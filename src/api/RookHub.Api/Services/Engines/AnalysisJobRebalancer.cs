@@ -28,10 +28,13 @@ public static class AnalysisJobRebalancer
     public static async Task<int> RebalanceAsync(AppDbContext db, DateTime now, Func<string, bool> isBusy,
         IReadOnlySet<string> explicitOnly, QuietHours? quiet, ILogger? logger = null, CancellationToken ct = default)
     {
-        var waiting = await db.AnalysisJobs
+        // Nur die Spalten, die die Verteilung braucht, ungetrackt (R1-012): je Worker-Takt kamen sonst ALLE wartenden
+        // Aufträge samt Fen/ResultJson als Entitäten. Umgehängt wird danach gezielt per Id.
+        var waiting = await db.AnalysisJobs.AsNoTracking()
             .Where(j => (j.Status == AnalysisJobStatus.Queued || j.Status == AnalysisJobStatus.Paused)
                 && (j.NextAttemptAt == null || j.NextAttemptAt <= now))
             .OrderBy(j => j.Priority).ThenBy(j => j.Background).ThenBy(j => j.Batch).ThenBy(j => j.CreatedAt)
+            .Select(j => new Waiting(j.Id, j.UserId, j.EngineOwnerUserId, j.EngineId, j.Batch))
             .ToListAsync(ct);
         if (waiting.Count == 0) return 0;
 
@@ -46,7 +49,7 @@ public static class AnalysisJobRebalancer
             var inList = list.ToHashSet(StringComparer.Ordinal);
             var forAll = (await EngineAvailability.UsableAsync(db, group.Key, list, batch: false, quiet, nowUtc, ct)).ToHashSet(StringComparer.Ordinal);
             var forBatch = (await EngineAvailability.UsableAsync(db, group.Key, list, batch: true, quiet, nowUtc, ct)).ToHashSet(StringComparer.Ordinal);
-            bool CanRun(string engine, AnalysisJob j) => j.Batch ? forBatch.Contains(engine) : forAll.Contains(engine);
+            bool CanRun(string engine, Waiting j) => j.Batch ? forBatch.Contains(engine) : forAll.Contains(engine);
 
             var jobs = group.ToList();
             var withWork = jobs.Select(j => j.EngineId).ToHashSet(StringComparer.Ordinal);
@@ -55,9 +58,11 @@ public static class AnalysisJobRebalancer
                 var job = jobs.FirstOrDefault(j => j.EngineId != engine && inList.Contains(j.EngineId)
                     && (isBusy(j.EngineId) || !CanRun(j.EngineId, j)) && CanRun(engine, j));
                 if (job is null) continue;
+                var entity = await db.AnalysisJobs.FirstOrDefaultAsync(j => j.Id == job.Id, ct);
+                if (entity is null) continue;
                 logger?.LogInformation("AnalysisJob {Id}: von {From} auf freie Engine {To} umverteilt", job.Id, job.EngineId, engine);
-                job.EngineId = engine;
-                job.UpdatedAt = now;
+                entity.EngineId = engine;
+                entity.UpdatedAt = now;
                 jobs.Remove(job);
                 withWork.Add(engine);
                 moved++;
@@ -66,4 +71,6 @@ public static class AnalysisJobRebalancer
         if (moved > 0) await db.SaveChangesAsync(ct);
         return moved;
     }
+
+    private sealed record Waiting(int Id, int UserId, int? EngineOwnerUserId, string EngineId, bool Batch);
 }

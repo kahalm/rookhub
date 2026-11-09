@@ -80,4 +80,19 @@ public class AnalysisJobRebalancerTests : IDisposable
         Assert.Equal("rhe_lc0", lc0.EngineId);
         Assert.Equal("rhe_gross1", gross.EngineId);
     }
+
+    /// <summary>R1-012: die wartenden kommen nur als Projektion; als Entität geladen (und gespeichert) wird nur, was umzieht.</summary>
+    [Fact]
+    public async Task OnlyMovedJobs_AreLoadedAsEntities()
+    {
+        for (var i = 0; i < 10; i++) Job("rhe_gross1", JobPriority.League, 60 - i);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        Assert.Equal(2, await RunAsync("rhe_gross1"));
+
+        var tracked = _db.ChangeTracker.Entries<AnalysisJob>().ToList();
+        Assert.Equal(2, tracked.Count);
+        Assert.All(tracked, e => Assert.NotEqual("rhe_gross1", e.Entity.EngineId));
+    }
 }

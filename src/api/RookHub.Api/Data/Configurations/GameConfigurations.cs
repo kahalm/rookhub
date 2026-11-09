@@ -476,6 +476,11 @@ internal sealed class AnalysisJobConfiguration : IEntityTypeConfiguration<Analys
         // Worker fragt je User nach laufbereiten Aufträgen; Liste sortiert nach Anlage.
         e.HasIndex(j => new { j.UserId, j.Status });
         e.HasIndex(j => new { j.UserId, j.CreatedAt });
+        // Worker-Takt (R1-012): Spitze je Engine in Rangfolge (PickNextForEngineAsync), „zuletzt gelaufen" je Engine,
+        // und die wartenden über alle Engines (EnginesWithRunnableJobsAsync, Rebalancer) — sonst Vollscan alle 5 s.
+        e.HasIndex(j => new { j.EngineId, j.Status, j.Priority, j.Background, j.Batch, j.CreatedAt });
+        e.HasIndex(j => new { j.EngineId, j.LastRunAt });
+        e.HasIndex(j => new { j.Status, j.EngineId });
         e.HasOne(j => j.User)
          .WithMany()
          .HasForeignKey(j => j.UserId)

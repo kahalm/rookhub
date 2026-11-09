@@ -502,16 +502,20 @@ public class AnalysisJobService
     /// Engines laufen deshalb parallel.</summary>
     public async Task<AnalysisJob?> PickNextForEngineAsync(string engineId, DateTime now, CancellationToken ct = default)
     {
-        var runnable = await _db.AnalysisJobs
+        var runnable = _db.AnalysisJobs
             .Where(j => j.EngineId == engineId
                 && (j.Status == AnalysisJobStatus.Queued || j.Status == AnalysisJobStatus.Paused)
-                && (j.NextAttemptAt == null || j.NextAttemptAt <= now))
-            // Strenge Rangfolge (0.918.0, JobPriority): interaktiv, wartet jemand, neue Vereinspartien, alte
-            // Vereinspartien, Liga, Meisterpartien. Darunter wie bisher: Hintergrund nach normal (0.523.0), Stapel nach
-            // eigener Vertiefung (0.817.1), dann der älteste.
+                && (j.NextAttemptAt == null || j.NextAttemptAt <= now));
+        // Strenge Rangfolge (0.918.0, JobPriority): interaktiv, wartet jemand, neue Vereinspartien, alte
+        // Vereinspartien, Liga, Meisterpartien. Darunter wie bisher: Hintergrund nach normal (0.523.0), Stapel nach
+        // eigener Vertiefung (0.817.1), dann der älteste.
+        // Nur die Spitze holen, nur ihre Sortierschlüssel (R1-012/R4-008): früher kamen ALLE laufbereiten Aufträge der
+        // Engine samt Fen/ResultJson je Worker-Takt als Entitäten, um einen zu nehmen. Index (EngineId, Status, Priority, …).
+        var head = await runnable
             .OrderBy(j => j.Priority).ThenBy(j => j.Background).ThenBy(j => j.Batch).ThenBy(j => j.CreatedAt)
-            .ToListAsync(ct);
-        if (runnable.Count == 0) return null;
+            .Select(j => new { j.Id, j.Priority, j.Background, j.Batch })
+            .FirstOrDefaultAsync(ct);
+        if (head is null) return null;
 
         var lastRunId = await _db.AnalysisJobs
             .Where(j => j.EngineId == engineId && j.LastRunAt != null)
@@ -520,8 +524,11 @@ public class AnalysisJobService
             .FirstOrDefaultAsync(ct);
         // Die warme Hashtabelle zaehlt nur innerhalb derselben Stufe: ein Hintergrundauftrag darf sich nicht ueber
         // die Treppe „zuletzt gelaufen" vor einen normalen draengen.
-        return runnable.FirstOrDefault(j => j.Id == lastRunId && j.Priority == runnable[0].Priority
-            && j.Background == runnable[0].Background && j.Batch == runnable[0].Batch) ?? runnable[0];
+        var pick = head.Id;
+        if (lastRunId is { } last && last != head.Id && await runnable.AnyAsync(j => j.Id == last
+                && j.Priority == head.Priority && j.Background == head.Background && j.Batch == head.Batch, ct))
+            pick = last;
+        return await _db.AnalysisJobs.FirstOrDefaultAsync(j => j.Id == pick, ct);
     }
 
     /// <summary>Alle Engines mit laufbereiten Aufträgen (für den Worker-Tick).</summary>

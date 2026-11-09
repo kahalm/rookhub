@@ -613,6 +613,29 @@ public class AnalysisJobServiceTests : IDisposable
         Assert.NotNull(await _svc.PickNextForEngineAsync("e", now.AddMinutes(6)));   // Backoff abgelaufen
     }
 
+    /// <summary>R1-012/R4-008: die Auswahl lädt nur den gewählten Auftrag als Entität, nicht den ganzen Rückstau der Engine —
+    /// und der zuletzt gelaufene zählt nur, solange er laufbereit ist.</summary>
+    [Fact]
+    public async Task PickNextForEngine_LaedtNurDenGewaehlten_ZuletztGelaufenerNurWennLaufbereit()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var now = DateTime.UtcNow;
+        for (var i = 0; i < 20; i++)
+            _db.AnalysisJobs.Add(new AnalysisJob { UserId = u, Fen = START, EngineId = "e", TargetDepth = 20 + i, MultiPv = 1,
+                Status = AnalysisJobStatus.Queued, CreatedAt = now.AddMinutes(-20 + i) });
+        var warmInBackoff = new AnalysisJob { UserId = u, Fen = START, EngineId = "e", TargetDepth = 50, MultiPv = 1,
+            Status = AnalysisJobStatus.Paused, CreatedAt = now.AddMinutes(-30), LastRunAt = now.AddMinutes(-1), NextAttemptAt = now.AddMinutes(5) };
+        _db.AnalysisJobs.Add(warmInBackoff);
+        await _db.SaveChangesAsync();
+        var oldest = await _db.AnalysisJobs.Where(j => j.NextAttemptAt == null).OrderBy(j => j.CreatedAt).Select(j => j.Id).FirstAsync();
+        _db.ChangeTracker.Clear();
+
+        var pick = await _svc.PickNextForEngineAsync("e", now);
+
+        Assert.Equal(oldest, pick!.Id);   // der warme steht im Backoff → die Spitze
+        Assert.Single(_db.ChangeTracker.Entries<AnalysisJob>());
+    }
+
     [Fact]
     public async Task JobsOnDifferentEngines_AreIndependentQueues()
     {

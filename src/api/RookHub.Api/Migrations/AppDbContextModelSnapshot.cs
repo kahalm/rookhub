@@ -271,9 +271,15 @@ namespace RookHub.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("EngineId", "LastRunAt");
+
+                    b.HasIndex("Status", "EngineId");
+
                     b.HasIndex("UserId", "CreatedAt");
 
                     b.HasIndex("UserId", "Status");
+
+                    b.HasIndex("EngineId", "Status", "Priority", "Background", "Batch", "CreatedAt");
 
                     b.ToTable("AnalysisJobs");
                 });

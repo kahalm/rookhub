@@ -177,6 +177,12 @@ Hintergrund-Liste des Besitzers, die frei ist, nichts Eigenes wartend hat und di
 Liste (von Hand gewählt) und Nur-auf-Anforderung-Engines (Lc0). Anlass 09.11.2026: vier neue Server-Engines saßen leer,
 während 67 Aufträge auf drei Gross-Engines warteten.
 
+**Abfragelast je Tick (R1-012/R4-008, 09.11.2026)**: `PickNextForEngineAsync` holt nur die Spitze der Rangfolge
+(Id + Sortierschlüssel), prüft den zuletzt gelaufenen gezielt per Id und lädt dann genau einen Auftrag; der Rebalancer
+liest die wartenden als ungetrackte Projektion (Id, Besitzer, Engine, Stapel) und lädt nur die umzuhängenden. Indizes
+dazu: (EngineId, Status, Priority, Background, Batch, CreatedAt), (EngineId, LastRunAt), (Status, EngineId) —
+Migration `AnalysisJobWorkerIndexes`.
+
 **Stellungs-Cache (0.921.0, `GameAnalysisPositionCache`)**: Vor jedem Auftrag für eine Partie-Analyse (erster Durchgang und
 Vertiefung) sucht die Pumpe dieselbe Stellung in fertigen Analysen anderer Partien: gleich bis auf die Zugzähler, mindestens
 so tief, mindestens so viele Linien. Treffer werden kopiert, ohne Engine. Lc0-Analysen und Knotenziele bleiben außen vor.
