@@ -115,7 +115,7 @@ public sealed class ClubFableExplanations
     }
 
     /// <summary>Die Begründung von Fable, oder <c>null</c> (aus, Deckel, Fehler, unbrauchbar) — dann schreibt das lokale Modell.</summary>
-    internal async Task<string?> ExplainAsync(AppDbContext db, MoveComparisonService.PairFacts facts, CancellationToken ct)
+    internal async Task<string?> ExplainAsync(AppDbContext db, MoveComparisonPrompts.PairFacts facts, CancellationToken ct)
     {
         if (!Available) return null;
         var start = _utcNow().Date;
@@ -199,10 +199,10 @@ public sealed class ClubFableExplanations
         Gib das JSON-Objekt {"explanation": "..."} zurück; Absätze mit Leerzeile trennen.
         """;
 
-    /// <summary>Die Fakten wie beim lokalen Modell (<see cref="MoveComparisonService.UserPrompt"/>, Bewertungen dort aus Sicht der
+    /// <summary>Die Fakten wie beim lokalen Modell (<see cref="MoveComparisonPrompts.UserPrompt"/>, Bewertungen dort aus Sicht der
     /// Seite am Zug), dazu die Seite am Zug — der Text soll aus Sicht von Weiß bewerten.</summary>
-    internal static string UserPrompt(MoveComparisonService.PairFacts f) =>
-        MoveComparisonService.UserPrompt(f)
+    internal static string UserPrompt(MoveComparisonPrompts.PairFacts f) =>
+        MoveComparisonPrompts.UserPrompt(f)
         + $"\n\nHinweis: Die Bewertungen oben sind aus Sicht des Spielers am Zug ({(f.MoverWhite ? "Weiß" : "Schwarz")}); "
         + "im Text bitte aus Sicht von Weiß angeben. Die Züge oben stehen in englischer Notation (N=S, B=L, R=T, Q=D)."
         + "\n\nMerksätze (nur diese, höchstens einer, per Kennung):\n" + ChessMaxims.PromptList();

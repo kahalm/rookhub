@@ -198,8 +198,8 @@ public class MoveComparisonServiceTests : IDisposable
         var dto = await CreateAsync(u, SCANDI, "e4d5", "b1c3");
         var takes = dto.Candidates.Single(c => c.Uci == "e4d5");
         var nc3 = dto.Candidates.Single(c => c.Uci == "b1c3");
-        var takesFen = MoveComparisonService.PlayUci(SCANDI, "e4d5")!;
-        var nc3Fen = MoveComparisonService.PlayUci(SCANDI, "b1c3")!;
+        var takesFen = MoveComparisonBoard.PlayUci(SCANDI, "e4d5")!;
+        var nc3Fen = MoveComparisonBoard.PlayUci(SCANDI, "b1c3")!;
 
         await FinishJobAsync(takesFen, Pvs((45, "d8d5 b1c3 d5a5"), (60, "g8f6 c2c4")));
         await FinishJobAsync(nc3Fen, Pvs((20, "d5e4 c3e4"), (35, "g8f6 e4e5")));
@@ -215,7 +215,7 @@ public class MoveComparisonServiceTests : IDisposable
         Assert.Equal(MoveComparisonLineState.Pending, replies[1].State);
         var job = await _db.AnalysisJobs.SingleAsync();
         Assert.Equal(1, job.MultiPv);
-        Assert.Equal(MoveComparisonService.PlayUci(takesFen, "g8f6"), job.Fen);
+        Assert.Equal(MoveComparisonBoard.PlayUci(takesFen, "g8f6"), job.Fen);
 
         await FinishJobAsync(job.Fen, Pvs((70, "c2c4 c7c6")));
         await _svc.PumpOneAsync(dto.Id);
@@ -246,10 +246,10 @@ public class MoveComparisonServiceTests : IDisposable
         var u = await UserWithEngineAsync();
         const string afterE4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
         var dto = await CreateAsync(u, afterE4, "d7d5", "g8f6");
-        var d5Fen = MoveComparisonService.PlayUci(afterE4, "d7d5")!;
+        var d5Fen = MoveComparisonBoard.PlayUci(afterE4, "d7d5")!;
         // Broker-Zeilen kommen in Weiß-Sicht: -45 = Schwarz steht 0,45 besser
         await FinishJobAsync(d5Fen, Pvs((-45, "e4d5 d8d5")));
-        await FinishJobAsync(MoveComparisonService.PlayUci(afterE4, "g8f6")!, Pvs((-20, "e4e5 f6d5"), (-35, "b1c3 d7d5")));
+        await FinishJobAsync(MoveComparisonBoard.PlayUci(afterE4, "g8f6")!, Pvs((-20, "e4e5 f6d5"), (-35, "b1c3 d7d5")));
         await _svc.PumpOneAsync(dto.Id);
         foreach (var job in await _db.AnalysisJobs.ToListAsync())
             await FinishJobAsync(job.Fen, Pvs((-30, "d5d4 c2c3")));   // nach 1...d5 und der Antwort zieht wieder Schwarz
@@ -272,12 +272,12 @@ public class MoveComparisonServiceTests : IDisposable
     [Fact]
     public void ShownText_MattUndBauern_ausSichtDerSeiteAmZug()
     {
-        Assert.Equal("#3", MoveComparisonService.ShownText(new MoveComparisonService.Ev(0, null, -3, false), moverWhite: false));
-        Assert.Equal("#-2", MoveComparisonService.ShownText(new MoveComparisonService.Ev(0, null, 2, false), moverWhite: false));
-        Assert.Equal("-1.50", MoveComparisonService.ShownText(new MoveComparisonService.Ev(150, 150, null, false), moverWhite: false));
-        Assert.Equal("+1.50", MoveComparisonService.ShownText(new MoveComparisonService.Ev(150, 150, null, false), moverWhite: true));
-        Assert.Equal("#0", MoveComparisonService.ShownText(new MoveComparisonService.Ev(-100_000, null, null, true), moverWhite: false));
-        Assert.Null(MoveComparisonService.ShownText(null, moverWhite: true));
+        Assert.Equal("#3", MoveComparisonEval.ShownText(new MoveComparisonEval.Ev(0, null, -3, false), moverWhite: false));
+        Assert.Equal("#-2", MoveComparisonEval.ShownText(new MoveComparisonEval.Ev(0, null, 2, false), moverWhite: false));
+        Assert.Equal("-1.50", MoveComparisonEval.ShownText(new MoveComparisonEval.Ev(150, 150, null, false), moverWhite: false));
+        Assert.Equal("+1.50", MoveComparisonEval.ShownText(new MoveComparisonEval.Ev(150, 150, null, false), moverWhite: true));
+        Assert.Equal("#0", MoveComparisonEval.ShownText(new MoveComparisonEval.Ev(-100_000, null, null, true), moverWhite: false));
+        Assert.Null(MoveComparisonEval.ShownText(null, moverWhite: true));
     }
 
     [Fact]
@@ -286,9 +286,9 @@ public class MoveComparisonServiceTests : IDisposable
         var u = await UserWithEngineAsync();
         _llm.Local = true;
         var dto = await CreateAsync(u, SCANDI, "e4d5", "b1c3");
-        var takesFen = MoveComparisonService.PlayUci(SCANDI, "e4d5")!;
+        var takesFen = MoveComparisonBoard.PlayUci(SCANDI, "e4d5")!;
         await FinishJobAsync(takesFen, Pvs((45, "d8d5 b1c3 d5a5")));
-        await FinishJobAsync(MoveComparisonService.PlayUci(SCANDI, "b1c3")!, Pvs((20, "d5e4 c3e4"), (35, "g8f6 e4e5")));
+        await FinishJobAsync(MoveComparisonBoard.PlayUci(SCANDI, "b1c3")!, Pvs((20, "d5e4 c3e4"), (35, "g8f6 e4e5")));
         await _svc.PumpOneAsync(dto.Id);
         var job = await _db.AnalysisJobs.SingleAsync();
         await FinishJobAsync(job.Fen, Pvs((70, "c2c4 c7c6")));
@@ -325,7 +325,7 @@ public class MoveComparisonServiceTests : IDisposable
         Assert.Single(_db.AnalysisJobs);   // nur Nf6
         Assert.Equal("done", dto.Candidates.Single(c => c.Uci == "d8h4").State);
 
-        await FinishJobAsync(MoveComparisonService.PlayUci(fool, "g8f6")!, Pvs((-80, "b1c3 d7d5")));
+        await FinishJobAsync(MoveComparisonBoard.PlayUci(fool, "g8f6")!, Pvs((-80, "b1c3 d7d5")));
         await _svc.PumpOneAsync(dto.Id);
 
         var c = await _db.MoveComparisons.Include(x => x.Lines).SingleAsync();

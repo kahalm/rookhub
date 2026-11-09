@@ -122,8 +122,8 @@ public class ClubFableExplanationsTests : IDisposable
         var row = await _db.MoveComparisons.SingleAsync(c => c.Id == dto.Id);
         row.GameAnalysisId = analysis;
         await _db.SaveChangesAsync();
-        await FinishJobAsync(MoveComparisonService.PlayUci(SCANDI, "e4d5")!, Pvs((45, "d8d5 b1c3 d5a5")));
-        await FinishJobAsync(MoveComparisonService.PlayUci(SCANDI, "b1c3")!, Pvs((20, "d5e4 c3e4"), (35, "g8f6 e4e5")));
+        await FinishJobAsync(MoveComparisonBoard.PlayUci(SCANDI, "e4d5")!, Pvs((45, "d8d5 b1c3 d5a5")));
+        await FinishJobAsync(MoveComparisonBoard.PlayUci(SCANDI, "b1c3")!, Pvs((20, "d5e4 c3e4"), (35, "g8f6 e4e5")));
         await svc.PumpOneAsync(dto.Id);
         foreach (var job in await _db.AnalysisJobs.Where(j => j.Status != AnalysisJobStatus.Done).ToListAsync())
             await FinishJobAsync(job.Fen, Pvs((70, "c2c4 c7c6")));

@@ -47,7 +47,7 @@ public enum MoveComparisonLineState
     Illegal = 3,
     /// <summary>Die Antwort ginge zwar, ist nach dem besten Zug aber ein ANDERER Zug (0.908.0): andere Figur auf dem Startfeld,
     /// oder sie schlug nach dem schwächeren Zug etwas und schlägt hier nichts — ohne Auftrag, nicht gezeigt, nicht erklärt.
-    /// Regel: <see cref="Services.Engines.MoveComparisonService.ReplyTransfers"/>.</summary>
+    /// Regel: <see cref="Services.Engines.MoveComparisonBoard.ReplyTransfers"/>.</summary>
     Skipped = 4,
 }
 

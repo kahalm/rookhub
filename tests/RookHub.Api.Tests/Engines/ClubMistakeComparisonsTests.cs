@@ -251,5 +251,5 @@ public class ClubMistakeComparisonsTests : IDisposable
     // En passant schlägt auch ohne Figur auf dem Zielfeld.
     [InlineData("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", "e5d6", true)]
     public void ReplyTransfers_Rule(string weakFen, string bestFen, string uci, bool expected)
-        => Assert.Equal(expected, MoveComparisonService.ReplyTransfers(weakFen, bestFen, uci));
+        => Assert.Equal(expected, MoveComparisonBoard.ReplyTransfers(weakFen, bestFen, uci));
 }

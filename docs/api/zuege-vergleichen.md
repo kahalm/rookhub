@@ -3,7 +3,11 @@
 > Ausgelagert aus `CLAUDE.md` am 2026-10-11 (Abschnitt „REST API → Züge vergleichen (0.602.0, auth) — „warum ist Zug 1 besser als Zug 2?"“). Neue Doku zu diesem Bereich gehört HIERHER, nicht in die CLAUDE.md.
 
 Wunsch 2026-09-29: „soll diese durchrechnen und schaun, warum Zug 1 besser ist als Zug 2 — vor allem im Vergleich: was
-sind bei Zug 2 die besten Züge, und warum gehen die bei Zug 1 nicht (so gut)". `Services/Engines/MoveComparisonService.cs`,
+sind bei Zug 2 die besten Züge, und warum gehen die bei Zug 1 nicht (so gut)". `Services/Engines/MoveComparisonService.cs`
+(Ablauf: Anlegen, Pumpe, Aufträge, Lesen; reine Teile daneben: `MoveComparisonBoard` Brett, `MoveComparisonEval` Bewertung
+lesen/zeigen, `MoveComparisonSteps` Auswahl/Rangfolge/Antwort-Zeilen, `MoveComparisonPrompts` Fakten + Prompts,
+`MoveComparisonExplainer` Begründungen, `MoveComparisonView` DTO, `MoveComparisonFromAnalysis` Übernahme aus der Analyse,
+`MoveComparisonExplainJobs`/`MoveComparisonException` eigene Dateien; Zerlegung 2026-11-09),
 Tabellen `MoveComparisons` + `MoveComparisonLines`, Pumpe `MoveComparisonPumpService` (`PeriodicWorker`, Start sofort, 5 s, `MoveComparison:PumpIntervalSeconds`).
 * **Zwei Durchgänge über die Hintergrund-Aufträge** (NICHT die Live-Engine — rechnet auch, wenn die Seite zu ist):
   (1) je Kandidat (2–4) die Stellung DANACH mit `CandidateLines` (3) Linien = die besten Antworten des Gegners; daraus
@@ -38,7 +42,7 @@ Tabellen `MoveComparisons` + `MoveComparisonLines`, Pumpe `MoveComparisonPumpSer
 | POST | `/api/move-comparisons` | `{ fen, moves[] (UCI, Rochade auch König-schlägt-Turm), depth?, lang?, title? }`; 400 `reason` ∈ invalid-fen/game-over/invalid-move/too-few-moves/too-many-moves/too-many-open/no-engine/too-many-jobs |
 | DELETE | `/api/move-comparisons/{id}` | Löschen samt offener Aufträge |
 
-**Antwort nach dem besten Zug muss derselbe Zug sein (0.908.0)**: `MoveComparisonService.ReplyTransfers` — eine beste
+**Antwort nach dem besten Zug muss derselbe Zug sein (0.908.0)**: `MoveComparisonBoard.ReplyTransfers` — eine beste
 Antwort auf den schwächeren Zug wird nach dem besten nur gerechnet, wenn auf ihrem Startfeld dieselbe Figur steht und sie,
 falls sie dort etwas schlug, auch hier etwas schlägt (Befund an Vereinspartie 236: „Sxd7" mit +6,52, der Springer zog nach
 dem besten Zug gratis auf ein leeres Feld). Sonst Zeilenstatus `Skipped`: kein Auftrag, nicht im DTO, nicht in den Fakten der

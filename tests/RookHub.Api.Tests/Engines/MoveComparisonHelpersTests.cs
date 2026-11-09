@@ -22,67 +22,67 @@ public class MoveComparisonHelpersTests
     [Fact]
     public void PieceAt_ReadsTheFen_NullForEmptyOrNonsense()
     {
-        Assert.Equal('P', MoveComparisonService.PieceAt(Start, "e2"));
-        Assert.Equal('k', MoveComparisonService.PieceAt(Start, "e8"));
-        Assert.Null(MoveComparisonService.PieceAt(Start, "e4"));
-        Assert.Null(MoveComparisonService.PieceAt(Start, "i1"));
-        Assert.Null(MoveComparisonService.PieceAt(Start, "e"));
-        Assert.Null(MoveComparisonService.PieceAt("8/8 w - - 0 1", "a1"));
-        Assert.Null(MoveComparisonService.PieceAt("", "a1"));
+        Assert.Equal('P', MoveComparisonBoard.PieceAt(Start, "e2"));
+        Assert.Equal('k', MoveComparisonBoard.PieceAt(Start, "e8"));
+        Assert.Null(MoveComparisonBoard.PieceAt(Start, "e4"));
+        Assert.Null(MoveComparisonBoard.PieceAt(Start, "i1"));
+        Assert.Null(MoveComparisonBoard.PieceAt(Start, "e"));
+        Assert.Null(MoveComparisonBoard.PieceAt("8/8 w - - 0 1", "a1"));
+        Assert.Null(MoveComparisonBoard.PieceAt("", "a1"));
     }
 
     [Fact]
     public void FindMove_UciAndKingTakesRookCastling_CaseAndBlanksIgnored()
     {
         var legal = ChessBoard.LoadFromFen(Castle).Moves();
-        Assert.Equal("e1g1", RookHub.Api.Services.Games.GamePlies.ToUci(MoveComparisonService.FindMove(legal, "e1h1")!));
-        Assert.Equal("e1c1", RookHub.Api.Services.Games.GamePlies.ToUci(MoveComparisonService.FindMove(legal, " E1A1 ")!));
-        Assert.NotNull(MoveComparisonService.FindMove(legal, "a1a8"));
-        Assert.Null(MoveComparisonService.FindMove(legal, "e1e3"));
-        Assert.Null(MoveComparisonService.FindMove(legal, "e1"));
-        Assert.Null(MoveComparisonService.FindMove(legal, null));
+        Assert.Equal("e1g1", RookHub.Api.Services.Games.GamePlies.ToUci(MoveComparisonBoard.FindMove(legal, "e1h1")!));
+        Assert.Equal("e1c1", RookHub.Api.Services.Games.GamePlies.ToUci(MoveComparisonBoard.FindMove(legal, " E1A1 ")!));
+        Assert.NotNull(MoveComparisonBoard.FindMove(legal, "a1a8"));
+        Assert.Null(MoveComparisonBoard.FindMove(legal, "e1e3"));
+        Assert.Null(MoveComparisonBoard.FindMove(legal, "e1"));
+        Assert.Null(MoveComparisonBoard.FindMove(legal, null));
     }
 
     [Fact]
     public void PlayUci_AndSanOf_NullWhenNotPlayable()
     {
-        Assert.Equal("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1", MoveComparisonService.PlayUci(Start, "e2e4"));
-        Assert.Null(MoveComparisonService.PlayUci(Start, "e2e5"));
-        Assert.Null(MoveComparisonService.PlayUci("kaputt", "e2e4"));
-        Assert.Equal("Nf3", MoveComparisonService.SanOf(Start, "g1f3"));
-        Assert.Equal("O-O", MoveComparisonService.SanOf(Castle, "e1h1"));
-        Assert.Null(MoveComparisonService.SanOf(Start, "g1g3"));
-        Assert.Null(MoveComparisonService.SanOf("kaputt", "g1f3"));
+        Assert.Equal("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1", MoveComparisonBoard.PlayUci(Start, "e2e4"));
+        Assert.Null(MoveComparisonBoard.PlayUci(Start, "e2e5"));
+        Assert.Null(MoveComparisonBoard.PlayUci("kaputt", "e2e4"));
+        Assert.Equal("Nf3", MoveComparisonBoard.SanOf(Start, "g1f3"));
+        Assert.Equal("O-O", MoveComparisonBoard.SanOf(Castle, "e1h1"));
+        Assert.Null(MoveComparisonBoard.SanOf(Start, "g1g3"));
+        Assert.Null(MoveComparisonBoard.SanOf("kaputt", "g1f3"));
     }
 
     [Fact]
     public void Terminal_MateStalemateOrNothing()
     {
-        Assert.Equal(new MoveComparisonService.Ev(100_000, null, null, true), MoveComparisonService.Terminal(Mated));
-        Assert.Equal(new MoveComparisonService.Ev(0, 0, null, false), MoveComparisonService.Terminal(Stalemate));
-        Assert.Null(MoveComparisonService.Terminal(Start));
-        Assert.Null(MoveComparisonService.Terminal(""));
+        Assert.Equal(new MoveComparisonEval.Ev(100_000, null, null, true), MoveComparisonEval.Terminal(Mated));
+        Assert.Equal(new MoveComparisonEval.Ev(0, 0, null, false), MoveComparisonEval.Terminal(Stalemate));
+        Assert.Null(MoveComparisonEval.Terminal(Start));
+        Assert.Null(MoveComparisonEval.Terminal(""));
     }
 
     [Fact]
     public void EvalOf_And_Pvs_WhiteView_MateRanksByDistance()
     {
-        var afterE4 = MoveComparisonService.PlayUci(Start, "e2e4")!;   // Schwarz am Zug — die Werte des Auftrags sind schon Weiß-Sicht
-        var pvs = MoveComparisonService.Pvs(afterE4, Pvs((-30, null, "e7e5 g1f3"), (-50, null, "c7c5")));
+        var afterE4 = MoveComparisonBoard.PlayUci(Start, "e2e4")!;   // Schwarz am Zug — die Werte des Auftrags sind schon Weiß-Sicht
+        var pvs = MoveComparisonEval.Pvs(afterE4, Pvs((-30, null, "e7e5 g1f3"), (-50, null, "c7c5")));
         Assert.Equal(2, pvs.Count);
         Assert.Equal(("e7e5", "e5", -30, (int?)null), (pvs[0].Uci, pvs[0].San, pvs[0].CpWhite, pvs[0].MateWhite));
         Assert.Equal(new[] { "e5", "Nf3" }, pvs[0].Line);
-        Assert.Equal(new MoveComparisonService.Ev(-30, -30, null, false), MoveComparisonService.EvalOf(afterE4, Pvs((-30, null, "e7e5"))));
-        Assert.Equal(new MoveComparisonService.Ev(-100_000 + 2, null, -2, false), MoveComparisonService.EvalOf(afterE4, Pvs((null, -2, "e7e5"))));
-        Assert.Equal(new MoveComparisonService.Ev(100_000 - 3, null, 3, false), MoveComparisonService.EvalOf(Start, Pvs((null, 3, "e2e4"))));
-        Assert.Null(MoveComparisonService.EvalOf(Start, null));
-        Assert.Empty(MoveComparisonService.Pvs("", Pvs((10, null, "e2e4"))));
+        Assert.Equal(new MoveComparisonEval.Ev(-30, -30, null, false), MoveComparisonEval.EvalOf(afterE4, Pvs((-30, null, "e7e5"))));
+        Assert.Equal(new MoveComparisonEval.Ev(-100_000 + 2, null, -2, false), MoveComparisonEval.EvalOf(afterE4, Pvs((null, -2, "e7e5"))));
+        Assert.Equal(new MoveComparisonEval.Ev(100_000 - 3, null, 3, false), MoveComparisonEval.EvalOf(Start, Pvs((null, 3, "e2e4"))));
+        Assert.Null(MoveComparisonEval.EvalOf(Start, null));
+        Assert.Empty(MoveComparisonEval.Pvs("", Pvs((10, null, "e2e4"))));
     }
 
     [Fact]
     public void SystemPrompt_NamesTheLanguage()
     {
-        var p = MoveComparisonService.SystemPrompt("de");
+        var p = MoveComparisonPrompts.SystemPrompt("de");
         Assert.StartsWith("You are a friendly, precise chess coach.", p);
         Assert.Contains("Write in German", p);
         Assert.EndsWith("Return the JSON object {\"explanation\": \"...\"}.", p);
@@ -92,18 +92,18 @@ public class MoveComparisonHelpersTests
     public void UserPrompt_ListsEvaluationsAnswersAndTests()
     {
         var fen = Start;
-        var best = MoveComparisonService.PlayUci(fen, "e2e4")!;
-        var weak = MoveComparisonService.PlayUci(fen, "g1f3")!;
-        var bestReplies = MoveComparisonService.Pvs(best, Pvs((-30, null, "e7e5 g1f3")));
-        var weakReplies = MoveComparisonService.Pvs(weak, Pvs((-20, null, "d7d5 d2d4")));
-        var tests = new List<MoveComparisonService.ReplyTest>
+        var best = MoveComparisonBoard.PlayUci(fen, "e2e4")!;
+        var weak = MoveComparisonBoard.PlayUci(fen, "g1f3")!;
+        var bestReplies = MoveComparisonEval.Pvs(best, Pvs((-30, null, "e7e5 g1f3")));
+        var weakReplies = MoveComparisonEval.Pvs(weak, Pvs((-20, null, "d7d5 d2d4")));
+        var tests = new List<MoveComparisonPrompts.ReplyTest>
         {
             new("d5", MoveComparisonLineState.Done, "+0.40", new[] { "exd5" }),
             new("Nf6", MoveComparisonLineState.Illegal, null, Array.Empty<string>()),
             new("c5", MoveComparisonLineState.Failed, null, Array.Empty<string>()),
         };
-        var f = new MoveComparisonService.PairFacts(fen, true, 22, "e4", best, "+0.30", bestReplies, "Nf3", weak, "+0.20", weakReplies, tests);
-        var text = MoveComparisonService.UserPrompt(f);
+        var f = new MoveComparisonPrompts.PairFacts(fen, true, 22, "e4", best, "+0.30", bestReplies, "Nf3", weak, "+0.20", weakReplies, tests);
+        var text = MoveComparisonPrompts.UserPrompt(f);
         var lines = text.Split('\n');
         Assert.Equal($"Position (FEN): {fen}", lines[0]);
         Assert.Equal("The reader plays White and is to move. The engine compared the reader's candidate moves at depth 22.", lines[1]);

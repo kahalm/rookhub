@@ -87,11 +87,11 @@ public static class MoveComparisonFromAnalysis
         var allCandidates = c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Candidate).All(l => l.State != MoveComparisonLineState.Pending);
         if (!allCandidates || c.Status != MoveComparisonStatus.Waiting) return filled;
 
-        if (!MoveComparisonService.AddReplyLines(c)) return filled;   // nichts bewertbar → Failed
+        if (!MoveComparisonSteps.AddReplyLines(c)) return filled;   // nichts bewertbar → Failed
         DeriveRepliesFromBest(c);
         if (c.Lines.Any(l => l.Kind == MoveComparisonLineKind.Reply && l.State == MoveComparisonLineState.Pending)) return filled;
         c.Source = MoveComparisonSource.Analysis;
-        c.Status = MoveComparisonService.HasWeakerCandidates(c) ? MoveComparisonStatus.Explaining : MoveComparisonStatus.Done;
+        c.Status = MoveComparisonSteps.HasWeakerCandidates(c) ? MoveComparisonStatus.Explaining : MoveComparisonStatus.Done;
         c.UpdatedAt = DateTime.UtcNow;
         if (c.Status == MoveComparisonStatus.Done) c.FinishedAt ??= c.UpdatedAt;
         return filled;
@@ -135,7 +135,7 @@ public static class MoveComparisonFromAnalysis
         if (moves.Count >= MinLinePlies) return true;
         if (moves.Count == 0) return false;
         var after = MoveComparisonService.PlayUci(fen, moves[0]);
-        return after is not null && MoveComparisonService.Terminal(after) is not null;
+        return after is not null && MoveComparisonEval.Terminal(after) is not null;
     }
 
     /// <summary>Stellung, Zugrecht und Rochaderechte gleich (Zugzähler und e.p.-Feld schreiben die Bibliotheken verschieden).</summary>

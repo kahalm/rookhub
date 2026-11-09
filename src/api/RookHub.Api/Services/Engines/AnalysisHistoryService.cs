@@ -154,7 +154,7 @@ public sealed class AnalysisHistoryService
                 if (d > MaxPlies) throw new ArgumentException($"At most {MaxPlies} moves in a line");
                 // In der flachen Form folgt das erste Kind direkt auf seinen Elternknoten — nur an Verzweigungen neu laden.
                 if (board is null || boardAt != p) board = ChessBoard.LoadFromFen(p == -1 ? fen : fens[p]);
-                var move = MoveComparisonService.FindMove(board.Moves(), n.U) ?? throw new ArgumentException("Illegal move");
+                var move = MoveComparisonBoard.FindMove(board.Moves(), n.U) ?? throw new ArgumentException("Illegal move");
                 var uci = GamePlies.ToUci(move);
                 if (!seen.Add((p, uci))) throw new ArgumentException("Duplicate move");
                 board.Move(move);

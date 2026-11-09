@@ -1,7 +1,3 @@
-using System.Collections.Concurrent;
-using System.Globalization;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Chess;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
@@ -9,14 +5,11 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Games;
 using RookHub.Api.DTOs.Engines;
+using static RookHub.Api.Services.Engines.MoveComparisonBoard;
+using static RookHub.Api.Services.Engines.MoveComparisonEval;
+using static RookHub.Api.Services.Engines.MoveComparisonSteps;
 
 namespace RookHub.Api.Services.Engines;
-
-/// <summary>Absage beim Anlegen eines Vergleichs — <see cref="Reason"/> ist der Code, den die Seite übersetzt.</summary>
-public sealed class MoveComparisonException(string reason, string message) : Exception(message)
-{
-    public string Reason { get; } = reason;
-}
 
 /// <summary>
 /// „Züge vergleichen" (0.602.0, Wunsch 2026-09-29): „soll diese durchrechnen und schaun, warum Zug 1 besser ist als
@@ -57,7 +50,6 @@ public sealed class MoveComparisonService
     public const int Parallel = 3;
     public const string JobTitle = "Zugvergleich";
 
-    private const double MateScore = 100_000;
 
     private readonly AppDbContext _db;
     private readonly AnalysisJobService _jobs;
@@ -66,6 +58,7 @@ public sealed class MoveComparisonService
     private readonly IServiceScopeFactory _scopes;
     private readonly ILogger<MoveComparisonService> _logger;
     private readonly ClubFableExplanations? _fable;
+    private readonly MoveComparisonExplainer _explainer;
 
     /// <param name="fable">Begründungen der Vereinspartien ab dem Stichtag über Claude Fable (0.911.0); <c>null</c> = nur lokal.</param>
     public MoveComparisonService(AppDbContext db, AnalysisJobService jobs, IClaudeJsonClient llm,
@@ -76,6 +69,7 @@ public sealed class MoveComparisonService
         _db = db;
         _jobs = jobs;
         _llm = llm;
+        _explainer = new MoveComparisonExplainer(llm, fable, logger);
         _running = running;
         _scopes = scopes;
         _logger = logger;
@@ -109,7 +103,7 @@ public sealed class MoveComparisonService
                     .Select(l => l.CandidateUci).ToList(),
             })
             .ToListAsync(ct);
-        return rows.Select(r => new MoveComparisonSummaryDto(r.Id, r.Fen, r.Title, StatusText(r.Status), r.CreatedAt,
+        return rows.Select(r => new MoveComparisonSummaryDto(r.Id, r.Fen, r.Title, MoveComparisonView.StatusText(r.Status), r.CreatedAt,
             r.Moves.Select(m => SanOf(r.Fen, m) ?? m).ToList(), r.BestUci is null ? null : SanOf(r.Fen, r.BestUci))).ToList();
     }
 
@@ -125,20 +119,7 @@ public sealed class MoveComparisonService
     public async Task<MoveComparisonDto> CreateAsync(int userId, CreateMoveComparisonRequest req, CancellationToken ct = default)
     {
         var fen = (req.Fen ?? string.Empty).Trim();
-        if (fen.Length is 0 or > 120 || !AnalysisJobService.IsLegalFen(fen))
-            throw new MoveComparisonException("invalid-fen", "Invalid FEN");
-        var legal = ChessBoard.LoadFromFen(fen).Moves();
-        if (legal.Length == 0) throw new MoveComparisonException("game-over", "No legal moves in this position");
-
-        var ucis = new List<string>();
-        foreach (var raw in req.Moves ?? [])
-        {
-            var move = FindMove(legal, raw) ?? throw new MoveComparisonException("invalid-move", $"Not a legal move: {raw}");
-            var uci = GamePlies.ToUci(move);
-            if (!ucis.Contains(uci)) ucis.Add(uci);
-        }
-        if (ucis.Count < MinCandidates) throw new MoveComparisonException("too-few-moves", $"At least {MinCandidates} moves");
-        if (ucis.Count > MaxCandidates) throw new MoveComparisonException("too-many-moves", $"At most {MaxCandidates} moves");
+        var ucis = CandidateUcis(fen, req.Moves);
         if (await OpenCountAsync(userId, ct) >= MaxOpenPerUser)
             throw new MoveComparisonException("too-many-open", "Too many comparisons still running");
         var owner = await EngineOwnerResolver.ResolveAsync(_db, userId, ct)
@@ -153,13 +134,7 @@ public sealed class MoveComparisonService
             Language = GameMoveExplanationService.NormalizeLanguage(req.Lang), Status = MoveComparisonStatus.Candidates,
             EngineOwnerUserId = owner == userId ? null : owner, CreatedAt = now, UpdatedAt = now, Source = MoveComparisonSource.Engine,
         };
-        for (var i = 0; i < ucis.Count; i++)
-        {
-            var after = PlayUci(fen, ucis[i])!;
-            var line = new MoveComparisonLine { Kind = MoveComparisonLineKind.Candidate, CandidateUci = ucis[i], Ordinal = i, Fen = after };
-            if (Terminal(after) is not null) line.State = MoveComparisonLineState.Done;   // setzt matt/patt — nichts zu rechnen
-            comparison.Lines.Add(line);
-        }
+        foreach (var line in PlanCandidates(fen, ucis)) comparison.Lines.Add(line);
         _db.MoveComparisons.Add(comparison);
         await TrimAsync(userId, ct);
         await _db.SaveChangesAsync(ct);
@@ -420,105 +395,6 @@ public sealed class MoveComparisonService
         }
     }
 
-    /// <summary>Kandidaten fertig: den besten bestimmen (<see cref="MoveComparison.BestUci"/>) und je schwächerem Kandidaten
-    /// dessen beste Antworten als Zeilen nach dem besten Zug anlegen (offen, ohne Auftrag; unmöglich/anderer Zug/Matt gleich
-    /// erledigt). <c>false</c> = kein Kandidat bewertbar, der Vergleich ist <see cref="MoveComparisonStatus.Failed"/>.</summary>
-    internal static bool AddReplyLines(MoveComparison c)
-    {
-        var ranked = Ranked(c);
-        if (ranked.Count == 0)
-        {
-            c.Status = MoveComparisonStatus.Failed;
-            c.Error = "No candidate move could be calculated";
-            return false;
-        }
-        var best = ranked[0].Line;
-        c.BestUci = best.CandidateUci;
-        var bestOver = Terminal(best.Fen) is not null;
-        foreach (var (weak, _) in ranked.Skip(1))
-        {
-            var replies = Pvs(weak.Fen, weak.ResultJson).Take(RepliesTested).ToList();
-            for (var k = 0; k < replies.Count; k++)
-            {
-                var line = new MoveComparisonLine
-                {
-                    Kind = MoveComparisonLineKind.Reply, CandidateUci = weak.CandidateUci, ReplyUci = replies[k].Uci, Ordinal = k,
-                };
-                var after = bestOver ? null : PlayUci(best.Fen, replies[k].Uci);
-                if (after is null) line.State = MoveComparisonLineState.Illegal;
-                else if (!ReplyTransfers(weak.Fen, best.Fen, replies[k].Uci)) line.State = MoveComparisonLineState.Skipped;
-                else
-                {
-                    line.Fen = after;
-                    if (Terminal(after) is not null) line.State = MoveComparisonLineState.Done;
-                }
-                c.Lines.Add(line);
-            }
-        }
-        return true;
-    }
-
-    /// <summary>
-    /// Ist die Antwort auf den schwächeren Zug nach dem besten noch DERSELBE Zug (0.908.0, Befund an Vereinspartie 236: nach
-    /// 11...c5 stand der Test „Sxd7" mit +6,52 da — der Springer zog nach dem besten Zug einfach gratis nach d7, nichts wurde
-    /// geschlagen)? Nein, wenn auf dem Startfeld eine andere (oder keine) Figur steht, oder wenn die Antwort nach dem schwächeren
-    /// Zug etwas schlug und hier nichts schlägt. Umgekehrt (still dort, schlägt hier) bleibt sie: genau das kann der Grund sein.
-    /// </summary>
-    internal static bool ReplyTransfers(string weakFen, string bestFen, string uci)
-    {
-        if (string.IsNullOrEmpty(uci) || uci.Length < 4) return false;
-        var from = uci[..2];
-        var to = uci.Substring(2, 2);
-        var piece = PieceAt(weakFen, from);
-        if (piece is null || piece != PieceAt(bestFen, from)) return false;
-        bool Captures(string fen)
-        {
-            var target = PieceAt(fen, to);
-            if (target is { } t) return char.IsUpper(t) != char.IsUpper(piece.Value);   // eigene Figur = Rochade (König schlägt Turm)
-            return char.ToLowerInvariant(piece.Value) == 'p' && from[0] != to[0];      // en passant
-        }
-        return !Captures(weakFen) || Captures(bestFen);
-    }
-
-    /// <summary>Figur auf einem Feld („e4") laut FEN, <c>null</c> = leer oder unlesbar.</summary>
-    internal static char? PieceAt(string fen, string square)
-    {
-        if (string.IsNullOrEmpty(fen) || square.Length != 2) return null;
-        var file = square[0] - 'a';
-        var rank = square[1] - '1';
-        if (file is < 0 or > 7 || rank is < 0 or > 7) return null;
-        var rows = fen.Split(' ')[0].Split('/');
-        if (rows.Length != 8) return null;
-        var col = 0;
-        foreach (var ch in rows[7 - rank])
-        {
-            if (char.IsDigit(ch)) { col += ch - '0'; continue; }
-            if (col == file) return ch;
-            col++;
-            if (col > file) return null;
-        }
-        return null;
-    }
-
-    /// <summary>Gerechnete Kandidaten, der beste (für die Seite am Zug) zuerst.</summary>
-    private static List<(MoveComparisonLine Line, double Score)> Ranked(MoveComparison c)
-    {
-        var moverWhite = FenFields.WhiteToMove(c.Fen);
-        return c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Candidate && l.State == MoveComparisonLineState.Done)
-            .Select(l => (Line: l, Ev: EvalOf(l.Fen, l.ResultJson)))
-            .Where(x => x.Ev is not null)
-            .Select(x => (x.Line, Score: moverWhite ? x.Ev!.Score : -x.Ev!.Score))
-            .OrderByDescending(x => x.Score).ThenBy(x => x.Line.Ordinal)
-            .ToList();
-    }
-
-    /// <summary>Gibt es etwas zu begründen (einen gerechneten schwächeren Kandidaten)?</summary>
-    internal static bool HasWeakerCandidates(MoveComparison c) => WeakerCandidates(c).Any();
-
-    private static IEnumerable<MoveComparisonLine> WeakerCandidates(MoveComparison c)
-        => c.BestUci is null ? [] : c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Candidate
-            && l.State == MoveComparisonLineState.Done && l.CandidateUci != c.BestUci);
-
     // ── Begründungen ───────────────────────────────────────────────────────────────────────────────
 
     private void StartExplaining(int id)
@@ -542,265 +418,16 @@ public sealed class MoveComparisonService
         });
     }
 
-    /// <summary>Je schwächerem Kandidaten eine Begründung schreiben lassen, dann fertig — auch wenn das Modell keine
-    /// brauchbare liefert (sonst stünde der Vergleich für immer auf „wird erklärt").</summary>
+    /// <summary>Je schwächerem Kandidaten eine Begründung schreiben lassen (<see cref="MoveComparisonExplainer"/>), dann fertig.</summary>
     public async Task ExplainAsync(int id, CancellationToken ct)
     {
         var c = await _db.MoveComparisons.Include(x => x.Lines).FirstOrDefaultAsync(x => x.Id == id, ct);
         if (c is null || c.Status != MoveComparisonStatus.Explaining) return;
-        var system = SystemPrompt(c.Language);
-        var pairs = WeakerCandidates(c).Select(w => (Line: w, Facts: PairFactsOf(c, w))).Where(p => p.Facts is not null).ToList();
-        // Vereinspartie ab dem Stichtag: erst Fable (eigener Kontext — der Abfrage-Kontext läuft nicht parallel), Rückfall lokal.
-        var fable = _fable != null && await _fable.AppliesAsync(_db, c, ct);
-        var fableTexts = new string?[pairs.Count];
-        if (fable)
-            for (var i = 0; i < pairs.Count; i++) fableTexts[i] = await _fable!.ExplainAsync(_db, pairs[i].Facts!, ct);
-        using var gate = new SemaphoreSlim(Parallel);
-        var texts = await Task.WhenAll(pairs.Select(async (p, i) =>
-        {
-            if (fableTexts[i] is { } done) return done;
-            if (!ExplanationsAvailable) return null;
-            await gate.WaitAsync(ct);
-            try { return await ExplainPairAsync(p.Facts!, system, ct); }
-            finally { gate.Release(); }
-        }));
-        for (var i = 0; i < pairs.Count; i++) pairs[i].Line.Explanation = texts[i];
-        c.Status = MoveComparisonStatus.Done;
-        var model = fableTexts.Any(t => t != null) ? _fable!.Model : _llm.TranslationModel;
-        c.Model = model is { Length: > 80 } m ? m[..80] : model;
-        c.UpdatedAt = DateTime.UtcNow;
-        c.FinishedAt = c.UpdatedAt;
-        await _db.SaveChangesAsync(ct);
-        _logger.LogInformation("Zugvergleich {Id}: {Saved} von {Total} Begruendungen", id, texts.Count(t => t != null), pairs.Count);
-    }
-
-    private async Task<string?> ExplainPairAsync(PairFacts facts, string system, CancellationToken ct)
-    {
-        var prompt = UserPrompt(facts);
-        for (var attempt = 0; attempt < 2; attempt++)
-        {
-            var json = await _llm.CompleteJsonAsync("move-comparison", system,
-                attempt == 0 ? prompt : prompt + "\n\nIMPORTANT: your previous answer mentioned a move that is not in the lines above. Mention ONLY moves that appear in the lines above.",
-                Schema, 1500, ct);
-            var text = TextOf(json);
-            if (text != null && GameMoveExplanationService.MentionsOnly(text, facts.AllowedMoves())) return text;
-            if (text != null) _logger.LogInformation("Zugvergleich: Begruendung verworfen (nennt einen fremden Zug): {Text}", text);
-        }
-        return null;
-    }
-
-    private static readonly JsonNode Schema = JsonNode.Parse(
-        """{"type":"object","properties":{"explanation":{"type":"string"}},"required":["explanation"],"additionalProperties":false}""")!;
-
-    private static string? TextOf(string? json)
-    {
-        if (json == null) return null;
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            var text = doc.RootElement.TryGetProperty("explanation", out var e) && e.ValueKind == JsonValueKind.String
-                ? e.GetString()?.Trim() : null;
-            return string.IsNullOrWhiteSpace(text) || text.Length > 1500 ? null : text;
-        }
-        catch (JsonException) { return null; }
-    }
-
-    // ── Fakten ─────────────────────────────────────────────────────────────────────────────────────
-
-    /// <summary>Eine Antwort nach dem besten Zug: geht sie, wie steht es dann (Sicht des Lesers), was antwortet er.</summary>
-    internal sealed record ReplyTest(string ReplySan, MoveComparisonLineState State, string? Eval, IReadOnlyList<string> Answer);
-
-    /// <summary>Alles, was das Modell für „warum ist <see cref="BestSan"/> besser als <see cref="WeakSan"/>" bekommt —
-    /// Bewertungen aus Sicht des LESERS (der Seite am Zug), Linien als SAN.</summary>
-    internal sealed record PairFacts(
-        string Fen, bool MoverWhite, int Depth,
-        string BestSan, string BestFen, string? BestEval, IReadOnlyList<Pv> BestReplies,
-        string WeakSan, string WeakFen, string? WeakEval, IReadOnlyList<Pv> WeakReplies,
-        IReadOnlyList<ReplyTest> Tests)
-    {
-        public IEnumerable<string> AllowedMoves() => new[] { BestSan, WeakSan }
-            .Concat(BestReplies.SelectMany(p => p.Line)).Concat(WeakReplies.SelectMany(p => p.Line))
-            .Concat(Tests.Select(t => t.ReplySan)).Concat(Tests.SelectMany(t => t.Answer));
-    }
-
-    private static PairFacts? PairFactsOf(MoveComparison c, MoveComparisonLine weak)
-    {
-        var best = c.Lines.FirstOrDefault(l => l.Kind == MoveComparisonLineKind.Candidate && l.CandidateUci == c.BestUci);
-        if (best is null) return null;
-        var moverWhite = FenFields.WhiteToMove(c.Fen);
-        var bestSan = SanOf(c.Fen, best.CandidateUci);
-        var weakSan = SanOf(c.Fen, weak.CandidateUci);
-        if (bestSan is null || weakSan is null) return null;
-        var weakReplies = Pvs(weak.Fen, weak.ResultJson);
-        var tests = c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Reply && l.CandidateUci == weak.CandidateUci
-                && l.State != MoveComparisonLineState.Skipped)
-            .OrderBy(l => l.Ordinal)
-            .Select(l =>
-            {
-                var san = weakReplies.FirstOrDefault(p => p.Uci == l.ReplyUci)?.San ?? l.ReplyUci ?? "?";
-                if (l.State == MoveComparisonLineState.Illegal) return new ReplyTest(san, l.State, null, []);
-                var pvs = Pvs(l.Fen, l.ResultJson);
-                var ev = EvalOf(l.Fen, l.ResultJson);
-                return new ReplyTest(san, l.State, ev is null ? null : MoverText(ev, moverWhite), pvs.FirstOrDefault()?.Line ?? []);
-            })
-            .ToList();
-        return new PairFacts(c.Fen, moverWhite, c.Depth,
-            bestSan, best.Fen, EvalOf(best.Fen, best.ResultJson) is { } be ? MoverText(be, moverWhite) : null, Pvs(best.Fen, best.ResultJson),
-            weakSan, weak.Fen, EvalOf(weak.Fen, weak.ResultJson) is { } we ? MoverText(we, moverWhite) : null, weakReplies,
-            tests);
-    }
-
-    internal static string SystemPrompt(string lang) =>
-        $"""
-        You are a friendly, precise chess coach. The reader is to move and considered two candidate moves; the engine
-        rates one of them higher. Explain WHY it is better. Write in {GameMoveExplanationService.LanguageName(lang)}, three
-        to five short sentences, at most 90 words:
-        1. What the opponent's best answer to the weaker move achieves — name it and take what it does from the
-           "Concretely" facts.
-        2. Why that answer does not work (as well) against the better move: either it is not possible at all, or the
-           reader's reply from the given line punishes it — name that reply and what it achieves, again from the facts.
-        3. What it means in plain words, from the evaluations (e.g. the better move keeps a clear advantage, the weaker one
-           only leads to an equal position). You may add the evaluations in pawns with a decimal POINT and one decimal, in
-           every language (e.g. +0.8 against -0.4).
-        If the facts say the two moves are almost equal, say that first and keep it short.
-        Never give the evaluation itself as the reason: "the engine rates it higher" or "it keeps the advantage" only
-        restate THAT it is better, not WHY. Claim an attack, a threat, a capture or a material gain ONLY if a "Concretely"
-        fact says so — if none does, describe what the moves of the lines do (which piece goes where), without inventing
-        tactics. Avoid empty phrases like "more active" or "better coordination" unless you say exactly what.
-        Use ONLY the facts and lines given — never calculate your own variations and never mention a move that is not in
-        the given lines. Name at most the first two moves of a line — never recite a whole engine line. Write moves
-        exactly as given, in English algebraic notation (e.g. Nf3, Bxh7+, O-O); every other word in
-        {GameMoveExplanationService.LanguageName(lang)}, no English words. Address the reader as "you", informally where the
-        language distinguishes (German "du", French "tu", …); the other side is "your opponent". Do not mention which
-        colour the reader plays. No centipawns, no percentages. Return the JSON object {"{"}"explanation": "..."{"}"}.
-        """;
-
-    internal static string UserPrompt(PairFacts f)
-    {
-        var you = f.MoverWhite ? "White" : "Black";
-        var number = MoveNumber(f.Fen) + (f.MoverWhite ? "." : "...");
-        var best = number + f.BestSan;
-        var weak = number + f.WeakSan;
-        var lines = new List<string>
-        {
-            $"Position (FEN): {f.Fen}",
-            $"The reader plays {you} and is to move. The engine compared the reader's candidate moves at depth {f.Depth}.",
-            $"Better move: {best} — evaluation from the reader's view afterwards: {f.BestEval ?? "?"}{Level(f.BestEval)}.",
-            $"Weaker move: {weak} — evaluation from the reader's view afterwards: {f.WeakEval ?? "?"}{Level(f.WeakEval)}.",
-        };
-        if (ExplanationFacts.Parse(f.BestEval) is { Mate: null } b && ExplanationFacts.Parse(f.WeakEval) is { Mate: null } w
-            && b.Level == w.Level && b.Pawns - w.Pawns < 0.3)
-            lines.Add($"The two moves are almost equal (difference {(b.Pawns - w.Pawns).ToString("0.0", CultureInfo.InvariantCulture)} pawns).");
-
-        if (f.WeakReplies.Count > 0)
-        {
-            lines.Add($"After {weak}, the opponent's best answers (evaluation from the reader's view, engine line):");
-            foreach (var p in f.WeakReplies)
-                lines.Add($"- {Numbered(f.WeakFen, [p.San])} ({p.MoverEval(f.MoverWhite)}): {Numbered(f.WeakFen, p.Line)}");
-            var top = f.WeakReplies[0].Line;
-            var facts = ExplanationFacts.FirstMoveAttacks(f.WeakFen, top)
-                .Concat(ExplanationFacts.LineEvents(f.Fen, top, gainerWhite: !f.MoverWhite, lead: f.WeakSan)).ToList();
-            if (facts.Count > 0)
-                lines.Add($"Concretely, after {weak} and the opponent's best answer line: {string.Join("; ", facts)}.");
-        }
-
-        if (f.Tests.Count > 0)
-        {
-            lines.Add($"The same answers against {best}:");
-            foreach (var t in f.Tests)
-            {
-                var reply = Numbered(f.BestFen, [t.ReplySan]);
-                if (t.State == MoveComparisonLineState.Illegal) { lines.Add($"- {reply}: not possible after {best}."); continue; }
-                if (t.State == MoveComparisonLineState.Failed || t.Eval is null) { lines.Add($"- {reply}: could not be calculated."); continue; }
-                var answer = t.Answer.Count > 0 && AfterMove(f.BestFen, t.ReplySan) is { } afterReply
-                    ? $" The reader's best reply, with the engine line: {Numbered(afterReply, t.Answer)}." : "";
-                lines.Add($"- {reply}: evaluation from the reader's view {t.Eval}{Level(t.Eval)}.{answer}");
-                if (t.Answer.Count > 0 && AfterMove(f.BestFen, t.ReplySan) is { } fenAfter)
-                {
-                    var facts = ExplanationFacts.FirstMoveAttacks(fenAfter, t.Answer)
-                        .Concat(ExplanationFacts.LineEvents(f.BestFen, t.Answer, gainerWhite: f.MoverWhite, lead: t.ReplySan)).ToList();
-                    if (facts.Count > 0) lines.Add($"  Concretely, after {best} {t.ReplySan} and the reader's reply line: {string.Join("; ", facts)}.");
-                }
-            }
-        }
-        if (f.BestReplies.Count > 0)
-        {
-            var p = f.BestReplies[0];
-            lines.Add($"The opponent's best answer to {best} itself: {Numbered(f.BestFen, [p.San])} ({p.MoverEval(f.MoverWhite)}): {Numbered(f.BestFen, p.Line)}");
-        }
-        lines.Add($"Reader: plays {you} — \"you\" is the reader, {(f.MoverWhite ? "Black" : "White")} is \"your opponent\".");
-        return string.Join('\n', lines);
-    }
-
-    private static string Level(string? moverEval)
-        => ExplanationFacts.Parse(moverEval) is { } e ? $" ({ExplanationFacts.LevelName(e)})" : "";
-
-    private static string MoveNumber(string fen)
-        => fen.Split(' ') is { Length: >= 6 } parts && int.TryParse(parts[5], out var n) ? n.ToString(CultureInfo.InvariantCulture) : "?";
-
-    private static string Numbered(string fen, IReadOnlyList<string> sans) => GameRecapService.Numbered(fen, sans);
-
-    // ── Zeile lesen ────────────────────────────────────────────────────────────────────────────────
-
-    /// <summary>Eine Linie der Engine: erster Zug (UCI + SAN), Bewertung aus WEISS-Sicht, Linie als SAN.</summary>
-    internal sealed record Pv(string Uci, string San, int? CpWhite, int? MateWhite, IReadOnlyList<string> Line)
-    {
-        public string MoverEval(bool moverWhite) => GameMistakes.EvalText(CpWhite, MateWhite, moverWhite);
-    }
-
-    /// <summary>Bewertung einer Stellung aus Weiß-Sicht: Rangwert (Matt ± <see cref="MateScore"/>) und die Rohwerte;
-    /// angezeigt wird sie über <see cref="ShownText(Ev, bool)"/> aus Sicht der Seite am Zug.</summary>
-    internal sealed record Ev(double Score, int? CpWhite, int? MateWhite, bool Checkmate);
-
-    internal static List<Pv> Pvs(string fen, string? resultJson)
-    {
-        var result = new List<Pv>();
-        if (string.IsNullOrEmpty(fen) || BrokerCandidates.Parse(resultJson, fen) is not { } cands) return result;
-        var sign = FenFields.WhiteToMove(fen) ? 1 : -1;   // Parse liefert die Sicht der Seite am Zug — zurück nach Weiß
-        foreach (var cand in cands)
-        {
-            var line = GameMistakes.LineSans(fen, cand.Pv is { Count: > 0 } pv ? pv : [cand.Uci], LinePlies);
-            if (line.Count == 0) continue;
-            result.Add(new Pv(cand.Uci, line[0], cand.Cp * sign, cand.Mate * sign, line));
-        }
-        return result;
-    }
-
-    internal static Ev? EvalOf(string fen, string? resultJson)
-    {
-        if (Terminal(fen) is { } t) return t;
-        var pv = Pvs(fen, resultJson).FirstOrDefault();
-        if (pv is null) return null;
-        if (pv.MateWhite is int m)
-            return new Ev(m > 0 ? MateScore - m : -MateScore - m, null, m, false);
-        var cp = pv.CpWhite ?? 0;
-        return new Ev(cp, cp, null, false);
-    }
-
-    /// <summary>Matt oder Patt auf dem Brett (keine legalen Züge) — dann gibt es nichts zu rechnen.</summary>
-    internal static Ev? Terminal(string fen)
-    {
-        if (string.IsNullOrEmpty(fen)) return null;
-        try
-        {
-            var board = ChessBoard.LoadFromFen(fen);
-            if (board.Moves().Length > 0) return null;
-            var white = FenFields.WhiteToMove(fen);
-            var mated = white ? board.WhiteKingChecked : board.BlackKingChecked;
-            if (!mated) return new Ev(0, 0, null, false);
-            return white ? new Ev(-MateScore, null, null, true) : new Ev(MateScore, null, null, true);
-        }
-        catch { return null; }
-    }
-
-    /// <summary>Aus Sicht des Lesers, wie „Warum war das ein Fehler?": „+1.35", „mate in 3", „gets mated in 2", „mate".</summary>
-    private static string MoverText(Ev e, bool moverWhite)
-    {
-        if (e.Checkmate) return (e.Score > 0) == moverWhite ? "mate" : "gets mated in 0";
-        return GameMistakes.EvalText(e.CpWhite, e.MateWhite, moverWhite);
+        await _explainer.ExplainAsync(_db, c, ct);
     }
 
     // ── DTO ────────────────────────────────────────────────────────────────────────────────────────
+
 
     private async Task<MoveComparisonDto> BuildDtoAsync(MoveComparison c, CancellationToken ct)
     {
@@ -810,151 +437,13 @@ public sealed class MoveComparisonService
             : await _db.AnalysisJobs.AsNoTracking().Where(j => jobIds.Contains(j.Id))
                 .Select(j => new { j.Id, j.ResultJson, j.ReachedDepth, j.CurrentDepth })
                 .ToDictionaryAsync(j => j.Id, j => (j.ResultJson, Math.Max(j.ReachedDepth, j.CurrentDepth)), ct);
-        (string? Json, int Depth) Current(MoveComparisonLine l)
-            => l.AnalysisJobId is int id && jobs.TryGetValue(id, out var j) ? j : (l.ResultJson, l.ReachedDepth);
-
-        var moverWhite = FenFields.WhiteToMove(c.Fen);
-        var best = c.Lines.FirstOrDefault(l => l.Kind == MoveComparisonLineKind.Candidate && l.CandidateUci == c.BestUci);
-        var candidates = c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Candidate)
-            .Select(l =>
-            {
-                var (json, depth) = Current(l);
-                var ev = EvalOf(l.Fen, json);
-                var replies = Pvs(l.Fen, json);
-                var tests = c.Lines.Where(r => r.Kind == MoveComparisonLineKind.Reply && r.CandidateUci == l.CandidateUci
-                        && r.State != MoveComparisonLineState.Skipped)   // ein anderer Zug — nicht zeigen (ReplyTransfers)
-                    .OrderBy(r => r.Ordinal)
-                    .Select(r =>
-                    {
-                        var (rj, rd) = Current(r);
-                        var san = replies.FirstOrDefault(p => p.Uci == r.ReplyUci)?.San ?? r.ReplyUci ?? "?";
-                        var answer = r.State == MoveComparisonLineState.Illegal ? [] : Pvs(r.Fen, rj).FirstOrDefault()?.Line ?? [];
-                        return new MoveComparisonTestDto(r.ReplyUci ?? "", san, StateText(r.State), rd,
-                            r.State == MoveComparisonLineState.Illegal ? null : ShownText(EvalOf(r.Fen, rj), moverWhite), answer);
-                    })
-                    .ToList();
-                var explanation = l.Explanation is null ? null : PieceLetters.Convert(l.Explanation, "en", c.Language);
-                return (Dto: new MoveComparisonCandidateDto(l.CandidateUci, SanOf(c.Fen, l.CandidateUci) ?? l.CandidateUci,
-                        StateText(l.State), depth, ShownText(ev, moverWhite), l.CandidateUci == c.BestUci,
-                        replies.Select(p => new MoveComparisonReplyDto(p.Uci, p.San, ShownText(p, moverWhite), p.Line)).ToList(), tests, explanation),
-                    Score: ev is null ? double.MinValue : moverWhite ? ev.Score : -ev.Score, l.Ordinal, Ranked: l.State == MoveComparisonLineState.Done);
-            })
-            .ToList();
-        // Erst gerechnet, dann nach Stärke — solange noch gerechnet wird, bleibt die Reihenfolge der Auswahl (sonst
-        // sprängen die Zeilen mit jedem Zwischenstand).
-        var ordered = c.BestUci is null
-            ? candidates.OrderBy(x => x.Ordinal)
-            : candidates.OrderByDescending(x => x.Ranked).ThenByDescending(x => x.Score).ThenBy(x => x.Ordinal);
-        return new MoveComparisonDto(c.Id, c.Fen, c.Title, c.Depth, StatusText(c.Status), c.Error, moverWhite, c.BestUci,
-            c.Language, ExplanationsAvailable, c.Lines.Count(l => l.State == MoveComparisonLineState.Pending), c.Lines.Count,
-            c.CreatedAt, c.FinishedAt, ordered.Select(x => x.Dto).ToList(), SourceText(c.Source));
+        return MoveComparisonView.Build(c, jobs, ExplanationsAvailable);
     }
-
-    // d3-rk-vergleich-vorzeichen-widerspruch: die ganze Seite zeigt die Bewertung aus Sicht der Seite am Zug der
-    // Ausgangsstellung — dieselbe Sicht wie die Begründung des Sprachmodells (MoverText). Vorher stand dort Weiß-Sicht,
-    // mit Schwarz am Zug also „-4.08" am besten Zug neben „+4,1" im Erklärtext.
-
-    /// <summary>Anzeige-Text aus Sicht des Lesers (Seite am Zug): „+4.08", „#3" (er setzt matt), „#-2" (er wird matt).</summary>
-    internal static string? ShownText(Ev? e, bool moverWhite)
-    {
-        if (e is null) return null;
-        if (e.Checkmate) return (e.Score > 0) == moverWhite ? "#0" : "#-0";
-        return Plain(e.CpWhite, e.MateWhite, moverWhite);
-    }
-
-    private static string ShownText(Pv p, bool moverWhite) => Plain(p.CpWhite, p.MateWhite, moverWhite);
-
-    private static string Plain(int? cpWhite, int? mateWhite, bool moverWhite)
-    {
-        var sign = moverWhite ? 1 : -1;
-        if (mateWhite is int m) return "#" + (m * sign).ToString(CultureInfo.InvariantCulture);
-        var v = (cpWhite ?? 0) * sign / 100.0;
-        return (v > 0 ? "+" : "") + v.ToString("0.00", CultureInfo.InvariantCulture);
-    }
-
-    private static string StatusText(MoveComparisonStatus s) => s switch
-    {
-        MoveComparisonStatus.Candidates => "candidates",
-        MoveComparisonStatus.Replies => "replies",
-        MoveComparisonStatus.Explaining => "explaining",
-        MoveComparisonStatus.Done => "done",
-        MoveComparisonStatus.Waiting => "waiting",
-        _ => "failed",
-    };
-
-    private static string SourceText(MoveComparisonSource? s) => s switch
-    {
-        MoveComparisonSource.Analysis => "analysis",
-        MoveComparisonSource.Mixed => "mixed",
-        _ => "engine",
-    };
-
-    private static string StateText(MoveComparisonLineState s) => s switch
-    {
-        MoveComparisonLineState.Pending => "pending",
-        MoveComparisonLineState.Done => "done",
-        MoveComparisonLineState.Illegal => "illegal",
-        _ => "failed",
-    };
 
     // ── Brett ──────────────────────────────────────────────────────────────────────────────────────
 
-    /// <summary>Ein legaler Zug zu einer UCI-Angabe — auch als König-schlägt-Turm (so schreibt der Broker Rochaden).</summary>
-    internal static Move? FindMove(Move[] legal, string? raw)
-    {
-        var uci = (raw ?? "").Trim().ToLowerInvariant();
-        if (uci.Length is < 4 or > 5) return null;
-        var move = Array.Find(legal, m => GamePlies.ToUci(m) == uci);
-        if (move != null) return move;
-        var castle = uci switch { "e1h1" => "e1g1", "e1a1" => "e1c1", "e8h8" => "e8g8", "e8a8" => "e8c8", _ => null };
-        return castle is null ? null : Array.Find(legal, m => GamePlies.ToUci(m) == castle && m.Parameter?.ShortStr is "O-O" or "O-O-O");
-    }
-
-    /// <summary>Die Stellung nach dem Zug, <c>null</c>, wenn er dort nicht geht.</summary>
-    internal static string? PlayUci(string fen, string uci)
-    {
-        try
-        {
-            var board = ChessBoard.LoadFromFen(fen);
-            var move = FindMove(board.Moves(), uci);
-            if (move is null) return null;
-            board.Move(move);
-            return board.ToFen();
-        }
-        catch { return null; }
-    }
-
-    private static string? AfterMove(string fen, string san)
-    {
-        try
-        {
-            var board = ChessBoard.LoadFromFen(fen);
-            var move = Array.Find(board.Moves(generateSan: true), m => m.San == san);
-            if (move is null) return null;
-            board.Move(move);
-            return board.ToFen();
-        }
-        catch { return null; }
-    }
-
-    internal static string? SanOf(string fen, string uci)
-    {
-        try
-        {
-            var board = ChessBoard.LoadFromFen(fen);
-            var legal = board.Moves(generateSan: true);
-            return FindMove(legal, uci)?.San;
-        }
-        catch { return null; }
-    }
-}
-
-/// <summary>Welche Vergleiche gerade erklärt werden — damit die Pumpe keinen zweiten Lauf startet. Nur Arbeitsspeicher:
-/// nach einem Neustart startet die Pumpe den Lauf neu.</summary>
-public sealed class MoveComparisonExplainJobs
-{
-    private readonly ConcurrentDictionary<int, byte> _running = new();
-    public bool TryStart(int id) => _running.TryAdd(id, 0);
-    public void Finish(int id) => _running.TryRemove(id, out _);
-    public bool IsRunning(int id) => _running.ContainsKey(id);
+    // Kurzwege für Aufrufer außerhalb des Bereichs (Games, League, Tactics) — die Logik liegt in MoveComparisonBoard.
+    internal static Move? FindMove(Move[] legal, string? raw) => MoveComparisonBoard.FindMove(legal, raw);
+    internal static string? PlayUci(string fen, string uci) => MoveComparisonBoard.PlayUci(fen, uci);
+    internal static string? SanOf(string fen, string uci) => MoveComparisonBoard.SanOf(fen, uci);
 }

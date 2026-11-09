@@ -98,9 +98,9 @@ public sealed class ClubMistakeComparisons
             var ordinal = 0;
             foreach (var uci in new[] { m.BestUci, m.PlayedUci })
             {
-                if (MoveComparisonService.PlayUci(m.FenBefore, uci) is not { } after) continue;
+                if (MoveComparisonBoard.PlayUci(m.FenBefore, uci) is not { } after) continue;
                 var line = new MoveComparisonLine { Kind = MoveComparisonLineKind.Candidate, CandidateUci = uci, Ordinal = ordinal++, Fen = after };
-                if (MoveComparisonService.Terminal(after) is not null) line.State = MoveComparisonLineState.Done;
+                if (MoveComparisonEval.Terminal(after) is not null) line.State = MoveComparisonLineState.Done;
                 c.Lines.Add(line);
             }
             if (c.Lines.Count < MoveComparisonService.MinCandidates) continue;
@@ -123,8 +123,8 @@ public sealed class ClubMistakeComparisons
     private static string MoveLabel(GameMistakeSelection.Selected m)
     {
         var number = m.Ply / 2 + 1;
-        var played = MoveComparisonService.SanOf(m.FenBefore, m.PlayedUci) ?? m.PlayedUci;
-        var best = MoveComparisonService.SanOf(m.FenBefore, m.BestUci) ?? m.BestUci;
+        var played = MoveComparisonBoard.SanOf(m.FenBefore, m.PlayedUci) ?? m.PlayedUci;
+        var best = MoveComparisonBoard.SanOf(m.FenBefore, m.BestUci) ?? m.BestUci;
         return $"{number}{(m.Ply % 2 == 0 ? "." : "...")}{played} / {best}";
     }
 
