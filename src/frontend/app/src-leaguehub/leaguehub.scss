@@ -665,6 +665,11 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .club-table td.side { white-space: nowrap; }
 .club-table td.opening { max-width: 0; width: 34%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .club-table td.card-cell { display: none; }
+/* 0.926.0: Zellen, die die Partie in RookHub öffnen — sehen aus wie Text, die Zugfolge kürzt weiter mit „…". */
+.cell-open { all: unset; cursor: pointer; text-decoration: underline dotted transparent; text-underline-offset: 3px; }
+.cell-open:hover { text-decoration-color: var(--ink); }
+.cell-open:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.club-table td.opening .cell-open { display: block; overflow: hidden; text-overflow: ellipsis; }
 /* Am Handy eine Karte je Partie (l-club-mobile): „Weiß – Schwarz", Ergebnis rechts, Jahr · Eröffnung grau, Aktionen
    rechtsbündig. Die Tabellenzellen weichen der einen Kartenzelle. */
 .gc-head { display: flex; align-items: baseline; gap: 10px; }

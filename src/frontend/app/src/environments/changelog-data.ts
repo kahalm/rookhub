@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.926.0", date: "2026-11-09", changes: [
+    { en: "LeagueHub club games: when signed in, clicking the result, move sequence, move count or analysis opens the game page in RookHub.",
+      de: "LeagueHub-Vereinspartien: Angemeldet öffnet ein Klick auf Ergebnis, Zugfolge, Züge oder Analyse die Partieseite in RookHub." },
+  ] },
   { version: "0.925.0", date: "2026-11-09", changes: [
     { en: "League share links: a club game opened without an account now also shows the mistake comparisons with explanations and rules of thumb, and the finished summary — read-only.",
       de: "Liga-Teilen-Links: Eine Vereinspartie zeigt auch ohne Konto die Fehler-Vergleiche mit Erklärungen und Merksätzen sowie die fertige Zusammenfassung — nur lesend." },

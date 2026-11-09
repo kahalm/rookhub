@@ -47,7 +47,7 @@ describe('ClubGamesPageComponent', () => {
         { provide: ClubApiService, useValue: { client: () => api } },
         { provide: LineupsApiService, useValue: lineups },
         { provide: LeagueApiService, useValue: jasmine.createSpyObj('LeagueApiService', ['card', 'pgn']) },
-        { provide: AuthService, useValue: { has: (p: string) => perms.has(p), currentUser: { username: 'patrik' } } },
+        { provide: AuthService, useValue: { has: (p: string) => perms.has(p), currentUser: { username: 'patrik' }, isLoggedIn: true } },
         { provide: ActivatedRoute, useValue: { snapshot: { data: routeData, queryParamMap: convertToParamMap(query) } } },
       ],
     });
@@ -127,6 +127,25 @@ describe('ClubGamesPageComponent', () => {
     const jump = spyOn(c.handoff, 'jumpToRookHub').and.resolveTo();
     c.openInRookHub(G(7));
     expect(jump).toHaveBeenCalledWith('club-games/7?ask=1');   // drüben „mit/ohne Engine“ (0.855.2)
+  }));
+
+  it('Ergebnis, Zugfolge und Züge öffnen angemeldet die RookHub-Partieseite; ohne RookHub bleibt es Text (0.926.0)', fakeAsync(() => {
+    create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('tr.game .cell-open')).toBeNull();
+    const c = fixture.componentInstance as any;
+    c.rookHub = 'https://rookhub.example';
+    c.items.update((v: unknown[]) => [...v]);
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    const jump = spyOn(c.handoff, 'jumpToRookHub').and.resolveTo();
+    const links = el.querySelectorAll<HTMLButtonElement>('tr.game > td:not(.card-cell) .cell-open');
+    expect(links.length).toBeGreaterThanOrEqual(3);
+    links.forEach(b => b.click());
+    expect(jump).toHaveBeenCalledTimes(links.length);
+    expect(jump.calls.first().args[0]).toMatch(/^club-games\/\d+\?ask=1$/);
   }));
 
   it('Ligaspieler ohne FIDE-ID: kein Bleistift, sondern „ohne FIDE-ID"; unbekannte Namen behalten ihn (0.594.0)', fakeAsync(() => {

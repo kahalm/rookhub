@@ -114,12 +114,12 @@ type Side = 'white' | 'black';
                   @for (k of sides; track k) {
                     <td class="side"><ng-container *ngTemplateOutlet="sideName; context: { $implicit: g, k: k }" /></td>
                   }
-                  <td class="num">{{ resultText(g.result) }}</td>
-                  <td class="hide-s small opening" [attr.title]="de(g.opening)">{{ de(g.opening) }}</td>
-                  <td class="num hide-s small">{{ moves(g) }}</td>
+                  <td class="num"><ng-container *ngTemplateOutlet="openCell; context: { $implicit: g, text: resultText(g.result) }" /></td>
+                  <td class="hide-s small opening" [attr.title]="de(g.opening)"><ng-container *ngTemplateOutlet="openCell; context: { $implicit: g, text: de(g.opening) }" /></td>
+                  <td class="num hide-s small"><ng-container *ngTemplateOutlet="openCell; context: { $implicit: g, text: moves(g) }" /></td>
                   @if (showAnalysis()) {
                     <td class="num small analysis-cell"><ng-container *ngTemplateOutlet="gameMarks; context: { $implicit: g }" />
-                      <span [attr.title]="analysisTitle(g)">{{ analysisText(g) }}</span></td>
+                      <span [attr.title]="analysisTitle(g)"><ng-container *ngTemplateOutlet="openCell; context: { $implicit: g, text: analysisText(g) }" /></span></td>
                   }
                   <td class="acts"><ng-container *ngTemplateOutlet="rowActs; context: { $implicit: g }" /></td>
                   <td class="card-cell">
@@ -127,7 +127,7 @@ type Side = 'white' | 'black';
                       <span class="gc-names"><span class="gc-side"><ng-container *ngTemplateOutlet="sideName; context: { $implicit: g, k: 'white' }" /></span>
                         <span class="gc-vs" aria-hidden="true">–</span>
                         <span class="gc-side"><ng-container *ngTemplateOutlet="sideName; context: { $implicit: g, k: 'black' }" /></span></span>
-                      <b class="gc-result">{{ resultText(g.result) }}</b>
+                      <b class="gc-result"><ng-container *ngTemplateOutlet="openCell; context: { $implicit: g, text: resultText(g.result) }" /></b>
                     </div>
                     <!-- z2-l-verein-karten-aktionen: Jahr · Eröffnung links, „Nachspielen" und ⋮ rechts in DERSELBEN Zeile. -->
                     <div class="gc-foot">
@@ -235,6 +235,11 @@ type Side = 'white' | 'black';
                 <span class="small muted" aria-hidden="true">✎</span></button> }
       @else { <span [attr.title]="nameOf(g, k)">{{ nameOf(g, k) }}</span> }
       @if (k === 'white' ? g.whiteElo : g.blackElo) { <span class="small"> {{ k === 'white' ? g.whiteElo : g.blackElo }}</span> }
+    </ng-template>
+    <!-- 0.926.0: Ergebnis, Zugfolge, Züge und Analyse öffnen angemeldet die Partieseite in RookHub. -->
+    <ng-template #openCell let-g let-text="text">
+      @if (canOpen() && text) { <button type="button" class="cell-open" (click)="openInRookHub(g)">{{ text }}</button> }
+      @else { {{ text }} }
     </ng-template>
     <!-- 0.852.0: Abzeichen „+n"/„!!n" (lh-game-badges) — in der Spalte „Analyse" bzw. in der Fußzeile der Handy-Karte;
          ein Klick klappt das Nachspielen auf und springt zur ersten markierten Stellung bzw. zum ersten „!!". -->
@@ -482,6 +487,8 @@ export class ClubGamesPageComponent implements OnInit {
   /** Die Partie auf RookHubs Partieseite (0.653.0, Wunsch 2026-10-04: „wie aus Meine Partien, mit unten den vorberechneten
    *  Werten zum schnellen Durchgehen") — Brett, Bewertungskurve, Zug-Klassen und Computer-Linien aus der Hintergrund-Analyse
    *  des Vereins. Sprung mit Einmal-Code, damit man drüben gleich angemeldet ist. Vorher: das Analysebrett mit dem PGN. */
+  canOpen(): boolean { return !!this.rookHub && this.auth.isLoggedIn; }
+
   openInRookHub(g: ClubGame): void {
     void this.handoff.jumpToRookHub(`club-games/${g.id}?ask=1`);   // drüben „mit/ohne Engine" (0.855.1)
   }
