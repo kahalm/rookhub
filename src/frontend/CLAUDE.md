@@ -19,6 +19,7 @@ stehen je Bereich in `rookhub/docs/frontend/` (Index unten); neue Feature-Doku d
 - Spielerkarte geteilt + Spielervorbereitung (`shared/player-card/`, `features/prep/`, 0.636.0–0.639.0) → `docs/frontend/spielerkarte-geteilt-spielervorbereitung.md`
 - Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0) → `docs/frontend/kurs-kommentare-mehrsprachig.md`
 - Routing → `docs/frontend/routing.md`
+- Neue Fassung erkennen + „Seite nicht gefunden“ prüft die Server-Version (`AppUpdateService`, U1) → `docs/frontend/app-update-und-nicht-gefunden.md`
 - Verzeichnisstruktur → `docs/frontend/verzeichnisstruktur.md`
 - Langer Kurs-Kommentar im Fenster (0.696.1) → `docs/frontend/langer-kurs-kommentar-im-fenster.md`
 - Partie-Rückblick: Bewertungskurve, Genauigkeit, Zug-Klassen (0.512.0, Sonderklassen 0.514.0) → `docs/frontend/partie-rueckblick.md`

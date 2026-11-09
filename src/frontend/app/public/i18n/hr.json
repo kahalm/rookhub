@@ -381,7 +381,11 @@
     "notFound": {
       "title": "Stranica nije pronađena",
       "text": "Na ovoj adresi nema (više) ničega — poveznica je možda zastarjela ili pogrešno upisana.",
-      "home": "Na početnu stranicu"
+      "home": "Na početnu stranicu",
+      "checking": "Provjeravam postoji li nova verzija …",
+      "updateText": "Dostupna je nova verzija ({{version}}). Ova stranica možda postoji tek ondje.",
+      "updateTextPlain": "Dostupna je nova verzija. Ova stranica možda postoji tek ondje.",
+      "update": "Ažuriraj"
     },
     "updateAvailable": "Dostupna je nova verzija.",
     "offlineQueueFull": "Izvanmrežna memorija je puna — novi rezultati se više ne mogu spremiti za kasniji prijenos.",

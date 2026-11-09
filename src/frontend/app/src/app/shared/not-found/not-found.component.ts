@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
+import { AppUpdateCheck, AppUpdateService } from '../../core/app-update.service';
 import { StaleRouteReloadService } from '../../core/stale-route-reload.service';
 
 /**
@@ -15,9 +16,15 @@ import { StaleRouteReloadService } from '../../core/stale-route-reload.service';
  * LeagueHubs '**'. „Zur Startseite“ ist „/“ — jede App weiß selbst, wohin das führt; die Hilfe nur, wo die App eine
  * eigene Hilfeseite hat (dieselbe Frage an die Routentabelle wie in der Fußzeile).
  *
- * Eine alte Fassung kennt neue Adressen nicht: Vor dem Text wird deshalb nach einer neueren Fassung gesucht und einmal
- * neu geladen (`StaleRouteReloadService`). Der Ladekreis verhindert, dass der Text dabei kurz aufblitzt; `checking` ist
- * ein Signal, weil das Ergebnis asynchron eintrifft und die OnPush-View sonst nicht neu gezeichnet würde.
+ * Eine alte Fassung kennt neue Adressen nicht. Bevor der Text erscheint, deshalb zwei Stufen, beide hinter dem Ladekreis
+ * (sonst blitzte der Text kurz auf):
+ * 1. Automatisch, einmal je Adresse und Tab (`StaleRouteReloadService`): neuere Fassung im Service Worker aktivieren und
+ *    dieselbe Adresse neu laden. Wird neu geladen, bleibt die Seite beim Ladekreis.
+ * 2. Fallback (U1), wenn Stufe 1 nicht neu lädt — kein Service Worker (LeagueHub), Adresse schon einmal neu geladen,
+ *    nichts zu aktivieren, Zeitgrenze, Fehler: `AppUpdateService.checkNow` vergleicht die Server-Version
+ *    (`/assets/version.json`). Ist sie neuer, Hinweis mit „Aktualisieren“ (aktiviert, falls vorhanden, und lädt DIESELBE
+ *    Adresse neu; ohne Service Worker ein einfacher Reload), sonst und bei jedem Fehler die normale Meldung.
+ * `phase` ist ein Signal, weil die Ergebnisse asynchron eintreffen und die OnPush-View sonst nicht neu gezeichnet würde.
  */
 @Component({
   selector: 'app-not-found',
@@ -25,16 +32,29 @@ import { StaleRouteReloadService } from '../../core/stale-route-reload.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, MatButtonModule, MatProgressSpinnerModule, TranslatePipe],
   template: `
-    @if (checking()) {
+    @if (phase() === 'checking') {
       <div class="nf-checking" role="status" [attr.aria-label]="'common.loading' | translate">
         <mat-spinner diameter="40"></mat-spinner>
       </div>
     } @else {
       <section class="not-found">
         <h1>{{ 'app.notFound.title' | translate }}</h1>
-        <p>{{ 'app.notFound.text' | translate }}</p>
+        @if (phase() === 'update') {
+          <p class="nf-update" role="status">
+            @if (update()?.version; as v) { {{ 'app.notFound.updateText' | translate: { version: v } }} }
+            @else { {{ 'app.notFound.updateTextPlain' | translate }} }
+          </p>
+        } @else {
+          <p>{{ 'app.notFound.text' | translate }}</p>
+        }
         <div class="nf-actions">
-          <a mat-flat-button routerLink="/">{{ 'app.notFound.home' | translate }}</a>
+          @if (phase() === 'update') {
+            <button mat-flat-button type="button" class="nf-reload" [disabled]="reloading()" (click)="reload()">
+              {{ 'app.notFound.update' | translate }}</button>
+            <a mat-button routerLink="/">{{ 'app.notFound.home' | translate }}</a>
+          } @else {
+            <a mat-flat-button routerLink="/">{{ 'app.notFound.home' | translate }}</a>
+          }
           @if (helpRoute) {
             <a mat-button routerLink="/help">{{ 'nav.help' | translate }}</a>
           }
@@ -55,16 +75,33 @@ export class NotFoundComponent {
   readonly helpRoute = inject(Router).config.some(r => r.path === 'help');
 
   private readonly staleRoute = inject(StaleRouteReloadService);
+  private readonly appUpdate = inject(AppUpdateService);
   private destroyed = false;
 
-  /** Sucht gerade nach einer neueren Fassung; bleibt `true`, wenn neu geladen wird. */
-  readonly checking = signal(this.staleRoute.canTry());
+  /** `checking`: Stufe 1 oder 2 läuft (bleibt so, wenn neu geladen wird); `update`: Server neuer; `none`: Text. */
+  readonly phase = signal<'checking' | 'update' | 'none'>('checking');
+  readonly update = signal<AppUpdateCheck | null>(null);
+  readonly reloading = signal(false);
 
   constructor() {
     inject(DestroyRef).onDestroy(() => (this.destroyed = true));
-    if (!this.checking()) return;
-    void this.staleRoute.reloadIfNewer(() => this.destroyed).then(reloading => {
-      if (!reloading) this.checking.set(false);
-    });
+    void this.run();
+  }
+
+  private async run(): Promise<void> {
+    if (this.staleRoute.canTry() && await this.staleRoute.reloadIfNewer(() => this.destroyed)) return;
+    if (this.destroyed) return;
+    try {
+      const r = await this.appUpdate.checkNow();
+      this.update.set(r);
+      this.phase.set(r.available ? 'update' : 'none');
+    } catch {
+      this.phase.set('none');
+    }
+  }
+
+  reload(): void {
+    this.reloading.set(true);
+    void this.appUpdate.activateAndReload();
   }
 }

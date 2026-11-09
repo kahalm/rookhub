@@ -115,3 +115,57 @@ describe('AppUpdateService', () => {
     expect(shown.length).withContext('Telemetrie gehoert nicht auf den Bildschirm').toBe(0);
   });
 });
+
+/** U1: sofortige Prüfung für die Nicht-gefunden-Seite — Service Worker und Server-Changelog. */
+describe('AppUpdateService.checkNow / activateAndReload (U1)', () => {
+  function make(sw: { isEnabled: boolean; found?: boolean } | null, server: string | null, own = '0.935.0') {
+    const activateUpdate = jasmine.createSpy('activateUpdate').and.resolveTo(true);
+    const providers: unknown[] = [
+      { provide: SnackbarService, useValue: { show: () => ({ onAction: () => new Subject() }) } },
+      { provide: TranslateService, useValue: { instant: (k: string) => k } },
+      { provide: ClientLogService, useValue: { report: () => {} } },
+    ];
+    if (sw) providers.push({ provide: SwUpdate, useValue: {
+      isEnabled: sw.isEnabled, versionUpdates: new Subject(), unrecoverable: new Subject(),
+      checkForUpdate: () => Promise.resolve(!!sw.found), activateUpdate,
+    } });
+    TestBed.configureTestingModule({ providers: providers as never[] });
+    const s = TestBed.inject(AppUpdateService) as any;
+    s.currentVersion = own;
+    s.serverVersion = () => Promise.resolve(server);
+    s.replaceLocation = jasmine.createSpy('replaceLocation');
+    s.reloadApp = jasmine.createSpy('reloadApp');
+    return { s: s as AppUpdateService & { replaceLocation: jasmine.Spy; reloadApp: jasmine.Spy }, activateUpdate };
+  }
+
+  it('Server-Changelog neuer als die eigene Fassung → verfügbar mit Nummer', async () => {
+    const { s } = make({ isEnabled: true, found: false }, '0.936.0');
+    expect(await s.checkNow()).toEqual({ available: true, version: '0.936.0' });
+  });
+
+  it('gleiche Fassung, Service Worker findet nichts → nicht verfügbar', async () => {
+    const { s } = make({ isEnabled: true, found: false }, '0.935.0');
+    expect(await s.checkNow()).toEqual({ available: false, version: null });
+  });
+
+  it('Service Worker findet eine Fassung, Changelog unlesbar → verfügbar ohne Nummer', async () => {
+    const { s } = make({ isEnabled: true, found: true }, null);
+    expect(await s.checkNow()).toEqual({ available: true, version: null });
+  });
+
+  it('ohne Service-Worker-Anbieter (LeagueHub): nur das Changelog zählt, Aktualisieren = harter Reload', async () => {
+    const { s } = make(null, '0.936.0');
+    expect(await s.checkNow()).toEqual({ available: true, version: '0.936.0' });
+    await s.activateAndReload();
+    expect(s.reloadApp).toHaveBeenCalledTimes(1);
+    expect(s.replaceLocation).not.toHaveBeenCalled();
+  });
+
+  it('mit Service Worker: erst aktivieren, dann dieselbe Adresse frisch laden', async () => {
+    const { s, activateUpdate } = make({ isEnabled: true, found: true }, '0.936.0');
+    await s.activateAndReload();
+    expect(activateUpdate).toHaveBeenCalledTimes(1);
+    expect(s.replaceLocation).toHaveBeenCalledOnceWith(document.location.href);
+    expect(s.reloadApp).not.toHaveBeenCalled();
+  });
+});

@@ -381,7 +381,11 @@
     "notFound": {
       "title": "Seite nicht gefunden",
       "text": "Unter dieser Adresse gibt es nichts (mehr) – vielleicht ist der Link veraltet oder vertippt.",
-      "home": "Zur Startseite"
+      "home": "Zur Startseite",
+      "checking": "Prüfe auf neue Version …",
+      "updateText": "Neue Version verfügbar ({{version}}). Diese Seite gibt es vielleicht erst dort.",
+      "updateTextPlain": "Eine neue Version ist verfügbar. Diese Seite gibt es vielleicht erst dort.",
+      "update": "Aktualisieren"
     },
     "updateAvailable": "Eine neue Version ist verfügbar.",
     "offlineQueueFull": "Der Offline-Speicher ist voll — neue Ergebnisse können nicht mehr für die spätere Übertragung gemerkt werden.",

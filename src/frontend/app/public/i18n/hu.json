@@ -150,7 +150,11 @@
     "notFound": {
       "title": "Az oldal nem található",
       "text": "Ezen a címen nincs (már) semmi — lehet, hogy a hivatkozás elavult vagy elgépelték.",
-      "home": "Ugrás a kezdőlapra"
+      "home": "Ugrás a kezdőlapra",
+      "checking": "Új verzió keresése …",
+      "updateText": "Új verzió érhető el ({{version}}). Lehet, hogy ez az oldal csak ott létezik.",
+      "updateTextPlain": "Új verzió érhető el. Lehet, hogy ez az oldal csak ott létezik.",
+      "update": "Frissítés"
     },
     "updateAvailable": "Új verzió érhető el.",
     "reload": "Újratöltés",

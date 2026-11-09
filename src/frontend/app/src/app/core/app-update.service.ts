@@ -7,6 +7,8 @@ import { TranslateService } from '@ngx-translate/core';
 import { filter, interval } from 'rxjs';
 import { ClientLogService } from './client-log.service';
 import { SnackbarService } from './snackbar.service';
+import { APP_VERSION } from '../../environments/changelog';
+import { fetchServerVersion, isNewerVersion } from './app-version-check';
 
 /**
  * „Es gibt eine neue Fassung" — der Umgang mit dem Service Worker, fuer BEIDE Oberflaechen.
@@ -28,9 +30,17 @@ import { SnackbarService } from './snackbar.service';
  *       Worker prueft von sich aus nur beim (Neu-)Start.</li>
  * </ol>
  */
+/** Ergebnis von {@link AppUpdateService.checkNow}: gibt es eine neuere Fassung, und wenn bekannt, welche. */
+export interface AppUpdateCheck {
+  available: boolean;
+  version: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AppUpdateService {
-  private readonly swUpdate = inject(SwUpdate);
+  // Optional: LeagueHub (und ClubHub) registrieren keinen Service Worker, nutzen aber die geteilte Nicht-gefunden-Seite,
+  // die checkNow() ruft (U1). Ohne Anbieter ist der Dienst dort einfach „ohne Service Worker“.
+  private readonly swUpdate = inject(SwUpdate, { optional: true });
   private readonly clientLog = inject(ClientLogService);
   private readonly snackbar = inject(SnackbarService);
   private readonly translate = inject(TranslateService);
@@ -52,9 +62,10 @@ export class AppUpdateService {
    * auch der Horcher am Sichtbarkeitswechsel, der sonst je Testlauf einen weiteren hinterliesse.
    */
   start(destroyRef: DestroyRef): void {
-    if (!this.swUpdate.isEnabled) return;
+    if (!this.swUpdate?.isEnabled) return;
+    const swUpdate = this.swUpdate;
 
-    this.swUpdate.versionUpdates
+    swUpdate.versionUpdates
       .pipe(filter((e): e is VersionReadyEvent => e.type === 'VERSION_READY'),
             takeUntilDestroyed(destroyRef))
       .subscribe(() => {
@@ -65,13 +76,13 @@ export class AppUpdateService {
         ref.onAction().subscribe(() => this.reloadApp());
       });
 
-    this.swUpdate.versionUpdates
+    swUpdate.versionUpdates
       .pipe(filter((e): e is VersionInstallationFailedEvent =>
               e.type === 'VERSION_INSTALLATION_FAILED'),
             takeUntilDestroyed(destroyRef))
       .subscribe(e => this.clientLog.report('sw_install_failed', e.error));
 
-    this.swUpdate.unrecoverable
+    swUpdate.unrecoverable
       .pipe(takeUntilDestroyed(destroyRef))
       .subscribe(ev => { this.recovery = this.recoverFromBrokenServiceWorker(ev.reason); });
 
@@ -124,8 +135,41 @@ export class AppUpdateService {
   }
 
   private checkForUpdate(): void {
-    if (!this.swUpdate.isEnabled) return;
+    if (!this.swUpdate?.isEnabled) return;
     this.swUpdate.checkForUpdate()
       .catch(() => { /* SW noch nicht bereit oder offline → ignorieren */ });
   }
+
+  /**
+   * SOFORT nachsehen, ob der Server eine neuere Fassung hat (U1: die Nicht-gefunden-Seite — eine alte, im Service Worker
+   * gehaltene Fassung kennt neue Routen nicht; die 15-Minuten-Prüfung käme zu spät). Erst `SwUpdate.checkForUpdate()`,
+   * dann (auch ohne Service Worker) die Version des Server-Changelogs gegen {@link APP_VERSION}. Fehler → „nichts“.
+   */
+  async checkNow(): Promise<AppUpdateCheck> {
+    let swFound = false;
+    if (this.swUpdate?.isEnabled) {
+      try { swFound = await this.swUpdate.checkForUpdate(); } catch { /* offline / SW nicht bereit */ }
+    }
+    const server = await this.serverVersion();
+    if (server && isNewerVersion(server, this.currentVersion)) return { available: true, version: server };
+    return { available: swFound, version: null };
+  }
+
+  /** „Aktualisieren“ (U1): bereitliegende Fassung aktivieren und dieselbe Adresse frisch laden — ohne Service Worker
+   *  ein harter Reload. */
+  async activateAndReload(): Promise<void> {
+    if (this.swUpdate?.isEnabled) {
+      try { await this.swUpdate.activateUpdate(); } catch { /* nichts bereit → der Reload holt sie */ }
+      this.replaceLocation(document.location.href);
+      return;
+    }
+    this.reloadApp();
+  }
+
+  /** Eigene Fassung — als Feld, damit Tests sie festlegen können. */
+  protected currentVersion = APP_VERSION;
+
+  /** In Methoden gekapselt, damit Tests Netz und Navigation abfangen können. */
+  protected serverVersion(): Promise<string | null> { return fetchServerVersion(); }
+  protected replaceLocation(url: string): void { document.location.replace(url); }
 }

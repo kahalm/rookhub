@@ -381,7 +381,11 @@
     "notFound": {
       "title": "Page not found",
       "text": "There is nothing (any longer) at this address — the link may be outdated or mistyped.",
-      "home": "Go to the start page"
+      "home": "Go to the start page",
+      "checking": "Checking for a new version …",
+      "updateText": "A new version is available ({{version}}). This page may only exist there.",
+      "updateTextPlain": "A new version is available. This page may only exist there.",
+      "update": "Update"
     },
     "updateAvailable": "A new version is available.",
     "offlineQueueFull": "Offline storage is full — new results can no longer be saved for later upload.",
