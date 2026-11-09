@@ -67,7 +67,12 @@
       </span>
     }
 
-    @if (pending() > 0) {
+    @if (pending() > 0 && pollStopped()) {
+      <span class="pending pending-stopped">
+        {{ 'turnier.history.pendingStopped' | translate: { count: pending() } }}
+        <button mat-button type="button" (click)="retry()">{{ 'common.retry' | translate }}</button>
+      </span>
+    } @else if (pending() > 0) {
       <span class="pending">
         <mat-icon inline>hourglass_top</mat-icon>
         {{ 'turnier.history.pending' | translate: { count: pending() } }}

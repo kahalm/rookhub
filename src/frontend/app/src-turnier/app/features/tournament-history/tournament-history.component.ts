@@ -369,6 +369,10 @@ export class TournamentHistoryComponent implements OnInit {
     this.loading.set(this.loaded()[key] === undefined);
     this.failed.set(false);
     this.pollSubscription?.unsubscribe();
+    // Nachfragen je Reiter zählen (Codereview F4-012): hatte ein Reiter den Deckel verbraucht, fragte ein danach
+    // geöffneter gar nicht mehr nach.
+    this.polls = 0;
+    this.pollStopped.set(false);
 
     const generation = ++this.generation;
     this.fetch(key).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -422,9 +426,13 @@ export class TournamentHistoryComponent implements OnInit {
 
   private polls = 0;
 
+  /** Es fehlen noch Ergebnisse, aber es wird nicht mehr nachgefragt (Deckel erreicht oder Nachfrage gescheitert) — die
+   *  Kopfzeile sagt das samt „Wiederholen“, statt für immer „hole N Ergebnisse…“ zu zeigen (F4-012). */
+  readonly pollStopped = signal(false);
+
   private schedulePoll(generation: number, key: string): void {
     if (this.pending() === 0) { this.polls = 0; return; }
-    if (this.polls >= TournamentHistoryComponent.MaxPolls) return;
+    if (this.polls >= TournamentHistoryComponent.MaxPolls) { this.pollStopped.set(true); return; }
 
     this.polls++;
     this.pollSubscription = timer(TournamentHistoryComponent.PollMs)
@@ -439,7 +447,7 @@ export class TournamentHistoryComponent implements OnInit {
               this.remember(key, history);
               this.schedulePoll(generation, key);
             },
-            error: () => { /* still: der naechste Versuch kommt beim naechsten Laden */ },
+            error: () => { if (generation === this.generation) this.pollStopped.set(true); },
           });
       });
   }

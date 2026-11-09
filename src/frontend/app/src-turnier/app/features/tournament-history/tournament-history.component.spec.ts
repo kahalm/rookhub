@@ -212,27 +212,68 @@ describe('TournamentHistoryComponent', () => {
    * Der Server holt die Ergebnisse einzeln im Hintergrund. Ohne Nachfragen saehe man eine halbe
    * Tabelle und hielte sie fuer endgueltig.
    */
+  // F4-012: Uhr gestellt statt echter 4,2-s-Wartezeiten.
   it('fragt nach, solange Ergebnisse fehlen', async () => {
     const req = await setup();
-    req.flush([history({ pending: 3 })]);
+    jasmine.clock().install();
+    try {
+      req.flush([history({ pending: 3 })]);
+      expect(component.pending()).toBe(3);
 
-    expect(component.pending()).toBe(3);
+      // Der Poll laeuft entprellt — nach 4 s muss eine zweite Anfrage vorliegen.
+      jasmine.clock().tick(4000);
+      http.expectOne(r => r.url === '/api/tournament-history').flush([history({ pending: 0 })]);
 
-    // Der Poll laeuft entprellt — abwarten, dann muss eine zweite Anfrage vorliegen.
-    await new Promise(resolve => setTimeout(resolve, 4200));
-    http.expectOne(r => r.url === '/api/tournament-history').flush([history({ pending: 0 })]);
-
-    expect(component.pending()).toBe(0);
-    http.verify();
+      expect(component.pending()).toBe(0);
+      http.verify();
+    } finally { jasmine.clock().uninstall(); }
   });
 
   it('fragt nicht nach, wenn alles da ist', async () => {
     const req = await setup();
-    req.flush([history({ pending: 0 })]);
+    jasmine.clock().install();
+    try {
+      req.flush([history({ pending: 0 })]);
+      jasmine.clock().tick(4000);
+      http.verify();   // keine zweite Anfrage
+    } finally { jasmine.clock().uninstall(); }
+  });
 
-    await new Promise(resolve => setTimeout(resolve, 4200));
+  /** Codereview F4-012: der Deckel galt für alle Reiter zusammen und endete still. */
+  it('Nachfrage-Zähler je Reiter; nach dem Deckel sagt die Kopfzeile, dass nicht mehr nachgefragt wird', async () => {
+    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true, entries: 1 }]);
+    jasmine.clock().install();
+    try {
+      first.flush([history({ pending: 3 })]);
+      for (let i = 0; i < 15; i++) {
+        jasmine.clock().tick(4000);
+        http.expectOne(r => r.url === '/api/tournament-history').flush([history({ pending: 3 })]);
+      }
+      jasmine.clock().tick(4000);
+      http.expectNone(r => r.url === '/api/tournament-history');
+      expect(component.pollStopped()).toBeTrue();
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.pending-stopped')?.textContent)
+        .toContain('turnier.history.pendingStopped');
 
-    http.verify();   // keine zweite Anfrage
+      component.onTabChange(1);                                      // anderer Reiter, auch dort fehlt noch etwas
+      http.expectOne(r => r.url === '/api/tournament-history').flush([history({ userId: 7, displayName: 'Freund', pending: 2 })]);
+      expect(component.pollStopped()).toBeFalse();
+      jasmine.clock().tick(4000);
+      http.expectOne(r => r.url === '/api/tournament-history').flush([history({ userId: 7, displayName: 'Freund', pending: 0 })]);
+      http.verify();
+    } finally { jasmine.clock().uninstall(); }
+  });
+
+  it('eine gescheiterte Nachfrage endet nicht still', async () => {
+    const req = await setup();
+    jasmine.clock().install();
+    try {
+      req.flush([history({ pending: 2 })]);
+      jasmine.clock().tick(4000);
+      http.expectOne(r => r.url === '/api/tournament-history').flush('x', { status: 503, statusText: 'down' });
+      expect(component.pollStopped()).toBeTrue();
+    } finally { jasmine.clock().uninstall(); }
   });
 
   /**
