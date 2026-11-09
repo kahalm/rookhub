@@ -40,21 +40,37 @@ internal sealed class GameAnalysisPump
     /// <summary>Alle unfertigen Partien einen Schritt weiterbringen (Ergebnisse einsammeln, nachfüttern).</summary>
     internal async Task<int> PumpAllAsync(CancellationToken ct = default)
     {
-        var ids = await _db.GameAnalyses
+        var rows = await _db.GameAnalyses
             .Where(g => g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running
                 || (g.Status == GameAnalysisStatus.Done && g.RefineDepth != null && g.RefinedAt == null))
             .OrderBy(g => g.CreatedAt)
-            .Select(g => g.Id)
+            .Select(g => new { g.Id, g.UserId })
             .ToListAsync(ct);
         var moved = 0;
-        foreach (var id in ids)
+        // Summen je Konto einmal je Takt (R4-020); jede Änderung an einer Partie verwirft den Stand ihres Kontos.
+        _turns.BeginTick();
+        try
         {
-            ct.ThrowIfCancellationRequested();
-            // Je Partie abschirmen: eine einzige stolpernde Analyse darf nicht den ganzen Durchlauf
-            // abbrechen — sonst kaeme keine der dahinterliegenden Partien je an die Reihe.
-            try { if (await PumpOneAsync(id, ct)) moved++; }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-            catch (Exception ex) { _logger.LogWarning(ex, "GameAnalysis {Id}: Durchlauf uebersprungen", id); }
+            foreach (var row in rows)
+            {
+                ct.ThrowIfCancellationRequested();
+                // Je Partie abschirmen: eine einzige stolpernde Analyse darf nicht den ganzen Durchlauf
+                // abbrechen — sonst kaeme keine der dahinterliegenden Partien je an die Reihe.
+                try
+                {
+                    if (await PumpOneAsync(row.Id, ct)) { moved++; _turns.Invalidate(row.UserId); }
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+                catch (Exception ex)
+                {
+                    _turns.Invalidate(row.UserId);
+                    _logger.LogWarning(ex, "GameAnalysis {Id}: Durchlauf uebersprungen", row.Id);
+                }
+            }
+        }
+        finally
+        {
+            _turns.EndTick();
         }
         return moved;
     }

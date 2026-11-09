@@ -26,6 +26,31 @@ internal sealed class GameAnalysisTurns
         _quiet = quiet;
     }
 
+    // ── Takt-Speicher (R4-020): je Pumpen-Takt die offenen Vertiefungen und die offenen Stellungen des ersten Durchgangs
+    // EINMAL je Konto lesen statt für jede wartende Vertiefung erneut (bei N Vertiefungen des Haus-Kontos N Summen über
+    // ~N Analysen, quadratisch). Was sich im Takt ändert, verwirft den Stand dieses Kontos (Invalidate) — die Entscheidung
+    // bleibt dieselbe wie mit frischen Abfragen.
+    private Dictionary<int, List<RefineRow>>? _refining;
+    private Dictionary<int, int>? _firstPassOpen;
+
+    private sealed record RefineRow(int Id, GameAnalysisOrigin Origin, DateTime CreatedAt, int Unrefined);
+
+    /// <summary>Für Tests: wie oft die offenen Vertiefungen aus der Datenbank gelesen wurden.</summary>
+    internal int RefineSumQueries { get; private set; }
+
+    /// <summary>Takt beginnt: ab jetzt werden die Summen je Konto gemerkt.</summary>
+    internal void BeginTick() => (_refining, _firstPassOpen) = (new(), new());
+
+    /// <summary>Takt endet: nichts mehr merken.</summary>
+    internal void EndTick() => (_refining, _firstPassOpen) = (null, null);
+
+    /// <summary>Eine Analyse des Kontos hat sich im Takt verändert (Ergebnisse übernommen, fertig vertieft).</summary>
+    internal void Invalidate(int userId)
+    {
+        _refining?.Remove(userId);
+        _firstPassOpen?.Remove(userId);
+    }
+
     /// <summary>
     /// Ist DIESE Partie gerade dran? Je Nutzer wird immer nur EINE Partie weitergefuettert: die
     /// aelteste, die noch ungerechnete Stellungen hat.
@@ -77,11 +102,16 @@ internal sealed class GameAnalysisTurns
     }
 
     /// <summary>Offene Stellungen des ERSTEN Durchgangs ueber alle unfertigen Partien des Nutzers.</summary>
-    private Task<int> OpenFirstPassPliesAsync(int userId, CancellationToken ct)
-        => _db.GameAnalyses
+    private async Task<int> OpenFirstPassPliesAsync(int userId, CancellationToken ct)
+    {
+        if (_firstPassOpen is not null && _firstPassOpen.TryGetValue(userId, out var known)) return known;
+        var open = await _db.GameAnalyses
             .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club && g.Origin != GameAnalysisOrigin.League
                 && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running))
             .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
+        _firstPassOpen?.TryAdd(userId, open);
+        return open;
+    }
 
     /// <summary>Wie viele Suchen fuer diese Partie nebeneinander laufen koennen: die Hintergrund-Engines
     /// des ENGINE-BESITZERS (Haus-Engine: das Haus-Konto), bei fest gewaehlter Engine genau eine.
@@ -114,6 +144,10 @@ internal sealed class GameAnalysisTurns
             _quiet, _quiet?.Now ?? DateTimeOffset.UtcNow, ct);
     }
 
+    /// <summary>Für Tests: die Summe der noch nicht vertieften Stellungen, die vor <paramref name="analysis"/> dran sind.</summary>
+    internal Task<int> UnrefinedAheadForTestAsync(GameAnalysis analysis, CancellationToken ct = default)
+        => UnrefinedPliesOfOlderGamesAsync(analysis, ct);
+
     /// <summary>
     /// Ist diese Partie mit der Vertiefung dran? Erst wenn KEINE Partie des Nutzers mehr im ersten Durchgang steckt —
     /// der schnelle Durchgang einer neuen Partie geht immer vor —, und dann die aelteste, die noch vertieft wird
@@ -145,8 +179,32 @@ internal sealed class GameAnalysisTurns
     /// zaehlt fuer sie NICHT mit, sonst stuende die eigene Partie des Haus-Engine-Kontos hinter Hunderten nachgetragener
     /// Vereinspartien. Eine Stapel-Partie wartet dagegen auf ALLE offenen eigenen Vertiefungen und unter dem Stapel auf
     /// die JUENGEREN: die Partien vom letzten Liga-Wochenende sollen nicht hinter dem Altbestand stehen.</para></summary>
-    private Task<int> UnrefinedPliesOfOlderGamesAsync(GameAnalysis analysis, CancellationToken ct)
+    private async Task<int> UnrefinedPliesOfOlderGamesAsync(GameAnalysis analysis, CancellationToken ct)
     {
+        if (_refining is null) return await UnrefinedPliesOfOlderGamesQueryAsync(analysis, ct);
+        if (!_refining.TryGetValue(analysis.UserId, out var rows))
+        {
+            RefineSumQueries++;
+            rows = await _db.GameAnalyses.AsNoTracking()
+                .Where(g => g.UserId == analysis.UserId && g.Status == GameAnalysisStatus.Done && g.RefineDepth != null && g.RefinedAt == null)
+                .Select(g => new RefineRow(g.Id, g.Origin, g.CreatedAt, g.Positions.Count(p => !p.Refined)))
+                .ToListAsync(ct);
+            _refining[analysis.UserId] = rows;
+        }
+        // Dieselbe Auswahl wie in der Abfrage unten, nur im Speicher.
+        static bool OwnLane(GameAnalysisOrigin o) =>
+            o != GameAnalysisOrigin.Library && o != GameAnalysisOrigin.Club && o != GameAnalysisOrigin.League;
+        bool Before(RefineRow g) => g.CreatedAt < analysis.CreatedAt || (g.CreatedAt == analysis.CreatedAt && g.Id < analysis.Id);
+        bool After(RefineRow g) => g.CreatedAt > analysis.CreatedAt || (g.CreatedAt == analysis.CreatedAt && g.Id > analysis.Id);
+        var batch = GameAnalysisOrigins.IsBatch(analysis.Origin);
+        return rows.Where(g => g.Id != analysis.Id && (batch ? OwnLane(g.Origin) || After(g) : OwnLane(g.Origin) && Before(g)))
+            .Sum(g => g.Unrefined);
+    }
+
+    /// <summary>Die Abfrage-Fassung von <see cref="UnrefinedPliesOfOlderGamesAsync"/> (außerhalb eines Pumpen-Takts).</summary>
+    private Task<int> UnrefinedPliesOfOlderGamesQueryAsync(GameAnalysis analysis, CancellationToken ct)
+    {
+        RefineSumQueries++;
         var refining = _db.GameAnalyses.Where(g => g.UserId == analysis.UserId && g.Id != analysis.Id
             && g.Status == GameAnalysisStatus.Done && g.RefineDepth != null && g.RefinedAt == null);
         var ahead = GameAnalysisOrigins.IsBatch(analysis.Origin)
