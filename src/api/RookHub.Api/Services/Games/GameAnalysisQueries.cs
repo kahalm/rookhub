@@ -288,11 +288,10 @@ internal sealed class GameAnalysisQueries
     {
         if (ucis is null || ucis.Count == 0 || ucis.Count > GameAnalysisService.MaxSameGamePlies) return [];
         var wanted = ucis.Select(u => (u ?? string.Empty).Trim().ToLowerInvariant()).ToList();
-        var candidates = await _db.GameAnalyses.AsNoTracking()
-            // Dazu die zweite Engine der Vereinspartien (0.684.0) für alle, die Vereinspartien sehen — sie gehört dem
-            // Engine-Konto, gezeigt wird sie wie die Stockfish-Analyse der Partie allen im Verein.
-            .Where(a => (a.UserId == userId || (clubReader && a.Origin == GameAnalysisOrigin.Club && a.EngineId != null))
-                && a.PlyCount == wanted.Count && a.Status != GameAnalysisStatus.Failed)
+        // Dazu die zweite Engine der Vereinspartien (0.684.0) für alle, die Vereinspartien sehen — sie gehört dem
+        // Engine-Konto, gezeigt wird sie wie die Stockfish-Analyse der Partie allen im Verein (nur DEINER Vereine, R4-017).
+        var candidates = await (await ReadableAsync(userId, clubReader, ct))
+            .Where(a => a.PlyCount == wanted.Count && a.Status != GameAnalysisStatus.Failed)
             .Select(a => new { a.Id, a.UserId, a.Title, a.EngineId, a.TargetNodes, a.TargetDepth, a.MultiPv, a.Status, a.PlyCount, a.CreatedAt })
             .ToListAsync(ct);
         if (candidates.Count == 0) return [];
@@ -363,10 +362,26 @@ internal sealed class GameAnalysisQueries
     /// der Partieseite. Ohne Buchzüge: die markiert schon die Kurve der Seite. <c>null</c> = gibt es nicht oder fremd.</summary>
     internal async Task<GameEvalsDto?> EvalsOfAsync(int userId, int id, CancellationToken ct = default, bool clubReader = false)
     {
-        var head = await GameEvalsStore.Heads(_db.GameAnalyses.AsNoTracking().Where(a => a.Id == id
-                && (a.UserId == userId || (clubReader && a.Origin == GameAnalysisOrigin.Club && a.EngineId != null))))
+        var head = await GameEvalsStore.Heads((await ReadableAsync(userId, clubReader, ct)).Where(a => a.Id == id))
             .FirstOrDefaultAsync(ct);
         return head is null ? null : await GameEvalsStore.ReadAsync(_db, head, null, ct);
+    }
+
+    /// <summary>
+    /// Die Analysen, die <paramref name="userId"/> auf der Partieseite lesen darf: die eigenen, und als Vereinsleser
+    /// (<c>league.view</c>/Admin) dazu die zweite Engine (<see cref="GameAnalysisOrigin.Club"/> mit <c>EngineId</c>) der
+    /// Vereinspartien SEINER Vereine (R4-017, Mandanten-Schritt 2026-10-07: ein Verein sieht nie die Partien eines anderen;
+    /// Admin: alle Vereine über <see cref="League.LeagueClubResolver.ClubIdsOfAsync"/>). Liga-Partien des Stapels laufen als
+    /// <see cref="GameAnalysisOrigin.League"/> und sind hier nicht gemeint.
+    /// </summary>
+    private async Task<IQueryable<GameAnalysis>> ReadableAsync(int userId, bool clubReader, CancellationToken ct)
+    {
+        var all = _db.GameAnalyses.AsNoTracking();
+        if (!clubReader) return all.Where(a => a.UserId == userId);
+        var mine = (await League.LeagueClubResolver.ClubIdsOfAsync(_db, userId, ct)).ToList();
+        var clubGames = _db.LeagueClubGames.Where(g => mine.Contains(g.ClubId)).Select(g => (int?)g.Id);
+        return all.Where(a => a.UserId == userId
+            || (a.Origin == GameAnalysisOrigin.Club && a.EngineId != null && clubGames.Contains(a.LeagueClubGameId)));
     }
 
     // ===== Mapping ==========================================================

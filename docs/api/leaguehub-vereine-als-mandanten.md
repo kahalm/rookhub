@@ -42,6 +42,10 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
   `IgnoreQueryFilters` würde den Archiv-Filter mit abschalten. `ClubGameReader.GamesOf(db, club)` ist der Einstieg jedes Wegs;
   `IgnoreQueryFilters` (Rückbau eines Links) hält den Verein ausdrücklich in der Bedingung. Trennung geprüft in
   `LeagueClubTenancyTests`.
+* **Zweite Engine auf RookHubs Partieseite** (`POST /api/game-analyses/same-game`, `GET /api/game-analyses/{id}/evals`): ein
+  Vereinsleser (`league.view`/Admin) sieht die Lc0-Analyse (`Origin = Club` mit `EngineId`) nur zu Vereinspartien SEINER Vereine
+  (`GameAnalysisQueries.ReadableAsync` über `LeagueClubResolver.ClubIdsOfAsync`, R4-017); fremde verhalten sich wie unbekannte
+  (leere Liste bzw. 404). Getestet in `ClubSecondEngineSchedulerTests`.
 * **Hintergrund über alle Vereine**: `MasterAnalysisScheduler`/`ClubSecondEngineScheduler` (alle Vereinspartien),
   `LeagueAnalysisQueue` (Gegner der nächsten Runde JEDES Vereins zuerst), `LeagueRefresh.StalePlayersAsync` (ebenso),
   `TacticHarvestService` (je Partie der Kurs ihres Vereins; Umbenennen alter Titel je Verein).

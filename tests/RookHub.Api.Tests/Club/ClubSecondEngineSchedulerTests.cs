@@ -47,7 +47,7 @@ public class ClubSecondEngineSchedulerTests : IDisposable
 
     private LeagueClubGame ClubGame()
     {
-        var g = new LeagueClubGame { White = "Morphy", Black = "Duke", Pgn = Pgn, Plies = 6, Year = 2025,
+        var g = new LeagueClubGame { ClubId = TestClubs.HomeId, White = "Morphy", Black = "Duke", Pgn = Pgn, Plies = 6, Year = 2025,
             MovesHash = Guid.NewGuid().ToString("N") };
         _db.LeagueClubGames.Add(g);
         _db.SaveChanges();
@@ -99,19 +99,52 @@ public class ClubSecondEngineSchedulerTests : IDisposable
         Assert.Empty(_db.GameAnalyses);
     }
 
+    /// <summary>Vereinsleser sehen die Lc0-Analyse der Partien IHRES Vereins (Test vorher ohne Vereinsbezug; seit R4-017 braucht
+    /// der Leser die Mitgliedschaft).</summary>
     [Fact]
     public async Task Vereinsleser_findenDieLc0Analyse_andereNicht()
     {
-        _db.AppUsers.Add(new AppUser { Id = 9, Username = "mitglied", PasswordHash = "x" });
-        await _db.SaveChangesAsync();
+        await SeedClubsAsync();
+        var game = ClubGame();
+        var id = (await Scheduler().TickOnceAsync(_db, Analyses(), default))!.Value;
+        Assert.Equal(TestClubs.HomeId, game.ClubId);
+
+        Assert.Empty(await Analyses().SameGameAsync(HomeMember, Ucis));
+        var seen = await Analyses().SameGameAsync(HomeMember, Ucis, clubReader: true);
+        Assert.Equal(id, Assert.Single(seen).Id);
+        Assert.Null(await Analyses().EvalsOfAsync(HomeMember, id));
+        Assert.NotNull(await Analyses().EvalsOfAsync(HomeMember, id, clubReader: true));
+    }
+
+    /// <summary>R4-017: ein Vereinsleser (<c>league.view</c>) eines ANDEREN Vereins bekommt weder Bewertungen (mit der Zugfolge)
+    /// noch über die Züge den Titel der Lc0-Analyse; ein Konto ohne Verein ebenso wenig. Admin sieht alle.</summary>
+    [Fact]
+    public async Task Vereinsleser_einesFremdenVereins_siehtDieLc0AnalyseNicht()
+    {
+        await SeedClubsAsync();
         ClubGame();
         var id = (await Scheduler().TickOnceAsync(_db, Analyses(), default))!.Value;
-        string[] ucis = ["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6"];
 
-        Assert.Empty(await Analyses().SameGameAsync(9, ucis));
-        var seen = await Analyses().SameGameAsync(9, ucis, clubReader: true);
-        Assert.Equal(id, Assert.Single(seen).Id);
-        Assert.Null(await Analyses().EvalsOfAsync(9, id));
-        Assert.NotNull(await Analyses().EvalsOfAsync(9, id, clubReader: true));
+        Assert.Empty(await Analyses().SameGameAsync(OtherMember, Ucis, clubReader: true));
+        Assert.Null(await Analyses().EvalsOfAsync(OtherMember, id, clubReader: true));
+        Assert.Empty(await Analyses().SameGameAsync(NoClub, Ucis, clubReader: true));
+        Assert.Null(await Analyses().EvalsOfAsync(NoClub, id, clubReader: true));
+        Assert.NotNull(await Analyses().EvalsOfAsync(Owner, id, clubReader: true));   // Owner ist Admin (und Engine-Besitzer)
+    }
+
+    private const int HomeMember = 9, OtherMember = 10, NoClub = 11;
+    private static readonly string[] Ucis = ["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6"];
+
+    /// <summary>Zwei Vereine mit je einer Gruppe; die Testpartien gehören <see cref="TestClubs.HomeId"/>.</summary>
+    private async Task SeedClubsAsync()
+    {
+        await TestClubs.SeedAsync(_db);
+        _db.Groups.AddRange(new Group { Id = 20, Name = "Heim" }, new Group { Id = 21, Name = "Fremd" });
+        _db.LeagueClubMembers.AddRange(new LeagueClubMember { ClubId = TestClubs.HomeId, GroupId = 20 },
+            new LeagueClubMember { ClubId = TestClubs.OtherId, GroupId = 21 });
+        foreach (var uid in new[] { HomeMember, OtherMember, NoClub })
+            _db.AppUsers.Add(new AppUser { Id = uid, Username = $"u{uid}", PasswordHash = "x" });
+        _db.UserGroups.AddRange(new UserGroup { UserId = HomeMember, GroupId = 20 }, new UserGroup { UserId = OtherMember, GroupId = 21 });
+        await _db.SaveChangesAsync();
     }
 }
