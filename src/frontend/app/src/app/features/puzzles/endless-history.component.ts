@@ -14,6 +14,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SelectionModel } from '@angular/cdk/collections';
 import { FORMAT_LOCALES, LocaleService } from '../../core/locale.service';
+import { SnackbarService } from '../../core/snackbar.service';
+import { apiErrorText } from '../../core/api-error';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 
 interface EndlessSessionDto {
   id: number;
@@ -68,7 +71,7 @@ interface EndlessHistoryResponse {
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatPaginatorModule, MatProgressSpinnerModule,
-    MatCheckboxModule, MatButtonToggleModule, MatTooltipModule, TranslatePipe
+    MatCheckboxModule, MatButtonToggleModule, MatTooltipModule, TranslatePipe, LoadErrorComponent
   ],
   template: `
     <div class="history-container">
@@ -82,6 +85,8 @@ interface EndlessHistoryResponse {
         <mat-card-content>
           @if (loading) {
             <div class="loading"><mat-spinner diameter="40"></mat-spinner></div>
+          } @else if (loadError !== null) {
+            <app-load-error [error]="loadError" (retry)="loadPage()" />
           } @else if (totalCount === 0 && archiveFilter === null) {
             <div class="empty-state">
               <mat-icon class="empty-icon">sports_esports</mat-icon>
@@ -314,11 +319,16 @@ export class EndlessHistoryComponent implements OnInit {
   page = 1;
   pageSize = 20;
   loading = true;
+  /** Fehler des letzten Ladens (F1-004): dann `app-load-error` statt „Noch keine Läufe“. */
+  loadError: unknown = null;
   archiveFilter: boolean | null = null;
   displayedColumns = ['select', 'date', 'maxRating', 'elo', 'solved', 'duration', 'config', 'mistakes'];
   selection = new SelectionModel<SessionRow>(true, []);
 
-  constructor(private http: HttpClient, public router: Router, private locale: LocaleService) {}
+  constructor(
+    private http: HttpClient, public router: Router, private locale: LocaleService,
+    private snackbar: SnackbarService, private translate: TranslateService,
+  ) {}
 
   get archiveFilterValue(): string {
     if (this.archiveFilter === null) return 'all';
@@ -331,6 +341,7 @@ export class EndlessHistoryComponent implements OnInit {
 
   loadPage(): void {
     this.loading = true;
+    this.loadError = null;
     this.selection.clear();
     const params: Record<string, string> = {
       page: this.page.toString(),
@@ -347,7 +358,7 @@ export class EndlessHistoryComponent implements OnInit {
         this.pageSize = res.pageSize;
         this.loading = false;
       },
-      error: () => { this.loading = false; }
+      error: err => { this.loadError = err ?? true; this.loading = false; }
     });
   }
 
@@ -395,7 +406,8 @@ export class EndlessHistoryComponent implements OnInit {
     if (ids.length === 0) return;
 
     this.http.post('/api/endless/archive', { sessionIds: ids, archive }).subscribe({
-      next: () => this.loadPage()
+      next: () => this.loadPage(),
+      error: err => this.snackbar.warn(apiErrorText(err, this.translate, 'endless.history.archiveFailed')),
     });
   }
 

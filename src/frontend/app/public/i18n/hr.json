@@ -2404,7 +2404,8 @@
       "colSolved": "Riješeno",
       "colDuration": "Trajanje",
       "colMistakes": "Pogreške",
-      "backToEndless": "Natrag na beskonačni način"
+      "backToEndless": "Natrag na beskonačni način",
+      "archiveFailed": "Status arhiviranja nije moguće promijeniti – pokušaj ponovno."
     },
     "loadFailed": "Trenutno nije bilo moguće učitati nove zagonetke. Pokušaj ponovno kasnije."
   },

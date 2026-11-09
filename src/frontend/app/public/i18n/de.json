@@ -2404,7 +2404,8 @@
       "colSolved": "Gelöst",
       "colDuration": "Dauer",
       "colMistakes": "Fehler",
-      "backToEndless": "Zurück zum Endlos-Modus"
+      "backToEndless": "Zurück zum Endlos-Modus",
+      "archiveFailed": "Archivstatus konnte nicht geändert werden – bitte erneut versuchen."
     },
     "loadFailed": "Es konnten gerade keine neuen Puzzles geladen werden. Bitte später erneut versuchen."
   },

@@ -2404,7 +2404,8 @@
       "colSolved": "Solved",
       "colDuration": "Duration",
       "colMistakes": "Mistakes",
-      "backToEndless": "Back to Endless mode"
+      "backToEndless": "Back to Endless mode",
+      "archiveFailed": "Could not change the archive status – please try again."
     },
     "loadFailed": "No new puzzles could be loaded right now. Please try again later."
   },

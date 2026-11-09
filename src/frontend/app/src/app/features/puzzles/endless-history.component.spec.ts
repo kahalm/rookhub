@@ -1,9 +1,16 @@
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
+import { SnackbarService } from '../../core/snackbar.service';
 import { EndlessHistoryComponent, durationText } from './endless-history.component';
 import { registerFormatLocaleData } from '../../core/locale-data';
 
 // Die Elo-Delta-Methoden hängen nicht von HttpClient/Router/Locale ab → direkte Instanziierung reicht.
 function makeComponent(): EndlessHistoryComponent {
-  return new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any);
+  return new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any, {} as any, {} as any);
 }
 
 function session(maxRating: number, configJson: string): any {
@@ -45,20 +52,20 @@ describe('EndlessHistoryComponent formatDate uses the active locale', () => {
   beforeAll(() => registerFormatLocaleData());
 
   it('formats with the locale from LocaleService (de uses dotted date, not US slashes)', () => {
-    const de = new EndlessHistoryComponent({} as any, {} as any, { current: 'de' } as any);
+    const de = new EndlessHistoryComponent({} as any, {} as any, { current: 'de' } as any, {} as any, {} as any);
     expect(de.formatDate(ts)).toContain('.');
     expect(de.formatDate(ts)).not.toContain('/');
   });
 
   it('returns - for an invalid timestamp', () => {
-    const en = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any);
+    const en = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any, {} as any, {} as any);
     expect(en.formatDate(NaN)).toBe('-');
   });
 });
 
 describe('EndlessHistoryComponent toRow precomputes display fields', () => {
   it('computes config/mistakes/elo text once instead of parsing JSON per CD cycle', () => {
-    const c = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any);
+    const c = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any, {} as any, {} as any);
     const dto = {
       id: 1, timestamp: Date.UTC(2021, 2, 5, 12, 0), totalSolved: 5, maxRating: 1840,
       durationSeconds: 90, configJson: JSON.stringify({ startElo: 1500, fasttrackThreshold1: 3 }),
@@ -88,7 +95,7 @@ describe('EndlessHistoryComponent Dauer in der App-Sprache', () => {
 
 describe('EndlessHistoryComponent Start-Rating ohne Wert (z1-rk-endless-history-config)', () => {
   it('zeigt „-“ statt „?“, wenn das Start-Rating fehlt', () => {
-    const c = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any);
+    const c = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any, {} as any, {} as any);
     expect(c.formatConfig(JSON.stringify({ fasttrackThreshold1: 3 }))).toBe('-');
     expect(c.formatConfig('kaputt')).toBe('-');
     expect(c.formatConfig(JSON.stringify({ startElo: 1200 }))).toBe('1200');
@@ -105,14 +112,14 @@ describe('EndlessHistoryComponent UI-Sweep a1', () => {
   const ts = new Date(2026, 9, 10, 0, 20).getTime();
 
   it('a1-rk-endless-verlauf-tabelle-datum: knappes Locale-Format short statt langem Eigenformat', () => {
-    const de = new EndlessHistoryComponent({} as any, {} as any, { current: 'de' } as any);
-    const en = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any);
+    const de = new EndlessHistoryComponent({} as any, {} as any, { current: 'de' } as any, {} as any, {} as any);
+    const en = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any, {} as any, {} as any);
     expect(de.formatDate(ts)).toBe('10.10.26, 00:20');
     expect(en.formatDate(ts).replace(/\s/g, ' ')).toBe('10/10/26, 12:20 AM');
   });
 
   it('Sprache ohne Locale-Daten fällt auf en zurück statt zu werfen', () => {
-    const fr = new EndlessHistoryComponent({} as any, {} as any, { current: 'fr' } as any);
+    const fr = new EndlessHistoryComponent({} as any, {} as any, { current: 'fr' } as any, {} as any, {} as any);
     expect(fr.formatDate(ts).replace(/\s/g, ' ')).toBe('10/10/26, 12:20 AM');
   });
 
@@ -129,5 +136,49 @@ describe('EndlessHistoryComponent UI-Sweep a1', () => {
   it('a1-rk-endless-verlauf-handykarte: Beschriftung 0,75 rem in 65 %, Handy-Raster dreispaltig', () => {
     expect(css()).toMatch(/\.session-stat-label[^{]*\{font-size:0?\.75rem;color:color-mix\(insrgb,currentColor65%,transparent\)/);
     expect(css()).toMatch(/@media\(max-width:768px\)\{.*\.session-card-stats[^{]*\{grid-template-columns:repeat\(3,1fr\)/);
+  });
+});
+
+/** Delta-Review 2026-11-09, F1-004: Ladefehler sah aus wie „Noch keine Läufe“, Archivieren scheiterte still. */
+describe('EndlessHistoryComponent Fehlerpfade (F1-004)', () => {
+  async function setup() {
+    const snackbar = { warn: jasmine.createSpy('warn'), info: jasmine.createSpy('info') };
+    await TestBed.configureTestingModule({
+      imports: [EndlessHistoryComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: SnackbarService, useValue: snackbar },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(EndlessHistoryComponent);
+    fixture.detectChanges();
+    return { fixture, http: TestBed.inject(HttpTestingController), snackbar, el: fixture.nativeElement as HTMLElement };
+  }
+  const page = (items: any[]) => ({ items, totalCount: items.length, page: 1, pageSize: 20 });
+
+  it('Ladefehler → app-load-error statt Leerzustand; Wiederholen lädt neu', async () => {
+    const { fixture, http, el } = await setup();
+    http.expectOne(r => r.url === '/api/endless/history').flush('x', { status: 500, statusText: 'err' });
+    fixture.detectChanges();
+    expect(el.querySelector('app-load-error')).not.toBeNull();
+    expect(el.textContent).not.toContain('endless.history.noSessions');
+    (el.querySelector('app-load-error button') as HTMLButtonElement).click();
+    http.expectOne(r => r.url === '/api/endless/history').flush(page([]));
+    fixture.detectChanges();
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.textContent).toContain('endless.history.noSessions');
+  });
+
+  it('Archivieren scheitert → Warnung', async () => {
+    const { fixture, http, snackbar } = await setup();
+    const row = { id: 4, timestamp: 0, totalSolved: 1, maxRating: 900, durationSeconds: 5, configJson: '{}', mistakeAtRatings: '', isArchived: false };
+    http.expectOne(r => r.url === '/api/endless/history').flush(page([row]));
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    c.selection.select(c.sessions[0]);
+    c.archiveSelected(true);
+    http.expectOne('/api/endless/archive').flush('x', { status: 500, statusText: 'err' });
+    expect(snackbar.warn).toHaveBeenCalledWith('endless.history.archiveFailed');
   });
 });
