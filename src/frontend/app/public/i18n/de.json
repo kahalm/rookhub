@@ -1466,7 +1466,8 @@
       "removedShort": "{{name}} entfernt",
       "toggleNameAria": "{{name}} als Favorit",
       "saveFailed": "Favorit {{name}} konnte nicht gespeichert werden – bitte erneut versuchen.",
-      "filterSaveFailed": "Der Favoriten-Filter konnte nicht gespeichert werden und springt beim nächsten Laden zurück."
+      "filterSaveFailed": "Der Favoriten-Filter konnte nicht gespeichert werden und springt beim nächsten Laden zurück.",
+      "loadFailed": "Deine Favoriten konnten gerade nicht geladen werden — die Sterne zeigen sie deshalb nicht."
     },
     "players": {
       "snr": "Nr.",
@@ -1520,7 +1521,8 @@
       "activateFailed": "Beobachtung konnte nicht aktiviert werden",
       "newRoundTitle": "Neue Runde verfügbar!",
       "newRoundBody": "Runde {{round}} wurde veröffentlicht.",
-      "newRoundSnack": "Neue Runde verfügbar! Runde {{round}}"
+      "newRoundSnack": "Neue Runde verfügbar! Runde {{round}}",
+      "loadFailed": "Ob du dieses Turnier beobachtest, ließ sich gerade nicht laden."
     },
     "list": {
       "title": "Gemerkte Turniere",
@@ -4877,7 +4879,8 @@
         "searchError": "Die Suche hat nicht geklappt. Bitte nochmal versuchen.",
         "title": "Spieler verfolgen"
       },
-      "friendNoName": "Im Profil von {{name}} fehlt der Name — chess-results wird über den Namen durchsucht, daher gibt es hier nichts anzuzeigen."
+      "friendNoName": "Im Profil von {{name}} fehlt der Name — chess-results wird über den Namen durchsucht, daher gibt es hier nichts anzuzeigen.",
+      "pendingStopped": "{{count}} Ergebnisse fehlen noch — es wird nicht mehr nachgefragt."
     }
   },
   "kids": {
@@ -5435,7 +5438,68 @@
       "minor": "minderjährig – nur für Admins sichtbar",
       "minorTitle": "Andere sehen nur, dass es ein Konto gibt; über Teilen-Links und in der Meldeliste steht es nie.",
       "addedBy": "hinzugefügt von {{name}}",
-      "addedAnon": "anonym hinzugefügt (Teilen-Link)"
+      "addedAnon": "anonym hinzugefügt (Teilen-Link)",
+      "checksTitle": "Was geprüft wurde",
+      "resync": "Nochmal holen",
+      "none": "Noch kein Online-Konto eingetragen.",
+      "add": "Konto hinzufügen",
+      "thanks": "Danke — das Konto ist eingetragen.",
+      "suggTitle": "Vorschläge der Konto-Suche",
+      "scanning": "Sucht …",
+      "scan": "Jetzt suchen",
+      "noSuggestions": "Keine offenen Vorschläge. LeagueHub sucht im Hintergrund auf Lichess und chess.com nach Konten, deren Name zum Spieler passt.",
+      "site": "Seite",
+      "user": "Name oder Profiladresse",
+      "shareNote": "Das Konto wird sofort als „gesichert“ eingetragen und als „anonym“ vermerkt — trag bitte nur ein, was du sicher weißt.",
+      "assignment": "Zuordnung",
+      "comment": "Kommentar",
+      "commentPlaceholder": "z. B. woher die Zuordnung kommt",
+      "saving": "Speichere …",
+      "removeHiddenConfirm": "Das verborgene Online-Konto entfernen? Die geholten Partien gehen mit.",
+      "removeConfirm": "{{site}}-Konto „{{user}}“ entfernen? Die geholten Partien gehen mit.",
+      "statusError": "Partien nicht geholt: {{error}}.",
+      "statusPending": "Partien werden geholt …",
+      "statusSynced": "{{count}} Online-Partien geholt (Stand {{date}}).",
+      "statusSyncedOne": "{{count}} Online-Partie geholt (Stand {{date}}).",
+      "hiddenSuggTitle": "Konten Minderjähriger zeigt LeagueHub niemandem — entscheide nach den Hinweisen",
+      "alsoFor": "auch vorgeschlagen für: {{names}}",
+      "acceptUnsure": "Unsicher",
+      "acceptUnsureTitle": "Als unsicher übernehmen",
+      "acceptSure": "Gesichert",
+      "acceptSureTitle": "Als gesichert übernehmen",
+      "reject": "Verwerfen",
+      "rejectTitle": "Vorschlag verwerfen — er kommt nicht wieder",
+      "acceptedSure": "Als gesichert übernommen.",
+      "acceptedUnsure": "Als unsicher übernommen.",
+      "twinsRejected": "Vorschlag für {{names}} verworfen — gehört jemand anderem.",
+      "rejected": "Verworfen — wird nicht wieder vorgeschlagen.",
+      "alreadyDone": "Schon erledigt.",
+      "checks": {
+        "elo": "Elo laut Meldeliste: {{elo}}.",
+        "noProfile": "Das Profil war gerade nicht abrufbar — später nochmal aufklappen.",
+        "loading": "Prüfe … (Profil und Partien werden frisch geholt)",
+        "gone": "Dieses Konto gibt es nicht mehr.",
+        "loadFailed": "Die Prüfung ließ sich gerade nicht laden.",
+        "status": {
+          "ok": "spricht dafür",
+          "weak": "spricht schwächer dafür",
+          "warn": "macht stutzig",
+          "fail": "spricht dagegen",
+          "info": "zur Kenntnis",
+          "none": "nichts zu prüfen"
+        },
+        "sum": {
+          "okOne": "{{count}} spricht dafür",
+          "ok": "{{count}} sprechen dafür",
+          "weakOne": "{{count}} schwächer dafür",
+          "weak": "{{count}} schwächer dafür",
+          "warnOne": "{{count}} macht stutzig",
+          "warn": "{{count}} machen stutzig",
+          "failOne": "{{count}} spricht dagegen",
+          "fail": "{{count}} sprechen dagegen",
+          "none": "Nichts, was dafür oder dagegen spricht."
+        }
+      }
     },
     "accountsNote": "„gesichert“: das Konto gehört sicher diesem Spieler, „unsicher“: nur vermutet. Über einen Teilen-Link erscheinen nur gesicherte. Ihre Partien holt LeagueHub im Hintergrund — im Eröffnungsbaum wählbar.",
     "sources": "Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026), die ChessBase-Megabase, die Partiedatenbank von chess-results.com, Lichess-Übertragungen von Turnieren am Brett und die Vereinspartien der LeagueHub-Vereine (nur mit Jahr). Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt.",

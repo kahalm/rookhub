@@ -1172,7 +1172,8 @@
       "removedShort": "{{name}} eltávolítva",
       "toggleNameAria": "{{name}} kedvencként",
       "saveFailed": "A(z) {{name}} kedvenc mentése nem sikerült – próbáld újra.",
-      "filterSaveFailed": "A kedvencszűrőt nem sikerült menteni; a következő betöltéskor visszaáll."
+      "filterSaveFailed": "A kedvencszűrőt nem sikerült menteni; a következő betöltéskor visszaáll.",
+      "loadFailed": "A kedvenceidet most nem sikerült betölteni — ezért a csillagok nem mutatják őket."
     },
     "players": {
       "snr": "Ssz.",
@@ -1226,7 +1227,8 @@
       "activateFailed": "Nem sikerült aktiválni a figyelést",
       "newRoundTitle": "Új forduló érhető el!",
       "newRoundBody": "A {{round}}. forduló közzé lett téve.",
-      "newRoundSnack": "Új forduló érhető el! {{round}}. forduló"
+      "newRoundSnack": "Új forduló érhető el! {{round}}. forduló",
+      "loadFailed": "Most nem sikerült betölteni, hogy figyeled-e ezt a versenyt."
     },
     "list": {
       "title": "Megjelölt versenyek",
@@ -4494,7 +4496,8 @@
         "searchError": "A keresés nem sikerült. Kérlek, próbáld újra.",
         "title": "Játékos követése"
       },
-      "friendNoName": "{{name}} profiljából hiányzik a név — a chess-resultson név alapján keresünk, ezért itt nincs mit megjeleníteni."
+      "friendNoName": "{{name}} profiljából hiányzik a név — a chess-resultson név alapján keresünk, ezért itt nincs mit megjeleníteni.",
+      "pendingStopped": "Még {{count}} eredmény hiányzik — már nem kérdezünk rá újra."
     }
   },
   "kids": {
@@ -5435,7 +5438,68 @@
       "minor": "kiskorú – csak adminoknak látható",
       "minorTitle": "Mások csak azt látják, hogy van fiók; megosztási linken és a nevezési listán soha nem jelenik meg.",
       "addedBy": "hozzáadta: {{name}}",
-      "addedAnon": "névtelenül hozzáadva (megosztási link)"
+      "addedAnon": "névtelenül hozzáadva (megosztási link)",
+      "checksTitle": "Mit ellenőriztünk",
+      "resync": "Újra lekérés",
+      "none": "Még nincs megadva online fiók.",
+      "add": "Fiók hozzáadása",
+      "thanks": "Köszönjük — a fiókot felvettük.",
+      "suggTitle": "A fiókkeresés javaslatai",
+      "scanning": "Keresés …",
+      "scan": "Keresés most",
+      "noSuggestions": "Nincs nyitott javaslat. A LeagueHub a háttérben a Lichessen és a chess.com-on olyan fiókokat keres, amelyek neve illik a játékoshoz.",
+      "site": "Oldal",
+      "user": "Név vagy profilcím",
+      "shareNote": "A fiókot azonnal „megerősített”-ként vesszük fel, „névtelen” megjelöléssel — kérjük, csak azt add meg, amiben biztos vagy.",
+      "assignment": "Hozzárendelés",
+      "comment": "Megjegyzés",
+      "commentPlaceholder": "pl. honnan származik a hozzárendelés",
+      "saving": "Mentés …",
+      "removeHiddenConfirm": "Eltávolítod a rejtett online fiókot? A lekért játszmák is vele mennek.",
+      "removeConfirm": "Eltávolítod a(z) {{site}}-fiókot („{{user}}”)? A lekért játszmák is vele mennek.",
+      "statusError": "A játszmák lekérése sikertelen: {{error}}.",
+      "statusPending": "Játszmák lekérése …",
+      "statusSynced": "{{count}} online játszma lekérve (állapot: {{date}}).",
+      "statusSyncedOne": "{{count}} online játszma lekérve (állapot: {{date}}).",
+      "hiddenSuggTitle": "A LeagueHub kiskorúak fiókjait senkinek sem mutatja — dönts a jelek alapján",
+      "alsoFor": "javasolva ehhez is: {{names}}",
+      "acceptUnsure": "Bizonytalan",
+      "acceptUnsureTitle": "Átvétel bizonytalanként",
+      "acceptSure": "Megerősített",
+      "acceptSureTitle": "Átvétel megerősítettként",
+      "reject": "Elvetés",
+      "rejectTitle": "Javaslat elvetése — nem jön vissza",
+      "acceptedSure": "Megerősítettként átvéve.",
+      "acceptedUnsure": "Bizonytalanként átvéve.",
+      "twinsRejected": "A(z) {{names}} javaslata elvetve — valaki másé.",
+      "rejected": "Elvetve — nem javasoljuk újra.",
+      "alreadyDone": "Már elintézve.",
+      "checks": {
+        "elo": "Élő a nevezési lista szerint: {{elo}}.",
+        "noProfile": "A profil épp nem volt elérhető — nyisd meg később újra.",
+        "loading": "Ellenőrzés … (a profilt és a játszmákat frissen lekérjük)",
+        "gone": "Ez a fiók már nem létezik.",
+        "loadFailed": "Az ellenőrzést most nem sikerült betölteni.",
+        "status": {
+          "ok": "mellette szól",
+          "weak": "gyengébben mellette szól",
+          "warn": "gyanús",
+          "fail": "ellene szól",
+          "info": "tájékoztatásul",
+          "none": "nincs mit ellenőrizni"
+        },
+        "sum": {
+          "okOne": "{{count}} mellette szól",
+          "ok": "{{count}} mellette szól",
+          "weakOne": "{{count}} gyengébben mellette",
+          "weak": "{{count}} gyengébben mellette",
+          "warnOne": "{{count}} gyanús",
+          "warn": "{{count}} gyanús",
+          "failOne": "{{count}} ellene szól",
+          "fail": "{{count}} ellene szól",
+          "none": "Semmi, ami mellette vagy ellene szólna."
+        }
+      }
     },
     "accountsNote": "„megerősített”: a fiók biztosan ehhez a játékoshoz tartozik, „bizonytalan”: csak feltételezés. Megosztási linken csak a megerősítettek látszanak. A partijaikat a LeagueHub a háttérben tölti le — a megnyitásfában választhatók.",
     "sources": "Források: Lumbra's GigaBase (versenypartik, 2026. júliusi állapot), a ChessBase Megabase, a chess-results.com partiadatbázisa, táblás versenyek Lichess-közvetítései és a LeagueHub-klubok klubpartijai (csak évvel). Hozzárendelés FIDE-azonosító alapján. A villám- és rapidpartik is beszámítanak.",

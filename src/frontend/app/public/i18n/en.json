@@ -1466,7 +1466,8 @@
       "removedShort": "{{name}} removed",
       "toggleNameAria": "{{name}} as favorite",
       "saveFailed": "Could not save the favorite {{name}} — please try again.",
-      "filterSaveFailed": "Could not save the favorites filter; it will reset on the next reload."
+      "filterSaveFailed": "Could not save the favorites filter; it will reset on the next reload.",
+      "loadFailed": "Your favourites could not be loaded just now — so the stars do not show them."
     },
     "players": {
       "snr": "No.",
@@ -1520,7 +1521,8 @@
       "activateFailed": "Failed to activate monitoring",
       "newRoundTitle": "New round available!",
       "newRoundBody": "Round {{round}} has been published.",
-      "newRoundSnack": "New round available! Round {{round}}"
+      "newRoundSnack": "New round available! Round {{round}}",
+      "loadFailed": "Whether you are watching this tournament could not be loaded just now."
     },
     "list": {
       "title": "Bookmarked tournaments",
@@ -4877,7 +4879,8 @@
         "searchError": "The search failed. Please try again.",
         "title": "Track a player"
       },
-      "friendNoName": "{{name}} has no name in their profile — chess-results is searched by name, so there is nothing to show here."
+      "friendNoName": "{{name}} has no name in their profile — chess-results is searched by name, so there is nothing to show here.",
+      "pendingStopped": "{{count}} results are still missing — no longer checking."
     }
   },
   "kids": {
@@ -5435,7 +5438,68 @@
       "minor": "minor – visible to admins only",
       "minorTitle": "Others only see that there is an account; it never appears via share links or in the entry list.",
       "addedBy": "added by {{name}}",
-      "addedAnon": "added anonymously (share link)"
+      "addedAnon": "added anonymously (share link)",
+      "checksTitle": "What was checked",
+      "resync": "Fetch again",
+      "none": "No online account added yet.",
+      "add": "Add account",
+      "thanks": "Thanks — the account has been added.",
+      "suggTitle": "Suggestions from the account search",
+      "scanning": "Searching …",
+      "scan": "Search now",
+      "noSuggestions": "No open suggestions. LeagueHub searches Lichess and chess.com in the background for accounts whose name matches the player.",
+      "site": "Site",
+      "user": "Name or profile address",
+      "shareNote": "The account is added right away as “confirmed” and marked as “anonymous” — please only add what you know for sure.",
+      "assignment": "Assignment",
+      "comment": "Comment",
+      "commentPlaceholder": "e.g. where the assignment comes from",
+      "saving": "Saving …",
+      "removeHiddenConfirm": "Remove the hidden online account? The fetched games go with it.",
+      "removeConfirm": "Remove the {{site}} account “{{user}}”? The fetched games go with it.",
+      "statusError": "Games not fetched: {{error}}.",
+      "statusPending": "Fetching games …",
+      "statusSynced": "{{count}} online games fetched (as of {{date}}).",
+      "statusSyncedOne": "{{count}} online game fetched (as of {{date}}).",
+      "hiddenSuggTitle": "LeagueHub never shows accounts of minors to anyone — decide based on the hints",
+      "alsoFor": "also suggested for: {{names}}",
+      "acceptUnsure": "Unsure",
+      "acceptUnsureTitle": "Accept as unsure",
+      "acceptSure": "Confirmed",
+      "acceptSureTitle": "Accept as confirmed",
+      "reject": "Discard",
+      "rejectTitle": "Discard the suggestion — it will not come back",
+      "acceptedSure": "Accepted as confirmed.",
+      "acceptedUnsure": "Accepted as unsure.",
+      "twinsRejected": "Suggestion for {{names}} discarded — belongs to someone else.",
+      "rejected": "Discarded — will not be suggested again.",
+      "alreadyDone": "Already done.",
+      "checks": {
+        "elo": "Rating in the entry list: {{elo}}.",
+        "noProfile": "The profile could not be fetched just now — open this again later.",
+        "loading": "Checking … (profile and games are fetched fresh)",
+        "gone": "This account no longer exists.",
+        "loadFailed": "The check could not be loaded just now.",
+        "status": {
+          "ok": "speaks for it",
+          "weak": "speaks weakly for it",
+          "warn": "raises doubts",
+          "fail": "speaks against it",
+          "info": "for information",
+          "none": "nothing to check"
+        },
+        "sum": {
+          "okOne": "{{count}} speaks for it",
+          "ok": "{{count}} speak for it",
+          "weakOne": "{{count}} weakly for it",
+          "weak": "{{count}} weakly for it",
+          "warnOne": "{{count}} raises doubts",
+          "warn": "{{count}} raise doubts",
+          "failOne": "{{count}} speaks against it",
+          "fail": "{{count}} speak against it",
+          "none": "Nothing that speaks for or against it."
+        }
+      }
     },
     "accountsNote": "“confirmed”: the account surely belongs to this player, “unsure”: only suspected. Via a share link only confirmed ones appear. LeagueHub fetches their games in the background — selectable in the opening tree.",
     "sources": "Sources: Lumbra's GigaBase (tournament games, as of July 2026), the ChessBase Megabase, the game database of chess-results.com, Lichess broadcasts of over-the-board tournaments and the club games of the LeagueHub clubs (year only). Matched by FIDE ID. Blitz and rapid games are included.",

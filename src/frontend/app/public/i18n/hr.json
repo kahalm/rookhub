@@ -1466,7 +1466,8 @@
       "removedShort": "{{name}} uklonjen",
       "toggleNameAria": "{{name}} kao favorit",
       "saveFailed": "Favorit {{name}} nije moguće spremiti – pokušaj ponovno.",
-      "filterSaveFailed": "Filtar favorita nije moguće spremiti; vratit će se pri sljedećem učitavanju."
+      "filterSaveFailed": "Filtar favorita nije moguće spremiti; vratit će se pri sljedećem učitavanju.",
+      "loadFailed": "Tvoje favorite trenutno nije moguće učitati — zato ih zvjezdice ne prikazuju."
     },
     "players": {
       "snr": "Br.",
@@ -1520,7 +1521,8 @@
       "activateFailed": "Aktiviranje praćenja nije uspjelo",
       "newRoundTitle": "Dostupno novo kolo!",
       "newRoundBody": "Kolo {{round}} je objavljeno.",
-      "newRoundSnack": "Dostupno novo kolo! Kolo {{round}}"
+      "newRoundSnack": "Dostupno novo kolo! Kolo {{round}}",
+      "loadFailed": "Trenutno nije moguće učitati pratiš li ovaj turnir."
     },
     "list": {
       "title": "Zabilježeni turniri",
@@ -4877,7 +4879,8 @@
         "searchError": "Pretraga nije uspjela. Pokušaj ponovno.",
         "title": "Prati igrača"
       },
-      "friendNoName": "U profilu korisnika {{name}} nedostaje ime — chess-results se pretražuje po imenu, pa ovdje nema što prikazati."
+      "friendNoName": "U profilu korisnika {{name}} nedostaje ime — chess-results se pretražuje po imenu, pa ovdje nema što prikazati.",
+      "pendingStopped": "Još nedostaje rezultata: {{count}} — više se ne provjerava."
     }
   },
   "kids": {
@@ -5435,7 +5438,68 @@
       "minor": "maloljetnik – vidljivo samo administratorima",
       "minorTitle": "Drugi vide samo da račun postoji; nikad se ne prikazuje preko poveznica za dijeljenje ni na popisu prijava.",
       "addedBy": "dodao/la {{name}}",
-      "addedAnon": "dodano anonimno (poveznica za dijeljenje)"
+      "addedAnon": "dodano anonimno (poveznica za dijeljenje)",
+      "checksTitle": "Što je provjereno",
+      "resync": "Dohvati ponovno",
+      "none": "Još nije unesen nijedan online račun.",
+      "add": "Dodaj račun",
+      "thanks": "Hvala — račun je unesen.",
+      "suggTitle": "Prijedlozi pretrage računa",
+      "scanning": "Traži …",
+      "scan": "Traži sada",
+      "noSuggestions": "Nema otvorenih prijedloga. LeagueHub u pozadini na Lichessu i chess.com traži račune čije ime odgovara igraču.",
+      "site": "Stranica",
+      "user": "Ime ili adresa profila",
+      "shareNote": "Račun se odmah unosi kao „potvrđen“ i bilježi kao „anoniman“ — unesi samo ono što sigurno znaš.",
+      "assignment": "Dodjela",
+      "comment": "Komentar",
+      "commentPlaceholder": "npr. odakle dolazi dodjela",
+      "saving": "Sprema …",
+      "removeHiddenConfirm": "Ukloniti skriveni online račun? Dohvaćene partije idu s njim.",
+      "removeConfirm": "Ukloniti {{site}} račun „{{user}}“? Dohvaćene partije idu s njim.",
+      "statusError": "Partije nisu dohvaćene: {{error}}.",
+      "statusPending": "Partije se dohvaćaju …",
+      "statusSynced": "Dohvaćeno online partija: {{count}} (stanje {{date}}).",
+      "statusSyncedOne": "Dohvaćena {{count}} online partija (stanje {{date}}).",
+      "hiddenSuggTitle": "LeagueHub nikome ne prikazuje račune maloljetnika — odluči prema naznakama",
+      "alsoFor": "predloženo i za: {{names}}",
+      "acceptUnsure": "Nesigurno",
+      "acceptUnsureTitle": "Preuzmi kao nesigurno",
+      "acceptSure": "Potvrđeno",
+      "acceptSureTitle": "Preuzmi kao potvrđeno",
+      "reject": "Odbaci",
+      "rejectTitle": "Odbaci prijedlog — neće se vratiti",
+      "acceptedSure": "Preuzeto kao potvrđeno.",
+      "acceptedUnsure": "Preuzeto kao nesigurno.",
+      "twinsRejected": "Prijedlog za {{names}} odbačen — pripada nekom drugom.",
+      "rejected": "Odbačeno — neće se ponovno predlagati.",
+      "alreadyDone": "Već riješeno.",
+      "checks": {
+        "elo": "Elo prema prijavnoj listi: {{elo}}.",
+        "noProfile": "Profil trenutno nije bio dostupan — otvori kasnije ponovno.",
+        "loading": "Provjeravam … (profil i partije dohvaćaju se iznova)",
+        "gone": "Ovaj račun više ne postoji.",
+        "loadFailed": "Provjeru trenutno nije moguće učitati.",
+        "status": {
+          "ok": "govori u prilog",
+          "weak": "slabije govori u prilog",
+          "warn": "izaziva sumnju",
+          "fail": "govori protiv",
+          "info": "na znanje",
+          "none": "nema što provjeriti"
+        },
+        "sum": {
+          "okOne": "{{count}} govori u prilog",
+          "ok": "{{count}} govore u prilog",
+          "weakOne": "{{count}} slabije u prilog",
+          "weak": "{{count}} slabije u prilog",
+          "warnOne": "{{count}} izaziva sumnju",
+          "warn": "{{count}} izazivaju sumnju",
+          "failOne": "{{count}} govori protiv",
+          "fail": "{{count}} govore protiv",
+          "none": "Ništa što govori u prilog ili protiv."
+        }
+      }
     },
     "accountsNote": "„potvrđen”: račun sigurno pripada ovom igraču, „nesiguran”: samo pretpostavka. Preko poveznice za dijeljenje prikazuju se samo potvrđeni. Njihove partije LeagueHub dohvaća u pozadini — mogu se odabrati u stablu otvaranja.",
     "sources": "Izvori: Lumbra's GigaBase (turnirske partije, stanje srpanj 2026.), ChessBase Megabase, baza partija chess-results.com, Lichess prijenosi turnira za pločom i klupske partije LeagueHub klubova (samo s godinom). Povezivanje preko FIDE ID-a. Ubrojeni su blitz i brzopotezni šah.",
