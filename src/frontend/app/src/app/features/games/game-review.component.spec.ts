@@ -5,6 +5,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { By } from '@angular/platform-browser';
 import { MatTooltip } from '@angular/material/tooltip';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
+import { SnackbarService } from '../../core/snackbar.service';
 import { GameReviewComponent } from './game-review.component';
 import { GameEvals, GameEvalsStatus } from './game-review.util';
 
@@ -442,6 +443,27 @@ describe('GameReviewComponent', () => {
     expect(current.classList).toContain('blunder');
     expect(current.textContent).toContain('+0.25');
     expect(current.textContent).toContain('+3.00');
+  });
+
+  it('Fehler-Erklärungen: ein Fehlschlag wird gemeldet, der Knopf bleibt (5xx); eine Absage (409) nimmt ihn weg (F2-007)', () => {
+    const { fixture, http, el } = setup();
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+    flushEvals(http, evals('done'));
+    fixture.detectChanges();
+    const ex = '/api/games/4/explanations';
+    http.expectOne(r => r.url === ex && r.method === 'GET')
+      .flush({ available: true, canGenerate: true, running: false, language: 'en', items: [] });
+    fixture.detectChanges();
+    (el.querySelector('.explain-btn') as HTMLButtonElement).click();
+    http.expectOne(r => r.url === ex && r.method === 'POST').flush(null, { status: 502, statusText: 'Bad Gateway' });
+    fixture.detectChanges();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(el.querySelector('.explain-btn')).not.toBeNull();
+    (el.querySelector('.explain-btn') as HTMLButtonElement).click();
+    http.expectOne(r => r.url === ex && r.method === 'POST').flush(null, { status: 409, statusText: 'Conflict' });
+    fixture.detectChanges();
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('.explain-btn')).toBeNull();
   });
 
   it('Fehler-Erklärungen (0.534.0): Knopf beim Besitzer, danach nachfragen, Text beim aktuellen Zug, im Training aus', fakeAsync(() => {

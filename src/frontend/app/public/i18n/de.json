@@ -3206,7 +3206,8 @@
       "lines": "Computer-Linien",
       "arrow": "Pfeil für den besten Zug",
       "badges": "Zug-Symbole (Brett und Zugliste)",
-      "refining": "Vertiefung läuft — {{done}} von {{total}} Stellungen"
+      "refining": "Vertiefung läuft — {{done}} von {{total}} Stellungen",
+      "explainFailed": "Die Erklärungen konnten nicht angefordert werden. Versuch es gleich noch einmal."
     },
     "analyzing": "Analyse läuft: {{pct}} % ({{analyzed}} von {{total}} Stellungen) – die Kurve steht auf der Partie-Seite",
     "accuracyHint": "Genauigkeit Weiß · Schwarz (aus der Partie-Analyse)",
@@ -3265,7 +3266,8 @@
         "played": "Partiezug",
         "best": "Bester Zug",
         "open": "Ganzen Vergleich öffnen"
-      }
+      },
+      "dismissFailed": "Ausblenden fehlgeschlagen — der Fehler kommt beim nächsten Durchgang wieder."
     },
     "live": {
       "toggle": "Live-Engine — eigene Züge ausprobieren",

@@ -9,6 +9,7 @@ import { of, throwError } from 'rxjs';
 import { MistakesCollectionComponent } from './mistakes-collection.component';
 import { GamesService, SavedGame } from './games.service';
 import { MistakeJudgeService } from './mistake-judge.service';
+import { SnackbarService } from '../../core/snackbar.service';
 
 /** UI-Sweep 2026-10-11: Grund unter „Starten", Einzahl, Material-Filter auf /games/mistakes. */
 describe('MistakesCollectionComponent (UI-Sweep 2026-10-11)', () => {
@@ -126,5 +127,25 @@ describe('MistakesCollectionComponent: Ladefehler (F2-006)', () => {
     expect(list).toHaveBeenCalledTimes(2);
     expect(el.querySelector('app-load-error')).toBeNull();
     expect(el.querySelector('.filters')).toBeTruthy();
+  });
+});
+
+describe('MistakesCollectionComponent: Ausblenden scheitert (F2-008)', () => {
+  it('meldet den Fehlschlag per Snackbar', () => {
+    const warn = jasmine.createSpy('warn');
+    TestBed.configureTestingModule({
+      imports: [MistakesCollectionComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: GamesService, useValue: { list: () => of([]), dismissMistake: () => throwError(() => ({ status: 0 })) } },
+        { provide: MistakeJudgeService, useValue: {} },
+        { provide: SnackbarService, useValue: { warn } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
+      ],
+    });
+    const c = TestBed.createComponent(MistakesCollectionComponent).componentInstance;
+    (c as unknown as { dismiss(m: unknown): void }).dismiss({ gameId: 4, ply: 12 });
+    expect(warn).toHaveBeenCalledOnceWith('games.mistakes.dismissFailed');
   });
 });

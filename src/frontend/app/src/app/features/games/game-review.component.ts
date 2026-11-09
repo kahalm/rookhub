@@ -10,6 +10,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { SnackbarService } from '../../core/snackbar.service';
+import { apiErrorText } from '../../core/api-error';
 import { Observable, Subscription, catchError, interval, map, of, switchMap, timer } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EvalGraphComponent, EvalGraphMark } from '../../shared/pgn-viewer/eval-graph.component';
@@ -381,6 +383,7 @@ export class GameReviewComponent {
   private analyses = inject(GameAnalysisService);
   private jobsApi = inject(AnalysisJobsService);
   private translate = inject(TranslateService);
+  private snackbar = inject(SnackbarService);
   private locale = inject(LOCALE_ID);
 
   /** `GET …/evals` der Partie; `null` = keine Kurve (die Komponente bleibt unsichtbar). */
@@ -842,7 +845,12 @@ export class GameReviewComponent {
     this.explainSub?.unsubscribe();
     this.explainSub = this.games.requestExplanations(this.games.explanationsUrl(url), this.language()).subscribe({
       next: e => this.applyExplanations(e),
-      error: () => this.explanations.update(e => e ? { ...e, canGenerate: false } : e),
+      // F2-007: melden; den Knopf nur bei einer fachlichen Absage (403/409) wegnehmen, sonst bleibt er für einen neuen Versuch.
+      error: (err: unknown) => {
+        this.snackbar.warn(apiErrorText(err, this.translate, 'games.review.explainFailed'));
+        const status = (err as { status?: number } | null)?.status;
+        if (status === 403 || status === 409) this.explanations.update(e => e ? { ...e, canGenerate: false } : e);
+      },
     });
   }
 

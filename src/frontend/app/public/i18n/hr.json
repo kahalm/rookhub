@@ -3206,7 +3206,8 @@
       "lines": "Računalne varijante",
       "arrow": "Strelica za najbolji potez",
       "badges": "Simboli poteza (ploča i popis poteza)",
-      "refining": "Dublja analiza — {{done}} od {{total}} pozicija"
+      "refining": "Dublja analiza — {{done}} od {{total}} pozicija",
+      "explainFailed": "Objašnjenja nije bilo moguće zatražiti. Pokušaj ponovno za trenutak."
     },
     "analyzing": "Analiza u tijeku: {{pct}} % ({{analyzed}} od {{total}} pozicija) – graf je na stranici partije",
     "accuracyHint": "Preciznost bijeli · crni (iz analize partije)",
@@ -3265,7 +3266,8 @@
         "played": "Potez iz partije",
         "best": "Najbolji potez",
         "open": "Otvori cijelu usporedbu"
-      }
+      },
+      "dismissFailed": "Skrivanje nije uspjelo — pogreška će se ponovno pojaviti sljedeći put."
     },
     "live": {
       "toggle": "Motor uživo — isprobaj vlastite poteze",

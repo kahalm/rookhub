@@ -3206,7 +3206,8 @@
       "lines": "Computer lines",
       "arrow": "Best-move arrow",
       "badges": "Move symbols (board and move list)",
-      "refining": "Deeper analysis — {{done}} of {{total}} positions"
+      "refining": "Deeper analysis — {{done}} of {{total}} positions",
+      "explainFailed": "The explanations could not be requested. Please try again in a moment."
     },
     "analyzing": "Analysis running: {{pct}}% ({{analyzed}} of {{total}} positions) – the graph appears on the game page",
     "accuracyHint": "Accuracy white · black (from the game analysis)",
@@ -3265,7 +3266,8 @@
         "played": "Game move",
         "best": "Best move",
         "open": "Open full comparison"
-      }
+      },
+      "dismissFailed": "Hiding failed — the mistake will come up again next time."
     },
     "live": {
       "toggle": "Live engine — try your own moves",

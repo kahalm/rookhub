@@ -8,10 +8,11 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, forkJoin, from, of } from 'rxjs';
 import { catchError, map, mergeMap, toArray } from 'rxjs/operators';
 import { PreferencesService } from '../../core/preferences.service';
+import { SnackbarService } from '../../core/snackbar.service';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { GamesService, SavedGame } from './games.service';
@@ -135,6 +136,8 @@ export class MistakesCollectionComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly judge = inject(MistakeJudgeService);
+  private readonly snackbar = inject(SnackbarService);
+  private readonly translate = inject(TranslateService);
   readonly preferences = inject(PreferencesService);
 
   readonly none = NO_CLASSIFIER;
@@ -235,7 +238,8 @@ export class MistakesCollectionComponent implements OnInit {
   private dismiss(m: Mistake): void {
     if (m.gameId == null) return;
     this.service.dismissMistake(m.gameId, m.ply, true, this.totals.get(m.gameId) ?? 0)
-      .subscribe({ error: () => { /* still — wie die Fortschrittsmeldung */ } });
+      // Nutzeraktion: ein Fehlschlag wird gemeldet (F2-008) — sonst käme der Fehler beim nächsten Durchgang still wieder.
+      .subscribe({ error: () => this.snackbar.warn(this.translate.instant('games.mistakes.dismissFailed')) });
   }
 
   private report(solved: readonly Mistake[]): void {
