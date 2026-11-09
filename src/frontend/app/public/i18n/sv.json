@@ -3374,6 +3374,7 @@
       "requestAgain": "Skriv om sammanfattningen",
       "requested": "Sammanfattning begärd …",
       "running": "Sammanfattningen skrivs …",
+      "queued": "Sammanfattningen står i kö …",
       "requestedToast": "Sammanfattning begärd — Claude skriver den inom några minuter.",
       "requestFailed": "Kunde inte begära sammanfattningen.",
       "toGame": "Till partiet",

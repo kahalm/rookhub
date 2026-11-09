@@ -84,7 +84,7 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
         return new OwnGameSummaryDto(StatusOf(s.Status), s.Markdown, s.DoneAt, s.RequestedAt,
             s.Markdown != null && s.MovesHash != null && s.MovesHash != MovesHashOf(g.Pgn), s.Model,
             s.Status == ClubGameSummaryStatus.Failed ? s.Error : null, readiness, "own", left, DailyPerUser,
-            ClubGameSummaries.ElapsedSecondsOf(s.Status, s.RequestedAt, s.StartedAt, DateTime.UtcNow));
+            ClubGameSummaries.ElapsedSecondsOf(s.Status, s.RequestedAt, s.StartedAt, Now, readiness?.Ready == true));
     }
 
     /// <summary>Fertiger Text der über <paramref name="token"/> geteilten Partie (Wunsch 2026-11-09); ohne Text <c>none</c>, auch bei

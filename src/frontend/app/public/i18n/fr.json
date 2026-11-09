@@ -3374,6 +3374,7 @@
       "requestAgain": "Réécrire le résumé",
       "requested": "Résumé demandé …",
       "running": "Le résumé est en cours de rédaction …",
+      "queued": "Résumé en file d’attente …",
       "requestedToast": "Résumé demandé — Claude le rédige en quelques minutes.",
       "requestFailed": "Impossible de demander le résumé.",
       "toGame": "Vers la partie",

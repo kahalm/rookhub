@@ -3374,6 +3374,7 @@
       "requestAgain": "Riscrivi riepilogo",
       "requested": "Riepilogo richiesto …",
       "running": "Il riepilogo è in scrittura …",
+      "queued": "Riepilogo in coda …",
       "requestedToast": "Riepilogo richiesto — Claude lo scrive in pochi minuti.",
       "requestFailed": "Impossibile richiedere il riepilogo.",
       "toGame": "Alla partita",

@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.937.1',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Game summary timer: it counts from the request while the analysis runs, shows „queued“ without a timer once the analysis is done, and starts again at 0:00 when the summary reaches the LLM.',
+        de: 'Zähler der Partie-Zusammenfassung: Er zählt ab der Anforderung, solange gerechnet wird, zeigt ohne Zähler „in der Warteschlange“, sobald die Berechnung fertig ist, und beginnt bei 0:00, wenn die Zusammenfassung beim LLM landet.' },
+    ],
+  },
+  {
     version: '0.937.0',
     date: '2026-11-09',
     changes: [

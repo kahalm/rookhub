@@ -3374,6 +3374,7 @@
       "requestAgain": "Samenvatting herschrijven",
       "requested": "Samenvatting aangevraagd …",
       "running": "Samenvatting wordt geschreven …",
+      "queued": "Samenvatting in de wachtrij …",
       "requestedToast": "Samenvatting aangevraagd — Claude schrijft hem binnen een paar minuten.",
       "requestFailed": "Kon de samenvatting niet aanvragen.",
       "toGame": "Naar de partij",

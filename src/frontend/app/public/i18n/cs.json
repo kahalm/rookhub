@@ -3374,6 +3374,7 @@
       "requestAgain": "Přepsat shrnutí",
       "requested": "Shrnutí vyžádáno …",
       "running": "Shrnutí se píše …",
+      "queued": "Shrnutí čeká ve frontě …",
       "requestedToast": "Shrnutí vyžádáno — Claude jej napíše za pár minut.",
       "requestFailed": "Shrnutí se nepodařilo vyžádat.",
       "toGame": "K partii",

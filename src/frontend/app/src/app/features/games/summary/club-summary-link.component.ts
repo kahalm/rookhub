@@ -40,7 +40,7 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
                 <mat-icon>info_outline</mat-icon>
               </button>
             } @else {
-              {{ (s.status === 'running' ? 'games.summary.running' : 'games.summary.requested') | translate }}
+              {{ phaseLabel() | translate }}
               @if (elapsed(); as e) { <span class="summary-timer">{{ e }}</span> }
             }
           </span>
@@ -97,16 +97,23 @@ export class ClubSummaryLinkComponent implements OnInit {
   readonly canRequest = computed(() => this.shareToken() === null && this.gameShareToken() === null && (this.kind() === 'own' || this.isAdmin));
   readonly state = signal<ClubGameSummary | null>(null);
   readonly busy = signal(false);
-  /** Offene Anforderung, deren Hintergrund-Rechnung noch läuft (0.914.0). */
+  /** Offene Anforderung, deren Hintergrund-Rechnung noch läuft (0.914.0). Beim Schreiben nie: das steht schon beim LLM. */
   readonly waiting = computed<ClubGameSummaryReadiness | null>(() => {
     const s = this.state();
     const r = s?.readiness;
-    return s && (s.status === 'requested' || s.status === 'running') && r && !r.ready ? r : null;
+    return s?.status === 'requested' && r && !r.ready ? r : null;
+  });
+  /** Beschriftung ohne Rechen-Fortschritt: beim Schreiben, in der Warteschlange (Rechnung durch, noch nicht abgeholt) oder nur angefordert. */
+  readonly phaseLabel = computed(() => {
+    const s = this.state();
+    if (s?.status === 'running') return 'games.summary.running';
+    return s?.readiness?.ready ? 'games.summary.queued' : 'games.summary.requested';
   });
 
   /** Sekunden, die seit der letzten Antwort des Servers vergangen sind (nur solange eine Anforderung offen ist). */
   private readonly sinceLoad = signal(0);
-  /** Zähler neben „angefordert“ / „wird geschrieben“: Minuten:Sekunden, `null`, solange nichts offen ist. */
+  /** Zähler neben „angefordert“ / „wird geschrieben“: Minuten:Sekunden; `null`, wenn der Server keine Zeit liefert (nichts offen,
+   *  oder Rechnung durch und noch nicht abgeholt). Beim Wechsel aufs Schreiben wird der Serverwert kleiner, `sinceLoad` beginnt je Antwort neu. */
   readonly elapsed = computed(() => {
     const st = this.state();
     return (st?.status === 'requested' || st?.status === 'running') && st.runningSeconds != null

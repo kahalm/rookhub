@@ -3376,6 +3376,7 @@
       "requestAgain": "Zusammenfassung neu schreiben",
       "requested": "Zusammenfassung angefordert …",
       "running": "Zusammenfassung wird geschrieben …",
+      "queued": "Zusammenfassung in der Warteschlange …",
       "requestedToast": "Zusammenfassung angefordert – Claude schreibt sie in ein paar Minuten.",
       "requestFailed": "Die Zusammenfassung konnte nicht angefordert werden.",
       "toGame": "Zur Partie",

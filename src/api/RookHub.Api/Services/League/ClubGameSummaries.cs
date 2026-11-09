@@ -106,22 +106,25 @@ public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = nul
         var s = await db.ClubGameSummaries.AsNoTracking().FirstOrDefaultAsync(x => x.ClubGameId == clubGameId, ct);
         if (s is null) return new ClubGameSummaryDto("none", null, null, null, false, null, null);
         var open = s.Status is ClubGameSummaryStatus.Requested or ClubGameSummaryStatus.Running;
+        var readiness = open ? await ReadinessAsync(clubGameId, ct) : null;
         return new ClubGameSummaryDto(StatusOf(s.Status), s.Markdown, s.DoneAt, s.RequestedAt,
             s.Markdown != null && s.MovesHash != null && s.MovesHash != hash.MovesHash, s.Model,
             s.Status == ClubGameSummaryStatus.Failed ? s.Error : null,
-            open ? await ReadinessAsync(clubGameId, ct) : null,
-            ElapsedSecondsOf(s.Status, s.RequestedAt, s.StartedAt, Now));
+            readiness,
+            ElapsedSecondsOf(s.Status, s.RequestedAt, s.StartedAt, Now, readiness?.Ready == true));
     }
 
-    /// <summary>Wert für <c>RunningSeconds</c> im Stand (Zähler auf der Seite, 0.926.1; das JSON-Feld behält seinen Namen):
-    /// beim Schreiben die Sekunden seit <paramref name="startedAt"/>, solange die Anforderung wartet die seit
-    /// <paramref name="requestedAt"/> (0.933.1). Vom Server gerechnet, damit Zeitzone und Uhr des Browsers keine Rolle spielen.
+    /// <summary>Wert für <c>RunningSeconds</c> im Stand (Zähler auf der Seite, 0.926.1; das JSON-Feld behält seinen Namen).
+    /// Solange die Hintergrund-Rechnung läuft: die Sekunden seit <paramref name="requestedAt"/> (0.933.1). Ist sie durch, wartet
+    /// der Auftrag nur noch auf den Watcher: <c>null</c>, also kein Zähler — die Rechenzeit soll nicht weiterlaufen, und einen
+    /// Zeitpunkt „Rechnung fertig“ gibt es nicht. Beim Schreiben (beim LLM): die Sekunden seit <paramref name="startedAt"/>, die
+    /// Zeit beginnt also bei 0 (Wunsch 2026-11-09). Vom Server gerechnet, damit Zeitzone und Uhr des Browsers keine Rolle spielen.
     /// <c>null</c>, wenn nichts offen ist.</summary>
-    internal static int? ElapsedSecondsOf(ClubGameSummaryStatus status, DateTime requestedAt, DateTime? startedAt, DateTime now)
+    internal static int? ElapsedSecondsOf(ClubGameSummaryStatus status, DateTime requestedAt, DateTime? startedAt, DateTime now, bool ready)
     {
         DateTime? since = status switch
         {
-            ClubGameSummaryStatus.Requested => requestedAt,
+            ClubGameSummaryStatus.Requested when !ready => requestedAt,
             ClubGameSummaryStatus.Running => startedAt,
             _ => null,
         };

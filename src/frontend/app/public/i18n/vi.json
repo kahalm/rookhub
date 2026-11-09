@@ -3374,6 +3374,7 @@
       "requestAgain": "Viết lại tóm tắt",
       "requested": "Đã yêu cầu tóm tắt …",
       "running": "Đang viết tóm tắt …",
+      "queued": "Bản tóm tắt đang xếp hàng …",
       "requestedToast": "Đã yêu cầu tóm tắt — Claude sẽ viết trong vài phút.",
       "requestFailed": "Không thể yêu cầu tóm tắt.",
       "toGame": "Đến ván cờ",

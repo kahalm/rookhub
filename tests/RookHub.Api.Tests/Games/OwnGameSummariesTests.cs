@@ -116,6 +116,32 @@ public class OwnGameSummariesTests : IDisposable
     }
 
     [Fact]
+    public async Task Get_Zaehler_rechnet_abAnforderung_bereit_keiner_beimLlm_abStart()
+    {
+        var analysis = Analysis(GameAnalysisStatus.Running);
+        var g = Game(analysis: analysis.Id);
+        var row = new OwnGameSummary { SavedGameId = g.Id, UserId = 7, Status = ClubGameSummaryStatus.Requested, RequestedAt = DateTime.UtcNow.AddMinutes(-35) };
+        _db.OwnGameSummaries.Add(row);
+        _db.SaveChanges();
+        var computing = (await Svc().GetAsync(7, g.Id, false))!;
+        Assert.False(computing.Readiness!.Ready);
+        Assert.InRange(computing.RunningSeconds!.Value, 2100, 2160);
+
+        analysis.Status = GameAnalysisStatus.Done;
+        analysis.MistakeComparisonsAt = DateTime.UtcNow;
+        _db.SaveChanges();
+        var queued = (await Svc().GetAsync(7, g.Id, false))!;
+        Assert.True(queued.Readiness!.Ready);
+        Assert.Equal("requested", queued.Status);
+        Assert.Null(queued.RunningSeconds);
+
+        Assert.Equal(OwnGameSummaries.Outcome.Ok, await Svc().StartAsync(g.Id));
+        var running = (await Svc().GetAsync(7, g.Id, false))!;
+        Assert.Equal("running", running.Status);
+        Assert.InRange(running.RunningSeconds!.Value, 0, 60);
+    }
+
+    [Fact]
     public async Task Complete_undKorrektur_meldetVeraltet()
     {
         var g = Game(analysis: Analysis().Id);

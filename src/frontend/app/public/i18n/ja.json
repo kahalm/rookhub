@@ -3374,6 +3374,7 @@
       "requestAgain": "まとめを書き直す",
       "requested": "まとめを依頼しました…",
       "running": "まとめを作成中…",
+      "queued": "要約は順番待ちです …",
       "requestedToast": "まとめを依頼しました。Claude が数分で書きます。",
       "requestFailed": "まとめを依頼できませんでした。",
       "toGame": "対局へ",

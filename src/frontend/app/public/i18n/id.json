@@ -3374,6 +3374,7 @@
       "requestAgain": "Tulis ulang ringkasan",
       "requested": "Ringkasan diminta …",
       "running": "Ringkasan sedang ditulis …",
+      "queued": "Ringkasan dalam antrean …",
       "requestedToast": "Ringkasan diminta — Claude menulisnya dalam beberapa menit.",
       "requestFailed": "Ringkasan tidak dapat diminta.",
       "toGame": "Ke partai",

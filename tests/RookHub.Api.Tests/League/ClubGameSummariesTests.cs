@@ -225,14 +225,54 @@ public class ClubGameSummariesTests : IDisposable
     {
         var now = new DateTime(2026, 11, 9, 10, 0, 0, DateTimeKind.Utc);
         var requested = now.AddSeconds(-300);
-        Assert.Equal(125, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Running, requested, now.AddSeconds(-125), now));
-        Assert.Equal(0, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Running, requested, now.AddSeconds(5), now));
-        Assert.Null(ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Running, requested, null, now));
+        Assert.Equal(125, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Running, requested, now.AddSeconds(-125), now, ready: false));
+        Assert.Equal(0, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Running, requested, now.AddSeconds(5), now, ready: false));
+        Assert.Null(ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Running, requested, null, now, ready: false));
         // Offene Anforderung: ab RequestedAt, ein alter StartedAt spielt keine Rolle.
-        Assert.Equal(300, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Requested, requested, null, now));
-        Assert.Equal(300, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Requested, requested, now.AddDays(-1), now));
-        Assert.Equal(0, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Requested, now.AddSeconds(5), null, now));
-        Assert.Null(ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Done, requested, now.AddSeconds(-125), now));
-        Assert.Null(ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Failed, requested, now.AddSeconds(-125), now));
+        Assert.Equal(300, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Requested, requested, null, now, ready: false));
+        Assert.Equal(300, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Requested, requested, now.AddDays(-1), now, ready: false));
+        Assert.Equal(0, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Requested, now.AddSeconds(5), null, now, ready: false));
+        Assert.Null(ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Done, requested, now.AddSeconds(-125), now, ready: false));
+        Assert.Null(ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Failed, requested, now.AddSeconds(-125), now, ready: false));
+    }
+
+    [Fact]
+    public void ElapsedSecondsOf_RechnungDurch_keinZaehler_beimLlmAbStart()
+    {
+        var now = new DateTime(2026, 11, 9, 10, 0, 0, DateTimeKind.Utc);
+        Assert.Null(ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Requested, now.AddMinutes(-35), null, now, ready: true));
+        Assert.Equal(4, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Running, now.AddMinutes(-35), now.AddSeconds(-4), now, ready: true));
+    }
+
+    [Fact]
+    public async Task Get_Zaehler_jePhase_undBeimNeuAnfordern()
+    {
+        var id = await GameAsync();
+        var a = await ReadyAsync(id, refined: false);
+        await Svc.RequestAsync(TestClubs.Home, id, 7);
+
+        _clock.Advance(TimeSpan.FromMinutes(35));
+        var computing = (await Svc.GetAsync(TestClubs.Home, id))!;
+        Assert.Equal(("requested", false, (int?)2100), (computing.Status, computing.Readiness!.Ready, computing.RunningSeconds));
+
+        a.RefinedAt = _clock.GetUtcNow().UtcDateTime;
+        await _db.SaveChangesAsync();
+        var queued = (await Svc.GetAsync(TestClubs.Home, id))!;
+        Assert.Equal(("requested", true, (int?)null), (queued.Status, queued.Readiness!.Ready, queued.RunningSeconds));
+
+        Assert.Equal(ClubGameSummaries.Outcome.Ok, await Svc.StartAsync(id));
+        Assert.Equal(0, (await Svc.GetAsync(TestClubs.Home, id))!.RunningSeconds);
+        _clock.Advance(TimeSpan.FromSeconds(5));
+        Assert.Equal(5, (await Svc.GetAsync(TestClubs.Home, id))!.RunningSeconds);
+
+        await Svc.CompleteAsync(id, "# Text", "fable");
+        Assert.Null((await Svc.GetAsync(TestClubs.Home, id))!.RunningSeconds);
+
+        // Neu anfordern: StartedAt der alten Runde zählt nicht, die Zeit beginnt wieder ab der Anforderung.
+        a.RefinedAt = null;
+        await _db.SaveChangesAsync();
+        await Svc.RequestAsync(TestClubs.Home, id, 7);
+        _clock.Advance(TimeSpan.FromSeconds(3));
+        Assert.Equal(3, (await Svc.GetAsync(TestClubs.Home, id))!.RunningSeconds);
     }
 }

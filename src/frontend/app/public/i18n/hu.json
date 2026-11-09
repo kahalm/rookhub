@@ -3783,6 +3783,7 @@
       "requestAgain": "Összefoglaló újraírása",
       "requested": "Összefoglaló kérve …",
       "running": "Az összefoglaló készül …",
+      "queued": "Az összefoglaló sorban áll …",
       "requestedToast": "Összefoglaló kérve – Claude néhány perc alatt megírja.",
       "requestFailed": "Az összefoglalót nem sikerült kérni.",
       "toGame": "A játszmához",

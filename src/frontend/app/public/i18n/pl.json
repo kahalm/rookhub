@@ -3374,6 +3374,7 @@
       "requestAgain": "Napisz podsumowanie ponownie",
       "requested": "Podsumowanie zamówione …",
       "running": "Podsumowanie jest pisane …",
+      "queued": "Podsumowanie w kolejce …",
       "requestedToast": "Podsumowanie zamówione — Claude napisze je w kilka minut.",
       "requestFailed": "Nie udało się zamówić podsumowania.",
       "toGame": "Do partii",

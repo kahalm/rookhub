@@ -3374,6 +3374,7 @@
       "requestAgain": "Özeti yeniden yazdır",
       "requested": "Özet istendi …",
       "running": "Özet yazılıyor …",
+      "queued": "Özet sırada …",
       "requestedToast": "Özet istendi — Claude birkaç dakika içinde yazar.",
       "requestFailed": "Özet istenemedi.",
       "toGame": "Oyuna",

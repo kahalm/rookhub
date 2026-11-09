@@ -194,6 +194,28 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
     beforeEach(() => jasmine.clock().install());
     afterEach(() => jasmine.clock().uninstall());
 
+    it('Phasenwechsel: 35:00 beim Rechnen, dann kein Zähler, beim LLM wieder von vorn', () => {
+      const url = '/api/league/club/games/236/summary';
+      const computing = { ...readinessDone, ready: false, comparisonsDone: 10 };
+      const { f, http, el } = setup(true);
+      http.expectOne(url).flush({ ...none, status: 'requested', runningSeconds: 2095, readiness: computing });
+      jasmine.clock().tick(5000);
+      f.detectChanges();
+      expect(el.querySelector('.summary-timer')?.textContent).toBe('35:00');
+      jasmine.clock().tick(5000);
+      http.expectOne(url).flush({ ...none, status: 'requested', runningSeconds: null, readiness: readinessDone });
+      f.detectChanges();
+      expect(el.querySelector('.summary-wait')?.textContent).toContain('games.summary.queued');
+      expect(el.querySelector('.summary-timer')).toBeNull();
+      jasmine.clock().tick(10000);
+      http.expectOne(url).flush({ ...none, status: 'running', runningSeconds: 2, readiness: readinessDone });
+      f.detectChanges();
+      expect(el.querySelector('.summary-timer')?.textContent).toBe('0:02');
+      jasmine.clock().tick(3000);
+      f.detectChanges();
+      expect(el.querySelector('.summary-timer')?.textContent).toBe('0:05');
+    });
+
     it('angefordert: zählt je Sekunde und sieht alle 10 s nach', () => {
       const { f, http, el } = setup(true);
       http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'requested', runningSeconds: 5 });
@@ -206,6 +228,28 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
       f.detectChanges();
       expect(el.querySelector('.summary-timer')?.textContent).toBe('0:01'); // Wechsel aufs Schreiben: gewollt von vorn
     });
+  });
+
+  const readinessDone = { ready: true, hasAnalysis: true, analysisDone: true, refining: false, refinedPositions: 62, totalPositions: 62,
+    comparisonsPlanned: true, comparisonsDone: 11, comparisonsTotal: 11 };
+
+  it('Rechnung durch, noch nicht abgeholt: „in der Warteschlange“, kein Zähler — auch auf der Detailseite', () => {
+    const { f, http, el } = setup(true, true);
+    http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'requested', markdown: '# x', runningSeconds: null, readiness: readinessDone });
+    f.detectChanges();
+    expect(el.querySelector('.summary-wait')?.textContent).toContain('games.summary.queued');
+    expect(el.querySelector('.summary-timer')).toBeNull();
+    expect(el.querySelector('.wait-info')).toBeNull();
+  });
+
+  it('beim Schreiben immer „wird geschrieben“, auch wenn die Bereitschaft wieder kippt', () => {
+    const { f, http, el } = setup(true);
+    http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'running', runningSeconds: 4,
+      readiness: { ...readinessDone, ready: false, comparisonsDone: 10 } });
+    f.detectChanges();
+    expect(el.querySelector('.summary-wait')?.textContent).toContain('games.summary.running');
+    expect(el.querySelector('.summary-timer')?.textContent).toBe('0:04');
+    expect(el.querySelector('.wait-info')).toBeNull();
   });
 
   it('ohne Zeitangabe des Servers oder fertig: kein Zähler', () => {

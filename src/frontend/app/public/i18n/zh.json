@@ -3374,6 +3374,7 @@
       "requestAgain": "重写总结",
       "requested": "已请求总结…",
       "running": "正在撰写总结…",
+      "queued": "摘要排队中 …",
       "requestedToast": "已请求总结——Claude 将在几分钟内写好。",
       "requestFailed": "无法请求总结。",
       "toGame": "前往对局",

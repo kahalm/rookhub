@@ -3374,6 +3374,7 @@
       "requestAgain": "Reescrever resumo",
       "requested": "Resumo pedido …",
       "running": "O resumo está a ser escrito …",
+      "queued": "Resumo na fila …",
       "requestedToast": "Resumo pedido — o Claude escreve-o dentro de alguns minutos.",
       "requestFailed": "Não foi possível pedir o resumo.",
       "toGame": "Para a partida",

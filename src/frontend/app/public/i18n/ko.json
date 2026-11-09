@@ -3374,6 +3374,7 @@
       "requestAgain": "요약 다시 쓰기",
       "requested": "요약 요청됨 …",
       "running": "요약 작성 중 …",
+      "queued": "요약 대기 중 …",
       "requestedToast": "요약이 요청되었습니다. Claude가 몇 분 안에 작성합니다.",
       "requestFailed": "요약을 요청할 수 없습니다.",
       "toGame": "게임으로",
