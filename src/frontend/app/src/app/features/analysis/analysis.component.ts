@@ -292,7 +292,10 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     const pgn = typeof statePgn === 'string' && statePgn.trim() ? statePgn : p.pgn;
     if (p.historyId != null && this.auth.isLoggedIn) {
       this.resetToStart();
-      this.history.get(p.historyId).subscribe({ next: e => this.openHistoryEntry(e), error: () => {} });
+      this.history.get(p.historyId).subscribe({
+        next: e => this.openHistoryEntry(e),
+        error: () => this.snackbar.warn(this.translate.instant('analysis.history.loadFailed')),   // F2-009 wie openHistoryEntry
+      });
       return;
     }
     const blind = window.history.state?.blind === true || p.blind;

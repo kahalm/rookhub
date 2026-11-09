@@ -1242,6 +1242,15 @@ describe('AnalysisComponent Verlauf + Sterne (0.603.0)', () => {
     c.ngOnDestroy();
   });
 
+  it('?history=<id> scheitert: Hinweis wie beim Öffnen aus der Liste statt stiller Grundstellung (F2-009)', () => {
+    const c = makeComponent({ history: '9' }, { loggedIn: true });
+    c.__history.get.and.returnValue(throwError(() => ({ status: 404 })));
+    c.ngOnInit();
+    expect(c.__history.get).toHaveBeenCalledWith(9);
+    expect(c.__snackbar.warn).toHaveBeenCalledWith('analysis.history.loadFailed');
+    c.ngOnDestroy();
+  });
+
   it('ein Eintrag aus der Liste (ohne Baum) wird erst geholt', () => {
     const c = makeComponent({}, { loggedIn: true });
     c.ngOnInit();
