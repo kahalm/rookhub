@@ -121,6 +121,29 @@ public class BoardCutJobServiceTests : IDisposable
         Assert.Null(await _service.ClaimAsync("pat:3", null, CancellationToken.None));
     }
 
+    /// <summary>G2-002: ein Auftrag, der immer wieder ohne Ergebnis zurückkommt (Worker-Fehler ohne Text, OOM-Kill über die
+    /// abgelaufene Leihe), gilt nach <see cref="BoardCutJobService.MaxAttempts"/> Leihen als gescheitert und hält den
+    /// jüngeren Auftrag nicht mehr auf. Vorher blieb er Pending und kam als ältester immer wieder.</summary>
+    [Fact]
+    public async Task Claim_AfterMaxAttemptsWithoutResult_FailsTheJobAndServesTheNext()
+    {
+        var stuck = await _service.CreateAsync(new BoardCutJobCreateDto { EbookId = (await BookWithPdfAsync()).Id, Payload = Payload() }, CancellationToken.None);
+        await Task.Delay(5);
+        var younger = await _service.CreateAsync(new BoardCutJobCreateDto { EbookId = (await BookWithPdfAsync()).Id, Payload = Payload() }, CancellationToken.None);
+
+        for (var i = 0; i < BoardCutJobService.MaxAttempts; i++)
+        {
+            var job = await _service.ClaimAsync("pat:1", null, CancellationToken.None);
+            Assert.Equal(stuck.JobId, job!.JobId);
+            await _service.ReleaseAsync(job.JobId, "pat:1", null, CancellationToken.None);
+        }
+
+        Assert.Equal(younger.JobId, (await _service.ClaimAsync("pat:1", null, CancellationToken.None))!.JobId);
+        var status = await _service.GetAsync(stuck.JobId, CancellationToken.None);
+        Assert.Equal("Failed", status.State);
+        Assert.Contains("attempts", status.Error);
+    }
+
     [Fact]
     public async Task NewJob_ReplacesTheWaitingOne_ForTheSameBook()
     {

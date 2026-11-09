@@ -95,6 +95,9 @@ public sealed partial class BoardCutJobService
 
     // ── Worker ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
+    /// <summary>So viele Leihen ohne Ergebnis bekommt ein Auftrag; die nächste markiert ihn als gescheitert (G2-002).</summary>
+    public const int MaxAttempts = 3;
+
     /// <summary>Ältesten wartenden, freien Auftrag leihen → Auftrag, oder <c>null</c>, wenn nichts wartet.</summary>
     public async Task<BoardWorkerJobDto?> ClaimAsync(string owner, string? worker, CancellationToken ct)
     {
@@ -110,6 +113,13 @@ public sealed partial class BoardCutJobService
                 if (!await TryClaimAsync(id, owner, Clip(worker, 64), ct)) continue;
                 _db.ChangeTracker.Clear();
                 var job = await _db.BoardCutJobs.AsNoTracking().Include(j => j.Ebook).ThenInclude(b => b.Files).FirstAsync(j => j.Id == id, ct);
+                if (job.Attempts > MaxAttempts)
+                {
+                    await FailAsync(id, $"Gave up after {MaxAttempts} attempts without a result.", ct);
+                    _logger.LogWarning("Brett-Auftrag {JobId} (E-Book {EbookId}) nach {Attempts} Versuchen ohne Ergebnis aufgegeben",
+                        id, job.EbookId, MaxAttempts);
+                    continue;
+                }
                 var file = PdfFile(job.Ebook, job.FileId);
                 if (file == null)
                 {
@@ -144,12 +154,13 @@ public sealed partial class BoardCutJobService
             return await _db.BoardCutJobs
                 .Where(j => j.Id == id && j.State == BoardCutState.Pending && (j.LeaseUntil == null || j.LeaseUntil < now))
                 .ExecuteUpdateAsync(s => s
+                    .SetProperty(j => j.Attempts, j => j.Attempts + 1)
                     .SetProperty(j => j.LeaseOwner, owner)
                     .SetProperty(j => j.LeaseUntil, until)
                     .SetProperty(j => j.Worker, worker), ct) == 1;
         var job = await _db.BoardCutJobs.FirstOrDefaultAsync(j => j.Id == id, ct);
         if (job == null || job.State != BoardCutState.Pending || (job.LeaseUntil != null && job.LeaseUntil >= now)) return false;
-        job.LeaseOwner = owner; job.LeaseUntil = until; job.Worker = worker;
+        job.LeaseOwner = owner; job.LeaseUntil = until; job.Worker = worker; job.Attempts++;
         await _db.SaveChangesAsync(ct);
         return true;
     }

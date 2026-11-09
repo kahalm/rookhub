@@ -38,6 +38,10 @@ def work(args):
         if best is None or bi < 0.5:
             best = (round(x * W), round(y * H), round((x + bw) * W), round((y + bh) * H))
         X0, Y0, X1, Y1 = [v * 2 for v in best]
+        # Abweichung vom Laptop-Worker (G2-002): ein entartetes Rechteck (unter 8 px oder außerhalb der Seite) wird
+        # übersprungen statt den ganzen Auftrag mit einer PIL-/numpy-Ausnahme abzubrechen. Gültige Bretter bleiben bytegleich.
+        if X0 < 0 or Y0 < 0 or min(X1, full.shape[1]) - X0 < 8 or min(Y1, full.shape[0]) - Y0 < 8:
+            continue
         bd = np.asarray(Image.fromarray((full[Y0:Y1, X0:X1] * 255).astype(np.uint8)).resize((8 * CS, 8 * CS), Image.BILINEAR), np.uint8)
         cells = bd.reshape(8, CS, 8, CS).transpose(0, 2, 1, 3).reshape(64, CS, CS)
         cells = cells.reshape(64, 32, 2, 32, 2).mean(axis=(2, 4)).round().astype(np.uint8)

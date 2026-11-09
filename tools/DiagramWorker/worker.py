@@ -151,7 +151,8 @@ def run_job(job, version):
 
 
 def board_once():
-    """Einen Brett-Auftrag erledigen → True, wenn gearbeitet wurde. Ergebnis wie beim Laptop: cells.npz, prep.json, crops/."""
+    """Einen Brett-Auftrag erledigen → True, wenn er erledigt wurde. Ergebnis wie beim Laptop: cells.npz, prep.json, crops/.
+    Ein gescheiterter Auftrag gibt False zurück, damit die Diagramm-Erkennung nicht hinter ihm hängt (G2-002)."""
     if os.environ.get('BOARDS') == '0':
         return False
     try:
@@ -203,18 +204,27 @@ def board_once():
         r = rh('POST', f"api/board-worker/jobs/{job['jobId']}/result", files=files, timeout=1800)
         if r.status_code == 200:
             log(f"Bretter: Buch {eid}: {len(res)}/{payload.get('diagrams', '?')} Bretter in {time.time() - t0:.0f} s")
-        else:
-            release_board(job, f'Ergebnis abgelehnt ({r.status_code}): {r.text[:400]}' if r.status_code == 400 else None)
-            log(f'Bretter: Buch {eid}: Ergebnis nicht angenommen ({r.status_code}) {r.text[:200]}')
-        return True
+            return True
+        # 5xx/429 = Server gerade nicht bereit → ohne Text frei (der Server deckelt die Versuche); jede andere Ablehnung
+        # ist fest und kommt beim nächsten Versuch wieder → mit Text = fehlgeschlagen (G2-002).
+        transient = r.status_code >= 500 or r.status_code == 429
+        release_board(job, None if transient else f'Ergebnis abgelehnt ({r.status_code}): {r.text[:400]}')
+        log(f'Bretter: Buch {eid}: Ergebnis nicht angenommen ({r.status_code}) {r.text[:200]}')
+        return False
     except BaseException as e:
-        gone = isinstance(e, requests.HTTPError) and e.response is not None and e.response.status_code == 404
-        release_board(job, f'Datei fehlt: {e}' if gone else None)
-        if isinstance(e, (KeyboardInterrupt, SystemExit)):
+        if isinstance(e, (KeyboardInterrupt, SystemExit)):   # docker stop: nur freigeben
+            release_board(job, None)
             raise
+        if isinstance(e, requests.RequestException):
+            # Netzfehler: ohne Text frei, ein anderer Lauf versucht es wieder; die Datei fehlt (404) = fest.
+            gone = isinstance(e, requests.HTTPError) and e.response is not None and e.response.status_code == 404
+            release_board(job, f'Datei fehlt: {e}' if gone else None)
+        else:
+            # Jeder andere Fehler (Ausschneiden, Speichern, Format) kommt beim nächsten Versuch genauso — vorher hing der
+            # Worker im Kreis „PDF laden → schneiden → Fehler → freigeben“ und erkannte keine Diagramme mehr (G2-002).
+            release_board(job, f'{type(e).__name__}: {e}'[:1000])
         log(f'Bretter: Buch {eid}: {type(e).__name__} {e} — freigegeben')
-        time.sleep(30)
-        return True
+        return False   # gescheitert → in diesem Durchlauf ist die Diagramm-Erkennung dran
     finally:
         stop.set()
         shutil.rmtree(work, ignore_errors=True)

@@ -522,7 +522,7 @@ Diagramm-Erkennung; das Ausschneiden ist wörtlich der Laptop-Code (`boardcut/`,
 | POST | `/api/admin/board-jobs/{jobId}/cancel` | wartenden Auftrag zurückziehen |
 | POST | `/api/board-worker/claim` | Worker: `{ worker? }` → `{ jobId, ebookId, title, payload, file: { url, … }, leaseUntil, heartbeatSeconds }`, 204 = nichts |
 | GET | `/api/board-worker/jobs/{jobId}/file` | das PDF (Original vor abgeleitetem, wie `prep.book_file`) |
-| POST | `/api/board-worker/jobs/{jobId}/heartbeat` · `…/release` | Leihe verlängern · zurückgeben (`{ error }` = fehlgeschlagen) |
+| POST | `/api/board-worker/jobs/{jobId}/heartbeat` · `…/release` | Leihe verlängern · zurückgeben (`{ error }` = fehlgeschlagen). Ohne Fehler wieder frei — aber höchstens `BoardCutJobService.MaxAttempts` (3) Leihen ohne Ergebnis, die nächste markiert den Auftrag `Failed` („Gave up after 3 attempts …“; zählt auch abgelaufene Leihen nach einem Absturz des Workers, G2-002). Der Container-Worker gibt nur Netzfehler und 5xx/429 beim Hochladen ohne Text zurück, jeden anderen Fehler mit Text |
 | POST | `/api/board-worker/jobs/{jobId}/result` | multipart `cells` (npz), `prep` (JSON), `crops` (ZIP nur `<Diagramm-Id>.png`) |
 
 Ablage: **`<Ebooks:Root>/board-cells/<EbookId>/`** (Prod-Host `/srv/media/rookhub-ebooks/prod/board-cells/<EbookId>`),

@@ -24,6 +24,10 @@ public class BoardCutJob
     /// <summary>Selbstgewählter Name des Rechners (nur Protokoll/Anzeige).</summary>
     public string? Worker { get; set; }
     public string? Error { get; set; }
+    /// <summary>Wie oft der Auftrag schon geliehen wurde (G2-002). Ab <c>BoardCutJobService.MaxAttempts</c> Leihen ohne
+    /// Ergebnis gilt er als gescheitert — sonst kam ein fest scheiternder Auftrag (auch nach OOM-Kill des Workers über die
+    /// abgelaufene Leihe) endlos wieder und hielt als ältester alle jüngeren auf.</summary>
+    public int Attempts { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? FinishedAt { get; set; }
 }

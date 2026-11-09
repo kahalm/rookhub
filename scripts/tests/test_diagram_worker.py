@@ -192,5 +192,93 @@ class BoardTests(unittest.TestCase):
         self.assertEqual(empty['cells'].shape, (0, 64, 32, 32))
 
 
+BOARD_JOB = {'jobId': 'b1', 'ebookId': 7, 'title': 'Buch', 'heartbeatSeconds': 600,
+             'payload': {'diagrams': 0, 'pages': {}}, 'file': {'url': 'api/board-worker/jobs/b1/file'}}
+
+
+class BoardFailureTests(unittest.TestCase):
+    """G2-002: ein Brett-Auftrag, der fest scheitert, kommt mit Fehlertext zurück (= fehlgeschlagen) und hält die
+    Diagramm-Erkennung nicht an; Netzfehler geben ihn ohne Text frei."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.calls = []
+        self._rh, self._work, self._sleep = w.rh, w.WORK, w.time.sleep
+        w.WORK = os.path.join(self.tmp, 'work')
+        w.time.sleep = lambda s: None
+
+    def tearDown(self):
+        w.rh, w.WORK, w.time.sleep = self._rh, self._work, self._sleep
+
+    def fake_rh(self, download=None, result_status=200):
+        def rh(method, path, **kw):
+            self.calls.append((method, path, kw.get('json')))
+            if path.endswith('/claim'): return Resp(200, BOARD_JOB)
+            if path.endswith('/file'):
+                if download: download()
+                return Resp(200, data=b'%PDF-1.4')
+            if path.endswith('/result'): return Resp(result_status, {'message': 'nein'})
+            return Resp(204)
+        return rh
+
+    def released(self):
+        return [c[2] for c in self.calls if c[1].endswith('/release')]
+
+    def test_fixed_error_releases_with_text_and_lets_diagrams_run(self):
+        def boom(): raise ValueError('tile cannot extend outside image')
+        w.rh = self.fake_rh(download=boom)
+        self.assertFalse(w.board_once())   # vorher True → diagram_once lief nie
+        self.assertEqual(len(self.released()), 1)
+        self.assertIn('tile cannot extend outside image', self.released()[0]['error'])
+
+    def test_network_error_releases_without_text(self):
+        def down(): raise w.requests.RequestException('weg')
+        w.rh = self.fake_rh(download=down)
+        self.assertFalse(w.board_once())
+        self.assertEqual(self.released(), [{}])
+
+    @unittest.skipIf(np is None, 'numpy fehlt')
+    def test_rejected_result_fails_but_server_error_only_frees(self):
+        w.rh = self.fake_rh(result_status=413)
+        self.assertFalse(w.board_once())
+        self.assertIn('413', self.released()[0]['error'])
+        self.calls.clear()
+        w.rh = self.fake_rh(result_status=503)
+        self.assertFalse(w.board_once())
+        self.assertEqual(self.released(), [{}])
+
+    def test_failed_board_does_not_block_diagrams(self):
+        order = []
+        old_b, old_d = w.board_once, w.diagram_once
+        try:
+            w.board_once = lambda: order.append('board') or False
+            w.diagram_once = lambda v: order.append('diagram') or True
+            self.assertTrue(w.board_once() or w.diagram_once('x'))
+        finally:
+            w.board_once, w.diagram_once = old_b, old_d
+        self.assertEqual(order, ['board', 'diagram'])
+
+
+@unittest.skipIf(np is None, 'numpy fehlt')
+class CutGuardTests(unittest.TestCase):
+    """G2-002: cut.work überspringt ein entartetes Rechteck (Breite 0 nach dem Runden) statt zu werfen."""
+
+    def test_zero_width_rect_is_skipped(self):
+        import shutil
+        if shutil.which('pdftoppm') is None:
+            self.skipTest('pdftoppm fehlt')
+        from PIL import Image
+        sys.path.insert(0, os.path.join(HERE, '..', '..', 'tools', 'DiagramWorker', 'boardcut'))
+        import cut
+        tmp = tempfile.mkdtemp(); os.makedirs(os.path.join(tmp, 'crops'))
+        pdf = os.path.join(tmp, 'p.pdf')
+        Image.new('RGB', (300, 300), 'white').save(pdf, 'PDF', resolution=72)
+        diags = [[1, 0.5, 0.1, 0.0, 0.8, '8/8/8/8/8/8/8/K6k w - - 0 1', 0.9],   # Breite 0
+                 [2, 0.1, 0.1, 0.5, 0.5, '8/8/8/8/8/8/8/K6k w - - 0 1', 0.9]]   # gültig
+        out = cut.work((pdf, 1, diags, tmp))
+        self.assertEqual([o[1] for o in out], [2])
+        self.assertEqual(os.listdir(os.path.join(tmp, 'crops')), ['2.png'])
+
+
 if __name__ == '__main__':
     unittest.main()
