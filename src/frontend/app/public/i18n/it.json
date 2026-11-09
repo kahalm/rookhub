@@ -921,7 +921,6 @@
     "privacy": {
       "title": "Informativa sulla privacy",
       "link": "Informativa sulla privacy",
-      "updated": "Ultimo aggiornamento: 26 ottobre 2026",
       "tocTitle": "Indice",
       "intro": "RookHub è una piattaforma di allenamento agli scacchi (puzzle, modalità infinita, corsi, repertori). Questa informativa spiega come vengono trattati i dati personali ai sensi del GDPR.",
       "introLeagueHub": "LeagueHub (parte di RookHub) prepara previsioni delle formazioni per gli incontri a squadre e gestisce il database partite dei club partecipanti. L'account è lo stesso di RookHub. Questa informativa spiega come vengono trattati i dati personali ai sensi del GDPR.",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "Caricamento puzzle…",
       "watchOpponent": "Osserva la mossa dell'avversario…",
+      "invalidPuzzle": "Questo puzzle non è giocabile: le mosse non corrispondono alla posizione.",
       "correct": "Corretto!",
       "checkmate": "Scacco matto!",
       "altSolution": "Soluzione alternativa — il puzzle aveva una sequenza di mosse diversa.",

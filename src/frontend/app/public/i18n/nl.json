@@ -921,7 +921,6 @@
     "privacy": {
       "title": "Privacybeleid",
       "link": "Privacybeleid",
-      "updated": "Laatst bijgewerkt: 26 oktober 2026",
       "tocTitle": "Inhoud",
       "intro": "RookHub is een schaaktrainingsplatform (puzzels, eindeloze modus, cursussen, repertoires). Dit beleid legt uit hoe persoonsgegevens worden verwerkt onder de AVG.",
       "introLeagueHub": "LeagueHub (onderdeel van RookHub) maakt opstellingsprognoses voor teamwedstrijden en beheert de partijdatabase van deelnemende clubs. Het account is hetzelfde als op RookHub. Deze verklaring legt uit hoe persoonsgegevens worden verwerkt volgens de AVG.",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "Puzzel laden…",
       "watchOpponent": "Kijk de zet van de tegenstander…",
+      "invalidPuzzle": "Deze puzzel kan niet gespeeld worden: de zetten passen niet bij de stelling.",
       "correct": "Goed!",
       "checkmate": "Schaakmat!",
       "altSolution": "Alternatieve oplossing — de puzzel had een andere bedoelde zetvolgorde.",

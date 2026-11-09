@@ -921,7 +921,6 @@
     "privacy": {
       "title": "Zásady ochrany osobních údajů",
       "link": "Zásady ochrany osobních údajů",
-      "updated": "Poslední aktualizace: 26. října 2026",
       "tocTitle": "Obsah",
       "intro": "RookHub je platforma pro šachový trénink (úlohy, nekonečný mód, kurzy, repertoáry). Tyto zásady vysvětlují, jak jsou osobní údaje zpracovávány v souladu s GDPR.",
       "introLeagueHub": "LeagueHub (součást RookHub) připravuje prognózy sestav pro družstvová utkání a vede databázi partií zúčastněných oddílů. Účet je stejný jako v RookHub. Toto prohlášení vysvětluje, jak jsou osobní údaje zpracovávány podle GDPR.",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "Načítám úlohu…",
       "watchOpponent": "Sledujte tah soupeře…",
+      "invalidPuzzle": "Tuto úlohu nelze hrát: tahy neodpovídají pozici.",
       "correct": "Správně!",
       "checkmate": "Mat!",
       "altSolution": "Alternativní řešení – úloha měla jinou zamýšlenou sekvenci tahů.",

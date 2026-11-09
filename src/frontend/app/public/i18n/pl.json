@@ -921,7 +921,6 @@
     "privacy": {
       "title": "Polityka prywatności",
       "link": "Polityka prywatności",
-      "updated": "Ostatnia aktualizacja: 26 października 2026",
       "tocTitle": "Spis treści",
       "intro": "RookHub to platforma treningowa do szachów (zadania, tryb nieskończony, kursy, repertuary). Niniejsza polityka wyjaśnia, jak dane osobowe są przetwarzane zgodnie z RODO.",
       "introLeagueHub": "LeagueHub (część RookHub) przygotowuje prognozy składów na mecze drużynowe i prowadzi bazę partii uczestniczących klubów. Konto jest to samo co w RookHub. To oświadczenie wyjaśnia, jak dane osobowe są przetwarzane zgodnie z RODO.",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "Ładowanie zadania…",
       "watchOpponent": "Obserwuj ruch przeciwnika…",
+      "invalidPuzzle": "Tego zadania nie można rozegrać: ruchy nie pasują do pozycji.",
       "correct": "Poprawnie!",
       "checkmate": "Mat!",
       "altSolution": "Alternatywne rozwiązanie — zadanie miało inną zamierzoną sekwencję ruchów.",

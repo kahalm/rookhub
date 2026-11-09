@@ -921,7 +921,6 @@
     "privacy": {
       "title": "Gizlilik Politikası",
       "link": "Gizlilik politikası",
-      "updated": "Son güncelleme: 26 Ekim 2026",
       "tocTitle": "İçindekiler",
       "intro": "RookHub bir satranç antrenman platformudur (problemler, sonsuz mod, kurslar, repertuarlar). Bu politika, kişisel verilerin GDPR kapsamında nasıl işlendiğini açıklar.",
       "introLeagueHub": "LeagueHub (RookHub'ın bir parçası), takım maçları için kadro tahminleri hazırlar ve katılımcı kulüplerin oyun veritabanını tutar. Hesap RookHub'dakiyle aynıdır. Bu açıklama, kişisel verilerin GDPR kapsamında nasıl işlendiğini açıklar.",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "Problem yükleniyor…",
       "watchOpponent": "Rakibin hamlesini izleyin…",
+      "invalidPuzzle": "Bu problem oynanamıyor: hamleler konuma uymuyor.",
       "correct": "Doğru!",
       "checkmate": "Mat!",
       "altSolution": "Alternatif çözüm — problemin farklı bir amaçlanan hamle sırası vardı.",

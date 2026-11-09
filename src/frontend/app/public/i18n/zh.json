@@ -921,7 +921,6 @@
     "privacy": {
       "title": "隐私政策",
       "link": "隐私政策",
-      "updated": "最后更新：2026 年 10 月 26 日",
       "tocTitle": "目录",
       "intro": "RookHub 是一个国际象棋训练平台（战术题、无尽模式、课程、开局库）。本政策说明个人数据如何在 GDPR 框架下被处理。",
       "introLeagueHub": "LeagueHub（RookHub 的一部分）为团体赛准备阵容预测，并保存参赛俱乐部的对局数据库。账户与 RookHub 相同。本声明说明如何依据 GDPR 处理个人数据。",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "加载战术题中…",
       "watchOpponent": "观察对手的走法…",
+      "invalidPuzzle": "此战术题无法进行：着法与局面不符。",
       "correct": "正确！",
       "checkmate": "将死！",
       "altSolution": "替代解法——本题有不同的预期走法序列。",

@@ -921,7 +921,6 @@
     "privacy": {
       "title": "Política de Privacidade",
       "link": "Política de Privacidade",
-      "updated": "Última atualização: 26 de outubro de 2026",
       "tocTitle": "Índice",
       "intro": "O RookHub é uma plataforma de treino de xadrez (puzzles, modo sem fim, cursos, repertórios). Esta política explica como os dados pessoais são tratados ao abrigo do RGPD.",
       "introLeagueHub": "O LeagueHub (parte do RookHub) prepara previsões de alinhamentos para encontros por equipas e mantém a base de dados de partidas dos clubes participantes. A conta é a mesma do RookHub. Esta declaração explica como os dados pessoais são tratados ao abrigo do RGPD.",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "A carregar puzzle…",
       "watchOpponent": "Observe o lance do adversário…",
+      "invalidPuzzle": "Este puzzle não pode ser jogado: os lances não correspondem à posição.",
       "correct": "Correto!",
       "checkmate": "Xeque-mate!",
       "altSolution": "Solução alternativa — o puzzle tinha uma sequência de lances pretendida diferente.",

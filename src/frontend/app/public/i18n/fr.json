@@ -921,7 +921,6 @@
     "privacy": {
       "title": "Politique de confidentialité",
       "link": "Politique de confidentialité",
-      "updated": "Dernière mise à jour : 26 octobre 2026",
       "tocTitle": "Sommaire",
       "intro": "RookHub est une plateforme d'entraînement aux échecs (puzzles, mode infini, cours, répertoires). Cette politique explique comment les données personnelles sont traitées conformément au RGPD.",
       "introLeagueHub": "LeagueHub (partie de RookHub) prépare des prévisions de composition pour les matchs par équipes et gère la base de parties des clubs participants. Le compte est le même que sur RookHub. Cette déclaration explique comment les données personnelles sont traitées conformément au RGPD.",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "Chargement du puzzle…",
       "watchOpponent": "Observez le coup de l'adversaire…",
+      "invalidPuzzle": "Ce puzzle ne peut pas être joué : ses coups ne correspondent pas à la position.",
       "correct": "Correct !",
       "checkmate": "Échec et mat !",
       "altSolution": "Solution alternative — le puzzle avait une séquence de coups prévue différente.",

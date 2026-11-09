@@ -921,7 +921,6 @@
     "privacy": {
       "title": "Politică de confidențialitate",
       "link": "Politica de confidențialitate",
-      "updated": "Ultima actualizare: 26 octombrie 2026",
       "tocTitle": "Cuprins",
       "intro": "RookHub este o platformă de antrenament la șah (probleme, mod infinit, cursuri, repertorii). Această politică explică modul în care sunt prelucrate datele personale în conformitate cu GDPR.",
       "introLeagueHub": "LeagueHub (parte din RookHub) pregătește prognoze de formații pentru meciurile pe echipe și ține baza de partide a cluburilor participante. Contul este același ca pe RookHub. Această declarație explică modul în care datele personale sunt prelucrate conform GDPR.",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "Se încarcă problema…",
       "watchOpponent": "Urmărește mutarea adversarului…",
+      "invalidPuzzle": "Această problemă nu poate fi jucată: mutările nu se potrivesc cu poziția.",
       "correct": "Corect!",
       "checkmate": "Șah mat!",
       "altSolution": "Soluție alternativă — problema avea o altă secvență de mutări intenționată.",

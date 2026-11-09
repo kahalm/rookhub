@@ -921,7 +921,6 @@
     "privacy": {
       "title": "개인정보 처리방침",
       "link": "개인정보 처리방침",
-      "updated": "최종 업데이트: 2026년 10월 26일",
       "tocTitle": "목차",
       "intro": "RookHub는 체스 훈련 플랫폼(퍼즐, 무한 모드, 코스, 레퍼토리)입니다. 이 방침은 GDPR에 따른 개인 데이터 처리 방식을 설명합니다.",
       "introLeagueHub": "LeagueHub(RookHub의 일부)는 단체전 라인업 예측을 준비하고 참가 클럽의 게임 데이터베이스를 관리합니다. 계정은 RookHub와 같습니다. 이 방침은 GDPR에 따른 개인정보 처리 방식을 설명합니다.",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "퍼즐 로딩 중…",
       "watchOpponent": "상대방의 수를 보세요…",
+      "invalidPuzzle": "이 퍼즐은 플레이할 수 없습니다: 수가 포지션과 맞지 않습니다.",
       "correct": "정답!",
       "checkmate": "체크메이트!",
       "altSolution": "대안 해답 — 퍼즐의 의도한 수순과 다릅니다.",

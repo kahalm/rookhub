@@ -921,7 +921,6 @@
     "privacy": {
       "title": "Política de privacidad",
       "link": "Política de privacidad",
-      "updated": "Última actualización: 26 de octubre de 2026",
       "tocTitle": "Contenido",
       "intro": "RookHub es una plataforma de entrenamiento de ajedrez (ejercicios, modo sin fin, cursos, repertorios). Esta política explica cómo se tratan los datos personales en virtud del RGPD.",
       "introLeagueHub": "LeagueHub (parte de RookHub) elabora pronósticos de alineaciones para encuentros por equipos y mantiene la base de partidas de los clubes participantes. La cuenta es la misma que en RookHub. Esta declaración explica cómo se tratan los datos personales en virtud del RGPD.",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "Cargando ejercicio…",
       "watchOpponent": "Observa la jugada del rival…",
+      "invalidPuzzle": "Este ejercicio no se puede jugar: sus jugadas no encajan con la posición.",
       "correct": "¡Correcto!",
       "checkmate": "¡Jaque mate!",
       "altSolution": "Solución alternativa — el ejercicio tenía una secuencia de jugadas prevista diferente.",

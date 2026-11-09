@@ -921,7 +921,6 @@
     "privacy": {
       "title": "Integritetspolicy",
       "link": "Integritetspolicy",
-      "updated": "Senast uppdaterad: 26 oktober 2026",
       "tocTitle": "Innehåll",
       "intro": "RookHub är en schackträningsplattform (uppgifter, ändlöst läge, kurser, repertoarer). Denna policy förklarar hur personuppgifter behandlas enligt GDPR.",
       "introLeagueHub": "LeagueHub (del av RookHub) tar fram laguppställningsprognoser för lagmatcher och sköter partidatabasen för deltagande klubbar. Kontot är detsamma som på RookHub. Den här redogörelsen förklarar hur personuppgifter behandlas enligt GDPR.",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "Laddar uppgift…",
       "watchOpponent": "Se motståndarens drag…",
+      "invalidPuzzle": "Den här uppgiften kan inte spelas: dragen passar inte ställningen.",
       "correct": "Rätt!",
       "checkmate": "Schackmatt!",
       "altSolution": "Alternativ lösning — uppgiften hade en annan avsedd dragföljd.",
