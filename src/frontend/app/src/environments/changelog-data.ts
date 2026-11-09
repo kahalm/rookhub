@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.938.2',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Fixes from the November code review (frontend, part 1): the deviation trainer no longer gets stuck while judging after “Again”; a cleared calculation tree is no longer written back by a save still in progress; Endless “Archive” and the Endless history report failures and offer “Retry”; the repertoire page shows loading errors instead of a blank page or an empty repertoire; failed file deletion, worksheet sharing and course edits are reported in your language; in the book, course and Woodpecker solver “Whole game” → “Back to puzzle” no longer turns a failed attempt into a solve; Woodpecker attempts survive offline and “Next” no longer repeats the task; course browse and weekly posts show loading errors as such; move navigation, file buttons and “Flip board” are labelled for screen readers; Endless results open with the keyboard.',
+        de: 'Korrekturen aus dem Codereview vom November (Oberfläche, Teil 1): Der Abweichungs-Trainer bleibt nach „Nochmal“ nicht mehr im Urteilen hängen; ein geleerter Kalkulationsbaum wird nicht mehr von einem laufenden Speichern zurückgeschrieben; „Archivieren“ und der Endlos-Verlauf melden Fehler und bieten „Erneut versuchen“; die Repertoire-Seite zeigt Ladefehler statt einer leeren Seite oder eines scheinbar leeren Repertoires; gescheitertes Löschen, Teilen von Aufgabenblättern und Kursänderungen werden in der eigenen Sprache gemeldet; im Buch-, Kurs- und Woodpecker-Löser macht „Ganze Partie“ → „Zurück zum Puzzle“ aus einem Fehlversuch kein „gelöst“ mehr; Woodpecker-Versuche überstehen Offline-Phasen, „Weiter“ wiederholt die Aufgabe nicht mehr; Kurs-Durchsicht und Wochenpost zeigen Ladefehler als solche; Zug-Navigation, Datei-Knöpfe und „Brett drehen“ sind für Screenreader benannt; Endlos-Ergebnisse öffnen sich per Tastatur.' },
+    ],
+  },
+  {
     version: '0.938.1',
     date: '2026-11-09',
     changes: [
