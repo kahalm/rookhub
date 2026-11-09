@@ -340,6 +340,26 @@ describe('TournamentDetailComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.group-switch')).toBeNull();
   });
 
+  // ----- Rundenwechsel: nur die zuletzt gewählte Runde zählt (G3-005) ----------
+  it('zeigt nach schnellem Rundenwechsel die Paarungen der gewählten Runde, auch wenn die ältere Antwort später kommt', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const http = TestBed.inject(HttpTestingController);
+    const c = fixture.componentInstance;
+
+    c.onRoundChange(6);
+    c.onRoundChange(7);
+    const r6 = http.expectOne('/api/tournaments/4711/pairings?round=6');
+    const r7 = http.expectOne('/api/tournaments/4711/pairings?round=7');
+    r7.flush([{ boardNumber: 1, white: 'Runde7-W', black: 'Runde7-S', result: '' }]);
+    if (!r6.cancelled) r6.flush([{ boardNumber: 1, white: 'Runde6-W', black: 'Runde6-S', result: '1-0' }]);
+
+    expect(r6.cancelled).toBeTrue();
+    expect(c.selectedRound).toBe(7);
+    expect(c.pairings.map(p => p.white)).toEqual(['Runde7-W']);
+    expect(c.pairingsLoading).toBeFalse();
+    http.verify();
+  });
+
   // ----- Aktualisieren, waehrend schon ein Auftrag laeuft (I2-009) ----------
 
   /**

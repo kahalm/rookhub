@@ -28,6 +28,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, toDisplayPairings } from './tournament-table.util';
 import { TournamentDetailService } from './tournament-detail.service';
 import { displayedTables } from './tournament-favorites.util';
+import { LatestRequest } from '@rh/shared/latest-request.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -399,9 +400,13 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Nur die Antwort der zuletzt gewählten Runde zählt (Pfeiltasten in der Rundenauswahl, Monitor meldet neue
+   *  Runde): ein neuer Abruf bricht den vorigen ab (G3-005). */
+  private readonly pairingsRequest = new LatestRequest();
+
   loadPairings(): void {
     this.pairingsLoading = true;
-    this.api.getPairings(this.id, this.selectedRound).subscribe({
+    this.pairingsRequest.run(this.api.getPairings(this.id, this.selectedRound), {
       next: (p) => {
         const { pairings, hasTeamPairings } = toDisplayPairings(p);
         this.pairings = pairings;

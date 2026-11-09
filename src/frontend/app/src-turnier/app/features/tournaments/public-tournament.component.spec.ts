@@ -170,6 +170,19 @@ describe('PublicTournamentComponent', () => {
     expect(c.displayedTeams.map(t => t.name)).toEqual(['Red']);
   });
 
+  it('Rundenwechsel: eine spätere Antwort der älteren Runde überschreibt die gewählte nicht (G3-005)', async () => {
+    const { http, c } = await render();
+    c.onRoundChange(6);
+    c.onRoundChange(7);
+    const r6 = http.expectOne(`/api/tournaments/${id}/pairings?round=6`);
+    const r7 = http.expectOne(`/api/tournaments/${id}/pairings?round=7`);
+    r7.flush([{ boardNumber: 1, white: 'Runde7-W', black: 'Runde7-S', result: '' }]);
+    if (!r6.cancelled) r6.flush([{ boardNumber: 1, white: 'Runde6-W', black: 'Runde6-S', result: '1-0' }]);
+
+    expect(r6.cancelled).toBeTrue();
+    expect(c.pairings.map(p => p.white)).toEqual(['Runde7-W']);
+  });
+
   it('Sortieren, Filter und Sterne berechnen die angezeigten Zeilen neu', async () => {
     const { http, c } = await render();
     http.expectOne(`/api/tournaments/${id}/players`).flush(players);

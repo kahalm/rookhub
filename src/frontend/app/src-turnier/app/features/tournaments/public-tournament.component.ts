@@ -23,6 +23,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, toDisplayPairings } from './tournament-table.util';
 import { displayedTables } from './tournament-favorites.util';
 import { TournamentRoundMonitor } from './tournament-round-monitor';
+import { LatestRequest } from '@rh/shared/latest-request.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -225,10 +226,14 @@ export class PublicTournamentComponent implements OnInit {
     });
   }
 
+  /** Nur die Antwort der zuletzt gewählten Runde zählt (Pfeiltasten in der Rundenauswahl, Monitor meldet neue
+   *  Runde): ein neuer Abruf bricht den vorigen ab (G3-005). */
+  private readonly pairingsRequest = new LatestRequest();
+
   loadPairings(): void {
     this.pairingsLoading = true;
     // Response can be either TeamPairingResponse[] or TournamentPairing[] depending on tournament type
-    this.tournaments.getPairings<CrawlerPairing[]>(this.id, this.selectedRound).subscribe({
+    this.pairingsRequest.run(this.tournaments.getPairings<CrawlerPairing[]>(this.id, this.selectedRound), {
       next: (p) => {
         const { pairings, hasTeamPairings } = toDisplayPairings(p);
         this.pairings = pairings;
