@@ -3339,7 +3339,8 @@
       "ownerSide": "My side",
       "sideNone": "not set",
       "classifierHint": "Online: platform + mode are filled in automatically · league games: e.g. “Landesliga” + “2026/27”",
-      "clubLinked": "This game is a copy from the club database. If you correct moves and uploaded it (or are a manager), the correction also applies there and to all copies — otherwise your copy becomes a version of its own."
+      "clubLinked": "This game is a copy from the club database. If you correct moves and uploaded it (or are a manager), the correction also applies there and to all copies — otherwise your copy becomes a version of its own.",
+      "sheetStateFailed": "The saved scoresheet state could not be loaded. Saving only changes the moves and details; the scoresheet reading stays unchanged."
     },
     "pgnCopy": "Copy PGN",
     "pgnCopied": "PGN copied",

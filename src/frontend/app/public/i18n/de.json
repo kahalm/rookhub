@@ -3339,7 +3339,8 @@
       "ownerSide": "Meine Seite",
       "sideNone": "nicht festgelegt",
       "classifierHint": "Online: Plattform + Modus werden automatisch gesetzt · Ligapartien: z. B. „Landesliga“ + „2026/27“",
-      "clubLinked": "Diese Partie ist eine Kopie aus der Vereins-Datenbank. Korrigierst du Züge und hast sie hochgeladen (oder bist Verwalter), gilt das auch dort und in allen Kopien — sonst wird deine Kopie zu einer eigenen Fassung."
+      "clubLinked": "Diese Partie ist eine Kopie aus der Vereins-Datenbank. Korrigierst du Züge und hast sie hochgeladen (oder bist Verwalter), gilt das auch dort und in allen Kopien — sonst wird deine Kopie zu einer eigenen Fassung.",
+      "sheetStateFailed": "Der gespeicherte Stand des Formulars konnte nicht geladen werden. Speichern ändert nur die Züge und Angaben, die Formular-Lesung bleibt unverändert."
     },
     "pgnCopy": "PGN kopieren",
     "pgnCopied": "PGN kopiert",

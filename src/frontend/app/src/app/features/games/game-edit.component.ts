@@ -76,6 +76,10 @@ import { loadErrorKind } from '../../shared/load-error/load-error-cause';
             <mat-icon>{{ saving() ? 'hourglass_top' : 'save' }}</mat-icon> {{ 'common.save' | translate }}
           </button>
         </div>
+        @if (sheetStateError(); as err) {
+          <!-- F2-020: ohne geladenen Bearbeitungsstand bleibt die gespeicherte Formular-Lesung beim Speichern unangetastet. -->
+          <mat-card class="sheet-state-error"><app-load-error [messageKey]="'games.edit.sheetStateFailed'" [error]="err" (retry)="reload()" /></mat-card>
+        }
         @if (clubGameId()) {
           <!-- Kopie einer Vereinspartie (0.660.0) -->
           <p class="club-linked">{{ 'games.edit.clubLinked' | translate }}</p>
@@ -231,6 +235,9 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
   readonly notFound = signal(false);
   /** Laden gescheitert (Netz/Server, nicht 4xx) — „Erneut versuchen" statt „gibt es nicht" (Codereview F4-011). */
   readonly loadError = signal<unknown>(null);
+  /** Bearbeitungsstand des Formulars nicht ladbar (nicht 404, F2-020): Hinweis zeigen und beim Speichern die Lesung je Halbzug
+   *  NICHT mitschicken — sonst ersetzte die blanke PGN-Fassung die gespeicherte Formular-Lesung. */
+  readonly sheetStateError = signal<unknown>(null);
   readonly saving = signal(false);
   readonly dirty = signal(false);
   /** Angaben-Karte am Handy aufgeklappt? Vorgabe zu; offen, wenn beim Laden ein Name fehlt. */
@@ -402,7 +409,12 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
       return;
     }
     this.isScoresheet.set(true);
-    this.sheets.editState(this.gameId).pipe(catchError(() => of(null)), takeUntilDestroyed(this.destroyRef)).subscribe(state => {
+    this.sheetStateError.set(null);
+    const editState$ = this.sheets.editState(this.gameId).pipe(catchError((err: unknown) => {
+      if ((err as { status?: number } | null)?.status !== 404) this.sheetStateError.set(err ?? true);
+      return of(null);
+    }));
+    editState$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(state => {
       const pages = Math.max(1, state?.pageCount ?? 1);
       void this.ph.load(pages, page => firstValueFrom(this.sheets.photo(this.gameId, page)), () => !this.destroyed);
       const comments = fromPgn.map(p => stripSheetNotes(p.comment));
@@ -511,7 +523,7 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
       classifier1: this.header.classifier1.trim(),
       classifier2: this.header.classifier2.trim(),
       tags: this.tags(),
-      scoresheetPlies: this.isScoresheet() ? toServer(legal) : null,
+      scoresheetPlies: this.isScoresheet() && this.sheetStateError() == null ? toServer(legal) : null,
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.saving.set(false);

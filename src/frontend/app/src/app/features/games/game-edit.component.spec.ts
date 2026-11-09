@@ -311,6 +311,44 @@ describe('GameEditComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/games', 5]);
   });
 
+  it('a scanned game whose edit state fails to load: shows the error and saves without scoresheetPlies (F2-020)', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9 }));
+    http.expectOne('/api/games/5/scoresheet').flush(null, { status: 500, statusText: 'Server Error' });
+    http.match(r => r.url.startsWith('/api/games/5/photo')).forEach(r => r.flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' })));
+    await settle();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(c.isScoresheet()).toBeTrue();
+    expect(el.querySelector('.sheet-state-error app-load-error')).toBeTruthy();
+
+    const router = TestBed.inject(Router);
+    spyOn(router, 'navigate').and.resolveTo(true);
+    c.save();
+    const put = http.expectOne({ method: 'PUT', url: '/api/games/5' });
+    expect(put.request.body.scoresheetPlies).toBeNull();
+    expect(put.request.body.moves.length).toBe(5);
+    put.flush(detail());
+  });
+
+  it('a scanned game without an edit state (404) keeps the old behaviour: no error, plies are sent (F2-020)', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9 }));
+    http.expectOne('/api/games/5/scoresheet').flush(null, { status: 404, statusText: 'Not Found' });
+    http.match(r => r.url.startsWith('/api/games/5/photo')).forEach(r => r.flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' })));
+    await settle();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.sheet-state-error')).toBeNull();
+    const router = TestBed.inject(Router);
+    spyOn(router, 'navigate').and.resolveTo(true);
+    c.save();
+    const put = http.expectOne({ method: 'PUT', url: '/api/games/5' });
+    expect(put.request.body.scoresheetPlies.length).toBe(5);
+    put.flush(detail());
+  });
+
   it('a scanned game: confirming a move clears the mark', async () => {
     const { fixture, c, http } = await setup();
     fixture.detectChanges();
