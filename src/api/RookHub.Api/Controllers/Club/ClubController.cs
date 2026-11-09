@@ -101,19 +101,23 @@ public class ClubController : BaseApiController
 
     private static readonly JsonSerializerOptions FaceJson = new(JsonSerializerDefaults.Web);
 
+    /// <summary>Cache-Kopf der Kinderfotos (Karteiblatt und Einheiten): nichts auf dem Gerät speichern (F4-002).</summary>
+    internal const string PhotoCacheControl = "no-store";
+
     /// <summary>Den Kreis ums Gesicht im vorhandenen Bild setzen — das Vorschaubild wird daraus neu geschnitten.</summary>
     [HttpPut("members/{id:int}/photo/face")]
     public async Task<ActionResult<ClubMemberPhotoDto>> SetMemberPhotoFace(int id, [FromBody] ClubPhotoFaceDto face, CancellationToken ct) =>
         Ok(await _club.SetMemberPhotoFaceAsync(await ActorAsync(), id, face, ct));
 
-    /// <summary>Das Bild als JPEG; <c>?thumb=true</c> das Vorschaubild. Privat: kein Cache über den Browser des Betrachters
-    /// hinaus. Die Oberfläche hängt die Marke des Bilds (<c>photoVersion</c>) als <c>v</c> an — hier ohne Bedeutung, sie
-    /// sorgt nur dafür, dass ein ersetztes Bild eine neue Adresse hat.</summary>
+    /// <summary>Das Bild als JPEG; <c>?thumb=true</c> das Vorschaubild. <c>no-store</c>: Kinderfotos landen nicht im
+    /// Plattencache des Browsers — auf einem geteilten Vereins-PC blieben sie sonst nach dem Abmelden einen Tag liegen
+    /// (Codereview F4-002, Entscheidung E7; die Seite hält sie je Aufruf im Speicher, <c>MemberPhotoStore</c>). Die
+    /// Oberfläche hängt die Marke des Bilds (<c>photoVersion</c>) als <c>v</c> an — hier ohne Bedeutung.</summary>
     [HttpGet("members/{id:int}/photo")]
     public async Task<IActionResult> MemberPhoto(int id, [FromQuery] bool thumb = false, CancellationToken ct = default)
     {
         var bytes = await _club.GetMemberPhotoAsync(await ActorAsync(), id, thumb, ct);
-        Response.Headers.CacheControl = "private, max-age=86400";
+        Response.Headers.CacheControl = PhotoCacheControl;
         return File(bytes, "image/jpeg");
     }
 
@@ -192,7 +196,8 @@ public class ClubController : BaseApiController
 
     // ---- Einheiten ----------------------------------------------------------------------------
 
-    /// <summary>Einheit des Tages anlegen oder ersetzen (je Gruppe und Tag eine).</summary>
+    /// <summary>Einheit des Tages anlegen (je Gruppe und Tag eine); steht schon eine, 409 — ändern geht über
+    /// <c>PUT …/sessions/{sessionId}</c> (F4-013).</summary>
     [HttpPost("groups/{id:int}/sessions")]
     public async Task<ActionResult<ClubSessionDetailDto>> SaveSession(int id, [FromBody] ClubSessionInputDto input, CancellationToken ct) =>
         Ok(await _club.SaveSessionAsync(await ActorAsync(), id, input, null, ct));
@@ -236,12 +241,12 @@ public class ClubController : BaseApiController
         return Ok(await _club.AddPhotoAsync(await ActorAsync(), sessionId, ms.ToArray(), ct));
     }
 
-    /// <summary>Das Bild als JPEG; <c>?thumb=1</c> das Vorschaubild. Privat: kein Cache über den Browser des Betrachters hinaus.</summary>
+    /// <summary>Das Bild als JPEG; <c>?thumb=1</c> das Vorschaubild. <c>no-store</c> wie beim Karteifoto (F4-002).</summary>
     [HttpGet("sessions/{sessionId:int}/photos/{photoId:int}")]
     public async Task<IActionResult> Photo(int sessionId, int photoId, [FromQuery] bool thumb = false, CancellationToken ct = default)
     {
         var bytes = await _club.GetPhotoAsync(await ActorAsync(), sessionId, photoId, thumb, ct);
-        Response.Headers.CacheControl = "private, max-age=86400";
+        Response.Headers.CacheControl = PhotoCacheControl;
         return File(bytes, "image/jpeg");
     }
 

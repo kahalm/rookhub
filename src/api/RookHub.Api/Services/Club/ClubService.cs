@@ -761,8 +761,10 @@ public class ClubService
     // ---- Einheiten und Anwesenheit ------------------------------------------------------------
 
     /// <summary>
-    /// Eine Einheit speichern. Ohne <paramref name="sessionId"/>: die Einheit dieses Tages anlegen oder ersetzen (je Gruppe
-    /// und Tag gibt es eine). Mit: genau diese ändern, auch ihr Datum — 409, wenn an dem Tag schon eine andere steht.
+    /// Eine Einheit speichern. Ohne <paramref name="sessionId"/>: die Einheit dieses Tages ANLEGEN (je Gruppe und Tag gibt es
+    /// eine) — steht an dem Tag schon eine, 409 statt sie zu ersetzen (Codereview F4-013: eine leer geöffnete Liste, etwa
+    /// nach einem gescheiterten Laden des Tages, überschrieb sonst Anwesenheit, Thema und Bericht). Mit: genau diese ändern,
+    /// auch ihr Datum — 409, wenn an dem Tag schon eine andere steht.
     /// Anwesenheit zählt für die Kinder der Gruppe und alle Trainer; ein leerer Status nimmt den Eintrag zurück.
     /// </summary>
     public Task<ClubSessionDetailDto> SaveSessionAsync(ClubActor actor, int groupId, ClubSessionInputDto input,
@@ -791,7 +793,7 @@ public class ClubService
         }
         else if (sameDay != null)
         {
-            session = sameDay;
+            throw new ConflictException("An diesem Tag gibt es schon eine Einheit der Gruppe — lade den Tag neu, bevor du speicherst.");
         }
         else
         {

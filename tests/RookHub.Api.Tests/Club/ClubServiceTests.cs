@@ -399,7 +399,7 @@ public class ClubServiceTests : IDisposable
     // ---- Einheiten und Anwesenheit ------------------------------------------------------------
 
     [Fact]
-    public async Task Session_OnePerGroupAndDay_SavingAgainReplaces_AndAnEmptyStatusTakesTheEntryBack()
+    public async Task Session_OnePerGroupAndDay_SavingAgainById_Replaces_AndAnEmptyStatusTakesTheEntryBack()
     {
         var g = await GroupAsync("Anfänger");
         var a = await Svc().CreateMemberAsync(Manager(), Kid("Anna", "Auer", g));
@@ -414,11 +414,17 @@ public class ClubServiceTests : IDisposable
         });
         Assert.Equal(("Gabel", 1, 1), (first.Topic, first.Present, first.Absent));
 
+        // F4-013: ohne Kennung ersetzt ein zweites Speichern desselben Tages NICHT mehr still — 409, nichts geändert.
+        await Assert.ThrowsAsync<ConflictException>(() => Svc().SaveSessionAsync(Manager(), g, new ClubSessionInputDto
+        { Date = "2026-09-25", Attendance = [new() { MemberId = a.Id, Status = "absent" }] }));
+        Assert.Equal(("Gabel", ClubAttendanceStatus.Present),
+            (_db.ClubSessions.AsNoTracking().Single().Topic, _db.ClubAttendances.AsNoTracking().Single(x => x.MemberId == a.Id).Status));
+
         var again = await Svc().SaveSessionAsync(Manager(), g, new ClubSessionInputDto
         {
             Date = "2026-09-25", Topic = "Gabel und Spieß",
             Attendance = [new() { MemberId = a.Id, Status = "" }, new() { MemberId = b.Id, Status = "absent" }],
-        });
+        }, first.Id);
         Assert.Equal(first.Id, again.Id);
         Assert.Equal(("Gabel und Spieß", 0, 1), (again.Topic, again.Present, again.Absent));
         Assert.Single(_db.ClubSessions);
@@ -791,6 +797,29 @@ public class ClubServiceTests : IDisposable
             ControllerContext = new ControllerContext
             { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Jwt")) } },
         };
+    }
+
+    /// <summary>Codereview F4-002: Kinderfotos (Karteiblatt und Einheit) mit <c>no-store</c> — nichts im Plattencache des
+    /// Browsers, auch nicht nach dem Abmelden auf einem geteilten Gerät. Fremder Trainer bekommt weiter kein Bild.</summary>
+    [Fact]
+    public async Task Controller_ChildPhotos_AreServedNoStore_AndStayHiddenFromOtherTrainers()
+    {
+        var (tina, tom) = (await UserAsync("tina"), await UserAsync("tom"));
+        var g = await GroupAsync("Anfänger", tina);
+        var kid = await Svc().CreateMemberAsync(Trainer(tina), Kid("Daniel", "Huber", g));
+        await Svc().SetMemberPhotoAsync(Trainer(tina), kid.Id, Jpeg(300, 400));
+        var session = await Svc().SaveSessionAsync(Trainer(tina), g, new ClubSessionInputDto { Date = "2026-09-25", Topic = "Gabel" });
+        var photo = await Svc().AddPhotoAsync(Trainer(tina), session.Id, Jpeg(300, 200));
+
+        var c1 = Controller(tina, perms: Permissions.ClubTrainer);
+        Assert.IsType<FileContentResult>(await c1.MemberPhoto(kid.Id, thumb: true));
+        Assert.Equal("no-store", c1.Response.Headers.CacheControl.ToString());
+        var c2 = Controller(tina, perms: Permissions.ClubTrainer);
+        Assert.IsType<FileContentResult>(await c2.Photo(session.Id, photo.Id, thumb: false));
+        Assert.Equal("no-store", c2.Response.Headers.CacheControl.ToString());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => Controller(tom, perms: Permissions.ClubTrainer).MemberPhoto(kid.Id, thumb: true));
+        await Assert.ThrowsAsync<NotFoundException>(() => Controller(tom, perms: Permissions.ClubTrainer).Photo(session.Id, photo.Id, thumb: true));
     }
 
     [Fact]

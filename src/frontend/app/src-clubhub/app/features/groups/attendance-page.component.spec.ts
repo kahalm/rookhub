@@ -60,7 +60,7 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
 
   beforeEach(() => {
     confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
-    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['group', 'sessionByDate', 'sessionDates', 'saveSession', 'deleteSession', 'uploadPhoto', 'photoBlob', 'deletePhoto', 'memberPhotoBlob']);
+    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['group', 'sessionByDate', 'sessionDates', 'saveSession', 'updateSession', 'deleteSession', 'uploadPhoto', 'photoBlob', 'deletePhoto', 'memberPhotoBlob']);
     api.memberPhotoBlob.and.resolveTo(new Blob(['x'], { type: 'image/jpeg' }));
     api.sessionDates.and.resolveTo([]);
     api.photoBlob.and.resolveTo(new Blob(['x'], { type: 'image/jpeg' }));
@@ -189,10 +189,40 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
     expect(pressed()).toEqual(['true', 'true', 'true']);                                 // die Haken bleiben für den nächsten Versuch
   });
 
+  // Codereview F4-013: ein gescheitertes Laden des Tages gab die leere Liste frei — Speichern ersetzte die erfasste Einheit.
+  it('scheitert das Laden des Tages, bleibt die Liste gesperrt: Fehlerkarte statt Liste, kein Speichern, „Erneut laden“ holt den Tag', async () => {
+    api.sessionByDate.and.returnValues(Promise.reject(new HttpErrorResponse({ status: 502 })), Promise.resolve(SESSION()));
+    await create(new Date(2026, 8, 25, 19, 0));
+    expect(el().querySelector('.load-failed')!.textContent).toContain('konnte nicht geladen werden');
+    expect(ticks().length).toBe(0);
+    expect(el().querySelector('.save')).toBeNull();
+    expect(el().querySelector('input[type=file]')).toBeNull();
+    await fixture.componentInstance.save();
+    expect(api.saveSession).not.toHaveBeenCalled();
+    expect(api.updateSession).not.toHaveBeenCalled();
+
+    el().querySelector<HTMLButtonElement>('.load-failed .retry')!.click();
+    await settle();
+    expect(el().querySelector('.load-failed')).toBeNull();
+    expect(pressed()).toEqual(['true', 'false', 'false']);
+  });
+
+  it('eine geladene Einheit wird mit ihrer Kennung geändert (PUT), nicht neu angelegt', async () => {
+    api.sessionByDate.and.resolveTo(SESSION());
+    api.updateSession.and.callFake(async (_g: number, _id: number, input: SessionInput) => SESSION({ topic: input.topic }));
+    await create(new Date(2026, 8, 25, 19, 0));
+    el().querySelector<HTMLButtonElement>('.save')!.click();
+    await settle();
+    expect(api.updateSession).toHaveBeenCalledWith(1, 5, jasmine.objectContaining({ date: '2026-09-25', topic: 'Gabel' }));
+    expect(api.saveSession).not.toHaveBeenCalled();
+  });
+
   it('Einheit löschen fragt nach und führt zurück zur Gruppe', async () => {
     api.sessionByDate.and.resolveTo(SESSION());
     api.deleteSession.and.resolveTo();
     await create(new Date(2026, 8, 25, 19, 0));
+    // F4-016: Gefahrknopf (DESIGN 8.5), kein grauer Textlink
+    expect(el().querySelector('.delete-session')?.className).toContain('btn danger');
     const ask = confirmAsk.and.returnValue(of(false));
     await fixture.componentInstance.remove(SESSION());
     expect(api.deleteSession).not.toHaveBeenCalled();

@@ -76,7 +76,8 @@ export class ClubApiService {
 
   /**
    * Das Bild als Blob (mit Anmeldung) — `thumb` = das Vorschaubild. `version` (die Marke aus der Liste) hängt nur an der
-   * Adresse: der Browser darf das Bild einen Tag behalten, ein ersetztes hat eine neue Adresse.
+   * Adresse (ein ersetztes hat eine neue). Der Server schickt `Cache-Control: no-store` (F4-002): kein Kinderfoto im
+   * Plattencache des Browsers — der Speicher der Seite (`MemberPhotoStore`) hält es je Aufruf.
    */
   memberPhotoBlob(id: number, thumb: boolean, version: number): Promise<Blob> {
     const params: Record<string, string | number | boolean> = { v: version };
@@ -132,6 +133,11 @@ export class ClubApiService {
   /** Die Einheit dieses Tages anlegen oder ersetzen — je Gruppe und Tag gibt es eine. */
   saveSession(groupId: number, input: SessionInput): Promise<SessionDetail> {
     return firstValueFrom(this.http.post<SessionDetail>(`${this.base}/groups/${groupId}/sessions`, input));
+  }
+
+  /** Eine geladene Einheit ändern (auch ihr Datum) — 409, wenn der Tag schon eine andere hat (F4-013). */
+  updateSession(groupId: number, sessionId: number, input: SessionInput): Promise<SessionDetail> {
+    return firstValueFrom(this.http.put<SessionDetail>(`${this.base}/groups/${groupId}/sessions/${sessionId}`, input));
   }
 
   /** Die Einheit eines Tages; `null`, wenn es an dem Tag keine gibt (204). */

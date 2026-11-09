@@ -33,8 +33,9 @@ klassisch ‚Mutter Daniela' oder ‚Vater Franz', auch E-Mail; am Freitag abhak
   Vorschaubild ≤ 256 px über `ScoresheetImage.Prepare`) — eigene Tabelle, damit keine Listen-Abfrage die Bytes lädt; ersetzt
   und gelöscht wird über Stellvertreter mit Schlüssel, ohne zu laden. Die Listen tragen nur die MARKE
   `ClubMember.PhotoVersion` (Unix-ms des Hochladens, streng steigend, `null` = kein Bild): daran sieht die Kartei, wer ein
-  Bild hat, und die Oberfläche hängt sie als `?v=` an die Bildadresse (der Browser darf das Bild einen Tag behalten,
-  `Cache-Control: private, max-age=86400`; ein ersetztes hat eine neue Adresse). `POST …/members/{id}/photo` (multipart
+  Bild hat, und die Oberfläche hängt sie als `?v=` an die Bildadresse (ein ersetztes hat eine neue Adresse). Karteifotos und
+  Fotos der Einheiten kommen mit `Cache-Control: no-store` (Codereview F4-002: auf einem geteilten Vereins-PC blieben sie
+  sonst nach dem Abmelden einen Tag im Plattencache des Browsers; der Speicher der Seite hält sie je Aufruf). `POST …/members/{id}/photo` (multipart
   `file`, 15 MB), `GET …/photo[?thumb=1]`, `DELETE …/photo` (idempotent) — wer das Blatt sieht, darf alle drei, auch bei
   Trainern (Personen). Oberfläche: `core/member-photo.store.ts` (EIN Speicher der Seite: je Blatt und Marke ein Abruf als
   Blob mit Anmeldung, höchstens 4 gleichzeitig — die Kartei zeigt viele auf einmal, und der globale Deckel ist 100
@@ -86,15 +87,17 @@ klassisch ‚Mutter Daniela' oder ‚Vater Franz', auch E-Mail; am Freitag abhak
   Nutzertext (`NormalizeContacts`). Die Kartei-Liste liefert die Kontakte mit — sie ist zugleich die Telefonliste. Gesucht
   wird im BROWSER: eine Namenssuche am Server hätte Namen von Kindern in die Adresse und damit in jedes Zugriffsprotokoll
   gebracht.
-- **Anwesenheit**: `POST /api/club/groups/{id}/sessions` legt die Einheit des Tages an ODER ersetzt sie; nur Kinder der
+- **Anwesenheit**: `POST /api/club/groups/{id}/sessions` legt die Einheit des Tages an (steht schon eine: 409,
+  geändert wird über `PUT …/sessions/{sessionId}` — Codereview F4-013); nur Kinder der
   Gruppe zählen, leerer Status nimmt den Eintrag zurück. **Zwei Zustände, da oder nicht da** — „entschuldigt" gab es nur
   in 0.613.0 und ist seit 0.615.0 weg (Wunsch: „interessiert mich nicht"); die Migration `ClubAttendanceTwoStates` ist
   eine reine Datenkorrektur (Status 2 → 3), `excused` ist seither ein 400. Jede Einheit trägt **Thema** (`Topic`, eine
   Zeile) und **„Was wurde gemacht?"** (`Notes`, bis 2000 Zeichen) — beides auf der Abhak-Liste einzugeben, auf der
   Gruppenseite als Trainingstagebuch (neueste zuerst) zu lesen. Die Oberfläche schickt für JEDES Kind der Gruppe einen Status —
   wer nicht abgehakt ist, hat gefehlt (sonst wäre die Quote immer 100 %). **Vor dem ersten Tipp fragt die Liste
-  `GET …/sessions/by-date/{datum}`** (204 = keine): ein Speichern ersetzt, eine leer geöffnete Liste überschriebe sonst
-  eine erfasste Einheit. Die Gruppenseite zeigt die letzten 12 Einheiten als Tabelle (älteste links), die Quote zählt über
+  `GET …/sessions/by-date/{datum}`** (204 = keine): eine leer geöffnete Liste überschriebe sonst eine erfasste Einheit.
+  Scheitert diese Abfrage, bleibt die Liste gesperrt (Fehlerkarte mit „Erneut laden“), Speichern und Fotos erst danach;
+  eine geladene Einheit speichert die Liste per `PUT` mit ihrer Kennung, eine neue per `POST` (F4-013). Die Gruppenseite zeigt die letzten 12 Einheiten als Tabelle (älteste links), die Quote zählt über
   alle. **Blättern** (0.640.0, Wunsch „eine Blätterfunktion, um zu alten Trainings zu kommen"): `GET
   …/groups/{id}/sessions/dates` liefert ALLE Tage mit Einheit (älteste zuerst); zwei Knöpfe über dem Datumsfeld führen zur
   Einheit davor/danach (`dateNeighbours` in `core/club-format.ts`: die Tage mit Einheit plus der Tag, für den die Liste

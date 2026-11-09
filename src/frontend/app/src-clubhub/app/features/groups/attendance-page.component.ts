@@ -23,8 +23,10 @@ export function tallyText(present: number, total: number): string {
  * stimmt die Quote. Unter den Kindern stehen die TRAINER (alle der Kartei, in jeder Gruppe) und werden genauso abgehakt.
  * Dazu das Thema der Einheit und, ausführlicher, was gemacht wurde — beides steht danach im Trainingstagebuch der Gruppe.
  *
- * Je Gruppe und Tag gibt es eine Einheit, ein Speichern ersetzt sie. Deshalb holt die Seite vor dem ersten Tipp, was für
- * den Tag schon erfasst ist (`sessionByDate`) — eine leer geöffnete Liste überschriebe sonst die erfasste.
+ * Je Gruppe und Tag gibt es eine Einheit. Deshalb holt die Seite vor dem ersten Tipp, was für den Tag schon erfasst ist
+ * (`sessionByDate`) — eine leer geöffnete Liste überschriebe sonst die erfasste. Scheitert das, bleibt die Liste gesperrt
+ * (Fehlerkarte mit „Erneut laden“); eine geladene Einheit wird mit ihrer Kennung gespeichert (`PUT`), eine neue per `POST`
+ * — der Server lehnt ein `POST` auf einen belegten Tag mit 409 ab (Codereview F4-013).
  *
  * BLÄTTERN (Wunsch 2026-10-02): zwei Knöpfe führen zur Einheit davor und danach — über die Tage, an denen die Gruppe
  * eine Einheit hat (`sessionDates`), plus den Tag, für den die Liste von selbst aufgeht. Wer mit ungespeicherten Haken
@@ -82,7 +84,14 @@ export function tallyText(present: number, total: number): string {
       </div>
       @if (session()) { <p class="muted small existing">Für diesen Tag ist schon eine Einheit erfasst — du änderst sie.</p> }
 
-      @if (!g.members.length && !g.coaches.length) {
+      @if (loadFailed(); as lf) {
+        <!-- Codereview F4-013: ohne den Stand des Tages bleibt die Liste gesperrt — eine leer geöffnete überschriebe sonst
+             die erfasste Einheit. Speichern und Fotos gibt es erst nach einem erfolgreichen Laden. -->
+        <section class="empty load-failed" role="alert">
+          <p>{{ lf }}</p>
+          <button type="button" class="btn primary retry" (click)="retryDate()">Erneut laden</button>
+        </section>
+      } @else if (!g.members.length && !g.coaches.length) {
         <div class="empty">
           <p>In dieser Gruppe ist noch kein Kind.</p>
           <a class="btn primary" routerLink="/kind/neu" [queryParams]="{ gruppe: g.id }">Kind anlegen</a>
@@ -130,7 +139,7 @@ export function tallyText(present: number, total: number): string {
           <button type="button" class="btn primary save" [disabled]="busy() || loading()" (click)="save()">Anwesenheit speichern</button>
           <span class="ok" role="status">{{ saved() ?? '' }}</span>
           <span class="err" role="alert">{{ error() ?? '' }}</span>
-          @if (session(); as s) { <button type="button" class="btn-link danger" [disabled]="busy()" (click)="remove(s)">Einheit löschen</button> }
+          @if (session(); as s) { <button type="button" class="btn danger slim delete-session" [disabled]="busy()" (click)="remove(s)">Einheit löschen</button> }
         </div>
       }
     } @else if (error()) {
@@ -159,6 +168,8 @@ export class AttendancePageComponent implements OnInit {
   readonly loading = signal(false);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  /** Der Stand des Tages ließ sich nicht laden — die Liste bleibt gesperrt, bis „Erneut laden“ klappt (F4-013). */
+  readonly loadFailed = signal<string | null>(null);
   readonly saved = signal<string | null>(null);
   /** „Foto 2 von 5 …" während des Hochladens, sonst leer. */
   readonly uploading = signal('');
@@ -267,6 +278,7 @@ export class AttendancePageComponent implements OnInit {
     this.loading.set(true);
     this.saved.set(null);
     this.error.set(null);
+    this.loadFailed.set(null);
     try {
       const s = await this.api.sessionByDate(g.id, date);
       if (mine !== this.epoch) return;
@@ -274,10 +286,15 @@ export class AttendancePageComponent implements OnInit {
     } catch (err) {
       if (mine !== this.epoch) return;
       this.apply(null);
-      this.error.set(apiErrorText(err, 'Der Stand für diesen Tag konnte nicht geladen werden.'));
+      this.loadFailed.set(apiErrorText(err, 'Der Stand für diesen Tag konnte nicht geladen werden.'));
     } finally {
       if (mine === this.epoch) this.loading.set(false);
     }
+  }
+
+  /** „Erneut laden“ auf der Fehlerkarte. */
+  retryDate(): void {
+    void this.loadDate(this.date());
   }
 
   private apply(s: SessionDetail | null): void {
@@ -315,7 +332,7 @@ export class AttendancePageComponent implements OnInit {
   async addPhotos(input: HTMLInputElement): Promise<void> {
     const files = Array.from(input.files ?? []);
     input.value = '';
-    if (!files.length || this.busy() || this.loading()) return;
+    if (!files.length || this.busy() || this.loading() || this.loadFailed()) return;
     this.photoError.set(null);
     if (!this.session()) {
       await this.save();
@@ -343,16 +360,19 @@ export class AttendancePageComponent implements OnInit {
 
   async save(): Promise<void> {
     const g = this.group();
-    if (!g || this.loading()) return;
+    if (!g || this.loading() || this.loadFailed()) return;
     this.busy.set(true);
     this.error.set(null);
     this.saved.set(null);
     try {
-      const s = await this.api.saveSession(g.id, {
+      const input = {
         date: this.date(), topic: this.topic().trim() || null, notes: this.notes().trim() || null,
         // Jeder auf der Liste (Kinder der Gruppe + Trainer) bekommt einen Eintrag: wer nicht abgehakt ist, hat gefehlt.
         attendance: this.listed().map(m => ({ memberId: m.id, status: this.marks()[m.id] ?? 'absent' })),
-      });
+      };
+      // Geladene Einheit: mit ihrer Kennung ändern; sonst neu anlegen — steht am Tag inzwischen eine, sagt der Server 409.
+      const current = this.session();
+      const s = current ? await this.api.updateSession(g.id, current.id, input) : await this.api.saveSession(g.id, input);
       this.apply(s);
       this.sessionDates.update(d => d.includes(s.date) ? d : [...d, s.date]);
       this.saved.set(`Gespeichert: ${tallyText(s.present, this.listed().length)}.`);
