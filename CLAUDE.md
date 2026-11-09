@@ -130,6 +130,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
 - „Ohne Engine analysieren" — eigene Linien, Bewertung erst auf Zuruf (0.855.0, auth) → `docs/api/ohne-engine-analysieren.md`
 - Maia-Sparring im Analysebrett (0.632.0) → `docs/api/maia-sparring-im-analysebrett.md`
 - Züge vergleichen (0.602.0, auth) — „warum ist Zug 1 besser als Zug 2?" → `docs/api/zuege-vergleichen.md`
+- Merksätze — kuratierte, literaturbelegte Liste, Fable wählt per Kennung, Seite `/maxims` (0.917.0) → `docs/api/merksaetze.md`
 - Knotenziel + „nur auf Anforderung"-Engines (2026-10-05, Phase 1 der Lc0-Zweitprüfung, UNGETAGGT) → `docs/api/knotenziel-nur-auf-anforderung-engines.md`
 - Endstellung in Partie-Analysen (0.689.0) → `docs/api/endstellung-in-partie-analysen.md`
 - „Tiefe Analyse" einer Stellung (0.686.0) — `DeepAnalysisService`, `POST /api/deep-analysis` → `docs/api/tiefe-analyse-einer-stellung.md`

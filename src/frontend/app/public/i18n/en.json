@@ -348,7 +348,8 @@
     "scoresheet": "Read a scoresheet",
     "prep": "Prepare for an opponent",
     "ebooks": "E-books",
-    "woodpecker": "Woodpecker"
+    "woodpecker": "Woodpecker",
+    "maxims": "Rules of thumb"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2756,7 +2757,8 @@
         "tournament-calendar": "Tournament calendar",
         "scoresheet": "Read a scoresheet (photo)",
         "ebooks": "E-book library",
-        "woodpecker": "Woodpecker training"
+        "woodpecker": "Woodpecker training",
+        "maxims": "Rules of thumb (chess maxims)"
       }
     },
     "messages": {
@@ -3964,6 +3966,14 @@
         "p": [
           "The Woodpecker Method (Smith & Tikkanen) trains tactical pattern recognition by solving the same puzzles over and over, faster each time. Pick one or more courses and start a training – the rules are fixed as in the book.",
           "Cycle 1: you have four weeks to solve as many puzzles as you can, in course order; they become your set. You may backdate the start – what you solved in these courses since then counts. After at least one day off, each further cycle brings the same set in random order and has half the time (14, 7, 4, 2, 1 days). Only your first attempt per puzzle counts in a cycle. You are done once you solve the set within one day, or after the 7th cycle."
+        ]
+      },
+      "maxims": {
+        "t": "Rules of thumb",
+        "p": [
+          "A short, curated list of classic chess maxims – “A knight on the rim is dim”, “Loose pieces drop off” and so on. Every rule is backed by passages from chess books in the library; the wording stays the same everywhere.",
+          "Open a rule to see when it applies and which books explain it, with a short quote. If you have access to a book, the link opens it right at the page (PDF) or the book (EPUB).",
+          "The explanations of your mistakes end with at most one of these rules; the (i) next to it shows the book passages."
         ]
       }
     }
@@ -6271,5 +6281,17 @@
     "maiaHint": "Opens the analysis board from this position with Maia at strength {{elo}} — as strong as {{who}}.",
     "next": "Next line",
     "skip": "Skip line"
+  },
+  "maxims": {
+    "label": "Rule of thumb:",
+    "sources": "Books explaining this principle",
+    "page": "p. {{page}}",
+    "title": "Rules of thumb",
+    "intro": "Classic chess maxims, each backed by passages from chess books. They appear under the explanations of your mistakes.",
+    "when": "When it applies",
+    "books": "Books",
+    "noAccess": "not in your library",
+    "all": "All rules of thumb",
+    "count": "{{count}} rules"
   }
 }

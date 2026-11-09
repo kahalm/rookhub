@@ -131,7 +131,8 @@ public sealed class ClubFableExplanations
             var text = TextOf(json);
             if (text is null) return null;   // Fehler/Ablehnung/Deckel der Tokens: nicht noch einmal bezahlen
             // Gespeichert wird wie beim lokalen Modell in englischer SAN — die Anzeige setzt die Figurenbuchstaben der Sprache ein.
-            var english = EnglishSan(text);
+            // Merksatz (0.917.0): nur aus der kuratierten Liste, im festen Wortlaut — eine Kennung wird zum Satz, Erfundenes fällt weg.
+            var english = ChessMaxims.Canonicalize(EnglishSan(text));
             if (GameMoveExplanationService.MentionsOnly(english, facts.AllowedMoves())) return english;
             _logger.LogInformation("Fable-Begründung verworfen (nennt einen fremden Zug)");
         }
@@ -174,12 +175,14 @@ public sealed class ClubFableExplanations
         die Bewertungen, die besten Antworten des Gegners mit Engine-Linien und Tests, wie dieselben Antworten gegen den besten
         Zug ausgehen.
 
-        Schreibe auf Deutsch, in zwei kurzen Absätzen und einem Merksatz, zusammen höchstens 170 Wörter:
+        Schreibe auf Deutsch, in zwei kurzen Absätzen und höchstens einem Merksatz, zusammen höchstens 170 Wörter:
         1. Was der gespielte Zug übersieht oder zulässt: nenne die konkrete Widerlegung aus den Linien (3 bis 6 Halbzüge, mit
            Zugnummern) und was sie bewirkt.
         2. Was der beste Zug stattdessen erreicht, ebenfalls mit einer kurzen Linie aus den Daten, und warum die Widerlegung
            dort nicht (so) funktioniert.
-        3. Eine letzte Zeile „Merksatz: …“ mit einer allgemeinen, auf andere Partien übertragbaren Regel.
+        3. Passt einer der Merksätze aus der Liste im Auftrag wirklich zu diesem Fehler, eine letzte Zeile
+           „Merksatz: <Kennung>“ mit seiner Kennung (z. B. „Merksatz: raum-und-tausch“). Passt keiner genau, lass die Zeile
+           weg. Erfinde nie einen eigenen Merksatz und schreibe den Wortlaut nicht selbst — er wird nach der Kennung eingesetzt.
 
         Regeln:
         - Nur, was die Linien und Bewertungen hergeben: keine eigenen Varianten, keine erfundenen Drohungen, Schläge oder
@@ -198,5 +201,6 @@ public sealed class ClubFableExplanations
     internal static string UserPrompt(MoveComparisonService.PairFacts f) =>
         MoveComparisonService.UserPrompt(f)
         + $"\n\nHinweis: Die Bewertungen oben sind aus Sicht des Spielers am Zug ({(f.MoverWhite ? "Weiß" : "Schwarz")}); "
-        + "im Text bitte aus Sicht von Weiß angeben. Die Züge oben stehen in englischer Notation (N=S, B=L, R=T, Q=D).";
+        + "im Text bitte aus Sicht von Weiß angeben. Die Züge oben stehen in englischer Notation (N=S, B=L, R=T, Q=D)."
+        + "\n\nMerksätze (nur diese, höchstens einer, per Kennung):\n" + ChessMaxims.PromptList();
 }

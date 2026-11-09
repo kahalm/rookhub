@@ -1,0 +1,2334 @@
+[
+ {
+  "id": "entwicklung-statt-bauernzuege",
+  "text": "In der Eröffnung ein, zwei Bauernzüge, nicht mehr.",
+  "category": "Eröffnung",
+  "when": "In den ersten etwa 12 Zügen mehrere Bauernzüge (besonders Rand- oder Flügelbauern), während Leichtfiguren noch auf der Grundreihe stehen.",
+  "sources": [
+   {
+    "ebookId": 1512,
+    "author": "Emanuel Lasker, Fred Reinfeld",
+    "title": "Common Sense in Chess",
+    "year": "1946",
+    "location": "PDF-S. 17",
+    "page": 17,
+    "quote": "Do not move any Pawns in the opening of a game but the K and the Q Pawns"
+   },
+   {
+    "ebookId": 408,
+    "author": "John Watson",
+    "title": "Secrets of Modern Chess Strategy",
+    "year": "2005",
+    "location": "2: Rule-Independence; E-Book ohne Seitenzahlen, bei ca. 35 %",
+    "percent": 35,
+    "quote": "not making too many pawn moves in the opening (7 of the first 10 moves), and especially not flank pawns"
+   },
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 21",
+    "page": 21,
+    "quote": "he has certainly wasted time by accomplishing in two moves what could be done in one."
+   },
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 1; E-Book ohne Seitenzahlen, bei ca. 2 %",
+    "percent": 2,
+    "quote": "wie schon LASKER richtig bemerkte, 1-2 Bauernzüge in der Eröffnung, nicht mehr"
+   }
+  ]
+ },
+ {
+  "id": "figur-nicht-zweimal",
+  "text": "Vor vollendeter Entwicklung keine Figur zweimal ziehen.",
+  "category": "Eröffnung",
+  "when": "Dieselbe Leichtfigur oder Dame wird in der Eröffnung mehrfach gezogen (ohne taktischen Grund), andere Figuren bleiben stehen.",
+  "sources": [
+   {
+    "ebookId": 1512,
+    "author": "Emanuel Lasker, Fred Reinfeld",
+    "title": "Common Sense in Chess",
+    "year": "1946",
+    "location": "PDF-S. 17",
+    "page": 17,
+    "quote": "Do not move any piece twice in the opening, but put it at once upon the right square."
+   },
+   {
+    "ebookId": 605,
+    "author": "Irving Chernev",
+    "title": "Logical Chess: Move by Move",
+    "year": "2018",
+    "location": "Game 2; E-Book ohne Seitenzahlen, bei ca. 7 %",
+    "percent": 7,
+    "quote": "Do not move the same piece twice in the opening."
+   },
+   {
+    "ebookId": 1057,
+    "author": "Johan Hellsten",
+    "title": "Mastering Opening Strategy",
+    "year": "2012",
+    "location": "PDF-S. 288",
+    "page": 288,
+    "quote": "principle of not moving the same piece twice in the opening"
+   },
+   {
+    "ebookId": 2248,
+    "author": "Alfred Brinckmann",
+    "title": "Lehrbuch des Schachspiels",
+    "year": "1979",
+    "location": "PDF-S. 34",
+    "page": 34,
+    "quote": "Du sollst in der Eröffnung mit keiner Figur zweimal ziehen"
+   },
+   {
+    "ebookId": 722,
+    "author": "José Raúl Capablanca",
+    "title": "Grundzüge der Schachstrategie",
+    "year": "1996",
+    "location": "PDF-S. 31",
+    "page": 31,
+    "quote": "Vor vollendeter Entwicklung sollte keine Figur zweimal gezogen werden"
+   }
+  ]
+ },
+ {
+  "id": "dame-nicht-zu-frueh",
+  "text": "Die Dame nicht zu früh ins Spiel.",
+  "category": "Eröffnung",
+  "when": "Die Dame zieht früh heraus und verliert durch Angriffe gegnerischer Leichtfiguren Tempi.",
+  "sources": [
+   {
+    "ebookId": 1377,
+    "author": "Max Euwe",
+    "title": "Schach von A–Z: Vollständige Anleitung zum Schachspiel",
+    "year": "1979",
+    "location": "PDF-S. 76",
+    "page": 76,
+    "quote": "Die Dame nicht zu früh ins Spiel"
+   },
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 21",
+    "page": 21,
+    "quote": "Do not bring the Queen too early into the game"
+   },
+   {
+    "ebookId": 1057,
+    "author": "Johan Hellsten",
+    "title": "Mastering Opening Strategy",
+    "year": "2012",
+    "location": "PDF-S. 8",
+    "page": 8,
+    "quote": "\"don't bring the queen out too early\""
+   },
+   {
+    "ebookId": 605,
+    "author": "Irving Chernev",
+    "title": "Logical Chess: Move by Move",
+    "year": "2018",
+    "location": "Game 28; E-Book ohne Seitenzahlen, bei ca. 78 %",
+    "percent": 78,
+    "quote": "he has brought the queen into play too early"
+   }
+  ]
+ },
+ {
+  "id": "frueh-rochieren",
+  "text": "Wer nicht rochiert, verliert.",
+  "category": "Eröffnung",
+  "when": "Der König steht noch auf e1/e8, während Linien im Zentrum aufgehen oder der Gegner entwickelt ist; Rochade wurde verschleppt.",
+  "sources": [
+   {
+    "ebookId": 605,
+    "author": "Irving Chernev",
+    "title": "Logical Chess: Move by Move",
+    "year": "2018",
+    "location": "Game 1; E-Book ohne Seitenzahlen, bei ca. 5 %",
+    "percent": 5,
+    "quote": "Castle early in the game, preferably on the kingside."
+   },
+   {
+    "ebookId": 6623,
+    "author": "Yasser Seirawan, Jeremy Silman",
+    "title": "Winning Chess Strategies",
+    "year": "2005",
+    "location": "PDF-S. 246",
+    "page": 246,
+    "quote": "castle early and get the King to safety"
+   },
+   {
+    "ebookId": 1057,
+    "author": "Johan Hellsten",
+    "title": "Mastering Opening Strategy",
+    "year": "2012",
+    "location": "PDF-S. 334",
+    "page": 334,
+    "quote": "With the enemy king stuck in the centre, it makes sense to the open the position"
+   },
+   {
+    "ebookId": 2186,
+    "author": "Theo Schuster",
+    "title": "Schach, das königliche Spiel: Von den Grundzügen zum strategischen Spiel",
+    "year": "1994",
+    "location": "PDF-S. 138",
+    "page": 138,
+    "quote": "„Wer nicht rochiert – verliert!“ lautet ein Schachspruch."
+   }
+  ]
+ },
+ {
+  "id": "entwicklungsvorsprung-oeffnen",
+  "text": "Mit Entwicklungsvorsprung öffne das Spiel.",
+  "category": "Eröffnung",
+  "when": "Eine Seite hat klar mehr Figuren entwickelt, spielt aber langsam und lässt die Stellung geschlossen (oder die rückständige Seite öffnet selbst).",
+  "sources": [
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 187",
+    "page": 187,
+    "quote": "the player with a distinct advantage in development does his best to open up the game"
+   },
+   {
+    "ebookId": 337,
+    "author": "Ludek Pachman",
+    "title": "Complete Chess Strategy Vol. 3",
+    "year": "1978",
+    "location": "PDF-S. 103",
+    "page": 103,
+    "quote": "the strategy for the player with a lead in development is to open up the position as quickly as possible"
+   },
+   {
+    "ebookId": 727,
+    "author": "Max Euwe, Walter Meiden",
+    "title": "Meister gegen Amateur",
+    "year": "1979",
+    "location": "PDF-S. 72",
+    "page": 72,
+    "quote": "Erziele einen Entwicklungsvorsprung, öffne das Spiel"
+   },
+   {
+    "ebookId": 1057,
+    "author": "Johan Hellsten",
+    "title": "Mastering Opening Strategy",
+    "year": "2012",
+    "location": "PDF-S. 98",
+    "page": 98,
+    "quote": "in order to exploit the great lead in development White should open the position"
+   },
+   {
+    "ebookId": 727,
+    "author": "Max Euwe, Walter Meiden",
+    "title": "Meister gegen Amateur",
+    "year": "1979",
+    "location": "PDF-S. 72",
+    "page": 72,
+    "quote": "„Erziele einen Entwicklungsvorsprung, öffne das Spiel, wenn nötig, durch Opfer von Bauern oder gar Figuren …“"
+   }
+  ]
+ },
+ {
+  "id": "kein-bauernraub-bei-entwicklungsrueckstand",
+  "text": "Spiele nie bei unvollendeter Entwicklung auf Bauerngewinn.",
+  "category": "Eröffnung",
+  "when": "Ein Spieler schlägt einen (oft Flügel-)Bauern mit Dame oder Figur und gerät dadurch weiter in Entwicklungsrückstand oder in einen Angriff.",
+  "sources": [
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 1; E-Book ohne Seitenzahlen, bei ca. 5 %",
+    "percent": 5,
+    "quote": "Vom Bauernraub in der Eröffnung. Zum Bauernraub sei keine Zeit"
+   },
+   {
+    "ebookId": 4749,
+    "author": "Siegbert Tarrasch",
+    "title": "Dreihundert Schachpartien: Ein unsystematisches Lehrbuch des Schachspiels für geübte Spieler",
+    "year": "1909",
+    "location": "PDF-S. 26",
+    "page": 26,
+    "quote": "Es ist eine schlechte Strategie, auf Bauernraub auszugehen"
+   },
+   {
+    "ebookId": 605,
+    "author": "Irving Chernev",
+    "title": "Logical Chess: Move by Move",
+    "year": "2018",
+    "location": "Game 2; E-Book ohne Seitenzahlen, bei ca. 8 %",
+    "percent": 8,
+    "quote": "Do not grab pawns at the expense of development or position."
+   },
+   {
+    "ebookId": 408,
+    "author": "John Watson",
+    "title": "Secrets of Modern Chess Strategy",
+    "year": "2005",
+    "location": "1: Overview; E-Book ohne Seitenzahlen, bei ca. 2 %",
+    "percent": 2,
+    "quote": "refrain from pawn-hunting when undeveloped"
+   },
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 1; E-Book ohne Seitenzahlen, bei ca. 5 %",
+    "percent": 5,
+    "quote": "Du sollst nie bei unvollendeter Entwicklung auf Bauerngewinn spielen"
+   }
+  ]
+ },
+ {
+  "id": "zentrum-beherrschen",
+  "text": "Wer das Zentrum beherrscht, sichert sich die Initiative.",
+  "category": "Eröffnung",
+  "when": "Ein Spieler überlässt dem Gegner kampflos das Zentrum (z. B. Randzüge statt e4/d4/c4/f4 oder Figurenkontrolle von d4/e4/d5/e5).",
+  "sources": [
+   {
+    "ebookId": 1328,
+    "author": "Siegbert Tarrasch",
+    "title": "Das Schachspiel: Systematisches Lehrbuch für Anfänger und Geübte",
+    "year": "2015",
+    "location": "Partie Nr. 2; E-Book ohne Seitenzahlen, bei ca. 92 %",
+    "percent": 92,
+    "quote": "Der wichtigste von allen diesen Vorteilen ist die Beherrschung des Zentrums"
+   },
+   {
+    "ebookId": 6623,
+    "author": "Yasser Seirawan, Jeremy Silman",
+    "title": "Winning Chess Strategies",
+    "year": "2005",
+    "location": "PDF-S. 246",
+    "page": 246,
+    "quote": "The goals of an opening are to develop pieces as quickly as possible; control as much of the center as possible; and castle early"
+   },
+   {
+    "ebookId": 722,
+    "author": "José Raúl Capablanca",
+    "title": "Grundzüge der Schachstrategie",
+    "year": "1996",
+    "location": "PDF-S. 31",
+    "page": 31,
+    "quote": "Manches Eröffnungsmanöver hat die Beherrschung des Zentrums zum alleinigen Ziel; denn dadurch wird die dauernde Initiative gesichert"
+   }
+  ]
+ },
+ {
+  "id": "bauernzuege-sind-endgueltig",
+  "text": "Ein Fehler mit einem Bauernzug ist unwiderruflich.",
+  "category": "Bauernstruktur",
+  "when": "Ein unnötiger Bauernzug schafft ein Loch oder einen schwachen Bauern, den der Gegner später ausnutzt.",
+  "sources": [
+   {
+    "ebookId": 6561,
+    "author": "Michael Stean",
+    "title": "Simple Chess",
+    "year": "2003",
+    "location": "PDF-S. 16",
+    "page": 16,
+    "quote": "Moreover the damage would be irreversible. Pawns cannot move backwards."
+   },
+   {
+    "ebookId": 6625,
+    "author": "Jeremy Silman",
+    "title": "How to Reassess Your Chess (4th Edition)",
+    "year": "2010",
+    "location": "PDF-S. 107",
+    "page": 107,
+    "quote": "pawns can't move backwards, so every time they advance, potential control of squares is lost"
+   },
+   {
+    "ebookId": 1377,
+    "author": "Max Euwe",
+    "title": "Schach von A–Z: Vollständige Anleitung zum Schachspiel",
+    "year": "1979",
+    "location": "PDF-S. 69",
+    "page": 69,
+    "quote": "Da die Bauern nur in einer Richtung ziehen können, ist ein Fehler mit einem Bauernzug definitiv und unwiderruflich."
+   }
+  ]
+ },
+ {
+  "id": "kette-an-der-basis-angreifen",
+  "text": "Richte den Angriff gegen die Basis der Bauernkette.",
+  "category": "Bauernstruktur",
+  "when": "Geschlossene Bauernkette (z. B. Französisch d4-e5, Königsindisch d5-e4); ein Spieler greift die Spitze statt des hintersten Kettenbauern an oder wählt den falschen Hebel.",
+  "sources": [
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 9: DIE BAUERNKETTE; E-Book ohne Seitenzahlen, bei ca. 46 %",
+    "percent": 46,
+    "quote": "KAPITEL 9 DIE BAUERNKETTE 1. Allgemeines und Definitionen. Die Basis der Bauernkette"
+   },
+   {
+    "ebookId": 6623,
+    "author": "Yasser Seirawan, Jeremy Silman",
+    "title": "Winning Chess Strategies",
+    "year": "2005",
+    "location": "PDF-S. 130",
+    "page": 130,
+    "quote": "useful rule: Always attack a pawn chain at its base."
+   },
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 62",
+    "page": 62,
+    "quote": "(i) Attack at its base."
+   },
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 9: DIE BAUERNKETTE; E-Book ohne Seitenzahlen, bei ca. 53 %",
+    "percent": 53,
+    "quote": "Natürlich ist der Angriff gegen die Basis zu richten"
+   },
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 9: DIE BAUERNKETTE; E-Book ohne Seitenzahlen, bei ca. 49 %",
+    "percent": 49,
+    "quote": "man richte den Angriff zunächst gegen die Basis"
+   }
+  ]
+ },
+ {
+  "id": "spiele-wohin-die-kette-zeigt",
+  "text": "Spiele in Richtung deiner Bauernkette.",
+  "category": "Bauernstruktur",
+  "when": "Bei geschlossener Bauernkette startet ein Spieler sein Spiel auf dem falschen Flügel statt dort, wohin die Kette weist (Raumvorteil).",
+  "sources": [
+   {
+    "ebookId": 6625,
+    "author": "Jeremy Silman",
+    "title": "How to Reassess Your Chess (4th Edition)",
+    "year": "2010",
+    "location": "PDF-S. 333",
+    "page": 333,
+    "quote": "The idea of playing where your pawn chain points"
+   },
+   {
+    "ebookId": 6625,
+    "author": "Jeremy Silman",
+    "title": "How to Reassess Your Chess (4th Edition)",
+    "year": "2010",
+    "location": "PDF-S. 320",
+    "page": 320,
+    "quote": "pawn chain points to the kingside, which usually means that this is where he wants to play"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Sieben / Raum; E-Book ohne Seitenzahlen, bei ca. 66 %",
+    "percent": 66,
+    "quote": "dass man das Spiel in Richtung der Bauernkette"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Sieben / Raum; E-Book ohne Seitenzahlen, bei ca. 66 %",
+    "percent": 66,
+    "quote": "Die Idee, in Richtung der eigenen Bauernkette zu spielen"
+   }
+  ]
+ },
+ {
+  "id": "isolani-blockieren-und-tauschen",
+  "text": "Gegen den Isolani: erst blockieren, dann angreifen, und Figuren tauschen.",
+  "category": "Bauernstruktur",
+  "when": "Der Gegner hat einen Isolani (oft d4/d5); der Spieler lässt ihn vorrücken (d4-d5-Durchbruch) oder vermeidet den Figurentausch.",
+  "sources": [
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 53",
+    "page": 53,
+    "quote": "Maxim: First blockade, then attack!"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Fünf / Gespür für Angriffsziele; E-Book ohne Seitenzahlen, bei ca. 50 %",
+    "percent": 50,
+    "quote": "die Seite, die gegen den isolierten Bauern spielt, versuchen sollte, so viele Leichtfiguren wie möglich abzutauschen"
+   },
+   {
+    "ebookId": 2140,
+    "author": "Ludek Pachman",
+    "title": "Mittelspielpraxis im Schach: Die moderne Schachlehre des internationalen Großmeisters",
+    "year": "1977",
+    "location": "PDF-S. 159",
+    "page": 159,
+    "quote": "Abtausche sind für die gegen den Isolani kämpfende Partei gewöhnlich günstig."
+   }
+  ]
+ },
+ {
+  "id": "isolani-aktiv-spielen",
+  "text": "Mit dem Isolani spiel aktiv: Nach dem Figurentausch bleibt nur die Schwäche.",
+  "category": "Bauernstruktur",
+  "when": "Der Spieler mit Isolani tauscht passiv Figuren ab oder spielt defensiv, statt Initiative (Vorposten e5/c5, Königsangriff, d4-d5) zu suchen.",
+  "sources": [
+   {
+    "ebookId": 1264,
+    "author": "Aron Nimzowitsch",
+    "title": "Chess Praxis: The Praxis of My System",
+    "year": "2007",
+    "location": "PDF-S. 120",
+    "page": 120,
+    "quote": "Despite its static weakness, the isolated pawn on d4 is filled with a certain dynamic power."
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Fünf / Gespür für Angriffsziele; E-Book ohne Seitenzahlen, bei ca. 50 %",
+    "percent": 50,
+    "quote": "In vielen Situationen kompensieren aktive Leichtfiguren den isolierten Bauern"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Fünf / Gespür für Angriffsziele; E-Book ohne Seitenzahlen, bei ca. 50 %",
+    "percent": 50,
+    "quote": "Doch wenn alle Leichtfiguren getauscht sind, dann ist diese Form der Kompensation nicht möglich und wird der Bauer zu einer reinen Schwäche degradiert"
+   }
+  ]
+ },
+ {
+  "id": "bauernmehrheit-freibauer",
+  "text": "Jede gesunde Bauernmehrheit muss einen Freibauern ergeben; der Bauer ohne Gegenüber geht voran.",
+  "category": "Bauernstruktur",
+  "when": "Ein Spieler hat eine Bauernmehrheit auf einem Flügel (z. B. Damenflügel 3:2), mobilisiert sie aber nicht oder zieht den falschen Bauern zuerst.",
+  "sources": [
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 4: DER FREIBAUER; E-Book ohne Seitenzahlen, bei ca. 21 %",
+    "percent": 21,
+    "quote": "Regel: Jede gesunde, nicht kompromittierte Bauernmehrheit muß einen Freibauern ergeben können"
+   },
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 109",
+    "page": 109,
+    "quote": "The correct play for White to obtain a passed pawn from a healthy pawn majority is to advance the unopposed pawn"
+   },
+   {
+    "ebookId": 722,
+    "author": "José Raúl Capablanca",
+    "title": "Grundzüge der Schachstrategie",
+    "year": "1996",
+    "location": "PDF-S. 24",
+    "page": 24,
+    "quote": "den Bauern vorzurücken, der kein Gegenüber hat"
+   }
+  ]
+ },
+ {
+  "id": "freibauer-blockieren",
+  "text": "Ein Freibauer gehört hinter Schloss und Riegel, am besten hinter einen Springer.",
+  "category": "Bauernstruktur",
+  "when": "Ein gegnerischer Freibauer kann ungehindert vorrücken, weil das Feld vor ihm nicht mit einer Figur besetzt wurde.",
+  "sources": [
+   {
+    "ebookId": 1264,
+    "author": "Aron Nimzowitsch",
+    "title": "Chess Praxis: The Praxis of My System",
+    "year": "2007",
+    "location": "PDF-S. 112",
+    "page": 112,
+    "quote": "According to the law of the blockade, passed pawns and partially passed pawns must be blockaded!"
+   },
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 4: DER FREIBAUER; E-Book ohne Seitenzahlen, bei ca. 21 %",
+    "percent": 21,
+    "quote": "Unter Blockade versteht man also die mechanische Stoppung eines feindlichen Bauern durch einen Offizier"
+   },
+   {
+    "ebookId": 1375,
+    "author": "Max Euwe, Hans Kramer",
+    "title": "Das Mittelspiel, Band 1–2",
+    "year": "1956",
+    "location": "PDF-S. 30",
+    "page": 30,
+    "quote": "Der Springer ist die ideale Figur, um Freibauern zu blockieren"
+   },
+   {
+    "ebookId": 1421,
+    "author": "Aron Nimzowitsch",
+    "title": "My System (Quality Chess 2007)",
+    "year": "2007",
+    "location": "PDF-S. 72",
+    "page": 72,
+    "quote": "the first compelling and logical reason for a blockade is that a passed pawn is such a dangerous \"criminal\" that police surveillance … is required"
+   },
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 4: DER FREIBAUER; E-Book ohne Seitenzahlen, bei ca. 22 %",
+    "percent": 22,
+    "quote": "Verbrecher, der hinter Schloß und Riegel gehöre"
+   }
+  ]
+ },
+ {
+  "id": "freibauern-muessen-laufen",
+  "text": "Freibauern müssen laufen.",
+  "category": "Bauernstruktur",
+  "when": "Ein Spieler hat einen (gedeckten oder verbundenen) Freibauern, lässt ihn aber stehen, bis der Gegner ihn blockiert.",
+  "sources": [
+   {
+    "ebookId": 605,
+    "author": "Irving Chernev",
+    "title": "Logical Chess: Move by Move",
+    "year": "2018",
+    "location": "Game 23; E-Book ohne Seitenzahlen, bei ca. 61 %",
+    "percent": 61,
+    "quote": "Passed pawns must be pushed!"
+   },
+   {
+    "ebookId": 1264,
+    "author": "Aron Nimzowitsch",
+    "title": "Chess Praxis: The Praxis of My System",
+    "year": "2007",
+    "location": "PDF-S. 36",
+    "page": 36,
+    "quote": "The passed pawn's lust to expand!"
+   },
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 1; E-Book ohne Seitenzahlen, bei ca. 2 %",
+    "percent": 2,
+    "quote": "kraft der ihm innewohnenden Expansionslust"
+   },
+   {
+    "ebookId": 408,
+    "author": "John Watson",
+    "title": "Secrets of Modern Chess Strategy",
+    "year": "2005",
+    "location": "3: Minorities, Majorities, and Passed Pawns; E-Book ohne Seitenzahlen, bei ca. 11 %",
+    "percent": 11,
+    "quote": "His playful characterization of the passed pawn’s “lust to expand”"
+   },
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 4: DER FREIBAUER; E-Book ohne Seitenzahlen, bei ca. 22 %",
+    "percent": 22,
+    "quote": "Die Expansionslust des Freibauern"
+   }
+  ]
+ },
+ {
+  "id": "zur-mitte-hin-schlagen",
+  "text": "Hast du die Wahl, schlage mit dem Bauern zur Mitte hin.",
+  "category": "Bauernstruktur",
+  "when": "Bauernschlag mit Wahl (z. B. bxc oder dxc), bei dem vom Zentrum weg geschlagen wird und die Struktur ohne Not schlechter wird.",
+  "sources": [
+   {
+    "ebookId": 6625,
+    "author": "Jeremy Silman",
+    "title": "How to Reassess Your Chess (4th Edition)",
+    "year": "2010",
+    "location": "PDF-S. 556",
+    "page": 556,
+    "quote": "breaks an age-old rule (\"always capture towards the center\")"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Sechs / Statisches gegen Dynamisches; E-Book ohne Seitenzahlen, bei ca. 62 %",
+    "percent": 62,
+    "quote": "eine uralte Regel („immer zum Zentrum hin schlagen“)"
+   },
+   {
+    "ebookId": 767,
+    "author": "Johan Hellsten",
+    "title": "Mastering Chess Strategy",
+    "year": "2010",
+    "location": "PDF-S. 255",
+    "page": 255,
+    "quote": "When about to double our pawns, we usually capture towards the centre"
+   },
+   {
+    "ebookId": 2248,
+    "author": "Alfred Brinckmann",
+    "title": "Lehrbuch des Schachspiels",
+    "year": "1979",
+    "location": "PDF-S. 110",
+    "page": 110,
+    "quote": "Denn so lautet eine alte Regel: „Hast Du die Wahl, so sollst Du mit dem Bauern nach der Mitte schlagen.“"
+   }
+  ]
+ },
+ {
+  "id": "raum-und-tausch",
+  "text": "Wer Raum hat, meidet den Tausch; wer beengt steht, dem hilft jeder Tausch.",
+  "category": "Figuren",
+  "when": "Die Seite mit klarem Raumvorteil tauscht Figuren ab und befreit damit den Gegner; oder die beengte Seite weicht Tauschangeboten aus und stellt ihre Figuren weiter zusammen, statt durch Abtausch Luft zu schaffen.",
+  "sources": [
+   {
+    "ebookId": 1391,
+    "author": "Hans Kmoch",
+    "title": "Die Kunst der Bauernführung: Ein Beitrag zur Schachstrategie",
+    "year": "1968",
+    "location": "PDF-S. 162",
+    "page": 162,
+    "quote": "daß unnötiger Figurentausch der Festhaltung eines Raumvorteils abträglich ist"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Eins / Das Konzept der Ungleichgewichte; E-Book ohne Seitenzahlen, bei ca. 3 %",
+    "percent": 3,
+    "quote": "Bei großem Raumvorteil werden Sie zwei Mal darüber nachdenken, bevor Sie Figuren tauschen"
+   },
+   {
+    "ebookId": 338,
+    "author": "Ludek Pachman",
+    "title": "Modern Chess Strategy",
+    "year": "1971",
+    "location": "E-Book ohne Seitenzahlen, bei ca. 73 %",
+    "percent": 73,
+    "quote": "In view of his great advantage in space, White will not want to exchange pieces"
+   },
+   {
+    "ebookId": 6623,
+    "author": "Yasser Seirawan, Jeremy Silman",
+    "title": "Winning Chess Strategies",
+    "year": "2005",
+    "location": "PDF-S. 170",
+    "page": 170,
+    "quote": "The player with more space usually avoids exchanges"
+   },
+   {
+    "ebookId": 6625,
+    "author": "Jeremy Silman",
+    "title": "How to Reassess Your Chess (4th Edition)",
+    "year": "2010",
+    "location": "PDF-S. 408",
+    "page": 408,
+    "quote": "the side with more space should avoid unnecessary exchanges"
+   },
+   {
+    "ebookId": 816,
+    "author": "Mikhail Shereshevsky",
+    "title": "Endgame Strategy: The Revised and Expanded Edition of a Chess Classic",
+    "year": "2022",
+    "location": "PDF-S. 516",
+    "page": 516,
+    "quote": "if the stronger side has an advantage in space, as a rule, it is necessary to avoid exchanges of minor pieces"
+   },
+   {
+    "ebookId": 605,
+    "author": "Irving Chernev",
+    "title": "Logical Chess: Move by Move",
+    "year": "2018",
+    "location": "Game 16; E-Book ohne Seitenzahlen, bei ca. 38 %",
+    "percent": 38,
+    "quote": "In a cramped position try to relieve the pressure by forcing exchanges of pieces."
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Sieben / Raum; E-Book ohne Seitenzahlen, bei ca. 67 %",
+    "percent": 67,
+    "quote": "Figurentausch als ein Mittel, die Qual einer beengten Stellung zu lindern"
+   },
+   {
+    "ebookId": 1081,
+    "author": "Jacob Aagaard, Renier Castellanos",
+    "title": "Mastering Chess Exchanges",
+    "year": "2025",
+    "location": "PDF-S. 81",
+    "page": 81,
+    "quote": "the person with less space wants to exchange minor pieces"
+   },
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 86",
+    "page": 86,
+    "quote": "exchanging may often be advantageous when in a cramped position."
+   },
+   {
+    "ebookId": 335,
+    "author": "Ludek Pachman",
+    "title": "Complete Chess Strategy Vol. 1",
+    "year": "1980",
+    "location": "PDF-S. 183",
+    "page": 183,
+    "quote": "When the exchange eases a cramped defence"
+   },
+   {
+    "ebookId": 2824,
+    "author": "Valeri Beim",
+    "title": "Lektionen zur Schachstrategie",
+    "year": "2005",
+    "location": "PDF-S. 60",
+    "page": 60,
+    "quote": "Es ist klar, dass der Figurentausch für den Spieler, der eine beengte Position hat, vorteilhaft ist. Entsprechend ist es für den Spieler mit Raumvorteil günstiger, …"
+   },
+   {
+    "ebookId": 725,
+    "author": "Max Euwe, Walter Meiden",
+    "title": "Amateur wird Meister",
+    "year": "1998",
+    "location": "PDF-S. 84",
+    "page": 84,
+    "quote": "jeder Tausch ist für den, der beengt steht, eine Erleichterung"
+   }
+  ]
+ },
+ {
+  "id": "laeufer-bauern-andere-farbe",
+  "text": "Hast du einen Läufer, stell die Bauern auf die andere Farbe; hat ihn der Gegner, auf seine.",
+  "category": "Figuren",
+  "when": "Ein Spieler legt seine Bauern auf die Farbe seines einzigen Läufers fest (schlechter Läufer), oder er stellt sie (besonders vom König gestützte Freibauern) auf die Farbe, die der gegnerische Läufer nicht beherrscht — besonders beim Übergang ins Endspiel.",
+  "sources": [
+   {
+    "ebookId": 6636,
+    "author": "Jose Capablanca",
+    "title": "Jose Capablanca - Chess Fundamentals",
+    "year": "1934",
+    "location": "S. 55 (Ausgabe 1921)",
+    "quote": "Whenever you have a Bishop, whether the opponent has also one or not, keep your Pawns on squares of the opposite colour to that of …"
+   },
+   {
+    "ebookId": 2315,
+    "author": "José Raúl Capablanca, Nick de Firmian",
+    "title": "Chess Fundamentals: Completely Revised and Updated for the 21st Century",
+    "year": "2006",
+    "location": "PDF-S. 62",
+    "page": 62,
+    "quote": "Whenever you have a bishop, whether the opponent also has one or not, keep your pawns on squares of the opposite color"
+   },
+   {
+    "ebookId": 2315,
+    "author": "José Raúl Capablanca, Nick de Firmian",
+    "title": "Chess Fundamentals: Completely Revised and Updated for the 21st Century",
+    "year": "2006",
+    "location": "PDF-S. 62",
+    "page": 62,
+    "quote": "it is generally preferable to keep your pawns on squares of the same color as that of the opposing bishop, particularly if they are passed …"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Zwei / Leichtfiguren; E-Book ohne Seitenzahlen, bei ca. 13 %",
+    "percent": 13,
+    "quote": "muss man zwei Mal darüber nachdenken, bevor man seine Bauern auf Felder der Farbe des eigenen Läufers stellt"
+   },
+   {
+    "ebookId": 1377,
+    "author": "Max Euwe",
+    "title": "Schach von A–Z: Vollständige Anleitung zum Schachspiel",
+    "year": "1979",
+    "location": "PDF-S. 145",
+    "page": 145,
+    "quote": "in Nr. 213 beide gut (festgelegte Bauern auf entgegengesetzter Farbe) und in Nr. 214 beide schlecht (festgelegte Bauern auf gleicher Farbe)"
+   },
+   {
+    "ebookId": 722,
+    "author": "José Raúl Capablanca",
+    "title": "Grundzüge der Schachstrategie",
+    "year": "1996",
+    "location": "PDF-S. 47",
+    "page": 47,
+    "quote": "Wenn der Gegner einen Läufer hat, bringe man seine Bauern auf Felder derselben Farbe. Wenn man selbst einen Läufer hat, so halte man sie auf …"
+   }
+  ]
+ },
+ {
+  "id": "laeufer-bei-bauern-auf-beiden-fluegeln",
+  "text": "Mit Bauern auf beiden Flügeln ist der Läufer besser als der Springer.",
+  "category": "Figuren",
+  "when": "Tausch von Läufer gegen Springer (oder Abwicklung ins Endspiel), obwohl Bauern auf beiden Brettseiten stehen und das Spiel offen ist.",
+  "sources": [
+   {
+    "ebookId": 2315,
+    "author": "José Raúl Capablanca, Nick de Firmian",
+    "title": "Chess Fundamentals: Completely Revised and Updated for the 21st Century",
+    "year": "2006",
+    "location": "PDF-S. 62",
+    "page": 62,
+    "quote": "Pawns on both sides of the board favor the long-range bishop"
+   },
+   {
+    "ebookId": 6636,
+    "author": "Jose Capablanca",
+    "title": "Jose Capablanca - Chess Fundamentals",
+    "year": "1934",
+    "location": "S. 54 (Ausgabe 1921)",
+    "quote": "If there were Pawns on both sides of the board there would be no advantage in having a Knight"
+   },
+   {
+    "ebookId": 338,
+    "author": "Ludek Pachman",
+    "title": "Modern Chess Strategy",
+    "year": "1971",
+    "location": "E-Book ohne Seitenzahlen, bei ca. 10 %",
+    "percent": 10,
+    "quote": "there are pawns on both sides of the board, and this throws the balance in favour of the Bishop"
+   },
+   {
+    "ebookId": 1908,
+    "author": "Edward Lasker",
+    "title": "Schachstrategie: Einführung in den Geist der praktischen Partie",
+    "year": "1923",
+    "location": "PDF-S. 173",
+    "page": 173,
+    "quote": "der Läufer hat in Endspielen mit Bauern auf beiden Flügeln meist bessere Chancen"
+   },
+   {
+    "ebookId": 3761,
+    "author": "Juri Awerbach",
+    "title": "Erfolg im Endspiel",
+    "year": "1987",
+    "location": "PDF-S. 104",
+    "page": 104,
+    "quote": "In Stellungen, in denen das Spiel auf beiden Flügeln verläuft, ist ein Läufer zweifellos besser als ein Springer."
+   }
+  ]
+ },
+ {
+  "id": "springer-am-rand",
+  "text": "Springer am Rand bringt Kummer und Schand.",
+  "category": "Figuren",
+  "when": "Ein Springer wird ohne konkreten Grund auf die a- oder h-Linie gezogen und verliert dort an Wirkung.",
+  "sources": [
+   {
+    "ebookId": 1328,
+    "author": "Siegbert Tarrasch",
+    "title": "Das Schachspiel: Systematisches Lehrbuch für Anfänger und Geübte",
+    "year": "2015",
+    "location": "II. Spezielle Eröffnungslehre; E-Book ohne Seitenzahlen, bei ca. 88 %",
+    "percent": 88,
+    "quote": "Der weiße Springer am Rande steht sehr schlecht"
+   },
+   {
+    "ebookId": 1023,
+    "author": "Andrew Soltis",
+    "title": "Catalog of Chess Mistakes",
+    "year": "1980",
+    "location": "PDF-S. 176",
+    "page": 176,
+    "quote": "(\"A knight on the rim brings shame,\" as a Gelman aphorism puts it)"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Eins / Das Konzept der Ungleichgewichte; E-Book ohne Seitenzahlen, bei ca. 4 %",
+    "percent": 4,
+    "quote": "bringen Springer am Rand nicht Kummer und Schand?"
+   },
+   {
+    "ebookId": 2248,
+    "author": "Alfred Brinckmann",
+    "title": "Lehrbuch des Schachspiels",
+    "year": "1979",
+    "location": "PDF-S. 95",
+    "page": 95,
+    "quote": "Das Sprichwort „Springer am Rande bringt ewige Schande“ gilt hier nicht."
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Eins / Das Konzept der Ungleichgewichte; E-Book ohne Seitenzahlen, bei ca. 4 %",
+    "percent": 4,
+    "quote": "Springer am Rand nicht Kummer und Schand"
+   }
+  ]
+ },
+ {
+  "id": "springer-auf-vorposten",
+  "text": "Ein Springer auf einem Vorposten, den kein Bauer vertreiben kann, ist sehr stark.",
+  "category": "Figuren",
+  "when": "Ein geschütztes Feld im gegnerischen Lager (z. B. d5, e5, c5) bleibt ungenutzt, oder man lässt einen gegnerischen Springer dort dauerhaft stehen.",
+  "sources": [
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 70",
+    "page": 70,
+    "quote": "A KNIGHT OUTPOST is a square which a Knight can occupy, either in the centre or enemy-half of the board, and from which it cannot …"
+   },
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 2: DIE OFFENE TURMLINIE; E-Book ohne Seitenzahlen, bei ca. 9 %",
+    "percent": 9,
+    "quote": "Punkt d5 bildet hier der Vorpostenpunkt, Springer d5 nennen wir den Vorposten"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Zwei / Leichtfiguren; E-Book ohne Seitenzahlen, bei ca. 7 %",
+    "percent": 7,
+    "quote": "Der Springer e5 steht auf einem dauerhaften Vorpostenfeld"
+   }
+  ]
+ },
+ {
+  "id": "laeuferpaar-stellung-oeffnen",
+  "text": "Der Besitzer des Läuferpaares muss offenes Spiel anstreben.",
+  "category": "Figuren",
+  "when": "Der Besitzer des Läuferpaars hält die Stellung geschlossen (oder der Gegner öffnet sie ihm ohne Not).",
+  "sources": [
+   {
+    "ebookId": 1375,
+    "author": "Max Euwe, Hans Kramer",
+    "title": "Das Mittelspiel, Band 1–2",
+    "year": "1956",
+    "location": "PDF-S. 31",
+    "page": 31,
+    "quote": "daß der Besitzer des Läuferpaares offenes Spiel anstreben muß"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Zwei / Leichtfiguren; E-Book ohne Seitenzahlen, bei ca. 17 %",
+    "percent": 17,
+    "quote": "Weiß hat das Läuferpaar und würde die Stellung gerne öffnen"
+   },
+   {
+    "ebookId": 1081,
+    "author": "Jacob Aagaard, Renier Castellanos",
+    "title": "Mastering Chess Exchanges",
+    "year": "2025",
+    "location": "PDF-S. 490",
+    "page": 490,
+    "quote": "his two bishops are at their best, and he can try to open the position with a pawn break"
+   },
+   {
+    "ebookId": 1375,
+    "author": "Max Euwe, Hans Kramer",
+    "title": "Das Mittelspiel, Band 1–2",
+    "year": "1956",
+    "location": "PDF-S. 31",
+    "page": 31,
+    "quote": "daß der Besitzer des Läuferpaares offenes Spiel anstreben muß"
+   }
+  ]
+ },
+ {
+  "id": "tuerme-auf-offene-linien",
+  "text": "Türme gehören auf offene Linien.",
+  "category": "Figuren",
+  "when": "Ein Turm bleibt hinter eigenen Bauern stehen, während eine offene Linie frei ist oder vom Gegner besetzt wird.",
+  "sources": [
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 69",
+    "page": 69,
+    "quote": "Advice Concerning Open Files and the Seventh Rank (a) Seize the open file."
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Drei / Türme; E-Book ohne Seitenzahlen, bei ca. 24 %",
+    "percent": 24,
+    "quote": "Wenn Sie wirkungsvolle Türme wollen, dann brauchen sie eine offene Linie"
+   },
+   {
+    "ebookId": 2922,
+    "author": "Max Euwe",
+    "title": "Positions- und Kombinationsspiel im Schach",
+    "year": "1971",
+    "location": "PDF-S. 7",
+    "page": 7,
+    "quote": "IV. Der Kampf um offene Linien für die Türme"
+   },
+   {
+    "ebookId": 1328,
+    "author": "Siegbert Tarrasch",
+    "title": "Das Schachspiel: Systematisches Lehrbuch für Anfänger und Geübte",
+    "year": "2015",
+    "location": "E-Book ohne Seitenzahlen, bei ca. 38 %",
+    "percent": 38,
+    "quote": "Diese Besetzung der offenen Linie, mit der Schwarz aus der Not eine Tugend macht, ist immer sehr wirksam"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Zwei / Leichtfiguren; E-Book ohne Seitenzahlen, bei ca. 10 %",
+    "percent": 10,
+    "quote": "Türme gehören auf offene Linien, nicht wahr"
+   }
+  ]
+ },
+ {
+  "id": "turm-auf-der-siebten",
+  "text": "Die siebte Reihe ist das Ziel jeder offenen Linie.",
+  "category": "Figuren",
+  "when": "Ein Turm könnte auf die 7. (bzw. 2.) Reihe eindringen und Bauern angreifen oder den König einsperren, wird aber nicht dorthin geführt (oder der Gegner wird hineingelassen).",
+  "sources": [
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 2: DIE OFFENE TURMLINIE; E-Book ohne Seitenzahlen, bei ca. 6 %",
+    "percent": 6,
+    "quote": "ziele aber unentwegt nach der 7. Reihe hin, deren Besetzung man als Ideal jeder Linienoperation zu betrachten habe"
+   },
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 68",
+    "page": 68,
+    "quote": "The seventh rank is a minor positional strongpoint, and its occupation by a Rook or Queen"
+   },
+   {
+    "ebookId": 1081,
+    "author": "Jacob Aagaard, Renier Castellanos",
+    "title": "Mastering Chess Exchanges",
+    "year": "2025",
+    "location": "PDF-S. 41",
+    "page": 41,
+    "quote": "the rook on the seventh rank is great"
+   }
+  ]
+ },
+ {
+  "id": "schlechteste-figur-verbessern",
+  "text": "Verbessere deine schlechteste Figur.",
+  "category": "Figuren",
+  "when": "In ruhiger Stellung ohne konkrete Drohungen zieht ein Spieler bereits gut stehende Figuren, während eine Figur untätig bleibt.",
+  "sources": [
+   {
+    "ebookId": 1157,
+    "author": "Mark Dvoretsky, Artur Yusupov",
+    "title": "Secrets of Positional Play (School of Future Champions 4)",
+    "year": "2008",
+    "location": "PDF-S. 93",
+    "page": 93,
+    "quote": "call 'the principle of the worst piece '"
+   },
+   {
+    "ebookId": 408,
+    "author": "John Watson",
+    "title": "Secrets of Modern Chess Strategy",
+    "year": "2005",
+    "location": "2: Rule-Independence; E-Book ohne Seitenzahlen, bei ca. 34 %",
+    "percent": 34,
+    "quote": "the idea of improving the position of one’s worst piece"
+   },
+   {
+    "ebookId": 1328,
+    "author": "Siegbert Tarrasch",
+    "title": "Das Schachspiel: Systematisches Lehrbuch für Anfänger und Geübte",
+    "year": "2015",
+    "location": "E-Book ohne Seitenzahlen, bei ca. 54 %",
+    "percent": 54,
+    "quote": "Ferner wird man eine schlecht stehende Figur, etwa einen Springer am Rande, besser postieren, sobald einem der Gegner dazu Zeit läßt"
+   }
+  ]
+ },
+ {
+  "id": "schlechte-gegen-gute-figur-tauschen",
+  "text": "Tausche deine schlechte Figur gegen eine gute des Gegners.",
+  "category": "Figuren",
+  "when": "Ein Spieler tauscht seine aktive Figur gegen eine passive des Gegners ab (oder lässt die Gelegenheit aus, seinen schlechten Läufer loszuwerden).",
+  "sources": [
+   {
+    "ebookId": 4204,
+    "author": "Andrew Soltis",
+    "title": "Your Kingdom for My Horse: When to Exchange in Chess",
+    "year": "2015",
+    "location": "PDF-S. 7",
+    "page": 7,
+    "quote": "The simplest way to improve a position is to swap your worst piece for a better enemy piece"
+   },
+   {
+    "ebookId": 4204,
+    "author": "Andrew Soltis",
+    "title": "Your Kingdom for My Horse: When to Exchange in Chess",
+    "year": "2015",
+    "location": "PDF-S. 6",
+    "page": 6,
+    "quote": "(a) Exchange your pieces for better ones"
+   },
+   {
+    "ebookId": 6625,
+    "author": "Jeremy Silman",
+    "title": "How to Reassess Your Chess (4th Edition)",
+    "year": "2010",
+    "location": "PDF-S. 28",
+    "page": 28,
+    "quote": "exchanging white's worst piece for one of black's best would be a great idea"
+   }
+  ]
+ },
+ {
+  "id": "fluegelangriff-mit-zentrum-beantworten",
+  "text": "Einen Flügelangriff beantwortet man am besten mit einem Gegenstoß im Zentrum.",
+  "category": "Angriff/Verteidigung",
+  "when": "Der Gegner greift am Flügel an, während das Zentrum offen oder beweglich ist; der Verteidiger reagiert nur passiv am Flügel.",
+  "sources": [
+   {
+    "ebookId": 1023,
+    "author": "Andrew Soltis",
+    "title": "Catalog of Chess Mistakes",
+    "year": "1980",
+    "location": "PDF-S. 69",
+    "page": 69,
+    "quote": "Wing attacks are best met by counterattacks in the center"
+   },
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 92",
+    "page": 92,
+    "quote": "in the case of a wing attack there is one excellent means of robbing it of its sting, and that is to counter-attack in the …"
+   },
+   {
+    "ebookId": 1375,
+    "author": "Max Euwe, Hans Kramer",
+    "title": "Das Mittelspiel, Band 1–2",
+    "year": "1956",
+    "location": "PDF-S. 103",
+    "page": 103,
+    "quote": "die bekannte Regel, daß ein Flügelangriff wenig Erfolgsaussichten hat, wenn man im Zentrum keinen Einfluß besitzt"
+   },
+   {
+    "ebookId": 1057,
+    "author": "Johan Hellsten",
+    "title": "Mastering Opening Strategy",
+    "year": "2012",
+    "location": "PDF-S. 230",
+    "page": 230,
+    "quote": "Black responds to the flank attack with a counterstrike at White's centre"
+   }
+  ]
+ },
+ {
+  "id": "vorteil-verpflichtet-zum-angriff",
+  "text": "Wer im Vorteil ist, ist zum Angriff verpflichtet.",
+  "category": "Angriff/Verteidigung",
+  "when": "Ein Spieler hat einen (oft vorübergehenden) Vorteil wie Entwicklungsvorsprung oder Initiative, spielt aber abwartend, bis der Vorteil verschwunden ist.",
+  "sources": [
+   {
+    "ebookId": 1536,
+    "author": "Alexey Suetin",
+    "title": "Soviet Chess Strategy",
+    "year": "2010",
+    "location": "PDF-S. 159",
+    "page": 159,
+    "quote": "Steinitz's dictum that the player with the advantage is obliged to attack"
+   },
+   {
+    "ebookId": 6623,
+    "author": "Yasser Seirawan, Jeremy Silman",
+    "title": "Winning Chess Strategies",
+    "year": "2005",
+    "location": "PDF-S. 193",
+    "page": 193,
+    "quote": "The obligation to attack can arise anywhere on the board"
+   },
+   {
+    "ebookId": 6623,
+    "author": "Yasser Seirawan, Jeremy Silman",
+    "title": "Winning Chess Strategies",
+    "year": "2005",
+    "location": "PDF-S. 191",
+    "page": 191,
+    "quote": "Black must attack or he will lose."
+   }
+  ]
+ },
+ {
+  "id": "keine-bauernzuege-vor-dem-koenig",
+  "text": "Ziehe keinen Rochadebauern ohne Not.",
+  "category": "Angriff/Verteidigung",
+  "when": "Züge wie h3/h6, g4/g5 oder f3/f6 vor dem eigenen rochierten König ohne Zwang, die Angriffsziele oder Löcher schaffen.",
+  "sources": [
+   {
+    "ebookId": 605,
+    "author": "Irving Chernev",
+    "title": "Logical Chess: Move by Move",
+    "year": "2018",
+    "location": "Game 1; E-Book ohne Seitenzahlen, bei ca. 5 %",
+    "percent": 5,
+    "quote": "“You should never, unless of necessity or to gain an advantage, move the pawns in front of the castled king,” says Tarrasch"
+   },
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 22",
+    "page": 22,
+    "quote": "Pawns in front of the castled King. Don’t move the pawns on the side to which the King intends to castle"
+   },
+   {
+    "ebookId": 605,
+    "author": "Irving Chernev",
+    "title": "Logical Chess: Move by Move",
+    "year": "2018",
+    "location": "Game 8; E-Book ohne Seitenzahlen, bei ca. 19 %",
+    "percent": 19,
+    "quote": "Every pawn move loosens the defending structure."
+   },
+   {
+    "ebookId": 1377,
+    "author": "Max Euwe",
+    "title": "Schach von A–Z: Vollständige Anleitung zum Schachspiel",
+    "year": "1979",
+    "location": "PDF-S. 95",
+    "page": 95,
+    "quote": "… doch empfiehlt es sich im allgemeinen nicht, einen Rochadebauern ohne Not zu ziehen."
+   }
+  ]
+ },
+ {
+  "id": "gegenrochade-bauernsturm",
+  "text": "Bei entgegengesetzten Rochaden stürmen die Bauern rücksichtslos gegen den König.",
+  "category": "Angriff/Verteidigung",
+  "when": "Ungleichseitige Rochaden; ein Spieler verliert Zeit mit Verteidigungszügen oder zieht Bauern vor dem eigenen König, statt seinen Bauernsturm zu beschleunigen.",
+  "sources": [
+   {
+    "ebookId": 6702,
+    "author": "Max Euwe",
+    "title": "Judgment and Planning in Chess",
+    "year": "1979",
+    "location": "PDF-S. 96",
+    "page": 96,
+    "quote": "The standing rule not to hesitate in bringing pawns forward to strengthen a King’s side attack is of course always valid when the players have …"
+   },
+   {
+    "ebookId": 6623,
+    "author": "Yasser Seirawan, Jeremy Silman",
+    "title": "Winning Chess Strategies",
+    "year": "2005",
+    "location": "PDF-S. 177",
+    "page": 177,
+    "quote": "it is a normal practice to seek your play on the side of the board where you have not castled"
+   },
+   {
+    "ebookId": 3958,
+    "author": "Max Euwe",
+    "title": "Urteil und Plan im Schach",
+    "year": "1986",
+    "location": "PDF-S. 75",
+    "page": 75,
+    "quote": "Die Merkregel, mit den Bauern rücksichtslos vorzugehen, um dem Königsangriff Kraft zu verleihen, gilt natürlich hauptsächlich nur für Partien mit entgegengesetzten Rochaden."
+   }
+  ]
+ },
+ {
+  "id": "abtausch-im-angriff",
+  "text": "Der Angreifer tauscht die Verteidiger ab, der Verteidiger die Angreifer.",
+  "category": "Angriff/Verteidigung",
+  "when": "Der Angreifer häuft weitere Figuren an, statt einen Verteidiger des Ziels (König, schwacher Bauer, Feld) abzutauschen; oder der Verteidiger weicht dem Tausch gegen die gefährlichsten Angriffsfiguren aus.",
+  "sources": [
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 2: DIE OFFENE TURMLINIE; E-Book ohne Seitenzahlen, bei ca. 8 %",
+    "percent": 8,
+    "quote": "Dezimieren der Verteidiger durch Abtausch"
+   },
+   {
+    "ebookId": 1421,
+    "author": "Aron Nimzowitsch",
+    "title": "My System (Quality Chess 2007)",
+    "year": "2007",
+    "location": "PDF-S. 32",
+    "page": 32,
+    "quote": "eliminating defenders by exchange"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Vier / Psychologische Streifzüge; E-Book ohne Seitenzahlen, bei ca. 31 %",
+    "percent": 31,
+    "quote": "Alle Verteidiger von a4 abtauschen und den Bauern gewinnen!"
+   },
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 86",
+    "page": 86,
+    "quote": "normally he wishes to exchange his defenders against your attackers"
+   },
+   {
+    "ebookId": 605,
+    "author": "Irving Chernev",
+    "title": "Logical Chess: Move by Move",
+    "year": "2018",
+    "location": "Game 16; E-Book ohne Seitenzahlen, bei ca. 38 %",
+    "percent": 38,
+    "quote": "He must try to beat back White’s attacking pieces or get rid of them by exchanges"
+   },
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 5: DER ABTAUSCH; E-Book ohne Seitenzahlen, bei ca. 33 %",
+    "percent": 33,
+    "quote": "Jedem Verteidiger im engeren oder weiteren Sinne gelte deine Vernichtungswut"
+   }
+  ]
+ },
+ {
+  "id": "ungleiche-laeufer",
+  "text": "Ungleichfarbige Läufer helfen im Mittelspiel dem Angreifer, im Endspiel dem Verteidiger.",
+  "category": "Angriff/Verteidigung",
+  "when": "Bei ungleichfarbigen Läufern mit vielen Figuren unterschätzt ein Spieler den Angriff auf die Felder, die der gegnerische Läufer nicht decken kann; oder ein Spieler mit Mehrbauern tauscht in ein Endspiel mit ungleichfarbigen Läufern ab, bzw. der Verteidiger übersieht diese Rettung.",
+  "sources": [
+   {
+    "ebookId": 29,
+    "author": "Jeremy Silman",
+    "title": "Silman's Complete Endgame Course",
+    "year": "2007",
+    "location": "PDF-S. 390",
+    "page": 390,
+    "quote": "Opposite colored Bishops are wonderful attacking weapons in the middlegame"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Zwei / Leichtfiguren; E-Book ohne Seitenzahlen, bei ca. 14 %",
+    "percent": 14,
+    "quote": "so sind ebendiese ungleichfarbigen Läufer (im Mittelspiel oder im Endspiel) doch günstig für den Angreifer"
+   },
+   {
+    "ebookId": 335,
+    "author": "Ludek Pachman",
+    "title": "Complete Chess Strategy Vol. 1",
+    "year": "1980",
+    "location": "PDF-S. 83",
+    "page": 83,
+    "quote": "the presence of opposite-coloured bishops even has the reverse effect and favours the side with the initiative"
+   },
+   {
+    "ebookId": 408,
+    "author": "John Watson",
+    "title": "Secrets of Modern Chess Strategy",
+    "year": "2005",
+    "location": "6: Minor-Piece Issues; E-Book ohne Seitenzahlen, bei ca. 23 %",
+    "percent": 23,
+    "quote": "summarized by the phrase ‘opposite-coloured bishops favour the attacker’"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Zwei / Leichtfiguren; E-Book ohne Seitenzahlen, bei ca. 14 %",
+    "percent": 14,
+    "quote": "Wenn Sie einen Mehrbauern haben und glauben, dass ungleichfarbige Läufer die Gewinnführung in einen Albtraum verwandeln könnten, dann tun Sie alles, um einen der Läufer …"
+   },
+   {
+    "ebookId": 4204,
+    "author": "Andrew Soltis",
+    "title": "Your Kingdom for My Horse: When to Exchange in Chess",
+    "year": "2015",
+    "location": "PDF-S. 168",
+    "page": 168,
+    "quote": "If your position reaches an endgame and material is equal, opposite colored bishops often guarantee a draw"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Zwei / Leichtfiguren; E-Book ohne Seitenzahlen, bei ca. 14 %",
+    "percent": 14,
+    "quote": "Obwohl ungleichfarbige Läufer in vielen Fällen die Chancen des Verteidigers, ein schlechteres Endspiel zu halten, erhöhen, so sind ebendiese ungleichfarbigen Läufer … doch günstig für …"
+   }
+  ]
+ },
+ {
+  "id": "luftloch-gegen-grundreihenmatt",
+  "text": "Schaffe deinem König rechtzeitig ein Luftloch.",
+  "category": "Angriff/Verteidigung",
+  "when": "Der König steht hinter unbewegten Bauern (z. B. f2-g2-h2) und die Grundreihe ist nur schwach gedeckt; eine Grundreihen-Taktik wird möglich.",
+  "sources": [
+   {
+    "ebookId": 2140,
+    "author": "Ludek Pachman",
+    "title": "Mittelspielpraxis im Schach: Die moderne Schachlehre des internationalen Großmeisters",
+    "year": "1977",
+    "location": "PDF-S. 141",
+    "page": 141,
+    "quote": "Durch dies ist nicht nur die Sicherung der 8. Linie (man nennt diese Vorsichtsmaßnahme oft »Luftloch«) …"
+   },
+   {
+    "ebookId": 1375,
+    "author": "Max Euwe, Hans Kramer",
+    "title": "Das Mittelspiel, Band 1–2",
+    "year": "1956",
+    "location": "PDF-S. 43",
+    "page": 43,
+    "quote": "seinem König ein Luftloch zu machen"
+   }
+  ]
+ },
+ {
+  "id": "schachs-schlaege-drohungen-pruefen",
+  "text": "Prüfe vor jedem Zug die Schachs, Schläge und Drohungen des Gegners.",
+  "category": "Taktik",
+  "when": "Ein Zug stellt Material ein oder erlaubt eine einfache Kombination, weil die forcierenden Antworten des Gegners nicht geprüft wurden.",
+  "sources": [
+   {
+    "ebookId": 882,
+    "author": "Dan Heisman",
+    "title": "Is Your Move Safe?",
+    "year": "2016",
+    "location": "PDF-S. 15",
+    "page": 15,
+    "quote": "when you are determining if a candidate move is safe, you have to consider the opponent’s checks, captures, and threats"
+   },
+   {
+    "ebookId": 882,
+    "author": "Dan Heisman",
+    "title": "Is Your Move Safe?",
+    "year": "2016",
+    "location": "PDF-S. 15",
+    "page": 15,
+    "quote": "These forcing moves are the responding player’s checks, captures, and threats"
+   }
+  ]
+ },
+ {
+  "id": "ungedeckte-figuren",
+  "text": "Ungedeckte Figuren fallen.",
+  "category": "Taktik",
+  "when": "Eine ungedeckte Figur fällt einer Gabel, einem Doppelangriff oder Abzug zum Opfer.",
+  "sources": [
+   {
+    "ebookId": 1328,
+    "author": "Siegbert Tarrasch",
+    "title": "Das Schachspiel: Systematisches Lehrbuch für Anfänger und Geübte",
+    "year": "2015",
+    "location": "E-Book ohne Seitenzahlen, bei ca. 31 %",
+    "percent": 31,
+    "quote": "Alle Figuren sollen womöglich gedeckt sein. Die sicherste Deckung ist die durch Bauern. Ungedeckte Figuren bringen häufig Unzuträglichkeiten mit sich"
+   },
+   {
+    "ebookId": 1191,
+    "author": "Dan Heisman",
+    "title": "Elements of Positional Evaluation: How the Pieces Get Their Power",
+    "year": "2010",
+    "location": "PDF-S. 28",
+    "page": 28,
+    "quote": "LPDO Loose Pieces Drop Off!"
+   },
+   {
+    "ebookId": 769,
+    "author": "John Nunn",
+    "title": "Secrets of Practical Chess (New Enlarged Edition)",
+    "year": "2007",
+    "location": "E-Book ohne Seitenzahlen, bei ca. 19 %",
+    "percent": 19,
+    "quote": "“LPDO?” “Loose Pieces Drop Off.”"
+   }
+  ]
+ },
+ {
+  "id": "drohung-staerker-als-ausfuehrung",
+  "text": "Die Drohung ist stärker als die Ausführung.",
+  "category": "Taktik",
+  "when": "Ein Spieler führt eine Drohung (Schlag, Tausch, Abzug) sofort aus und löst damit die Spannung, obwohl das Aufrechterhalten den Gegner stärker gebunden hätte.",
+  "sources": [
+   {
+    "ebookId": 1914,
+    "author": "Eugene Znosko-Borovsky",
+    "title": "Das Mittelspiel im Schach",
+    "year": "1926",
+    "location": "PDF-S. 57",
+    "page": 57,
+    "quote": "Im letzteren Falle sagt man richtig, die Drohung ist stärker als ihre Ausführung."
+   },
+   {
+    "ebookId": 1057,
+    "author": "Johan Hellsten",
+    "title": "Mastering Opening Strategy",
+    "year": "2012",
+    "location": "PDF-S. 294",
+    "page": 294,
+    "quote": "The threat is stronger than its execution"
+   },
+   {
+    "ebookId": 1081,
+    "author": "Jacob Aagaard, Renier Castellanos",
+    "title": "Mastering Chess Exchanges",
+    "year": "2025",
+    "location": "PDF-S. 282",
+    "page": 282,
+    "quote": "They say the threat is stronger than the execution"
+   },
+   {
+    "ebookId": 1913,
+    "author": "Savielly Tartakower",
+    "title": "Winke für die Schachstrategie",
+    "year": "1927",
+    "location": "PDF-S. 24",
+    "page": 24,
+    "quote": "Die Drohung ist stärker als die Ausführung"
+   }
+  ]
+ },
+ {
+  "id": "koenig-im-endspiel-aktivieren",
+  "text": "Im Endspiel ist der König eine starke Figur.",
+  "category": "Endspiel",
+  "when": "Nach dem Damentausch bleibt der König am Rand oder auf der Grundreihe, statt aktiv ins Zentrum oder zu den Bauern zu gehen.",
+  "sources": [
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 6: DIE ELEMENTE DER ENDSPIEL-STRATEGIE; E-Book ohne Seitenzahlen, bei ca. 34 %",
+    "percent": 34,
+    "quote": "Im Mittelspiel ist der König bloßer Statist, im Endspiel dagegen – einer der Hauptakteure"
+   },
+   {
+    "ebookId": 605,
+    "author": "Irving Chernev",
+    "title": "Logical Chess: Move by Move",
+    "year": "2018",
+    "location": "Game 26; E-Book ohne Seitenzahlen, bei ca. 71 %",
+    "percent": 71,
+    "quote": "The king is a strong piece and should be used aggressively in the ending"
+   },
+   {
+    "ebookId": 6623,
+    "author": "Yasser Seirawan, Jeremy Silman",
+    "title": "Winning Chess Strategies",
+    "year": "2005",
+    "location": "PDF-S. 80",
+    "page": 80,
+    "quote": "The King is a strong piece and must be used in an endgame. When most of the pieces have been traded, rush your King into …"
+   },
+   {
+    "ebookId": 29,
+    "author": "Jeremy Silman",
+    "title": "Silman's Complete Endgame Course",
+    "year": "2007",
+    "location": "PDF-S. 95",
+    "page": 95,
+    "quote": "The King is a strong piece and must be used in the endgame"
+   },
+   {
+    "ebookId": 816,
+    "author": "Mikhail Shereshevsky",
+    "title": "Endgame Strategy: The Revised and Expanded Edition of a Chess Classic",
+    "year": "2022",
+    "location": "PDF-S. 16",
+    "page": 16,
+    "quote": "There are four basic principles in the endgame: centralization of the king"
+   },
+   {
+    "ebookId": 1328,
+    "author": "Siegbert Tarrasch",
+    "title": "Das Schachspiel: Systematisches Lehrbuch für Anfänger und Geübte",
+    "year": "2015",
+    "location": "Partie Nr. 1; E-Book ohne Seitenzahlen, bei ca. 92 %",
+    "percent": 92,
+    "quote": "Der König ist eine starke Figur!"
+   }
+  ]
+ },
+ {
+  "id": "turm-hinter-den-freibauern",
+  "text": "Der Turm gehört hinter den Freibauern, hinter den eigenen wie hinter den feindlichen.",
+  "category": "Endspiel",
+  "when": "Im Turmendspiel steht der Turm vor oder neben einem Freibauern (eigenem oder gegnerischem) statt dahinter.",
+  "sources": [
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil I. Kapitel 6: DIE ELEMENTE DER ENDSPIEL-STRATEGIE; E-Book ohne Seitenzahlen, bei ca. 36 %",
+    "percent": 36,
+    "quote": "Der Turm gehört hinter den Freibauern, sowohl hinter den eigenen, als auch hinter den feindlichen!"
+   },
+   {
+    "ebookId": 1421,
+    "author": "Aron Nimzowitsch",
+    "title": "My System (Quality Chess 2007)",
+    "year": "2007",
+    "location": "PDF-S. 109",
+    "page": 109,
+    "quote": "The rook belongs behind the passed pawn, no matter whether it is our passed pawn or our opponent's"
+   },
+   {
+    "ebookId": 129,
+    "author": "Mark Dvoretsky",
+    "title": "Dvoretsky's Endgame Manual, 4th Edition",
+    "year": "2014",
+    "location": "Chapter 9: Rook Endgames; E-Book ohne Seitenzahlen, bei ca. 38 %",
+    "percent": 38,
+    "quote": "Tarrasch’s famous rule is perfectly on point here: Place your rook behind the passed pawn, whether it is yours or your adversary’s"
+   },
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 136",
+    "page": 136,
+    "quote": "porting or attacking a passed pawn with Rook, place the Rook behind the passed pawn"
+   },
+   {
+    "ebookId": 1377,
+    "author": "Max Euwe",
+    "title": "Schach von A–Z: Vollständige Anleitung zum Schachspiel",
+    "year": "1979",
+    "location": "PDF-S. 140",
+    "page": 140,
+    "quote": "„Hinter den Freibauern!“ lautet die richtige Parole für den Turm"
+   },
+   {
+    "ebookId": 1328,
+    "author": "Siegbert Tarrasch",
+    "title": "Das Schachspiel: Systematisches Lehrbuch für Anfänger und Geübte",
+    "year": "2015",
+    "location": "E-Book ohne Seitenzahlen, bei ca. 15 %",
+    "percent": 15,
+    "quote": "Die Türme gehören hinter die Freibauern, hinter die feindlichen, um sie aufzuhalten, hinter die eigenen, um ihr Vorgehen zu unterstützen"
+   }
+  ]
+ },
+ {
+  "id": "material-tauschregel",
+  "text": "Wer mehr Material hat, tauscht Figuren; wer weniger hat, tauscht Bauern.",
+  "category": "Endspiel",
+  "when": "Die stärkere Seite vermeidet Figurentausch oder tauscht Bauern ab; oder die schwächere Seite tauscht Figuren ab, statt Bauern abzutauschen und auf ein theoretisches Remis hinzuarbeiten.",
+  "sources": [
+   {
+    "ebookId": 605,
+    "author": "Irving Chernev",
+    "title": "Logical Chess: Move by Move",
+    "year": "2018",
+    "location": "Game 26; E-Book ohne Seitenzahlen, bei ca. 72 %",
+    "percent": 72,
+    "quote": "In endings where one side has a material advantage, the prescribed strategy is to exchange pieces, not pawns"
+   },
+   {
+    "ebookId": 816,
+    "author": "Mikhail Shereshevsky",
+    "title": "Endgame Strategy: The Revised and Expanded Edition of a Chess Classic",
+    "year": "2022",
+    "location": "PDF-S. 617",
+    "page": 617,
+    "quote": "chess player with a material advantage should strive to exchange pieces, and the defending side, on the contrary, to exchange pawns"
+   },
+   {
+    "ebookId": 129,
+    "author": "Mark Dvoretsky",
+    "title": "Dvoretsky's Endgame Manual, 4th Edition",
+    "year": "2014",
+    "location": "Chapter 5: Opposite-Color Bishops; E-Book ohne Seitenzahlen, bei ca. 21 %",
+    "percent": 21,
+    "quote": "The side that is down material should usually exchange pawns whenever possible"
+   },
+   {
+    "ebookId": 4204,
+    "author": "Andrew Soltis",
+    "title": "Your Kingdom for My Horse: When to Exchange in Chess",
+    "year": "2015",
+    "location": "PDF-S. 6",
+    "page": 6,
+    "quote": "(b) Trade when you’re ahead in material"
+   },
+   {
+    "ebookId": 335,
+    "author": "Ludek Pachman",
+    "title": "Complete Chess Strategy Vol. 1",
+    "year": "1980",
+    "location": "PDF-S. 174",
+    "page": 174,
+    "quote": "Usually the side with material advantage is the one who wishes to exchange queens and to introduce further simplification"
+   }
+  ]
+ },
+ {
+  "id": "prinzip-der-zwei-schwaechen",
+  "text": "Eine Schwäche zu verteidigen ist schwer, mehrere fast unmöglich.",
+  "category": "Endspiel",
+  "when": "Ein Spieler greift im Endspiel mit Vorteil immer nur dieselbe Schwäche an, die der Gegner ausreichend decken kann.",
+  "sources": [
+   {
+    "ebookId": 129,
+    "author": "Mark Dvoretsky",
+    "title": "Dvoretsky's Endgame Manual, 4th Edition",
+    "year": "2014",
+    "location": "Chapter 7: Bishop versus Knight; E-Book ohne Seitenzahlen, bei ca. 27 %",
+    "percent": 27,
+    "quote": "One of the most important methods of converting one’s advantage in endgames (and not just in endgames) is “the principle of two weaknesses.”"
+   },
+   {
+    "ebookId": 1155,
+    "author": "Mark Dvoretsky",
+    "title": "Dvoretsky's Endgame Manual, 6th Edition",
+    "year": "2025",
+    "location": "PDF-S. 296",
+    "page": 296,
+    "quote": "the attacking side strives to create a second weakness in the enemy camp, or to exploit one which already exists"
+   },
+   {
+    "ebookId": 29,
+    "author": "Jeremy Silman",
+    "title": "Silman's Complete Endgame Course",
+    "year": "2007",
+    "location": "PDF-S. 10",
+    "page": 10,
+    "quote": "The Principle of Two Weaknesses"
+   },
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil II. Kapitel 5: DAS LAVIEREN; E-Book ohne Seitenzahlen, bei ca. 89 %",
+    "percent": 89,
+    "quote": "systematischen Lavieren gegen zwei Schwächen"
+   },
+   {
+    "ebookId": 816,
+    "author": "Mikhail Shereshevsky",
+    "title": "Endgame Strategy: The Revised and Expanded Edition of a Chess Classic",
+    "year": "2022",
+    "location": "PDF-S. 2",
+    "page": 2,
+    "quote": "The principle of two weaknesses"
+   },
+   {
+    "ebookId": 3958,
+    "author": "Max Euwe",
+    "title": "Urteil und Plan im Schach",
+    "year": "1986",
+    "location": "PDF-S. 35",
+    "page": 35,
+    "quote": "Das Verteidigen einer Schwäche ist eine schwierige, von mehreren Schwächen eine fast unmögliche Aufgabe."
+   }
+  ]
+ },
+ {
+  "id": "im-endspiel-nicht-eilen",
+  "text": "Im besseren Endspiel gilt: Nicht eilen!",
+  "category": "Endspiel",
+  "when": "Ein Spieler mit klarem Endspielvorteil sucht die sofortige Entscheidung (voreiliger Bauernvorstoß, Abtausch), statt zuerst König und Figuren optimal zu postieren.",
+  "sources": [
+   {
+    "ebookId": 816,
+    "author": "Mikhail Shereshevsky",
+    "title": "Endgame Strategy: The Revised and Expanded Edition of a Chess Classic",
+    "year": "2022",
+    "location": "PDF-S. 2",
+    "page": 2,
+    "quote": "Chapter 12 ‘Do not hurry’"
+   },
+   {
+    "ebookId": 734,
+    "author": "Alexander Kotov",
+    "title": "Think Like a Grandmaster",
+    "year": "2004",
+    "location": "PDF-S. 158",
+    "page": 158,
+    "quote": "principle which is 'Do not hurry"
+   },
+   {
+    "ebookId": 803,
+    "author": "Johan Hellsten",
+    "title": "Mastering Endgame Strategy",
+    "year": "2013",
+    "location": "PDF-S. 76",
+    "page": 76,
+    "quote": "Incidentally, “don’t hurry” is a good rule of thumb in the endgame"
+   },
+   {
+    "ebookId": 29,
+    "author": "Jeremy Silman",
+    "title": "Silman's Complete Endgame Course",
+    "year": "2007",
+    "location": "PDF-S. 743",
+    "page": 743,
+    "quote": "his credo of “Do not hurry!” served him very well in the endgame"
+   }
+  ]
+ },
+ {
+  "id": "turm-aktiv-halten",
+  "text": "Im Turmendspiel ist die Aktivität des Turms das oberste Prinzip.",
+  "category": "Endspiel",
+  "when": "Im Turmendspiel verteidigt ein Turm passiv einen Bauern von hinten/von der Seite, statt aktiv Gegenspiel zu suchen, oder man opfert ungern einen Bauern für Turmaktivität.",
+  "sources": [
+   {
+    "ebookId": 1155,
+    "author": "Mark Dvoretsky",
+    "title": "Dvoretsky's Endgame Manual, 6th Edition",
+    "year": "2025",
+    "location": "PDF-S. 530",
+    "page": 530,
+    "quote": "The rook’s activity is the main principle for evaluation and practical play in rook-and-pawn endgames."
+   },
+   {
+    "ebookId": 1081,
+    "author": "Jacob Aagaard, Renier Castellanos",
+    "title": "Mastering Chess Exchanges",
+    "year": "2025",
+    "location": "PDF-S. 406",
+    "page": 406,
+    "quote": "In rook endgames the activity of the rook plays a key role in determining whether a position can be defended, sometimes regardless of the material …"
+   },
+   {
+    "ebookId": 29,
+    "author": "Jeremy Silman",
+    "title": "Silman's Complete Endgame Course",
+    "year": "2007",
+    "location": "PDF-S. 216",
+    "page": 216,
+    "quote": "things can turn ugly if the defender’s Rook becomes passively placed"
+   }
+  ]
+ },
+ {
+  "id": "opposition",
+  "text": "Ohne Opposition keine Umwandlung.",
+  "category": "Endspiel",
+  "when": "König-und-Bauern-Endspiel, in dem ein König den falschen Zug macht und dem Gegner die Opposition überlässt.",
+  "sources": [
+   {
+    "ebookId": 29,
+    "author": "Jeremy Silman",
+    "title": "Silman's Complete Endgame Course",
+    "year": "2007",
+    "location": "PDF-S. 95",
+    "page": 95,
+    "quote": "The Opposition is an extremely important tool that allows one King to become stronger than another"
+   },
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 130",
+    "page": 130,
+    "quote": "the OPPOSITION is very important in these types of games"
+   },
+   {
+    "ebookId": 1377,
+    "author": "Max Euwe",
+    "title": "Schach von A–Z: Vollständige Anleitung zum Schachspiel",
+    "year": "1979",
+    "location": "PDF-S. 52",
+    "page": 52,
+    "quote": "Ohne Opposition ist die Umwandlung nicht zu erzwingen …"
+   },
+   {
+    "ebookId": 1377,
+    "author": "Max Euwe",
+    "title": "Schach von A–Z: Vollständige Anleitung zum Schachspiel",
+    "year": "1979",
+    "location": "PDF-S. 52",
+    "page": 52,
+    "quote": "Ohne Opposition keine Umwandlung"
+   }
+  ]
+ },
+ {
+  "id": "quadratregel",
+  "text": "Steht der König im Quadrat des Bauern, holt er ihn ein.",
+  "category": "Endspiel",
+  "when": "Bauernwettlauf, in dem ein Spieler falsch einschätzt, ob sein König den gegnerischen Freibauern noch einholt.",
+  "sources": [
+   {
+    "ebookId": 1328,
+    "author": "Siegbert Tarrasch",
+    "title": "Das Schachspiel: Systematisches Lehrbuch für Anfänger und Geübte",
+    "year": "2015",
+    "location": "E-Book ohne Seitenzahlen, bei ca. 18 %",
+    "percent": 18,
+    "quote": "Befindet sich der feindliche König in diesem Quadrat oder kann er am Zuge in das „Quadrat des Bauern“ eintreten, so holt er ihn ein"
+   },
+   {
+    "ebookId": 129,
+    "author": "Mark Dvoretsky",
+    "title": "Dvoretsky's Endgame Manual, 4th Edition",
+    "year": "2014",
+    "location": "Chapter 1: Pawn Endgames; E-Book ohne Seitenzahlen, bei ca. 6 %",
+    "percent": 6,
+    "quote": "The Rule of the Square Imagine a square having for one of its sides the path from the pawn to its queening square"
+   },
+   {
+    "ebookId": 1168,
+    "author": "Max Euwe, M. Blaine, J. F. S. Rumble",
+    "title": "The Logical Approach to Chess",
+    "year": "1982",
+    "location": "PDF-S. 113",
+    "page": 113,
+    "quote": "the King must be able to get into the square of the pawn and stay in the square of the pawn"
+   },
+   {
+    "ebookId": 602,
+    "author": "Juri Awerbach",
+    "title": "Lehrbuch der Schachendspiele, Band 1",
+    "year": "1979",
+    "location": "E-Book ohne Seitenzahlen, bei ca. 12 %",
+    "percent": 12,
+    "quote": "Befindet sich der König im Quadrat des Bauern oder kann er in dieses eintreten, holt er den Bauern ein"
+   }
+  ]
+ },
+ {
+  "id": "bauernendspiel-genau-rechnen",
+  "text": "Ins Bauernendspiel geht man nur nach genauer Rechnung.",
+  "category": "Endspiel",
+  "when": "Ein Spieler tauscht die letzten Figuren ab und landet in einem verlorenen Bauernendspiel (oder verpasst ein gewonnenes).",
+  "sources": [
+   {
+    "ebookId": 803,
+    "author": "Johan Hellsten",
+    "title": "Mastering Endgame Strategy",
+    "year": "2013",
+    "location": "PDF-S. 264",
+    "page": 264,
+    "quote": "pawn endings are delicate terrain. Don't enter them without some careful calculation beforehand"
+   },
+   {
+    "ebookId": 1081,
+    "author": "Jacob Aagaard, Renier Castellanos",
+    "title": "Mastering Chess Exchanges",
+    "year": "2025",
+    "location": "PDF-S. 209",
+    "page": 209,
+    "quote": "Pawn endgames require precise calculation, and any mistake is lethal"
+   },
+   {
+    "ebookId": 129,
+    "author": "Mark Dvoretsky",
+    "title": "Dvoretsky's Endgame Manual, 4th Edition",
+    "year": "2014",
+    "location": "Chapter 1: Pawn Endgames; E-Book ohne Seitenzahlen, bei ca. 3 %",
+    "percent": 3,
+    "quote": "Here you can rarely get along on “general principles” – you must know how to calculate accurately"
+   }
+  ]
+ },
+ {
+  "id": "kandidatenzuege",
+  "text": "Suche zuerst alle Kandidatenzüge, bevor du einen davon tief rechnest.",
+  "category": "Praxis/Denken",
+  "when": "Ein Spieler rechnet den erstbesten Zug und übersieht eine stärkere Alternative (oft eine einfache Taktik oder einen ruhigen Zug).",
+  "sources": [
+   {
+    "ebookId": 734,
+    "author": "Alexander Kotov",
+    "title": "Think Like a Grandmaster",
+    "year": "2004",
+    "location": "PDF-S. 5",
+    "page": 5,
+    "quote": "Selection of Candidate Moves"
+   },
+   {
+    "ebookId": 3043,
+    "author": "Andrew Soltis",
+    "title": "David vs Goliath Chess: How to Beat a Stronger Player",
+    "year": "2016",
+    "location": "PDF-S. 143",
+    "page": 143,
+    "quote": "It is figuring which candidate moves to calculate"
+   },
+   {
+    "ebookId": 816,
+    "author": "Mikhail Shereshevsky",
+    "title": "Endgame Strategy: The Revised and Expanded Edition of a Chess Classic",
+    "year": "2022",
+    "location": "PDF-S. 243",
+    "page": 243,
+    "quote": "some system is needed to decide which candidate moves you want to focus on"
+   }
+  ]
+ },
+ {
+  "id": "besseren-zug-suchen",
+  "text": "Siehst du einen guten Zug, such einen besseren.",
+  "category": "Praxis/Denken",
+  "when": "Ein Spieler spielt einen naheliegenden guten Zug, obwohl es einen deutlich stärkeren (z. B. Kombination, Zwischenzug) gab.",
+  "sources": [
+   {
+    "ebookId": 1023,
+    "author": "Andrew Soltis",
+    "title": "Catalog of Chess Mistakes",
+    "year": "1980",
+    "location": "PDF-S. 190",
+    "page": 190,
+    "quote": "When you see a good move, said Emanuel Lasker, don't play it. look for a better move"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Vier / Psychologische Streifzüge; E-Book ohne Seitenzahlen, bei ca. 49 %",
+    "percent": 49,
+    "quote": "Wenn Du einen guten Zug siehst, dann warte und halte nach einem besseren Ausschau"
+   }
+  ]
+ },
+ {
+  "id": "was-will-der-gegner",
+  "text": "Frage dich bei jedem Zug: Was will der Gegner?",
+  "category": "Praxis/Denken",
+  "when": "Ein Spieler verfolgt nur seinen eigenen Plan und übersieht die Idee oder Drohung hinter dem letzten gegnerischen Zug.",
+  "sources": [
+   {
+    "ebookId": 1081,
+    "author": "Jacob Aagaard, Renier Castellanos",
+    "title": "Mastering Chess Exchanges",
+    "year": "2025",
+    "location": "PDF-S. 99",
+    "page": 99,
+    "quote": "Prophylaxis is the art of taking the opponent’s intentions into consideration"
+   },
+   {
+    "ebookId": 816,
+    "author": "Mikhail Shereshevsky",
+    "title": "Endgame Strategy: The Revised and Expanded Edition of a Chess Classic",
+    "year": "2022",
+    "location": "PDF-S. 631",
+    "page": 631,
+    "quote": "He constantly asked himself the question: ‘What would the opponent do if it were his move?’"
+   },
+   {
+    "ebookId": 6625,
+    "author": "Jeremy Silman",
+    "title": "How to Reassess Your Chess (4th Edition)",
+    "year": "2010",
+    "location": "PDF-S. 450",
+    "page": 450,
+    "quote": "if you refuse to take your opponent's plans into consideration, you are dooming yourself to a lot of pain"
+   },
+   {
+    "ebookId": 1417,
+    "author": "Artur Jussupow, Mark Dworezki",
+    "title": "Der selbständige Weg zum Schachprofi: Geheimnisse und Tips aus einer neuen Schachschule",
+    "year": "1997",
+    "location": "PDF-S. 44",
+    "page": 44,
+    "quote": "Sicher stellte er sich gleich die Frage, was will der Gegner, worin besteht der Plan von Schwarz?"
+   }
+  ]
+ },
+ {
+  "id": "plan-aus-der-stellung",
+  "text": "Der Plan ergibt sich aus dem Charakter der Stellung.",
+  "category": "Praxis/Denken",
+  "when": "Ziellose Züge (hin und her, Einzelaktionen) ohne Bezug zu Bauernstruktur, Schwächen oder Figurenverteilung.",
+  "sources": [
+   {
+    "ebookId": 1914,
+    "author": "Eugene Znosko-Borovsky",
+    "title": "Das Mittelspiel im Schach",
+    "year": "1926",
+    "location": "PDF-S. 70",
+    "page": 70,
+    "quote": "so kann der Plan nur nach dem Charakter der Stellung, seinen inneren Qualitäten und Eigenheiten …"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Eins / Das Konzept der Ungleichgewichte; E-Book ohne Seitenzahlen, bei ca. 1 %",
+    "percent": 1,
+    "quote": "Meistens wählen sie ihren Plan (wenn sie überhaupt einen haben) auf der Grundlage gefühlsmäßiger, aber nicht schachspezifischer"
+   },
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Eins / Das Konzept der Ungleichgewichte; E-Book ohne Seitenzahlen, bei ca. 3 %",
+    "percent": 3,
+    "quote": "Die Ungleichgewichte führen Sie in den meisten Stellungen zum richtigen Zug"
+   },
+   {
+    "ebookId": 1914,
+    "author": "Eugene Znosko-Borovsky",
+    "title": "Das Mittelspiel im Schach",
+    "year": "1926",
+    "location": "PDF-S. 70",
+    "page": 70,
+    "quote": "so kann der Plan nur nach dem Charakter der Stellung, seinen inneren Qualitäten und Eigenheiten … entwickelt werden"
+   }
+  ]
+ },
+ {
+  "id": "gegenspiel-zuerst-unterbinden",
+  "text": "Wer besser steht, unterbindet zuerst das gegnerische Gegenspiel.",
+  "category": "Praxis/Denken",
+  "when": "Ein Spieler mit Vorteil stürmt sofort los und erlaubt dem Gegner aktives Gegenspiel, statt dessen Möglichkeiten zuerst einzuschränken.",
+  "sources": [
+   {
+    "ebookId": 1314,
+    "author": "Jeremy Silman",
+    "title": "Schach mit neuem Schwung: Besser spielen durch das Verstehen von Ungleichgewichten",
+    "year": "2012",
+    "location": "Teil Vier / Psychologische Streifzüge; E-Book ohne Seitenzahlen, bei ca. 46 %",
+    "percent": 46,
+    "quote": "Sie geben sich alle erdenkliche Mühe, um jedwedes Gegenspiel zu verhindern"
+   },
+   {
+    "ebookId": 1081,
+    "author": "Jacob Aagaard, Renier Castellanos",
+    "title": "Mastering Chess Exchanges",
+    "year": "2025",
+    "location": "PDF-S. 168",
+    "page": 168,
+    "quote": "5.5 Preventing counterplay"
+   },
+   {
+    "ebookId": 816,
+    "author": "Mikhail Shereshevsky",
+    "title": "Endgame Strategy: The Revised and Expanded Edition of a Chess Classic",
+    "year": "2022",
+    "location": "PDF-S. 203",
+    "page": 203,
+    "quote": "the plan to prevent the opponent’s counterplay"
+   }
+  ]
+ },
+ {
+  "id": "laeufer-aus-der-ferne",
+  "text": "Läufer sind wie Scharfschützen: Sie stehen hinten und greifen aus der Ferne an.",
+  "category": "Figuren",
+  "when": "Ein Läufer wird ohne Not weit nach vorn ins Gedränge gezogen, wo er von Bauern oder Leichtfiguren vertrieben wird oder eigenen Figuren im Weg steht, statt aus sicherer Entfernung (lange Diagonale, Fianchetto) zu wirken.",
+  "sources": [
+   {
+    "ebookId": 1377,
+    "author": "Max Euwe",
+    "title": "Schach von A–Z: Vollständige Anleitung zum Schachspiel",
+    "year": "1979",
+    "location": "PDF-S. 68",
+    "page": 68,
+    "quote": "Der Läufer arbeitet am besten in großer Entfernung vom Kampfplatz."
+   },
+   {
+    "ebookId": 1377,
+    "author": "Max Euwe",
+    "title": "Schach von A–Z: Vollständige Anleitung zum Schachspiel",
+    "year": "1979",
+    "location": "PDF-S. 68",
+    "page": 68,
+    "quote": "Die Fernwirkung hat den Vorteil, daß die Figur selbst nicht so leicht bedroht werden kann und außerdem ihren Kameraden nicht im Wege steht."
+   },
+   {
+    "ebookId": 1265,
+    "author": "Aron Nimzowitsch",
+    "title": "Mein System",
+    "year": "2014",
+    "location": "Teil II. Kapitel 3: DER ISOLIERTE DAMENBAUER UND SEINE NACHKOMMENSCHAFT; E-Book ohne Seitenzahlen, bei ca. 82 %",
+    "percent": 82,
+    "quote": "die Hauptstärke – in der Langschrittigkeit"
+   },
+   {
+    "ebookId": 4109,
+    "author": "Svetlana Ivannikova",
+    "title": "Zauberwelt des Schachspiels: Das Schachlehrbuch für Kinder",
+    "year": "2006",
+    "location": "PDF-S. 24",
+    "page": 24,
+    "quote": "Wegen seiner großen Reichweite ist dies auch aus der Ferne möglich"
+   }
+  ]
+ }
+]

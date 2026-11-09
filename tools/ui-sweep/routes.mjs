@@ -98,6 +98,8 @@ export const ROUTES = [
   r('rookhub', '/worksheets/{worksheetId}/print', 'user', { main: ['.ws-sheet .ws-task', '.ws-sheet', '.ws-empty'], foldExempt: true }),
   // Seit 0.778.0 auch ohne Anmeldung (für alle freigegebene Bücher + eigene Uploads).
   r('rookhub', '/ebooks', 'any', { main: ['.eb-grid .eb-card', '.eb-empty', '.eb-page app-load-error'] }),
+  // Merksätze (0.917.0): kuratierte Liste, offen für alle; Buchlinks nur bei Zugriff.
+  r('rookhub', '/maxims', 'any', { main: ['.maxims-page mat-expansion-panel', '.maxims-page .center'] }),
   // Leser: Werkzeugleiste + Seiten in der Resthöhe — Sonderlayout wie das Brett (DESIGN.md 4.5).
   // Beide Leser-Routen für alle Rollen: seed.mjs gibt die Bücher für „Everyone" frei (abgemeldet sieht man genau diese).
   r('rookhub', '/ebooks/{ebookId}', 'any', { main: ['.rd-viewer', '.rd-download', '.rd-page app-load-error'], foldExempt: true }),
@@ -278,7 +280,7 @@ export const AREAS = [
   ['punktepartie', r => r.app === 'rookhub' && /^\/guess/.test(r.url)],
   ['vorbereitung', r => r.app === 'rookhub' && /^\/prep/.test(r.url)],
   ['aufgabenblaetter', r => r.app === 'rookhub' && /^\/(worksheets|w\/)/.test(r.url)],
-  ['ebooks', r => r.app === 'rookhub' && /^\/ebooks/.test(r.url)],
+  ['ebooks', r => r.app === 'rookhub' && /^\/(ebooks|maxims)/.test(r.url)],
   ['rekonstruktion', r => r.app === 'rookhub' && /^\/(reconstruct|r\/)/.test(r.url)],
   ['anmeldung', r => /^\/(login|register|forgot-password|reset-password)/.test(r.url)],
   ['rechtliches', r => /^\/(privacy|impressum|account-deletion)/.test(r.url)],

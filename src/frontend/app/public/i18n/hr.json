@@ -348,7 +348,8 @@
     "scoresheet": "Učitaj zapisnik partije",
     "prep": "Priprema za protivnika",
     "ebooks": "E-knjige",
-    "woodpecker": "Woodpecker"
+    "woodpecker": "Woodpecker",
+    "maxims": "Pravila"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -2756,7 +2757,8 @@
         "tournament-calendar": "Kalendar turnira",
         "scoresheet": "Učitaj zapisnik partije (fotografija)",
         "ebooks": "Knjižnica e-knjiga",
-        "woodpecker": "Woodpecker trening"
+        "woodpecker": "Woodpecker trening",
+        "maxims": "Pravila (šahovske maksime)"
       }
     },
     "messages": {
@@ -3964,6 +3966,14 @@
         "p": [
           "Woodpecker metoda (Smith i Tikkanen) trenira prepoznavanje taktičkih uzoraka: iste zadatke rješavaš uvijek iznova, svaki put brže. Odaberi jedan ili više tečajeva i pokreni trening – pravila su fiksna kao u knjizi.",
           "Ciklus 1: imaš četiri tjedna da riješiš što više zadataka redoslijedom tečaja; oni postaju tvoj set. Početak možeš pomaknuti unatrag – računa se ono što si od tada riješio u tim tečajevima. Nakon barem jednog dana pauze svaki sljedeći ciklus donosi isti set nasumičnim redoslijedom, u pola vremena (14, 7, 4, 2, 1 dan). U ciklusu se računa samo tvoj prvi pokušaj po zadatku. Gotov si kad set riješiš unutar jednog dana, inače nakon 7. ciklusa."
+        ]
+      },
+      "maxims": {
+        "t": "Pravila",
+        "p": [
+          "Kratak, odabran popis klasičnih šahovskih maksima. Svako pravilo potkrijepljeno je odlomcima iz šahovskih knjiga u knjižnici; formulacija je svugdje ista.",
+          "Otvori pravilo da vidiš kada vrijedi i koje ga knjige objašnjavaju, s kratkim citatom. Ako imaš pristup knjizi, poveznica je otvara na stranici (PDF) ili otvara knjigu (EPUB).",
+          "Objašnjenja tvojih pogrešaka završavaju najviše jednim od ovih pravila; (i) pokraj njega prikazuje odlomke iz knjiga."
         ]
       }
     }
@@ -6271,5 +6281,17 @@
     "maiaHint": "Otvara ploču za analizu od ove pozicije s Maiom jačine {{elo}} — jakom kao {{who}}.",
     "next": "Sljedeća varijanta",
     "skip": "Preskoči varijantu"
+  },
+  "maxims": {
+    "label": "Pravilo:",
+    "sources": "Knjige koje objašnjavaju ovo načelo",
+    "page": "str. {{page}}",
+    "title": "Pravila",
+    "intro": "Klasične šahovske maksime, svaka potkrijepljena odlomcima iz šahovskih knjiga. Pojavljuju se ispod objašnjenja tvojih pogrešaka.",
+    "when": "Kada vrijedi",
+    "books": "Knjige",
+    "noAccess": "nije u tvojoj knjižnici",
+    "all": "Sva pravila",
+    "count": "{{count}} pravila"
   }
 }

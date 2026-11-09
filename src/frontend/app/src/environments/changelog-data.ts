@@ -10,6 +10,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.917.0", date: "2026-11-09", changes: [
+    { en: "Rules of thumb: the explanations of club-game mistakes no longer invent their own maxim. Claude picks at most one from a fixed, curated list of 51 classic rules (“A knight on the rim is dim”, “Loose pieces drop off”, Capablanca’s bishop rule …), each backed by passages from chess books — the wording is always the same.",
+      de: "Merksätze: Die Erklärungen der Fehler in Vereinspartien erfinden keinen eigenen Merksatz mehr. Claude wählt höchstens einen aus einer festen, kuratierten Liste von 51 klassischen Regeln („Springer am Rand bringt Kummer und Schand“, „Ungedeckte Figuren fallen“, Capablancas Läuferregel …), jede mit Stellen aus Schachbüchern belegt — der Wortlaut ist immer derselbe." },
+    { en: "Behind every rule of thumb there is an (i): it lists the books that explain the principle, with a short quote — with access to the book, the link opens it right at the page (PDFs).",
+      de: "Hinter jedem Merksatz steht ein (i): Es zeigt die Bücher, die das Prinzip erklären, mit kurzem Zitat — mit Zugriff auf das Buch öffnet der Link es direkt auf der Seite (PDFs)." },
+    { en: "New page “Rules of thumb” (library menu): all rules by category, each expandable with when it applies, the books and links.",
+      de: "Neue Seite „Merksätze“ (Menü Bibliothek): alle Sätze nach Kategorien, jeder aufklappbar mit „Wann er passt“, den Büchern und Links." },
+  ] },
   { version: "0.916.1", date: "2026-11-09", changes: [
     { en: "Club games: when a summary has been requested, that game’s mistake comparisons now jump the queue and run as normal background work instead of waiting behind the whole backlog.",
       de: "Vereinspartien: Ist eine Zusammenfassung angefordert, kommen die Fehler-Vergleiche dieser Partie jetzt in der Warteschlange nach vorne und rechnen als normale Hintergrundarbeit, statt hinter dem ganzen Nachtrag zu warten." },

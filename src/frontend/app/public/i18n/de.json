@@ -348,7 +348,8 @@
     "scoresheet": "Partieformular einlesen",
     "prep": "Gegner vorbereiten",
     "ebooks": "E-Books",
-    "woodpecker": "Woodpecker"
+    "woodpecker": "Woodpecker",
+    "maxims": "Merksätze"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2756,7 +2757,8 @@
         "tournament-calendar": "Turnierkalender",
         "scoresheet": "Partieformular einlesen (Foto)",
         "ebooks": "E-Book-Bibliothek",
-        "woodpecker": "Woodpecker-Training"
+        "woodpecker": "Woodpecker-Training",
+        "maxims": "Merksätze"
       }
     },
     "messages": {
@@ -3964,6 +3966,14 @@
         "p": [
           "Die Woodpecker-Methode (Smith & Tikkanen) trainiert das Erkennen taktischer Muster: dieselben Aufgaben immer wieder lösen, jedes Mal schneller. Wähle einen oder mehrere Kurse und starte ein Training – die Regeln stehen fest wie im Buch.",
           "Zyklus 1: Du hast vier Wochen, um so viele Aufgaben wie möglich in Kursreihenfolge zu lösen; sie werden dein Satz. Den Beginn kannst du zurückdatieren – was du seitdem in diesen Kursen gelöst hast, zählt mit. Nach mindestens einem Tag Pause kommt in jedem weiteren Zyklus derselbe Satz in zufälliger Reihenfolge, in der halben Zeit (14, 7, 4, 2, 1 Tage). Je Zyklus zählt nur dein erster Versuch an einer Aufgabe. Fertig bist du, sobald du den Satz an einem Tag schaffst, sonst nach dem 7. Zyklus."
+        ]
+      },
+      "maxims": {
+        "t": "Merksätze",
+        "p": [
+          "Eine kurze, kuratierte Liste klassischer Schach-Merksätze – „Springer am Rand bringt Kummer und Schand“, „Ungedeckte Figuren fallen“ und so weiter. Jeder Satz ist mit Stellen aus Schachbüchern der Bibliothek belegt; der Wortlaut ist überall derselbe.",
+          "Klappe einen Merksatz auf: Du siehst, wann er passt und welche Bücher ihn erklären, mit kurzem Zitat. Hast du Zugriff auf das Buch, öffnet der Link es direkt auf der Seite (PDF) bzw. das Buch (EPUB).",
+          "Die Erklärungen deiner Fehler enden mit höchstens einem dieser Merksätze; das (i) daneben zeigt die Buchstellen."
         ]
       }
     }
@@ -6271,5 +6281,17 @@
     "maiaHint": "Öffnet das Analysebrett ab dieser Stellung mit Maia in der Stärke {{elo}} — so stark wie {{who}}.",
     "next": "Nächste Linie",
     "skip": "Linie überspringen"
+  },
+  "maxims": {
+    "label": "Merksatz:",
+    "sources": "Bücher, die dieses Prinzip erklären",
+    "page": "S. {{page}}",
+    "title": "Merksätze",
+    "intro": "Klassische Schach-Merksätze, jeder mit Stellen aus Schachbüchern belegt. Sie stehen unter den Erklärungen deiner Fehler.",
+    "when": "Wann er passt",
+    "books": "Bücher",
+    "noAccess": "nicht in deiner Bibliothek",
+    "all": "Alle Merksätze",
+    "count": "{{count}} Merksätze"
   }
 }

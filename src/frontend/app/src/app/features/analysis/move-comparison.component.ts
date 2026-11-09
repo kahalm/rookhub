@@ -23,6 +23,8 @@ import {
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { localizeSanText } from '../../shared/chess/keyboard-move.util';
+import { MaximNoteComponent } from '../../shared/maxims/maxim-note.component';
+import { splitMaxim } from '../../shared/maxims/chess-maxims.service';
 
 /** Was das Brett gerade zeigt: eine Stellung des Vergleichs samt Pfeil für den nächsten Zug. */
 interface BoardView { key: string; fen: string; arrows: BoardArrow[]; lastMove?: [string, string]; caption: string; }
@@ -39,7 +41,7 @@ const POLL_MS = 3_000;
   selector: 'app-move-comparison',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconLabelDirective, DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent, SanPipe, LoadErrorComponent, LoadingSpinnerComponent],
+  imports: [IconLabelDirective, DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent, SanPipe, LoadErrorComponent, LoadingSpinnerComponent, MaximNoteComponent],
   template: `
     <div class="cmp-page">
       <!-- b1-rk-zuege-vergleichen-zwei-knoepfe: „Zum Analysebrett" ist ein Rücklink über dem Titel (Textknopf), nicht ein
@@ -128,7 +130,10 @@ const POLL_MS = 3_000;
                       <span>{{ moveLabel(w.san) }} <span class="ev" [class.neg]="isNeg(w.evalText)">{{ w.evalText }}</span></span>
                     </div>
                     @if (w.explanation) {
-                      <p class="expl">{{ w.explanation }}</p>
+                      @let ex = splitMaxim(w.explanation);
+                      <p class="expl">{{ ex.body }}</p>
+                      <!-- Merksatz aus der kuratierten Liste mit (i) → Buchstellen (0.917.0). -->
+                      @if (ex.maxim) { <app-maxim-note [text]="ex.maxim" /> }
                     } @else if (d.status === 'explaining' || (d.explanationsAvailable && d.status !== 'done' && d.status !== 'failed')) {
                       <p class="muted small">{{ 'moveCompare.page.explaining' | translate }}</p>
                     } @else if (d.explanationsAvailable && d.status === 'done') {
@@ -261,6 +266,8 @@ const POLL_MS = 3_000;
   `],
 })
 export class MoveComparisonComponent implements OnInit {
+  /** Erklärung ohne die Merksatz-Zeile + der Merksatz (0.917.0). */
+  readonly splitMaxim = splitMaxim;
   readonly preferences = inject(PreferencesService);
   private readonly api = inject(MoveComparisonService);
   private readonly route = inject(ActivatedRoute);

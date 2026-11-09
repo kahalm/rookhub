@@ -1,0 +1,36 @@
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
+import { MaximsComponent } from './maxims.component';
+import { ChessMaxim } from '../../shared/maxims/chess-maxims.service';
+
+const LIST: ChessMaxim[] = [
+  { id: 'springer-am-rand', text: 'Springer am Rand bringt Kummer und Schand.', category: 'Figuren', when: 'Springer auf a/h ohne Grund.',
+    sources: [{ ebookId: 1314, author: 'Jeremy Silman', title: 'Schach mit neuem Schwung', location: 'PDF-S. 12', page: 12, accessible: true }] },
+  { id: 'ungedeckte-figuren', text: 'Ungedeckte Figuren fallen.', category: 'Taktik', when: 'Eine Figur steht ungedeckt.',
+    sources: [{ ebookId: 769, author: 'John Nunn', title: 'Secrets of Practical Chess', location: 'PDF-S. 40', page: 40, quote: 'Loose pieces drop off', accessible: false }] },
+];
+
+describe('MaximsComponent (0.917.0)', () => {
+  it('listet je Kategorie aufklappbar, verlinkt nur zugängliche Bücher', () => {
+    TestBed.configureTestingModule({
+      imports: [MaximsComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const f = TestBed.createComponent(MaximsComponent);
+    f.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne('/api/maxims').flush(LIST);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(Array.from(el.querySelectorAll('h2')).map(h => h.textContent)).toEqual(['Figuren', 'Taktik']);
+    expect(el.querySelectorAll('mat-expansion-panel').length).toBe(2);
+    const links = Array.from(el.querySelectorAll('.sources a')) as HTMLAnchorElement[];
+    expect(links.map(a => a.getAttribute('href'))).toEqual(['/ebooks/1314?page=12']);
+    expect(el.textContent).toContain('Secrets of Practical Chess');
+    expect(el.textContent).toContain('maxims.noAccess');
+  });
+});

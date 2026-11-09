@@ -48,6 +48,7 @@ export const routes: Routes = [
   // E-Book-Bibliothek (0.764.0): Übersicht + Leser; Sichtbarkeit je Buch regelt die API (Gruppen), das Menü den Bereich.
   // Ohne authGuard (0.778.0): auch ohne Anmeldung nutzbar — „Alle“-Bücher + eigene anonyme Uploads, beim Anmelden übernommen.
   { path: 'ebooks', loadComponent: () => import('./features/ebooks/ebook-list.component').then(m => m.EbookListComponent), canActivate: [menuGuard('ebooks')] },
+  { path: 'maxims', loadComponent: () => import('./features/maxims/maxims.component').then(m => m.MaximsComponent), canActivate: [menuGuard('maxims')] },
   { path: 'ebooks/:id', loadComponent: () => import('./features/ebooks/ebook-reader.component').then(m => m.EbookReaderComponent), canActivate: [menuGuard('ebooks')] },
   { path: 'weekly', loadComponent: () => import('./features/weekly/weekly-list.component').then(m => m.WeeklyListComponent), canActivate: [authGuard, menuGuard('weekly')] },
   // Direkter Link auf EINE Wochenpost: bewusst ohne Guards. Der Server liefert Post, Puzzles

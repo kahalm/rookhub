@@ -40,6 +40,7 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
   'scoresheet': 'games',
   'remembered': 'chessable',
   'ebooks': 'ebooks',
+  'maxims': 'maxims',
   'weekly': 'weekly',
   'courses': 'courses',
   'woodpecker': 'woodpecker',
@@ -314,6 +315,7 @@ export class HelpComponent implements AfterViewInit, OnDestroy {
     { id: 'games', icon: '\u{1F4DD}' },
     { id: 'reconstruct', icon: '\u{1F9E0}' },
     { id: 'ebooks', icon: '\u{1F4D5}' },
+    { id: 'maxims', icon: '\u{1F4DC}' },
     // Community
     { id: 'friends', icon: '\u{1F91D}' },
     { id: 'tournaments', icon: '\u{1F3C6}' },

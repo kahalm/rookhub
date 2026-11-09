@@ -8,6 +8,8 @@ import { MoveComparison, MoveComparisonCandidate, numberedLine } from '../analys
 import { localizeSanText } from '../../shared/chess/keyboard-move.util';
 import { ExplanationPart, explanationParts } from './explanation-lines';
 import { LiveMove } from './live-engine-session';
+import { MaximNoteComponent } from '../../shared/maxims/maxim-note.component';
+import { splitMaxim } from '../../shared/maxims/chess-maxims.service';
 
 /** Zugvergleich zu einem Fehler einer Vereinspartie (0.908.0, `GET /api/league/club/games/{id}/comparisons`). */
 export interface ClubMistakeComparison {
@@ -67,7 +69,7 @@ function afterFen(fen: string, uci: string): string | null {
   selector: 'app-mistake-comparison',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MatButtonModule, MatIconModule, TranslatePipe],
+  imports: [RouterLink, MatButtonModule, MatIconModule, TranslatePipe, MaximNoteComponent],
   template: `
     @if (entry(); as e) {
       @if (pending()) {
@@ -90,6 +92,8 @@ function afterFen(fen: string, uci: string): string | null {
             <p class="expl">@for (p of parts; track $index) {@if (p.line) {<button type="button" class="mv"
               (click)="showLine.emit({ fen: e.comparison.fen, line: p.line, at: p.at! })">{{ p.text }}</button>} @else {{{ p.text }}}}</p>
           }
+          <!-- Merksatz aus der kuratierten Liste mit (i) → Buchstellen (0.917.0). -->
+          @if (maxim(); as mx) { <app-maxim-note [text]="mx" /> }
           <a mat-button class="open" [routerLink]="['/analysis/compare', e.comparison.id]" [queryParams]="{ clubGame: clubGameId() }">
             <mat-icon>compare_arrows</mat-icon> {{ 'games.mistakes.compare.open' | translate }}
           </a>
@@ -133,8 +137,10 @@ export class MistakeComparisonComponent {
   readonly explanationParts = computed<ExplanationPart[] | null>(() => {
     const e = this.entry();
     const text = this.explanation();
-    return e && text ? explanationParts(text, e.comparison.fen) : null;
+    return e && text ? explanationParts(splitMaxim(text).body, e.comparison.fen) : null;
   });
+  /** Der Merksatz am Ende der Erklärung (fester Wortlaut aus der Liste), sonst `null`. */
+  readonly maxim = computed(() => { const t = this.explanation(); return t ? splitMaxim(t).maxim : null; });
   /** Klick auf einen Zug der Erklärung: die Folge ab der Aufgabe, man steht nach `at` Zügen. */
   readonly showLine = output<{ fen: string; line: LiveMove[]; at: number }>();
 }

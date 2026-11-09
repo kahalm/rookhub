@@ -163,10 +163,25 @@ public class ClubFableExplanationsTests : IDisposable
         var text = WeakExplanation(c)!;
         Assert.StartsWith("2.Nc3 lässt 2...dxe4 zu", text);
         Assert.Contains("2.exd5 Qxd5 3.Nc3", text);
-        Assert.Contains("Merksatz:", text);
+        // 0.917.0: ein frei erfundener Merksatz fällt weg — nur die kuratierte Liste zählt.
+        Assert.DoesNotContain("Merksatz:", text);
+        Assert.Contains("Merksätze (nur diese, höchstens einer, per Kennung)", _fable.Prompts[0]);
+        Assert.Contains("- raum-und-tausch: ", _fable.Prompts[0]);
         Assert.Contains("Klubspielern (Elo 1500–2000)", _fable.Systems[0]);
         Assert.Contains("L (Läufer), S (Springer)", _fable.Systems[0]);
         Assert.True(_fable.Prompts[0].Contains("Weaker move: 2.Nc3"), _fable.Prompts[0]);
+    }
+
+    [Fact]
+    public async Task Merksatz_perKennung_wirdZumFestenWortlaut()
+    {
+        SeedGame(new DateOnly(2026, 11, 7), null, new DateTime(2026, 11, 7, 22, 0, 0, DateTimeKind.Utc));
+        _fable.Answers.Enqueue(FableText.Replace("Merksatz: Erst den angegriffenen Bauern klären.", "Merksatz: raum-und-tausch"));
+
+        var c = await ExplainClubComparisonAsync(Service(Fable()));
+
+        var text = WeakExplanation(c)!;
+        Assert.EndsWith("\n\nMerksatz: " + ChessMaxims.ById("raum-und-tausch")!.Text, text);
     }
 
     [Fact]

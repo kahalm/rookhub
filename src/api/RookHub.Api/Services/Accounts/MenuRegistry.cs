@@ -33,6 +33,8 @@ public static class MenuRegistry
         new MenuItemDef("remembered", MenuVisibilityLevel.Registered),
         // E-Book-Bibliothek (0.764.0): Sichtbarkeit JE BUCH regeln Gruppen-Freigaben; der Menüpunkt öffnet nur den Bereich.
         new MenuItemDef("ebooks", MenuVisibilityLevel.All),   // 0.778.0: auch ohne Anmeldung („Alle“-Bücher + eigene Uploads)
+        // Merksätze (0.917.0): die kuratierte, literaturbelegte Liste — offen wie die Bibliothek; Buchlinks nur bei Zugriff.
+        new MenuItemDef("maxims", MenuVisibilityLevel.All),
         new MenuItemDef("weekly", MenuVisibilityLevel.Registered),
         new MenuItemDef("courses", MenuVisibilityLevel.Registered),
         new MenuItemDef("woodpecker", MenuVisibilityLevel.Registered),

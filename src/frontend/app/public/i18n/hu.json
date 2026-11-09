@@ -135,7 +135,8 @@
     "scoresheet": "Játszmalap beolvasása",
     "prep": "Felkészülés ellenfélre",
     "ebooks": "E-könyvek",
-    "woodpecker": "Woodpecker"
+    "woodpecker": "Woodpecker",
+    "maxims": "Szabályok"
   },
   "app": {
     "changelogTitle": "Változásnapló",
@@ -2309,7 +2310,8 @@
         "tournament-calendar": "Versenynaptár",
         "scoresheet": "Játszmalap beolvasása (fénykép)",
         "ebooks": "E-könyvtár",
-        "woodpecker": "Woodpecker-edzés"
+        "woodpecker": "Woodpecker-edzés",
+        "maxims": "Szabályok (sakkmaximák)"
       }
     },
     "messages": {
@@ -4809,6 +4811,14 @@
           "A Woodpecker-módszer (Smith és Tikkanen) a taktikai minták felismerését edzi: ugyanazokat a feladatokat oldod meg újra és újra, minden alkalommal gyorsabban. Válassz egy vagy több tanfolyamot, és indíts edzést – a szabályok rögzítettek, mint a könyvben.",
           "1. ciklus: négy heted van, hogy a tanfolyamok sorrendjében minél több feladatot megoldj; ezek lesznek a sorozatod. A kezdést visszadátumozhatod – ami azóta ezekben a tanfolyamokban megoldottál, beszámít. Legalább egy nap szünet után minden további ciklus ugyanazt a sorozatot hozza véletlen sorrendben, fele annyi idő alatt (14, 7, 4, 2, 1 nap). Egy ciklusban feladatonként csak az első próbálkozásod számít. Akkor végzel, ha a sorozatot egy nap alatt megoldod, különben a 7. ciklus után."
         ]
+      },
+      "maxims": {
+        "t": "Szabályok",
+        "p": [
+          "Klasszikus sakkmaximák rövid, válogatott listája. Minden szabályt a könyvtár sakk-könyveinek részletei támasztanak alá; a megfogalmazás mindenhol ugyanaz.",
+          "Nyiss ki egy szabályt: látod, mikor érvényes, és mely könyvek magyarázzák, rövid idézettel. Ha hozzáférsz a könyvhöz, a link az oldalon (PDF) vagy a könyvet (EPUB) nyitja meg.",
+          "A hibáid magyarázata legfeljebb egy ilyen szabállyal zárul; a mellette lévő (i) mutatja a könyvrészleteket."
+        ]
       }
     },
     "title": "Súgó és útmutató",
@@ -6271,5 +6281,17 @@
     "maiaHint": "Megnyitja az elemzőtáblát ettől az állástól, {{elo}} erősségű Maiával — olyan erős, mint {{who}}.",
     "next": "Következő változat",
     "skip": "Változat kihagyása"
+  },
+  "maxims": {
+    "label": "Szabály:",
+    "sources": "Könyvek, amelyek ezt az elvet magyarázzák",
+    "page": "{{page}}. o.",
+    "title": "Szabályok",
+    "intro": "Klasszikus sakkmaximák, mindegyik sakk-könyvek részleteivel alátámasztva. A hibáid magyarázata alatt jelennek meg.",
+    "when": "Mikor érvényes",
+    "books": "Könyvek",
+    "noAccess": "nincs a könyvtáradban",
+    "all": "Minden szabály",
+    "count": "{{count}} szabály"
   }
 }

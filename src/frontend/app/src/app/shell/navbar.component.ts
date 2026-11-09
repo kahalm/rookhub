@@ -161,6 +161,7 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
           @if (can('reconstruct')) { <button mat-menu-item routerLink="/reconstruct">{{ 'nav.reconstruct' | translate }}</button> }
           @if (can('remembered')) { <button mat-menu-item routerLink="/remembered">{{ 'nav.remembered' | translate }}</button> }
           @if (can('ebooks')) { <button mat-menu-item routerLink="/ebooks">{{ 'nav.ebooks' | translate }}</button> }
+          @if (can('maxims')) { <button mat-menu-item routerLink="/maxims">{{ 'nav.maxims' | translate }}</button> }
           @if (showCatalog && can('catalog')) {
             <button mat-menu-item routerLink="/catalog">{{ 'nav.catalog' | translate }}</button>
           }
@@ -460,7 +461,7 @@ export class NavbarComponent implements OnInit {
   }
   get anyLibrary(): boolean {
     return this.can('analysis') || this.can('games') || this.can('scoresheet') || this.can('reconstruct') || this.can('remembered')
-      || this.can('ebooks') || (this.showCatalog && this.can('catalog')) || this.auth.has('prep.view');
+      || this.can('ebooks') || this.can('maxims') || (this.showCatalog && this.can('catalog')) || this.auth.has('prep.view');
   }
 
   /** Glocken-Badge: Anzahl ungelesener In-App-Benachrichtigungen. */
