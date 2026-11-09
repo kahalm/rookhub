@@ -94,7 +94,9 @@ public static class EbookPdfOutline
             // Geschwister über /Next ablaufen, Kinder (/First) eine Ebene tiefer auf den Stapel.
             for (IToken? cur = token; cur != null;)
             {
-                if (cur is IndirectReferenceToken r && !seen.Add(r.Data)) break;
+                // Ein Knoten, der schon besucht war, heißt Ring (/First oder /Next zeigt zurück): kein Lesezeichen-Baum,
+                // sondern eine Endlosschleife für jeden rekursiven Leser → wie „zu groß“ behandeln (Gegenlesung GA-01).
+                if (cur is IndirectReferenceToken r && !seen.Add(r.Data)) return true;
                 if (++nodes > MaxRawNodes) return true;
                 if (Resolve(doc, cur) is not DictionaryToken d) break;
                 if (d.TryGet(FirstName, out var child)) stack.Push((child, depth + 1));
