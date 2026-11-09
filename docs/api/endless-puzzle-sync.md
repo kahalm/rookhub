@@ -28,7 +28,9 @@ Offline-Warteschlange (`OfflineQueueService.enqueueLatest`: nur der LETZTE Stand
 `null` eines beendeten Laufs); ein direkt angekommener PUT verwirft ältere vorgemerkte (`drop`). Überlappende PUTs
 (GF-R3): beide Wege tragen den Sendezeitpunkt — `drop(…, sentAt)` verwirft nur Einträge mit `ts <= sentAt`,
 `enqueueLatest(…, sentAt)` merkt nichts vor, wenn schon ein jüngerer Stand liegt, und der Flush sendet keinen Eintrag,
-der seit seinem Schnappschuss verworfen wurde. Beim Abgleich
+der seit seinem Schnappschuss verworfen wurde. Vorgemerkt wird nur bei vorübergehenden Fehlern (`isTransientHttpStatus`: Netz/0, 408,
+429, 5xx — dieselbe Grenze wie der Flush); ein 4xx (z. B. 403 während einer Impersonation) verfällt (GF-R4). Während
+einer Impersonation geht der PUT ohnehin nicht hinaus (F3-007). Beim Abgleich
 (`EndlessRunStore.syncFromServer`) ersetzt der Server-`activeGameState` den lokalen nur, wenn KEIN Stand mehr in der
 Warteschlange wartet (`EndlessStorageService.hasPendingProgress`) — sonst ist der lokale jünger (offline weitergespielt
 oder beendet), und der Nachlauf bringt ihn hinauf. Ohne vorgemerkten Stand gilt wie bisher der Server (Gerätewechsel).

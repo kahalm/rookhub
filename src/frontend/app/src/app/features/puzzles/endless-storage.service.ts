@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
-import { OfflineQueueService } from '../../core/offline-queue.service';
+import { isTransientHttpStatus, OfflineQueueService } from '../../core/offline-queue.service';
 import { Observable, of, catchError, map, tap } from 'rxjs';
 import { PuzzleDto } from './puzzle.service';
 import { ENDLESS_POOL_KEY } from '../../core/offline.service';
@@ -325,7 +325,11 @@ export class EndlessStorageService {
     const sentAt = Date.now();
     this.http.put(target.url, target.body).subscribe({
       next: () => this.offlineQueue.drop('PUT', target.url, sentAt),
-      error: () => this.offlineQueue.enqueueLatest('PUT', target.url, target.body, sentAt),
+      // Nur vorübergehende Fehler vormerken (GF-R4): ein 4xx (z. B. 403 während einer Impersonation) käme beim Nachlauf
+      // genauso zurück und bliebe als Dauer-Eintrag kleben (hasPendingProgress dauerhaft true).
+      error: (e: { status?: number } | null) => {
+        if (isTransientHttpStatus(e?.status ?? 0)) this.offlineQueue.enqueueLatest('PUT', target.url, target.body, sentAt);
+      },
     });
   }
 

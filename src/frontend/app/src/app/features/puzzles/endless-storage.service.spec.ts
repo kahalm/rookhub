@@ -344,4 +344,18 @@ describe('EndlessStorageService Spielstand-PUT mit Offline-Warteschlange (G3-002
     expect(queuedBody().activeGameState).toContain('"chainIndex":9');
   });
 
+  it('dauerhafter 4xx (z. B. 403) wird nicht vorgemerkt, 429 schon (GF-R4)', () => {
+    svc.saveProgressImmediate(CONFIG, 0, { lives: 2, chainIndex: 5 });
+    http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress')).flush('x', { status: 403, statusText: 'Forbidden' });
+    expect(queue.pendingCount()).toBe(0);
+    expect(svc.hasPendingProgress()).toBeFalse();
+
+    svc.saveProgressImmediate(CONFIG, 0, { lives: 2, chainIndex: 6 });
+    http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress')).flush('x', { status: 400, statusText: 'Bad Request' });
+    expect(queue.pendingCount()).toBe(0);
+
+    svc.saveProgressImmediate(CONFIG, 0, { lives: 2, chainIndex: 7 });
+    http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress')).flush('x', { status: 429, statusText: 'Too Many' });
+    expect(svc.hasPendingProgress()).toBeTrue();
+  });
 });

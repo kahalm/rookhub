@@ -3,6 +3,7 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { TranslateService } from '@ngx-translate/core';
 import {
   OfflineQueueService, OFFLINE_QUEUE_KEY, OFFLINE_QUEUE_THROTTLE_MS, OFFLINE_QUEUE_MAX, OFFLINE_QUEUE_RETRY_BACKOFF_MS,
+  isTransientHttpStatus,
 } from './offline-queue.service';
 import { SnackbarService } from './snackbar.service';
 
@@ -237,6 +238,11 @@ describe('OfflineQueueService', () => {
     http.expectNone('/api/endless/progress');
     expect(svc.pendingCount()).toBe(0);
   }));
+
+  it('isTransientHttpStatus: Netz/408/429/5xx ja, übrige 4xx nein (GF-R4)', () => {
+    expect([0, 408, 429, 500, 502, 503, 504].every(isTransientHttpStatus)).toBeTrue();
+    expect([400, 401, 403, 404, 409, 422].some(isTransientHttpStatus)).toBeFalse();
+  });
 
   it('flush ohne Einträge löst keinen Request aus', () => {
     svc.flush();

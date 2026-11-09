@@ -46,6 +46,15 @@ export const OFFLINE_QUEUE_MAX = 200;
  * gescheiterte Nachlauf wartet den nächsten Wert, ab dem letzten bleibt es bei ihm (Obergrenze, kein Sturm: es
  * gibt immer höchstens EINEN geplanten Nachlauf). Ein erfolgreicher Versand setzt den Takt zurück.
  */
+/**
+ * Lohnt Nachsenden bei diesem HTTP-Status? Netz (0), 408, 429 und 5xx sind vorübergehend; übrige 4xx sind eine
+ * dauerhafte Ablehnung (Rechte, Impersonation, Validierung) und kämen beim Nachlauf genauso zurück. Dieselbe Grenze
+ * wie im Flush (dort bleiben 401/403 zusätzlich liegen: abgelaufene Anmeldung beim NACHLAUF, GF-R4).
+ */
+export function isTransientHttpStatus(status: number): boolean {
+  return !(status >= 400 && status < 500) || status === 408 || status === 429;
+}
+
 export const OFFLINE_QUEUE_RETRY_BACKOFF_MS: readonly number[] = [5000, 15000, 60000];
 
 /**
@@ -241,7 +250,7 @@ export class OfflineQueueService implements OnDestroy {
         }
         // FALLE: 429 (Rate-Limit) und 408 sind KEINE dauerhaften Fehler — würden sie wie 4xx
         // verworfen, löschte ein großer Nachlauf genau die Lösungen, die die Queue schützen soll.
-        const permanent = status >= 400 && status < 500 && status !== 429 && status !== 408;
+        const permanent = !isTransientHttpStatus(status);
         if (permanent) {
           // Dauerhaft fehlerhaft (z.B. Puzzle weg / nicht mehr berechtigt) → verwerfen.
           this.remove(r.id);
