@@ -1227,12 +1227,16 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         await Assert.ThrowsAsync<RookHub.Api.Exceptions.NotFoundException>(() => club.GetMemberAsync(trainer, anna.Id));
         Assert.Equal("Anfänger", Assert.Single(await club.ListGroupsAsync(trainer)).Name);
 
-        // Anwesenheit: eine Einheit je Tag (zweites Speichern ersetzt), Tabelle, Quote, Liste mit Max(Date).
+        // Anwesenheit: eine Einheit je Tag (ohne Kennung 409, mit Kennung ersetzt), Tabelle, Quote, Liste mit Max(Date).
         var att = new List<RookHub.Api.DTOs.Club.ClubAttendanceInputDto> { new() { MemberId = daniel.Id, Status = "present" } };
         var first = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.Club.ClubSessionInputDto { Date = "2026-09-18", Attendance = att });
         await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.Club.ClubSessionInputDto { Date = "2026-09-25", Topic = "Gabel", Attendance = att });
         att[0].Status = "absent";
-        var again = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.Club.ClubSessionInputDto { Date = "2026-09-18", Attendance = att });
+        // F4-013: ohne Kennung ersetzt ein zweites Speichern desselben Tags nichts mehr (409 statt stillem Überschreiben);
+        // mit der Kennung der geladenen Einheit wird sie aktualisiert.
+        await Assert.ThrowsAsync<RookHub.Api.Exceptions.ConflictException>(() =>
+            club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.Club.ClubSessionInputDto { Date = "2026-09-18", Attendance = att }));
+        var again = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.Club.ClubSessionInputDto { Date = "2026-09-18", Attendance = att }, first.Id);
         Assert.Equal(first.Id, again.Id);
         Assert.Equal(first.Id, (await club.GetSessionByDateAsync(trainer, mine.Id, "2026-09-18"))!.Id);
         Assert.Null(await club.GetSessionByDateAsync(trainer, mine.Id, "2026-09-19"));
