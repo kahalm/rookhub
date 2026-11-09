@@ -2599,7 +2599,8 @@
       "promote": "Változat előléptetése",
       "makeMainline": "Legyen főváltozat",
       "deleteFrom": "Törlés innentől",
-      "hint": "Jobb kattintás egy lépésen (telefonon hosszan nyomva): csillag, változat előléptetése, főváltozattá tétel vagy törlés onnantól."
+      "hint": "Jobb kattintás egy lépésen (telefonon hosszan nyomva): csillag, változat előléptetése, főváltozattá tétel vagy törlés onnantól.",
+      "label": "Lépésfa"
     },
     "tablebase": {
       "title": "Végjáték-adatbázis (Lichess)",
@@ -2665,7 +2666,9 @@
       "reveal": "Motor bekapcsolása",
       "hide": "Motor kikapcsolása",
       "progressShort": "{{done}}/{{total}} elemezve",
-      "bestShort": "{{best}}/{{rated}} legjobb"
+      "bestShort": "{{best}}/{{rated}} legjobb",
+      "loadFailed": "Az ehhez a játszmához mentett változataidat nem sikerült betölteni. A sikeres újrapróbálkozásig semmi sem kerül mentésre.",
+      "saveFailed": "A változataidat nem sikerült menteni — a következő lépés újra megpróbálja."
     },
     "withoutEngine": "Motor nélkül",
     "withEngine": "Motorral"
@@ -3613,7 +3616,8 @@
       "lines": "Gépi változatok",
       "arrow": "Nyíl a legjobb lépéshez",
       "badges": "Lépésjelek (tábla és lépéslista)",
-      "refining": "Mélyebb elemzés — {{done}} / {{total}} állás"
+      "refining": "Mélyebb elemzés — {{done}} / {{total}} állás",
+      "explainFailed": "A magyarázatokat nem sikerült lekérni. Próbáld újra egy pillanat múlva."
     },
     "analyzing": "Elemzés folyamatban: {{pct}}% ({{analyzed}} / {{total}} állás) – a görbe a játszma oldalán jelenik meg",
     "accuracyHint": "Pontosság világos · sötét (a játszmaelemzésből)",
@@ -3672,7 +3676,8 @@
         "played": "Játszmalépés",
         "best": "Legjobb lépés",
         "open": "Teljes összehasonlítás megnyitása"
-      }
+      },
+      "dismissFailed": "Az elrejtés nem sikerült — a hiba a következő menetben újra előkerül."
     },
     "live": {
       "toggle": "Élő motor — próbáld ki a saját lépéseidet",
@@ -3746,7 +3751,8 @@
       "ownerSide": "Az én oldalam",
       "sideNone": "nincs megadva",
       "classifierHint": "Online: a platform és a mód automatikusan kitöltődik · bajnoki partik: pl. „Landesliga” + „2026/27”",
-      "clubLinked": "Ez a játszma másolat a klub adatbázisából. Ha lépéseket javítasz és te töltötted fel (vagy kezelő vagy), a javítás ott és minden másolatban is érvényes — különben a másolatod önálló változat lesz."
+      "clubLinked": "Ez a játszma másolat a klub adatbázisából. Ha lépéseket javítasz és te töltötted fel (vagy kezelő vagy), a javítás ott és minden másolatban is érvényes — különben a másolatod önálló változat lesz.",
+      "sheetStateFailed": "A jegyzőkönyv mentett állapotát nem sikerült betölteni. A mentés csak a lépéseket és az adatokat módosítja, a jegyzőkönyv-olvasat változatlan marad."
     },
     "pgnCopy": "PGN másolása",
     "pgnCopied": "PGN másolva",
@@ -3918,7 +3924,8 @@
       "submit": "Elemzés indítása",
       "noEngine": "A profilban nincs háttérmotor beállítva — a játszmaelemzés csak háttérmotoron fut.",
       "toProfile": "Profilhoz",
-      "enginesFailed": "A motorokat nem sikerült betölteni"
+      "enginesFailed": "A motorokat nem sikerült betölteni",
+      "depthFailed": "Az lc0-elemzés fut, a mélységi elemzés nem sikerült: {{reason}}"
     },
     "convergence": {
       "title": "Konvergencia: mikortól éri meg többet számolni?",
@@ -5895,7 +5902,8 @@
       "dissolved": "Gyűjtemény feloszlatva.",
       "back": "Vissza az összes könyvhöz",
       "count": "{{n}} könyv",
-      "open": "Megnyitás"
+      "open": "Megnyitás",
+      "loadFailed": "A meglévő gyűjteményeket nem sikerült betölteni."
     },
     "reader": {
       "area": "Oldalak",
@@ -5970,7 +5978,8 @@
       "openBoardOne": "Tábla: 1 diagram",
       "missedText": "Hibás a szöveg",
       "checkPdfTitle": "Megnézed ezt a részt a PDF-ben?",
-      "checkPdfYes": "PDF megnyitása"
+      "checkPdfYes": "PDF megnyitása",
+      "pageFailed": "Ezt az oldalt nem sikerült betölteni. Töltsd újra a könyvet, ha így marad."
     },
     "diagrams": "{{n}} diagram",
     "diagramsOne": "1 diagram",
