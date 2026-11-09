@@ -318,6 +318,37 @@ public class LeagueTeamScoutTests : IDisposable
         Assert.StartsWith("Mitglied im Lichess-Team „Schachkreis Zugspitze“", sugg.Evidence);
     }
 
+    /// <summary>G1-008: eine Zeitüberschreitung bei EINEM Konto hält die Team-Suche nicht an — das Konto bekommt einen Vermerk
+    /// („morgen wieder“), das nächste wird geprüft. Vorher flog die TaskCanceledException aus RunOnceAsync, das Konto blieb
+    /// ungeprüft vorn in der Warteschlange.</summary>
+    [Fact]
+    public async Task Run_TimeoutOnOneAccount_NotesItAndChecksTheNext()
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 912_026_001, Name = "ZL", Season = "2026/27", League = "ZL", Stage = "Liga", Source = ZugspitzeSource.Source });
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 912_026_001, Team = "SK Weilheim II", Name = "Mustermann, Hans", NameKey = "mustermann, hans", FideId = "777", EloN = 1900 });
+        _db.LeagueScoutAccounts.AddRange(
+            new LeagueScoutAccount { UserName = "aaa", DisplayName = "aaa", Teams = "Schachkreis Zugspitze", FoundAt = DateTime.UtcNow },
+            new LeagueScoutAccount { UserName = "zzz", DisplayName = "zzz", Teams = "Schachkreis Zugspitze", FoundAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        var http = new FakeHttp(req =>
+        {
+            var u = req.RequestUri!.ToString();
+            if (u.EndsWith("/api/users"))
+                return Ok("""[{"id":"aaa","username":"aaa","profile":{"flag":"DE","realName":"Hans Mustermann"}},{"id":"zzz","username":"zzz","profile":{}}]""");
+            if (u.Contains("/api/fide/player/")) throw new TaskCanceledException("Zeitüberschreitung");
+            return Status(HttpStatusCode.NotFound);
+        });
+
+        Assert.False(await Scout(http).RunOnceAsync(TimeSpan.FromMinutes(1), refreshPool: false, default));
+
+        var rows = await _db.LeagueScoutAccounts.AsNoTracking().OrderBy(a => a.UserName).ToListAsync();
+        Assert.StartsWith("Abruf gescheitert", rows[0].Result);
+        Assert.NotNull(rows[0].CheckedAt);
+        Assert.NotNull(rows[1].CheckedAt);
+        Assert.DoesNotContain("Abruf gescheitert", rows[1].Result);
+        Assert.Empty(await _db.LeagueAccountScans.ToListAsync());   // halbe Änderung aus CheckAsync verworfen
+    }
+
     // UI-Sweep 2026-10-11 (r2-l-same-account): „Hans Schmidt" passt auf „Schmidt, Hans" (SC Garching 4) und „Schmidt, Hans
     // Christoph" (SC Haar 1) — das Konto spielte für SC Garching, also bekommt nur der Garchinger den Vorschlag.
     [Fact]

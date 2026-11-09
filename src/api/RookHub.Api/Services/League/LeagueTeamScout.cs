@@ -472,10 +472,15 @@ public sealed partial class LeagueTeamScout
                         a.Result = Cut(await CheckAsync(a, profiles.GetValueOrDefault(user), ctx, ct), 300);
                         a.CheckedAt = DateTime.UtcNow;
                     }
-                    catch (HttpRequestException e)
+                    catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException && !ct.IsCancellationRequested)
                     {
                         // Ein Konto, dessen Partien gerade nicht zu holen sind, hält die übrigen nicht auf — morgen wieder.
+                        // Wie die Namenssuche (LeagueAccountFinder): auch Zeitüberschreitung und abgerissene ndjson-Zeile, und
+                        // halbe Änderungen aus CheckAsync verwerfen (G1-008) — vorher blieb so ein Konto vorn in der Warteschlange
+                        // und hielt die Team-Suche dauerhaft an.
                         _logger.LogWarning("LeagueHub: Team-Suche, Konto {User}: {Message}", user, e.Message);
+                        _db.ChangeTracker.Clear();
+                        a = await _db.LeagueScoutAccounts.FirstAsync(x => x.UserName == user, ct);
                         a.Result = Cut("Abruf gescheitert: " + e.Message, 300);
                         a.CheckedAt = DateTime.UtcNow.AddDays(1 - RecheckDays);
                     }
