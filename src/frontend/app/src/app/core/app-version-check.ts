@@ -1,10 +1,12 @@
 /**
  * Server-Version nachsehen, ohne den Service Worker (U1, „Seite nicht gefunden“ prüft die Server-Version): das vom Build
- * erzeugte Changelog-Asset (`scripts/changelog-json.mjs` → `/assets/changelog.json`, neuester Eintrag zuerst) frisch
- * holen. `cache: 'no-store'` umgeht den HTTP-Zwischenspeicher, `ngsw-bypass` den Service Worker (er hält das Asset in
- * seiner lazy-Gruppe `changelog` und lieferte sonst den Stand der alten Fassung).
+ * erzeugte Versions-Asset (`scripts/changelog-json.mjs` → `/assets/version.json`, nur `{ version }`, wenige Byte — nicht
+ * das 2-MB-Changelog, Gegenlesung GF-R2) frisch holen. `cache: 'no-store'` umgeht den HTTP-Zwischenspeicher, `ngsw-bypass`
+ * den Service Worker (er lieferte sonst den Stand der alten Fassung).
  */
-export const SERVER_CHANGELOG_URL = '/assets/changelog.json?ngsw-bypass=1';
+export const SERVER_VERSION_URL = '/assets/version.json?ngsw-bypass=1';
+/** @deprecated Alter Name; die Prüfung liest seit GF-R2 `version.json`. */
+export const SERVER_CHANGELOG_URL = SERVER_VERSION_URL;
 
 /** Höchstens so lange auf die Antwort warten — danach gilt „nichts gefunden“ (normale Nicht-gefunden-Seite). */
 export const SERVER_VERSION_TIMEOUT_MS = 5000;
@@ -21,17 +23,17 @@ export function isNewerVersion(a: string, b: string): boolean {
   return false;
 }
 
-/** Oberste Version des Server-Changelogs, `null` bei jedem Fehler (offline, 404, SPA-Rückfall statt JSON, Zeitlimit). */
+/** Version des Servers aus `version.json`, `null` bei jedem Fehler (offline, 404, SPA-Rückfall statt JSON, Zeitlimit). */
 export async function fetchServerVersion(
   fetcher: typeof fetch = (...args) => fetch(...args), timeoutMs = SERVER_VERSION_TIMEOUT_MS): Promise<string | null> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), timeoutMs); });
   const load = (async () => {
     try {
-      const res = await fetcher(SERVER_CHANGELOG_URL, { cache: 'no-store' });
+      const res = await fetcher(SERVER_VERSION_URL, { cache: 'no-store' });
       if (!res.ok) return null;
-      const entries: unknown = await res.json();
-      const top = Array.isArray(entries) ? (entries[0] as { version?: unknown } | undefined)?.version : null;
+      const body: unknown = await res.json();
+      const top = body && typeof body === 'object' ? (body as { version?: unknown }).version : null;
       return typeof top === 'string' ? top : null;
     } catch {
       return null;

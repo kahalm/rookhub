@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Changelog als DATEN (Codereview F8-008): schreibt das CHANGELOG-Array aus src/environments/changelog-data.ts als
-// JSON nach generated/changelog/changelog.json. angular.json kopiert die Datei im Projekt `app` nach
-// /assets/changelog.json; das Changelog-Overlay (shared/app-footer) laedt sie per HttpClient erst beim Oeffnen.
+// JSON nach generated/changelog/changelog.json (+ version.json mit der obersten Version). angular.json kopiert beide im Projekt `app` nach
+// /assets/; das Changelog-Overlay (shared/app-footer) laedt sie per HttpClient erst beim Oeffnen.
 //
 // Warum: als Code (dynamic import) lag das Changelog als ~2 MB-Lazy-Chunk unter `/*.js` in der prefetch-Gruppe des
 // Service Workers — jeder Release aendert den Text, also den Hash, und jede installierte PWA lud den Chunk im
@@ -24,6 +24,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const SOURCE = join(APP_DIR, 'src', 'environments', 'changelog-data.ts');
 export const OUT = join(APP_DIR, 'generated', 'changelog', 'changelog.json');
+// Nur die oberste Version, wenige Byte: fuer die Versionspruefung der Nicht-gefunden-Seite (U1) statt des ganzen Changelogs.
+export const VERSION_OUT = join(APP_DIR, 'generated', 'changelog', 'version.json');
 
 /**
  * changelog-data.ts ist ein reines Array-Literal hinter einem Typ-Import — ohne Import und Typangabe gueltiges
@@ -80,6 +82,7 @@ function main() {
   const text = serializeChangelog(entries);
   mkdirSync(dirname(OUT), { recursive: true });
   writeFileSync(OUT, text);
+  writeFileSync(VERSION_OUT, JSON.stringify({ version: entries[0]?.version ?? null }) + '\n');
   console.log(`${relative(APP_DIR, OUT)}: ${entries.length} Versionen, ${Buffer.byteLength(text)} Byte.`);
 }
 

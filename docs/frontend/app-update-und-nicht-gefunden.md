@@ -13,8 +13,8 @@ landet auf „Seite nicht gefunden“, obwohl es die Seite am Server gibt. `shar
 (RookHub `'**'`, Kurz-URL-Auflöser, LeagueHub `'**'`) ruft deshalb beim Anzeigen `AppUpdateService.checkNow()`:
 
 1. `SwUpdate.checkForUpdate()`, wenn ein Service Worker läuft;
-2. immer zusätzlich `fetchServerVersion()` (`core/app-version-check.ts`): `GET /assets/changelog.json?ngsw-bypass=1`
-   mit `cache: 'no-store'` (das von `scripts/changelog-json.mjs` erzeugte Asset, neuester Eintrag zuerst; `ngsw-bypass`
+2. immer zusätzlich `fetchServerVersion()` (`core/app-version-check.ts`): `GET /assets/version.json?ngsw-bypass=1`
+   mit `cache: 'no-store'` (die von `scripts/changelog-json.mjs` neben dem Changelog erzeugte Datei `{ version }` — wenige Byte statt des 2-MB-Changelogs, Gegenlesung GF-R2; `ngsw-bypass`
    weil der SW es in seiner lazy-Gruppe `changelog` hält), oberste Version gegen `APP_VERSION` per `isNewerVersion`
    (dreiteilig numerisch). Zeitlimit 5 s; jeder Fehler (offline, 404, SPA-Rückfall statt JSON) zählt als „nichts“.
 
@@ -23,6 +23,6 @@ gibt es vielleicht erst dort.“ (ohne bekannte Nummer, wenn nur der SW eine mel
 „Aktualisieren“ (`activateAndReload`: `activateUpdate()` und `location.replace(<dieselbe Adresse>)`, ohne SW ein harter
 Reload); sonst und bei Fehlern die normale Meldung.
 
-Grenzen: `changelog.json` wird nur ins Projekt `app` kopiert (angular.json) — in LeagueHub (ohne SW) findet die Prüfung
+Grenzen: `version.json` wird (wie `changelog.json`) nur ins Projekt `app` kopiert (angular.json) — in LeagueHub (ohne SW) findet die Prüfung
 darum nie etwas und zeigt die normale Seite. Turnierseite, KidHub und ClubHub haben keine Nicht-gefunden-Seite (`'**'`
 leitet auf die Startseite um).

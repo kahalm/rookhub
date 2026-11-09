@@ -68,7 +68,7 @@
                 "output": "/assets/maia"
               },
               {
-                "glob": "changelog.json",
+                "glob": "*.json",
                 "input": "generated/changelog",
                 "output": "/assets"
               },

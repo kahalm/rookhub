@@ -1,4 +1,4 @@
-import { SERVER_CHANGELOG_URL, fetchServerVersion, isNewerVersion } from './app-version-check';
+import { SERVER_VERSION_URL, fetchServerVersion, isNewerVersion } from './app-version-check';
 
 describe('isNewerVersion (U1)', () => {
   it('vergleicht dreiteilig numerisch, nicht als Text', () => {
@@ -19,17 +19,19 @@ describe('isNewerVersion (U1)', () => {
 describe('fetchServerVersion (U1)', () => {
   const json = (body: unknown, ok = true) => Promise.resolve({ ok, json: () => Promise.resolve(body) } as Response);
 
-  it('holt das Changelog ohne Zwischenspeicher und am Service Worker vorbei, nimmt die oberste Version', async () => {
-    const fetcher = jasmine.createSpy('fetch').and.returnValue(json([{ version: '0.940.0' }, { version: '0.939.0' }]));
+  it('holt version.json ohne Zwischenspeicher und am Service Worker vorbei (nicht das ganze Changelog)', async () => {
+    const fetcher = jasmine.createSpy('fetch').and.returnValue(json({ version: '0.940.0' }));
     expect(await fetchServerVersion(fetcher)).toBe('0.940.0');
     const [url, init] = fetcher.calls.mostRecent().args;
-    expect(url).toBe(SERVER_CHANGELOG_URL);
+    expect(url).toBe(SERVER_VERSION_URL);
+    expect(url).toContain('version.json');
     expect(url).toContain('ngsw-bypass');
     expect(init).toEqual({ cache: 'no-store' });
   });
 
   it('null bei Fehlerstatus, Nicht-JSON (SPA-Rückfall), Netzfehler und Zeitlimit', async () => {
-    expect(await fetchServerVersion(() => json([], false))).toBeNull();
+    expect(await fetchServerVersion(() => json({ version: '0.940.0' }, false))).toBeNull();
+    expect(await fetchServerVersion(() => json([{ version: '0.940.0' }]))).toBeNull();
     expect(await fetchServerVersion(() => Promise.resolve({ ok: true, json: () => Promise.reject(new SyntaxError('<')) } as Response))).toBeNull();
     expect(await fetchServerVersion(() => Promise.reject(new TypeError('offline')))).toBeNull();
     expect(await fetchServerVersion(() => new Promise<Response>(() => {}), 1)).toBeNull();
