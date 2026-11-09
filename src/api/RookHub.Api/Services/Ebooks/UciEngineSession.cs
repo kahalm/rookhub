@@ -63,7 +63,15 @@ public sealed class UciEngineSession : IPositionEvaluator
         var lines = new List<string>();
         while (true)
         {
-            var line = await _proc.StandardOutput.ReadLineAsync(cts.Token) ?? throw new IOException("Stockfish beendet");
+            string? line;
+            try { line = await _proc.StandardOutput.ReadLineAsync(cts.Token); }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // Die eigene Zeitschranke (nicht das Herunterfahren): wie ein Absturz melden, damit der Aufrufer die
+                // Sitzung verwirft und neu startet (R3-011, wie ScoresheetPlausibility).
+                throw new IOException($"Stockfish antwortet nicht binnen {timeout.TotalSeconds:0} s (warte auf „{prefix}“)");
+            }
+            if (line == null) throw new IOException("Stockfish beendet");
             lines.Add(line);
             if (line.StartsWith(prefix, StringComparison.Ordinal)) return lines;
         }

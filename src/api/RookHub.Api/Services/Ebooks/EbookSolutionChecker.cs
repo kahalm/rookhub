@@ -84,8 +84,11 @@ public static class EbookSolutionChecker
     private static async Task<bool> FirstMoveOk(IPositionEvaluator engine, string fen, UciResult root, string move, int moveTimeMs, CancellationToken ct)
     {
         if (root.Pv.Count > 0 && root.Pv[0] == move) return true;
+        // Nur ein in dieser Stellung spielbarer Zug in UCI-Schreibweise (R3-011): die Engine-Sitzung gibt auch für eine
+        // ungültige Eingabe („e7e8Q“) null zurück — das darf nicht als „Matt auf dem Brett“ durchgehen.
+        if (Replay(fen, [move]).Uci.Count == 0) return false;
         var after = await engine.EvaluateAsync(fen, [move], moveTimeMs, ct);
-        // Kein Score nach dem Zug = Matt/Patt auf dem Brett: Matt setzen ist immer richtig.
+        // Kein Score nach dem (legalen) Zug = Matt/Patt auf dem Brett: Matt setzen ist immer richtig.
         if (after == null) return true;
         return BookMoveOk(root.Score, -after.Score);
     }
@@ -184,8 +187,10 @@ public class EbookSolutionCheckWorker : PeriodicWorker
                 {
                     ct.ThrowIfCancellationRequested();
                     try { await EbookSolutionChecker.CheckAsync(engine, d, moveTimeMs, ct); }
-                    catch (IOException ex)
+                    catch (Exception ex) when (ex is IOException || ex is OperationCanceledException && !ct.IsCancellationRequested)
                     {
+                        // Zeitüberschreitung zählt wie ein Absturz (R3-011): sonst lief die Ausnahme bis zum PeriodicWorker
+                        // durch, das Buch blieb Pending und stand als Stapel-Oberstes alle 30 s wieder vorn.
                         // Stockfish ist an dieser Stellung abgestürzt: Diagramm auslassen, Engine neu starten, weiter —
                         // sonst scheitert das Buch bei jedem Durchlauf an derselben Stelle und blockiert alle dahinter.
                         logger.LogWarning(ex, "E-Book {EbookId}: Stockfish an Diagramm {DiagramId} abgestürzt ({Fen})", ebook.Id, d.Id, d.Fen);

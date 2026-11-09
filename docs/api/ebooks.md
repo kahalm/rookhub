@@ -271,6 +271,10 @@ Tipp-Generator, `Ebooks__StockfishPath`) und prüft jedes regelgerechte Diagramm
 - **Keine Buchlösung:** Bewertung ≥ 200 cp oder Matt → Engine-Hauptvariante wird die Lösung (`SolutionSource = engine`, bis zum
   Matt bzw. 7 Halbzüge, `Engine`); sonst `NoPuzzle`. Studien ohne König u. Ä. (Gera.Chess lehnt ab) bleiben `Unchecked`.
 - Feld `EngineEval` (cp für die Seite am Zug, Matt in n = ±(10000 − n)) im Diagramm-DTO, ebenso `solutionSource`, `solutionCheck`.
+- **Hänger und ungültige Züge** (R3-011): antwortet Stockfish nicht binnen Bedenkzeit + 10 s, meldet `UciEngineSession` das
+  als `IOException` (wie einen Absturz) — der Prüfdienst lässt das Diagramm aus, startet die Sitzung neu und prüft das Buch
+  zu Ende, statt alle 30 s am selben Buch zu scheitern. Ein Lösungszug, der in der Stellung nicht spielbar oder nicht in
+  UCI-Schreibweise ist („e7e8Q“), gilt nie als „Matt auf dem Brett“ (vorher: `null` von der Engine = bestätigt).
 Gemessen 14.10. (300 ms): Woodpecker 1 129 bestätigt, 3 ersetzt (u. a. Nr. 631 jetzt = Kurs), 8 Engine-Lösungen, erster Zug = Kurs
 1 118 von 1 124; Baird 755 Engine-Lösungen von 764 (Matt in 2/3), 7,7 min für beide Bücher.
 
