@@ -364,8 +364,9 @@ public class LichessExplorerClient
 /// <summary>
 /// Der LOKALE Eröffnungs-Explorer (<c>lila-openingexplorer</c> im eigenen Stack, Adresse aus
 /// <c>LichessExplorer:LocalUrl</c>): dieselben Endpunkte und Antworten wie
-/// <c>explorer.lichess.ovh</c>, aber ohne Token, ohne Drossel und mit wenigen Millisekunden je Stellung.
-/// Deshalb auch keine Leitung (<see cref="LichessExplorerGate"/>). Datenbank-Speicher nur für die Schätzung der
+/// <c>explorer.lichess.ovh</c>, aber ohne Token, ohne Drossel und mit wenigen Millisekunden je Stellung (warm).
+/// Deshalb keine Leitung (<see cref="LichessExplorerGate"/>), aber ein prozessweiter Deckel gleichzeitiger Abfragen
+/// (<see cref="MaxConcurrent"/>, R4-018) — kalt sind es nur ~12 Stellungen/s von der Platte. Datenbank-Speicher nur für die Schätzung der
 /// Trainingslinien (<see cref="Models.LocalExplorerPosition"/>, 45 Tage, 0.884.0): dort sind es Tausende Stellungen je Abfrage.
 ///
 /// <para>Datenstand dort (Absprache mit der Stack-Sitzung, 2026-09-22): Lichess-Partien erst ab
@@ -381,6 +382,14 @@ public class LocalExplorerClient
 
     /// <summary>Die Bedenkzeiten, für die der lokale Bestand Partien hat.</summary>
     public static readonly IReadOnlyList<string> LocalSpeeds = new[] { "blitz", "rapid", "classical", "correspondence" };
+
+    /// <summary>Höchstens so viele Abfragen gleichzeitig an den lokalen Explorer — PROZESSWEIT, über alle Konten und
+    /// Dienste (R4-018). Kalt schafft er ~12 Stellungen/s von der Platte; je Zugfolgen-Suche gehen 8 parallel, zehn Konten
+    /// zugleich wären 80 — dann warteten Analysebrett, Lochfinder und die Trainingslinien-Schätzung aller in den Timeout.</summary>
+    public const int MaxConcurrent = 16;
+    /// <summary>So lange wartet eine Abfrage höchstens auf einen freien Platz; danach wie „nicht erreichbar" (<c>null</c>).</summary>
+    internal static TimeSpan MaxQueueWait = TimeSpan.FromSeconds(30);
+    private static readonly SemaphoreSlim Slots = new(MaxConcurrent, MaxConcurrent);
 
     private readonly HttpClient _http;
     private readonly ILogger<LocalExplorerClient> _logger;
@@ -401,6 +410,23 @@ public class LocalExplorerClient
         GetAsync(LichessExplorerClient.BuildGamesUrl(fen, query), fen, LichessExplorerClient.ParseGames, ct);
 
     private async Task<T?> GetAsync<T>(string url, string fen, Func<JsonDocument, T?> parse, CancellationToken ct) where T : class
+    {
+        if (!await Slots.WaitAsync(MaxQueueWait, ct))
+        {
+            _logger.LogWarning("Lokaler Explorer ausgelastet ({Max} Abfragen laufen) — {Fen} übersprungen", MaxConcurrent, fen);
+            return null;
+        }
+        try
+        {
+            return await SendAsync(url, fen, parse, ct);
+        }
+        finally
+        {
+            Slots.Release();
+        }
+    }
+
+    private async Task<T?> SendAsync<T>(string url, string fen, Func<JsonDocument, T?> parse, CancellationToken ct) where T : class
     {
         try
         {

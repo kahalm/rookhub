@@ -39,7 +39,10 @@
 `POST …/explorer-analysis` zählen bei Quelle `online` (auch leer = Vorgabe) gemeinsam gegen `Explorer:OnlinePerAccountPerMinute`
 (Vorgabe 30) je Konto und Minute (`ExplorerOnlineQuota`, Singleton) — die Lichess-Leitung ist global, ein Konto konnte sie
 sonst dauerhaft belegen. Darüber 429 wie bei jeder Policy (`{ message, code: "rate_limited", retryAfterSeconds }` +
-`Retry-After`, Log über `RateLimitRejectionHandler` mit Policy `explorer-online`). `source=local` bleibt frei.
+`Retry-After`, Log über `RateLimitRejectionHandler` mit Policy `explorer-online`). `source=local` hat seit R4-018 einen
+eigenen, weiteren Topf (`Explorer:LocalPerAccountPerMinute`, Vorgabe 300, Policy `explorer-local`), und `LocalExplorerClient`
+schickt prozessweit höchstens 16 Abfragen zugleich an den lokalen Explorer (`MaxConcurrent`; wer länger als 30 s auf einen
+Platz wartet, bekommt `null` wie bei „nicht erreichbar") — die Platte des lokalen Explorers teilen sich alle Konten.
 ## Neues Repertoire aus Auswahl (0.809.0)
 
 Wunsch 2026-10-19: „mehrere kapitel oder/und lines markieren und ein neues repertoir daraus machen". Linienliste →
