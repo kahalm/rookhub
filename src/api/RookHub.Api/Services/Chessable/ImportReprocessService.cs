@@ -83,11 +83,8 @@ public partial class ImportReprocessService
     /// und jeder Klick meldete nur „übersprungen" (gemeldet 2026-09-20).</summary>
     private readonly bool _chessableEnabled;
 
-    /// <summary>Wie lange ein nicht-cachebarer (truncated) Kurs nach einem erfolglosen Re-Fetch im
-    /// automatischen Massen-Reprocess übersprungen wird, bevor er erneut versucht wird. Ein solcher
-    /// Kurs wird von piratechess nicht gecacht und würde sonst bei JEDEM „Update all" komplett neu von
-    /// Chessable geholt (Hunderte Line-Fetches → Block-Risiko). Ein gezielter Admin-Re-Import umgeht das.</summary>
-    private static readonly TimeSpan IncompleteRefetchBackoff = TimeSpan.FromHours(24);
+    private readonly ChessableRefetchQueue _refetchQueue;
+    private readonly RepertoireReprocess _repertoires;
 
     /// <summary>oids je Abfrage an den Linien-Cache. piratechess lädt dafür je oid das rohe getGame-JSON —
     /// gemessen ~455 KB je Linie im gemeldeten Kurs (1.881 Linien = 835 MB in EINER Abfrage). 100 Linien
@@ -109,6 +106,9 @@ public partial class ImportReprocessService
         _chessableImport = chessableImport;
         _cachedLines = cachedLines;
         _logger = logger;
+        _refetchQueue = new ChessableRefetchQueue(db, chessableImport, _chessableEnabled);
+        _repertoires = new RepertoireReprocess(db, chessableImport, _refetchQueue,
+            new RepertoireCacheRebuild(db, cachedLines, logger), logger, _chessableEnabled);
     }
 
     // ===== Kurse / Bücher =====
@@ -169,7 +169,7 @@ public partial class ImportReprocessService
     }
 
     /// <summary>Aktualisierbar im Sinne des Banners (lokal, aus dem Linien-Cache oder per Re-Fetch).</summary>
-    private static bool IsActionable(StaleAction a) => a is StaleAction.Local or StaleAction.Cache or StaleAction.Refetch;
+    internal static bool IsActionable(StaleAction a) => a is StaleAction.Local or StaleAction.Cache or StaleAction.Refetch;
 
     /// <param name="localOnly">true = nur aus dem serverseitig gespeicherten Quell-PGN aufbereiten
     /// („Aus Cache"), KEIN Chessable-Re-Fetch übers Netz. Der Linien-Cache-Weg (<see cref="StaleAction.Cache"/>)
@@ -200,7 +200,7 @@ public partial class ImportReprocessService
             .ToListAsync(ct);
 
         var result = new ReprocessResultDto();
-        var refetch = new List<RefetchCandidate>();
+        var refetch = new List<ChessableRefetchQueue.RefetchCandidate>();
         foreach (var book in stale)
         {
             var action = ActionFor(book.HasSource, book.SourceModern, book.Tags, book.FileName);
@@ -210,83 +210,15 @@ public partial class ImportReprocessService
                 // alten gecachten PGN → ein lokales Reprocess könnte sie nie setzen).
                 if (localOnly) continue; // Netz-Re-Fetch bewusst auslassen
                 TryParseBid(book.FileName, out var bid);   // ActionFor hat die bid bereits geprüft
-                refetch.Add(new RefetchCandidate(book.OwnerUserId ?? userId, bid, "book", book.DisplayName, null));
+                refetch.Add(new ChessableRefetchQueue.RefetchCandidate(book.OwnerUserId ?? userId, bid, "book", book.DisplayName, null));
             }
             else if (action == StaleAction.Local)
             {
-                // Lokal verlustfrei + in-place aus dem gespeicherten PGN (der Import-Kern erkennt das
-                // veraltete Buch). Gilt für Nicht-Chessable-Kurse und — ohne eigenen Chessable-Weg — für
-                // Chessable-Altbestand ohne oids → kein Chessable-Kontakt, kein Crash/Dedup/Bearer.
-                // (Chessable MIT oids geht über den Cache-Zweig unten.)
-                // FALLE: EIN kaputtes Buch (korruptes SourcePgn, Parser-Sonderfall, DbUpdateException)
-                // riss ohne dieses try/catch den GANZEN Batch mit — alle nachfolgenden Bücher blieben
-                // veraltet und die gesammelten Re-Fetch-Kandidaten (unten) wurden nie eingereiht, weil
-                // die Exception bis in den fire-and-forget-Launcher durchschlug. Also je Buch isolieren.
-                try
-                {
-                    // Dieselbe Regel wie beim Anlegen: bei einem EIGENEN Kurs bleiben die
-                    // Repertoire-Linien aus der Grundstellung spielbar. Ohne das raeumte ein
-                    // Reprocess genau die Linien wieder ab, die die Umwandlung erzeugt hat.
-                    var res = await _pgnImport.ReprocessFromStoredSourceAsync(book.Id,
-                        playFromStartPosition: book.OwnerUserId != null, CancellationToken.None);
-                    result.Reprocessed++;
-                    result.UpdatedLines += res.Updated;
-                }
-                catch (Exception ex)
-                {
-                    // NICHT als "übersprungen" verbuchen: das Buch behält seine ImportVersion, bleibt
-                    // also im „Aktualisieren (N)"-Banner stehen. Nur ein eigener Fehler-Zähler macht
-                    // den Unterschied zwischen „nichts zu tun" und „kaputt" nach außen sichtbar.
-                    result.Failed++;
-                    _logger.LogWarning(ex,
-                        "Course-Reprocess: Buch {FileName} (Id {BookId}) konnte nicht neu aufbereitet werden — bleibt veraltet",
-                        book.FileName, book.Id);
-                }
-                finally
-                {
-                    // Der Lauf hat EINEN DbContext (ReprocessLauncher-Scope). Ohne das blieben Buch, Roh-PGN
-                    // (bis 6 MB) und alle Linien jedes Buchs bis zum Ende getrackt — und nach einem
-                    // gescheiterten SaveChanges risse der kaputte Tracker-Zustand das NÄCHSTE Buch mit.
-                    // Unbedenklich: `stale` ist eine Projektion, nach dem Buch braucht niemand mehr etwas
-                    // aus dem Tracker.
-                    _db.ChangeTracker.Clear();
-                }
+                await ReprocessLocalAsync(book.Id, book.FileName, ownCourse: book.OwnerUserId != null, result);
             }
             else if (action == StaleAction.Cache)
             {
-                // Chessable mit oids: Zugtexte aus dem geteilten Linien-Cache (aktuelle piratechess-Logik),
-                // dann dieselbe In-place-Aufbereitung wie lokal. Läuft auch bei localOnly (kein Chessable-
-                // Kontakt) und auch mit Chessable:Enabled=false. Je Buch isoliert wie der lokale Zweig.
-                try
-                {
-                    var rebuilt = await RebuildFromCacheAsync(book.Id, playFromStartPosition: book.OwnerUserId != null);
-                    if (rebuilt is { } r)
-                    {
-                        result.Reprocessed++;
-                        result.RebuiltFromCache++;
-                        result.CacheLinesReplaced += r.Replaced;
-                        result.UpdatedLines += r.Updated;
-                    }
-                    else
-                    {
-                        // Nichts aus dem Cache übernommen (leer, anderer Server, piratechess weg): das Buch bleibt
-                        // veraltet und wird beim nächsten „Aktualisieren" erneut versucht.
-                        result.Skipped++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Portion geworfen (piratechess nicht erreichbar) oder Import gescheitert: NICHTS wurde
-                    // geschrieben, das Buch behält seine Version — wie ein Fehler im lokalen Zweig.
-                    result.Failed++;
-                    _logger.LogWarning(ex,
-                        "Course-Reprocess: Buch {FileName} (Id {BookId}) konnte nicht aus dem Linien-Cache erneuert werden — bleibt veraltet",
-                        book.FileName, book.Id);
-                }
-                finally
-                {
-                    _db.ChangeTracker.Clear();   // wie im lokalen Zweig: nach dem Buch nichts mehr im Tracker
-                }
+                await ReprocessFromCacheAsync(book.Id, book.FileName, ownCourse: book.OwnerUserId != null, result);
             }
             else
             {
@@ -295,13 +227,94 @@ public partial class ImportReprocessService
         }
 
         // Zentrales Einreihen (Batch-Cache, Backoff, Dedup, Admin-Bypass, kein Abbruch) — geteilt mit Repertoiren.
-        await EnqueueRefetchesAsync(refetch, isAdmin, result);
+        await _refetchQueue.EnqueueAsync(refetch, isAdmin, result);
 
         _logger.LogInformation(
             "Course-Reprocess für User {UserId} (admin={IsAdmin}, localOnly={LocalOnly}): {Reprocessed} aufbereitet ({UpdatedLines} Linien), davon {RebuiltFromCache} aus dem Linien-Cache ({CacheLinesReplaced} Linien ersetzt), {Enqueued} eingereiht, {Skipped} übersprungen, {Failed} fehlgeschlagen",
             userId, isAdmin, localOnly, result.Reprocessed, result.UpdatedLines, result.RebuiltFromCache, result.CacheLinesReplaced,
             result.Enqueued, result.Skipped, result.Failed);
         return result;
+    }
+
+    /// <summary>Lokaler Zweig für EIN Buch (<see cref="StaleAction.Local"/>), isoliert: zählt Reprocessed bzw. Failed.</summary>
+    /// <param name="ownCourse">Ein EIGENER Kurs (<c>OwnerUserId</c> gesetzt) — seine Repertoire-Linien aus der Grundstellung bleiben spielbar.</param>
+    private async Task ReprocessLocalAsync(int bookId, string fileName, bool ownCourse, ReprocessResultDto result)
+    {
+        // Lokal verlustfrei + in-place aus dem gespeicherten PGN (der Import-Kern erkennt das
+        // veraltete Buch). Gilt für Nicht-Chessable-Kurse und — ohne eigenen Chessable-Weg — für
+        // Chessable-Altbestand ohne oids → kein Chessable-Kontakt, kein Crash/Dedup/Bearer.
+        // (Chessable MIT oids geht über den Cache-Zweig unten.)
+        // FALLE: EIN kaputtes Buch (korruptes SourcePgn, Parser-Sonderfall, DbUpdateException)
+        // riss ohne dieses try/catch den GANZEN Batch mit — alle nachfolgenden Bücher blieben
+        // veraltet und die gesammelten Re-Fetch-Kandidaten (unten) wurden nie eingereiht, weil
+        // die Exception bis in den fire-and-forget-Launcher durchschlug. Also je Buch isolieren.
+        try
+        {
+            // Dieselbe Regel wie beim Anlegen: bei einem EIGENEN Kurs bleiben die
+            // Repertoire-Linien aus der Grundstellung spielbar. Ohne das raeumte ein
+            // Reprocess genau die Linien wieder ab, die die Umwandlung erzeugt hat.
+            var res = await _pgnImport.ReprocessFromStoredSourceAsync(bookId,
+                playFromStartPosition: ownCourse, CancellationToken.None);
+            result.Reprocessed++;
+            result.UpdatedLines += res.Updated;
+        }
+        catch (Exception ex)
+        {
+            // NICHT als "übersprungen" verbuchen: das Buch behält seine ImportVersion, bleibt
+            // also im „Aktualisieren (N)"-Banner stehen. Nur ein eigener Fehler-Zähler macht
+            // den Unterschied zwischen „nichts zu tun" und „kaputt" nach außen sichtbar.
+            result.Failed++;
+            _logger.LogWarning(ex,
+                "Course-Reprocess: Buch {FileName} (Id {BookId}) konnte nicht neu aufbereitet werden — bleibt veraltet",
+                fileName, bookId);
+        }
+        finally
+        {
+            // Der Lauf hat EINEN DbContext (ReprocessLauncher-Scope). Ohne das blieben Buch, Roh-PGN
+            // (bis 6 MB) und alle Linien jedes Buchs bis zum Ende getrackt — und nach einem
+            // gescheiterten SaveChanges risse der kaputte Tracker-Zustand das NÄCHSTE Buch mit.
+            // Unbedenklich: `stale` ist eine Projektion, nach dem Buch braucht niemand mehr etwas
+            // aus dem Tracker.
+            _db.ChangeTracker.Clear();
+        }
+    }
+
+    /// <summary>Cache-Zweig für EIN Buch (<see cref="StaleAction.Cache"/>), isoliert: zählt Reprocessed/RebuiltFromCache bzw. Skipped/Failed.</summary>
+    private async Task ReprocessFromCacheAsync(int bookId, string fileName, bool ownCourse, ReprocessResultDto result)
+    {
+        // Chessable mit oids: Zugtexte aus dem geteilten Linien-Cache (aktuelle piratechess-Logik),
+        // dann dieselbe In-place-Aufbereitung wie lokal. Läuft auch bei localOnly (kein Chessable-
+        // Kontakt) und auch mit Chessable:Enabled=false. Je Buch isoliert wie der lokale Zweig.
+        try
+        {
+            var rebuilt = await RebuildFromCacheAsync(bookId, playFromStartPosition: ownCourse);
+            if (rebuilt is { } r)
+            {
+                result.Reprocessed++;
+                result.RebuiltFromCache++;
+                result.CacheLinesReplaced += r.Replaced;
+                result.UpdatedLines += r.Updated;
+            }
+            else
+            {
+                // Nichts aus dem Cache übernommen (leer, anderer Server, piratechess weg): das Buch bleibt
+                // veraltet und wird beim nächsten „Aktualisieren" erneut versucht.
+                result.Skipped++;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Portion geworfen (piratechess nicht erreichbar) oder Import gescheitert: NICHTS wurde
+            // geschrieben, das Buch behält seine Version — wie ein Fehler im lokalen Zweig.
+            result.Failed++;
+            _logger.LogWarning(ex,
+                "Course-Reprocess: Buch {FileName} (Id {BookId}) konnte nicht aus dem Linien-Cache erneuert werden — bleibt veraltet",
+                fileName, bookId);
+        }
+        finally
+        {
+            _db.ChangeTracker.Clear();   // wie im lokalen Zweig: nach dem Buch nichts mehr im Tracker
+        }
     }
 
     /// <summary>
@@ -395,402 +408,17 @@ public partial class ImportReprocessService
         return (rebuilt.Replaced, res.Updated);
     }
 
-    /// <summary>Kandidat für einen Chessable-Re-Fetch — Kurs ODER Repertoire.</summary>
-    private readonly record struct RefetchCandidate(int OwnerId, string Bid, string Target, string Name, int? TargetRepertoireId);
+    // ===== Repertoires (RepertoireReprocess) =====
 
-    /// <summary>
-    /// ZENTRALES Einreihen von Chessable-Re-Fetch-Jobs für Kurse UND Repertoires. Hier liegen — an EINER
-    /// Stelle statt je Pfad dupliziert — alle Vorsichtsmaßnahmen: EINMALIGER Batch-Cache-Abruf statt teurem
-    /// Einzel-Check je Kurs; kein Abbruch am Request-Token (Wegnavigieren darf das Einreihen nicht killen →
-    /// <see cref="CancellationToken.None"/>); Backoff für nicht-cachebare (truncated) Kurse, damit sie
-    /// Chessable nicht bei jedem Lauf neu fluten; Admin-Eigentums-Bypass (getHomeData listet nur einen Teil
-    /// der Bibliothek). Dedup gegen bereits laufende Importe steckt in <c>EnqueueReimportAsync</c>.
-    /// Zählt Enqueued/Skipped in <paramref name="result"/>.
-    /// </summary>
-    private async Task EnqueueRefetchesAsync(IReadOnlyList<RefetchCandidate> candidates, bool isAdmin, ReprocessResultDto result, IReadOnlySet<string>? knownCachedBids = null)
-    {
-        if (candidates.Count == 0) return;
-        if (!_chessableEnabled)
-        {
-            // Sicherheitsnetz: ohne die eigenen Lanes würde ein angelegter Auftrag nie abgearbeitet — er
-            // stünde als „läuft" in der Liste und blockierte über die Dedup-Regel jeden späteren Versuch.
-            result.Skipped += candidates.Count;
-            return;
-        }
+    /// <summary>Status der veralteten Repertoires — dieselbe Vierteilung wie bei den Kursen (<see cref="RepertoireReprocess.GetStatusAsync"/>).</summary>
+    public Task<ReprocessStatusDto> GetRepertoireStatusAsync(int userId, bool isAdmin = false, CancellationToken ct = default) =>
+        _repertoires.GetStatusAsync(userId, isAdmin, ct);
 
-        // Cache-Status ALLER Kandidaten EINMAL en bloc (1 piratechess-Aufruf) statt je Kurs ein teurer
-        // Einzel-Check, der den ganzen Cache-Blob lädt+entpackt. Der Aufrufer kann die Menge bereits
-        // ermittelt haben (Repertoire-Reprocess braucht sie schon für die Bearer-lose Cache-Entscheidung).
-        var cachedBids = knownCachedBids ?? await _chessableImport.GetCachedBidsAsync(CancellationToken.None);
-
-        foreach (var c in candidates)
-        {
-            var cached = cachedBids.Contains(c.Bid);
-            // Backoff: ein nicht-cachebarer (truncated) Kurs würde bei jedem Lauf komplett neu von Chessable
-            // geholt. Wurde er kürzlich schon (erfolglos = weiterhin nicht gecacht) geholt, jetzt überspringen.
-            if (!cached)
-            {
-                var lastDone = await _db.ChessableImports
-                    .Where(i => i.Bid == c.Bid && i.Status == ChessableImportStatus.Completed && i.CompletedAt != null)
-                    .OrderByDescending(i => i.CompletedAt)
-                    .Select(i => i.CompletedAt)
-                    .FirstOrDefaultAsync(CancellationToken.None);
-                if (lastDone.HasValue && lastDone.Value > DateTime.UtcNow - IncompleteRefetchBackoff)
-                {
-                    result.Skipped++;
-                    continue;
-                }
-            }
-
-            // trustOwnership=isAdmin: getHomeData listet nur einen Teil der Bibliothek → sonst würden eigene,
-            // längst importierte Kurse fälschlich als „nicht besessen" abgewiesen; Admins dürfen ohnehin jeden
-            // Kurs holen (Nicht-Admin bleibt geprüft = v0.203.9-Schutz gegen Cached-Content-Diebstahl).
-            var importId = await _chessableImport.EnqueueReimportAsync(
-                c.OwnerId, c.Bid, c.Target, c.Name, targetRepertoireId: c.TargetRepertoireId,
-                knownCached: cached, trustOwnership: isAdmin, ct: CancellationToken.None);
-            if (importId != null) result.Enqueued++;
-            else result.Skipped++;
-        }
-    }
-
-    // ===== Repertoires =====
-
-    /// <summary>
-    /// Was Status und Lauf über ein veraltetes Repertoire wissen müssen — OHNE seinen PGN-Text. Von den Dateinamen
-    /// stehen nur die mit <c>chessable-</c> dabei (Herkunft + bid); ob eine Datei oids trägt, kommt fertig aus SQL.
-    /// </summary>
-    private sealed record StaleRepertoire(int Id, int UserId, string Name, string? ChessableCourseId,
-        IReadOnlyList<string> ChessableFileNames, bool SourceModern, bool CacheMissed)
-    {
-        /// <summary>Chessable-Herkunft: die hinterlegte Kurs-Id ODER ein Dateiname aus dem Chessable-Import —
-        /// dieselbe Regel wie die (!)-Markierung der Liste (<c>RepertoireService.MarkNeedsReimportAsync</c>).</summary>
-        public bool IsChessable => !string.IsNullOrEmpty(ChessableCourseId) || ChessableFileNames.Count > 0;
-
-        /// <summary>bid für einen Re-Fetch; null ⇒ nicht auflösbar (siehe <see cref="ResolveRepertoireBid"/>).</summary>
-        public string? Bid => ResolveRepertoireBid(ChessableCourseId, ChessableFileNames);
-    }
-
-    /// <summary>Verwaltbare Repertoires: Admin = die ALLER User (wie bei Kursen), sonst die eigenen.</summary>
-    private IQueryable<Repertoire> ManageableRepertoires(int userId, bool isAdmin) =>
-        isAdmin ? _db.Repertoires : _db.Repertoires.Where(r => r.UserId == userId);
-
-    /// <summary>
-    /// Die veralteten Repertoires als PROJEKTION — ob eine Datei <c>[ChessableOid]</c> trägt, fragt ein SQL-<c>LIKE</c>,
-    /// der Text selbst wird nicht übertragen. Vorher luden Status und Lauf jedes Repertoire mit
-    /// <c>.Include(r =&gt; r.Files)</c>, also JEDEN PGN-Text (Prod trägt ~250 MB Chessable-PGN), nur um Herkunft und
-    /// diesen Marker zu prüfen — dieselbe Klasse Fehler wie bei den Büchern (0.508.3: 23 GB RAM auf Prod). Den Text lädt
-    /// nur noch der Cache-Weg, und zwar Datei für Datei (<see cref="RebuildRepertoireFromCacheAsync"/>).
-    /// </summary>
-    private async Task<List<StaleRepertoire>> LoadStaleRepertoiresAsync(IQueryable<Repertoire> repertoires, CancellationToken ct)
-    {
-        var rows = await repertoires
-            .Where(r => r.ImportVersion < ImportPipeline.CurrentVersion)
-            .Select(r => new
-            {
-                r.Id, r.UserId, r.Name, r.ChessableCourseId,
-                ChessableFileNames = r.Files.Where(f => f.FileName.StartsWith("chessable-")).Select(f => f.FileName).ToList(),
-                SourceModern = r.Files.Any(f => f.PgnContent.Contains(StaleContentRule.ModernMarker)),
-                CacheMissed = r.CacheMissAt != null && r.CacheMissAt >= r.UpdatedAt,   // Repertoire.CacheMissAt gilt, solange nicht älter als UpdatedAt
-            })
-            .ToListAsync(ct);
-        return rows.Select(r => new StaleRepertoire(r.Id, r.UserId, r.Name, r.ChessableCourseId, r.ChessableFileNames, r.SourceModern,
-                r.CacheMissed))
-            .ToList();
-    }
-
-    /// <summary>Dieselbe Regel für Status, Lauf und die (!)-Markierung der Liste (<see cref="StaleContentRule.ActionForRepertoire"/>).
-    /// <paramref name="forDisplay"/> = Status: ein Repertoire, aus dem der letzte Lauf nichts aus dem Cache übernehmen konnte
-    /// (<see cref="Repertoire.CacheMissAt"/>), zählt als „braucht Re-Import". Der LAUF fragt ohne und versucht es weiter.</summary>
-    private StaleAction ActionFor(StaleRepertoire r, bool forDisplay = false) =>
-        StaleContentRule.ActionForRepertoire(r.IsChessable, r.SourceModern, _chessableEnabled, forDisplay && r.CacheMissed);
-
-    public async Task<ReprocessStatusDto> GetRepertoireStatusAsync(int userId, bool isAdmin = false, CancellationToken ct = default)
-    {
-        var repertoires = ManageableRepertoires(userId, isAdmin);
-        var total = await repertoires.CountAsync(ct);
-        var stale = await LoadStaleRepertoiresAsync(repertoires, ct);
-        // Dieselbe Vierteilung wie bei den Kursen — „Manual" ist der Showstopper, der in der LISTE als (!) am
-        // Repertoire steht statt als anonyme Zahl im Banner. Anzeige = Ausführung: der Lauf nimmt dieselbe Regel.
-        // Ausnahme wie bei Kursen: woraus der letzte Lauf nichts aus dem Cache übernehmen konnte, zählt als „braucht
-        // Re-Import" (CacheMissed) — der Lauf versucht es weiter, verspricht im Banner aber nichts mehr.
-        var actions = stale.Select(r => ActionFor(r, forDisplay: true)).ToList();
-        return new ReprocessStatusDto
-        {
-            CurrentVersion = ImportPipeline.CurrentVersion,
-            Total = total,
-            Stale = stale.Count,
-            // Cache zählt mit wie bei Kursen: für den Nutzer ein Klick, kein Download — das Banner rechnet
-            // reprocessableLocally + refetchable und bleibt damit unverändert.
-            ReprocessableLocally = actions.Count(a => a is StaleAction.Local or StaleAction.Cache),
-            FromCache = actions.Count(a => a == StaleAction.Cache),
-            Refetchable = actions.Count(a => a == StaleAction.Refetch),
-            NeedsReimport = actions.Count(a => a == StaleAction.Manual),
-            // UI-Sweep 2026-10-11 (r2-rg-rep-reprocess): Umfang fürs Banner (Admin = alle Nutzer, davon eigene).
-            AllUsers = isAdmin,
-            OwnActionable = stale.Zip(actions).Count(x => x.First.UserId == userId && IsActionable(x.Second)),
-        };
-    }
-
-    /// <param name="localOnly">true = ohne Chessable-Abruf („Aus Cache"): Versions-Mark UND der Linien-Cache-Weg
-    /// (<see cref="StaleAction.Cache"/>) — wie bei Kursen gehört er dazu, denn „ohne Chessable-Abruf" ist genau das.
-    /// false = zusätzlich Chessable-Repertoires ohne oids frisch holen („Alle").</param>
-    public async Task<ReprocessResultDto> ReprocessRepertoiresAsync(int userId, bool isAdmin = false, bool localOnly = false, CancellationToken ct = default)
-    {
-        // Nur die Projektion (kein PGN-Text, nichts getrackt) — wie bei den Kursen. Re-Fetch je Repertoire läuft mit
-        // dem Bearer des jeweiligen Owners (gecachte Kurse laufen ohnehin ohne Bearer durch).
-        var stale = await LoadStaleRepertoiresAsync(ManageableRepertoires(userId, isAdmin), ct);
-
-        var result = new ReprocessResultDto();
-        var refetch = new List<RefetchCandidate>();
-        var versionMark = new List<int>();
-        var bearerUsers = await _db.ChessableCredentials.Select(c => c.UserId).ToHashSetAsync(ct);
-        // Ein gecachter Kurs ist AUCH ohne Bearer holbar (piratechess liefert ihn aus dem Rohdaten-Cache) —
-        // aber nur im Admin-Reprocess (trustOwnership; sonst wäre es ein Eigentums-Bypass, [[0.203.9]]).
-        // Cache-Status daher NUR abrufen, wenn es überhaupt einen bearer-losen Re-Fetch-Kandidaten gibt
-        // (Refetch setzt den eigenen Chessable-Weg voraus).
-        var needCache = !localOnly && isAdmin && stale.Any(r =>
-            ActionFor(r) == StaleAction.Refetch && r.Bid != null && !bearerUsers.Contains(r.UserId));
-        var cachedBids = needCache
-            ? await _chessableImport.GetCachedBidsAsync(CancellationToken.None)
-            : new HashSet<string>();
-        foreach (var r in stale)
-        {
-            var action = ActionFor(r);
-            if (action == StaleAction.Manual)
-            {
-                // Ohne den eigenen Chessable-Weg ist dieses Repertoire NICHT holbar. Es trotzdem auf die
-                // aktuelle Version zu setzen wäre eine Lüge: die [%alt]-Varianten fehlen weiter. Es bleibt
-                // veraltet und trägt in der Liste ein (!) mit dem Hinweis auf die Erweiterung.
-                result.Skipped++;
-                continue;
-            }
-            if (action == StaleAction.Cache)
-            {
-                // Chessable mit oids: Zugtexte aus dem geteilten Linien-Cache (aktuelle piratechess-Logik), dann der
-                // Versions-Mark. Läuft auch bei localOnly (kein Chessable-Kontakt) und mit Chessable:Enabled=false.
-                // Je Repertoire isoliert wie bei den Kursen: EIN kaputtes darf den Lauf nicht mitreißen.
-                try
-                {
-                    if (await RebuildRepertoireFromCacheAsync(r.Id, r.Name, r.Bid) is { } replaced)
-                    {
-                        result.Reprocessed++;
-                        result.RebuiltFromCache++;
-                        result.CacheLinesReplaced += replaced;
-                    }
-                    else
-                    {
-                        // Nichts übernommen (nichts gecacht, piratechess weg, währenddessen geändert): bleibt
-                        // veraltet und wird beim nächsten „Aktualisieren" erneut versucht.
-                        result.Skipped++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Portion geworfen (piratechess nicht erreichbar) oder Schreiben gescheitert: NICHTS wurde
-                    // geschrieben, das Repertoire behält seine Version.
-                    result.Failed++;
-                    _logger.LogWarning(ex,
-                        "Repertoire-Reprocess: Repertoire „{Name}“ (Id {RepertoireId}) konnte nicht aus dem Linien-Cache erneuert werden — bleibt veraltet",
-                        r.Name, r.Id);
-                }
-                finally
-                {
-                    // Die Dateien EINES Repertoires hingen bis hierher im Tracker — vor dem nächsten wieder raus
-                    // (Prod: ~250 MB Chessable-PGN), und ein gescheitertes SaveChanges risse sonst das nächste mit.
-                    _db.ChangeTracker.Clear();
-                }
-                continue;
-            }
-            if (action == StaleAction.Refetch)
-            {
-                // Chessable-Repertoire OHNE oids = Re-Fetch-Kandidat.
-                if (localOnly) continue; // „Aus Cache"-Modus: Netz-Re-Fetch bewusst auslassen (bleibt stale)
-                if (r.Bid is { } bid && (bearerUsers.Contains(r.UserId) || (isAdmin && cachedBids.Contains(bid))))
-                {
-                    // Frisch holen (inkl. [%alt]) und IN-PLACE ins bestehende Repertoire schreiben (Id/
-                    // Trainings-Fortschritt bleiben; Version steigt beim Job-Abschluss). Owner = r.UserId →
-                    // richtiger Bearer bzw. — falls keiner — Cache-Re-Fetch (Admin, gecacht).
-                    refetch.Add(new RefetchCandidate(r.UserId, bid, "repertoire", r.Name, r.Id));
-                    continue;
-                }
-                // Chessable, aber weder Bearer noch (admin-)gecacht (oder keine bid lösbar) → nie automatisch holbar.
-                // Statt es ewig im Banner hängen zu lassen, als aktuell markieren (ein echter Re-Import erfordert
-                // erst, dass der Besitzer einen Bearer hinterlegt). Fällt in den Versions-Mark unten.
-            }
-            // Nicht-Chessable / Chessable-ohne-Bearer-und-nicht-gecacht → Versions-Mark.
-            versionMark.Add(r.Id);
-        }
-
-        // Versions-Mark gezielt: nur die Repertoire-Zeilen, OHNE Dateien — vorher hingen hier die PGN-Texte aller
-        // veralteten Repertoires bis zum Ende des Laufs im Tracker. Erst nach der Schleife geladen, weil der
-        // Cache-Zweig den Tracker je Repertoire leert.
-        if (versionMark.Count > 0)
-        {
-            var now = DateTime.UtcNow;
-            foreach (var rep in await _db.Repertoires.Where(x => versionMark.Contains(x.Id)).ToListAsync(CancellationToken.None))
-            {
-                rep.ImportVersion = ImportPipeline.CurrentVersion;
-                rep.UpdatedAt = now;
-                result.Reprocessed++;
-            }
-        }
-
-        // Zentrales Einreihen (Batch-Cache, Backoff, Dedup, Admin-Bypass, kein Abbruch) — geteilt mit Kursen.
-        // Die bereits ermittelte Cache-Menge weiterreichen (spart einen zweiten Abruf); sonst holt sie der
-        // zentrale Pfad selbst (z. B. reine Bearer-Kandidaten, für die needCache nicht griff).
-        await EnqueueRefetchesAsync(refetch, isAdmin, result, needCache ? cachedBids : null);
-        await _db.SaveChangesAsync(CancellationToken.None);
-
-        _logger.LogInformation(
-            "Repertoire-Reprocess für User {UserId} (admin={IsAdmin}, localOnly={LocalOnly}): {Reprocessed} aufbereitet, davon {RebuiltFromCache} aus dem Linien-Cache ({CacheLinesReplaced} Linien ersetzt), {Enqueued} eingereiht, {Skipped} übersprungen, {Failed} fehlgeschlagen",
-            userId, isAdmin, localOnly, result.Reprocessed, result.RebuiltFromCache, result.CacheLinesReplaced,
-            result.Enqueued, result.Skipped, result.Failed);
-        return result;
-    }
-
-    /// <summary>
-    /// Cache-Weg für EIN Repertoire (<see cref="StaleAction.Cache"/>) — dieselben Regeln wie
-    /// <see cref="RebuildFromCacheAsync"/> für Kurse, nur ohne Import danach (der Trainer wertet das PGN live aus):
-    /// je Datei mit <c>[ChessableOid]</c> die Zugtexte aus dem geteilten Linien-Cache über
-    /// <see cref="CachedSourceRebuild"/> (Header bleiben, ausgeblendete Partien bleiben, Modus je DATEI), dann Text
-    /// schreiben und die Version setzen.
-    /// <para>Erst prüfen, dann schreiben: gibt es keine einzige gecachte Linie, wird nichts geholt; wirft eine
-    /// Portion, wird nichts geschrieben; wird keine Linie übernommen oder hat jemand das Repertoire währenddessen
-    /// geschrieben, auch nicht. In allen Fällen bleibt es veraltet und kommt beim nächsten „Aktualisieren" dran.</para>
-    /// <para><c>RepertoireFile.ChessableOidsCache</c>/<c>ChessableOidsPgnLength</c> und <c>CleanupVersion</c> bleiben
-    /// unberührt: die oid-Menge ändert der Rebuild nicht (nur der Zugtext wird ersetzt, oid-Header kommen nie dazu),
-    /// der Kennungs-Zwischenspeicher prüft sich über die PGN-Länge ohnehin selbst, und ausgeblendete Partien und
-    /// entfernte oids stehen danach genauso da wie vorher.</para>
-    /// </summary>
-    /// <returns>Zahl der übernommenen Linien; null = nichts übernommen, das Repertoire bleibt veraltet.</returns>
-    /// <param name="bid">Kurs-Id des Repertoires (<see cref="ResolveRepertoireBid"/>); der Linien-Cache füllt nur Linien
-    /// dieses Kurses. null → nichts zu fragen, bleibt veraltet.</param>
-    private async Task<int?> RebuildRepertoireFromCacheAsync(int repertoireId, string name, string? bid)
-    {
-        if (_cachedLines is null) return null;
-        if (bid is null)
-        {
-            _logger.LogInformation(
-                "Repertoire-Reprocess: Repertoire „{Name}“ (Id {RepertoireId}) — keine Kurs-Id, bleibt veraltet",
-                name, repertoireId);
-            await MarkRepertoireCacheMissAsync(repertoireId);
-            return null;
-        }
-
-        // Den Stand VOR dem Lesen der Texte merken: wer danach schreibt (Live-Append der Extension, Upload, Löschen
-        // einer Datei, die Bereinigung), setzt Repertoire.UpdatedAt — und das fällt unten auf. Alle Aufrufe mit
-        // CancellationToken.None: der Lauf ist fire-and-forget (ReprocessLauncher), Wegnavigieren darf ihn nicht
-        // mitten im Repertoire abbrechen.
-        var loadedAt = await RepertoireUpdatedAtAsync(repertoireId);
-        if (loadedAt is null) return null;   // inzwischen gelöscht
-
-        // Die Texte Datei für Datei, und nur Dateien, die überhaupt oids tragen (LIKE, ohne den Text zu übertragen).
-        // Sie bleiben bis zum Schreiben getrackt — die EINES Repertoires; der Aufrufer leert den Tracker danach.
-        var fileIds = await _db.RepertoireFiles
-            .Where(f => f.RepertoireId == repertoireId && f.PgnContent.Contains(StaleContentRule.ModernMarker))
-            .OrderBy(f => f.Id)
-            .Select(f => f.Id)
-            .ToListAsync(CancellationToken.None);
-        var files = new List<(RepertoireFile File, string Mode, IReadOnlyList<string> Oids)>();
-        foreach (var id in fileIds)
-        {
-            var file = await _db.RepertoireFiles.FirstOrDefaultAsync(f => f.Id == id, CancellationToken.None);
-            if (file is null) continue;
-            // Modus je DATEI: ein aus einem Kurs umgewandeltes Repertoire trägt die Trainingsmarker, ein von
-            // Chessable geholtes nicht — beide können im selben Repertoire liegen.
-            files.Add((file, CachedSourceRebuild.ModeFor(file.PgnContent), CachedSourceRebuild.OidsOf(file.PgnContent)));
-        }
-        var oids = files.SelectMany(f => f.Oids).Distinct(StringComparer.Ordinal).ToList();
-        if (oids.Count == 0)
-        {
-            await MarkRepertoireCacheMissAsync(repertoireId);
-            return null;
-        }
-
-        // EIN billiger Existenz-Aufruf fürs ganze Repertoire: ein Server ohne (diesen) Cache soll nicht Dutzende teure
-        // PGN-Abfragen absetzen, um am Ende nichts zu haben. Weich — piratechess weg liefert hier „nichts".
-        var cached = await _cachedLines.GetCachedLineOidsAsync(bid, oids, CancellationToken.None);
-        if (!oids.Any(cached.Contains))
-        {
-            _logger.LogInformation(
-                "Repertoire-Reprocess: Repertoire „{Name}“ (Id {RepertoireId}) — keine der {Total} Linien im Linien-Cache, bleibt veraltet",
-                name, repertoireId, oids.Count);
-            await MarkRepertoireCacheMissAsync(repertoireId);
-            return null;
-        }
-
-        // Je Modus eigene Abfragen (derselbe Linien-Inhalt kommt je Modus anders heraus), in Portionen wie bei Kursen.
-        var freshByMode = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
-        foreach (var group in files.GroupBy(f => f.Mode, StringComparer.Ordinal))
-        {
-            var fresh = new Dictionary<string, string>(StringComparer.Ordinal);
-            var wanted = group.SelectMany(f => f.Oids).Where(cached.Contains).Distinct(StringComparer.Ordinal).ToList();
-            foreach (var portion in wanted.Chunk(CacheRebuildBatchSize))
-                foreach (var (oid, pgn) in await _cachedLines.GetCachedLinePgnsAsync(bid, portion, group.Key, CancellationToken.None))
-                    fresh[oid] = pgn;
-            freshByMode[group.Key] = fresh;
-        }
-
-        var rebuilt = files.Select(f => (f.File, Result: CachedSourceRebuild.Rebuild(f.File.PgnContent, freshByMode[f.Mode]))).ToList();
-        var replaced = rebuilt.Sum(f => f.Result.Replaced);
-        _logger.LogInformation(
-            "Repertoire-Reprocess: Repertoire „{Name}“ (Id {RepertoireId}, {Files} Dateien mit oids, Modus {Modes}) — {Replaced} von {Total} Linien aus dem Cache, {Missing} nicht gecacht, {ModeMismatch} Modus-Konflikt, {Conflicts} Konflikt, {Hidden} ausgeblendet",
-            name, repertoireId, files.Count, string.Join('/', freshByMode.Keys), replaced, rebuilt.Sum(f => f.Result.Total),
-            rebuilt.Sum(f => f.Result.Missing), rebuilt.Sum(f => f.Result.ModeMismatch), rebuilt.Sum(f => f.Result.Conflicts),
-            rebuilt.Sum(f => f.Result.Hidden));
-        // Keine Linie übernommen (etwa alle im falschen Modus): nicht als erneuert ausgeben — sonst stünde das
-        // Repertoire auf der aktuellen Version, ohne dass sich etwas geändert hat, und käme nie wieder dran.
-        if (replaced == 0)
-        {
-            await MarkRepertoireCacheMissAsync(repertoireId);
-            return null;
-        }
-
-        // Ein großes Repertoire braucht Dutzende Cache-Abfragen, also Minuten. Hat in der Zeit ein anderer Weg
-        // geschrieben (die Extension hängt live Linien an), fehlten dessen Linien im umgeschriebenen Text, und dieser
-        // Lauf überschriebe sie. Alle Schreiber des Repertoire-PGN setzen UpdatedAt — steht es anders als beim Laden,
-        // lieber nichts schreiben: das Repertoire bleibt veraltet und kommt beim nächsten „Aktualisieren" dran.
-        if (await RepertoireUpdatedAtAsync(repertoireId) != loadedAt)
-        {
-            _logger.LogInformation(
-                "Repertoire-Reprocess: Repertoire „{Name}“ (Id {RepertoireId}) wurde während der Cache-Abfragen geändert — nichts geschrieben, bleibt veraltet",
-                name, repertoireId);
-            return null;
-        }
-
-        foreach (var (file, result) in rebuilt)
-        {
-            if (result.Replaced == 0) continue;
-            file.PgnContent = result.Pgn;
-            // Bytes, nicht Zeichen — wie beim Hochladen und in der Bereinigung.
-            file.FileSize = Encoding.UTF8.GetByteCount(result.Pgn);
-        }
-        var repertoire = await _db.Repertoires.FirstAsync(r => r.Id == repertoireId, CancellationToken.None);
-        repertoire.ImportVersion = ImportPipeline.CurrentVersion;
-        repertoire.UpdatedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync(CancellationToken.None);
-        return replaced;
-    }
-
-    /// <summary>
-    /// Merkt sich, dass der Cache-Weg für dieses Repertoire nichts übernehmen konnte (<see cref="Repertoire.CacheMissAt"/>),
-    /// damit Banner und Liste es als „braucht Re-Import" führen statt es bei jedem Aufruf als aktualisierbar anzubieten.
-    /// UpdatedAt bleibt unberührt — ein neuer Import hebt die Markierung über genau dieses Feld wieder auf. Nicht bei
-    /// vorübergehenden Gründen (währenddessen geändert, Portion geworfen); ein piratechess-Ausfall liefert allerdings
-    /// ebenfalls „nichts gecacht" und markiert damit zu Unrecht — der nächste Lauf heilt das.
-    /// </summary>
-    private async Task MarkRepertoireCacheMissAsync(int repertoireId)
-    {
-        var tracked = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repertoireId, CancellationToken.None);
-        if (tracked is null) return;
-        var now = DateTime.UtcNow;
-        tracked.CacheMissAt = now > tracked.UpdatedAt ? now : tracked.UpdatedAt;
-        await _db.SaveChangesAsync(CancellationToken.None);
-    }
-
-    private Task<DateTime?> RepertoireUpdatedAtAsync(int repertoireId) =>
-        _db.Repertoires.Where(r => r.Id == repertoireId).Select(r => (DateTime?)r.UpdatedAt)
-            .FirstOrDefaultAsync(CancellationToken.None);
+    /// <summary>Veraltete Repertoires neu aufbereiten (<see cref="RepertoireReprocess.ReprocessAsync"/>).</summary>
+    /// <param name="localOnly">true = ohne Chessable-Abruf („Aus Cache"): Versions-Mark und Linien-Cache-Weg; false = zusätzlich
+    /// Chessable-Repertoires ohne oids frisch holen („Alle").</param>
+    public Task<ReprocessResultDto> ReprocessRepertoiresAsync(int userId, bool isAdmin = false, bool localOnly = false, CancellationToken ct = default) =>
+        _repertoires.ReprocessAsync(userId, isAdmin, localOnly, ct);
 
     // ===== Helpers =====
 

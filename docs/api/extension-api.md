@@ -183,7 +183,7 @@ bestehende Kurse — der Re-Fetch-Weg ist auf PROD seit 2026-09-09 aus. Regeln:
   Versions-Mark (`Local`, auch mit oids); Chessable (Kurs-Id ODER Dateiname `chessable-…`) und eine Datei traegt
   `[ChessableOid]` → `Cache`; ohne oids → `Refetch` bzw. ohne eigenen Weg `Manual`. Ein Chessable-Repertoire MIT oids
   bekommt NIE mehr nur den Versions-Mark (sonst fuer den Cache-Weg verbrannt, wie bei Kursen).
-  `ImportReprocessService.RebuildRepertoireFromCacheAsync` nutzt DIESELBE Textfunktion (`CachedSourceRebuild`), nur ohne
+  `RepertoireCacheRebuild.RebuildAsync` nutzt DIESELBE Textfunktion (`CachedSourceRebuild`), nur ohne
   Import-Kern: Text je Datei schreiben (`FileSize` in UTF-8-Bytes), dann `ImportVersion` + `UpdatedAt` (der Trainer
   wertet live aus). Was dabei anders ist als bei Kursen, und warum:
   - **Modus je DATEI**, nicht je Repertoire: ein aus einem Kurs umgewandeltes Repertoire traegt `[%tqu`
