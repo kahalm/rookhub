@@ -1,4 +1,4 @@
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
@@ -243,3 +243,53 @@ describe('WeeklyListComponent Puzzle-Anzahl', () => {
   });
 });
 
+
+/** Delta-Review 2026-11-09, F1-014: Ladefehler sahen aus wie „keine Wochenposts“, die Rangliste merkte sich [] für immer. */
+describe('WeeklyListComponent Ladefehler (F1-014)', () => {
+  afterEach(() => TestBed.resetTestingModule());
+  async function render(weekly: any) {
+    await TestBed.configureTestingModule({
+      imports: [WeeklyListComponent],
+      providers: [provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isLoggedIn: false, isAdmin: false, has: () => false } },
+        { provide: WeeklyService, useValue: weekly },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+        { provide: MatDialog, useValue: { open: () => {} } },
+        { provide: ConfirmService, useValue: { ask: () => of(false) } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(WeeklyListComponent);
+    fixture.detectChanges();
+    return { fixture, el: fixture.nativeElement as HTMLElement };
+  }
+  const POST = { id: 1, title: 'Wochenpost 1', scheduledAt: '2026-07-09T19:00:00', description: null };
+
+  it('Liste lädt nicht → app-load-error statt Leerzustand; Wiederholen lädt neu', async () => {
+    let fail = true;
+    const weekly = { getAll: () => fail ? throwError(() => ({ status: 500 })) : of([POST]), getAllProgress: () => of([]) };
+    const { fixture, el } = await render(weekly);
+    expect(el.querySelector('app-load-error')).not.toBeNull();
+    expect(el.textContent).not.toContain('weekly.empty');
+    fail = false;
+    (el.querySelector('app-load-error button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.querySelector('.wp-list')).not.toBeNull();
+  });
+
+  it('Rangliste scheitert → Fehler statt leer; erneutes Aufklappen lädt wieder', async () => {
+    let fail = true;
+    const getResults = jasmine.createSpy('getResults').and.callFake(() =>
+      fail ? throwError(() => ({ status: 500 })) : of({ total: 3, players: [] }));
+    const { fixture } = await render({ getAll: () => of([POST]), getAllProgress: () => of([]), getResults });
+    const c = fixture.componentInstance;
+    c.toggleBoard(POST as any);
+    expect(c.boardError[1]).toBeDefined();
+    expect(c.board[1]).toBeUndefined();
+    c.toggleBoard(POST as any);   // zu
+    fail = false;
+    c.toggleBoard(POST as any);   // wieder auf → neu laden
+    expect(getResults).toHaveBeenCalledTimes(2);
+    expect(c.boardError[1]).toBeUndefined();
+    expect(c.board[1]).toEqual([]);
+  });
+});

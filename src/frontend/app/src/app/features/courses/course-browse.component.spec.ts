@@ -35,7 +35,7 @@ describe('CourseBrowseComponent', () => {
     puzzles: BookPuzzleDto[],
     chapterIndex: number | null = null,
     chapters: any[] = [],
-    opts: { status?: { solvedIds: number[]; failedIds: number[] }; favorites?: any[]; loggedIn?: boolean; dialog?: any; favService?: any; marks?: number[]; setMark?: any } = {},
+    opts: { status?: { solvedIds: number[]; failedIds: number[] }; favorites?: any[]; loggedIn?: boolean; dialog?: any; favService?: any; marks?: number[]; setMark?: any; course?: Record<string, unknown> } = {},
   ): CourseBrowseComponent {
     const route: any = { snapshot: { paramMap: { get: (k: string) => k === 'bookId' ? '5' : (k === 'chapterIndex' ? (chapterIndex == null ? null : String(chapterIndex)) : null) } } };
     const courseService: any = {
@@ -44,6 +44,7 @@ describe('CourseBrowseComponent', () => {
       getLineStatus: () => of(opts.status ?? { solvedIds: [], failedIds: [] }),
       getFlashcardMarks: () => of({ lineIds: opts.marks ?? [] }),
       setFlashcardMark: opts.setMark ?? (() => of({ marked: true })),
+      ...opts.course,
     };
     const prefs: any = { boardTheme: 'brown', pieceSet: 'cburnett' };
     const auth: any = { isLoggedIn: opts.loggedIn ?? true };
@@ -127,6 +128,27 @@ describe('CourseBrowseComponent', () => {
     );
     expect(comp.chapterName).toBe('Tactics');
     expect(comp.lines.map(l => l.id)).toEqual([2, 3]);
+  });
+
+  // Delta-Review 2026-11-09, F1-014: Ladefehler zeigten „keine Linien“, ein Kapitel-Fehler das ganze Buch.
+  it('Linien laden nicht → Ladefehler statt Leerzustand; Wiederholen lädt neu', () => {
+    let fail = true;
+    const comp = build([], null, [], { course: {
+      getBookPuzzles: () => fail ? throwError(() => ({ status: 500 })) : of([line({ id: 1 })]),
+    } });
+    expect(comp.loading).toBeFalse();
+    expect(comp.loadError).not.toBeNull();
+    fail = false;
+    comp.retryLoad();
+    expect(comp.loadError).toBeNull();
+    expect(comp.lines.map(l => l.id)).toEqual([1]);
+  });
+
+  it('Kapitel nicht auflösbar → Ladefehler statt aller Linien des Buchs', () => {
+    const comp = build([line({ id: 1, chapter: 'Intro' }), line({ id: 2, chapter: 'Tactics' })], 1, [],
+      { course: { getChapters: () => throwError(() => ({ status: 503 })) } });
+    expect(comp.loadError).not.toBeNull();
+    expect(comp.lines).toEqual([]);
   });
 
   it('steps through the line and resolves comments backwards; orientation from the start FEN', () => {

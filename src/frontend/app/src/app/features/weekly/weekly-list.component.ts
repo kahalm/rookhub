@@ -17,6 +17,7 @@ import { WeeklyService, WeeklyPost, WeeklyProgress, WeeklyPlayerResult, sortLead
 import { WeeklyScheduleFieldsComponent } from './weekly-schedule-fields.component';
 import { WeeklyBreakdownDialogComponent } from './weekly-breakdown-dialog.component';
 import { WeeklyFromChapterDialogComponent } from './weekly-from-chapter-dialog.component';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { apiErrorText } from '../../core/api-error';
 import { formatSecondsClock } from '../../shared/clock-format.util';
@@ -34,7 +35,7 @@ interface WeeklyPostRow extends WeeklyPost {
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatDialogModule, MatMenuModule,
-    TranslatePipe, LoadingSpinnerComponent, WeeklyScheduleFieldsComponent, PctPipe
+    TranslatePipe, LoadingSpinnerComponent, WeeklyScheduleFieldsComponent, PctPipe, LoadErrorComponent
   ],
   template: `
     <div class="weekly-container">
@@ -92,6 +93,8 @@ interface WeeklyPostRow extends WeeklyPost {
 
       @if (loading) {
         <app-loading-spinner />
+      } @else if (loadError !== null) {
+        <app-load-error [error]="loadError" messageKey="weekly.loadFailed" (retry)="loadPosts()" />
       } @else if (rows.length === 0) {
         <p class="empty-state">{{ 'weekly.empty' | translate }}</p>
       } @else {
@@ -176,6 +179,8 @@ interface WeeklyPostRow extends WeeklyPost {
                 <div class="lb">
                   @if (boardLoading[r.id]) {
                     <app-loading-spinner />
+                  } @else if (boardError[r.id] !== undefined) {
+                    <app-load-error [error]="boardError[r.id]" (retry)="loadBoard(r)" />
                   } @else if ((board[r.id]?.length ?? 0) > 0) {
                     <div class="lb-scroll">
                       <table class="lb-table">
@@ -285,12 +290,16 @@ interface WeeklyPostRow extends WeeklyPost {
 export class WeeklyListComponent implements OnInit {
   rows: WeeklyPostRow[] = [];
   loading = false;
+  /** Fehler beim Laden der Liste (F1-014): `app-load-error` statt „Noch keine Wochenposts“. */
+  loadError: unknown = null;
   /** Per-User-Fortschritt je WeeklyPost-Id (nur Posts mit Versuchen). */
   prog: Record<number, WeeklyProgress> = {};
 
   /** Aufgeklappte Bestenliste (eine zur Zeit). */
   expandedId: number | null = null;
   boardLoading: Record<number, boolean> = {};
+  /** Rangliste eines Posts nicht ladbar (F1-014): nicht als leer cachen, Ladefehler mit Wiederholen. */
+  boardError: Record<number, unknown> = {};
   /** Sortierte Bestenliste je Post (gecacht). */
   board: Record<number, WeeklyPlayerResult[]> = {};
   /** Puzzle-Gesamtzahl je Post (für die Genauigkeit). */
@@ -354,6 +363,7 @@ export class WeeklyListComponent implements OnInit {
 
   loadPosts(): void {
     this.loading = true;
+    this.loadError = null;
     this.weekly.getAll().subscribe({
       next: posts => {
         this.rows = posts.map(p => ({ ...p, editDate: weeklyDatePart(p.scheduledAt), editTime: weeklyTimePart(p.scheduledAt) }));
@@ -361,8 +371,8 @@ export class WeeklyListComponent implements OnInit {
         this.loading = false;
         this.loadProgress();
       },
-      error: () => {
-        this.snackbar.info(this.translate.instant('weekly.loadFailed'), { action: 'common.ok', duration: 3000 });
+      error: err => {
+        this.loadError = err ?? true;
         this.loading = false;
       }
     });
@@ -438,14 +448,20 @@ export class WeeklyListComponent implements OnInit {
     if (this.expandedId === row.id) { this.expandedId = null; return; }
     this.expandedId = row.id;
     if (this.board[row.id]) return;   // schon geladen
+    this.loadBoard(row);
+  }
+
+  /** Rangliste laden (auch „Erneut versuchen“ nach einem Fehler). */
+  loadBoard(row: WeeklyPost): void {
     this.boardLoading[row.id] = true;
+    delete this.boardError[row.id];
     this.weekly.getResults(row.id).subscribe({
       next: res => {
         this.boardTotal[row.id] = res.total;
         this.board[row.id] = sortLeaderboard(res.players, res.total);
         this.boardLoading[row.id] = false;
       },
-      error: () => { this.board[row.id] = []; this.boardLoading[row.id] = false; },
+      error: err => { this.boardError[row.id] = err ?? true; this.boardLoading[row.id] = false; },
     });
   }
 

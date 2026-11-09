@@ -28,6 +28,7 @@ import { AuthService } from '../../core/auth.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { SharePuzzleDialogComponent } from '../puzzles/share-puzzle-dialog.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { groupByChapter } from '../../shared/lines/chapter-groups.util';
 import { MarkSet } from '../../shared/lines/mark-set';
 import { CourseLanguageService, CourseRef } from './course-language.service';
@@ -65,7 +66,7 @@ interface ChapterGroup {
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, MatMenuModule, IconLabelDirective,
     MatDialogModule, TranslatePipe, PuzzleBoardComponent, ReviewNavComponent, LoadingSpinnerComponent,
-    SendToWorksheetComponent, CourseLangPickerComponent, MachineNoteComponent, SanPipe,
+    SendToWorksheetComponent, CourseLangPickerComponent, MachineNoteComponent, SanPipe, LoadErrorComponent,
   ],
   template: `
     <div class="browse-container">
@@ -121,6 +122,8 @@ interface ChapterGroup {
 
       @if (loading) {
         <app-loading-spinner />
+      } @else if (loadError !== null) {
+        <app-load-error [error]="loadError" messageKey="courses.browse.loadFailed" (retry)="retryLoad()" />
       } @else if (lines.length === 0) {
         <p class="empty-state">{{ 'courses.browse.empty' | translate }}</p>
       } @else {
@@ -439,6 +442,8 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   private fileName: string | null = null;
 
   loading = true;
+  /** Fehler des Erst-Ladens (Linien oder Kapitel, F1-014): `app-load-error` statt „keine Linien“. */
+  loadError: unknown = null;
   lines: BookPuzzleDto[] = [];
   groups: ChapterGroup[] = [];
 
@@ -607,7 +612,13 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
    */
   private load(chapterIndex: number | null, keepPosition = false): void {
     const keep = keepPosition && this.selected ? { id: this.selected.id, ply: this.plyIndex } : null;
-    if (!keep) this.loading = true;
+    if (!keep) { this.loading = true; this.loadError = null; }
+    // Sprachwechsel (keep): die Linien stehen schon — nur melden, nicht durch den Ladefehler ersetzen.
+    const failed = (err: unknown) => {
+      this.loading = false;
+      if (keep) this.snackbar.info(this.translate.instant('courses.browse.loadFailed'), { action: 'common.ok', duration: 3000 });
+      else this.loadError = err ?? true;
+    };
     const lang = this.courseLang.requestLang(this.langRef);
     this.courseService.getBookPuzzles(this.bookId, lang).subscribe({
       next: puzzles => {
@@ -626,7 +637,8 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
               this.setLines(puzzles.filter(p => (p.chapter || null) === (this.chapterName ?? null)), keep);
               this.loading = false;
             },
-            error: () => { this.setLines(puzzles, keep); this.loading = false; }
+            // Kapitel angefragt, aber nicht auflösbar: Ladefehler statt stillschweigend das ganze Buch (F1-014).
+            error: err => failed(err),
           });
         } else {
           this.chapterName = undefined;
@@ -635,12 +647,12 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
           this.loading = false;
         }
       },
-      error: () => {
-        this.loading = false;
-        this.snackbar.info(this.translate.instant('courses.browse.loadFailed'), { action: 'common.ok', duration: 3000 });
-      }
+      error: err => failed(err),
     });
   }
+
+  /** „Erneut versuchen“ des Ladefehlers. */
+  retryLoad(): void { this.load(this.chapterIndex); }
 
   private setLines(lines: BookPuzzleDto[], keep: { id: number; ply: number } | null = null): void {
     this.lines = lines;
