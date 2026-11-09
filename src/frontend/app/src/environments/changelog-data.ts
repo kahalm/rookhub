@@ -10,6 +10,20 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.942.0',
+    date: '2026-11-09',
+    changes: [
+      { en: 'After a deploy, an open tab that tries to load a bundle that no longer exists now reloads itself once (all five interfaces, loop guard, with service worker update first); the web server answers missing bundles with 404 instead of the start page.',
+        de: 'Nach einem Deploy lädt sich ein offener Tab, der ein nicht mehr vorhandenes Bündel nachladen will, einmal selbst neu (alle fünf Oberflächen, Schleifenschutz, mit Service-Worker-Update zuerst); der Webserver beantwortet fehlende Bündel mit 404 statt mit der Startseite.' },
+      { en: 'Mistake explanations: clicking a move sequence now follows the variation named last in the text (e.g. „against 17.Qh4 … 18.d5“ plays 17.Qh4 Nf6 18.d5), filling gaps from the compared candidates; the prefix is shown on the board so the variation is clear.',
+        de: 'Fehler-Erklärungen: Ein Klick auf eine Zugfolge folgt jetzt der zuletzt im Text genannten Variante (z. B. „gegen 17.Dh4 … 18.d5“ spielt 17.Dh4 Sf6 18.d5), Lücken werden aus den Vergleichskandidaten gefüllt; die Vorgeschichte wird mit angezeigt.' },
+      { en: 'Engine provider: under sustained CPU pressure (PSI or load per core) the container reduces its background engines one by one, down to none, and brings them back after five quiet minutes; the primary engine always stays. Configurable via ENGINE_CPU_PRESSURE*; Windows script has the logic switched off by default.',
+        de: 'Engine-Provider: Bei anhaltendem CPU-Druck (PSI bzw. Load je Kern) schaltet der Container seine Hintergrund-Engines einzeln ab, bis auf null, und nach fünf ruhigen Minuten wieder zu; die Live-Engine bleibt immer. Einstellbar über ENGINE_CPU_PRESSURE*; im Windows-Skript ist die Logik vorerst aus.' },
+      { en: 'E-books: external translators (Claude agents) can claim a book, fetch its text segments, return translations and have the translated EPUB assembled by the same code as the Spark worker (admin endpoints under /api/admin/ebooks/translations/external, tool tools/EbookTranslateExternal). New table EbookTranslationSegments.',
+        de: 'E-Books: Externe Übersetzer (Claude-Agenten) können ein Buch beanspruchen, die Textsegmente abholen, Übersetzungen zurückgeben und das übersetzte EPUB vom selben Code wie der Spark-Worker bauen lassen (Admin-Endpunkte unter /api/admin/ebooks/translations/external, Werkzeug tools/EbookTranslateExternal). Neue Tabelle EbookTranslationSegments.' },
+    ],
+  },
   { version: "0.941.8", date: "2026-11-09", changes: [
     { en: "UI sweep: many more views are now captured — every admin tab, the training-goal and friends tabs, analysis without engine, the login hint for pages that need an account, „delete account“, the error page of every share link, LeagueHub’s single shared game, lineups on the share link and the other upload kinds, plus the tournament map and calendar tabs. The route check now also verifies tab links and nested routes; a cancelled twin request on the summary error pages no longer counts as a finding, and the test data clean up their own stuck scoresheet uploads.",
       de: "UI-Sweep: Deutlich mehr Ansichten werden fotografiert — jeder Admin-Reiter, die Reiter der Trainingsziele und Freunde, die Analyse ohne Engine, der Anmeldehinweis für Seiten mit Konto, „Konto löschen“, die Fehlerseite jedes Teilen-Links, die einzelne geteilte Ligapartie in LeagueHub, die Aufstellungen am Teilen-Link und die anderen Eingabearten sowie Karte und Kalender der Turnierseite. Der Routen-Abgleich prüft jetzt auch Reiter-Links und Kind-Routen; eine abgebrochene Schwester-Anfrage auf den Fehlerseiten der Zusammenfassung zählt nicht mehr als Befund, und die Testdaten räumen ihre eigenen hängenden Formular-Einlesungen auf." },
