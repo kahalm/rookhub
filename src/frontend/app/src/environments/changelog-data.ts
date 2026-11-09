@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.936.3',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Security and rights fixes from the November code review (backend, part 1): second-engine analyses of club games are readable only within your own club; in ClubHub only management can switch a person between trainer and child; global LeagueHub imports and data refresh are admin-only; sign-in inputs are length-limited and “Forgot password” sends at most one mail per 2 minutes and 5 per day; the daily game-summary quota is enforced reliably, summaries are accepted only for the running job, and a pending summary is cancelled with refund after a move correction; position marks without an account are deleted after 90 days; Woodpecker serves only courses you can access; Endless saves nothing to the target account while impersonating; young players’ online accounts stay hidden one year longer; scoresheet photos and game must belong to the same club; player preparation keeps its memory use bounded and the club overview loads faster.',
+        de: 'Sicherheits- und Rechtekorrekturen aus dem Codereview vom November (Backend, Teil 1): Zweit-Engine-Analysen von Vereinspartien sind nur noch im eigenen Verein lesbar; in ClubHub ändert nur die Leitung, ob jemand Trainer oder Kind ist; globale LeagueHub-Importe und „Daten aktualisieren“ sind Admins vorbehalten; Anmelde-Eingaben sind in der Länge begrenzt und „Passwort vergessen“ schickt höchstens eine Mail je 2 Minuten und 5 am Tag; das Tageskontingent der Partie-Zusammenfassung wird zuverlässig eingehalten, Zusammenfassungen werden nur für den laufenden Auftrag angenommen, und nach einer Zugkorrektur bricht eine offene Zusammenfassung mit Gutschrift ab; Markierungen ohne Konto werden nach 90 Tagen gelöscht; Woodpecker zeigt nur Kurse, auf die du Zugriff hast; Endless speichert während „Als Nutzer einsteigen“ nichts ins Zielkonto; Online-Konten junger Spieler bleiben ein Jahr länger verborgen; Formularfotos und Partie müssen zum selben Verein gehören; die Spielervorbereitung hält ihren Speicherbedarf in Grenzen und die Vereinsübersicht lädt schneller.' },
+    ],
+  },
+  {
     version: '0.936.2',
     date: '2026-11-09',
     changes: [
