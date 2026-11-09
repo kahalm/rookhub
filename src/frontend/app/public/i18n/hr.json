@@ -3540,7 +3540,8 @@
       "promote": "Unaprijedi varijantu",
       "makeMainline": "Postavi kao glavnu varijantu",
       "deleteFrom": "Obriši odavde",
-      "hint": "Desni klik na potez (na mobitelu dugi pritisak): zvjezdica, unaprijedi varijantu, postavi kao glavnu ili obriši odande."
+      "hint": "Desni klik na potez (na mobitelu dugi pritisak, na tipkovnici tipka izbornika ili Shift+F10): zvjezdica, unaprijedi varijantu, postavi kao glavnu ili obriši odande.",
+      "label": "Stablo poteza"
     },
     "tablebase": {
       "title": "Tablebase (Lichess)",

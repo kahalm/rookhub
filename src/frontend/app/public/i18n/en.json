@@ -3540,7 +3540,8 @@
       "promote": "Promote variation",
       "makeMainline": "Make main line",
       "deleteFrom": "Delete from here",
-      "hint": "Right-click a move (long press on a phone): star, promote a variation, make it the main line or delete from there."
+      "hint": "Right-click a move (long press on a phone, menu key or Shift+F10 on the keyboard): star, promote a variation, make it the main line or delete from there.",
+      "label": "Move tree"
     },
     "tablebase": {
       "title": "Tablebase (Lichess)",

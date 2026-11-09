@@ -3540,7 +3540,8 @@
       "promote": "Variante hochstufen",
       "makeMainline": "Zur Hauptvariante machen",
       "deleteFrom": "Ab hier löschen",
-      "hint": "Rechtsklick auf einen Zug (am Handy lange drücken): Stern, Variante hochstufen, zur Hauptvariante machen oder ab dort löschen."
+      "hint": "Rechtsklick auf einen Zug (am Handy lange drücken, mit der Tastatur Kontextmenü-Taste bzw. Umschalt+F10): Stern, Variante hochstufen, zur Hauptvariante machen oder ab dort löschen.",
+      "label": "Zugbaum"
     },
     "tablebase": {
       "title": "Tablebase (Lichess)",

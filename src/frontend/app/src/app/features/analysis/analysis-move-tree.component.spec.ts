@@ -40,6 +40,37 @@ describe('AnalysisMoveTreeComponent', () => {
     return { fixture, c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement, overlay };
   }
 
+  it('keyboard: only the current move is in the tab order; Enter picks, the context-menu key opens the actions (F2-012)', fakeAsync(() => {
+    const { root, ke7 } = screenshotTree();
+    const { fixture, c, el, overlay } = make(root, ke7);
+    const tabbable = [...el.querySelectorAll<HTMLElement>('[tabindex="0"]')];
+    expect(tabbable.length).toBe(1);
+    expect(tabbable[0].textContent).toContain('Ke7');
+    expect(tabbable[0].getAttribute('role')).toBe('button');
+    expect(el.querySelectorAll('.move[tabindex="-1"], .vmove[tabindex="-1"]').length).toBeGreaterThan(3);
+
+    const picked: AnalysisNode[] = [];
+    c.select.subscribe(n => picked.push(n));
+    const e4 = [...el.querySelectorAll<HTMLElement>('.cell.move')].find(x => x.textContent!.includes('e4'))!;
+    e4.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(picked).toEqual([root.children[0]]);
+
+    tabbable[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ContextMenu', bubbles: true }));
+    fixture.detectChanges();
+    tick();
+    expect(overlay.textContent).toContain('analysis.tree.deleteFrom');
+    expect(overlay.textContent).toContain('analysis.tree.makeMainline');
+  }));
+
+  it('start position: the first move is reachable by Tab; a comment on a main move is readable text (F2-012)', () => {
+    const { root } = screenshotTree();
+    root.children[0].comment = 'Gut so';
+    const { el } = make(root, root);
+    const tabbable = el.querySelector<HTMLElement>('[tabindex="0"]')!;
+    expect(tabbable.textContent).toContain('e4');
+    expect(el.querySelector('.cell.move .sr-only')!.textContent).toBe('Gut so');
+  });
+
   it('shows the main line as a table with evals and the variation as a block', () => {
     const { root, ke7 } = screenshotTree();
     const { el } = make(root, ke7);

@@ -31,6 +31,9 @@ springen kann". `Services/Engines/AnalysisHistoryService.cs`, Tabelle `AnalysisH
   schickt eins, die 800-ms-Sperre verhindert das doppelte Öffnen) öffnet ein `mat-menu` an einem fest positionierten Anker:
   Stern, Variante hochstufen (`promote`: EINE Stufe, an der tiefsten Verzweigung, an der der Weg nicht die Fortsetzung ist), zur
   Hauptvariante machen (`makeMainline`), ab hier löschen (`removeNode`; stand man darin, geht es beim Elternknoten weiter).
+  Tastatur (F2-012): jeder Zug ist `role="button"`, im Tab-Ablauf steht nur der aktuelle (in der Ausgangsstellung der erste
+  Zug, roving tabindex); Enter/Leertaste wählt, Kontextmenü-Taste bzw. Umschalt+F10 öffnet dasselbe Menü am Zug. Der
+  Kommentar am Hauptzug steht zusätzlich als versteckter Text für Vorleser.
   `treeVersion` zählt jede Änderung am Baum, die Tabelle baut nur dann neu auf (nicht, wenn nur der aktuelle Zug wandert).
   PGN laden liest seit 0.604.0 Varianten mit (`parsePgnTree`: RAV, nur die erste Partie, `[FEN]`, Wörter ohne Zug wie „e.p."
   fallen weg, ein ungültiger Zug beendet nur seine Variante).

@@ -31,7 +31,9 @@ const LONG_PRESS_SLOP_PX = 10;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgTemplateOutlet, MatMenuModule, MatIconModule, TranslatePipe, SanPipe],
   template: `
-    <div class="tree" #list>
+    <!-- F2-012: Züge per Tab erreichbar (roving: der aktuelle Zug trägt tabindex 0), Enter/Leertaste wählt, Kontextmenü-Taste
+         bzw. Umschalt+F10 öffnet die Varianten-Aktionen. -->
+    <div class="tree" #list role="group" [attr.aria-label]="'analysis.tree.label' | translate">
       @for (item of items; track $index) {
         @if (item.kind === 'row') {
           @let r = asRow(item);
@@ -48,6 +50,8 @@ const LONG_PRESS_SLOP_PX = 10;
                 @for (t of line; track $index) {
                   @if (t.kind === 'move') {
                     <span class="vmove" [class.active]="t.node === current" [class.starred]="t.node.starred"
+                          role="button" [attr.tabindex]="t.node === focusNode() ? 0 : -1" [attr.aria-current]="t.node === current ? 'step' : null"
+                          (keydown)="onKey($event, t.node)"
                           (click)="pick(t.node)" (contextmenu)="onContextMenu($event, t.node)"
                           (pointerdown)="onPointerDown($event, t.node)" (pointermove)="onPointerMove($event)"
                           (pointerup)="clearPress()" (pointercancel)="clearPress()">{{ t.label | san:'text' }}{{ t.node.glyph ?? '' }}@if (!hideEngine() && t.node.verdict; as vd) {<span class="vd" [style.color]="vd.color" [title]="verdictTitle(vd)">{{ vd.symbol }}</span>}@if (t.node.evaluation) {<span class="ann"> {{ t.node.evaluation }}</span>}@if (t.node.starred) {<span class="star">★</span>}@if (!hideEngine() && t.node.evalText) {<span class="vev"> {{ t.node.evalText }}</span>}@if (t.node.comment) {<span class="cmt"> {{ t.node.comment }}</span>}</span>
@@ -69,12 +73,14 @@ const LONG_PRESS_SLOP_PX = 10;
         <span class="cell gap">…</span>
       } @else if (c) {
         <span class="cell move" [class.active]="c === current" [class.starred]="c.starred"
+              role="button" [attr.tabindex]="c === focusNode() ? 0 : -1" [attr.aria-current]="c === current ? 'step' : null"
+              (keydown)="onKey($event, c)"
               (click)="pick(c)" (contextmenu)="onContextMenu($event, c)"
               (pointerdown)="onPointerDown($event, c)" (pointermove)="onPointerMove($event)"
               (pointerup)="clearPress()" (pointercancel)="clearPress()">
           <span class="san">{{ c.san | san }}{{ c.glyph ?? '' }}@if (!hideEngine() && c.verdict; as vd) {<span class="vd" [style.color]="vd.color" [title]="verdictTitle(vd)">{{ vd.symbol }}</span>}@if (c.evaluation) {<span class="ann"> {{ c.evaluation }}</span>}@if (c.starred) {<span class="star">★</span>}</span>
           @if (!hideEngine() && c.evalText) { <span class="ev">{{ c.evalText }}</span> }
-          @if (c.comment) { <mat-icon class="cmt-icon" [title]="c.comment" aria-hidden="true">chat_bubble_outline</mat-icon> }
+          @if (c.comment) { <mat-icon class="cmt-icon" [title]="c.comment" aria-hidden="true">chat_bubble_outline</mat-icon><span class="sr-only">{{ c.comment }}</span> }
         </span>
       } @else {
         <span class="cell"></span>
@@ -139,6 +145,9 @@ const LONG_PRESS_SLOP_PX = 10;
     .vmove { font-family: 'Courier New', monospace; padding: 1px 3px; border-radius: 3px; margin-right: .2em; }
     .paren { color: color-mix(in srgb, currentColor 45%, transparent); margin-right: .2em; }
     .ctx-anchor { position: fixed; width: 0; height: 0; pointer-events: none; }
+    .move:focus-visible, .vmove:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: -2px; }
+    /* Kommentar am Hauptzug: sichtbar nur als Symbol, für Vorleser als Text (F2-012). */
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   `],
 })
 export class AnalysisMoveTreeComponent implements OnChanges, AfterViewChecked, OnDestroy {
@@ -198,6 +207,23 @@ export class AnalysisMoveTreeComponent implements OnChanges, AfterViewChecked, O
   asRow(item: MoveTableItem): MoveRow { return item as MoveRow; }
   asBlock(item: MoveTableItem): VariationBlock { return item as VariationBlock; }
   onMainline(node: AnalysisNode): boolean { return isMainline(node); }
+
+  /** Der Zug, der per Tab erreichbar ist: der aktuelle — in der Ausgangsstellung der erste Zug. */
+  focusNode(): AnalysisNode | null {
+    return this.current && this.current !== this.root ? this.current : this.root?.children[0] ?? null;
+  }
+
+  /** Tastatur am Zug (F2-012): Enter/Leertaste = wählen, Kontextmenü-Taste oder Umschalt+F10 = Aktionen. */
+  onKey(e: KeyboardEvent, node: AnalysisNode): void {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      this.select.emit(node);
+    } else if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+      e.preventDefault();
+      const r = (e.target as HTMLElement | null)?.getBoundingClientRect?.();
+      this.openMenu(node, r ? r.left : 0, r ? r.bottom : 0);
+    }
+  }
 
   pick(node: AnalysisNode): void {
     if (Date.now() < this.suppressClickUntil) return;   // der Finger hob sich nach einem langen Druck
