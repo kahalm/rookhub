@@ -232,6 +232,10 @@ internal sealed class GeoPlaceConfiguration : IEntityTypeConfiguration<GeoPlace>
     public void Configure(EntityTypeBuilder<GeoPlace> e)
     {
         e.HasIndex(g => new { g.Country, g.PostalCode });
+        // Der Ortsvorschlag per Postleitzahl fragt OHNE Land (`PostalCode LIKE '60%' ORDER BY PostalCode, Name`,
+        // anonym je Tastendruck): (Country, PostalCode) taugt dafür nicht, EXPLAIN zeigte einen vollen Scan über
+        // ~1,65 Mio. Zeilen mit filesort (G1-009). Dieser Index liefert Bereich und Reihenfolge.
+        e.HasIndex(g => new { g.PostalCode, g.Name });
         e.HasIndex(g => new { g.Country, g.NameNormalized });
         e.HasIndex(g => g.NameNormalized);
         // Die zweite Schreibweise wird genauso gesucht wie die erste (ue-Umschrift,

@@ -484,7 +484,9 @@ public class TournamentDirectoryQueryService
         if (term.Length < 2) return [];
 
         // Reine Ziffern koennen nur eine PLZ sein, alles andere ein Ortsname - das haelt die
-        // Abfrage auf einem der beiden Indizes statt auf einem OR ueber beide.
+        // Abfrage auf einem der beiden Indizes statt auf einem OR ueber beide. Fuer die PLZ ist das
+        // der Index (PostalCode, Name) (G1-009): (Country, PostalCode) greift ohne Land nicht, er
+        // liefert hier Bereich (LIKE 'term%') UND Reihenfolge, ohne filesort.
         if (term.All(char.IsAsciiDigit))
         {
             return await _db.GeoPlaces.AsNoTracking()

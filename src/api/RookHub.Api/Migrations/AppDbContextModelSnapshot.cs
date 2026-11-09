@@ -3977,6 +3977,8 @@ namespace RookHub.Api.Migrations
 
                     b.HasIndex("Country", "PostalCode");
 
+                    b.HasIndex("PostalCode", "Name");
+
                     b.ToTable("GeoPlaces");
                 });
 
