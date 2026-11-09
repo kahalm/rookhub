@@ -1,9 +1,10 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Component } from '@angular/core';
 import { RouterLink, Routes, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { StaleRouteReloadService } from '../../core/stale-route-reload.service';
 import { NotFoundComponent } from './not-found.component';
 
 @Component({ standalone: true, template: '' })
@@ -35,5 +36,61 @@ describe('NotFoundComponent', () => {
   it('bietet die Hilfe nur, wo die App eine Hilfeseite hat (RookHub ja, LeagueHub nein)', () => {
     const el = render([{ path: '', component: StubComponent }, { path: 'help', component: StubComponent }]);
     expect(el.links).toEqual(['/', '/help']);
+  });
+
+  describe('Suche nach einer neueren Fassung', () => {
+    function setup(canTry: boolean, result: Promise<boolean>) {
+      const reloader = {
+        canTry: () => canTry,
+        reloadIfNewer: jasmine.createSpy('reloadIfNewer').and.returnValue(result),
+      };
+      TestBed.configureTestingModule({
+        imports: [NotFoundComponent],
+        providers: [
+          provideRouter([{ path: '', component: StubComponent }]), provideNoopAnimations(),
+          provideTranslateService({ fallbackLang: 'en' }),
+          { provide: StaleRouteReloadService, useValue: reloader },
+        ],
+      });
+      const fixture = TestBed.createComponent(NotFoundComponent);
+      fixture.detectChanges();
+      return { fixture, reloader, el: fixture.nativeElement as HTMLElement };
+    }
+
+    it('ohne Versuch: sofort der Text, kein Ladekreis', () => {
+      const { el, reloader } = setup(false, Promise.resolve(false));
+      expect(el.querySelector('mat-spinner')).toBeNull();
+      expect(el.querySelector('h1')).not.toBeNull();
+      expect(reloader.reloadIfNewer).not.toHaveBeenCalled();
+    });
+
+    it('während der Suche Ladekreis statt Text, ohne neue Fassung danach der Text', fakeAsync(() => {
+      let finish!: (reloading: boolean) => void;
+      const { fixture, el } = setup(true, new Promise<boolean>(resolve => (finish = resolve)));
+      expect(el.querySelector('mat-spinner')).not.toBeNull();
+      expect(el.querySelector('h1')).toBeNull();
+
+      finish(false);
+      flushMicrotasks();
+      fixture.detectChanges();
+      expect(el.querySelector('mat-spinner')).toBeNull();
+      expect(el.querySelector('h1')).not.toBeNull();
+    }));
+
+    it('wird neu geladen: der Ladekreis bleibt, kein Aufblitzen des Textes', fakeAsync(() => {
+      const { fixture, el } = setup(true, Promise.resolve(true));
+      flushMicrotasks();
+      fixture.detectChanges();
+      expect(el.querySelector('mat-spinner')).not.toBeNull();
+      expect(el.querySelector('h1')).toBeNull();
+    }));
+
+    it('meldet dem Dienst, wenn die Seite verlassen wurde', () => {
+      const { fixture, reloader } = setup(true, new Promise<boolean>(() => undefined));
+      const cancelled = reloader.reloadIfNewer.calls.mostRecent().args[0] as () => boolean;
+      expect(cancelled()).toBeFalse();
+      fixture.destroy();
+      expect(cancelled()).toBeTrue();
+    });
   });
 });

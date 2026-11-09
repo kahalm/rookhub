@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.940.0',
+    date: '2026-11-09',
+    changes: [
+      {
+        en: 'A link to a page that only exists in a newer app version no longer ends on “Page not found”: the app now looks for a newer version, activates it and reloads the same address, at most once per address and tab. LeagueHub keeps its normal page, as it has no service worker.',
+        de: 'Ein Link auf eine Seite, die es erst in einer neueren App-Fassung gibt, endet nicht mehr auf „Seite nicht gefunden“: Die App sucht nach einer neueren Fassung, aktiviert sie und lädt dieselbe Adresse neu, je Adresse und Tab höchstens einmal. LeagueHub zeigt weiter die normale Seite, weil es dort keinen Service Worker gibt.',
+      },
+    ],
+  },
+  {
     version: '0.939.0',
     date: '2026-11-09',
     changes: [{
