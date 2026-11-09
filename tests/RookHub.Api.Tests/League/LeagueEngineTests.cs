@@ -310,9 +310,13 @@ public class LeagueEngineTests
 
     // ---- Teilen-Links -----------------------------------------------------------------------------
 
-    private static (AppDbContext Db, LeagueService Svc) ShareFixture(IMemoryCache? cache = null)
+    private static (AppDbContext Db, LeagueService Svc) ShareFixture(IMemoryCache? cache = null,
+        Func<string, Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor>? interceptor = null)
     {
-        var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var name = Guid.NewGuid().ToString();
+        var builder = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(name);
+        if (interceptor != null) builder.AddInterceptors(interceptor(name));
+        var db = new AppDbContext(builder.Options);
         var svc = new LeagueService(db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance, cache);
         var w = TinyWorld();
         var v = new LeagueViewBuilder(w, LeagueModel.FromEmbedded(), new Dictionary<string, int>(),
@@ -343,6 +347,45 @@ public class LeagueEngineTests
         Assert.True(await svc.ShareCoversAsync(s1.Token, "B3", default));
         Assert.False(await svc.ShareCoversAsync(s1.Token, "C1", default));  // anderer Gegner: gehört nicht zum Link
         db.Dispose();
+    }
+
+    /// <summary>G1-006: zwei gleichzeitige „Link teilen“ für dieselbe Begegnung — die zweite läuft in den eindeutigen Index
+    /// und bekommt jetzt den Link der ersten statt einer DbUpdateException (500).</summary>
+    [Fact]
+    public async Task Share_ConcurrentCreate_UniqueRaceReturnsTheOtherLink()
+    {
+        var (db, svc) = ShareFixture(interceptor: name => new ShareRaceInterceptor(name));
+        var s = await svc.CreateShareAsync(TestClubs.Home, 1, 1, "A", 7, default);
+        Assert.Equal("rival-token", s!.Token);
+        Assert.Equal("rival-token", Assert.Single(await db.LeagueShares.AsNoTracking().ToListAsync()).Token);
+        db.Dispose();
+    }
+
+    /// <summary>Beim ersten Speichern eines neuen Links legt „die andere Anfrage“ denselben Link an und das eigene Speichern
+    /// scheitert wie unter MariaDB mit „Duplicate entry“ (die InMemory-Datenbank kennt keine eindeutigen Indizes).</summary>
+    private sealed class ShareRaceInterceptor(string dbName) : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
+    {
+        private bool _raced;
+        public override async ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(
+            Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData,
+            Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            var added = eventData.Context!.ChangeTracker.Entries<LeagueShare>().FirstOrDefault(e => e.State == EntityState.Added)?.Entity;
+            if (added != null && !_raced)
+            {
+                _raced = true;
+                await using var other = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(dbName).Options);
+                other.LeagueShares.Add(new LeagueShare
+                {
+                    Token = "rival-token", ClubId = added.ClubId, Tnr = added.Tnr, Round = added.Round, Team = added.Team,
+                    CreatedAt = DateTime.UtcNow, Expires = added.Expires,
+                });
+                await other.SaveChangesAsync(cancellationToken);
+                throw new DbUpdateException("An error occurred while saving the entity changes.",
+                    new InvalidOperationException("Duplicate entry for key 'IX_LeagueShares_ClubId_Tnr_Round_Team'"));
+            }
+            return await base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
     }
 
     /// <summary>Codereview 2026-09-29, N4-003: jede Karten-Anfrage über einen Teilen-Link (jeder Klick im Baum) parste die

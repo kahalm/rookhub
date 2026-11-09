@@ -414,7 +414,12 @@ public sealed class LeagueService
             Expires = ExpiresFor(f.Value.Fixture["date"]?.GetValue<string>(), today),
         };
         _db.LeagueShares.Add(share);
-        await _db.SaveChangesAsync(ct);
+        // Zwei gleichzeitige Anfragen (Doppeltipp, zwei Verwalter) laufen in den eindeutigen Index (ClubId, Tnr, Round, Team):
+        // dann gilt der Link der anderen Anfrage — an Ort und Stelle aufgelöst wie in Startup/DatabaseSetup.cs beschrieben,
+        // statt 500 (G1-006).
+        if (!await _db.SaveIgnoringUniqueRaceAsync(_log, ct))
+            return await _db.LeagueShares.AsNoTracking()
+                .FirstAsync(s => s.ClubId == club.Id && s.Tnr == tnr && s.Round == round && s.Team == team, ct);
         return share;
     }
 
