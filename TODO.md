@@ -9,7 +9,11 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
-## [ ] Formular-Leser: d/e verwechselbar + Engine nur als Gleichstands-Entscheider (2026-10-08)
+## [x] Formular-Leser: d/e verwechselbar + Engine nur als Gleichstands-Entscheider (2026-10-08, ERLEDIGT 2026-11-09 in (Version folgt))
+
+Erledigt: d/e stand schon seit 0.737.1 in `Confusable` (Se7 und Sa7 kosten aus „Sd7" jetzt je 2,0, Sd4 2,5 — ein echter
+Gleichstand). Den entscheidet jetzt `ScoresheetPlausibility` (Gleichstands-Entscheider, `TieMargin` 0,05 auf die
+Lesekosten des ganzen Rests, `TieMinGainPct` 3): nur unter gleich guten Lesarten, nie gegen die Schrift.
 
 Anlass: LeagueHub-Formular 30 — gelesen „Sd7", gemeint war Se7 (Springer auf c6 kommt nicht nach d7). Se7 stand in den
 Lesarten HINTER Sd4/Sa7, weil d/e nicht als verwechselbares Paar gilt.

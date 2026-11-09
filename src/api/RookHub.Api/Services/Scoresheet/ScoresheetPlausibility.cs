@@ -43,6 +43,12 @@ public interface IScoresheetEngineSession : IAsyncDisposable
 /// Partie danach nicht schlechter zum Formular passt (nicht mehr zurechtgebogene Züge, nicht mehr Unaufgelöstes). Dann steht der Zug als
 /// unsicher da (<c>Check = replaced</c>), die alte Lesung als zweite Option.</para>
 ///
+/// <para><b>Gleichstands-Entscheider</b> (gemeldet 2026-10-08, LeagueHub-Formular 30: „Sd7" vom Springer auf c6 — Se7 und
+/// Sa7 erklären die Schrift genau gleich gut, der Auflöser entschied nach der Stellungs-Zeichenkette). Erklären zwei
+/// Lesarten das GANZE Formular gleich gut (<see cref="TieMargin"/>), nimmt die Prüfung die, die die Engine vorzieht — aber
+/// NUR dann: als Hauptkriterium „korrigierte" die Engine richtig gelesene schwache Amateurzüge. Der Zug bleibt unsicher
+/// (<c>Check = replaced</c>), die Lesart des Auflösers steht als zweite Option daneben.</para>
+///
 /// <para>Eine Engine, die versagt, oder ein abgelaufenes Zeitbudget (<see cref="Budget"/>) lassen die Lesung, wie sie ist.</para>
 /// </summary>
 public static class ScoresheetPlausibility
@@ -89,6 +95,25 @@ public static class ScoresheetPlausibility
     /// <summary>Höchstens so viele Ersatz-Lesarten je Halbzug werden durchgerechnet (die billigsten).</summary>
     public const int MaxCandidates = 6;
 
+    /// <summary>
+    /// So viel darf die Lesekosten-Summe einer Ersatz-Lesart (der Zug UND der Rest des Formulars, den sie nach sich zieht)
+    /// von der gewählten abweichen, damit die Engine zwischen beiden entscheiden darf. Bewusst weit unter der kleinsten
+    /// gewollten Stufe des Auflösers: „Eintrag vor Deutung" trennt der Unterschied 0,1 (Eintrag 0, Deutung des Modells 0,1),
+    /// die fehlende Herkunft 0,3, ein Lesefehler 2,5 (verwechselbares Zeichen 2,0). Alles ab 0,1 ist eine ENTSCHEIDUNG der
+    /// Schrift, die die Engine nicht überstimmen darf — sonst „korrigierte" sie einen richtig gelesenen schwachen Zug, weil das
+    /// Modell einen stärkeren hineindeutete. Darunter bleibt nur echter Gleichstand (dieselbe Art Treffer an denselben
+    /// Einträgen: Se7/Sa7 aus „Sd7" je 2,0, Sbd2/Sfd2 aus „Sd2" je 0,3) und Rechen-Rauschen der Gleitkommazahlen.
+    /// <see cref="ScoresheetResolver"/>'s eigenes Maß für „ebenbürtig" (0,5) ist dafür zu weit.
+    /// </summary>
+    public const double TieMargin = 0.05;
+
+    /// <summary>
+    /// So viel Gewinnchance (Prozentpunkte, Sicht des Ziehenden, Stellung direkt nach dem Zug) muss die Engine-Lesart vor der
+    /// gewählten liegen. Darunter ist es Rauschen der geringen Tiefe (<c>EngineDepth</c> 10: zwei gleichwertige Züge liegen
+    /// oft 10–20 cp auseinander, ≈ 1–2 Punkte nahe Ausgleich); 3 Punkte ≈ 35 cp nahe Ausgleich, ein echter Unterschied.
+    /// </summary>
+    public const double TieMinGainPct = 3;
+
     /// <summary>Zeitbudget der ganzen Prüfung — danach bleibt der Rest, wie er ist.</summary>
     public static readonly TimeSpan Budget = TimeSpan.FromSeconds(90);
 
@@ -99,16 +124,17 @@ public static class ScoresheetPlausibility
         public const string Suggested = "suggested";
     }
 
-    public sealed record Outcome(ScoresheetResolution Resolution, List<int> Replaced, List<int> Flagged);
+    /// <param name="TieBroken">Halbzüge, an denen die Engine unter gleich guten Lesarten entschied (<see cref="TieMargin"/>).</param>
+    public sealed record Outcome(ScoresheetResolution Resolution, List<int> Replaced, List<int> Flagged, List<int> TieBroken);
 
     private sealed record Candidate(int K, string San, string Uci, string Match, double Cost, double Extra,
         List<ScoresheetPly> After, (int Zig, double Excess) Bad);
 
     public static async Task<Outcome> ImproveAsync(IReadOnlyList<ScannedPly> scanned, ScoresheetResolver.Options options,
         ScoresheetResolution resolution, IScoresheetEngine engine, string? startFen = null, CancellationToken ct = default,
-        Action<string>? trace = null)
+        Action<string>? trace = null, bool tieBreak = true)
     {
-        var unchanged = new Outcome(resolution, new(), new());
+        var unchanged = new Outcome(resolution, new(), new(), new());
         if (resolution.Plies.Count < 2) return unchanged;
         await using var session = await engine.OpenAsync(ct);
         if (session == null) return unchanged;
@@ -123,8 +149,23 @@ public static class ScoresheetPlausibility
         var skipped = resolution.Skipped.ToList();
         var replaced = new List<int>();
         var flagged = new List<int>();
+        var tieBroken = new List<int>();
         var evals = await session.EvaluateLineAsync(fen0, plies.Select(p => p.Uci).ToList(), ct);
         if (evals == null || evals.Count != plies.Count + 1) return unchanged;
+
+        // Erst die Gleichstände: das Zickzack danach sucht in der Partie, die die Engine unter gleich guten Lesarten vorzog.
+        if (tieBreak)
+        {
+            var before = tieBroken.Count;
+            (plies, unresolved, stuckAt, stuckFen, skipped) = await TieBreakAsync(scanned, options, fen0, session,
+                (plies, unresolved, stuckAt, stuckFen, skipped), 0, tieBroken, clock, trace, ct);
+            if (tieBroken.Count > before)
+            {
+                evals = await session.EvaluateLineAsync(fen0, plies.Select(p => p.Uci).ToList(), ct);
+                if (evals == null || evals.Count != plies.Count + 1)
+                    return new(Rebuild(plies, unresolved, stuckAt, stuckFen, skipped), replaced, flagged, tieBroken);
+            }
+        }
 
         var from = 0;
         for (var round = 0; round < MaxFixes && clock.Elapsed < Budget; round++)
@@ -163,7 +204,7 @@ public static class ScoresheetPlausibility
                     var line = rest.Plies.Select(p => p.Uci).Prepend(uci).ToList();
                     var end = Math.Min(k + line.Count, spanEnd);
                     var part = await session.EvaluateLineAsync(fens[k], line.Take(end - k).ToList(), ct);
-                    if (part == null) return new(Rebuild(plies, unresolved, stuckAt, stuckFen, skipped), replaced, flagged);
+                    if (part == null) return new(Rebuild(plies, unresolved, stuckAt, stuckFen, skipped), replaced, flagged, tieBroken);
                     var combined = evals.Take(k).Concat(part).ToList();
                     var bad = Badness(combined, whiteFirst, lo, end);
                     trace?.Invoke($"  k={k} {plies[k].San}->{san} cost {cost:F1} (chosen {chosen:F1}) bad {bad}");
@@ -233,14 +274,115 @@ public static class ScoresheetPlausibility
                 .ToList();
             replaced.Add(best.K);
             trace?.Invoke($"  -> replace {original.San} by {best.San} at {best.K}");
+            // Der Rest kommt aus einer neuen Auflösung — deren Gleichstände entschied noch niemand.
+            if (tieBreak)
+                (plies, unresolved, stuckAt, stuckFen, skipped) = await TieBreakAsync(scanned, options, fen0, session,
+                    (plies, unresolved, stuckAt, stuckFen, skipped), best.K + 1, tieBroken, clock, trace, ct);
             var again = await session.EvaluateLineAsync(fen0, plies.Select(p => p.Uci).ToList(), ct);
             if (again == null || again.Count != plies.Count + 1) break;
             evals = again;
             from = best.K + 1;
         }
-        return replaced.Count == 0 && flagged.Count == 0
+        return replaced.Count == 0 && flagged.Count == 0 && tieBroken.Count == 0
             ? unchanged
-            : new(Rebuild(plies, unresolved, stuckAt, stuckFen, skipped), replaced, flagged);
+            : new(Rebuild(plies, unresolved, stuckAt, stuckFen, skipped), replaced, flagged, tieBroken);
+    }
+
+    /// <summary>
+    /// Gleichstände entscheiden (<see cref="TieMargin"/>): an jeder unsicheren Stelle ab <paramref name="from"/>, deren Lesarten
+    /// der Auflöser mitgab, die Stellung direkt nach jeder Lesart bewerten. Liegt eine Ersatz-Lesart mindestens
+    /// <see cref="TieMinGainPct"/> vor der gewählten, wird der Rest mit ihr neu gelesen — und übernommen nur, wenn das GANZE
+    /// Formular dann genauso gut erklärt ist (Lesekosten-Summe ab der Stelle, nichts mehr unaufgelöst). Erst die Engine, dann
+    /// die (teurere) Neu-Lesung: an den meisten Stellen sieht die Engine keinen Unterschied, und dann bleibt alles.
+    /// </summary>
+    private static async Task<(List<ScoresheetPly>, List<string>, int?, string?, List<ScoresheetSkip>)> TieBreakAsync(
+        IReadOnlyList<ScannedPly> scanned, ScoresheetResolver.Options options, string fen0, IScoresheetEngineSession session,
+        (List<ScoresheetPly>, List<string>, int?, string?, List<ScoresheetSkip>) line, int from, List<int> tieBroken, Stopwatch clock, Action<string>? trace, CancellationToken ct)
+    {
+        var (plies, unresolved, stuckAt, stuckFen, skipped) = line;
+        var fens = Fens(fen0, plies);
+        for (var k = Math.Max(0, from); k < plies.Count && clock.Elapsed < Budget; k++)
+        {
+            var ply = plies[k];
+            if (!ply.Uncertain || ply.Check != null || ply.W is not int w || w >= scanned.Count
+                || ply.Match == ScoresheetResolver.Matches.Inserted || ply.Options is not { Count: > 1 } opts) continue;
+            if (k >= fens.Count) break;
+            var whiteMoves = FenFields.WhiteToMove(fens[k]);
+            async Task<double?> After(string uci)
+            {
+                var e = await session.EvaluateLineAsync(fens[k], new[] { uci }, ct);
+                if (e == null || e.Count != 2) return null;
+                var win = GameAccuracy.WinPercent(e[1], null)!.Value;
+                return whiteMoves ? win : 100 - win;
+            }
+            var chosenWin = await After(ply.Uci);
+            if (chosenWin == null) break;
+            var better = new List<(ScoresheetOption Option, double Win)>();
+            foreach (var o in opts.Where(o => o.Uci != ply.Uci))
+            {
+                var win = await After(o.Uci);
+                if (win == null) return (plies, unresolved, stuckAt, stuckFen, skipped);
+                if (win.Value >= chosenWin.Value + TieMinGainPct) better.Add((o, win.Value));
+            }
+            if (better.Count == 0) continue;
+
+            var chosenCost = TailCost(scanned, options, fens[k], plies.Skip(k))
+                + ScoresheetResolver.EditCost * skipped.Count(x => x.AfterPly > k);
+            foreach (var (alt, win) in better.OrderByDescending(b => b.Win))
+            {
+                ct.ThrowIfCancellationRequested();
+                var prefix = plies.Take(k).Select(p => p.San).Append(alt.San).ToList();
+                ScoresheetResolution rest;
+                try { rest = ScoresheetResolver.Resolve(scanned, options, prefix, w + 1, fen0, withBranches: true); }
+                catch (ArgumentException) { continue; }
+                if (rest.Unresolved.Count != unresolved.Count) continue;
+                var altPly = new ScoresheetPly { W = w, Written = ply.Written, San = alt.San, Uci = alt.Uci, Match = alt.Match };
+                var altCost = TailCost(scanned, options, fens[k], rest.Plies.Prepend(altPly))
+                    + ScoresheetResolver.EditCost * rest.Skipped.Count;
+                trace?.Invoke($"  tie at {k}: {ply.San} {chosenCost:F2} / {chosenWin:F0} % vs {alt.San} {altCost:F2} / {win:F0} %");
+                // Beidseitig: eine BILLIGERE Ersatz-Lesart hieße, der Weg dahinter wurde schon geändert (Zickzack) — die
+                // Änderung rückgängig zu machen ist kein Gleichstand.
+                if (Math.Abs(altCost - chosenCost) > TieMargin) continue;
+
+                altPly.Uncertain = true;
+                altPly.Check = Checks.Replaced;
+                altPly.Options = opts.Where(o => o.Uci == alt.Uci).Concat(opts.Where(o => o.Uci == ply.Uci))
+                    .Concat(opts.Where(o => o.Uci != alt.Uci && o.Uci != ply.Uci)).ToList();
+                plies = plies.Take(k).Append(altPly).Concat(rest.Plies).ToList();
+                unresolved = rest.Unresolved;
+                stuckAt = rest.StuckAt;
+                stuckFen = rest.StuckFen;
+                skipped = skipped.Where(x => x.AfterPly <= k)
+                    .Concat(rest.Skipped.Select(x => new ScoresheetSkip { W = x.W, Written = x.Written, AfterPly = x.AfterPly + k + 1 }))
+                    .ToList();
+                fens = Fens(fen0, plies);
+                tieBroken.Add(k);
+                trace?.Invoke($"  -> tie-break {ply.San} by {alt.San} at {k}");
+                break;
+            }
+        }
+        return (plies, unresolved, stuckAt, stuckFen, skipped);
+    }
+
+    /// <summary>Lesekosten der Halbzüge ab Stellung <paramref name="fen"/> — dieselben Kosten, nach denen der Auflöser wählt
+    /// (<see cref="ScoresheetResolver.Score"/>; ein eingeschobener Zug kostet wie dort <c>EditCost</c>, ein erschlossener
+    /// <c>GuessCost</c>).</summary>
+    private static double TailCost(IReadOnlyList<ScannedPly> scanned, ScoresheetResolver.Options options, string fen,
+        IEnumerable<ScoresheetPly> plies)
+    {
+        var board = ChessBoard.LoadFromFen(fen);
+        var sum = 0.0;
+        foreach (var p in plies)
+        {
+            if (p.W is int w && w < scanned.Count && p.Match != ScoresheetResolver.Matches.Inserted)
+            {
+                var c = ScoresheetResolver.Score(scanned[w], p.San, p.Uci, options, ScoresheetResolver.Squares(board.ToFen())).Cost;
+                sum += double.IsInfinity(c) ? ScoresheetResolver.GuessCost : c;
+            }
+            else sum += ScoresheetResolver.EditCost;
+            if (!board.Move(p.San)) break;
+        }
+        return sum;
     }
 
     /// <summary>Weniger Zickzacks, dann die billigere Lesart (die SCHRIFT entscheidet vor kleinen Bewertungsunterschieden —

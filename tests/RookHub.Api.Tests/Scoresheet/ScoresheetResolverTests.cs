@@ -262,6 +262,14 @@ public class ScoresheetResolverTests
         // Da3/Dg3, Kh1/Kf1 waren dort verlesen
         foreach (var (a, b) in new[] { ("e6", "g6"), ("Rc4", "Ra4"), ("Qd1", "Qe1"), ("Qa3", "Qg3"), ("Kh1", "Kf1") })
             Assert.True(ScoresheetNotation.IsConfusable(a, b), $"{a}/{b}");
+        // d/e (seit 0.737.1, Anlass LeagueHub-Formular 30): „Sd7" vom Springer auf c6 — Se7 kostet wie Sa7 (a/d) 2,0, Sd4
+        // (7/4, beliebig) 2,5. Zwischen Se7 und Sa7 entscheidet danach die Engine (ScoresheetPlausibility.TieMargin).
+        Assert.True(ScoresheetNotation.IsConfusable("Nd7", "Ne7"));
+        var entry = new ScannedPly("Sd7", null);
+        var e7 = ScoresheetResolver.Score(entry, "Ne7", "c6e7", German).Cost;
+        Assert.Equal(2.0, e7, 6);
+        Assert.Equal(e7, ScoresheetResolver.Score(entry, "Na7", "c6a7", German).Cost, 6);
+        Assert.True(e7 < ScoresheetResolver.Score(entry, "Nd4", "c6d4", German).Cost);
         Assert.Equal(1.0, ScoresheetNotation.WeightedDistance("ba4", "bc4"));
         Assert.Equal(1.2, ScoresheetNotation.WeightedDistance("ba4", "a4"));
     }

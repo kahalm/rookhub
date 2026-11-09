@@ -139,6 +139,117 @@ public class ScoresheetPlausibilityTests
         Assert.Same(r, o.Resolution);
     }
 
+    // ── Gleichstands-Entscheider ────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Wie LeagueHub-Formular 30 (2026-10-08): „Sd7" für den Springer auf c6, der nicht nach d7 kann. Se7 (d/e) und Sa7 (d/a)
+    /// erklären den Eintrag genau gleich gut (je 2,0), alles danach geht in beiden Fällen — ein echter Gleichstand.
+    /// Der Springer von g8 steht auf h6, damit nur der von c6 nach e7 kann.
+    /// </summary>
+    private static readonly string[] SheetKnightC6 =
+        { "e4", "e5", "Sf3", "Sc6", "Lc4", "Sh6", "0-0", "a6", "d3", "Sd7", "h3", "d6", "c3", "f6", "a3" };
+
+    /// <summary>Der Halbzug 5…„Sd7" (0-basiert).</summary>
+    private const int KnightPly = 9;
+
+    /// <summary>Feld a7 in <see cref="ScoresheetResolver.Squares"/>.</summary>
+    private const int A7 = 8;
+
+    /// <summary>Feld e7.</summary>
+    private const int E7 = 12;
+
+    [Theory]
+    [InlineData(E7, "Ne7", "c6e7")]
+    [InlineData(A7, "Na7", "c6a7")]
+    public async Task TieBreak_EqualReadings_TheEnginesChoiceWins(int goodSquare, string expectedSan, string expectedUci)
+    {
+        var scanned = SheetKnightC6.Select(w => new ScannedPly(w, null, null, "high")).ToList();
+        var r = ScoresheetResolver.Resolve(scanned, German);
+        var read = r.Plies[KnightPly];
+        Assert.Contains(read.San, new[] { "Ne7", "Na7" });
+        Assert.True(read.Uncertain);
+        Assert.Contains(read.Options!, o => o.Uci == expectedUci);
+
+        // Steht der schwarze Springer auf dem „guten" Feld, steht Schwarz besser (−150 aus Weiß-Sicht) — sonst ausgeglichen.
+        // Kein Zickzack: die Bewertung springt einmal und bleibt.
+        int Prefers(string fen) => ScoresheetResolver.Squares(fen)[goodSquare] == 'n' ? -150 : 0;
+        var o = await ScoresheetPlausibility.ImproveAsync(scanned, German, r, new FakeScoresheetEngine(Prefers));
+
+        var ply = o.Resolution.Plies[KnightPly];
+        Assert.Equal(expectedSan, ply.San);
+        Assert.Equal("Sd7", ply.Written);
+        Assert.True(ply.Uncertain);
+        Assert.Empty(o.Replaced);
+        Assert.Empty(o.Flagged);
+        if (read.Uci == expectedUci)
+        {
+            // Der Auflöser lag schon richtig — nichts zu entscheiden.
+            Assert.Same(r, o.Resolution);
+            Assert.Empty(o.TieBroken);
+        }
+        else
+        {
+            Assert.Equal(new[] { KnightPly }, o.TieBroken);
+            Assert.Equal(ScoresheetPlausibility.Checks.Replaced, ply.Check);
+            // Die Lesart des Auflösers bleibt einen Klick entfernt.
+            Assert.Equal(new[] { expectedUci, read.Uci }, ply.Options!.Take(2).Select(x => x.Uci));
+        }
+        // Der Rest der Partie bleibt, wie er auf dem Formular steht.
+        Assert.Equal(SheetKnightC6.Length, o.Resolution.Plies.Count);
+        Assert.Empty(o.Resolution.Unresolved);
+        Assert.Equal(r.Plies.Skip(KnightPly + 1).Select(p => p.San), o.Resolution.Plies.Skip(KnightPly + 1).Select(p => p.San));
+    }
+
+    [Fact]
+    public async Task TieBreak_EngineSeesNoRealDifference_TheReadingStays()
+    {
+        var scanned = SheetKnightC6.Select(w => new ScannedPly(w, null, null, "high")).ToList();
+        var r = ScoresheetResolver.Resolve(scanned, German);
+        var other = r.Plies[KnightPly].Uci == "c6e7" ? 'a' : 'e';
+        // 15 cp für die andere Lesart: unter TieMinGainPct — Rauschen, keine Vorliebe.
+        int Slight(string fen) => ScoresheetResolver.Squares(fen)[other == 'a' ? A7 : E7] == 'n' ? -15 : 0;
+
+        var o = await ScoresheetPlausibility.ImproveAsync(scanned, German, r, new FakeScoresheetEngine(Slight));
+
+        Assert.Same(r, o.Resolution);
+        Assert.Empty(o.TieBroken);
+    }
+
+    [Fact]
+    public async Task TieBreak_WrittenEntryBeatsTheModelsReading_EngineDoesNotOverrule()
+    {
+        // „Se7" steht da und ist legal (0), das Modell deutete „Na7" hinein (0,1) — die Schrift hat entschieden. Auch wenn die
+        // Engine Sa7 klar vorzieht, bleibt Se7: ein schwacher, aber richtig gelesener Amateurzug wird nicht „korrigiert".
+        var scanned = SheetKnightC6.Select(w => new ScannedPly(w, null, null, "high")).ToList();
+        scanned[KnightPly] = new ScannedPly("Se7", "Na7", null, "high");
+        var r = ScoresheetResolver.Resolve(scanned, German);
+        var read = r.Plies[KnightPly];
+        Assert.Equal("Ne7", read.San);
+        Assert.True(read.Uncertain);
+        Assert.Contains(read.Options!, o => o.San == "Na7");
+
+        static int LovesA7(string fen) => ScoresheetResolver.Squares(fen)[A7] == 'n' ? -400 : 0;
+        var o = await ScoresheetPlausibility.ImproveAsync(scanned, German, r, new FakeScoresheetEngine(LovesA7));
+
+        Assert.Same(r, o.Resolution);
+        Assert.Empty(o.TieBroken);
+        Assert.Equal("Ne7", o.Resolution.Plies[KnightPly].San);
+        Assert.Null(o.Resolution.Plies[KnightPly].Check);
+    }
+
+    [Fact]
+    public async Task TieBreak_Off_LeavesTheTieToTheResolver()
+    {
+        var scanned = SheetKnightC6.Select(w => new ScannedPly(w, null, null, "high")).ToList();
+        var r = ScoresheetResolver.Resolve(scanned, German);
+        var otherSquare = r.Plies[KnightPly].Uci == "c6e7" ? A7 : E7;
+        int Prefers(string fen) => ScoresheetResolver.Squares(fen)[otherSquare] == 'n' ? -150 : 0;
+
+        var o = await ScoresheetPlausibility.ImproveAsync(scanned, German, r, new FakeScoresheetEngine(Prefers), tieBreak: false);
+
+        Assert.Same(r, o.Resolution);
+    }
+
     [Fact]
     public void Alternatives_OnlyReadingsOneConfusableCharacterAway()
     {

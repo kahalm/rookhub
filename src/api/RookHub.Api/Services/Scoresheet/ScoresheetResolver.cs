@@ -140,12 +140,12 @@ public static class ScoresheetResolver
         public const string Skip = "skip";
     }
 
-    private const double GuessCost = 8;
+    internal const double GuessCost = 8;
     private const int PerStateMoves = 6;
 
     /// <summary>Kosten eines fehlenden bzw. überzähligen Eintrags. Teurer als ein Lesefehler um ein Zeichen (2,5),
     /// billiger als zwei: eine Verschiebung zieht sonst eine Kette von Lesefehlern nach sich, und DIE ist teurer.</summary>
-    private const double EditCost = 5;
+    internal const double EditCost = 5;
 
     /// <summary>Erst ab so hohen Kosten des besten normalen Treffers wird ein fehlender/überzähliger Eintrag
     /// erwogen — wo etwas glatt passt, bleibt es beim einfachen Lesen (und die Suche schnell).</summary>
