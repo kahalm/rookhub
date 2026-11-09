@@ -122,6 +122,26 @@ describe('KidsProgressSync', () => {
     expect(JSON.parse(localStorage.getItem('rh-kids-endless-v1')!)).toEqual({ runs: [], best: 0 });
   }));
 
+  // Codereview F4-010: Wechsel A → B ohne Abmelden (geteilte Anmeldung) übernahm Sternenjagd und Endlos-Rekord von A.
+  it('direkter Kontowechsel ohne Abmelden leert Endlos und Sternenjagd des vorigen Kinds', fakeAsync(() => {
+    const endless = TestBed.inject(KidsEndlessStore);
+    const stars = TestBed.inject(KidsStarsStore);
+    start();
+    user.next(lena);
+    progressCalls()[0].flush(empty);
+    endless.record({ at: 1, solved: 25, maxRating: 1600, firstMistakeRating: null });
+    stars.complete(1);
+    tick(SYNC_DEBOUNCE_MS);
+    progressCalls().forEach(r => r.flush(empty));
+    expect(endless.best()).toBe(25);
+    expect(stars.done()).toBe(1);
+
+    user.next(tom);                                       // ohne null dazwischen
+    expect(endless.best()).toBe(0);
+    expect(stars.done()).toBe(0);
+    progressCalls().forEach(r => r.flush(empty));
+  }));
+
   it('ohne Netz bleibt alles lokal und der Zustand sagt es', fakeAsync(() => {
     const store = TestBed.inject(KidsProgressStore);
     store.completeRun(1);

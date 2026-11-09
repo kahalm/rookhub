@@ -59,6 +59,7 @@ export class KidsProgressSync {
 
   private onUser(id: number | null): void {
     if (id === this.userId) return;
+    const previous = this.userId;
     this.userId = id;
     if (id === null) {
       clearTimeout(this.timer);
@@ -71,6 +72,13 @@ export class KidsProgressSync {
     }
     const owner = this.store.owner();
     if (owner !== null && owner !== id) this.store.clear();
+    // Direkter Wechsel A → B ohne Abmelden (geteilte Anmeldung, anderer Tab; Codereview F4-010): auch Endlos und
+    // Sternenjagd des vorigen Kinds räumen — ihr Stand lebt als Signal im Speicher und schrieb sich sonst beim nächsten
+    // complete()/record() samt Rekord und Kurve wieder in den Gerätespeicher.
+    if (previous !== null) {
+      this.endless.clear();
+      this.stars.clear();
+    }
     this.push();
   }
 
