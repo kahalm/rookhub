@@ -149,11 +149,19 @@ public static class EbookReflowLayout
         return lines;
     }
 
+    /// <summary>Größte Seitenbreite (pt), auf der ein Bundsteg gesucht wird — Höchstmaß der PDF-Spezifikation.</summary>
+    internal const double MaxGutterPageWidth = 14_400;
+    /// <summary>Höchstzahl der Prüfpositionen je Seite (bis zur Höchstbreite bleibt es bei 1-pt-Schritten).</summary>
+    internal const int MaxGutterSteps = 4_320;
+
     /// <summary>Bundsteg: eine X-Position zwischen 35 und 65 % der Breite, die höchstens 6 % der Zeilen kreuzen, mit je
     /// mindestens 25 % der Zeilen ganz links bzw. ganz rechts davon. <c>null</c> = einspaltig.</summary>
     internal static double? FindGutter(List<List<ReflowGlyph>> lines, double width)
     {
-        if (lines.Count < 8 || width <= 0) return null;
+        // G2-003: Breite kommt ungeprüft aus der PDF-Seite. Über der Höchstgröße der PDF-Spezifikation (14 400 pt) gibt es
+        // keine Spaltensuche (einspaltig), und die Schrittzahl ist gedeckelt — sonst lief die Schleife bei riesiger
+        // MediaBox praktisch endlos (ab ~2,6e16 änderte x += 1 den Wert gar nicht mehr).
+        if (lines.Count < 8 || width <= 0 || !double.IsFinite(width) || width > MaxGutterPageWidth) return null;
         // Je Zeile die bedeckten Strecken: Glyphen mit Lücken unter 0,8 Schriftgröße (Wortzwischenräume) verschmolzen.
         var spans = lines.Select(l =>
         {
@@ -166,7 +174,8 @@ public static class EbookReflowLayout
             return list;
         }).ToList();
         double? best = null; var bestCross = int.MaxValue;
-        for (var x = width * 0.35; x <= width * 0.65; x += 1)
+        var step = Math.Max(1, width * 0.3 / MaxGutterSteps);   // normale Seiten: 1 pt wie bisher
+        for (var x = width * 0.35; x <= width * 0.65; x += step)
         {
             int cross = 0, left = 0, right = 0;
             foreach (var l in spans)
@@ -290,12 +299,14 @@ public static class EbookReflowLayout
     // ── 3. Absätze ───────────────────────────────────────────────────────────────────────────────────
 
     /// <summary>Alle Seiten → Blöcke in Lesereihenfolge.</summary>
-    public static List<ReflowBlock> Blocks(IReadOnlyList<ReflowPage> pages, IReadOnlyList<ReflowDiagram> diagrams, IEnumerable<string>? knownHeads = null)
+    public static List<ReflowBlock> Blocks(IReadOnlyList<ReflowPage> pages, IReadOnlyList<ReflowDiagram> diagrams, IEnumerable<string>? knownHeads = null,
+        CancellationToken ct = default)
     {
         var byPage = diagrams.GroupBy(d => d.Page).ToDictionary(g => g.Key, g => g.ToList());
         var perPage = new List<(ReflowPage Page, List<Segment> Segs, double? Gutter)>();
         foreach (var p in pages)
         {
+            ct.ThrowIfCancellationRequested();   // G2-003: Pause/Sperrzeit greifen auch mitten in einem großen Buch
             var ds = byPage.GetValueOrDefault(p.Number) ?? [];
             var segs = Segments(p, ds, out var gutter);
             perPage.Add((p, segs, gutter));

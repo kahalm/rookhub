@@ -29,7 +29,7 @@ public static class EbookReflowConverter
         if (doc.Pages.Count == 0 || chars < MinCharsPerPage * doc.Pages.Count)
             throw new ReflowNotPossibleException($"The PDF has too little text ({chars} characters on {doc.Pages.Count} pages) — probably a scan.");
         ct.ThrowIfCancellationRequested();
-        var blocks = EbookReflowLayout.Blocks(doc.Pages, diagrams, doc.Outline.Select(o => o.Title).Append(title));
+        var blocks = EbookReflowLayout.Blocks(doc.Pages, diagrams, doc.Outline.Select(o => o.Title).Append(title), ct);
         ct.ThrowIfCancellationRequested();
         var chapters = EbookReflowLayout.Chapters(blocks, doc.Outline, doc.Pages.Count);
         var book = new ReflowBook(
