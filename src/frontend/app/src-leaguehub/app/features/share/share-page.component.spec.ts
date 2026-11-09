@@ -76,6 +76,29 @@ describe('SharePageComponent', () => {
     expect((el.querySelector('.cta-actions a') as HTMLAnchorElement).getAttribute('href')).toContain('TOKEN123~3');
   });
 
+  // Codereview F4-004: zwei schnelle Rundenwechsel, die Antworten kommen vertauscht — es zählt die zuletzt gewählte Runde.
+  it('schneller Rundenwechsel: eine späte Antwort für die vorige Wahl überschreibt die neue nicht', async () => {
+    const R = (round: number) => ({ league: 'Landesliga', season: '2026/27', round, team: 'Schwaz/', generated: '', expires: '2027-01-24',
+      rounds: [...ROUNDS, { round: 4, date: 'Sa 21.11.2026', opp: 'Zirl', home: true, status: 'open' }],
+      fixture: { opp: round === 4 ? 'Zirl' : round === 3 ? 'Kufstein' : 'Wörgl', home: true, status: 'open', boards: [], roster: [] } }) as any;
+    let release3!: () => void;
+    api.shared.and.callFake((t: string) => t.endsWith('~3')
+      ? new Promise(r => { release3 = () => r(R(3)); })
+      : Promise.resolve(R(t.endsWith('~4') ? 4 : 2)));
+    const f = create();
+    await f.whenStable();
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const c = f.componentInstance;
+    c.pickRound(3);
+    c.pickRound(4);
+    await f.whenStable();
+    release3();
+    await f.whenStable();
+    f.detectChanges();
+    expect(c.data()?.round).toBe(4);
+    expect((f.nativeElement as HTMLElement).querySelector('.match')?.textContent).toContain('Zirl');
+  });
+
   it('Runde aus der Adresse (?runde=3) gilt gleich beim Laden; nur eine Runde → keine Auswahl', async () => {
     api.shared.and.resolveTo({
       league: 'Landesliga', season: '2026/27', round: 3, team: 'Schwaz/', generated: '27.09.2026 21:00', expires: '2027-01-24',

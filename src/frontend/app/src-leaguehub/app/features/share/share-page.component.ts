@@ -140,14 +140,21 @@ export class SharePageComponent implements OnInit {
     return this.load();
   }
 
+  /** Zählt die Ladevorgänge — nur der jüngste darf schreiben (Codereview F4-004: schneller Rundenwechsel 3 → 4, die
+   *  Antwort für 3 kam nach der für 4, und die Seite zeigte Runde 3 unter `?runde=4`). */
+  private seq = 0;
+
   async load(): Promise<void> {
+    const mine = ++this.seq;
     this.loadError.set(null);
     try {
       const d = await this.api.shared(this.token());
+      if (mine !== this.seq) return;
       this.data.set(d);
       this.clubs.useShareClub(d.club ?? null);
       this.title.setTitle(`${tn(d.team)} – Runde ${d.round} | LeagueHub`);
     } catch (err) {
+      if (mine !== this.seq) return;
       const status = err instanceof HttpErrorResponse ? err.status : null;
       if (status === 404) {
         // 0.846.4, Wunsch 2026-10-26: „wenn man eingeloggt ist und ein Link abgelaufen ist, aber das sowieso sehen darf, sollte
@@ -168,14 +175,14 @@ export class SharePageComponent implements OnInit {
       try {
         s = await this.api.sources(this.token());
       } catch {
-        this.sources.set(null);
+        if (mine === this.seq) this.sources.set(null);
         return;
       }
-      if (this.destroyed) return;
+      if (this.destroyed || mine !== this.seq) return;
       this.sources.set(s);
       if (!s.pending || attempt >= SOURCES_RETRIES) return;
       await new Promise(r => setTimeout(r, SOURCES_RETRY_MS));
-      if (this.destroyed) return;
+      if (this.destroyed || mine !== this.seq) return;
     }
   }
 
