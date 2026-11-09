@@ -79,11 +79,11 @@ public class TacticHarvestUpkeepTests : IDisposable
     {
         var club = TestClubs.Home;
         var g = new LeagueClubGame { White = "Moser, Axel", WhiteFide = "24602094", Black = "Testdorf", Year = 2026, Pgn = "", MovesHash = "h" };
-        var round = new TacticHarvestService.LeagueRound("2026/27 · Landesliga · Runde 1", "Moser, Axel", "Streiter, Gerhard");
-        Assert.Equal("Moser, Axel – Streiter, Gerhard (2026)", TacticHarvestService.ClubTitle(g, round, club));
-        Assert.Equal("Moser, Axel – Testdorf (2026)", TacticHarvestService.ClubTitle(g, null, club));
+        var round = new TacticLeagueRounds.LeagueRound("2026/27 · Landesliga · Runde 1", "Moser, Axel", "Streiter, Gerhard");
+        Assert.Equal("Moser, Axel – Streiter, Gerhard (2026)", TacticLeagueRounds.ClubTitle(g, round, club));
+        Assert.Equal("Moser, Axel – Testdorf (2026)", TacticLeagueRounds.ClubTitle(g, null, club));
         g.Year = null;
-        Assert.Equal("Moser, Axel – Testdorf", TacticHarvestService.ClubTitle(g, new TacticHarvestService.LeagueRound("x", "A", " "), club));
+        Assert.Equal("Moser, Axel – Testdorf", TacticLeagueRounds.ClubTitle(g, new TacticLeagueRounds.LeagueRound("x", "A", " "), club));
     }
 
     [Theory]
@@ -96,7 +96,7 @@ public class TacticHarvestUpkeepTests : IDisposable
     [Fact]
     public void ClubChapterKey_UnreadableGoesLast()
     {
-        Assert.Equal((1, 0, "", 0), TacticHarvestService.ClubChapterKey(null));
-        Assert.Equal((1, 0, "2026 · Liga · Runde 1", 0), TacticHarvestService.ClubChapterKey("2026 · Liga · Runde 1"));
+        Assert.Equal((1, 0, "", 0), TacticHarvestUpkeep.ClubChapterKey(null));
+        Assert.Equal((1, 0, "2026 · Liga · Runde 1", 0), TacticHarvestUpkeep.ClubChapterKey("2026 · Liga · Runde 1"));
     }
 }

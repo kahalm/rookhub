@@ -43,9 +43,9 @@ public class TacticHarvestChapterOrderTests
     [Fact]
     public void ClubChapterKey_parses_season_league_round()
     {
-        Assert.Equal((0, 2026, "Landesliga", 1), TacticHarvestService.ClubChapterKey("2026/27 · Landesliga · Runde 1"));
-        Assert.Equal((1, 0, "Andere Partien", 0), TacticHarvestService.ClubChapterKey("Andere Partien"));
-        Assert.Equal((1, 0, "", 0), TacticHarvestService.ClubChapterKey(null));
+        Assert.Equal((0, 2026, "Landesliga", 1), TacticHarvestUpkeep.ClubChapterKey("2026/27 · Landesliga · Runde 1"));
+        Assert.Equal((1, 0, "Andere Partien", 0), TacticHarvestUpkeep.ClubChapterKey("Andere Partien"));
+        Assert.Equal((1, 0, "", 0), TacticHarvestUpkeep.ClubChapterKey(null));
     }
 
     [Fact]
@@ -66,10 +66,8 @@ public class TacticHarvestChapterOrderTests
                 Fen = "x", Moves = "e2e4", Chapter = chapters[i],
             });
         await db.SaveChangesAsync();
-        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
-        var svc = new TacticHarvestService(db, new AnalysisJobService(db, config: config), new QuietHours("", "UTC"), config,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<TacticHarvestService>.Instance);
-        await svc.SortClubChaptersAsync(TacticHarvestService.ClubBookOf(1), default);
+        var upkeep = new TacticHarvestUpkeep(db, Microsoft.Extensions.Logging.Abstractions.NullLogger<TacticHarvestService>.Instance);
+        await upkeep.SortClubChaptersAsync(TacticHarvestService.ClubBookOf(1), default);
         var order = db.BookPuzzles.AsEnumerable().OrderBy(p => p.Round.Length).ThenBy(p => p.Round).Select(p => p.Chapter).ToList();
         Assert.Equal(new[]
         {

@@ -119,8 +119,8 @@ public class BookSourceSplitSqlTests
         using var db = MySqlContext();
         foreach (var sql in new[]
         {
-            RookHub.Api.Services.Tactics.TacticHarvestService.OldCommentPuzzles(db.BookPuzzles).ToQueryString(),
-            RookHub.Api.Services.Tactics.TacticHarvestService.UnlinkedPuzzles(db.BookPuzzles).ToQueryString(),
+            RookHub.Api.Services.Tactics.TacticHarvestUpkeep.OldCommentPuzzles(db.BookPuzzles).ToQueryString(),
+            RookHub.Api.Services.Tactics.TacticHarvestUpkeep.UnlinkedPuzzles(db.BookPuzzles).ToQueryString(),
         })
             Assert.Contains("LIKE 'tactics-%'", sql);
     }

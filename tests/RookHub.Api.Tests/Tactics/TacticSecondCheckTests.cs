@@ -66,9 +66,9 @@ public class TacticSecondCheckTests : IDisposable
     public void SecondStep_AllStagesAgree_ConfirmsTheCandidate()
     {
         var c = Cand1();
-        TacticHarvestService.SecondStep(c, new[] { C("a1a8", mate: 1), C("g1f2", cp: 50) });     // Stufe 0: Aufgabenstellung
+        TacticCandidateSteps.SecondStep(c, new[] { C("a1a8", mate: 1), C("g1f2", cp: 50) });     // Stufe 0: Aufgabenstellung
         Assert.Equal((1, (bool?)null, "a1a8", "#1"), (c.SecondStage, c.SecondAgrees, c.SecondBest, c.SecondEval));
-        TacticHarvestService.SecondStep(c, new[] { C("g8f8", cp: 20) });                         // Stufe 1: vor dem Fehler war es ruhig
+        TacticCandidateSteps.SecondStep(c, new[] { C("g8f8", cp: 20) });                         // Stufe 1: vor dem Fehler war es ruhig
         Assert.Equal((true, TacticCandidateStatus.Done), (c.SecondAgrees, c.Status));
     }
 
@@ -76,7 +76,7 @@ public class TacticSecondCheckTests : IDisposable
     public void SecondStep_DifferentBestMove_Disputes()
     {
         var c = Cand1();
-        TacticHarvestService.SecondStep(c, new[] { C("g1f2", cp: 300), C("a1a8", cp: 20) });
+        TacticCandidateSteps.SecondStep(c, new[] { C("g1f2", cp: 300), C("a1a8", cp: 20) });
         Assert.Equal((TacticCandidateStatus.Disputed, (bool?)false, "lc0Move"), (c.Status, c.SecondAgrees, c.RejectReason));
     }
 
@@ -84,8 +84,8 @@ public class TacticSecondCheckTests : IDisposable
     public void SecondStep_OpponentMoveWasNoMistakeForTheSecondEngine_Disputes()
     {
         var c = Cand1();
-        TacticHarvestService.SecondStep(c, new[] { C("a1a8", mate: 1), C("g1f2", cp: 50) });
-        TacticHarvestService.SecondStep(c, new[] { C("g8f8", cp: -900) });                       // stand schon verloren: kein Fehler
+        TacticCandidateSteps.SecondStep(c, new[] { C("a1a8", mate: 1), C("g1f2", cp: 50) });
+        TacticCandidateSteps.SecondStep(c, new[] { C("g8f8", cp: -900) });                       // stand schon verloren: kein Fehler
         Assert.Equal((TacticCandidateStatus.Disputed, "lc0NoBlunder"), (c.Status, c.RejectReason));
     }
 
@@ -93,11 +93,11 @@ public class TacticSecondCheckTests : IDisposable
     public void SecondFen_FollowsTheSolutionWithReplies_NullWhenNotPlayable()
     {
         var c = Cand1("material", "b2b7 h8g8 a1a8", LadderPrev, LadderFen);
-        Assert.Equal(LadderFen, TacticHarvestService.SecondFen(c, 0));
-        Assert.Equal(LadderPrev, TacticHarvestService.SecondFen(c, 1));
-        Assert.Equal("6k1/1R6/8/8/8/8/8/R5K1 w - - 2 2", TacticHarvestService.SecondFen(c, 2));
+        Assert.Equal(LadderFen, TacticCandidateSteps.SecondFen(c, 0));
+        Assert.Equal(LadderPrev, TacticCandidateSteps.SecondFen(c, 1));
+        Assert.Equal("6k1/1R6/8/8/8/8/8/R5K1 w - - 2 2", TacticCandidateSteps.SecondFen(c, 2));
         c.Moves = "b2b7 h8h1";   // Antwort nicht spielbar
-        Assert.Null(TacticHarvestService.SecondFen(c, 3));
+        Assert.Null(TacticCandidateSteps.SecondFen(c, 3));
     }
 
     [Fact]
@@ -105,12 +105,12 @@ public class TacticSecondCheckTests : IDisposable
     {
         var material = Cand1("material", "b2b7 h8g8 a1a8", LadderPrev, LadderFen);
         material.SecondStage = 2;
-        TacticHarvestService.SecondStep(material, new[] { C("a1a2", cp: 700), C("a1a8", cp: 20) });
+        TacticCandidateSteps.SecondStep(material, new[] { C("a1a2", cp: 700), C("a1a8", cp: 20) });
         Assert.Equal(("b2b7", (bool?)true, TacticCandidateStatus.Done), (material.Moves, material.SecondAgrees, material.Status));
 
         var mate = Cand1("mate", "b2b7 h8g8 a1a8", LadderPrev, LadderFen);
         mate.SecondStage = 2;
-        TacticHarvestService.SecondStep(mate, new[] { C("a1a2", cp: 700), C("a1a8", cp: 20) });
+        TacticCandidateSteps.SecondStep(mate, new[] { C("a1a2", cp: 700), C("a1a8", cp: 20) });
         Assert.Equal((TacticCandidateStatus.Disputed, "lc0Line", "b2b7 h8g8 a1a8"), (mate.Status, mate.RejectReason, mate.Moves));
     }
 
@@ -119,7 +119,7 @@ public class TacticSecondCheckTests : IDisposable
     {
         var c = Cand1("material", "b2b7 h8g8 a1a8", LadderPrev, LadderFen);
         c.SecondStage = 2;
-        TacticHarvestService.SecondStep(c, new[] { C("a1a8", cp: 700), C("a1a2", cp: 20) });
+        TacticCandidateSteps.SecondStep(c, new[] { C("a1a8", cp: 700), C("a1a2", cp: 20) });
         Assert.Equal(("b2b7 h8g8 a1a8", (bool?)true), (c.Moves, c.SecondAgrees));
     }
 

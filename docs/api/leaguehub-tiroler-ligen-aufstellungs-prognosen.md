@@ -164,7 +164,7 @@ Rollenverwaltung an).
 - **Taktik-Ernte (0.657.0**, Wunsch 2026-10-04 „Taktiken aus den Partien automatisch ernten … plan und bau", Kapitel je
   Ligarunde): `Services/Tactics/` — `TacticHarvest` (rein: Lichess-Puzzler-Schwellen ohne AGPL-Code: Gewinnchance −1..1,
   Fehler des Gegners > 0,6, nicht schon > +3, Matt ≤ 15 oder ≥ +2, eindeutig > 0,7 bzw. bei Matt kein zweites Matt; Themen
-  mateInN/oneMove/short/long/promotion/check/hangingPiece/fork), `TacticHarvestService` (Scan: fertige Analysen Origin
+  mateInN/oneMove/short/long/promotion/check/hangingPiece/fork), `TacticHarvestService` (Schritte je Kandidat in `TacticCandidateSteps`, Pflege veröffentlichter Aufgaben in `TacticHarvestUpkeep`, Ligarunde/Titel in `TacticLeagueRounds`; Scan: fertige Analysen Origin
   Club/Library/SavedGame — NICHT Guess/Manual, privat — einmal je Analyse `GameAnalyses.TacticsScannedAt`; Pump: je
   Löserzug ein Auftrag MultiPv 2, Tiefe 22, `background`, nicht in der Ruhezeit, höchstens 8 offen, Gegnerzug aus der
   Hauptvariante, Engine-Besitzer `TacticHarvest:OwnerUserId` → `MasterAnalysis:OwnerUserId` → Haus-Engine eines Admins;
@@ -210,7 +210,7 @@ Rollenverwaltung an).
 - **Feste Ligapaarung einer Vereinspartie** (0.678.0, Wunsch 2026-10-05: „wenn ich eine Partie von meinen Spielen in die
   Vereins-DB kopiere, kann ich sie keiner Ligarunde zuweisen — überleg dir da was"): `LeagueClubGames.LeagueGameId` (Index, KEIN
   FK) zeigt auf die Brettpaarung (`LeagueGames.Id`) und schlägt jede Raterei — `LeagueFixtureGames` nimmt fest zugeordnete
-  Partien zuerst (das Raten nur noch unter Partien ohne lebende Zuordnung), `TacticHarvestService.LeagueRoundAsync` ebenso. Vorschläge
+  Partien zuerst (das Raten nur noch unter Partien ohne lebende Zuordnung), `TacticLeagueRounds.LeagueRoundAsync` ebenso. Vorschläge
   rechnet `Services/League/LeaguePairingFinder.cs`: Paarungen mit mindestens einer FIDE-ID der Partie (auch der internen hinter
   „Schwaz"; die „Schwaz"-Seite passt zu jedem Spieler des eigenen Vereins), `Exact` = beide Seiten in ihren Farben UND Tag
   ±`DayTolerance` (3) um den Rundentermin (ohne Tag: Saison passt zum Jahr), höchstens `MaxOptions` (8); vorgewählt nur bei
@@ -231,7 +231,7 @@ Rollenverwaltung an).
   löst `RelinkAsync(tnr)` die Id aus dem Schlüssel neu auf (Paarung weg → Id `null`, Schlüssel bleibt, kommt sie wieder, findet der
   nächste Lauf sie). **Jeder Leser** geht über `LeagueGameLinks.ResolveAsync`/`FindAsync` (Id, wenn sie lebt und zum Schlüssel
   passt, sonst Schlüssel, sonst „nicht zugeordnet" + Warnung): `LeagueFixtureGames` (tote Id = raten erlaubt — eine Partie
-  verschwindet nie wegen einer toten Id), `TacticHarvestService.LeagueRoundAsync`, `PairingsForGameAsync`, die Bezeichnung im DTO
+  verschwindet nie wegen einer toten Id), `TacticLeagueRounds.LeagueRoundAsync`, `PairingsForGameAsync`, die Bezeichnung im DTO
   (`FillPairingLabelsAsync` gibt die aufgelöste Id aus) und `ArchiveOlderVersionsAsync` (gleiche Paarung = gleiche aufgelöste Id
   bzw. gleicher Schlüssel; eine tote Id ist keine „andere feste Paarung"). Wer einen neuen Leser baut, nimmt `ResolveAsync`, nie
   `LeagueGameId` roh. (3) **Heilung beim Start** (`LeagueGameLinks.HealOnStartupAsync` in `Startup/DatabaseSetup.cs`, idempotent, wirft nie):

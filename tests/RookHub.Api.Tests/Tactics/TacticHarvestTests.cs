@@ -57,7 +57,7 @@ public class TacticHarvestTests : IDisposable
     {
         var a = new GameAnalysis { Id = 1, Origin = GameAnalysisOrigin.Club };
         var f = new TacticHarvest.Found("mate", 1, C("a1a8", mate: 1));
-        var c = TacticHarvestService.Start(a, "6k1/5ppp/8/8/8/8/7P/R5K1 b - - 0 1", "g8h8", 3, "7k/5ppp/8/8/8/8/7P/R5K1 w - - 1 2", "a1a8", f, DateTime.UtcNow);
+        var c = TacticCandidateSteps.Start(a, "6k1/5ppp/8/8/8/8/7P/R5K1 b - - 0 1", "g8h8", 3, "7k/5ppp/8/8/8/8/7P/R5K1 w - - 1 2", "a1a8", f, DateTime.UtcNow);
         Assert.NotNull(c);
         Assert.Equal(TacticCandidateStatus.Done, c!.Status);
         Assert.True(c.Found);
@@ -72,17 +72,17 @@ public class TacticHarvestTests : IDisposable
         const string fen = "7k/8/8/8/8/8/1R6/R5K1 w - - 0 1";
         var a = new GameAnalysis { Id = 1, Origin = GameAnalysisOrigin.Club };
         var f = new TacticHarvest.Found("mate", 2, M("b2b7", 2, "b2b7", "h8g8", "a1a8"));
-        var c = TacticHarvestService.Start(a, "7k/8/8/8/8/8/1R6/R5K1 b - - 0 1", "h8h8", 1, fen, "g1g2", f, DateTime.UtcNow);
+        var c = TacticCandidateSteps.Start(a, "7k/8/8/8/8/8/1R6/R5K1 b - - 0 1", "h8h8", 1, fen, "g1g2", f, DateTime.UtcNow);
         Assert.Null(c);   // Fehler des Gegners geht nicht (h8h8) → kein Kandidat
 
         var prev = "6k1/8/8/8/8/8/1R6/R5K1 b - - 0 1";
-        c = TacticHarvestService.Start(a, prev, "g8h8", 1, fen, "g1g2", f, DateTime.UtcNow)!;
+        c = TacticCandidateSteps.Start(a, prev, "g8h8", 1, fen, "g1g2", f, DateTime.UtcNow)!;
         Assert.Equal(TacticCandidateStatus.Verifying, c.Status);
         Assert.False(c.Found);
         Assert.Equal("h8g8", c.PendingReplyUci);
         Assert.Equal("6k1/1R6/8/8/8/8/8/R5K1 w - - 2 2", c.NextFen);
 
-        TacticHarvestService.Step(c, new[] { C("a1a8", mate: 1), C("b7b8", mate: 1) });   // zwei Matts: nicht eindeutig
+        TacticCandidateSteps.Step(c, new[] { C("a1a8", mate: 1), C("b7b8", mate: 1) });   // zwei Matts: nicht eindeutig
         Assert.Equal(TacticCandidateStatus.Done, c.Status);
         Assert.Equal("b2b7", c.Moves);                                                     // endet beim letzten eindeutigen Zug
         Assert.DoesNotContain("mate", c.Themes);                                           // kein Matt erreicht
@@ -92,10 +92,10 @@ public class TacticHarvestTests : IDisposable
     public void Step_UniqueMate_AppendsReplyAndMove_AndFinishesOnMate()
     {
         var a = new GameAnalysis { Id = 1, Origin = GameAnalysisOrigin.Library };
-        var c = TacticHarvestService.Start(a, "6k1/8/8/8/8/8/1R6/R5K1 b - - 0 1", "g8h8", 1, "7k/8/8/8/8/8/1R6/R5K1 w - - 0 1", "b2b7",
+        var c = TacticCandidateSteps.Start(a, "6k1/8/8/8/8/8/1R6/R5K1 b - - 0 1", "g8h8", 1, "7k/8/8/8/8/8/1R6/R5K1 w - - 0 1", "b2b7",
             new TacticHarvest.Found("mate", 2, M("b2b7", 2, "b2b7", "h8g8", "a1a8")), DateTime.UtcNow)!;
         Assert.True(c.Found);
-        TacticHarvestService.Step(c, new[] { M("a1a8", 1, "a1a8"), C("b7b1", cp: 900) });
+        TacticCandidateSteps.Step(c, new[] { M("a1a8", 1, "a1a8"), C("b7b1", cp: 900) });
         Assert.Equal(TacticCandidateStatus.Done, c.Status);
         Assert.Equal("b2b7 h8g8 a1a8", c.Moves);
         Assert.Contains("mateIn2", c.Themes);
@@ -137,11 +137,11 @@ public class TacticHarvestTests : IDisposable
     public async Task LeagueRound_FromPlayersColoursAndSeason_AnonymousSideMatchesOwnClub()
     {
         var (_, g) = await SeedClubAsync();
-        Assert.Equal("2026/27 · Landesliga · Runde 1", await TacticHarvestService.LeagueRoundChapterAsync(_db, g, TestClubs.Home, default));
+        Assert.Equal("2026/27 · Landesliga · Runde 1", await TacticLeagueRounds.LeagueRoundChapterAsync(_db, g, TestClubs.Home, default));
         g.Year = 2019;   // andere Saison
-        Assert.Null(await TacticHarvestService.LeagueRoundChapterAsync(_db, g, TestClubs.Home, default));
+        Assert.Null(await TacticLeagueRounds.LeagueRoundChapterAsync(_db, g, TestClubs.Home, default));
         g.Year = 2026; g.White = "Testdorf"; g.WhiteFide = null; g.Black = "Moser, Axel"; g.BlackFide = "24602094";   // Farben vertauscht
-        Assert.Null(await TacticHarvestService.LeagueRoundChapterAsync(_db, g, TestClubs.Home, default));
+        Assert.Null(await TacticLeagueRounds.LeagueRoundChapterAsync(_db, g, TestClubs.Home, default));
     }
 
     private TacticHarvestService Svc() => new(_db, new AnalysisJobService(_db), new QuietHours("", "UTC"),

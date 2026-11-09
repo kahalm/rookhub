@@ -208,10 +208,10 @@ public class LeagueGameLinksTests : IDisposable
         await SeedAsync();
         var keyed = Haselbeck(leagueGameId: 999_999);
         (keyed.LeagueTnr, keyed.LeagueRound, keyed.LeagueMatchNo, keyed.LeagueBoard) = (Tnr, 2, 2, 2);
-        Assert.Equal("2026/27 · Landesliga · Runde 2", await TacticHarvestService.LeagueRoundChapterAsync(_db, keyed, TestClubs.Home, default));
+        Assert.Equal("2026/27 · Landesliga · Runde 2", await TacticLeagueRounds.LeagueRoundChapterAsync(_db, keyed, TestClubs.Home, default));
 
         var dead = Haselbeck(leagueGameId: 999_999);                      // ohne Schlüssel: geraten über Spieler + Saison
-        Assert.Equal("2026/27 · Landesliga · Runde 2", await TacticHarvestService.LeagueRoundChapterAsync(_db, dead, TestClubs.Home, default));
+        Assert.Equal("2026/27 · Landesliga · Runde 2", await TacticLeagueRounds.LeagueRoundChapterAsync(_db, dead, TestClubs.Home, default));
     }
 
     [Fact]

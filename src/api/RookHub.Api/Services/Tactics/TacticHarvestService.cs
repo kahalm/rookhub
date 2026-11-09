@@ -51,6 +51,8 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     public const string BookPrefix = "tactics-";
     public const string OtherGamesChapter = "Andere Partien";
 
+    private readonly TacticHarvestUpkeep _upkeep = new(db, log);
+
     private static readonly GameAnalysisOrigin[] Sources =
         { GameAnalysisOrigin.Club, GameAnalysisOrigin.Library, GameAnalysisOrigin.SavedGame };
 
@@ -103,7 +105,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
                 if (found is null && !lc0) { found = TacticHarvest.Detect(before, here, TacticHarvest.Relaxed); variant = "relaxed"; }
                 if (found is null) continue;
                 if (a.LeagueClubGameId is { } gid && seen.Contains((gid, ps[i].Ply))) continue;
-                var c = Start(a, ps[i - 1].Fen, ps[i - 1].GameMoveUci, ps[i].Ply, ps[i].Fen, ps[i].GameMoveUci, found, now, variant);
+                var c = TacticCandidateSteps.Start(a, ps[i - 1].Fen, ps[i - 1].GameMoveUci, ps[i].Ply, ps[i].Fen, ps[i].GameMoveUci, found, now, variant);
                 if (c is null) continue;
                 db.TacticCandidates.Add(c);
                 if (a.LeagueClubGameId is { } g2) seen.Add((g2, ps[i].Ply));
@@ -113,79 +115,6 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         await db.SaveChangesAsync(ct);
         if (added > 0) log.LogInformation("Taktik-Ernte: {Count} Kandidaten aus {Games} Analysen", added, analyses.Count);
         return added;
-    }
-
-    /// <summary>Kandidat anlegen: erster Zug (normiert), gefunden ja/nein, nächster Schritt aus der Hauptvariante.</summary>
-    internal static TacticCandidate? Start(GameAnalysis a, string prevFen, string blunderUci, int ply, string fen, string gameUci,
-        TacticHarvest.Found found, DateTime now, string? variant = null)
-    {
-        var first = TacticHarvest.Play(fen, found.Best.Uci);
-        if (first is null || TacticHarvest.Play(prevFen, blunderUci) is null) return null;
-        var bestUci = GamePlies.ToUci(first.Value.Move);
-        var played = TacticHarvest.Play(fen, gameUci);
-        var c = new TacticCandidate
-        {
-            GameAnalysisId = a.Id, Ply = ply, Origin = a.Origin, PrevFen = prevFen, BlunderUci = blunderUci, Fen = fen,
-            SolverWhite = FenFields.WhiteToMove(fen), GameMoveUci = gameUci,
-            Found = played is not null && played.Value.Fen == first.Value.Fen, Kind = found.Kind, Moves = bestUci,
-            EvalText = TacticHarvest.EvalText(found.Best), Status = TacticCandidateStatus.Verifying, CreatedAt = now, UpdatedAt = now,
-            Variant = variant,
-        };
-        // Lc0-Fund: Stockfish sieht den Vorteil oft nicht (das ist der Punkt) — die Lösung bleibt der eine erste Zug, die Zweitprüfung
-        // (wieder Lc0) bestätigt ihn
-        if (variant == "lc0") Finish(c);
-        else Continue(c, first.Value.Fen, first.Value.Over, found.Best.Pv);
-        return c;
-    }
-
-    /// <summary>Nach einem bestätigten Zug des Lösers: weiter mit der Antwort aus der Hauptvariante, oder fertig.</summary>
-    private static void Continue(TacticCandidate c, string fenAfterSolver, bool over, IReadOnlyList<string> pv)
-    {
-        var solverMoves = (c.Moves.Split(' ').Length + 1) / 2;
-        var reply = pv.Count > 1 ? pv[1] : null;
-        var next = !over && solverMoves < TacticHarvest.MaxSolverMoves && reply is not null ? TacticHarvest.Play(fenAfterSolver, reply) : null;
-        if (next is null || next.Value.Over)
-        {
-            Finish(c);
-            return;
-        }
-        c.PendingReplyUci = GamePlies.ToUci(next.Value.Move);
-        c.NextFen = next.Value.Fen;
-        c.AnalysisJobId = null;
-        c.Attempts = 0;
-    }
-
-    private static void Finish(TacticCandidate c)
-    {
-        c.Status = TacticCandidateStatus.Done;
-        c.PendingReplyUci = null;
-        c.NextFen = null;
-        c.AnalysisJobId = null;
-        var solution = c.Moves.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        c.Themes = string.Join(',', TacticHarvest.Themes(c.Fen, solution, c.Kind));
-        c.UpdatedAt = DateTime.UtcNow;
-    }
-
-    /// <summary>Ergebnis der Stellung <see cref="TacticCandidate.NextFen"/> (Löser am Zug): eindeutig → weiter, sonst fertig.</summary>
-    internal static void Step(TacticCandidate c, IReadOnlyList<TacticHarvest.Cand> cands)
-    {
-        var mate = c.Kind == "mate";
-        if (cands.Count == 0 || c.NextFen is null || c.PendingReplyUci is null || !TacticHarvest.IsUnique(cands, mate, TacticHarvest.RulesFor(c.Variant))
-            || (mate && cands[0].Mate is not > 0)
-            || (!mate && cands[0].Mate is null && (cands[0].Cp ?? 0) < TacticHarvest.RulesFor(c.Variant).MinAdvantageCp))
-        {
-            Finish(c);
-            return;
-        }
-        var played = TacticHarvest.Play(c.NextFen, cands[0].Uci);
-        if (played is null)
-        {
-            Finish(c);
-            return;
-        }
-        c.Moves = $"{c.Moves} {c.PendingReplyUci} {GamePlies.ToUci(played.Value.Move)}";
-        c.UpdatedAt = DateTime.UtcNow;
-        Continue(c, played.Value.Fen, played.Value.Over, cands[0].Pv);
     }
 
     // ── 2. Prüfen ──
@@ -226,14 +155,14 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
                 if (job.Status == AnalysisJobStatus.Done)
                 {
                     var parsed = BrokerCandidates.Parse(job.ResultJson, c.NextFen!) ?? new();
-                    Step(c, parsed.Select(p => new TacticHarvest.Cand(p.Uci, p.Cp, p.Mate, p.Pv ?? Array.Empty<string>())).ToList());
+                    TacticCandidateSteps.Step(c, parsed.Select(p => new TacticHarvest.Cand(p.Uci, p.Cp, p.Mate, p.Pv ?? Array.Empty<string>())).ToList());
                     db.AnalysisJobs.Remove(job);
                 }
                 else if (job.Status == AnalysisJobStatus.Failed)
                 {
                     db.AnalysisJobs.Remove(job);
                     c.AnalysisJobId = null;
-                    if (++c.Attempts >= MaxAttempts) Finish(c);
+                    if (++c.Attempts >= MaxAttempts) TacticCandidateSteps.Finish(c);
                 }
             }
             await db.SaveChangesAsync(ct);
@@ -272,76 +201,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         await db.SaveChangesAsync(ct);
     }
 
-    // ── 2b. Zweitprüfung (lc0) ──
-
-    /// <summary>Stellung der Zweitprüfung in Stufe <paramref name="stage"/>: 0 = Aufgabenstellung, 1 = vor dem Fehler, ab 2 die
-    /// Stellung vor dem späteren Löserzug (nach den Zügen davor samt Antworten). <c>null</c> = nicht spielbar.</summary>
-    internal static string? SecondFen(TacticCandidate c, int stage)
-    {
-        if (stage == 0) return c.Fen;
-        if (stage == 1) return c.PrevFen;
-        var fen = c.Fen;
-        var tokens = c.Moves.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        for (var i = 0; i < 2 * (stage - 1); i++)
-        {
-            if (i >= tokens.Length || TacticHarvest.Play(fen, tokens[i]) is not { } p) return null;
-            fen = p.Fen;
-        }
-        return fen;
-    }
-
-    private static void Dispute(TacticCandidate c, string reason)
-    {
-        c.Status = TacticCandidateStatus.Disputed;
-        c.SecondAgrees = false;
-        c.SecondJobId = null;
-        c.RejectReason = reason;
-        c.UpdatedAt = DateTime.UtcNow;
-    }
-
-    /// <summary>
-    /// Ergebnis der Zweitprüfung für <see cref="TacticCandidate.SecondStage"/>. Stufe 0: bester Zug und Eindeutigkeit wie die
-    /// Erstprüfung. Stufe 1: ist der Zug des Gegners auch für die Zweitprüfung ein Fehler (sonst Kompensation, keine Taktik)?
-    /// Ab Stufe 2: die späteren Löserzüge — stimmt einer nicht, endet die Lösung davor (bei Matt-Aufgaben stattdessen
-    /// <c>Disputed</c>, sie wären abgeschnitten keine Matt-Aufgabe mehr). Alle Stufen durch → <see cref="TacticCandidate.SecondAgrees"/>.
-    /// </summary>
-    internal static void SecondStep(TacticCandidate c, IReadOnlyList<TacticHarvest.Cand> cands)
-    {
-        var tokens = c.Moves.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var solverMoves = (tokens.Length + 1) / 2;
-        var mate = c.Kind == "mate";
-        c.SecondJobId = null;
-        c.SecondAttempts = 0;
-        c.UpdatedAt = DateTime.UtcNow;
-        if (c.SecondStage == 0)
-        {
-            if (!TacticHarvest.Agree(c.Fen, cands, tokens[0], mate, TacticHarvest.RulesFor(c.Variant))) { Dispute(c, "lc0Move"); return; }
-            c.SecondBest = cands[0].Uci;
-            c.SecondEval = TacticHarvest.EvalText(cands[0]);
-            c.SecondHereJson = TacticHarvest.Dump(cands);
-        }
-        else if (c.SecondStage == 1)
-        {
-            if (TacticHarvest.Detect(cands, TacticHarvest.LoadDump(c.SecondHereJson), TacticHarvest.RulesFor(c.Variant)) is null) { Dispute(c, "lc0NoBlunder"); return; }
-        }
-        else
-        {
-            var j = c.SecondStage - 1;   // Index des Löserzugs (0-basiert), Halbzug-Index 2*j
-            var fen = SecondFen(c, c.SecondStage);
-            if (fen is null) { Dispute(c, "lc0Fen"); return; }
-            if (!TacticHarvest.Agree(fen, cands, tokens[2 * j], mate, TacticHarvest.RulesFor(c.Variant)))
-            {
-                if (mate) { Dispute(c, "lc0Line"); return; }
-                c.Moves = string.Join(' ', tokens.Take(2 * j - 1));
-                c.Themes = string.Join(',', TacticHarvest.Themes(c.Fen, c.Moves.Split(' '), c.Kind));
-                c.SecondStage = solverMoves + 1;
-                c.SecondAgrees = true;
-                return;
-            }
-        }
-        c.SecondStage++;
-        if (c.SecondStage > solverMoves) c.SecondAgrees = true;
-    }
+    // ── 2b. Zweitprüfung (lc0, Schritte in TacticCandidateSteps) ──
 
     private async Task PumpSecondAsync(int engineOwner, CancellationToken ct)
     {
@@ -358,16 +218,16 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
                 if (!byId.TryGetValue(c.SecondJobId!.Value, out var job)) { c.SecondJobId = null; continue; }
                 if (job.Status == AnalysisJobStatus.Done)
                 {
-                    var fen = SecondFen(c, c.SecondStage);
+                    var fen = TacticCandidateSteps.SecondFen(c, c.SecondStage);
                     var parsed = fen is null ? new() : BrokerCandidates.Parse(job.ResultJson, fen) ?? new();
-                    SecondStep(c, parsed.Select(p => new TacticHarvest.Cand(p.Uci, p.Cp, p.Mate, p.Pv ?? Array.Empty<string>())).ToList());
+                    TacticCandidateSteps.SecondStep(c, parsed.Select(p => new TacticHarvest.Cand(p.Uci, p.Cp, p.Mate, p.Pv ?? Array.Empty<string>())).ToList());
                     db.AnalysisJobs.Remove(job);
                 }
                 else if (job.Status == AnalysisJobStatus.Failed)
                 {
                     db.AnalysisJobs.Remove(job);
                     c.SecondJobId = null;
-                    if (++c.SecondAttempts >= MaxAttempts) Dispute(c, "lc0Failed");
+                    if (++c.SecondAttempts >= MaxAttempts) TacticCandidateSteps.Dispute(c, "lc0Failed");
                 }
             }
             await db.SaveChangesAsync(ct);
@@ -391,8 +251,8 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
             .Take(free).ToListAsync(ct);
         foreach (var c in next)
         {
-            var fen = SecondFen(c, c.SecondStage);
-            if (fen is null) { Dispute(c, "lc0Fen"); continue; }
+            var fen = TacticCandidateSteps.SecondFen(c, c.SecondStage);
+            if (fen is null) { TacticCandidateSteps.Dispute(c, "lc0Fen"); continue; }
             try
             {
                 var job = await jobs.CreateAsync(engineOwner,
@@ -403,7 +263,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
             }
             catch (ArgumentException)
             {
-                Dispute(c, "illegalFen");
+                TacticCandidateSteps.Dispute(c, "illegalFen");
             }
             catch (InvalidOperationException ex)
             {
@@ -418,9 +278,9 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
 
     public async Task<int> PublishAsync(CancellationToken ct)
     {
-        await RetireOrphansAsync(ct);
-        await RetitleClubAsync(ct);
-        await LinkGamesAsync(ct);
+        await _upkeep.RetireOrphansAsync(ct);
+        await _upkeep.RetitleClubAsync(ct);
+        await _upkeep.LinkGamesAsync(ct);
         // Mit Zweitprüfung nur, was sie bestätigt hat (Disputed hat einen eigenen Status, Unentschiedene warten).
         var secondOn = SecondEngineId is not null;
         var done = await db.TacticCandidates.Include(c => c.GameAnalysis)
@@ -465,7 +325,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
                 LineId = lineId, BookFileName = file, BookId = book.Id, Round = round.ToString(), Fen = c.PrevFen,
                 Moves = $"{c.BlunderUci} {c.Moves}", StartPly = 0, Title = title, Chapter = chapter, Comment = comment,
                 Tags = string.Join(',', new[] { c.Found ? "gefunden" : "verpasst" }.Concat(c.Variant is null ? Array.Empty<string>() : new[] { c.Variant }).Concat((c.Themes ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries))),
-                Source = "tactic-harvest", SourceGame = await SourceGameAsync(c, a, ct),
+                Source = "tactic-harvest", SourceGame = await TacticHarvestUpkeep.SourceGameAsync(db, c, a, ct),
             });
             c.Status = TacticCandidateStatus.Published;
             c.LineId = lineId;
@@ -474,7 +334,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
             published++;
         }
         await db.SaveChangesAsync(ct);
-        foreach (var file in books.Keys.Where(f => f.StartsWith(ClubBookPrefix, StringComparison.Ordinal))) await SortClubChaptersAsync(file, ct);
+        foreach (var file in books.Keys.Where(f => f.StartsWith(ClubBookPrefix, StringComparison.Ordinal))) await _upkeep.SortClubChaptersAsync(file, ct);
         log.LogInformation("Taktik-Ernte: {Count} Aufgaben in die Kurse gelegt", published);
         return published;
     }
@@ -529,229 +389,9 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         if (a.Origin == GameAnalysisOrigin.Club && club is not null && a.LeagueClubGameId is { } gid
             && await db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(g => g.Id == gid, ct) is { } g)
         {
-            var round = await LeagueRoundAsync(db, g, club, ct);
-            return (ClubTitle(g, round, club) + tail, round?.Chapter ?? OtherGamesChapter);
+            var round = await TacticLeagueRounds.LeagueRoundAsync(db, g, club, ct);
+            return (TacticLeagueRounds.ClubTitle(g, round, club) + tail, round?.Chapter ?? OtherGamesChapter);
         }
         return ($"{a.White ?? "?"} – {a.Black ?? "?"}{tail}", c.Found ? "Gefunden" : "Verpasst");
-    }
-
-    /// <summary>„Weiß – Schwarz (Jahr)". Eine anonymisierte Seite (<see cref="LeagueClub.AnonName"/>) heißt im Vereinskurs wie in
-    /// der Paarung der Ligarunde (Wunsch 2026-10-04, Variante 2: „den Schwazer Gegner nennen") — aus den ÖFFENTLICHEN Paarungen,
-    /// nie aus den internen <c>*RealName</c>-Spalten; der Kurs ist nur für die Gruppen des Vereins sichtbar. Ohne Ligarunde bleibt
-    /// der Vereinsname.</summary>
-    internal static string ClubTitle(LeagueClubGame g, LeagueRound? round, LeagueClub club)
-    {
-        string Name(string name, string? fide, string? league) =>
-            club.IsAnon(name, fide) && !string.IsNullOrWhiteSpace(league) ? league! : name;
-        return $"{Name(g.White, g.WhiteFide, round?.WhitePlayer)} – {Name(g.Black, g.BlackFide, round?.BlackPlayer)}"
-            + (g.Year is { } y ? $" ({y})" : "");
-    }
-
-    public sealed record LeagueRound(string Chapter, string? WhitePlayer, string? BlackPlayer);
-
-    internal static async Task<string?> LeagueRoundChapterAsync(AppDbContext db, LeagueClubGame g, LeagueClub club, CancellationToken ct) =>
-        (await LeagueRoundAsync(db, g, club, ct))?.Chapter;
-
-    /// <summary>
-    /// Die Ligarunde einer Vereinspartie (Wunsch 2026-10-04: „pro Liga-Runde ein Kapitel"): eine Liga-Partie mit denselben
-    /// Spielern in denselben Farben — die anonymisierte Seite (<see cref="LeagueClub.AnonName"/>) passt zu jedem Spieler des
-    /// Vereins der Partie —, in der Saison des Jahres; bei mehreren gewinnt die mit gleichem Ergebnis. → „2026/27 · Landesliga ·
-    /// Runde 1" samt den Spielern der Paarung, sonst <c>null</c>.
-    /// </summary>
-    internal static async Task<LeagueRound?> LeagueRoundAsync(AppDbContext db, LeagueClubGame g, LeagueClub club, CancellationToken ct)
-    {
-        // fest zugeordnet (0.678.0): genau diese Paarung — über LeagueGameLinks aufgelöst (Id, sonst Schlüssel); eine tote Id
-        // fällt auf das Raten unten zurück (0.716.1)
-        if (await LeagueGameLinks.FindAsync(db, g, ct) is { } linked)
-        {
-            var l = await (from lg in db.LeagueGames.AsNoTracking()
-                           join t in db.LeagueTournaments.AsNoTracking() on lg.Tnr equals t.Tnr
-                           where lg.Id == linked.Id
-                           select new { lg, t.Season, t.League, t.Grp }).FirstOrDefaultAsync(ct);
-            if (l != null)
-            {
-                var lname = string.IsNullOrEmpty(l.Grp) ? l.League : $"{l.League} {l.Grp}";
-                var lw = l.lg.HomeColor == "w";
-                return new LeagueRound($"{l.Season} · {lname} · Runde {l.lg.Round}",
-                    lw ? l.lg.HomePlayer : l.lg.AwayPlayer, lw ? l.lg.AwayPlayer : l.lg.HomePlayer);
-            }
-        }
-        var fides = new[] { g.WhiteFide, g.BlackFide }.Where(f => !string.IsNullOrEmpty(f)).ToList();
-        if (fides.Count == 0) return null;
-        var rows = await (from lg in db.LeagueGames.AsNoTracking()
-                          join t in db.LeagueTournaments.AsNoTracking() on lg.Tnr equals t.Tnr
-                          where fides.Contains(lg.HomeFide!) || fides.Contains(lg.AwayFide!)
-                          select new { lg, t.Season, t.League, t.Grp }).ToListAsync(ct);
-        bool Side(string? clubFide, string clubName, string? fide, string team) =>
-            clubFide != null ? clubFide == fide : club.IsAnon(clubName) && club.OwnsTeam(team);
-        bool InSeason(string season) => g.Year is not { } y || (int.TryParse(season.Split('/')[0], out var s) && (s == y || s + 1 == y));
-        var hits = rows.Where(r =>
-        {
-            var homeWhite = r.lg.HomeColor == "w";
-            var (wf, wt, bf, bt) = homeWhite
-                ? (r.lg.HomeFide, r.lg.HomeTeam, r.lg.AwayFide, r.lg.AwayTeam)
-                : (r.lg.AwayFide, r.lg.AwayTeam, r.lg.HomeFide, r.lg.HomeTeam);
-            return Side(g.WhiteFide, g.White, wf, wt) && Side(g.BlackFide, g.Black, bf, bt) && InSeason(r.Season);
-        }).ToList();
-        if (hits.Count == 0) return null;
-        string Norm(string r) => r.Replace(" ", "").Replace("½", "1/2");
-        var best = hits.OrderByDescending(r => Norm(LeagueFixtureGames.WhiteBlackResult(r.lg.Result, r.lg.HomeColor != "s")) == Norm(g.Result) ? 1 : 0).ThenByDescending(r => r.Season).First();
-        var league = string.IsNullOrEmpty(best.Grp) ? best.League : $"{best.League} {best.Grp}";
-        var homeWhite = best.lg.HomeColor == "w";
-        return new LeagueRound($"{best.Season} · {league} · Runde {best.lg.Round}",
-            homeWhite ? best.lg.HomePlayer : best.lg.AwayPlayer, homeWhite ? best.lg.AwayPlayer : best.lg.HomePlayer);
-    }
-
-    /// <summary>
-    /// Die Kapitel des Vereinskurses nach Jahrgang ordnen (Wunsch 2026-10-06): neueste Saison oben, darin Liga alphabetisch,
-    /// Runden aufsteigend, „Andere Partien" zuletzt. Die Lesereihenfolge hängt an <see cref="BookPuzzle.Round"/>
-    /// (<see cref="ChapterOrder"/>), die hier fortlaufend NEU vergeben wird — über alle Zeilen des Buchs, auch stillgelegte, damit die
-    /// nächste Aufgabe (Anzahl + 1) hinten anschließt. Innerhalb eines Kapitels bleibt die bisherige Reihenfolge. Ändert sich
-    /// nichts, wird nicht geschrieben.
-    /// </summary>
-    internal async Task SortClubChaptersAsync(string bookFile, CancellationToken ct)
-    {
-        var rows = await db.BookPuzzles.Where(p => p.BookFileName == bookFile).ToListAsync(ct);
-        if (rows.Count < 2) return;
-        var ordered = rows.OrderBy(p => p, Comparer<BookPuzzle>.Create(CompareClubRows)).ToList();
-        var changed = 0;
-        for (var i = 0; i < ordered.Count; i++)
-        {
-            var round = (i + 1).ToString();
-            if (ordered[i].Round == round) continue;
-            ordered[i].Round = round;
-            changed++;
-        }
-        if (changed > 0) await db.SaveChangesAsync(ct);
-    }
-
-    private static int CompareClubRows(BookPuzzle a, BookPuzzle b)
-    {
-        var (ga, sa, la, ra) = ClubChapterKey(a.Chapter);
-        var (gb, sb, lb, rb) = ClubChapterKey(b.Chapter);
-        var c = ga.CompareTo(gb);
-        if (c == 0) c = sb.CompareTo(sa);                          // neueste Saison zuerst
-        if (c == 0) c = string.Compare(la, lb, StringComparison.CurrentCultureIgnoreCase);
-        if (c == 0) c = ra.CompareTo(rb);
-        return c != 0 ? c : ChapterOrder.Compare(a.Round, a.Id, b.Round, b.Id);
-    }
-
-    /// <summary>„2026/27 · Landesliga · Runde 1" → (0, 2026, „Landesliga", 1); „Andere Partien" und alles Unlesbare → Gruppe 1 (hinten).</summary>
-    internal static (int Group, int Season, string League, int Round) ClubChapterKey(string? chapter)
-    {
-        var m = chapter is null ? null : System.Text.RegularExpressions.Regex.Match(chapter, @"^(\d{4})/\d{2} · (.+?) · Runde (\d+)$");
-        return m is { Success: true } ? (0, int.Parse(m.Groups[1].Value), m.Groups[2].Value, int.Parse(m.Groups[3].Value)) : (1, 0, chapter ?? "", 0);
-    }
-
-    /// <summary>Verweis auf die Partie (<see cref="BookPuzzle.SourceGame"/>): Vereinspartie → <c>club</c>, eigene gespeicherte
-    /// Partie → <c>own</c>; Meisterpartien und Handanalysen haben keine Partie-Seite → <c>null</c>. Der Halbzug ist die
-    /// Stellung nach dem Fehler, also die, in der der Löser am Zug ist.</summary>
-    private async Task<string?> SourceGameAsync(TacticCandidate c, GameAnalysis a, CancellationToken ct)
-    {
-        var ply = c.Ply;   // Zahl der gespielten Halbzüge bis zur Stellung nach dem Fehler
-        if (a.Origin == GameAnalysisOrigin.Club && a.LeagueClubGameId is { } gid) return $"club:{gid}:{ply}";
-        if (a.Origin == GameAnalysisOrigin.SavedGame
-            && await db.SavedGames.AsNoTracking().Where(g => g.GameAnalysisId == a.Id).Select(g => (int?)g.Id).FirstOrDefaultAsync(ct) is { } sid)
-            return $"own:{sid}:{ply}";
-        return null;
-    }
-
-    // Beide Abfragen laufen in JEDEM Takt (minütlich) und fangen mit dem Buch-Präfix an: über den Index auf BookFileName
-    // sind es die paar hundert Aufgaben der Taktik-Bücher, ohne ihn ein Vollscan über alle BookPuzzles samt Kommentaren —
-    // auf Prod (156 000 Zeilen) 20 s im Leerlauf, unter Last über dem Command-Timeout von 30 s: „Taktik-Ernte: Takt
-    // fehlgeschlagen" alle 1–2 Minuten (gemeldet 2026-10-07), und die Veröffentlichung dahinter lief nie.
-
-    /// <summary>Aufgaben mit altem Kommentar-Wortlaut (<see cref="RewordCommentsAsync"/>).</summary>
-    internal static IQueryable<BookPuzzle> OldCommentPuzzles(IQueryable<BookPuzzle> puzzles)
-        => puzzles.Where(p => p.BookFileName.StartsWith(BookPrefix) && p.Source == "tactic-harvest" && p.Comment != null
-            && (p.Comment.Contains("Nach dem ersten Zug: ") || p.Comment.Contains("Die Lösung bringt +") || p.Comment.Contains("Die Lösung bringt -")));
-
-    /// <summary>Veröffentlichte Aufgaben ohne Partie-Verweis (<see cref="LinkGamesAsync"/>); die Meisterpartien haben keine Partie-Seite.</summary>
-    internal static IQueryable<BookPuzzle> UnlinkedPuzzles(IQueryable<BookPuzzle> puzzles)
-        => puzzles.Where(p => p.BookFileName.StartsWith(BookPrefix) && p.Source == "tactic-harvest" && p.SourceGame == null && !p.Retired
-            && p.BookFileName != MasterBook);
-
-    private static readonly System.Text.RegularExpressions.Regex OldOutcome =
-        new(@" (?:Nach dem ersten Zug: |Die Lösung bringt )([+-]?\d+(?:\.\d+)?|#\d+)\.$");
-
-    /// <summary>Alte Kommentare mit Zahl („… Nach dem ersten Zug: +5.3." bzw. „Die Lösung bringt +5.3.") auf die Worte von
-    /// <see cref="Outcome"/> umstellen (Matt-Texte „#3" der ersten Fassung ebenso).</summary>
-    private async Task RewordCommentsAsync(CancellationToken ct)
-    {
-        var puzzles = await OldCommentPuzzles(db.BookPuzzles).Take(200).ToListAsync(ct);
-        foreach (var p in puzzles)
-        {
-            var m = OldOutcome.Match(p.Comment!);
-            if (m.Success) p.Comment = p.Comment![..m.Index] + " " + Outcome(m.Groups[1].Value);
-        }
-        if (puzzles.Count > 0) await db.SaveChangesAsync(ct);
-    }
-
-    /// <summary>Schon veröffentlichte Aufgaben ohne Partie-Verweis nachtragen (0.672.0) — je Takt höchstens 200; was keinen
-    /// Verweis bekommen kann, bleibt <c>null</c> und wird jedes Mal wieder angesehen, bleibt aber billig (nur Meisterpartien).</summary>
-    private async Task LinkGamesAsync(CancellationToken ct)
-    {
-        await RewordCommentsAsync(ct);
-        var puzzles = await UnlinkedPuzzles(db.BookPuzzles).OrderBy(p => p.Id).Take(200).ToListAsync(ct);
-        if (puzzles.Count == 0) return;
-        var lineIds = puzzles.Select(p => p.LineId).ToList();
-        var cands = await db.TacticCandidates.Include(c => c.GameAnalysis).Where(c => c.LineId != null && lineIds.Contains(c.LineId))
-            .ToDictionaryAsync(c => c.LineId!, ct);
-        var changed = 0;
-        foreach (var p in puzzles)
-        {
-            if (!cands.TryGetValue(p.LineId, out var c) || c.GameAnalysis is null) continue;
-            if (await SourceGameAsync(c, c.GameAnalysis, ct) is not { } link) continue;
-            p.SourceGame = link;
-            changed++;
-        }
-        if (changed > 0) await db.SaveChangesAsync(ct);
-    }
-
-    /// <summary>Schon veröffentlichte Aufgaben der Vereinskurse, die noch den Vereinsnamen (<see cref="LeagueClub.AnonName"/>)
-    /// im Titel tragen, nach der Regel von <see cref="ClubTitle"/> umbenennen (0.657.2) — einmal je Aufgabe, solange eine
-    /// Ligarunde passt; je Verein sein Kurs und sein Name.</summary>
-    private async Task RetitleClubAsync(CancellationToken ct)
-    {
-        foreach (var club in await db.LeagueClubs.AsNoTracking().ToListAsync(ct)) await RetitleClubAsync(club, ct);
-    }
-
-    private async Task RetitleClubAsync(LeagueClub club, CancellationToken ct)
-    {
-        var anon = club.AnonName;
-        var file = ClubBookOf(club.Id);
-        var puzzles = await db.BookPuzzles.Where(p => p.BookFileName == file && p.Source == "tactic-harvest" && !p.Retired
-                && p.Title != null && (p.Title.StartsWith(anon + " –") || p.Title.Contains("– " + anon)))
-            .Take(100).ToListAsync(ct);
-        if (puzzles.Count == 0) return;
-        var lineIds = puzzles.Select(p => p.LineId).ToList();
-        var cands = await db.TacticCandidates.AsNoTracking().Include(c => c.GameAnalysis)
-            .Where(c => c.LineId != null && lineIds.Contains(c.LineId)).ToDictionaryAsync(c => c.LineId!, ct);
-        var changed = 0;
-        foreach (var p in puzzles)
-        {
-            if (!cands.TryGetValue(p.LineId, out var c) || c.GameAnalysis?.LeagueClubGameId is not { } gid) continue;
-            var g = await db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(x => x.Id == gid && x.ClubId == club.Id, ct);
-            if (g is null || await LeagueRoundAsync(db, g, club, ct) is not { } round) continue;
-            var title = ClubTitle(g, round, club) + $", Zug {c.Ply / 2 + 1}";
-            if (title == p.Title) continue;
-            p.Title = title;
-            changed++;
-        }
-        if (changed > 0) await db.SaveChangesAsync(ct);
-    }
-
-    /// <summary>Aufgaben, deren Taktik es nicht mehr gibt (Partie gelöscht → Analyse → Taktik per Cascade), still legen.</summary>
-    private async Task RetireOrphansAsync(CancellationToken ct)
-    {
-        var lines = await db.BookPuzzles.Where(p => p.BookFileName.StartsWith(BookPrefix) && !p.Retired && p.Source == "tactic-harvest")
-            .Select(p => new { p.Id, p.LineId }).ToListAsync(ct);
-        if (lines.Count == 0) return;
-        var known = (await db.TacticCandidates.Where(c => c.LineId != null).Select(c => c.LineId!).ToListAsync(ct)).ToHashSet();
-        var orphanIds = lines.Where(l => !known.Contains(l.LineId)).Select(l => l.Id).ToList();
-        if (orphanIds.Count == 0) return;
-        foreach (var p in await db.BookPuzzles.Where(p => orphanIds.Contains(p.Id)).ToListAsync(ct)) p.Retired = true;
-        await db.SaveChangesAsync(ct);
-        log.LogInformation("Taktik-Ernte: {Count} Aufgaben stillgelegt (Partie entfernt)", orphanIds.Count);
     }
 }
