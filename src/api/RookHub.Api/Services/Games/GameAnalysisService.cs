@@ -71,8 +71,8 @@ public class GameAnalysisService
 
     /// <inheritdoc cref="GameAnalysisIntake.CreateClubBatchAsync"/>
     public Task<GameAnalysisDto> CreateClubBatchAsync(int ownerUserId, int leagueClubGameId, string pgn,
-        CancellationToken ct = default)
-        => _intake.CreateClubBatchAsync(ownerUserId, leagueClubGameId, pgn, ct);
+        CancellationToken ct = default, bool expedited = false)
+        => _intake.CreateClubBatchAsync(ownerUserId, leagueClubGameId, pgn, ct, expedited);
 
     /// <inheritdoc cref="GameAnalysisIntake.CreateLeagueBatchAsync"/>
     public Task<GameAnalysisDto> CreateLeagueBatchAsync(int ownerUserId, string pgn, string movesHash, CancellationToken ct = default)

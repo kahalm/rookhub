@@ -162,7 +162,7 @@ internal sealed class GameAnalysisPump
     {
         // Der Stapel (Vereinspartien, seit 0.909.0 mit Vertiefung) haelt sich auch hier an Zeitplan bzw. Sperrzeiten —
         // wie beim ersten Durchgang (EnqueueNextAsync): ohne nutzbare Engine kommt nichts Neues dazu.
-        if (GameAnalysisOrigins.IsBatch(analysis.Origin) && (await _turns.UsableEnginesAsync(analysis, ct)).Count == 0) return false;
+        if (GameAnalysisOrigins.RunsAsBatch(analysis) && (await _turns.UsableEnginesAsync(analysis, ct)).Count == 0) return false;
         var open = analysis.Positions.Count(p => !p.Refined && p.AnalysisJobId != null);
         var room = GameAnalysisTurnRules.RefineJobCap(await _turns.EngineSlotsAsync(analysis, ct)) - open;
         if (room <= 0) return false;
@@ -204,7 +204,7 @@ internal sealed class GameAnalysisPump
                     MultiPv = analysis.RefineMultiPv ?? analysis.MultiPv,
                     EngineId = analysis.EngineId,
                 }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: true,
-                    batch: GameAnalysisOrigins.IsBatch(analysis.Origin), priority: PriorityOf(analysis));
+                    batch: GameAnalysisOrigins.RunsAsBatch(analysis), priority: PriorityOf(analysis));
                 pos.AnalysisJobId = job.Id;
                 changed = true;
             }
@@ -224,14 +224,14 @@ internal sealed class GameAnalysisPump
     }
 
     /// <summary>Stufe der Aufträge einer Analyse (<see cref="JobPriority"/>): Stapel nach Herkunft, eigene Partien → Vorgabe.</summary>
-    private static JobPriority? PriorityOf(GameAnalysis analysis) => GameAnalysisOrigins.IsBatch(analysis.Origin)
+    private static JobPriority? PriorityOf(GameAnalysis analysis) => GameAnalysisOrigins.RunsAsBatch(analysis)
         ? JobPriorities.ForBatch(analysis.Origin, analysis.CreatedAt, DateTime.UtcNow) : null;
 
     /// <summary>Bis zum Block-Limit neue Aufträge einreihen (in Zugreihenfolge). Meister- und Vereinspartien des Stapels
     /// (<see cref="GameAnalysisOrigins.IsBatch"/>) nur ausserhalb der Sperrzeiten und nur als Hintergrundarbeit.</summary>
     private async Task<bool> EnqueueNextAsync(GameAnalysis analysis, CancellationToken ct)
     {
-        var batch = GameAnalysisOrigins.IsBatch(analysis.Origin);
+        var batch = GameAnalysisOrigins.RunsAsBatch(analysis);
         // In der Sperrzeit steht der Stapel still: schon eingereihte Stellungen laufen noch zu Ende (hoechstens
         // ein Block), neue kommen erst, wenn das Fenster wieder offen ist.
         // Seit 0.679.0 nicht mehr pauschal an den Sperrzeiten: eine Engine, deren Client einen Zeitplan meldet,

@@ -10,6 +10,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.922.0',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Club games somebody is waiting for (requested summary, or the game is in „My games“) are analysed right away instead of waiting for the background window outside working hours.',
+        de: 'Vereinspartien, auf die jemand wartet (angeforderte Zusammenfassung oder Eintrag in „Meine Partien“), werden sofort analysiert statt erst im Hintergrundfenster außerhalb der Arbeitszeit.' },
+    ],
+  },
   { version: "0.921.0", date: "2026-11-09", changes: [
     { en: "Game analysis: a position that has already been calculated deeply enough is taken over instead of being calculated again.",
       de: "Partie-Analyse: Eine Stellung, die schon tief genug gerechnet wurde, wird übernommen statt noch einmal gerechnet." },

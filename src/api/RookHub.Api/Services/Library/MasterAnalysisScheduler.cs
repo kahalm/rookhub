@@ -115,6 +115,7 @@ public class MasterAnalysisScheduler : BackgroundService, IBackgroundJobInfo
     {
         var owner = await OwnerAsync(db, ct);
         if (owner is null) return null;
+        if (await ExpediteWantedAsync(db, analyses, owner.UserId, ct) is { } expedited) return expedited;
         // Nicht mehr pauschal „Sperrzeit = Stillstand" (0.679.0): eine Engine, deren Client einen Zeitplan meldet,
         // rechnet nach DIESEM; nur Engines ohne Meldung halten sich an die Sperrzeiten von RookHub. Steht gerade
         // keine einzige zur Verfuegung, legt der Takt nichts an — genau das alte Verhalten in der Sperrzeit.
@@ -196,6 +197,55 @@ public class MasterAnalysisScheduler : BackgroundService, IBackgroundJobInfo
         var cred = await db.LichessEngineCredentials.AsNoTracking()
             .FirstOrDefaultAsync(c => c.UserId == id && c.BackgroundEngineIds != null, ct);
         return cred is not null && cred.BackgroundEngines.Count > 0 ? cred : null;
+    }
+
+    /// <summary>
+    /// Vereinspartien, auf die jemand wartet (0.922.0) — unabhängig von Sperrzeit und freien Plätzen: eine angeforderte
+    /// Zusammenfassung oder ein Eintrag in „Meine Partien" ohne Hauptanalyse. Fehlt die Analyse, wird sie als
+    /// <see cref="GameAnalysis.Expedited"/> angelegt; steht eine noch offene im Stapel und ist eine Zusammenfassung angefordert,
+    /// wird sie umgestellt (samt schon eingereihter Aufträge). → Id einer neu angelegten Analyse, sonst <c>null</c>.
+    /// </summary>
+    internal async Task<int?> ExpediteWantedAsync(AppDbContext db, GameAnalysisService analyses, int ownerUserId, CancellationToken ct)
+    {
+        var summaries = db.ClubGameSummaries.Where(s => s.Status == ClubGameSummaryStatus.Requested || s.Status == ClubGameSummaryStatus.Running)
+            .Select(s => s.ClubGameId);
+        var waiting = db.GameAnalyses.Where(a => a.Origin == GameAnalysisOrigin.Club && a.EngineId == null && !a.Expedited
+            && a.LeagueClubGameId != null && summaries.Contains(a.LeagueClubGameId.Value)
+            && (a.Status == GameAnalysisStatus.Pending || a.Status == GameAnalysisStatus.Running
+                || (a.Status == GameAnalysisStatus.Done && a.RefineDepth != null && a.RefinedAt == null)));
+        foreach (var a in await waiting.ToListAsync(ct))
+        {
+            a.Expedited = true;
+            var jobIds = db.GameAnalysisPositions.Where(p => p.GameAnalysisId == a.Id && p.AnalysisJobId != null).Select(p => p.AnalysisJobId!.Value);
+            foreach (var job in await db.AnalysisJobs.Where(j => jobIds.Contains(j.Id) && j.Batch).ToListAsync(ct))
+            {
+                job.Batch = false;
+                job.Priority = JobPriorities.Default(job.Background, batch: false);
+            }
+            _logger.LogInformation("Analyse {AnalysisId} der Vereinspartie {LeagueClubGameId}: Zusammenfassung wartet — rechnet ab jetzt sofort",
+                a.Id, a.LeagueClubGameId);
+        }
+        await db.SaveChangesAsync(ct);
+
+        var q = db.LeagueClubGames.AsNoTracking()
+            .Where(c => !db.GameAnalyses.Any(a => a.LeagueClubGameId == c.Id && a.EngineId == null)
+                && (summaries.Contains(c.Id) || db.SavedGames.Any(s => s.LeagueClubGameId == c.Id)));
+        if (_unplayableClub.Count > 0) q = q.Where(c => !_unplayableClub.Contains(c.Id));
+        var club = await q.OrderBy(c => c.Id).FirstOrDefaultAsync(ct);
+        if (club is null) return null;
+        try
+        {
+            var dto = await analyses.CreateClubBatchAsync(ownerUserId, club.Id, club.Pgn, ct, expedited: true);
+            _logger.LogInformation("Vereinspartie {LeagueClubGameId} sofort eingereiht (Analyse {AnalysisId}, {Plies} Halbzüge) — jemand wartet darauf",
+                club.Id, dto.Id, dto.PlyCount);
+            return dto.Id;
+        }
+        catch (ArgumentException ex)
+        {
+            _unplayableClub.Add(club.Id);
+            _logger.LogWarning("Vereinspartie {LeagueClubGameId} übersprungen: {Reason}", club.Id, ex.Message);
+            return null;
+        }
     }
 
     /// <summary>Die nächste Vereinspartie ohne Analyse, nach Id. Ohne Zeiger: es sind wenige, und eine gelöschte oder neu

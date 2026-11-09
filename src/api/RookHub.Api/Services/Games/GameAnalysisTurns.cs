@@ -110,7 +110,7 @@ internal sealed class GameAnalysisTurns
             var cred = await _db.LichessEngineCredentials.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == ownerId, ct);
             engines = cred?.BackgroundEngines ?? [];
         }
-        return await EngineAvailability.UsableAsync(_db, ownerId, engines, GameAnalysisOrigins.IsBatch(analysis.Origin),
+        return await EngineAvailability.UsableAsync(_db, ownerId, engines, GameAnalysisOrigins.RunsAsBatch(analysis),
             _quiet, _quiet?.Now ?? DateTimeOffset.UtcNow, ct);
     }
 

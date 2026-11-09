@@ -68,6 +68,10 @@ public static class GameAnalysisOrigins
     /// ausgeschrieben (<c>Origin != Library &amp;&amp; Origin != Club</c>) — ein Methodenaufruf ließe sich nicht übersetzen.</summary>
     public static bool IsBatch(GameAnalysisOrigin origin) =>
         origin is GameAnalysisOrigin.Library or GameAnalysisOrigin.Club or GameAnalysisOrigin.League;
+
+    /// <summary>Rechnet die Analyse wirklich als Stapel (Sperrzeiten, nachrangig)? Nicht, wenn jemand auf sie wartet
+    /// (<see cref="GameAnalysis.Expedited"/>).</summary>
+    public static bool RunsAsBatch(GameAnalysis analysis) => IsBatch(analysis.Origin) && !analysis.Expedited;
 }
 
 /// <summary>
@@ -145,6 +149,14 @@ public class GameAnalysis
 
     /// <summary>Von Hand eingereiht oder auf der Punktepartie-Seite eingeworfen.</summary>
     public GameAnalysisOrigin Origin { get; set; } = GameAnalysisOrigin.Manual;
+
+    /// <summary>
+    /// Auf diese Stapel-Analyse wartet jemand (0.922.0): eine Zusammenfassung ist angefordert oder die Partie steht in
+    /// „Meine Partien". Sie bleibt, was sie ist (Herkunft, Listen, Besitzer), rechnet aber wie „Partie analysieren" sofort
+    /// statt erst außerhalb der Sperrzeiten (<see cref="GameAnalysisOrigins.RunsAsBatch"/>). Anlass: Vereinspartie 239 vom
+    /// 09.11. — Montag früh hochgeladen, die Zusammenfassung wäre erst nach 17 Uhr losgelaufen.
+    /// </summary>
+    public bool Expedited { get; set; }
 
     /// <summary>
     /// Aus welcher Zeile des Rohbestands diese Analyse angefordert wurde; <c>null</c> = eingeworfen

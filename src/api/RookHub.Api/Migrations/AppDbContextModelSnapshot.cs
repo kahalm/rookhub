@@ -3365,6 +3365,9 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
 
+                    b.Property<bool>("Expedited")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("datetime(6)");
 

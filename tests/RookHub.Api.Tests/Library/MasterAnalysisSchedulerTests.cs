@@ -279,6 +279,61 @@ public class MasterAnalysisSchedulerTests : IDisposable
         Assert.Empty(await new AnalysisJobService(_db).ListAsync(Owner));
     }
 
+    [Fact]
+    public async Task Sperrzeit_angeforderteZusammenfassung_legtDieAnalyseSofortAn()
+    {
+        var game = ClubGame();
+        _db.ClubGameSummaries.Add(new ClubGameSummary { ClubGameId = game.Id, Status = ClubGameSummaryStatus.Requested, RequestedAt = DateTime.UtcNow });
+        _db.SaveChanges();
+        var quiet = WorkingHours();
+
+        var id = await Scheduler(quiet).TickOnceAsync(_db, Analyses(quiet), default);
+
+        var a = await _db.GameAnalyses.SingleAsync(g => g.Id == id);
+        Assert.Equal(game.Id, a.LeagueClubGameId);
+        Assert.True(a.Expedited);
+        Assert.NotEmpty(_db.AnalysisJobs);
+        Assert.All(_db.AnalysisJobs, j => Assert.False(j.Batch));
+    }
+
+    [Fact]
+    public async Task Sperrzeit_EintragInMeinenPartien_legtDieAnalyseSofortAn()
+    {
+        var game = ClubGame();
+        _db.SavedGames.Add(new SavedGame { UserId = Viewer, Source = "pgn", Pgn = Short, LeagueClubGameId = game.Id });
+        _db.SaveChanges();
+        var quiet = WorkingHours();
+
+        var id = await Scheduler(quiet).TickOnceAsync(_db, Analyses(quiet), default);
+
+        Assert.True((await _db.GameAnalyses.SingleAsync(g => g.Id == id)).Expedited);
+    }
+
+    [Fact]
+    public async Task Sperrzeit_VereinspartieOhneWartenden_bleibtImStapel()
+    {
+        ClubGame();
+        var quiet = WorkingHours();
+
+        Assert.Null(await Scheduler(quiet).TickOnceAsync(_db, Analyses(quiet), default));
+        Assert.Empty(_db.GameAnalyses);
+    }
+
+    [Fact]
+    public async Task ZusammenfassungAngefordert_stelltOffeneStapelAnalyseSamtAuftraegenUm()
+    {
+        var game = ClubGame();
+        var dto = await Analyses().CreateClubBatchAsync(Owner, game.Id, Short);
+        Assert.Contains(_db.AnalysisJobs, j => j.Batch);
+        _db.ClubGameSummaries.Add(new ClubGameSummary { ClubGameId = game.Id, Status = ClubGameSummaryStatus.Requested, RequestedAt = DateTime.UtcNow });
+        _db.SaveChanges();
+
+        Assert.Null(await Scheduler(Never).ExpediteWantedAsync(_db, Analyses(), Owner, default));
+
+        Assert.True((await _db.GameAnalyses.AsNoTracking().SingleAsync(g => g.Id == dto.Id)).Expedited);
+        Assert.DoesNotContain(_db.AnalysisJobs.AsNoTracking(), j => j.Batch);
+    }
+
     /// <summary>Wunsch 2026-10-06: nach einer Zugkorrektur nur die geänderten Stellungen neu rechnen (0.694.1).</summary>
     [Fact]
     public async Task VereinspartieKorrigiert_behaeltGleicheStellungen_undRechnetNurDieGeaenderten()

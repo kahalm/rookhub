@@ -41,7 +41,7 @@ internal sealed class GameAnalysisIntake
 
     internal async Task<GameAnalysisDto> CreateAsync(int userId, CreateGameAnalysisRequest req, CancellationToken ct = default,
         GameAnalysisOrigin origin = GameAnalysisOrigin.Manual, int? engineOwnerUserId = null,
-        int? libraryGameId = null, int? leagueClubGameId = null, string? movesHash = null)
+        int? libraryGameId = null, int? leagueClubGameId = null, string? movesHash = null, bool expedited = false)
     {
         var depth = req.TargetDepth ?? GameAnalysisDefaults.TargetDepth;
         if (depth is < 1 or > AnalysisJobService.MaxDepth)
@@ -94,6 +94,7 @@ internal sealed class GameAnalysisIntake
             TargetNodes = req.TargetNodes,
             EngineOwnerUserId = engineOwnerUserId == userId ? null : engineOwnerUserId,
             Origin = origin,
+            Expedited = expedited,
             LibraryGameId = libraryGameId,
             LeagueClubGameId = leagueClubGameId,
             MovesHash = movesHash,
@@ -160,14 +161,14 @@ internal sealed class GameAnalysisIntake
     /// endgültig fertig: Glocke und Zugvergleiche der Fehler kommen mit den Zahlen der Tiefe 30.</para>
     /// </summary>
     internal async Task<GameAnalysisDto> CreateClubBatchAsync(int ownerUserId, int leagueClubGameId, string pgn,
-        CancellationToken ct = default)
+        CancellationToken ct = default, bool expedited = false)
     {
         var dto = await CreateAsync(ownerUserId, new CreateGameAnalysisRequest
         {
             Pgn = pgn,
             TargetDepth = GameAnalysisDefaults.GuessTargetDepth,
             MultiPv = GameAnalysisDefaults.MultiPv,
-        }, ct, GameAnalysisOrigin.Club, engineOwnerUserId: ownerUserId, leagueClubGameId: leagueClubGameId);
+        }, ct, GameAnalysisOrigin.Club, engineOwnerUserId: ownerUserId, leagueClubGameId: leagueClubGameId, expedited: expedited);
         var entity = await _db.GameAnalyses.FirstAsync(g => g.Id == dto.Id, ct);
         entity.RefineDepth = GameAnalysisDefaults.ClubRefineDepth;
         entity.RefineMultiPv = GameAnalysisDefaults.MultiPv;
