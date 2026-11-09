@@ -303,7 +303,11 @@ public class ChessableReviewLineService
             }
             if (taken.Count == 0)
             {
-                _db.ChangeTracker.Clear();
+                // Nichts übernommen: nur die in dieser Portion geladenen Zeilen lösen (G2-004, Gegenlesung GA-02). Ein
+                // ChangeTracker.Clear() löste auch die Kurslisten des umgebenden Refresh-Laufs (gemeinsamer DbContext), deren
+                // Änderungen dann still verloren gingen.
+                foreach (var row in existing.Values) _db.Entry(row).State = EntityState.Detached;
+                foreach (var a in rows) _db.Entry(a).State = EntityState.Detached;
                 continue;
             }
             rows = taken;
