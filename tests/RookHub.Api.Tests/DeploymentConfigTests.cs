@@ -500,7 +500,8 @@ public class DeploymentConfigTests
         Assert.True(og.Success, "OG-Location in nginx.conf nicht gefunden");
         var body = og.Groups["body"].Value;
         // Seit 0.641.x laufen auch Kalender-Links der Turnierseite durch die Weiche (Eckdaten im Vorschaufenster).
-        Assert.Contains("location ~ ^/(g|t|puzzles|tournaments/calendar)(/|$) {", nginx);
+        // Seit 2026-11-09 auch rekonstruierte Partie /r/ und Repertoire-Linie /l/ (Vorschaubilder, docs/api/link-vorschau.md).
+        Assert.Contains("location ~ ^/(g|t|puzzles|tournaments/calendar|l|r)(/|$) {", nginx);
 
         Assert.Contains("proxy_intercept_errors on;", body);
         var errorPage = Regex.Match(body, @"error_page ([0-9 ]+)= @og_fallback;");

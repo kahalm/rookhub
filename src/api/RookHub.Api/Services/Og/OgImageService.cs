@@ -15,7 +15,7 @@ namespace RookHub.Api.Services.Og;
 /// liegt, dunkel, wo Schwarz vorn liegt, geglättet — ebenfalls ohne Schrift. Die chess.com-Fläche (Weiß vom unteren Rand)
 /// hat der Nutzer auf der Seite abgelehnt (0.521.1).</para>
 /// </summary>
-public class OgImageService
+public partial class OgImageService
 {
     // Zielformat: 1200×630 ist das von allen Plattformen (Reddit/Discord/Signal/Twitter/Teams) erwartete
     // og:image-Seitenverhältnis (1.91:1). Brett quadratisch, mittig, mit Marken-Hintergrund.

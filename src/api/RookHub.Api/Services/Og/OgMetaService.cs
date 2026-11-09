@@ -10,17 +10,21 @@ using RookHub.Api.Validation;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Repertoires;
 using RookHub.Api.Services.Tournaments;
 using RookHub.Api.DTOs.Games;
 
 namespace RookHub.Api.Services.Og;
 
 /// <summary>Auflösung einer öffentlichen Route zu Open-Graph-Metadaten + der zu rendernden Brett-FEN.</summary>
-public record OgPage(string Title, string Description, string ImageUrl, string CanonicalUrl, string Type = "website");
+public record OgPage(string Title, string Description, string ImageUrl, string CanonicalUrl, string Type = "website", string SiteName = "RookHub");
 
 /// <summary>Die für das Brett-Bild aufgelöste Stellung (FEN + Perspektive), bei einer analysierten Partie dazu die
 /// Bewertungskurve (<see cref="OgMetaService.CurveOf"/>).</summary>
-public record OgBoard(string Fen, bool Flip, IReadOnlyList<double?>? Curve = null, OgImageService.TrainCard? Train = null);
+/// <para>Mit <paramref name="Card"/> rendert der Controller eine Karte mit Text (<see cref="OgImageService.RenderCard"/>);
+/// <paramref name="MaxAge"/> = wie lange das Bild gecacht werden darf (<c>null</c> = eine Woche, unveränderlich).</para>
+public record OgBoard(string Fen, bool Flip, IReadOnlyList<double?>? Curve = null, OgImageService.TrainCard? Train = null,
+    OgCard? Card = null, TimeSpan? MaxAge = null);
 
 /// <summary>
 /// Liest aus einer öffentlichen SPA-Route (<c>/g/{token}</c>, <c>/puzzles/*</c>, <c>/t/{id}</c>) die Daten
@@ -28,7 +32,7 @@ public record OgBoard(string Fen, bool Flip, IReadOnlyList<double?>? Curve = nul
 /// der <see cref="OgImageService"/> das Brett rendert. Alles best-effort — bei jedem Fehler <c>null</c>,
 /// der Controller liefert dann die unveränderte SPA aus bzw. kein Bild.
 /// </summary>
-public class OgMetaService
+public partial class OgMetaService
 {
     private readonly SavedGameService _games;
     private readonly PuzzleService _puzzles;
@@ -36,12 +40,17 @@ public class OgMetaService
     private readonly CrawlerProxyService _crawler;
     private readonly AppDbContext _db;
     private readonly ILogger<OgMetaService> _logger;
+    private readonly GameReconstructionService? _reconstructions;
+    private readonly SharedLineService? _sharedLines;
 
     private const string StartFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     public OgMetaService(SavedGameService games, PuzzleService puzzles, BookPuzzleService bookPuzzles,
-        CrawlerProxyService crawler, AppDbContext db, ILogger<OgMetaService> logger)
+        CrawlerProxyService crawler, AppDbContext db, ILogger<OgMetaService> logger,
+        GameReconstructionService? reconstructions = null, SharedLineService? sharedLines = null)
     {
+        _reconstructions = reconstructions;
+        _sharedLines = sharedLines;
         _games = games;
         _puzzles = puzzles;
         _bookPuzzles = bookPuzzles;
@@ -80,6 +89,10 @@ public class OgMetaService
                 return ("game", segments[1]);
             case "t" when segments.Length >= 2:
                 return ("tournament", segments[1]);
+            case "r" when segments.Length == 2:
+                return ("recon", segments[1]);
+            case "l" when segments.Length == 2:
+                return ("line", segments[1]);
             case "puzzles" when segments.Length >= 3 && segments[1] == "book":
                 return ("book", segments[2]);
             case "puzzles" when segments.Length >= 3 && segments[1] == "daily":
@@ -156,8 +169,22 @@ public class OgMetaService
                         // merken es sich nach der Adresse und zeigten sonst weiter die deutsche.
                         return new OgPage(TrainTitle, trainDesc, version == null ? $"{trainImg}?l=en" : $"{trainImg}?v={version}&l=en", canonical, "article");
                     }
-                    return new OgPage(title, description, version == null ? img : $"{img}?v={version}", canonical, "article");
+                    // Markierte Stellung (`?ply=n`, Sprung aus einer geernteten Aufgabe): das Bild zeigt die Stellung nach n Halbzügen.
+                    if (int.TryParse(QueryParam(path, "ply"), out var ply) && ply > 0)
+                    {
+                        var at = GamePlies.Parse(g.Pgn, MaxPlies) is { } gp && ply <= gp.Plies.Count ? MoveLabel(gp.Plies, ply) : null;
+                        if (at != null)
+                        {
+                            var plyImg = $"{baseUrl}/api/og/img/gameply/{ply}-{Uri.EscapeDataString(id)}.png?c={CardVersion}{(version == null ? "" : $"&v={version}")}";
+                            return new OgPage(title, $"Position after {at} · {string.Join(" · ", descParts.Take(descParts.Count - 1).Append("replay the game on RookHub"))}",
+                                plyImg, canonical, "article");
+                        }
+                    }
+                    return new OgPage(title, description, $"{img}?c={CardVersion}{(version == null ? "" : $"&v={version}")}", canonical, "article");
                 }
+                case "recon":
+                case "line":
+                    return await ResolveSharedPageAsync(kind, id, img, canonical, ct);
                 case "puzzle":
                 {
                     if (!int.TryParse(id, out var pid)) return null;
@@ -221,9 +248,24 @@ public class OgMetaService
                     if (g is null) return null;
                     // Aus der Sicht des Teilenden: spielte er Schwarz, wird auch die Vorschau gedreht. Die Kurve dreht nicht
                     // mit — wie auf der Seite steht Weiß unten.
-                    return new OgBoard(EndFenFromPgn(g.Pgn), Flip: g.OwnerSide == "black",
-                        Curve: CurveOf(await _games.GetSharedEvalsAsync(id, null, ct)));
+                    var curve = CurveOf(await _games.GetSharedEvalsAsync(id, null, ct));
+                    return new OgBoard(EndFenFromPgn(g.Pgn), Flip: g.OwnerSide == "black", Curve: curve,
+                        Card: GameCard(g, null, curve));
                 }
+                case "gameply":
+                {
+                    // „<ply>-<token>" (das Token darf Bindestriche tragen)
+                    var dash = id.IndexOf('-');
+                    if (dash <= 0 || !int.TryParse(id[..dash], out var ply) || ply <= 0) return null;
+                    var g = await _games.GetSharedAsync(id[(dash + 1)..]);
+                    if (g is null) return null;
+                    var curve = CurveOf(await _games.GetSharedEvalsAsync(id[(dash + 1)..], null, ct));
+                    var card = GameCard(g, ply, curve);
+                    return new OgBoard(card.Boards[0].Fen, card.Boards[0].Flip, curve, Card: card);
+                }
+                case "recon":
+                case "line":
+                    return await ResolveSharedBoardAsync(kind, id, ct);
                 case "train":
                 {
                     // „white-<token>" bzw. „black-<token>" (das Token selbst darf Bindestriche tragen)
