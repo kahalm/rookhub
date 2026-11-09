@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs.Club;
 using RookHub.Api.Models;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Services.Club;
 using Xunit;
 
@@ -28,23 +29,25 @@ public class ClubSessionRaceTests : IDisposable
     private static ClubActor Manager() => new(1, true, false);
 
     [Fact]
-    public async Task SaveSession_UniqueRaceOnFirstSessionOfTheDay_AppliesInputToTheOtherSession()
+    public async Task SaveSession_UniqueRaceOnFirstSessionOfTheDay_ReturnsConflictAndKeepsTheOtherSession()
     {
         var g = (await Svc().CreateGroupAsync(Manager(), new ClubGroupInputDto { Name = "Anfänger" })).Id;
         var a = await Svc().CreateMemberAsync(Manager(), new ClubMemberInputDto { FirstName = "Anna", LastName = "Auer", GroupIds = [g] });
         var b = await Svc().CreateMemberAsync(Manager(), new ClubMemberInputDto { FirstName = "Ben", LastName = "Berger", GroupIds = [g] });
         _race.Arm(g, a.Id);
 
-        var saved = await Svc().SaveSessionAsync(Manager(), g, new ClubSessionInputDto
+        // Seit F4-013 überschreibt ein Speichern ohne Kennung keine Einheit: der Verlierer des Wettlaufs bekommt 409 wie
+        // jedes Speichern auf einen schon belegten Tag (statt 500 vor G1-007), die Einheit des anderen Trainers bleibt
+        // unverändert — er lädt den Tag neu und trägt seine Kinder dort ein.
+        await Assert.ThrowsAsync<ConflictException>(() => Svc().SaveSessionAsync(Manager(), g, new ClubSessionInputDto
         {
             Date = "2026-09-25", Topic = "Gabel",
             Attendance = [new() { MemberId = b.Id, Status = "present" }],
-        });
+        }));
 
         var session = Assert.Single(await _db.ClubSessions.AsNoTracking().Include(s => s.Attendance).ToListAsync());
-        Assert.Equal(session.Id, saved.Id);
-        Assert.Equal("Gabel", session.Topic);
-        Assert.Equal([a.Id, b.Id], session.Attendance.Select(x => x.MemberId).OrderBy(x => x));   // beide Trainer-Eingaben
+        Assert.Null(session.Topic);
+        Assert.Equal([a.Id], session.Attendance.Select(x => x.MemberId));
     }
 
     /// <summary>Beim ersten Speichern einer NEUEN Einheit legt „der andere Trainer“ sie an (mit seinem Eintrag), und das eigene

@@ -831,8 +831,9 @@ public class ClubService
             await _db.SaveChangesAsync(ct);
         }
         // Zwei Trainer speichern gleichzeitig die erste Einheit des Tages: der zweite läuft in den eindeutigen Index
-        // (GroupId, Date). Dann gibt es die Einheit jetzt — die Eingabe einmal darauf anwenden wie ein zweites Speichern,
-        // statt 500 (G1-007; Konvention Startup/DatabaseSetup.cs).
+        // (GroupId, Date). Dann gibt es die Einheit jetzt — noch einmal wie ein zweites Speichern durchlaufen, das ohne
+        // Kennung mit 409 endet (F4-013: Speichern ohne Kennung überschreibt nie), statt 500 (G1-007; Konvention
+        // Startup/DatabaseSetup.cs).
         catch (DbUpdateException ex) when (creating && retryRace && AuthService.IsUniqueViolation(ex))
         {
             _db.ChangeTracker.Clear();
