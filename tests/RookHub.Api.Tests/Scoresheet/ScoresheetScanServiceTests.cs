@@ -449,6 +449,24 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Empty(await _db.ScoresheetScanViews.ToListAsync());
     }
 
+    /// <summary>R2-009: Bilder aus dem Stapel von Verein 1 an eine Vereinspartie von Verein 2 → abgelehnt (vorher still eine
+    /// Einlesung von Verein 2 mit den Fotos von Verein 1). Gleicher Verein bzw. ohne Stapel-Verein bleibt wie bisher.</summary>
+    [Fact]
+    public async Task CreateManual_StapelUndPartieAusVerschiedenenVereinen_mixedClubs()
+    {
+        var u = await UserAsync();
+        var game = new LeagueClubGame { ClubId = TestClubs.OtherId, White = "A", Black = "B", Pgn = "1. Nf3 d5 *", MovesHash = "x", Result = "*" };
+        _db.LeagueClubGames.Add(game);
+        await _db.SaveChangesAsync();
+        ScoresheetUpload[] Pages() => [new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg")];
+
+        var (scan, reason) = await _service.CreateManualAsync(u.Id, Pages(), Answer(Written), game.Id, clubId: TestClubs.HomeId);
+
+        Assert.Equal(("mixedClubs", (ScoresheetScanDto?)null), (reason, scan));
+        Assert.Empty(_db.ScoresheetScans);
+        Assert.Null((await _service.CreateManualAsync(u.Id, Pages(), Answer(Written), game.Id, clubId: TestClubs.OtherId)).Reason);
+    }
+
     [Fact]
     public async Task CreateManual_ForAClubGame_IsArchivedSoCorrectingShowsTheSheet()
     {

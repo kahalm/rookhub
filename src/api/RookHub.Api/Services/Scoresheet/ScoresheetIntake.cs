@@ -186,6 +186,9 @@ internal sealed class ScoresheetIntake
         {
             var game = await _db.LeagueClubGames.Where(g => g.Id == cg).Select(g => new { g.Pgn, g.ClubId }).FirstOrDefaultAsync(ct);
             if (game == null) return (null, "clubGameNotFound");
+            // Bilder aus dem Stapel eines Vereins gehören nie in die Einlesung einer Partie eines ANDEREN (R2-009): sonst sähen
+            // dessen Verwalter die Formularfotos — derselbe Grund wie mixedClubs über die Stapel.
+            if (clubId is int stack && stack != game.ClubId) return (null, "mixedClubs");
             finalPgn = game.Pgn;
             clubId = game.ClubId;
         }

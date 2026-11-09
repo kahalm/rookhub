@@ -57,7 +57,8 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
   übernimmt nur deren Analyse (`SavedGameAnalysisLink.ClubGameForMovesAsync`/`ClubAnalysisForMovesAsync`/`LinkClubCopiesAsync`,
   `LeagueClubResolver.ClubIdsOfAsync`); korrigieren über die Kopie darf der Hochladende oder ein Verwalter DES Vereins der Partie
   (`LeagueClubResolver.CanManageAsync`). Stapel-Uploads zeigen im Admin-Tab den Verein (`club`), die manuelle Einlesung
-  (`manual-scan`) gehört dem Verein des Stapels (Bilder zweier Vereine → 400 `mixedClubs`).
+  (`manual-scan`) gehört dem Verein des Stapels (Bilder zweier Vereine → 400 `mixedClubs`; ebenso eine `clubGameId` aus einem
+  anderen Verein als dem des Stapels, R2-009).
 * **Verwaltung** (`Services/League/LeagueClubAdminService.cs`, nur Admins mit `league.manage`): Verein anlegen/ändern, Gruppe
   zuordnen (eine andere Zuordnung derselben Gruppe wird ersetzt; der Taktik-Kurs wird freigegeben bzw. beim Lösen entzogen),
   Kursname folgt dem Vereinsnamen.
