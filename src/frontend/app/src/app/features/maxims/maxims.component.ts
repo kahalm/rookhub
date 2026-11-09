@@ -7,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { map } from 'rxjs';
 import { ChessMaxim, ChessMaximSource, ChessMaximsService, localizeMaxim, readerJump } from '../../shared/maxims/chess-maxims.service';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 
 /**
  * Seite „Merksätze“ (0.917.0, Wunsch 2026-11-09: „mach irgendwo in RookHub einen Link, wo diese Merksätze aufgelistet sind —
@@ -18,14 +19,16 @@ import { ChessMaxim, ChessMaximSource, ChessMaximsService, localizeMaxim, reader
   selector: 'app-maxims',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MatCardModule, MatExpansionModule, MatProgressSpinnerModule, TranslatePipe],
+  imports: [RouterLink, MatCardModule, MatExpansionModule, MatProgressSpinnerModule, TranslatePipe, LoadErrorComponent],
   template: `
     <div class="maxims-page">
       <mat-card class="head-card">
         <h1>{{ 'maxims.title' | translate }}</h1>
         <p class="intro">{{ 'maxims.intro' | translate }}</p>
       </mat-card>
-      @if (list(); as all) {
+      @if (state() === 'error') {
+        <app-load-error (retry)="maxims.retry()" />
+      } @else if (list(); as all) {
         <p class="count">{{ 'maxims.count' | translate: { count: all.length } }}</p>
         @for (g of groups(); track g.category) {
           <h2>{{ g.category }}</h2>
@@ -81,7 +84,10 @@ import { ChessMaxim, ChessMaximSource, ChessMaximsService, localizeMaxim, reader
 export class MaximsComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly translate = inject(TranslateService);
-  readonly list = toSignal(inject(ChessMaximsService).all$);
+  protected readonly maxims = inject(ChessMaximsService);
+  /** Lade-/Fehlerzustand: ein gescheiterter Abruf zeigt `app-load-error` statt „0 Merksätze“ (Codereview F3-003). */
+  readonly state = toSignal(this.maxims.state$);
+  readonly list = computed(() => { const s = this.state(); return Array.isArray(s) ? s : undefined; });
   readonly openId = toSignal(this.route.queryParamMap.pipe(map(q => q.get('m'))), { initialValue: null });
   private readonly scrolled = signal(false);
 

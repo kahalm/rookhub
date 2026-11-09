@@ -1,6 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, of, shareReplay } from 'rxjs';
+import {
+  BehaviorSubject, Observable, catchError, combineLatest, defer, distinctUntilChanged, filter, map, of, shareReplay,
+  startWith, switchMap, tap,
+} from 'rxjs';
+import { AuthService } from '../../core/auth.service';
 
 /** Eine Buchstelle zu einem Merksatz (0.917.0): PDF-Seite (`page`) bzw. Anteil im EPUB (`percent`), Zitat. */
 export interface ChessMaximSource {
@@ -39,12 +43,48 @@ export function splitMaxim(text: string): { body: string; maxim: string | null }
   return m ? { body: text.slice(0, m.index).trimEnd(), maxim: m[1].trim() } : { body: text, maxim: null };
 }
 
-/** Die kuratierten Merksätze — einmal je Sitzung geladen; ohne Netz einfach keine Buchstellen (still). */
+/** Stand der Merksätze: `undefined` = lädt, `'error'` = Abruf gescheitert, sonst die Liste. */
+export type ChessMaximsState = ChessMaxim[] | 'error' | undefined;
+
+/**
+ * Die kuratierten Merksätze. Die Antwort hängt am Aufrufer (`accessible` je Buchstelle nach den E-Book-Rechten), deshalb
+ * wird je Konto geladen: An-/Abmelden oder ein Kontowechsel holt die Liste neu (Codereview F3-003). Ein gescheiterter
+ * Abruf wird nicht behalten — das nächste Abonnieren (oder `retry()`) fragt erneut. Die (i)-Hinweise nehmen `all$`
+ * (ohne Netz still keine Buchstellen), die Seite `/maxims` nimmt `state$` und zeigt den Fehler.
+ */
 @Injectable({ providedIn: 'root' })
 export class ChessMaximsService {
   private readonly http = inject(HttpClient);
-  readonly all$: Observable<ChessMaxim[]> = this.http.get<ChessMaxim[]>('/api/maxims').pipe(
-    catchError(() => of([] as ChessMaxim[])), shareReplay(1));
+  private readonly auth = inject(AuthService);
+  private readonly reload$ = new BehaviorSubject<void>(undefined);
+  private failed = false;
+
+  private readonly shared$: Observable<ChessMaximsState> = combineLatest([
+    this.auth.currentUser$.pipe(map(u => u?.userId ?? null), distinctUntilChanged()),
+    this.reload$,
+  ]).pipe(
+    switchMap(() => this.http.get<ChessMaxim[]>('/api/maxims').pipe(
+      tap(() => this.failed = false),
+      catchError(() => { this.failed = true; return of('error' as const); }),
+      startWith(undefined))),
+    shareReplay(1));
+
+  /** Liste mit Lade- und Fehlerzustand; nach einem Fehler lädt jedes neue Abonnieren erneut. */
+  readonly state$: Observable<ChessMaximsState> = defer(() => {
+    if (this.failed) this.retry();
+    return this.shared$;
+  });
+
+  /** Nur die Liste (Fehler = leer, Laden wird übersprungen) — für die (i)-Hinweise in Erklärungen. */
+  readonly all$: Observable<ChessMaxim[]> = this.state$.pipe(
+    filter((s): s is ChessMaxim[] | 'error' => s !== undefined),
+    map(s => s === 'error' ? [] : s));
+
+  /** Erneut laden (Knopf „Erneut versuchen“). */
+  retry(): void {
+    this.failed = false;
+    this.reload$.next();
+  }
 
   /** Der Merksatz mit genau diesem Wortlaut, deutsch oder englisch (die Erklärung trägt den festen Text, nicht die Kennung). */
   static byText(all: readonly ChessMaxim[], text: string): ChessMaxim | null {

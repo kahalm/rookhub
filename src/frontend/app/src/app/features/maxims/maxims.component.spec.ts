@@ -62,4 +62,25 @@ describe('MaximsComponent (0.917.0)', () => {
     expect(el.textContent).not.toContain('Springer am Rand bringt');
     expect(el.textContent).toContain('Loose pieces drop off');
   });
+
+  it('Ladefehler zeigt app-load-error mit Wiederholen statt „0 Merksätze“ (F3-003)', () => {
+    TestBed.configureTestingModule({
+      imports: [MaximsComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const f = TestBed.createComponent(MaximsComponent);
+    f.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/maxims').flush('x', { status: 502, statusText: 'Bad Gateway' });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('app-load-error')).not.toBeNull();
+    expect(el.textContent).not.toContain('maxims.count');
+    (el.querySelector('app-load-error button') as HTMLButtonElement).click();
+    http.expectOne('/api/maxims').flush(LIST);
+    f.detectChanges();
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.querySelectorAll('mat-expansion-panel').length).toBe(2);
+  });
 });
