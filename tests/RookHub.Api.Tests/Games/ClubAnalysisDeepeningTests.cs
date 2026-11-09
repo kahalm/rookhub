@@ -135,12 +135,12 @@ public class ClubAnalysisDeepeningTests : IDisposable
     }
 
     /// <summary>Eine fertige Analyse mit offener Vertiefung, Stellungen gerechnet, nichts vertieft.</summary>
-    private async Task<GameAnalysis> RefiningAsync(GameAnalysisOrigin origin, DateTime created, int? clubGameId = null)
+    private async Task<GameAnalysis> RefiningAsync(GameAnalysisOrigin origin, DateTime created, int? clubGameId = null, bool expedited = false)
     {
         var a = new GameAnalysis
         {
             UserId = Owner, EngineOwnerUserId = origin == GameAnalysisOrigin.SavedGame ? Owner : null, Pgn = Short, StartFen = "start",
-            Origin = origin, Status = GameAnalysisStatus.Done, RefineDepth = 30, RefineMultiPv = 5, LeagueClubGameId = clubGameId,
+            Origin = origin, Status = GameAnalysisStatus.Done, RefineDepth = 30, RefineMultiPv = 5, LeagueClubGameId = clubGameId, Expedited = expedited,
             PlyCount = 2, CreatedAt = created, FinishedAt = created,
             Positions =
             {
@@ -188,6 +188,43 @@ public class ClubAnalysisDeepeningTests : IDisposable
         _db.ChangeTracker.Clear();
         Assert.Empty(await OpenJobsAsync(club3.Id));
         Assert.NotNull(own);
+    }
+
+    [Fact]
+    public async Task EilendeVereinspartie_wirdSofortVertieft_trotzJuengererPartienDesStapels()
+    {
+        var svc = Analyses();
+        var expedited = await RefiningAsync(GameAnalysisOrigin.Club, DateTime.UtcNow.AddDays(-10), ClubGame().Id, expedited: true);
+        var waiting = await RefiningAsync(GameAnalysisOrigin.Club, DateTime.UtcNow.AddDays(-9), ClubGame().Id);
+        await RefiningAsync(GameAnalysisOrigin.Club, DateTime.UtcNow.AddDays(-1), ClubGame().Id);
+
+        await svc.PumpOneAsync(expedited.Id);
+        await svc.PumpOneAsync(waiting.Id);
+        _db.ChangeTracker.Clear();
+
+        var jobs = await OpenJobsAsync(expedited.Id);
+        Assert.NotEmpty(jobs);
+        Assert.All(jobs, j => Assert.Equal((true, false, JobPriority.Waiting), (j.Background, j.Batch, j.Priority)));
+        Assert.Empty(await OpenJobsAsync(waiting.Id));                                // ohne Eile weiter hinter der jüngeren
+    }
+
+    [Fact]
+    public async Task EilendeVereinspartie_wartetNichtAufDenErstenDurchgangEigenerPartien()
+    {
+        var svc = Analyses();
+        var expedited = await RefiningAsync(GameAnalysisOrigin.Club, DateTime.UtcNow.AddDays(-10), ClubGame().Id, expedited: true);
+        var waiting = await RefiningAsync(GameAnalysisOrigin.Club, DateTime.UtcNow.AddDays(-1), ClubGame().Id);
+        var own = await RefiningAsync(GameAnalysisOrigin.SavedGame, DateTime.UtcNow);
+        own.Status = GameAnalysisStatus.Running;                                      // 3 offene Stellungen ≥ 2 Engines
+        foreach (var p in own.Positions) p.CandidatesJson = null;
+        await _db.SaveChangesAsync();
+
+        await svc.PumpOneAsync(expedited.Id);
+        await svc.PumpOneAsync(waiting.Id);
+        _db.ChangeTracker.Clear();
+
+        Assert.NotEmpty(await OpenJobsAsync(expedited.Id));
+        Assert.Empty(await OpenJobsAsync(waiting.Id));
     }
 
     [Fact]

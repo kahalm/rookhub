@@ -121,6 +121,9 @@ internal sealed class GameAnalysisTurns
     /// </summary>
     internal async Task<bool> IsOwnersRefineTurnAsync(GameAnalysis analysis, CancellationToken ct)
     {
+        // Jemand wartet auf genau diese Partie (0.922.0, MasterAnalysisScheduler.ExpediteWantedAsync): sie steht nicht
+        // hinter den jüngeren Partien des Stapels. Ihre Aufträge tragen die Stufe „Waiting“, der Worker ordnet sie ein.
+        if (analysis.Expedited) return true;
         // Dieselbe Schwanz-Regel wie im ersten Durchgang (0.543.0): solange der erste Durchgang mehr offene
         // Stellungen hat als Engines da sind, wartet die Vertiefung; darunter darf sie die freien Engines
         // nehmen — ihre Auftraege sind ohnehin Hintergrundarbeit, die der Worker nur ohne normalen Auftrag zieht.

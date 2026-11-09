@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.932.1", date: "2026-11-09", changes: [
+    { en: "Game analysis: a club game someone is waiting for now gets its depth-30 pass right away instead of queuing behind all younger batch games.",
+      de: "Partie-Analyse: Eine Vereinspartie, auf die jemand wartet, wird jetzt sofort auf Tiefe 30 vertieft und steht nicht mehr hinter allen jüngeren Partien des Stapels." },
+  ] },
   { version: "0.932.0", date: "2026-11-09", changes: [
     { en: "Game summaries: moves in the text are clickable. A game move jumps to that position on the side board, a side line appears there and can be stepped through. You can also play your own moves on that board; such variations stay on the page and are not saved.",
       de: "Partie-Zusammenfassung: Züge im Text sind anklickbar. Ein Partiezug springt auf dem Seitenbrett an seine Stelle, eine Variante erscheint dort und lässt sich durchklicken. Eigene Züge auf dem Brett ergeben ebenfalls eine Variante; sie bleibt nur auf dieser Seite und wird nicht gespeichert." },
