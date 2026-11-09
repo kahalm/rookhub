@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.938.1',
+    date: '2026-11-09',
+    changes: [
+      {
+        en: 'Language menu: coverage table updated to match the current translation files.',
+        de: 'Sprachmenü: Abdeckungstabelle an die aktuellen Sprachdateien angepasst.',
+      },
+    ],
+  },
+  {
     version: '0.938.0',
     date: '2026-11-09',
     changes: [
