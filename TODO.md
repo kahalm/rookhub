@@ -1029,7 +1029,17 @@ Merkmal kam am 2026-09-07 um 12:43, der letzte Sweep lief 03:1x — also davor. 
 Sweep traegt es nach, aber erst ueber eine Rotationswoche; fuer eine einzelne Foederation sofort:
 `POST /api/admin/tournament-directory/sweep` mit `AUT`.
 
-## [ ] Mannschaftsturnier ohne Rundenzahl importiert nichts (von Kopie 2 gemeldet, 2026-09-07)
+## [x] Mannschaftsturnier ohne Rundenzahl importiert nichts (von Kopie 2 gemeldet, 2026-09-07, erledigt 2026-11-09, Version folgt)
+
+**Erledigt 2026-11-09 im Crawler** (Branch `todo-3`): Ursache war der GET auf `art=0&turdet=YES` — er klappt die
+Turnierdetails nicht aus (das tut nur der Postback), bei der Liga steht dort nur die Kreuztabelle. Die
+„Rundenanzahl"-Zeile, die seit der Olympiade-Reparatur gelesen wird, kommt so nie an. art=2 ist die „Teamauslosung aller
+Runden" ohne `rd=`-Link. Jetzt: `PairingsParser.ParseRoundHeadingsAsync` liest „1. Runde" … „11. Runde" (lan=1 „Round
+N") aus der Paarungstabelle, `PairingsCrawl` hebt `TotalRounds` darauf an, der Fallback `1..TotalRounds` greift. Bleibt
+es bei 0, obwohl art=2 Paarungen zeigt: Warnung im Crawler-Log und `roundCountUnknown: true` in der Turnierantwort.
+Fixtures sind die echten Seiten von tnr1221888 (art=0, art=2, art=2&rd=1; `LeagueWithoutRoundCountTests`). Doku:
+`docs/api/turnier-proxy.md`. Nach dem Crawler-Deploy das Turnier einmal neu holen. Urspruenglicher Text:
+
 
 `tnr1221888` („2. Bundesliga West AUT 2025-26") importiert 208 Spieler und 11 Mannschaften, aber
 NULL Runden: `ParseTotalRoundsAsync` findet auf der `art=0`-Seite dieses Mannschaftsturniers kein
