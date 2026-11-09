@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.938.5',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Fixes from the November code review (frontend, part 2): lines in “No engine” mode are no longer overwritten after a load error, failed saves are reported and retried, and “Turn engine on” works while saving; if the scoresheet state fails to load, saving keeps the stored reading; the e-book reader renews its access itself so long-open books no longer show blank pages, large PDFs use less memory and pages that cannot be shown are reported; game list, mistake collection and the collection dialog show load errors with “Retry”; “Explain mistakes”, “Don’t show again” and a history entry from a link report failures; the e-book list always shows the latest search; the board in the e-book reader frees Maia when you leave; unfinished blocks in game summaries no longer swallow the rest of the text; lc0 plus depth analysis reports partial success without duplicates; switching move comparisons shows the right one; the analysis move tree works with the keyboard, including variation actions and comments.',
+        de: 'Korrekturen aus dem Codereview vom November (Oberfläche, Teil 2): Linien „Ohne Engine“ werden nach einem Ladefehler nicht mehr überschrieben, gescheitertes Speichern wird gemeldet und wiederholt, und „Engine einschalten“ wirkt auch während des Speicherns; lädt der Stand des Formulars nicht, bleibt die gespeicherte Formular-Lesung beim Speichern erhalten; der E-Book-Leser erneuert seinen Zugang selbst, lange offene Bücher zeigen keine weißen Seiten mehr, große PDFs brauchen weniger Speicher und nicht darstellbare Seiten werden gemeldet; Partienliste, Fehler-Sammlung und Sammlungs-Dialog zeigen Ladefehler mit „Erneut versuchen“; „Fehler erklären lassen“, „Nicht mehr zeigen“ und ein Verlaufseintrag aus einem Link melden Fehlschläge; die E-Book-Liste zeigt immer die letzte Suche; das Brett im E-Book-Leser gibt Maia beim Verlassen frei; abgebrochene Blöcke in Partie-Zusammenfassungen verschlucken den restlichen Text nicht mehr; lc0 plus Tiefen-Analyse meldet einen Teil-Erfolg ohne Doppel; der Wechsel des Zugvergleichs zeigt den richtigen; der Zugbaum im Analysebrett ist per Tastatur bedienbar, auch Varianten-Aktionen und Kommentare.' },
+    ],
+  },
+  {
     version: '0.938.4',
     date: '2026-11-09',
     changes: [
