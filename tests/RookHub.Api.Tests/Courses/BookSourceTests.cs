@@ -200,7 +200,9 @@ public class BookSourceTests : IDisposable
 
     // ===== Teil-/Lücken-Import: Leer-Prüfung per SQL, Text nur laden, wenn er ersetzt wird =====
 
-    private const string TeilPgn = "[Event \"X\"]\n[Round \"2\"]\n[FEN \"" + StartFen + "\"]\n\n1. d4 d5 2. c4 *\n";
+    // Nicht aus der Grundstellung: dort verwirft der Parser eine Linie ohne [%tqu] (Invalid) — es entstünde keine.
+    private const string TeilFen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2";
+    private const string TeilPgn = "[Event \"X\"]\n[Round \"2\"]\n[FEN \"" + TeilFen + "\"]\n\n2. Nf3 Nc6 3. Bb5 a6 *\n";
 
     [Theory]
     [InlineData(true, false)]   // partial
@@ -229,13 +231,29 @@ public class BookSourceTests : IDisposable
         var id = await SeedBookAsync(leer, importVersion: ImportPipeline.CurrentVersion, fileName: "leer.pgn");
 
         var db = Fresh();
+        // Zustand der BookSource VOR jedem Speichern festhalten (danach übernimmt EF die aktuellen Werte als Original).
+        var vorDemSpeichern = new List<(EntityState State, bool Modified, string? Original, string? Current)>();
+        db.SavingChanges += (_, _) =>
+        {
+            foreach (var e in db.ChangeTracker.Entries<BookSource>())
+            {
+                var p = e.Property(s => s.SourcePgn);
+                vorDemSpeichern.Add((e.State, p.IsModified, p.OriginalValue, p.CurrentValue));
+            }
+        };
+
         await new PgnImportService(db).ImportFileAsync("leer.pgn", TeilPgn, CancellationToken.None,
             preserveExistingSourcePgn: preserve, partial: partial);
 
         Assert.Equal(TeilPgn, (await Fresh().BookSources.SingleAsync(s => s.Id == id)).SourcePgn);
-        // Über den Stub geschrieben: nur die eine Spalte geändert, Ursprungswert der (ungeladene) Stub-Wert.
-        var entry = db.ChangeTracker.Entries<BookSource>().Single();
-        Assert.Null(entry.Property(s => s.SourcePgn).OriginalValue);
+        // Über den Stub geschrieben: der Text kam nie in den Kontext (Original = Stub-Wert null), geändert wurde nur
+        // die eine Spalte — kein Added (das wäre ein neues Buch), kein Ersetzen eines geladenen Texts.
+        var geschrieben = Assert.Single(vorDemSpeichern, x => x.State != EntityState.Unchanged);
+        Assert.Equal(EntityState.Modified, geschrieben.State);
+        Assert.True(geschrieben.Modified);
+        Assert.Null(geschrieben.Original);
+        Assert.Equal(TeilPgn, geschrieben.Current);
+        Assert.Single(db.ChangeTracker.Entries<BookSource>());
     }
 
     [Fact]
