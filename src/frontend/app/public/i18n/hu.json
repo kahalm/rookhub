@@ -475,7 +475,7 @@
     },
     "sharedLinks": {
       "title": "Megosztási linkjeim",
-      "help": "Akinél egy repertoárvonal linkje van, bejelentkezés nélkül látja a vonalat — amíg vissza nem vonod.\n\nA játszmalinkeket a játszmalistában vonhatod vissza: ⋮ → „Megosztási link visszavonása”.",
+      "help": "Akinél egy repertoárvonal linkje van, bejelentkezés nélkül látja a vonalat — a megosztástól számított 30 napig (újbóli megosztás meghosszabbítja), vagy amíg vissza nem vonod.\n\nA játszmalinkeket a játszmalistában vonhatod vissza: ⋮ → „Megosztási link visszavonása”.",
       "empty": "Még nem osztottál meg nyilvánosan vonalat.",
       "fromExtension": "RepCheckből",
       "open": "Megnyitás",
@@ -483,7 +483,9 @@
       "revokeConfirm": "Visszavonod a(z) „{{title}}” linkjét? Akinél megvan, többé nem látja a vonalat.",
       "revoked": "Link visszavonva.",
       "error": "A megosztási linkek nem tölthetők be.",
-      "revokeError": "A visszavonás nem sikerült."
+      "revokeError": "A visszavonás nem sikerült.",
+      "validUntil": "érvényes eddig: {{date}}",
+      "expired": "lejárt: {{date}}"
     },
     "offline": {
       "title": "Offline",
@@ -1063,9 +1065,17 @@
       "action": "Változat megosztása",
       "title": "Ennek a változatnak a megosztása",
       "hint": "Bárki, akinek megvan ez a link, lejátszhatja a változatot — fiók sem kell hozzá.",
-      "notFound": "Ez a megosztott változat nem létezik (vagy törölték).",
+      "notFound": "Ez a megosztott változat nem létezik, törölték vagy lejárt.",
       "defaultTitle": "Repertoár-változat",
-      "error": "A megosztási linket nem sikerült létrehozni."
+      "error": "A megosztási linket nem sikerült létrehozni.",
+      "chapterAction": "Fejezet megosztása",
+      "chapterTitle": "Fejezet megosztása",
+      "chapterHint": "A link birtokában bárki végigkattinthatja a fejezet összes változatát — fiók nélkül.",
+      "validUntil": "Érvényes eddig: {{date}}",
+      "prevLine": "Előző változat",
+      "nextLine": "Következő változat",
+      "pickLine": "Változat kiválasztása",
+      "lineOf": "{{n}}. változat / {{total}}"
     },
     "downloadLine": "Változat letöltése PGN-ként",
     "holes": {

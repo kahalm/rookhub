@@ -29,6 +29,12 @@ public class SharedLineService
     /// beliebig große LONGTEXT-Blobs missbraucht wird.</summary>
     public const int MaxPgnChars = 32 * 1024;
 
+    /// <summary>Deckel für ein geteiltes Kapitel (mehrere Linien als eigene Partien).</summary>
+    public const int MaxChapterPgnChars = 512 * 1024;
+
+    /// <summary>So lange gilt ein Link ab dem (letzten) Teilen; erneutes Teilen verlängert ihn.</summary>
+    public static readonly TimeSpan Lifetime = TimeSpan.FromDays(30);
+
     /// <summary>
     /// Legt einen Teilen-Link für eine Linie des Repertoires <paramref name="repertoireId"/> an.
     /// Zugriff: NUR der Besitzer. Dieselbe Linie erneut geteilt (gleicher PGN-Hash je Besitzer)
@@ -39,8 +45,9 @@ public class SharedLineService
     public async Task<ShareLineResultDto?> CreateAsync(int userId, int repertoireId, ShareLineInputDto dto, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(dto.Pgn)) return null;
-        if (dto.Pgn.Length > MaxPgnChars)
-            throw new DomainValidationException($"PGN exceeds the {MaxPgnChars / 1024} KB limit for shared lines.");
+        var cap = dto.Chapter ? MaxChapterPgnChars : MaxPgnChars;
+        if (dto.Pgn.Length > cap)
+            throw new DomainValidationException($"PGN exceeds the {cap / 1024} KB limit for shared {(dto.Chapter ? "chapters" : "lines")}.");
         if (!RepertoireService.LooksLikePgn(dto.Pgn)) return null;
 
         var rep = await _db.Repertoires.AsNoTracking()
@@ -54,7 +61,7 @@ public class SharedLineService
         // RepertoireShares) — also entscheidet über eine ÖFFENTLICHE Kopie allein der Besitzer.
         if (rep.UserId != userId) return null;
 
-        return await StoreAsync(userId, repertoireId, dto.Title, rep.Name, dto.Pgn.Trim(), null, ct);
+        return await StoreAsync(userId, repertoireId, dto.Title, rep.Name, dto.Pgn.Trim(), dto.Chapter ? "chapter|" + dto.Pgn.Trim() : null, dto.Chapter, ct);
     }
 
     /// <summary>
@@ -85,18 +92,25 @@ public class SharedLineService
             throw new ArgumentException($"PGN exceeds the {MaxPgnChars / 1024} KB limit for shared lines.");
         // Identität einer freistehenden Line = ihre Zugfolge (NICHT der variable Seitentitel) →
         // Dedup über die Züge, damit derselbe Spielstand denselben Link liefert.
-        return await StoreAsync(userId, null, title, null, pgn, "ext|" + string.Join(' ', sans), ct);
+        return await StoreAsync(userId, null, title, null, pgn, "ext|" + string.Join(' ', sans), false, ct);
     }
 
-    private async Task<ShareLineResultDto?> StoreAsync(int userId, int? repertoireId, string? title, string? repertoireName, string pgn, string? dedupSource, CancellationToken ct)
+    private async Task<ShareLineResultDto?> StoreAsync(int userId, int? repertoireId, string? title, string? repertoireName, string pgn, string? dedupSource, bool isChapter, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(pgn)) return null;
         var hash = Sha256Hex(dedupSource ?? pgn);
+        var expiresAt = DateTime.UtcNow + Lifetime;
 
-        // Dedup je Besitzer über den PGN-Hash → derselbe Link bei erneutem Teilen.
-        var existing = await _db.SharedLines.AsNoTracking()
+        // Dedup je Besitzer über den PGN-Hash → derselbe Link bei erneutem Teilen; das Teilen verlängert ihn
+        // (auch einen schon abgelaufenen) wieder auf 30 Tage ab jetzt.
+        var existing = await _db.SharedLines
             .FirstOrDefaultAsync(s => s.OwnerUserId == userId && s.LineHash == hash, ct);
-        if (existing != null) return new ShareLineResultDto { ShareToken = existing.ShareToken };
+        if (existing != null)
+        {
+            existing.ExpiresAt = expiresAt;
+            await _db.SaveChangesAsync(ct);
+            return new ShareLineResultDto { ShareToken = existing.ShareToken, ExpiresAt = expiresAt };
+        }
 
         var cleanTitle = string.IsNullOrWhiteSpace(title) ? null : title!.Trim();
         if (cleanTitle is { Length: > 200 }) cleanTitle = cleanTitle[..200];
@@ -111,6 +125,8 @@ public class SharedLineService
             LineHash = hash,
             ShareToken = await GenerateUniqueTokenAsync(ct),
             CreatedAt = DateTime.UtcNow,
+            ExpiresAt = expiresAt,
+            IsChapter = isChapter,
         };
         _db.SharedLines.Add(entity);
         try
@@ -123,10 +139,10 @@ public class SharedLineService
             _db.ChangeTracker.Clear();
             var raced = await _db.SharedLines.AsNoTracking()
                 .FirstOrDefaultAsync(s => s.OwnerUserId == userId && s.LineHash == hash, ct);
-            if (raced != null) return new ShareLineResultDto { ShareToken = raced.ShareToken };
+            if (raced != null) return new ShareLineResultDto { ShareToken = raced.ShareToken, ExpiresAt = raced.ExpiresAt };
             throw;
         }
-        return new ShareLineResultDto { ShareToken = entity.ShareToken };
+        return new ShareLineResultDto { ShareToken = entity.ShareToken, ExpiresAt = expiresAt };
     }
 
     /// <summary>Baut aus einer SAN-Hauptlinie (ab Grundstellung) ein minimales PGN mit Zugnummern.</summary>
@@ -153,7 +169,7 @@ public class SharedLineService
             .Select(s => new OwnSharedLineDto
             {
                 Id = s.Id, ShareToken = s.ShareToken, Title = s.Title, RepertoireName = s.RepertoireName,
-                RepertoireId = s.RepertoireId, CreatedAt = s.CreatedAt,
+                RepertoireId = s.RepertoireId, CreatedAt = s.CreatedAt, ExpiresAt = s.ExpiresAt, IsChapter = s.IsChapter,
             })
             .ToListAsync(ct);
 
@@ -169,13 +185,13 @@ public class SharedLineService
         return true;
     }
 
-    /// <summary>Öffentliche Sicht über das Token; <c>null</c> wenn unbekannt.</summary>
+    /// <summary>Öffentliche Sicht über das Token; <c>null</c> wenn unbekannt oder abgelaufen.</summary>
     public async Task<SharedLineDto?> GetByTokenAsync(string token, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(token)) return null;
         var s = await _db.SharedLines.AsNoTracking()
             .FirstOrDefaultAsync(x => x.ShareToken == token, ct);
-        if (s == null) return null;
+        if (s == null || (s.ExpiresAt is { } exp && exp <= DateTime.UtcNow)) return null;
         return new SharedLineDto
         {
             ShareToken = s.ShareToken,
@@ -183,6 +199,8 @@ public class SharedLineService
             RepertoireName = s.RepertoireName,
             Pgn = s.Pgn,
             CreatedAt = s.CreatedAt,
+            ExpiresAt = s.ExpiresAt,
+            IsChapter = s.IsChapter,
         };
     }
 

@@ -39,6 +39,9 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
                   <span class="meta">
                     {{ l.repertoireId === null ? ('profile.sharedLinks.fromExtension' | translate) : (l.repertoireName || '') }}
                     · {{ l.createdAt | date:'mediumDate' }}
+                    @if (l.expiresAt) {
+                      · <span [class.expired]="isExpired(l)">{{ (isExpired(l) ? 'profile.sharedLinks.expired' : 'profile.sharedLinks.validUntil') | translate: { date: (l.expiresAt | date:'mediumDate') } }}</span>
+                    }
                   </span>
                 </div>
                 <a mat-button class="open" [href]="'/l/' + l.shareToken" target="_blank" rel="noopener">
@@ -62,6 +65,7 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
     .what { flex: 1 1 12rem; min-width: 0; display: flex; flex-direction: column; }
     .title { overflow-wrap: anywhere; }
     .meta { font-size: 0.85em; color: var(--rh-text-secondary); }
+    .meta .expired { color: var(--rh-error); }
   `],
 })
 export class SharedLinksCardComponent implements OnInit {
@@ -82,6 +86,11 @@ export class SharedLinksCardComponent implements OnInit {
       next: list => this.lines.set(list),
       error: () => this.error.set(true),
     });
+  }
+
+  /** Abgelaufen: der Link liefert 404, erneutes Teilen derselben Linie verlängert ihn wieder. */
+  isExpired(l: OwnSharedLine): boolean {
+    return !!l.expiresAt && new Date(l.expiresAt).getTime() <= Date.now();
   }
 
   label(l: OwnSharedLine): string {

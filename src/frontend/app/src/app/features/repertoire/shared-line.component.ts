@@ -43,7 +43,26 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
             <span class="meta">
               @if (line.repertoireName) { <span class="rep" [attr.title]="line.repertoireName">{{ line.repertoireName }}</span> }
               <span class="date">{{ line.createdAt | date:'mediumDate' }}</span>
+              @if (line.expiresAt) {
+                <span class="date">{{ 'repertoire.shareLine.validUntil' | translate: { date: (line.expiresAt | date:'mediumDate') } }}</span>
+              }
             </span>
+            <!-- Geteiltes Kapitel: je Linie eine Partie im PGN → Linie wählen, vor/zurück. -->
+            @if (service.games.length > 1) {
+              <div class="line-picker">
+                <button mat-icon-button (click)="pickLine(service.currentGameIndex - 1)" [disabled]="service.currentGameIndex <= 0"
+                        [attr.aria-label]="'repertoire.shareLine.prevLine' | translate"><mat-icon>chevron_left</mat-icon></button>
+                <select class="line-select" [value]="service.currentGameIndex" (change)="pickLine(+$any($event.target).value)"
+                        [attr.aria-label]="'repertoire.shareLine.pickLine' | translate">
+                  @for (g of service.games; track $index) {
+                    <option [value]="$index" [selected]="$index === service.currentGameIndex">{{ lineLabel($index) }}</option>
+                  }
+                </select>
+                <button mat-icon-button (click)="pickLine(service.currentGameIndex + 1)" [disabled]="service.currentGameIndex >= service.games.length - 1"
+                        [attr.aria-label]="'repertoire.shareLine.nextLine' | translate"><mat-icon>chevron_right</mat-icon></button>
+                <span class="line-count">{{ 'repertoire.shareLine.lineOf' | translate: { n: service.currentGameIndex + 1, total: service.games.length } }}</span>
+              </div>
+            }
           </div>
           <div class="body">
             <div class="board-section">
@@ -86,6 +105,11 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
     .rep { font-weight: 500; }
     .date { white-space: nowrap; }
     .rep + .date::before { content: '·'; margin: 0 6px; }
+    .date + .date::before { content: '·'; margin: 0 6px; }
+    .line-picker { display: flex; align-items: center; gap: 4px; margin-top: 4px; min-width: 0; }
+    .line-select { flex: 1 1 auto; min-width: 0; max-width: 420px; padding: 6px 8px; border-radius: 4px; font: inherit;
+      border: 1px solid color-mix(in srgb, currentColor 20%, transparent); background: var(--mat-sys-surface-container); color: inherit; }
+    .line-count { white-space: nowrap; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); margin-left: 4px; }
     .body { display: flex; gap: 16px; align-items: flex-start; }
     .board-section { width: var(--board-size); display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
     .board-wrap { position: relative; width: var(--board-size); }
@@ -112,6 +136,8 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
       .header { padding: 12px 16px; }
       /* Handy: „Name · Datum“ in EINER Zeile, der Name kürzt mit „…“ (5.3), das Datum bleibt ganz. */
       .meta { flex-wrap: nowrap; }
+      .line-picker { padding: 0; }
+      .line-count { display: none; }
       .rep { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .date { flex: none; }
       .board-wrap { width: 100%; }
@@ -151,5 +177,29 @@ export class SharedLineComponent implements OnInit {
     if (!isBoardHotkey(event)) return;
     if (event.key === 'ArrowLeft') { event.preventDefault(); this.service.goBack(); }
     else if (event.key === 'ArrowRight') { event.preventDefault(); this.service.goForward(); }
+    else if (event.key === 'ArrowUp' && this.service.games.length > 1) { event.preventDefault(); this.pickLine(this.service.currentGameIndex - 1); }
+    else if (event.key === 'ArrowDown' && this.service.games.length > 1) { event.preventDefault(); this.pickLine(this.service.currentGameIndex + 1); }
+  }
+
+  /** Linie eines geteilten Kapitels wählen (außerhalb des Bereichs: nichts). */
+  pickLine(index: number): void {
+    this.service.selectGame(index);
+  }
+
+  /** Eintrag der Linienauswahl: „3. Sizilianisch, Najdorf — 6. Lg5“ (Titel + letzter Zug, damit gleiche Titel unterscheidbar sind). */
+  lineLabel(index: number): string {
+    const g = this.service.games[index];
+    if (!g) return '';
+    const title = g.headers['Event'] && g.headers['Event'] !== '?' ? g.headers['Event'] : '';
+    const last = g.moves.length > 0 ? g.moves[g.moves.length - 1] : null;
+    let lastText = '';
+    if (last) {
+      const fen = g.fens[g.moves.length - 1] ?? '';
+      const parts = fen.split(' ');
+      const fullmove = Number(parts[5]) || 0;
+      // fens[i] = Stellung VOR Halbzug i → Zugnummer + wer zieht; Schwarz ⇒ „N…Sf6“.
+      lastText = parts[1] === 'b' ? `${fullmove}…${last.san}` : `${fullmove}. ${last.san}`;
+    }
+    return [`${index + 1}.`, title, lastText ? `— ${lastText}` : ''].filter(Boolean).join(' ');
   }
 }

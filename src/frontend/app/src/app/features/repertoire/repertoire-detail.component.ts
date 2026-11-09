@@ -224,6 +224,7 @@ const TREE_ARROWS_KEY = 'rh.repertoire.treeArrows';
                   (lineDeselected)="viewerService.deselectLine()"
                   (moveClicked)="viewerService.goToMove($event)"
                   (shareLine)="onShareLine($event)"
+                  (shareChapter)="onShareChapter($event)"
                   (downloadLine)="onDownloadLine($event)"
                   (createSubset)="onCreateSubset($event)"
                   (commentMovePreview)="onCommentMovePreview($event)"
@@ -659,7 +660,27 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
     this.repertoireService.shareLine(this.id, { pgn, title }).subscribe({
       next: res => {
         const url = `${location.origin}/l/${res.shareToken}`;
-        this.dialog.open(ShareLineDialogComponent, { data: { url, lineTitle: title } });
+        this.dialog.open(ShareLineDialogComponent, { data: { url, lineTitle: title, expiresAt: res.expiresAt } });
+      },
+      error: () => this.snackbar.info(this.translate.instant('repertoire.shareLine.error')),
+    });
+  }
+
+  /** Teilt ein ganzes Kapitel: je Linie eine Partie im PGN (Titel = Eröffnung/Variante der Linie) → ein Link. */
+  onShareChapter(ev: { chapter: string; lines: RepertoireLine[] }): void {
+    const chapterTitle = ev.chapter || this.translate.instant('repertoire.lines.noChapter');
+    const pgn = ev.lines
+      .map(line => {
+        const game = this.viewerService.games[line.gameIndex];
+        return game ? parsedGameToPgn(game, { title: line.opening || line.chapter || chapterTitle }).trim() : '';
+      })
+      .filter(p => p.length > 0)
+      .join('\n\n') + '\n';
+    if (pgn.trim().length === 0) return;
+    this.repertoireService.shareLine(this.id, { pgn, title: chapterTitle, chapter: true }).subscribe({
+      next: res => {
+        const url = `${location.origin}/l/${res.shareToken}`;
+        this.dialog.open(ShareLineDialogComponent, { data: { url, lineTitle: chapterTitle, expiresAt: res.expiresAt, chapter: true } });
       },
       error: () => this.snackbar.info(this.translate.instant('repertoire.shareLine.error')),
     });

@@ -276,4 +276,76 @@ public class SharedLineServiceTests : IDisposable
         Assert.NotNull(await _svc.GetByTokenAsync(b!.ShareToken));
         Assert.NotNull(await _svc.GetByTokenAsync(ext!.ShareToken));
     }
+    [Fact]
+    public async Task NewLink_ExpiresAfter30Days_AndExpiredTokenIsNotFound()
+    {
+        var owner = await AddUserAsync("owner");
+        var repId = await AddRepertoireAsync(owner);
+        var res = await _svc.CreateAsync(owner, repId, new ShareLineInputDto { Pgn = Pgn });
+
+        Assert.NotNull(res!.ExpiresAt);
+        Assert.InRange(res.ExpiresAt!.Value, DateTime.UtcNow.AddDays(29.9), DateTime.UtcNow.AddDays(30.1));
+        Assert.NotNull(await _svc.GetByTokenAsync(res.ShareToken));
+
+        var row = _db.SharedLines.Single();
+        row.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+        await _db.SaveChangesAsync();
+        Assert.Null(await _svc.GetByTokenAsync(res.ShareToken));
+    }
+
+    [Fact]
+    public async Task SharingAgain_RenewsExpiredLink_SameToken()
+    {
+        var owner = await AddUserAsync("owner");
+        var repId = await AddRepertoireAsync(owner);
+        var first = await _svc.CreateAsync(owner, repId, new ShareLineInputDto { Pgn = Pgn });
+        var row = _db.SharedLines.Single();
+        row.ExpiresAt = DateTime.UtcNow.AddDays(-3);
+        await _db.SaveChangesAsync();
+
+        var again = await _svc.CreateAsync(owner, repId, new ShareLineInputDto { Pgn = Pgn });
+
+        Assert.Equal(first!.ShareToken, again!.ShareToken);
+        Assert.NotNull(await _svc.GetByTokenAsync(first.ShareToken));
+    }
+
+    [Fact]
+    public async Task LegacyLinkWithoutExpiry_StaysReadable()
+    {
+        var owner = await AddUserAsync("owner");
+        var repId = await AddRepertoireAsync(owner);
+        var res = await _svc.CreateAsync(owner, repId, new ShareLineInputDto { Pgn = Pgn });
+        _db.SharedLines.Single().ExpiresAt = null;
+        await _db.SaveChangesAsync();
+
+        Assert.NotNull(await _svc.GetByTokenAsync(res!.ShareToken));
+    }
+
+    [Fact]
+    public async Task Chapter_AllowsLargerPgn_AndIsMarked()
+    {
+        var owner = await AddUserAsync("owner");
+        var repId = await AddRepertoireAsync(owner);
+        var game = Pgn.Replace("{solid}", "{" + new string('x', 1000) + "}");
+        var chapterPgn = string.Join("\n", Enumerable.Repeat(game, 50));   // ~50 KB > Linien-Deckel
+        Assert.True(chapterPgn.Length > SharedLineService.MaxPgnChars);
+
+        await Assert.ThrowsAsync<DomainValidationException>(() =>
+            _svc.CreateAsync(owner, repId, new ShareLineInputDto { Pgn = chapterPgn }));
+        var res = await _svc.CreateAsync(owner, repId, new ShareLineInputDto { Pgn = chapterPgn, Title = "Najdorf", Chapter = true });
+
+        var dto = await _svc.GetByTokenAsync(res!.ShareToken);
+        Assert.True(dto!.IsChapter);
+        Assert.True((await _svc.ListOwnAsync(owner)).Single().IsChapter);
+    }
+
+    [Fact]
+    public async Task Chapter_WithSamePgnAsLine_GetsOwnLink()
+    {
+        var owner = await AddUserAsync("owner");
+        var repId = await AddRepertoireAsync(owner);
+        var line = await _svc.CreateAsync(owner, repId, new ShareLineInputDto { Pgn = Pgn });
+        var chapter = await _svc.CreateAsync(owner, repId, new ShareLineInputDto { Pgn = Pgn, Chapter = true });
+        Assert.NotEqual(line!.ShareToken, chapter!.ShareToken);
+    }
 }

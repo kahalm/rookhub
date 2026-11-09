@@ -128,6 +128,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                     <button mat-menu-item (click)="makeDue(chapterKeys(group))"><mat-icon>bolt</mat-icon>{{ 'repertoire.lines.sr.makeDue' | translate }}</button>
                     <button mat-menu-item (click)="setPaused(chapterKeys(group), true)"><mat-icon>pause_circle</mat-icon>{{ 'repertoire.lines.sr.pause' | translate }}</button>
                     <button mat-menu-item (click)="setPaused(chapterKeys(group), false)"><mat-icon>play_circle</mat-icon>{{ 'repertoire.lines.sr.resume' | translate }}</button>
+                    <button mat-menu-item (click)="shareChapter.emit({ chapter: group.chapter, lines: group.lines })"><mat-icon>share</mat-icon>{{ 'repertoire.shareLine.chapterAction' | translate }}</button>
                     <div class="menu-label">{{ 'repertoire.lines.color.title' | translate }}</div>
                     <button mat-menu-item (click)="setChapterColor(group, 'w')">
                       <mat-icon>{{ chapterColor(group) === 'w' ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>{{ 'repertoire.lines.color.white' | translate }}
@@ -328,6 +329,8 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
   /** „Diese Linie als öffentlichen Link teilen" — der Container baut das PGN + ruft die API. */
   @Output() shareLine = new EventEmitter<RepertoireLine>();
   @Output() downloadLine = new EventEmitter<RepertoireLine>();
+  /** „Kapitel teilen" — alle Linien des Kapitels als EIN öffentlicher Link (je Linie eine Partie im PGN). */
+  @Output() shareChapter = new EventEmitter<{ chapter: string; lines: RepertoireLine[] }>();
   /** „Neues Repertoire aus Auswahl…" — mit den gerade markierten Linien-Schlüsseln als Vorauswahl. */
   @Output() createSubset = new EventEmitter<string[]>();
   /** Ein Zug in einem Kommentar (auch einer eingefalteten Variante) wurde angeklickt → Brett-Vorschau. */

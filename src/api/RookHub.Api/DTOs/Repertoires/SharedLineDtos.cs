@@ -12,12 +12,17 @@ public class ShareLineInputDto
     /// <summary>Anzeigetitel (Eröffnungs-/Kapitelname), optional.</summary>
     [MaxLength(200)]
     public string? Title { get; set; }
+
+    /// <summary>Ganzes Kapitel: <see cref="Pgn"/> enthält mehrere Partien (je Linie eine); größerer Deckel.</summary>
+    public bool Chapter { get; set; }
 }
 
 /// <summary>Antwort nach dem Teilen: das Token für den öffentlichen Link <c>/l/{token}</c>.</summary>
 public class ShareLineResultDto
 {
     public string ShareToken { get; set; } = string.Empty;
+    /// <summary>Ablauf des Links (UTC), <c>null</c> = läuft nie ab.</summary>
+    public DateTime? ExpiresAt { get; set; }
 }
 
 /// <summary>Extension-Anfrage: teilt die aktuell gespielte Zugfolge (SAN, ab Grundstellung) als Line.</summary>
@@ -39,6 +44,8 @@ public class OwnSharedLineDto
     /// <summary>Herkunfts-Repertoire; <c>null</c> bei einer Linie aus der RepCheck-Extension.</summary>
     public int? RepertoireId { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime? ExpiresAt { get; set; }
+    public bool IsChapter { get; set; }
 }
 
 /// <summary>Öffentliche Sicht einer geteilten Linie (kein Login nötig).</summary>
@@ -49,4 +56,6 @@ public class SharedLineDto
     public string? RepertoireName { get; set; }
     public string Pgn { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public DateTime? ExpiresAt { get; set; }
+    public bool IsChapter { get; set; }
 }

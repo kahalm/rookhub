@@ -82,3 +82,56 @@ describe('SharedLineComponent Layout', () => {
     expect(block('min-width:2400px')).toContain('--board-size:clamp(360px,calc(100vh-260px),1080px)');
   });
 });
+
+/** Geteiltes Kapitel (0.915.0): mehrere Partien im PGN → Linienauswahl; Ablaufdatum im Kopf. */
+describe('SharedLineComponent Kapitel', () => {
+  const chapterPgn = [
+    '[Event "Najdorf"]\n\n1. e4 c5 2. Nf3 d6 *',
+    '[Event "Najdorf"]\n\n1. e4 c5 2. Nf3 Nc6 *',
+    '[Event "Alapin"]\n\n1. e4 c5 2. c3 *',
+  ].join('\n\n');
+
+  async function setup() {
+    await TestBed.configureTestingModule({
+      imports: [SharedLineComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(SharedLineComponent);
+    const c = fixture.componentInstance;
+    c.line = { shareToken: 't', title: 'Sicilian', repertoireName: 'Rep', pgn: chapterPgn,
+      createdAt: '2026-11-09T10:00:00', expiresAt: '2026-12-09T10:00:00', isChapter: true };
+    c.service.loadPgn(chapterPgn);
+    c.loading = false;
+    fixture.detectChanges();
+    return { fixture, c };
+  }
+
+  it('zeigt eine Auswahl mit allen Linien, letzter Zug unterscheidet gleiche Titel', async () => {
+    const { fixture, c } = await setup();
+    const options = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.line-select option')).map(o => o.textContent?.trim());
+    expect(options).toEqual(['1. Najdorf — 2…d6', '2. Najdorf — 2…Nc6', '3. Alapin — 2. c3']);
+    expect(c.service.currentGameIndex).toBe(0);
+  });
+
+  it('vor/zurück und Pfeil runter wechseln die Linie, nie über den Rand', async () => {
+    const { c } = await setup();
+    c.pickLine(-1);
+    expect(c.service.currentGameIndex).toBe(0);
+    c.onKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));
+    expect(c.service.currentGameIndex).toBe(1);
+    c.pickLine(2);
+    c.pickLine(3);
+    expect(c.service.currentGameIndex).toBe(2);
+    expect(c.service.currentMoveIndex).toBe(-1);
+  });
+
+  it('eine einzelne Linie zeigt keine Auswahl', async () => {
+    const { fixture, c } = await setup();
+    c.service.loadPgn('[Event "x"]\n\n1. e4 *');
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.line-picker')).toBeNull();
+  });
+});

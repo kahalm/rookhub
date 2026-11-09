@@ -767,7 +767,7 @@
     },
     "sharedLinks": {
       "title": "My share links",
-      "help": "Anyone with a link to a repertoire line can view it without signing in, until you revoke it.\n\nRevoke game links in the game list: ⋮ → “Revoke share link”.",
+      "help": "Anyone with a link to a repertoire line can view it without signing in, for 30 days after sharing (sharing again renews it) or until you revoke it.\n\nRevoke game links in the game list: ⋮ → “Revoke share link”.",
       "empty": "You have not shared any line publicly.",
       "fromExtension": "from RepCheck",
       "open": "Open",
@@ -775,7 +775,9 @@
       "revokeConfirm": "Revoke the link to “{{title}}”? Anyone who has it will no longer see the line.",
       "revoked": "Link revoked.",
       "error": "Could not load your share links.",
-      "revokeError": "Revoking failed."
+      "revokeError": "Revoking failed.",
+      "validUntil": "valid until {{date}}",
+      "expired": "expired {{date}}"
     },
     "engine": {
       "title": "External engine",
@@ -1355,9 +1357,17 @@
       "action": "Share line",
       "title": "Share this line",
       "hint": "Anyone with this link can replay the line — no account needed.",
-      "notFound": "This shared line does not exist (or was removed).",
+      "notFound": "This shared line does not exist, was removed or has expired.",
       "defaultTitle": "Repertoire line",
-      "error": "Could not create the share link."
+      "error": "Could not create the share link.",
+      "chapterAction": "Share chapter",
+      "chapterTitle": "Share this chapter",
+      "chapterHint": "Anyone with this link can click through every line of the chapter — no account needed.",
+      "validUntil": "Valid until {{date}}",
+      "prevLine": "Previous line",
+      "nextLine": "Next line",
+      "pickLine": "Choose line",
+      "lineOf": "Line {{n}} of {{total}}"
     },
     "downloadLine": "Download line as PGN",
     "holes": {

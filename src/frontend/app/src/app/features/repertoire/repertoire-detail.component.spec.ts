@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -67,6 +67,42 @@ describe('RepertoireDetailComponent Linien-Download', () => {
     const pgn = await text();
     expect(pgn).toContain('1. e4 e6');
     expect(pgn).not.toContain('[%alt');
+  });
+});
+
+describe('RepertoireDetailComponent Kapitel teilen', () => {
+  const PGN = '[Event "Rep"]\n[Black "1) Najdorf"]\n[Result "*"]\n\n1. e4 c5 2. Nf3 d6 *\n\n'
+    + '[Event "Rep"]\n[Black "1) Najdorf"]\n[Result "*"]\n\n1. e4 c5 2. Nf3 Nc6 *\n';
+
+  it('schickt alle Linien des Kapitels als ein PGN mit chapter: true und zeigt den Link mit Ablauf', async () => {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireDetailComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const comp = TestBed.createComponent(RepertoireDetailComponent).componentInstance;
+    comp.id = 13;
+    comp.viewerService.loadPgn(PGN);
+    const http = TestBed.inject(HttpTestingController);
+    const open = spyOn((comp as any).dialog, 'open');
+
+    comp.onShareChapter({ chapter: 'Najdorf', lines: comp.viewerService.lines });
+
+    const req = http.expectOne({ url: '/api/repertoires/13/share-line', method: 'POST' });
+    expect(req.request.body.chapter).toBeTrue();
+    expect(req.request.body.title).toBe('Najdorf');
+    const games = (req.request.body.pgn as string).split('[Event ').length - 1;
+    expect(games).toBe(2);
+    expect(req.request.body.pgn).toContain('2. Nf3 d6');
+    expect(req.request.body.pgn).toContain('2. Nf3 Nc6');
+    req.flush({ shareToken: 'tok', expiresAt: '2026-12-09T10:00:00' });
+    expect(open).toHaveBeenCalled();
+    const data = (open.calls.mostRecent().args[1] as any).data;
+    expect(data.url).toContain('/l/tok');
+    expect(data.chapter).toBeTrue();
+    expect(data.expiresAt).toBe('2026-12-09T10:00:00');
   });
 });
 

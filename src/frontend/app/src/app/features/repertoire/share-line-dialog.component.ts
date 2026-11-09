@@ -17,7 +17,7 @@ import { SnackbarService } from '../../core/snackbar.service';
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe, QrCodeComponent],
   template: `
-    <h2 class="dialog-title">{{ 'repertoire.shareLine.title' | translate }}</h2>
+    <h2 class="dialog-title">{{ (data.chapter ? 'repertoire.shareLine.chapterTitle' : 'repertoire.shareLine.title') | translate }}</h2>
     @if (data.lineTitle) { <div class="line-name">{{ data.lineTitle }}</div> }
     <div class="qr-container">
       <app-qr-code [data]="data.url" [width]="220" />
@@ -28,7 +28,10 @@ import { SnackbarService } from '../../core/snackbar.service';
         <mat-icon>content_copy</mat-icon>
       </button>
     </div>
-    <p class="hint">{{ 'repertoire.shareLine.hint' | translate }}</p>
+    <p class="hint">{{ (data.chapter ? 'repertoire.shareLine.chapterHint' : 'repertoire.shareLine.hint') | translate }}</p>
+    @if (data.expiresAt) {
+      <p class="hint expires">{{ 'repertoire.shareLine.validUntil' | translate: { date: (data.expiresAt | date:'mediumDate') } }}</p>
+    }
     <div class="dialog-actions">
       <span class="spacer"></span>
       <button mat-button mat-dialog-close>{{ 'common.close' | translate }}</button>
@@ -45,13 +48,14 @@ import { SnackbarService } from '../../core/snackbar.service';
       font-size: 0.85rem; background: var(--mat-sys-surface-container); color: inherit;
     }
     .hint { font-size: 0.8rem; opacity: 0.65; margin: 0.75rem 0 0; }
+    .hint.expires { margin-top: 0.25rem; }
     .dialog-actions { display: flex; align-items: center; margin-top: 1rem; }
     .dialog-actions .spacer { flex: 1; }
   `]
 })
 export class ShareLineDialogComponent {
   constructor(
-    @Inject(MAT_DIALOG_DATA) public data: { url: string; lineTitle?: string },
+    @Inject(MAT_DIALOG_DATA) public data: { url: string; lineTitle?: string; expiresAt?: string | null; chapter?: boolean },
     private snackbar: SnackbarService,
     private translate: TranslateService,
   ) {}

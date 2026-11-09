@@ -51,6 +51,20 @@ describe('SharedLinksCardComponent', () => {
     expect(rows[1].querySelector('.title')?.textContent?.trim()).toBe('—');
   });
 
+  it('markiert abgelaufene Links, zeigt bei gültigen das Ablaufdatum', () => {
+    lines.push({ id: 3, shareToken: 'tokC', title: 'Alt', repertoireName: 'R', repertoireId: 3, createdAt: '2026-01-01T10:00:00Z', expiresAt: '2026-01-31T10:00:00Z' } as any);
+    lines.push({ id: 4, shareToken: 'tokD', title: 'Neu', repertoireName: 'R', repertoireId: 3, createdAt: '2026-11-01T10:00:00Z', expiresAt: '2999-01-01T10:00:00Z' } as any);
+    try {
+      const rows = (render().nativeElement as HTMLElement).querySelectorAll('li.row');
+      expect(rows[2].querySelector('.meta .expired')).not.toBeNull();
+      expect(rows[3].querySelector('.meta .expired')).toBeNull();
+      expect(rows[3].querySelector('.meta')?.textContent).toContain('profile.sharedLinks.validUntil');
+      expect(rows[0].querySelector('.meta')?.textContent).not.toContain('validUntil');
+    } finally {
+      lines.splice(2);
+    }
+  });
+
   it('widerruft nach Rückfrage und nimmt die Zeile heraus; Abbruch tut nichts', () => {
     const fixture = render();
     const el: HTMLElement = fixture.nativeElement;

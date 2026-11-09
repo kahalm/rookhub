@@ -260,6 +260,10 @@ export interface SharedLine {
   repertoireName: string | null;
   pgn: string;
   createdAt: string;
+  /** Ablauf (UTC, ISO); null = läuft nie ab (Links von vor 0.915.0). */
+  expiresAt: string | null;
+  /** Ganzes Kapitel: das PGN enthält je Linie eine Partie. */
+  isChapter: boolean;
 }
 
 /** Eigener Linien-Link in „Meine Teilen-Links" (Profil, A2-006). `repertoireId` null = aus der RepCheck-Extension. */
@@ -270,6 +274,8 @@ export interface OwnSharedLine {
   repertoireName: string | null;
   repertoireId: number | null;
   createdAt: string;
+  expiresAt: string | null;
+  isChapter: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -294,8 +300,8 @@ export class RepertoireService {
   }
 
   /** Erzeugt einen öffentlichen Nur-Ansehen-Link für eine einzelne Linie (liefert das Token). */
-  shareLine(id: number, body: { pgn: string; title?: string }): Observable<{ shareToken: string }> {
-    return this.http.post<{ shareToken: string }>(`${this.apiUrl}/${id}/share-line`, body);
+  shareLine(id: number, body: { pgn: string; title?: string; chapter?: boolean }): Observable<{ shareToken: string; expiresAt: string | null }> {
+    return this.http.post<{ shareToken: string; expiresAt: string | null }>(`${this.apiUrl}/${id}/share-line`, body);
   }
 
   /** Alle eigenen Linien-Links (neueste zuerst). */

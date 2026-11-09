@@ -7600,6 +7600,12 @@ namespace RookHub.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsChapter")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<string>("LineHash")
                         .IsRequired()
                         .HasMaxLength(64)

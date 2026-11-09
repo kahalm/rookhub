@@ -767,7 +767,7 @@
     },
     "sharedLinks": {
       "title": "Moje poveznice za dijeljenje",
-      "help": "Tko ima poveznicu na liniju repertoara, vidi je bez prijave — dok je ne opozoveš.\n\nPoveznice partija opozivaš u popisu partija: ⋮ → „Opozovi poveznicu za dijeljenje”.",
+      "help": "Tko ima poveznicu na liniju repertoara, vidi je bez prijave — 30 dana od dijeljenja (ponovno dijeljenje produljuje) ili dok je ne opozoveš.\n\nPoveznice partija opozivaš u popisu partija: ⋮ → „Opozovi poveznicu za dijeljenje”.",
       "empty": "Nisi javno podijelio nijednu liniju.",
       "fromExtension": "iz RepChecka",
       "open": "Otvori",
@@ -775,7 +775,9 @@
       "revokeConfirm": "Opozvati poveznicu na „{{title}}”? Tko je ima, više neće vidjeti liniju.",
       "revoked": "Poveznica opozvana.",
       "error": "Poveznice za dijeljenje nije moguće učitati.",
-      "revokeError": "Opoziv nije uspio."
+      "revokeError": "Opoziv nije uspio.",
+      "validUntil": "vrijedi do {{date}}",
+      "expired": "isteklo {{date}}"
     },
     "engine": {
       "title": "Vanjski motor",
@@ -1355,9 +1357,17 @@
       "action": "Podijeli liniju",
       "title": "Podijeli ovu liniju",
       "hint": "Svatko s ovom poveznicom može odigrati liniju — bez računa.",
-      "notFound": "Ova podijeljena linija ne postoji (više).",
+      "notFound": "Ova podijeljena linija ne postoji, uklonjena je ili je istekla.",
       "defaultTitle": "Linija repertoara",
-      "error": "Poveznicu za dijeljenje nije bilo moguće stvoriti."
+      "error": "Poveznicu za dijeljenje nije bilo moguće stvoriti.",
+      "chapterAction": "Podijeli poglavlje",
+      "chapterTitle": "Podijeli ovo poglavlje",
+      "chapterHint": "Svatko s ovom poveznicom može proći kroz sve linije poglavlja — bez računa.",
+      "validUntil": "Vrijedi do {{date}}",
+      "prevLine": "Prethodna linija",
+      "nextLine": "Sljedeća linija",
+      "pickLine": "Odaberi liniju",
+      "lineOf": "Linija {{n}} od {{total}}"
     },
     "downloadLine": "Preuzmi varijantu kao PGN",
     "holes": {

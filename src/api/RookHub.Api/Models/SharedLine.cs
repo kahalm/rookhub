@@ -40,4 +40,11 @@ public class SharedLine
     public string ShareToken { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Ablauf des Links (UTC): 30 Tage nach dem (letzten) Teilen, danach liefert <c>/l/{token}</c> 404.
+    /// <c>null</c> = läuft nie ab (Links von vor 0.915.0).</summary>
+    public DateTime? ExpiresAt { get; set; }
+
+    /// <summary>Ganzes Kapitel statt einer Linie: das PGN enthält dann je Linie eine eigene Partie.</summary>
+    public bool IsChapter { get; set; }
 }

@@ -767,7 +767,7 @@
     },
     "sharedLinks": {
       "title": "Meine Teilen-Links",
-      "help": "Wer einen Link zu einer Repertoire-Linie hat, sieht sie ohne Anmeldung, bis du ihn widerrufst.\n\nPartie-Links widerrufst du in der Partieliste: ⋮ → „Teilen-Link widerrufen“.",
+      "help": "Wer einen Link zu einer Repertoire-Linie hat, sieht sie ohne Anmeldung, 30 Tage ab dem Teilen (erneut teilen verlängert) oder bis du ihn widerrufst.\n\nPartie-Links widerrufst du in der Partieliste: ⋮ → „Teilen-Link widerrufen“.",
       "empty": "Du hast keine Linie öffentlich geteilt.",
       "fromExtension": "aus RepCheck",
       "open": "Öffnen",
@@ -775,7 +775,9 @@
       "revokeConfirm": "Link zu „{{title}}“ widerrufen? Wer ihn hat, sieht die Linie danach nicht mehr.",
       "revoked": "Link widerrufen.",
       "error": "Teilen-Links konnten nicht geladen werden.",
-      "revokeError": "Widerrufen fehlgeschlagen."
+      "revokeError": "Widerrufen fehlgeschlagen.",
+      "validUntil": "gültig bis {{date}}",
+      "expired": "abgelaufen am {{date}}"
     },
     "engine": {
       "title": "Externe Engine",
@@ -1355,9 +1357,17 @@
       "action": "Linie teilen",
       "title": "Diese Linie teilen",
       "hint": "Jeder mit diesem Link kann die Linie durchspielen — kein Konto nötig.",
-      "notFound": "Diese geteilte Linie existiert nicht (mehr).",
+      "notFound": "Diese geteilte Linie existiert nicht (mehr) oder ist abgelaufen.",
       "defaultTitle": "Repertoire-Linie",
-      "error": "Teilen-Link konnte nicht erstellt werden."
+      "error": "Teilen-Link konnte nicht erstellt werden.",
+      "chapterAction": "Kapitel teilen",
+      "chapterTitle": "Dieses Kapitel teilen",
+      "chapterHint": "Jeder mit diesem Link kann alle Linien des Kapitels durchklicken — kein Konto nötig.",
+      "validUntil": "Gültig bis {{date}}",
+      "prevLine": "Vorige Linie",
+      "nextLine": "Nächste Linie",
+      "pickLine": "Linie wählen",
+      "lineOf": "Linie {{n}} von {{total}}"
     },
     "downloadLine": "Linie als PGN herunterladen",
     "holes": {
