@@ -616,13 +616,14 @@ public class PuzzleService
             var fen = parts[1].Trim();
             var moves = parts[2].Trim();
             var moveList = moves.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (moveList.Length == 0 || EngineBroker.WorkSanitizer.PositionError(fen, moveList) is { } reason)
+            var reason = moveList.Length == 0 ? "no moves" : EngineBroker.WorkSanitizer.PositionError(fen, moveList);
+            if (reason is not null)
             {
                 result.RejectedInvalidMoves++;
                 if (result.RejectedLineNumbers.Count < PuzzleCsvImportResultDto.MaxRejectedLineNumbers)
                     result.RejectedLineNumbers.Add(lineNumber);
                 _logger.LogDebug("Puzzle-Import: Zeile {Line} ({LichessId}) verworfen: {Reason}",
-                    lineNumber, lichessId, reason ?? "no moves");
+                    lineNumber, lichessId, reason);
                 continue;
             }
 
