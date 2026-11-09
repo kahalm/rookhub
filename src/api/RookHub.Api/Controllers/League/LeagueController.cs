@@ -665,7 +665,10 @@ public class LeagueShareController : ControllerBase
         [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct)
     {
         if (!await _league.ShareCoversAsync(token, fide, ct)) return NotFound();
-        var r = await accounts.CreateViaShareAsync(fide, req?.Site, req?.User, req?.Comment, LeagueClubService.ShareHashOf(token), ct);
+        // Vermerkt wird der Token der Link-ZEILE, nicht der Routenwert (R2-005, Regel A2-009 wie Import/Stapel): „abc~3", „ABC" und
+        // „abc" sind derselbe Link.
+        if (await _league.ValidShareTokenAsync(token, ct) is not { } rowToken) return NotFound();
+        var r = await accounts.CreateViaShareAsync(fide, req?.Site, req?.User, req?.Comment, LeagueClubService.ShareHashOf(rowToken), ct);
         return r switch
         {
             ({ } a, _) => Ok(await accounts.JsonAsync(a, ct)),

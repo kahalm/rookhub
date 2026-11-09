@@ -512,6 +512,13 @@ public class LeagueEngineTests
         Assert.Contains("duplicate", System.Text.Json.JsonSerializer.Serialize(twice.Value));
         Assert.Single(await db.LeagueOnlineAccounts.Where(a => a.FideId == "B3").ToListAsync());
 
+        // R2-005: über die Runden-Schreibweise „{token}~{runde}" desselben Links hängt der Vermerk am Token der Link-Zeile
+        // (vorher am Routenwert — ein anderer Hash für denselben Link).
+        Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(await controller.AddAccount(s.Token + "~1", "B2",
+            new("lichess", "NeuerB2", null), accounts, default));
+        Assert.Equal(LeagueClubService.ShareHashOf(s.Token),
+            (await db.LeagueOnlineAccounts.SingleAsync(a => a.FideId == "B2" && a.UserName == "NeuerB2")).AddedShareHash);
+
         // Angemeldet eingetragen: der Nutzername steht da; das Konto-JSON zeigt ihn.
         var (byUser, _) = await accounts.CreateAsync("C1", new("chess.com", "cee1", true, null), default, "patrik");
         Assert.Equal("patrik", (string?)LeagueOnlineAccountService.ToJson(byUser!, full: true)["addedBy"]);
