@@ -276,6 +276,9 @@ public partial class ExtensionController
     /// Erweiterung, beim Senden an RookHub …). Log + Admin-Nachricht (<see cref="ChessableResponseAlertService.ReportCrawlErrorAsync"/>).
     /// </summary>
     [HttpPost("chessable/crawl-error")]
+    // Jede Meldung kann eine Admin-Nachricht samt Glocke auslösen; entprellt wird nur je bid — deshalb dieselbe Drossel
+    // je Konto wie der reguläre Nachrichtenweg (R4-006).
+    [EnableRateLimiting("user-message")]
     public async Task<IActionResult> ChessableCrawlError([FromBody] ChessableCrawlErrorInputDto dto,
         [FromServices] ChessableResponseAlertService alerts, CancellationToken ct)
     {
@@ -293,6 +296,9 @@ public partial class ExtensionController
     /// der ohnehin lange Konstruktor nicht wächst.
     /// </summary>
     [HttpPost("chessable/unexpected-response")]
+    // Jede Meldung kann eine Admin-Nachricht samt Glocke auslösen; entprellt wird nur je bid — deshalb dieselbe Drossel
+    // je Konto wie der reguläre Nachrichtenweg (R4-006).
+    [EnableRateLimiting("user-message")]
     public async Task<IActionResult> ChessableUnexpectedResponse([FromBody] ChessableUnexpectedResponseInputDto dto,
         [FromServices] ChessableResponseAlertService alerts, CancellationToken ct)
     {
