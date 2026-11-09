@@ -14,7 +14,7 @@ import { By } from '@angular/platform-browser';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { EbookReaderComponent } from './ebook-reader.component';
 import { EbookBoardComponent } from './ebook-board.component';
-import { Ebook, EbookDiagram, EbookService } from './ebook.service';
+import { Ebook, EbookDiagram, EbookService, READER_TOKEN_MIN_MS } from './ebook.service';
 import { PdfEngineLoader } from './pdf-engine';
 import { EpubViewerComponent } from './epub-viewer.component';
 
@@ -108,6 +108,24 @@ describe('EbookReaderComponent', () => {
       fixture.componentInstance.setReadLang('fr');
       expect(fixture.componentInstance.readLang()).toBe('original');
     });
+  });
+
+  it('öffnet mit einem Ausweis großer Restlaufzeit; Seitenfehler danach: einmal neuer Ausweis, Leser an derselben Seite neu (F2-005)', async () => {
+    const fixture = await make(book());
+    const c = fixture.componentInstance;
+    expect(service.accessToken).toHaveBeenCalledWith(READER_TOKEN_MIN_MS);
+    expect(c.fileUrl).toContain('t=tok');
+    c.onPageChange(17);
+    service.accessToken.and.returnValue(of('frisch'));
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+    c.onPageFailed();
+    expect(service.forgetToken).toHaveBeenCalled();
+    expect(c.fileUrl).toContain('t=frisch');
+    expect(c.initialPage).toBe(17);
+    expect(warn).not.toHaveBeenCalled();
+    c.onPageFailed();                                         // gleich wieder: kein Erneuerungs-Karussell, sondern ein Hinweis
+    expect(service.accessToken).toHaveBeenCalledTimes(2);
+    expect(warn).toHaveBeenCalledWith('ebooks.reader.pageFailed');
   });
 
   it('Doppelklick ohne Diagramm: „Fehlt ein Diagramm“/„Text falsch“ wird gespeichert, Abbrechen nicht (nur angemeldet)', async () => {

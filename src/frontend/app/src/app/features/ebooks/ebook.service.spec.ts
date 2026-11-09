@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { BehaviorSubject } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { EbookService, ebookDisplayTitle, ebookReadableLanguages, formatBytes } from './ebook.service';
-import { coarseCfi, epubPageAt } from './ebook.service';
+import { READER_TOKEN_MIN_MS, coarseCfi, epubPageAt } from './ebook.service';
 
 describe('EbookService', () => {
   let service: EbookService;
@@ -131,6 +131,17 @@ describe('EbookService', () => {
     http.expectOne('/api/ebooks/access-token').flush({ token: 'alt', expiresAt: new Date(Date.now() + 60_000).toISOString() });
     service.accessToken().subscribe();
     http.expectOne('/api/ebooks/access-token').flush({ token: 'neu', expiresAt: new Date(Date.now() + 3_600_000).toISOString() });
+  });
+
+  it('der Leser verlangt große Restlaufzeit: 10 min Rest → neuer Ausweis, die Liste nimmt den alten weiter (F2-005)', () => {
+    service.accessToken().subscribe();
+    http.expectOne('/api/ebooks/access-token').flush({ token: 'alt', expiresAt: new Date(Date.now() + 10 * 60_000).toISOString() });
+    service.accessToken().subscribe();
+    http.expectNone('/api/ebooks/access-token');
+    let t = '';
+    service.accessToken(READER_TOKEN_MIN_MS).subscribe(v => t = v);
+    http.expectOne('/api/ebooks/access-token').flush({ token: 'neu', expiresAt: new Date(Date.now() + 12 * 3_600_000).toISOString() });
+    expect(t).toBe('neu');
   });
 
   it('baut Datei- und Titelbild-Adressen mit dem Ausweis', () => {

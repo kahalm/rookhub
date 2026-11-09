@@ -347,6 +347,8 @@ export function formatBytes(bytes: number, lang: string = 'en'): string {
 
 /** Wie viel Vorlauf der Ausweis haben soll, bevor er neu geholt wird (er lebt 12 h). */
 const TOKEN_MARGIN_MS = 5 * 60 * 1000;
+/** Vorlauf beim Öffnen des Lesers (F2-005): eine Lesesitzung baut die Adressen einmal — der Ausweis soll sie überdauern. */
+export const READER_TOKEN_MIN_MS = 2 * 60 * 60 * 1000;
 
 @Injectable({ providedIn: 'root' })
 export class EbookService {
@@ -505,10 +507,11 @@ export class EbookService {
 
   /**
    * Der Ausweis für Datei und Titelbild (`?t=`): einmal geholt, bis kurz vor Ablauf wiederverwendet; parallele
-   * Anfragen teilen sich EINE Server-Anfrage.
+   * Anfragen teilen sich EINE Server-Anfrage. `minRemainingMs`: so lange muss er noch gelten, sonst wird ein neuer geholt
+   * (der Leser verlangt {@link READER_TOKEN_MIN_MS}, F2-005).
    */
-  accessToken(): Observable<string> {
-    if (this.token && this.token.expiresAt - Date.now() > TOKEN_MARGIN_MS) return of(this.token.value);
+  accessToken(minRemainingMs = TOKEN_MARGIN_MS): Observable<string> {
+    if (this.token && this.token.expiresAt - Date.now() > Math.max(TOKEN_MARGIN_MS, minRemainingMs)) return of(this.token.value);
     if (!this.tokenRequest) {
       this.tokenRequest = this.http.get<{ token: string; expiresAt: string }>('/api/ebooks/access-token').pipe(
         map(r => {

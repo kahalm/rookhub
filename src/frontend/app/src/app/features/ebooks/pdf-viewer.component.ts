@@ -86,6 +86,8 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Output() pageChange = new EventEmitter<number>();
   @Output() loaded = new EventEmitter<{ pageCount: number; fitZoom: number }>();
   @Output() failed = new EventEmitter<unknown>();
+  /** Eine Seite ließ sich NACH dem Öffnen nicht laden/zeichnen (z. B. abgelaufener Ausweis bei einer Bereichsanfrage, F2-005). */
+  @Output() pageFailed = new EventEmitter<unknown>();
   /** Der tatsächlich benutzte Faktor (nach „Breite füllen"), damit die Werkzeugleiste ihn anzeigen kann. */
   @Output() zoomApplied = new EventEmitter<number>();
   /** Zonen über den Seiten (erkannte Diagramme) — Doppelklick meldet `zonePick`. */
@@ -382,7 +384,10 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
       if (!ctx) return;
       await page.render({ canvasContext: ctx, viewport, canvas } as unknown as Parameters<PdfPage['render']>[0]).promise;
       slot.rendered = scaleAtStart;
-    })().catch(() => { slot.rendered = 0; }).finally(() => { slot.rendering = null; });
+    })().catch((e: unknown) => {
+      slot.rendered = 0;
+      if (!this.destroyed && doc === this.doc) this.pageFailed.emit(e);
+    }).finally(() => { slot.rendering = null; });
     await slot.rendering;
     if (!this.destroyed && this.scaleFor(slot) !== scaleAtStart) this.renderVisible();
   }

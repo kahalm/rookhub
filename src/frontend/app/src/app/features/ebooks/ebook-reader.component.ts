@@ -17,7 +17,7 @@ import { AuthService } from '../../core/auth.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { EBOOK_READ_LANG_KEY, Ebook, EbookDiagram, EbookFile, EbookService, EpubMissedSpot, READABLE_FORMATS, coarseCfi, ebookAuthorNames, ebookDisplayTitle, formatBytes } from './ebook.service';
+import { EBOOK_READ_LANG_KEY, READER_TOKEN_MIN_MS, Ebook, EbookDiagram, EbookFile, EbookService, EpubMissedSpot, READABLE_FORMATS, coarseCfi, ebookAuthorNames, ebookDisplayTitle, formatBytes } from './ebook.service';
 import { PdfViewerComponent, PdfZone } from './pdf-viewer.component';
 import { EpubDiagramImage, EpubLayout, EpubLocation, EpubTocEntry, EpubViewerComponent } from './epub-viewer.component';
 import { readRaw, localStore, writeRaw } from '../../core/local-json-store';
@@ -179,7 +179,7 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
         this.page.set(this.initialPage);
         if (book.pageCount) this.pageCount.set(book.pageCount);
         if (book.diagramState === 'done' && book.diagramCount > 0) this.loadDiagrams(book.id);
-        this.ebooks.accessToken().subscribe({
+        this.ebooks.accessToken(READER_TOKEN_MIN_MS).subscribe({
           next: token => {
             this.token = token;
             this.viewFormat.set(book.primaryFormat && READABLE_FORMATS.has(book.primaryFormat) ? book.primaryFormat : null);
@@ -237,7 +237,12 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   get translated(): boolean { return this.isEpub && this.readLang() !== 'original' && this.translations.includes(this.readLang()); }
 
   /** Schlüssel des EPUB-Lesers: wechselt er (Sprache), baut der Leser neu auf — epub.js öffnet ein Buch nur einmal. */
-  readonly epubKey = computed(() => this.readLang());
+  readonly epubKey = computed(() => this.readLang() + '|' + this.tokenGeneration());
+  /** Zählt die Erneuerungen des Ausweises (F2-005) — der EPUB-Leser baut damit mit den neuen Adressen neu auf. */
+  private readonly tokenGeneration = signal(0);
+  /** Zeitpunkt der letzten Erneuerung nach einem Seitenfehler — höchstens eine je {@link ReaderRenewCooldownMs}. */
+  private lastRenewAt = 0;
+  static readonly ReaderRenewCooldownMs = 60_000;
 
   /** „Original“ / „English“: anderes Archiv, gleiche Stelle (so gut es geht, {@link coarseCfi}); auf dem Gerät gemerkt. */
   setReadLang(lang: string): void {
@@ -543,6 +548,33 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   onLoaded(e: { pageCount: number; fitZoom: number }): void {
     this.pageCount.set(e.pageCount);
     this.viewerFailed.set(false);
+  }
+
+  /**
+   * Eine Seite bzw. ein Kapitel ließ sich nach dem Öffnen nicht laden (F2-005): meist ist der Ausweis in der Adresse
+   * abgelaufen (401). Einmal je Minute einen frischen holen und den Leser an derselben Stelle neu aufbauen; scheitert es
+   * danach wieder (oder die Erneuerung selbst), einen Hinweis zeigen statt still weiße Seiten.
+   */
+  onPageFailed(): void {
+    const now = Date.now();
+    if (now - this.lastRenewAt < EbookReaderComponent.ReaderRenewCooldownMs) { this.pageFailedHint(); return; }
+    this.lastRenewAt = now;
+    this.ebooks.forgetToken();
+    this.ebooks.accessToken(READER_TOKEN_MIN_MS).subscribe({
+      next: token => {
+        this.token = token;
+        if (this.isEpub) { this.epubLocator = this.lastCfi ?? this.epubLocator; this.epubJumpPercent = null; }
+        else this.initialPage = this.page();
+        this.tokenGeneration.update(n => n + 1);
+        this.applyViewFormat();
+        this.cdr.markForCheck();
+      },
+      error: () => this.pageFailedHint(),
+    });
+  }
+
+  private pageFailedHint(): void {
+    this.snackbar.warn(this.translate.instant('ebooks.reader.pageFailed'));
   }
 
   onViewerFailed(): void {

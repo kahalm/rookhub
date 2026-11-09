@@ -146,14 +146,14 @@
             @for (k of [epubKey()]; track k) {
             <app-epub-viewer [src]="fileUrl" [dirSrc]="epubDirUrl" [initialLocator]="epubLocator" [initialPercent]="epubJumpPercent" (located)="onEpubLocated($event)"
                              [images]="epubImages()" [activeImage]="picked()?.id ?? null" (imagePick)="pick($event)" (missedPick)="askMissedEpub(ebook, $event)"
-                             (toc)="epubToc.set($event)" (failed)="onViewerFailed()"
+                             (toc)="epubToc.set($event)" (failed)="onViewerFailed()" (pageFailed)="onPageFailed()"
                              [layout]="epubLayout()" [fontScale]="epubFont()" />
             }
           } @else {
             <app-pdf-viewer [src]="fileUrl" [initialPage]="initialPage" [zoom]="zoom()"
                             [zones]="zones()" [activeZone]="picked()?.id ?? null" (zonePick)="pick($event)" (blankDblclick)="askMissedDiagram(ebook, $event)"
                             (pageChange)="onPageChange($event)" (loaded)="onLoaded($event)"
-                            (zoomApplied)="appliedZoom.set($event)" (failed)="onViewerFailed()" />
+                            (zoomApplied)="appliedZoom.set($event)" (failed)="onViewerFailed()" (pageFailed)="onPageFailed()" />
           }
           @if (eink()) {
             <!-- E-Ink-Modus (DESIGN 3.6): Tippzonen am Rand blättern zurück/vor; die Mitte bleibt fürs Buch (Diagramme, Scrollen). -->

@@ -167,6 +167,8 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
   @Output() located = new EventEmitter<EpubLocation>();
   @Output() toc = new EventEmitter<EpubTocEntry[]>();
   @Output() failed = new EventEmitter<unknown>();
+  /** Blättern NACH dem Öffnen scheiterte (Kapitel nicht ladbar, z. B. abgelaufener Ausweis, F2-005). */
+  @Output() pageFailed = new EventEmitter<unknown>();
   @Input() images: readonly EpubDiagramImage[] = [];
   @Input() activeImage: number | null = null;
   @Output() imagePick = new EventEmitter<number>();
@@ -433,8 +435,12 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     try { this.rendition?.destroy(); this.book?.destroy(); } catch { /* schon weg */ }
   }
 
-  next(): void { void this.rendition?.next(); }
-  prev(): void { void this.rendition?.prev(); }
+  next(): void { this.turnPage(this.rendition?.next()); }
+  prev(): void { this.turnPage(this.rendition?.prev()); }
+
+  private turnPage(p: Promise<unknown> | undefined): void {
+    void p?.catch((e: unknown) => { if (!this.destroyed) this.zone.run(() => this.pageFailed.emit(e)); });
+  }
   goTo(href: string): void {
     const r = this.rendition;
     if (!r) return;

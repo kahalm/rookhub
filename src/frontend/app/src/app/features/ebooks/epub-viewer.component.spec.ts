@@ -187,6 +187,17 @@ describe('EpubViewerComponent', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it('Blättern scheitert (Kapitel nicht ladbar): pageFailed statt still (F2-005)', async () => {
+    const c = make(null);
+    (c as unknown as { rendition: unknown }).rendition = { next: () => Promise.reject({ status: 401 }), prev: () => Promise.resolve() };
+    const seen: unknown[] = [];
+    c.pageFailed.subscribe(e => seen.push(e));
+    c.prev();
+    c.next();
+    await new Promise(r => setTimeout(r));
+    expect(seen).toEqual([{ status: 401 }]);
+  });
+
   it('Größenänderung des Bereichs (Brett-Spalte gezogen) misst epub.js neu — nicht beim ersten Messen, nicht ohne Änderung', () => {
     const c = make(null);
     const resize = jasmine.createSpy('resize');

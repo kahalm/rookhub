@@ -5973,7 +5973,8 @@
       "openBoardOne": "Board: 1 diagram",
       "missedText": "Text is wrong",
       "checkPdfTitle": "Check this passage in the PDF?",
-      "checkPdfYes": "Open the PDF"
+      "checkPdfYes": "Open the PDF",
+      "pageFailed": "This page could not be loaded. Reload the book if it stays that way."
     },
     "diagrams": "{{n}} diagrams",
     "diagramsOne": "1 diagram",
