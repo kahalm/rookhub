@@ -4306,7 +4306,8 @@
       "submit": "Start analysis",
       "noEngine": "No background engine is set in your profile — game analysis only runs on background engines.",
       "toProfile": "Go to profile",
-      "enginesFailed": "Could not load the engines"
+      "enginesFailed": "Could not load the engines",
+      "depthFailed": "The lc0 analysis is running, the depth analysis failed: {{reason}}"
     },
     "convergence": {
       "title": "Convergence: when does more computing pay off?",

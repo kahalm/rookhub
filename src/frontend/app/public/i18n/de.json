@@ -4306,7 +4306,8 @@
       "submit": "Analyse starten",
       "noEngine": "Im Profil ist keine Hintergrund-Engine festgelegt — die Partie-Analyse rechnet nur auf Hintergrund-Engines.",
       "toProfile": "Zum Profil",
-      "enginesFailed": "Die Engines ließen sich nicht laden"
+      "enginesFailed": "Die Engines ließen sich nicht laden",
+      "depthFailed": "Die lc0-Analyse läuft, die Tiefen-Analyse ist fehlgeschlagen: {{reason}}"
     },
     "convergence": {
       "title": "Konvergenz: ab wann zahlt sich mehr Rechnen aus?",

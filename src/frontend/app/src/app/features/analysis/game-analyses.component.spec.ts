@@ -7,6 +7,7 @@ import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { GameAnalysesComponent } from './game-analyses.component';
+import { SnackbarService } from '../../core/snackbar.service';
 import { GameAnalysis } from './game-analysis.service';
 
 function analysis(over: Partial<GameAnalysis> = {}): GameAnalysis {
@@ -131,6 +132,39 @@ describe('GameAnalysesComponent', () => {
     expect(fixture.componentInstance.analyses.map(a => a.id)).toEqual([12, 11]);
     expect(fixture.componentInstance.pgn).toBe('');
     expect(fixture.componentInstance.creating).toBeFalse();
+  });
+
+  it('lc0-Dialog: scheitert nur die Tiefen-Analyse, Teil-Erfolg melden und Formular schließen — kein Doppel-Anlegen (F2-022)', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+    const c = fixture.componentInstance;
+    c.formOpen = true;
+    openWith({ engineId: 'rhe_lc', nodes: 50_000, multiPv: 3, alsoDepth: true }, fixture);
+    http.expectOne(r => r.method === 'POST' && r.body.engineId === 'rhe_lc')
+      .flush(analysis({ id: 11, engineId: 'rhe_lc', targetNodes: 50_000, status: 'pending' }));
+    http.expectOne(r => r.method === 'POST' && r.body.targetDepth === 30)
+      .flush({ message: 'quota', code: 'nope_unknown' }, { status: 400, statusText: 'Bad Request' });
+    expect(c.analyses.map(a => a.id)).toEqual([11]);
+    expect(c.formOpen).toBeFalse();
+    expect(c.pgn).toBe('');
+    expect(c.creating).toBeFalse();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.calls.mostRecent().args[0]).toContain('gameAnalysis.nodes.depthFailed');
+  });
+
+  it('Startfehler mit Code: übersetzter apiErrors-Text statt Rohtext (F2-021)', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
+    TestBed.inject(TranslateService).setTranslation('en', { apiErrors: { rate_limited: 'Slow down, please.' } }, true);
+    TestBed.inject(TranslateService).use('en');
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+    fixture.componentInstance.pgn = '1. e4 e5';
+    fixture.componentInstance.create();
+    http.expectOne(r => r.method === 'POST').flush({ message: 'Too many requests', code: 'rate_limited' }, { status: 429, statusText: 'Too Many' });
+    expect(warn).toHaveBeenCalledOnceWith('Slow down, please.');
   });
 
   it('lc0-Dialog ohne Stockfish-Haken: nur die Knoten-Analyse', () => {

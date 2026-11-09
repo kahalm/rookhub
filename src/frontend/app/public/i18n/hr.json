@@ -4306,7 +4306,8 @@
       "submit": "Pokreni analizu",
       "noEngine": "U profilu nije postavljen pozadinski stroj — analiza partija radi samo na pozadinskim strojevima.",
       "toProfile": "Na profil",
-      "enginesFailed": "Strojevi se nisu mogli učitati"
+      "enginesFailed": "Strojevi se nisu mogli učitati",
+      "depthFailed": "lc0 analiza je pokrenuta, analiza po dubini nije uspjela: {{reason}}"
     },
     "convergence": {
       "title": "Konvergencija: od kada se isplati više računati?",

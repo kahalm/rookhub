@@ -13,11 +13,12 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TextFieldModule } from '@angular/cdk/text-field';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Subscription, interval, of, switchMap } from 'rxjs';
+import { Subscription, interval } from 'rxjs';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { formatEta } from '../../shared/eta.util';
 import { SnackbarService } from '../../core/snackbar.service';
+import { apiErrorText } from '../../core/api-error';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { AnalysisThroughput, GameAnalysis, GameAnalysisService } from './game-analysis.service';
 import { AuthService } from '../../core/auth.service';
@@ -469,29 +470,40 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Die Knoten-Analyse anlegen, danach (wenn gewünscht) die Tiefen-Analyse derselben Partie. */
+  /**
+   * Die Knoten-Analyse anlegen, danach (wenn gewünscht) die Tiefen-Analyse derselben Partie. Scheitert nur die zweite,
+   * läuft die erste schon: Formular zu und den Teil-Erfolg melden — ein zweiter Klick legte sie sonst doppelt an (F2-022).
+   */
   private createWithNodes(pgn: string, res: GameAnalysisNodesDialogResult): void {
     this.creating = true;
-    this.service.create({ pgn, engineId: res.engineId, targetNodes: res.nodes, multiPv: res.multiPv }).pipe(
-      switchMap(first => {
+    this.service.create({ pgn, engineId: res.engineId, targetNodes: res.nodes, multiPv: res.multiPv }).subscribe({
+      next: first => {
         this.analyses = [first, ...this.analyses];
-        return res.alsoDepth ? this.service.create({ pgn, targetDepth: this.depth }) : of(null);
-      }),
-    ).subscribe({
-      next: second => {
-        this.creating = false;
         this.pgn = '';
         this.formOpen = false;
-        if (second) this.analyses = [second, ...this.analyses];
-        this.snackbar.success(this.translate.instant('gameAnalysis.started'));
-        this.cdr.markForCheck();
+        if (!res.alsoDepth) { this.finishCreate(); return; }
+        this.service.create({ pgn, targetDepth: this.depth }).subscribe({
+          next: second => { this.analyses = [second, ...this.analyses]; this.finishCreate(); },
+          error: err => {
+            this.creating = false;
+            this.snackbar.warn(this.translate.instant('gameAnalysis.nodes.depthFailed',
+              { reason: apiErrorText(err, this.translate, 'gameAnalysis.startFailed') }));
+            this.cdr.markForCheck();
+          },
+        });
       },
       error: err => {
         this.creating = false;
-        this.snackbar.warn(err?.error?.message || this.translate.instant('gameAnalysis.startFailed'));
+        this.snackbar.warn(apiErrorText(err, this.translate, 'gameAnalysis.startFailed'));
         this.cdr.markForCheck();
       },
     });
+  }
+
+  private finishCreate(): void {
+    this.creating = false;
+    this.snackbar.success(this.translate.instant('gameAnalysis.started'));
+    this.cdr.markForCheck();
   }
 
   create(): void {
@@ -509,8 +521,8 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.creating = false;
-        // Der Nutzer hat gerade etwas ausgelöst → konkrete Meldung (fehlende Engine, kaputtes PGN).
-        this.snackbar.warn(err?.error?.message || this.translate.instant('gameAnalysis.startFailed'));
+        // Der Nutzer hat gerade etwas ausgelöst → konkrete Meldung (fehlende Engine, kaputtes PGN), übersetzt (F2-021).
+        this.snackbar.warn(apiErrorText(err, this.translate, 'gameAnalysis.startFailed'));
         this.cdr.markForCheck();
       },
     });
