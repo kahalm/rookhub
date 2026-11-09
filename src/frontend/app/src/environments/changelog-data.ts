@@ -10,6 +10,16 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.941.1',
+    date: '2026-11-09',
+    changes: [
+      {
+        en: 'Further fixes from the November code review (backend follow-ups): move classes of an analysis are recomputed on the next run after a brief database outage instead of being skipped for good; the checklist of an account suggestion shows fantasy flags (earth, pirate, international) as “no country in profile” instead of a foreign country; claiming collected Chessable lines stops once the storage quota is full instead of loading all remaining lines every time; if two managers replace an expired share link at the same time, both get the new link instead of an error; tournament search with hidden tournaments is faster.',
+        de: 'Weitere Korrekturen aus dem Codereview vom November (Backend-Nacharbeiten): Zug-Klassen einer Analyse werden nach einem kurzen Datenbankausfall beim nächsten Lauf nachgerechnet statt dauerhaft ausgelassen; die Prüfliste eines Kontovorschlags zeigt Fantasie-Flaggen (Erde, Piraten, International) als „kein Land im Profil“ statt als fremdes Land; die Übernahme gesammelter Chessable-Linien hört nach vollem Speicherkontingent auf, statt jedes Mal alle restlichen Linien zu laden; ersetzen zwei Verwalter gleichzeitig einen abgelaufenen Teilen-Link, bekommen beide den neuen Link statt einer Fehlermeldung; die Turniersuche mit ausgeblendeten Turnieren ist schneller.',
+      },
+    ],
+  },
   { version: '0.941.0', date: '2026-11-09', changes: [
     { en: 'LeagueHub: a „Opponent | Own lineup“ switch above the forecast shows, for every round, the forecast of your own team (signed in only; not on share links, bye rounds or locked rounds).',
       de: 'LeagueHub: Umschalter „Gegner | Eigene Aufstellung“ über der Prognose zeigt je Runde die Prognose der eigenen Mannschaft (nur angemeldet; nicht auf Teilen-Links, in spielfreien oder gesperrten Runden).' },
