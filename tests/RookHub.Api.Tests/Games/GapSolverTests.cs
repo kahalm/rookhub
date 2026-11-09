@@ -131,14 +131,40 @@ public class GapSolverTests
         // Der teuerste erlaubte Fall: sechs Halbzüge ab der Grundstellung, und die Tiefen 2 und 4
         // müssen erst vollständig scheitern. Das Budget ist die Zusage an den Aufrufer, dass eine
         // Anfrage keinen Request-Thread minutenlang bindet.
-        const string afterSixPlies = "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4";
+        // R4-021: die Zusage ist die Laufzeit, nicht die Lösung — unter CI-Last kann das 4-s-Budget vor Tiefe 6 enden.
+        // Dann meldet die Suche ehrlich „Budget erschöpft"; ob sie die Lösung findet, prüft der Test darunter.
         var sw = Stopwatch.StartNew();
-        var result = GapSolver.Solve(Start, afterSixPlies, maxPlies: GapSolver.MaxSearchPlies);
+        var result = GapSolver.Solve(Start, AfterSixPlies, maxPlies: GapSolver.MaxSearchPlies);
         sw.Stop();
 
         Assert.True(sw.Elapsed < TimeSpan.FromSeconds(20), $"{sw.Elapsed.TotalSeconds:0.0} s bei {result.Nodes} Knoten");
+        Assert.True(result.Solutions.Count > 0 || result.BudgetExhausted, "weder Lösung noch Budget-Ende");
+        Assert.All(result.Solutions, x => Assert.Equal(6, x.Plies));
+    }
+
+    private const string AfterSixPlies = "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4";
+
+    /// <summary>R4-021: die Korrektheit der tiefsten Suche mit eigenem, großzügigem Zeitbudget — unabhängig davon, wie
+    /// schnell der Rechner gerade ist (das Knotenbudget bleibt der Deckel).</summary>
+    [Fact]
+    public void Solve_DeepestSearch_FindsTheSixPlyWays_WithAGenerousTimeBudget()
+    {
+        var result = GapSolver.Solve(Start, AfterSixPlies, maxPlies: GapSolver.MaxSearchPlies, timeBudget: TimeSpan.FromSeconds(120));
+
         Assert.NotEmpty(result.Solutions);
         Assert.All(result.Solutions, x => Assert.Equal(6, x.Plies));
+    }
+
+    /// <summary>R4-021: ein winziges Zeitbudget bricht die tiefste Suche ehrlich ab (BudgetExhausted), statt den Thread zu halten.</summary>
+    [Fact]
+    public void Solve_DeepestSearch_TinyTimeBudget_StopsAndSaysSo()
+    {
+        var sw = Stopwatch.StartNew();
+        var result = GapSolver.Solve(Start, AfterSixPlies, maxPlies: GapSolver.MaxSearchPlies, timeBudget: TimeSpan.FromMilliseconds(1));
+        sw.Stop();
+
+        Assert.True(result.BudgetExhausted);
+        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(20), $"{sw.Elapsed.TotalSeconds:0.0} s");
     }
 
     [Fact]
