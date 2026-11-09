@@ -100,7 +100,8 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
             : new SharedOwnGameSummaryDto("done", s.Markdown, s.DoneAt, s.MovesHash != null && s.MovesHash != MovesHashOf(g.Pgn), s.Model);
     }
 
-    /// <summary>Anfordern. Eine noch offene Anforderung kostet nichts; das Kontingent wird erst nach erfolgreichem Analyse-Start belastet.</summary>
+    /// <summary>Anfordern. Eine noch offene Anforderung kostet nichts; das Kontingent wird vor der Analyse gebucht (R4-004) und
+    /// zurückgegeben, wenn sie nicht startet.</summary>
     public async Task<(OwnGameSummaryDto? Dto, RequestError Error)> RequestAsync(int userId, int savedGameId, bool isAdmin, string? lang, CancellationToken ct = default)
     {
         var game = await db.SavedGames.AsNoTracking().Where(x => x.Id == savedGameId && x.UserId == userId)
@@ -113,8 +114,12 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
         if (GamePlies.Parse(game.Pgn, GameAnalysisDefaults.MaxPlies) is not { } parsed || !SavedGamePgn.IsStandardStart(parsed.Header.StartFen))
             return (null, RequestError.UnsupportedStart);
         if (await QuotaLeftAsync(userId, isAdmin, ct) is 0) return (null, RequestError.QuotaExceeded);
+        // Buchen VOR der (langen) Analyse (R4-004): parallele Anforderungen sahen sonst alle denselben Zählerstand.
+        if (await BookAsync(userId, savedGameId, isAdmin, ct) is not { } booking) return (null, RequestError.QuotaExceeded);
 
-        var analysis = await games.AnalyzeAsync(userId, savedGameId, ct, lang);
+        GameAnalyzeResultDto? analysis = null;
+        try { analysis = await games.AnalyzeAsync(userId, savedGameId, ct, lang); }
+        finally { if (analysis?.Analysis is null) await UnbookAsync(booking); }   // ohne Analyse-Start kostet es nichts
         if (analysis?.Analysis is null) return (null, RequestError.AnalysisUnavailable);
 
         if (s is null)
@@ -126,9 +131,55 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
         s.RequestedAt = Now;
         s.StartedAt = null;
         s.Error = null;
-        db.OwnGameSummaryRequests.Add(new OwnGameSummaryRequest { UserId = userId, SavedGameId = savedGameId, At = Now });
         await db.SaveChangesAsync(ct);
         return (await GetAsync(userId, savedGameId, isAdmin, ct), RequestError.None);
+    }
+
+    /// <summary>
+    /// Eine Anforderung ins Tageskontingent buchen (R4-004): erst die Zeile schreiben, dann nachzählen, wie viele Buchungen des
+    /// Kontos heute bis einschließlich dieser liegen (nach Id, also in Schreibreihenfolge). Liegt sie über dem Deckel, wird sie
+    /// wieder entfernt und <c>null</c> geliefert — von zwei gleichzeitigen Anforderungen mit einem freien Platz kommt so genau die
+    /// früher geschriebene durch. Admins: immer gebucht (nur gezählt).
+    /// </summary>
+    internal async Task<OwnGameSummaryRequest?> BookAsync(int userId, int savedGameId, bool isAdmin, CancellationToken ct)
+    {
+        var booking = new OwnGameSummaryRequest { UserId = userId, SavedGameId = savedGameId, At = Now };
+        db.OwnGameSummaryRequests.Add(booking);
+        await db.SaveChangesAsync(ct);
+        if (isAdmin) return booking;
+        var start = Now.Date;
+        var rank = await db.OwnGameSummaryRequests.CountAsync(r => r.UserId == userId && r.At >= start && r.Id <= booking.Id, ct);
+        if (rank <= DailyPerUser) return booking;
+        await UnbookAsync(booking);
+        return null;
+    }
+
+    private async Task UnbookAsync(OwnGameSummaryRequest booking)
+    {
+        db.OwnGameSummaryRequests.Remove(booking);
+        await db.SaveChangesAsync(CancellationToken.None);
+    }
+
+    /// <summary>Fehlerkennung einer Anforderung, die wegen geänderter Züge abgebrochen wurde.</summary>
+    public const string MovesChangedError = "movesChanged";
+
+    /// <summary>
+    /// Die Züge der Partie haben sich geändert (<see cref="SavedGameCorrection.MovesChangedAsync"/>, auch beim Heilen per Re-Save;
+    /// R4-013): eine offene Anforderung gehört zur alten Zugfolge. Ohne Analyse käme sie nie mehr beim Watcher an und blieb für immer
+    /// „angefordert“; eine laufende schriebe einen Text der alten Züge, der als frisch gälte. Darum: abgebrochen
+    /// (<c>failed</c>, <see cref="MovesChangedError"/>), die Buchung von heute geht zurück ins Kontingent — der Besitzer fordert
+    /// für die neue Fassung neu an. Ein früher fertiger Text bleibt (er gilt dann als veraltet). Speichert nicht selbst.
+    /// </summary>
+    internal static async Task MovesChangedAsync(AppDbContext db, int savedGameId, CancellationToken ct)
+    {
+        var s = await db.OwnGameSummaries.FirstOrDefaultAsync(x => x.SavedGameId == savedGameId, ct);
+        if (s is null || !Open(s.Status)) return;
+        s.Status = ClubGameSummaryStatus.Failed;
+        s.Error = MovesChangedError;
+        var booking = await db.OwnGameSummaryRequests.Where(r => r.SavedGameId == savedGameId && r.UserId == s.UserId
+                && r.At >= s.RequestedAt.Date)
+            .OrderByDescending(r => r.Id).FirstOrDefaultAsync(ct);
+        if (booking is not null && booking.At.Date == DateTime.UtcNow.Date) db.OwnGameSummaryRequests.Remove(booking);
     }
 
     /// <summary>Die Analyse-Id der eigenen Partie: <c>(true, Id)</c>, ohne Analyse <c>(true, null)</c>, fremd/unbekannt <c>(false, null)</c>.</summary>
@@ -192,6 +243,9 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
         var pgn = await db.SavedGames.AsNoTracking().Where(x => x.Id == savedGameId).Select(x => x.Pgn).FirstOrDefaultAsync(ct);
         var s = await db.OwnGameSummaries.FirstOrDefaultAsync(x => x.SavedGameId == savedGameId, ct);
         if (pgn is null || s is null) return Outcome.NotFound;
+        // Nur der gerade übernommene Auftrag (R4-005): ein Text für eine Partie, deren Auftrag nicht läuft (fremde Id aus einem
+        // gesteuerten Prompt, schon fertig, wegen geänderter Züge abgebrochen), wird nicht übernommen.
+        if (s.Status != ClubGameSummaryStatus.Running) return Outcome.Conflict;
         s.Status = ClubGameSummaryStatus.Done;
         s.Markdown = markdown.Trim();
         s.MovesHash = MovesHashOf(pgn);
@@ -206,6 +260,7 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
     {
         var s = await db.OwnGameSummaries.FirstOrDefaultAsync(x => x.SavedGameId == savedGameId, ct);
         if (s is null) return Outcome.NotFound;
+        if (s.Status != ClubGameSummaryStatus.Running) return Outcome.Conflict;   // wie CompleteAsync (R4-005)
         s.Status = ClubGameSummaryStatus.Failed;
         var e = (error ?? "").Trim();
         s.Error = e.Length == 0 ? "failed" : e[..Math.Min(e.Length, 1000)];
@@ -219,8 +274,21 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
         var g = await db.SavedGames.AsNoTracking().FirstOrDefaultAsync(x => x.Id == savedGameId, ct);
         if (g is null || GamePlies.Parse(g.Pgn, GameAnalysisDefaults.MaxPlies) is not { } parsed) return null;
         var profile = await db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == g.UserId, ct);
-        return new OwnGameSummaryGame(g.Id, g.White, g.Black, g.Result, g.WhiteElo, g.BlackElo, g.PlayedAt?.Year, parsed.Header.Event,
-            SavedGameService.DetermineOwnerSide(g, profile), string.Join(' ', parsed.Plies.Select(p => p.Uci)));
+        return new OwnGameSummaryGame(g.Id, WatcherText(g.White), WatcherText(g.Black), g.Result, g.WhiteElo, g.BlackElo, g.PlayedAt?.Year,
+            WatcherText(parsed.Header.Event), SavedGameService.DetermineOwnerSide(g, profile), string.Join(' ', parsed.Plies.Select(p => p.Uci)));
+    }
+
+    /// <summary>Höchstlänge der freien Kopfzeilen (Namen, Event) im Prompt-Material des Watchers.</summary>
+    internal const int MaxWatcherText = 100;
+
+    /// <summary>Freitext aus dem PGN-Kopf für den Watcher (R4-005): ohne Steuerzeichen (Zeilenumbrüche werden Leerzeichen) und auf
+    /// <see cref="MaxWatcherText"/> Zeichen gekürzt — er landet in einem Claude-Prompt, eine lange „Anweisung“ im Event-Feld soll
+    /// dort nicht als eigener Absatz stehen.</summary>
+    internal static string? WatcherText(string? value)
+    {
+        if (value is null) return null;
+        var clean = new string(value.Select(c => char.IsControl(c) ? ' ' : c).ToArray()).Trim();
+        return clean.Length <= MaxWatcherText ? clean : clean[..MaxWatcherText].TrimEnd();
     }
 
     /// <summary>Bewertungen für den Watcher; <c>null</c> = keine Analyse.</summary>

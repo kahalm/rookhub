@@ -189,7 +189,9 @@ public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = nul
         return Outcome.Ok;
     }
 
-    /// <summary>Den fertigen Text abliefern. Geht auch ohne vorheriges <see cref="StartAsync"/> (Handlauf).</summary>
+    /// <summary>Den fertigen Text abliefern. Geht auch ohne vorheriges <see cref="StartAsync"/> (Handlauf), aber nur für eine
+    /// Partie, für die es schon eine Zeile gibt (angefordert oder früher geschrieben) — eine neue legt der Watcher nicht mehr an
+    /// (R4-005: eine frei gewählte Id aus einem gesteuerten Prompt schrieb sonst in eine beliebige Vereinspartie).</summary>
     public async Task<Outcome> CompleteAsync(int clubGameId, string? markdown, string? model, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(markdown) || markdown.Length > MaxMarkdown) return Outcome.Invalid;
@@ -197,11 +199,7 @@ public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = nul
             .Select(g => new { g.MovesHash }).FirstOrDefaultAsync(ct);
         if (game is null) return Outcome.NotFound;
         var s = await db.ClubGameSummaries.FirstOrDefaultAsync(x => x.ClubGameId == clubGameId, ct);
-        if (s is null)
-        {
-            s = new ClubGameSummary { ClubGameId = clubGameId, RequestedAt = Now };
-            db.ClubGameSummaries.Add(s);
-        }
+        if (s is null) return Outcome.NotFound;
         s.Status = ClubGameSummaryStatus.Done;
         s.Markdown = markdown.Trim();
         s.MovesHash = game.MovesHash;

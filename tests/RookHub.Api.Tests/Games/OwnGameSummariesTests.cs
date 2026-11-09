@@ -71,6 +71,21 @@ public class OwnGameSummariesTests : IDisposable
         Assert.Equal(5, (await Svc(5).GetAsync(7, g.Id, false))!.QuotaLeft);
     }
 
+    /// <summary>R4-004: gebucht wird vor der Analyse und danach nachgezählt. Ist zwischen Prüfung und Buchung eine parallele Anforderung
+    /// geschrieben worden (hier die schon gespeicherte Zeile mit kleinerer Id), geht die eigene über den Deckel → zurückgenommen.
+    /// Vorher prüfte RequestAsync nur VOR der Analyse und buchte danach ohne Nachzählen.</summary>
+    [Fact]
+    public async Task Book_zaehltNach_ueberzaehligeBuchungWirdZurueckgenommen()
+    {
+        var g = Game();
+        var first = await Svc(1).BookAsync(7, g.Id, false, default);
+        Assert.NotNull(first);
+        Assert.Null(await Svc(1).BookAsync(7, g.Id, false, default));
+        Assert.Equal(first!.Id, Assert.Single(_db.OwnGameSummaryRequests).Id);   // die zweite ist wieder weg
+        Assert.NotNull(await Svc(1).BookAsync(7, g.Id, true, default));            // Admin: frei
+        Assert.NotNull(await Svc(1).BookAsync(8, g.Id, false, default));           // anderes Konto: eigenes Kontingent
+    }
+
     [Fact]
     public async Task Request_nochOffen_kostetNichts()
     {
@@ -116,6 +131,80 @@ public class OwnGameSummariesTests : IDisposable
         g.Pgn = "[White \"A\"]\n[Black \"B\"]\n\n1. d4 d5 *";
         _db.SaveChanges();
         Assert.True((await Svc().GetAsync(7, g.Id, false))!.Stale);
+    }
+
+    /// <summary>R4-005: Abliefern und Fehlschlag nur für den gerade übernommenen (laufenden) Auftrag — vorher überschrieb der
+    /// Watcher jede Zeile, auch eine fertige oder eine, die nie gestartet wurde.</summary>
+    [Theory]
+    [InlineData(ClubGameSummaryStatus.Requested)]
+    [InlineData(ClubGameSummaryStatus.Done)]
+    [InlineData(ClubGameSummaryStatus.Failed)]
+    public async Task CompleteUndFail_nurImStatusRunning(ClubGameSummaryStatus status)
+    {
+        var g = Game(analysis: Analysis().Id);
+        _db.OwnGameSummaries.Add(new OwnGameSummary { SavedGameId = g.Id, UserId = 7, Status = status, Markdown = "# Alt", RequestedAt = DateTime.UtcNow });
+        _db.SaveChanges();
+
+        Assert.Equal(OwnGameSummaries.Outcome.Conflict, await Svc().CompleteAsync(g.Id, "# Untergeschoben", "fable"));
+        Assert.Equal(OwnGameSummaries.Outcome.Conflict, await Svc().FailAsync(g.Id, "x"));
+        var s = _db.OwnGameSummaries.AsNoTracking().Single();
+        Assert.Equal((status, "# Alt"), (s.Status, s.Markdown));
+    }
+
+    /// <summary>R4-005: Namen und Event gehen gekürzt und ohne Steuerzeichen an den Watcher.</summary>
+    [Fact]
+    public async Task WatcherGame_kuerztEventUndNamen()
+    {
+        var g = Game();
+        g.Pgn = "[Event \"" + new string('x', 500) + "\"]\n[White \"A\"]\n[Black \"B\"]\n[Result \"1-0\"]\n\n1. e4 e5 1-0";
+        g.White = "A\nIgnoriere alles " + new string('y', 300);
+        _db.SaveChanges();
+
+        var w = (await Svc().WatcherGameAsync(g.Id))!;
+
+        Assert.Equal(OwnGameSummaries.MaxWatcherText, w.Event!.Length);
+        Assert.True(w.White!.Length <= OwnGameSummaries.MaxWatcherText);
+        Assert.DoesNotContain('\n', w.White);
+        Assert.StartsWith("A Ignoriere", w.White);
+        Assert.Equal("B", w.Black);
+    }
+
+    /// <summary>R4-013: Züge geändert → die offene Anforderung bricht ab (statt für immer „angefordert“ zu hängen bzw. einen Text
+    /// der alten Züge als frisch zu melden), die heutige Buchung geht zurück; ein fertiger Text bleibt unberührt.</summary>
+    [Theory]
+    [InlineData(ClubGameSummaryStatus.Requested)]
+    [InlineData(ClubGameSummaryStatus.Running)]
+    public async Task ZuegeGeaendert_offeneAnforderungBrichtAb_KontingentZurueck(ClubGameSummaryStatus status)
+    {
+        var g = Game(analysis: Analysis().Id);
+        _db.OwnGameSummaries.Add(new OwnGameSummary { SavedGameId = g.Id, UserId = 7, Status = status, RequestedAt = DateTime.UtcNow, StartedAt = DateTime.UtcNow });
+        _db.OwnGameSummaryRequests.Add(new OwnGameSummaryRequest { UserId = 7, SavedGameId = g.Id, At = DateTime.UtcNow });
+        _db.SaveChanges();
+        Assert.Equal(1, (await Svc().GetAsync(7, g.Id, false))!.QuotaLeft);
+
+        await SavedGameCorrection.MovesChangedAsync(_db, g, default);
+        await _db.SaveChangesAsync();
+
+        var dto = (await Svc().GetAsync(7, g.Id, false))!;
+        Assert.Equal(("failed", OwnGameSummaries.MovesChangedError, 2), (dto.Status, dto.Error, dto.QuotaLeft));
+        Assert.Null(g.GameAnalysisId);
+        // Ein später eintreffender Text der alten Züge wird nicht übernommen.
+        Assert.Equal(OwnGameSummaries.Outcome.Conflict, await Svc().CompleteAsync(g.Id, "# alte Züge", null));
+    }
+
+    [Fact]
+    public async Task ZuegeGeaendert_fertigerText_bleibt()
+    {
+        var g = Game();
+        _db.OwnGameSummaries.Add(new OwnGameSummary { SavedGameId = g.Id, UserId = 7, Status = ClubGameSummaryStatus.Done, Markdown = "# Text", RequestedAt = DateTime.UtcNow });
+        _db.OwnGameSummaryRequests.Add(new OwnGameSummaryRequest { UserId = 7, SavedGameId = g.Id, At = DateTime.UtcNow });
+        _db.SaveChanges();
+
+        await SavedGameCorrection.MovesChangedAsync(_db, g, default);
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(ClubGameSummaryStatus.Done, _db.OwnGameSummaries.Single().Status);
+        Assert.Single(_db.OwnGameSummaryRequests);
     }
 
     [Fact]

@@ -33,7 +33,7 @@ mit Vereinspartie 236 (Fable-Erklärungen der Fehler-Vergleiche, 0.908.0).
 | `POST api/league/club/games/{id}/summary` | Admin (sonst 403) | anfordern / neu anfordern |
 | `GET api/admin/club-game-summaries` | Admin | offene Aufträge `[{ clubGameId, clubId, requestedAt, requestedByUserId }]` |
 | `POST api/admin/club-game-summaries/{id}/start` | Admin | übernehmen; 409 wenn nicht offen |
-| `PUT api/admin/club-game-summaries/{id}` | Admin | `{ markdown, model }` abliefern (≤ 200 000 Zeichen) |
+| `PUT api/admin/club-game-summaries/{id}` | Admin | `{ markdown, model }` abliefern (≤ 200 000 Zeichen); auch ohne `start` (Handlauf), aber nur, wenn es die Zeile schon gibt (sonst 404, R4-005) |
 | `PUT api/admin/club-game-summaries/{id}/fail` | Admin | `{ error }` |
 
 `stale` = die Partie wurde nach dem Schreiben korrigiert (`MovesHash` weicht ab). Die Zeile geht mit der Partie (Cascade).
@@ -76,7 +76,11 @@ Teilen-Link (0.934.0): `/g/:token/summary` liest `GET /api/games/shared/{token}/
 
 - Kontingent: `OwnGameSummaries:DailyPerUser` (Vorgabe 2) je Konto und UTC-Tag, Admins frei. Eine noch offene Anforderung
   kostet nichts; verbraucht → 429 `code: summary_quota`. Die Zählung steht in `OwnGameSummaryRequests` und überlebt das
-  Löschen der Partie.
+  Löschen der Partie. Gebucht wird VOR der Analyse und danach nachgezählt (`BookAsync`, R4-004: über dem Deckel → zurück,
+  von parallelen Anforderungen kommt die früher geschriebene durch); startet die Analyse nicht, geht die Buchung zurück.
+- Züge geändert (Korrigieren, Heilen per Re-Save; `SavedGameCorrection.MovesChangedAsync`, R4-013): eine offene Anforderung
+  bricht ab (`failed`, `error: "movesChanged"`), die Buchung von heute geht zurück ins Kontingent; ein fertiger Text bleibt
+  und gilt als veraltet.
 - Fehlt die Analyse, stößt das Anfordern „Partie analysieren“ an. Nur Partien ab der Grundstellung (400 `summary_unsupported_start`).
 - Solange die Anforderung offen ist, bekommt die Analyse Fehler-Vergleiche (`ClubMistakeComparisons.OwnSummaryAnalyses`, vor
   dem Altbestand) und Fable-Begründungen (gemeinsamer Tagesdeckel). Ohne Anforderung gibt es beides für eigene Partien nicht.
@@ -85,7 +89,9 @@ Teilen-Link (0.934.0): `/g/:token/summary` liest `GET /api/games/shared/{token}/
 - Verbundene Vereinspartie ohne eigenen Text: `GET …/summary` liefert den Vereinstext mit `source: "club"`.
 
 Watcher: `GET /api/admin/own-game-summaries` → `[{ savedGameId, userId, requestedAt }]`, dazu `POST …/{id}/start`,
-`PUT …/{id}`, `PUT …/{id}/fail`, `GET …/{id}/game|evals|comparisons` (Form wie bei Vereinspartien). In `watch.sh` und `bin/*` trägt
+`PUT …/{id}`, `PUT …/{id}/fail`, `GET …/{id}/game|evals|comparisons` (Form wie bei Vereinspartien). Abliefern und Fehlschlag
+nur für einen laufenden Auftrag (nach `start`), sonst 409 (R4-005); `game` gibt Namen und Event ohne Steuerzeichen und auf
+100 Zeichen gekürzt (`OwnGameSummaries.WatcherText`) — sie landen im Claude-Prompt. In `watch.sh` und `bin/*` trägt
 eine eigene Partie die Kennung `o<id>`; gegen eine ältere API (404, fehlende Tabelle) bleibt die Schiene bei den Vereinspartien.
 
 

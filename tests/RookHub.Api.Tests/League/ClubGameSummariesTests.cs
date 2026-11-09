@@ -158,7 +158,8 @@ public class ClubGameSummariesTests : IDisposable
     {
         var id = await GameAsync();
         await ReadyAsync(id);
-        await Svc.CompleteAsync(id, "alt", null);
+        await Svc.RequestAsync(TestClubs.Home, id, 7);   // seit R4-005 nur mit vorhandener Zeile
+        Assert.Equal(ClubGameSummaries.Outcome.Ok, await Svc.CompleteAsync(id, "alt", null));
         var again = (await Svc.RequestAsync(TestClubs.Home, id, 7))!;
         Assert.Equal(("requested", "alt"), (again.Status, again.Markdown));
         await Svc.StartAsync(id);
@@ -183,11 +184,23 @@ public class ClubGameSummariesTests : IDisposable
     public async Task CorrectedGame_MarksTheSummaryStale()
     {
         var id = await GameAsync(hash: "vorher");
-        await Svc.CompleteAsync(id, "Text", null);
+        _db.ClubGameSummaries.Add(new ClubGameSummary { ClubGameId = id, RequestedAt = _clock.GetUtcNow().UtcDateTime });   // R4-005: Zeile nötig
+        await _db.SaveChangesAsync();
+        Assert.Equal(ClubGameSummaries.Outcome.Ok, await Svc.CompleteAsync(id, "Text", null));
         var g = await _db.LeagueClubGames.FirstAsync(x => x.Id == id);
         g.MovesHash = "nachher";
         await _db.SaveChangesAsync();
         Assert.True((await Svc.GetAsync(TestClubs.Home, id))!.Stale);
+    }
+
+    /// <summary>R4-005: der Handlauf (Abliefern ohne Start) bleibt, legt aber keine Zusammenfassung mehr für eine Partie an, die
+    /// keiner angefordert hat — vorher schrieb eine frei gewählte Id in jede Vereinspartie.</summary>
+    [Fact]
+    public async Task Complete_ohneZeile_legtNichtsAn()
+    {
+        var id = await GameAsync();
+        Assert.Equal(ClubGameSummaries.Outcome.NotFound, await Svc.CompleteAsync(id, "# untergeschoben", null));
+        Assert.Empty(_db.ClubGameSummaries);
     }
 
     [Fact]

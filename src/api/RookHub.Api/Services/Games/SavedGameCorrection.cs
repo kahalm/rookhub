@@ -107,5 +107,6 @@ internal sealed class SavedGameCorrection
         g.GameAnalysisId = null;
         db.GameMistakeProgresses.RemoveRange(await db.GameMistakeProgresses.Where(p => p.SavedGameId == g.Id).ToListAsync(ct));
         db.GameRecaps.RemoveRange(await db.GameRecaps.Where(r => r.SavedGameId == g.Id).ToListAsync(ct));
+        await OwnGameSummaries.MovesChangedAsync(db, g.Id, ct);
     }
 }
