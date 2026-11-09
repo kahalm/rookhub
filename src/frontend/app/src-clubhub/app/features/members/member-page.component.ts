@@ -154,8 +154,9 @@ function orNull(value: string | null | undefined): string | null {
         <section>
           <label class="check"><input type="checkbox" [checked]="form().archived" (change)="set('archived', $any($event.target).checked)">
             Im Archiv (kommt nicht mehr ins Training)</label>
-          <!-- Löschen steht hier am Ende und nicht in der klebenden Leiste: selten, endgültig, kein Griff daneben. -->
-          @if (member()?.canDelete) { <p class="mt-s"><button type="button" class="btn-link danger" [disabled]="busy()" (click)="remove()">Blatt löschen</button></p> }
+          <!-- Löschen steht hier am Ende und nicht in der klebenden Leiste: selten, endgültig, kein Griff daneben. Als
+               Gefahrknopf, nicht als grauer Textlink (DESIGN 8.5, Codereview F4-016). -->
+          @if (member()?.canDelete) { <p class="mt-s"><button type="button" class="btn danger slim delete-member" [disabled]="busy()" (click)="remove()">Blatt löschen</button></p> }
         </section>
 
         <p class="err status-line" role="alert">{{ error() ?? '' }}</p>

@@ -560,6 +560,9 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     fixture.componentInstance.startEdit();
     await settle();
     expect(el().textContent).toContain('Blatt löschen');
+    // F4-016: Gefahrknopf (DESIGN 8.5), kein grauer Textlink
+    expect(el().querySelector('.delete-member')?.className).toContain('btn danger');
+    expect(el().querySelector('.delete-member')?.classList.contains('btn-link')).toBeFalse();
     const ask = confirmAsk.and.returnValue(of(false));
     await fixture.componentInstance.remove();
     expect(api.deleteMember).not.toHaveBeenCalled();

@@ -1155,7 +1155,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   stehen ebenso als `.need` unter dem Feld, das Feld bekommt Fokus + `aria-invalid`; die Statuszeile am Formularende
   nur für Serverfehler (b1-c-kind-neu-fehler-unter-falz). Feld und sein `.need` bilden eine Gitterzelle `.field-cell`, damit der
   Hinweis auch im einspaltigen `.grid-2` (Handy) unter SEINEM Feld steht. Zerstörende Aktionen als `.btn.danger`, nicht als
-  `.btn-link`.
+  `.btn-link` — ganze Datensätze (Gruppe, Karteiblatt, Trainingseinheit samt Anwesenheit und Fotos; F4-016); kleine
+  Entfernen-Aktionen in Listen und Zeilen (Bild entfernen, Notiz löschen, Verknüpfung trennen) dürfen `.btn-link.danger`
+  bleiben. `.btn.danger:hover` füllt in `--bad` mit Schrift `--bad-ink` (dunkel ≥ 4,5:1, F4-017).
 - Metazeilen `.kid-meta`: Trenner „·" als absolut gesetztes `::before` ab der zweiten Angabe mitten in der 14-px-Lücke,
   nicht vor Chips; `overflow-x: clip` schneidet ihn an einer umgebrochenen Zeile ab — weder am Zeilenende noch am
   -anfang (5.13, b1-c-meta-trenner-zeilenende). Seitenkopf

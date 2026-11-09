@@ -139,7 +139,8 @@ ch-root > .foot { flex: none; width: 100%; }
   filter: none; background: color-mix(in srgb, var(--primary) 14%, var(--card)); border-color: var(--primary); color: var(--ink);
 }
 .btn.danger { border-color: var(--bad); color: var(--bad); }
-.btn.danger:hover { background: var(--bad); color: #fff; }
+/* F4-017: Schrift --bad-ink (dunkel #1b0f0e auf #f07b72 ≈ 6,9:1; weiß wären nur 2,7:1), hell weiß wie bisher. */
+.btn.danger:hover { background: var(--bad); color: var(--bad-ink); }
 .btn.danger:disabled { background: var(--card); border-color: var(--muted); color: var(--muted); }
 .btn.slim { min-height: 36px; padding: 6px 12px; font-size: 15px; }
 .btn-link { font: inherit; font-size: 15px; color: var(--muted); background: none; border: 0; padding: 6px 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }

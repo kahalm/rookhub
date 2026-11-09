@@ -408,6 +408,26 @@ describe('clubhub.scss', () => {
     });
   }
 
+  // Codereview F4-017: der Gefahrknopf beim Überfahren war dunkel weiß auf #f07b72 (≈ 2,7:1).
+  for (const dark of [false, true]) {
+    it(`.btn.danger:hover (${dark ? 'dunkel' : 'hell'}): Schrift --bad-ink auf --bad, ≥ 4,5:1`, () => {
+      const rules = Array.from(document.styleSheets).flatMap(sh => { try { return Array.from(sh.cssRules); } catch { return []; } })
+        .filter((r): r is CSSStyleRule => r instanceof CSSStyleRule && r.selectorText === '.btn.danger:hover');
+      expect(rules.length).withContext('Regel .btn.danger:hover').toBeGreaterThan(0);
+      expect(rules.at(-1)!.style.color.replace(/\s/g, '')).toBe('var(--bad-ink)');
+      document.documentElement.classList.toggle('dark-theme', dark);
+      try {
+        const el = mount(`<span class="ink"></span><span class="bg"></span>`);
+        const ink = el.querySelector<HTMLElement>('.ink')!, bg = el.querySelector<HTMLElement>('.bg')!;
+        ink.style.color = 'var(--bad-ink)';
+        bg.style.color = 'var(--bad)';
+        expect(contrast(parseColor(getComputedStyle(ink).color), parseColor(getComputedStyle(bg).color))).toBeGreaterThanOrEqual(4.5);
+      } finally {
+        document.documentElement.classList.remove('dark-theme');
+      }
+    });
+  }
+
   // a1-c-disabled-button-contrast: gesperrte Knöpfe waren pauschal 50 % durchsichtig (hell ≈ 2,4:1).
   for (const dark of [false, true]) {
     it(`gesperrte Knöpfe (${dark ? 'dunkel' : 'hell'}): volle Deckkraft, Schrift ≥ 4,5:1, Rahmen gestrichelt ≥ 3:1`, () => {
