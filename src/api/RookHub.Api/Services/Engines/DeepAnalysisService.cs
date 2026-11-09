@@ -53,7 +53,9 @@ public class DeepAnalysisService(AppDbContext db, AnalysisJobService jobs, IConf
         var reg = regs[0];
 
         var existing = await db.GameAnalyses.AsNoTracking()
-            .Where(a => a.UserId == userId && a.EngineId == reg.Id && a.Pgn == pgn && a.Status != GameAnalysisStatus.Failed)
+            // Über den Namen (R4-001, E6): eine neu angemeldete Lc0 hat eine neue Kennung, die alte Analyse gilt trotzdem.
+            .Where(a => a.UserId == userId && (a.EngineName == name || a.EngineId == reg.Id) && a.Pgn == pgn
+                && a.Status != GameAnalysisStatus.Failed)
             .OrderByDescending(a => a.Id).Select(a => (int?)a.Id).FirstOrDefaultAsync(ct);
         if (existing is { } id && await analyses.GetAsync(userId, id, ct) is { } dto) return dto;
 

@@ -3376,6 +3376,10 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)");
 
+                    b.Property<string>("EngineName")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
                     b.Property<int?>("EngineOwnerUserId")
                         .HasColumnType("int");
 

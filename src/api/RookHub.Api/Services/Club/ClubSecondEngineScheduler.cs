@@ -56,14 +56,19 @@ public sealed class ClubSecondEngineScheduler(IServiceScopeFactory scopes, IConf
             return null;
         }
         var reg = regs[0];
+        var name = _engineName;
 
-        var open = await db.GameAnalyses.CountAsync(a => a.Origin == GameAnalysisOrigin.Club && a.EngineId == reg.Id
+        // „Diese Engine" = gleicher NAME (R4-001, E6): nach dem Aufräumen und Neuanmelden hat die Registrierung eine neue
+        // rhe_-Kennung, die schon gerechneten Partien tragen noch die alte. Die Kennung zählt zusätzlich für Analysen,
+        // die vor der Spalte EngineName angelegt wurden und deren Registrierung schon weg war (kein Nachtrag möglich).
+        var open = await db.GameAnalyses.CountAsync(a => a.Origin == GameAnalysisOrigin.Club
+            && (a.EngineName == name || a.EngineId == reg.Id)
             && (a.Status == GameAnalysisStatus.Pending || a.Status == GameAnalysisStatus.Running), ct);
         if (open >= _maxOpen) return null;
 
         var q = db.LeagueClubGames.AsNoTracking()
             .Where(c => !db.GameAnalyses.Any(a => a.LeagueClubGameId == c.Id && a.Origin == GameAnalysisOrigin.Club
-                && a.EngineId == reg.Id && a.Status != GameAnalysisStatus.Failed));
+                && (a.EngineName == name || a.EngineId == reg.Id) && a.Status != GameAnalysisStatus.Failed));
         if (_unplayable.Count > 0) q = q.Where(c => !_unplayable.Contains(c.Id));
         var game = await q.OrderByDescending(c => c.Id).Select(c => new { c.Id, c.Pgn }).FirstOrDefaultAsync(ct);
         if (game is null) return null;

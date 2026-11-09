@@ -66,6 +66,10 @@ internal sealed class GameAnalysisIntake
             await _jobs.VerifyEngineAsync(engineOwnerUserId ?? userId, engineId, ct);
         }
 
+        // Name der Broker-Registrierung mitschreiben: die Kennung wechselt nach Aufräumen/Neuanmelden, der Name nicht (R4-001).
+        var engineName = engineId is null ? null : await _db.ExternalEngineRegistrations.AsNoTracking()
+            .Where(r => r.Id == engineId).Select(r => r.Name).FirstOrDefaultAsync(ct);
+
         var parsed = GamePlies.Parse(req.Pgn, GameAnalysisDefaults.MaxPlies)
             ?? throw new ArgumentException("PGN enthält keine spielbare Partie");
         var (header, plies) = parsed;
@@ -91,6 +95,7 @@ internal sealed class GameAnalysisIntake
             TargetDepth = depth,
             MultiPv = multiPv,
             EngineId = engineId,
+            EngineName = engineName,
             TargetNodes = req.TargetNodes,
             EngineOwnerUserId = engineOwnerUserId == userId ? null : engineOwnerUserId,
             Origin = origin,

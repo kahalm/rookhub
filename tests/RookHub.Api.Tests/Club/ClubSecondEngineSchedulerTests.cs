@@ -147,4 +147,32 @@ public class ClubSecondEngineSchedulerTests : IDisposable
         _db.UserGroups.AddRange(new UserGroup { UserId = HomeMember, GroupId = 20 }, new UserGroup { UserId = OtherMember, GroupId = 21 });
         await _db.SaveChangesAsync();
     }
+
+    /// <summary>R4-001: Registrierung aufgeräumt, gleichnamig neu angemeldet (neue rhe_-Kennung) → die schon gerechnete
+    /// Partie wird NICHT noch einmal eingereiht.</summary>
+    [Fact]
+    public async Task NachAufraeumenUndNeuanmeldung_rechnetDieGerechnetePartieNichtNeu()
+    {
+        ClubGame();
+        var id = (await Scheduler().TickOnceAsync(_db, Analyses(), default))!.Value;
+        var done = await _db.GameAnalyses.SingleAsync(a => a.Id == id);
+        Assert.Equal(ClubSecondEngineScheduler.DefaultEngineName, done.EngineName);
+        done.Status = GameAnalysisStatus.Done;
+        _db.ExternalEngineRegistrations.Remove(await _db.ExternalEngineRegistrations.SingleAsync(r => r.Id == Lc0));
+        _db.ExternalEngineRegistrations.Add(new ExternalEngineRegistration
+        {
+            Id = "rhe_lc0test02", UserId = Owner, Name = ClubSecondEngineScheduler.DefaultEngineName, ClientSecret = "s",
+            ProviderSelector = "sel2", MaxThreads = 1, MaxHash = 16, Variants = "chess",
+        });
+        await _db.SaveChangesAsync();
+
+        Assert.Null(await Scheduler().TickOnceAsync(_db, Analyses(), default));
+        Assert.Single(_db.GameAnalyses);
+
+        // Eine NEUE Partie bekommt die neue Kennung.
+        var fresh = ClubGame();
+        var nextId = (await Scheduler().TickOnceAsync(_db, Analyses(), default))!.Value;
+        var next = await _db.GameAnalyses.SingleAsync(a => a.Id == nextId);
+        Assert.Equal(((int?)fresh.Id, "rhe_lc0test02"), (next.LeagueClubGameId, next.EngineId));
+    }
 }

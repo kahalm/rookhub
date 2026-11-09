@@ -105,4 +105,23 @@ public class DeepAnalysisServiceTests : IDisposable
         Assert.Equal((Member, Lc0, (long?)100_000, GameAnalysisOrigin.Manual, (int?)House),
             (a.UserId, a.EngineId, a.TargetNodes, a.Origin, a.EngineOwnerUserId));
     }
+
+    /// <summary>R4-001: nach Aufräumen + Neuanmeldung (neue rhe_-Kennung, gleicher Name) kommt die vorhandene Lc0-Analyse zurück.</summary>
+    [Fact]
+    public async Task Lc0Partie_nachNeuanmeldungDerEngine_nimmtDieVorhandene()
+    {
+        const string pgn = "[White \"A\"]\n[Black \"B\"]\n\n1. e4 e5 2. Nf3 Nc6 *";
+        var first = await Service().StartLc0GameAsync(Member, pgn);
+        _db.ExternalEngineRegistrations.Remove(await _db.ExternalEngineRegistrations.SingleAsync(r => r.Id == Lc0));
+        _db.ExternalEngineRegistrations.Add(new ExternalEngineRegistration
+        {
+            Id = "rhe_lc0deep002", UserId = House, Name = ClubSecondEngineScheduler.DefaultEngineName, ClientSecret = "s",
+            ProviderSelector = "sel2", MaxThreads = 1, MaxHash = 16, Variants = "chess",
+        });
+        await _db.SaveChangesAsync();
+
+        var again = await Service().StartLc0GameAsync(Member, pgn);
+        Assert.Equal(first.Id, again.Id);
+        Assert.Single(_db.GameAnalyses);
+    }
 }

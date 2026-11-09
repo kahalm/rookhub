@@ -124,6 +124,14 @@ public class GameAnalysis
     [MaxLength(64)] public string? EngineId { get; set; }
 
     /// <summary>
+    /// Name der Broker-Registrierung hinter <see cref="EngineId"/> beim Anlegen (z. B. „RookHub Spark Lc0"), sonst <c>null</c>.
+    /// Die <c>rhe_</c>-Kennung ist nicht stabil: das Aufräumen (7 Tage ohne Meldung) löscht die Registrierung, und ein neues
+    /// Anmelden bekommt eine NEUE Kennung. „Schon gerechnet?" fragt deshalb über den Namen (R4-001, Entscheidung E6) —
+    /// <c>ClubSecondEngineScheduler</c> und <c>DeepAnalysisService.StartLc0GameAsync</c>.
+    /// </summary>
+    [MaxLength(200)] public string? EngineName { get; set; }
+
+    /// <summary>
     /// Kuratierter Bestand: diese Partie darf JEDER als Punktepartie spielen — auch ohne Anmeldung.
     /// Gesetzt vom Besitzer oder einem Admin (<c>PUT /api/game-analyses/{id}/public</c>).
     ///

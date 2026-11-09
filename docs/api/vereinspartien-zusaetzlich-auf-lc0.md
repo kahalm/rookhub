@@ -14,3 +14,10 @@ Stellungen, Taktik-Ernte) — wer eine neue Club-Abfrage baut, nimmt die Bedingu
 `POST /api/game-analyses/same-game` und `GET /api/game-analyses/{id}/evals`: Nutzer mit `league.view` sehen dort zusätzlich
 Club-Analysen mit `EngineId` (`clubReader`). `GameEvalPlyDto.Nodes` = erreichte Knoten (letzte Stufe aus `NodeStepsJson`),
 die Partieseite zeigt sie in den Ansichten Lc0/Beide.
+
+**„Schon gerechnet" über den Engine-Namen (R4-001, 09.11.2026):** jede Analyse mit `EngineId` trägt seit der Migration
+`GameAnalysisEngineName` zusätzlich `GameAnalysis.EngineName` (Name der Broker-Registrierung beim Anlegen, nachgetragen aus
+den noch lebenden Registrierungen). Der Takt und `DeepAnalysisService.StartLc0GameAsync` (Wiederverwendung „dieselbe
+Partie auf Lc0") vergleichen `EngineName == ClubSecondEngine:EngineName` ODER `EngineId == aktuelle Kennung` — räumt die
+Wartung die Registrierung nach 7 Tagen ohne Meldung weg und meldet sich der Provider neu (neue `rhe_`-Kennung), werden
+die schon gerechneten Vereinspartien nicht noch einmal eingereiht.
