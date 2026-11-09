@@ -13,8 +13,9 @@ import { PgnSourcePanelComponent } from './pgn-source-panel.component';
 import { ScoresheetUploadStore } from './scoresheet-upload-store';
 import { ClubScoresheetPanelComponent } from './club-scoresheet-panel.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
+import { HandoffService } from '@rh/core/handoff.service';
 
-type Kind = 'pgn' | 'formular';
+type Kind = 'pgn' | 'formular' | 'brett';
 
 /**
  * Partien hinzufügen — angemeldet (`/verein/neu`, Vereinsgruppe) ODER ohne Konto über einen Teilen-Link
@@ -34,6 +35,7 @@ export class ClubAddPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly handoff = inject(HandoffService);
 
   /** Token des Teilen-Links (Weg ohne Anmeldung) — sonst `null`. */
   readonly share = this.route.snapshot.paramMap.get('token');
@@ -49,6 +51,9 @@ export class ClubAddPageComponent implements OnInit {
   readonly clubName = this.clubCtx.clubName;
 
   readonly kind = signal<Kind>('pgn');
+  /** „Am Analysebrett eingeben" (Wunsch 2026-11-09): nur mit Konto — das Brett liegt auf RookHub, und ein Teilen-Link
+   *  trägt dorthin kein Recht auf die Vereinsdatenbank — und nur, wenn es ein RookHub zu diesem LeagueHub gibt. */
+  readonly boardAvailable = !this.share && !!this.handoff.rookHubUrl;
   /** Erklärtexte hinter (i) (d2-l-hinzufuegen-anon-text): Einleitung und Schalter „ersetzen". */
   readonly introInfo = signal(false);
   readonly anonInfo = signal(false);
@@ -74,7 +79,7 @@ export class ClubAddPageComponent implements OnInit {
     isManager: this.isManager,
     openScans: () => this.clubApi.openScans(),
     confirm: text => firstValueFrom(this.confirm.ask(text)),
-    kind: () => this.kind(),
+    kind: () => this.kind() === 'formular' ? 'formular' : 'pgn',
   });
 
   constructor() {
@@ -94,11 +99,39 @@ export class ClubAddPageComponent implements OnInit {
   ngOnInit(): void {
     if (!this.allowed) return;
     if (this.share) this.clubCtx.useShare(this.share);   // ohne Konto: der Verein des Links (0.698.0)
-    if (this.route.snapshot.queryParamMap.get('art') === 'formular') this.kind.set('formular');
-    const game = Number(this.route.snapshot.queryParamMap.get('partie'));
+    const query = this.route.snapshot.queryParamMap;
+    const art = query.get('art');
+    if (art === 'formular') this.kind.set('formular');
+    else if (art === 'brett' && this.boardAvailable) this.kind.set('brett');
+    const entwurf = Number(query.get('entwurf'));
+    if (!this.share && Number.isInteger(entwurf) && entwurf > 0) { void this.openBoardDraft(entwurf, Number(query.get('club'))); return; }
+    const game = Number(query.get('partie'));
     if (!this.share && Number.isInteger(game) && game > 0) void this.loadSavedGame(game);
     void this.sheets.loadScans();
     void this.store.loadDrafts();
+  }
+
+  /** Vom Analysebrett übergeben (`?entwurf=<id>&club=<id>`): in den Verein des Entwurfs wechseln (auf dem Brett gewählt, kann
+   *  ein anderer sein als der hier gemerkte), dann die Übersicht öffnen wie bei „Weiter" einer offenen Liste. */
+  private async openBoardDraft(id: number, club: number): Promise<void> {
+    if (Number.isInteger(club) && club > 0) {
+      await firstValueFrom(this.clubCtx.ensure());
+      if (this.clubCtx.current()?.id !== club && this.clubCtx.clubs().some(c => c.id === club)) {
+        this.clubCtx.select(club);
+        await firstValueFrom(this.clubCtx.reload());
+      }
+    }
+    this.kind.set('pgn');
+    await this.store.openDraft(String(id));
+    void this.router.navigate([], { queryParams: { entwurf: null, club: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    void this.sheets.loadScans();
+    void this.store.loadDrafts();
+  }
+
+  /** Zum Analysebrett; die Partie kommt von dort als Entwurf zurück. In der Adresse steht nur der Verein, nie das PGN. */
+  openBoard(): void {
+    const club = this.clubCtx.club()?.id;
+    void this.handoff.jumpToRookHub(`analysis?verein=1${club ? `&club=${club}` : ''}`);
   }
 
   /** Eine Partie aus RookHub (⋮ → „In die Vereins-Datenbank", Wunsch 2026-09-28) — gleich in die Übersicht, wie ein Upload. */
@@ -109,7 +142,7 @@ export class ClubAddPageComponent implements OnInit {
 
   setKind(k: Kind): void {
     this.kind.set(k);
-    void this.router.navigate([], { queryParams: { art: k === 'formular' ? 'formular' : null }, replaceUrl: true });
+    void this.router.navigate([], { queryParams: { art: k === 'pgn' ? null : k }, replaceUrl: true });
     if (k === 'formular' && !this.sheets.status()) void this.sheets.loadStatus();
   }
 

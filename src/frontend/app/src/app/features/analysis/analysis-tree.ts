@@ -224,7 +224,7 @@ function fenBefore(n: AnalysisNode): string {
   return n.parent ? n.parent.fen : n.fen;
 }
 
-function moveNumberOf(fen: string): { number: number; white: boolean } {
+export function moveNumberOf(fen: string): { number: number; white: boolean } {
   const parts = fen.split(' ');
   return { number: parseInt(parts[5] ?? '1', 10) || 1, white: whiteToMove(fen) };
 }

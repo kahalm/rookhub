@@ -114,6 +114,13 @@
           (keepEvalBarChange)="spar.onKeepEvalBarChange($event)" (analyzeWarning)="spar.analyzeWarning()" />
       }
 
+      <!-- Aus LeagueHub gekommen: die Knöpfe stehen über dem Zugbaum, sonst unten beim PGN-Feld (Wunsch 2026-11-09). -->
+      @if (!study && clubEntry) {
+        <mat-card class="io-card"><mat-card-content>
+          <app-analysis-game-actions [root]="root" [version]="treeVersion" [headers]="pgnHeaders" [clubEntry]="clubEntry" [clubId]="clubEntryId" />
+        </mat-card-content></mat-card>
+      }
+
       <mat-card class="moves-card">
         <mat-card-content>
           <div class="controls">
@@ -212,6 +219,9 @@
             <textarea matInput rows="3" [(ngModel)]="pgnInput"></textarea>
           </mat-form-field>
           <button mat-stroked-button (click)="loadPgn()"><mat-icon>upload</mat-icon> {{ 'analysis.loadPgn' | translate }}</button>
+          @if (!clubEntry) {
+            <app-analysis-game-actions [root]="root" [version]="treeVersion" [headers]="pgnHeaders" [clubEntry]="clubEntry" [clubId]="clubEntryId" />
+          }
         </mat-card-content>
       </mat-card>
       }

@@ -12,6 +12,7 @@ import { ClubScoresheetPanelComponent } from './club-scoresheet-panel.component'
 import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { HandoffService } from '@rh/core/handoff.service';
 
 const SCAN = (status: ScoresheetScan['status']): ScoresheetScan => ({
   id: 7, status, notationLanguage: 'de', createdAt: '2026-09-28T08:00:00Z', rounds: 1, moveCount: 40, uncertainCount: 2,
@@ -32,8 +33,10 @@ describe('ClubAddPageComponent', () => {
   let service: { client: jasmine.Spy; savedGame: jasmine.Spy; openScans: jasmine.Spy; allDrafts: jasmine.Spy };
   let query: Record<string, string>;
   let params: Record<string, string>;
+  let handoff: { rookHubUrl: string | null; jumpToRookHub: jasmine.Spy };
 
   beforeEach(() => {
+    handoff = { rookHubUrl: 'https://rookhub.example', jumpToRookHub: jasmine.createSpy('jumpToRookHub').and.resolveTo() };
     confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
     localStorage.removeItem('lh-anon-scans');
     query = {};
@@ -57,6 +60,7 @@ describe('ClubAddPageComponent', () => {
       imports: [ClubAddPageComponent],
       providers: [provideTestClub(), { provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, 
         provideRouter([]),
+        { provide: HandoffService, useValue: handoff },
         { provide: ClubApiService, useValue: service },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(query), paramMap: convertToParamMap(params) } } },
         { provide: AuthService, useValue: { has, currentUser: perms ? { username: 'patrik' } : null } },
@@ -66,6 +70,46 @@ describe('ClubAddPageComponent', () => {
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
+
+
+  describe('Analysebrett als dritte Möglichkeit', () => {
+    const segButtons = (root: HTMLElement) => Array.from(root.querySelectorAll<HTMLButtonElement>('.club-kind button')).map(b => b.textContent!.trim());
+
+    it('steht neben PGN und Formular und springt mit dem Verein zum Brett', () => {
+      const root = create();
+      expect(segButtons(root)).toEqual(['Partiedaten', 'Partieformular', 'Analysebrett']);
+      root.querySelectorAll<HTMLButtonElement>('.club-kind button')[2].click();
+      fixture.detectChanges();
+      const go = Array.from(root.querySelectorAll<HTMLButtonElement>('button.btn-pri')).find(b => b.textContent!.includes('Zum Analysebrett'))!;
+      go.click();
+      expect(handoff.jumpToRookHub).toHaveBeenCalledOnceWith('analysis?verein=1&club=1');
+    });
+
+    it('fehlt über einen Teilen-Link (dort kein Recht am Brett)', () => {
+      params = { token: 'abc' };
+      expect(segButtons(create())).toEqual(['Partiedaten', 'Partieformular']);
+    });
+
+    it('fehlt, wenn es kein RookHub zu dieser Seite gibt', () => {
+      handoff.rookHubUrl = null;
+      expect(segButtons(create())).toEqual(['Partiedaten', 'Partieformular']);
+    });
+
+    it('?entwurf= öffnet die Übersicht des übergebenen Entwurfs', fakeAsync(() => {
+      query = { entwurf: '42', club: '1' };
+      api.draft.and.resolveTo({ ref: '42', id: 42, source: 'rookhub', label: 'Analysebrett: A – B', gameCount: 1, importedCount: 0,
+        createdAt: '', updatedAt: '', viaShareLink: false, mine: true, pgn: '1. e4 *', state: null, imported: [] });
+      api.preview.and.resolveTo(PREVIEW);
+      create();
+      flush();
+      expect(api.draft).toHaveBeenCalledOnceWith('42');
+      expect(api.preview).toHaveBeenCalledOnceWith('1. e4 *', 42);
+      expect(fixture.componentInstance.store.review()).not.toBeNull();
+      expect(fixture.componentInstance.kind()).toBe('pgn');
+      expect(api.createDraft).not.toHaveBeenCalled();
+    }));
+  });
+
 
   /** Die PGN-Quelle (Datei, ChessBase, Lichess, Text) — eigene Kind-Komponente seit der Zerlegung Z31. */
   function source(): PgnSourcePanelComponent {

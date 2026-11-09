@@ -7,14 +7,14 @@ describe('readAnalysisParams', () => {
     const r = read({ fen: 'F', orientation: 'black', from: '/puzzles/1', engine: 'eei_a', depth: '30', lines: '5',
       moves: 'e2e4, e7e5  g1f3', pgn: '1. e4', history: '7', blind: '1', maia: '2143', game: '/club-games/236' });
     expect(r).toEqual({ fen: 'F', orientation: 'black', returnTo: '/puzzles/1', engine: 'eei_a', depth: 30, lines: 5,
-      moves: ['e2e4', 'e7e5', 'g1f3'], pgn: '1. e4', historyId: 7, blind: true, maia: 2200, gamePage: '/club-games/236' });
+      moves: ['e2e4', 'e7e5', 'g1f3'], pgn: '1. e4', historyId: 7, blind: true, maia: 2200, gamePage: '/club-games/236', clubEntry: false, clubId: null });
   });
 
   it('verwirft ungültige Werte', () => {
     const r = read({ fen: 'F', orientation: 'red', from: 'https://x', engine: 'a b', depth: '31', lines: '6', pgn: '  ',
       history: '0', maia: 'x', game: 'https://evil' }, false);
     expect(r).toEqual({ fen: null, orientation: null, returnTo: null, engine: null, depth: null, lines: null, moves: [],
-      pgn: null, historyId: null, blind: false, maia: null, gamePage: null });
+      pgn: null, historyId: null, blind: false, maia: null, gamePage: null, clubEntry: false, clubId: null });
     expect(read({ from: '//evil' }).returnTo).toBeNull();
     expect(read({ game: '//evil' }).gamePage).toBeNull();
     expect(read({ game: '/\\evil' }).gamePage).toBeNull();
@@ -27,5 +27,13 @@ describe('readAnalysisParams', () => {
     expect(nearestMaiaElo(300)).toBe(600);
     expect(nearestMaiaElo(2850)).toBe(2600);
     expect(read({ maia: '0' }).maia).toBeNull();
+  });
+
+  it('?verein=1 und ?club= (aus LeagueHub); ungültiger Verein fällt weg', () => {
+    const map = (o: Record<string, string>) => ({ get: (k: string) => o[k] ?? null });
+    const ok = readAnalysisParams(map({ verein: '1', club: '4' }), () => true);
+    expect(ok.clubEntry).toBeTrue();
+    expect(ok.clubId).toBe(4);
+    expect(readAnalysisParams(map({ verein: '0', club: 'x' }), () => true)).toEqual(jasmine.objectContaining({ clubEntry: false, clubId: null }));
   });
 });

@@ -28,6 +28,9 @@
   <div class="seg club-kind" role="group" aria-label="Art">
     <button type="button" [attr.aria-pressed]="kind() === 'pgn'" (click)="setKind('pgn')">Partiedaten</button>
     <button type="button" [attr.aria-pressed]="kind() === 'formular'" (click)="setKind('formular')">Partieformular</button>
+    @if (boardAvailable) {
+      <button type="button" [attr.aria-pressed]="kind() === 'brett'" (click)="setKind('brett')">Analysebrett</button>
+    }
   </div>
 
   @if (kind() === 'pgn') {
@@ -118,6 +121,13 @@
           </div>
         }
       }
+    </section>
+  } @else if (kind() === 'brett') {
+    <section class="panel">
+      <h3 class="club-h3">Am Analysebrett eingeben</h3>
+      <p class="small muted">Du spielst die Partie auf dem Analysebrett von RookHub ein. Dort geht es mit „In die Vereinsdatenbank“
+        hierher zurück, in dieselbe Übersicht wie bei einer PGN-Datei.</p>
+      <div class="actions"><button type="button" class="btn-pri" (click)="openBoard()">Zum Analysebrett</button></div>
     </section>
   } @else {
     <lh-club-scoresheet-panel [store]="sheets" />

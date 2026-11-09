@@ -58,6 +58,7 @@ import { fullscreenSupported } from '../../shared/fullscreen/fullscreen.util';
 import { NextMoveChoice, nextMoveKey, openNextMoveChoice, siblingLine } from './next-move-choice';
 import { GamesService } from '../games/games.service';
 import { AnalyzeGameService } from '../games/analyze-game.service';
+import { AnalysisGameActionsComponent } from './analysis-game-actions.component';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -70,7 +71,7 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, AnalysisEngineCardComponent, PositionSetupComponent,
     PositionRepertoiresComponent, OpeningExplorerComponent, PositionMenuComponent, MarkPositionButtonComponent, AnalysisMoveTreeComponent,
     IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent, LineStudyCardComponent,
-    CalcAnnotateCardComponent
+    CalcAnnotateCardComponent, AnalysisGameActionsComponent
   ],
   templateUrl: './analysis.component.html',
   styleUrl: './analysis.component.scss',
@@ -117,6 +118,11 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   fenInput = '';
   pgnInput = '';
+  /** Kopfdaten des zuletzt geladenen PGN — Vorbelegung für Download/Speichern; ein neuer Baum setzt sie zurück. */
+  pgnHeaders: Record<string, string> | null = null;
+  /** Aus LeagueHub gekommen (`?verein=1`, Wunsch 2026-11-09): das Übernehmen steht vorn. */
+  clubEntry = false;
+  clubEntryId: number | null = null;
   editing = false;
 
 
@@ -233,6 +239,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const p = readAnalysisParams(this.route.snapshot.queryParamMap, fen => this.isValidFen(fen));
+    this.clubEntry = p.clubEntry;
+    this.clubEntryId = p.clubId;
     this.applyRouteParams(p);
     this.connectEngine();
     // External Engines des Lichess-Kontos (nur eingeloggt; stiller Hintergrund-Feed — ohne Liste bleibt es beim
@@ -445,6 +453,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** Einen neuen Baum aufs Brett (Laden, Zurücksetzen) und dort auf `current` stehen. */
   private setTree(root: AnalysisNode, current: AnalysisNode = root): void {
     this.spar.onNewTree();   // beendet ein Sparring (Maia-Regel 9), „Partie analysieren" verfällt
+    this.pgnHeaders = null;
     this.model.setRoot(root);
     this.goToNode(current);
   }
@@ -746,6 +755,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (!keepText) this.pgnInput = '';
     const main = mainline(parsed.root);
     this.setTree(parsed.root, main[main.length - 1] ?? parsed.root);
+    this.pgnHeaders = parsed.headers;
   }
 
   // ---- Sterne + Zugbaum ----

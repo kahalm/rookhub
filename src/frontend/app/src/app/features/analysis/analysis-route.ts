@@ -28,6 +28,10 @@ export interface AnalysisRouteParams {
   /** „Gegen Maia weiterspielen" (`?maia=<Elo>`, 0.892.0, Abweichungs-Trainer): Maia-Karte offen, Stärke = nächste Maia-Stufe;
    *  `null` = nichts vorgegeben. Gilt nur für diesen Aufruf (nicht gespeichert). */
   maia: number | null;
+  /** Aus LeagueHub zum Eingeben einer Vereinspartie (`?verein=1`, 2026-11-09): „In die Vereinsdatenbank“ steht vorn. */
+  clubEntry: boolean;
+  /** Verein, aus dem der Aufruf kam (`?club=`) — nur Vorauswahl im Dialog, der Server prüft die Mitgliedschaft. */
+  clubId: number | null;
 }
 
 /** Nächste Maia-Stufe zu einer Elo (600–2600 in 200er-Schritten; Gleichstand → die höhere). */
@@ -55,6 +59,7 @@ export function readAnalysisParams(params: QueryParams, isValidFen: (fen: string
   const historyId = parseInt(params.get('history') || '', 10);
   const maia = parseInt(params.get('maia') || '', 10);
   const game = params.get('game');
+  const club = parseInt(params.get('club') || '', 10);
   return {
     fen: fen && isValidFen(fen) ? fen : null,
     orientation: orientation === 'white' || orientation === 'black' ? orientation : null,
@@ -68,5 +73,7 @@ export function readAnalysisParams(params: QueryParams, isValidFen: (fen: string
     blind: params.get('blind') === '1',
     gamePage: game && isOwnPath(game) ? game : null,
     maia: maia > 0 && maia < 4000 ? nearestMaiaElo(maia) : null,
+    clubEntry: params.get('verein') === '1',
+    clubId: club > 0 ? club : null,
   };
 }

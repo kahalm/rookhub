@@ -1,7 +1,7 @@
 import { computed, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ClubClient } from '../../core/club-api.service';
-import { ClubDraft, ClubImportResult } from '../../core/club.models';
+import { ClubDraft, ClubDraftDetail, ClubImportResult } from '../../core/club.models';
 import { reasonText } from '../../core/club-format';
 import { partLabel, pgnPortions, portionNote } from '../../core/pgn-portions';
 import { draftKeys, rememberDraftKey } from './club-anon-keys';
@@ -114,13 +114,23 @@ export class ClubDraftStore {
 
   /** Einen Entwurf wieder aufnehmen: Text laden, Übersicht neu lesen (für den Einreicher), Korrekturen wiederherstellen. */
   async resume(d: ClubDraft): Promise<void> {
+    await this.open(d, () => this.client.draft(d.ref));
+  }
+
+  /** Einen Entwurf über seine Nummer öffnen (vom Analysebrett übergeben, 2026-11-09). */
+  async openDraft(ref: string): Promise<void> {
+    await this.open(null, () => this.client.draft(ref));
+  }
+
+  private async open(known: ClubDraft | null, load: () => Promise<ClubDraftDetail>): Promise<void> {
     this.resuming.set(true);
     this.importError.set(null);
     this.dbNote.set(null);
     this.portionNote.set(null);
     this.result.set(null);
     try {
-      const full = await this.client.draft(d.ref);
+      const full = await load();
+      const d = known ?? full;
       this.pgn.set(full.pgn);
       this.importedBefore = full.imported;
       this.draft.set({ ...d, pgn: full.pgn });
