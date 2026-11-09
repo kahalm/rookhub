@@ -162,4 +162,59 @@ public class OwnGameSummariesTests : IDisposable
         Assert.NotNull(a.MistakeComparisonsAt);
         Assert.True(await ClubMistakeComparisons.SummaryWantedAsync(_db, a.Id));
     }
+
+    private SavedGame Shared(string token, int? club = null)
+    {
+        var g = Game(club: club);
+        g.ShareToken = token;
+        _db.SaveChanges();
+        return g;
+    }
+
+    [Fact]
+    public async Task GetShared_fertigerText_nurTextfelder()
+    {
+        var g = Shared("tok-done");
+        var done = new DateTime(2026, 11, 9, 10, 0, 0, DateTimeKind.Utc);
+        _db.OwnGameSummaries.Add(new OwnGameSummary { SavedGameId = g.Id, UserId = 7, Status = ClubGameSummaryStatus.Done, Markdown = "# Text", DoneAt = done, Model = "m", RequestedAt = done, Error = "intern" });
+        _db.SaveChanges();
+        var dto = await Svc().GetSharedAsync("tok-done");
+        Assert.Equal(new SharedOwnGameSummaryDto("done", "# Text", done, false, "m"), dto);
+        Assert.Equal(new[] { "DoneAt", "Markdown", "Model", "Stale", "Status" },
+            typeof(SharedOwnGameSummaryDto).GetProperties().Select(p => p.Name).Order().ToArray());
+    }
+
+    [Theory]
+    [InlineData(ClubGameSummaryStatus.Requested)]
+    [InlineData(ClubGameSummaryStatus.Running)]
+    [InlineData(ClubGameSummaryStatus.Failed)]
+    public async Task GetShared_ohneText_none(ClubGameSummaryStatus status)
+    {
+        var g = Shared("tok-open");
+        _db.OwnGameSummaries.Add(new OwnGameSummary { SavedGameId = g.Id, UserId = 7, Status = status, RequestedAt = DateTime.UtcNow, Error = "intern" });
+        _db.SaveChanges();
+        Assert.Equal(new SharedOwnGameSummaryDto("none", null, null, false, null), await Svc().GetSharedAsync("tok-open"));
+    }
+
+    [Fact]
+    public async Task GetShared_NeuAngefordert_zeigtFruehrenText_ohneAnforderungsdaten()
+    {
+        var g = Shared("tok-again");
+        _db.OwnGameSummaries.Add(new OwnGameSummary { SavedGameId = g.Id, UserId = 7, Status = ClubGameSummaryStatus.Requested, Markdown = "# Alt", RequestedAt = DateTime.UtcNow });
+        _db.SaveChanges();
+        var dto = await Svc().GetSharedAsync("tok-again");
+        Assert.Equal("done", dto!.Status);
+        Assert.Equal("# Alt", dto.Markdown);
+    }
+
+    [Fact]
+    public async Task GetShared_unbekannterLink_null_keinRueckfallAufVereinspartie()
+    {
+        Assert.Null(await Svc().GetSharedAsync("gibt-es-nicht"));
+        Assert.Null(await Svc().GetSharedAsync(" "));
+        Shared("tok-club", club: 239);
+        _db.ClubGameSummaries.Add(new ClubGameSummary { ClubGameId = 239, Status = ClubGameSummaryStatus.Done, Markdown = "# Verein", RequestedAt = DateTime.UtcNow });
+        _db.SaveChanges();
+        Assert.Equal("none", (await Svc().GetSharedAsync("tok-club"))!.Status);
+    }
 }

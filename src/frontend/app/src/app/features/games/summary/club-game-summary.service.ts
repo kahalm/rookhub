@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 /** Stand der Zusammenfassung einer Vereinspartie (0.913.0, `GET /api/league/club/games/{id}/summary`). */
 export interface ClubGameSummary {
@@ -61,6 +61,12 @@ export class ClubGameSummaryService {
   /** Vereinspartie über den Teilen-Link, nur lesend (Wunsch 2026-11-09): nur der fertige Text. */
   getShared(token: string, gameId: number): Observable<ClubGameSummary> {
     return this.http.get<ClubGameSummary>(`/api/league/s/${encodeURIComponent(token)}/club/games/${gameId}/summary`);
+  }
+
+  /** Eigene Partie über ihren Teilen-Link `/g/{token}`, nur lesend (Wunsch 2026-11-09): nur der fertige Text. */
+  getSharedOwn(token: string): Observable<ClubGameSummary> {
+    return this.http.get<Pick<ClubGameSummary, 'status' | 'markdown' | 'doneAt' | 'stale' | 'model'>>(`/api/games/shared/${encodeURIComponent(token)}/summary`)
+      .pipe(map(s => ({ ...s, requestedAt: null, error: null })));
   }
 
   /** Eigene Partie (0.923.0, `GET /api/games/{id}/summary`). */

@@ -135,6 +135,7 @@ export const ROUTES = [
   // Vereinspartie über den LeagueHub-Teilen-Link (0.838.3, „Analyse“ ohne Konto)
   r('rookhub', '/s/{leagueShareGameToken}/club-games/{shareClubGameId}', 'any', { main: GAME_BOARD }),
   r('rookhub', '/g/{gameShareToken}', 'any', { main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
+  r('rookhub', '/g/{gameShareToken}/summary', 'any', { main: ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'] }),
   r('rookhub', '/g/{analyzedShareToken}', 'any', { label: 'g-analyzed', main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
   r('rookhub', '/reconstruct', 'user', { main: ['.page mat-card.item', '.page .empty-state', '.page mat-card.new-card'] }),
   r('rookhub', '/reconstruct/{reconstructionId}', 'user', { main: ['.parts mat-card.part', '.parts .add-row', '.page > p.muted'] }),

@@ -14,6 +14,9 @@ public sealed record OwnGameSummaryDto(string Status, string? Markdown, DateTime
     string? Model, string? Error, ClubGameSummaryReadiness? Readiness, string Source, int? QuotaLeft, int QuotaLimit, int? RunningSeconds = null);
 
 /// <summary>Offener Auftrag für den Watcher.</summary>
+/// <summary>Zusammenfassung über den Teilen-Link <c>/g/{token}</c>: nur der fertige Text, nichts zur Anforderung, zum Besitzer oder zum Kontingent.</summary>
+public sealed record SharedOwnGameSummaryDto(string Status, string? Markdown, DateTime? DoneAt, bool Stale, string? Model);
+
 public sealed record OwnGameSummaryJob(int SavedGameId, int UserId, DateTime RequestedAt);
 
 /// <summary>Die Partie in der Form, die der Watcher von einer Vereinspartie kennt (<c>lib/digest.py</c>).</summary>
@@ -80,6 +83,21 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
             s.Markdown != null && s.MovesHash != null && s.MovesHash != MovesHashOf(g.Pgn), s.Model,
             s.Status == ClubGameSummaryStatus.Failed ? s.Error : null, readiness, "own", left, DailyPerUser,
             ClubGameSummaries.ElapsedSecondsOf(s.Status, s.RequestedAt, s.StartedAt, DateTime.UtcNow));
+    }
+
+    /// <summary>Fertiger Text der über <paramref name="token"/> geteilten Partie (Wunsch 2026-11-09); ohne Text <c>none</c>, auch bei
+    /// offener oder fehlgeschlagener Anforderung. <c>null</c> = unbekannter Link. Bewusst KEIN Rückfall auf die verbundene Vereinspartie:
+    /// deren Text sehen sonst nur Vereinsmitglieder und Teilen-Links DIESER Begegnung.</summary>
+    public async Task<SharedOwnGameSummaryDto?> GetSharedAsync(string token, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return null;
+        var g = await db.SavedGames.AsNoTracking().Where(x => x.ShareToken == token)
+            .Select(x => new { x.Id, x.Pgn }).FirstOrDefaultAsync(ct);
+        if (g is null) return null;
+        var s = await db.OwnGameSummaries.AsNoTracking().FirstOrDefaultAsync(x => x.SavedGameId == g.Id, ct);
+        return s?.Markdown is null
+            ? new SharedOwnGameSummaryDto("none", null, null, false, null)
+            : new SharedOwnGameSummaryDto("done", s.Markdown, s.DoneAt, s.MovesHash != null && s.MovesHash != MovesHashOf(g.Pgn), s.Model);
     }
 
     /// <summary>Anfordern. Eine noch offene Anforderung kostet nichts; das Kontingent wird erst nach erfolgreichem Analyse-Start belastet.</summary>

@@ -70,7 +70,9 @@ Archivierte Vereinspartien (durch ein neueres Formular ersetzt, `ArchivedAt`) ha
 ## Eigene Partien (0.923.0)
 
 Der Besitzer fordert auf `/games/:id` an (`POST /api/games/{id}/summary`, `{ lang }`), gelesen wird auf
-`/games/:id/summary` (`GET /api/games/{id}/summary`), sichtbar nur für ihn. `OwnGameSummary`, je Partie eine Zeile.
+`/games/:id/summary` (`GET /api/games/{id}/summary`), angefordert nur von ihm. `OwnGameSummary`, je Partie eine Zeile.
+
+Teilen-Link (0.934.0): `/g/:token/summary` liest `GET /api/games/shared/{token}/summary` (ohne Anmeldung, globaler IP-Limiter) → `{ status: done|none, markdown, doneAt, stale, model }`, 404 bei unbekanntem Link. Ohne Text `none`, auch wenn eine Anforderung offen oder gescheitert ist; ein früherer Text bleibt sichtbar. Nichts zu Kontingent, Anforderung, Fehler, und **kein** Rückfall auf den Text einer verbundenen Vereinspartie (der gehört nicht zu diesem Link). Wer den Link hat, liest damit den Text — auch den an den Besitzer gerichteten Schluss.
 
 - Kontingent: `OwnGameSummaries:DailyPerUser` (Vorgabe 2) je Konto und UTC-Tag, Admins frei. Eine noch offene Anforderung
   kostet nichts; verbraucht → 429 `code: summary_quota`. Die Zählung steht in `OwnGameSummaryRequests` und überlebt das

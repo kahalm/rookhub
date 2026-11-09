@@ -111,6 +111,7 @@ export const routes: Routes = [
   { path: 'courses/:bookId/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard] },
   { path: 'chessable', loadComponent: () => import('./features/chessable/chessable.component').then(m => m.ChessableComponent), canActivate: [authGuard, menuGuard('chessable')] },
   { path: 'admin', loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent), canActivate: [adminAreaGuard] },
+  { path: 'g/:token/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'own-share' } },
   { path: 'g/:token', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent) },
   // Vereinspartie über einen LeagueHub-Teilen-Link (0.838.3): ohne Anmeldung, nur Partien der geteilten Begegnung — der Server
   // entscheidet; kein Guard, sonst landete der Gast vor der Anmeldemaske.

@@ -11,6 +11,13 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.934.0',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Shared games: the share link of a saved game now also leads to its finished summary, without signing in and read-only.', de: 'Geteilte Partien: Der Teilen-Link einer gespeicherten Partie führt jetzt auch zur fertigen Zusammenfassung, ohne Anmeldung und nur lesend.' },
+    ],
+  },
+  {
     version: '0.933.1',
     date: '2026-11-09',
     changes: [

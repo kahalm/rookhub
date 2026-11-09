@@ -63,7 +63,7 @@ interface ResolvedDiagram {
               <a mat-stroked-button [routerLink]="gameLink()" class="to-game">
                 <mat-icon>sports_esports</mat-icon> {{ 'games.summary.toGame' | translate }}
               </a>
-              @if (shareToken === null) { <app-club-summary-link [gameId]="gameId" [allowAgain]="true" [kind]="own ? 'own' : 'club'" /> }
+              @if (shareToken === null && gameShareToken === null) { <app-club-summary-link [gameId]="gameId" [allowAgain]="true" [kind]="own ? 'own' : 'club'" /> }
             </div>
           </div>
           @if (summary()?.stale) {
@@ -217,7 +217,10 @@ export class ClubGameSummaryComponent implements OnInit {
   own = false;
   /** `/s/:token/club-games/:id/summary` (Wunsch 2026-11-09): über den LeagueHub-Teilen-Link, ohne Anmeldung, nur lesend. */
   shareToken: string | null = null;
+  /** `/g/:token/summary` (Wunsch 2026-11-09): eigene Partie über ihren Teilen-Link, ohne Anmeldung, nur lesend. */
+  gameShareToken: string | null = null;
   gameLink(): (string | number)[] {
+    if (this.gameShareToken !== null) return ['/g', this.gameShareToken];
     return this.shareToken !== null ? ['/s', this.shareToken, 'club-games', this.gameId] : [this.own ? '/games' : '/club-games', this.gameId];
   }
   readonly loading = signal(true);
@@ -243,6 +246,7 @@ export class ClubGameSummaryComponent implements OnInit {
     this.gameId = Number(this.route.snapshot.paramMap.get('id'));
     this.own = this.route.snapshot.data?.['mode'] === 'own';
     if (this.route.snapshot.data?.['mode'] === 'club-share') this.shareToken = this.route.snapshot.paramMap.get('token') || '';
+    if (this.route.snapshot.data?.['mode'] === 'own-share') this.gameShareToken = this.route.snapshot.paramMap.get('token') || '';
     this.load();
   }
 
@@ -250,7 +254,10 @@ export class ClubGameSummaryComponent implements OnInit {
     this.loading.set(true);
     this.failed.set(false);
     const token = this.shareToken;
-    const load: Observable<[SharedGame, ClubGameSummary]> = token !== null
+    const ownToken = this.gameShareToken;
+    const load: Observable<[SharedGame, ClubGameSummary]> = ownToken !== null
+      ? forkJoin([this.games.getShared(ownToken), this.summaries.getSharedOwn(ownToken)])
+      : token !== null
       ? forkJoin([this.games.sharedClubGame(token, this.gameId), this.summaries.getShared(token, this.gameId)])
       : this.own
       ? forkJoin([this.games.get(this.gameId), this.summaries.getOwn(this.gameId)])

@@ -70,14 +70,19 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
   `],
 })
 export class ClubSummaryLinkComponent implements OnInit {
-  readonly gameId = input.required<number>();
+  /** Kennung der Partie; beim Teilen-Link eigener Partien (`gameShareToken`) ohne Bedeutung. */
+  readonly gameId = input(0);
   /** Darf eine vorhandene Zusammenfassung hier neu angefordert werden? Nur auf der Zusammenfassungsseite (0.916.0). */
   readonly allowAgain = input(false);
   /** `own` (0.923.0): eigene Partie — der Besitzer fordert an (Kontingent); `club`: Vereinspartie, nur Admins. */
   readonly kind = input<'club' | 'own'>('club');
   /** LeagueHub-Teilen-Link (Wunsch 2026-11-09): nur der Link zur fertigen Zusammenfassung, nichts anfordern. */
   readonly shareToken = input<string | null>(null);
+  /** Teilen-Link einer eigenen Partie `/g/:token` (Wunsch 2026-11-09): ebenso nur der Link zum fertigen Text. */
+  readonly gameShareToken = input<string | null>(null);
   summaryLink(): (string | number)[] {
+    const own = this.gameShareToken();
+    if (own !== null) return ['/g', own, 'summary'];
     const token = this.shareToken();
     return token !== null ? ['/s', token, 'club-games', this.gameId(), 'summary']
       : [this.kind() === 'own' ? '/games' : '/club-games', this.gameId(), 'summary'];
@@ -89,7 +94,7 @@ export class ClubSummaryLinkComponent implements OnInit {
   private translate = inject(TranslateService);
 
   readonly isAdmin = this.auth.isAdmin;
-  readonly canRequest = computed(() => this.shareToken() === null && (this.kind() === 'own' || this.isAdmin));
+  readonly canRequest = computed(() => this.shareToken() === null && this.gameShareToken() === null && (this.kind() === 'own' || this.isAdmin));
   readonly state = signal<ClubGameSummary | null>(null);
   readonly busy = signal(false);
   /** Offene Anforderung, deren Hintergrund-Rechnung noch läuft (0.914.0). */
@@ -127,7 +132,9 @@ export class ClubSummaryLinkComponent implements OnInit {
   private load(): void {
     // still bei Fehlern: ohne Stand gibt es einfach keinen Knopf
     const token = this.shareToken();
-    (token !== null ? this.service.getShared(token, this.gameId())
+    const own = this.gameShareToken();
+    (own !== null ? this.service.getSharedOwn(own)
+      : token !== null ? this.service.getShared(token, this.gameId())
       : this.kind() === 'own' ? this.service.getOwn(this.gameId()) : this.service.get(this.gameId())).subscribe({ next: s => { this.sinceLoad.set(0); this.state.set(s); }, error: () => this.state.set(null) });
   }
 

@@ -16,6 +16,13 @@ public class GameSummaryController(OwnGameSummaries summaries) : BaseApiControll
     public async Task<IActionResult> Get(int id, CancellationToken ct) =>
         await summaries.GetAsync(GetUserId(), id, IsAdmin, ct) is { } dto ? Ok(dto) : NotFound();
 
+    /// <summary>Teilen-Link <c>/g/{token}</c>, ohne Anmeldung, nur lesend → <c>{ status: done|none, markdown, doneAt, stale, model }</c>; 404 unbekannter Link.
+    /// Kein eigener Rate-Limiter: derselbe globale je IP wie die übrigen <c>shared/{token}</c>-Endpunkte.</summary>
+    [HttpGet("shared/{token}/summary")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetShared(string token, CancellationToken ct) =>
+        await summaries.GetSharedAsync(token, ct) is { } dto ? Ok(dto) : NotFound();
+
     public sealed record RequestBody(string? Lang);
 
     /// <summary>Anfordern → Stand; 404 unbekannt/fremd, 429 <c>code summary_quota</c> Tageskontingent verbraucht,

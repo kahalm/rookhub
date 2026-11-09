@@ -180,6 +180,19 @@ describe('SharedGameComponent', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
+  // Wunsch 2026-11-09: am Teilen-Link der fertige Text, nur lesend — auch für angemeldete Nicht-Besitzer.
+  it('offers the finished summary on /g/:token, without a request button', async () => {
+    const { fixture, http } = await setup(true);
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok').flush(sharedGame('white'));
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok/summary').flush({ status: 'done', markdown: '# x', doneAt: null, stale: false, model: null });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('a.summary-link')?.getAttribute('href')).toBe('/g/tok/summary');
+    expect(el.querySelector('.summary-request')).toBeNull();
+  });
+
   // Teilender spielte Schwarz → Brett startet aus seiner Sicht gedreht (Flip-Knopf bleibt nutzbar).
   it('starts flipped when the sharer played black (ownerSide=black)', async () => {
     const { fixture, http } = await setup();

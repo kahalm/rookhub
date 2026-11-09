@@ -82,6 +82,9 @@
           } @else if (clubShareToken !== null && clubShareGameId !== null) {
             <!-- Teilen-Link (Wunsch 2026-11-09): nur lesend, nur wenn es einen fertigen Text gibt. -->
             <app-club-summary-link [gameId]="clubShareGameId" [shareToken]="clubShareToken" />
+          } @else if (publicToken !== null) {
+            <!-- /g/:token (Wunsch 2026-11-09): ebenso nur lesend; der Besitzer ist da schon nach /games/:id umgeleitet. -->
+            <app-club-summary-link [gameShareToken]="publicToken" />
           }
           @if (game.sourceUrl) {
             <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original wide-only">
