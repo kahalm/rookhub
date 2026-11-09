@@ -127,8 +127,9 @@ export class EndlessRunStore {
       if (serverData.progress || serverData.sessions.length > 0) {
         this.profile.mergeServer(serverData, onConfigScreen());
 
-        // Server active game state takes priority
-        if (serverData.progress?.activeGameState) {
+        // Der Server-Spielstand hat Vorrang — außer ein lokal jüngerer (offline gespielt oder beendet) wartet noch in
+        // der Offline-Warteschlange auf den Server: dann bleibt der lokale, der Nachlauf bringt ihn hinauf (G3-002).
+        if (serverData.progress?.activeGameState && !this.storage.hasPendingProgress()) {
           try { this.activeGameState.set(JSON.parse(serverData.progress.activeGameState)); } catch {}
         }
         // Auch Server-State auf 0-Lives-Zombie pruefen (Legacy aus aelteren Builds).

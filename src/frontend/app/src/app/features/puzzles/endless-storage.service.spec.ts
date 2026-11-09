@@ -4,6 +4,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { EndlessStorageService, EndlessConfig } from './endless-storage.service';
 import { AuthService } from '../../core/auth.service';
+import { OfflineQueueService } from '../../core/offline-queue.service';
 import { ENDLESS_POOL_KEY } from '../../core/offline.service';
 import { ANON_PUZZLE_SESSION_KEY, getOrCreateAnonSessionId } from '../../core/anon-session';
 
@@ -272,5 +273,43 @@ describe('EndlessStorageService mergeServerData', () => {
     expect(res.config.stockfishDepth).toBe(12);
     expect(res.config.worstTags).toBeTrue();
     expect(svc.loadConfig({ startElo: 700, themes: '', stockfishDepth: 16 }).worstTags).toBeTrue();
+  });
+});
+
+/** G3-002: der Spielstand-PUT geht nicht mehr still verloren, sondern (nur der letzte) in die Offline-Warteschlange. */
+describe('EndlessStorageService Spielstand-PUT mit Offline-Warteschlange (G3-002)', () => {
+  let svc: EndlessStorageService;
+  let http: HttpTestingController;
+  let queue: OfflineQueueService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isLoggedIn: true } },
+      ],
+    });
+    svc = TestBed.inject(EndlessStorageService);
+    http = TestBed.inject(HttpTestingController);
+    queue = TestBed.inject(OfflineQueueService);
+    queue.clear();
+  });
+
+  afterEach(() => { http.verify(); queue.clear(); });
+
+  it('gescheiterter PUT landet in der Warteschlange, ein zweiter ersetzt ihn; Erfolg räumt sie', () => {
+    svc.saveProgressImmediate(CONFIG, 0, { lives: 2, chainIndex: 5 });
+    http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress')).flush('x', { status: 500, statusText: 'x' });
+    expect(queue.has('PUT', '/api/endless/progress')).toBeTrue();
+    expect(svc.hasPendingProgress()).toBeTrue();
+
+    svc.saveProgressImmediate(CONFIG, 0, null);          // Lauf beendet: auch das null muss hinauf
+    http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress')).error(new ProgressEvent('error'));
+    expect(queue.pendingCount()).toBe(1);                // nur der letzte Stand zählt
+
+    svc.saveProgressImmediate(CONFIG, 0, null);
+    http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress')).flush({});
+    expect(svc.hasPendingProgress()).toBeFalse();
   });
 });

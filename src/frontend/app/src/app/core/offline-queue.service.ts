@@ -73,6 +73,28 @@ export class OfflineQueueService {
     return true;
   }
 
+  /** Wie {@link enqueue}, verwirft aber vorher frühere Einträge mit derselben Methode + URL des aktuellen Kontos —
+   *  für Zustands-Schreibwege (ganzer Stand je PUT), bei denen nur der LETZTE zählt (Endless-Spielstand, G3-002). */
+  enqueueLatest(method: 'POST' | 'PUT', url: string, body: unknown): boolean {
+    this.drop(method, url);
+    return this.enqueue(method, url, body);
+  }
+
+  /** Vorgemerkte Einträge mit dieser Methode + URL (des aktuellen Kontos bzw. anonym) verwerfen — z. B. nachdem ein
+   *  jüngerer Stand direkt angekommen ist; sonst überschriebe ihn der spätere Nachlauf mit dem älteren. */
+  drop(method: 'POST' | 'PUT', url: string): void {
+    const q = this.read();
+    const uid = this.currentUserId();
+    const kept = q.filter(r => !(r.method === method && r.url === url && this.eligible(r, uid)));
+    if (kept.length !== q.length) this.write(kept);
+  }
+
+  /** Liegt für Methode + URL (aktuelles Konto bzw. anonym) noch etwas in der Warteschlange? */
+  has(method: 'POST' | 'PUT', url: string): boolean {
+    const uid = this.currentUserId();
+    return this.read().some(r => r.method === method && r.url === url && this.eligible(r, uid));
+  }
+
   /** Schon einmal sichtbar vor Verlust gewarnt (einmal je App-Lauf reicht — sonst nervt die
    *  Snackbar bei jeder weiteren Lösung, ohne neue Information zu liefern)? */
   private lossWarned = false;

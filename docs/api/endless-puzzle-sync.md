@@ -20,3 +20,12 @@
 Die Schreibwege mit Konto (`PUT progress`, `POST archive`, `POST sessions`, `POST sessions/bulk`, `POST claim-session`) sind
 während einer Admin-Impersonation gesperrt (`[DenyWhileImpersonating]`, 403 `{ message }`; F3-007): die Endless-Schlüssel im
 Browser sind geräteweit, der Abgleich hätte Läufe und Highscore des Admins ins Zielkonto geschoben (und umgekehrt).
+
+## Spielstand offline (Client, G3-002)
+
+Der Spielstand-PUT (`/progress` bzw. `/progress/anonymous`) geht offline oder bei einem Fehler über die
+Offline-Warteschlange (`OfflineQueueService.enqueueLatest`: nur der LETZTE Stand je URL bleibt vorgemerkt, auch das
+`null` eines beendeten Laufs); ein direkt angekommener PUT verwirft ältere vorgemerkte (`drop`). Beim Abgleich
+(`EndlessRunStore.syncFromServer`) ersetzt der Server-`activeGameState` den lokalen nur, wenn KEIN Stand mehr in der
+Warteschlange wartet (`EndlessStorageService.hasPendingProgress`) — sonst ist der lokale jünger (offline weitergespielt
+oder beendet), und der Nachlauf bringt ihn hinauf. Ohne vorgemerkten Stand gilt wie bisher der Server (Gerätewechsel).

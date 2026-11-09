@@ -257,3 +257,39 @@ describe('EndlessRunStore', () => {
     expect(called).toBe(1);
   });
 });
+
+/** G3-002: ein offline gespielter oder beendeter Lauf darf nicht vom älteren Server-Spielstand ersetzt werden. */
+describe('EndlessRunStore.syncFromServer — Server-Spielstand gegen lokal jüngeren (G3-002)', () => {
+  const SERVER_GAME = { lives: 3, solved: 2, level: 1, chainIndex: 2, seed: 's1' };
+  function withServer(h: Harness, pending: boolean, localGame: object | null): void {
+    h.storage.loadActiveGameLocal = () => localGame;
+    h.storage.hasPendingProgress = () => pending;
+    h.storage.mergeServerData = (config: any, highscore: number, history: any[]) => ({ config, highscore, history });
+    h.storage.loadFromServer = () => sub({
+      progress: { startElo: 700, themes: '', stockfishDepth: 8, highscore: 0, updatedAt: '', activeGameState: JSON.stringify(SERVER_GAME) },
+      sessions: [],
+    });
+    h.run.loadLocal();
+    h.run.syncFromServer(() => true);
+  }
+
+  it('beendeter Lauf (lokal kein offener Lauf), Stand noch in der Warteschlange → kein „Fortsetzen“ des alten', () => {
+    const h = makeStore({ loggedIn: true });
+    withServer(h, true, null);
+    expect(h.run.activeGameState()).toBeNull();
+  });
+
+  it('offen weitergespielt → der lokale (spätere) Stand bleibt', () => {
+    const h = makeStore({ loggedIn: true });
+    const local = { lives: 1, solved: 17, level: 3, chainIndex: 17, seed: 's1' };
+    withServer(h, true, local);
+    expect(h.run.activeGameState()?.chainIndex).toBe(17);
+    expect(h.run.activeGameState()?.lives).toBe(1);
+  });
+
+  it('nichts vorgemerkt → der Server-Stand gilt wie bisher (Gerätewechsel)', () => {
+    const h = makeStore({ loggedIn: true });
+    withServer(h, false, null);
+    expect(h.run.activeGameState()?.chainIndex).toBe(2);
+  });
+});

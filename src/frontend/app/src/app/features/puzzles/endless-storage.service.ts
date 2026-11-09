@@ -311,15 +311,33 @@ export class EndlessStorageService {
       activeGameState: activeGameState ? JSON.stringify(activeGameState) : null
     };
 
-    if (this.authService.isLoggedIn) {
-      this.http.put(`${this.apiUrl}/progress`, body).pipe(catchError(() => of(null))).subscribe();
-    } else {
-      const sessionId = this.getSessionId();
-      if (sessionId) {
-        this.http.put(`${this.apiUrl}/progress/anonymous`, { ...body, sessionId })
-          .pipe(catchError(() => of(null))).subscribe();
-      }
+    const target = this.progressTarget(body);
+    if (!target) return;
+    // Offline/gescheitert: den Stand (nur den letzten) über die Offline-Warteschlange nachschicken — sonst bliebe der
+    // Server auf dem Spielstand von vor dem Funkloch, und der nächste Abgleich holte ihn als „Fortsetzen“ zurück
+    // (G3-002). Ein direkt angekommener Stand verwirft ältere vorgemerkte, damit der Nachlauf ihn nicht überschreibt.
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      this.offlineQueue.enqueueLatest('PUT', target.url, target.body);
+      return;
     }
+    this.http.put(target.url, target.body).subscribe({
+      next: () => this.offlineQueue.drop('PUT', target.url),
+      error: () => this.offlineQueue.enqueueLatest('PUT', target.url, target.body),
+    });
+  }
+
+  /** URL + Rumpf des Spielstand-PUT für die aktuelle Identität (anonym: mit Sitzungskennung); null = keine Kennung. */
+  private progressTarget(body: object): { url: string; body: object } | null {
+    if (this.authService.isLoggedIn) return { url: `${this.apiUrl}/progress`, body };
+    const sessionId = this.getSessionId();
+    return sessionId ? { url: `${this.apiUrl}/progress/anonymous`, body: { ...body, sessionId } } : null;
+  }
+
+  /** Liegt ein lokal jüngerer Spielstand noch in der Offline-Warteschlange (Server hat ihn nicht)? Dann ist der
+   *  Server-Spielstand älter und darf den lokalen nicht ersetzen (G3-002). */
+  hasPendingProgress(): boolean {
+    const target = this.progressTarget({});
+    return !!target && this.offlineQueue.has('PUT', target.url);
   }
 
   saveProgressImmediate(config: EndlessConfig, highscore: number, activeGameState: object | null): void {
