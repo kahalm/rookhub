@@ -9,6 +9,56 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [~] Nacharbeiten der Fixwelle B8 — Codereview 2026-11-09 (Hauptteil in 0.936.1–0.940.3 + Satelliten, Stand 09.11.)
+
+Bericht `CODE_REVIEW_2026-11-09.md` (Umsetzungsstand in §6). Alle kritischen, hohen und mittleren Funde sind behoben;
+hier steht, was bewusst offen blieb oder eine Entscheidung des Betreibers braucht.
+
+**Folgefunde der Gegenlesung (klein, noch offen):**
+- [ ] GL-FE1-01 (F1-013): Versuch landet online (5xx/504/0) in der Offline-Warteschlange → Woodpecker liefert dieselbe
+      Aufgabe in Schleife, bis die App neu startet; beim Einreihen im Online-Zustand einen Nachsendeversuch mit kurzem Backoff planen.
+- [ ] GL-FE2-02 (F2-005): EPUB-Teil der Ausweis-Erneuerung ist wirkungslos — epub.js verschluckt Ladefehler in next()/prev();
+      den Fehler im `book.request`-Wrapper (`patchHtmlRequests`) bei `!r.ok` abgreifen.
+- [ ] GF-R3/GF-R4 (G3-002): Offline-Warteschlange „nur der letzte Stand zählt“ bei überlappenden PUTs nicht garantiert (Sendezeitpunkt
+      mitführen); dauerhafte 4xx (z. B. 403 bei Impersonation) nicht einreihen, nur 0/5xx/408/429.
+- [ ] GL-BE3-01 (R4-007): auch ein vorübergehender DB-Fehler vermerkt eine Analyse dauerhaft als „ohne Klassen“ — nur deterministische Fehler als Übersprung werten.
+- [ ] GA-04 (G1-003): Prüfliste eines Kontovorschlags wertet Pseudo-Flaggen („_E“) als fremdes Land → `LeagueProfileFlags.Country` auch dort.
+- [ ] GA-05 (G2-004): nach erschöpftem Kontingent lädt jeder Claim-Lauf weiter alle Anon-Zeilen samt JSON — Merker setzen und Portionsschleife verlassen.
+- [ ] GA-06 (G1-001): `WhereNotIgnored` ist auf MariaDB eine abhängige Unterabfrage mit OR + EXISTS je Zeile — EXPLAIN auf Dev mit einem Nutzer mit vielen Ausblendungen; ggf. ohne OR umformen.
+- [ ] GA-07 (G1-006): „abgelaufener Teilen-Link wird ersetzt“ endet im Wettlauf weiter mit 500 (`DbUpdateConcurrencyException`) — fangen, gültigen Link neu lesen.
+- [ ] Z1-002/Z1-003: Kommentare/cref nach den Zerlegungen (Chessable-Refetch/Cache-Rebuild, `MoveComparisonBoard.ReplyTransfers`) nachziehen.
+- [ ] U1: Turnier- und KidHub-App haben keine Nicht-gefunden-Seite (leiten auf „“ um) → weder das einmalige Neuladen (0.940.0) noch der Versionshinweis greifen dort.
+- [ ] Zeit-Test `RunSweepAsync_PausesBetweenFederations_ButNotBeforeTheFirst` ist unter Last rot (kalter Pfad 0,87 s > 120 ms) — Grenze entkoppeln (Aufwärmlauf oder Fake-Delay).
+
+**Dateien > 400 Zeilen ohne eigenen Fund (nur auf Zuruf zerlegen):**
+- Backend: `EbookService` ~1000, `ClubService` ~1000, `MoveComparisonService` 960 (Z1b läuft), `TrainingLinesService` 812, `LeagueController` ~700,
+  `ExplorerPathFinder` 698, `LeagueAccountFinder`/`LeagueTeamScout` ~720, `AnalysisJobService` ~580, `WoodpeckerService` ~430;
+  erledigt in Z1: `TacticHarvestService` 757→400, `ImportReprocessService` 830→324.
+- Frontend `app`: `game-review` ~985, `repertoire-detail` 912, `ebook-board` ~865, `course-browse` 854, `analysis.component` ~850, `guess-list` 837,
+  `stats` 806, `repertoire-trainer` ~770, `book-puzzle` 767, `ebook-reader` ~725, `games-list` ~680, `dashboard` 669, `endless-run.store` 616,
+  `navbar` 614, `player-card` ~605, `training-lines` 593, `epub-viewer` ~580, `ebook.service` ~570, `guess-board` 565, `weekly-list` 549,
+  `game-edit` ~545, `game-analyses` ~520, `endless-history` 490, `move-comparison` ~490, `friends` 436, `admin-github-actions` 432, `engine-card` 430.
+- Andere Projekte: ClubHub `member-page` 653, `club-games-page` 608; LeagueHub `fixture-view` 605, `moves-editor` ~590, `league-page` 446;
+  KidHub `stars-play` 605; Turnier `tournament-card` 519, `tournament-directory`.
+
+**Produkt-/Betreiberentscheidungen (offen):**
+- [ ] R2-003: Vereinsverwalter kann Einträge anderer Vereine überschreiben — Produktentscheidung (Code trägt Kommentar).
+- [ ] R1-002-Grenzen (1 Mail / 2 min, 5 / Tag, Queue 64) und R3-003 „Kurs ruht“ bestätigen.
+- [ ] G1-003: `CurrentVersion` 9 löst eine einmalige Neusuche aller Spieler aus (Last nach dem Deploy einplanen).
+- [ ] G3-002 Gerätewechsel: ungesendeter lokaler Endless-Stand gewinnt über den Server (so belassen?).
+- [ ] F3-002 / S1-001: Wortlaut der Datenschutztexte (de/en/hr, repcheck PRIVACY.md, docs/privacy.md) prüfen — Rechtsgrundlage ist Platzhaltersatz.
+- [ ] S2-005: leeres `CHANNEL_ID` im Bot = kein Daily-Post (gewollt?).
+- [ ] G1-006/G1-007: Knöpfe „Link teilen“/„Speichern“ während der Anfrage sperren (Frontend) · F2-008: Ausblenden auf der Partieseite scheitert weiter still ·
+      F3-011: Server-Texte der Spielerkarte deutsch · F2-018: `check_summary.py` (Watcher) prüft Zaun-Parität nicht · R4-019: Aufbewahrung `ChessableActivities` ·
+      Laptop-Worker `~/claude/ebook-board-training/worker/worker.py` an `cut.py` (G2-002) angleichen.
+
+**Ops (Betreiber, außerhalb des Repos):**
+- [ ] `App__KidHubBaseUrl` (Prod) und `App__LeagueHubBaseUrl` (Dev) setzen (R1-003).
+- [ ] log-watcher: Component-Template `labels.MessageTemplate` einspielen (S2-012); `LLM_SAMPLE_FIELD=message` auf Prod (S5-005, G4-002).
+- [ ] Bot-Stack-Compose: `CHAT_DAILY_TOKEN_CAP` und `CHANNEL_ID`-Vorgabe (S2-009/S2-005).
+- [ ] G1-009: EXPLAIN nach dem neuen Index auf Prod wiederholen; `apply.sh` der Schema-Pipeline.
+- [ ] Tags: Satelliten (log-watcher v0.25.2, schach-bot v2.84.2, repcheck Manifest 1.74.1, piratechess 1 Commit, explorer-Image) sind gepusht, aber ungetaggt.
+
 ## [~] Link-Vorschau: Vorschaubilder für geteilte Seiten — gebaut 2026-11-09 in 0.938.0, Reste bewusst offen
 
 Gebaut (Details `docs/api/link-vorschau.md`): Karten mit Text für Partie (+ `?ply=`), Repertoire-Linie, Rekonstruktion,
