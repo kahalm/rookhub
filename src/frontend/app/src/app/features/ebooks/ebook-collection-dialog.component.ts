@@ -13,6 +13,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { apiErrorText } from '../../core/api-error';
 import { SnackbarService } from '../../core/snackbar.service';
 import { EbookCollection, EbookService } from './ebook.service';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 
 export interface EbookCollectionDialogData { ebookIds: number[]; }
 
@@ -22,7 +23,7 @@ export interface EbookCollectionDialogData { ebookIds: number[]; }
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-ebook-collection-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatRadioModule, MatSelectModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatRadioModule, MatSelectModule, TranslatePipe, LoadErrorComponent],
   template: `
     <h2 mat-dialog-title>{{ 'ebooks.collection.assignTitle' | translate }}</h2>
     <mat-dialog-content>
@@ -33,6 +34,10 @@ export interface EbookCollectionDialogData { ebookIds: number[]; }
           <mat-radio-button value="existing">{{ 'ebooks.collection.existing' | translate }}</mat-radio-button>
         }
       </mat-radio-group>
+      @if (loadError(); as err) {
+        <!-- F2-014: vorhandene Sammlungen nicht ladbar — sagen statt leerer Auswahl. -->
+        <app-load-error class="collections-error" [messageKey]="'ebooks.collection.loadFailed'" [error]="err" (retry)="loadCollections()" />
+      }
       @if (mode === 'new') {
         <mat-form-field appearance="outline" class="full">
           <mat-label>{{ 'ebooks.collection.name' | translate }}</mat-label>
@@ -72,6 +77,8 @@ export class EbookCollectionDialogComponent implements OnInit {
 
   readonly collections = signal<EbookCollection[]>([]);
   readonly busy = signal(false);
+  /** Laden der vorhandenen Sammlungen gescheitert (F2-014). */
+  readonly loadError = signal<unknown>(null);
   mode: 'new' | 'existing' = 'new';
   name = '';
   collectionId: number | null = null;
@@ -79,7 +86,12 @@ export class EbookCollectionDialogComponent implements OnInit {
   additional = false;
 
   ngOnInit(): void {
-    this.ebooks.collections().subscribe({ next: c => this.collections.set(c), error: () => {} });
+    this.loadCollections();
+  }
+
+  loadCollections(): void {
+    this.loadError.set(null);
+    this.ebooks.collections().subscribe({ next: c => this.collections.set(c), error: err => this.loadError.set(err ?? true) });
   }
 
   get valid(): boolean { return this.blockReason === null; }

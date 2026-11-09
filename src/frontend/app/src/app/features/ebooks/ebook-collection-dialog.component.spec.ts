@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import { EbookCollectionDialogComponent } from './ebook-collection-dialog.component';
 import { EbookService } from './ebook.service';
@@ -41,6 +41,31 @@ describe('EbookCollectionDialogComponent', () => {
     fixture.detectChanges();
     expect(el.querySelector('mat-dialog-actions .why')).toBeNull();
     expect(save().disabled).toBeFalse();
+  });
+
+  it('Sammlungen nicht ladbar: Fehlerhinweis mit Wiederholen statt stiller leerer Auswahl (F2-014)', () => {
+    let fail = true;
+    TestBed.configureTestingModule({
+      imports: [EbookCollectionDialogComponent],
+      providers: [
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: MAT_DIALOG_DATA, useValue: { ebookIds: [1] } },
+        { provide: MatDialogRef, useValue: { close: () => {} } },
+        { provide: EbookService, useValue: {
+          collections: () => (fail ? throwError(() => ({ status: 500 })) : of([{ id: 3, name: 'Kongress', bookCount: 2 }])),
+          assignCollection: () => of(null) } },
+        { provide: SnackbarService, useValue: { warn: () => {} } },
+      ],
+    });
+    const fixture = TestBed.createComponent(EbookCollectionDialogComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.collections-error')?.textContent).toContain('ebooks.collection.loadFailed');
+    fail = false;
+    (el.querySelector('.collections-error button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.collections-error')).toBeNull();
+    expect(fixture.componentInstance.collections().length).toBe(1);
   });
 
   it('bestehende Sammlung ohne Auswahl nennt „Erst eine Sammlung wählen.“', () => {

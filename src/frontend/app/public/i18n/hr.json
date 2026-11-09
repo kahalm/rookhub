@@ -5900,7 +5900,8 @@
       "dissolved": "Zbirka raspuštena.",
       "back": "Natrag na sve knjige",
       "count": "{{n}} knjiga",
-      "open": "Otvori"
+      "open": "Otvori",
+      "loadFailed": "Postojeće zbirke nije bilo moguće učitati."
     },
     "reader": {
       "area": "Stranice",

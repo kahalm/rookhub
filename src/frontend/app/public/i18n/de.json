@@ -5900,7 +5900,8 @@
       "dissolved": "Sammlung aufgelöst.",
       "back": "Zurück zu allen Büchern",
       "count": "{{n}} Bücher",
-      "open": "Öffnen"
+      "open": "Öffnen",
+      "loadFailed": "Die vorhandenen Sammlungen konnten nicht geladen werden."
     },
     "reader": {
       "area": "Seiten",

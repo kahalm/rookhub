@@ -5900,7 +5900,8 @@
       "dissolved": "Collection dissolved.",
       "back": "Back to all books",
       "count": "{{n}} books",
-      "open": "Open"
+      "open": "Open",
+      "loadFailed": "The existing collections could not be loaded."
     },
     "reader": {
       "area": "Pages",
