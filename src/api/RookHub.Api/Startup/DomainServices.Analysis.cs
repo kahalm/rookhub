@@ -92,6 +92,7 @@ public static partial class DomainServicesSetup
         // „Warum war das ein Fehler?" (0.534.0): Erklärungen über das Modell auf eigener Hardware.
         services.AddSingleton<GameExplanationJobs>();
         services.AddScoped<GameMoveExplanationService>();
+        services.AddSingleton<GameRoastRolls>();   // Wurf-Zähler je Nutzer über alle Anfragen (G2-001)
         services.AddScoped<GameRoastService>();
         services.AddScoped<GameRecapService>();
         // Gescheiterte Nacherzählungen je Partie (A6-012): das Öffnen fragt dann 6 h nicht erneut beim Modell an.

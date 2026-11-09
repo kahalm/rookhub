@@ -34,15 +34,18 @@ public sealed class GameRoastService
     private readonly IClaudeJsonClient _llm;
     private readonly SavedGameService _games;
     private readonly ILogger<GameRoastService> _logger;
+    private readonly GameRoastRolls _rolls;
 
     // Keine Sperrzeit (0.585.0): „Würfeln" ist ein Auftrag auf Zuruf, und dafür steht die Spark auch tagsüber bereit.
     // Zurückgestellt werden nur die automatischen Roasts nach der Analyse — das macht der Scheduler (GameReviewTexts).
-    public GameRoastService(AppDbContext db, IClaudeJsonClient llm, SavedGameService games, ILogger<GameRoastService> logger)
+    public GameRoastService(AppDbContext db, IClaudeJsonClient llm, SavedGameService games, ILogger<GameRoastService> logger,
+        GameRoastRolls? rolls = null)
     {
         _db = db;
         _llm = llm;
         _games = games;
         _logger = logger;
+        _rolls = rolls ?? new GameRoastRolls();
     }
 
     public bool Available => _llm.IsConfigured && _llm.IsLocal;
@@ -94,6 +97,9 @@ public sealed class GameRoastService
             var since = DateTime.UtcNow.AddDays(-1);
             var today = await _db.GameRoasts.CountAsync(r => r.SavedGame!.UserId == userId && !r.Automatic && r.CreatedAt >= since, ct);
             if (today >= MaxPerDay) return new(null, "dailyLimit");
+            // Würfe zählen, nicht Zeilen (G2-001): „Neu würfeln“ überschreibt dieselbe Zeile, der Zeilen-Zähler stieg dabei nie.
+            // Gebucht vor dem Modellaufruf, also zählt auch ein misslungener Wurf (er belegt die Spark genauso).
+            if (!_rolls.TryTake(userId, MaxPerDay)) return new(null, "dailyLimit");
         }
         else if (await _db.GameRoasts.AnyAsync(r => r.SavedGameId == gameId && r.Language == language && r.Style == style, ct))
             return new(null, "exists");

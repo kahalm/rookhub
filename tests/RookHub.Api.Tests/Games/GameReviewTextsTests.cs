@@ -268,4 +268,38 @@ public class GameReviewTextsTests : IDisposable
         Assert.Null(rolled.Reason);
         Assert.False((await _db.GameRoasts.AsNoTracking().SingleAsync(r => r.Style == "cheeky" && r.Language == "de")).Automatic);
     }
+
+    /// <summary>G2-001: der Tagesdeckel zählt WÜRFE. „Neu würfeln“ auf derselben Partie und demselben Stil überschreibt eine
+    /// Zeile — vorher blieb der Zähler bei 1, und der 61. Wurf ging wie alle anderen an das Sprachmodell.</summary>
+    [Fact]
+    public async Task Roast_RerollsOfTheSameGameAndStyle_CountAgainstTheDailyCap()
+    {
+        var (userId, gameId, _) = await SeedAsync(reviewLanguage: "de");
+        var rolls = new GameRoastRolls();
+        var roasts = new GameRoastService(_db, _llm, TestServices.SavedGames(_db), NullLogger<GameRoastService>.Instance, rolls);
+        for (var i = 0; i < GameRoastService.MaxPerDay; i++)
+            Assert.Null((await roasts.RoastAsync(userId, gameId, "russian", "de")).Reason);
+        Assert.Single(_db.GameRoasts.Where(r => !r.Automatic));
+
+        var calls = _llm.Calls.Count;
+        Assert.Equal("dailyLimit", (await roasts.RoastAsync(userId, gameId, "russian", "de")).Reason);
+        Assert.Equal(calls, _llm.Calls.Count);   // kein Modellaufruf mehr
+
+        // Der Zähler gilt je Anfrage-übergreifend (Singleton): ein neuer Dienst mit demselben Zähler bleibt gesperrt.
+        var next = new GameRoastService(_db, _llm, TestServices.SavedGames(_db), NullLogger<GameRoastService>.Instance, rolls);
+        Assert.Equal("dailyLimit", (await next.RoastAsync(userId, gameId, "friendly", "de")).Reason);
+    }
+
+    [Fact]
+    public void RoastRolls_WindowSlides_PerUser()
+    {
+        var now = new DateTime(2026, 11, 9, 12, 0, 0, DateTimeKind.Utc);
+        var rolls = new GameRoastRolls(() => now);
+        Assert.True(rolls.TryTake(1, 2));
+        Assert.True(rolls.TryTake(1, 2));
+        Assert.False(rolls.TryTake(1, 2));
+        Assert.True(rolls.TryTake(2, 2));          // anderer Nutzer
+        now = now.AddDays(1).AddSeconds(1);
+        Assert.True(rolls.TryTake(1, 2));          // nach 24 h wieder frei
+    }
 }
