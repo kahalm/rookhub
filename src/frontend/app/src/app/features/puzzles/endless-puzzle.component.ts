@@ -188,6 +188,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
       setState: s => { this.state = s; },
       loadCurrent: () => this.loadCurrent(),
       notice: (key, duration) => this.snackbar.info(this.translate.instant(key), { action: 'common.ok', duration }),
+      warn: key => this.snackbar.warn(this.translate.instant(key)),
       tick: seconds => { this.elapsedSeconds = seconds; },
     });
     this.favoriteTracker = new FavoriteTracker(

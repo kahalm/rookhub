@@ -26,7 +26,7 @@ function manualRunClock(t0 = 1_000_000): ManualClock & EndlessRunClock & { t: nu
 
 interface Harness {
   run: EndlessRunStore;
-  host: EndlessRunHost & { states: EndlessRunScreen[]; loads: number; notices: string[]; ticks: number[] };
+  host: EndlessRunHost & { states: EndlessRunScreen[]; loads: number; notices: string[]; warnings: string[]; ticks: number[] };
   storage: any;
   puzzleService: any;
   clock: ReturnType<typeof manualRunClock>;
@@ -42,7 +42,7 @@ function makeStore(opts: { batch?: () => any; loggedIn?: boolean } = {}): Harnes
     recordSession: (hist: any[], s: any) => [...hist, s],
     recordSessionToServer: jasmine.createSpy('recordSessionToServer').and.returnValue(sub(9)),
     loadLiveElapsed: () => null, saveLiveElapsed: jasmine.createSpy('saveLiveElapsed'),
-    archiveSession: jasmine.createSpy('archiveSession').and.returnValue(sub(null)),
+    archiveSession: jasmine.createSpy('archiveSession').and.returnValue(sub(true)),
   };
   const puzzleService: any = {
     getRandomBatch: jasmine.createSpy('getRandomBatch').and.callFake(opts.batch ?? (() => sub(CHAIN.map(p => ({ ...p }))))),
@@ -51,7 +51,7 @@ function makeStore(opts: { batch?: () => any; loggedIn?: boolean } = {}): Harnes
   const clock = manualRunClock();
   const run = makeEndlessRunStore({ storage, puzzleService, auth: { isLoggedIn: opts.loggedIn ?? false }, clock });
   const host = {
-    states: [] as EndlessRunScreen[], loads: 0, notices: [] as string[], ticks: [] as number[],
+    states: [] as EndlessRunScreen[], loads: 0, notices: [] as string[], warnings: [] as string[], ticks: [] as number[],
     setState(s: EndlessRunScreen) { this.states.push(s); },
     loadCurrent() {
       this.loads++;
@@ -59,6 +59,7 @@ function makeStore(opts: { batch?: () => any; loggedIn?: boolean } = {}): Harnes
       if (p) run.enterPuzzle(p); else run.handleChainEnd();
     },
     notice(k: string) { this.notices.push(k); },
+    warn(k: string) { this.warnings.push(k); },
     tick(s: number) { this.ticks.push(s); },
   };
   run.attach(host);
@@ -232,5 +233,27 @@ describe('EndlessRunStore', () => {
       expect(h.run.profile.sessionHistory().length).toBe(1);
       expect(started).toBe(1);
     }
+  });
+
+  it('Archivieren nach Spielende: Erfolg → „Archiviert“; Fehler → Warnung, Knopf bleibt (F1-003)', () => {
+    const h = makeStore({ loggedIn: true });
+    h.run.lastSessionId.set(9);
+    h.storage.archiveSession.and.returnValue(sub(false));
+    h.run.archiveLastSession();
+    expect(h.run.lastSessionArchived()).toBeFalse();
+    expect(h.run.archiving()).toBeFalse();
+    expect(h.host.warnings).toEqual(['endless.gameOver.archiveFailed']);
+    h.storage.archiveSession.and.returnValue(sub(true));
+    h.run.archiveLastSession();
+    expect(h.run.lastSessionArchived()).toBeTrue();
+    expect(h.host.warnings.length).toBe(1);
+  });
+
+  it('Rating-Spanne lädt nicht (offline): `then` läuft trotzdem, damit ?start=1 startet (F1-009)', () => {
+    const h = makeStore();
+    h.puzzleService.getRatingRange = () => throwError(() => new Error('offline'));
+    let called = 0;
+    h.run.loadRatingRange(() => called++);
+    expect(called).toBe(1);
   });
 });

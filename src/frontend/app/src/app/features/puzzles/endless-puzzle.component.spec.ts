@@ -1716,7 +1716,7 @@ describe('EndlessPuzzleComponent Lauf-Übergänge (Charakterisierung A4)', () =>
   it('Archivieren des letzten Laufs: einmal anstoßen, danach als archiviert markiert', () => {
     const c = makeComponent();
     const ids: number[] = [];
-    c.run['storage'].archiveSession = (id: number) => { ids.push(id); return sub(null); };
+    c.run['storage'].archiveSession = (id: number) => { ids.push(id); return sub(true); };
     c.run.lastSessionId.set(12);
     c.archiveLastSession();
     expect(ids).toEqual([12]);

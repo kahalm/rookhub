@@ -2383,7 +2383,8 @@
       "archived": "Arhivirano",
       "playAgain": "Igraj ponovno",
       "backToPuzzles": "Natrag na zagonetke",
-      "backToHistory": "Natrag na povijest"
+      "backToHistory": "Natrag na povijest",
+      "archiveFailed": "Arhiviranje nije uspjelo – pokušaj ponovno."
     },
     "history": {
       "title": "Povijest beskonačnog načina",

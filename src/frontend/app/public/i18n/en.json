@@ -2383,7 +2383,8 @@
       "archived": "Archived",
       "playAgain": "Play again",
       "backToPuzzles": "Back to puzzles",
-      "backToHistory": "Back to history"
+      "backToHistory": "Back to history",
+      "archiveFailed": "Archiving failed – please try again."
     },
     "history": {
       "title": "Endless Puzzle History",

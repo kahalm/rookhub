@@ -25,10 +25,12 @@ export interface EndlessRunHost {
   setState(state: EndlessRunScreen): void;
   loadCurrent(): void;
   notice(key: string, duration: number): void;
+  /** Fehlgeschlagene Nutzeraktion melden (Snackbar `warn`). */
+  warn(key: string): void;
   tick(puzzleSeconds: number): void;
 }
 
-const NO_HOST: EndlessRunHost = { setState: () => undefined, loadCurrent: () => undefined, notice: () => undefined, tick: () => undefined };
+const NO_HOST: EndlessRunHost = { setState: () => undefined, loadCurrent: () => undefined, notice: () => undefined, warn: () => undefined, tick: () => undefined };
 
 /** Offener Lauf, wie er lokal bzw. am Server liegt (Spielstände älterer Builds: Felder können fehlen). */
 export type StoredEndlessGame = Partial<EndlessRunSnapshot> & { mistakes?: number[]; puzzleAttempts?: SavedPuzzleAttempt[] };
@@ -142,7 +144,9 @@ export class EndlessRunStore {
     });
   }
 
-  /** Rating-Spanne der Puzzle-DB laden; danach (online, ohne Cache) eine Kette vorab holen und `then` rufen. */
+  /** Rating-Spanne der Puzzle-DB laden; danach (online, ohne Cache) eine Kette vorab holen und `then` rufen.
+   *  Scheitert das Laden (offline, Server weg), läuft `then` trotzdem — mit der bisherigen Spanne; sonst hinge der
+   *  Autostart über `?start=1` an diesem GET, obwohl der Offline-Pool den Lauf tragen kann (F1-009). */
   loadRatingRange(then: () => void): void {
     this.puzzleService.getRatingRange().subscribe({
       next: r => {
@@ -153,7 +157,7 @@ export class EndlessRunStore {
         if (navigator.onLine && this.offlinePool.length === 0) this.prefetchRun();
         then();
       },
-      error: () => {}
+      error: () => then(),
     });
   }
 
@@ -278,9 +282,11 @@ export class EndlessRunStore {
     const id = this.lastSessionId();
     if (!id || this.archiving()) return;
     this.archiving.set(true);
-    this.storage.archiveSession(id).subscribe(() => {
-      this.lastSessionArchived.set(true);
+    // Nur ein bestätigtes Archivieren zeigt „Archiviert“; sonst Warnung, der Knopf bleibt (F1-003).
+    this.storage.archiveSession(id).subscribe(ok => {
       this.archiving.set(false);
+      if (ok) this.lastSessionArchived.set(true);
+      else this.host.warn('endless.gameOver.archiveFailed');
     });
   }
 

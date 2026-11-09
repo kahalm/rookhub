@@ -2383,7 +2383,8 @@
       "archived": "Archiviert",
       "playAgain": "Nochmal spielen",
       "backToPuzzles": "Zurück zu den Puzzles",
-      "backToHistory": "Zurück zum Verlauf"
+      "backToHistory": "Zurück zum Verlauf",
+      "archiveFailed": "Archivieren fehlgeschlagen – bitte erneut versuchen."
     },
     "history": {
       "title": "Verlauf im Endlos-Modus",

@@ -374,9 +374,11 @@ export class EndlessStorageService {
     );
   }
 
-  archiveSession(sessionId: number): Observable<any> {
+  /** `true` = der Server hat archiviert, `false` = Fehler (offline, 5xx …) — der Aufrufer meldet das. */
+  archiveSession(sessionId: number): Observable<boolean> {
     return this.http.post(`${this.apiUrl}/archive`, { sessionIds: [sessionId], archive: true }).pipe(
-      catchError(() => of(null))
+      map(() => true),
+      catchError(() => of(false))
     );
   }
 
