@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.919.2',
+    date: '2026-11-09',
+    changes: [
+      { en: 'LeagueHub scoresheet review: the Elo field now sits level with the player name instead of halfway down (and no longer stretched); year and result line up with the event field.',
+        de: 'LeagueHub, Formular prüfen: Das Elo-Feld steht jetzt auf Höhe des Spielernamens statt halb darunter (und nicht mehr gestreckt); Jahr und Ergebnis stehen auf einer Linie mit der Veranstaltung.' },
+    ],
+  },
+  {
     version: '0.919.1',
     date: '2026-11-09',
     changes: [

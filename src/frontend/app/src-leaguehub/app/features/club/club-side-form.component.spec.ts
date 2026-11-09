@@ -43,6 +43,14 @@ describe('ClubSideFormComponent', () => {
     expect(el.querySelector('.preview')).not.toBeNull();
   });
 
+  it('Elo steht oben auf Höhe des Namens, Jahr/Ergebnis unten (gemeldet 09.11.2026: Elo zu tief)', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    const elo = Array.from(el.querySelectorAll('input[maxlength="4"]')).map(i => i.closest('label')!);
+    expect(elo.length).toBe(2);
+    elo.forEach(l => expect(l.classList).toContain('field-start'));
+    expect(el.querySelector('input[type=number]')!.closest('label')!.classList).toContain('field-end');
+  });
+
   it('Ergebnis „*" heißt „unbekannt"; das Jahr reicht bis nächstes Jahr', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(Array.from(el.querySelectorAll('select option')).map(o => o.textContent?.trim())).toEqual(['1-0', '0-1', '1/2-1/2', 'unbekannt']);

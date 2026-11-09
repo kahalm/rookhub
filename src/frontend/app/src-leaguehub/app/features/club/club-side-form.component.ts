@@ -34,14 +34,14 @@ import { ScanHeaderForm, SIDES } from './scan-header-form';
             <input type="checkbox" [checked]="form().replace(k)()" (change)="form().setReplace(k, $any($event.target).checked)" />
             durch „{{ anon() }}“ ersetzen</label>
         </div>
-        <label class="field narrow">Elo<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" [value]="form().elo(k)() ?? ''"
+        <label class="field narrow field-start">Elo<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" [value]="form().elo(k)() ?? ''"
                                          (input)="form().elo(k).set(num($any($event.target).value))" [disabled]="form().replace(k)()" /></label>
       }
-      <label class="field narrow">Jahr<input type="number" inputmode="numeric" min="1900" [max]="maxYear" [value]="form().year() ?? ''"
+      <label class="field narrow field-end">Jahr<input type="number" inputmode="numeric" min="1900" [max]="maxYear" [value]="form().year() ?? ''"
                                         (input)="form().year.set(num($any($event.target).value)); form().yearRead.set(null); form().schedulePairings()" />
         @if (form().yearRead(); as r) { <span class="small muted year-hint">gelesen {{ r }} — auf heuer gesetzt, bitte prüfen</span> }
       </label>
-      <label class="field narrow">Ergebnis
+      <label class="field narrow field-end">Ergebnis
         <select (change)="form().result.set($any($event.target).value)">
           @for (r of results; track r) { <option [value]="r" [selected]="form().result() === r">{{ r === '*' ? 'unbekannt' : r }}</option> }
         </select>

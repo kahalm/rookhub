@@ -49,6 +49,11 @@ app-sheet-workbench { display: block; }
 .scan-side > .save-panel { margin-top: 0; }
 .save-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, .7fr) minmax(0, 2fr) minmax(0, .7fr); gap: 0 12px; }
 .save-grid .field.narrow { min-width: 0; }
+/* Ein .field ist selbst ein Grid und wird auf die Zeilenhöhe gestreckt — die Spalte mit dem Spielernamen (Name, Haken,
+   Abgleich, „ersetzen“) ist viel höher, Elo stand dadurch mitten in der Zeile und gestreckt (gemeldet 09.11.2026).
+   Elo oben auf Höhe des Namens, Jahr/Ergebnis unten auf Höhe des Veranstaltungsfelds (dessen Beschriftung umbricht). */
+.save-grid .field.field-start { align-self: start; }
+.save-grid .field.field-end { align-self: end; }
 .save-grid .field.wide { grid-column: span 2; }
 @media (max-width: 768px) { .save-grid { grid-template-columns: minmax(0, 1fr) minmax(0, .5fr); } .save-grid .field.wide { grid-column: 1 / -1; } }
 /* Abgleich unter einem Namen der Formular-Prüfung — nur der span: als nackte Klasse überschrieb die Regel die
