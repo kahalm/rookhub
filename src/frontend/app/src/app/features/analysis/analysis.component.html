@@ -64,6 +64,10 @@
       }
       @if (study; as s) {
         <!-- „Ohne Engine analysieren" (0.855.0): Fortschritt der Hintergrundrechnung, „Engine einschalten", danach der Vergleich. -->
+        @if (s.loadFailed) {
+          <!-- F2-002: gespeicherter Baum nicht ladbar — Speichern ist gesperrt, bis der Neuversuch gelingt. -->
+          <app-load-error class="line-study-load-error" messageKey="analysis.lineStudy.loadFailed" [error]="s.loadError" (retry)="s.open()" />
+        }
         <app-line-study-card [revealed]="s.revealed" [hidden]="studyEngineHidden" [analyzed]="s.analyzed" [total]="s.total"
                              [comparison]="s.comparison" (reveal)="studyEngineHidden && toggleNoEngine(true)" (hide)="!studyEngineHidden && toggleNoEngine(true)" />
       }

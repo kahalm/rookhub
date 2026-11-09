@@ -37,7 +37,7 @@ Partie-Analyse läuft im Hintergrund und bleibt dabei verdeckt; EIN Baum je Part
 | Methode | Route | Zweck |
 |---|---|---|
 | GET | `/api/line-studies?key=` | der Baum zur Partie (404 = keiner) |
-| PUT | `/api/line-studies` | `{ gameKey, startFen, title, tree, current }` anlegen/ersetzen (Baum geprüft wie im Analyse-Verlauf, `CheckTree`; 400 bei ungültigem) |
+| PUT | `/api/line-studies` | `{ gameKey, startFen, title, tree, current, createOnly? }` anlegen/ersetzen (Baum geprüft wie im Analyse-Verlauf, `CheckTree`; 400 bei ungültigem); `createOnly: true` = nur anlegen, 409 wenn es den Baum schon gibt (F2-002) |
 | POST | `/api/line-studies/{id}/reveal` | Engine einschalten |
 | GET | `/api/line-studies/{id}/evals` | `{ revealed, analyzed, total, nodes[{ index, cp, mate, bestUci, depth }] }` — `nodes` erst nach dem Einschalten |
 
@@ -111,3 +111,13 @@ Engine* auf `analysis?blind=1` — vermutlich besser `games/236?blind=1`“. Als
   0.898.0 auf der Seite um.
 - Ohne Konto geht der Weg auch, nur ohne gespeicherte Linien (freies Brett ohne Engine, 0.895.0).
 
+
+## Nachtrag Fixwelle B8 — Laden/Speichern abgesichert (F2-002/003/004)
+
+- `LineStudySession.open()` legt den Partie-Baum nur nach **404** an, und zwar mit `createOnly` (Server: 409, wenn es den
+  Baum inzwischen gibt → die Sitzung lädt neu). Jeder andere Ladefehler (500, 429, Netz) sperrt das Speichern
+  (`schedule`/`flush`/`destroy`) und zeigt über der Leiste `app-load-error` mit Neuversuch (`open()` erneut) — vorher ersetzte
+  ein kurzer Ladefehler den gespeicherten Baum durch die nackte Partie.
+- Gescheitertes Speichern bleibt offen (dirty) und meldet sich per Snackbar (`analysis.lineStudy.saveFailed`); der nächste
+  Zug bzw. das Verlassen versucht es erneut.
+- „Engine einschalten“ während eines laufenden Speicherns wird vorgemerkt und nach dem Speichern ausgeführt.

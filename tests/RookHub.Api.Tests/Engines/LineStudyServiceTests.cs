@@ -1,4 +1,8 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Controllers.Engines;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs.Engines;
 using RookHub.Api.Models;
@@ -40,17 +44,57 @@ public class LineStudyServiceTests : IDisposable
     public async Task Save_CreatesOnePositionPerNode_PlusTheStart_AndReplacesOnSecondSave()
     {
         await UserAsync(997201);
-        var dto = await _svc.SaveAsync(997201, Req());
+        var dto = (await _svc.SaveAsync(997201, Req()))!;
         Assert.Equal((4, 0, false), (dto.Total, dto.Analyzed, dto.Revealed));
         Assert.Equal(3, dto.Tree.N!.Count);
 
         var again = Req();
         again.Tree!.N!.Add(new() { P = 1, U = "g1f3" });
-        var second = await _svc.SaveAsync(997201, again);
+        var second = (await _svc.SaveAsync(997201, again))!;
         Assert.Equal(dto.Id, second.Id);                       // je Partie EIN Baum
         Assert.Equal(5, second.Total);
         Assert.Equal(dto.Id, (await _svc.GetAsync(997201, "game:abc"))!.Id);
         Assert.Null(await _svc.GetAsync(997202, "game:abc"));   // fremd
+    }
+
+    [Fact]
+    public async Task Save_CreateOnly_CreatesWhenMissing_ButNeverReplacesAnExistingTree()
+    {
+        await UserAsync(997209);
+        var create = Req();
+        create.CreateOnly = true;
+        var dto = (await _svc.SaveAsync(997209, create))!;           // fehlt → angelegt
+        Assert.Equal(3, dto.Tree.N!.Count);
+
+        var bare = Req();
+        bare.CreateOnly = true;
+        bare.Tree = new AnalysisTreeDto { N = [new() { P = -1, U = "e2e4" }] };
+        Assert.Null(await _svc.SaveAsync(997209, bare));                 // vorhanden → nichts ersetzt (Controller: 409)
+        var kept = (await _svc.GetAsync(997209, "game:abc"))!;
+        Assert.Equal((dto.Id, 3), (kept.Id, kept.Tree.N!.Count));
+
+        bare.CreateOnly = false;
+        Assert.Single((await _svc.SaveAsync(997209, bare))!.Tree.N!);  // ohne Flag wie bisher ersetzt
+    }
+
+    [Fact]
+    public async Task Controller_CreateOnly_OnExistingTree_Is409()
+    {
+        await UserAsync(997210);
+        var controller = new LineStudiesController(_svc)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "997210")], "Test")),
+                },
+            },
+        };
+        var create = Req();
+        create.CreateOnly = true;
+        Assert.IsType<OkObjectResult>((await controller.Save(create, default)).Result);
+        Assert.IsType<ConflictObjectResult>((await controller.Save(create, default)).Result);
     }
 
     [Fact]
@@ -68,11 +112,11 @@ public class LineStudyServiceTests : IDisposable
     {
         await UserAsync(997204);
         // Narrenmatt: 1.f3 e5 2.g4 Dh4#
-        var dto = await _svc.SaveAsync(997204, new SaveLineStudyRequest
+        var dto = (await _svc.SaveAsync(997204, new SaveLineStudyRequest
         {
             GameKey = "game:mate", StartFen = Start,
             Tree = new AnalysisTreeDto { N = [new() { P = -1, U = "f2f3" }, new() { P = 0, U = "e7e5" }, new() { P = 1, U = "g2g4" }, new() { P = 2, U = "d8h4" }] },
-        });
+        }))!;
         Assert.Equal((5, 1), (dto.Total, dto.Analyzed));
     }
 
@@ -80,7 +124,7 @@ public class LineStudyServiceTests : IDisposable
     public async Task Step_QueuesJobs_CollectsResults_AndEvalsOnlyAfterReveal()
     {
         await UserAsync(997205);
-        var dto = await _svc.SaveAsync(997205, Req());
+        var dto = (await _svc.SaveAsync(997205, Req()))!;
 
         var (collected, queued) = await _svc.StepAsync();
         Assert.Equal((0, 4), (collected, queued));

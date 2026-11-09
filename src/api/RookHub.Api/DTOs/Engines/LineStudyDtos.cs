@@ -24,6 +24,9 @@ public class SaveLineStudyRequest
     public string? Title { get; set; }
     public AnalysisTreeDto? Tree { get; set; }
     public int Current { get; set; } = -1;
+    /// <summary>Nur anlegen (F2-002): gibt es den Baum zu <see cref="GameKey"/> schon, ersetzt der Server ihn nicht, sondern
+    /// antwortet 409 — der Client legt nach einem 404 so nie blind die nackte Partie über einen inzwischen vorhandenen Baum.</summary>
+    public bool CreateOnly { get; set; }
 }
 
 /// <summary>Bewertung der Stellung NACH dem Knoten <see cref="Index"/> des gespeicherten Baums (-1 = Ausgangsstellung), Weiß-Sicht

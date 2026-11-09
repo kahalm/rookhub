@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs.Engines;
+using RookHub.Api.Services;
 using RookHub.Api.Services.Engines;
 
 namespace RookHub.Api.Controllers.Engines;
@@ -17,11 +18,17 @@ public class LineStudiesController(LineStudyService studies) : BaseApiController
     public async Task<ActionResult<LineStudyDto>> Get([FromQuery] string? key, CancellationToken ct)
         => await studies.GetAsync(GetUserId(), key, ct) is { } s ? Ok(s) : NotFound();
 
-    /// <summary>Anlegen oder ersetzen (je Nutzer und <c>gameKey</c> einer); 400 bei ungültigem Baum.</summary>
+    /// <summary>Anlegen oder ersetzen (je Nutzer und <c>gameKey</c> einer); 400 bei ungültigem Baum, 409 mit <c>createOnly</c>,
+    /// wenn es den Baum schon gibt (F2-002).</summary>
     [HttpPut]
     public async Task<ActionResult<LineStudyDto>> Save([FromBody] SaveLineStudyRequest req, CancellationToken ct)
     {
-        try { return Ok(await studies.SaveAsync(GetUserId(), req, ct)); }
+        try
+        {
+            return await studies.SaveAsync(GetUserId(), req, ct) is { } s
+                ? Ok(s)
+                : Conflict(ApiErrorResponses.Body("Line study already exists", null));
+        }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 

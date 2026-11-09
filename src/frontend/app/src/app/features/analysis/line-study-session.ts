@@ -15,6 +15,8 @@ export interface LineStudyHost {
   revealed(): void;
   /** Zustand geändert (Zähler, Bewertungen am Baum) — neu zeichnen. */
   changed(): void;
+  /** Speichern gescheitert (F2-003) — die Änderung bleibt offen, der nächste Zug bzw. das Verlassen versucht es erneut. */
+  saveFailed(err: unknown): void;
 }
 
 /**
@@ -32,6 +34,8 @@ export class LineStudySession {
   analyzed = 0;
   total = 0;
   comparison: LineComparison | null = null;
+  /** Laden des gespeicherten Baums gescheitert (nicht 404, F2-002): Speichern ist gesperrt, bis {@link open} gelingt. */
+  loadError: unknown = null;
 
   private saveSub?: Subscription;
   private pollSub?: Subscription;
@@ -43,15 +47,28 @@ export class LineStudySession {
   private destroyed = false;
   /** „Mit Engine“ gewählt, bevor der Baum eine Kennung hat — aufdecken, sobald er gespeichert bzw. geladen ist. */
   private revealPending = false;
+  /** Erst nach einem gelungenen Laden (oder 404 = neu) darf gespeichert werden — sonst ersetzte die nackte Partie auf dem
+   *  Brett den gespeicherten Baum (F2-002). */
+  private loaded = false;
+  /** „Engine einschalten“ kam während eines laufenden Speicherns — nach dem nächsten gelungenen Speichern ausführen (F2-004). */
+  private afterSave?: () => void;
 
   constructor(private readonly api: LineStudyService, private readonly host: LineStudyHost,
               readonly gameKey: string, private readonly gameUcis: readonly string[], private readonly title: string | null) {}
 
-  /** Vorhandenen Baum holen (dann aufs Brett) oder den Partie-Baum als neuen anlegen. */
+  /**
+   * Vorhandenen Baum holen (dann aufs Brett) oder — NUR bei 404 — den Partie-Baum als neuen anlegen (`createOnly`: gibt es
+   * ihn inzwischen doch, antwortet der Server 409 und die Sitzung lädt neu). Jeder andere Ladefehler sperrt das Speichern
+   * und steht in {@link loadError}; ein erneuter Aufruf ist der Neuversuch (F2-002).
+   */
   open(): void {
+    if (this.destroyed) return;
+    this.loadError = null;
     this.api.get(this.gameKey).subscribe({
       next: s => {
         if (this.destroyed) return;
+        this.loaded = true;
+        this.dirty = false;
         const { root, nodes } = fromDto(s.startFen, s.tree);
         const current = s.current >= 0 ? nodes[s.current] ?? root : root;
         this.host.setTree(root, current);
@@ -59,21 +76,34 @@ export class LineStudySession {
         if (this.revealed) this.host.revealed();
         this.refreshEvals();
       },
-      error: () => { if (!this.destroyed) this.saveNow(); },   // 404 = neu
+      error: err => {
+        if (this.destroyed) return;
+        if ((err as { status?: number } | null)?.status === 404) {
+          this.loaded = true;
+          this.saveNow(undefined, true);
+          return;
+        }
+        this.loadError = err ?? true;
+        this.host.changed();
+      },
     });
   }
+
+  /** Laden gescheitert, Speichern gesperrt (F2-002). */
+  get loadFailed(): boolean { return this.loadError != null; }
 
   /** Nach jeder Änderung am Baum (gedrosselt). */
   schedule(): void {
     if (this.destroyed) return;
     this.dirty = true;
+    if (!this.loaded) return;   // F2-002: ohne geladenen Stand nie speichern
     this.saveSub?.unsubscribe();
     this.saveSub = timer(LineStudySession.SaveDelayMs).subscribe(() => this.saveNow());
   }
 
   /** Beim Verlassen: ausstehende Änderung sofort schicken. */
   flush(): void {
-    if (this.dirty) this.saveNow();
+    if (this.dirty && this.loaded && !this.destroyed) this.saveNow();
   }
 
   /** „Engine einschalten": erst den letzten Stand speichern, dann aufdecken und die Bewertungen holen. */
@@ -88,7 +118,7 @@ export class LineStudySession {
       },
       error: () => { /* still: der Knopf bleibt, ein zweiter Klick versucht es erneut */ },
     });
-    if (this.dirty) this.saveNow(go); else go();
+    if (this.dirty || this.saving) this.saveNow(go); else go();
   }
 
   /** Aufdecken, sobald möglich (0.898.0: Brett startet „Mit Engine“ bzw. Kopf-Schalter vor dem ersten Speichern). */
@@ -104,23 +134,50 @@ export class LineStudySession {
     this.pollSub?.unsubscribe();
   }
 
-  private saveNow(after?: () => void): void {
-    if (this.saving) { this.dirty = true; return; }
+  private saveNow(after?: () => void, createOnly = false): void {
+    if (!this.loaded) return;
+    if (this.saving) {
+      // Läuft schon ein Speichern: offen halten und den Rückruf vormerken (F2-004) — er kommt nach dem nächsten Speichern.
+      if (after) this.afterSave = after; else this.dirty = true;
+      return;
+    }
     const root = this.host.root();
     const { tree, current } = toDto(root, this.host.current());
     const flat = flatNodes(root);
     this.dirty = false;
     this.saving = true;
-    this.api.save({ gameKey: this.gameKey, startFen: root.fen, title: this.title, tree, current }).subscribe({
+    const req = { gameKey: this.gameKey, startFen: root.fen, title: this.title, tree, current, ...(createOnly ? { createOnly: true } : {}) };
+    this.api.save(req).subscribe({
       next: s => {
         this.saving = false;
         this.savedFlat = flat;
         this.accept(s, root);
-        if (this.dirty) this.schedule();
+        if (this.dirty) {
+          // Weitere Änderung kam dazwischen: sofort hinterher, der vorgemerkte Rückruf danach.
+          if (after) this.afterSave = after;
+          if (this.destroyed) this.saveNow(); else this.schedule();
+          return;
+        }
+        const pending = this.afterSave;
+        this.afterSave = undefined;
         after?.();
+        if (pending && pending !== after) pending();
         if (this.revealed) this.refreshEvals();
       },
-      error: () => { this.saving = false; },
+      error: err => {
+        this.saving = false;
+        if (createOnly && (err as { status?: number } | null)?.status === 409) {
+          // Zwischen 404 und Anlegen entstand der Baum (anderer Tab): den gespeicherten laden statt ihn zu ersetzen.
+          this.loaded = false;
+          if (after || this.afterSave) { this.afterSave = undefined; this.revealPending = true; }
+          this.open();
+          return;
+        }
+        // F2-003: die Änderung bleibt offen — der nächste Zug (schedule) bzw. das Verlassen (flush) versucht es erneut.
+        this.dirty = true;
+        if (after) this.afterSave = after;
+        this.host.saveFailed(err);   // auch nach dem Verlassen: die Meldung erscheint auf der nächsten Seite
+      },
     });
   }
 

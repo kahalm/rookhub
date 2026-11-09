@@ -56,7 +56,8 @@ export class LineStudyService {
     return this.http.get<LineStudy>('/api/line-studies', { params: new HttpParams().set('key', gameKey) });
   }
 
-  save(req: { gameKey: string; startFen: string; title: string | null; tree: AnalysisTreeDto; current: number }): Observable<LineStudy> {
+  /** `createOnly` (F2-002): nur anlegen — gibt es den Baum schon, antwortet der Server 409 statt ihn zu ersetzen. */
+  save(req: { gameKey: string; startFen: string; title: string | null; tree: AnalysisTreeDto; current: number; createOnly?: boolean }): Observable<LineStudy> {
     return this.http.put<LineStudy>('/api/line-studies', req);
   }
 

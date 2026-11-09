@@ -43,8 +43,9 @@ public partial class LineStudyService(AppDbContext db, AnalysisJobService jobs)
         return study is null ? null : await ToDtoAsync(study, ct);
     }
 
-    /// <summary>Anlegen oder ersetzen. <see cref="ArgumentException"/> bei ungültiger Kennung, Stellung oder ungültigem Baum.</summary>
-    public async Task<LineStudyDto> SaveAsync(int userId, SaveLineStudyRequest req, CancellationToken ct = default)
+    /// <summary>Anlegen oder ersetzen. <see cref="ArgumentException"/> bei ungültiger Kennung, Stellung oder ungültigem Baum;
+    /// <c>null</c> nur mit <see cref="SaveLineStudyRequest.CreateOnly"/>, wenn der Baum schon existiert (nichts geändert, F2-002).</summary>
+    public async Task<LineStudyDto?> SaveAsync(int userId, SaveLineStudyRequest req, CancellationToken ct = default)
     {
         if (req.GameKey is null || !KeyPattern().IsMatch(req.GameKey)) throw new ArgumentException("Invalid game key");
         var startFen = FenListParser.NormalizeFen(req.StartFen) ?? throw new ArgumentException("Invalid FEN");
@@ -53,6 +54,7 @@ public partial class LineStudyService(AppDbContext db, AnalysisJobService jobs)
 
         var study = await db.LineStudies.Include(s => s.Positions)
             .FirstOrDefaultAsync(s => s.UserId == userId && s.GameKey == req.GameKey, ct);
+        if (study is not null && req.CreateOnly) return null;
         var now = DateTime.UtcNow;
         if (study is null)
         {

@@ -59,6 +59,8 @@ import { NextMoveChoice, nextMoveKey, openNextMoveChoice, siblingLine } from './
 import { GamesService } from '../games/games.service';
 import { AnalyzeGameService } from '../games/analyze-game.service';
 import { AnalysisGameActionsComponent } from './analysis-game-actions.component';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
+import { apiErrorText } from '../../core/api-error';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -71,7 +73,7 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, AnalysisEngineCardComponent, PositionSetupComponent,
     PositionRepertoiresComponent, OpeningExplorerComponent, PositionMenuComponent, MarkPositionButtonComponent, AnalysisMoveTreeComponent,
     IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent, LineStudyCardComponent,
-    CalcAnnotateCardComponent, AnalysisGameActionsComponent
+    CalcAnnotateCardComponent, AnalysisGameActionsComponent, LoadErrorComponent
   ],
   templateUrl: './analysis.component.html',
   styleUrl: './analysis.component.scss',
@@ -337,6 +339,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       // aufgedeckt (Server): die Bewertungen hängen am Baum; ob sie zu sehen sind, entscheidet der Modus
       revealed: () => { this.cdr.markForCheck(); },
       changed: () => { this.treeVersion++; this.cdr.markForCheck(); },
+      // F2-003: gescheitertes Speichern melden — die Änderung bleibt offen und geht mit dem nächsten Zug bzw. beim Verlassen mit
+      saveFailed: err => this.snackbar.warn(apiErrorText(err, this.translate, 'analysis.lineStudy.saveFailed')),
     }, lineStudyKey(parsed.root.fen, gameUcis), gameUcis, pgnTitle(parsed.headers));
     this.loadPgn(true);
     this.study.open();

@@ -3603,7 +3603,9 @@
       "reveal": "Uključi engine",
       "hide": "Isključi engine",
       "progressShort": "{{done}}/{{total}} analizirano",
-      "bestShort": "{{best}}/{{rated}} najboljih"
+      "bestShort": "{{best}}/{{rated}} najboljih",
+      "loadFailed": "Tvoje spremljene varijante za ovu partiju nije bilo moguće učitati. Ništa se ne sprema dok ponovni pokušaj ne uspije.",
+      "saveFailed": "Tvoje varijante nije bilo moguće spremiti — sljedeći potez pokušava ponovno."
     },
     "withoutEngine": "Bez enginea",
     "withEngine": "S engineom"

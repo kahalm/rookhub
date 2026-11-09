@@ -3603,7 +3603,9 @@
       "reveal": "Engine einschalten",
       "hide": "Engine ausschalten",
       "progressShort": "{{done}}/{{total}} gerechnet",
-      "bestShort": "{{best}}/{{rated}} beste"
+      "bestShort": "{{best}}/{{rated}} beste",
+      "loadFailed": "Deine gespeicherten Linien zu dieser Partie konnten nicht geladen werden. Bis zum erfolgreichen Neuversuch wird nichts gespeichert.",
+      "saveFailed": "Deine Linien konnten nicht gespeichert werden — der nächste Zug versucht es erneut."
     },
     "withoutEngine": "Ohne Engine",
     "withEngine": "Mit Engine"

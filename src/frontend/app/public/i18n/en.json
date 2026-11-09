@@ -3603,7 +3603,9 @@
       "reveal": "Switch engine on",
       "hide": "Switch engine off",
       "progressShort": "{{done}}/{{total}} analysed",
-      "bestShort": "{{best}}/{{rated}} best"
+      "bestShort": "{{best}}/{{rated}} best",
+      "loadFailed": "Your saved lines for this game could not be loaded. Nothing is saved until a retry succeeds.",
+      "saveFailed": "Your lines could not be saved — the next move tries again."
     },
     "withoutEngine": "Without engine",
     "withEngine": "With engine"
