@@ -6,6 +6,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 
 import { routes } from './app.routes';
+import { provideChunkReload } from '@rh/core/chunk-reload';
 import { provideRhHttpClient } from '@rh/core/http-chain';
 import { provideTouchSubmenuGuard } from '@rh/core/touch-submenu-guard';
 import { resolveStartupLocale } from '@rh/core/locale.service';
@@ -26,6 +27,8 @@ export const kidhubConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     { provide: LOCALE_ID, useFactory: resolveStartupLocale },
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
+    // Alter Tab nach einem Deploy: fehlendes Lazy-Bündel → einmal neu laden statt kaputter Seite (siehe chunk-reload.ts).
+    provideChunkReload(),
     provideRhHttpClient(),
     provideAnimationsAsync(),
     // Untermenüs am Handy erst beim Tipp öffnen, nicht schon beim simulierten Hover (sonst trifft der Tipp das Untermenü).

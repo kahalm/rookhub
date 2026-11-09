@@ -7,6 +7,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 
 import { routes } from './app.routes';
+import { provideChunkReload } from './core/chunk-reload';
 import { provideRhHttpClient } from './core/http-chain';
 import { provideTouchSubmenuGuard } from './core/touch-submenu-guard';
 import { visitorInterceptor } from './core/visitor.interceptor';
@@ -30,6 +31,8 @@ export const appConfig: ApplicationConfig = {
     // Aktive Locale (en/de/hr) für Angular-Pipes; aus gespeicherter Sprache beim Start.
     { provide: LOCALE_ID, useFactory: resolveStartupLocale },
     provideRouter(routes),
+    // Alter Tab nach einem Deploy: fehlendes Lazy-Bündel → einmal neu laden statt kaputter Seite (siehe chunk-reload.ts).
+    provideChunkReload(),
     // Gemeinsame Kette (connectivity zuerst — sieht Erfolge/finale Fehler NACH den Retries); nur hier mit visitorInterceptor.
     provideRhHttpClient([visitorInterceptor]),
     provideAnimationsAsync(),

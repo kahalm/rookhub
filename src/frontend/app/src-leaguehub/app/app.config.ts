@@ -8,6 +8,7 @@ import { registerLocaleData } from '@angular/common';
 import localeDe from '@angular/common/locales/de';
 
 import { routes } from './app.routes';
+import { provideChunkReload } from '@rh/core/chunk-reload';
 import { provideRhHttpClient } from '@rh/core/http-chain';
 import { provideTouchSubmenuGuard } from '@rh/core/touch-submenu-guard';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/core/legal-site';
@@ -31,6 +32,8 @@ export const leaguehubConfig: ApplicationConfig = {
     // (hr, hu …) als LOCALE_ID ließe jede Datums-/Zahlen-Pipe mit „Missing locale data" scheitern.
     { provide: LOCALE_ID, useValue: 'de' },
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
+    // Alter Tab nach einem Deploy: fehlendes Lazy-Bündel → einmal neu laden statt kaputter Seite (siehe chunk-reload.ts).
+    provideChunkReload(),
     // Vereine als Mandanten (0.698.0): jeder LeagueHub-Aufruf trägt den gewählten Verein als `?club=`.
     provideRhHttpClient([leagueClubInterceptor]),
     provideAnimationsAsync(),

@@ -8,6 +8,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 
 import { routes } from './app.routes';
+import { provideChunkReload } from '@rh/core/chunk-reload';
 import { provideRhHttpClient } from '@rh/core/http-chain';
 import { provideTouchSubmenuGuard } from '@rh/core/touch-submenu-guard';
 import { resolveStartupLocale } from '@rh/core/locale.service';
@@ -35,6 +36,8 @@ export const turnierConfig: ApplicationConfig = {
     provideAppInitializer(() => inject(PermissionRefresher).start()),
     { provide: LOCALE_ID, useFactory: resolveStartupLocale },
     provideRouter(routes),
+    // Alter Tab nach einem Deploy: fehlendes Lazy-Bündel → einmal neu laden statt kaputter Seite (siehe chunk-reload.ts).
+    provideChunkReload(),
     // Gleiche Route, andere Id (Gruppen-Umschaltung): Seite neu aufbauen — siehe die Klasse.
     { provide: RouteReuseStrategy, useClass: ReloadOnParamChangeStrategy },
     provideRhHttpClient(),

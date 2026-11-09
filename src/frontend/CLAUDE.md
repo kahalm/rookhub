@@ -20,6 +20,7 @@ stehen je Bereich in `rookhub/docs/frontend/` (Index unten); neue Feature-Doku d
 - Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0) → `docs/frontend/kurs-kommentare-mehrsprachig.md`
 - Routing → `docs/frontend/routing.md`
 - Neue Fassung erkennen + „Seite nicht gefunden“ lädt einmal neu, sonst Versionshinweis (`StaleRouteReloadService` + `AppUpdateService`, U1) → `docs/frontend/app-update-und-nicht-gefunden.md`
+- Alter Tab nach Deploy: fehlender Lazy-Chunk → nginx 404 statt index.html, `provideChunkReload()` (alle fünf `app.config.ts`) lädt einmal neu → selbe Datei
 - Verzeichnisstruktur → `docs/frontend/verzeichnisstruktur.md`
 - Langer Kurs-Kommentar im Fenster (0.696.1) → `docs/frontend/langer-kurs-kommentar-im-fenster.md`
 - Partie-Rückblick: Bewertungskurve, Genauigkeit, Zug-Klassen (0.512.0, Sonderklassen 0.514.0) → `docs/frontend/partie-rueckblick.md`

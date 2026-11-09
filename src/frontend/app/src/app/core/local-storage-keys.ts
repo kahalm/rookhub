@@ -135,6 +135,7 @@ export const STORAGE_KEYS: readonly StorageKeyEntry[] = [
   { key: 'rookhub_weekly_mode_', prefix: true, cls: 'session', why: 'Wochenpost: Modus je Post' },
   { key: 'leaguehub-round', cls: 'session', why: 'LeagueHub: gewählte Runde' },
   { key: 'rookhub_stale_route_reload', cls: 'session', why: 'Adressen, die nach „nicht gefunden“ schon einmal neu geladen wurden (Schleifensperre)' },
+  { key: 'rookhub_chunk_reload', cls: 'session', why: 'fehlende Lazy-Bündel nach einem Deploy: Zeitpunkt des letzten Neuladens (Schleifensperre)' },
 
   // --- keine Speicherschlüssel --------------------------------------------------------------------------------------
   { key: 'leaguehub-dev', cls: 'none', why: 'Host-Kennung (partner-site)' },
