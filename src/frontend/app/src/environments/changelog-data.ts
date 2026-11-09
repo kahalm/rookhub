@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.941.5", date: "2026-11-09", changes: [
+    { en: "UI sweep: the test data now create a real share link for a club game, so the sweep also captures „/cg/…“ and its summary page with content instead of only „link invalid“.",
+      de: "UI-Sweep: Die Testdaten legen jetzt einen echten Teilen-Link einer Vereinspartie an, damit der Sweep „/cg/…“ und die Zusammenfassung mit Inhalt fotografiert statt nur „Link ungültig“." },
+  ] },
   { version: "0.941.4", date: "2026-11-09", changes: [
     { en: "UI sweep: the new share pages for club games (own link and summary via the league share link) are now covered.",
       de: "UI-Sweep: Die neuen Teilen-Seiten für Vereinspartien (eigener Link und Zusammenfassung über den Liga-Teilen-Link) werden jetzt mitgeprüft." },

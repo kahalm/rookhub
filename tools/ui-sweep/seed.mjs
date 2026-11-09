@@ -469,6 +469,27 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
     return { _why: 'keine Vereinspartie an einer Ligapaarung des eigenen Teams' };
   });
 
+  // Eigener Teilen-Link EINER Vereinspartie (0.939.0, `/cg/{token}` + `/cg/{token}/summary`) — ohne ihn sah der Sweep nur
+  // „Link ungültig“. Angelegt über `POST /api/league/club/games/{id}/share` (ein schon bestehender Link bleibt); bevorzugt eine
+  // Partie mit fertiger Zusammenfassung unter den ersten sechs, sonst die erste. Der Link vom letzten Lauf gilt bis zum Widerruf.
+  await step(['clubGameLinkToken'], async () => {
+    if (previous.clubGameLinkToken) {
+      const ok = await fetch(`${base}/api/league/s-club-game/${previous.clubGameLinkToken}`).then(r => r.ok, () => false);
+      if (ok) return { clubGameLinkToken: previous.clubGameLinkToken };
+    }
+    const club = (await a.get('/api/league/me')).clubs?.[0];
+    if (!club) return { _why: 'kein Verein' };
+    const games = list(await a.get(`/api/league/club/games?club=${club.id}`));
+    if (!games.length) return { _why: 'keine Vereinspartie' };
+    let pick = games[0];
+    for (const g of games.slice(0, 6)) {
+      const s = await a.get(`/api/league/club/games/${g.id}/summary?club=${club.id}`).catch(() => null);
+      if (s?.status === 'done' && s.markdown) { pick = g; break; }
+    }
+    const s = await a.post(`/api/league/club/games/${pick.id}/share?club=${club.id}`);
+    return { clubGameLinkToken: s?.token };
+  });
+
   // Eine GESPIELTE Runde mit Vereinspartie für die Prognoseseite (`/?liga=…&runde=…&verein=…`, 28.10.2026): ohne
   // Abfrage zeigt sie nur die nächste offene Runde (Prognose, keine Partien) — Ergebnisse, „Partie vorhanden“, „+“/„!!“
   // und „Alle Aufstellungen der Runde“ sah der Sweep nie. Liga + Runde aus dem Label einer zugeordneten Vereinspartie.

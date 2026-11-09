@@ -136,9 +136,11 @@ export const ROUTES = [
   r('rookhub', '/s/{leagueShareGameToken}/club-games/{shareClubGameId}', 'any', { main: GAME_BOARD }),
   r('rookhub', '/g/{gameShareToken}', 'any', { main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
   r('rookhub', '/g/{gameShareToken}/summary', 'any', { main: ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'] }),
-  // 0.939.0/0.925.0: Vereinspartie über eigenen Link (/cg/…) und Zusammenfassung über den Liga-Teilen-Link. Der Seed legt
-  // keinen /cg/-Token an, daher nur der Fall „Link ungültig“ (wie /partie/ungueltig in LeagueHub).
+  // 0.939.0/0.925.0: Vereinspartie über eigenen Link (/cg/…) und Zusammenfassung über den Liga-Teilen-Link. Den /cg/-Token
+  // legt der Seed an (`clubGameLinkToken`, als claude-dev); die Ungültig-Zeilen prüfen die Fehlerseite (wie /partie/ungueltig).
   r('rookhub', '/s/{leagueShareGameToken}/club-games/{shareClubGameId}/summary', 'any', { main: ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'] }),
+  r('rookhub', '/cg/{clubGameLinkToken}', 'any', { main: GAME_BOARD }),
+  r('rookhub', '/cg/{clubGameLinkToken}/summary', 'any', { main: ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'] }),
   r('rookhub', '/cg/ungueltig', 'any', { label: 'cg-invalid', main: GAME_BOARD, expectedFailures: [/^GET \/api\/league\/s-club-game\/ungueltig(\/\w+)? → 404$/] }),
   r('rookhub', '/cg/ungueltig/summary', 'any', { label: 'cg-summary-invalid', main: ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'], expectedFailures: [/^GET \/api\/league\/s-club-game\/ungueltig(\/\w+)? → 404$/] }),
   r('rookhub', '/g/{analyzedShareToken}', 'any', { label: 'g-analyzed', main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),

@@ -165,7 +165,9 @@ Die Prüfungen ersetzen das Hinsehen nicht — Gestaltung („wirkt das gut?") s
   Aufgabenblatt mit Teilen-Link, eine Rekonstruktion, eine geteilte Repertoire-Linie, für das normale
   Konto einen eigenen Kalkulationskurs „Kalkulation (ui-sweep)", eine offene LeagueHub-Einlesung — alle mit „ui-sweep" im Namen, beim nächsten Lauf
   wiedergefunden; einmalig wird die Partie zur Analyse eingeworfen). Gefundene Werte merkt sich `runs/params-dev.json`;
-  das Zufallspuzzle und der LeagueHub-Teilen-Link werden von dort weiterbenutzt. Fehlt ein Parameter (kein Freund,
+  das Zufallspuzzle und der LeagueHub-Teilen-Link werden von dort weiterbenutzt. Den Teilen-Link EINER Vereinspartie
+  (`clubGameLinkToken` für `/cg/…`, 0.939.0) legt der Seed per `POST /api/league/club/games/{id}/share` an — bevorzugt an
+  einer Partie mit fertiger Zusammenfassung — und benutzt ihn weiter, solange er gilt. Fehlt ein Parameter (kein Freund,
   keine Kinderkurse auf Dev), wird die Route übersprungen und in der Übersicht unter „nicht auflösbar" genannt.
 - **Rollen** (`--auth`): `admin` = das Admin-Konto `claude-dev` (`ROOKHUB_DEV_USER`/`_PASSWORD`),
   `user` = ein normales Konto ohne Sonderrechte (`ROOKHUB_DEV_PLAIN_USER`/`_PASSWORD`), `empty` = ein frisch registriertes
