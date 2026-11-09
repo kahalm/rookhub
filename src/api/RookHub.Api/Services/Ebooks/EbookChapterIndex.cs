@@ -36,13 +36,9 @@ public static class EbookChapterIndex
         try
         {
             using var doc = PdfDocument.Open(path, new ParsingOptions { UseLenientParsing = true, SkipMissingFonts = true });
-            if (!doc.TryGetBookmarks(out var bookmarks)) return list;
-            void Walk(BookmarkNode n)
-            {
+            // Gedeckelt und auf eigenem Stapel gelesen (G2-005): tiefe Gliederungen ließen sonst den Stapel überlaufen.
+            foreach (var (n, _) in EbookPdfOutline.Read(doc))
                 if (n is DocumentBookmarkNode d && d.PageNumber > 0 && Clean(n.Title) is { Length: > 0 } t) list.Add(new Entry(d.PageNumber, n.Level, t));
-                foreach (var c in n.Children) Walk(c);
-            }
-            foreach (var r in bookmarks.Roots) Walk(r);
         }
         catch (Exception e) when (e is not OperationCanceledException) { /* kaputte Lesezeichen: ohne Kapitel */ }
         return list.OrderBy(e => e.Position).ToList();

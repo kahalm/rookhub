@@ -29,23 +29,14 @@ public static class EbookReflowPdfReader
             ct.ThrowIfCancellationRequested();
             pages.Add(ReadPage(page));
         }
+        // Gedeckelt und auf eigenem Stapel gelesen (G2-005); kaputte Lesezeichen: ohne Gliederung weiter.
         var outline = new List<ReflowOutline>();
-        try
-        {
-            if (doc.TryGetBookmarks(out var bookmarks))
-                foreach (var root in bookmarks.Roots) Walk(root, outline);
-        }
-        catch (Exception) { /* kaputte Lesezeichen: ohne Gliederung weiter */ }
+        foreach (var (node, _) in EbookPdfOutline.Read(doc))
+            if (node is DocumentBookmarkNode d && d.PageNumber > 0 && !string.IsNullOrWhiteSpace(node.Title))
+                outline.Add(new ReflowOutline(Clean(node.Title), d.PageNumber, node.Level));
         string? title = null, author = null;
         try { title = doc.Information?.Title; author = doc.Information?.Author; } catch (Exception) { /* egal */ }
         return new Document(pages, outline, title, author);
-    }
-
-    private static void Walk(BookmarkNode node, List<ReflowOutline> into)
-    {
-        if (node is DocumentBookmarkNode d && d.PageNumber > 0 && !string.IsNullOrWhiteSpace(node.Title))
-            into.Add(new ReflowOutline(Clean(node.Title), d.PageNumber, node.Level));
-        foreach (var c in node.Children) Walk(c, into);
     }
 
     private static string Clean(string s) => Regex.Replace(s.Replace('\0', ' '), @"\s+", " ").Trim();
