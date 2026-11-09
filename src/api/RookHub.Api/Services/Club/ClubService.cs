@@ -6,6 +6,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.Scoresheet;
 using RookHub.Api.DTOs.Club;
 
@@ -764,8 +765,12 @@ public class ClubService
     /// und Tag gibt es eine). Mit: genau diese ändern, auch ihr Datum — 409, wenn an dem Tag schon eine andere steht.
     /// Anwesenheit zählt für die Kinder der Gruppe und alle Trainer; ein leerer Status nimmt den Eintrag zurück.
     /// </summary>
-    public async Task<ClubSessionDetailDto> SaveSessionAsync(ClubActor actor, int groupId, ClubSessionInputDto input,
-        int? sessionId = null, CancellationToken ct = default)
+    public Task<ClubSessionDetailDto> SaveSessionAsync(ClubActor actor, int groupId, ClubSessionInputDto input,
+        int? sessionId = null, CancellationToken ct = default) =>
+        SaveSessionCoreAsync(actor, groupId, input, sessionId, retryRace: true, ct);
+
+    private async Task<ClubSessionDetailDto> SaveSessionCoreAsync(ClubActor actor, int groupId, ClubSessionInputDto input,
+        int? sessionId, bool retryRace, CancellationToken ct)
     {
         await LoadGroupAsync(actor, groupId, ct);
         if (!DateOnly.TryParseExact((input.Date ?? "").Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
@@ -774,6 +779,7 @@ public class ClubService
         var sameDay = await _db.ClubSessions.Include(s => s.Attendance)
             .FirstOrDefaultAsync(s => s.GroupId == groupId && s.Date == date, ct);
         ClubSession session;
+        var creating = false;
         if (sessionId is { } sid)
         {
             session = sameDay?.Id == sid ? sameDay
@@ -791,6 +797,7 @@ public class ClubService
         {
             session = new ClubSession { GroupId = groupId, Date = date, CreatedAt = _utcNow(), CreatedByUserId = actor.UserId };
             _db.ClubSessions.Add(session);
+            creating = true;
         }
         session.Topic = Clean(input.Topic);
         session.Notes = Clean(input.Notes);
@@ -817,7 +824,18 @@ public class ClubService
                 row.Status = status.Value;
             }
         }
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        // Zwei Trainer speichern gleichzeitig die erste Einheit des Tages: der zweite läuft in den eindeutigen Index
+        // (GroupId, Date). Dann gibt es die Einheit jetzt — die Eingabe einmal darauf anwenden wie ein zweites Speichern,
+        // statt 500 (G1-007; Konvention Startup/DatabaseSetup.cs).
+        catch (DbUpdateException ex) when (creating && retryRace && AuthService.IsUniqueViolation(ex))
+        {
+            _db.ChangeTracker.Clear();
+            return await SaveSessionCoreAsync(actor, groupId, input, null, retryRace: false, ct);
+        }
         return SessionDetail(session);
     }
 
