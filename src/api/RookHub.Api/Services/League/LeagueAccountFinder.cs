@@ -33,9 +33,10 @@ public sealed partial class LeagueAccountFinder
     /// 3 = auch Minderjährige, verborgen (0.610.0), 4 = anderer Vorname im Profil = anderer Mensch (0.611.0),
     /// 5 = Online-Wertungsband 100–300 über der Elo (0.619.0), 6 = das Band ist der OPTIMALE Treffer, jede andere Wertung bis 400 unter
     /// der Elo ein schwächerer, dazu derselbe Nutzername auf der anderen Seite (0.621.0), 7 = Lichess-„vorläufig" mit genug Partien
-    /// zählt (0.622.0), 8 = Land und Orte nach der Region des Spielers (Bayern: Deutschland, bayerische Orte; 0.712.0).
+    /// zählt (0.622.0), 8 = Land und Orte nach der Region des Spielers (Bayern: Deutschland, bayerische Orte; 0.712.0),
+    /// 9 = Pseudo-Flaggen („_earth“, „EU“, „XX“) sind keine Landesangabe statt „anderes Land“ (G1-003).
     /// </summary>
-    public const int CurrentVersion = 8;
+    public const int CurrentVersion = 9;
     /// <summary>Jünger = Konten verborgen (<see cref="LeagueHiddenAccounts"/>).</summary>
     public const int AdultAge = 18;
     /// <summary>Nach so vielen Tagen wird ein Spieler erneut abgesucht (neue Konten, geänderte Profile).</summary>
@@ -229,10 +230,9 @@ public sealed partial class LeagueAccountFinder
         }
         var region = p.OnlineRegion;
         var allowed = AllowedCountries(p.Fed, fideFed, p.Local, p.Region);
-        var flag = (prof.Flag ?? "").Trim();
-        if (flag.Length >= 2)
+        // Pseudo-Flaggen („_earth“, „EU“, chess.com „XX“) sind keine Landesangabe: kein Hinweis, kein Ausschluss (G1-003).
+        if (LeagueProfileFlags.Country(prof.Flag) is { } code)
         {
-            var code = flag[..2].ToUpperInvariant();
             if (!allowed.Contains(code)) return null;                // anderes Land — vermutlich ein Namensvetter
             score += ScoreCountry;
             // UI-Sweep 2026-10-11 (r2-l-land-codes): jedes Land ausgeschrieben, nicht nur das der Region

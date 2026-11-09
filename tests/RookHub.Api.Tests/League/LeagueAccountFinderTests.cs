@@ -59,6 +59,34 @@ public class LeagueAccountFinderTests : IDisposable
         Assert.Contains("Nachname im Profil („IM Muster“)", LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "IM Muster"), derived: true)!.Evidence[1]);
     }
 
+    /// <summary>G1-003: Pseudo-Flaggen sind keine Landesangabe — kein Ausschluss, kein Länder-Hinweis. Vorher fiel das Konto
+    /// trotz Klarnamen als „anderes Land“ heraus.</summary>
+    [Theory]
+    [InlineData("_earth")]
+    [InlineData("_pirate")]
+    [InlineData("EU")]
+    [InlineData("XX")]
+    public void Judge_PseudoFlag_CountsAsNoCountry(string flag)
+    {
+        var v = LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", flag), derived: true);
+        Assert.NotNull(v);
+        Assert.Equal(1 + 3, v!.Score);
+        Assert.DoesNotContain(v.Evidence, e => e.StartsWith("Land "));
+    }
+
+    [Fact]
+    public void Judge_ForeignOrRegionalFlag_StillDecidesByCountry()
+    {
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "FR"), derived: true));   // fremdes Land bleibt draußen
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "XE"), derived: true));   // England = GB, nicht AT
+        Assert.Equal("GB", LeagueProfileFlags.Country("GB-ENG"));
+        Assert.Equal("GB", LeagueProfileFlags.Country("XS"));
+        Assert.Equal("XK", LeagueProfileFlags.Country("XK"));
+        Assert.Equal("AT", LeagueProfileFlags.Country(" at "));
+        Assert.Null(LeagueProfileFlags.Country("_united-nations"));
+        Assert.Null(LeagueProfileFlags.Country(null));
+    }
+
     [Fact]
     public void Judge_ByRegion_GermanProfileFitsAWeilheimer_NotASchwazer()
     {
