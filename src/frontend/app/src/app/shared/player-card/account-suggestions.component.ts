@@ -4,6 +4,7 @@ import { LeagueApiService } from '@lh/core/league-api.service';
 import { AccountSuggestion, AccountSuggestionTwin } from '@lh/core/league.models';
 import { HIDDEN_ACCOUNT, MINOR_ACCOUNT, MINOR_ACCOUNT_TITLE, accountErrorText, siteLabel } from './account-format';
 import { AccountChecksComponent } from './account-checks.component';
+import { injectCardTx } from './card-tx';
 
 /** „zuletzt aktiv 09/2026" — genauer braucht es niemand, um ein verwaistes Konto zu erkennen. */
 export function lastActiveText(iso: string | null): string | null {
@@ -55,12 +56,12 @@ export function betterFitText(s: AccountSuggestion): string | null {
         <li [class.done]="gone().has(s.id)">
           <div class="acc-row">
             @if (s.hidden) {
-              <span class="acc-hidden" title="Konten Minderjähriger zeigt LeagueHub niemandem — entscheide nach den Hinweisen">{{ hiddenLabel }}</span>
+              <span class="acc-hidden" [title]="tx('playerCard.accounts.hiddenSuggTitle', 'Konten Minderjähriger zeigt LeagueHub niemandem — entscheide nach den Hinweisen')">{{ tx('playerCard.accounts.hidden', hiddenLabel) }}</span>
             } @else {
               <a [href]="s.url" target="_blank" rel="noopener">{{ label(s.site) }}: {{ s.user }}</a>
-              <button type="button" class="chk-btn" [attr.aria-expanded]="checksOpen().has(s.id)" aria-label="Was geprüft wurde"
-                      title="Was geprüft wurde" (click)="toggleChecks(s.id)">i</button>
-              @if (s.minor) { <span class="tag tag-minor" [attr.title]="minorTitle">{{ minorLabel }}</span> }
+              <button type="button" class="chk-btn" [attr.aria-expanded]="checksOpen().has(s.id)" [attr.aria-label]="tx('playerCard.accounts.checksTitle', 'Was geprüft wurde')"
+                      [title]="tx('playerCard.accounts.checksTitle', 'Was geprüft wurde')" (click)="toggleChecks(s.id)">i</button>
+              @if (s.minor) { <span class="tag tag-minor" [attr.title]="tx('playerCard.accounts.minorTitle', minorTitle)">{{ tx('playerCard.accounts.minor', minorLabel) }}</span> }
             }
             @if (showPlayer() && s.name) {
               <button type="button" class="btn-link sugg-player" (click)="openPlayer.emit(s.fide)">{{ s.name }}</button>
@@ -70,7 +71,7 @@ export function betterFitText(s: AccountSuggestion): string | null {
           @if (s.alsoFor?.length) {
             <!-- UI-Sweep 2026-10-11 (r2-l-same-account): dasselbe Konto steht auch bei anderen Spielern — wer es hier
                  übernimmt, verwirft die anderen (ein Konto gehört einem Menschen). -->
-            <p class="also-for" [class.fits]="s.clubFits">auch vorgeschlagen für: {{ twins(s) }}</p>
+            <p class="also-for" [class.fits]="s.clubFits">{{ tx('playerCard.accounts.alsoFor', 'auch vorgeschlagen für: ' + twins(s), { names: twins(s) }) }}</p>
             @if (betterFit(s); as b) { <p class="small muted sugg-better">{{ b }}</p> }
           }
           <p class="small sugg-evidence">{{ s.evidence }}</p>
@@ -82,11 +83,11 @@ export function betterFitText(s: AccountSuggestion): string | null {
             <div class="sugg-actions">
               <!-- UI-Sweep 2026-10-10 (l-account-btns): drei gleich breite Knöpfe ≥ 40 px, die langen Texte als Tooltip -->
               <button type="button" class="btn-sec sa-btn" [disabled]="busy() === s.id" (click)="accept(s, false)"
-                      title="Als unsicher übernehmen">Unsicher</button>
+                      [title]="tx('playerCard.accounts.acceptUnsureTitle', 'Als unsicher übernehmen')">{{ tx('playerCard.accounts.acceptUnsure', 'Unsicher') }}</button>
               <button type="button" class="btn-pri sa-btn" [disabled]="busy() === s.id" (click)="accept(s, true)"
-                      title="Als gesichert übernehmen">Gesichert</button>
+                      [title]="tx('playerCard.accounts.acceptSureTitle', 'Als gesichert übernehmen')">{{ tx('playerCard.accounts.acceptSure', 'Gesichert') }}</button>
               <button type="button" class="btn-sec sa-btn sa-reject" [disabled]="busy() === s.id" (click)="reject(s)"
-                      title="Vorschlag verwerfen — er kommt nicht wieder">Verwerfen</button>
+                      [title]="tx('playerCard.accounts.rejectTitle', 'Vorschlag verwerfen — er kommt nicht wieder')">{{ tx('playerCard.accounts.reject', 'Verwerfen') }}</button>
             </div>
           }
         </li>
@@ -103,6 +104,8 @@ export class AccountSuggestionsComponent {
   readonly openPlayer = output<string>();
 
   private readonly api = inject(LeagueApiService);
+  /** Sprache wie die Karte (Codereview F3-011: in RookHubs Spielervorbereitung stand der Baustein fest deutsch). */
+  readonly tx = injectCardTx();
   readonly label = siteLabel;
   readonly facts = suggestionFacts;
   readonly betterFit = betterFitText;
@@ -124,16 +127,20 @@ export class AccountSuggestionsComponent {
   async accept(s: AccountSuggestion, sure: boolean): Promise<void> {
     await this.run(s, async () => {
       await this.api.acceptSuggestion(s.id, sure);
-      const note = sure ? 'Als gesichert übernommen.' : 'Als unsicher übernommen.';
+      const note = sure ? this.tx('playerCard.accounts.acceptedSure', 'Als gesichert übernommen.')
+        : this.tx('playerCard.accounts.acceptedUnsure', 'Als unsicher übernommen.');
       // UI-Sweep 2026-10-11 (r2-l-same-account): der Server verwirft die Vorschläge desselben Kontos bei anderen Spielern.
-      return s.alsoFor?.length ? `${note} Vorschlag für ${this.twins(s)} verworfen — gehört jemand anderem.` : note;
+      const names = this.twins(s);
+      return s.alsoFor?.length
+        ? `${note} ${this.tx('playerCard.accounts.twinsRejected', `Vorschlag für ${names} verworfen — gehört jemand anderem.`, { names })}`
+        : note;
     }, true);
   }
 
   async reject(s: AccountSuggestion): Promise<void> {
     await this.run(s, async () => {
       await this.api.rejectSuggestion(s.id);
-      return 'Verworfen — wird nicht wieder vorgeschlagen.';
+      return this.tx('playerCard.accounts.rejected', 'Verworfen — wird nicht wieder vorgeschlagen.');
     }, false);
   }
 
@@ -147,7 +154,7 @@ export class AccountSuggestionsComponent {
     } catch (err) {
       const e = err instanceof HttpErrorResponse ? err : null;
       if (e?.status === 404) {
-        this.gone.update(m => new Map(m).set(s.id, 'Schon erledigt.'));
+        this.gone.update(m => new Map(m).set(s.id, this.tx('playerCard.accounts.alreadyDone', 'Schon erledigt.')));
       } else {
         this.error.set(accountErrorText(e?.error?.reason));
       }

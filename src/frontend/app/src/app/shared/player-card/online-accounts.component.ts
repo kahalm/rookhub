@@ -8,6 +8,7 @@ import { LeagueApiService } from '@lh/core/league-api.service';
 import { Account, AccountInput, AccountSuggestion, SuggestionList } from '@lh/core/league.models';
 import { AccountSuggestionsComponent } from './account-suggestions.component';
 import { AccountChecksComponent } from './account-checks.component';
+import { injectCardTx } from './card-tx';
 import { ACCOUNT_SITES, HIDDEN_ACCOUNT, MINOR_ACCOUNT, MINOR_ACCOUNT_TITLE, accountErrorText, siteLabel } from './account-format';
 
 export { ACCOUNT_SITES, accountErrorText, siteLabel } from './account-format';
@@ -58,44 +59,43 @@ export function accountStatus(a: Account): string | null {
                 @if (a.minor) { <span class="tag tag-minor" [attr.title]="tx('playerCard.accounts.minorTitle', minorTitle)">{{ tx('playerCard.accounts.minor', minorLabel) }}</span> }
                 @if (a.addedBy) { <span class="small muted acc-by">{{ addedByText(a.addedBy) }}</span> }
                 @if (a.id !== undefined && !a.hidden) {
-                  <button type="button" class="chk-btn" [attr.aria-expanded]="checksOpen().has(a.id)" aria-label="Was geprüft wurde"
-                          title="Was geprüft wurde" (click)="toggleChecks(a.id)">i</button>
+                  <button type="button" class="chk-btn" [attr.aria-expanded]="checksOpen().has(a.id)" [attr.aria-label]="tx('playerCard.accounts.checksTitle', 'Was geprüft wurde')"
+                          [title]="tx('playerCard.accounts.checksTitle', 'Was geprüft wurde')" (click)="toggleChecks(a.id)">i</button>
                 }
                 @if (canEdit() && a.id !== undefined) {
-                  @if (!a.hidden) { <button type="button" class="btn-link" [disabled]="busy()" (click)="startEdit(a)">Bearbeiten</button> }
-                  <button type="button" class="btn-link" [disabled]="busy()" (click)="remove(a)">Entfernen</button>
+                  @if (!a.hidden) { <button type="button" class="btn-link" [disabled]="busy()" (click)="startEdit(a)">{{ tx('common.edit', 'Bearbeiten') }}</button> }
+                  <button type="button" class="btn-link" [disabled]="busy()" (click)="remove(a)">{{ tx('common.remove', 'Entfernen') }}</button>
                 }
               </div>
               @if (a.id !== undefined && checksOpen().has(a.id)) { <lh-account-checks kind="account" [id]="a.id" /> }
               @if (a.comment) { <p class="acc-comment small">{{ a.comment }}</p> }
-              @if (status(a); as st) {
+              @if (statusText(a); as st) {
                 <p class="small muted acc-status">{{ st }}
-                  @if (canEdit() && a.error) { <button type="button" class="btn-link" [disabled]="busy()" (click)="resync(a)">Nochmal holen</button> }</p>
+                  @if (canEdit() && a.error) { <button type="button" class="btn-link" [disabled]="busy()" (click)="resync(a)">{{ tx('playerCard.accounts.resync', 'Nochmal holen') }}</button> }</p>
               }
             }
           </li>
         }
       </ul>
     } @else {
-      <p class="muted small">Noch kein Online-Konto eingetragen.</p>
+      <p class="muted small">{{ tx('playerCard.accounts.none', 'Noch kein Online-Konto eingetragen.') }}</p>
     }
     @if (canAdd() && editing() === null) {
       @if (adding()) { <ng-container *ngTemplateOutlet="form" /> }
-      @else { <button type="button" class="btn-sec acc-add" (click)="startAdd()">Konto hinzufügen</button> }
+      @else { <button type="button" class="btn-sec acc-add" (click)="startAdd()">{{ tx('playerCard.accounts.add', 'Konto hinzufügen') }}</button> }
     }
-    @if (thanks()) { <p class="small acc-thanks" role="status">Danke — das Konto ist eingetragen.</p> }
+    @if (thanks()) { <p class="small acc-thanks" role="status">{{ tx('playerCard.accounts.thanks', 'Danke — das Konto ist eingetragen.') }}</p> }
     <span class="update-msg err" role="status">{{ error() ?? '' }}</span>
     @if (canEdit()) {
       <div class="sugg">
         <div class="sugg-head">
-          <h4>Vorschläge der Konto-Suche</h4>
-          <button type="button" class="btn-link" [disabled]="scanning()" (click)="scan()">{{ scanning() ? 'Sucht …' : 'Jetzt suchen' }}</button>
+          <h4>{{ tx('playerCard.accounts.suggTitle', 'Vorschläge der Konto-Suche') }}</h4>
+          <button type="button" class="btn-link" [disabled]="scanning()" (click)="scan()">{{ scanning() ? tx('playerCard.accounts.scanning', 'Sucht …') : tx('playerCard.accounts.scan', 'Jetzt suchen') }}</button>
         </div>
         @if (suggestions().length) {
           <lh-account-suggestions [items]="suggestions()" (decided)="onDecided($event.accepted)" />
         } @else if (!scanning() && !scanNote()) {
-          <p class="muted small">Keine offenen Vorschläge. LeagueHub sucht im Hintergrund auf Lichess und chess.com nach Konten,
-            deren Name zum Spieler passt.</p>
+          <p class="muted small">{{ tx('playerCard.accounts.noSuggestions', NO_SUGGESTIONS) }}</p>
         }
         @if (scanNote(); as n) { <p class="small muted" role="status">{{ n }}</p> }
       </div>
@@ -104,31 +104,30 @@ export function accountStatus(a: Account): string | null {
     <ng-template #form>
       <form class="acc-form" (submit)="$event.preventDefault(); save()">
         <div class="acc-form-row">
-          <label class="field">Seite
+          <label class="field">{{ tx('playerCard.accounts.site', 'Seite') }}
             <select [value]="formSite()" (change)="formSite.set($any($event.target).value)">
               @for (s of sites; track s.key) { <option [value]="s.key" [selected]="s.key === formSite()">{{ s.label }}</option> }
             </select>
           </label>
-          <label class="field acc-user">Name oder Profiladresse
+          <label class="field acc-user">{{ tx('playerCard.accounts.user', 'Name oder Profiladresse') }}
             <input type="text" autocomplete="off" spellcheck="false" [value]="formUser()" (input)="formUser.set($any($event.target).value)" />
           </label>
         </div>
         @if (shareToken()) {
-          <p class="small muted">Das Konto wird sofort als „gesichert“ eingetragen und als „anonym“ vermerkt — trag bitte nur ein,
-            was du sicher weißt.</p>
+          <p class="small muted">{{ tx('playerCard.accounts.shareNote', SHARE_NOTE) }}</p>
         } @else {
-          <div class="seg" role="group" aria-label="Zuordnung">
-            <button type="button" [attr.aria-pressed]="formSure()" (click)="formSure.set(true)">gesichert</button>
-            <button type="button" [attr.aria-pressed]="!formSure()" (click)="formSure.set(false)">unsicher</button>
+          <div class="seg" role="group" [attr.aria-label]="tx('playerCard.accounts.assignment', 'Zuordnung')">
+            <button type="button" [attr.aria-pressed]="formSure()" (click)="formSure.set(true)">{{ tx('playerCard.accounts.confirmed', 'gesichert') }}</button>
+            <button type="button" [attr.aria-pressed]="!formSure()" (click)="formSure.set(false)">{{ tx('playerCard.accounts.unsure', 'unsicher') }}</button>
           </div>
         }
-        <label class="field">Kommentar
+        <label class="field">{{ tx('playerCard.accounts.comment', 'Kommentar') }}
           <textarea rows="2" maxlength="1000" [value]="formComment()" (input)="formComment.set($any($event.target).value)"
-                    placeholder="z. B. woher die Zuordnung kommt"></textarea>
+                    [placeholder]="tx('playerCard.accounts.commentPlaceholder', 'z. B. woher die Zuordnung kommt')"></textarea>
         </label>
         <div class="actions">
-          <button type="submit" class="btn-pri" [disabled]="busy() || !formUser().trim()">{{ busy() ? 'Speichere …' : 'Speichern' }}</button>
-          <button type="button" class="btn-link" [disabled]="busy()" (click)="cancel()">Abbrechen</button>
+          <button type="submit" class="btn-pri" [disabled]="busy() || !formUser().trim()">{{ busy() ? tx('playerCard.accounts.saving', 'Speichere …') : tx('common.save', 'Speichern') }}</button>
+          <button type="button" class="btn-link" [disabled]="busy()" (click)="cancel()">{{ tx('common.cancel', 'Abbrechen') }}</button>
         </div>
       </form>
     </ng-template>
@@ -155,14 +154,26 @@ export class OnlineAccountsComponent {
   readonly status = accountStatus;
   readonly HIDDEN_TITLE = 'Konten Minderjähriger zeigt LeagueHub niemandem — ihre Partien zählen nur im Eröffnungsbaum';
 
-  /** Was die Spielervorbereitung (nur lesend) zeigt, folgt der Oberflächensprache (e1-rk-prep-card-german); LeagueHub stellt
-   *  `de` ein. Ohne Sprache (Specs) der deutsche Text. Das Pflegen der Konten gibt es nur in LeagueHub und bleibt deutsch. */
-  private readonly translate = inject(TranslateService, { optional: true });
-  tx(key: string, german: string, params: Record<string, unknown> = {}): string {
-    if (!this.translate?.getCurrentLang()) return german;
-    const v = this.translate.instant(key, params);
-    return v && v !== key ? v : german;
+  readonly NO_SUGGESTIONS = 'Keine offenen Vorschläge. LeagueHub sucht im Hintergrund auf Lichess und chess.com nach Konten, deren Name zum Spieler passt.';
+  readonly SHARE_NOTE = 'Das Konto wird sofort als „gesichert“ eingetragen und als „anonym“ vermerkt — trag bitte nur ein, was du sicher weißt.';
+
+  /** Sprache wie die Karte (RookHub: Oberflächensprache, LeagueHub `de`; ohne Sprache deutsch) — alle Texte dieses
+   *  Bausteins, auch die Pflege (Codereview F3-011: sie steht je nach Recht auch in RookHubs Spielervorbereitung). */
+  readonly tx = injectCardTx();
+
+  /** Stand des Abrufs in der Sprache der Karte (deutsche Vorgabe: {@link accountStatus}). */
+  statusText(a: Account): string | null {
+    const german = accountStatus(a);
+    if (german === null) return null;
+    if (a.error) return this.tx('playerCard.accounts.statusError', german, { error: a.error });
+    if (!a.syncedAt) return this.tx('playerCard.accounts.statusPending', german);
+    const d = new Date(a.syncedAt);
+    const date = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`;
+    const n = a.games ?? 0;
+    return this.tx(n === 1 ? 'playerCard.accounts.statusSyncedOne' : 'playerCard.accounts.statusSynced', german,
+      { count: n.toLocaleString(this.translate?.getCurrentLang() || 'de'), date });
   }
+  private readonly translate = inject(TranslateService, { optional: true });
 
   readonly adding = signal(false);
   /** Kennung des Kontos, das gerade bearbeitet wird. */
@@ -259,8 +270,11 @@ export class OnlineAccountsComponent {
   }
 
   async remove(a: Account): Promise<void> {
-    const what = a.hidden ? 'Das verborgene Online-Konto' : `${siteLabel(a.site)}-Konto „${a.user}“`;
-    if (a.id === undefined || !(await firstValueFrom(this.confirm.ask(`${what} entfernen? Die geholten Partien gehen mit.`)))) return;
+    const site = siteLabel(a.site), user = a.user ?? '';
+    const question = a.hidden
+      ? this.tx('playerCard.accounts.removeHiddenConfirm', 'Das verborgene Online-Konto entfernen? Die geholten Partien gehen mit.')
+      : this.tx('playerCard.accounts.removeConfirm', `${site}-Konto „${user}“ entfernen? Die geholten Partien gehen mit.`, { site, user });
+    if (a.id === undefined || !(await firstValueFrom(this.confirm.ask(question)))) return;
     await this.run(() => this.api.deleteAccount(a.id!));
   }
 
