@@ -42,13 +42,16 @@ public partial class OgMetaService
     private readonly ILogger<OgMetaService> _logger;
     private readonly GameReconstructionService? _reconstructions;
     private readonly SharedLineService? _sharedLines;
+    private readonly WeeklyPostService? _weekly;
 
     private const string StartFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     public OgMetaService(SavedGameService games, PuzzleService puzzles, BookPuzzleService bookPuzzles,
         CrawlerProxyService crawler, AppDbContext db, ILogger<OgMetaService> logger,
-        GameReconstructionService? reconstructions = null, SharedLineService? sharedLines = null)
+        GameReconstructionService? reconstructions = null, SharedLineService? sharedLines = null,
+        WeeklyPostService? weekly = null)
     {
+        _weekly = weekly;
         _reconstructions = reconstructions;
         _sharedLines = sharedLines;
         _games = games;
@@ -93,6 +96,15 @@ public partial class OgMetaService
                 return ("recon", segments[1]);
             case "l" when segments.Length == 2:
                 return ("line", segments[1]);
+            case "weekly" when segments.Length == 2 && int.TryParse(segments[1], out _):
+                return ("weekly", segments[1]);
+            // Geteilte Stellung (⋮ → „Stellung teilen", position-links.util.ts): /analysis?fen=…&orientation=black
+            case "analysis" when segments.Length == 1:
+            {
+                var pairs = query.Split('&').Select(p => p.Split('=', 2)).Where(p => p.Length == 2).ToList();
+                string? Get(string n) => pairs.FirstOrDefault(p => p[0] == n) is { } hit ? Uri.UnescapeDataString(hit[1].Replace('+', ' ')) : null;
+                return PositionId(Get("fen"), Get("orientation")) is { } pos ? ("position", pos) : null;
+            }
             case "puzzles" when segments.Length >= 3 && segments[1] == "book":
                 return ("book", segments[2]);
             case "puzzles" when segments.Length >= 3 && segments[1] == "daily":
@@ -186,29 +198,11 @@ public partial class OgMetaService
                 case "line":
                     return await ResolveSharedPageAsync(kind, id, img, canonical, ct);
                 case "puzzle":
-                {
-                    if (!int.TryParse(id, out var pid)) return null;
-                    var p = await _puzzles.GetByIdAsync(pid);
-                    if (p is null) return null;
-                    return new OgPage($"Schachpuzzle #{pid}",
-                        "Finde den besten Zug — auf RookHub", img, canonical);
-                }
                 case "book":
-                {
-                    if (!int.TryParse(id, out var bid)) return null;
-                    var b = await _bookPuzzles.GetByIdAsync(bid);
-                    if (b is null) return null;
-                    var title = !string.IsNullOrWhiteSpace(b.BookTitle) ? b.BookTitle! : "Schachpuzzle";
-                    return new OgPage(title, "Finde den besten Zug — auf RookHub", img, canonical);
-                }
                 case "daily":
-                {
-                    if (!TryParseDaily(id, out var date)) return null;
-                    var d = await _bookPuzzles.GetOrAssignDailyAsync(date);
-                    if (d is null) return null;
-                    return new OgPage($"Tagespuzzle {date:yyyy-MM-dd}",
-                        "Löse das heutige Puzzle auf RookHub", img, canonical);
-                }
+                case "weekly":
+                case "position":
+                    return await ResolvePuzzlePageAsync(kind, id, path, baseUrl, img, canonical, ct);
                 case "tournament":
                 {
                     if (!TournamentIdValidator.IsValid(id)) return null;
@@ -283,23 +277,11 @@ public partial class OgMetaService
                             $"Mistakes by {who}"));
                 }
                 case "puzzle":
-                {
-                    if (!int.TryParse(id, out var pid)) return null;
-                    var p = await _puzzles.GetByIdAsync(pid);
-                    return p is null ? null : new OgBoard(p.Fen, FlipFromFen(p.Fen));
-                }
                 case "book":
-                {
-                    if (!int.TryParse(id, out var bid)) return null;
-                    var b = await _bookPuzzles.GetByIdAsync(bid);
-                    return b is null ? null : new OgBoard(b.Fen, FlipFromFen(b.Fen));
-                }
                 case "daily":
-                {
-                    if (!TryParseDaily(id, out var date)) return null;
-                    var d = await _bookPuzzles.GetOrAssignDailyAsync(date);
-                    return d is null ? null : new OgBoard(d.Fen, FlipFromFen(d.Fen));
-                }
+                case "weekly":
+                case "position":
+                    return await ResolvePuzzleBoardAsync(kind, id, ct);
                 case "tournament":
                     // Turniere haben keine einzelne Stellung → generisches Schach-Motiv (Grundstellung).
                     return TournamentIdValidator.IsValid(id) ? new OgBoard(StartFen, Flip: false) : null;
@@ -400,9 +382,6 @@ public partial class OgMetaService
         }
         return StartFen;
     }
-
-    /// <summary>Brett aus Sicht der am Zug befindlichen Seite (Schwarz → gedreht).</summary>
-    private static bool FlipFromFen(string fen) => !FenFields.WhiteToMove(fen);
 
     private static bool TryParseDaily(string s, out DateOnly date)
     {

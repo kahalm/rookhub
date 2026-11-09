@@ -495,13 +495,14 @@ public class DeploymentConfigTests
         // der Nutzer vor einer weissen Seite. 429 (Limiter der API je IP) war der fehlende Fall: im
         // E2E-Lauf bekam ein Test statt der App die Absage als Dokument.
         var nginx = ReadRepoFile("src/frontend/nginx.conf");
-        var og = Regex.Match(nginx, @"location ~ \^/\(g\|t\|puzzles[^)]*\)\(/\|\$\) \{(?<body>.*?)\n    \}",
+        var og = Regex.Match(nginx, @"location ~ \^/\(g\|t\|puzzles[^)]*\)\(/\|\$\)[^{\n]* \{(?<body>.*?)\n    \}",
             RegexOptions.Singleline);
         Assert.True(og.Success, "OG-Location in nginx.conf nicht gefunden");
         var body = og.Groups["body"].Value;
         // Seit 0.641.x laufen auch Kalender-Links der Turnierseite durch die Weiche (Eckdaten im Vorschaufenster).
-        // Seit 2026-11-09 auch rekonstruierte Partie /r/ und Repertoire-Linie /l/ (Vorschaubilder, docs/api/link-vorschau.md).
-        Assert.Contains("location ~ ^/(g|t|puzzles|tournaments/calendar|l|r)(/|$) {", nginx);
+        // Seit 2026-11-09 auch rekonstruierte Partie /r/, Repertoire-Linie /l/, Wochenpost /weekly/ und genau /analysis
+        // (geteilte Stellung ?fen=) — Vorschaubilder, docs/api/link-vorschau.md.
+        Assert.Contains("location ~ ^/(g|t|puzzles|tournaments/calendar|l|r|weekly)(/|$)|^/analysis$ {", nginx);
 
         Assert.Contains("proxy_intercept_errors on;", body);
         var errorPage = Regex.Match(body, @"error_page ([0-9 ]+)= @og_fallback;");
@@ -539,7 +540,7 @@ public class DeploymentConfigTests
         foreach (var host in new[] { "rookhub.oberschmid.homes", "rookhub-dev.oberschmid.homes", "localhost", "172.18.0.5" })
             Assert.Equal("", Site(host));
 
-        var og = Regex.Match(nginx, @"location ~ \^/\(g\|t\|puzzles[^)]*\)\(/\|\$\) \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        var og = Regex.Match(nginx, @"location ~ \^/\(g\|t\|puzzles[^)]*\)\(/\|\$\)[^{\n]* \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
         Assert.True(og.Success, "OG-Location in nginx.conf nicht gefunden");
         var body = og.Groups["body"].Value;
         // Seiten ohne Vorschau bekommen ihre eigene index.html, BEVOR etwas an die API geht.
