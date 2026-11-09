@@ -36,6 +36,12 @@ public sealed class LeagueClubOverview(AppDbContext db, LeagueService league, Le
         {
             var rounds = await db.LeagueGames.AsNoTracking().Where(g => g.Tnr == tnr).Select(g => g.Round).Distinct()
                 .OrderBy(r => r).ToListAsync(ct);
+            // Nur Runden, in denen eine eigene Mannschaft spielt, voll aufstellen (R2-007): vorher lief LineupsAsync (Begegnungen,
+            // Bretter, Züge, Vereinspartien) für JEDE Runde jeder Liga und wurde erst danach auf eigene Begegnungen gefiltert.
+            // Dieselbe Regel wie LineupMatch.Own (Heim oder Gast aus Spielplan oder Brettpaarung) — eine Runde ohne eigene
+            // Mannschaft fiel dort ohnehin weg.
+            var ownRounds = await OwnRoundsAsync(club, tnr, ct);
+            rounds = rounds.Where(ownRounds.Contains).ToList();
             var list = new List<Round>();
             foreach (var r in rounds)
             {
@@ -50,5 +56,17 @@ public sealed class LeagueClubOverview(AppDbContext db, LeagueService league, Le
             if (list.Count > 0) result.Add(new League(tnr, name, list));
         }
         return new Overview((string?)index["season"], result, await marks.CountsAsync(gameIds, ct));
+    }
+
+    /// <summary>Die Runden der Liga, in denen laut Spielplan oder Brettpaarungen eine Mannschaft des Vereins spielt — zwei Abfragen
+    /// je Liga statt einer vollen Aufstellung je Runde.</summary>
+    private async Task<HashSet<int>> OwnRoundsAsync(LeagueClub club, int tnr, CancellationToken ct)
+    {
+        var fixtures = await db.LeagueMatches.AsNoTracking().Where(m => m.Tnr == tnr)
+            .Select(m => new { m.Round, Home = m.Home, Away = m.Away }).Distinct().ToListAsync(ct);
+        var pairings = await db.LeagueGames.AsNoTracking().Where(g => g.Tnr == tnr)
+            .Select(g => new { g.Round, Home = g.HomeTeam, Away = g.AwayTeam }).Distinct().ToListAsync(ct);
+        return fixtures.Select(f => (f.Round, f.Home, f.Away)).Concat(pairings.Select(p => (p.Round, p.Home, p.Away)))
+            .Where(x => club.OwnsTeam(x.Home) || club.OwnsTeam(x.Away)).Select(x => x.Round).ToHashSet();
     }
 }
