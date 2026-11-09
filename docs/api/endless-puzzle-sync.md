@@ -25,7 +25,10 @@ Browser sind geräteweit, der Abgleich hätte Läufe und Highscore des Admins in
 
 Der Spielstand-PUT (`/progress` bzw. `/progress/anonymous`) geht offline oder bei einem Fehler über die
 Offline-Warteschlange (`OfflineQueueService.enqueueLatest`: nur der LETZTE Stand je URL bleibt vorgemerkt, auch das
-`null` eines beendeten Laufs); ein direkt angekommener PUT verwirft ältere vorgemerkte (`drop`). Beim Abgleich
+`null` eines beendeten Laufs); ein direkt angekommener PUT verwirft ältere vorgemerkte (`drop`). Überlappende PUTs
+(GF-R3): beide Wege tragen den Sendezeitpunkt — `drop(…, sentAt)` verwirft nur Einträge mit `ts <= sentAt`,
+`enqueueLatest(…, sentAt)` merkt nichts vor, wenn schon ein jüngerer Stand liegt, und der Flush sendet keinen Eintrag,
+der seit seinem Schnappschuss verworfen wurde. Beim Abgleich
 (`EndlessRunStore.syncFromServer`) ersetzt der Server-`activeGameState` den lokalen nur, wenn KEIN Stand mehr in der
 Warteschlange wartet (`EndlessStorageService.hasPendingProgress`) — sonst ist der lokale jünger (offline weitergespielt
 oder beendet), und der Nachlauf bringt ihn hinauf. Ohne vorgemerkten Stand gilt wie bisher der Server (Gerätewechsel).

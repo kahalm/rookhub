@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideTranslateService } from '@ngx-translate/core';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
 import { EndlessStorageService, EndlessConfig } from './endless-storage.service';
 import { AuthService } from '../../core/auth.service';
-import { OfflineQueueService } from '../../core/offline-queue.service';
+import { OFFLINE_QUEUE_KEY, OfflineQueueService } from '../../core/offline-queue.service';
 import { ENDLESS_POOL_KEY } from '../../core/offline.service';
 import { ANON_PUZZLE_SESSION_KEY, getOrCreateAnonSessionId } from '../../core/anon-session';
 
@@ -312,4 +312,36 @@ describe('EndlessStorageService Spielstand-PUT mit Offline-Warteschlange (G3-002
     http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress')).flush({});
     expect(svc.hasPendingProgress()).toBeFalse();
   });
+
+  // GF-R3: zwei überlappende PUTs (Latenz > Entprellung) — A geht vor B raus, kommt aber erst danach zurück.
+  function twoOverlapping(): { a: TestRequest; b: TestRequest } {
+    let now = 1_000_000;
+    spyOn(Date, 'now').and.callFake(() => now);
+    svc.saveProgressImmediate(CONFIG, 0, { lives: 3, chainIndex: 1 });   // A, gesendet t0
+    const a = http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress'));
+    now += 5000;
+    svc.saveProgressImmediate(CONFIG, 0, { lives: 2, chainIndex: 9 });   // B, gesendet t0 + 5 s
+    const b = http.match(r => r.method === 'PUT' && r.url.endsWith('/progress')).find(r => r !== a)!;
+    now += 5000;
+    return { a, b };
+  }
+  const queuedBody = () => JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY)!)[0].body;
+
+  it('Erfolg des älteren PUT räumt den jüngeren vorgemerkten Stand NICHT (GF-R3)', () => {
+    const { a, b } = twoOverlapping();
+    b.flush('x', { status: 503, statusText: 'x' });     // B scheitert sofort → vorgemerkt
+    a.flush({});                                          // A kommt danach durch
+    expect(svc.hasPendingProgress()).toBeTrue();
+    expect(queue.pendingCount()).toBe(1);
+    expect(queuedBody().activeGameState).toContain('"chainIndex":9');
+  });
+
+  it('spät scheiternder älterer PUT verdrängt den jüngeren vorgemerkten Stand nicht (GF-R3)', () => {
+    const { a, b } = twoOverlapping();
+    b.error(new ProgressEvent('error'));                  // B vorgemerkt
+    a.flush('x', { status: 502, statusText: 'x' });     // A scheitert danach
+    expect(queue.pendingCount()).toBe(1);
+    expect(queuedBody().activeGameState).toContain('"chainIndex":9');
+  });
+
 });

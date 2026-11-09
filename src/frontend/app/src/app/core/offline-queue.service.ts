@@ -85,28 +85,41 @@ export class OfflineQueueService implements OnDestroy {
    *  Liefert `false`, wenn NICHTS gemerkt wurde (Queue voll / Speicher wirft) — der Verlust wird
    *  dann EINMAL sichtbar gemeldet statt still verschluckt (siehe {@link OFFLINE_QUEUE_MAX}). */
   enqueue(method: 'POST' | 'PUT', url: string, body: unknown): boolean {
-    const q = this.read();
+    return this.store(this.read(), method, url, body, Date.now());
+  }
+
+  /** Eintrag an `q` hängen und die GANZE Liste in EINEM Schreibvorgang speichern (`q` darf schon gefiltert sein). */
+  private store(q: PendingRequest[], method: 'POST' | 'PUT', url: string, body: unknown, ts: number): boolean {
     if (q.length >= OFFLINE_QUEUE_MAX) { this.warnLossOnce(); return false; }
-    q.push({ id: this.newId(), method, url, body, ts: Date.now(), userId: this.currentUserId() });
+    q.push({ id: this.newId(), method, url, body, ts, userId: this.currentUserId() });
     if (!this.write(q)) { this.warnLossOnce(); return false; }
     // Online vorgemerkt = der Server hat gerade gestört, nicht das Netz: bald selbst nachsenden (GL-FE1-01).
     if (typeof navigator !== 'undefined' && navigator.onLine) this.scheduleRetry(OFFLINE_QUEUE_RETRY_BACKOFF_MS[0]);
     return true;
   }
 
-  /** Wie {@link enqueue}, verwirft aber vorher frühere Einträge mit derselben Methode + URL des aktuellen Kontos —
-   *  für Zustands-Schreibwege (ganzer Stand je PUT), bei denen nur der LETZTE zählt (Endless-Spielstand, G3-002). */
-  enqueueLatest(method: 'POST' | 'PUT', url: string, body: unknown): boolean {
-    this.drop(method, url);
-    return this.enqueue(method, url, body);
+  /** Wie {@link enqueue}, ersetzt aber frühere Einträge mit derselben Methode + URL des aktuellen Kontos — für
+   *  Zustands-Schreibwege (ganzer Stand je PUT), bei denen nur der LETZTE zählt (Endless-Spielstand, G3-002).
+   *  `at` = wann dieser Stand entstand/gesendet wurde (Vorgabe jetzt). Überlappende PUTs (GF-R3): liegt schon ein
+   *  JÜNGERER Stand (`ts > at`) vor, wird nichts vorgemerkt — ein spät scheiternder alter PUT verdrängt ihn nicht.
+   *  Neuer Eintrag und Verwerfen der älteren gehen in EINEM Schreibvorgang: ist die Queue voll oder wirft der
+   *  Speicher, bleibt der bisher vorgemerkte Stand stehen. `true` = der Stand (oder ein jüngerer) ist vorgemerkt. */
+  enqueueLatest(method: 'POST' | 'PUT', url: string, body: unknown, at = Date.now()): boolean {
+    const q = this.read();
+    const uid = this.currentUserId();
+    const same = (r: PendingRequest) => r.method === method && r.url === url && this.eligible(r, uid);
+    if (q.some(r => same(r) && r.ts > at)) return true;
+    return this.store(q.filter(r => !same(r)), method, url, body, at);
   }
 
   /** Vorgemerkte Einträge mit dieser Methode + URL (des aktuellen Kontos bzw. anonym) verwerfen — z. B. nachdem ein
-   *  jüngerer Stand direkt angekommen ist; sonst überschriebe ihn der spätere Nachlauf mit dem älteren. */
-  drop(method: 'POST' | 'PUT', url: string): void {
+   *  jüngerer Stand direkt angekommen ist; sonst überschriebe ihn der spätere Nachlauf mit dem älteren.
+   *  `olderThan` (GF-R3): nur Einträge mit `ts <= olderThan` — der Sendezeitpunkt des angekommenen Stands; ein danach
+   *  vorgemerkter, jüngerer Stand bleibt liegen. Ohne Angabe: alle. */
+  drop(method: 'POST' | 'PUT', url: string, olderThan = Number.POSITIVE_INFINITY): void {
     const q = this.read();
     const uid = this.currentUserId();
-    const kept = q.filter(r => !(r.method === method && r.url === url && this.eligible(r, uid)));
+    const kept = q.filter(r => !(r.method === method && r.url === url && this.eligible(r, uid) && r.ts <= olderThan));
     if (kept.length !== q.length) this.write(kept);
   }
 
@@ -208,6 +221,9 @@ export class OfflineQueueService implements OnDestroy {
     const r = q[i];
     // Fremd-User-Eintrag: NICHT senden und NICHT entfernen — zum nächsten weitergehen.
     if (!this.eligible(r, currentUserId)) { this.sendNext(q, i + 1, currentUserId); return; }
+    // Seit dem Schnappschuss verworfen/ersetzt (ein jüngerer Stand kam direkt an, GF-R3): nicht mehr senden — sonst
+    // landete der ältere Stand NACH dem jüngeren beim Server.
+    if (!this.read().some(x => x.id === r.id)) { this.sendNext(q, i + 1, currentUserId); return; }
     this.http.request(r.method, r.url, { body: r.body }).subscribe({
       next: () => { this.retryStep = 0; this.remove(r.id); this.sendThrottled(q, i + 1, currentUserId); },
       error: (e: { status?: number; headers?: { get(name: string): string | null } }) => {

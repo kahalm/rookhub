@@ -201,6 +201,43 @@ describe('OfflineQueueService', () => {
     expect(svc.pendingCount()).toBe(1);
   }));
 
+  // GF-R3: „nur der letzte Stand zählt“ auch bei überlappenden Zuständen.
+  it('drop(olderThan) verwirft nur Einträge bis zum Sendezeitpunkt', () => {
+    svc.enqueueLatest('PUT', '/api/endless/progress', { v: 2 }, 2000);
+    svc.drop('PUT', '/api/endless/progress', 1000);       // älterer PUT kam durch
+    expect(svc.pendingCount()).toBe(1);
+    svc.drop('PUT', '/api/endless/progress', 2000);
+    expect(svc.pendingCount()).toBe(0);
+  });
+
+  it('enqueueLatest merkt nichts vor, wenn schon ein jüngerer Stand liegt', () => {
+    svc.enqueueLatest('PUT', '/api/endless/progress', { v: 2 }, 2000);
+    expect(svc.enqueueLatest('PUT', '/api/endless/progress', { v: 1 }, 1000)).toBeTrue();
+    const q = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY)!);
+    expect(q.length).toBe(1);
+    expect(q[0].body).toEqual({ v: 2 });
+    svc.enqueueLatest('PUT', '/api/endless/progress', { v: 3 }, 3000);
+    expect(JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY)!).map((r: { body: unknown }) => r.body)).toEqual([{ v: 3 }]);
+  });
+
+  it('enqueueLatest behält den bisherigen Stand, wenn der Speicher wirft', () => {
+    svc.enqueueLatest('PUT', '/api/endless/progress', { v: 1 }, 1000);
+    spyOn(localStorage, 'setItem').and.throwError('QuotaExceededError');
+    expect(svc.enqueueLatest('PUT', '/api/endless/progress', { v: 2 }, 2000)).toBeFalse();
+    expect(svc.has('PUT', '/api/endless/progress')).toBeTrue();
+  });
+
+  it('flush sendet keinen Eintrag mehr, der seit dem Schnappschuss verworfen wurde', fakeAsync(() => {
+    svc.enqueue('POST', '/api/a', {});
+    svc.enqueueLatest('PUT', '/api/endless/progress', { v: 1 }, 1000);
+    svc.flush();
+    svc.drop('PUT', '/api/endless/progress', 5000);      // jüngerer Stand kam direkt an
+    http.expectOne('/api/a').flush({});
+    tick(OFFLINE_QUEUE_THROTTLE_MS);
+    http.expectNone('/api/endless/progress');
+    expect(svc.pendingCount()).toBe(0);
+  }));
+
   it('flush ohne Einträge löst keinen Request aus', () => {
     svc.flush();
     http.expectNone(() => true);

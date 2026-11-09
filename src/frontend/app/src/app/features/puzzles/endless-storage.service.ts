@@ -320,9 +320,12 @@ export class EndlessStorageService {
       this.offlineQueue.enqueueLatest('PUT', target.url, target.body);
       return;
     }
+    // Sendezeitpunkt mitführen (GF-R3): überlappen zwei PUTs (Latenz > Entprellung), räumt der Erfolg des älteren nur
+    // ältere Vormerkungen, und ein spät scheiternder älterer verdrängt keinen jüngeren vorgemerkten Stand.
+    const sentAt = Date.now();
     this.http.put(target.url, target.body).subscribe({
-      next: () => this.offlineQueue.drop('PUT', target.url),
-      error: () => this.offlineQueue.enqueueLatest('PUT', target.url, target.body),
+      next: () => this.offlineQueue.drop('PUT', target.url, sentAt),
+      error: () => this.offlineQueue.enqueueLatest('PUT', target.url, target.body, sentAt),
     });
   }
 
