@@ -77,4 +77,18 @@ public static class TacticLeagueRounds
         return new LeagueRound($"{best.Season} · {league} · Runde {best.lg.Round}",
             homeWhite ? best.lg.HomePlayer : best.lg.AwayPlayer, homeWhite ? best.lg.AwayPlayer : best.lg.HomePlayer);
     }
+
+    /// <summary>Titel „Weiß – Schwarz (Jahr), Zug n" und Kapitel: bei Vereinspartien die Ligarunde, sonst gefunden/verpasst.</summary>
+    internal static async Task<(string Title, string Chapter)> DescribeAsync(AppDbContext db, TacticCandidate c, GameAnalysis a, LeagueClub? club, CancellationToken ct)
+    {
+        var moveNo = c.Ply / 2 + 1;
+        var tail = $", Zug {moveNo}";
+        if (a.Origin == GameAnalysisOrigin.Club && club is not null && a.LeagueClubGameId is { } gid
+            && await db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(g => g.Id == gid, ct) is { } g)
+        {
+            var round = await LeagueRoundAsync(db, g, club, ct);
+            return (ClubTitle(g, round, club) + tail, round?.Chapter ?? TacticHarvestService.OtherGamesChapter);
+        }
+        return ($"{a.White ?? "?"} – {a.Black ?? "?"}{tail}", c.Found ? "Gefunden" : "Verpasst");
+    }
 }
