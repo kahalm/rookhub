@@ -24,6 +24,9 @@ using RookHub.Api.Services.Scoresheet;
 //   --model <id>          Vorgabe claude-opus-5-5; bei openai/dots das erste Modell, das der Server meldet
 //   --replay <ordner>     KEIN Modell-Aufruf: die gespeicherten Antworten (NN.answer.json eines früheren Laufs)
 //                         werden neu aufgelöst — misst Auflöser-Änderungen an echten Modell-Lesungen, kostenlos
+//   --engine <pfad>       danach die Engine-Prüfung wie in RookHub (ScoresheetPlausibility: Zickzack + Gleichstands-
+//                         Entscheider) mit diesem Stockfish; --engine-depth 10 wie Scoresheet:EngineDepth,
+//                         --no-tiebreak schaltet nur den Gleichstands-Entscheider ab (Vorher/Nachher-Messung)
 //
 // Andere Leser (eigene Hardware, OpenAI-kompatible Schnittstelle, z. B. vLLM auf dem DGX Spark):
 //   --provider claude|openai|dots   Vorgabe claude. openai = ein Vision-Modell wie Qwen3-VL (liest UND deutet),
@@ -102,6 +105,14 @@ var resolverOnly = argv.Contains("--resolver-only");
 var maxUsd = decimal.Parse(Opt("--max-usd", "8"), CultureInfo.InvariantCulture);
 var model = Opt("--model", provider == "claude" ? "claude-opus-5-5" : "");
 var replayDir = Opt("--replay", "");
+var enginePath = Opt("--engine", "");
+var tieBreak = !argv.Contains("--no-tiebreak");
+IScoresheetEngine? engine = enginePath.Length == 0 ? null : new StockfishScoresheetEngine(
+    new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+    {
+        ["Scoresheet:EnginePath"] = enginePath,
+        ["Scoresheet:EngineDepth"] = Opt("--engine-depth", "10"),
+    }).Build(), NullLogger<StockfishScoresheetEngine>.Instance);
 Directory.CreateDirectory(outDir);
 
 var belege = JsonSerializer.Deserialize<List<BelegInfo>>(File.ReadAllText(Path.Combine(dir, "belege.json")),
@@ -191,10 +202,12 @@ foreach (var b in belege)
 
     ScoresheetResolution? resolution;
     List<ScannedPly> scanned;
+    // Dieselben Einstellungen, mit denen aufgelöst wurde — die Engine-Prüfung liest damit neu.
+    var resolveOptions = new ScoresheetResolver.Options(ScoresheetNotation.Find(lang));
     if (resolverOnly)
     {
         scanned = sheet.Select(t => new ScannedPly(lang == "pt" ? ToPortuguese(t) : t, null)).ToList();
-        resolution = ScoresheetResolver.Resolve(scanned, new ScoresheetResolver.Options(ScoresheetNotation.Find(lang)));
+        resolution = ScoresheetResolver.Resolve(scanned, resolveOptions);
     }
     else if (replayDir.Length > 0)
     {
@@ -207,7 +220,8 @@ foreach (var b in belege)
         r.ModellSprache = t0.NotationLanguage;
         r.ModellEintraege = scanned.Count;
         var eff = ScoresheetReader.EffectiveLanguage(lang, t0.NotationLanguage);
-        resolution = ScoresheetResolver.Resolve(scanned, new ScoresheetResolver.Options(ScoresheetNotation.Find(eff)));
+        resolveOptions = new ScoresheetResolver.Options(ScoresheetNotation.Find(eff));
+        resolution = ScoresheetResolver.Resolve(scanned, resolveOptions);
         File.WriteAllText(Path.Combine(outDir, b.Beleg + ".answer.json"), json0);
         Reading(r, scanned, sheet, truthMoves, lang);
     }
@@ -245,10 +259,19 @@ foreach (var b in belege)
         r.Fehler = outcome.Error;
         if (outcome.Json != null) File.WriteAllText(Path.Combine(outDir, b.Beleg + ".answer.json"), outcome.Json);
         resolution = outcome.Resolution;
+        resolveOptions = new ScoresheetResolver.Options(ScoresheetNotation.Find(outcome.Language));
         scanned = outcome.Transcription?.Scanned() ?? new();
         r.ModellSprache = outcome.Transcription?.NotationLanguage;
         r.ModellEintraege = scanned.Count;
         if (outcome.Transcription != null) Reading(r, scanned, sheet, truthMoves, lang);
+    }
+    if (resolution != null && engine != null)
+    {
+        var checkedOutcome = await ScoresheetPlausibility.ImproveAsync(scanned, resolveOptions, resolution, engine, tieBreak: tieBreak);
+        resolution = checkedOutcome.Resolution;
+        r.EngineErsetzt = checkedOutcome.Replaced.Count;
+        r.EngineZweifelt = checkedOutcome.Flagged.Count;
+        r.EngineGleichstand = checkedOutcome.TieBroken.Count;
     }
     sw.Stop();
     r.Sekunden = Math.Round(sw.Elapsed.TotalSeconds, 1);
@@ -283,7 +306,8 @@ foreach (var b in belege)
         r.AufloeserRettet = Enumerable.Range(0, Math.Min(Math.Min(got.Count, truth.Count), scanned.Count))
             .Count(i => UciOf(truthMoves[i].FenBefore, scanned[i].San ?? "") != truthMoves[i].Uci && Hit(i));
     Console.WriteLine($"{b.Beleg}: {r.Richtig}/{truth.Count} richtig, erste Abweichung {r.ErsteAbweichung ?? "keine"}, " +
-                      $"{r.Unsicher} unsicher, {r.Offen} offen, {r.Sekunden}s" + (resolverOnly ? "" : $", {r.KostenUsd:0.000} $"));
+                      $"{r.Unsicher} unsicher, {r.Offen} offen, {r.Sekunden}s" + (resolverOnly ? "" : $", {r.KostenUsd:0.000} $")
+                      + (engine == null ? "" : $", Engine: {r.EngineErsetzt} ersetzt, {r.EngineZweifelt} Zweifel, {r.EngineGleichstand} Gleichstand"));
 }
 
 var json = JsonSerializer.Serialize(results, new JsonSerializerOptions
@@ -484,6 +508,10 @@ static string Report(List<Result> rs, bool resolverOnly, string model, long spen
     sb.AppendLine();
     sb.AppendLine($"Gesamt: {right} von {total} Halbzügen richtig ({Share(right, total)} %)" +
                   (resolverOnly ? "" : $", Kosten {spentMicro / 1_000_000m:0.000} $"));
+    sb.AppendLine($"Unsicher {rs.Sum(r => r.Unsicher)}, davon falsch {rs.Sum(r => r.UnsicherUndFalsch)}; falsch ohne Marke {rs.Sum(r => r.FalschOhneMarke)}" +
+                  (rs.Any(r => r.EngineErsetzt != null)
+                      ? $"; Engine: {rs.Sum(r => r.EngineErsetzt ?? 0)} ersetzt, {rs.Sum(r => r.EngineZweifelt ?? 0)} Zweifel, {rs.Sum(r => r.EngineGleichstand ?? 0)} Gleichstand"
+                      : ""));
     foreach (var r in rs.Where(r => r.SollHinweis != null)) sb.AppendLine($"- Beleg {r.Beleg}: {r.SollHinweis}");
     return sb.ToString();
 }
@@ -524,6 +552,11 @@ sealed class Result
     public int Unsicher { get; set; }
     public int UnsicherUndFalsch { get; set; }
     public int FalschOhneMarke { get; set; }
+    /// <summary>Nur mit <c>--engine</c>: Halbzüge, die die Engine-Prüfung ersetzte, anzweifelte bzw. unter gleich guten
+    /// Lesarten entschied.</summary>
+    public int? EngineErsetzt { get; set; }
+    public int? EngineZweifelt { get; set; }
+    public int? EngineGleichstand { get; set; }
     public int Offen { get; set; }
     public int GeratenOderRepariert { get; set; }
     public int? AufloeserRettet { get; set; }
