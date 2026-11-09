@@ -509,6 +509,9 @@ public class AnalysisJobService
         // Strenge Rangfolge (0.918.0, JobPriority): interaktiv, wartet jemand, neue Vereinspartien, alte
         // Vereinspartien, Liga, Meisterpartien. Darunter wie bisher: Hintergrund nach normal (0.523.0), Stapel nach
         // eigener Vertiefung (0.817.1), dann der älteste.
+        // Kein Reihum über Nutzer innerhalb einer Stufe (R4-002, Produktentscheidung offen): FIFO nach CreatedAt. Gebremst
+        // wird nur über die Zuführung — je Nutzer eine Partie zur Zeit (GameAnalysisTurns), je Partie höchstens
+        // MaxOpenJobsPerGame offen, MaxOpenJobsPerUser je Konto; ein Tagesdeckel für fremde Rechenzeit fehlt.
         // Nur die Spitze holen, nur ihre Sortierschlüssel (R1-012/R4-008): früher kamen ALLE laufbereiten Aufträge der
         // Engine samt Fen/ResultJson je Worker-Takt als Entitäten, um einen zu nehmen. Index (EngineId, Status, Priority, …).
         var head = await runnable

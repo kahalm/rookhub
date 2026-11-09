@@ -165,7 +165,8 @@ services:
       # Eigene Domain der Turnierseite — og:url geteilter Turnier-Links (/t/{id}).
       App__TurnierBaseUrl: ${TURNIER_BASE_URL:-}
       # Eigene Domains von KidHub und LeagueHub — Ziel des Passwort-Reset-Links, wenn dort „Passwort vergessen"
-      # geklickt wurde (leer = Link auf App__BaseUrl).
+      # geklickt wurde (leer = Link auf App__BaseUrl). Betrieb (R1-003): in JEDEM Stack setzen — fehlt KIDHUB_BASE_URL,
+      # kommt die KidHub-Reset-Mail zwar als „KidHub“, der Link öffnet aber RookHub (Dev: ebenso LEAGUEHUB_BASE_URL).
       App__KidHubBaseUrl: ${KIDHUB_BASE_URL:-}
       App__LeagueHubBaseUrl: ${LEAGUEHUB_BASE_URL:-}
       Email__SmtpHost: ${EMAIL_SMTP_HOST:-}

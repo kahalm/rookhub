@@ -223,6 +223,9 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
         System.Buffers.SearchValues.Create("\u2010\u2011\u2012\u2212\u00AD\u00A0\u2009\u202F");
 
     /// <summary>Eingestelltes Modell, sonst das erste unter <c>/models</c> (einmal gefragt, dann gemerkt).</summary>
+    /// <remarks>Gemerkt für die ganze Prozesslaufzeit (R1-010): die Spark-vLLM meldet ALIAS-Namen, ein Modellwechsel unter
+    /// demselben Alias bricht das nicht. Wird der Alias selbst umbenannt, scheitern die Aufrufe (Warnung, <c>null</c>) bis zum
+    /// Neustart der API — dann <c>TextLlm:Model</c> setzen oder die API neu starten.</remarks>
     private async Task<string?> ModelAsync(CancellationToken ct)
     {
         if (_configuredModel != null) return _configuredModel;

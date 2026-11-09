@@ -108,6 +108,11 @@ public static class RateLimitPartitions
     /// nach dem Lösen ein Puzzle weiter oder stellt eine Anfrage — 10 je Minute bleibt weit darüber.</summary>
     public const int UserSocialPermitPerMinute = 10;
 
+    /// <remarks>Volle Adresse als Schlüssel, NICHT <see cref="IpBucket.Key"/> (/64 bei IPv6), obwohl sich IpBucket „die EINE
+    /// Fassung“ nennt (R1-009). Heute ohne Wirkung: NPM läuft mit <c>DISABLE_IPV6=1</c>, der Host hat keine globale
+    /// IPv6-Adresse. Wird IPv6 eingeschaltet, rotiert ein Anschluss innerhalb seines /64 und bekäme je Adresse ein frisches
+    /// Fenster — dann hier, in <c>RateLimitingSetup.PerIpFixedWindow</c> und im <c>RateLimitRejectionHandler</c> auf
+    /// IpBucket umstellen.</remarks>
     public static string ClientIp(HttpContext ctx) => ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     /// <summary>Globaler Deckel je Adresse — außer für Endpunkte, deren eigene Policy schon die Obergrenze je Adresse
