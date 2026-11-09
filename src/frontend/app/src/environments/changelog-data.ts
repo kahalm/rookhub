@@ -10,6 +10,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.920.1',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Internal: a timing test of the repertoire explorer that occasionally failed on the build server is now independent of server load.',
+        de: 'Intern: Ein Zeit-Test des Repertoire-Explorers, der auf dem Build-Server gelegentlich scheiterte, hängt nicht mehr von der Auslastung ab.' },
+    ],
+  },
   { version: "0.920.0", date: "2026-11-09", changes: [
     { en: "Background analysis: an idle engine now takes over waiting jobs from busy engines of the same background list, so newly added engines start working at once.",
       de: "Hintergrund-Analyse: Eine freie Engine übernimmt jetzt wartende Aufträge von beschäftigten Engines derselben Hintergrund-Liste — neu hinzugekommene Engines rechnen damit sofort mit." },

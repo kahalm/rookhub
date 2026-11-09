@@ -433,20 +433,28 @@ public class RepertoireExplorerServiceTests : IDisposable
         Assert.Equal(4, _localHandler.Urls.Count);
     }
 
+    /// <remarks>
+    /// Kippte jahrelang gelegentlich auf dem CI-Runner (zuletzt 09.11.2026, PositionsPending 2 statt 1): mit Budget
+    /// 100 ms war das Budget unter Last schon vor der zweiten Schicht verbraucht — die Schicht lief gar nicht, beide
+    /// Stellungen blieben offen; und die schnelle Stellung hatte nur 300 ms. Jetzt mit großem Abstand (Budget 2 s, Boden
+    /// 4 s, langsame Stellung 60 s), und geprüft wird die UNTERGRENZE: vor ihrem Boden kann die Schicht nicht abbrechen
+    /// — das ist unabhängig von der Last und zeigt zugleich, dass der Boden das kleinere Restbudget schlägt.
+    /// </remarks>
     [Fact]
     public async Task LocalSource_SlowPosition_IsCutAtTheLayerLimit_AndLeftPending()
     {
         var (userId, repId) = await SeedAsync(BlackLines);
         _localHandler.Respond(StartKey, BothFirstMoves);
-        _localHandler.SlowKeys[AfterE4C5] = TimeSpan.FromSeconds(20);
+        _localHandler.SlowKeys[AfterE4C5] = TimeSpan.FromSeconds(60);
         var service = Service();
-        service.Budget = TimeSpan.FromMilliseconds(100);
-        service.LocalLayerFloor = TimeSpan.FromMilliseconds(300);
+        service.Budget = TimeSpan.FromSeconds(2);
+        service.LocalLayerFloor = TimeSpan.FromSeconds(4);
 
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var result = await service.AnalyzeAsync(userId, repId, LocalRequest(), CancellationToken.None);
 
-        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(5), $"Runde dauerte {clock.Elapsed}");
+        Assert.True(clock.Elapsed >= TimeSpan.FromSeconds(3.9), $"Schicht vor ihrem Boden abgebrochen: {clock.Elapsed}");
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(30), $"Langsame Stellung nicht abgeschnitten: {clock.Elapsed}");
         Assert.False(result.FetchFailed);
         Assert.Equal(1, result.PositionsPending);
     }
