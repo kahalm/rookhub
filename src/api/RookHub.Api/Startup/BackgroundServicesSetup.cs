@@ -56,6 +56,7 @@ namespace RookHub.Api.Startup;
 /// ScoresheetScanWorker                immer                                 Partieformulare einlesen
 /// BackgroundTaskWorker                immer                                 allgemeine Warteschlange
 /// WebhookTaskWorker                   immer                                 schach-bot-Webhooks
+/// ResetMailWorker                     immer                                 Mails von „Passwort vergessen"
 /// HintTaskWorker                      immer                                 Tipp-Generierung
 /// ChessableImportWatchdogService      immer (Lanes intern per Schalter)     Extension-Pflichten + Lane-Netz
 /// ChessableImportFastLaneService      immer                                 voll gecachte Importe (netzfrei)
@@ -136,6 +137,8 @@ public static class BackgroundServicesSetup
         // Eigene Queue + Consumer NUR für schach-bot-Webhooks, damit Solver-Updates nicht
         // hinter/unter einem Chessable-Import-Schwung in der allgemeinen Queue verhungern.
         services.AddHostedService<WebhookTaskWorker>();
+        // Eigene Queue + Consumer fuer die Reset-Mails (R1-002): eine SMTP-Runde haelt sonst die Bot-Pushes auf.
+        services.AddHostedService<RookHub.Api.Services.Accounts.ResetMailWorker>();
         // Eigene Queue + Consumer fuer die Tipp-Generierung (Stockfish + LLM je Linie): ein grosser Kurs-Upload hielt den
         // einzigen allgemeinen Consumer sonst stundenlang fest; persoenliche Kurse sind dort gedeckelt (A4-002).
         services.AddHostedService<HintTaskWorker>();

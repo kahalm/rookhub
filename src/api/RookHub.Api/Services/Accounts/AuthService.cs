@@ -199,6 +199,10 @@ public class AuthService
     public async Task<AuthResponseDto> LoginAsync(LoginDto dto)
     {
         var loginName = dto.Username ?? string.Empty;
+        // Länger als jeder mögliche Anmeldename (R1-001): gleich ablehnen, ohne Eintrag in der Konto-Bremse und ohne DB-Abfrage —
+        // sonst legte jeder neue Riesen-Name einen Cache-Eintrag an. Der Controller weist das schon per [MaxLength] ab.
+        if (loginName.Length > LoginDto.MaxNameLength)
+            throw new UnauthorizedAccessException("Invalid username or password.");
 
         // Konto-bezogene Bremse VOR jeder Prüfung anwenden (nicht erst im Fehlerfall) — sonst
         // verrät die Antwortzeit, ob das Passwort stimmte bzw. ob es das Konto überhaupt gibt.

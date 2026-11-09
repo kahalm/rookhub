@@ -20,12 +20,12 @@ public class AuthController : BaseApiController
     private readonly PasswordResetService _passwordReset;
     private readonly AuthHandoffService _handoff;
     private readonly SharedSessionService _sharedSession;
-    /// <summary>Kurze Hintergrundarbeiten mit eigenem Consumer (wie Web-Push) — hier der Reset-Mailversand,
-    /// damit „Passwort vergessen" nicht ueber die Antwortzeit verraet, ob es die Adresse gibt.</summary>
-    private readonly IWebhookTaskQueue _shortTasks;
+    /// <summary>Eigene kleine Queue fuer den Reset-Mailversand (R1-002, vorher die Bot-Webhook-Queue), damit „Passwort
+    /// vergessen" nicht ueber die Antwortzeit verraet, ob es die Adresse gibt.</summary>
+    private readonly IResetMailQueue _shortTasks;
 
     public AuthController(AuthService authService, PasswordResetService passwordReset,
-        AuthHandoffService handoff, SharedSessionService sharedSession, IWebhookTaskQueue shortTasks)
+        AuthHandoffService handoff, SharedSessionService sharedSession, IResetMailQueue shortTasks)
     {
         _authService = authService;
         _passwordReset = passwordReset;
@@ -34,7 +34,11 @@ public class AuthController : BaseApiController
         _shortTasks = shortTasks;
     }
 
+    /// <summary>Rumpfgrenze der anonymen Anmelde-Wege (R1-001): greift vor dem Puffern; die Felder sind ohnehin gedeckelt.</summary>
+    internal const long AuthBodyLimit = 16 * 1024;
+
     [HttpPost("register")]
+    [RequestSizeLimit(AuthBodyLimit)]
     public async Task<ActionResult<AuthResponseDto>> Register([FromBody] RegisterDto dto)
     {
         try
@@ -50,6 +54,7 @@ public class AuthController : BaseApiController
     }
 
     [HttpPost("login")]
+    [RequestSizeLimit(AuthBodyLimit)]
     public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto dto)
     {
         try
@@ -269,19 +274,22 @@ public class AuthController : BaseApiController
     };
 
     [HttpPost("forgot-password")]
-    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+    [RequestSizeLimit(AuthBodyLimit)]
+    public Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {
         // Suche, SMTP-Versand und Token-Persistenz laufen im Hintergrund (eigener DI-Scope): wartete die Antwort
         // darauf, kaeme sie bei unbekannter Adresse in Millisekunden, bei bekannter erst nach der SMTP-Runde —
         // ein Konten-Orakel trotz neutraler 200 (Codereview A1-009).
         var (email, site, lang) = (dto.Email, dto.Site, dto.Lang);
-        await _shortTasks.EnqueueAsync((sp, ct) =>
+        // Volle Queue: verworfen (geloggt), die Antwort bleibt dieselbe — kein Warten, keine Bot-Pushes dahinter (R1-002).
+        _shortTasks.TryEnqueue((sp, ct) =>
             sp.GetRequiredService<PasswordResetService>().RequestResetAsync(email, site, lang, ct));
-        return Ok(new { message = "If the address belongs to an account, a reset link has been sent." });
+        return Task.FromResult<IActionResult>(Ok(new { message = "If the address belongs to an account, a reset link has been sent." }));
     }
 
     /// <summary>„Passwort vergessen", Schritt 2: neues Passwort mit dem Token aus der Mail setzen.</summary>
     [HttpPost("reset-password")]
+    [RequestSizeLimit(AuthBodyLimit)]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
     {
         try

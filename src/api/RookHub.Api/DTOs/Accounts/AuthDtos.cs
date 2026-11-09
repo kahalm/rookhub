@@ -52,11 +52,16 @@ public class RegisterDto
 
 public class LoginDto
 {
-    [Required]
+    /// <summary>Benutzername ODER E-Mail-Adresse — höchstens <see cref="MaxNameLength"/> Zeichen (R1-001: ohne Deckel hielt die
+    /// Konto-Bremse jeden beliebig langen Namen 15 Minuten im Speicher).</summary>
+    [Required, MaxLength(MaxNameLength)]
     public string Username { get; set; } = string.Empty;
 
-    [Required]
+    [Required, MaxLength(1024)]
     public string Password { get; set; } = string.Empty;
+
+    /// <summary>Längster sinnvoller Anmeldename: die E-Mail-Spalte (Benutzernamen haben höchstens 50).</summary>
+    public const int MaxNameLength = 255;
 
     /// <summary>„Eingeloggt bleiben" — verlängert die Token-Gültigkeit (30 Tage statt 1 Tag).</summary>
     public bool RememberMe { get; set; }

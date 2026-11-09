@@ -137,6 +137,7 @@ public class PasswordResetServiceTests : IDisposable
             .AddInMemoryCollection(new Dictionary<string, string?> { ["App:BaseUrl"] = "https://rookhub.example" })
             .Build();
         var failingSvc = new PasswordResetService(_db, new FailingEmailSender(), config, NullLogger<PasswordResetService>.Instance);
+        await AgeTokensAsync();                                        // außerhalb der Sperrfrist (R1-002)
         await failingSvc.RequestResetAsync("known@test.com");          // SMTP down
 
         Assert.Single(_db.PasswordResetTokens);                        // kein zweites Token persistiert
@@ -150,6 +151,7 @@ public class PasswordResetServiceTests : IDisposable
         await CreateUserAsync("known@test.com");
 
         await _service.RequestResetAsync("known@test.com");
+        await AgeTokensAsync();                                        // außerhalb der Sperrfrist (R1-002)
         await _service.RequestResetAsync("known@test.com");
 
         var tokens = await _db.PasswordResetTokens.OrderBy(t => t.Id).ToListAsync();
@@ -489,5 +491,49 @@ public class PasswordResetServiceTests : IDisposable
 
         var hash = (await dbB.AppUsers.AsNoTracking().SingleAsync()).PasswordHash;
         Assert.True(BCrypt.Net.BCrypt.Verify("FirstNewPassword1!", hash));
+    }
+
+    /// <summary>Die angelegten Tokens um <paramref name="minutes"/> Minuten zurückdatieren (Sperrfrist R1-002).</summary>
+    private async Task AgeTokensAsync(int minutes = 3)
+    {
+        foreach (var t in _db.PasswordResetTokens) t.CreatedAt = t.CreatedAt.AddMinutes(-minutes);
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>R1-002: zwei Anfragen innerhalb der Sperrfrist → genau EINE Mail (vorher je Anfrage eine).</summary>
+    [Fact]
+    public async Task RequestReset_withinTheCooldown_sendsOnlyOneMail()
+    {
+        await CreateUserAsync("known@test.com");
+        var mails = new CapturingEmailSender();
+        var svc = new PasswordResetService(_db, mails, new ConfigurationBuilder().Build(), NullLogger<PasswordResetService>.Instance);
+
+        await svc.RequestResetAsync("known@test.com");
+        await svc.RequestResetAsync("known@test.com");
+        await svc.RequestResetAsync("known@test.com");
+
+        Assert.Equal(1, mails.Sends);
+        Assert.Single(_db.PasswordResetTokens);
+        // Nach der Frist geht wieder eine hinaus.
+        await AgeTokensAsync();
+        await svc.RequestResetAsync("known@test.com");
+        Assert.Equal(2, mails.Sends);
+    }
+
+    /// <summary>R1-002: höchstens <see cref="PasswordResetService.MaxMailsPerDay"/> Mails in 24 Stunden, auch mit Abstand.</summary>
+    [Fact]
+    public async Task RequestReset_dailyCap_stopsFurtherMails()
+    {
+        await CreateUserAsync("known@test.com");
+        var mails = new CapturingEmailSender();
+        var svc = new PasswordResetService(_db, mails, new ConfigurationBuilder().Build(), NullLogger<PasswordResetService>.Instance);
+
+        for (var i = 0; i < PasswordResetService.MaxMailsPerDay + 2; i++)
+        {
+            await svc.RequestResetAsync("known@test.com");
+            await AgeTokensAsync(10);
+        }
+
+        Assert.Equal(PasswordResetService.MaxMailsPerDay, mails.Sends);
     }
 }

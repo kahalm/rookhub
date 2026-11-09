@@ -24,6 +24,12 @@ public class PasswordResetService
     /// Mail-Link, weil der Admin ihn erst über den Kanal der Person weitergibt (Nachricht, Telefon, persönlich).</summary>
     public static readonly TimeSpan AdminLinkTtl = TimeSpan.FromHours(24);
     private const int TokenBytes = 32;            // → ~43 Char Base64URL
+    /// <summary>Sperrfrist je Konto (R1-002): höchstens eine Mail je <see cref="MailCooldown"/> und
+    /// <see cref="MaxMailsPerDay"/> in 24 Stunden — gezählt an den angelegten Tokens (<c>CreatedAt</c>, auch entwertete und
+    /// vom Admin erzeugte Links). Vorher ging jede Anfrage als neue Mail hinaus; die IP-Bremse (10/min) allein ließ mit
+    /// wenigen Adressen eine Mail-Flut gegen ein fremdes Postfach zu.</summary>
+    public static readonly TimeSpan MailCooldown = TimeSpan.FromMinutes(2);
+    public const int MaxMailsPerDay = 5;
 
     private readonly AppDbContext _db;
     private readonly IEmailSender _email;
@@ -61,6 +67,16 @@ public class PasswordResetService
         if (user == null)
         {
             _logger.LogInformation("PasswordReset: request for unknown/inactive email (no action)");
+            return;
+        }
+
+        // Sperrfrist je Konto (R1-002): still nichts tun — die Antwort an den Browser ist ohnehin neutral.
+        var since = DateTime.UtcNow - TimeSpan.FromDays(1);
+        var recent = await _db.PasswordResetTokens.Where(t => t.UserId == user.Id && t.CreatedAt > since)
+            .Select(t => t.CreatedAt).ToListAsync(ct);
+        if (recent.Count >= MaxMailsPerDay || recent.Any(c => c > DateTime.UtcNow - MailCooldown))
+        {
+            _logger.LogInformation("PasswordReset: request for user {UserId} within the cooldown (no mail)", user.Id);
             return;
         }
 

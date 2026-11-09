@@ -24,5 +24,7 @@ public static partial class DomainServicesSetup
         // Eigene Queue NUR für schach-bot-Webhooks, damit Solver-Updates nicht
         // hinter/unter einem Chessable-Import-Schwung in der allgemeinen Queue verhungern.
         services.AddSingleton<IWebhookTaskQueue, WebhookTaskQueue>();
+        // Eigene kleine Queue fuer die Mails von „Passwort vergessen" (R1-002): verwirft, wenn voll, statt zu warten.
+        services.AddSingleton<RookHub.Api.Services.Accounts.IResetMailQueue, RookHub.Api.Services.Accounts.ResetMailQueue>();
     }
 }

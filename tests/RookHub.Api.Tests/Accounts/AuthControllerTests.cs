@@ -83,9 +83,15 @@ public class AuthControllerTests : IDisposable
 
     /// <summary>Sammelt eingereihte Arbeiten, statt sie auszufuehren — der Test entscheidet, wann der
     /// „Hintergrund" laeuft, und mit welchem ServiceProvider.</summary>
-    private sealed class CapturingTaskQueue : IWebhookTaskQueue
+    private sealed class CapturingTaskQueue : RookHub.Api.Services.Accounts.IResetMailQueue
     {
         public List<Func<IServiceProvider, CancellationToken, Task>> Items { get; } = new();
+
+        public bool TryEnqueue(Func<IServiceProvider, CancellationToken, Task> workItem)
+        {
+            Items.Add(workItem);
+            return true;
+        }
 
         public ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem)
         {
