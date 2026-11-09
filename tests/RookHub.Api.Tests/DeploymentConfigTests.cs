@@ -329,6 +329,28 @@ public class DeploymentConfigTests
     }
 
     /// <summary>
+    /// R1-014: der Patch schreibt das gepruefte Provider-Skript um — er darf deshalb nicht vom beweglichen master kommen.
+    /// Beide Wege ohne Docker holen ihn von einem Commit und pruefen seine Pruefsumme, die der Datei im Repo entspricht
+    /// (aendert sich der Patch, faellt der veraltete Pin hier auf); der Wrapper fuehrt nur den gepinnten aus.
+    /// </summary>
+    [Fact]
+    public void EngineProvider_PatchKommtGepinntUndGeprueft()
+    {
+        var readme = ReadRepoFile("engine-provider/README.md");
+        Assert.DoesNotContain("kahalm/rookhub/master/", readme);
+        var pins = Regex.Matches(readme, @"kahalm/rookhub/([0-9a-f]{40})/engine-provider/patch_force_close\.py");
+        Assert.Equal(2, pins.Count);
+
+        var bytes = File.ReadAllBytes(Path.Combine(RepoRoot(), "engine-provider", "patch_force_close.py"));
+        var sum = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+        Assert.Single(readme.Split('\n'), l => l.Contains(sum.ToLowerInvariant()) && l.Contains("sha256sum -c - || rm -f example-provider.py patch_force_close.py"));
+        Assert.Single(readme.Split('\n'), l => l.Contains(sum) && l.Contains(@"Remove-Item .\patch_force_close.py") && l.Contains("throw"));
+
+        var wrapper = ReadRepoFile("engine-provider/windows/run_provider.ps1");
+        Assert.Contains($"$patchSha256 = \"{sum}\"", wrapper);
+    }
+
+    /// <summary>
     /// pip-audit prueft nur requirements-Dateien — eine Fassung im Dockerfile oder ein „pip install …" im
     /// Skript-Kommentar sieht es nicht. Vorher gab es keine einzige Datei, der Audit meldete still „nichts zu
     /// pruefen", und 0 von 5 Fremdpaketen waren abgedeckt, darunter aiohttp im Provider-Image, das beim Nutzer mit

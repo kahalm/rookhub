@@ -233,9 +233,14 @@ function Write-WrapperLog([string]$message) {
 # bleibt"): ungepatcht stirbt ein Teil der Uploads im ersten Byte, und RookHub bekommt nach 15 s
 # einen 503. patch_force_close.py liegt nach README-Schritt 3 neben dem Provider-Skript; der
 # Aufruf ist idempotent und bricht ab (ohne etwas zu aendern), wenn die Textstelle nicht passt.
+# Nur der gepinnte Patch laeuft (R1-014): er schreibt das Provider-Skript um, das den Token sieht. Pruefsumme wie in
+# README Schritt 3; bei Abweichung bleibt das Skript ungepatcht (Warnzeile unten).
+$patchSha256 = "F6E589E3B2FA12FC0E2141698E92FE72DCA18CC31862DA4B435F6DFAAEFA33F5"
 $patch = Join-Path (Split-Path -Parent $script) "patch_force_close.py"
 if (-not (Select-String -Path $script -SimpleMatch "force_close=True" -Quiet -ErrorAction SilentlyContinue)) {
-    if (Test-Path $patch) {
+    if ((Test-Path $patch) -and (Get-FileHash $patch -Algorithm SHA256).Hash -ne $patchSha256) {
+        Write-WrapperLog "WARNUNG: $patch hat nicht die gepinnte Pruefsumme - nicht ausgefuehrt"
+    } elseif (Test-Path $patch) {
         $patchOut = & $pythonExe $patch $script 2>&1 | Out-String
         Write-WrapperLog "patch_force_close: $($patchOut.Trim())"
     }

@@ -424,7 +424,8 @@ Es geht auch direkt, wenn Python 3.10–3.14 und eine Engine vorhanden sind:
 python3 -m venv .venv && .venv/bin/pip install "aiohttp==3.14.3"
 curl -O https://raw.githubusercontent.com/lichess-org/external-engine/d0eeb24229bae3cf5eb1e6696c0487ea05ef09ad/example-provider.py
 echo "aea0bb0258c7afbb4177eba91d1beaed5a9d102d1d46122aae7f6f00433c44a1  example-provider.py" | sha256sum -c - || rm -f example-provider.py
-curl -O https://raw.githubusercontent.com/kahalm/rookhub/master/engine-provider/patch_force_close.py
+curl -O https://raw.githubusercontent.com/kahalm/rookhub/fa7c72261e6620016ed824f83e8a9d03b6bac359/engine-provider/patch_force_close.py
+echo "f6e589e3b2fa12fc0e2141698e92fe72dca18cc31862da4b435f6dfaaefa33f5  patch_force_close.py" | sha256sum -c - || rm -f example-provider.py patch_force_close.py
 .venv/bin/python patch_force_close.py example-provider.py
 LICHESS_API_TOKEN=lip_dein_token .venv/bin/python example-provider.py \
   --engine /usr/games/stockfish --name "RookHub Heim-Engine" --max-threads 6
@@ -437,7 +438,10 @@ Stimmt die Prüfsumme nicht, wird die Datei verworfen (`|| rm -f example-provide
 Start scheitern dann an der fehlenden Datei, statt einem veränderten Skript den Token zu zeigen —
 auch wenn der ganze Block auf einmal eingefügt wird. Auf macOS lautet die Zeile
 `shasum -a 256 -c - || rm -f example-provider.py` statt `sha256sum -c - || rm -f example-provider.py`.
-`patch_force_close.py` liegt im geklonten Repo schon in diesem Ordner.
+`patch_force_close.py` liegt im geklonten Repo schon in diesem Ordner. Auch der Patch ist auf einen Commit gepinnt
+und wird vor dem Ausführen per Prüfsumme geprüft (R1-014): er schreibt das Provider-Skript um, ein beweglicher
+Stand von `master` hebelte sonst die Prüfsumme des Providers aus. Stimmt sie nicht, gehen Patch UND Provider-Skript
+weg — der Start scheitert, statt ungeprüften Code mit dem Token laufen zu lassen.
 
 Die virtuelle Umgebung ist kein Zierrat: aktuelle Linux-Distributionen (Debian 12+, Ubuntu 23.04+)
 und Homebrew lehnen ein direktes `pip install` in die System-Python ab
@@ -483,14 +487,16 @@ Engine über die Kommandozeile, ein Pfad wie `C:\Program Files\…` würde dort 
 cd C:\stockfish
 curl.exe -O https://raw.githubusercontent.com/lichess-org/external-engine/d0eeb24229bae3cf5eb1e6696c0487ea05ef09ad/example-provider.py
 if ((Get-FileHash .\example-provider.py -Algorithm SHA256).Hash -ne "aea0bb0258c7afbb4177eba91d1beaed5a9d102d1d46122aae7f6f00433c44a1") { Remove-Item .\example-provider.py; throw "Pruefsumme stimmt nicht - Datei verworfen" }
-curl.exe -O https://raw.githubusercontent.com/kahalm/rookhub/master/engine-provider/patch_force_close.py
+curl.exe -O https://raw.githubusercontent.com/kahalm/rookhub/fa7c72261e6620016ed824f83e8a9d03b6bac359/engine-provider/patch_force_close.py
+if ((Get-FileHash .\patch_force_close.py -Algorithm SHA256).Hash -ne "F6E589E3B2FA12FC0E2141698E92FE72DCA18CC31862DA4B435F6DFAAEFA33F5") { Remove-Item .\patch_force_close.py, .\example-provider.py; throw "Pruefsumme des Patches stimmt nicht - Dateien verworfen" }
 python patch_force_close.py example-provider.py
 ```
 
 Die Prüfsumme schützt den Token (ein verändertes Skript bekäme ihn zu sehen), der Patch die
 Uploads: ohne ihn stirbt ein Teil davon im ersten Byte, und RookHub bekommt nach 15 s einen 503
 (Abschnitt „Ein Eingriff bleibt" oben). `run_provider.ps1` (unten) prüft beim Start, ob der Patch
-drin ist, und holt ihn mit dem daneben liegenden `patch_force_close.py` nach.
+drin ist, und holt ihn mit dem daneben liegenden `patch_force_close.py` nach — nur, wenn dessen Prüfsumme die
+gepinnte ist (sonst eine Warnzeile im Wrapper-Log und kein Patch).
 
 **4. Starten** — direkt mit RookHub (der Token ist der rkh_-Token aus dem Profil, Bereich
 „Engine"; die Umgebungsvariable heisst trotzdem `LICHESS_API_TOKEN`, weil der Provider nur diesen
