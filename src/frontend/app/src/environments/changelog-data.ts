@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.936.1',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Security fixes for the e-book library from the November code review: e-book entries are now served in isolation; oversized or malformed e-books no longer stall processing; oversized uploads without an account are rejected right away, uploads without an account are limited per connection and ring the admin bell at most once per hour; “Share → RookHub” stays available under load; solution checking no longer gets stuck on one position and invalid solution moves are no longer confirmed; external tools are reliably stopped on cancellation; the training service recovers from interrupted uploads; the import tool refuses to migrate real databases and uses the server’s database dialect.',
+        de: 'Sicherheitskorrekturen für die E-Book-Bibliothek aus dem Codereview vom November: E-Book-Einträge werden isoliert ausgeliefert; sehr große oder fehlerhafte E-Books bremsen die Verarbeitung nicht mehr aus; zu große Uploads ohne Konto werden sofort abgewiesen, Uploads ohne Konto sind je Anschluss begrenzt und klingeln bei den Admins höchstens einmal pro Stunde; „Teilen → RookHub“ bleibt auch unter Last verfügbar; die Lösungsprüfung hängt nicht mehr an einer einzelnen Stellung fest und ungültige Lösungszüge gelten nicht mehr als bestätigt; externe Werkzeuge werden beim Abbruch zuverlässig beendet; der Trainingsdienst erholt sich von abgebrochenen Uploads; das Import-Werkzeug verweigert echte Datenbanken und nutzt den Datenbank-Dialekt des Servers.' },
+    ],
+  },
+  {
     version: '0.936.0',
     date: '2026-11-09',
     changes: [
