@@ -62,7 +62,7 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
         </div>
       </section>
     } @else if (failed()) {
-      <kid-error (retry)="start()" />
+      <kid-error (retry)="retry()" />
     } @else if (task(); as t) {
       <kid-puzzle [task]="t" [hintCost]="hintCost()" (mistake)="onMistake()" (hinted)="onHint($event)" (solved)="onSolved()"
                   (next)="onNext()">
@@ -188,6 +188,14 @@ export class EndlessPlayComponent {
     this.newBest.set(false);
     this.failed.set(false);
     this.current.set(null);
+    this.fetch();
+  }
+
+  /** Fehlerkachel „Nochmal“: mitten im Lauf (Netz weg, Schlange leer) nur den Abruf wiederholen und den Lauf
+   *  behalten — ein Neustart verwarf ihn sonst ohne Rekord und Verlauf (G3-011). Ohne gelöste Aufgabe neu starten. */
+  retry(): void {
+    if (this.solved() === 0) { this.start(); return; }
+    this.failed.set(false);
     this.fetch();
   }
 

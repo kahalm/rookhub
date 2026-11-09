@@ -1,7 +1,7 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { EndlessPlayComponent } from './endless-play.component';
 import { KidsApiService, KidsEndlessPuzzle } from '../../core/kids-api.service';
 import { KidsEndlessStore } from '../../core/kids-endless.store';
@@ -208,6 +208,29 @@ describe('EndlessPlayComponent', () => {
     expect(api.endlessBatch.calls.count()).toBeGreaterThan(1);
     expect(f.componentInstance.failed()).toBeFalse();
     expect(f.componentInstance.current()?.rating).toBe(700);
+  });
+
+  it('Netz weg mitten im Lauf: „Nochmal" holt nur nach und behält den Lauf (G3-011)', () => {
+    let online = true;
+    api.endlessBatch.and.callFake((w: { minRating: number; maxRating: number }[]) =>
+      online ? of(answer(w)) : throwError(() => new Error('offline')));
+    const f = TestBed.createComponent(EndlessPlayComponent);
+    f.detectChanges();
+    const c = f.componentInstance;
+    online = false;                                   // ab jetzt scheitert jedes Nachladen
+    for (let i = 0; i < 20; i++) { c.onSolved(); c.onNext(); }
+    f.detectChanges();
+    expect(c.solved()).toBe(20);
+    expect(c.failed()).withContext('Schlange leer, Nachladen gescheitert').toBeTrue();
+
+    online = true;
+    (f.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('kid-error button.again')!.click();
+    f.detectChanges();
+
+    expect(c.failed()).toBeFalse();
+    expect(c.solved()).withContext('der Lauf bleibt').toBe(20);
+    expect(c.lives()).toBe(3);
+    expect(c.current()).not.toBeNull();
   });
 
   it('spaeter keine Aufgaben mehr: der Lauf endet als geschafft', () => {
