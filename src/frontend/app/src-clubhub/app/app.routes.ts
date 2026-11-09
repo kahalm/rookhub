@@ -31,5 +31,7 @@ export const routes: Routes = [
   { path: 'impressum', loadComponent: () => import('@rh/features/legal/impressum.component').then(m => m.ImpressumComponent) },
   { path: 'privacy', loadComponent: () => import('@rh/features/legal/privacy.component').then(m => m.PrivacyComponent) },
   { path: 'account-deletion', loadComponent: () => import('@rh/features/legal/account-deletion.component').then(m => m.AccountDeletionComponent) },
-  { path: '**', redirectTo: '' },
+  // Unbekannte Adressen (UX-026, Codereview F4-008): Hinweisseite ohne Guard wie in RookHub und LeagueHub. Vorher leitete
+  // '**' auf '' um, BEVOR der authGuard lief — Gäste verloren das Ziel, Angemeldete standen stumm auf der Kartei.
+  { path: '**', loadComponent: () => import('@rh/shared/not-found/not-found.component').then(m => m.NotFoundComponent) },
 ];

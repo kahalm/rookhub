@@ -7,6 +7,7 @@ import { authGuard } from '@rh/core/auth.guard';
 import { AuthService } from '@rh/core/auth.service';
 import { LoginComponent } from '@rh/features/auth/login.component';
 import { routes } from './app.routes';
+import { NotFoundComponent } from '@rh/shared/not-found/not-found.component';
 import { checkSharedPageLinks } from '@rh/testing/shared-page-links';
 import { clubhubConfig } from './app.config';
 import { LEGAL_SITE, LegalSite } from '@rh/core/legal-site';
@@ -22,6 +23,14 @@ describe('ClubHub-Routen', () => {
   it('„neu" steht vor „:id" — sonst läse das Karteiblatt „neu" als Nummer', () => {
     const paths = routes.map(r => r.path);
     expect(paths.indexOf('kind/neu')).toBeLessThan(paths.indexOf('kind/:id'));
+  });
+
+  it('unbekannte Adressen zeigen „Seite nicht gefunden“ ohne Guard, statt auf „/“ umzuleiten (UX-026, F4-008)', async () => {
+    const catchAll = routes.at(-1)!;
+    expect(catchAll.path).toBe('**');
+    expect(catchAll.redirectTo).toBeUndefined();
+    expect(catchAll.canActivate).toBeUndefined();
+    expect(await catchAll.loadComponent!()).toBe(NotFoundComponent);
   });
 
   it('kein Pfad, den der gemeinsame nginx an die Link-Vorschau schickt (/g, /t, /puzzles)', () => {

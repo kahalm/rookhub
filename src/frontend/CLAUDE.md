@@ -131,7 +131,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - **Neuer Menüpunkt** (Codereview UX-011) – Eintrag in `MenuRegistry` → Eintrag in `MENU_HELP`
   (`features/help/help.component.ts`) und Hilfe-Abschnitt in en/de/hr/hu; Wache
   `MenuRegistryTests.EveryMenuItem_HasHelpSection`
-- **Unbekannte Adressen** (Codereview UX-026) – `'**'` (RookHub, LeagueHub) und unbekannte Kurz-URLs zeigen
+- **Unbekannte Adressen** (Codereview UX-026) – `'**'` (RookHub, LeagueHub, ClubHub — F4-008) und unbekannte Kurz-URLs zeigen
   `shared/not-found/NotFoundComponent` (guard-frei). Guards, die Angemeldete umleiten, melden das über `blockedNotice()`
   (`core/blocked-notice.ts`) — übersetzt mit `get()`, nicht `instant()` (Kaltstart: Sprachdatei noch unterwegs).
   `PublicSlugComponent` zeigt „nicht gefunden“ nur bei 404, sonst `LoadErrorComponent` mit Wiederholen
