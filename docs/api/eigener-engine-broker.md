@@ -39,7 +39,7 @@ Lichess-Konto ging gar nichts. Direkt gibt es keine fremde Drossel, keinen Liche
   `ExternalEngineRegistrationService.PruneStaleAsync`. Stand eine in der Hintergrund-Liste, merkt sich
   `LichessEngineCredentials.PrunedBackgroundNames` ihren Namen; meldet sich ein Provider mit diesem Namen neu an (neue
   Kennung), kommt sie von selbst zurück in die Liste. Anlass 09.11.2026: 17 tote PC-Einträge füllten den Deckel von
-  32 Engines je Konto, neue Engines wurden abgewiesen. Die Engine-Liste (`GET /api/engine/external`) trägt je
+  32 Engines je Konto, neue Engines wurden abgewiesen (seit 0.937.0 sind es 64 je Konto, `MaxEnginesPerUser`). Die Engine-Liste (`GET /api/engine/external`) trägt je
   `rookhub`-Engine `lastSeenAt`; das Profil blendet Offline-Engines standardmäßig aus (Knopf zum Einblenden) und zeigt
   „zuletzt da“.
 

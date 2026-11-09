@@ -23,7 +23,7 @@ public sealed record EngineRegistrationResult(ExternalEngineRegistration? Engine
 /// </summary>
 public class ExternalEngineRegistrationService
 {
-    public const int MaxEnginesPerUser = 32;
+    public const int MaxEnginesPerUser = 64;
     public const int MaxNameLength = 200;
     public const int MaxThreadsLimit = 1024;
     public const int MaxHashLimit = 1_048_576;
