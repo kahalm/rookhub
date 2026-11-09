@@ -39,4 +39,10 @@ public class EbookSuggestionsController(EbookSuggestions suggestions, Permission
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Candidates([FromQuery] string? game, CancellationToken ct) =>
         Ok(await suggestions.CandidatesAsync(string.IsNullOrEmpty(game) ? null : await suggestions.RequesterAsync(game, ct), ct));
+
+    /// <summary>Spielstärke beider Seiten für den Watcher: <c>?game=237</c> bzw. <c>o143</c>; die anonymisierte Seite nur als Band.</summary>
+    [HttpGet("api/admin/ebook-suggestions/strength")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Strength([FromQuery] string? game, CancellationToken ct) =>
+        !string.IsNullOrEmpty(game) && await suggestions.StrengthAsync(game, ct) is { } strength ? Ok(strength) : NotFound();
 }

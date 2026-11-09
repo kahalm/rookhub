@@ -17,7 +17,7 @@ import { MaximNoteComponent } from '../../../shared/maxims/maxim-note.component'
 import { ClubGameSummary, ClubGameSummaryService, EbookSuggestionInfo } from './club-game-summary.service';
 import { ClubSummaryLinkComponent } from './club-summary-link.component';
 import { SummaryGameBoardComponent } from './summary-game-board.component';
-import { DiagramSpec, InlinePart, SummaryBlock, moveLabel, parseSummary, positionsOf } from './summary-markdown.util';
+import { DiagramSpec, InlinePart, SummaryBlock, moveLabel, parseSummary, positionsOf, visibleSummaryBlocks } from './summary-markdown.util';
 
 /** Ein fertig aufgelöstes Diagramm: Stellung, letzter Zug, Pfeile, Blickrichtung. */
 interface ResolvedDiagram {
@@ -225,17 +225,7 @@ export class ClubGameSummaryComponent implements OnInit {
   readonly justBlocked = signal<ReadonlySet<number>>(new Set());
   readonly loggedIn = inject(AuthService).isLoggedIn;
   /** Ohne Bücher und ohne deren Überschrift, wenn von der Literatur-Liste nichts übrig bleibt. */
-  readonly visibleBlocks = computed<SummaryBlock[]>(() => {
-    const shown = (b: SummaryBlock) => b.kind !== 'book' || this.books().has(b.id);
-    const all = this.blocks();
-    return all.filter((b, i) => {
-      if (!shown(b)) return false;
-      if (b.kind !== 'heading') return true;
-      let j = i + 1;
-      while (all[j]?.kind === 'book') j++;
-      return j === i + 1 || all.slice(i + 1, j).some(shown);
-    });
-  });
+  readonly visibleBlocks = computed<SummaryBlock[]>(() => visibleSummaryBlocks(this.blocks(), b => this.books().has(b.id)));
   private readonly positions = computed(() => positionsOf(this.game()?.pgn ?? ''));
   /** Seitenbrett nur, wenn es Text gibt, neben dem es steht, und Züge zum Durchklicken. */
   readonly hasBoard = computed(() => !!this.summary()?.markdown && this.positions().sans.length > 0);

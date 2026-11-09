@@ -162,6 +162,26 @@ export function parseSummary(markdown: string): SummaryBlock[] {
   return blocks;
 }
 
+/**
+ * Sichtbare Blöcke: `shown` entscheidet über Bücher. Eine Überschrift fällt weg, wenn alles bis zur nächsten gleich hohen oder
+ * höheren Überschrift ausgeblendete Bücher sind — so bleibt weder „### Für Weiß“ noch „## Empfohlene Literatur“ leer stehen.
+ */
+export function visibleSummaryBlocks(all: SummaryBlock[], shown: (b: SummaryBlock & { kind: 'book' }) => boolean): SummaryBlock[] {
+  const hiddenBook = (b: SummaryBlock) => b.kind === 'book' && !shown(b);
+  return all.filter((b, i) => {
+    if (hiddenBook(b)) return false;
+    if (b.kind !== 'heading') return true;
+    let end = i + 1;
+    while (end < all.length) {
+      const n = all[end];
+      if (n.kind === 'heading' && n.level <= b.level) break;
+      end++;
+    }
+    const body = all.slice(i + 1, end).filter(x => x.kind !== 'heading');
+    return !body.length || !body.every(hiddenBook);
+  });
+}
+
 /** Stellungen der Partie: `fens[n]` = nach n Halbzügen, `lastMoves[n]` = der Zug dorthin. Ungültiges PGN → nur Anfang. */
 export function positionsOf(pgn: string): { fens: string[]; lastMoves: ([string, string] | undefined)[]; sans: string[] } {
   const chess = new Chess();

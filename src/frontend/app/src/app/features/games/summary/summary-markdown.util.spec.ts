@@ -1,4 +1,4 @@
-import { moveLabel, parseInline, parseSummary, positionsOf } from './summary-markdown.util';
+import { moveLabel, parseInline, parseSummary, positionsOf, visibleSummaryBlocks } from './summary-markdown.util';
 
 describe('summary-markdown.util (Partie-Zusammenfassung, 0.913.0)', () => {
   it('zerlegt Überschriften, Absätze, Listen, Zitat, Trennlinie und Tabelle', () => {
@@ -62,5 +62,27 @@ describe('parseSummary: Merksatz und Literatur (Wunsch 2026-11-09)', () => {
   it('book-Block trägt Kennung und Begründung, ohne Kennung fällt er weg', () => {
     expect(parseSummary('```book\nid: 1314\nwhy: Passt: zweimal Raum verschenkt.\n```\n\n```book\nwhy: x\n```'))
       .toEqual([{ kind: 'book', id: 1314, why: 'Passt: zweimal Raum verschenkt.' }]);
+  });
+});
+
+describe('visibleSummaryBlocks (Literatur je Seite, Wunsch 2026-11-09)', () => {
+  const md = '## Was man mitnehmen kann\n\nText\n\n## Empfohlene Literatur\n\n### Für Weiß\n\n```book\nid: 1\nwhy: a\n```\n\n'
+    + '### Für Schwarz\n\n```book\nid: 2\nwhy: b\n```\n';
+  const headings = (ids: number[]) => visibleSummaryBlocks(parseSummary(md), b => ids.includes(b.id))
+    .filter(b => b.kind === 'heading').map(b => b.kind === 'heading' ? b.parts[0].text : '');
+
+  it('blendet nur die leere Seite aus', () => {
+    expect(headings([2])).toEqual(['Was man mitnehmen kann', 'Empfohlene Literatur', 'Für Schwarz']);
+  });
+  it('ohne Bücher verschwindet auch die Hauptüberschrift', () => {
+    expect(headings([])).toEqual(['Was man mitnehmen kann']);
+  });
+  it('alle Bücher da: alles bleibt', () => {
+    expect(headings([1, 2]).length).toBe(4);
+  });
+  it('alte Fassung ohne Unterüberschriften und leere Abschnitte', () => {
+    const flat = parseSummary('## Empfohlene Literatur\n\n```book\nid: 1\nwhy: a\n```\n\n## Leer\n');
+    expect(visibleSummaryBlocks(flat, () => false).map(b => b.kind)).toEqual(['heading']);
+    expect(visibleSummaryBlocks(flat, () => true).length).toBe(3);
   });
 });

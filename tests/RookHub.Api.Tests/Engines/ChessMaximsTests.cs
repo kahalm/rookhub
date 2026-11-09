@@ -90,6 +90,127 @@ public class EbookSuggestionsTests : IDisposable
         .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
     public void Dispose() => _db.Dispose();
 
+    private const string RealName = "Geheim, Klarname";
+    private const string RealFide = "76543210";
+
+    private RookHub.Api.Services.Ebooks.EbookSuggestions Strength(params RookHub.Api.Models.LeagueClubGame[] games)
+    {
+        _db.LeagueClubs.Add(new RookHub.Api.Models.LeagueClub { Id = 1, Name = "Schwaz", AnonName = "Schwaz", TeamPrefix = "Schwaz" });
+        _db.LeagueClubGames.AddRange(games);
+        _db.SaveChanges();
+        return new(_db);
+    }
+
+    private static RookHub.Api.Models.LeagueClubGame Game(int id, string white, string black) => new()
+    {
+        Id = id, ClubId = 1, Year = 2026, White = white, Black = black, Result = "1-0", Pgn = "1. e4 *", MovesHash = "h" + id,
+    };
+
+    private void Roster(string fide, int? eloI, int? eloN = null, string season = "2025/26", int tnr = 1)
+    {
+        if (!_db.LeagueTournaments.Any(t => t.Tnr == tnr))
+            _db.LeagueTournaments.Add(new RookHub.Api.Models.LeagueTournament { Tnr = tnr, Name = "Liga", Season = season, League = "L", Grp = "G", Stage = "S" });
+        _db.LeaguePlayers.Add(new RookHub.Api.Models.LeaguePlayer { Tnr = tnr, Team = "T", Name = "X", NameKey = "x", FideId = fide, EloI = eloI, EloN = eloN });
+        _db.SaveChanges();
+    }
+
+    [Fact]
+    public async Task Anonymisierte_Seite_liefert_nur_das_Band_ohne_Name_und_Fide()
+    {
+        var g = Game(1, "Schwaz", "Gegner, Otto");
+        g.WhiteRealName = RealName; g.WhiteRealFide = RealFide; g.BlackFide = "111"; g.Anonymized = true;
+        var svc = Strength(g);
+        Roster(RealFide, 1754);
+        Roster("111", null, 1612);
+
+        var s = await svc.StrengthAsync("1");
+        Assert.Equal(new RookHub.Api.Services.Ebooks.PlayerStrength(null, "1700–1799"), s!.White);
+        Assert.Equal(new RookHub.Api.Services.Ebooks.PlayerStrength(1612, null), s.Black);
+        var json = System.Text.Json.JsonSerializer.Serialize(s);
+        Assert.DoesNotContain(RealFide, json);
+        Assert.DoesNotContain("Geheim", json);
+        Assert.DoesNotContain("1754", json);
+    }
+
+    [Fact]
+    public async Task Gespeicherte_Elo_der_anonymen_Seite_wird_ebenfalls_zum_Band()
+    {
+        var g = Game(1, "Schwaz", "Gegner"); g.WhiteElo = 1899; g.BlackElo = 2001; g.Anonymized = true;
+        var s = await Strength(g).StrengthAsync("1");
+        Assert.Equal("1800–1899", s!.White!.Band);
+        Assert.Null(s.White.Elo);
+        Assert.Equal(2001, s.Black!.Elo);
+    }
+
+    [Fact]
+    public async Task Ligapaarung_liefert_Elo_je_Farbe_und_Unbekanntes_bleibt_null()
+    {
+        var linked = Game(1, "Schwaz", "Gegner"); linked.Anonymized = true; linked.LeagueGameId = 5;
+        var none = Game(2, "Schwaz", "Niemand"); none.Anonymized = true;
+        var svc = Strength(linked, none);
+        _db.LeagueTournaments.Add(new RookHub.Api.Models.LeagueTournament { Tnr = 9, Name = "Liga", Season = "2025/26", League = "L", Grp = "G", Stage = "S" });
+        _db.LeagueGames.Add(new RookHub.Api.Models.LeagueGame { Id = 5, Tnr = 9, Round = 1, MatchNo = 1, Board = 1, HomeTeam = "Wörgl", AwayTeam = "Schwaz", HomeColor = "s", HomeElo = 1500, AwayElo = 2105 });
+        _db.SaveChanges();
+
+        var s = await svc.StrengthAsync("1");
+        Assert.Equal("2100–2199", s!.White!.Band);
+        Assert.Equal(1500, s.Black!.Elo);
+        var n = await svc.StrengthAsync("2");
+        Assert.Null(n!.White);
+        Assert.Null(n.Black);
+        Assert.Null(await svc.StrengthAsync("99"));
+        Assert.Null(await svc.StrengthAsync("abc"));
+    }
+
+    [Fact]
+    public async Task Einzige_genaue_Paarung_liefert_das_Band_ohne_interne_Fide()
+    {
+        var g = Game(1, "Schwaz", "Gegner, Otto"); g.BlackFide = "111"; g.Anonymized = true;
+        var svc = Strength(g);
+        _db.LeagueTournaments.Add(new RookHub.Api.Models.LeagueTournament { Tnr = 9, Name = "Liga", Season = "2026/27", League = "L", Grp = "G", Stage = "S" });
+        _db.LeagueGames.Add(new RookHub.Api.Models.LeagueGame
+        {
+            Id = 5, Tnr = 9, Round = 1, MatchNo = 1, Board = 1, HomeTeam = "Schwaz 1", AwayTeam = "Wörgl", HomeColor = "w", HomePlayer = "Klar, Name", AwayPlayer = "Gegner, Otto",
+            HomeFide = "222", AwayFide = "111", HomeElo = 1650, AwayElo = 1700, Result = "1 - 0",
+        });
+        _db.SaveChanges();
+
+        var s = await svc.StrengthAsync("1");
+        Assert.Equal("1600–1699", s!.White!.Band);
+        Assert.Null(s.Black);   // geratene Paarung nur für die anonyme Seite
+    }
+
+    [Fact]
+    public async Task Meldeliste_nimmt_die_Saison_am_naechsten_zur_Partie()
+    {
+        var g = Game(1, "Gegner A", "Gegner B"); g.WhiteFide = "111";
+        var svc = Strength(g);
+        Roster("111", 1400, null, "2019/20", 1);
+        Roster("111", 1800, null, "2025/26", 2);
+        Assert.Equal(1800, (await svc.StrengthAsync("1"))!.White!.Elo);
+    }
+
+    [Fact]
+    public async Task Eigene_Partie_nur_gespeicherte_Elo()
+    {
+        var svc = new RookHub.Api.Services.Ebooks.EbookSuggestions(_db);
+        _db.SavedGames.Add(new RookHub.Api.Models.SavedGame { Id = 7, UserId = 1, Pgn = "*", WhiteElo = 1500, BlackElo = 0 });
+        _db.SaveChanges();
+        var s = await svc.StrengthAsync("o7");
+        Assert.Equal(1500, s!.White!.Elo);
+        Assert.Null(s.Black);
+        Assert.Null(await svc.StrengthAsync("o8"));
+    }
+
+    [Fact]
+    public void Strength_nur_fuer_Admins()
+    {
+        var a = typeof(RookHub.Api.Controllers.Ebooks.EbookSuggestionsController).GetMethod("Strength")!
+            .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), false)
+            .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>().Single();
+        Assert.Equal("Admin", a.Roles);
+    }
+
     [Fact]
     public async Task Sperre_gilt_je_Konto_fremde_Buecher_bleiben_unsichtbar()
     {

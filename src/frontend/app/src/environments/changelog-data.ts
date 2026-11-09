@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.931.0", date: "2026-11-09", changes: [
+    { en: "Game summaries: recommended books are now listed separately for White and Black, chosen for that player's mistakes and strength; a heading disappears when you have blocked all the books beneath it.",
+      de: "Partie-Zusammenfassung: „Empfohlene Literatur“ steht jetzt getrennt für Weiß und Schwarz, passend zu Fehlern und Spielstärke des jeweiligen Spielers; eine Überschrift verschwindet, wenn alle Bücher darunter gesperrt sind." },
+  ] },
   { version: "0.930.0", date: "2026-11-09", changes: [
     { en: "Analysis board: download the game as PGN with variations and headers (also without an account), save it to My Games, or hand it to the club database, where it goes through the usual check of players and duplicates.",
       de: "Analysebrett: Partie samt Varianten und Kopfdaten als PGN herunterladen (auch ohne Konto), in „Meine Partien“ speichern oder an die Vereinsdatenbank übergeben; dort läuft sie durch die gewohnte Prüfung von Spielern und Duplikaten." },
