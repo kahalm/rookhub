@@ -230,7 +230,7 @@ public class CrawlerContractTests
     /// hier streichen. Bis dahin liefert ein alter Crawler sie nicht, und der Leser bekommt
     /// <c>null</c> — genau das Verhalten, das „fehlt" ohnehin hat.
     /// </summary>
-    private static readonly HashSet<string> FideDetailAwaitingCrawlerTag = ["Organizers", "ChiefArbiter"];
+    private static readonly HashSet<string> FideDetailAwaitingCrawlerTag = [];   // leer seit Crawler-Tag v0.938.1 (Organizers, ChiefArbiter stehen in fide-event.json)
 
     /// <summary>
     /// Der FIDE-Detail-Nachlauf liest <c>GET /api/fide-calendar/event</c> GETYPT

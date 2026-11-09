@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.938.3',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Tests: the crawler contract fixture now carries the FIDE event fields organizers and chief arbiter (crawler tag v0.938.1); the waiting list for not-yet-tagged crawler fields is empty again.',
+        de: 'Tests: Die Vertragsdatei zum Crawler trägt jetzt die FIDE-Ereignisfelder Veranstalter und Hauptschiedsrichter (Crawler-Tag v0.938.1); die Warteliste für noch nicht getaggte Crawler-Felder ist wieder leer.' },
+    ],
+  },
+  {
     version: '0.938.2',
     date: '2026-11-09',
     changes: [
