@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { firstValueFrom, of } from 'rxjs';
+import { Subject, firstValueFrom, of } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AuthService } from '../../core/auth.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
@@ -578,5 +578,17 @@ describe('EbookListComponent', () => {
     const css = compactCss(EbookListComponent);
     expect(css).toMatch(/\.eb-cover(\[[^\]]*\])?img(\[[^\]]*\])?\{width:100%;height:100%;object-fit:contain/);
     expect(css).not.toContain('object-fit:cover');
+  });
+
+  it('überholte Antworten: eine späte Antwort der vorigen Suche überschreibt die Liste nicht (F2-010)', () => {
+    const c = make([]);
+    const first = new Subject<EbookList>(), second = new Subject<EbookList>();
+    const pending = [first, second];
+    service.list.and.callFake(() => pending.shift()!);
+    c.load();                                   // alte Suche
+    c.load();                                   // neue Suche
+    second.next(list([book({ id: 2, title: 'Neu' })]));
+    first.next(list([book({ id: 1, title: 'Alt' })]));
+    expect(c.items.map(b => b.id)).toEqual([2]);
   });
 });

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { LatestRequest } from '../../shared/latest-request.util';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -143,6 +144,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
+  private readonly listRequest = new LatestRequest();
   private route = inject(ActivatedRoute, { optional: true });
   private router = inject(Router, { optional: true });
 
@@ -155,6 +157,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.listRequest.cancel();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -209,20 +212,20 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.saveState();
     this.loading = this.list == null;
     this.error = false;
-    this.ebooks.list({ search: this.search.trim() || undefined, tag: this.tag, author: this.author, mine: this.mine, minElo: this.minElo, maxElo: this.maxElo,
+    // F2-010: eine neue Filterung bricht die vorige Anfrage ab — eine späte Antwort der alten Suche überschreibt sie nie.
+    this.listRequest.run(this.ebooks.list({ search: this.search.trim() || undefined, tag: this.tag, author: this.author, mine: this.mine, minElo: this.minElo, maxElo: this.maxElo,
       language: this.language, translation: this.translation, readable: this.allLanguages ? null : this.readableLanguages,
-      collection: this.collection, sort: this.sort, page: this.page, pageSize: this.pageSize })
-      .subscribe({
-        next: list => {
-          this.list = list;
-          this.loading = false;
-          // Auswahl auf die Bücher dieser Seite eindampfen, die es noch gibt.
-          const ids = new Set(list.items.map(i => i.id));
-          this.selected.update(s => new Set([...s].filter(id => ids.has(id))));
-          this.cdr.markForCheck();
-        },
-        error: () => { this.loading = false; this.error = true; this.cdr.markForCheck(); },
-      });
+      collection: this.collection, sort: this.sort, page: this.page, pageSize: this.pageSize }), {
+      next: list => {
+        this.list = list;
+        this.loading = false;
+        // Auswahl auf die Bücher dieser Seite eindampfen, die es noch gibt.
+        const ids = new Set(list.items.map(i => i.id));
+        this.selected.update(s => new Set([...s].filter(id => ids.has(id))));
+        this.cdr.markForCheck();
+      },
+      error: () => { this.loading = false; this.error = true; this.cdr.markForCheck(); },
+    });
   }
 
   get items(): Ebook[] { return this.list?.items ?? []; }
