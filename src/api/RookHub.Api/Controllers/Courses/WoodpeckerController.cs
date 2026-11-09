@@ -65,7 +65,7 @@ public class WoodpeckerController : BaseApiController
     [HttpGet("{planId:int}/next")]
     public async Task<IActionResult> Next(int planId, [FromQuery] string? lang = null, CancellationToken ct = default)
     {
-        var next = await _service.GetNextAsync(GetUserId(), planId, ct);
+        var next = await _service.GetNextAsync(GetUserId(), planId, ct, IsAdmin);
         if (_localizer is not null) await _localizer.ApplyAsync(next.Puzzle, lang, ct);
         return Ok(next);
     }
@@ -73,5 +73,5 @@ public class WoodpeckerController : BaseApiController
     /// <summary>Versuch an einer Aufgabe im laufenden Zyklus (je Zyklus zählt der erste).</summary>
     [HttpPost("{planId:int}/attempts")]
     public async Task<IActionResult> RecordAttempt(int planId, [FromBody] RecordWoodpeckerAttemptDto dto, CancellationToken ct) =>
-        Ok(await _service.RecordAttemptAsync(GetUserId(), planId, dto, ct));
+        Ok(await _service.RecordAttemptAsync(GetUserId(), planId, dto, ct, IsAdmin));
 }

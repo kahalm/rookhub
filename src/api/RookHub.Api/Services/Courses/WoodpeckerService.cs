@@ -160,28 +160,35 @@ public class WoodpeckerService
         return await BuildDtoAsync(plan, ct);
     }
 
-    public async Task<WoodpeckerNextDto> GetNextAsync(int userId, int planId, CancellationToken ct = default)
+    /// <summary>Nächste Aufgabe. Nur aus Kursen, auf die das Konto JETZT Zugriff hat (R3-003): wer aus der Kursgruppe fällt (oder
+    /// dessen Kurs privat wird), bekommt aus diesem Kurs nichts mehr — die übrigen Kurse des Plans laufen weiter, der Kurs ruht,
+    /// bis der Zugang wieder da ist. Ein Kalkulationsbuch liefert nie die Lösung.</summary>
+    public async Task<WoodpeckerNextDto> GetNextAsync(int userId, int planId, CancellationToken ct = default, bool isAdmin = false)
     {
         var plan = await LoadAsync(userId, planId, ct);
         await RefreshAsync(plan, userId, ct);
         var current = Current(plan);
         int? puzzleId = null;
         if (plan.CompletedAt == null && current.FinishedAt == null)
+        {
+            var open = await AccessibleBookIdsAsync(plan, userId, isAdmin, ct);
             puzzleId = current.Number == 1
-                ? await NextInSetOrderAsync(plan, ct)
-                : await RandomRemainingAsync(plan.Id, current.Number, ct);
+                ? await NextInSetOrderAsync(plan, open, ct)
+                : await RandomRemainingAsync(plan.Id, current.Number, open, ct);
+        }
 
         BookPuzzleDto? puzzle = null;
         if (puzzleId is { } id)
         {
             var bp = await BookPuzzleService.PuzzleWithBook(_db, id).FirstAsync(ct);
             puzzle = BookPuzzleService.MapToDto(bp);
+            if (bp.Book?.IsCalculation == true) BookPuzzleService.WithholdSolution(puzzle);
         }
         return new WoodpeckerNextDto { Puzzle = puzzle, Plan = await BuildDtoAsync(plan, ct) };
     }
 
     public async Task<WoodpeckerPlanDto> RecordAttemptAsync(int userId, int planId, RecordWoodpeckerAttemptDto dto,
-        CancellationToken ct = default)
+        CancellationToken ct = default, bool isAdmin = false)
     {
         var plan = await LoadAsync(userId, planId, ct);
         await RefreshAsync(plan, userId, ct);
@@ -193,7 +200,8 @@ public class WoodpeckerService
             .Select(bp => new { bp.Id, bp.BookId, bp.IsInfoOnly })
             .FirstOrDefaultAsync(ct);
         var bookIds = plan.Books.Select(b => b.BookId).ToList();
-        if (puzzle?.BookId is not { } bookId || puzzle.IsInfoOnly || !bookIds.Contains(bookId))
+        if (puzzle?.BookId is not { } bookId || puzzle.IsInfoOnly || !bookIds.Contains(bookId)
+            || !await CourseAccess.CanAccessAsync(_db, userId, bookId, isAdmin, ct))   // Zugang wie beim Anlegen (R3-003)
             throw new NotFoundException("Puzzle not found.");
         var inSet = await _db.WoodpeckerSetItems.AnyAsync(i => i.PlanId == planId && i.BookPuzzleId == puzzle.Id, ct);
         if (current.Number > 1 && !inSet) throw new NotFoundException("Puzzle not found.");
@@ -316,10 +324,20 @@ public class WoodpeckerService
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Zyklus 1: erste noch nicht bearbeitete Aufgabe — Kurse in Plan-Reihenfolge, je Kurs Lesereihenfolge.</summary>
-    private async Task<int?> NextInSetOrderAsync(WoodpeckerPlan plan, CancellationToken ct)
+    /// <summary>Die Kurse des Plans, auf die das Konto jetzt Zugriff hat (<see cref="CourseAccess.CanAccessAsync"/>, R3-003).</summary>
+    private async Task<HashSet<int>> AccessibleBookIdsAsync(WoodpeckerPlan plan, int userId, bool isAdmin, CancellationToken ct)
     {
-        foreach (var book in plan.Books.OrderBy(b => b.Position))
+        var open = new HashSet<int>();
+        foreach (var b in plan.Books)
+            if (await CourseAccess.CanAccessAsync(_db, userId, b.BookId, isAdmin, ct)) open.Add(b.BookId);
+        return open;
+    }
+
+    /// <summary>Zyklus 1: erste noch nicht bearbeitete Aufgabe — Kurse in Plan-Reihenfolge, je Kurs Lesereihenfolge; nur
+    /// zugängliche Kurse (<paramref name="open"/>).</summary>
+    private async Task<int?> NextInSetOrderAsync(WoodpeckerPlan plan, HashSet<int> open, CancellationToken ct)
+    {
+        foreach (var book in plan.Books.Where(b => open.Contains(b.BookId)).OrderBy(b => b.Position))
         {
             var id = await Solvable(new[] { book.BookId })
                 .Where(bp => !_db.WoodpeckerSetItems.Any(i => i.PlanId == plan.Id && i.BookPuzzleId == bp.Id))
@@ -331,11 +349,12 @@ public class WoodpeckerService
         return null;
     }
 
-    /// <summary>Ab Zyklus 2: zufällige Aufgabe des Satzes, die in diesem Zyklus noch nicht dran war.</summary>
-    private async Task<int?> RandomRemainingAsync(int planId, int cycle, CancellationToken ct)
+    /// <summary>Ab Zyklus 2: zufällige Aufgabe des Satzes, die in diesem Zyklus noch nicht dran war — nur aus zugänglichen Kursen.</summary>
+    private async Task<int?> RandomRemainingAsync(int planId, int cycle, HashSet<int> open, CancellationToken ct)
     {
+        var openIds = open.ToList();
         var remaining = await _db.WoodpeckerSetItems
-            .Where(i => i.PlanId == planId)
+            .Where(i => i.PlanId == planId && openIds.Contains(i.BookId))
             .Where(i => !_db.WoodpeckerAttempts.Any(a => a.PlanId == planId && a.Cycle == cycle && a.BookPuzzleId == i.BookPuzzleId))
             .Select(i => i.BookPuzzleId)
             .ToListAsync(ct);

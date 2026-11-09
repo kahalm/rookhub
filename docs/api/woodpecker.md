@@ -36,8 +36,8 @@ diese Aufgaben im Satz. Umgekehrt schreibt der Woodpecker-Löser KEINE `CourseAt
 | PUT | `/api/woodpecker/{id}/start` | `{ startedAt }` — Beginn des laufenden Zyklus verschieben: nicht in die Zukunft, nicht hinter dessen ersten Versuch, nicht vor das Ende des vorigen. Die Oberfläche bietet es nur in Zyklus 1 an |
 | POST | `/api/woodpecker/{id}/finish-set` | Zyklus 1 vorzeitig beenden (Satz leer → 400) |
 | POST | `/api/woodpecker/{id}/next-cycle` | nächsten Zyklus beginnen (Pause < 24 h oder Zyklus läuft → 409) |
-| GET | `/api/woodpecker/{id}/next` | `{ puzzle: BookPuzzleDto \| null, plan }` — `null`, wenn der Zyklus erledigt ist; `?lang=` übersetzt die Kommentare wie `GET /api/courses/{id}/next` (0.882.0) |
-| POST | `/api/woodpecker/{id}/attempts` | `{ bookPuzzleId, solved, timeSeconds }` → `plan`; Aufgabe nicht im Plan (Zyklus 1: nicht in den Kursen, ab 2: nicht im Satz) → 404; zweiter Versuch im selben Zyklus ändert nichts |
+| GET | `/api/woodpecker/{id}/next` | `{ puzzle: BookPuzzleDto \| null, plan }` — `null`, wenn der Zyklus erledigt ist; `?lang=` übersetzt die Kommentare wie `GET /api/courses/{id}/next` (0.882.0). Nur aus Kursen, auf die das Konto JETZT Zugriff hat (R3-003: ein Kurs ohne Zugang ruht, die übrigen laufen weiter); ein Kalkulationsbuch kommt ohne Lösung |
+| POST | `/api/woodpecker/{id}/attempts` | `{ bookPuzzleId, solved, timeSeconds }` → `plan`; Aufgabe nicht im Plan (Zyklus 1: nicht in den Kursen, ab 2: nicht im Satz) oder Kurs ohne Zugang (R3-003) → 404; zweiter Versuch im selben Zyklus ändert nichts |
 
 `WoodpeckerPlanDto.status`: `solving` (Zyklus läuft), `break` (Pause bis `nextCycleAt`), `ready`, `completed`.
 
