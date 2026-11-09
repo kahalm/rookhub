@@ -145,6 +145,7 @@ public class EndpointAuthInventoryTests
         "GET /api/games/shared/{token}/evals",                       // GamesController.SharedEvals
         // „Warum war das ein Fehler?" (0.534.0): die Erklaerungen der vom Besitzer verknuepften Analyse LESEN —
         // wie die Kurve hinter dem Teilen-Link. Erzeugen bleibt angemeldet (POST nur an der eigenen Partie).
+        "GET /api/games/shared/{token}/summary",                     // GameSummaryController.GetShared (nur der fertige Text, 0.934.0)
         "GET /api/games/shared/{token}/explanations",                // GameExplanationController.GetShared
         "GET /api/games/shared/{token}/similar",                     // SimilarGamesController.Shared (Kopfdaten des Rohbestands, ohne Züge)
         "GET /api/reconstructions/shared/{token}",                   // GameReconstructionController.Shared (Teilen-Link /r/{token})

@@ -11,6 +11,13 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.934.1',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Tests: the new anonymous endpoint for the finished summary of a shared game is listed in the inventory of public endpoints.', de: 'Tests: Der neue anonyme Endpunkt für die fertige Zusammenfassung einer geteilten Partie steht in der Liste der öffentlichen Endpunkte.' },
+    ],
+  },
+  {
     version: '0.934.0',
     date: '2026-11-09',
     changes: [
