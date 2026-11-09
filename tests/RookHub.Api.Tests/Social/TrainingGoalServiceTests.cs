@@ -498,6 +498,38 @@ public class TrainingGoalServiceTests : IDisposable
         Assert.Equal(3600, rows[1].TimeSeconds);   // auf PerChessableFlushCapSeconds gedeckelt
     }
 
+    /// <summary>R4-019: je Konto und UTC-Tag höchstens 24 h Chessable-Zeit — der Rest eines Häppchens wird gekappt,
+    /// danach wird nichts mehr angelegt; ein anderes Konto ist unberührt.</summary>
+    [Fact]
+    public async Task RecordChessableActivity_DeckeltJeTagAuf24Stunden()
+    {
+        var u = await CreateUserAsync();
+        var other = await CreateUserAsync();
+        for (var i = 0; i < 30; i++)
+            await _service.RecordChessableActivityAsync(u.Id, new ChessableActivityInputDto { SecondsActive = 3500 });
+        await _service.RecordChessableActivityAsync(other.Id, new ChessableActivityInputDto { SecondsActive = 60 });
+
+        var rows = await _db.ChessableActivities.Where(a => a.UserId == u.Id).ToListAsync();
+        Assert.Equal(24 * 3600, rows.Sum(r => r.TimeSeconds));
+        Assert.Equal(25, rows.Count);   // 24 volle Häppchen + der gekappte Rest, dann nichts mehr
+        Assert.Equal(60, (await _db.ChessableActivities.SingleAsync(a => a.UserId == other.Id)).TimeSeconds);
+    }
+
+    /// <summary>R4-019: auch winzige Häppchen in einer Schleife wachsen nicht ohne Grenze.</summary>
+    [Fact]
+    public async Task RecordChessableActivity_DeckeltDieZeilenJeTag()
+    {
+        var u = await CreateUserAsync();
+        var now = DateTime.UtcNow;
+        _db.ChessableActivities.AddRange(Enumerable.Range(0, 1500).Select(_ =>
+            new ChessableActivity { UserId = u.Id, TimeSeconds = 1, AttemptedAt = now }));
+        await _db.SaveChangesAsync();
+
+        await _service.RecordChessableActivityAsync(u.Id, new ChessableActivityInputDto { SecondsActive = 1 });
+
+        Assert.Equal(1500, await _db.ChessableActivities.CountAsync(a => a.UserId == u.Id));
+    }
+
     [Fact]
     public async Task RecordChessableActivity_PersistsCourseIdAndName_Trimmed()
     {

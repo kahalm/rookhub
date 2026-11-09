@@ -39,6 +39,7 @@ je DELETE), ohne große Spalten zu laden.
 | ClubHub-Verknüpfungscode | 14 Tage | Ablauf beim Prüfen | fest |
 | Passwort-Reset-Codes (`PasswordResetTokens`, Hash + Zeitstempel; gültig 1 h, Admin-Link 24 h) | 7 Tage nach Verbrauch bzw. Ablauf | Aufräumlauf | fest (`OneTimeCodeRetention.MaxAgeAfterEnd`) |
 | Übergabe-Codes zwischen den Oberflächen (`AuthHandoffTokens`, gültig 60 s) | 7 Tage nach Verbrauch bzw. Ablauf (außerdem beim nächsten Sprung desselben Kontos) | Aufräumlauf | fest (`OneTimeCodeRetention.MaxAgeAfterEnd`) |
+| Chessable-Trainingszeit der Extension (`ChessableActivities`) | bis zur Kontolöschung (Tracker- und Kurs-Verlauf); Zuwachs je Tag gedeckelt: 24 h Zeit, 1 500 Häppchen | beim Schreiben (R4-019) | fest (`TrainingCaps`) |
 | Konto selbst | bis zur Löschung durch den Nutzer (Kontolöschung räumt alles Zugehörige) | — | — |
 
 ## Außerhalb der Datenbank

@@ -132,6 +132,8 @@ public partial class ExtensionController : BaseApiController
     /// ist auf 1–3600 s je Aufruf begrenzt (die Extension flusht in kleinen Intervallen).
     /// </summary>
     [HttpPost("training-activity")]
+    // Je Konto gedrosselt wie die Roh-Senken (R4-019); Tagesdeckel beim Schreiben (ChessableActivityLog).
+    [EnableRateLimiting("extension-sink")]
     public async Task<IActionResult> RecordTrainingActivity([FromBody] ChessableActivityInputDto dto)
     {
         if (dto == null || dto.SecondsActive <= 0)

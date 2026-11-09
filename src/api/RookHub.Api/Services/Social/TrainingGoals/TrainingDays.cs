@@ -25,6 +25,11 @@ internal static class TrainingCaps
     public const int PerSessionCapSeconds = 14400; // 4 h
     /// <summary>Obergrenze je Chessable-Zeit-Häppchen (die Extension flusht in kleinen Intervallen).</summary>
     public const int PerChessableFlushCapSeconds = 3600; // 1 h
+    /// <summary>Chessable-Zeit je Konto und UTC-Tag beim Schreiben (R4-019): mehr als ein Tag hat der Tag nicht.</summary>
+    public const int ChessableDayCapSeconds = 24 * 3600;
+    /// <summary>Chessable-Häppchen je Konto und UTC-Tag (R4-019). Die Extension flusht höchstens etwa minütlich
+    /// (1 440 am Tag); was darüber kommt, ist eine Schleife und verfällt.</summary>
+    public const int MaxChessableRowsPerDay = 1500;
     /// <summary>Sanity-Obergrenze für manuell eingetragene OTB-Partien je Eintrag.</summary>
     public const int ManualGamesCap = 50;
     /// <summary>Deckel für SELBST eingetragene Minuten-Aktivitäten (10 h). Bewusst höher als

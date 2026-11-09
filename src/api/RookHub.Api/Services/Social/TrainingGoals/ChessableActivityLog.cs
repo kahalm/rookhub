@@ -59,16 +59,26 @@ internal sealed class ChessableActivityLog
         if (IsModeLabel(courseName)) courseName = null;
         if (courseName is null && courseId is not null)
             courseName = await CachedChessableCourseNameAsync(userId, courseId);
+
+        // Deckel je Konto und UTC-Tag (R4-019): höchstens 24 h Zeit und MaxChessableRowsPerDay Häppchen — eine Schleife
+        // blähte sonst Tracker, Vereinsfortschritt (Minutes28) und die Tabelle ohne Grenze auf. Was darüber geht, verfällt.
+        var now = DateTime.UtcNow;
+        var dayStart = now.Date;
+        var today = _db.ChessableActivities.Where(a => a.UserId == userId && a.AttemptedAt >= dayStart);
+        if (await today.CountAsync() >= TrainingCaps.MaxChessableRowsPerDay) return;
+        var left = TrainingCaps.ChessableDayCapSeconds - await today.SumAsync(a => a.TimeSeconds);
+        if (left <= 0) return;
+
         _db.ChessableActivities.Add(new ChessableActivity
         {
             UserId = userId,
-            TimeSeconds = Math.Clamp(dto.SecondsActive, 0, TrainingCaps.PerChessableFlushCapSeconds),
+            TimeSeconds = Math.Clamp(dto.SecondsActive, 0, Math.Min(TrainingCaps.PerChessableFlushCapSeconds, left)),
             MovesTrained = Math.Max(0, dto.MovesTrained),
             LinesTrained = Math.Max(0, dto.LinesTrained),
             CourseKind = dto.CourseKind,
             CourseId = courseId?.Length > 32 ? courseId[..32] : courseId,
             CourseName = courseName?.Length > 200 ? courseName[..200] : courseName,
-            AttemptedAt = DateTime.UtcNow,
+            AttemptedAt = now,
         });
         await _db.SaveChangesAsync();
         InvalidateDailySeries(userId);

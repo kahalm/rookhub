@@ -40,4 +40,19 @@ public class ExtensionSinkLimitTests
         Assert.Contains("ClaimTypes.NameIdentifier", block);
         Assert.Contains("PermitLimit = 60 * permitScale", block);
     }
+
+    /// <summary>R4-019: die Trainingszeit-Meldung ist je Konto gedrosselt wie die Roh-Senken.</summary>
+    [Fact]
+    public void TrainingActivity_HasPerUserRateLimit()
+        => Assert.Equal("extension-sink", typeof(ExtensionController).GetMethod(nameof(ExtensionController.RecordTrainingActivity))!
+            .GetCustomAttribute<EnableRateLimitingAttribute>()?.PolicyName);
+
+    /// <summary>R4-006: die Meldewege, die eine Admin-Nachricht samt Glocke auslösen können, laufen unter derselben Drossel
+    /// je Konto wie der reguläre Nachrichtenweg (POST /api/messages/reply).</summary>
+    [Theory]
+    [InlineData(nameof(ExtensionController.ChessableCrawlError))]
+    [InlineData(nameof(ExtensionController.ChessableUnexpectedResponse))]
+    public void AdminAlertReports_RunUnderTheUserMessageLimit(string action)
+        => Assert.Equal("user-message", typeof(ExtensionController).GetMethod(action)!
+            .GetCustomAttribute<EnableRateLimitingAttribute>()?.PolicyName);
 }
