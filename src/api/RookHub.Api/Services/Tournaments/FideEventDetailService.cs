@@ -28,11 +28,21 @@ public record FideDetailResult(int Checked, int WithDetails, int Geocoded);
 /// Der <see cref="GeocodingService"/> hat mit einer PLZ seinen genauesten Weg, und der greift bei
 /// FIDE-Eintraegen sonst nie — von 144 sind 81 verortet, und die ueber Ortsnamen.</para>
 ///
-/// <para><b>Was NICHT von hier kommt: Einzel gegen Mannschaft.</b> Das Feld „Tournament system"
-/// trennt Rundenturnier von Schweizer System, nicht Einzel von Mannschaft — die
-/// 46. Schacholympiade steht dort auf „Other". <see cref="TournamentDirectoryEntry.Kind"/> bleibt
-/// bei FIDE-Eintraegen also <c>Unknown</c>, und das ist die richtige Antwort statt einer
-/// geratenen.</para>
+/// <para><b>Einzel gegen Mannschaft kommt hier nur im ausdruecklichen Fall.</b> Das Feld
+/// „Tournament system" trennt Rundenturnier von Schweizer System, nicht Einzel von Mannschaft —
+/// die 46. Schacholympiade steht dort auf „Other", die Team-Blitz-WM auf „Round-Robin". Nur ein
+/// System, das „Team" ausdruecklich nennt („Team Swiss", „Team Round-Robin"), setzt
+/// <see cref="TournamentDirectoryEntry.Kind"/> auf <c>Team</c>; alles andere laesst es stehen.
+/// „Sonst Einzel" waere geraten und fuer die Olympiade nachweislich falsch.</para>
+///
+/// <para><b>Widerspruchsregel fuer Turniere auf BEIDEN Quellen</b> (Entscheidung 2026-11-09):
+/// <b>chess-results gilt fuer Termin und Ort</b> — Termin und Ortstext schreibt dieser Nachlauf ohnehin
+/// nie, und einen schon verorteten Eintrag mit chess-results-Nummer verortet er nicht neu;
+/// Runden, Teilnehmer, Veranstalter und Hauptschiedsrichter fuellt er nur, wo nichts steht.
+/// <b>FIDE gilt fuer die Bedenkzeit-Beschreibung</b> — dort ist sie ausgeschrieben („90 minutes
+/// with 30 second increment from move 1"), bei chess-results oft nur „90+30" oder leer; sie
+/// ersetzt den vorhandenen Text, und die Speed-Klasse folgt ihr (nur wenn sie daraus eindeutig
+/// hervorgeht).</para>
 /// </summary>
 public class FideEventDetailService
 {
@@ -41,9 +51,12 @@ public class FideEventDetailService
     /// zum Detail-Fragment aendert** — der naechtliche Durchgang holt dann jedes aeltere Ereignis
     /// genau EINMAL nach, ohne dass jemand `retryEmpty` von Hand ausloest.
     ///
-    /// <para>1 = Stand 2026-09-07 (erste Fassung des Detail-Nachlaufs).</para>
+    /// <para>1 = Stand 2026-09-07 (erste Fassung des Detail-Nachlaufs).
+    /// 2 = 2026-11-09: Veranstalter und Hauptschiedsrichter, Mannschaft aus „Team …", Ortstext.
+    /// <b>Setzt einen Crawler voraus, der <c>organizers</c>/<c>chiefArbiter</c> liefert</b> — ein
+    /// aelterer Crawler laesst die Felder weg, und der Eintrag gaelte trotzdem als Fassung 2.</para>
     /// </summary>
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     /// <summary>
     /// Zwischenstand alle 25 Ereignisse — dieselbe Lehre wie beim Rundenplan: ein Durchgang ueber
@@ -162,10 +175,14 @@ public class FideEventDetailService
     {
         var any = false;
 
+        // Widerspruchsregel: FIDE gilt fuer die Bedenkzeit-BESCHREIBUNG, auch gegen chess-results.
+        // Die Klasse folgt dem Text nur, wenn er sie hergibt — ein Text, aus dem der Klassifizierer
+        // nichts liest, loescht keine vorhandene Klasse.
         if (!string.IsNullOrWhiteSpace(d.TimeControlText))
         {
             entry.TimeControlText = Truncate(d.TimeControlText, 300);
-            entry.Speed = TournamentSpeedClassifier.Classify(d.TimeControlText);
+            var classified = TournamentSpeedClassifier.Classify(d.TimeControlText);
+            if (classified != TournamentSpeed.Unknown) entry.Speed = classified;
             any = true;
         }
         // Ohne ausgeschriebene Bedenkzeit traegt wenigstens FIDEs eigene Klasse. Sie wird NICHT
@@ -184,14 +201,53 @@ public class FideEventDetailService
             any = true;
         }
 
+        if (entry.Kind == TournamentKind.Unknown && MapKind(d.System) is { } kind)
+        {
+            entry.Kind = kind;
+            any = true;
+        }
+
         // `is null or <= 0`, nicht `<= 0`: die Spalten sind nullbar, und ein Vergleich gegen null
         // ist FALSCH — mit `<= 0` allein blieben genau die leeren Felder ungefuellt, also die,
         // um die es hier geht.
         if (d.Rounds is > 0 && entry.Rounds is null or <= 0) { entry.Rounds = d.Rounds.Value; any = true; }
         if (d.Players is > 0 && entry.PlayerCount is null or <= 0) { entry.PlayerCount = d.Players.Value; any = true; }
 
+        // Personen nur in Luecken — chess-results fuehrt sie oft genauer (mit Titel, ohne Kuerzel).
+        if (!string.IsNullOrWhiteSpace(d.Organizers) && string.IsNullOrWhiteSpace(entry.Organizer))
+        {
+            entry.Organizer = Truncate(d.Organizers, 300);
+            any = true;
+        }
+        if (!string.IsNullOrWhiteSpace(d.ChiefArbiter) && string.IsNullOrWhiteSpace(entry.ChiefArbiter))
+        {
+            entry.ChiefArbiter = Truncate(d.ChiefArbiter, 300);
+            any = true;
+        }
+
+        // Den Ortstext besitzt der Sweep (Jahresansicht bzw. chess-results, und der ChangeHash
+        // haengt daran) — hier nur, wenn noch gar keiner steht.
+        if (string.IsNullOrWhiteSpace(entry.LocationText) && !string.IsNullOrWhiteSpace(d.City))
+        {
+            entry.LocationText = Truncate(
+                string.IsNullOrWhiteSpace(d.Country) ? d.City : $"{d.City}, {d.Country}", 500);
+            any = true;
+        }
+
         return any;
     }
+
+    /// <summary>
+    /// Mannschaft nur, wenn das Turniersystem es AUSDRUECKLICH sagt („Team Swiss", „Team
+    /// Round-Robin"). Sonst <c>null</c> — auch nicht „Einzel", denn FIDE fuehrt die Olympiade auf
+    /// „Other" und die Team-Blitz-WM auf „Round-Robin".
+    /// </summary>
+    internal static TournamentKind? MapKind(string? system) =>
+        system is not null
+        && System.Text.RegularExpressions.Regex.IsMatch(system, @"\bteams?\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+            ? TournamentKind.Team
+            : null;
 
     /// <summary>
     /// „Round-Robin" / „Swiss-System" / „Other" auf die eigene Aufzaehlung.
@@ -236,7 +292,12 @@ public class FideEventDetailService
         TournamentDirectoryEntry entry, CrawlerFideDetail d, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(d.VenueAddress)) return false;
-        if (entry.GeoSource is GeoSource.Manual or GeoSource.PostalCode) return false;
+        if (entry.GeoSource is GeoSource.Manual or GeoSource.PostalCode or GeoSource.SourceProvided) return false;
+        // Widerspruchsregel: bei Turnieren auf beiden Quellen gilt chess-results fuer den Ort. Ein
+        // schon verorteter Eintrag mit chess-results-Nummer bleibt, wo er ist; nur ein Eintrag OHNE
+        // brauchbaren Pin (keiner, oder mehrdeutig) darf die FIDE-Anschrift nehmen.
+        if (entry.ChessResultsId is not null && entry.GeoSource is not (GeoSource.None or GeoSource.Ambiguous))
+            return false;
 
         var hit = await _geocoding.ResolveAsync(d.VenueAddress, entry.State, entry.Federation, ct);
         if (hit is null || hit.Source == GeoSource.Ambiguous) return false;
@@ -252,12 +313,20 @@ public class FideEventDetailService
 
     private async Task<CrawlerFideDetail?> FetchAsync(string fideId, CancellationToken ct)
     {
+        // 404 heisst beim Crawler „keine gueltige Ereignis-Nummer" — das aendert sich nie, also
+        // „nachgesehen, nichts da" (null) statt eines Fehlers, der den Eintrag jede Nacht wieder
+        // vorn in die Warteschlange stellt.
         return await _httpClientFactory.GetCrawlerJsonAsync<CrawlerFideDetail>(
-            $"/api/fide-calendar/event?id={Uri.EscapeDataString(fideId)}", ct);
+            $"/api/fide-calendar/event?id={Uri.EscapeDataString(fideId)}", ct,
+            absentOn: System.Net.HttpStatusCode.NotFound);
     }
 
+    /// <summary>
+    /// SPIEGEL von <c>FideEventDetailResponse</c> im Crawler (<c>DTOs/FideCalendarDtos.cs</c>);
+    /// goldene Fassung in <c>tests/…/Fixtures/CrawlerContract/fide-event.json</c>.
+    /// </summary>
     internal sealed record CrawlerFideDetail(
         string? EventId, string? EventType, string? TimeControl, string? TimeControlText,
         string? System, int? Rounds, int? Players, string? Country, string? City,
-        string? VenueAddress, string? Website);
+        string? VenueAddress, string? Website, string? Organizers = null, string? ChiefArbiter = null);
 }

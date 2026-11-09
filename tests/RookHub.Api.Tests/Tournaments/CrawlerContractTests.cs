@@ -27,8 +27,8 @@ namespace RookHub.Api.Tests.Tournaments;
 /// NEUES Crawler-Feld bricht nichts und darf in der goldenen Datei fehlen, bis es jemand liest.</para>
 ///
 /// <para><b>SPIEGEL</b>: chessresults_crawler <c>src/ChessResultsCrawler/DTOs/TournamentDtos.cs</c>,
-/// <c>DTOs/PlayerSearchDtos.cs</c> und <c>Services/RoundDetectionService.cs</c>
-/// (<c>RoundCheckResult</c>). Wer dort ein Antwort-Feld aendert, zieht die goldene Datei hier nach
+/// <c>DTOs/PlayerSearchDtos.cs</c>, <c>DTOs/FideCalendarDtos.cs</c> (<c>FideEventDetailResponse</c>)
+/// und <c>Services/RoundDetectionService.cs</c> (<c>RoundCheckResult</c>). Wer dort ein Antwort-Feld aendert, zieht die goldene Datei hier nach
 /// — und damit jeden Leser.</para>
 /// </summary>
 public class CrawlerContractTests
@@ -223,6 +223,46 @@ public class CrawlerContractTests
         Assert.True(empty.Count == 0, "Nicht gelesen: " + string.Join(", ", empty));
     }
 
+    /// <summary>
+    /// Felder, die RookHub schon liest, die der zuletzt GETAGGTE Crawler aber noch nicht liefert —
+    /// sie fehlen deshalb in der goldenen Datei (sonst waere der Vertrags-Job gegen den Tag rot).
+    /// <b>Nach dem naechsten Crawler-Tag</b>: die Felder in <c>fide-event.json</c> aufnehmen und
+    /// hier streichen. Bis dahin liefert ein alter Crawler sie nicht, und der Leser bekommt
+    /// <c>null</c> — genau das Verhalten, das „fehlt" ohnehin hat.
+    /// </summary>
+    private static readonly HashSet<string> FideDetailAwaitingCrawlerTag = ["Organizers", "ChiefArbiter"];
+
+    /// <summary>
+    /// Der FIDE-Detail-Nachlauf liest <c>GET /api/fide-calendar/event</c> GETYPT
+    /// (<see cref="FideEventDetailService.CrawlerFideDetail"/>, <see cref="DirectoryCrawlerClient.JsonOptions"/>):
+    /// ein anders geschriebener Name bliebe still <c>null</c>, und der Eintrag gaelte trotzdem als
+    /// nachgesehen. Die goldene Datei stammt aus dem echten Abruf id=17954 und traegt jedes Feld.
+    /// </summary>
+    [Fact]
+    public void FideDetailRecord_ReadsEveryFieldOfTheGoldenFideEvent()
+    {
+        var row = JsonSerializer.Deserialize<FideEventDetailService.CrawlerFideDetail>(
+            Golden("fide-event.json").ToJsonString(), DirectoryCrawlerClient.JsonOptions)!;
+
+        var empty = typeof(FideEventDetailService.CrawlerFideDetail)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.Name != "EqualityContract" && p.GetValue(row) is null
+                        && !FideDetailAwaitingCrawlerTag.Contains(p.Name))
+            .Select(p => p.Name)
+            .ToList();
+        Assert.True(empty.Count == 0, "Nicht gelesen: " + string.Join(", ", empty));
+        Assert.Contains("50012", row.VenueAddress);
+    }
+
+    /// <summary>Die Warteliste darf nur Felder nennen, die der Leser wirklich hat.</summary>
+    [Fact]
+    public void FideDetailAwaitingCrawlerTag_NamesOnlyRealProperties()
+    {
+        var props = typeof(FideEventDetailService.CrawlerFideDetail)
+            .GetProperties().Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
+        Assert.All(FideDetailAwaitingCrawlerTag, f => Assert.Contains(f, props));
+    }
+
     // ----- (3) Goldene Datei gegen den Crawler-Quelltext --------------------
 
     /// <summary>Goldene Antwort → Crawler-DTO (Quelldatei relativ zum Crawler-Repo, Klasse).</summary>
@@ -239,6 +279,7 @@ public class CrawlerContractTests
         { "rounds-check.json", null, "src/ChessResultsCrawler/Services/RoundDetectionService.cs", "RoundCheckResult" },
         { "player-search.json", null, "src/ChessResultsCrawler/DTOs/PlayerSearchDtos.cs", "PlayerSearchResponse" },
         { "player-history.json", null, "src/ChessResultsCrawler/DTOs/PlayerSearchDtos.cs", "PlayerTournamentResponse" },
+        { "fide-event.json", null, "src/ChessResultsCrawler/DTOs/FideCalendarDtos.cs", "FideEventDetailResponse" },
     };
 
     /// <summary>

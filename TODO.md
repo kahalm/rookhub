@@ -661,7 +661,7 @@ Schach der Gegenseite — und eine ungueltige Stellung mit klarer Meldung ablehn
 weiterzugeben. `PermissiveSan` im API-Projekt kennt den Fall schon von der anderen Seite (es spielt
 illegale Stellungen bewusst nach), die Pruefung gehoert daneben und nicht hinein.
 
-## [ ] FIDE-Detailangaben nachtragen — EIN Abruf je Ereignis, alle Felder da (2026-09-07)
+## [x] FIDE-Detailangaben nachtragen — EIN Abruf je Ereignis, alle Felder da (2026-09-07, ERLEDIGT 2026-11-09, Version folgt)
 
 Gemeldet als „bei den FIDE-Turnieren bist du noch sehr zaghaft mit den Details". Zu Recht. Am
 Dev-Stand gezaehlt:
@@ -718,6 +718,20 @@ mindestens zwei gemeinsamen unterscheidenden Namenswoertern. Faktisch gewinnt ch
 durch eine Vorrangregel, sondern weil die FIDE-Jahresansicht die Detailfelder nicht liefert. Mit
 dem Nachlauf oben waere zu entscheiden, wer bei Widerspruch gilt (Vorschlag: chess-results fuer
 Termin/Ort, FIDE fuer die Bedenkzeit-Beschreibung — dort ist sie ausgeschrieben).
+
+**Erledigt (2026-11-09, Version folgt).** Der Grundbau stand schon seit 2026-09-07 (Crawler `GET
+/api/fide-calendar/event?id=`, `FideEventDetailService`, Migration `AddTournamentSystemAndFideDetails` mit
+`FideDetailCheckedAt`/`FideDetailVersion`, naechtlicher „FIDE-Detail-Durchgang", Admin `POST …/fide-details`); nur
+der Punkt hier war offen geblieben. Jetzt nachgezogen: Crawler liest Veranstalter + Hauptschiedsrichter (Karten
+hinter `h4`, nicht in `event-info-row`), rookhub fuellt `Organizer`/`ChiefArbiter`/`LocationText` in Luecken,
+`Kind = Team` nur bei „Team …" im System, die **Widerspruchsregel** steht als Kommentar + Test (chess-results:
+Termin/Ort, FIDE: Bedenkzeit-Beschreibung), ein unklassifizierbarer Text loescht keine Speed-Klasse mehr, 404 =
+„nachgesehen", `FideDetailVersion` 2 (holt den Bestand einmal nach), Vertragsdatei `CrawlerContract/fide-event.json`.
+Offen/entschieden: (1) „sonst Einzel" bewusst NICHT umgesetzt — FIDE nennt die Olympiade „Other", die Team-Blitz-WM
+„Round-Robin"; Einzel/Mannschaft fuer FIDE-Eintraege bleibt meist `Unknown`. (2) `State` (Region) gibt FIDE nicht
+her, nur Land + Stadt. (3) Die E-Mail des Veranstalters wird nicht uebernommen (persoenlich, kein Feld). (4) Crawler
+VOR oder MIT der API ausrollen, sonst stempelt Fassung 2 die Eintraege ohne Veranstalter. (5) Nach dem naechsten
+Crawler-Tag `organizers`/`chiefArbiter` in `fide-event.json` aufnehmen und `FideDetailAwaitingCrawlerTag` leeren.
 
 ## [x] Postleitzahlen fehlen fuer die halbe dritte Runde (2026-09-09, ERLEDIGT am selben Tag)
 

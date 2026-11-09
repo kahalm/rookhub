@@ -120,6 +120,7 @@ Regeländerung zieht der nächste Start von selbst nach. Was dann noch getrennt 
 | POST | `/api/admin/tournament-directory/geocode-missing?limit=&force=` | Nicht verortete Eintraege erneut aufloesen — **ohne `limit` den GANZEN Bestand**: der Lauf braucht kein Netz (lokales Lexikon, 6598 Eintraege in 14 s), und ein Deckel liefert KEINE zweite Portion (die Auswahl hat keine Fortschrittsmarke, ein zweiter Aufruf sieht wieder dieselben ersten N — am 2026-09-09 live erlebt). **`force=true`** nimmt auch schon verortete vor — gebraucht, wenn sich die REGELN aendern (der Sweep verortet einen bestehenden Eintrag nur bei geaendertem Ortstext neu, ein Pin aus einer alten Regel bliebe sonst fuer immer). Entfernt dabei Pins, die nach der neuen Regel Rateentscheidungen sind; `GeoSource=Manual`, `SourceProvided` und `TeamHint` bleiben in jedem Fall unberuehrt — der Vereinsnamen-Beleg ist eine Auskunft, die die Namensregel nicht reproduzieren kann |
 | POST | `/api/admin/tournament-directory/backfill-sources` | Herkunftsvermerk fuer den Altbestand nachtragen (jeder bestehende Eintrag stammt aus chess-results). Braucht kein Netz; der Sweep tut es von selbst, aber erst nach einer Rotationswoche |
 | POST | `/api/admin/tournament-directory/round-plans?limit=&retryEmpty=` | SPIELTERMINE langlaufender Turniere nachtragen — ein Seitenabruf je Turnier (chess-results art=14), gedeckelt. Siehe unten |
+| POST | `/api/admin/tournament-directory/fide-details?limit=&retryEmpty=` | FIDE-DETAILANGABEN nachtragen (Bedenkzeit, System, Runden, Teilnehmer, Veranstalter, Schiedsrichter, Anschrift → Verortung) — ein Abruf je Ereignis, gedeckelt (1–1000, Vorgabe 100), einmalig je Ereignis über `FideDetailCheckedAt`. Siehe unten |
 | POST | `/api/admin/tournament-directory/fide?years=` | Den FIDE-Kalender sofort lesen (Vorgabe: laufendes Jahr + 2). Ein Seitenabruf je Jahr; neue Ereignisse kommen mit `ChessResultsId = null` dazu, erkannte werden mit dem bestehenden Eintrag verschmolzen |
 | POST | `/api/admin/tournament-directory/fsi?months=` | Den Kalender des ITALIENISCHEN Verbands lesen (ein Abruf, alle Felder inline). Siehe „Zusatzquellen" unten |
 | POST | `/api/admin/tournament-directory/szs` | Den Kalender des SLOWENISCHEN Verbands lesen (vier Seitenabrufe, PLZ steht in der Liste) |
@@ -236,6 +237,28 @@ unterscheidende Woerter teilen (oder eines plus denselben Ort); sonst kommt es a
 mit `ChessResultsId = null` dazu. Online-Ereignisse (`ONL`) bekommen keine Koordinaten. Geplant
 ueber `TournamentDirectory:FideYears` (Vorgabe 3 Jahre) nach dem naechtlichen Sweep, von Hand
 `POST /api/admin/tournament-directory/fide`.
+
+**FIDE-Detailangaben: ein Abruf je Ereignis, einmalig** (`Services/Tournaments/FideEventDetailService.cs`,
+Crawler-Endpunkt `GET /api/fide-calendar/event?id=` → `calendar_server.php?id=<id>&preview=0`, das Fragment, das
+`js/tabs.js` in die Ereignisseite nachlaedt). Die Jahresansicht traegt je Ereignis nur Name, Termin und Ort und
+ignoriert ihre Filter `event_type`/`time_control` — einen Sammelweg wie `art=` bei chess-results gibt es nicht.
+Der Nachlauf nimmt jeden Eintrag mit FIDE-Herkunftsvermerk, der noch keinen `FideDetailCheckedAt` traegt (oder
+eine aeltere `FideDetailVersion`, aktuell 2), aelteste Pruefung zuerst, hoechstens
+`TournamentDirectory:FideDetailBatchSize` (Vorgabe 50) je Lauf; geplant als „FIDE-Detail-Durchgang" NACH dem
+FIDE-Jahreskalender, von Hand `POST /api/admin/tournament-directory/fide-details?limit=&retryEmpty=`. Zwischenstand
+alle 25 Ereignisse und im `finally` (Lehre aus dem Rundenplan). Ein Fehler bei EINEM Ereignis wird protokolliert
+und laesst dessen Vermerk leer (naechster Lauf versucht es wieder), der Lauf geht weiter; ein 404 des Crawlers
+(keine gueltige Nummer) und ein Ereignis ohne gepflegte Angaben gelten als „nachgesehen, nichts da".
+Zuordnung: Bedenkzeit-Text → `TimeControlText` (+ `Speed`, wenn der Klassifizierer sie liest, sonst FIDEs Klasse
+„Standard/Rapid/Blitz"), Turniersystem → `System`, „Team …" im System → `Kind = Team` (sonst bleibt `Kind` stehen:
+die Olympiade heisst dort „Other", die Team-Blitz-WM „Round-Robin" — „sonst Einzel" waere geraten), Runden/
+Teilnehmer/Veranstalter/Hauptschiedsrichter nur in Luecken, Stadt + Land → `LocationText` nur, wenn keiner steht
+(den Ortstext besitzt der Sweep), Spielort-Anschrift → `GeocodingService` (traegt meist eine PLZ, der genaueste
+Weg). **Widerspruchsregel bei Turnieren auf BEIDEN Quellen** (2026-11-09): chess-results gilt fuer Termin und Ort
+(ein verorteter Eintrag mit chess-results-Nummer wird nicht neu verortet), FIDE fuer die Bedenkzeit-Beschreibung
+(ersetzt den vorhandenen Text). Von Hand gesetzte (`Manual`), von der Quelle gelieferte (`SourceProvided`) und
+schon ueber die PLZ gefundene Standorte bleiben immer. Test: `FideEventDetailServiceTests`; Vertrag
+`Fixtures/CrawlerContract/fide-event.json`.
 
 **Die VERBANDSKALENDER sind die dritte Quellenart** (`Services/TournamentDirectory/ExternalDirectorySource.cs` traegt
 das Gemeinsame, je Land ein `…DirectorySweepService`; die Abgleichschleife selbst steht seit der Zerlegung Z7 EINMAL in

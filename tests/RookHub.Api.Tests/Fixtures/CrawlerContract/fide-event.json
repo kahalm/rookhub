@@ -1,0 +1,13 @@
+{
+  "eventId": "17954",
+  "eventType": "Over-the-Board Tournament",
+  "timeControl": "Standard",
+  "timeControlText": "90 minutes with 30 second increment from move 1",
+  "system": "Round-Robin",
+  "rounds": 9,
+  "players": 10,
+  "country": "Spain",
+  "city": "Zaragoza",
+  "venueAddress": "Vía Ibérica, 69, 77, 50012 Zaragoza, Spain",
+  "website": "https://stadiumcasablanca.com/openmyinvestor/"
+}

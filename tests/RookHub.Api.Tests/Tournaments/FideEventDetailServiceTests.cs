@@ -70,7 +70,8 @@ public class FideEventDetailServiceTests : IDisposable
         {"eventId":"17954","eventType":"Over-the-Board Tournament","timeControl":"Standard",
          "timeControlText":"90 minutes with 30 second increment from move 1",
          "system":"Round-Robin","rounds":9,"players":10,"country":"Spain","city":"Zaragoza",
-         "venueAddress":"Via Iberica, 69, 77, 50012 Zaragoza, Spain","website":null}
+         "venueAddress":"Via Iberica, 69, 77, 50012 Zaragoza, Spain","website":null,
+         "organizers":"Adla, Diego (ARG); Glavina, Pablo (ESP)","chiefArbiter":"Cajo Esteban, Ruben (ESP)"}
         """;
 
     /// <summary>Die 46. Schacholympiade: acht Zeilen, davon die Haelfte leer.</summary>
@@ -96,8 +97,182 @@ public class FideEventDetailServiceTests : IDisposable
         Assert.Equal(TournamentSystem.RoundRobin, entry.System);
         Assert.Equal(9, entry.Rounds);
         Assert.Equal(10, entry.PlayerCount);
+        Assert.Equal("Adla, Diego (ARG); Glavina, Pablo (ESP)", entry.Organizer);
+        Assert.Equal("Cajo Esteban, Ruben (ESP)", entry.ChiefArbiter);
+        // Kein Ortstext am Eintrag → der aus dem Detail.
+        Assert.Equal("Zaragoza, Spain", entry.LocationText);
+        // „Round-Robin" sagt nichts ueber Einzel/Mannschaft.
+        Assert.Equal(TournamentKind.Unknown, entry.Kind);
         Assert.NotNull(entry.FideDetailCheckedAt);
     }
+
+    /// <summary>
+    /// Die WIDERSPRUCHSREGEL fuer Turniere auf beiden Quellen (Entscheidung 2026-11-09):
+    /// chess-results gilt fuer Termin und Ort, FIDE fuer die Bedenkzeit-Beschreibung. Was
+    /// chess-results schon fuehrt (Runden, Teilnehmer, Veranstalter, Schiedsrichter, Ortstext,
+    /// Pin), bleibt; nur der Bedenkzeit-Text wird durch FIDEs ausgeschriebene Fassung ersetzt.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_EntryOnBothSources_ChessResultsKeepsDateAndPlace_FideGivesTheTimeControl()
+    {
+        var entry = await AddFideEntryAsync(publicId: "990101", fideId: "990101", chessResultsId: "990101");
+        entry.Federation = "ESP";
+        entry.TimeControlText = "90+30";
+        entry.Rounds = 7;
+        entry.PlayerCount = 50;
+        entry.Organizer = "Club Ajedrez Zaragoza";
+        entry.ChiefArbiter = "IA Cajo Esteban, Ruben";
+        entry.LocationText = "Hotel Palafox, Zaragoza";
+        entry.Lat = 41.6;
+        entry.Lon = -0.88;
+        entry.GeoSource = GeoSource.City;
+        _db.GeoPlaces.Add(new GeoPlace
+        {
+            Country = "ES", PostalCode = "50012", Name = "Zaragoza",
+            NameNormalized = "zaragoza", Lat = 41.65, Lon = -0.91,
+            Kind = GeoPlaceKind.PostalCode, Population = 0,
+        });
+        await _db.SaveChangesAsync();
+        var start = entry.StartDate;
+
+        var result = await CreateService(FullDetail).RunAsync(10);
+
+        Assert.Equal(0, result.Geocoded);
+        await _db.Entry(entry).ReloadAsync();
+        // FIDE: Bedenkzeit-Beschreibung.
+        Assert.Equal("90 minutes with 30 second increment from move 1", entry.TimeControlText);
+        Assert.Equal(TournamentSpeed.Standard, entry.Speed);
+        // chess-results: Termin, Ort, Pin — und alles andere, was schon steht.
+        Assert.Equal(start, entry.StartDate);
+        Assert.Equal("Hotel Palafox, Zaragoza", entry.LocationText);
+        Assert.Equal(GeoSource.City, entry.GeoSource);
+        Assert.Equal(41.6, entry.Lat);
+        Assert.Equal(7, entry.Rounds);
+        Assert.Equal(50, entry.PlayerCount);
+        Assert.Equal("Club Ajedrez Zaragoza", entry.Organizer);
+        Assert.Equal("IA Cajo Esteban, Ruben", entry.ChiefArbiter);
+    }
+
+    /// <summary>
+    /// … aber ein Eintrag mit chess-results-Nummer OHNE brauchbaren Pin (mehrdeutig) darf die
+    /// FIDE-Anschrift nehmen — dann gibt es keinen chess-results-Ort, der gelten koennte.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_EntryOnBothSources_WithoutAPin_TakesTheFideAddress()
+    {
+        var entry = await AddFideEntryAsync(publicId: "990102", fideId: "990102", chessResultsId: "990102");
+        entry.Federation = "ESP";
+        entry.GeoSource = GeoSource.Ambiguous;
+        _db.GeoPlaces.Add(new GeoPlace
+        {
+            Country = "ES", PostalCode = "50012", Name = "Zaragoza",
+            NameNormalized = "zaragoza", Lat = 41.65, Lon = -0.91,
+            Kind = GeoPlaceKind.PostalCode, Population = 0,
+        });
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(1, (await CreateService(FullDetail).RunAsync(10)).Geocoded);
+        await _db.Entry(entry).ReloadAsync();
+        Assert.Equal(GeoSource.PostalCode, entry.GeoSource);
+    }
+
+    /// <summary>
+    /// Ein Bedenkzeit-Text, aus dem der Klassifizierer nichts liest, ersetzt zwar den Text
+    /// (FIDE gilt dafuer), loescht aber keine vorhandene Speed-Klasse.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_UnclassifiableTimeControlText_KeepsTheExistingSpeed()
+    {
+        var entry = await AddFideEntryAsync(publicId: "990103", fideId: "990103", chessResultsId: "990103");
+        entry.Speed = TournamentSpeed.Rapid;
+        entry.TimeControlText = "15+10";
+        await _db.SaveChangesAsync();
+        const string json = """
+            {"eventId":"990103","timeControl":null,"timeControlText":"see regulations",
+             "system":null,"rounds":null,"players":null}
+            """;
+
+        await CreateService(json).RunAsync(10);
+
+        await _db.Entry(entry).ReloadAsync();
+        Assert.Equal("see regulations", entry.TimeControlText);
+        Assert.Equal(TournamentSpeed.Rapid, entry.Speed);
+    }
+
+    /// <summary>Nur ein System, das „Team" ausdruecklich nennt, macht den Eintrag zur Mannschaft.</summary>
+    [Fact]
+    public async Task RunAsync_TeamSystem_SetsKindTeam()
+    {
+        var entry = await AddFideEntryAsync(publicId: "990104", fideId: "990104");
+        const string json = """{"eventId":"990104","system":"Team Swiss-System"}""";
+
+        await CreateService(json).RunAsync(10);
+
+        await _db.Entry(entry).ReloadAsync();
+        Assert.Equal(TournamentKind.Team, entry.Kind);
+        Assert.Equal(TournamentSystem.Swiss, entry.System);
+    }
+
+    /// <summary>
+    /// 404 heisst beim Crawler „keine gueltige Ereignis-Nummer" — dauerhaft. Der Eintrag gilt als
+    /// nachgesehen; sonst stuende er als nie geprueft jede Nacht wieder vorn in der Schlange und
+    /// verdraengte bei kleinem Deckel die anderen.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_CrawlerNotFound_MarksItChecked()
+    {
+        var entry = await AddFideEntryAsync(publicId: "990105", fideId: "990105");
+
+        var result = await CreateService("""{"message":"Invalid FIDE event id."}""", HttpStatusCode.NotFound)
+            .RunAsync(10);
+
+        Assert.Equal(1, result.Checked);
+        Assert.Equal(0, result.WithDetails);
+        await _db.Entry(entry).ReloadAsync();
+        Assert.NotNull(entry.FideDetailCheckedAt);
+    }
+
+    /// <summary>
+    /// Ein Fehler bei EINEM Ereignis bricht den Lauf nicht ab: das naechste wird trotzdem geholt.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_OneFailingEvent_DoesNotStopTheRun()
+    {
+        var failing = await AddFideEntryAsync(publicId: "990106", fideId: "990106");
+        failing.StartDate = new DateOnly(2026, 1, 1);
+        var fine = await AddFideEntryAsync(publicId: "990107", fideId: "990107");
+        fine.StartDate = new DateOnly(2026, 2, 1);
+        await _db.SaveChangesAsync();
+
+        var handler = new PerIdHandler(new Dictionary<string, (HttpStatusCode, string)>
+        {
+            ["990106"] = (HttpStatusCode.BadGateway, "upstream"),
+            ["990107"] = (HttpStatusCode.OK, FullDetail),
+        });
+        var service = new FideEventDetailService(_db, new StubClientFactory(handler),
+            new GeocodingService(_db), new TestLogger<FideEventDetailService>());
+
+        var result = await service.RunAsync(10);
+
+        Assert.Equal(2, result.Checked);
+        Assert.Equal(1, result.WithDetails);
+        await _db.Entry(failing).ReloadAsync();
+        await _db.Entry(fine).ReloadAsync();
+        Assert.Null(failing.FideDetailCheckedAt);
+        Assert.NotNull(fine.FideDetailCheckedAt);
+        Assert.Equal(9, fine.Rounds);
+    }
+
+    [Theory]
+    [InlineData("Team Swiss-System", TournamentKind.Team)]
+    [InlineData("Team Round-Robin", TournamentKind.Team)]
+    [InlineData("Teams", TournamentKind.Team)]
+    [InlineData("Round-Robin", null)]
+    [InlineData("Other", null)]
+    [InlineData("Steamroller", null)]
+    [InlineData(null, null)]
+    public void MapKind_OnlyAnExplicitTeamSystemIsATeam(string? system, TournamentKind? expected) =>
+        Assert.Equal(expected, FideEventDetailService.MapKind(system));
 
     /// <summary>
     /// Und der karge Fall. Fehlende Angaben duerfen nichts ueberschreiben — aber der Vermerk muss
@@ -301,6 +476,20 @@ public class FideEventDetailServiceTests : IDisposable
     {
         public HttpClient CreateClient(string name) =>
             new(handler, disposeHandler: false) { BaseAddress = new Uri("http://crawler:8080") };
+    }
+
+    /// <summary>Antwortet je FIDE-Nummer (Query <c>id=</c>) anders.</summary>
+    private sealed class PerIdHandler(Dictionary<string, (HttpStatusCode Status, string Body)> byId) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var id = System.Web.HttpUtility.ParseQueryString(request.RequestUri!.Query)["id"]!;
+            var (status, body) = byId[id];
+            return Task.FromResult(new HttpResponseMessage(status)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            });
+        }
     }
 
     private sealed class StubHandler(string body, HttpStatusCode status) : HttpMessageHandler
