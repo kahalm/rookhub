@@ -38,7 +38,10 @@ public class LeagueAdminUnpackLimitTests : IDisposable
     private LeagueController Controller(byte[] body, bool gzip = true)
     {
         var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
-        var http = new DefaultHttpContext();
+        // Die globalen Importe verlangen Admin (R2-002).
+        var http = new DefaultHttpContext { User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+            [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "1"),
+             new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Admin")], "Test")) };
         http.Request.Body = new MemoryStream(body);
         if (gzip) http.Request.Headers.ContentEncoding = "gzip";
         return new LeagueController(league, null!, null!)

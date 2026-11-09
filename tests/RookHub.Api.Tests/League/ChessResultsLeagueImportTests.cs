@@ -154,7 +154,8 @@ public class ChessResultsLeagueImportTests : IDisposable
     [Fact]
     public async Task Endpoint_MapsTheOutcomes()
     {
-        var ctl = new LeagueController(new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance), null!, null!);
+        var ctl = new LeagueController(new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance), null!, null!)
+            .As(1, admin: true);   // globaler Import nur Admin (R2-002)
         var ok = await ctl.ChessResultsImport(new(Tnr, "2026/27", 2, "2. Bundesliga", "West", null, null), dryRun: true, Import(), default);
         var res = Assert.IsType<ChessResultsLeagueImport.ImportResult>(Assert.IsType<OkObjectResult>(ok).Value);
         Assert.True(res.DryRun);

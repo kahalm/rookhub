@@ -15,8 +15,10 @@ namespace RookHub.Api.Controllers.League;
 
 /// <summary>
 /// LeagueHub (leaguehub(-dev).oberschmid.homes): Aufstellungs-Prognosen der Tiroler Mannschaftsmeisterschaft.
-/// Lesen hinter <see cref="Permissions.LeagueView"/>, Aktualisieren/Teilen/Import hinter
-/// <see cref="Permissions.LeagueManage"/> — vorerst haben beides nur Admins (Wunsch 2026-09-27).
+/// Lesen hinter <see cref="Permissions.LeagueView"/>, Teilen/Online-Konten hinter <see cref="Permissions.LeagueManage"/>
+/// (Verwalter eines Vereins, Mandanten-Schritt 2026-10-07). Die GLOBALEN Schreibwege — „Daten aktualisieren“, Rebuild,
+/// Selbstmeldungen, fremde Partien, Megabase-Verzeichnis, Übertragungen und alle Liga-Importe — wirken auf alle Vereine und
+/// verlangen zusätzlich Admin (R2-002, wie <c>admin/clubs</c>); sonst 403.
 /// </summary>
 [ApiController]
 [Route("api/league")]
@@ -242,6 +244,7 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> ImportSelfReports([FromBody] LeagueSelfReportImport.Request? req, [FromQuery] bool dryRun,
         [FromServices] Data.AppDbContext db, CancellationToken ct)
     {
+        if (!IsAdmin) return Forbid();   // global, alle Vereine (R2-002)
         var (outcome, reason) = await LeagueSelfReportImport.ImportAsync(db, req ?? new(null, null), dryRun, ct);
         return outcome is not null ? Ok(outcome) : BadRequest(new { reason });
     }
@@ -364,7 +367,7 @@ public class LeagueController : BaseApiController
 
     [HttpPost("update")]
     [HasPermission(Permissions.LeagueManage)]
-    public IActionResult StartUpdate() => _update.TryStart() switch
+    public IActionResult StartUpdate() => !IsAdmin ? Forbid() : _update.TryStart() switch   // global (R2-002)
     {
         LeagueUpdateService.StartResult.Started => Accepted(_update.Status()),
         LeagueUpdateService.StartResult.Running => Conflict(_update.Status()),
@@ -407,6 +410,7 @@ public class LeagueController : BaseApiController
     [RequestSizeLimit(CollectionMaxBytes)]
     public async Task<IActionResult> ImportGames([FromQuery] string? source, CancellationToken ct)
     {
+        if (!IsAdmin) return Forbid();   // global, alle Vereine (R2-002)
         var src = (source ?? "").Trim();
         if (src.Length is 0 or > 20 || !src.All(char.IsLetterOrDigit)) return BadRequest(new { message = "source fehlt/ungültig" });
         var body = AdminBody(CollectionUnpackedLimit);
@@ -425,7 +429,7 @@ public class LeagueController : BaseApiController
     [HttpGet("admin/broadcasts")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> Broadcasts([FromServices] LeagueBroadcastImport broadcasts, CancellationToken ct) =>
-        Ok(await broadcasts.ListAsync(ct));
+        IsAdmin ? Ok(await broadcasts.ListAsync(ct)) : Forbid();   // global (R2-002)
 
     public sealed record BroadcastRequest(string? Url);
 
@@ -436,6 +440,7 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> AddBroadcast([FromBody] BroadcastRequest? req, [FromServices] LeagueBroadcastImport broadcasts,
         CancellationToken ct)
     {
+        if (!IsAdmin) return Forbid();   // global, alle Vereine (R2-002)
         try
         {
             var (b, reason) = await broadcasts.AddAsync(req?.Url, ct);
@@ -461,6 +466,7 @@ public class LeagueController : BaseApiController
     [RequestSizeLimit(CollectionMaxBytes)]
     public async Task<IActionResult> ImportMegaPlayers([FromServices] LeagueMegaPlayers mega, CancellationToken ct)
     {
+        if (!IsAdmin) return Forbid();   // global, alle Vereine (R2-002)
         using var reader = new StreamReader(AdminBody(CollectionUnpackedLimit), Encoding.UTF8);
         try { return Ok(new { players = await mega.ReplaceAsync(reader, ct) }); }
         catch (LimitedReadStream.LimitExceededException) { return UnpackedTooLarge(CollectionUnpackedLimit); }
@@ -468,7 +474,8 @@ public class LeagueController : BaseApiController
 
     [HttpPost("admin/rebuild")]
     [HasPermission(Permissions.LeagueManage)]
-    public async Task<IActionResult> Rebuild(CancellationToken ct) => Ok(new { views = await _league.RebuildViewsAsync(ct) });
+    public async Task<IActionResult> Rebuild(CancellationToken ct) =>
+        IsAdmin ? Ok(new { views = await _league.RebuildViewsAsync(ct) }) : Forbid();   // global (R2-002)
 
     /// <summary>Eine Liga des bayerischen Ligamanagers: Adresse ODER Region + Saison + Slug (mit Id); <c>Boards</c> = Bretter je
     /// Begegnung, solange noch keine Runde gespielt ist und keine frühere Saison derselben Liga eingespielt ist.</summary>
@@ -485,6 +492,7 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> LigamanagerImport([FromBody] LigamanagerImportRequest? req, [FromQuery] bool dryRun,
         [FromServices] LigamanagerSource ligamanager, CancellationToken ct)
     {
+        if (!IsAdmin) return Forbid();   // global, alle Vereine (R2-002)
         var lref = LigamanagerSource.LeagueRef.Parse(req?.Url) ?? LigamanagerSource.LeagueRef.Of(req?.Region, req?.Season, req?.Slug);
         if (lref is null) return BadRequest(new { reason = "invalidLeague" });
         try
@@ -513,6 +521,7 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> ChessResultsImport([FromBody] ChessResultsImportRequest? req, [FromQuery] bool dryRun,
         [FromServices] ChessResultsLeagueImport import, CancellationToken ct)
     {
+        if (!IsAdmin) return Forbid();   // global, alle Vereine (R2-002)
         if (req?.Tnr is not { } tnr || req.Level is not { } level || string.IsNullOrWhiteSpace(req.Season) || string.IsNullOrWhiteSpace(req.League))
             return BadRequest(new { reason = "invalidLeague", message = "tnr, season, level und league sind Pflicht" });
         try
@@ -552,6 +561,7 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> ImportZugspitzeOnlineReports([FromQuery] string? season, [FromQuery] bool dryRun,
         [FromServices] ZugspitzeOnlineReports reports, CancellationToken ct)
     {
+        if (!IsAdmin) return Forbid();   // global, alle Vereine (R2-002)
         if (!Services.League.ZugspitzeOnlineReports.ValidSeason(season)) return BadRequest(new { reason = "invalidSeason" });
         try
         {
@@ -570,6 +580,7 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> ZugspitzeImport([FromBody] ZugspitzeImportRequest? req, [FromQuery] bool dryRun,
         [FromServices] ZugspitzeSource zugspitze, CancellationToken ct)
     {
+        if (!IsAdmin) return Forbid();   // global, alle Vereine (R2-002)
         var lref = !string.IsNullOrWhiteSpace(req?.Url) ? ZugspitzeSource.LeagueRef.Parse(req.Url)
             : ZugspitzeSource.LeagueRef.Of(req?.LigaId, req?.Season);
         if (lref is null) return BadRequest(new { reason = "invalidLeague" });

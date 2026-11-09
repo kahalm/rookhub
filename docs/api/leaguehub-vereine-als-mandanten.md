@@ -24,7 +24,11 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
   eine Aussage über öffentliche Ligaspieler, sie verweist bewusst weder auf Partie noch auf Verein oder Nutzer —
   vereinsübergreifend harmlos), `LeagueSelfReports`/Online-Konten (hängen an FIDE-IDs), der Meldelisten-Index (je Verein nur mit
   eigener `OwnClub`-Regel, gecacht je Verein), Zuordnen nach dem Anmelden (der Schlüssel des Browsers sagt, was ER hochgeladen
-  hat), „Daten aktualisieren" und die Admin-Importe.
+  hat), „Daten aktualisieren" und die Admin-Importe. Weil sie auf ALLE Vereine wirken, verlangen die globalen Schreibwege
+  (`POST update`, `admin/rebuild`, `admin/self-reports`, `admin/games`, `admin/mega-players`, `admin/broadcasts` GET/POST,
+  `admin/ligamanager/import`, `admin/chessresults/import`, `admin/online-reports/zugspitze`, `admin/zugspitze/import`) seit
+  R2-002 zusätzlich Admin (sonst 403, wie `admin/clubs`); die Online-Konten (`player/{fide}/accounts`, `accounts/{id}`,
+  `suggestions…`) bleiben für Vereinsverwalter mit `league.manage`.
 * **Zugehörigkeit + Rechte**: über die Gruppen des Kontos (`UserGroups` → `LeagueClubMembers`); Admins gehören zu ALLEN Vereinen.
   Die Rechte `league.view/contribute/manage` bleiben Rollen wie bisher und wirken in den Vereinen des Kontos (kein Recht je
   Verein). Ein Konto mit Recht, aber ohne Vereinsgruppe, bekommt 403 `noClub` (auf Prod hatten die direkt vergebenen

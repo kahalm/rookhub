@@ -449,7 +449,7 @@ public class LigamanagerSourceTests : IDisposable
     [Fact]
     public async Task Endpoint_ParsesTheRequestAndMapsErrors()
     {
-        var ctl = new LeagueController(League(), null!, null!);
+        var ctl = new LeagueController(League(), null!, null!).As(1, admin: true);   // globaler Import nur Admin (R2-002)
         var src = Source(new Factory((_, r) => Site(r)));
         Assert.IsType<BadRequestObjectResult>(await ctl.LigamanagerImport(new("https://example.org/x", null, null, null, null), true, src, default));
         var ok = Assert.IsType<OkObjectResult>(await ctl.LigamanagerImport(
