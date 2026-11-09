@@ -183,6 +183,14 @@ describe('ClubImportReviewComponent', () => {
     expect(el.querySelector('.actions .btn-pri')!.textContent).toContain('Weiter importieren (2 übrig)');
     expect(result).toBeNull();
 
+    // G3-010: gespeicherte Zeilen sind gekennzeichnet und gesperrt — eine Änderung daran würde nicht mehr gesendet.
+    const rows = Array.from(el.querySelectorAll<HTMLTableRowElement>('tbody tr:not(.edit-row)'));
+    expect(rows[0].querySelector('.st')!.textContent).toContain('gespeichert');
+    expect(rows[0].querySelector<HTMLInputElement>('td.chk input')!.disabled).toBeTrue();
+    expect(rows[0].querySelector<HTMLButtonElement>('.side-btn')!.disabled).toBeTrue();
+    expect(rows[10].querySelector('.st')!.textContent).toContain('wird importiert');
+    expect(rows[10].querySelector<HTMLInputElement>('td.chk input')!.disabled).toBeFalse();
+
     client.importPgn.calls.reset();
     client.importPgn.and.resolveTo(ok(2));
     await fixture.componentInstance.run();

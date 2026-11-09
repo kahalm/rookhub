@@ -44,13 +44,13 @@ interface Editing { index: number; side: SideKey; text: string }
         <tbody>
           @for (r of review.visible(); track r.game.index) {
             <tr [class.off]="!isIn(r)">
-              <td class="chk"><input type="checkbox" [checked]="isIn(r)" [disabled]="!status(r).importable"
+              <td class="chk"><input type="checkbox" [checked]="isIn(r)" [disabled]="!status(r).importable || isSaved(r)"
                          [attr.aria-label]="'Partie ' + r.game.index + ' importieren'" (change)="review.toggleInclude(r.game.index)" /></td>
               <td class="num nr">{{ r.game.index }}</td>
               <td class="num yr">{{ r.game.year ?? '–' }}</td>
               <td class="small event" [attr.title]="r.game.event">{{ r.game.event ?? '' }}
                 @if (!r.game.error && r.game.pairings?.length) {
-                  <select class="pairing-pick" [attr.aria-label]="'Ligapaarung von Partie ' + r.game.index"
+                  <select class="pairing-pick" [attr.aria-label]="'Ligapaarung von Partie ' + r.game.index" [disabled]="isSaved(r)"
                           [class.set]="r.pairingId != null" (change)="pairing(r, $any($event.target).value)">
                     <option value="" [selected]="r.pairingId == null">keine Ligapartie</option>
                     @for (p of r.game.pairings; track p.id) {
@@ -60,7 +60,7 @@ interface Editing { index: number; side: SideKey; text: string }
                 }</td>
               @for (k of sides; track k) {
                 <td class="side" [class.white]="k === 'white'" [class.black]="k === 'black'" [attr.data-label]="k === 'white' ? 'Weiß' : 'Schwarz'">
-                  <button type="button" class="side-btn" [disabled]="!!r.game.error" (click)="edit(r, k)"
+                  <button type="button" class="side-btn" [disabled]="!!r.game.error || isSaved(r)" (click)="edit(r, k)"
                           [attr.aria-label]="(k === 'white' ? 'Weiß' : 'Schwarz') + ' korrigieren'">
                     <span [class.anon]="r[k].replace">{{ shown(r[k]) }}</span>
                     <span class="badge" [class.ok]="badge(r[k]).ok" [class.warn]="badge(r[k]).warn">{{ badge(r[k]).text }}</span>
@@ -68,7 +68,7 @@ interface Editing { index: number; side: SideKey; text: string }
                   @if (r[k].changed || (r[k].raw && r[k].name !== r[k].raw && !r[k].replace)) {
                     <span class="small muted raw">im PGN: {{ r[k].raw || '?' }}</span>
                   }
-                  @if (!r.game.error && quickPicks(r[k]).length) {
+                  @if (!r.game.error && !isSaved(r) && quickPicks(r[k]).length) {
                     <span class="quick-pick small"><span class="muted">Meintest du</span>
                       @for (c of quickPicks(r[k]); track c.name + (c.fide ?? '')) {
                         <button type="button" class="btn-chip" (click)="quick(r, k, c)"
@@ -80,7 +80,8 @@ interface Editing { index: number; side: SideKey; text: string }
                 </td>
               }
               <td class="num res">{{ resultText(r.game.result) }}</td>
-              <td class="small st">@if (isIn(r)) { <span class="ok-text">wird importiert</span> }
+              <td class="small st">@if (isSaved(r)) { <span class="ok-text saved">gespeichert</span> }
+                @else if (isIn(r)) { <span class="ok-text">wird importiert</span> }
                 @else if (status(r).importable) { <span class="muted">{{ optional(r) ? 'nicht in Liga — anhaken zum Hinzufügen' : 'abgewählt' }}</span> }
                 @else { <span class="muted">{{ reason(status(r).reason!) }}</span> }</td>
             </tr>
@@ -180,6 +181,12 @@ export class ClubImportReviewComponent {
   /** Schon gespeicherte Partien dieser Übersicht — nach einem Abbruch geht „Weiter importieren" nur den Rest an. */
   readonly savedCount = signal(0);
   private readonly saved = new Set<number>();
+
+  /** Schon gespeichert (Portion vor einem Abriss)? Dann ist die Zeile gesperrt: „Weiter importieren“ schickt sie nicht
+   *  mehr, eine Änderung daran ginge still verloren (G3-010). Liest `savedCount`, damit die Vorlage nachzieht. */
+  isSaved(r: { game: { index: number } }): boolean {
+    return this.savedCount() > 0 && this.saved.has(r.game.index);
+  }
   private acc: ClubImportResult | null = null;
   /** Partien je Anfrage: jede Portion wird sofort gespeichert, und 500 Partien bleiben so bei 50 Anfragen — unter den
    *  Drosseln (60 je Minute über einen Teilen-Link). */
