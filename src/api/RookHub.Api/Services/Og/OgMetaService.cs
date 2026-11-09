@@ -43,14 +43,16 @@ public partial class OgMetaService
     private readonly GameReconstructionService? _reconstructions;
     private readonly SharedLineService? _sharedLines;
     private readonly WeeklyPostService? _weekly;
+    private readonly WorksheetService? _worksheets;
 
     private const string StartFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     public OgMetaService(SavedGameService games, PuzzleService puzzles, BookPuzzleService bookPuzzles,
         CrawlerProxyService crawler, AppDbContext db, ILogger<OgMetaService> logger,
         GameReconstructionService? reconstructions = null, SharedLineService? sharedLines = null,
-        WeeklyPostService? weekly = null)
+        WeeklyPostService? weekly = null, WorksheetService? worksheets = null)
     {
+        _worksheets = worksheets;
         _weekly = weekly;
         _reconstructions = reconstructions;
         _sharedLines = sharedLines;
@@ -96,6 +98,8 @@ public partial class OgMetaService
                 return ("recon", segments[1]);
             case "l" when segments.Length == 2:
                 return ("line", segments[1]);
+            case "w" when segments.Length == 2:
+                return ("worksheet", segments[1]);
             case "weekly" when segments.Length == 2 && int.TryParse(segments[1], out _):
                 return ("weekly", segments[1]);
             // Geteilte Stellung (⋮ → „Stellung teilen", position-links.util.ts): /analysis?fen=…&orientation=black
@@ -197,6 +201,8 @@ public partial class OgMetaService
                 case "recon":
                 case "line":
                     return await ResolveSharedPageAsync(kind, id, img, canonical, ct);
+                case "worksheet":
+                    return await ResolveWorksheetPageAsync(id, img, canonical);
                 case "puzzle":
                 case "book":
                 case "daily":
@@ -260,6 +266,8 @@ public partial class OgMetaService
                 case "recon":
                 case "line":
                     return await ResolveSharedBoardAsync(kind, id, ct);
+                case "worksheet":
+                    return await ResolveWorksheetBoardAsync(id);
                 case "train":
                 {
                     // „white-<token>" bzw. „black-<token>" (das Token selbst darf Bindestriche tragen)
