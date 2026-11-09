@@ -63,13 +63,26 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
       }
       @if (enginesLoaded) {
         @if (directEngines.length > 0) {
+          <!-- 0.919.0 (Wunsch 2026-11-09): offline Engines standardmäßig ausgeblendet, je Engine „zuletzt da“. -->
+          @if (shownDirectEngines.length === 0) {
+            <p class="engine-hint none-online">{{ 'profile.engine.noneOnline' | translate }}</p>
+          }
           <ul class="engine-list direct-list">
-            @for (e of directEngines; track e.id) {
+            @for (e of shownDirectEngines; track e.id) {
               <li>
                 <span class="dot" [class.on]="e.online === true"
                       [attr.title]="(e.online ? 'profile.engine.online' : 'profile.engine.offline') | translate"></span>
                 <strong>{{ e.name }}</strong> — {{ 'profile.engine.specs' | translate: { threads: e.maxThreads, hash: e.maxHash } }}
                 <span class="state">{{ (e.online ? 'profile.engine.online' : 'profile.engine.offline') | translate }}</span>
+                @if (!e.online) {
+                  <span class="seen">
+                    @if (e.lastSeenAt) {
+                      {{ 'profile.engine.lastSeen' | translate: { when: (e.lastSeenAt | date: 'short') } }}
+                    } @else {
+                      {{ 'profile.engine.neverSeen' | translate }}
+                    }
+                  </span>
+                }
                 <button mat-icon-button type="button" class="del" (click)="removeDirect(e)"
                         [attr.aria-label]="'profile.engine.deleteEngine' | translate"
                         [attr.title]="'profile.engine.deleteEngine' | translate">
@@ -78,6 +91,14 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
               </li>
             }
           </ul>
+          @if (offlineCount > 0) {
+            <button mat-button type="button" class="offline-toggle" (click)="showOffline = !showOffline"
+                    [attr.aria-expanded]="showOffline">
+              {{ (showOffline ? 'profile.engine.hideOffline' : 'profile.engine.showOffline') | translate: { count: offlineCount } }}
+              <mat-icon iconPositionEnd>{{ showOffline ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          }
+          <p class="engine-hint">{{ 'profile.engine.pruneHint' | translate }}</p>
         } @else {
           <p class="engine-hint">{{ 'profile.engine.directNone' | translate }}</p>
         }
@@ -186,6 +207,8 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
     .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--mat-sys-outline); flex: 0 0 10px; }
     .dot.on { background: var(--rh-success); }
     .state { color: color-mix(in srgb, currentColor 70%, transparent); font-size: 0.8rem; }
+    .seen { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.8rem; }
+    .offline-toggle { margin: 0 0 4px -12px; }
     .del { margin-left: auto; }
     .direct-url { margin-bottom: 0.25rem; }
     .url { background: color-mix(in srgb, currentColor 8%, transparent); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; overflow-wrap: anywhere; }
@@ -205,6 +228,8 @@ export class EngineCardComponent implements OnInit, OnDestroy {
   engines: ExternalEngineInfo[] = [];
   /** Direkt bei RookHub angemeldete Engines (mit Online-Punkt) bzw. die des Lichess-Kontos — beide aus `engines`. */
   directEngines: ExternalEngineInfo[] = [];
+  /** Offline-Engines „RookHub direkt“ mit anzeigen (Vorgabe: aus). */
+  showOffline = false;
   lichessEngines: ExternalEngineInfo[] = [];
   /** Lichess antwortete nicht; die Liste enthält nur die direkt angemeldeten Engines. */
   lichessUnreachable = false;
@@ -216,6 +241,14 @@ export class EngineCardComponent implements OnInit, OnDestroy {
   canShareHouseEngine = false;
   /** „Einrichten“ der direkten Anbindung aufgeklappt (b1-rk-profil-tokens-engine-textwand) — zu Beginn zu. */
   setupOpen = false;
+
+  get shownDirectEngines(): ExternalEngineInfo[] {
+    return this.showOffline ? this.directEngines : this.directEngines.filter(e => e.online === true);
+  }
+
+  get offlineCount(): number {
+    return this.directEngines.filter(e => e.online !== true).length;
+  }
   private listSub?: Subscription;
   private statusSub?: Subscription;
 

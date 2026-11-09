@@ -28,6 +28,10 @@ public sealed class LocalBrokerOptions
     /// <summary>„Online" = letzter Abruf des Providers liegt höchstens so weit zurück.</summary>
     public TimeSpan OnlineWindow { get; init; } = TimeSpan.FromSeconds(30);
 
+    /// <summary>Registrierungen, deren Provider sich so lange nicht gemeldet hat, räumt die Wartung weg (0.919.0,
+    /// Wunsch 2026-11-09 — sonst füllen tote Einträge den Deckel von 32 Engines je Konto). <c>Zero</c> = aus.</summary>
+    public TimeSpan PruneAfter { get; init; } = TimeSpan.FromDays(7);
+
     public static LocalBrokerOptions FromConfig(IConfiguration config)
     {
         var s = config.GetSection(Section);
@@ -40,6 +44,7 @@ public sealed class LocalBrokerOptions
             MaxQueuedPerEngine = Math.Clamp(s.GetValue<int?>("MaxQueuedPerEngine") ?? 64, 1, 1024),
             OngoingExpiry = Seconds(s.GetValue<double?>("OngoingExpirySeconds") ?? 30, 1, 600),
             OnlineWindow = Seconds(s.GetValue<double?>("OnlineWindowSeconds") ?? 30, 5, 600),
+            PruneAfter = TimeSpan.FromDays(Math.Clamp(s.GetValue<int?>("PruneAfterDays") ?? 7, 0, 365)),
         };
     }
 

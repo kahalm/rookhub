@@ -16,6 +16,8 @@ export interface ExternalEngineInfo {
   source?: ExternalEngineSource;
   /** Nur für `rookhub`: hat der Provider in den letzten 30 s abgefragt? Für Lichess `null` (unbekannt). */
   online?: boolean | null;
+  /** Nur für `rookhub`: letzter Abruf des Providers (UTC, ISO); fehlt = noch nie gemeldet. */
+  lastSeenAt?: string | null;
 }
 
 /** Quelle einer Engine — aus dem Feld, sonst aus der Kennung (`rhe_` = RookHub direkt). */

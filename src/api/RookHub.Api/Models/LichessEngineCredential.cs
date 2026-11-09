@@ -76,6 +76,26 @@ public class LichessEngineCredential
     /// </summary>
     public bool ShareAsHouseEngine { get; set; }
 
+    /// <summary>
+    /// Namen von Hintergrund-Engines, deren Registrierung das Aufräumen entfernt hat (Provider zu lange weg, 0.919.0).
+    /// Meldet sich ein Provider später wieder mit genau diesem Namen an, bekommt er eine NEUE Kennung — die kommt dann
+    /// von selbst wieder in <see cref="BackgroundEngineIds"/>, statt still aus der Hintergrund-Arbeit zu fallen.
+    /// Zeilenweise; gelesen und geschrieben nur über <see cref="PrunedBackground"/> / <see cref="SetPrunedBackground"/>.
+    /// </summary>
+    [MaxLength(4000)]
+    public string? PrunedBackgroundNames { get; set; }
+
+    public IReadOnlyList<string> PrunedBackground =>
+        string.IsNullOrEmpty(PrunedBackgroundNames) ? [] : PrunedBackgroundNames.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+    /// <summary>Setzt die Liste (Duplikate raus; passt sie nicht in die Spalte, fallen die ältesten weg).</summary>
+    public void SetPrunedBackground(IEnumerable<string> names)
+    {
+        var clean = names.Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.Ordinal).ToList();
+        while (clean.Count > 0 && string.Join('\n', clean).Length > 4000) clean.RemoveAt(0);
+        PrunedBackgroundNames = clean.Count == 0 ? null : string.Join('\n', clean);
+    }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

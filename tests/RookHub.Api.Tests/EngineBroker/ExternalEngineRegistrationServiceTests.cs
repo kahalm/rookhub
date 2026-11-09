@@ -204,6 +204,48 @@ public class ExternalEngineRegistrationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task PruneStale_RemovesLongGoneEngines_RemembersBackground_AndRestoresOnReRegistration()
+    {
+        var uid = await UserAsync();
+        var now = DateTime.UtcNow;
+        var gone = (await _svc.SaveAsync(uid, null, Req("PC Hintergrund", "secret-gone-0000000000"))).Engine!;
+        var fresh = (await _svc.SaveAsync(uid, null, Req("Gross Hintergrund", "secret-fresh-000000000"))).Engine!;
+        var never = (await _svc.SaveAsync(uid, null, Req("Nie gesehen", "secret-never-000000000"))).Engine!;
+        var rows = await _db.ExternalEngineRegistrations.ToListAsync();
+        rows.Single(r => r.Id == gone.Id).LastSeenAt = now.AddDays(-8);
+        rows.Single(r => r.Id == fresh.Id).LastSeenAt = now.AddHours(-3);
+        rows.Single(r => r.Id == never.Id).CreatedAt = now.AddDays(-9);
+        var cred = new LichessEngineCredential { UserId = uid, EncryptedToken = "" };
+        cred.SetBackgroundEngines([gone.Id, fresh.Id]);
+        _db.LichessEngineCredentials.Add(cred);
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(2, await _svc.PruneStaleAsync(now, TimeSpan.FromDays(7)));
+        Assert.Equal([fresh.Id], (await _db.ExternalEngineRegistrations.Select(r => r.Id).ToListAsync()));
+        var row = await _db.LichessEngineCredentials.AsNoTracking().SingleAsync();
+        Assert.Equal([fresh.Id], row.BackgroundEngines);
+        Assert.Equal(["PC Hintergrund"], row.PrunedBackground);   // „Nie gesehen" war keine Hintergrund-Engine
+
+        // Der PC meldet sich wieder an: neue Kennung, aber wieder in der Hintergrund-Liste.
+        var back = (await _svc.SaveAsync(uid, null, Req("PC Hintergrund", "secret-back-0000000000"))).Engine!;
+        Assert.NotEqual(gone.Id, back.Id);
+        row = await _db.LichessEngineCredentials.AsNoTracking().SingleAsync();
+        Assert.Equal([fresh.Id, back.Id], row.BackgroundEngines);
+        Assert.Empty(row.PrunedBackground);
+    }
+
+    [Fact]
+    public async Task PruneStale_Zero_IsOff()
+    {
+        var uid = await UserAsync();
+        var e = (await _svc.SaveAsync(uid, null, Req())).Engine!;
+        (await _db.ExternalEngineRegistrations.SingleAsync()).CreatedAt = DateTime.UtcNow.AddDays(-100);
+        await _db.SaveChangesAsync();
+        Assert.Equal(0, await _svc.PruneStaleAsync(DateTime.UtcNow, TimeSpan.Zero));
+        Assert.Single(_db.ExternalEngineRegistrations);
+    }
+
+    [Fact]
     public async Task Delete_ForeignEngine_ReturnsFalse_AndKeepsIt()
     {
         var alice = await UserAsync("alice");

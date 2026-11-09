@@ -141,6 +141,7 @@ public class ExternalEngineRegistrationService
             return EngineRegistrationResult.Fail(409, "An engine with this name already exists");
         }
 
+        if (isNew) await RestorePrunedBackgroundAsync(userId, target, ct);
         _directory.Register(target.ProviderSelector);
         _logger.LogInformation("EngineBroker: Engine {Action} user={UserId} engine={EngineId} threads={Threads} hash={Hash}",
             isNew ? "registriert" : "aktualisiert", userId, target.Id, target.MaxThreads, target.MaxHash);
@@ -167,6 +168,53 @@ public class ExternalEngineRegistrationService
         _directory.Invalidate();
         _logger.LogInformation("EngineBroker: Engine geloescht user={UserId} engine={EngineId}", userId, id);
         return true;
+    }
+
+    /// <summary>
+    /// Registrierungen wegräumen, deren Provider sich seit <paramref name="maxAge"/> nicht gemeldet hat (zuletzt gesehen,
+    /// sonst angelegt). Stand eine davon in der Hintergrund-Liste, merkt sich die Zugangsdatenzeile ihren Namen
+    /// (<see cref="LichessEngineCredential.PrunedBackgroundNames"/>) — meldet sie sich wieder an, kommt sie von selbst
+    /// zurück in die Liste. → Zahl entfernt.
+    /// </summary>
+    public async Task<int> PruneStaleAsync(DateTime now, TimeSpan maxAge, CancellationToken ct = default)
+    {
+        if (maxAge <= TimeSpan.Zero) return 0;
+        var cutoff = now - maxAge;
+        var stale = (await _db.ExternalEngineRegistrations.Where(r => (r.LastSeenAt ?? r.CreatedAt) < cutoff).ToListAsync(ct))
+            .Where(r => !(_directory.LastSeen(r.ProviderSelector) is { } seen && seen >= cutoff))   // im Speicher frischer
+            .ToList();
+        if (stale.Count == 0) return 0;
+        var userIds = stale.Select(r => r.UserId).Distinct().ToList();
+        var creds = await _db.LichessEngineCredentials.Where(c => userIds.Contains(c.UserId)).ToListAsync(ct);
+        foreach (var cred in creds)
+        {
+            var mine = stale.Where(r => r.UserId == cred.UserId && cred.BackgroundEngines.Contains(r.Id)).ToList();
+            if (mine.Count == 0) continue;
+            cred.SetPrunedBackground(cred.PrunedBackground.Concat(mine.Select(r => r.Name)));
+            cred.SetBackgroundEngines(cred.BackgroundEngines.Where(id => mine.All(r => r.Id != id)));
+            cred.UpdatedAt = now;
+        }
+        _db.ExternalEngineRegistrations.RemoveRange(stale);
+        await _db.SaveChangesAsync(ct);
+        _directory.Invalidate();
+        foreach (var r in stale)
+            _logger.LogInformation("EngineBroker: Engine aufgeraeumt user={UserId} engine={EngineId} name={Name} zuletzt={LastSeen}",
+                r.UserId, r.Id, r.Name, r.LastSeenAt);
+        return stale.Count;
+    }
+
+    /// <summary>Eine neu angemeldete Engine, deren Name als aufgeräumte Hintergrund-Engine gemerkt ist, wieder in die
+    /// Hintergrund-Liste (sofern dort Platz ist). Speichert selbst.</summary>
+    private async Task RestorePrunedBackgroundAsync(int userId, ExternalEngineRegistration reg, CancellationToken ct)
+    {
+        var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
+        if (cred is null || !cred.PrunedBackground.Contains(reg.Name)) return;
+        cred.SetPrunedBackground(cred.PrunedBackground.Where(n => n != reg.Name));
+        if (cred.BackgroundEngines.Count < EngineSettingsService.MaxBackgroundEngines)
+            cred.SetBackgroundEngines(cred.BackgroundEngines.Append(reg.Id));
+        cred.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        _logger.LogInformation("EngineBroker: Engine {EngineId} ({Name}) wieder als Hintergrund-Engine eingetragen", reg.Id, reg.Name);
     }
 
     public static ExternalEngineRegistrationDto ToDto(ExternalEngineRegistration r, string username, bool withSecret) => new()

@@ -26,7 +26,8 @@ public sealed record EngineRef(
     EngineSource Source,
     bool? Online = null,
     LichessExternalEngine? Lichess = null,
-    LocalEngineTarget? Local = null);
+    LocalEngineTarget? Local = null,
+    DateTime? LastSeenAt = null);
 
 public enum EngineLookupFailure { None, NotFound, NoToken }
 
@@ -152,6 +153,7 @@ public class EngineRegistry
     private EngineRef ToRef(ExternalEngineRegistration r, string username) => new(
         r.Id, r.Name, Math.Max(1, r.MaxThreads), Math.Max(1, r.MaxHash), EngineSource.Local,
         Online: IsOnline(r),
+        LastSeenAt: _directory.LastSeen(r.ProviderSelector) ?? r.LastSeenAt,
         Local: new LocalEngineTarget(r.ProviderSelector, ExternalEngineRegistrationService.ToDto(r, username, withSecret: true)));
 
     private static EngineRef FromLichess(LichessExternalEngine e) =>

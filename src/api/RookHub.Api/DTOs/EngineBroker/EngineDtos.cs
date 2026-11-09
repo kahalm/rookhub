@@ -11,7 +11,7 @@ public class SaveLichessTokenRequest
 /// <summary>Eine auf dem Lichess-Konto des Users registrierte External Engine — bewusst OHNE
 /// <c>clientSecret</c>: das bleibt serverseitig, der Browser analysiert nur über den RookHub-Proxy.</summary>
 public record ExternalEngineDto(string Id, string Name, int MaxThreads, int MaxHash,
-    string Source = ExternalEngineDto.SourceLichess, bool? Online = null)
+    string Source = ExternalEngineDto.SourceLichess, bool? Online = null, DateTime? LastSeenAt = null)
 {
     public const string SourceLichess = "lichess";
     public const string SourceRookHub = "rookhub";

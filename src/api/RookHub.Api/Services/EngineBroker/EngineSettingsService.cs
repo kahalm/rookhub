@@ -107,7 +107,7 @@ internal sealed class EngineSettingsService
     }
 
     private static ExternalEngineDto ToDto(EngineRef e) => new(e.Id, e.Name, e.MaxThreads, e.MaxHash,
-        e.Source == EngineSource.Local ? ExternalEngineDto.SourceRookHub : ExternalEngineDto.SourceLichess, e.Online);
+        e.Source == EngineSource.Local ? ExternalEngineDto.SourceRookHub : ExternalEngineDto.SourceLichess, e.Online, e.LastSeenAt);
 
     // ===== Hintergrund-Engines ===============================================
 

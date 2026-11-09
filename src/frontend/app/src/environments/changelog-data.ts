@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.919.0", date: "2026-11-09", changes: [
+    { en: "Profile, external engines: offline engines are hidden by default (a button shows them), and each one says when it was last seen.",
+      de: "Profil, externe Engines: Offline-Engines sind standardmäßig ausgeblendet (ein Knopf zeigt sie), und bei jeder steht, wann sie zuletzt da war." },
+    { en: "Engines whose computer has not connected for 7 days are removed automatically. When the computer comes back it registers again — and a former background engine returns to the background list by itself.",
+      de: "Engines, deren Rechner sich 7 Tage nicht gemeldet hat, werden automatisch entfernt. Kommt der Rechner wieder, meldet er sich neu an — und eine frühere Hintergrund-Engine kommt von selbst zurück in die Hintergrund-Liste." },
+  ] },
   { version: "0.918.1", date: "2026-11-09", changes: [
     { en: "Build fix: the new “Rules of thumb” page marks its signal as readonly (ESLint ratchet).",
       de: "Build-Fix: Die neue Seite „Merksätze“ markiert ihr Signal als readonly (ESLint-Ratsche)." },

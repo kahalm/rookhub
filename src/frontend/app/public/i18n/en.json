@@ -817,7 +817,13 @@
       "sourceRookhub": "RookHub",
       "sourceLichess": "Lichess",
       "guide": "Open the guide",
-      "urlCopied": "Address copied"
+      "urlCopied": "Address copied",
+      "noneOnline": "No engine is online right now.",
+      "lastSeen": "last seen {{when}}",
+      "neverSeen": "never connected",
+      "showOffline": "Show offline engines ({{count}})",
+      "hideOffline": "Hide offline engines ({{count}})",
+      "pruneHint": "Engines that have not connected for 7 days are removed automatically; they come back when their computer reconnects."
     },
     "offline": {
       "title": "Offline",

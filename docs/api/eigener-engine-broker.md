@@ -34,6 +34,14 @@ Lichess-Konto ging gar nichts. Direkt gibt es keine fremde Drossel, keinen Liche
   „online“ = gepollt in den letzten `OnlineWindowSeconds` (30) (`EngineSelectorDirectory`; `LastSeenAt` schreibt
   `EngineBrokerMaintenanceService` alle 60 s, dazu alle 10 min eine Statistikzeile). Schalter
   `Engine:LocalBroker:Enabled` (Vorgabe an; aus = `/api/external-engine/*` 404).
+* **Aufräumen (0.919.0)**: `EngineBrokerMaintenanceService` entfernt stündlich Registrierungen, deren Provider sich seit
+  `Engine:LocalBroker:PruneAfterDays` (7; 0 = aus) nicht gemeldet hat (`LastSeenAt`, sonst `CreatedAt`) —
+  `ExternalEngineRegistrationService.PruneStaleAsync`. Stand eine in der Hintergrund-Liste, merkt sich
+  `LichessEngineCredentials.PrunedBackgroundNames` ihren Namen; meldet sich ein Provider mit diesem Namen neu an (neue
+  Kennung), kommt sie von selbst zurück in die Liste. Anlass 09.11.2026: 17 tote PC-Einträge füllten den Deckel von
+  32 Engines je Konto, neue Engines wurden abgewiesen. Die Engine-Liste (`GET /api/engine/external`) trägt je
+  `rookhub`-Engine `lastSeenAt`; das Profil blendet Offline-Engines standardmäßig aus (Knopf zum Einblenden) und zeigt
+  „zuletzt da“.
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|

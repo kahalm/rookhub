@@ -5737,6 +5737,10 @@ namespace RookHub.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PrunedBackgroundNames")
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
+
                     b.Property<bool>("ShareAsHouseEngine")
                         .HasColumnType("tinyint(1)");
 

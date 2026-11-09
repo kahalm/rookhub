@@ -566,7 +566,13 @@
       "sourceRookhub": "RookHub",
       "sourceLichess": "Lichess",
       "guide": "Útmutató megnyitása",
-      "urlCopied": "Cím kimásolva"
+      "urlCopied": "Cím kimásolva",
+      "noneOnline": "Jelenleg egy motor sem elérhető.",
+      "lastSeen": "utoljára látva: {{when}}",
+      "neverSeen": "még sosem csatlakozott",
+      "showOffline": "Offline motorok mutatása ({{count}})",
+      "hideOffline": "Offline motorok elrejtése ({{count}})",
+      "pruneHint": "A 7 napja nem jelentkező motorokat a rendszer automatikusan eltávolítja; visszakerülnek, amint a gépük újra csatlakozik."
     },
     "changePwd": {
       "title": "Jelszó módosítása",

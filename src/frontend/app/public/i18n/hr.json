@@ -817,7 +817,13 @@
       "sourceRookhub": "RookHub",
       "sourceLichess": "Lichess",
       "guide": "Otvori upute",
-      "urlCopied": "Adresa kopirana"
+      "urlCopied": "Adresa kopirana",
+      "noneOnline": "Trenutačno nijedan engine nije na mreži.",
+      "lastSeen": "zadnji put viđen {{when}}",
+      "neverSeen": "nikad povezan",
+      "showOffline": "Prikaži enginee izvan mreže ({{count}})",
+      "hideOffline": "Sakrij enginee izvan mreže ({{count}})",
+      "pruneHint": "Enginei koji se nisu javili 7 dana automatski se uklanjaju; vraćaju se čim se njihovo računalo ponovno poveže."
     },
     "offline": {
       "title": "Offline",

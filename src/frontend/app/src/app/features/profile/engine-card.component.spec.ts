@@ -69,8 +69,44 @@ describe('EngineCardComponent', () => {
     expect(component.directEngines.length).toBe(1);
     expect(component.lichessEngines.map(e => e.id)).toEqual(['eei_cloud']);
     const el: HTMLElement = fixture.nativeElement;
+    // Offline ist standardmäßig ausgeblendet (0.919.0) — erst der Knopf zeigt die Engine.
+    expect(el.querySelector('.direct-list .dot')).toBeNull();
+    expect(el.querySelector('.none-online')).not.toBeNull();
+    (el.querySelector('.offline-toggle') as HTMLButtonElement).click();
+    fixture.detectChanges();
     expect(el.querySelector('.direct-list .dot')).not.toBeNull();
     expect(el.querySelector('.direct-list .dot.on')).toBeNull();
+  });
+
+  it('hides offline direct engines until asked, and says when each was last seen', () => {
+    fixture.detectChanges();
+    http.expectOne('/api/engine/credentials').flush({ hasCredentials: false, maskedToken: null });
+    http.expectOne('/api/engine/external').flush({
+      hasCredentials: false, tokenInvalid: false,
+      engines: [
+        { id: 'rhe_aaaaaaaaaaaa', name: 'Gross', maxThreads: 16, maxHash: 8192, source: 'rookhub', online: true,
+          lastSeenAt: '2026-11-09T08:00:00Z' },
+        { id: 'rhe_bbbbbbbbbbbb', name: 'PC', maxThreads: 24, maxHash: 4096, source: 'rookhub', online: false,
+          lastSeenAt: '2026-10-21T17:09:42Z' },
+        { id: 'rhe_cccccccccccc', name: 'Neu', maxThreads: 2, maxHash: 64, source: 'rookhub', online: false, lastSeenAt: null },
+      ],
+    });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const names = () => Array.from(el.querySelectorAll('.direct-list li strong')).map(n => n.textContent);
+
+    expect(names()).toEqual(['Gross']);
+    expect(el.querySelector('.direct-list .seen')).toBeNull();   // online: kein „zuletzt da“
+    const toggle = el.querySelector('.offline-toggle') as HTMLButtonElement;
+    expect(component.offlineCount).toBe(2);
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(names()).toEqual(['Gross', 'PC', 'Neu']);
+    const seen = Array.from(el.querySelectorAll('.direct-list .seen')).map(n => n.textContent!.trim());
+    expect(seen.length).toBe(2);
+    expect(seen[0]).toContain('profile.engine.lastSeen');
+    expect(seen[1]).toContain('profile.engine.neverSeen');
   });
 
   it('says so when Lichess is unreachable but direct engines are listed', () => {

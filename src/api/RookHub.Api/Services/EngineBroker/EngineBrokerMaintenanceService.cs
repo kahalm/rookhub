@@ -19,11 +19,13 @@ public sealed class EngineBrokerMaintenanceService(
 {
     public static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan StatsInterval = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan PruneInterval = TimeSpan.FromHours(1);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!options.Enabled) return;
         var lastStats = DateTime.UtcNow;
+        var lastPrune = DateTime.MinValue;
         long statsVersion = 0;
         using var timer = new PeriodicTimer(FlushInterval);
         while (await WaitAsync(timer, stoppingToken))
@@ -32,6 +34,16 @@ public sealed class EngineBrokerMaintenanceService(
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogWarning(ex, "EngineBroker: LastSeenAt nachtragen fehlgeschlagen");
+            }
+
+            if (DateTime.UtcNow - lastPrune >= PruneInterval)
+            {
+                lastPrune = DateTime.UtcNow;
+                try { await PruneAsync(stoppingToken); }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    logger.LogWarning(ex, "EngineBroker: Aufraeumen alter Engines fehlgeschlagen");
+                }
             }
 
             if (DateTime.UtcNow - lastStats >= StatsInterval && hub.Stats.Version != statsVersion)
@@ -49,6 +61,15 @@ public sealed class EngineBrokerMaintenanceService(
     {
         try { return await timer.WaitForNextTickAsync(ct); }
         catch (OperationCanceledException) { return false; }
+    }
+
+    /// <summary>Registrierungen, die sich länger als <see cref="LocalBrokerOptions.PruneAfter"/> nicht gemeldet haben,
+    /// wegräumen (öffentlich für Tests).</summary>
+    public async Task<int> PruneAsync(CancellationToken ct)
+    {
+        using var scope = scopes.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<ExternalEngineRegistrationService>()
+            .PruneStaleAsync(DateTime.UtcNow, options.PruneAfter, ct);
     }
 
     /// <summary>Schreibt die seit dem letzten Lauf gesehenen Selectors in <c>LastSeenAt</c> (öffentlich für Tests).</summary>

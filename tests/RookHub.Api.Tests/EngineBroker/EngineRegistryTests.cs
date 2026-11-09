@@ -113,6 +113,17 @@ public class EngineRegistryTests : IDisposable
     }
 
     [Fact]
+    public async Task List_LocalEngine_CarriesLastSeen()
+    {
+        var uid = await UserAsync();
+        var seen = new DateTime(2026, 10, 21, 17, 9, 42, DateTimeKind.Utc);
+        await LocalAsync(uid, lastSeen: seen);
+
+        var e = Assert.Single((await Registry().ListAsync(uid, CancellationToken.None)).Engines);
+        Assert.Equal(seen, e.LastSeenAt);
+    }
+
+    [Fact]
     public async Task List_MixesBothSources()
     {
         var uid = await UserAsync();
