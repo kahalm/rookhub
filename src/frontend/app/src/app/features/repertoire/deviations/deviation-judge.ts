@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { Chess } from 'chess.js';
 import type { AnalysisLine, AnalysisState } from '../../analysis/analysis-engine.service';
 import { whiteToMove } from '../../../shared/chess/fen-side';
@@ -78,20 +78,27 @@ export class DeviationJudge {
     return new Promise(resolve => {
       let last: AnalysisLine[] = [];
       let finished = false;
+      // Vor `done` deklariert (Delta-Review 2026-11-09, F1-001): `analysis$` ist ein BehaviorSubject und meldet den
+      // aktuellen Zustand SYNCHRON beim subscribe — passt der schon (dieselbe Stellung fertig gerechnet, z. B. „Nochmal“
+      // mit demselben Zug), läuft `done` noch innerhalb von subscribe(); früher warf es dort an `const sub` (TDZ) und das
+      // Urteil löste nie auf.
+      let sub: Subscription | undefined;
+      let timer: ReturnType<typeof setTimeout> | undefined;
       const done = () => {
         if (finished) return;
         finished = true;
-        sub.unsubscribe();
-        clearTimeout(timer);
+        sub?.unsubscribe();
+        if (timer !== undefined) clearTimeout(timer);
         this.engine.setDepth(prevDepth);
         resolve(last);
       };
-      const sub = this.engine.analysis$.subscribe(st => {
+      sub = this.engine.analysis$.subscribe(st => {
         if (st.fen !== fen) return;
         if (st.lines.length) last = st.lines;
         if (st.lines.length && (st.depth >= depth || !st.running)) done();
       });
-      const timer = setTimeout(done, timeoutMs);
+      if (finished) { sub.unsubscribe(); return; }   // schon fertig gerechnet: nichts neu anstoßen
+      timer = setTimeout(done, timeoutMs);
       this.engine.setMultiPv(multiPv);
       this.engine.setDepth(depth);
       this.engine.analyze(fen).catch(() => done());

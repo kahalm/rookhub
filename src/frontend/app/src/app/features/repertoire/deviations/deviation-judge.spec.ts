@@ -1,5 +1,5 @@
 import { fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { Chess } from 'chess.js';
 import { AFTER_TIMEOUT_MS, DeviationJudge, Verdict, moverCp } from './deviation-judge';
 
@@ -75,4 +75,21 @@ describe('DeviationJudge (Engine-Urteil der Abweichungen, 0.892.0)', () => {
     expect(moverCp(line('mate', 3), BEFORE)).toBeGreaterThan(90000);
     expect(moverCp(line('cp', 50), BEFORE.replace(' w ', ' b '))).toBe(-50);
   });
+
+  it('Stellung schon fertig gerechnet (BehaviorSubject meldet synchron): Urteil löst sofort auf, Tiefe zurück (F1-001)', fakeAsync(() => {
+    const e = fakeEngine();
+    const lines = [{ multipv: 1, depth: 20, scoreType: 'cp', score: 40, evalText: '0.40', pvUci: ['g1f3'] }];
+    const state$ = new BehaviorSubject<any>({ fen: BEFORE, depth: 20, running: false, nodes: 0, nps: 0, lines });
+    const engine = { ...e, analysis$: state$, get depthLimit() { return e.depthLimit; } } as any;
+    engine.setDepth = (d: number) => { e.depthLimit = d; };
+    const j = new DeviationJudge(engine);
+    let got: unknown = null;
+    j.evaluate(BEFORE, 3, 16, 2500).then(x => got = x);
+    flushMicrotasks();
+    expect(got).toEqual(lines);
+    expect(e.depthLimit).toBe(22);
+    expect(e.asked).toEqual([]);                               // nichts neu angestoßen
+    expect(state$.observed).toBeFalse();                       // abgemeldet
+    tick(5000);                                                // kein offener Timer
+  }));
 });
