@@ -3378,7 +3378,9 @@
       "progressRefine": "Vertiefung {{done}}/{{total}} Stellungen",
       "progressComparisons": "Fehler-Vergleiche {{done}}/{{total}}",
       "progressComparisonsPending": "Fehler-Vergleiche noch nicht begonnen",
-      "requestedWaitingToast": "Angefordert – die Hintergrund-Analyse ist noch nicht durch; Claude schreibt die Zusammenfassung, sobald sie fertig ist."
+      "requestedWaitingToast": "Angefordert – die Hintergrund-Analyse ist noch nicht durch; Claude schreibt die Zusammenfassung, sobald sie fertig ist.",
+      "progressFast": "schnelle Analyse {{done}}/{{total}} Stellungen",
+      "progressRefineNext": "Vertiefung folgt"
     }
   },
   "analysis": {

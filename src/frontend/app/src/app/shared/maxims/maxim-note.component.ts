@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ChessMaxim, ChessMaximSource, ChessMaximsService } from './chess-maxims.service';
+import { ChessMaxim, ChessMaximSource, ChessMaximsService, readerJump } from './chess-maxims.service';
 
 /**
  * Der Merksatz unter einer Erklärung (0.917.0, Wunsch 2026-11-09: „mach dahinter immer ein (i), mit dem du auf die
@@ -31,7 +31,7 @@ import { ChessMaxim, ChessMaximSource, ChessMaximsService } from './chess-maxims
         @for (s of m.sources; track $index) {
           <li>
             @if (s.accessible) {
-              <a [routerLink]="['/ebooks', s.ebookId]" [queryParams]="s.page ? { page: s.page } : {}" target="_blank" rel="noopener">
+              <a [routerLink]="['/ebooks', s.ebookId]" [queryParams]="jump(s)" target="_blank" rel="noopener">
                 {{ s.author }} — <em>{{ s.title }}</em></a>
             } @else { {{ s.author }} — <em>{{ s.title }}</em> }@if (s.year) { ({{ s.year }})}
             @if (s.page) { <span class="where">· {{ 'maxims.page' | translate: { page: s.page } }}</span> }
@@ -66,6 +66,8 @@ export class MaximNoteComponent {
   private readonly all = toSignal(inject(ChessMaximsService).all$, { initialValue: [] as ChessMaxim[] });
   /** Der passende Eintrag der Liste — nur dann gibt es das (i). */
   readonly maxim = computed(() => ChessMaximsService.byText(this.all(), this.text()));
+
+  readonly jump = readerJump;
 
   /** Stellenangabe eines EPUBs (Kapitel, ~Anteil) ohne den Hinweis auf fehlende Seitenzahlen. */
   where(s: ChessMaximSource): string {

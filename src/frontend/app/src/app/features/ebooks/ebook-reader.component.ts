@@ -79,6 +79,8 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   /** EPUB-Diagramme als Bildanker (0.775.0): Doppelklick aufs Bild im Buch holt die Stellung. */
   readonly epubImages = signal<EpubDiagramImage[]>([]);
   epubLocator: string | null = null;
+  /** Sprung an eine ungefähre Stelle im EPUB (`?pct=`, Merksätze 0.919.3) — schlägt die gemerkte Lesestelle. */
+  epubJumpPercent: number | null = null;
   private epubSave$ = new Subject<EpubLocation>();
   /** Letzte Lesestelle im EPUB (CFI) — beim Wechsel Original ↔ Übersetzung springt der neue Leser dorthin. */
   private lastCfi: string | null = null;
@@ -166,6 +168,11 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
         // Sprung aus dem Kurs („Im Buch“, 2026-10-15): ?page=…&diagram=… schlägt die gemerkte Lesestelle.
         const q = this.route.snapshot.queryParamMap;
         const jumpPage = Number(q?.get('page')) || 0;
+        // Sprung aus den Merksätzen (0.919.3): `fmt=pdf` = die Seitenzahl gilt im PDF (das EPUB ist sonst bevorzugt und
+        // kennt keine Seiten); `pct=37` = ungefähre Stelle im EPUB.
+        const jumpFmt = q?.get('fmt');
+        const jumpPct = Number(q?.get('pct'));
+        this.epubJumpPercent = jumpPct > 0 && jumpPct <= 100 ? jumpPct : null;
         this.jumpDiagramId = Number(q?.get('diagram')) || null;
         this.initialPage = jumpPage > 0 ? jumpPage : book.progress?.page ?? 1;
         this.epubLocator = book.progress?.locator ?? null;
@@ -180,6 +187,11 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
             if (remembered && (book.translations ?? []).includes(remembered)) {
               this.readLang.set(remembered);
               this.viewFormat.set('epub');
+            }
+            if (jumpFmt && jumpFmt !== this.viewFormat() && READABLE_FORMATS.has(jumpFmt)
+                && (book.files ?? []).some(f => f.format === jumpFmt)) {
+              this.readLang.set('original');
+              this.viewFormat.set(jumpFmt);
             }
             this.applyViewFormat();
             this.loading = false;

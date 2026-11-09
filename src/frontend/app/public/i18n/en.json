@@ -3378,7 +3378,9 @@
       "progressRefine": "deepening {{done}}/{{total}} positions",
       "progressComparisons": "mistake comparisons {{done}}/{{total}}",
       "progressComparisonsPending": "mistake comparisons not started yet",
-      "requestedWaitingToast": "Requested – the background analysis is not finished yet; Claude writes the summary as soon as it is."
+      "requestedWaitingToast": "Requested – the background analysis is not finished yet; Claude writes the summary as soon as it is.",
+      "progressFast": "fast analysis {{done}}/{{total}} positions",
+      "progressRefineNext": "deepening follows"
     }
   },
   "analysis": {

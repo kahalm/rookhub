@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.919.4", date: "2026-11-09", changes: [
+    { en: "Rules of thumb: book links now open the right spot — PDF passages open the PDF at the page (even when the e-book reader would prefer the EPUB), EPUB-only passages jump to the approximate position.",
+      de: "Merksätze: Die Buchlinks öffnen jetzt die richtige Stelle — PDF-Fundstellen öffnen das PDF auf der Seite (auch wenn der Leser sonst das EPUB bevorzugt), reine EPUB-Fundstellen springen an die ungefähre Position." },
+    { en: "Club games, requested summary: while the background analysis is still in its fast pass, the header shows its progress („fast analysis 40/62 positions · deepening follows“).",
+      de: "Vereinspartien, angeforderte Zusammenfassung: Solange die Hintergrund-Analyse noch im schnellen Durchgang ist, zeigt die Kopfzeile den Fortschritt („schnelle Analyse 40/62 Stellungen · Vertiefung folgt“)." },
+  ] },
   { version: "0.919.3", date: "2026-11-09", changes: [
     { en: "Profile, external engines: each engine row has its own “Background” checkbox instead of the multi-select list.",
       de: "Profil, externe Engines: Jede Engine-Zeile hat ein eigenes Häkchen „Hintergrund“ statt der Mehrfachauswahl." },

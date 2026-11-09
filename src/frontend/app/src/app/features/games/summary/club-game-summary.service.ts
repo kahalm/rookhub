@@ -27,6 +27,8 @@ export interface ClubGameSummaryReadiness {
   comparisonsPlanned: boolean;
   comparisonsDone: number;
   comparisonsTotal: number;
+  /** Stellungen, die der schnelle Durchgang schon gerechnet hat (0.919.3). */
+  analyzedPositions?: number;
 }
 
 @Injectable({ providedIn: 'root' })

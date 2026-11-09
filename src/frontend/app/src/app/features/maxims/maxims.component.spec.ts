@@ -29,7 +29,7 @@ describe('MaximsComponent (0.917.0)', () => {
     expect(Array.from(el.querySelectorAll('h2')).map(h => h.textContent)).toEqual(['Figuren', 'Taktik']);
     expect(el.querySelectorAll('mat-expansion-panel').length).toBe(2);
     const links = Array.from(el.querySelectorAll('.sources a')) as HTMLAnchorElement[];
-    expect(links.map(a => a.getAttribute('href'))).toEqual(['/ebooks/1314?page=12']);
+    expect(links.map(a => a.getAttribute('href'))).toEqual(['/ebooks/1314?page=12&fmt=pdf']);
     expect(el.textContent).toContain('Secrets of Practical Chess');
     expect(el.textContent).toContain('maxims.noAccess');
   });

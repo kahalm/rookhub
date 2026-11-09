@@ -70,6 +70,10 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
     expect(f.componentInstance.progressText({ ready: false, hasAnalysis: true, analysisDone: true, refining: false,
       refinedPositions: 62, totalPositions: 62, comparisonsPlanned: true, comparisonsDone: 3, comparisonsTotal: 11 }))
       .toBe('games.summary.progressComparisons');
+    // 0.919.3: schneller Durchgang läuft noch → Zahlen statt nur „Analyse läuft noch“
+    expect(f.componentInstance.progressText({ ready: false, hasAnalysis: true, analysisDone: false, refining: false,
+      refinedPositions: 0, totalPositions: 62, analyzedPositions: 40, comparisonsPlanned: false, comparisonsDone: 0, comparisonsTotal: 0 }))
+      .toBe('games.summary.progressFast · games.summary.progressRefineNext');
   });
 
   it('0.914.0: bereit — wieder der normale Wartevermerk', () => {

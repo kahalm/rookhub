@@ -1,6 +1,7 @@
 import {
   AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, HostListener, Input, NgZone, OnChanges,
   OnDestroy, Output, SimpleChanges, ViewChild, inject, signal,
+  input,
 } from '@angular/core';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -90,7 +91,7 @@ interface EpubBook {
   ready: Promise<unknown>;
   open(input: string, what?: string): Promise<unknown>;
   loaded: { navigation: Promise<{ toc: { label: string; href: string }[] }> };
-  locations: { generate(chars: number): Promise<unknown>; percentageFromCfi(cfi: string): number; length(): number };
+  locations: { generate(chars: number): Promise<unknown>; percentageFromCfi(cfi: string): number; cfiFromPercentage(p: number): string; length(): number };
   renderTo(el: HTMLElement, opts: Record<string, unknown>): EpubRendition;
   spine: { get(index: number): { href: string } | null };
   /** Lädt Buchdateien (Ordner-Modus); im Archiv-Modus übernimmt `archive.request`. */
@@ -160,6 +161,9 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
   /** Basis-Adresse des Buchs „als Ordner“ (mit Schrägstrich am Ende); leer = ganzes Archiv aus `src`. */
   @Input() dirSrc: string | null = null;
   @Input() initialLocator: string | null = null;
+  /** Sprung an einen Anteil des Buchs in Prozent (Merksätze, 0.919.3): vermisst das Buch sofort und zeigt die Stelle — schlägt
+   *  `initialLocator`. Ungefähr: die Prozentangabe stammt aus dem Text des Buchs, nicht aus epub.js. */
+  readonly initialPercent = input<number | null>(null);
   @Output() located = new EventEmitter<EpubLocation>();
   @Output() toc = new EventEmitter<EpubTocEntry[]>();
   @Output() failed = new EventEmitter<unknown>();
@@ -205,7 +209,15 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
         this.resizeObs = new ResizeObserver(() => this.onAreaResize());
         this.resizeObs.observe(this.area.nativeElement);
       }
-      await rendition.display(this.initialLocator || undefined).catch(() => rendition.display());
+      const pct = this.initialPercent();
+      let target = this.initialLocator || undefined;
+      if (pct != null && pct > 0) {
+        // Erst vermessen (lädt jedes Kapitel einmal, bei großen Büchern Sekunden), dann die Stelle zum Anteil.
+        await book.locations.generate(1600).catch(() => undefined);   // ohne Vermessung: die gemerkte Stelle
+        if (this.destroyed) return;
+        if (book.locations.length() > 0) target = book.locations.cfiFromPercentage(Math.min(pct, 100) / 100) || target;
+      }
+      await rendition.display(target).catch(() => rendition.display());
       EpubViewerComponent.keepViews(rendition);
       this.zone.run(() => this.loading.set(false));
       book.loaded.navigation.then(nav => this.zone.run(() => this.toc.emit(nav.toc.map(t => ({ label: t.label.trim(), href: t.href })))))

@@ -3755,7 +3755,9 @@
       "progressRefine": "mélyítés {{done}}/{{total}} állás",
       "progressComparisons": "hibaösszevetések {{done}}/{{total}}",
       "progressComparisonsPending": "a hibaösszevetések még nem kezdődtek el",
-      "requestedWaitingToast": "Kérve – a háttérelemzés még nem kész; Claude megírja az összefoglalót, amint elkészül."
+      "requestedWaitingToast": "Kérve – a háttérelemzés még nem kész; Claude megírja az összefoglalót, amint elkészül.",
+      "progressFast": "gyors elemzés {{done}}/{{total}} állás",
+      "progressRefineNext": "mélyítés következik"
     }
   },
   "analysisJobs": {

@@ -43,7 +43,7 @@ describe('MaximNoteComponent (0.917.0)', () => {
     (el.querySelector('button.info') as HTMLButtonElement).click();
     f.detectChanges();
     const links = Array.from(el.querySelectorAll('.sources a')) as HTMLAnchorElement[];
-    expect(links.map(a => a.getAttribute('href'))).toEqual(['/ebooks/338?page=41', '/ebooks/1314', '/maxims?m=raum-und-tausch']);
+    expect(links.map(a => a.getAttribute('href'))).toEqual(['/ebooks/338?page=41&fmt=pdf', '/ebooks/1314?pct=37', '/maxims?m=raum-und-tausch']);
     // Buch ohne Zugriff: Titel ja, Link nein.
     expect(el.textContent).toContain('Nicht freigegeben');
     expect(el.textContent).toContain('White will not want to exchange pieces');

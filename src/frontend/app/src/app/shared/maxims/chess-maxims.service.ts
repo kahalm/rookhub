@@ -13,6 +13,13 @@ export interface ChessMaximSource {
 /** Ein Merksatz der kuratierten Liste (`GET /api/maxims`). */
 export interface ChessMaxim { id: string; text: string; category: string; when: string; sources: ChessMaximSource[]; }
 
+/** Sprung in den Leser: PDF-Seite (`fmt=pdf` — sonst öffnet das bevorzugte EPUB ohne Seiten) bzw. Anteil im EPUB. */
+export function readerJump(s: ChessMaximSource): Record<string, string | number> {
+  if (s.page) return { page: s.page, fmt: 'pdf' };
+  if (s.percent) return { pct: s.percent };
+  return {};
+}
+
 /** Präfix der Merksatz-Zeile am Ende einer Erklärung (wie `ChessMaxims.LinePrefix` am Server). */
 export const MAXIM_PREFIX = 'Merksatz:';
 

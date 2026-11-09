@@ -16,7 +16,8 @@ public sealed record ClubGameSummaryDto(string Status, string? Markdown, DateTim
 /// <c>RefinedPositions/TotalPositions</c> zählen nur bei vorgesehener Vertiefung; <c>ComparisonsTotal</c> ist 0, solange die
 /// Vergleiche noch nicht angelegt sind (<c>ComparisonsPlanned</c> = false).</summary>
 public sealed record ClubGameSummaryReadiness(bool Ready, bool HasAnalysis, bool AnalysisDone, bool Refining,
-    int RefinedPositions, int TotalPositions, bool ComparisonsPlanned, int ComparisonsDone, int ComparisonsTotal);
+    int RefinedPositions, int TotalPositions, bool ComparisonsPlanned, int ComparisonsDone, int ComparisonsTotal,
+    int AnalyzedPositions = 0);
 
 /// <summary>Ein offener Auftrag für den Watcher: Partie und Verein (für <c>?club=</c> an den Lese-Wegen der Partie).</summary>
 public sealed record ClubGameSummaryJob(int ClubGameId, int ClubId, DateTime RequestedAt, int? RequestedByUserId);
@@ -46,12 +47,14 @@ public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = nul
         var failed = a.Status == GameAnalysisStatus.Failed;
         var done = a.Status == GameAnalysisStatus.Done || failed;
         var refining = !failed && a.RefineDepth != null && a.RefinedAt == null;
-        int refined = 0, total = 0;
-        if (a.RefineDepth != null && !failed)
+        int refined = 0, total = 0, analyzed = 0;
+        if (!failed && (!done || a.RefineDepth != null))
         {
+            // 0.919.3 (Wunsch 09.11.: „zeig mir den Fortschritt, x/x tief/schnell“): auch der schnelle Durchgang zählt mit.
             var positions = db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == a.Id);
             total = await positions.CountAsync(ct);
-            refined = await positions.CountAsync(p => p.Refined, ct);
+            analyzed = done ? total : await positions.CountAsync(p => p.AnalyzedAt != null, ct);
+            if (a.RefineDepth != null) refined = await positions.CountAsync(p => p.Refined, ct);
         }
         var planned = a.MistakeComparisonsAt != null;
         int cDone = 0, cTotal = 0;
@@ -63,7 +66,7 @@ public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = nul
             cDone = cs.Count(st => st == MoveComparisonStatus.Done || st == MoveComparisonStatus.Failed);
         }
         var comparisonsReady = failed || !ComparisonsEnabled || (planned && cDone == cTotal);
-        return new(done && !refining && comparisonsReady, true, done, refining, refined, total, planned, cDone, cTotal);
+        return new(done && !refining && comparisonsReady, true, done, refining, refined, total, planned, cDone, cTotal, analyzed);
     }
 
     /// <summary>So lange darf ein Auftrag „läuft" stehen; danach gilt der Watcher als abgestürzt und die Warteschlange gibt ihn

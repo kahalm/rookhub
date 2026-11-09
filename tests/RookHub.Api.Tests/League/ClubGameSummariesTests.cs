@@ -87,6 +87,17 @@ public class ClubGameSummariesTests : IDisposable
     }
 
     [Fact]
+    public async Task Readiness_SchnellerDurchgang_zaehltGerechneteStellungen()
+    {
+        var id = await GameAsync();
+        var a = await ReadyAsync(id, GameAnalysisStatus.Running, refined: false, comparisonsPlanned: false);
+        a.Positions[0].AnalyzedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        var r = await Svc.ReadinessAsync(id);
+        Assert.Equal((false, false, 1, 2), (r.Ready, r.AnalysisDone, r.AnalyzedPositions, r.TotalPositions));
+    }
+
+    [Fact]
     public async Task Readiness_FailedAnalysis_OrComparisonsSwitchedOff_DoNotBlock()
     {
         var id = await GameAsync();

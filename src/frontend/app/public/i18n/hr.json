@@ -3378,7 +3378,9 @@
       "progressRefine": "produbljivanje {{done}}/{{total}} pozicija",
       "progressComparisons": "usporedbe grešaka {{done}}/{{total}}",
       "progressComparisonsPending": "usporedbe grešaka još nisu započele",
-      "requestedWaitingToast": "Zatraženo – analiza u pozadini još nije gotova; Claude piše sažetak čim bude."
+      "requestedWaitingToast": "Zatraženo – analiza u pozadini još nije gotova; Claude piše sažetak čim bude.",
+      "progressFast": "brza analiza {{done}}/{{total}} pozicija",
+      "progressRefineNext": "slijedi produbljivanje"
     }
   },
   "analysis": {

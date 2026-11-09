@@ -144,7 +144,7 @@
         <div class="rd-viewer">
           @if (isEpub) {
             @for (k of [epubKey()]; track k) {
-            <app-epub-viewer [src]="fileUrl" [dirSrc]="epubDirUrl" [initialLocator]="epubLocator" (located)="onEpubLocated($event)"
+            <app-epub-viewer [src]="fileUrl" [dirSrc]="epubDirUrl" [initialLocator]="epubLocator" [initialPercent]="epubJumpPercent" (located)="onEpubLocated($event)"
                              [images]="epubImages()" [activeImage]="picked()?.id ?? null" (imagePick)="pick($event)" (missedPick)="askMissedEpub(ebook, $event)"
                              (toc)="epubToc.set($event)" (failed)="onViewerFailed()"
                              [layout]="epubLayout()" [fontScale]="epubFont()" />

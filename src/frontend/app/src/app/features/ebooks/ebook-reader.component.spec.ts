@@ -189,6 +189,20 @@ describe('EbookReaderComponent', () => {
     expect(c.diagrams()[0].sideKnown).toBeTrue();
   });
 
+  it('Sprung aus den Merksätzen (0.919.3): ?page=&fmt=pdf öffnet das PDF auf der Seite, ?pct= das EPUB an der Stelle', async () => {
+    const files = [
+      { id: 1, format: 'epub', fileName: 'x.epub', sizeBytes: 1 },
+      { id: 2, format: 'pdf', fileName: 'x.pdf', sizeBytes: 9 },
+    ];
+    const toPdf = (await make(book({ primaryFormat: 'epub', files }), new Map([['page', '130'], ['fmt', 'pdf']]))).componentInstance;
+    expect(toPdf.isEpub).toBeFalse();
+    expect(toPdf.initialPage).toBe(130);
+    TestBed.resetTestingModule();
+    const toEpub = (await make(book({ primaryFormat: 'epub', files }), new Map([['pct', '37']]))).componentInstance;
+    expect(toEpub.isEpub).toBeTrue();
+    expect(toEpub.epubJumpPercent).toBe(37);
+  });
+
   it('EPUB und PDF im selben Buch (0.793.0): liest das EPUB, „Als PDF lesen“ nimmt die Lesefassung des PDF', async () => {
     const b = book({ primaryFormat: 'epub', files: [
       { id: 1, format: 'epub', fileName: 'x.epub', sizeBytes: 1 },

@@ -6,7 +6,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
 import { map } from 'rxjs';
-import { ChessMaxim, ChessMaximSource, ChessMaximsService } from '../../shared/maxims/chess-maxims.service';
+import { ChessMaxim, ChessMaximSource, ChessMaximsService, readerJump } from '../../shared/maxims/chess-maxims.service';
 
 /**
  * Seite „Merksätze“ (0.917.0, Wunsch 2026-11-09: „mach irgendwo in RookHub einen Link, wo diese Merksätze aufgelistet sind —
@@ -40,7 +40,7 @@ import { ChessMaxim, ChessMaximSource, ChessMaximsService } from '../../shared/m
                   @for (s of m.sources; track $index) {
                     <li>
                       @if (s.accessible) {
-                        <a [routerLink]="['/ebooks', s.ebookId]" [queryParams]="s.page ? { page: s.page } : {}">{{ s.author }} — <em>{{ s.title }}</em></a>
+                        <a [routerLink]="['/ebooks', s.ebookId]" [queryParams]="jump(s)">{{ s.author }} — <em>{{ s.title }}</em></a>
                       } @else { <span>{{ s.author }} — <em>{{ s.title }}</em></span> }
                       @if (s.year) { <span class="where"> ({{ s.year }})</span> }
                       @if (s.page) { <span class="where"> · {{ 'maxims.page' | translate: { page: s.page } }}</span> }
@@ -98,6 +98,8 @@ export class MaximsComponent {
     }
     return out;
   });
+
+  readonly jump = readerJump;
 
   where(s: ChessMaximSource): string {
     return (s.location ?? '').replace(/;?\s*E-Book ohne Seitenzahlen, bei ca\.\s*(\d+)\s*%/, (_m, p) => ` ~${p} %`).trim();

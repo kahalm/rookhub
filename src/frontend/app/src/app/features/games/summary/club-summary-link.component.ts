@@ -95,7 +95,13 @@ export class ClubSummaryLinkComponent implements OnInit {
   /** „Vertiefung 56/62 · Fehler-Vergleiche 0/11" — was noch fehlt, knapp. */
   progressText(r: ClubGameSummaryReadiness): string {
     const t = (k: string, p?: object) => this.translate.instant('games.summary.' + k, p);
-    if (!r.hasAnalysis || !r.analysisDone) return t('progressAnalysis');
+    if (!r.hasAnalysis) return t('progressAnalysis');
+    // 0.919.3 (Wunsch 09.11.: „zeig mir den Fortschritt, x/x tief/schnell“): schneller Durchgang mit Zahlen.
+    if (!r.analysisDone) {
+      return r.totalPositions > 0
+        ? t('progressFast', { done: r.analyzedPositions ?? 0, total: r.totalPositions }) + ' · ' + t('progressRefineNext')
+        : t('progressAnalysis');
+    }
     const parts: string[] = [];
     if (r.refining) parts.push(t('progressRefine', { done: r.refinedPositions, total: r.totalPositions }));
     parts.push(r.comparisonsPlanned
