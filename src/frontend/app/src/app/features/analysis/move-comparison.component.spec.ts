@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
-import { of } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import { MoveComparisonComponent, arrowOf, play } from './move-comparison.component';
 import { numberedLine } from './move-comparison.service';
 
@@ -186,6 +186,28 @@ describe('MoveComparisonComponent', () => {
   }));
 
   // d3-rk-vergleich-leere-seite-balken: 502 nach den Wiederholungen ließ den Ladebalken für immer stehen.
+  it('switching to another comparison while the first still loads shows the new one, not the old (F2-023)', fakeAsync(() => {
+    const params = new BehaviorSubject(convertToParamMap({ id: '7' }));
+    TestBed.configureTestingModule({
+      imports: [MoveComparisonComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { paramMap: params } }],
+    });
+    const fixture = TestBed.createComponent(MoveComparisonComponent);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    const slowA = http.expectOne('/api/move-comparisons/7');
+    http.expectOne('/api/move-comparisons').flush([]);
+    params.next(convertToParamMap({ id: '8' }));            // Wechsel zu B, A läuft noch
+    expect(slowA.cancelled).toBeTrue();
+    http.expectOne('/api/move-comparisons/8').flush(comparison({ id: 8 }));
+    http.match('/api/move-comparisons').forEach(r => r.flush([]));
+    expect(c.data()?.id).toBe(8);
+    discardPeriodicTasks();
+  }));
+
   it('shows a load error with retry instead of an endless bar when loading fails', fakeAsync(() => {
     const { fixture, c, http } = make();
     const el = fixture.nativeElement as HTMLElement;

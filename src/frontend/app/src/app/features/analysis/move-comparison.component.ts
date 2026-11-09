@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { LatestRequest } from '../../shared/latest-request.util';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { interval } from 'rxjs';
@@ -291,6 +292,8 @@ export class MoveComparisonComponent implements OnInit {
   /** Eigene Partie (`?ownGame=`, 0.923.0): wie `clubGame`, gelesen über die gespeicherte Partie. */
   readonly ownGame = signal<number | null>(null);
   private loading = false;
+  /** Laufende Anfrage — ein Wechsel der Kennung bricht sie ab (F2-023). */
+  private readonly loadRequest = new LatestRequest();
 
   readonly running = computed(() => { const s = this.data()?.status; return !!s && s !== 'done' && s !== 'failed'; });
   readonly best = computed(() => this.data()?.candidates.find(c => c.isBest) ?? null);
@@ -313,6 +316,9 @@ export class MoveComparisonComponent implements OnInit {
       this.clubGame.set(Number.isInteger(club) && club > 0 ? club : null);
       const own = Number(this.route.snapshot?.queryParamMap?.get('ownGame'));
       this.ownGame.set(Number.isInteger(own) && own > 0 ? own : null);
+      // F2-023: eine noch laufende Anfrage gehört zur ALTEN Kennung — abbrechen, sonst zeigte ihre Antwort A unter B.
+      this.loadRequest.cancel();
+      this.loading = false;
       this.currentId.set(id);
       this.data.set(null);
       this.view.set(null);
@@ -332,9 +338,10 @@ export class MoveComparisonComponent implements OnInit {
     this.loading = true;
     const club = this.clubGame();
     const own = this.ownGame();
-    (club ? this.api.getClub(club, id) : own ? this.api.getOwn(own, id) : this.api.get(id)).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.loadRequest.run((club ? this.api.getClub(club, id) : own ? this.api.getOwn(own, id) : this.api.get(id)).pipe(takeUntilDestroyed(this.destroyRef)), {
       next: d => {
         this.loading = false;
+        if (id !== this.currentId()) return;
         this.loadError.set(false);
         const wasRunning = this.running();
         this.data.set(d);
