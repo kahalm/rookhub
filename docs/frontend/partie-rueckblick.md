@@ -48,7 +48,9 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
     **Abgleich mit chess.com (0.853.0, Vereinspartie 228):** chess.com „!!“ 22.Sxe6, 24.O-O; „!“ 14.Sexd4, 19…Kd7,
     23.g3, 30.De7+, 31.Te6+ — seit 0.853.0 bei uns genauso (vorher „!!“ 25.Df3, „!“ nur 23.g3, 30.De7+). Dazu zählt
     der König im Abtausch als LETZTER Schläger (`influenceOn`): nach 22.Sxe6 schlägt erst …Dxe6, nach Dxe6+ der König —
-    vorher fehlte er, weil Kxe6 im Moment illegal ist, und das Opfer blieb unerkannt.
+    vorher fehlte er, weil Kxe6 im Moment illegal ist, und das Opfer blieb unerkannt. Seit Regelstand 2 (2026-11-09,
+    „schon vorher hängend = kein Opfer“, siehe `sacrificedPiece`) ist 24.O-O bei uns „!“ statt „!!“: der Se6 hing seit
+    22.Sxe6 — bewusste Abweichung von chess.com.
     Fehlt eine Zutat (Lücke davor, kein zweiter Kandidat, keine UCI), entfällt die Sonderklasse. Book gibt es
     nicht (kein Eröffnungsbuch im Client). `MOVE_CLASS_COLORS` ist die EINE Farbtabelle (chess.com-nah) für
     Zähler, Abzeichen und Kurven-Punkte.
@@ -64,7 +66,12 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
   Angreifer UND ein Verteidiger billiger als der billigste Angreifer) oder ein Bauer deckt; (e) sonst nein.
   `sacrificedPiece` = die TEUERSTE eigene Figur (N/B/R/Q, auch eine, die nicht gezogen hat — Legall), die hängt
   und bei der der Gegner im ABTAUSCH mehr gewinnt als das Geschlagene (`exchangeGain`, SEE ohne Röntgen; en
-  passant = 1). **Seit 0.518.1 zwei Korrekturen**, beide an der Prod-Partie MYXN3hXqz1X2hm7Cx6V47Q gefunden
+  passant = 1). **Regelstand 2 (User-Entscheidung 2026-11-09, Vereinspartie 241):** eine Figur, die auf demselben Feld
+  schon VOR dem Zug hing (`hungBefore` = `hangingOn` über die Vorher-Stellung, ohne Abtausch-Regel), ist KEIN Opfer dieses
+  Zuges; die gezogene Figur (Zielfeld) ist ausgenommen, und eine Figur, der der Zug den Verteidiger wegzieht, hing vorher
+  nicht und bleibt ein Opfer. Beispiel 241: 7…Sxe4 ist ein Opfer (der Springer hängt auf e4), 9.Ld3 nicht (der Se4 hing
+  schon gegen d5 — der Läuferzug gibt nur das vorher geopferte Material zurück); ebenso 25.Df3 in Partie 228.
+  **Seit 0.518.1 zwei Korrekturen**, beide an der Prod-Partie MYXN3hXqz1X2hm7Cx6V47Q gefunden
   (chess.com: kein Brilliant): (1) der Abtausch statt des vollen Figurenwerts — 22…gxf4 ließ einen von der
   Dame GEDECKTEN Turm vor einem Läufer stehen (Verlust die Qualität, 2 < geschlagener Läufer 3); (2) freechess'
   Schlag-Simulation (`capturable`) ist jetzt drin (seit 0.521.3 OHNE den Schläger selbst auf dem Opferfeld — sein

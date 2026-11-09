@@ -205,6 +205,32 @@ describe('move-tactics.util', () => {
       expect(sacrificedPiece(before, after, 'c1b1')).toEqual({ square: 'd1', piece: 'r' });
     });
 
+    // Regelstand 2 (User-Entscheidung 2026-11-09, Vereinspartie 241 / Analyse 24754): eine Figur, die auf demselben Feld schon
+    // VOR dem Zug hing, opfert dieser Zug nicht. Spiegel: MoveTacticsTests (dieselben FENs).
+    it('Partie 241, 7…Sxe4: der Springer schlägt e4 und hängt dort — die gezogene Figur ist das Opfer', () => {
+      expect(sacrificedPiece('rnbq1rk1/ppp1bppp/3p1n2/8/2BNP3/2N5/PPP2PPP/R1BQ1RK1 b - - 6 7',
+        'rnbq1rk1/ppp1bppp/3p4/8/2BNn3/2N5/PPP2PPP/R1BQ1RK1 w - - 0 8', 'f6e4')).toEqual({ square: 'e4', piece: 'n' });
+    });
+
+    it('Partie 241, 9.Ld3: der Se4 hing schon vor dem Zug (Bauer d5) — der Läuferzug gibt nur Material zurück, kein Opfer', () => {
+      const before = 'rnbq1rk1/ppp1bppp/8/3p4/2BNN3/8/PPP2PPP/R1BQ1RK1 w - - 0 9';
+      const after = 'rnbq1rk1/ppp1bppp/8/3p4/3NN3/3B4/PPP2PPP/R1BQ1RK1 b - - 1 9';
+      expect(isPieceHanging(before, before, 'e4')).toBeTrue();
+      expect(sacrificedPiece(before, after, 'c4d3')).toBeNull();
+    });
+
+    it('Partie 228, 25.Df3: der Se6 hing schon vor dem Zug — kein Opfer (bis Regelstand 1: Opfer e6)', () => {
+      expect(sacrificedPiece('r1b4r/3k2pp/p3Nb2/3pq2B/8/2P3P1/P3Q2P/R4RK1 w - - 3 25',
+        'r1b4r/3k2pp/p3Nb2/3pq2B/8/2P2QP1/P6P/R4RK1 b - - 4 25', 'e2f3')).toBeNull();
+    });
+
+    it('Verteidiger weggezogen: der Sd4 (Td8 greift an, Le3 deckt) hängt erst nach Lc1 → bleibt ein Opfer', () => {
+      const before = '3r2k1/8/8/8/3N4/4B3/8/6K1 w - - 0 1';
+      const after = '3r2k1/8/8/8/3N4/8/8/2B3K1 b - - 1 1';
+      expect(isPieceHanging(before, before, 'd4')).toBeFalse();
+      expect(sacrificedPiece(before, after, 'e3c1')).toEqual({ square: 'd4', piece: 'n' });
+    });
+
     it('unlesbare Stellung → kein Opfer, statt zu werfen', () => {
       expect(sacrificedPiece('kaputt', GREEK_AFTER, 'd3h7')).toBeNull();
       expect(sacrificedPiece(GREEK_BEFORE, '8/8/8/8/8/8/8/8 w - - 0 1', 'd3h7')).toBeNull();

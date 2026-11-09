@@ -55,12 +55,17 @@ public static class MoveTactics
         && TacticsBoard.SquareIndex(square) is int sq && HangingOn(b, a, sq);
 
     /// <summary>Das Opfer eines Zuges: die teuerste eigene Figur (Springer bis Dame), die danach hängt, bei der der Gegner
-    /// MEHR gewinnt als geschlagen wurde, und die sich wirklich nehmen lässt. <c>null</c> sonst.</summary>
+    /// MEHR gewinnt als geschlagen wurde, und die sich wirklich nehmen lässt. <c>null</c> sonst.
+    /// <para>Seit Regelstand 2 (User 2026-11-09, Vereinspartie 241): eine Figur, die auf demselben Feld schon VOR dem Zug hing
+    /// (<see cref="HungBefore"/>), opfert dieser Zug nicht — 9.Ld3 gab nur das vorher geopferte Material zurück. Die gezogene
+    /// Figur (Zielfeld) ist ausgenommen, sie stand vorher woanders; eine Figur, der der Zug den Verteidiger nimmt, hing vorher
+    /// nicht und bleibt ein Opfer.</para></summary>
     public static Sacrifice? SacrificedPiece(string? fenBefore, string? fenAfter, string? uci)
     {
         if (TacticsBoard.TryParse(fenBefore) is not { } before || TacticsBoard.TryParse(fenAfter) is not { } after) return null;
         if (CapturedOn(before, uci) is not double captured) return null;
         var mover = before.WhiteToMove;
+        var to = TacticsBoard.SquareIndex(uci![2..4])!.Value;
 
         var hanging = new List<(int Square, char Piece)>();
         foreach (var (sq, p) in after.Pieces())
@@ -69,6 +74,7 @@ public static class MoveTactics
             var type = char.ToLowerInvariant(p);
             if (type is 'p' or 'k') continue;
             if (PieceValue(p) <= captured) continue;
+            if (sq != to && HungBefore(before, sq, p)) continue;
             if (HangingOn(before, after, sq) && ExchangeLossOn(after, sq) > captured) hanging.Add((sq, type));
         }
         if (hanging.Count == 0 || !Capturable(after, hanging)) return null;
@@ -76,6 +82,12 @@ public static class MoveTactics
         foreach (var h in hanging) if (PieceValue(h.Piece) > PieceValue(top.Piece)) top = h;
         return new Sacrifice(TacticsBoard.SquareName(top.Square), top.Piece);
     }
+
+    /// <summary>Stand <paramref name="piece"/> schon VOR dem Zug auf <paramref name="sq"/> und hing dort (Regelstand 2)? Gefragt
+    /// wird <see cref="HangingOn"/> über die Vorher-Stellung allein — die Abtausch-Regel a) greift nicht, geschlagen wurde
+    /// dort nichts. Der Ziehende ist vorher am Zug, Angreifer und Verteidiger sind also Pseudo (wie im Client).</summary>
+    private static bool HungBefore(TacticsBoard before, int sq, char piece) =>
+        before.At(sq) == piece && HangingOn(before, before, sq);
 
     /// <summary>Lässt sich wenigstens eines der hängenden Stücke nehmen, ohne dass das Schlagen anderswo mindestens so viel
     /// kostet (Köder) — und ein Opfer unter Turmwert erlaubt danach kein Matt in einem Zug?</summary>

@@ -21,8 +21,9 @@ namespace RookHub.Api.Services.Games;
 public static class GameMoveClasses
 {
     /// <summary>Stand der Regeln. 1 = 0.853.0 (König schlägt im Abtausch zuletzt, Good-Brillant nur mit gezogener Figur,
-    /// Great = einziger guter Zug in Gewinnchance).</summary>
-    public const int Version = 1;
+    /// Great = einziger guter Zug in Gewinnchance). 2 = 2026-11-09 (Vereinspartie 241: eine Figur, die schon VOR dem Zug auf
+    /// ihrem Feld hing, ist kein Opfer dieses Zuges — 9.Ld3 nein, 7…Sxe4 ja; <see cref="MoveTactics.SacrificedPiece"/>).</summary>
+    public const int Version = 2;
 
     /// <summary>Zeichen je Klasse in <see cref="GameAnalysis.MoveClasses"/>; <c>-</c> = nicht bewertbar.</summary>
     public static readonly IReadOnlyDictionary<string, char> Codes = new Dictionary<string, char>

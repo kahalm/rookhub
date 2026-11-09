@@ -31,8 +31,11 @@ public class GameMoveClassesTests
 
         Assert.Equal(71, classes.Length);
         // chess.com: „!!" 22.Sxe6, 24.O-O — „!" 14.Sexd4, 19…Kd7, 23.g3, 30.De7+, 31.Te6+ (Halbzug = 2·(Zug−1) + Schwarz).
-        Assert.Equal([42, 46], GameMoveClasses.PliesOf(classes, 'B'));
-        Assert.Equal([26, 37, 44, 58, 60], GameMoveClasses.PliesOf(classes, 'G'));
+        // Seit Regelstand 2 (User-Entscheidung 2026-11-09, Partie 241) bei uns OHNE 24.O-O: der Se6 hing schon vor dem Zug
+        // (seit 22.Sxe6), die Rochade opfert also nichts Neues — bewusste Abweichung von chess.com. Sie ist jetzt „!" (Great:
+        // einziger guter Zug, kein Opfer, schlägt nichts).
+        Assert.Equal([42], GameMoveClasses.PliesOf(classes, 'B'));
+        Assert.Equal([26, 37, 44, 46, 58, 60], GameMoveClasses.PliesOf(classes, 'G'));
         Assert.Equal('O', classes[48]);   // 25.Df3: gut, aber der hängende Springer war schon geopfert — kein „!!"
         Assert.Equal('X', classes[25]);   // 13…fxe6: verpasste Strafe nach 13.fxe6
         Assert.Equal('P', classes[24]);   // 13.fxe6 ??
@@ -80,7 +83,7 @@ public class GameMoveClassesTests
         Assert.Equal(0, await MoveClassHarvestWorker.HarvestAsync(db, 10));
 
         var done = await db.GameAnalyses.AsNoTracking().ToDictionaryAsync(a => a.Id);
-        Assert.Equal([42, 46], GameMoveClasses.PliesOf(done[990101].MoveClasses, 'B'));
+        Assert.Equal([42], GameMoveClasses.PliesOf(done[990101].MoveClasses, 'B'));
         Assert.Equal("alt", done[990103].MoveClasses);   // aktueller Stand bleibt
         Assert.Null(done[990104].MoveClasses);           // unfertig: nicht ernten
     }
