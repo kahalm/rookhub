@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
 import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
@@ -22,7 +23,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-shared-line',
   standalone: true,
-  imports: [
+  imports: [IconLabelDirective,
     CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent,
   ],
@@ -73,11 +74,11 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
                 <div class="board-tap board-tap-next" (click)="service.goForward()"></div>
               </div>
               <div class="nav">
-                <button mat-icon-button (click)="service.goToStart()" [disabled]="service.currentMoveIndex < 0"><mat-icon>skip_previous</mat-icon></button>
-                <button mat-icon-button (click)="service.goBack()" [disabled]="service.currentMoveIndex < 0"><mat-icon>navigate_before</mat-icon></button>
-                <button mat-icon-button (click)="service.goForward()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>navigate_next</mat-icon></button>
-                <button mat-icon-button (click)="service.goToEnd()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>skip_next</mat-icon></button>
-                <button mat-icon-button (click)="flipped = !flipped"><mat-icon>swap_vert</mat-icon></button>
+                <button mat-icon-button (click)="service.goToStart()" [disabled]="service.currentMoveIndex < 0" [appIconLabel]="'pgnViewer.nav.first' | translate"><mat-icon>skip_previous</mat-icon></button>
+                <button mat-icon-button (click)="service.goBack()" [disabled]="service.currentMoveIndex < 0" [appIconLabel]="'pgnViewer.nav.previous' | translate"><mat-icon>navigate_before</mat-icon></button>
+                <button mat-icon-button (click)="service.goForward()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1" [appIconLabel]="'pgnViewer.nav.next' | translate"><mat-icon>navigate_next</mat-icon></button>
+                <button mat-icon-button (click)="service.goToEnd()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1" [appIconLabel]="'pgnViewer.nav.last' | translate"><mat-icon>skip_next</mat-icon></button>
+                <button mat-icon-button (click)="flipped = !flipped" [appIconLabel]="'pgnViewer.nav.flip' | translate"><mat-icon>swap_vert</mat-icon></button>
               </div>
             </div>
             <div class="moves-section">

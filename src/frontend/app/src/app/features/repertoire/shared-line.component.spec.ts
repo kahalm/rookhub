@@ -134,4 +134,11 @@ describe('SharedLineComponent Kapitel', () => {
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('.line-picker')).toBeNull();
   });
+
+  // Delta-Review 2026-11-09, F1-015: Navigation und „Brett drehen“ ohne zugänglichen Namen.
+  it('alle Symbolknöpfe der Navigation tragen einen Namen', async () => {
+    const { fixture } = await setup();
+    const labels = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.nav button')).map(b => b.getAttribute('aria-label'));
+    expect(labels).toEqual(['pgnViewer.nav.first', 'pgnViewer.nav.previous', 'pgnViewer.nav.next', 'pgnViewer.nav.last', 'pgnViewer.nav.flip']);
+  });
 });

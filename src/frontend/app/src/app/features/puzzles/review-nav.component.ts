@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, Input, Output, EventEmitter } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { TranslatePipe } from '@ngx-translate/core';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 /**
  * Wiederverwendbare Vor/Zurück-Navigation für die Lösungs-Durchsicht
@@ -13,12 +15,14 @@ import { MatIconModule } from '@angular/material/icon';
   selector: 'app-review-nav',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule],
+  imports: [MatButtonModule, MatIconModule, TranslatePipe, IconLabelDirective],
   template: `
     <div class="review-nav">
-      <button mat-icon-button (click)="prev.emit()" [disabled]="currentIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+      <button mat-icon-button (click)="prev.emit()" [disabled]="currentIndex === 0"
+              [appIconLabel]="'pgnViewer.nav.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
       <span class="review-counter">{{ currentIndex }} / {{ totalSteps }}</span>
-      <button mat-icon-button (click)="next.emit()" [disabled]="currentIndex >= totalSteps"><mat-icon>chevron_right</mat-icon></button>
+      <button mat-icon-button (click)="next.emit()" [disabled]="currentIndex >= totalSteps"
+              [appIconLabel]="'pgnViewer.nav.next' | translate"><mat-icon>chevron_right</mat-icon></button>
     </div>
   `,
   styles: [`

@@ -190,18 +190,22 @@ const TREE_ARROWS_KEY = 'rh.repertoire.treeArrows';
               }
               @if (mode === 'lines' && viewerService.selectedLineIndex >= 0) {
                 <div class="nav-buttons">
-                  <button mat-icon-button (click)="viewerService.goToStart()" [disabled]="viewerService.currentMoveIndex < 0">
+                  <button mat-icon-button (click)="viewerService.goToStart()" [disabled]="viewerService.currentMoveIndex < 0"
+                          [appIconLabel]="'pgnViewer.nav.first' | translate">
                     <mat-icon>skip_previous</mat-icon>
                   </button>
-                  <button mat-icon-button (click)="viewerService.goBack()" [disabled]="viewerService.currentMoveIndex < 0">
+                  <button mat-icon-button (click)="viewerService.goBack()" [disabled]="viewerService.currentMoveIndex < 0"
+                          [appIconLabel]="'pgnViewer.nav.previous' | translate">
                     <mat-icon>navigate_before</mat-icon>
                   </button>
                   <button mat-icon-button (click)="viewerService.goForward()"
-                          [disabled]="!viewerService.selectedGame || viewerService.currentMoveIndex >= viewerService.selectedGame.moves.length - 1">
+                          [disabled]="!viewerService.selectedGame || viewerService.currentMoveIndex >= viewerService.selectedGame.moves.length - 1"
+                          [appIconLabel]="'pgnViewer.nav.next' | translate">
                     <mat-icon>navigate_next</mat-icon>
                   </button>
                   <button mat-icon-button (click)="viewerService.goToEnd()"
-                          [disabled]="!viewerService.selectedGame || viewerService.currentMoveIndex >= viewerService.selectedGame.moves.length - 1">
+                          [disabled]="!viewerService.selectedGame || viewerService.currentMoveIndex >= viewerService.selectedGame.moves.length - 1"
+                          [appIconLabel]="'pgnViewer.nav.last' | translate">
                     <mat-icon>skip_next</mat-icon>
                   </button>
                 </div>

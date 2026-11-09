@@ -21,4 +21,16 @@ describe('ReviewNavComponent', () => {
     const fixture = TestBed.createComponent(ReviewNavComponent);
     expect(fixture.componentInstance).toBeTruthy();
   });
+
+  // Delta-Review 2026-11-09, F1-015: ◀/▶ hatten keinen zugänglichen Namen (mat-icon ist aria-hidden).
+  it('◀/▶ tragen einen zugänglichen Namen', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ReviewNavComponent],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ReviewNavComponent);
+    fixture.detectChanges();
+    const labels = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).map(b => b.getAttribute('aria-label'));
+    expect(labels).toEqual(['pgnViewer.nav.previous', 'pgnViewer.nav.next']);
+  });
 });

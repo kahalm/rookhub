@@ -107,3 +107,18 @@ describe('RepertoireEditComponent Datei löschen (F1-006)', () => {
     expect(deleted).toBe(0);
   });
 });
+
+/** Delta-Review 2026-11-09, F1-015: Herunterladen/Löschen waren für Screenreader nicht unterscheidbar. */
+describe('RepertoireEditComponent Symbolknöpfe (F1-015)', () => {
+  it('Herunterladen und Löschen tragen je einen Namen', () => {
+    TestBed.configureTestingModule({
+      imports: [RepertoireEditComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(), provideTranslateService()],
+    });
+    const fixture = TestBed.createComponent(RepertoireEditComponent);
+    fixture.componentInstance.files = [{ id: 1, fileName: 'a.pgn', fileSize: 10, uploadedAt: '2026-11-09T10:00:00' } as any];
+    fixture.detectChanges();
+    const labels = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[matListItemMeta] button')).map(b => b.getAttribute('aria-label'));
+    expect(labels).toEqual(['common.downloadPgn', 'common.delete']);
+  });
+});

@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { forkJoin, of, catchError, map } from 'rxjs';
 import { RepertoireFile } from '../../core/models';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -16,7 +17,7 @@ import { downloadBlob } from '../../shared/download.util';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-repertoire-edit',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatListModule, TranslatePipe],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatListModule, TranslatePipe, IconLabelDirective],
   template: `
     <div class="edit-container">
       <div class="upload-area" [class.dragover]="dragActive"
@@ -38,10 +39,12 @@ import { downloadBlob } from '../../shared/download.util';
             <span matListItemTitle>{{ file.fileName }}</span>
             <span matListItemLine>{{ formatSize(file.fileSize) }} | {{ file.uploadedAt | date }}</span>
             <div matListItemMeta>
-              <button mat-icon-button (click)="downloadFile(file.id, file.fileName)">
+              <button mat-icon-button (click)="downloadFile(file.id, file.fileName)"
+                      [appIconLabel]="'common.downloadPgn' | translate">
                 <mat-icon>download</mat-icon>
               </button>
-              <button mat-icon-button color="warn" (click)="deleteFile(file.id)">
+              <button mat-icon-button color="warn" (click)="deleteFile(file.id)"
+                      [appIconLabel]="'common.delete' | translate">
                 <mat-icon>delete</mat-icon>
               </button>
             </div>
