@@ -44,10 +44,14 @@ describe('ClubOverviewPageComponent', () => {
   let dialog: { open: jasmine.Spy };
 
   async function create(allowed = true): Promise<HTMLElement> {
+    return createWith(DATA, { '78': { pgn: GREEK_PGN, evals: GREEK_EVALS } }, allowed);
+  }
+
+  async function createWith(data: typeof DATA, reviews: Record<string, unknown>, allowed = true): Promise<HTMLElement> {
     api = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['overview', 'clubGame', 'clubGameMarks', 'clubGameReviews', 'fixturePgn']);
-    api.overview.and.resolveTo(DATA);
+    api.overview.and.resolveTo(data);
     dialog = { open: jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(undefined) }) };
-    api.clubGameReviews.and.resolveTo({ '78': { pgn: GREEK_PGN, evals: GREEK_EVALS } });
+    api.clubGameReviews.and.resolveTo(reviews as never);
     TestBed.configureTestingModule({ imports: [ClubOverviewPageComponent], providers: [
       { provide: LineupsApiService, useValue: api }, { provide: MatDialog, useValue: dialog },
       { provide: AuthService, useValue: { has: () => allowed, isLoggedIn: true } },
@@ -119,6 +123,19 @@ describe('ClubOverviewPageComponent', () => {
     expect(el.querySelectorAll('.lu-match').length).toBe(1);
     expect(el.querySelectorAll('.lu-board').length).toBe(2);                 // Brett 1 mit ◆, Brett 2 mit !!
     expect(Array.from(el.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Runde 3 · 24.10.2026+3']);
+  });
+
+  // Codereview F4-014: Filter ohne Treffer zeigte leere Liga-Aufklapper statt eines Satzes.
+  it('Filter ohne Treffer: Leer-Satz statt leerer Liga-Köpfe', async () => {
+    const el = await createWith({ ...DATA, marks: {} }, {});
+    (el.querySelector('.ov-filter input') as HTMLInputElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.ov-none')?.textContent).toContain('Keine Partie mit + oder !!');
+    expect(el.querySelectorAll('details.ov-league').length).toBe(0);
+    (el.querySelector('.ov-filter input') as HTMLInputElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.ov-none')).toBeNull();
+    expect(el.querySelectorAll('details.ov-league').length).toBeGreaterThan(0);
   });
 
   // 0.855.1, Wunsch 2026-10-27: „sortiere die übersicht auch umgekehrt"

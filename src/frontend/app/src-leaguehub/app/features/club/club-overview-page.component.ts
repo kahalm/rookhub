@@ -63,8 +63,13 @@ function storedNewestFirst(): boolean {
       } @else if (data(); as d) {
         @if (!d.leagues.length) {
           <p class="muted">Noch keine Begegnungen mit Aufstellung in dieser Saison.</p>
+        } @else if (onlyMarked() && !markedTotal()) {
+          <!-- Codereview F4-014: ohne Treffer standen nur leere Liga-Köpfe da — das wirkte wie ein Ladefehler. -->
+          <p class="muted ov-none" role="status">{{ markersLoading()
+            ? 'Marker werden noch geladen …'
+            : 'Keine Partie mit + oder !! — Marker entstehen, sobald Partien analysiert sind.' }}</p>
         }
-        @for (l of d.leagues; track l.tnr) {
+        @for (l of (onlyMarked() && !markedTotal() ? [] : d.leagues); track l.tnr) {
           <details class="ov-league" [attr.aria-label]="l.name" [open]="!collapsed().has(l.tnr)" (toggle)="onToggle(l.tnr, $event)">
             @let lm = leagueMatches(l);
             <!-- „+n" im Kopf öffnet das Stellungsfenster, ohne die Liga auf- oder zuzuklappen. -->
@@ -171,6 +176,8 @@ export class ClubOverviewPageComponent implements OnInit {
   readonly pts = points;
   /** „◆"/„!!" je Partie (`GameMarkers`, 0.850.0 geteilt mit den Aufstellungen einer Runde); „!!" füllt sich paketweise. */
   readonly markers = new GameMarkers(this.api);
+  /** Die „!!" laden noch paketweise nach — Treffer sind dann noch unbekannt (F4-014). */
+  readonly markersLoading = signal(false);
   /** Partien mit markierter Stellung oder „!!" — Zahl hinter dem Filter. */
   readonly markedTotal = computed(() => {
     const ids = new Set<number>();
@@ -188,7 +195,9 @@ export class ClubOverviewPageComponent implements OnInit {
     try {
       const d = await this.api.overview();
       this.data.set(d);
-      void this.markers.load(GameMarkers.idsOf(d.leagues.flatMap(l => l.rounds.flatMap(r => r.matches))), d.marks);
+      this.markersLoading.set(true);
+      void this.markers.load(GameMarkers.idsOf(d.leagues.flatMap(l => l.rounds.flatMap(r => r.matches))), d.marks)
+        .finally(() => this.markersLoading.set(false));
     } catch (err) {
       const s = err instanceof HttpErrorResponse ? err.status : 0;
       this.error.set(s === 403 ? 'Die Vereinsübersicht ist für dein Konto nicht freigeschaltet.'
