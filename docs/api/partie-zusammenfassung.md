@@ -35,9 +35,13 @@ mit Vereinspartie 236 (Fable-Erklärungen der Fehler-Vergleiche, 0.908.0).
 | `POST api/admin/club-game-summaries/{id}/start` | Admin | übernehmen; 409 wenn nicht offen |
 | `PUT api/admin/club-game-summaries/{id}` | Admin | `{ markdown, model }` abliefern (≤ 200 000 Zeichen); auch ohne `start` (Handlauf), aber nur, wenn es die Zeile schon gibt (sonst 404, R4-005) |
 | `PUT api/admin/club-game-summaries/{id}/fail` | Admin | `{ error }` |
+| `GET api/league/s/{token}/club/games/{id}/summary` | anonym über den Teilen-Link (Partie muss zum Link gehören, sonst 404) | nur der fertige Text: `{ status: done, markdown, doneAt, stale }` bzw. `{ status: none }` — ohne Warte-Stand, Modell und Fehler |
 
 `stale` = die Partie wurde nach dem Schreiben korrigiert (`MovesHash` weicht ab). Die Zeile geht mit der Partie (Cascade).
-Über Teilen-Links gibt es die Zusammenfassung nicht.
+Seit 09.11. gibt es die FERTIGE Zusammenfassung auch über den Teilen-Link (`LeagueClubController` unter
+`api/league/s/{token}/club`, Route der App `s/:token/club-games/:id/summary`, `ClubGameSummaryComponent` im
+`shareToken`-Modus): lesend, ohne Anfordern; Warte-Stand, Modell und Fehlertext bleiben den Vereinsmitgliedern vorbehalten.
+Wer den Link hat, liest also den Text der Zusammenfassung.
 
 ## Markdown-Format
 
