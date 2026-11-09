@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.941.3',
+    date: '2026-11-09',
+    changes: [
+      {
+        en: 'Internal: two tests from the code-review wave aligned with each other (club session race now ends in 409, board-worker tests skip without numpy) — no visible change in behaviour.',
+        de: 'Intern: zwei Tests der Codereview-Welle aufeinander abgestimmt (Wettlauf beim Speichern einer Vereinseinheit endet in 409, Brett-Auftrag-Tests ohne numpy übersprungen) — kein sichtbares Verhalten geändert.',
+      },
+    ],
+  },
+  {
     version: '0.941.2',
     date: '2026-11-09',
     changes: [
