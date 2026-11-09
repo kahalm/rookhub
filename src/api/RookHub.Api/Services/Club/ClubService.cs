@@ -147,6 +147,10 @@ public class ClubService
     public async Task<ClubMemberDto> UpdateMemberAsync(ClubActor actor, int id, ClubMemberInputDto input, CancellationToken ct = default)
     {
         var m = await LoadVisibleAsync(actor, id, ct);
+        // Kind ↔ Trainer stuft nur die Leitung um (R2-001): als Trainer verlässt das Blatt alle Gruppen und steht bei jedem
+        // Trainer-Konto in der Kartei; umgekehrt zöge ein Trainer-Konto ein Trainer-Blatt in seine Gruppe.
+        if (!actor.Manager && input.IsTrainer != m.IsTrainer)
+            throw new ForbiddenException("Ob jemand Trainer ist, legt nur die Leitung fest.");
         Apply(m, input, _utcNow());
         await ApplyGroupsAsync(actor, m, input.GroupIds, ct);
         await _db.SaveChangesAsync(ct);
@@ -250,9 +254,15 @@ public class ClubService
         if (known.Count != wanted.Count) throw new DomainValidationException("Eine der Gruppen gibt es nicht.");
 
         List<int> target;
-        if (actor.Manager || m.IsTrainer)
+        if (actor.Manager)
         {
             target = wanted;
+        }
+        else if (m.IsTrainer)
+        {
+            // Ein Trainer-Konto legt Trainer-Blätter ohne Gruppe an und ändert deren Gruppen nicht (R2-001: der Sonderweg
+            // „leere Liste als Ziel“ gilt nur für die Leitung — sonst verlöre ein Blatt auch seine FREMDEN Gruppen).
+            target = m.Groups.Select(g => g.GroupId).ToList();
         }
         else
         {

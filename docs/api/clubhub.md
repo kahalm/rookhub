@@ -74,7 +74,10 @@ klassisch ‚Mutter Daniela' oder ‚Vater Franz', auch E-Mail; am Freitag abhak
   stehen in `Services/Club/ClubService.cs` (`ClubActor`). **Sichtbarkeit ist die eine Regel**: ohne Recht 403, ein fremdes
   Kind/eine fremde Gruppe ist 404 wie ein unbekanntes — ein Trainer erfährt nicht, dass es das Blatt gibt. Ein Trainer legt
   Kinder nur in EIGENEN Gruppen an (sonst sähe er das Blatt selbst nicht) und lässt die Zugehörigkeit zu fremden Gruppen
-  beim Speichern unberührt; löschen darf nur die Leitung.
+  beim Speichern unberührt; löschen darf nur die Leitung. Kind ↔ Trainer (`IsTrainer`) stuft nur die Leitung um, in beide
+  Richtungen (R2-001, sonst 403): ein Trainer-Konto legt Trainer-Blätter zwar an (ohne Gruppe), ändert aber weder ihre
+  Einstufung noch ihre Gruppen — als Trainer verließe ein Kind sonst auch seine FREMDEN Gruppen und stünde bei jedem
+  Trainer-Konto in der Kartei.
 - **Nur der Vorname ist Pflicht** (0.615.0, Wunsch „Nachname optional, ich weiß den oft nicht"): `LastName` ist dann ein
   LEERER Text (Spalte bleibt NOT NULL, keine Migration). Geordnet wird nach dem Nachnamen und ohne ihn nach dem Vornamen —
   am Server `ClubService.SortName` (CASE in SQL), im Browser `sortName`/`nameHead`/`nameTail` in `core/club-format.ts`
