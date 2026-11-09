@@ -1,15 +1,17 @@
 name: Diagram-Worker-Image
 
 # Externer Diagramm-Worker (tools/DiagramWorker, 0.873.0) → ghcr.io/<owner>/rookhub-diagram-worker, amd64 + arm64 (DGX Spark).
-# Eigenständig wie board-train: kein Test-Gate, kein Prod-Image. Gebaut bei jedem Release-Tag (die Erkennung im Image soll
-# zur Server-Fassung passen) und wenn sich Worker oder DiagramCli auf master ändern.
+# Eigenständig wie board-train: kein Test-Gate, kein Prod-Image. Gebaut, wenn sich auf master Worker, DiagramCli oder die
+# Erkennung (Services/Ebooks, die DiagramCli über den Projektverweis mitbringt) ändert — nicht mehr bei jedem Tag (0.927.0).
 on:
   push:
     branches: [master]
-    tags: ['v*']
     paths:
       - 'tools/DiagramWorker/**'
       - 'tools/DiagramCli/**'
+      - 'src/api/RookHub.Api/Services/Ebooks/**'
+      - 'src/api/RookHub.Api/DTOs/Ebooks/**'
+      - 'src/api/RookHub.Api/Assets/ebook-*'
       - '.github/workflows/diagram-worker.yml'
   workflow_dispatch:
 
@@ -70,12 +72,8 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Mehrarchitektur-Tags (sha, latest, bei Tag die Version)
-        env:
-          REF_TYPE: ${{ github.ref_type }}
-          REF_NAME: ${{ github.ref_name }}
+      - name: Mehrarchitektur-Tags (sha, latest)
         run: |
           image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/rookhub-diagram-worker"
           tags=(-t "$image:$GITHUB_SHA" -t "$image:latest")
-          if [ "$REF_TYPE" = tag ]; then tags+=(-t "$image:$REF_NAME"); fi
           docker buildx imagetools create "${tags[@]}" "$image:$GITHUB_SHA-amd64" "$image:$GITHUB_SHA-arm64"

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.927.0", date: "2026-11-09", changes: [
+    { en: "CI: the diagram worker image is no longer rebuilt for every release tag, only when the worker or the diagram recognition changes. A tag now shows one build in the admin CI list.",
+      de: "CI: Das Image des Diagramm-Workers wird nicht mehr bei jedem Release-Tag gebaut, sondern nur, wenn sich der Worker oder die Diagrammerkennung ändert. Ein Tag zeigt in der Admin-CI-Liste jetzt einen Build." },
+  ] },
   { version: "0.926.2", date: "2026-11-09", changes: [
     { en: "Fixes the build after a merge conflict in the game summary header.",
       de: "Behebt den Build nach einem Zusammenführungs-Konflikt in der Kopfzeile der Zusammenfassung." },

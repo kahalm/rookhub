@@ -18,8 +18,8 @@ bytegleiche Ergebnisse). Die WebDAV-Aufträge macht weiter nur der Laptop. Ablau
    ```
 
 Image: `ghcr.io/kahalm/rookhub-diagram-worker:latest` (amd64 + arm64), gebaut von `.github/workflows/diagram-worker.yml`
-bei jedem Release-Tag (dann zusätzlich `:vX.Y.Z`) und bei Änderungen an Worker oder DiagramCli. Nach einem Tag mit
-geänderter Erkennung: `docker compose pull && docker compose up -d`.
+bei Änderungen an Worker, DiagramCli oder der Erkennung auf master (nicht mehr bei jedem Release-Tag). Danach:
+`docker compose pull && docker compose up -d`.
 
 ## Einstellungen (Umgebung)
 
