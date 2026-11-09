@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
@@ -358,23 +357,7 @@ public class PrepController : BaseApiController
         discarded = r.Discarded, reasons = r.Reasons, millis = r.Millis, already = r.Already,
     };
 
-    /// <summary>Den Rumpf lesen, gzip entpackt — <c>null</c>, wenn er entpackt größer als <see cref="MaxPgnBytes"/> ist.</summary>
-    private async Task<string?> ReadBodyAsync(CancellationToken ct)
-    {
-        Stream body = Request.Body;
-        if (Request.Headers.ContentEncoding.ToString().Contains("gzip", StringComparison.OrdinalIgnoreCase))
-            body = new GZipStream(Request.Body, CompressionMode.Decompress);
-        await using (body)
-        {
-            using var buffer = new MemoryStream();
-            var chunk = new byte[81920];
-            int n;
-            while ((n = await body.ReadAsync(chunk, ct)) > 0)
-            {
-                if (buffer.Length + n > MaxPgnBytes) return null;
-                buffer.Write(chunk, 0, n);
-            }
-            return Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length);
-        }
-    }
+    /// <summary>Den Rumpf lesen, gzip entpackt — <c>null</c>, wenn er entpackt größer als <see cref="MaxPgnBytes"/> ist
+    /// (gemeinsame Hilfe mit den Liga-Importen, R2-006).</summary>
+    private Task<string?> ReadBodyAsync(CancellationToken ct) => RequestBodies.ReadTextAsync(Request, MaxPgnBytes, ct);
 }

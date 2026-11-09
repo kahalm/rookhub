@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -391,10 +390,7 @@ public class LeagueController : BaseApiController
     /// <summary>Der Rumpf, bei <c>Content-Encoding: gzip</c> entpackt — aber höchstens <paramref name="limit"/> Bytes:
     /// <c>RequestSizeLimit</c> zählt nur die komprimierten Bytes, eine gzip-Bombe hätte sonst den ganzen API-Prozess
     /// (alle Nutzer) in den Speicherdruck getrieben. Darüber wirft das Lesen <see cref="LimitedReadStream.LimitExceededException"/>.</summary>
-    private Stream AdminBody(long limit) =>
-        Request.Headers.ContentEncoding.ToString().Contains("gzip", StringComparison.OrdinalIgnoreCase)
-            ? new LimitedReadStream(new GZipStream(Request.Body, CompressionMode.Decompress), limit)
-            : Request.Body;
+    private Stream AdminBody(long limit) => RequestBodies.Unpacked(Request, limit);   // gemeinsam mit PrepController (R2-006)
 
     private ObjectResult UnpackedTooLarge(long limit) =>
         StatusCode(StatusCodes.Status413PayloadTooLarge, new { message = $"entpackt größer als {limit / (1024 * 1024)} MB — bitte aufteilen" });
