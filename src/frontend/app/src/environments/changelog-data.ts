@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.941.4", date: "2026-11-09", changes: [
+    { en: "UI sweep: the new share pages for club games (own link and summary via the league share link) are now covered.",
+      de: "UI-Sweep: Die neuen Teilen-Seiten für Vereinspartien (eigener Link und Zusammenfassung über den Liga-Teilen-Link) werden jetzt mitgeprüft." },
+  ] },
   {
     version: '0.941.3',
     date: '2026-11-09',
