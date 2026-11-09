@@ -110,13 +110,23 @@ public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = nul
             s.Markdown != null && s.MovesHash != null && s.MovesHash != hash.MovesHash, s.Model,
             s.Status == ClubGameSummaryStatus.Failed ? s.Error : null,
             open ? await ReadinessAsync(clubGameId, ct) : null,
-            RunningSecondsOf(s.Status, s.StartedAt, Now));
+            ElapsedSecondsOf(s.Status, s.RequestedAt, s.StartedAt, Now));
     }
 
-    /// <summary>So lange schreibt Claude schon (Zähler auf der Seite, 0.926.1); vom Server gerechnet, damit Zeitzone und Uhr des
-    /// Browsers keine Rolle spielen. <c>null</c>, solange nicht geschrieben wird.</summary>
-    internal static int? RunningSecondsOf(ClubGameSummaryStatus status, DateTime? startedAt, DateTime now) =>
-        status == ClubGameSummaryStatus.Running && startedAt is { } t ? Math.Max(0, (int)(now - t).TotalSeconds) : null;
+    /// <summary>Wert für <c>RunningSeconds</c> im Stand (Zähler auf der Seite, 0.926.1; das JSON-Feld behält seinen Namen):
+    /// beim Schreiben die Sekunden seit <paramref name="startedAt"/>, solange die Anforderung wartet die seit
+    /// <paramref name="requestedAt"/> (0.933.1). Vom Server gerechnet, damit Zeitzone und Uhr des Browsers keine Rolle spielen.
+    /// <c>null</c>, wenn nichts offen ist.</summary>
+    internal static int? ElapsedSecondsOf(ClubGameSummaryStatus status, DateTime requestedAt, DateTime? startedAt, DateTime now)
+    {
+        DateTime? since = status switch
+        {
+            ClubGameSummaryStatus.Requested => requestedAt,
+            ClubGameSummaryStatus.Running => startedAt,
+            _ => null,
+        };
+        return since is { } t ? Math.Max(0, (int)(now - t).TotalSeconds) : null;
+    }
 
     /// <summary>Anfordern bzw. neu anfordern (auch nach Fehler oder wenn schon fertig). Läuft gerade einer, bleibt es dabei.
     /// <c>null</c> = Partie unbekannt oder fremd.</summary>

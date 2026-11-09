@@ -208,12 +208,18 @@ public class ClubGameSummariesTests : IDisposable
     }
 
     [Fact]
-    public void RunningSecondsOf_NurBeimSchreiben_NieNegativ()
+    public void ElapsedSecondsOf_WartenAbAnforderung_SchreibenAbStart_NieNegativ()
     {
         var now = new DateTime(2026, 11, 9, 10, 0, 0, DateTimeKind.Utc);
-        Assert.Equal(125, ClubGameSummaries.RunningSecondsOf(ClubGameSummaryStatus.Running, now.AddSeconds(-125), now));
-        Assert.Equal(0, ClubGameSummaries.RunningSecondsOf(ClubGameSummaryStatus.Running, now.AddSeconds(5), now));
-        Assert.Null(ClubGameSummaries.RunningSecondsOf(ClubGameSummaryStatus.Requested, now, now));
-        Assert.Null(ClubGameSummaries.RunningSecondsOf(ClubGameSummaryStatus.Running, null, now));
+        var requested = now.AddSeconds(-300);
+        Assert.Equal(125, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Running, requested, now.AddSeconds(-125), now));
+        Assert.Equal(0, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Running, requested, now.AddSeconds(5), now));
+        Assert.Null(ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Running, requested, null, now));
+        // Offene Anforderung: ab RequestedAt, ein alter StartedAt spielt keine Rolle.
+        Assert.Equal(300, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Requested, requested, null, now));
+        Assert.Equal(300, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Requested, requested, now.AddDays(-1), now));
+        Assert.Equal(0, ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Requested, now.AddSeconds(5), null, now));
+        Assert.Null(ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Done, requested, now.AddSeconds(-125), now));
+        Assert.Null(ClubGameSummaries.ElapsedSecondsOf(ClubGameSummaryStatus.Failed, requested, now.AddSeconds(-125), now));
     }
 }

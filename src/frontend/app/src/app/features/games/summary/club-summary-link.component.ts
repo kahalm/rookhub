@@ -33,6 +33,7 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
               <!-- Angefordert, die Hintergrund-Rechnung läuft noch: kurz in der Kopfzeile, der Fortschritt hinter dem (i)
                    (Wunsch 2026-11-09 — der lange Satz quetschte die Spielernamen zusammen). Antippen geht auch am Handy. -->
               {{ 'games.summary.requested' | translate }}
+              @if (elapsed(); as e) { <span class="summary-timer">{{ e }}</span> }
               <button type="button" class="wait-info" #tip="matTooltip" (click)="tip.toggle()"
                       [matTooltip]="('games.summary.waitingForAnalysis' | translate) + ' ' + progressText(w)"
                       [attr.aria-label]="('games.summary.waitingForAnalysis' | translate) + ' ' + progressText(w)">
@@ -98,23 +99,25 @@ export class ClubSummaryLinkComponent implements OnInit {
     return s && (s.status === 'requested' || s.status === 'running') && r && !r.ready ? r : null;
   });
 
-  /** Sekunden, die seit der letzten Antwort des Servers vergangen sind (nur während Claude schreibt). */
+  /** Sekunden, die seit der letzten Antwort des Servers vergangen sind (nur solange eine Anforderung offen ist). */
   private readonly sinceLoad = signal(0);
-  /** Zähler neben „wird geschrieben“: Minuten:Sekunden, `null`, solange nicht geschrieben wird. */
+  /** Zähler neben „angefordert“ / „wird geschrieben“: Minuten:Sekunden, `null`, solange nichts offen ist. */
   readonly elapsed = computed(() => {
-    const base = this.state()?.runningSeconds;
-    return this.state()?.status === 'running' && base != null ? formatElapsed(base + this.sinceLoad()) : null;
+    const st = this.state();
+    return (st?.status === 'requested' || st?.status === 'running') && st.runningSeconds != null
+      ? formatElapsed(st.runningSeconds + this.sinceLoad()) : null;
   });
 
   constructor() {
-    // Solange eine Anforderung offen ist, nachsehen (Fortschritt, fertig) — still bei Fehlern. Beim Schreiben läuft der
-    // Zähler je Sekunde und das Nachsehen alle 10 s: es dauert nur wenige Minuten, er soll nicht über das Ende hinauslaufen.
+    // Solange eine Anforderung offen ist (angefordert oder beim Schreiben), läuft der Zähler je Sekunde und es wird alle
+    // 10 s nachgesehen (Fortschritt, fertig) — still bei Fehlern. Der Zähler soll nicht über das Ende hinauslaufen, und der
+    // Fortschritt im (i) stand direkt nach dem Anfordern sonst bis zu 60 s veraltet da.
     let seconds = 0;
     const timer = setInterval(() => {
       const st = this.state()?.status;
-      if (st === 'running') this.sinceLoad.update(v => v + 1);
-      seconds++;
-      if ((st === 'running' && seconds % 10 === 0) || (st === 'requested' && seconds % 60 === 0)) this.load();
+      if (st !== 'requested' && st !== 'running') return;
+      this.sinceLoad.update(v => v + 1);
+      if (++seconds % 10 === 0) this.load();
     }, 1000);
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }

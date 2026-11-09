@@ -11,6 +11,13 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.933.1',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Game summary: the running timer now also shows while a summary is requested (first request and re-request, game page and summary page), counted from the request; while waiting the status is checked every 10 seconds instead of 60.', de: 'Partie-Zusammenfassung: Die laufende Zeit erscheint jetzt auch, solange eine Zusammenfassung angefordert ist (erstes Anfordern und Neu-Anfordern, Partie- und Zusammenfassungsseite), gezählt ab der Anforderung; beim Warten wird alle 10 Sekunden statt alle 60 nachgesehen.' },
+    ],
+  },
+  {
     version: '0.933.0',
     date: '2026-11-09',
     changes: [

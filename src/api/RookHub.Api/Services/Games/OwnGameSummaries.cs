@@ -79,7 +79,7 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
         return new OwnGameSummaryDto(StatusOf(s.Status), s.Markdown, s.DoneAt, s.RequestedAt,
             s.Markdown != null && s.MovesHash != null && s.MovesHash != MovesHashOf(g.Pgn), s.Model,
             s.Status == ClubGameSummaryStatus.Failed ? s.Error : null, readiness, "own", left, DailyPerUser,
-            ClubGameSummaries.RunningSecondsOf(s.Status, s.StartedAt, DateTime.UtcNow));
+            ClubGameSummaries.ElapsedSecondsOf(s.Status, s.RequestedAt, s.StartedAt, DateTime.UtcNow));
     }
 
     /// <summary>Anfordern. Eine noch offene Anforderung kostet nichts; das Kontingent wird erst nach erfolgreichem Analyse-Start belastet.</summary>

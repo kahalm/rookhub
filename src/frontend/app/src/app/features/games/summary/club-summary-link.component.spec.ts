@@ -146,9 +146,49 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
     expect(el.querySelector('.summary-timer')?.textContent).toBe('2:05');
   });
 
-  it('ohne Schreiben kein Zähler', () => {
+  it('angefordert: Zähler auch dann, Neu-Anfordern mit vorhandenem Text eingeschlossen', () => {
+    const { f, http, el } = setup(true, true);
+    http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'requested', markdown: '# x', runningSeconds: 65 });
+    f.detectChanges();
+    expect(el.querySelector('.summary-wait')?.textContent).toContain('games.summary.requested');
+    expect(el.querySelector('.summary-timer')?.textContent).toBe('1:05');
+  });
+
+  it('angefordert, Hintergrund rechnet noch: Zähler neben „requested“, vor dem (i)', () => {
+    const { f, http, el } = setup(true);
+    http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'requested', runningSeconds: 7, readiness: {
+      ready: false, hasAnalysis: true, analysisDone: false, refining: false, refinedPositions: 0, totalPositions: 62,
+      comparisonsPlanned: false, comparisonsDone: 0, comparisonsTotal: 0 } });
+    f.detectChanges();
+    const timer = el.querySelector('.summary-timer');
+    expect(timer?.textContent).toBe('0:07');
+    expect(timer!.compareDocumentPosition(el.querySelector('.wait-info')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  describe('Uhr', () => {
+    beforeEach(() => jasmine.clock().install());
+    afterEach(() => jasmine.clock().uninstall());
+
+    it('angefordert: zählt je Sekunde und sieht alle 10 s nach', () => {
+      const { f, http, el } = setup(true);
+      http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'requested', runningSeconds: 5 });
+      jasmine.clock().tick(9000);
+      f.detectChanges();
+      expect(el.querySelector('.summary-timer')?.textContent).toBe('0:14');
+      http.expectNone('/api/league/club/games/236/summary');
+      jasmine.clock().tick(1000);
+      http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'running', runningSeconds: 1 });
+      f.detectChanges();
+      expect(el.querySelector('.summary-timer')?.textContent).toBe('0:01'); // Wechsel aufs Schreiben: gewollt von vorn
+    });
+  });
+
+  it('ohne Zeitangabe des Servers oder fertig: kein Zähler', () => {
     const { f, http, el } = setup(true);
     http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'requested' });
+    f.detectChanges();
+    expect(el.querySelector('.summary-timer')).toBeNull();
+    f.componentInstance.state.set({ ...none, status: 'done', markdown: '# x', runningSeconds: 40 } as never);
     f.detectChanges();
     expect(el.querySelector('.summary-timer')).toBeNull();
   });

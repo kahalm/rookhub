@@ -87,7 +87,7 @@ Watcher: `GET /api/admin/own-game-summaries` → `[{ savedGameId, userId, reques
 eine eigene Partie die Kennung `o<id>`; gegen eine ältere API (404, fehlende Tabelle) bleibt die Schiene bei den Vereinspartien.
 
 
-**Zähler (0.926.1)**: Die Stand-Antwort trägt `runningSeconds` (nur Status `running`, vom Server gerechnet). Die Kopfzeile zählt daraus je Sekunde hoch und fragt beim Schreiben alle 10 s nach dem Stand.
+**Zähler (0.926.1, ab 0.933.1 auch beim Warten)**: Die Stand-Antwort trägt `runningSeconds`, vom Server gerechnet: bei `requested` die Sekunden seit `RequestedAt`, bei `running` die seit `StartedAt` (beim Wechsel beginnt er also neu), sonst `null`. Die Kopfzeile zählt daraus je Sekunde hoch und fragt, solange etwas offen ist, alle 10 s nach dem Stand.
 
 ## Merksätze und Empfohlene Literatur (0.929.0)
 
