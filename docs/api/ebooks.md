@@ -21,7 +21,10 @@ das Einlesen; Übersicht und Leser laufen trotzdem. Gelöscht werden nur Uploads
 `location ^~ /api/ebooks` hält dieselbe Grenze ungepuffert, `DeploymentConfigTests`), Kontingent 5 GiB Uploads je Nutzer
 (`UserQuotaBytes`, 0 = aus; Verwalter ohne), Formate `pdf epub djvu cbz cbr mobi azw3` (`EbookFormats.Allowed`), höchstens
 20 Schlagworte à 40 Zeichen. Eine zweite Datei mit demselben SHA-256 → 409 `ebook_duplicate_file` (die Datei wird wieder
-gelöscht). Dasselbe Buch in einer ANDEREN Datei erkennt seit 0.863.0 die Dublettenprüfung (ISBN, Text-Fingerabdruck,
+gelöscht) — **bewusst über ALLE Bücher**, auch unsichtbare (fremde private Uploads): genannt wird nur ein sichtbares Buch,
+`forceNew` gilt nicht für Byte-Dubletten. Folge: wer genau die Bytes eines fremden privaten Uploads hochlädt, bekommt 409
+ohne Ziel (Existenz-Orakel nur für exakt bekannte Bytes). Offene Produktentscheidung (R3-010, Review 2026-11-09: „so
+lassen, dokumentiert“). Dasselbe Buch in einer ANDEREN Datei erkennt seit 0.863.0 die Dublettenprüfung (ISBN, Text-Fingerabdruck,
 Titel + Autor) — siehe „Upload-Dublettenprüfung“ unten.
 
 **Titelbilder** rendert der `EbookCoverWorker` (alle 20 s, 4 Bücher je Durchlauf) nachträglich: PDF über `pdftoppm` (die erste
@@ -100,6 +103,12 @@ Bücher kommen auch aus anonymen Uploads; ihr Inhalt ist fremder Code bzw. fremd
   `IHttpMaxRequestBodySizeFeature` auf diese Grenze gesenkt (auch chunked bricht dort ab). Angemeldet bleibt es bei
   1,1 GB. nginx (`location ^~ /api/ebooks`, 1100M) unterscheidet nicht nach Anmeldung — muss es nicht: mit
   `proxy_request_buffering off` puffert nginx nichts, die frühe 413 der API beendet die Anfrage.
+- **Anonyme Uploads je Anschluss** (`EbookAnonymousUploadGuard`, Singleton im Prozess): zusätzlich zum Kontingent je
+  `X-Visitor-Id` (frei wählbar) gilt je Anschluss (`IpBucket.Key`, IPv6 als /64) in 24 h höchstens das anonyme Kontingent
+  (300 MB) und 20 Uploads, über alle Besucher-Kennungen zusammen → sonst 400 `ebook_quota_exceeded`. Reserviert wird vor dem
+  Speichern, ein gescheiterter Upload (Dublette, Fehler) gibt seine Reservierung zurück; ein Neustart setzt zurück.
+  **Glocke:** anonyme Uploads klingeln bei den Admins höchstens einmal je Stunde (das Buch steht trotzdem in der Übersicht);
+  Uploads angemeldeter Nutzer klingeln wie bisher jedes Mal.
 
 ## Upload-Dublettenprüfung (0.863.0)
 

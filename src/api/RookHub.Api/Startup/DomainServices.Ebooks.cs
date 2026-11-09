@@ -11,6 +11,8 @@ public static partial class DomainServicesSetup
         services.Configure<RookHub.Api.Services.Ebooks.EbookOptions>(configuration.GetSection(RookHub.Api.Services.Ebooks.EbookOptions.Section));
         services.AddSingleton<RookHub.Api.Services.Ebooks.EbookStorage>();
         services.AddSingleton<RookHub.Api.Services.Ebooks.EbookAccessTokens>();
+        // Bremse je Anschluss + Glocken-Takt für anonyme Uploads (R3-002): Zustand im Prozess, darum Singleton.
+        services.AddSingleton<RookHub.Api.Services.Ebooks.EbookAnonymousUploadGuard>();
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookService>();
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookSuggestions>();
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookCourseBuilder>();

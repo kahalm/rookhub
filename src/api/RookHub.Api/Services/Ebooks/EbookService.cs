@@ -35,14 +35,19 @@ public class EbookService
     private readonly NotificationService? _notifications;
 
     public EbookService(AppDbContext db, EbookStorage storage, ILogger<EbookService> logger,
-        Microsoft.Extensions.Options.IOptions<EbookOptions>? options = null, NotificationService? notifications = null)
+        Microsoft.Extensions.Options.IOptions<EbookOptions>? options = null, NotificationService? notifications = null,
+        EbookAnonymousUploadGuard? anonymousGuard = null)
     {
         _db = db;
         _storage = storage;
         _logger = logger;
         _options = options?.Value ?? new EbookOptions();
         _notifications = notifications;
+        _anonymousGuard = anonymousGuard;
     }
+
+    /// <summary>Bremsen je Anschluss + Glocken-Takt für anonyme Uploads (R3-002); <c>null</c> = aus (Tests).</summary>
+    private readonly EbookAnonymousUploadGuard? _anonymousGuard;
 
     /// <summary>Kontingent eines Besuchers ohne Anmeldung (0.778.0); 0 = anonymes Hochladen aus.</summary>
     private long AnonQuota => _options.AnonymousUploads ? Math.Max(0, _options.AnonymousQuotaBytes) : 0;
@@ -301,7 +306,7 @@ public class EbookService
     /// <paramref name="forceNew"/>), dann das Buch mit Metadaten und Freigabe angelegt. Ein Verwalter hat kein Kontingent.
     /// </summary>
     public async Task<EbookDto> UploadAsync(EbookCaller caller, bool manageAll, Stream content, string fileName, long declaredLength,
-        EbookMetaDto meta, CancellationToken ct = default, bool forceNew = false)
+        EbookMetaDto meta, CancellationToken ct = default, bool forceNew = false, string? clientIpBucket = null)
     {
         if (!_storage.UploadsEnabled)
             throw new DomainValidationException("Uploads are not configured on this server.") { Code = ApiErrorCodes.EbooksNotConfigured };
@@ -324,9 +329,19 @@ public class EbookService
         if (caller.IsAnonymous && await AnonymousTotalBytesAsync(ct) + Math.Max(declaredLength, 0) > _options.AnonymousTotalBytes)
             throw new DomainValidationException("Uploads without an account are full right now — please sign in.") { Code = ApiErrorCodes.EbookQuotaExceeded };
 
-        var saved = await _storage.SaveUploadAsync(content, format, maxFile, ct);
+        // Anonym zusätzlich je Anschluss (R3-002): neue Besucher-Kennungen vervielfachen das Kontingent nicht.
+        var ipReserved = caller.IsAnonymous && _anonymousGuard != null && clientIpBucket != null;
+        if (ipReserved && !_anonymousGuard!.TryReserve(clientIpBucket!, declaredLength, AnonQuota, DateTime.UtcNow))
+            throw new DomainValidationException("Your upload quota is used up.") { Code = ApiErrorCodes.EbookQuotaExceeded };
+        void ReleaseIp() { if (ipReserved) _anonymousGuard!.Release(clientIpBucket!, declaredLength); }
+
+        EbookStorage.SavedUpload saved;
+        try { saved = await _storage.SaveUploadAsync(content, format, maxFile, ct); }
+        catch { ReleaseIp(); throw; }
         try
         {
+            // Bewusst über ALLE Bücher (auch unsichtbare) und ohne forceNew (R3-010, so belassen, docs/api/ebooks.md
+            // „Grenzen“): dieselben Bytes liegen nie zweimal; ein fremder privater Upload ergibt 409 ohne Ziel.
             var sameBytes = await _db.EbookFiles.Where(f => f.Sha256 == saved.Sha256).Select(f => f.EbookId).Distinct().ToListAsync(ct);
             if (sameBytes.Count > 0)
             {
@@ -404,16 +419,23 @@ public class EbookService
         catch
         {
             _storage.DeleteUpload(new EbookFile { RelativePath = saved.RelativePath }, EbookSource.Upload);
+            ReleaseIp();
             throw;
         }
     }
 
     /// <summary>Upload von jemandem ohne E-Book-Verwaltung (Nutzer oder anonym) → Glocke aller Admins mit Link aufs Buch
     /// (0.788.0, Wunsch 15.10.2026: die Bibliothek ist offen, Admins sollen jeden fremden Upload sehen). Best-effort — ein
-    /// Fehler hier kippt den schon gespeicherten Upload nicht.</summary>
+    /// Fehler hier kippt den schon gespeicherten Upload nicht. Anonyme Uploads klingeln höchstens einmal je Stunde
+    /// (R3-002, <see cref="EbookAnonymousUploadGuard.TryTakeAnonymousBell"/>).</summary>
     private async Task NotifyAdminsOfUploadAsync(Ebook ebook, EbookCaller caller, CancellationToken ct)
     {
         if (_notifications == null) return;
+        if (caller.IsAnonymous && _anonymousGuard != null && !_anonymousGuard.TryTakeAnonymousBell(DateTime.UtcNow))
+        {
+            _logger.LogInformation("E-Book {EbookId}: anonymer Upload ohne Glocke (höchstens eine je Stunde)", ebook.Id);
+            return;
+        }
         try
         {
             var admins = await PermissionResolver.UserIdsWithPermissionAsync(_db, Permissions.MessagesAdmin, ct);
