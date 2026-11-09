@@ -27,7 +27,7 @@ const WRONG = 'r6r/1pp3k1/1b6/p2P1p2/P1N1p3/2P2PPn/BP5P/4RR1K w - - 1 18';
 
 describe('EbookBoardComponent', () => {
   let maiaStatus: ReturnType<typeof signal<string>>;
-  let maia: { status: () => string; progress: () => number; prepare: jasmine.Spy; download: jasmine.Spy; chooseMove: jasmine.Spy };
+  let maia: { status: () => string; progress: () => number; prepare: jasmine.Spy; download: jasmine.Spy; chooseMove: jasmine.Spy; release: jasmine.Spy };
   let stockfish: jasmine.SpyObj<StockfishService>;
 
   function make(d: EbookDiagram = D, defaultMode?: EbookBoardMode): ComponentFixture<EbookBoardComponent> {
@@ -37,6 +37,7 @@ describe('EbookBoardComponent', () => {
       prepare: jasmine.createSpy('prepare').and.resolveTo(true),
       download: jasmine.createSpy('download').and.resolveTo(true),
       chooseMove: jasmine.createSpy('chooseMove').and.resolveTo('h1h2'),
+      release: jasmine.createSpy('release'),
     };
     stockfish = jasmine.createSpyObj<StockfishService>('StockfishService', ['getBestMove']);
     TestBed.configureTestingModule({
@@ -117,6 +118,19 @@ describe('EbookBoardComponent', () => {
     expect(el.querySelector('.eb-bar .eb-settings')).not.toBeNull();
     // Maia: Stärke steht in der Zugzeile.
     expect(el.querySelector('.eb-maia-state')!.textContent).toContain('ebooks.board.maiaElo');
+  });
+
+  it('gibt Maia beim Verlassen frei, wenn das Brett sie geholt hat — sonst nicht (F2-011)', () => {
+    const used = make();
+    used.detectChanges();
+    used.componentInstance.setMode('maia');
+    used.destroy();
+    expect(maia.release).toHaveBeenCalledTimes(1);
+    TestBed.resetTestingModule();
+    const unused = make();
+    unused.detectChanges();
+    unused.destroy();
+    expect(maia.release).not.toHaveBeenCalled();
   });
 
   it('⚙ beim Lösen: Art und Quelle als Auswahl im Menü; ⋮ meldet das Diagramm (nur „reportable“)', async () => {

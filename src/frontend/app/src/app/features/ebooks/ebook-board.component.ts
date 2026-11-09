@@ -167,6 +167,8 @@ export class EbookBoardComponent implements OnChanges {
   readonly maiaElo = signal<number>(MAIA_DEFAULT_ELO);
   readonly maiaEloOptions = MAIA_ELO_OPTIONS;
   readonly maiaThinking = signal(false);
+  /** Hat dieses Brett Maia geladen? Dann gibt es sie beim Verlassen frei (F2-011). */
+  private maiaUsed = false;
 
   /** Partie (0.831.0): geladene Partie, Lade-Zustand und der Halbzug in der Hauptlinie; eigene Züge ab dort in {@link played}. */
   readonly gameLine = signal<EbookGameLine | null>(null);
@@ -255,7 +257,12 @@ export class EbookBoardComponent implements OnChanges {
       if (s && fen) untracked(() => s.sync(++this.engineIndex, fen));
     });
 
-    inject(DestroyRef).onDestroy(() => { this.clearTimer(); this.engine()?.destroy(); });
+    inject(DestroyRef).onDestroy(() => {
+      this.clearTimer();
+      this.engine()?.destroy();
+      // F2-011: Maia (Modell + Sitzung im Worker, ~150 MB) freigeben wie das Analysebrett — nur, wenn dieses Brett sie geholt hat.
+      if (this.maiaUsed) this.maia.release();
+    });
   }
 
   ngOnChanges(ch: SimpleChanges): void {
@@ -278,7 +285,7 @@ export class EbookBoardComponent implements OnChanges {
     if (!this.hasStoredSolution) this.solveSource.set('engine');
     if (this.mode() === 'calc') this.loadCalc();
     if (this.mode() === 'solve') this.startSolving();
-    if (this.mode() === 'maia') void this.maia.prepare();
+    if (this.mode() === 'maia') this.prepareMaia();
     if (this.mode() === 'game') this.loadGame();
     if (this.mode() === 'tree') this.loadTree();
   }
@@ -294,7 +301,7 @@ export class EbookBoardComponent implements OnChanges {
     this.mode.set(m);
     if (m === 'calc') this.loadCalc();
     if (m === 'solve') this.startSolving();
-    if (m === 'maia') void this.maia.prepare();
+    if (m === 'maia') this.prepareMaia();
     if (m === 'game') this.loadGame();
     if (m === 'tree') this.loadTree();
   }
@@ -767,7 +774,12 @@ export class EbookBoardComponent implements OnChanges {
 
   setMaiaElo(elo: number): void { this.maiaElo.set(elo); }
 
-  loadMaia(): void { void this.maia.download(); }
+  loadMaia(): void { this.maiaUsed = true; void this.maia.download(); }
+
+  private prepareMaia(): void {
+    this.maiaUsed = true;
+    void this.maia.prepare();
+  }
 
   private async maiaReply(): Promise<void> {
     const fen = this.boardFen();
