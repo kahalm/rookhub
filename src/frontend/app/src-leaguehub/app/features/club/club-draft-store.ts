@@ -18,7 +18,12 @@ export interface ClubDraftStoreDeps {
   savedGame: (id: number) => Promise<{ pgn: string }>;
   /** Rückfrage (ConfirmService) — `true` = ja. */
   confirm: (text: string) => Promise<boolean>;
+  /** Warnung als Snackbar — ein gescheitertes Speichern des Entwurfs darf nicht still bleiben (F4-003). */
+  warn?: (text: string) => void;
 }
+
+/** Text der Warnung, wenn der Online-Entwurf nicht gespeichert werden konnte. */
+export const DRAFT_SAVE_FAILED = 'Deine letzten Korrekturen liegen noch nicht online — die Übersicht bleibt offen, die nächste Änderung versucht es wieder.';
 
 /** Wie lange nach der letzten Änderung der Übersicht gespeichert wird (ms) — Tippen und Klicken sollen nicht je Zug senden. */
 export const SAVE_DEBOUNCE_MS = 1500;
@@ -66,6 +71,8 @@ export class ClubDraftStore {
   private importedBefore: number[] = [];
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private disposed = false;
+  /** Die letzte Speicherung des Entwurfs ist gescheitert — Korrekturen seitdem liegen nur hier (Codereview F4-003). */
+  readonly saveFailed = signal(false);
 
   constructor(private readonly deps: ClubDraftStoreDeps) {
     this.client = deps.client;
@@ -88,7 +95,14 @@ export class ClubDraftStore {
     this.saveTimer = null;
     const d = this.draft(), rv = this.review();
     if (!d || !rv) return;
-    try { await this.client.saveDraft(d.ref, { state: rv.snapshot() }); } catch { /* nächste Änderung versucht es wieder */ }
+    try {
+      await this.client.saveDraft(d.ref, { state: rv.snapshot() });
+      this.saveFailed.set(false);
+    } catch {
+      // Nicht mehr still (F4-003): die nächste Änderung versucht es wieder, aber der Nutzer weiß es.
+      if (!this.saveFailed()) this.deps.warn?.(DRAFT_SAVE_FAILED);
+      this.saveFailed.set(true);
+    }
   }
 
   /** Die offenen Entwürfe — die eigenen, und für Verwalter die aller anderen. */
@@ -168,17 +182,26 @@ export class ClubDraftStore {
   async closeCurrent(): Promise<void> {
     const d = this.draft(), rv = this.review();
     if (!d && rv && !(await this.deps.confirm('Die Liste liegt nicht online — schließt du die Übersicht, gehen deine Korrekturen verloren. Trotzdem schließen?'))) return;
-    const unsaved = !!this.saveTimer;
+    // Die letzte Korrektur wartet vielleicht noch auf die Drossel, oder die vorige Speicherung ist gescheitert — ERST
+    // speichern, dann leeren. Scheitert es, bleiben Übersicht und Text stehen (F4-003: vorher waren sie weg, die
+    // Korrekturen auch).
+    if (d && rv && (this.saveTimer || this.saveFailed())) {
+      if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = null; }
+      try {
+        await this.client.saveDraft(d.ref, { state: rv.snapshot() });
+        this.saveFailed.set(false);
+      } catch {
+        this.saveFailed.set(true);
+        this.deps.warn?.(DRAFT_SAVE_FAILED);
+        return;
+      }
+    }
     this.review.set(null);
     this.dbNote.set(null);
     this.portionNote.set(null);
     this.resetDraft();
     // Der Text liegt im Entwurf — stünde er noch im Feld, legte ein erneutes „Partien prüfen" einen zweiten Entwurf an.
     if (d) this.pgn.set('');
-    // Die letzte Korrektur wartet vielleicht noch auf die Drossel — jetzt speichern, sonst fehlt sie beim Weitermachen.
-    if (d && rv && unsaved) {
-      try { await this.client.saveDraft(d.ref, { state: rv.snapshot() }); } catch { /* bleibt beim letzten Stand */ }
-    }
     void this.loadDrafts();
   }
 
@@ -187,7 +210,9 @@ export class ClubDraftStore {
     const d = this.draft();
     if (!d) return;
     const all = [...new Set([...this.importedBefore, ...indices])];
-    void this.client.saveDraft(d.ref, { imported: all }).catch(() => undefined);
+    // Scheitert das, böte der Entwurf beim Fortsetzen schon importierte Partien noch einmal an — sagen (F4-003).
+    void this.client.saveDraft(d.ref, { imported: all }).catch(() =>
+      this.deps.warn?.('Welche Partien schon importiert sind, ließ sich nicht im Entwurf vermerken — beim Fortsetzen erscheinen sie vielleicht noch einmal.'));
   }
 
   private resetDraft(): void {
@@ -195,6 +220,7 @@ export class ClubDraftStore {
     this.draft.set(null);
     this.resumedFrom.set(null);
     this.importedBefore = [];
+    this.saveFailed.set(false);
   }
 
   /** Eine Partie aus RookHub (⋮ → „In die Vereins-Datenbank", Wunsch 2026-09-28) — gleich in die Übersicht, wie ein Upload. */

@@ -2,7 +2,7 @@ import { fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ClubClient } from '../../core/club-api.service';
 import { ClubDraft, ClubPreview } from '../../core/club.models';
-import { ClubDraftStore, ClubDraftStoreDeps, SAVE_DEBOUNCE_MS } from './club-draft-store';
+import { ClubDraftStore, ClubDraftStoreDeps, DRAFT_SAVE_FAILED, SAVE_DEBOUNCE_MS } from './club-draft-store';
 import { draftKeys } from './club-anon-keys';
 
 const M = { league: true, ambiguous: false, name: 'Hengl, Philip', fide: '222', club: false, candidates: [] };
@@ -101,6 +101,34 @@ describe('ClubDraftStore', () => {
     expect(api.saveDraft).toHaveBeenCalledTimes(2);
     tick(SAVE_DEBOUNCE_MS);
     expect(api.saveDraft).toHaveBeenCalledTimes(2);
+  }));
+
+  // Codereview F4-003: das Speichern des Online-Entwurfs scheiterte still, „Schließen“ leerte trotzdem Übersicht und Text.
+  it('gescheitertes Speichern meldet sich; Schließen behält Übersicht und Text, bis das Speichern klappt', fakeAsync(() => {
+    const warn = jasmine.createSpy('warn');
+    const s = new ClubDraftStore({ ...deps, warn });
+    s.pgn.set('1. e4 *');
+    void s.startPreview();
+    flushMicrotasks();
+    api.saveDraft.and.rejectWith(new HttpErrorResponse({ status: 502 }));
+    s.scheduleSave();
+    tick(SAVE_DEBOUNCE_MS);
+    flushMicrotasks();
+    expect(warn).toHaveBeenCalledOnceWith(DRAFT_SAVE_FAILED);
+    expect(s.saveFailed()).toBeTrue();
+
+    void s.closeCurrent();
+    flushMicrotasks();
+    expect(s.review()).not.toBeNull();
+    expect(s.pgn()).toBe('1. e4 *');
+    expect(s.draft()).not.toBeNull();
+
+    api.saveDraft.and.resolveTo();
+    void s.closeCurrent();
+    flushMicrotasks();
+    expect(s.review()).toBeNull();
+    expect(s.pgn()).toBe('');
+    expect(s.saveFailed()).toBeFalse();
   }));
 
   it('done: Ergebnis steht, Text und Entwurf gehen, Liste neu geladen', fakeAsync(() => {

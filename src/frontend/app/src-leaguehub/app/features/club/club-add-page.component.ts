@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnInit, effect, inject, signal } from '@angular/core';
+import { SnackbarService } from '@rh/core/snackbar.service';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, Injector, OnInit, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
@@ -41,6 +42,7 @@ export class ClubAddPageComponent implements OnInit {
   readonly share = this.route.snapshot.paramMap.get('token');
   private readonly clubApi = inject(ClubApiService);
   private readonly confirm = inject(ConfirmService);
+  private readonly injector = inject(Injector);
   readonly client: ClubClient = this.clubApi.client(this.share);
   readonly allowed = !!this.share || this.auth.has('league.contribute');
   /** Ohne Beitragsrecht, aber mit Leserecht: die Sperrkarte nennt das fehlende Recht und führt zu den Vereinspartien. */
@@ -71,6 +73,8 @@ export class ClubAddPageComponent implements OnInit {
     allDrafts: () => this.clubApi.allDrafts(),
     savedGame: id => this.clubApi.savedGame(id),
     confirm: text => firstValueFrom(this.confirm.ask(text)),
+    // Erst bei Bedarf holen: die Snackbar hängt an MatSnackBar + Übersetzung (F4-003).
+    warn: text => { try { this.injector.get(SnackbarService).warn(text); } catch { /* ohne Snackbar (Specs) still */ } },
   });
   /** Die Partieformulare (Fotos, Hochladen, eigene und fremde offene Formulare) — lebt so lange wie die Seite. */
   readonly sheets = new ScoresheetUploadStore({
