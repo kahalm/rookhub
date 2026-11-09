@@ -373,12 +373,14 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
         canvas.style.width = `${Math.round(slot.width * scaleAtStart)}px`;
         canvas.style.height = `${Math.round(slot.height * scaleAtStart)}px`;
       }
-      const dpr = renderPixelRatio(window.devicePixelRatio, currentUiScale());
+      const dpr = cappedCanvasRatio(slot.width * scaleAtStart, slot.height * scaleAtStart,
+        renderPixelRatio(window.devicePixelRatio, currentUiScale()));
       const viewport = page.getViewport({ scale: scaleAtStart * dpr });
       canvas.width = Math.floor(viewport.width);
       canvas.height = Math.floor(viewport.height);
       const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      // Kein Zeichenkontext (Speicher): als Seitenfehler melden statt still weiß (F2-017).
+      if (!ctx) throw new Error('PDF canvas context unavailable');
       await page.render({ canvasContext: ctx, viewport, canvas } as unknown as Parameters<PdfPage['render']>[0]).promise;
       slot.rendered = scaleAtStart;
     })().catch((e: unknown) => {
@@ -405,6 +407,20 @@ export function evictOldestPage(cache: Map<number, Pick<PdfPage, 'cleanup'>>, ke
   const page = cache.get(oldest);
   cache.delete(oldest);
   try { page?.cleanup(); } catch { /* Dokument schon zu */ }
+}
+
+/** Höchstens so viele Pixel je Seiten-Leinwand (wie `maxCanvasPixels` im Viewer von pdf.js, 16 Mio. ≈ 64 MB RGBA). */
+export const MAX_CANVAS_PIXELS = 16_777_216;
+
+/**
+ * Pixeldichte für eine Leinwand der CSS-Größe `cssWidth × cssHeight` (F2-017): `ratio` (aus {@link renderPixelRatio}),
+ * aber so weit gesenkt, dass die Leinwand {@link MAX_CANVAS_PIXELS} nicht überschreitet — bei Zoom 4 und dpr 3 wären es
+ * sonst über 70 Mio. Pixel je Seite. Die CSS-Größe bleibt; die Seite wird darüber nur weniger scharf.
+ */
+export function cappedCanvasRatio(cssWidth: number, cssHeight: number, ratio: number, maxPixels = MAX_CANVAS_PIXELS): number {
+  const area = cssWidth * cssHeight;
+  if (!(area > 0)) return ratio;
+  return Math.min(ratio, Math.sqrt(maxPixels / area));
 }
 
 /**
