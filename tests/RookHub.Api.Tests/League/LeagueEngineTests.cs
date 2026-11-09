@@ -388,6 +388,58 @@ public class LeagueEngineTests
         }
     }
 
+    /// <summary>GA-07 (G1-006): zwei gleichzeitige „Link teilen“ für eine Begegnung mit ABGELAUFENEM Link — beide löschen den
+    /// toten Link, die zweite trifft beim Löschen 0 Zeilen (DbUpdateConcurrencyException statt Unique-Verletzung) und bekam
+    /// 500. Jetzt bekommt sie den frischen Link der ersten.</summary>
+    [Fact]
+    public async Task Share_ConcurrentReplaceOfExpired_ReturnsTheOtherLink()
+    {
+        var (db, svc) = ShareFixture(interceptor: name => new ExpiredShareRaceInterceptor(name));
+        db.LeagueShares.Add(new LeagueShare
+        {
+            Token = "old-token", ClubId = TestClubs.Home.Id, Tnr = 1, Round = 1, Team = "A", CreatedAt = DateTime.UtcNow.AddYears(-1),
+            Expires = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1),
+        });
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        var s = await svc.CreateShareAsync(TestClubs.Home, 1, 1, "A", 7, default);
+
+        Assert.Equal("rival-token", s!.Token);
+        Assert.Equal("rival-token", Assert.Single(await db.LeagueShares.AsNoTracking().ToListAsync()).Token);
+        db.Dispose();
+    }
+
+    /// <summary>Beim Ersetzen eines abgelaufenen Links räumt „die andere Anfrage“ ihn vorher weg und legt ihren frischen an;
+    /// das eigene Speichern scheitert dann wie unter MariaDB am Löschen, das 0 Zeilen trifft.</summary>
+    private sealed class ExpiredShareRaceInterceptor(string dbName) : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
+    {
+        private bool _raced;
+        public override async ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(
+            Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData,
+            Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            var tracker = eventData.Context!.ChangeTracker;
+            var removed = tracker.Entries<LeagueShare>().FirstOrDefault(e => e.State == EntityState.Deleted)?.Entity;
+            var added = tracker.Entries<LeagueShare>().FirstOrDefault(e => e.State == EntityState.Added)?.Entity;
+            if (removed != null && added != null && !_raced)
+            {
+                _raced = true;
+                await using var other = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(dbName).Options);
+                other.LeagueShares.Remove(await other.LeagueShares.SingleAsync(x => x.Token == removed.Token, cancellationToken));
+                other.LeagueShares.Add(new LeagueShare
+                {
+                    Token = "rival-token", ClubId = added.ClubId, Tnr = added.Tnr, Round = added.Round, Team = added.Team,
+                    CreatedAt = DateTime.UtcNow, Expires = added.Expires,
+                });
+                await other.SaveChangesAsync(cancellationToken);
+                throw new DbUpdateConcurrencyException(
+                    "The database operation was expected to affect 1 row(s), but actually affected 0 row(s).");
+            }
+            return await base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
+    }
+
     /// <summary>Codereview 2026-09-29, N4-003: jede Karten-Anfrage über einen Teilen-Link (jeder Klick im Baum) parste die
     /// ganze Liga-Ansicht und klonte die Begegnung, nur um zu prüfen, ob der Spieler in der Meldeliste steht. Jetzt je
     /// Ansicht (<c>GeneratedAt</c>) einmal; ein widerrufener Link gilt trotzdem sofort nicht mehr.</summary>

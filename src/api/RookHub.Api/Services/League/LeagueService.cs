@@ -417,9 +417,22 @@ public sealed class LeagueService
         // Zwei gleichzeitige Anfragen (Doppeltipp, zwei Verwalter) laufen in den eindeutigen Index (ClubId, Tnr, Round, Team):
         // dann gilt der Link der anderen Anfrage — an Ort und Stelle aufgelöst wie in Startup/DatabaseSetup.cs beschrieben,
         // statt 500 (G1-006).
-        if (!await _db.SaveIgnoringUniqueRaceAsync(_log, ct))
-            return await _db.LeagueShares.AsNoTracking()
-                .FirstAsync(s => s.ClubId == club.Id && s.Tnr == tnr && s.Round == round && s.Team == team, ct);
+        try
+        {
+            if (!await _db.SaveIgnoringUniqueRaceAsync(_log, ct))
+                return await _db.LeagueShares.AsNoTracking()
+                    .FirstAsync(s => s.ClubId == club.Id && s.Tnr == tnr && s.Round == round && s.Team == team, ct);
+        }
+        catch (DbUpdateConcurrencyException) when (existing is not null)
+        {
+            // Derselbe Wettlauf auf dem Pfad „abgelaufener Link wird ersetzt“: die andere Anfrage hat den toten Link schon
+            // gelöscht, unser Löschen trifft 0 Zeilen. Dann gilt ihr frischer Link (GA-07/G1-006) statt 500.
+            _db.ChangeTracker.Clear();
+            var current = await _db.LeagueShares.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.ClubId == club.Id && s.Tnr == tnr && s.Round == round && s.Team == team && s.Expires >= today, ct);
+            if (current is null) throw;
+            return current;
+        }
         return share;
     }
 
