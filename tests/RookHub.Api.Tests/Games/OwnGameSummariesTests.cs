@@ -17,11 +17,17 @@ public class OwnGameSummariesTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private OwnGameSummaries Svc(int? daily = null)
+    private OwnGameSummaries Svc(int? daily = null, TimeProvider? clock = null)
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         { ["OwnGameSummaries:DailyPerUser"] = daily?.ToString() }).Build();
-        return new OwnGameSummaries(_db, null!, new ClubGameSummaries(_db), null!, null, config);
+        return new OwnGameSummaries(_db, null!, new ClubGameSummaries(_db), null!, clock, config);
+    }
+
+    /// <summary>Feste Uhr für das Tageskontingent (R4-022): gegen die echte Uhr kippte der Test über UTC-Mitternacht.</summary>
+    private sealed class FixedClock(DateTime utc) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(utc, TimeSpan.Zero);
     }
 
     private SavedGame Game(int user = 7, int? analysis = null, int? club = null)
@@ -55,20 +61,23 @@ public class OwnGameSummariesTests : IDisposable
     public async Task Request_KontingentVerbraucht_lehntAb_gestrigeZaehlenNicht()
     {
         var g = Game();
+        // Eine Millisekunde vor UTC-Mitternacht: mit der echten Uhr wäre das genau das kippende Fenster.
+        var now = new DateTime(2026, 11, 9, 23, 59, 59, 999, DateTimeKind.Utc);
+        var clock = new FixedClock(now);
         _db.OwnGameSummaryRequests.AddRange(
-            new OwnGameSummaryRequest { UserId = 7, SavedGameId = 1, At = DateTime.UtcNow },
-            new OwnGameSummaryRequest { UserId = 7, SavedGameId = 2, At = DateTime.UtcNow });
+            new OwnGameSummaryRequest { UserId = 7, SavedGameId = 1, At = now.AddHours(-1) },
+            new OwnGameSummaryRequest { UserId = 7, SavedGameId = 2, At = now });
         _db.SaveChanges();
 
-        var (dto, error) = await Svc().RequestAsync(7, g.Id, false, null);
+        var (dto, error) = await Svc(clock: clock).RequestAsync(7, g.Id, false, null);
 
         Assert.Null(dto);
         Assert.Equal(OwnGameSummaries.RequestError.QuotaExceeded, error);
-        Assert.Equal(0, (await Svc().GetAsync(7, g.Id, false))!.QuotaLeft);
-        foreach (var r in _db.OwnGameSummaryRequests) r.At = DateTime.UtcNow.AddDays(-1);
+        Assert.Equal(0, (await Svc(clock: clock).GetAsync(7, g.Id, false))!.QuotaLeft);
+        foreach (var r in _db.OwnGameSummaryRequests) r.At = now.AddDays(-1);
         _db.SaveChanges();
-        Assert.Equal(2, (await Svc().GetAsync(7, g.Id, false))!.QuotaLeft);
-        Assert.Equal(5, (await Svc(5).GetAsync(7, g.Id, false))!.QuotaLeft);
+        Assert.Equal(2, (await Svc(clock: clock).GetAsync(7, g.Id, false))!.QuotaLeft);
+        Assert.Equal(5, (await Svc(5, clock).GetAsync(7, g.Id, false))!.QuotaLeft);
     }
 
     /// <summary>R4-004: gebucht wird vor der Analyse und danach nachgezählt. Ist zwischen Prüfung und Buchung eine parallele Anforderung
