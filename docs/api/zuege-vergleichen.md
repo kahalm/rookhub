@@ -4,7 +4,7 @@
 
 Wunsch 2026-09-29: „soll diese durchrechnen und schaun, warum Zug 1 besser ist als Zug 2 — vor allem im Vergleich: was
 sind bei Zug 2 die besten Züge, und warum gehen die bei Zug 1 nicht (so gut)". `Services/Engines/MoveComparisonService.cs`,
-Tabellen `MoveComparisons` + `MoveComparisonLines`, Pumpe `MoveComparisonPumpService` (5 s, `MoveComparison:PumpIntervalSeconds`).
+Tabellen `MoveComparisons` + `MoveComparisonLines`, Pumpe `MoveComparisonPumpService` (`PeriodicWorker`, Start sofort, 5 s, `MoveComparison:PumpIntervalSeconds`).
 * **Zwei Durchgänge über die Hintergrund-Aufträge** (NICHT die Live-Engine — rechnet auch, wenn die Seite zu ist):
   (1) je Kandidat (2–4) die Stellung DANACH mit `CandidateLines` (3) Linien = die besten Antworten des Gegners; daraus
   der beste Kandidat (`BestUci`, Sicht der Seite am Zug, Matt ± 100 000). (2) Je SCHWÄCHEREM Kandidaten dessen

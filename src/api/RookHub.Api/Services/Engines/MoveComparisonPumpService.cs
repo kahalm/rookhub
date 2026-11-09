@@ -5,53 +5,23 @@ namespace RookHub.Api.Services.Engines;
 /// die Antworten einreihen, die Begründungen anstoßen. Kürzerer Takt als die Partie-Analyse (5 s) — hier wartet jemand
 /// vor der Seite, und ein Vergleich besteht aus einer Handvoll Stellungen, nicht aus einer Partie.
 /// <para>Konfiguration: <c>MoveComparison:PumpIntervalSeconds</c> (2..120).</para>
+/// <para>Auf <see cref="PeriodicWorker"/> (R1-013): fester Takt, Start sofort, Pause/Fehler/Shutdown wie alle anderen.
+/// Die Fehlerzeile bleibt wörtlich die bisherige (Warnung, ein Durchlauf fällt aus, der nächste kommt).</para>
 /// </summary>
-public class MoveComparisonPumpService : BackgroundService, IBackgroundJobInfo
+public class MoveComparisonPumpService(IServiceScopeFactory scopes, IConfiguration config, ILogger<MoveComparisonPumpService> logger)
+    : PeriodicWorker(scopes, logger)
 {
-    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): Takt fällt bei Pause aus.
-    private PauseGate? _pauseGate;
-    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(MoveComparisonPumpService), _logger);
-    /// <inheritdoc/>
-    public bool PausableByAdmin => true;
-    /// <inheritdoc/>
-    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+    private readonly TimeSpan _interval =
+        TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("MoveComparison:PumpIntervalSeconds") ?? 5, 2, 120));
 
-    private readonly IServiceScopeFactory _scopes;
-    private readonly ILogger<MoveComparisonPumpService> _logger;
-    private readonly TimeSpan _interval;
+    protected override WorkerSchedule Schedule => WorkerSchedule.Every(_interval);
+    protected override WorkerStart Start => WorkerStart.Immediately;
+    protected override void LogFailure(Exception ex) => logger.LogWarning(ex, "Zugvergleich: Durchlauf uebersprungen");
 
-    public MoveComparisonPumpService(IServiceScopeFactory scopes, IConfiguration config, ILogger<MoveComparisonPumpService> logger)
+    protected override async Task StepAsync(IServiceProvider services, CancellationToken ct)
     {
-        _scopes = scopes;
-        _logger = logger;
-        var seconds = Math.Clamp(config.GetValue<int?>("MoveComparison:PumpIntervalSeconds") ?? 5, 2, 120);
-        _interval = TimeSpan.FromSeconds(seconds);
-    }
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            if (await Pause.SkipAndWaitAsync(_scopes, _interval, stoppingToken)) continue;
-            try
-            {
-                using var scope = _scopes.CreateScope();
-                await scope.ServiceProvider.GetRequiredService<MoveComparisonService>().PumpAllAsync(stoppingToken);
-                // Zugvergleiche der Vereinspartien (0.908.0): Nachtrag + wartende starten (gedeckelt, Stapel-Vorrang).
-                await scope.ServiceProvider.GetRequiredService<ClubMistakeComparisons>().TickAsync(stoppingToken);
-                Pause.MarkTick();
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                break;   // Shutdown ist kein Fehler (sonst Fehlalarm im log-watcher)
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Zugvergleich: Durchlauf uebersprungen");
-            }
-
-            try { await Task.Delay(_interval, stoppingToken); }
-            catch (OperationCanceledException) { break; }
-        }
+        await services.GetRequiredService<MoveComparisonService>().PumpAllAsync(ct);
+        // Zugvergleiche der Vereinspartien (0.908.0): Nachtrag + wartende starten (gedeckelt, Stapel-Vorrang).
+        await services.GetRequiredService<ClubMistakeComparisons>().TickAsync(ct);
     }
 }
