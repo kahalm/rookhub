@@ -45,7 +45,9 @@ diese Aufgaben im Satz. Umgekehrt schreibt der Woodpecker-Löser KEINE `CourseAt
 Fehler geht der POST in die Offline-Warteschlange (gleicher Body) und gilt weiter als gemeldet — „Nochmal“ oder „Ganze
 Partie“ → „Zurück zum Puzzle“ melden nichts mehr. „Weiter“ wartet auf eine laufende Meldung, damit `GET next` nicht vor
 dem POST ankommt. Liefert `next` (Zyklus 1: Ausschluss erst über den gespeicherten Versuch) eine Aufgabe, deren Versuch
-noch in der Warteschlange liegt, gilt sie als gemeldet (Hinweis „schon gewertet“).
+noch in der Warteschlange liegt, gilt sie als gemeldet (Hinweis „schon gewertet“). Damit „Weiter“ nicht bis zum
+nächsten App-Start dieselbe Aufgabe bringt, sendet die Warteschlange online Vorgemerktes selbst nach (5 s, dann 15 s,
+60 s; GL-FE1-01).
 
 **Daten** (`Models/WoodpeckerPlan.cs`, `Data/Configurations/WoodpeckerConfigurations.cs`): `WoodpeckerPlans` (UserId
 Cascade), `WoodpeckerPlanBooks` (Position), `WoodpeckerCycles` (Number, StartedAt, FinishedAt), `WoodpeckerSetItems`

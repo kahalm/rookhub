@@ -1,7 +1,9 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { TranslateService } from '@ngx-translate/core';
-import { OfflineQueueService, OFFLINE_QUEUE_KEY, OFFLINE_QUEUE_THROTTLE_MS, OFFLINE_QUEUE_MAX } from './offline-queue.service';
+import {
+  OfflineQueueService, OFFLINE_QUEUE_KEY, OFFLINE_QUEUE_THROTTLE_MS, OFFLINE_QUEUE_MAX, OFFLINE_QUEUE_RETRY_BACKOFF_MS,
+} from './offline-queue.service';
 import { SnackbarService } from './snackbar.service';
 
 describe('OfflineQueueService', () => {
@@ -129,6 +131,74 @@ describe('OfflineQueueService', () => {
     tick(1);
     http.expectOne('/api/puzzles/5/attempt').flush({});
     expect(svc.pendingCount()).toBe(0);
+  }));
+
+  // GL-FE1-01 (F1-013): online vorgemerkt (Server 5xx/504/0, Gerät online) ging bis zum nächsten 'online'-Ereignis
+  // oder App-Start nicht raus — Woodpecker lieferte bis dahin dieselbe Aufgabe in Schleife.
+  it('sendet online Vorgemerktes nach kurzem Backoff selbst nach (5 s, 15 s, dann gedeckelt 60 s)', fakeAsync(() => {
+    expect(OFFLINE_QUEUE_RETRY_BACKOFF_MS).toEqual([5000, 15000, 60000]);
+    svc.enqueue('POST', '/api/woodpecker/3/attempts', { bookPuzzleId: 9, solved: true });
+    tick(4999);
+    http.expectNone('/api/woodpecker/3/attempts');
+    tick(1);
+    http.expectOne('/api/woodpecker/3/attempts').flush({}, { status: 503, statusText: 'Service Unavailable' });
+    expect(svc.pendingCount()).toBe(1);
+
+    tick(14999);
+    http.expectNone('/api/woodpecker/3/attempts');
+    tick(1);
+    http.expectOne('/api/woodpecker/3/attempts').error(new ProgressEvent('error'), { status: 0, statusText: '' });
+
+    tick(59999);
+    http.expectNone('/api/woodpecker/3/attempts');
+    tick(1);
+    http.expectOne('/api/woodpecker/3/attempts').flush({}, { status: 504, statusText: 'Gateway Timeout' });
+
+    tick(60000);                                     // Obergrenze: bleibt bei 60 s
+    http.expectOne('/api/woodpecker/3/attempts').flush({});
+    expect(svc.pendingCount()).toBe(0);
+    tick(120000);
+    http.expectNone(() => true);                     // nach Erfolg kein weiterer Nachlauf
+  }));
+
+  it('plant beim Vormerken höchstens EINEN Nachlauf (kein Sturm bei vielen Einträgen)', fakeAsync(() => {
+    svc.enqueue('POST', '/api/a', { x: 1 });
+    tick(2000);
+    svc.enqueue('POST', '/api/b', { x: 2 });
+    svc.enqueue('POST', '/api/c', { x: 3 });
+    tick(3000);                                      // 5 s nach dem ERSTEN Vormerken, nicht nach dem letzten
+    http.expectOne('/api/a').flush({});
+    http.expectNone('/api/b');
+    tick(OFFLINE_QUEUE_THROTTLE_MS);
+    http.expectOne('/api/b').flush({});
+    tick(OFFLINE_QUEUE_THROTTLE_MS);
+    http.expectOne('/api/c').flush({});
+    expect(svc.pendingCount()).toBe(0);
+    tick(60000);
+    http.expectNone(() => true);
+  }));
+
+  it('setzt den Backoff nach einem Erfolg zurück', fakeAsync(() => {
+    svc.enqueue('POST', '/api/a', {});
+    tick(5000);
+    http.expectOne('/api/a').flush({}, { status: 502, statusText: 'Bad Gateway' });
+    tick(15000);
+    http.expectOne('/api/a').flush({});
+    svc.enqueue('POST', '/api/b', {});
+    tick(5000);
+    http.expectOne('/api/b').flush({}, { status: 502, statusText: 'Bad Gateway' });
+    tick(14999);                                     // wieder Stufe 2 (15 s), nicht 60 s
+    http.expectNone('/api/b');
+    tick(1);
+    http.expectOne('/api/b').flush({});
+  }));
+
+  it('plant offline beim Vormerken keinen Nachlauf (das online-Ereignis übernimmt)', fakeAsync(() => {
+    spyOnProperty(navigator, 'onLine').and.returnValue(false);
+    svc.enqueue('POST', '/api/a', {});
+    tick(120000);
+    http.expectNone(() => true);
+    expect(svc.pendingCount()).toBe(1);
   }));
 
   it('flush ohne Einträge löst keinen Request aus', () => {

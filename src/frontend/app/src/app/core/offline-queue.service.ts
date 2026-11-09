@@ -1,4 +1,4 @@
-import { Injectable, NgZone } from '@angular/core';
+import { Injectable, NgZone, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from './snackbar.service';
@@ -39,6 +39,16 @@ export const OFFLINE_QUEUE_THROTTLE_MS = 300;
 export const OFFLINE_QUEUE_MAX = 200;
 
 /**
+ * Nachsende-Takt im Online-Zustand (GL-FE1-01/F1-013): scheitert ein Schreibweg, obwohl das Gerät als online gilt
+ * (API-Neustart/502, ngsw-504, DB-Stall), merkt der Aufrufer ihn vor — ohne eigenen Anstoß ginge er erst beim
+ * nächsten 'online'-Ereignis oder App-Start raus, und Woodpecker lieferte bis dahin dieselbe Aufgabe in Schleife.
+ * Deshalb plant {@link OfflineQueueService.enqueue} online einen Nachlauf nach dem ersten Wert; jeder weitere
+ * gescheiterte Nachlauf wartet den nächsten Wert, ab dem letzten bleibt es bei ihm (Obergrenze, kein Sturm: es
+ * gibt immer höchstens EINEN geplanten Nachlauf). Ein erfolgreicher Versand setzt den Takt zurück.
+ */
+export const OFFLINE_QUEUE_RETRY_BACKOFF_MS: readonly number[] = [5000, 15000, 60000];
+
+/**
  * Merkt sich schreibende Requests (Lösungs-/Versuchs-Aufzeichnungen), die offline nicht
  * rausgehen konnten, im localStorage und spielt sie bei Reconnect (window 'online' bzw.
  * App-Start) erneut über den HttpClient ein. Idempotent gegenüber Mehrfach-Flush: ein Eintrag
@@ -48,17 +58,26 @@ export const OFFLINE_QUEUE_MAX = 200;
  * Replays laufen über den normalen authInterceptor → der aktuelle Bearer-Token wird angehängt.
  */
 @Injectable({ providedIn: 'root' })
-export class OfflineQueueService {
+export class OfflineQueueService implements OnDestroy {
   private flushing = false;
   private seq = 0;
+  private readonly onOnline = () => this.zone.run(() => this.flush());
+  private startTimer?: ReturnType<typeof setTimeout>;
 
   constructor(private http: HttpClient, private zone: NgZone,
               private snackbar: SnackbarService, private translate: TranslateService) {
-    window.addEventListener('online', () => this.zone.run(() => this.flush()));
+    window.addEventListener('online', this.onOnline);
     // App-Start: falls online, gleich versuchen (kurz verzögert, damit Auth/Token steht).
     if (typeof navigator !== 'undefined' && navigator.onLine) {
-      setTimeout(() => this.flush(), 4000);
+      this.startTimer = setTimeout(() => { this.startTimer = undefined; this.flush(); }, 4000);
     }
+  }
+
+  /** Root-Dienst: räumt Listener und geplante Nachläufe ab (App-Ende, TestBed-Abbau) — sonst feuerten sie danach. */
+  ngOnDestroy(): void {
+    window.removeEventListener('online', this.onOnline);
+    if (this.startTimer !== undefined) clearTimeout(this.startTimer);
+    this.cancelRetry();
   }
 
   /** Einen Request für später vormerken (wenn offline / Netzwerkfehler). Wird mit der aktuellen
@@ -70,6 +89,8 @@ export class OfflineQueueService {
     if (q.length >= OFFLINE_QUEUE_MAX) { this.warnLossOnce(); return false; }
     q.push({ id: this.newId(), method, url, body, ts: Date.now(), userId: this.currentUserId() });
     if (!this.write(q)) { this.warnLossOnce(); return false; }
+    // Online vorgemerkt = der Server hat gerade gestört, nicht das Netz: bald selbst nachsenden (GL-FE1-01).
+    if (typeof navigator !== 'undefined' && navigator.onLine) this.scheduleRetry(OFFLINE_QUEUE_RETRY_BACKOFF_MS[0]);
     return true;
   }
 
@@ -126,11 +147,26 @@ export class OfflineQueueService {
   }
 
   private retryTimer?: ReturnType<typeof setTimeout>;
+  /** Gescheiterte Nachläufe seit dem letzten Erfolg; die erste Stufe des Takts gehört dem Vormerken. */
+  private retryStep = 0;
 
-  /** Einmaligen Backoff-Retry planen (für „online, aber Server gerade 5xx/weg/drosselt"). */
-  private scheduleRetry(delayMs = 30000): void {
+  /** Einmaligen Backoff-Retry planen (für „online, aber Server gerade 5xx/weg/drosselt"). Ist schon einer
+   *  geplant, bleibt es bei ihm — höchstens EIN Timer, egal wie oft vorgemerkt wird. */
+  private scheduleRetry(delayMs: number): void {
     if (this.retryTimer !== undefined) return;
     this.retryTimer = setTimeout(() => { this.retryTimer = undefined; this.flush(); }, delayMs);
+  }
+
+  /** Nächste Wartezeit des Takts nach einem gescheiterten Nachlauf (steigt bis zur Obergrenze). */
+  private nextBackoffMs(): number {
+    const steps = OFFLINE_QUEUE_RETRY_BACKOFF_MS;
+    const ms = steps[Math.min(this.retryStep + 1, steps.length - 1)];
+    this.retryStep++;
+    return ms;
+  }
+
+  private cancelRetry(): void {
+    if (this.retryTimer !== undefined) { clearTimeout(this.retryTimer); this.retryTimer = undefined; }
   }
 
   /** Wartezeit aus dem `Retry-After`-Header (Sekunden ODER HTTP-Datum) des 429; gedeckelt auf
@@ -161,6 +197,8 @@ export class OfflineQueueService {
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
     const q = this.read();
     if (q.length === 0) return;
+    // Läuft jetzt ohnehin: ein geplanter Nachlauf ist überholt (scheitert dieser, plant er neu).
+    this.cancelRetry();
     this.flushing = true;
     this.sendNext(q, 0, this.currentUserId());
   }
@@ -171,7 +209,7 @@ export class OfflineQueueService {
     // Fremd-User-Eintrag: NICHT senden und NICHT entfernen — zum nächsten weitergehen.
     if (!this.eligible(r, currentUserId)) { this.sendNext(q, i + 1, currentUserId); return; }
     this.http.request(r.method, r.url, { body: r.body }).subscribe({
-      next: () => { this.remove(r.id); this.sendThrottled(q, i + 1, currentUserId); },
+      next: () => { this.retryStep = 0; this.remove(r.id); this.sendThrottled(q, i + 1, currentUserId); },
       error: (e: { status?: number; headers?: { get(name: string): string | null } }) => {
         const status = e?.status ?? 0;
         // 401/403 = ABGELAUFENE ANMELDUNG, kein dauerhaft fehlerhafter Eintrag. Sie mussten hier
@@ -196,7 +234,7 @@ export class OfflineQueueService {
           // Netzwerk (0), 429/408 oder 5xx → Queue stehen lassen + Backoff-Retry planen (sonst
           // bliebe sie bei durchgehend „online" bis zum nächsten App-Start/online-Event liegen).
           this.flushing = false;
-          this.scheduleRetry(status === 429 ? this.retryAfterMs(e) : 30000);
+          this.scheduleRetry(status === 429 ? this.retryAfterMs(e) : this.nextBackoffMs());
         }
       },
     });
