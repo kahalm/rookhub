@@ -257,6 +257,19 @@ LUECKEN** (`FillIfEmpty`) — ersetzte sie vorhandene Werte, entschiede die Reih
 naechtlichen Durchgaenge, welche Angabe gilt. Die Turnier**art** bleibt dabei immer `Unknown`:
 keine dieser Quellen sagt etwas darueber.
 
+**Verschwundene Turniere zieht die Quelle selbst zurueck** (`ExternalDirectorySource.RetireVanishedAsync`, seit
+0.454.1, am Ende von `ExternalSweepRunner.RunAsync`; ChessCz und FIDE rufen es selbst). Was ein Lauf nicht mehr liefert,
+zaehlt `MissedSweeps` hoch (hoechstens einmal je `MissCooldown` = 20 h, also je NACHT), ab `MissesUntilRetired` = 2
+steht `RemovedAt`. Wiedergeliefert setzt Zaehler und `LastMissAt` zurueck. Nur kuenftige Eintraege ohne
+chess-results-Nummer, deren EINZIGER Herkunftsvermerk diese Quelle ist, und nur bis zum Horizont des Laufs. **Ein
+Lauf ohne echte Daten zieht nie etwas zurueck**: leer (`rows` und `unreadable` leer → der Runner kehrt sofort
+zurueck), mittendrin abgebrochen (die Ausnahme verlaesst den Runner nach dem Zwischenstand-Speichern, die
+Verschwunden-Erkennung wird nicht erreicht) oder lueckenhaft (weniger als `MinSeenPercent` = 90 % der eigenen
+Kandidaten wiedergesehen → Warnung im Log, nichts gezaehlt). Die Sonderfaelle „abgesagt" (Slowenien) und „Schulung"
+(CZ/SK) laufen davor ueber den `Withdrawn`-Haken und ziehen sofort zurueck. Tests: `RetireVanishedTests` (die
+Regeln) und `ExternalSweepRunnerRetireTests` (ganzer Durchgang: Schwelle, leer, Fehler mittendrin, halbe Antwort,
+wieder aufgetaucht).
+
 **Nummern-Treffer muessen halten.** ICU nennt die chess-results-Nummer nur auf der Detailseite, und
 die wird je Turnier EINMAL geholt. Bis 0.832.20 fehlte die Nummer deshalb ab der zweiten Nacht, der
 Namensvergleich schlug fehl, es entstand ein eigener Eintrag `ie<nr>` und der Herkunftsvermerk

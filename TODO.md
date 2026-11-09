@@ -1000,7 +1000,18 @@ einmal holt und „schon geholt" an der `Url` des Herkunftsvermerks erkennt. Bei
 Erstbestand nach fuenf Naechten durch, danach kostet er fast nichts. Die Machinerie steht bei den
 vier genannten Quellen schon.
 
-## [ ] Verschwundene Turniere der ZUSATZQUELLEN werden nie zurueckgezogen (2026-09-08)
+## [x] Verschwundene Turniere der ZUSATZQUELLEN werden nie zurueckgezogen (2026-09-08, abgehakt 2026-11-09, Version folgt)
+
+**Stand 2026-11-09:** Der Nachlauf steht seit **0.454.1** im Code (`ExternalDirectorySource.RetireVanishedAsync`, seit
+der Zerlegung Z7 am Ende von `ExternalSweepRunner.RunAsync`; ChessCz und FIDE rufen es selbst) — der Eintrag hier war
+nur nie abgehakt. Er vergleicht die GELIEFERTEN Kennungen des Laufs statt `LastSeenAt` (gleichwertig, aber ohne
+Uhrvergleich), zaehlt `MissedSweeps` je Nacht (`MissCooldown` 20 h) und setzt ab `MissesUntilRetired` = 2
+`RemovedAt`. Leerer Lauf → der Runner kehrt sofort zurueck; Fehler mittendrin → die Ausnahme verlaesst den Runner vor
+der Verschwunden-Erkennung; halbe Antwort → Bremse `MinSeenPercent` = 90 % mit Warnung. Neu dazu:
+`ExternalSweepRunnerRetireTests` prueft genau die vier geforderten Faelle ueber den GANZEN Durchgang (Schwelle, leer,
+Fehler mittendrin + abgerissene Antwort, wieder aufgetaucht); die Regeln selbst prueft `RetireVanishedTests`. Doku:
+`docs/api/turnierverzeichnis-turnierkalender.md`. Urspruenglicher Text:
+
 
 Der chess-results-Sweep fuehrt `MissedSweeps`: taucht ein Turnier in der Trefferliste nicht mehr
 auf, zaehlt der Vermerk hoch, und nach mehreren Durchgaengen gilt der Eintrag als entfernt. **Die
