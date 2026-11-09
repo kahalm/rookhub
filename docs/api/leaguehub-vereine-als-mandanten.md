@@ -88,9 +88,10 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
   Geprüft in `LeagueClubTenancyTests.Index_OnlyLeaguesWithAnOwnTeam_AllOnRequest`/`IndexEndpoint_AllOnlyForManagers_…` und
   gegen MariaDB in `LeagueRegionSqlTests`.
 * **Vereinsverwaltung `/vereine` (0.700.0)**: Reiter „Vereine" in LeagueHub, nur Admins mit `league.manage` (sonst
-  Sperrkarte; der Server verlangt beides). Liste (Name, `anonName`, `teamPrefix`, Quelle, Gruppen, Vereinspartien, angelegt),
-  Anlegen/Ändern (400/409 `reason` → Klartext; Quelle umstellen mit Rückfrage — `PUT` darf alle vier Felder ändern, die
-  Startseite filtert nach `Source`), Gruppen zuordnen über eine Suche in `GET /api/admin/groups` (`groups.manage`, Admins haben
+  Sperrkarte; der Server verlangt beides). Liste (Name, `anonName`, `teamPrefix`, Region mit ihren Quellen grau als zweite
+  Zeile, Gruppen, Vereinspartien, angelegt), Anlegen/Ändern (400/409 `reason` → Klartext; Region umstellen mit Rückfrage —
+  `PUT` darf alle vier Felder ändern, die Startseite filtert seit 0.704.0 nach der Region über `LeagueRegions.InRegion`,
+  nicht mehr nach `Source`), Gruppen zuordnen über eine Suche in `GET /api/admin/groups` (`groups.manage`, Admins haben
   jedes Recht; „Everyone" und Gruppen ANDERER Vereine nicht wählbar, obwohl der Server eine andere Zuordnung ersetzen würde)
   und lösen mit Rückfrage. Nach jeder Änderung `ClubContextService.reload()` (neues `/api/league/me`, gewählter Verein
   bleibt). Seite `src-leaguehub/app/features/clubs/clubs-page.component.ts`.
