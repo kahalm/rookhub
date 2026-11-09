@@ -263,7 +263,8 @@
       "denied": "Notifications are blocked in your browser settings — allow them for this site to use push.",
       "enableError": "Could not change push notifications.",
       "notOnDevice": "Push notifications are not yet set up on this device. Switch an area on (or off and on again) to set them up here."
-    }
+    },
+    "markAllFailed": "The notifications could not be marked as read."
   },
   "catalog": {
     "title": "Catalog",
@@ -2917,7 +2918,8 @@
       "noTick": "no run yet",
       "pausedNow": "Background jobs paused",
       "resumedNow": "Background jobs running again",
-      "saveError": "Could not change the switch."
+      "saveError": "Could not change the switch.",
+      "confirmPause": "Pause all {{count}} pausable background services (analysis, harvesting, sweeps …)? The pause survives restarts until you lift it here."
     }
   },
   "favorites": {
@@ -5506,7 +5508,8 @@
     "markVariation": "Variation: {{line}}",
     "markInVariation": "in a variation",
     "backToGame": "Back to the game",
-    "markedTimes": "marked {{count}} times"
+    "markedTimes": "marked {{count}} times",
+    "recentError": "The recent games with this colour could not be loaded — switch the colour to try again."
   },
   "prep": {
     "trainingRepertoire": {

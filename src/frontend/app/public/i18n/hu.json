@@ -2469,7 +2469,8 @@
       "noTick": "még nem futott",
       "pausedNow": "Háttérfeladatok szüneteltetve",
       "resumedNow": "A háttérfeladatok újra futnak",
-      "saveError": "A kapcsolót nem sikerült átállítani."
+      "saveError": "A kapcsolót nem sikerült átállítani.",
+      "confirmPause": "Leállítod mind a(z) {{count}} szüneteltethető háttérszolgáltatást (elemzés, gyűjtés, átfésülések …)? A szünet újraindítás után is megmarad, amíg itt fel nem oldod."
     }
   },
   "analysis": {
@@ -2949,7 +2950,8 @@
       "denied": "Az értesítések le vannak tiltva a böngésződben — engedélyezd őket ehhez az oldalhoz.",
       "enableError": "A push-értesítéseket nem sikerült módosítani.",
       "notOnDevice": "Ezen az eszközön még nem érkeznek push-értesítések. Kapcsolj be egy területet (vagy kapcsold ki, majd újra be), hogy itt is beállítsd őket."
-    }
+    },
+    "markAllFailed": "Az értesítéseket nem sikerült olvasottnak jelölni."
   },
   "repertoireTrainer": {
     "resetProgress": "Előrehaladás törlése",
@@ -5506,7 +5508,8 @@
     "markVariation": "Változat: {{line}}",
     "markInVariation": "egy változatban",
     "backToGame": "Vissza a játszmához",
-    "markedTimes": "{{count}}× megjelölve"
+    "markedTimes": "{{count}}× megjelölve",
+    "recentError": "Az ezzel a színnel játszott legutóbbi játszmákat nem sikerült betölteni — válts színt az újrapróbáláshoz."
   },
   "prep": {
     "trainingRepertoire": {

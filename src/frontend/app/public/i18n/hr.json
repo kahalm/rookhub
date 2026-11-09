@@ -263,7 +263,8 @@
       "denied": "Obavijesti su blokirane u postavkama preglednika — dopusti ih za ovu stranicu da koristiš push.",
       "enableError": "Push obavijesti nije moguće promijeniti.",
       "notOnDevice": "Na ovom uređaju push obavijesti još ne stižu. Uključi neko područje (ili ga isključi pa ponovno uključi) da ih ovdje postaviš."
-    }
+    },
+    "markAllFailed": "Obavijesti nije bilo moguće označiti kao pročitane."
   },
   "catalog": {
     "title": "Katalog",
@@ -2917,7 +2918,8 @@
       "noTick": "još nije pokrenuto",
       "pausedNow": "Pozadinski poslovi pauzirani",
       "resumedNow": "Pozadinski poslovi ponovno rade",
-      "saveError": "Prekidač nije moguće promijeniti."
+      "saveError": "Prekidač nije moguće promijeniti.",
+      "confirmPause": "Zaustaviti svih {{count}} pozadinskih usluga koje se mogu pauzirati (analiza, prikupljanje, pregledi …)? Pauza ostaje i nakon ponovnog pokretanja, dok je ovdje ne ukloniš."
     }
   },
   "favorites": {
@@ -5506,7 +5508,8 @@
     "markVariation": "Varijanta: {{line}}",
     "markInVariation": "u varijanti",
     "backToGame": "Natrag na partiju",
-    "markedTimes": "označeno {{count}} puta"
+    "markedTimes": "označeno {{count}} puta",
+    "recentError": "Posljednje partije ovom bojom nije moguće učitati — promijeni boju da pokušaš ponovno."
   },
   "prep": {
     "trainingRepertoire": {

@@ -263,7 +263,8 @@
       "denied": "Benachrichtigungen sind in deinen Browser-Einstellungen blockiert — erlaube sie für diese Seite, um Push zu nutzen.",
       "enableError": "Push-Benachrichtigungen konnten nicht geändert werden.",
       "notOnDevice": "Auf diesem Gerät kommen noch keine Push-Benachrichtigungen an. Schalte einen Bereich ein (oder aus und wieder ein), um sie hier einzurichten."
-    }
+    },
+    "markAllFailed": "Die Benachrichtigungen konnten nicht als gelesen markiert werden."
   },
   "catalog": {
     "title": "Katalog",
@@ -2917,7 +2918,8 @@
       "noTick": "noch kein Lauf",
       "pausedNow": "Hintergrundjobs pausiert",
       "resumedNow": "Hintergrundjobs laufen wieder",
-      "saveError": "Schalter konnte nicht umgelegt werden."
+      "saveError": "Schalter konnte nicht umgelegt werden.",
+      "confirmPause": "Alle {{count}} pausierbaren Hintergrunddienste anhalten (Analyse, Ernte, Sweeps …)? Die Pause bleibt auch über Neustarts bestehen, bis du sie hier aufhebst."
     }
   },
   "favorites": {
@@ -5506,7 +5508,8 @@
     "markVariation": "Variante: {{line}}",
     "markInVariation": "in einer Variante",
     "backToGame": "Zurück zur Partie",
-    "markedTimes": "{{count}}× markiert"
+    "markedTimes": "{{count}}× markiert",
+    "recentError": "Die letzten Partien dieser Farbe konnten nicht geladen werden — wechsle die Farbe, um es erneut zu versuchen."
   },
   "prep": {
     "trainingRepertoire": {
