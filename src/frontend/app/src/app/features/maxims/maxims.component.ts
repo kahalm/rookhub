@@ -82,7 +82,7 @@ export class MaximsComponent {
   private readonly route = inject(ActivatedRoute);
   readonly list = toSignal(inject(ChessMaximsService).all$);
   readonly openId = toSignal(this.route.queryParamMap.pipe(map(q => q.get('m'))), { initialValue: null });
-  private scrolled = signal(false);
+  private readonly scrolled = signal(false);
 
   /** Kategorien in der Reihenfolge der Liste. */
   readonly groups = computed(() => {

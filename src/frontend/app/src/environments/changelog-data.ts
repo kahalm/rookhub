@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.918.1", date: "2026-11-09", changes: [
+    { en: "Build fix: the new “Rules of thumb” page marks its signal as readonly (ESLint ratchet).",
+      de: "Build-Fix: Die neue Seite „Merksätze“ markiert ihr Signal als readonly (ESLint-Ratsche)." },
+  ] },
   { version: "0.918.0", date: "2026-11-09", changes: [
     { en: "Background analysis now follows a strict priority: interactive first, then work someone is waiting for (own games, requested summaries), new club games, older club games, league games and finally master games.",
       de: "Die Hintergrund-Analyse folgt jetzt einer strengen Rangfolge: zuerst interaktiv, dann worauf jemand wartet (eigene Partien, angeforderte Zusammenfassungen), neue Vereinspartien, ältere Vereinspartien, Ligapartien und zuletzt Meisterpartien." },
