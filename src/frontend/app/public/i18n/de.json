@@ -1249,7 +1249,8 @@
       "parsing": "Repertoire wird gelesen … {{done}} von {{total}} Linien",
       "modeLines": "Linien",
       "modeTree": "Baum",
-      "modeHoles": "Lochfinder"
+      "modeHoles": "Lochfinder",
+      "pgnLoadFailed": "Die Linien dieses Repertoires konnten nicht geladen werden – es ist nichts verloren."
     },
     "dialog": {
       "title": "Neues Repertoire",

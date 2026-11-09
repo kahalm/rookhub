@@ -752,3 +752,47 @@ describe('RepertoireDetailComponent Baum: Pfeile + Ziehen', () => {
     expect(comp.treeService.breadcrumbs.map(b => b.san)).toEqual(['e4', 'c5']);
   });
 });
+
+/** Delta-Review 2026-11-09, F1-005: Ladefehler ergaben eine leere Seite, ein PGN-Fehler ein scheinbar leeres Repertoire. */
+describe('RepertoireDetailComponent Ladefehler (F1-005)', () => {
+  async function render() {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireDetailComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RepertoireDetailComponent);
+    fixture.detectChanges();
+    return { fixture, http: TestBed.inject(HttpTestingController), el: fixture.nativeElement as HTMLElement };
+  }
+  const isDetail = (r: { url: string }) => /\/repertoires\/\d+$/.test(r.url);
+  const isPgn = (r: { url: string }) => /\/repertoires\/\d+\/pgn$/.test(r.url);
+
+  it('Repertoire lädt nicht → app-load-error; Wiederholen lädt neu', async () => {
+    const { fixture, http, el } = await render();
+    http.expectOne(isDetail).flush('x', { status: 500, statusText: 'err' });
+    fixture.detectChanges();
+    expect(el.querySelector('app-load-error')).not.toBeNull();
+    (el.querySelector('app-load-error button') as HTMLButtonElement).click();
+    http.expectOne(isDetail).flush({ id: 7, name: 'R', description: null, isOwner: true, files: [] });
+    fixture.detectChanges();
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.querySelector('.detail-container')).not.toBeNull();
+  });
+
+  it('PGN lädt nicht → eigener Hinweis statt leerem Repertoire; Wiederholen holt das PGN neu', async () => {
+    const { fixture, http, el } = await render();
+    http.expectOne(isDetail).flush({ id: 7, name: 'R', description: null, isOwner: true, files: [] });
+    http.expectOne(isPgn).flush('x', { status: 503, statusText: 'err' });
+    fixture.detectChanges();
+    const hint = el.querySelector('app-load-error.pgn-error');
+    expect(hint).not.toBeNull();
+    expect(hint!.textContent).toContain('repertoire.detail.pgnLoadFailed');
+    (hint!.querySelector('button') as HTMLButtonElement).click();
+    http.expectOne(isPgn).flush('');
+    fixture.detectChanges();
+    expect(el.querySelector('app-load-error.pgn-error')).toBeNull();
+  });
+});

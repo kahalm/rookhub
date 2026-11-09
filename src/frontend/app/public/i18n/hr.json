@@ -1249,7 +1249,8 @@
       "parsing": "Repertoar se učitava … {{done}} od {{total}} linija",
       "modeLines": "Linije",
       "modeTree": "Stablo",
-      "modeHoles": "Traženje rupa"
+      "modeHoles": "Traženje rupa",
+      "pgnLoadFailed": "Linije ovog repertoara nije moguće učitati – ništa nije izgubljeno."
     },
     "dialog": {
       "title": "Novi repertoar",

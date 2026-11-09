@@ -9,6 +9,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MatDialog } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { BoardArrow, ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { canonSan, sameArrows, treeArrows } from './repertoire-tree-arrows.util';
@@ -49,7 +50,7 @@ const TREE_ARROWS_KEY = 'rh.repertoire.treeArrows';
   standalone: true,
   imports: [IconLabelDirective,
     CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatButtonToggleModule,
-    TranslatePipe, LoadingSpinnerComponent, ChessBoardComponent,
+    TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, ChessBoardComponent,
     RepertoireLinesComponent, RepertoireTreeComponent, RepertoireEditComponent, RepertoireHolesComponent,
   ],
   // Komponenten-bezogen (nicht providedIn:'root') — jede Instanz hat ihren eigenen
@@ -58,8 +59,15 @@ const TREE_ARROWS_KEY = 'rh.repertoire.treeArrows';
   template: `
     @if (loading) {
       <app-loading-spinner />
+    } @else if (loadError !== null) {
+      <app-load-error [error]="loadError" (retry)="retryLoad()" />
     } @else if (repertoire) {
       <div class="detail-container">
+        @if (pgnError !== null) {
+          <!-- Linien nicht ladbar: sagen statt ein leeres Repertoire zu zeigen (F1-005). -->
+          <app-load-error class="pgn-error" [error]="pgnError" messageKey="repertoire.detail.pgnLoadFailed"
+                          (retry)="retryPgn()" />
+        }
         @if (parseProgress; as p) {
           <div class="parse-progress" role="status">
             <mat-icon>hourglass_top</mat-icon>
@@ -397,6 +405,10 @@ const TREE_ARROWS_KEY = 'rh.repertoire.treeArrows';
 export class RepertoireDetailComponent implements OnInit, DoCheck {
   repertoire: RepertoireDetail | null = null;
   loading = true;
+  /** Fehler beim Laden des Repertoires (F1-005): `app-load-error` statt leerer Seite. */
+  loadError: unknown = null;
+  /** Fehler beim Laden des PGN (F1-005): eigener Hinweis statt scheinbar leerem Repertoire. */
+  pgnError: unknown = null;
   mode: ViewMode = 'lines';
   /** Deep-Link-Ziel aus der Stellungssuche („Ansehen"): lineKey + Halbzug, einmalig nach dem Laden angewandt. */
   private focusLineKey: string | null = null;
@@ -809,6 +821,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
 
   private loadRepertoire(): void {
     this.loading = true;
+    this.loadError = null;
     this.repertoireService.getDetail<RepertoireDetail>(this.id).subscribe({
       next: (r) => {
         this.repertoire = r;
@@ -817,11 +830,16 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
         this.loading = false;
         this.loadCombinedPgn();
       },
-      error: () => { this.loading = false; }
+      error: err => { this.loadError = err ?? true; this.loading = false; this.cdr.markForCheck(); }
     });
   }
 
+  retryLoad(): void { this.loadRepertoire(); }
+
+  retryPgn(): void { this.loadCombinedPgn(); }
+
   private loadCombinedPgn(): void {
+    this.pgnError = null;
     this.repertoireService.getPgnText(this.id).subscribe({
       next: async (pgn) => {
         // In Portionen (0.712.0): ein großes Chessable-Repertoire braucht am Stück Sekunden; die Seite bleibt bedienbar
@@ -846,10 +864,12 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
         this.applyFocusLine();
         this.recomputeFilter();   // Filter-Treffer gegen den frischen Linien-Stand
       },
-      error: () => {
+      error: err => {
+        this.pgnError = err ?? true;
         this.viewerService.loadPgn('');
         this.treeService.buildTree('');
         this.recomputeFilter();
+        this.cdr.markForCheck();
       }
     });
   }

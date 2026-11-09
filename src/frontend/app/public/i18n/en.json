@@ -1249,7 +1249,8 @@
       "parsing": "Reading the repertoire … {{done}} of {{total}} lines",
       "modeLines": "Lines",
       "modeTree": "Tree",
-      "modeHoles": "Hole finder"
+      "modeHoles": "Hole finder",
+      "pgnLoadFailed": "The lines of this repertoire could not be loaded – nothing has been lost."
     },
     "dialog": {
       "title": "New Repertoire",
