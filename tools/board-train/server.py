@@ -1,10 +1,11 @@
 """Trainingsdienst im Container (DGX Spark): nimmt Trainingsdaten als tgz an, trainiert mit train.py, liefert das Netz.
 
     POST /jobs?epochs=12&batch=1024     Körper: tgz mit books/*.npz, base/*.npz, final32.pt  → {"id": …}
-    GET  /jobs/<id>                     {"status": "läuft|fertig|fehler", "log": letzte Zeilen}
+    GET  /jobs/<id>                     {"status": "empfängt|läuft|fertig|fehler", "log": letzte Zeilen}
     GET  /jobs/<id>/files/<name>        model_all.onnx | model_all.pt | eval.tsv | train.log
     GET  /health
 Zugang: Kopfzeile „Authorization: Bearer $TRAIN_TOKEN“ (Pflicht). Es läuft immer nur ein Training; ein zweites → 409.
+Ein abgebrochener oder 300 s lang stiller Upload endet als „fehler“ (Ordner gelöscht) und gibt den Platz frei (R3-004).
 """
 import json, os, secrets, shutil, subprocess, sys, tarfile, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -40,7 +41,11 @@ def run(job_id, args):
         jobs[job_id]['ended'] = time.time()
         shutil.rmtree(os.path.join(d, 'data'), ignore_errors=True)
 
+BUSY = ('empfängt', 'läuft')
+
 class H(BaseHTTPRequestHandler):
+    # Zeitschranke je Socket-Operation: ein Client, der mitten im Upload verstummt, hält den Handler nicht ewig fest.
+    timeout = 300
     def _send(self, code, obj=None, body=None, ctype='application/json'):
         b = body if body is not None else json.dumps(obj, ensure_ascii=False).encode()
         self.send_response(code); self.send_header('Content-Type', ctype); self.send_header('Content-Length', str(len(b))); self.end_headers(); self.wfile.write(b)
@@ -67,12 +72,25 @@ class H(BaseHTTPRequestHandler):
         n = int(self.headers.get('Content-Length', '0'))
         if n <= 0 or n > MAX_UPLOAD: return self._send(413, {'error': f'Upload fehlt oder größer als {MAX_UPLOAD >> 20} MB'})
         with lock:
-            if any(j['status'] == 'läuft' for j in jobs.values()): return self._send(409, {'error': 'es läuft schon ein Training'})
+            if any(j['status'] in BUSY for j in jobs.values()): return self._send(409, {'error': 'es läuft schon ein Training'})
             job_id = time.strftime('%Y%m%d-%H%M%S'); d = os.path.join(WORK, job_id); os.makedirs(d)
-            jobs[job_id] = {'id': job_id, 'status': 'läuft', 'started': time.time()}
-        with open(os.path.join(d, 'data.tgz'), 'wb') as f:
-            left = n
-            while left: chunk = self.rfile.read(min(left, 2**20)); f.write(chunk); left -= len(chunk)
+            # „empfängt“ hält den Platz (ein zweiter POST bekommt weiter 409), „läuft“ erst nach vollständigem Empfang.
+            jobs[job_id] = {'id': job_id, 'status': 'empfängt', 'started': time.time()}
+        try:
+            with open(os.path.join(d, 'data.tgz'), 'wb') as f:
+                left = n
+                while left:
+                    chunk = self.rfile.read(min(left, 2**20))
+                    # Abgebrochener Upload: read() liefert b'' — vorher drehte die Schleife hier ewig und der Auftrag blieb
+                    # für immer „läuft“ (jeder weitere POST 409 bis zum Neustart).
+                    if not chunk: raise ConnectionError(f'Upload abgebrochen ({n - left} von {n} Bytes)')
+                    f.write(chunk); left -= len(chunk)
+        except (OSError, ConnectionError) as ex:   # auch socket.timeout (Handler-Zeitschranke) und Verbindungs-Reset
+            jobs[job_id].update(status='fehler', error=str(ex), ended=time.time())
+            shutil.rmtree(d, ignore_errors=True)
+            self.close_connection = True
+            return
+        jobs[job_id]['status'] = 'läuft'
         q = parse_qs(u.query); args = []
         for k in ('epochs', 'batch', 'lr', 'hold'):
             if k in q and q[k][0].replace('.', '', 1).isdigit(): args += [f'--{k}', q[k][0]]
