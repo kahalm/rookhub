@@ -205,23 +205,35 @@ describe('move-tactics.util', () => {
       expect(sacrificedPiece(before, after, 'c1b1')).toEqual({ square: 'd1', piece: 'r' });
     });
 
-    // Regelstand 2 (User-Entscheidung 2026-11-09, Vereinspartie 241 / Analyse 24754): eine Figur, die auf demselben Feld schon
-    // VOR dem Zug hing, opfert dieser Zug nicht. Spiegel: MoveTacticsTests (dieselben FENs).
+    // Regelstand 2 (User-Entscheidung 2026-11-09, Vereinspartie 241 / Analyse 24754): eine schon vorher hängende Figur bleibt
+    // Opfer (bewusst stehen gelassen), außer der Zug löst eine Gabel auf. Spiegel: MoveTacticsTests (dieselben FENs).
     it('Partie 241, 7…Sxe4: der Springer schlägt e4 und hängt dort — die gezogene Figur ist das Opfer', () => {
       expect(sacrificedPiece('rnbq1rk1/ppp1bppp/3p1n2/8/2BNP3/2N5/PPP2PPP/R1BQ1RK1 b - - 6 7',
         'rnbq1rk1/ppp1bppp/3p4/8/2BNn3/2N5/PPP2PPP/R1BQ1RK1 w - - 0 8', 'f6e4')).toEqual({ square: 'e4', piece: 'n' });
     });
 
-    it('Partie 241, 9.Ld3: der Se4 hing schon vor dem Zug (Bauer d5) — der Läuferzug gibt nur Material zurück, kein Opfer', () => {
+    it('Partie 241, 9.Ld3: d5 gabelt Lc4 und Se4, der Läuferzug löst die Gabel auf und gibt nur Material zurück → kein Opfer', () => {
       const before = 'rnbq1rk1/ppp1bppp/8/3p4/2BNN3/8/PPP2PPP/R1BQ1RK1 w - - 0 9';
       const after = 'rnbq1rk1/ppp1bppp/8/3p4/3NN3/3B4/PPP2PPP/R1BQ1RK1 b - - 1 9';
       expect(isPieceHanging(before, before, 'e4')).toBeTrue();
+      expect(isPieceHanging(before, before, 'c4')).toBeTrue();
       expect(sacrificedPiece(before, after, 'c4d3')).toBeNull();
     });
 
-    it('Partie 228, 25.Df3: der Se6 hing schon vor dem Zug — kein Opfer (bis Regelstand 1: Opfer e6)', () => {
+    it('Partie 228, 25.Df3: der Se6 hing schon vorher, aber allein (keine Gabel) → bleibt Opfer', () => {
       expect(sacrificedPiece('r1b4r/3k2pp/p3Nb2/3pq2B/8/2P3P1/P3Q2P/R4RK1 w - - 3 25',
-        'r1b4r/3k2pp/p3Nb2/3pq2B/8/2P2QP1/P6P/R4RK1 b - - 4 25', 'e2f3')).toBeNull();
+        'r1b4r/3k2pp/p3Nb2/3pq2B/8/2P2QP1/P6P/R4RK1 b - - 4 25', 'e2f3')).toEqual({ square: 'e6', piece: 'n' });
+    });
+
+    it('Partie 228, 24.O-O: der Se6 hängt vorher allein und danach weiter → Opfer („!!" wie chess.com)', () => {
+      expect(sacrificedPiece('r1b4r/3k2pp/p2qNb2/3p3B/8/2P3P1/P3Q2P/R3K2R w KQ - 1 24',
+        'r1b4r/3k2pp/p2qNb2/3p3B/8/2P3P1/P3Q2P/R4RK1 b - - 2 24', 'e1g1')).toEqual({ square: 'e6', piece: 'n' });
+    });
+
+    it('eine Figur hängt vorher allein, der Zug lässt sie bewusst stehen → Opfer (chess.com-Verhalten)', () => {
+      const before = '3r2k1/8/8/8/3N4/8/8/6K1 w - - 0 1';
+      expect(isPieceHanging(before, before, 'd4')).toBeTrue();
+      expect(sacrificedPiece(before, '3r2k1/8/8/8/3N4/8/8/7K b - - 1 1', 'g1h1')).toEqual({ square: 'd4', piece: 'n' });
     });
 
     it('Verteidiger weggezogen: der Sd4 (Td8 greift an, Le3 deckt) hängt erst nach Lc1 → bleibt ein Opfer', () => {

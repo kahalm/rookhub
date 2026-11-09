@@ -30,14 +30,32 @@ public class MoveTacticsTests
         Assert.Null(MoveTactics.SacrificedPiece(before, after, "d4f5"));
     }
 
-    /// <summary>Bis Regelstand 1 hieß das hier „Opfer Se6" (der Springer hängt weiter). Seit Regelstand 2 (User-Entscheidung
-    /// 2026-11-09, Partie 241): der Springer hing auf e6 schon VOR 25.Df3 — dieser Zug opfert ihn nicht.</summary>
+    /// <summary>Regelstand 2: der Se6 hing schon VOR 25.Df3, aber allein (keine Gabel) — bewusst stehen gelassen, bleibt Opfer.</summary>
     [Fact]
-    public void Game228_25Qf3_TheKnightE6HungBefore_NoSacrifice()
+    public void Game228_25Qf3_TheKnightE6StillHangs()
     {
-        Assert.Null(MoveTactics.SacrificedPiece(
+        Assert.Equal(new MoveTactics.Sacrifice("e6", 'n'), MoveTactics.SacrificedPiece(
             "r1b4r/3k2pp/p3Nb2/3pq2B/8/2P3P1/P3Q2P/R4RK1 w - - 3 25",
             "r1b4r/3k2pp/p3Nb2/3pq2B/8/2P2QP1/P6P/R4RK1 b - - 4 25", "e2f3"));
+    }
+
+    /// <summary>Partie 228, 24.O-O: vorher hängt nur der Se6 (seit 22.Sxe6), danach weiter → Opfer, „!!" wie chess.com.</summary>
+    [Fact]
+    public void Game228_24CastlesKeepsTheKnightE6_IsASacrifice()
+    {
+        Assert.Equal(new MoveTactics.Sacrifice("e6", 'n'), MoveTactics.SacrificedPiece(
+            "r1b4r/3k2pp/p2qNb2/3p3B/8/2P3P1/P3Q2P/R3K2R w KQ - 1 24",
+            "r1b4r/3k2pp/p2qNb2/3p3B/8/2P3P1/P3Q2P/R4RK1 b - - 2 24", "e1g1"));
+    }
+
+    /// <summary>Eine Figur hängt vorher allein, der Zug lässt sie bewusst stehen → Opfer (chess.com-Verhalten, Regelstand 2).</summary>
+    [Fact]
+    public void LonePieceHungBefore_LeftStanding_IsASacrifice()
+    {
+        const string before = "3r2k1/8/8/8/3N4/8/8/6K1 w - - 0 1";
+        Assert.True(MoveTactics.IsPieceHanging(before, before, "d4"));
+        Assert.Equal(new MoveTactics.Sacrifice("d4", 'n'),
+            MoveTactics.SacrificedPiece(before, "3r2k1/8/8/8/3N4/8/8/7K b - - 1 1", "g1h1"));
     }
 
     /// <summary>Vereinspartie 241 (Analyse 24754), 7…Sxe4: der Springer schlägt e4 und hängt dort — die gezogene Figur
@@ -50,14 +68,15 @@ public class MoveTacticsTests
             "rnbq1rk1/ppp1bppp/3p4/8/2BNn3/2N5/PPP2PPP/R1BQ1RK1 w - - 0 8", "f6e4"));
     }
 
-    /// <summary>Vereinspartie 241, 9.Ld3: der Springer e4 hing schon vor dem Zug (Bauer d5) — der Läuferzug gibt nur das
-    /// vorher geopferte Material zurück, kein Opfer (User-Entscheidung 2026-11-09, Regelstand 2).</summary>
+    /// <summary>Vereinspartie 241, 9.Ld3: der Bauer d5 gabelt Lc4 und Se4, der Läuferzug löst die Gabel auf und gibt nur das
+    /// vorher geopferte Material zurück — kein Opfer (User-Entscheidung 2026-11-09, Regelstand 2).</summary>
     [Fact]
     public void Game241_9Bd3_KnightE4HungBefore_NoSacrifice()
     {
         const string before = "rnbq1rk1/ppp1bppp/8/3p4/2BNN3/8/PPP2PPP/R1BQ1RK1 w - - 0 9";
         const string after = "rnbq1rk1/ppp1bppp/8/3p4/3NN3/3B4/PPP2PPP/R1BQ1RK1 b - - 1 9";
         Assert.True(MoveTactics.IsPieceHanging(before, before, "e4"));
+        Assert.True(MoveTactics.IsPieceHanging(before, before, "c4"));
         Assert.Null(MoveTactics.SacrificedPiece(before, after, "c4d3"));
     }
 

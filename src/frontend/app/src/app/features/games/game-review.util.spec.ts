@@ -395,9 +395,7 @@ describe('game-review.util', () => {
       it('good: hängt eine andere als die gezogene Figur, ist der Zug nicht brillant (25.Df3)', () => {
         const fens = ['r1b4r/3k2pp/p3Nb2/3pq2B/8/2P3P1/P3Q2P/R4RK1 w - - 3 25',
                       'r1b4r/3k2pp/p3Nb2/3pq2B/8/2P2QP1/P6P/R4RK1 b - - 4 25'];
-        // Hängen tut er weiter — aber schon VOR dem Zug: seit Regelstand 2 (User-Entscheidung 2026-11-09, Partie 241) ist das
-        // kein Opfer dieses Zuges mehr (bis dahin hier { square: 'e6', piece: 'n' }).
-        expect(sacrificedPiece(fens[0], fens[1], 'e2f3')).toBeNull();
+        expect(sacrificedPiece(fens[0], fens[1], 'e2f3')).toEqual({ square: 'e6', piece: 'n' });   // hängen tut er
         const r = reviewGame(game([ply(0, { cp: 416 }, 'e2d1', 'e2f3', { secondCp: 283 })], { cp: 358 }), fens, ['e2f3']);
         expect(r.moves[0]!.base).toBe('good');
         expect(r.moves[0]!.cls).toBe('good');

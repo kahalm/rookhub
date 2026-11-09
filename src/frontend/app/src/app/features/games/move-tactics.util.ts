@@ -138,10 +138,12 @@ export function isPieceHanging(fenBefore: string, fenAfter: string, square: stri
  * Bewusst über ALLE eigenen Figuren, nicht nur die gezogene: beim Legall-Matt zieht der Springer, geopfert
  * wird die Dame, die stehen bleibt. `null`, wenn nichts hängt oder eine Stellung unlesbar ist.
  *
- * Seit Regelstand 2 (User 2026-11-09, Vereinspartie 241): eine Figur, die auf demselben Feld schon VOR dem Zug
- * hing (`hungBefore`), opfert DIESER Zug nicht — 9.Ld3 gab nur das vorher geopferte Material zurück (der Se4 hing
- * gegen d5), 7…Sxe4 dagegen ist das Opfer. Die gezogene Figur (Zielfeld) ist ausgenommen, sie stand vorher
- * woanders; eine Figur, der der Zug den Verteidiger wegzieht, hing vorher nicht und bleibt ein Opfer.
+ * Seit Regelstand 2 (User 2026-11-09, Vereinspartie 241): eine Figur, die schon VOR dem Zug auf ihrem Feld hing,
+ * bleibt ein Opfer (bewusst stehen gelassen, wie chess.com — 228: 24.O-O „!!") — AUSSER der Zug löst eine Gabel auf
+ * (`forkResolved`): hingen vorher mindestens zwei eigene Figuren (Springer bis Dame) und hängen danach weniger, gibt
+ * der Zug nur zurück, was ohnehin fällt (241: 9.Ld3 rettet den Lc4, der Se4 fällt gegen d5; 7…Sxe4 ist das Opfer).
+ * Die gezogene Figur (Zielfeld) ist immer Opfer-fähig; eine Figur, der der Zug den Verteidiger wegzieht, hing vorher
+ * nicht und bleibt ein Opfer.
  */
 export function sacrificedPiece(fenBefore: string, fenAfter: string, moveUci: string): Sacrifice | null {
   const before = tryLoadFen(fenBefore);
@@ -152,13 +154,16 @@ export function sacrificedPiece(fenBefore: string, fenAfter: string, moveUci: st
   const mover = before.turn();
   // capturedOn hat den Zug schon gelesen: die Zeichen 3–4 sind ein Feld.
   const to = moveUci.slice(2, 4) as Square;
+  const hungBefore = hangingPieces(before, before, mover);
+  const forkResolved = hungBefore.size >= 2 && hangingPieces(before, after, mover).size < hungBefore.size;
 
   const hanging: Sacrifice[] = [];
   for (const row of after.board()) {
     for (const cell of row) {
       if (!cell || cell.color !== mover || cell.type === 'p' || cell.type === 'k') continue;
       if (pieceValue(cell.type) <= captured) continue;
-      if (cell.square !== to && hungBefore(before, cell.square, cell.color, cell.type)) continue;
+      if (forkResolved && cell.square !== to && hungBefore.has(cell.square)
+          && before.get(cell.square)?.color === cell.color && before.get(cell.square)?.type === cell.type) continue;
       if (hangingOn(before, after, cell.square) && exchangeLossOn(after, cell.square) > captured) {
         hanging.push({ square: cell.square, piece: cell.type });
       }
@@ -169,13 +174,19 @@ export function sacrificedPiece(fenBefore: string, fenAfter: string, moveUci: st
 }
 
 /**
- * Stand dieselbe Figur schon VOR dem Zug auf `square` und hing sie dort (Regelstand 2, Spiegel `MoveTactics.HungBefore`)?
- * `hangingOn` über die Vorher-Stellung allein — die Abtausch-Regel a) greift nicht, geschlagen wurde dort nichts. Der
- * Ziehende ist vorher am Zug, Angreifer und Verteidiger sind also Pseudo (`influenceOn`).
+ * Die Felder der eigenen Figuren (Springer bis Dame) der Farbe `color`, die in `board` hängen (Regelstand 2, Spiegel
+ * `MoveTactics.HangingPieces`). Mit `board = before` heißt das „hing schon vor dem Zug": die Abtausch-Regel a) greift
+ * nicht, geschlagen wurde dort nichts; der Ziehende ist am Zug, Angreifer und Verteidiger sind also Pseudo (`influenceOn`).
  */
-function hungBefore(before: Chess, square: Square, color: Color, type: PieceSymbol): boolean {
-  const piece = before.get(square);
-  return !!piece && piece.color === color && piece.type === type && hangingOn(before, before, square);
+function hangingPieces(before: Chess, board: Chess, color: Color): Set<Square> {
+  const result = new Set<Square>();
+  for (const row of board.board()) {
+    for (const cell of row) {
+      if (!cell || cell.color !== color || cell.type === 'p' || cell.type === 'k') continue;
+      if (hangingOn(before, board, cell.square)) result.add(cell.square);
+    }
+  }
+  return result;
 }
 
 /**

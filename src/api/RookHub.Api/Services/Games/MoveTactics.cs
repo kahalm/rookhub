@@ -56,16 +56,18 @@ public static class MoveTactics
 
     /// <summary>Das Opfer eines Zuges: die teuerste eigene Figur (Springer bis Dame), die danach hängt, bei der der Gegner
     /// MEHR gewinnt als geschlagen wurde, und die sich wirklich nehmen lässt. <c>null</c> sonst.
-    /// <para>Seit Regelstand 2 (User 2026-11-09, Vereinspartie 241): eine Figur, die auf demselben Feld schon VOR dem Zug hing
-    /// (<see cref="HungBefore"/>), opfert dieser Zug nicht — 9.Ld3 gab nur das vorher geopferte Material zurück. Die gezogene
-    /// Figur (Zielfeld) ist ausgenommen, sie stand vorher woanders; eine Figur, der der Zug den Verteidiger nimmt, hing vorher
-    /// nicht und bleibt ein Opfer.</para></summary>
+    /// <para>Seit Regelstand 2 (User 2026-11-09, Vereinspartie 241): eine Figur, die schon VOR dem Zug auf ihrem Feld hing,
+    /// bleibt ein Opfer (bewusst stehen gelassen, wie chess.com — 228: 24.O-O „!!") — AUSSER der Zug löst eine Gabel auf:
+    /// hingen vorher mindestens zwei eigene Figuren (Springer bis Dame) und hängen danach weniger, gibt der Zug nur zurück,
+    /// was ohnehin fällt (241: 9.Ld3 rettet den Lc4, der Se4 fällt gegen d5). Die gezogene Figur (Zielfeld) ist immer
+    /// Opfer-fähig; eine Figur, der der Zug den Verteidiger nimmt, hing vorher nicht und bleibt ein Opfer.</para></summary>
     public static Sacrifice? SacrificedPiece(string? fenBefore, string? fenAfter, string? uci)
     {
         if (TacticsBoard.TryParse(fenBefore) is not { } before || TacticsBoard.TryParse(fenAfter) is not { } after) return null;
         if (CapturedOn(before, uci) is not double captured) return null;
         var mover = before.WhiteToMove;
         var to = TacticsBoard.SquareIndex(uci![2..4])!.Value;
+        var forkResolved = ForkResolved(before, after, mover, out var hungBefore);
 
         var hanging = new List<(int Square, char Piece)>();
         foreach (var (sq, p) in after.Pieces())
@@ -74,7 +76,7 @@ public static class MoveTactics
             var type = char.ToLowerInvariant(p);
             if (type is 'p' or 'k') continue;
             if (PieceValue(p) <= captured) continue;
-            if (sq != to && HungBefore(before, sq, p)) continue;
+            if (forkResolved && sq != to && hungBefore.Contains(sq) && before.At(sq) == p) continue;
             if (HangingOn(before, after, sq) && ExchangeLossOn(after, sq) > captured) hanging.Add((sq, type));
         }
         if (hanging.Count == 0 || !Capturable(after, hanging)) return null;
@@ -83,11 +85,26 @@ public static class MoveTactics
         return new Sacrifice(TacticsBoard.SquareName(top.Square), top.Piece);
     }
 
-    /// <summary>Stand <paramref name="piece"/> schon VOR dem Zug auf <paramref name="sq"/> und hing dort (Regelstand 2)? Gefragt
-    /// wird <see cref="HangingOn"/> über die Vorher-Stellung allein — die Abtausch-Regel a) greift nicht, geschlagen wurde
-    /// dort nichts. Der Ziehende ist vorher am Zug, Angreifer und Verteidiger sind also Pseudo (wie im Client).</summary>
-    private static bool HungBefore(TacticsBoard before, int sq, char piece) =>
-        before.At(sq) == piece && HangingOn(before, before, sq);
+    /// <summary>Löst der Zug eine Gabel auf (Regelstand 2)? Hingen VOR dem Zug mindestens zwei eigene Figuren (Springer bis
+    /// Dame) und hängen danach weniger → <c>true</c>; <paramref name="hungBefore"/> = die Felder, auf denen vorher eine hing.
+    /// Vorher gefragt über <see cref="HangingOn"/> mit der Vorher-Stellung allein — die Abtausch-Regel a) greift nicht,
+    /// geschlagen wurde dort nichts; der Ziehende ist am Zug, Angreifer und Verteidiger sind also Pseudo (wie im Client).</summary>
+    private static bool ForkResolved(TacticsBoard before, TacticsBoard after, bool mover, out HashSet<int> hungBefore)
+    {
+        hungBefore = HangingPieces(before, before, mover);
+        return hungBefore.Count >= 2 && HangingPieces(before, after, mover).Count < hungBefore.Count;
+    }
+
+    private static HashSet<int> HangingPieces(TacticsBoard before, TacticsBoard board, bool white)
+    {
+        var result = new HashSet<int>();
+        foreach (var (sq, p) in board.Pieces())
+        {
+            if (TacticsBoard.IsWhite(p) != white || char.ToLowerInvariant(p) is 'p' or 'k') continue;
+            if (HangingOn(before, board, sq)) result.Add(sq);
+        }
+        return result;
+    }
 
     /// <summary>Lässt sich wenigstens eines der hängenden Stücke nehmen, ohne dass das Schlagen anderswo mindestens so viel
     /// kostet (Köder) — und ein Opfer unter Turmwert erlaubt danach kein Matt in einem Zug?</summary>

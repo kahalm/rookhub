@@ -253,7 +253,8 @@ flachere), aber mit eigenem Ursprung
   jüngste zuerst, pausierbar; eine werfende Analyse wird mit Warnung übersprungen und ohne Klassen auf dem aktuellen
   Regelstand vermerkt, R4-007). **Regeln ändern = `GameMoveClasses.Version` hochzählen und den Client im selben Commit
   mitziehen** — der Erntelauf rechnet dann den Bestand neu. Regelstände: 1 = 0.853.0; 2 = 2026-11-09 (User-Entscheidung,
-  Vereinspartie 241: eine Figur, die schon VOR dem Zug auf ihrem Feld hing, ist kein Opfer — 7…Sxe4 „!!“ ja, 9.Ld3 nein). Parität beim Port an 300 Prod-Analysen Zeichen für Zeichen geprüft
+  Vereinspartie 241: löst der Zug eine Gabel auf — vorher hingen ≥ 2 eigene Figuren, danach weniger —, ist die schon vorher
+  hängende Figur kein Opfer: 9.Ld3 nein, 7…Sxe4 ja; eine allein hängende, bewusst stehen gelassene bleibt Opfer, 228: 24.O-O „!!“). Parität beim Port an 300 Prod-Analysen Zeichen für Zeichen geprüft
   (111 „!!“, 917 „!“, 76 Miss; C# ~12 ms je Partie, der Client ~90 ms); fest abgesichert durch `GameMoveClassesTests`
   (Vereinspartie 228 als Fixture, chess.com-Markierungen literal), `MoveTacticsTests` ↔ `move-tactics.util.spec.ts`,
   `TacticsBoardTests`. Erster Abnehmer: LeagueHubs „!!“-Marker (`club/games/reviews`).
