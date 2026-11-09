@@ -46,6 +46,11 @@
   Release an, Text = Changelog-Einträge seit dem vorigen Versions-Tag (`scripts/release-notes.mjs`, Test in
   `scripts/tests/test_release_notes.sh`). APK + AAB wandern vom bisherigen Latest-Release mit — `/install` lädt
   `releases/latest/download/app-release-signed.apk`, ein Latest ohne die Datei wäre ein toter Link.
+  **Tag-Lauf spart schon gruene Tests** (seit 0.932.2): Der `changes`-Job (Schritt `green`) sucht den letzten
+  erfolgreichen master-push-Lauf desselben Commits und gibt die Test-Jobs weiter, die dort wirklich grün waren;
+  `test.yml` lässt genau die aus (`already-green`). Vom Pfadfilter ausgelassene Jobs zählen nicht und laufen im
+  Tag — ein früherer roter oder ersetzter Push kann deren Bereich ungetestet geändert haben. Kein fertiger grüner
+  Lauf, API-Fehler oder Handstart: alle Tests laufen. Die sechs `build-*`-Jobs haben `timeout-minutes: 10`.
   **Ein Lauf je bewegliches Tag** (Codereview I1-012): `docker.yml` hat `concurrency: { group: docker-${{ github.ref_type }},
   cancel-in-progress: false }`. `:dev` hängt nur ein master-Lauf um, `:latest` nur ein Tag-Lauf; ohne Gruppe gewann der
   zuletzt fertige Lauf, ein älterer Stand konnte einen neueren überschreiben (Watchtower rollt um 02:00 aus). Gruppe am

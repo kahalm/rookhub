@@ -55,8 +55,12 @@ jobs:
       clubhub: ${{ steps.filter.outputs.clubhub }}
       # 'true' nur bei einem Tag vX.Y.Z, dessen Commit auf master liegt — einzige Freigabe fuer `:latest`.
       release: ${{ steps.release.outputs.release }}
+      # Test-Jobs, die auf GENAU diesem Commit im master-Lauf schon gruen waren (`,job,job,`); nur beim Tag gefuellt.
+      tests-green: ${{ steps.green.outputs.jobs }}
     permissions:
       contents: read
+      # Nur fuer die Abfrage „war dieser Commit auf master schon gruen?“ (Schritt `green`).
+      actions: read
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       # Jeder Tag-Lauf (auch ein Handstart auf einem Tag) muss hier durch: keine Release-Form oder
@@ -79,6 +83,37 @@ jobs:
             exit 1
           fi
           echo "release=true" >> "$GITHUB_OUTPUT"
+      # Tag kurz nach dem master-Push: dieselben Tests auf demselben Commit noch einmal laufen zu lassen
+      # kostet ~6 min und nimmt dem master-Lauf die Runner weg. Uebersprungen wird JE JOB und nur, was im
+      # letzten erfolgreichen master-Lauf dieses Commits wirklich gruen war. „Lauf gruen“ allein reicht
+      # NICHT: der Pfadfilter laesst dort Jobs aus, und ein frueherer Push (rot oder als wartender Lauf
+      # ersetzt) kann deren Bereich ungetestet geaendert haben — ein ausgelassener Job laeuft also hier.
+      # Alles Unklare (Lauf fehlt oder laeuft noch, API-Fehler) laesst den Output leer: dann laufen alle
+      # Tests wie bisher. Darum `continue-on-error`, und der Output wird als Letztes in einem Stueck
+      # geschrieben. Ein Handstart auf einem Tag soll ausdruecklich ALLES pruefen, daher nur `push`.
+      - name: Schon gruene Test-Jobs dieses Commits ermitteln
+        id: green
+        if: github.event_name == 'push' && steps.release.outputs.release == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/docker.yml/runs?head_sha=$GITHUB_SHA&event=push&branch=master&status=success&per_page=10" \
+            --jq '[.workflow_runs[] | select(.head_branch == "master" and .conclusion == "success")] | sort_by(.created_at) | last | .id // empty')
+          if [ -z "$run_id" ]; then
+            echo "::notice::Kein abgeschlossener gruener master-Lauf fuer $GITHUB_SHA — alle Tests laufen."
+            exit 0
+          fi
+          jobs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?filter=latest&per_page=100")
+          green=","
+          for job in test-rookhub test-rookhub-integration test-crawler-contract test-engine-provider test-scripts build-frontend build-frontend-hubs; do
+            # Matrix-Jobs heissen „tests / name (…)“: gruen nur, wenn ALLE Teile gruen sind.
+            if jq -e --arg job "tests / $job" '[.jobs[] | select(.name == $job or (.name | startswith($job + " (")))] | length > 0 and all(.conclusion == "success")' <<< "$jobs" > /dev/null; then
+              green+="$job,"
+            fi
+          done
+          echo "::notice::Master-Lauf $run_id: im Tag-Lauf entfallen $green"
+          echo "jobs=$green" >> "$GITHUB_OUTPUT"
       # Beim Handstart gibt es keinen Vorgaenger-Stand zum Vergleichen (dorny hielte master gegen
       # master und setzte alles auf `false`). Der Schritt bleibt deshalb aus, die Outputs sind
       # leer — und die Job-Bedingungen unten fangen den Fall ueber `github.event_name` ab.
@@ -97,7 +132,10 @@ jobs:
   # Schritt laeuft: `startup_failure`, keine Jobs, kein Image, und in der API keine Annotation,
   # die es erklaert. Genau so gesehen bei v0.434.2 und v0.434.3.
   tests:
+    needs: changes
     uses: ./.github/workflows/test.yml
+    with:
+      already-green: ${{ needs.changes.outputs.tests-green }}
     permissions:
       contents: read
       pull-requests: read
@@ -310,6 +348,8 @@ jobs:
               || startsWith(github.ref, 'refs/tags/v')
               || needs.changes.outputs.api == 'true') }}
     runs-on: ubuntu-latest
+    # Normal 10–25 s (reines Umhaengen); ein Haenger blockierte bei v0.924.1 die Tag-Schlange 45 min.
+    timeout-minutes: 10
     permissions:
       contents: read
       packages: write
@@ -348,6 +388,8 @@ jobs:
               || startsWith(github.ref, 'refs/tags/v')
               || needs.changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-latest
+    # Normal 10–25 s (reines Umhaengen); ein Haenger blockierte bei v0.924.1 die Tag-Schlange 45 min.
+    timeout-minutes: 10
     permissions:
       contents: read
       packages: write
@@ -389,6 +431,8 @@ jobs:
               || startsWith(github.ref, 'refs/tags/v')
               || needs.changes.outputs.turnier == 'true') }}
     runs-on: ubuntu-latest
+    # Normal 10–25 s (reines Umhaengen); ein Haenger blockierte bei v0.924.1 die Tag-Schlange 45 min.
+    timeout-minutes: 10
     permissions:
       contents: read
       packages: write
@@ -430,6 +474,8 @@ jobs:
               || startsWith(github.ref, 'refs/tags/v')
               || needs.changes.outputs.kidhub == 'true') }}
     runs-on: ubuntu-latest
+    # Normal 10–25 s (reines Umhaengen); ein Haenger blockierte bei v0.924.1 die Tag-Schlange 45 min.
+    timeout-minutes: 10
     permissions:
       contents: read
       packages: write
@@ -470,6 +516,8 @@ jobs:
               || startsWith(github.ref, 'refs/tags/v')
               || needs.changes.outputs.leaguehub == 'true') }}
     runs-on: ubuntu-latest
+    # Normal 10–25 s (reines Umhaengen); ein Haenger blockierte bei v0.924.1 die Tag-Schlange 45 min.
+    timeout-minutes: 10
     permissions:
       contents: read
       packages: write
@@ -510,6 +558,8 @@ jobs:
               || startsWith(github.ref, 'refs/tags/v')
               || needs.changes.outputs.clubhub == 'true') }}
     runs-on: ubuntu-latest
+    # Normal 10–25 s (reines Umhaengen); ein Haenger blockierte bei v0.924.1 die Tag-Schlange 45 min.
+    timeout-minutes: 10
     permissions:
       contents: read
       packages: write

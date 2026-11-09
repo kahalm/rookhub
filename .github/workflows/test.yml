@@ -2,6 +2,12 @@ name: Tests
 
 on:
   workflow_call:
+    inputs:
+      # Nur vom Tag-Lauf gesetzt (docker.yml, Schritt `green`): `,job,job,` = auf diesem Commit schon gruen.
+      already-green:
+        type: string
+        required: false
+        default: ''
   pull_request:
     branches: [master]
 
@@ -47,9 +53,10 @@ jobs:
   test-rookhub:
     needs: changes
     if: >-
-      ${{ github.event_name == 'workflow_dispatch'
+      ${{ !contains(inputs.already-green, ',test-rookhub,')
+          && (github.event_name == 'workflow_dispatch'
           || startsWith(github.ref, 'refs/tags/v')
-          || needs.changes.outputs.api == 'true' }}
+          || needs.changes.outputs.api == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -96,9 +103,10 @@ jobs:
   test-rookhub-integration:
     needs: changes
     if: >-
-      ${{ github.event_name == 'workflow_dispatch'
+      ${{ !contains(inputs.already-green, ',test-rookhub-integration,')
+          && (github.event_name == 'workflow_dispatch'
           || startsWith(github.ref, 'refs/tags/v')
-          || needs.changes.outputs.api == 'true' }}
+          || needs.changes.outputs.api == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -148,9 +156,10 @@ jobs:
   test-crawler-contract:
     needs: changes
     if: >-
-      ${{ github.event_name == 'workflow_dispatch'
+      ${{ !contains(inputs.already-green, ',test-crawler-contract,')
+          && (github.event_name == 'workflow_dispatch'
           || startsWith(github.ref, 'refs/tags/v')
-          || needs.changes.outputs.crawler == 'true' }}
+          || needs.changes.outputs.crawler == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -189,9 +198,10 @@ jobs:
   test-engine-provider:
     needs: changes
     if: >-
-      ${{ github.event_name == 'workflow_dispatch'
+      ${{ !contains(inputs.already-green, ',test-engine-provider,')
+          && (github.event_name == 'workflow_dispatch'
           || startsWith(github.ref, 'refs/tags/v')
-          || needs.changes.outputs.engine-provider == 'true' }}
+          || needs.changes.outputs.engine-provider == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -240,9 +250,10 @@ jobs:
   test-scripts:
     needs: changes
     if: >-
-      ${{ github.event_name == 'workflow_dispatch'
+      ${{ !contains(inputs.already-green, ',test-scripts,')
+          && (github.event_name == 'workflow_dispatch'
           || startsWith(github.ref, 'refs/tags/v')
-          || needs.changes.outputs.api == 'true' }}
+          || needs.changes.outputs.api == 'true') }}
     runs-on: ubuntu-latest
     # Die fuenf Tests brauchen zusammen Sekunden. Ohne Deckel liefe ein kuenftig kaputter
     # MAX_ROUNDS-Deckel in directory-runs.sh bis zum 6-h-Standard und hielte so lange das
@@ -263,13 +274,14 @@ jobs:
   build-frontend:
     needs: changes
     if: >-
-      ${{ github.event_name == 'workflow_dispatch'
+      ${{ !contains(inputs.already-green, ',build-frontend,')
+          && (github.event_name == 'workflow_dispatch'
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.frontend == 'true'
           || needs.changes.outputs.turnier == 'true'
           || needs.changes.outputs.kidhub == 'true'
           || needs.changes.outputs.leaguehub == 'true'
-          || needs.changes.outputs.clubhub == 'true' }}
+          || needs.changes.outputs.clubhub == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -347,13 +359,14 @@ jobs:
   build-frontend-hubs:
     needs: changes
     if: >-
-      ${{ github.event_name == 'workflow_dispatch'
+      ${{ !contains(inputs.already-green, ',build-frontend-hubs,')
+          && (github.event_name == 'workflow_dispatch'
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.frontend == 'true'
           || needs.changes.outputs.turnier == 'true'
           || needs.changes.outputs.kidhub == 'true'
           || needs.changes.outputs.leaguehub == 'true'
-          || needs.changes.outputs.clubhub == 'true' }}
+          || needs.changes.outputs.clubhub == 'true') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

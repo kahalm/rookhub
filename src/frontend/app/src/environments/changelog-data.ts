@@ -10,6 +10,13 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.932.2',
+    date: '2026-11-09',
+    changes: [
+      { en: 'CI: tag runs skip test jobs that already passed on the same commit on master; image tag jobs now time out after 10 minutes.', de: 'CI: Tag-Läufe überspringen Test-Jobs, die auf demselben Commit auf master schon grün waren; die Jobs für die Image-Tags brechen nach 10 Minuten ab.' },
+    ],
+  },
   { version: "0.932.1", date: "2026-11-09", changes: [
     { en: "Game analysis: a club game someone is waiting for now gets its depth-30 pass right away instead of queuing behind all younger batch games.",
       de: "Partie-Analyse: Eine Vereinspartie, auf die jemand wartet, wird jetzt sofort auf Tiefe 30 vertieft und steht nicht mehr hinter allen jüngeren Partien des Stapels." },

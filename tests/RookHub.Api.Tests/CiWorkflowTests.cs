@@ -1221,4 +1221,54 @@ public class CiWorkflowTests
             Assert.True(entry.EndsWith($": {image.Groups["major"].Value}", StringComparison.Ordinal),
                 $"node-version weicht vom Frontend-Image (node:{image.Groups["major"].Value}) ab — {entry}");
     }
+
+    private static readonly Regex TestGateJobs = new(@"(?m)^  (?<job>[a-z0-9-]+):\n    needs: changes\n", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Der Tag-Lauf spart nur Test-Jobs, die auf demselben Commit schon gruen waren. Fehlt ein Job in der
+    /// Liste, laeuft er bloss unnoetig; fehlt der Schutz, liefe er auch dann, wenn er in der Liste steht —
+    /// Liste und Bedingungen muessen also genau zusammenpassen.
+    /// </summary>
+    [Fact]
+    public void TagRun_SkipsExactlyTheTestJobsAlreadyGreenOnTheSameCommit()
+    {
+        var jobs = TestGateJobs.Matches(ReadRepoFile(Tests)).Select(m => m.Groups["job"].Value).ToList();
+        Assert.NotEmpty(jobs);
+        var step = Step(WorkflowJob(Docker, "changes"), "name: Schon gruene Test-Jobs dieses Commits ermitteln");
+        var listed = Regex.Match(step, @"for job in (?<jobs>[^;]+);").Groups["jobs"].Value.Split(' ');
+
+        Assert.Equal(jobs.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
+        foreach (var job in jobs)
+            Assert.Contains($"!contains(inputs.already-green, ',{job},')", WorkflowJob(Tests, job));
+
+        Assert.Contains("needs.changes.outputs.tests-green", WorkflowJob(Docker, "tests"));
+    }
+
+    /// <summary>
+    /// Sicherheitsrichtung: nur ein gruener push-Lauf auf master zaehlt, Unklares darf den Tag nicht roten und
+    /// keine Tests kosten, und ein Handstart prueft immer alles.
+    /// </summary>
+    [Fact]
+    public void TagRun_GreenCheck_FailsTowardsRunningTheTests()
+    {
+        var job = WorkflowJob(Docker, "changes");
+        var step = Step(job, "name: Schon gruene Test-Jobs dieses Commits ermitteln");
+
+        Assert.Contains("github.event_name == 'push' && steps.release.outputs.release == 'true'", step);
+        Assert.Contains("continue-on-error: true", step);
+        Assert.Contains("event=push&branch=master&status=success", step);
+        Assert.Contains("all(.conclusion == \"success\")", step);
+        Assert.Contains("actions: read", job);
+    }
+
+    /// <summary>Hinter dem Gate wird nur umgehaengt (Sekunden) — ein Haenger darf die Schlange nicht aufhalten.</summary>
+    [Theory]
+    [InlineData("build-api")]
+    [InlineData("build-frontend")]
+    [InlineData("build-turnier")]
+    [InlineData("build-kidhub")]
+    [InlineData("build-leaguehub")]
+    [InlineData("build-clubhub")]
+    public void EveryImageTagJob_HasAShortTimeout(string job) =>
+        Assert.Contains("timeout-minutes: 10", WorkflowJob(Docker, job));
 }
