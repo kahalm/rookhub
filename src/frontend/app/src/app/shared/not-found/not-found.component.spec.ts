@@ -4,7 +4,10 @@ import { Component } from '@angular/core';
 import { RouterLink, Routes, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { StaleRouteReloadService } from '../../core/stale-route-reload.service';
+import { SwUpdate } from '@angular/service-worker';
+import { STALE_ROUTE_RELOAD_KEY, StaleRouteReloadService } from '../../core/stale-route-reload.service';
+import { ClientLogService } from '../../core/client-log.service';
+import { SnackbarService } from '../../core/snackbar.service';
 import { NotFoundComponent } from './not-found.component';
 import { AppUpdateCheck, AppUpdateService } from '../../core/app-update.service';
 
@@ -169,4 +172,105 @@ describe('NotFoundComponent einmaliges Neuladen (Stufe 1)', () => {
     flushMicrotasks();
     expect(update.checkNow).not.toHaveBeenCalled();
   }));
+});
+
+/**
+ * Beide Stufen mit den ECHTEN Diensten: nur Netz (`fetch` auf version.json), Service Worker und harter Reload sind
+ * ersetzt. Deckt LeagueHub ab (kein `SwUpdate`-Anbieter) und die schon einmal neu geladene Adresse.
+ */
+describe('NotFoundComponent mit echten Diensten (Stufe 1 + Fallback)', () => {
+  const routes: Routes = [{ path: '', component: StubComponent }];
+  const address = () => document.location.pathname + document.location.search;
+  let appReload: jasmine.Spy;
+  let staleReload: jasmine.Spy;
+
+  beforeEach(() => {
+    sessionStorage.removeItem(STALE_ROUTE_RELOAD_KEY);
+    type Reloads = { reloadApp: () => void };
+    appReload = spyOn(AppUpdateService.prototype as unknown as Reloads, 'reloadApp');
+    staleReload = spyOn(StaleRouteReloadService.prototype as unknown as Reloads, 'reloadApp');
+  });
+  afterEach(() => sessionStorage.removeItem(STALE_ROUTE_RELOAD_KEY));
+
+  function serverAnswers(body: unknown, status = 200) {
+    return spyOn(window, 'fetch').and.callFake(() => Promise.resolve(new Response(JSON.stringify(body), { status })));
+  }
+
+  function swStub() {
+    return {
+      isEnabled: true,
+      checkForUpdate: jasmine.createSpy('checkForUpdate').and.resolveTo(false),
+      activateUpdate: jasmine.createSpy('activateUpdate').and.resolveTo(false),
+    };
+  }
+
+  async function renderReal(sw: ReturnType<typeof swStub> | null) {
+    TestBed.configureTestingModule({
+      imports: [NotFoundComponent],
+      providers: [provideRouter(routes), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: SnackbarService, useValue: { show: () => undefined } },
+        { provide: ClientLogService, useValue: { report: () => undefined } },
+        ...(sw ? [{ provide: SwUpdate, useValue: sw }] : [])],
+    });
+    const fixture = TestBed.createComponent(NotFoundComponent);
+    const el = fixture.nativeElement as HTMLElement;
+    // Bis der Ladekreis weg ist (echte Promises, kein fakeAsync wegen fetch/Response).
+    for (let i = 0; i < 50; i++) {
+      fixture.detectChanges();
+      if (!el.querySelector('mat-spinner')) break;
+      await new Promise(r => setTimeout(r, 0));
+    }
+    fixture.detectChanges();
+    return { fixture, el };
+  }
+
+  it('kein Service Worker (LeagueHub), version.json neuer → Hinweis; der Knopf lädt einfach neu', async () => {
+    const fetchSpy = serverAnswers({ version: '99999.0.0' });
+    const { el, fixture } = await renderReal(null);
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(el.querySelector('.nf-update')?.textContent).toContain('app.notFound.updateText');
+    el.querySelector<HTMLButtonElement>('button.nf-reload')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(appReload).toHaveBeenCalledTimes(1);
+    expect(staleReload).not.toHaveBeenCalled();
+  });
+
+  it('kein Service Worker, version.json fehlt → normale Seite, kein Absturz', async () => {
+    serverAnswers({}, 404);
+    const { el } = await renderReal(null);
+    expect(el.textContent).toContain('app.notFound.text');
+    expect(el.querySelector('button.nf-reload')).toBeNull();
+  });
+
+  it('Adresse schon einmal neu geladen, Server neuer → kein zweites Neuladen, sondern der Hinweis', async () => {
+    sessionStorage.setItem(STALE_ROUTE_RELOAD_KEY, JSON.stringify([address()]));
+    serverAnswers({ version: '99999.0.0' });
+    const sw = swStub();
+    const { el } = await renderReal(sw);
+    expect(sw.activateUpdate).not.toHaveBeenCalled();
+    expect(staleReload).not.toHaveBeenCalled();
+    expect(el.querySelector('.nf-update')?.textContent).toContain('app.notFound.updateText');
+  });
+
+  it('Stufe 1 aktiviert nichts, Server neuer → Hinweis (die Sperre ist wieder frei)', async () => {
+    serverAnswers({ version: '99999.0.0' });
+    const sw = swStub();
+    const { el } = await renderReal(sw);
+    expect(sw.activateUpdate).toHaveBeenCalledTimes(1);
+    expect(staleReload).not.toHaveBeenCalled();
+    expect(el.querySelector('.nf-update')?.textContent).toContain('app.notFound.updateText');
+    expect(JSON.parse(sessionStorage.getItem(STALE_ROUTE_RELOAD_KEY) ?? '[]')).not.toContain(address());
+  });
+
+  it('Stufe 1 lädt neu → Ladekreis bleibt, keine Versionsprüfung', async () => {
+    const fetchSpy = serverAnswers({ version: '99999.0.0' });
+    const sw = swStub();
+    sw.activateUpdate.and.resolveTo(true);
+    const { el } = await renderReal(sw);
+    expect(staleReload).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(el.querySelector('mat-spinner')).not.toBeNull();
+    expect(el.querySelector('h1')).toBeNull();
+  });
 });

@@ -6,23 +6,37 @@ Hinweis „Neue Version verfügbar“ mit „Neu laden“, Telemetrie bei gesche
 `SwUpdate` wird OPTIONAL injiziert — LeagueHub und ClubHub registrieren keinen Service Worker, nutzen aber die geteilte
 Nicht-gefunden-Seite.
 
-## Nicht-gefunden-Seite prüft sofort (U1, Wunsch 2026-11-09)
+## Nicht-gefunden-Seite: erst einmal neu laden, dann Hinweis (0.940.0 + U1)
 
-Eine alte, im Service Worker gehaltene Fassung kennt neue Routen nicht (Beispiel `/games/:id/summary` aus 0.913.0) und
-landet auf „Seite nicht gefunden“, obwohl es die Seite am Server gibt. `shared/not-found/not-found.component.ts`
-(RookHub `'**'`, Kurz-URL-Auflöser, LeagueHub `'**'`) ruft deshalb beim Anzeigen `AppUpdateService.checkNow()`:
+Eine alte, im Service Worker gehaltene Fassung kennt neue Routen nicht (Beispiele `/games/:id/summary` aus 0.913.0,
+`/g/:token/summary` auf 0.932.1) und landet auf „Seite nicht gefunden“, obwohl es die Seite am Server gibt.
+`shared/not-found/not-found.component.ts` (RookHub `'**'`, Kurz-URL-Auflöser, LeagueHub `'**'`) zeigt deshalb zuerst
+den Ladekreis (`mat-spinner`, `aria-label` = `common.loading`) und geht zwei Stufen durch:
 
-1. `SwUpdate.checkForUpdate()`, wenn ein Service Worker läuft;
-2. immer zusätzlich `fetchServerVersion()` (`core/app-version-check.ts`): `GET /assets/version.json?ngsw-bypass=1`
-   mit `cache: 'no-store'` (die von `scripts/changelog-json.mjs` neben dem Changelog erzeugte Datei `{ version }` — wenige Byte statt des 2-MB-Changelogs, Gegenlesung GF-R2; `ngsw-bypass`
-   weil der SW es in seiner lazy-Gruppe `changelog` hält), oberste Version gegen `APP_VERSION` per `isNewerVersion`
-   (dreiteilig numerisch). Zeitlimit 5 s; jeder Fehler (offline, 404, SPA-Rückfall statt JSON) zählt als „nichts“.
+1. **Automatisch, einmal** (`core/stale-route-reload.service.ts`, 0.940.0): Nur mit aktivem Service Worker und solange
+   die Adresse in diesem Tab noch nicht gesperrt ist (`canTry()`, Sperrliste im `sessionStorage` unter
+   `rookhub_stale_route_reload`): `checkForUpdate()`, Sperre setzen, `activateUpdate()`; liefert das `true`, wird
+   dieselbe Adresse neu geladen und die Seite bleibt beim Ladekreis. Sonst wird die Sperre wieder gelöst. Zeitgrenze
+   10 s.
+2. **Fallback-Hinweis** (U1) — nur wenn Stufe 1 NICHT neu lädt (kein Service Worker, Adresse schon einmal neu geladen,
+   nichts zu aktivieren, Zeitgrenze, Fehler): `AppUpdateService.checkNow()`:
+   - `SwUpdate.checkForUpdate()`, wenn ein Service Worker läuft;
+   - immer zusätzlich `fetchServerVersion()` (`core/app-version-check.ts`): `GET /assets/version.json?ngsw-bypass=1`
+     mit `cache: 'no-store'` (die von `scripts/changelog-json.mjs` neben dem Changelog erzeugte Datei `{ version }` —
+     wenige Byte statt des 2-MB-Changelogs, Gegenlesung GF-R2; `ngsw-bypass`, damit nicht der SW den alten Stand
+     liefert), Version gegen `APP_VERSION` per `isNewerVersion` (dreiteilig numerisch). Zeitlimit 5 s; jeder Fehler
+     (offline, 404, SPA-Rückfall statt JSON) zählt als „nichts“.
 
-Anzeige: während der Prüfung „Prüfe auf neue Version …“; neuere Fassung → „Neue Version verfügbar (x.y.z). Diese Seite
-gibt es vielleicht erst dort.“ (ohne bekannte Nummer, wenn nur der SW eine meldet: ohne Klammer) mit dem Hauptknopf
-„Aktualisieren“ (`activateAndReload`: `activateUpdate()` und `location.replace(<dieselbe Adresse>)`, ohne SW ein harter
-Reload); sonst und bei Fehlern die normale Meldung.
+   Neuere Fassung → „Neue Version verfügbar (x.y.z). Diese Seite gibt es vielleicht erst dort.“ (meldet nur der SW eine,
+   ohne Klammer) mit dem Hauptknopf „Aktualisieren“ (`activateAndReload`: mit SW `activateUpdate()` und
+   `location.replace(<dieselbe Adresse>)`, ohne SW ein einfaches `document.location.reload()`); sonst und bei Fehlern
+   die normale Meldung. Während Stufe 2 läuft, steht weiter derselbe Ladekreis (kein eigener Text mehr, früher
+   `app.notFound.checking`).
 
-Grenzen: `version.json` wird (wie `changelog.json`) nur ins Projekt `app` kopiert (angular.json) — in LeagueHub (ohne SW) findet die Prüfung
-darum nie etwas und zeigt die normale Seite. Turnierseite, KidHub und ClubHub haben keine Nicht-gefunden-Seite (`'**'`
-leitet auf die Startseite um).
+Ohne Service Worker (LeagueHub): `SwUpdate` ist in beiden Diensten optional injiziert, Stufe 1 entfällt (`canTry()` ist
+`false`), Stufe 2 läuft. Spec `src-leaguehub/app/not-found-ohne-service-worker.spec.ts` erzeugt die Seite ohne
+`SwUpdate`-Anbieter.
+
+Grenzen: `version.json` wird (wie `changelog.json`) nur ins Projekt `app` kopiert (angular.json) — in LeagueHub findet
+Stufe 2 darum heute nie etwas und zeigt nach dem Ladekreis die normale Seite. Turnierseite, KidHub und ClubHub haben
+keine Nicht-gefunden-Seite (`'**'` leitet auf die Startseite um).
