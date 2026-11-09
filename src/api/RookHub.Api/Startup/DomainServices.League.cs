@@ -101,8 +101,15 @@ public static partial class DomainServicesSetup
         services.AddSingleton<RookHub.Api.Services.Prep.PrepAccountSearchGate>();
         services.AddScoped<RookHub.Api.Services.Prep.PrepAccountSearch>();
         // Grenzen der Karte (jüngste N Partien, „alle“ höchstens M) einstellbar — siehe PrepCardService.
+        // Eigener Cache mit Größengrenze in Partien (R2-004) — der allgemeine IMemoryCache hat keine.
+        services.AddKeyedSingleton<Microsoft.Extensions.Caching.Memory.IMemoryCache>(RookHub.Api.Services.Prep.PrepCardService.CacheServiceKey,
+            (_, _) => new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions
+            {
+                SizeLimit = RookHub.Api.Services.Prep.PrepCardService.CacheSizeLimit,
+            }));
         services.AddScoped(sp => new RookHub.Api.Services.Prep.PrepCardService(sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
-            sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<RookHub.Api.Services.League.LeagueService>(),
+            sp.GetRequiredKeyedService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(RookHub.Api.Services.Prep.PrepCardService.CacheServiceKey),
+            sp.GetRequiredService<RookHub.Api.Services.League.LeagueService>(),
             RookHub.Api.Services.Prep.PrepCardService.LimitFrom(configuration), RookHub.Api.Services.Prep.PrepCardService.MaxFrom(configuration)));
         // Trainingslinien gegen einen Gegner — ein Dienst für Spielervorbereitung und LeagueHub (0.701.0).
         // Schätzung der Lücken über den Lichess-Explorer (lokal, sonst online wie der Lochfinder).

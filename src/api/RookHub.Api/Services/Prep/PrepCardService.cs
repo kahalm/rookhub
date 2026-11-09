@@ -26,7 +26,10 @@ namespace RookHub.Api.Services.Prep;
 /// Bestandspartie — ältere wären meist Dubletten von nicht geladenen.</para>
 ///
 /// <para><b>Speicher.</b> Was eine Karte lädt, bleibt <see cref="CacheFor"/> im Speicher (keine eigene Tabelle): Profil,
-/// Baum und letzte Partien rechnen danach ohne Datenbank. Die Online-Partien fragt jede Anfrage neu (Filter, wenige).</para>
+/// Baum und letzte Partien rechnen danach ohne Datenbank. Die Online-Partien fragt jede Anfrage neu (Filter, wenige). Seit R2-004
+/// in einem eigenen Cache (<see cref="CacheServiceKey"/>) mit Größengrenze in Partien (<see cref="CacheSizeLimit"/>, wie
+/// <see cref="League.LeagueProfileStore"/>): der allgemeine <see cref="IMemoryCache"/> hat keine, einige hundert „alle“-Karten
+/// lagen dort sonst je 15 min ungebremst. Eine Karte über der Grenze wird nicht gehalten.</para>
 ///
 /// <para><b>Namens-Zwilling.</b> Partien ohne FIDE-ID gehören einem eigenen Spieler (Identität = Name). Trägt GENAU EIN
 /// FIDE-Spieler denselben Namensschlüssel, bietet seine Karte den Zwilling an (<c>twin</c>, mit Partienzahl) und nimmt
@@ -50,6 +53,10 @@ public sealed class PrepCardService(AppDbContext db, IMemoryCache cache, LeagueS
 
     private int Cap(bool all) => all ? Math.Max(max, limit) : limit;
     public static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(15);
+    /// <summary>Schlüssel des eigenen, begrenzten Karten-Caches (R2-004).</summary>
+    public const string CacheServiceKey = "prep-card-games";
+    /// <summary>Höchstens so viele Partien halten alle Karten zusammen (Größe eines Eintrags = seine Partien).</summary>
+    public const long CacheSizeLimit = 20_000;
     /// <summary>Partien je <c>IN (…)</c>-Abfrage.</summary>
     private const int IdBatch = 1000;
 
@@ -92,7 +99,7 @@ public sealed class PrepCardService(AppDbContext db, IMemoryCache cache, LeagueS
 
         var total = player.Games + (twin && tw is not null ? tw.Games : 0);
         var loaded = new Loaded(player, tw, twin && tw is not null, Cap(all), games, total, rows.Count, more, since);
-        cache.Set(key, loaded, CacheFor);
+        cache.Set(key, loaded, new MemoryCacheEntryOptions { Size = Math.Max(1, games.Count), AbsoluteExpirationRelativeToNow = CacheFor });
         return loaded;
     }
 

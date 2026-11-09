@@ -138,6 +138,11 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         bool ExplorerIncomplete = false, int ExplorerPending = 0, bool ExplorerRunning = false, int SkippedAlternatives = 0,
         OpponentTrainingLines.Analysis? Analysis = null);
 
+    /// <summary>Fester Fingerabdruck der Farbangabe je Kapitel für Cache-Schlüssel (R2-004): SHA-256 statt bis zu 200 000
+    /// Zeichen Klartext im Schlüssel.</summary>
+    internal static string OverridesKey(string overrides) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(overrides)));
+
     /// <summary>
     /// Die gemeinsame Rechnung. Quellen: das gewählte Repertoire oder — ohne Wahl — ALLE markierten (Wunsch 2026-10-07: „nicht ein
     /// repertoir auswählen sondern die markierten verwenden"), je nur die Kapitel der Farbe; ihre Linien laufen in EINE Reihung.
@@ -160,7 +165,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             per = q.ChapterColors.PerRepertoire.OrderBy(x => x.Key).Select(x => x.Key + ":" + string.Join(",",
                 x.Value.OrderBy(y => y.Key, StringComparer.Ordinal).Select(y => y.Key + "=" + y.Value))),
         });
-        var key = $"training-lines:{userId}:{scope}:{q.Repertoire}:{q.Color}:{exclude}:{overrides}:"
+        var key = $"training-lines:{userId}:{scope}:{q.Repertoire}:{q.Color}:{exclude}:{OverridesKey(overrides)}:"
                   + string.Join(",", stamps.Select(x => $"{x.Id}@{x.UpdatedAt.Ticks}"));
         if (cache.TryGetValue(key, out Computed? hit) && hit is not null) return hit;
         var computed = await ComputeCoreAsync(userId, q, games, ct, exclude, elo, key);
@@ -499,7 +504,10 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             var overrides = string.Join(";", q.ChapterColors.Flat.OrderBy(x => x.Key, StringComparer.Ordinal).Select(x => x.Key + "=" + x.Value))
                 + "|" + string.Join(";", q.ChapterColors.PerRepertoire.OrderBy(x => x.Key).Select(x => x.Key + ":" + string.Join(",",
                     x.Value.OrderBy(y => y.Key, StringComparer.Ordinal).Select(y => y.Key + "=" + y.Value))));
-            key = $"deviations:{userId}:{scope}:{q.Repertoire}:{q.Color}:{q.Take}:{overrides}:"
+            // Take wie beim Rechnen geklemmt, die Farbangabe als fester Fingerabdruck (R2-004): sonst ergab jede Zahl und jede bis
+            // 200 000 Zeichen lange Angabe einen eigenen, beliebig langen Schlüssel.
+            var take = Math.Clamp(q.Take ?? OpponentDeviations.MaxDeviations, 1, OpponentDeviations.MaxDeviations);
+            key = $"deviations:{userId}:{scope}:{q.Repertoire}:{q.Color}:{take}:{OverridesKey(overrides)}:"
                   + string.Join(",", stamps.Select(x => $"{x.Id}@{x.UpdatedAt.Ticks}"));
             if (cache.TryGetValue(key, out JsonObject? hit) && hit is not null) return (JsonObject)hit.DeepClone();
         }

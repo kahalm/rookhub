@@ -28,7 +28,7 @@ nicht). Messung 01.10.: 554 B/Partie, voller Bestand ≈ 15,2 Mio. Zeilen ≈ 8,
   `all` und `twin`.
 - Vorgabe die jüngsten 500 Partien (`Prep:CardLimit`), `all=true` bis 3 000 (`Prep:CardMax`). Kalt kostet jede Partie
   einen Plattenzugriff (2–8 ms); gemessen 02.10. am vollen Lumbra-Bestand mit 128 MB Puffer: Karte 1–4,4 s, 3 000
-  Partien 21–24 s. Geladenes bleibt 15 min im IMemoryCache; Online-Partien fragt jede Anfrage neu.
+  Partien 21–24 s. Geladenes bleibt 15 min im eigenen Karten-Cache (`PrepCardService.CacheServiceKey`, Grenze 20 000 Partien, Größe je Karte = ihre Partien; seit R2-004 nicht mehr im ungedeckelten allgemeinen IMemoryCache); Online-Partien fragt jede Anfrage neu.
 - Mit FIDE-ID kommen dazu: Liga-, chess-results- und Vereinspartien ohne Dubletten (`LeagueProfileStore.GamesAsync`; seit 0.725.0
   auch Teilpartien aus eingegebenen ersten Zügen, ohne `recent`/PGN und ohne die, deren volle Partie der Bestand hat),
   Online-Partien über `LeagueProfileStore.OnlineGames` (gemeinsame Auswahl mit der Liga) und Konten über
@@ -130,7 +130,8 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   anlegen. `sameRepertoire` (400) wird VOR `exists` geprüft.
 - Tempo (0.718.0, gemessen auf Prod 21–22 s je Abfrage): das Ergebnis von `ComputeAsync` (Reihung samt Schätzung) bleibt
   15 min im `IMemoryCache`, Schlüssel = Nutzer, `scope` (Gegner + Filter, Prep mit all/twin — `TrainingLinesService.Scope`),
-  Auswahl, Farbe, chapterColors, exclude und `Id@UpdatedAt` ALLER markierten Repertoires (geändert → sofort neu). Ohne
+  Auswahl, Farbe, chapterColors (als SHA-256-Fingerabdruck, `OverridesKey`, R2-004), exclude und `Id@UpdatedAt` ALLER markierten
+  Repertoires (geändert → sofort neu); die Abweichungen ebenso, mit `take` geklemmt wie beim Rechnen. Ohne
   `scope` (Tests) kein Cache. Je Rechnung eine INFO-Zeile „Trainingslinien: … ms gesamt — Repertoires laden+parsen …,
   Partien laden …, Zählen …, Explorer … (Stellungen, Treffer, offen, Budget erreicht), Reihen …". Gemessen lokal an den 4
   markierten Repertoires des Users (13,6 MB PGN, 2543 Abschnitte): Parsen 0,25–0,36 s, Graph bauen 1,5–2,4 s, Reihen
