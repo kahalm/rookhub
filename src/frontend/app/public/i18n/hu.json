@@ -951,7 +951,8 @@
       "parsing": "Repertoár beolvasása … {{done}} / {{total}} sor",
       "modeLines": "Vonalak",
       "modeTree": "Fa",
-      "modeHoles": "Lyukkereső"
+      "modeHoles": "Lyukkereső",
+      "pgnLoadFailed": "A repertoár változatai nem tölthetők be – semmi sem veszett el."
     },
     "dialog": {
       "title": "Új repertoár",
@@ -1043,7 +1044,9 @@
       "uploadSuccessOne": "{{count}} fájl feltöltve",
       "uploadPartial": "{{ok}} feltöltve, {{failed}} sikertelen",
       "downloadFailed": "Letöltés sikertelen",
-      "deleteConfirm": "Törli ezt a fájlt?"
+      "deleteConfirm": "Törli ezt a fájlt?",
+      "uploadFailed": "A feltöltés nem sikerült",
+      "deleteFailed": "A fájlt nem sikerült törölni."
     },
     "positionFilter": {
       "hint": "Lépj a táblán, hogy állás szerint szűrd a változatokat.",
@@ -1531,7 +1534,8 @@
       "downloadChapterPgn": "Fejezet letöltése PGN-ként",
       "downloadLinePgn": "Változat letöltése PGN-ként",
       "createWeekly": "Heti poszt létrehozása",
-      "source": "Forrás"
+      "source": "Forrás",
+      "addLinesFailed": "A sorokat nem sikerült hozzáadni."
     },
     "pinTooltip": "Rögzítés az irányítópultra",
     "unpinTooltip": "Levétel az irányítópultról",
@@ -1634,7 +1638,8 @@
       "failed": "Nem sikerült",
       "favorite": "Változat kedvelése",
       "unfavorite": "Kedvelés visszavonása",
-      "share": "Változat megosztása"
+      "share": "Változat megosztása",
+      "lines": "Változatok"
     },
     "themes": {
       "title": "Tanfolyam témái",
@@ -1927,7 +1932,8 @@
       "archived": "Archiválva",
       "playAgain": "Újrajátszás",
       "backToPuzzles": "Vissza a feladványokhoz",
-      "backToHistory": "Vissza az előzményekhez"
+      "backToHistory": "Vissza az előzményekhez",
+      "archiveFailed": "Az archiválás nem sikerült – próbáld újra."
     },
     "history": {
       "title": "Végtelen feladvány előzmények",
@@ -1947,7 +1953,8 @@
       "colSolved": "Megoldva",
       "colDuration": "Időtartam",
       "colMistakes": "Hibák",
-      "backToEndless": "Vissza a Végtelen módhoz"
+      "backToEndless": "Vissza a Végtelen módhoz",
+      "archiveFailed": "Az archiválási állapot nem módosítható – próbáld újra."
     },
     "themePreset": {
       "label": "Gyorsválasztás",
@@ -3372,7 +3379,8 @@
       "stopConfirm": "Befejezed a megosztást? A mostani link érvénytelen lesz — a kinyomtatott QR-kódok ezután sehová sem vezetnek, egy újabb megosztás pedig másik linket hoz létre.",
       "solutionWarning": "Figyelem: a link a megoldásokat is mutatja.",
       "scanHint": "Játszd végig a táblán:",
-      "noSheetLink": "Ez a lap nincs megosztva — a nyomtatvány nem kap QR-kódot."
+      "noSheetLink": "Ez a lap nincs megosztva — a nyomtatvány nem kap QR-kódot.",
+      "failed": "A megosztást nem sikerült bekapcsolni – a lapnak még nincs QR-kódja."
     },
     "solve": {
       "notFound": "Ez a link (már) nem létezik.",
