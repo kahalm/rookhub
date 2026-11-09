@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.920.0", date: "2026-11-09", changes: [
+    { en: "Background analysis: an idle engine now takes over waiting jobs from busy engines of the same background list, so newly added engines start working at once.",
+      de: "Hintergrund-Analyse: Eine freie Engine übernimmt jetzt wartende Aufträge von beschäftigten Engines derselben Hintergrund-Liste — neu hinzugekommene Engines rechnen damit sofort mit." },
+  ] },
   { version: "0.919.4", date: "2026-11-09", changes: [
     { en: "Rules of thumb: book links now open the right spot — PDF passages open the PDF at the page (even when the e-book reader would prefer the EPUB), EPUB-only passages jump to the approximate position.",
       de: "Merksätze: Die Buchlinks öffnen jetzt die richtige Stelle — PDF-Fundstellen öffnen das PDF auf der Seite (auch wenn der Leser sonst das EPUB bevorzugt), reine EPUB-Fundstellen springen an die ungefähre Position." },

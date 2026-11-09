@@ -168,3 +168,11 @@ auf dieser Engine nichts mehr wartet (die warme Hashtabelle zählt nur innerhalb
 Gesetzt beim Anlegen (`GameAnalysisPump.PriorityOf`, `MoveComparisonService.CreateJobAsync`), nie verschoben; die
 Migration `AnalysisJobPriority` stuft die offenen Aufträge einmal ein. Ein höher eingestufter Auftrag verdrängt einen
 laufenden Hintergrundauftrag NICHT (nur interaktive tun das) — er kommt an die Reihe, sobald dieser fertig ist.
+
+**Umverteilen (0.920.0, `AnalysisJobRebalancer`)**: Die Engine wird beim Anlegen fest zugeteilt. Jeder Tick des
+`AnalysisJobWorker` hängt deshalb zuerst wartende Aufträge (Queued/Paused, fällig) auf freie Engines um: Geber ist ein
+Auftrag, dessen Engine gerade rechnet, aus ist oder für diese Art Arbeit Sperrzeit hat; Nehmer eine Engine derselben
+Hintergrund-Liste des Besitzers, die frei ist, nichts Eigenes wartend hat und die Arbeit jetzt nehmen darf
+(`EngineAvailability.UsableAsync`). Reihenfolge wie `PickNextForEngineAsync`. Nie angefasst: Engines außerhalb der
+Liste (von Hand gewählt) und Nur-auf-Anforderung-Engines (Lc0). Anlass 09.11.2026: vier neue Server-Engines saßen leer,
+während 67 Aufträge auf drei Gross-Engines warteten.

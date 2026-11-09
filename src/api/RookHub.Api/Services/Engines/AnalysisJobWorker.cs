@@ -150,7 +150,20 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         var now = DateTime.UtcNow;
         List<string> engines;
         using (var scope = _scopeFactory.CreateScope())
+        {
+            // Freie Engines nehmen wartenden Aufträgen anderer Engines derselben Liste ab (0.920.0).
+            try
+            {
+                await AnalysisJobRebalancer.RebalanceAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), now,
+                    e => _running.ContainsKey(e) || _tracker.IsEngineBusy(e), _settings.ExplicitOnly,
+                    scope.ServiceProvider.GetService<QuietHours>(), _logger, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "AnalysisJobWorker: Umverteilen fehlgeschlagen");
+            }
             engines = await scope.ServiceProvider.GetRequiredService<AnalysisJobService>().EnginesWithRunnableJobsAsync(now, ct);
+        }
 
         foreach (var engineId in engines)
         {
