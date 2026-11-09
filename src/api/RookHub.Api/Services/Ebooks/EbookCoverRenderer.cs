@@ -254,36 +254,9 @@ public class EbookCoverRenderer
 
     private async Task<ProcessResult> RunAsync(string exe, string[] args, CancellationToken ct)
     {
-        var psi = new ProcessStartInfo(exe)
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        foreach (var a in args) psi.ArgumentList.Add(a);
-        using var process = new Process { StartInfo = psi };
-        try
-        {
-            process.Start();
-        }
-        catch (System.ComponentModel.Win32Exception ex)
-        {
-            return new ProcessResult(-1, string.Empty, $"{exe} not available: {ex.Message}");
-        }
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(5, _options.CoverTimeoutSeconds)));
-        var stdout = process.StandardOutput.ReadToEndAsync(timeout.Token);
-        var stderr = process.StandardError.ReadToEndAsync(timeout.Token);
-        try
-        {
-            await process.WaitForExitAsync(timeout.Token);
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            try { process.Kill(entireProcessTree: true); } catch { /* schon weg */ }
-            return new ProcessResult(-2, string.Empty, "timeout");
-        }
-        return new ProcessResult(process.ExitCode, await stdout, await stderr);
+        // Gemeinsamer Starter (R3-006); Rückgabe wie bisher: −1 = nicht da, −2 = Zeitüberschreitung.
+        var run = await ExternalProcess.RunAsync(exe, args, TimeSpan.FromSeconds(Math.Max(5, _options.CoverTimeoutSeconds)), ct);
+        return new ProcessResult(run.ExitCode, run.StdOut, run.StdErr);
     }
 
     private static string Trim(string s) => s.Length <= 200 ? s.Trim() : s[..200].Trim() + "…";

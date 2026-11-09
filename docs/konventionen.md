@@ -103,6 +103,12 @@
   (`BackgroundPause`); ein Dienst, der Speicher/Konsistenz schützt (Aufbewahrung, Aufräumen), setzt
   `protected override bool Pausable => false` mit Begründung. Hintergrunddienste OHNE `PeriodicWorker` prüfen über
   `PauseGate` (Liste und Gründe: `docs/api/hintergrundjobs-pause.md`).
+- **Kommandozeilen-Werkzeuge über `ExternalProcess`** (`Services/ExternalProcess.cs`, Review 2026-11-09, R3-006) –
+  ddjvu, pdftoppm, pdfinfo & Co. startet `ExternalProcess.RunAsync` (bzw. `Run` für synchrone Aufrufer): Argumente nur
+  über `ArgumentList`, Zeitschranke → Prozessbaum töten (`TimedOut`, Exit −2), Abbruch des äußeren Tokens → ebenfalls
+  töten und `OperationCanceledException`, stdout/stderr ganz gelesen, aber auf 1 Mio. Zeichen gedeckelt, fehlendes Programm
+  → `NotFound` (Exit −1). Kein eigener `ProcessStartInfo`-Ablauf mehr je Dienst. Ausgenommen sind langlebige
+  UCI-Sitzungen (`UciEngineSession`, `ScoresheetPlausibility`, Engine-Analyse) mit eigenem Lebenszyklus.
 - **Serilog-Stufen je Quelle stehen in `Logging/SerilogLevels.cs`** (Codereview 2026-09-29, A10-014) – eine Liste für
   alle Overrides (Microsoft.AspNetCore, EF Core …); die HttpClient-Handler-Logs (`System.Net.Http.HttpClient`, je
   ausgehendem Request) erst ab Warning. Neue Overrides dorthin (ein Test prüft sie am echten Logger), nicht in den Bootstrap in `Program.cs`.

@@ -145,21 +145,9 @@ public class EbookDjvuConverter : PeriodicWorker
 
     private async Task<bool> RunAsync(string exe, string[] args, CancellationToken ct)
     {
-        var psi = new ProcessStartInfo(exe) { RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false };
-        foreach (var a in args) psi.ArgumentList.Add(a);
-        using var p = new Process { StartInfo = psi };
-        try { p.Start(); }
-        catch (System.ComponentModel.Win32Exception ex) { Logger.LogWarning(ex, "ddjvu nicht verfügbar"); return false; }
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(MaxRuntime);
-        _ = p.StandardOutput.ReadToEndAsync(timeout.Token);
-        _ = p.StandardError.ReadToEndAsync(timeout.Token);
-        try { await p.WaitForExitAsync(timeout.Token); }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            try { p.Kill(entireProcessTree: true); } catch { /* weg */ }
-            return false;
-        }
-        return p.ExitCode == 0;
+        // Gemeinsamer Starter (R3-006): Kill auch beim Abbruch von außen, Ausgabe gedeckelt.
+        var run = await ExternalProcess.RunAsync(exe, args, MaxRuntime, ct);
+        if (run.NotFound) Logger.LogWarning("ddjvu nicht verfügbar: {Message}", run.StdErr);
+        return run.Succeeded;
     }
 }

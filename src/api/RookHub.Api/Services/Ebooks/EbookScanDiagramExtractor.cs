@@ -239,21 +239,14 @@ public class EbookScanDiagramExtractor
     /// <summary>Seitengrößen (Punkte) aus <c>pdfinfo -f … -l …</c> („Page    3 size: 772.4 x 1210.35 pts“).</summary>
     private Dictionary<int, (double W, double H)> PageSizes(string pdf, int first, int last, CancellationToken ct)
     {
-        try
+        // Gemeinsamer Starter (R3-006); fehlt pdfinfo, läuft es zu lange oder scheitert es → keine Größen (300 dpi wie bisher).
+        var run = ExternalProcess.Run(_options.PdfinfoPath, ["-f", first.ToString(), "-l", last.ToString(), pdf], TimeSpan.FromSeconds(60), ct);
+        if (run.NotFound || run.TimedOut)
         {
-            var psi = new ProcessStartInfo(_options.PdfinfoPath) { RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false };
-            foreach (var a in new[] { "-f", first.ToString(), "-l", last.ToString(), pdf }) psi.ArgumentList.Add(a);
-            using var p = Process.Start(psi)!;
-            var output = p.StandardOutput.ReadToEndAsync(ct);
-            _ = p.StandardError.ReadToEndAsync(ct);
-            if (!p.WaitForExit(TimeSpan.FromSeconds(60))) { try { p.Kill(true); } catch { /* weg */ } return []; }
-            return ParsePageSizes(output.Result);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _logger.LogDebug(ex, "pdfinfo Seitengrößen nicht lesbar");
+            _logger.LogDebug("pdfinfo Seitengrößen nicht lesbar: {Err}", run.StdErr);
             return [];
         }
+        return ParsePageSizes(run.StdOut);
     }
 
     internal static Dictionary<int, (double W, double H)> ParsePageSizes(string pdfinfo)
@@ -286,25 +279,23 @@ public class EbookScanDiagramExtractor
 
     private bool RunPdftoppm(string pdf, int first, int last, int dpi, string dir, CancellationToken ct)
     {
-        var psi = new ProcessStartInfo(_options.PdftoppmPath) { RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false };
-        foreach (var a in new[] { "-r", dpi.ToString(), "-gray", "-f", first.ToString(), "-l", last.ToString(), pdf, Path.Combine(dir, "p") })
-            psi.ArgumentList.Add(a);
-        using var p = new Process { StartInfo = psi };
-        try { p.Start(); }
-        catch (System.ComponentModel.Win32Exception ex)
+        // Gemeinsamer Starter (R3-006): Kill bei Zeitüberschreitung UND beim Abbruch von außen.
+        var run = ExternalProcess.Run(_options.PdftoppmPath,
+            ["-r", dpi.ToString(), "-gray", "-f", first.ToString(), "-l", last.ToString(), pdf, Path.Combine(dir, "p")],
+            TimeSpan.FromSeconds(Math.Max(60, _options.CoverTimeoutSeconds * 4)), ct);
+        if (run.NotFound)
         {
-            _logger.LogWarning("pdftoppm nicht verfügbar: {Message}", ex.Message);
+            _logger.LogWarning("pdftoppm nicht verfügbar: {Message}", run.StdErr);
             return false;
         }
-        var err = p.StandardError.ReadToEndAsync(ct);
-        _ = p.StandardOutput.ReadToEndAsync(ct);
-        if (!p.WaitForExit(TimeSpan.FromSeconds(Math.Max(60, _options.CoverTimeoutSeconds * 4))))
+        if (run.TimedOut)
         {
-            try { p.Kill(entireProcessTree: true); } catch { /* schon weg */ }
             _logger.LogWarning("pdftoppm Zeitüberschreitung bei Seiten {First}–{Last}", first, last);
             return false;
         }
-        if (p.ExitCode != 0) _logger.LogWarning("pdftoppm exit {Code} bei Seiten {First}–{Last}: {Err}", p.ExitCode, first, last, err.IsCompleted ? err.Result : "");
+        // Bewusst weiter „true“ bei Exit ≠ 0: scheitert in einem Stapel EINE Seite, liegen die übrigen gerendert im Ordner
+        // und werden gelesen (fehlende Seiten fallen beim Einlesen auf).
+        if (run.ExitCode != 0) _logger.LogWarning("pdftoppm exit {Code} bei Seiten {First}–{Last}: {Err}", run.ExitCode, first, last, run.StdErr);
         return true;
     }
 
