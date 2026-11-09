@@ -185,6 +185,10 @@ import { PRIVACY_PERIODS, privacyPeriodKey } from './privacy-periods';
                (Auftragsverarbeitung) klaeren; bis dahin nennt der Text ihn nur als Empfaenger-Kategorie. -->
           <h2 id="privacy-ai" tabindex="-1">{{ 'legal.privacy.aiTitle' | translate }}</h2>
           <p>{{ 'legal.privacy.aiScoresheet' | translate }}</p>
+          <!-- Codereview F3-002 (Entscheidung E5): Partie-Zusammenfassung (Formular-Watcher, Claude headless) und
+               Fable-Begruendungen der Vereins-Fehlervergleiche (ClubFableExplanations, Partien ab 06.11.2026) gehen an
+               Anthropic; aiLocal nimmt sie deshalb aus. Wortlaut/Rechtsgrundlage prueft der Betreiber. -->
+          <p>{{ 'legal.privacy.aiClubGames' | translate }}</p>
           <p>{{ 'legal.privacy.aiLocal' | translate }}</p>
 
           <!-- Discord-Bot (Codereview S4-008): Stand ab schach-bot v2.83.14 — DM-Log (core/dm_log.py: ein- und ausgehend,

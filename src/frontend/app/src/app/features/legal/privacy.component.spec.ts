@@ -434,6 +434,8 @@ describe('PrivacyComponent', () => {
     expect(el.textContent).toContain('legal.privacy.dataScoresheet');
     expect(el.textContent).toContain('legal.privacy.aiLocal');
     expect(el.textContent).toContain('legal.privacy.thirdTextLlm');
+    // F3-002: Zusammenfassung und Fable-Begruendungen der Vereinspartien laufen ueber Anthropic.
+    expect(el.textContent).toContain('legal.privacy.aiClubGames');
   });
 
   // UX-057: der Titel stand in <mat-card-title> (keine Ueberschriften-Rolle), die Abschnitte als h4 — kein h1, h2/h3
@@ -514,6 +516,16 @@ describe('Datenschutz-Texte (en/de/hr/hu)', () => {
       expect(p['aiLocal']).toContain('DGX Spark');
       expect(p['aiLocal']).not.toMatch(/verlassen keine Daten|eigenen Hardware|no data leaves|own hardware|ne napuštaju|vlastitom hardveru|nem hagyja el|saját hardverünkön/);
       expect(p['thirdTextLlm']).toContain('DGX Spark');
+      // F3-002 (E5): Partie-Zusammenfassung und Fable-Begruendungen der Vereins-Fehlervergleiche gehen an Anthropic —
+      // genannt in der Empfaengerliste und im KI-Abschnitt; aiLocal sagt nicht mehr „nie ueber Anthropic“.
+      expect(p['aiClubGames']).toContain('Anthropic');
+      expect(p['aiClubGames']).toContain('Claude');
+      expect(p['aiClubGames']).toMatch(/USA|SAD/);
+      expect(p['aiClubGames']).toMatch(/2026/);
+      expect(p['thirdAnthropic']).toMatch(/Zusammenfassung|summar|sažet|összefoglal/i);
+      expect(p['aiLocal']).not.toMatch(/nie über Anthropic|never run via Anthropic|nikad ne rade preko|soha nem az Anthropicon/);
+      expect(p['aiScoresheet']).not.toMatch(/Ohne Foto wird nichts an Anthropic|Without a photo, nothing is sent to Anthropic\.|Bez fotografije ništa se ne prenosi|Fénykép nélkül semmi sem/);
+      expect(p['updated']).not.toMatch(/\b26\b/);
       // LeagueHub: Foto geht erst beim Uebernehmen/Verwerfen, nicht schon „nach der Korrektur“.
       expect(p['aiScoresheet']).not.toMatch(/nach der Korrektur verworfen|discarded after the correction|odbacuje nakon ispravka|javítás után elvetjük/);
     });
