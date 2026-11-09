@@ -66,4 +66,22 @@ describe('directory-view-state (Golden: zurückgelesen = gemerkt)', () => {
     expect([s['calendarYear'], s['calendarMonth']]).toEqual([2026, 10]);
     expect(applyStoredView(b, null)).toBeNull();
   });
+
+  it('ein gespeichertes „kein Ort“/„alle Tempi“ hebt den bisherigen Stand auf (G3-009)', () => {
+    const b = host();
+    Object.assign(b.filter, { lat: 47, lon: 11, radiusKm: 50, speed: 'Blitz' });
+    b.placeLabel = 'Innsbruck';
+    applyStoredView(b, { lat: null, lon: null, radiusKm: null, placeLabel: null, speed: null });
+
+    expect([b.filter.lat, b.filter.lon, b.filter.radiusKm, b.filter.speed, b.placeLabel])
+      .toEqual([null, null, null, null, '']);
+  });
+
+  it('ein alter Zustand ohne diese Schlüssel lässt Ort und Tempo stehen', () => {
+    const b = host();
+    Object.assign(b.filter, { lat: 47, lon: 11, radiusKm: 50, speed: 'Blitz' });
+    applyStoredView(b, { tab: 'list' });
+
+    expect([b.filter.lat, b.filter.lon, b.filter.radiusKm, b.filter.speed]).toEqual([47, 11, 50, 'Blitz']);
+  });
 });

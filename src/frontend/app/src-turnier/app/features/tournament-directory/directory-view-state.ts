@@ -93,9 +93,13 @@ export function applyStoredView(
   host.filter.includeIgnored = stored['includeIgnored'] === true;
   host.filter.includeImplausible = stored['includeImplausible'] === true;
 
+  // Ein gespeichertes `null` heißt „alle Tempi“ und hebt den bisherigen Wert auf (G3-009: sonst blieb beim
+  // Server-Abgleich der gerätelokale Filter stehen und ging mit der nächsten Änderung wieder hinauf).
   const speed = stored['speed'];
   if (typeof speed === 'string' && host.speeds.includes(speed as TournamentSpeed)) {
     host.filter.speed = speed as TournamentSpeed;
+  } else if ('speed' in stored) {
+    host.filter.speed = null;
   }
 
   const colourBy = stored['mapColourBy'];
@@ -115,12 +119,18 @@ export function applyStoredView(
   const lon = stored['lon'];
   const radiusKm = stored['radiusKm'];
   if (typeof radiusKm === 'number') host.filter.radiusKm = radiusKm;
+  else if ('radiusKm' in stored) host.filter.radiusKm = null;
   let placeRestored = false;
   if (typeof lat === 'number' && typeof lon === 'number') {
     host.filter.lat = lat;
     host.filter.lon = lon;
     host.placeLabel = str(stored['placeLabel']) ?? '';
     placeRestored = true;
+  } else if ('lat' in stored || 'lon' in stored) {
+    // „Kein Mittelpunkt“ ist eine Entscheidung (z. B. auf einem anderen Gerät gelöscht), kein fehlender Wert.
+    host.filter.lat = null;
+    host.filter.lon = null;
+    host.placeLabel = '';
   }
 
   // Das Profil wird erst uebernommen, wenn es die Liste noch kennt (applyQueryParams) —
