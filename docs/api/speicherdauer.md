@@ -37,6 +37,8 @@ je DELETE), ohne große Spalten zu laden.
 | Gemeinsame Anmeldung (`SharedSessionService`) | 30 Tage | Ablauf beim Prüfen | fest |
 | Discord-Verknüpfungs-Token | 30 Tage | Ablauf beim Prüfen | `Discord:LinkTokenMaxAgeDays` (30) |
 | ClubHub-Verknüpfungscode | 14 Tage | Ablauf beim Prüfen | fest |
+| Passwort-Reset-Codes (`PasswordResetTokens`, Hash + Zeitstempel; gültig 1 h, Admin-Link 24 h) | 7 Tage nach Verbrauch bzw. Ablauf | Aufräumlauf | fest (`OneTimeCodeRetention.MaxAgeAfterEnd`) |
+| Übergabe-Codes zwischen den Oberflächen (`AuthHandoffTokens`, gültig 60 s) | 7 Tage nach Verbrauch bzw. Ablauf (außerdem beim nächsten Sprung desselben Kontos) | Aufräumlauf | fest (`OneTimeCodeRetention.MaxAgeAfterEnd`) |
 | Konto selbst | bis zur Löschung durch den Nutzer (Kontolöschung räumt alles Zugehörige) | — | — |
 
 ## Außerhalb der Datenbank
