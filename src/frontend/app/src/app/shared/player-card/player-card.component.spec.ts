@@ -212,6 +212,28 @@ describe('PlayerCardComponent', () => {
     expect(rows()[0]).toContain('Kleissl, Helmut');
   });
 
+  it('Ladefehler der letzten Partien einer Farbe: Fehlertext statt „keine Partien“, erneuter Wechsel lädt neu (F3-010)', async () => {
+    const B = { date: '2025.??.??', vs: 'Binder, Moriz', color: 's' as const, event: 'TMM', vs_elo: '', score: 1, opening: '1.d4 d5',
+      pgn: `[White "Binder, Moriz"]\n[Black "Oberschmid, Patrik"]\n[Result "0-1"]\n\n1. d4 d5 0-1\n` };
+    api.recent.and.returnValues(Promise.reject(new Error('503')), Promise.resolve({ fide: '1606921', games: [B] }));
+    await fixture.componentInstance.open('1606921', 's', 3, null);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el().textContent).toContain('konnten nicht geladen werden');
+    expect(el().textContent).not.toContain('Keine Partien mit Schwarz');
+    const seg = (label: string) => Array.from(el().querySelectorAll<HTMLButtonElement>('.seg button')).find(b => b.textContent === label)!;
+    seg('Beide').click();
+    fixture.detectChanges();
+    seg('Schwarz').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.recent).toHaveBeenCalledTimes(2);
+    expect(el().textContent).not.toContain('konnten nicht geladen werden');
+    expect(Array.from(el().querySelectorAll('table.recent tr')).map(r => r.textContent ?? '')[0]).toContain('Binder, Moriz');
+  });
+
   it('eine Partie, die es nicht mehr gibt, sagt es', async () => {
     api.recent.and.resolveTo({ fide: '1606921', games: [] });
     await fixture.componentInstance.open('1606921', null, null, null);

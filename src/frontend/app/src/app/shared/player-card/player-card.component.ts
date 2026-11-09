@@ -168,7 +168,9 @@ const OPENINGS_VS_D4: Record<string, string> = {
             <h3>{{ (show() === 'w' ? 'playerCard.recentWhite' : show() === 's' ? 'playerCard.recentBlack' : 'playerCard.recent') | translate }}
               <span class="muted small"> {{ 'playerCard.recentHint' | translate }}</span></h3>
             @if (replayError(); as e) { <p class="err small">{{ e | translate }}</p> }
-            @if (recentShown(); as list) {
+            @if (show() !== 'b' && colorFailed()[show() === 'w' ? 'w' : 's']) {
+              <p class="err small">{{ 'playerCard.recentError' | translate }}</p>
+            } @else if (recentShown(); as list) {
               @if (!list.length) { <p class="muted small">{{ (show() === 'w' ? 'playerCard.noGamesWhite' : 'playerCard.noGamesBlack') | translate }}</p> }
             } @else { <p class="muted small">{{ 'playerCard.loading' | translate }}</p> }
             <table class="recent">
@@ -278,6 +280,9 @@ export class PlayerCardComponent {
   private recentGames: RecentGame[] | null = null;
   /** Die letzten Partien JE FARBE (0.592.0): oben Weiß/Schwarz gewählt → die letzten acht dieser Farbe, samt PGN. */
   private readonly byColor = signal<Partial<Record<'w' | 's', RecentGame[]>>>({});
+  /** Abruf der Farbe gescheitert (Codereview F3-010): eigener Zustand statt „keine Partien mit …“; die Farbe bleibt
+   *  ungeladen, der nächste Wechsel auf sie fragt erneut. */
+  readonly colorFailed = signal<Partial<Record<'w' | 's', boolean>>>({});
   /** Was die Liste zeigt: bei „Beide" die Liste der Karte, sonst die der Farbe (`null` = wird geholt). */
   readonly recentShown = computed<(RecentGame | NonNullable<PlayerCard['recent']>[number])[] | null>(() => {
     const c = this.card(), s = this.show();
@@ -328,11 +333,12 @@ export class PlayerCardComponent {
     if (this.loadingColor.has(key)) return;
     this.loadingColor.add(key);
     const my = this.seq;
+    if (my === this.seq) this.colorFailed.update(m => ({ ...m, [color]: false }));
     try {
       const r = await this.api.recent(fide, this.token, color);
       if (my === this.seq) this.byColor.update(m => ({ ...m, [color]: r.games }));
     } catch {
-      if (my === this.seq) this.byColor.update(m => ({ ...m, [color]: [] }));
+      if (my === this.seq) this.colorFailed.update(m => ({ ...m, [color]: true }));
     } finally {
       this.loadingColor.delete(key);
     }
@@ -387,6 +393,7 @@ export class PlayerCardComponent {
     this.savedIds.clear();
     this.recentGames = null;
     this.byColor.set({});
+    this.colorFailed.set({});
     this.error.set(null);
     this.loading.set(true);
     const my = ++this.seq;
