@@ -197,12 +197,21 @@ public class TournamentDirectoryQueryService
         // Ein Turnier zaehlt, wenn EINER seiner Spielorte in der Box liegt. Bei Ligen nennt
         // chess-results mehrere („Mayrhofen, St.Veit") — mit dem Hauptort allein faende die
         // Umkreissuche ein Turnier nicht, das zur Haelfte vor der Haustuer stattfindet.
-        var candidates = await filtered
+        var inBox = filtered
             .Where(e => (e.Lat != null && e.Lon != null
                          && e.Lat >= box.MinLat && e.Lat <= box.MaxLat
                          && e.Lon >= box.MinLon && e.Lon <= box.MaxLon)
                         || e.Venues.Any(v => v.Lat >= box.MinLat && v.Lat <= box.MaxLat
-                                             && v.Lon >= box.MinLon && v.Lon <= box.MaxLon))
+                                             && v.Lon >= box.MinLon && v.Lon <= box.MaxLon));
+        // Vor dem Deckel sortieren, nach dem SQL-faehigen Teil der Rangfolge unten (G1-004): sonst
+        // entschied bei mehr als MaxMaterialized Kandidaten die Lesereihenfolge der Datenbank, welche
+        // wegfallen — auch das nahe Turnier am naechsten Wochenende. So fehlen die spaetesten, wie auf
+        // der Karte.
+        var boxOrdered = query.From is { } boxWindowStart
+            ? inBox.OrderBy(e => e.StartDate == null ? 2 : e.StartDate < boxWindowStart ? 1 : 0)
+                .ThenBy(e => e.StartDate).ThenBy(e => e.Id)
+            : inBox.OrderBy(e => e.StartDate).ThenBy(e => e.Id);
+        var candidates = await boxOrdered
             .Include(e => e.Venues)
             .Include(e => e.RoundDates)
             .Include(e => e.Sources)
