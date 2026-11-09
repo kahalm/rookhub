@@ -82,7 +82,13 @@ export class CalcTreeSaver {
       // Leerer Baum: gespeicherten Stand verwerfen (nicht „{}" ablegen).
       if (isEmpty(tree)) {
         this.options.markDone(bookPuzzleId, false);
-        if (this.hadStoredTree) { this.hadStoredTree = false; this.outbox.set(bookPuzzleId, null); }
+        // Läuft noch ein Save dieser Stellung (z. B. der erste, langsame), die Löschung hinterherschicken (F1-002):
+        // bei Erfolg schickt die Warteschlange das wartende null gleich nach, bei Fehlschlag lässt keepUnlessNewer
+        // die Löschung stehen statt den alten Baum wieder einzureihen.
+        if (this.hadStoredTree || this.outbox.isInFlight(bookPuzzleId)) {
+          this.hadStoredTree = false;
+          this.outbox.set(bookPuzzleId, null);
+        }
         // Sonst nur einen noch offenen Stand entwerten: ohne das würde ein zuvor
         // fehlgeschlagener Save (Eintrag liegt noch in der Outbox) den gerade bewusst
         // GELEERTEN Baum beim nächsten Senden doch wieder hochschreiben.
@@ -107,12 +113,14 @@ export class CalcTreeSaver {
     this.options.backend().saveTree(bookPuzzleId, json).subscribe({
       next: res => {
         this.options.onSaved();
+        // Inzwischen geleert (wartende Löschung): der Stand ist schon überholt — nicht als bearbeitet markieren.
+        const deletionWaiting = this.outbox.has(bookPuzzleId) && this.outbox.get(bookPuzzleId) === null;
         if (this.isCurrent(bookPuzzleId)) {
           this.saving = false;
-          this.hadStoredTree = true;
+          if (!deletionWaiting) this.hadStoredTree = true;
           this.savedAt = new Date(res.updatedAt);
         }
-        this.options.markDone(bookPuzzleId, true);
+        if (!deletionWaiting) this.options.markDone(bookPuzzleId, true);
         this.outbox.succeeded(flight);
       },
       error: () => {

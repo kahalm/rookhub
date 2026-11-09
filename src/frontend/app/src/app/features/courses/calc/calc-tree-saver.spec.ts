@@ -106,4 +106,35 @@ describe('CalcTreeSaver', () => {
     expect(saver.savedAt).toBeNull();
     expect(saver.saving).toBeFalse();
   });
+
+  // Delta-Review 2026-11-09, F1-002: geleert, während der erste Save noch unterwegs war.
+  function slowFirstSave() {
+    const answers: Subject<{ bookPuzzleId: number; updatedAt: string }>[] = [];
+    const sent: string[] = [];
+    const h = make((_id, json) => { sent.push(json); const s = new Subject<{ bookPuzzleId: number; updatedAt: string }>(); answers.push(s); return s; });
+    h.saver.reset(pos(7));
+    h.setTree(withMove());
+    h.saver.markDirty();
+    h.saver.flush();                    // Save läuft
+    h.setTree(createTree(START));       // Zug wieder gelöscht
+    h.saver.markDirty();
+    h.saver.flush();
+    return { ...h, answers, sent };
+  }
+
+  it('Leeren während der Save läuft, Save gelingt → Löschung wird hinterhergeschickt, nicht „bearbeitet“ (F1-002)', () => {
+    const { log, answers, sent } = slowFirstSave();
+    expect(log).toEqual(['done:7:false']);
+    answers[0].next({ bookPuzzleId: 7, updatedAt: '2026-07-28T10:00:00Z' }); answers[0].complete();
+    expect(sent.length).toBe(1);
+    expect(log).toEqual(['done:7:false', 'saved', 'delete:7']);
+  });
+
+  it('Leeren während der Save läuft, Save scheitert → der alte Baum wird nicht wieder eingereiht (F1-002)', () => {
+    const { saver, log, answers, sent } = slowFirstSave();
+    answers[0].error(new Error('500'));
+    saver.flush();
+    expect(sent.length).toBe(1);          // kein zweiter saveTree mit dem alten Baum
+    expect(log).toEqual(['done:7:false', 'failed', 'delete:7']);
+  });
 });
