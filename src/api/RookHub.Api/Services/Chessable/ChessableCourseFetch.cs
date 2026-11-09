@@ -24,6 +24,10 @@ internal sealed class ChessableCourseFetch
     internal int PollDelayMs = 2500;
     internal int FetchStallPolls = 240;   // aufeinanderfolgende Polls OHNE Fortschritt → Stillstand (≈10 min)
     internal int FetchMaxPolls = 2160;    // Absolut-Backstop (≈90 min) gegen echte Endlosschleifen
+    /// <summary>Neustarts eines verschwundenen/abgebrochenen piratechess-Jobs je Versuch (R4-016). Danach wie Stillstand:
+    /// ein piratechess, das Jobs immer wieder verliert (Crash-Schleife), startete sonst ohne Ende alle 2,5 s einen neuen
+    /// Kurs-Abruf über die VPN-IP und hielt die serielle Abruf-Lane belegt.</summary>
+    internal int FetchMaxRestarts = 5;
 
     // Reine Verbindungsfehler zu piratechess (Container-Neustart/kurzer Ausfall) dürfen einen Import
     // NICHT sofort scheitern lassen — sonst killt ein 5-Sekunden-Recreate die ganze Queue kaskadierend.
@@ -185,6 +189,7 @@ internal sealed class ChessableCourseFetch
         int lastMarker = import.ChaptersDone + import.LinesDone;
         int noProgressPolls = 0;
         int totalPolls = 0;
+        int restarts = 0;
         string? pgn = null;
 
         while (string.IsNullOrEmpty(pgn))
@@ -209,7 +214,15 @@ internal sealed class ChessableCourseFetch
                 prog = null;
             if (prog is null)
             {
-                // Job weg (piratechess-Neustart) → neu starten und weiter pollen.
+                // Job weg (piratechess-Neustart) → neu starten und weiter pollen. Zählt gegen die Grenzen (R4-016):
+                // kein Fortschritt, ein Poll, ein Neustart — zu viele davon beenden den Versuch wie ein Stillstand.
+                noProgressPolls++;
+                if (++restarts > FetchMaxRestarts || noProgressPolls >= FetchStallPolls || ++totalPolls >= FetchMaxPolls)
+                {
+                    _logger.LogWarning("Chessable-Import {Id}: piratechess-Job {Restarts}× verschwunden — Versuch endet wie Stillstand",
+                        import.Id, restarts - 1);
+                    break;
+                }
                 var start = await WithConnectionRetryAsync(
                     () => _proxy.StartCourseFetchAsync(bearer, import.Bid, mode, ct), import.Id, ct);
                 import.FetchJobId = start.JobId;

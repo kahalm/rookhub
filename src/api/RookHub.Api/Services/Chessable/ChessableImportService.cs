@@ -25,6 +25,7 @@ public class ChessableImportService : ICourseReimporter
     internal int PollDelayMs { get => _courseFetch.PollDelayMs; set => _courseFetch.PollDelayMs = value; }
     internal int FetchStallPolls { get => _courseFetch.FetchStallPolls; set => _courseFetch.FetchStallPolls = value; }
     internal int FetchMaxPolls { get => _courseFetch.FetchMaxPolls; set => _courseFetch.FetchMaxPolls = value; }
+    internal int FetchMaxRestarts { get => _courseFetch.FetchMaxRestarts; set => _courseFetch.FetchMaxRestarts = value; }
 
     /// <summary>Siehe <see cref="ChessableImportProgress.IsDrivenLocally"/> (prozessweite Treiber-Liste).</summary>
     internal static bool IsDrivenLocally(int importId) => ChessableImportProgress.IsDrivenLocally(importId);

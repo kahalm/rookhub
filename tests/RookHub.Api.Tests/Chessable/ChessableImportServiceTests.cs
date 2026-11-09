@@ -1347,6 +1347,30 @@ public class ChessableImportServiceTests : IDisposable
         Assert.Equal(1, _queue.Count);               // automatisch neu eingereiht (Auto-Restart)
     }
 
+    /// <summary>R4-016: piratechess verliert den Job bei jedem Poll (Crash-Schleife) — der Neustart-Zweig zählt gegen die
+    /// Grenzen und endet nach FetchMaxRestarts wie ein Stillstand (Resume), statt endlos neue Kurs-Abrufe zu starten.</summary>
+    [Fact]
+    public async Task RunAsync_JobVerschwindetImmerWieder_endetNachMaxNeustartsWieStillstand()
+    {
+        SeedFetchUserAndImport(attempts: 0, out var id);
+        var starts = 0;
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = $"job-{++starts}" });
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 1000; svc.FetchMaxPolls = 100_000; svc.FetchMaxRestarts = 3;
+
+        var run = svc.RunAsync(id);
+        Assert.Same(run, await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(60))));
+        await run;
+
+        Assert.InRange(starts, 1, 1 + 3);   // erster Start + höchstens drei Neustarts
+        var reloaded = await _db.ChessableImports.FindAsync(id);
+        Assert.Equal(ChessableImportStatus.Running, reloaded!.Status);   // wie Stillstand: neu eingereiht, nicht gescheitert
+        Assert.Equal(1, _queue.Count);
+    }
+
     [Fact]
     public async Task RunAsync_SlowButProgressing_DoesNotTimeOut()
     {
