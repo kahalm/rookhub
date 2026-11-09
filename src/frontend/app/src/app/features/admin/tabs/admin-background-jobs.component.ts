@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { HelpHintComponent } from '../../../shared/help-hint/help-hint.component';
@@ -129,6 +130,7 @@ export class AdminBackgroundJobsComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly translate = inject(TranslateService);
   private readonly snack = inject(SnackbarService);
+  private readonly confirm = inject(ConfirmService);
 
   readonly state = signal<BackgroundJobsPause | null>(null);
   readonly error = signal(false);
@@ -153,6 +155,14 @@ export class AdminBackgroundJobsComponent implements OnInit {
 
   async toggle(ev: MatSlideToggleChange): Promise<void> {
     const paused = ev.checked;
+    // Pausieren hält ALLE pausierbaren Dienste an und übersteht Neustarts — ein gestreifter Schalter am Handy fiele
+    // erst auf, wenn Analysen ausbleiben. Deshalb Rückfrage; Fortsetzen geht ohne (Codereview F3-005, Entscheidung E7).
+    if (paused) {
+      const count = (this.state()?.services ?? []).filter(x => x.pausable).length;
+      this.saving.set(true);
+      const ok = await firstValueFrom(this.confirm.ask('admin.jobs.confirmPause', { count }), { defaultValue: false });
+      if (!ok) { ev.source.checked = false; this.saving.set(false); return; }
+    }
     this.saving.set(true);
     try {
       this.state.set(await firstValueFrom(this.http.put<BackgroundJobsPause>(BACKGROUND_JOBS_URL, { paused })));

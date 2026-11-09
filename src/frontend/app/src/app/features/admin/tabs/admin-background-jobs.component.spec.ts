@@ -5,11 +5,14 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AdminBackgroundJobsComponent, BACKGROUND_JOBS_URL, BackgroundJobsPause } from './admin-background-jobs.component';
 import { SnackbarService } from '../../../core/snackbar.service';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { of } from 'rxjs';
 
 describe('AdminBackgroundJobsComponent', () => {
   let fixture: ComponentFixture<AdminBackgroundJobsComponent>;
   let http: HttpTestingController;
   let snack: jasmine.SpyObj<SnackbarService>;
+  let ask: jasmine.Spy;
 
   const running: BackgroundJobsPause = {
     paused: false, since: null, by: null, forcedByConfig: false, pausedInDb: false,
@@ -32,11 +35,13 @@ describe('AdminBackgroundJobsComponent', () => {
 
   beforeEach(() => {
     snack = jasmine.createSpyObj('SnackbarService', ['success', 'warn']);
+    ask = jasmine.createSpy('ask').and.returnValue(of(true));
     TestBed.configureTestingModule({
       imports: [AdminBackgroundJobsComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
-        { provide: SnackbarService, useValue: snack }],
+        { provide: SnackbarService, useValue: snack },
+        { provide: ConfirmService, useValue: { ask } }],
     });
     fixture = TestBed.createComponent(AdminBackgroundJobsComponent);
     http = TestBed.inject(HttpTestingController);
@@ -67,6 +72,7 @@ describe('AdminBackgroundJobsComponent', () => {
 
     const input = el().querySelector('[data-testid="pause-toggle"] button, [data-testid="pause-toggle"] input') as HTMLElement;
     input.click();
+    await render();                                   // Rückfrage (bestätigt) liegt vor dem PUT
     const req = http.expectOne(BACKGROUND_JOBS_URL);
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual({ paused: true });
@@ -78,6 +84,37 @@ describe('AdminBackgroundJobsComponent', () => {
     expect(snack.success).toHaveBeenCalledWith('admin.jobs.pausedNow');
   });
 
+  // Codereview F3-005: Pausieren nur nach Rückfrage, Fortsetzen sofort.
+  it('Pausieren fragt nach (mit Zahl der pausierbaren Dienste); ohne Bestätigung kein PUT, Schalter zurück', async () => {
+    ask.and.returnValue(of(false));
+    fixture.detectChanges();
+    http.expectOne(BACKGROUND_JOBS_URL).flush(running);
+    await render();
+
+    const input = el().querySelector('[data-testid="pause-toggle"] button, [data-testid="pause-toggle"] input') as HTMLElement;
+    input.click();
+    await render();
+    expect(ask).toHaveBeenCalledOnceWith('admin.jobs.confirmPause', { count: 1 });
+    http.expectNone(BACKGROUND_JOBS_URL);
+    expect(fixture.componentInstance.saving()).toBeFalse();
+    const toggleEl = el().querySelector('[data-testid="pause-toggle"] button') as HTMLElement | null;
+    if (toggleEl) expect(toggleEl.getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('Fortsetzen geht ohne Rückfrage sofort hinaus', async () => {
+    fixture.detectChanges();
+    http.expectOne(BACKGROUND_JOBS_URL).flush(paused);
+    await render();
+
+    const input = el().querySelector('[data-testid="pause-toggle"] button, [data-testid="pause-toggle"] input') as HTMLElement;
+    input.click();
+    const req = http.expectOne(BACKGROUND_JOBS_URL);
+    expect(req.request.body).toEqual({ paused: false });
+    req.flush(running);
+    await render();
+    expect(ask).not.toHaveBeenCalled();
+  });
+
   it('meldet einen gescheiterten Wechsel und lässt den Stand stehen', async () => {
     fixture.detectChanges();
     http.expectOne(BACKGROUND_JOBS_URL).flush(running);
@@ -85,6 +122,7 @@ describe('AdminBackgroundJobsComponent', () => {
 
     const input = el().querySelector('[data-testid="pause-toggle"] button, [data-testid="pause-toggle"] input') as HTMLElement;
     input.click();
+    await render();
     http.expectOne(BACKGROUND_JOBS_URL).flush('nope', { status: 500, statusText: 'err' });
     await render();
 
