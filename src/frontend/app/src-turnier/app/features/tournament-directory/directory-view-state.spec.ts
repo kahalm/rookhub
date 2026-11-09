@@ -77,6 +77,15 @@ describe('directory-view-state (Golden: zurückgelesen = gemerkt)', () => {
       .toEqual([null, null, null, null, '']);
   });
 
+  it('ein gespeichertes Suchprofil ohne Mittelpunkt behält seine Ortsbeschriftung (Gegenlesung GF-R1)', () => {
+    const b = host();
+    Object.assign(b.filter, { lat: 47, lon: 11 });
+    b.placeLabel = 'Innsbruck';
+    applyStoredView(b, { lat: null, lon: null, placeLabel: 'Profil Tirol' });
+
+    expect([b.filter.lat, b.filter.lon, b.placeLabel]).toEqual([null, null, 'Profil Tirol']);
+  });
+
   it('ein alter Zustand ohne diese Schlüssel lässt Ort und Tempo stehen', () => {
     const b = host();
     Object.assign(b.filter, { lat: 47, lon: 11, radiusKm: 50, speed: 'Blitz' });

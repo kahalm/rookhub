@@ -130,7 +130,8 @@ export function applyStoredView(
     // „Kein Mittelpunkt“ ist eine Entscheidung (z. B. auf einem anderen Gerät gelöscht), kein fehlender Wert.
     host.filter.lat = null;
     host.filter.lon = null;
-    host.placeLabel = '';
+    // Ein aktives Suchprofil hat ebenfalls keinen Mittelpunkt, trägt aber seine Beschriftung — die bleibt (Gegenlesung GF-R1).
+    host.placeLabel = str(stored['placeLabel']) ?? '';
   }
 
   // Das Profil wird erst uebernommen, wenn es die Liste noch kennt (applyQueryParams) —
