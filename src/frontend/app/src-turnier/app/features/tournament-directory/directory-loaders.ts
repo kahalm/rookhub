@@ -38,7 +38,7 @@ export class DirectoryListLoader {
   private generation = 0;
 
   constructor(
-    private readonly search: (filter: DirectoryFilter, page: number, pageSize: number) => Observable<DirectoryPage>,
+    private readonly search: (filter: DirectoryFilter, page: number, pageSize: number, skip?: number) => Observable<DirectoryPage>,
     private readonly pageSize: number,
     /** „Mehr anzeigen" ist gescheitert — die Liste bis hierher stimmt. */
     private readonly moreFailed: () => void,
@@ -50,7 +50,11 @@ export class DirectoryListLoader {
     this.failed.set(false);
     const generation = ++this.generation;
     const requestedPage = this.page;
-    this.search(filter, requestedPage, this.pageSize).subscribe({
+    // Folgeseiten ab der Zahl der GELADENEN Einträge statt nach Seitennummer (Codereview F4-011): nach „Ausblenden“ fehlt
+    // die Karte in der Liste und am Server — nach Seitennummer rückte das Fenster um jede Ausblendung weiter, und so viele
+    // Turniere wurden still übersprungen.
+    const skip = requestedPage > 1 ? this.entries().length : undefined;
+    this.search(filter, requestedPage, this.pageSize, skip).subscribe({
       next: page => {
         if (generation !== this.generation) return;
         this.applyPage(page, requestedPage);
@@ -63,7 +67,13 @@ export class DirectoryListLoader {
   }
 
   private applyPage(page: DirectoryPage, requestedPage: number): void {
-    this.entries.set(requestedPage === 1 ? page.items : [...this.entries(), ...page.items]);
+    if (requestedPage === 1) {
+      this.entries.set(page.items);
+    } else {
+      // Doppelte nicht zweimal: nach „Rückgängig“ eines Ausblendens kann eine Karte schon in der Liste stehen.
+      const have = new Set(this.entries().map(e => e.id));
+      this.entries.set([...this.entries(), ...page.items.filter(e => !have.has(e.id))]);
+    }
     this.total.set(page.total);
     this.truncated.set(page.truncated);
     this.loading.set(false);

@@ -116,7 +116,7 @@ export class TournamentDirectoryComponent implements OnInit {
 
   /** Die Liste (seitenweise, mit Zaehler gegen ueberholte Antworten — `DirectoryListLoader`). */
   private readonly list = new DirectoryListLoader(
-    (filter, page, size) => this.directory.search(filter, page, size), this.pageSize,
+    (filter, page, size, skip) => this.directory.search(filter, page, size, skip), this.pageSize,
     () => this.snackbar.warn(this.translate.instant('tournamentDirectory.loadError')));
   readonly entries = this.list.entries;
   readonly total = this.list.total;

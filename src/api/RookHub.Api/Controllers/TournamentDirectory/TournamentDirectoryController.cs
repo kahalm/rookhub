@@ -78,13 +78,15 @@ public class TournamentDirectoryController : BaseApiController
         [FromQuery] int? profileId = null,
         [FromQuery] DirectoryAudienceQuery? audience = null,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 50,
+        [FromQuery] int? skip = null,
         CancellationToken ct = default)
     {
         var parsed = await BuildQueryAsync(from, to, lat, lon, radiusKm, fed, speed, q,
             weekendOnly, minPlayers, profileId, audience, page, pageSize, ct);
         if (parsed.Error is not null) return BadRequest(new { message = parsed.Error });
 
-        var result = await _query.SearchAsync(parsed.Query!, ct);
+        // skip (F4-011): „Mehr laden" ab der Zahl der geladenen Eintraege — ausgeblendete verschieben das Fenster nicht.
+        var result = await _query.SearchAsync(parsed.Query! with { Skip = skip }, ct);
         var subscribed = await SubscribedIdsAsync(
             result.Items.SelectMany(i => i.Members).Select(m => m.ChessResultsId), ct);
         var ignored = await IgnoredIdsAsync(

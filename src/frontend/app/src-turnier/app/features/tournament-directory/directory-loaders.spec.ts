@@ -22,7 +22,7 @@ describe('DirectoryListLoader', () => {
   beforeEach(() => {
     r = requests<DirectoryPage>();
     warned = 0;
-    list = new DirectoryListLoader((f, page, size) => r.fn(f, page, size), 25, () => warned++);
+    list = new DirectoryListLoader((f, page, size, skip) => skip === undefined ? r.fn(f, page, size) : r.fn(f, page, size, skip), 25, () => warned++);
   });
 
   it('ersetzt mit Seite 1 und hängt weitere Seiten an', () => {
@@ -35,8 +35,22 @@ describe('DirectoryListLoader', () => {
     list.page = 2;
     list.load(filter);
     expect(r.calls[1].args[1]).toBe(2);
+    expect(r.calls[1].args[3]).toBe(1);                              // ab den geladenen Einträgen
     r.calls[1].answer.next({ items: [e('b')], total: 3, truncated: false });
     expect(list.entries().map(x => x.id)).toEqual(['a', 'b']);
+  });
+
+  // Codereview F4-011: nach „Ausblenden“ (Karte lokal und am Server weg) übersprang „Mehr laden“ nach Seitennummer still
+  // so viele Turniere, wie ausgeblendet wurden.
+  it('Folgeseite ab der Zahl der geladenen Einträge — ausgeblendete verschieben das Fenster nicht; keine Doppel', () => {
+    list.load(filter);
+    r.calls[0].answer.next({ items: [e('a'), e('b'), e('c')], total: 6, truncated: false });
+    list.entries.update(l => l.filter(x => x.id !== 'b'));         // „Ausblenden“ nimmt b heraus
+    list.page = 2;
+    list.load(filter);
+    expect(r.calls[1].args).toEqual([filter, 2, 25, 2]);            // ab Eintrag 2 (a, c geladen), nicht ab 25
+    r.calls[1].answer.next({ items: [e('c'), e('d')], total: 5, truncated: false });
+    expect(list.entries().map(x => x.id)).toEqual(['a', 'c', 'd']);
   });
 
   it('verwirft die Antwort eines überholten Aufrufs', () => {

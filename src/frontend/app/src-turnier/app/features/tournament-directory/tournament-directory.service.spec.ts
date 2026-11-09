@@ -32,6 +32,13 @@ describe('TournamentDirectoryService', () => {
     req.flush({ items: [], total: 0, truncated: false });
   });
 
+  it('Folgeseite mit skip = Zahl der geladenen Einträge (F4-011)', () => {
+    service.search(filter(), 2, 20, 17).subscribe();
+    const req = http.expectOne(r => r.url === '/api/tournament-directory');
+    expect([req.request.params.get('page'), req.request.params.get('pageSize'), req.request.params.get('skip')]).toEqual(['2', '20', '17']);
+    req.flush({ items: [], total: 0, truncated: false });
+  });
+
   it('schickt den Umkreis nur mit, wenn Mittelpunkt UND Radius gesetzt sind', () => {
     // Ein Radius ohne Mittelpunkt (oder umgekehrt) ist keine halbe Umkreissuche,
     // sondern eine, die der Server ablehnen würde.

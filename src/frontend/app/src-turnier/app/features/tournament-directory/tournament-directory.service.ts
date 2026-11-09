@@ -15,8 +15,11 @@ import {
 export class TournamentDirectoryService {
   constructor(private http: HttpClient) {}
 
-  search(filter: DirectoryFilter, page = 1, pageSize = 50): Observable<DirectoryPage> {
-    const params = this.toParams(filter).set('page', page).set('pageSize', pageSize);
+  /** `skip`: Folgeseite ab genau so vielen Einträgen (statt `(page - 1) * pageSize`) — die Liste schickt die Zahl der
+   *  geladenen, damit ausgeblendete Turniere das Fenster nicht verschieben (F4-011). */
+  search(filter: DirectoryFilter, page = 1, pageSize = 50, skip?: number): Observable<DirectoryPage> {
+    let params = this.toParams(filter).set('page', page).set('pageSize', pageSize);
+    if (skip != null) params = params.set('skip', skip);
     return this.http.get<DirectoryPage>('/api/tournament-directory', { params });
   }
 

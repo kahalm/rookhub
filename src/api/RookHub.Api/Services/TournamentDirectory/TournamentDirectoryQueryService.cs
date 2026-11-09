@@ -82,6 +82,14 @@ public sealed record DirectorySearchQuery
 
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 50;
+
+    /// <summary>
+    /// Folgeseite ab genau so vielen Eintraegen statt ab <c>(Page - 1) * PageSize</c> (Codereview F4-011): die Liste
+    /// schickt die Zahl der schon GELADENEN. Blendet der Nutzer auf Seite 1 Turniere aus, fallen sie aus der Liste UND
+    /// aus dem Ergebnis — nach Seitennummer rueckte das Fenster um jede Ausblendung weiter, und so viele Turniere fehlten
+    /// still. <c>null</c> = wie bisher nach Seite.
+    /// </summary>
+    public int? Skip { get; init; }
 }
 
 /// <summary>
@@ -158,6 +166,7 @@ public class TournamentDirectoryQueryService
         DirectorySearchQuery query, int maxPageSize, CancellationToken ct = default)
     {
         var (page, pageSize) = Paging.Normalize(query.Page, query.PageSize, Math.Max(1, maxPageSize));
+        var offset = query.Skip is { } skip ? Math.Max(0, skip) : (page - 1) * pageSize;
         var filtered = ApplyFilters(_db.TournamentDirectoryEntries.AsNoTracking(), query);
 
         var radius = query.RadiusKm;
@@ -185,7 +194,7 @@ public class TournamentDirectoryQueryService
                     .ThenBy(g => g.Start).ThenBy(g => g.PrimaryId)
                 : groups.OrderBy(g => g.Start).ThenBy(g => g.PrimaryId);
             var keys = await ordered
-                .Skip((page - 1) * pageSize).Take(pageSize)
+                .Skip(offset).Take(pageSize)
                 .ToListAsync(ct);
 
             var items = await LoadGroupsAsync(filtered, keys.Select(k => k.Key).ToList(),
@@ -252,7 +261,7 @@ public class TournamentDirectoryQueryService
             .ToList();
 
         return new DirectorySearchResult(
-            await MarkAsync(grouped.Skip((page - 1) * pageSize).Take(pageSize).ToList(), query, ct),
+            await MarkAsync(grouped.Skip(offset).Take(pageSize).ToList(), query, ct),
             grouped.Count,
             truncated);
     }

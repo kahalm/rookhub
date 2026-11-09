@@ -1469,6 +1469,30 @@ public class TournamentDirectoryControllerTests : IDisposable
     }
 
     /// <summary>
+    /// Codereview F4-011: nach „Ausblenden" auf Seite 1 rueckte die Folgeseite nach Seitennummer um jede Ausblendung
+    /// weiter — so viele Turniere fehlten still. Mit <c>skip</c> = Zahl der geladenen Eintraege kommt genau das naechste.
+    /// Ohne <c>skip</c> bleibt es beim Seiten-Offset; ein negativer zaehlt wie 0.
+    /// </summary>
+    [Fact]
+    public async Task Search_Skip_ContinuesAfterTheLoadedEntries_WhenOneWasIgnoredMeanwhile()
+    {
+        var userId = await CreateUserAsync();
+        for (var i = 1; i <= 5; i++)
+            await AddEntryAsync($"{i}", $"Open {i}", new DateOnly(2026, 10, i), new DateOnly(2026, 10, i));
+
+        async Task<List<string?>> Ids(int page, int? skip) => Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(userId).Search("2026-10-01", "2026-12-31", page: page, pageSize: 2, skip: skip)).Result).Value)
+            .Items.Select(i => i.ChessResultsId).ToList();
+
+        Assert.Equal(["1", "2"], await Ids(1, null));
+        await CreateController(userId).Ignore("2", default);         // auf Seite 1 ausgeblendet — geladen bleibt nur „1"
+
+        Assert.Equal(["4", "5"], await Ids(2, null));                // nach Seitennummer: „3" fehlte still
+        Assert.Equal(["3", "4"], await Ids(2, 1));                   // ab dem einen geladenen Eintrag
+        Assert.Equal(["1", "3"], await Ids(2, -5));
+    }
+
+    /// <summary>
     /// Ausgeblendetes gilt NUR fuer den, der es ausgeblendet hat — sonst waere es eine
     /// Moderation und keine persoenliche Auswahl.
     /// </summary>
