@@ -114,3 +114,15 @@ Wunsch 2026-11-09: „die empfehlungen sollen getrennt für weiß & schwarz sein
 ## Klickbare Züge und Varianten am Seitenbrett (0.932.0)
 
 Züge im Text (Überschriften, Absätze, Listen, Zitate, Tabellen, Bildunterschriften) werden über `linkSummaryMoves` klickbar, sobald es das Seitenbrett gibt. Nummer + Seite treffen zuerst den tatsächlichen Partiezug, dann zuletzt genannte Stellungen des Absatzes, dann die Partiestellung als Abzweig (`explanationParts(text, root, game, shared)`); Illegales bleibt Text. Eine Folge, die die Partie verlässt, wird auf dem Brett zur Variante ab dem Abzweig. Eigene Züge auf dem Brett ergeben ebenfalls eine Variante. Varianten liegen nur im Speicher der Seite, ohne Schreibzugriff, und verschwinden beim Blättern in der Partie, beim Neuladen oder Verlassen.
+
+## Teilen-Link einer Vereinspartie (`/cg/{token}`, 2026-11-09)
+
+„Teilen-Link kopieren“ auf `/club-games/{id}` (Recht `league.view`, wie „Partie teilen“ der Ligapartie) legt `LeagueClubGames.ShareToken` an; gültig bis zum Widerruf (⋮ → „Teilen-Link widerrufen“, Token wird gelöscht, ein neues Teilen vergibt ein neues) oder bis die Partie archiviert wird.
+
+| Endpunkt | Wer | Antwort |
+| --- | --- | --- |
+| `GET/POST/DELETE api/league/club/games/{id}/share` | `league.view`, Verein der Partie | `{ token }` bzw. 204 |
+| `GET api/league/s-club-game/{token}` | anonym | nur Namen, Elo, Ergebnis, Jahr, PGN, Event, eigene Seite (keine Id, keine Paarung) |
+| `…/evals`, `…/comparisons`, `…/summary` | anonym | Bewertungen; Vergleiche ohne Titel/Fehler; nur fertiger Text (ohne Modell und Stand) |
+
+Anonymisierte Partie: PGN neu gebaut (nur Hauptvariante, ohne Event und Elo der ersetzten Seite); `Event` leer. Im Text der Zusammenfassung werden „Runde N“/„Brett N“ gelöscht (der Watcher bekommt `leagueGameLabel`); steht ein interner Name (jeder Namensteil ab drei Zeichen) oder die interne FIDE-ID darin, gibt es `none`. Die Seite reicht bei einem Treffer keinen Text heraus — lieber keine Zusammenfassung als ein Klarname.

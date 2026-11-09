@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.939.0',
+    date: '2026-11-09',
+    changes: [{
+      en: 'Club games can now be shared like your own games: “Copy share link” on the club game page creates a link (/cg/…) that anyone can open without signing in, including the finished summary, read-only. The link can be revoked from the ⋮ menu. Anonymized games stay anonymous: no internal names, no round or board.',
+      de: 'Vereinspartien lassen sich jetzt wie eigene Partien teilen: „Teilen-Link kopieren“ auf der Seite der Vereinspartie erzeugt einen Link (/cg/…), den jeder ohne Anmeldung öffnen kann, samt fertiger Zusammenfassung, nur lesend. Widerrufen geht im ⋮-Menü. Anonymisierte Partien bleiben anonym: keine internen Namen, keine Runde und kein Brett.',
+    }],
+  },
+  {
     version: '0.938.5',
     date: '2026-11-09',
     changes: [

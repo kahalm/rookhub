@@ -113,6 +113,28 @@ public class LeagueClubOverviewController(LeagueClubResolver clubs, LeagueClubOv
             await club.ClubOfGameAsync(id, ct));
     }
 
+    /// <summary>Teilen-Link der Vereinspartie (<see cref="ClubGameLinks"/>) → <c>{ token }</c>, <c>null</c> = nicht geteilt; 404 unbekannt oder fremd.
+    /// Recht wie der Knopf „Partie teilen" einer Ligapartie: wer die Vereinspartie lesen darf.</summary>
+    [HttpGet("games/{id:int}/share")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> Share(int id, [FromServices] ClubGameLinks links, CancellationToken ct) =>
+        await WithClubAsync(ct, async c => await links.TokenAsync(c, id, ct) is (true, var token) ? Ok(new { token }) : NotFound(),
+            await club.ClubOfGameAsync(id, ct));
+
+    /// <summary>Teilen-Link anlegen (ein schon bestehender bleibt) → <c>{ token }</c>; 404 unbekannt oder fremd.</summary>
+    [HttpPost("games/{id:int}/share")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> CreateShare(int id, [FromServices] ClubGameLinks links, CancellationToken ct) =>
+        await WithClubAsync(ct, async c => await links.CreateAsync(c, id, ct) is { } token ? Ok(new { token }) : NotFound(),
+            await club.ClubOfGameAsync(id, ct));
+
+    /// <summary>Teilen-Link widerrufen → 204; 404 unbekannt oder fremd.</summary>
+    [HttpDelete("games/{id:int}/share")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> RevokeShare(int id, [FromServices] ClubGameLinks links, CancellationToken ct) =>
+        await WithClubAsync(ct, async c => await links.RevokeAsync(c, id, ct) ? NoContent() : NotFound(),
+            await club.ClubOfGameAsync(id, ct));
+
     private static List<int> IdList(string? ids) =>
         (ids ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(x => int.TryParse(x, out var n) ? n : 0).Where(n => n > 0).Distinct().ToList();

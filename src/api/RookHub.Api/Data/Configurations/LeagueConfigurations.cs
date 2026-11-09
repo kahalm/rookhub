@@ -351,6 +351,8 @@ internal sealed class LeagueClubGameConfiguration : IEntityTypeConfiguration<Lea
         e.HasIndex(g => new { g.LeagueTnr, g.LeagueRound, g.LeagueMatchNo, g.LeagueBoard });   // 0.716.1, LeagueGameLinks
         e.HasIndex(g => g.MovesHash);
         e.HasIndex(g => g.ArchivedAt);
+        e.Property(g => g.ShareToken).HasMaxLength(32);
+        e.HasIndex(g => g.ShareToken).IsUnique();
         // Archivierte Fassungen (ersetzt durch ein neueres Formular) sind überall unsichtbar.
         e.HasQueryFilter(g => g.ArchivedAt == null);
         // Der Verein (Mandanten-Schritt 2026-10-07) bekommt BEWUSST keinen zweiten globalen Filter: EF Core kennt je Typ nur

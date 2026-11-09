@@ -1180,3 +1180,56 @@ describe('SharedGameComponent Layout', () => {
     // „Kurz erzählt" kürzt seit der Nachrunde gemessen auf drei Zeilen (game-recap.component.spec.ts).
   });
 });
+
+describe('SharedGameComponent — Teilen-Link der Vereinspartie (2026-11-09)', () => {
+  async function setup(mode: 'club' | 'club-link', loggedIn: boolean, perms: string[] = []) {
+    const params = mode === 'club' ? { id: '241' } : { token: 'tok' };
+    await TestBed.configureTestingModule({
+      imports: [SharedGameComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isLoggedIn: loggedIn, has: (p: string) => perms.includes(p) } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params), data: { mode }, queryParamMap: convertToParamMap({}) } } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(SharedGameComponent);
+    return { fixture, c: fixture.componentInstance, http: TestBed.inject(HttpTestingController) };
+  }
+  const dto = { white: 'Testdorf', black: 'b', result: '1-0', pgn: '1. e4 e5 1-0', whiteElo: null, blackElo: null, year: 2026, event: null };
+
+  it('shows the share button only with league.view on the signed-in club page', async () => {
+    const { fixture, c, http } = await setup('club', true, ['league.view']);
+    fixture.detectChanges();
+    expect(c.canShareClub).toBeTrue();
+    http.expectOne('/api/league/club/games/241/share').flush({ token: null });
+    http.expectOne('/api/league/club/games/241').flush({ ...dto, id: 241 });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('button.club-share')).toBeTruthy();
+    fixture.destroy();
+  });
+
+  it('offers no share button without the permission', async () => {
+    const { fixture, c, http } = await setup('club', true, []);
+    fixture.detectChanges();
+    expect(c.canShareClub).toBeFalse();
+    http.expectNone('/api/league/club/games/241/share');
+    http.expectOne('/api/league/club/games/241').flush({ ...dto, id: 241 });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('button.club-share')).toBeNull();
+    fixture.destroy();
+  });
+
+  it('on the link itself: reads only the link endpoints, no share button, no club id as mark origin', async () => {
+    const { fixture, c, http } = await setup('club-link', false);
+    fixture.detectChanges();
+    expect(c.canShareClub).toBeFalse();
+    expect(c.clubLinkToken).toBe('tok');
+    expect(c.markSource).toEqual({});
+    http.expectOne('/api/league/s-club-game/tok/comparisons').flush([]);
+    http.expectOne('/api/league/s-club-game/tok').flush(dto);
+    expect(c.game?.white).toBe('Testdorf');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('button.club-share')).toBeNull();
+    fixture.destroy();
+  });
+});

@@ -33,6 +33,7 @@ public static partial class DomainServicesSetup
             anonymousCap: RookHub.Api.Services.League.LeagueClubDraftService.AnonymousCapFrom(sp.GetService<IConfiguration>())));
         services.AddScoped<RookHub.Api.Services.League.LeagueMegaPlayers>();
         services.AddScoped<RookHub.Api.Services.League.LeagueGameShares>();     // Link auf eine einzelne Ligapartie (2026-11-09)
+        services.AddScoped<RookHub.Api.Services.League.ClubGameLinks>();        // Teilen-Link einer Vereinspartie (2026-11-09)
         services.AddScoped<RookHub.Api.Services.League.LeagueFixtureGames>();   // Paarungen samt Partien (0.673.0)
         services.AddScoped(sp => new RookHub.Api.Services.League.LeagueGameMoves(   // Aufstellungen + erste Züge (2026-10-08)
             sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), null,                     // + Partie je Brett (0.724.0)

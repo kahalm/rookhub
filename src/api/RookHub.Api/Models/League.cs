@@ -436,6 +436,9 @@ public class LeagueClubGame
     public DateTime? ArchivedAt { get; set; }
     /// <summary>Die Partie, die diese ersetzt hat (kein Fremdschlüssel).</summary>
     public int? ReplacedById { get; set; }
+    /// <summary>Teilen-Link (2026-11-09, <see cref="Services.League.ClubGameLinks"/>): <c>/cg/{token}</c> zeigt ohne Anmeldung nur diese
+    /// Partie; <c>null</c> = nicht geteilt.</summary>
+    public string? ShareToken { get; set; }
     /// <summary>Nur in der Antwort des Hinzufügens: wie viele ältere Fassungen diese Partie gerade archiviert hat.</summary>
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public int Replaced { get; set; }

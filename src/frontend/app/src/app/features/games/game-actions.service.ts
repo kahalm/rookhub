@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { TranslateService } from '@ngx-translate/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { downloadBlob } from '../../shared/download.util';
@@ -70,7 +70,13 @@ export class GameActionsService {
   /** Teilen-Link einer Partie in die Zwischenablage; scheitert das, steht der Link in der Meldung. */
   copyShareLink(shareToken: string | null | undefined): void {
     if (!shareToken) return;
-    const url = this.games.shareUrl(shareToken);
+    this.copyLink(this.games.shareUrl(shareToken));
+  }
+
+  /** Link der Vereinspartie (`/cg/:token`) in die Zwischenablage. */
+  copyClubGameLink(token: string): void { this.copyLink(this.games.clubGameShareUrl(token)); }
+
+  private copyLink(url: string): void {
     navigator.clipboard?.writeText(url).then(
       () => this.snackbar.copy(this.translate.instant('games.shareCopied')),
       () => this.snackbar.warn(url),
@@ -109,13 +115,22 @@ export class GameActionsService {
 
   /** Teilen-Link widerrufen (nach Rückfrage, A2-006) → das neue, unveröffentlichte Token; nichts bei Abbruch/Fehler. */
   revokeShareLink(id: number): Observable<string> {
-    return new Observable<string>(sub => {
+    return this.confirmRevoke(this.games.revokeShare(id).pipe(map(r => r.shareToken)));
+  }
+
+  /** Teilen-Link einer Vereinspartie widerrufen; `next` nach Erfolg. */
+  revokeClubGameLink(id: number): Observable<void> {
+    return this.confirmRevoke(this.games.revokeClubGameShare(id));
+  }
+
+  private confirmRevoke<T>(call: Observable<T>): Observable<T> {
+    return new Observable<T>(sub => {
       const ask = this.confirm.ask('games.revokeShareConfirm').subscribe(ok => {
         if (!ok) { sub.complete(); return; }
-        this.games.revokeShare(id).subscribe({
+        call.subscribe({
           next: r => {
             this.snackbar.success(this.translate.instant('games.revokeShareDone'));
-            sub.next(r.shareToken);
+            sub.next(r);
             sub.complete();
           },
           error: () => { this.snackbar.warn(this.translate.instant('games.revokeShareError')); sub.complete(); },

@@ -117,6 +117,9 @@ export const routes: Routes = [
   // entscheidet; kein Guard, sonst landete der Gast vor der Anmeldemaske.
   { path: 's/:token/club-games/:id/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'club-share' } },
   { path: 's/:token/club-games/:id', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), data: { mode: 'club-share' } },
+  // Eine einzelne Vereinspartie, per „Teilen-Link kopieren" auf /club-games/:id (2026-11-09): ohne Anmeldung, nur lesend.
+  { path: 'cg/:token/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'club-link' } },
+  { path: 'cg/:token', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), data: { mode: 'club-link' } },
   { path: 'l/:token', loadComponent: () => import('./features/repertoire/shared-line.component').then(m => m.SharedLineComponent) },
   // Geteilte Rekonstruktion: die ganze Partie samt ihrer Lücken, ohne Anmeldung — man verschickt
   // den Link ja gerade, um jemanden auf die offenen Stellen schauen zu lassen.

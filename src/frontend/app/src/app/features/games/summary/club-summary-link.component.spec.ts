@@ -276,4 +276,20 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
     f.detectChanges();
     expect(el.querySelector('.summary-wait')?.textContent).toContain('games.summary.running');
   });
+
+  it('Link einer Vereinspartie /cg/:token: nur der fertige Text, nichts anfordern — auch für Admins', () => {
+    TestBed.configureTestingModule({
+      imports: [ClubSummaryLinkComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }), { provide: AuthService, useValue: { isAdmin: true } }],
+    });
+    const f = TestBed.createComponent(ClubSummaryLinkComponent);
+    f.componentRef.setInput('clubLinkToken', 'tok');
+    f.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne('/api/league/s-club-game/tok/summary').flush({ ...none, status: 'done', markdown: '# x' });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('a.summary-link')?.getAttribute('href')).toBe('/cg/tok/summary');
+    expect(el.querySelector('.summary-request')).toBeNull();
+  });
 });

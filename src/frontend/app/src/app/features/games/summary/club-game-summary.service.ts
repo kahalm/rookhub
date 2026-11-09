@@ -63,6 +63,11 @@ export class ClubGameSummaryService {
     return this.http.get<ClubGameSummary>(`/api/league/s/${encodeURIComponent(token)}/club/games/${gameId}/summary`);
   }
 
+  /** Vereinspartie über ihren eigenen Link `/cg/{token}`, nur lesend: nur der fertige Text. */
+  getLinked(token: string): Observable<ClubGameSummary> {
+    return this.http.get<ClubGameSummary>(`/api/league/s-club-game/${encodeURIComponent(token)}/summary`);
+  }
+
   /** Eigene Partie über ihren Teilen-Link `/g/{token}`, nur lesend (Wunsch 2026-11-09): nur der fertige Text. */
   getSharedOwn(token: string): Observable<ClubGameSummary> {
     return this.http.get<Pick<ClubGameSummary, 'status' | 'markdown' | 'doneAt' | 'stale' | 'model'>>(`/api/games/shared/${encodeURIComponent(token)}/summary`)

@@ -4775,6 +4775,10 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(12)
                         .HasColumnType("varchar(12)");
 
+                    b.Property<string>("ShareToken")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
                     b.Property<string>("UploadShareHash")
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)");
@@ -4816,6 +4820,9 @@ namespace RookHub.Api.Migrations
                     b.HasIndex("LeagueGameId");
 
                     b.HasIndex("MovesHash");
+
+                    b.HasIndex("ShareToken")
+                        .IsUnique();
 
                     b.HasIndex("UploadShareHash");
 

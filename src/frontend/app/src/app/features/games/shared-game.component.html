@@ -79,6 +79,8 @@
             <app-club-summary-link [gameId]="clubComparisonGameId" />
           } @else if (ownComparisonGameId !== null) {
             <app-club-summary-link [gameId]="ownComparisonGameId" kind="own" />
+          } @else if (clubLinkToken !== null) {
+            <app-club-summary-link [clubLinkToken]="clubLinkToken" />
           } @else if (clubShareToken !== null && clubShareGameId !== null) {
             <!-- Teilen-Link (Wunsch 2026-11-09): nur lesend, nur wenn es einen fertigen Text gibt. -->
             <app-club-summary-link [gameId]="clubShareGameId" [shareToken]="clubShareToken" />
@@ -108,6 +110,11 @@
           }
           @if (own && shareToken) {
             <button mat-stroked-button class="share wide-only" (click)="share()">
+              <mat-icon>share</mat-icon> {{ 'games.share' | translate }}
+            </button>
+          }
+          @if (canShareClub) {
+            <button mat-stroked-button class="share club-share wide-only" (click)="shareClub()">
               <mat-icon>share</mat-icon> {{ 'games.share' | translate }}
             </button>
           }
@@ -195,6 +202,16 @@
                 <button mat-menu-item class="share-item narrow-only" (click)="share()">
                   <mat-icon>share</mat-icon><span>{{ 'games.share' | translate }}</span>
                 </button>
+              }
+              @if (canShareClub) {
+                <button mat-menu-item class="share-item club-share-item narrow-only" (click)="shareClub()">
+                  <mat-icon>share</mat-icon><span>{{ 'games.share' | translate }}</span>
+                </button>
+                @if (clubGameLink()) {
+                  <button mat-menu-item class="revoke-share" (click)="revokeClubShare()">
+                    <mat-icon>link_off</mat-icon><span>{{ 'games.revokeShare' | translate }}</span>
+                  </button>
+                }
               }
               <!-- Fehler-Training teilen (0.740.0): Link öffnet für jeden direkt das Nachspielen der gewählten Farbe. -->
               @if (own && shareToken) {

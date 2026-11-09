@@ -18,3 +18,24 @@ public class LeagueGameShareController(LeagueGameShares shares) : ControllerBase
     public async Task<IActionResult> Get(string token, CancellationToken ct) =>
         await shares.ReadAsync(token, ct) is { } g ? Ok(g) : NotFound();
 }
+
+/// <summary>Öffentliche Ansicht EINER geteilten Vereinspartie (<see cref="ClubGameLinks"/>): ohne Anmeldung, nur lesend, je 404 =
+/// ungültig oder widerrufen.</summary>
+[ApiController]
+[Route("api/league/s-club-game/{token}")]
+[AllowAnonymous]
+[EnableRateLimiting("anonymous-tournament")]
+public class ClubGameLinkController(ClubGameLinks links) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> Get(string token, CancellationToken ct) => await links.ReadAsync(token, ct) is { } g ? Ok(g) : NotFound();
+
+    [HttpGet("evals")]
+    public async Task<IActionResult> Evals(string token, CancellationToken ct) => await links.EvalsAsync(token, ct) is { } e ? Ok(e) : NotFound();
+
+    [HttpGet("comparisons")]
+    public async Task<IActionResult> Comparisons(string token, CancellationToken ct) => await links.ComparisonsAsync(token, ct) is { } c ? Ok(c) : NotFound();
+
+    [HttpGet("summary")]
+    public async Task<IActionResult> Summary(string token, CancellationToken ct) => await links.SummaryAsync(token, ct) is { } s ? Ok(s) : NotFound();
+}

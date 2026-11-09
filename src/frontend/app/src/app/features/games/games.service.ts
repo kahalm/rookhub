@@ -310,6 +310,28 @@ export class GamesService {
   sharedClubGame(token: string, id: number): Observable<SharedGame> {
     return this.http.get<ClubGameDto>(`/api/league/s/${encodeURIComponent(token)}/club/games/${id}`).pipe(map(toClubGame));
   }
+  /** Teilen-Link EINER Vereinspartie (2026-11-09, `/cg/:token`): Stand, anlegen, widerrufen. */
+  clubGameShare(id: number): Observable<{ token: string | null }> {
+    return this.http.get<{ token: string | null }>(`/api/league/club/games/${id}/share`);
+  }
+  createClubGameShare(id: number): Observable<{ token: string }> {
+    return this.http.post<{ token: string }>(`/api/league/club/games/${id}/share`, {});
+  }
+  revokeClubGameShare(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/league/club/games/${id}/share`);
+  }
+  clubGameShareUrl(token: string): string { return `${window.location.origin}/cg/${token}`; }
+
+  /** Die Vereinspartie des Links `/cg/:token`: ohne Id und Rechte, darum `id: 0`. */
+  linkedClubGame(token: string): Observable<SharedGame> {
+    return this.http.get<Omit<ClubGameDto, 'id' | 'canDelete'>>(`/api/league/s-club-game/${encodeURIComponent(token)}`)
+      .pipe(map(g => toClubGame({ ...g, id: 0 })));
+  }
+  linkedClubComparisons(token: string): Observable<ClubMistakeComparison[]> {
+    return this.http.get<ClubMistakeComparison[]>(`/api/league/s-club-game/${encodeURIComponent(token)}/comparisons`);
+  }
+  linkedClubEvalsUrl(token: string): string { return `/api/league/s-club-game/${encodeURIComponent(token)}/evals`; }
+
   /** Fehler-Vergleiche über den Teilen-Link, nur lesend (Wunsch 2026-11-09). */
   sharedClubComparisons(token: string, id: number): Observable<ClubMistakeComparison[]> {
     return this.http.get<ClubMistakeComparison[]>(`/api/league/s/${encodeURIComponent(token)}/club/games/${id}/comparisons`);

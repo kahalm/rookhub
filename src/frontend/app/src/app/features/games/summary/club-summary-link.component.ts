@@ -80,7 +80,11 @@ export class ClubSummaryLinkComponent implements OnInit {
   readonly shareToken = input<string | null>(null);
   /** Teilen-Link einer eigenen Partie `/g/:token` (Wunsch 2026-11-09): ebenso nur der Link zum fertigen Text. */
   readonly gameShareToken = input<string | null>(null);
+  /** Link einer einzelnen Vereinspartie `/cg/:token` (2026-11-09): ebenso nur lesend. */
+  readonly clubLinkToken = input<string | null>(null);
   summaryLink(): (string | number)[] {
+    const link = this.clubLinkToken();
+    if (link !== null) return ['/cg', link, 'summary'];
     const own = this.gameShareToken();
     if (own !== null) return ['/g', own, 'summary'];
     const token = this.shareToken();
@@ -94,7 +98,7 @@ export class ClubSummaryLinkComponent implements OnInit {
   private translate = inject(TranslateService);
 
   readonly isAdmin = this.auth.isAdmin;
-  readonly canRequest = computed(() => this.shareToken() === null && this.gameShareToken() === null && (this.kind() === 'own' || this.isAdmin));
+  readonly canRequest = computed(() => this.shareToken() === null && this.gameShareToken() === null && this.clubLinkToken() === null && (this.kind() === 'own' || this.isAdmin));
   readonly state = signal<ClubGameSummary | null>(null);
   readonly busy = signal(false);
   /** Offene Anforderung, deren Hintergrund-Rechnung noch läuft (0.914.0). Beim Schreiben nie: das steht schon beim LLM. */
@@ -140,7 +144,9 @@ export class ClubSummaryLinkComponent implements OnInit {
     // still bei Fehlern: ohne Stand gibt es einfach keinen Knopf
     const token = this.shareToken();
     const own = this.gameShareToken();
-    (own !== null ? this.service.getSharedOwn(own)
+    const link = this.clubLinkToken();
+    (link !== null ? this.service.getLinked(link)
+      : own !== null ? this.service.getSharedOwn(own)
       : token !== null ? this.service.getShared(token, this.gameId())
       : this.kind() === 'own' ? this.service.getOwn(this.gameId()) : this.service.get(this.gameId())).subscribe({ next: s => { this.sinceLoad.set(0); this.state.set(s); }, error: () => this.state.set(null) });
   }

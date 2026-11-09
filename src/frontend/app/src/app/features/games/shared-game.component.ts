@@ -103,6 +103,12 @@ export class SharedGameComponent implements OnInit, DoCheck {
   /** LeagueHub-Teilen-Link der Vereinspartie (Wunsch 2026-11-09): Vergleiche und Zusammenfassung nur lesend. */
   clubShareToken: string | null = null;
   clubShareGameId: number | null = null;
+  /** `/cg/:token`: diese eine Vereinspartie über ihren eigenen Link, nur lesend (2026-11-09). */
+  clubLinkToken: string | null = null;
+  /** Darf hier (Vereinspartie, angemeldet, kein Link) ein Teilen-Link erzeugt werden? Regel wie „Partie teilen" der Ligapartie. */
+  canShareClub = false;
+  /** Bestehender Teilen-Link dieser Vereinspartie; `null` = noch keiner. */
+  readonly clubGameLink = signal<string | null>(null);
   /** Eigene Partie (0.923.0): Vergleiche und Zusammenfassung laufen über die gespeicherte Partie. */
   ownComparisonGameId: number | null = null;
   readonly comparisons = signal<ReadonlyMap<number, ClubMistakeComparison> | null>(null);
@@ -115,7 +121,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
 
   get notFoundKey(): string {
     if (this.errorKind === 'locked') return 'games.clubNoAccess';
-    return this.own || this.club ? 'games.notFound' : 'games.shared.notFound';
+    return this.own || (this.club && this.clubLinkToken === null) ? 'games.notFound' : 'games.shared.notFound';
   }
 
   /** Fehler beim Laden der Partie einordnen (siehe {@link errorKind}). */
@@ -329,9 +335,11 @@ export class SharedGameComponent implements OnInit, DoCheck {
    *  Still bei Fehlern: der Trainer zeigt dann einfach keinen Vergleich. */
   private loadComparisons(): void {
     const id = this.clubComparisonGameId ?? this.ownComparisonGameId ?? this.clubShareGameId;
-    if (id == null) return;
-    (this.clubShareToken !== null ? this.games.sharedClubComparisons(this.clubShareToken, id)
-      : this.clubComparisonGameId != null ? this.games.clubComparisons(id) : this.games.ownComparisons(id)).subscribe({
+    const load = this.clubLinkToken !== null ? this.games.linkedClubComparisons(this.clubLinkToken)
+      : id == null ? null
+      : this.clubShareToken !== null ? this.games.sharedClubComparisons(this.clubShareToken, id)
+      : this.clubComparisonGameId != null ? this.games.clubComparisons(id) : this.games.ownComparisons(id);
+    load?.subscribe({
       next: list => this.comparisons.set(new Map(list.map(x => [x.ply, x]))),
       error: () => {},
     });
@@ -369,14 +377,27 @@ export class SharedGameComponent implements OnInit, DoCheck {
     this.roastId = Number.isInteger(roast) && roast > 0 ? roast : null;
     const mode = this.route.snapshot.data?.['mode'];
     this.own = mode === 'own';
-    this.club = mode === 'club' || mode === 'club-share';
+    this.club = mode === 'club' || mode === 'club-share' || mode === 'club-link';
+    if (mode === 'club-link') {
+      // Kein „+" mit der Partie als Herkunft: das schriebe an der Vereinspartie, der Link ist nur zum Lesen da.
+      const token = this.route.snapshot.paramMap.get('token') || '';
+      this.clubLinkToken = token;
+      this.loadComparisons();
+      this.evalsUrl = this.games.linkedClubEvalsUrl(token);
+      this.games.linkedClubGame(token).subscribe({ next: g => this.show(g), error: e => this.loadFailed(e) });
+      return;
+    }
     if (this.club) {
       const id = Number(this.route.snapshot.paramMap.get('id'));
       // 0.838.3: über einen LeagueHub-Teilen-Link (`s/:token/club-games/:id`) ohne Anmeldung — Partie und Bewertungen kommen
       // über den Link, der Server gibt nur Partien der geteilten Begegnung her und nie das Bearbeitungsrecht.
       const shareToken = mode === 'club-share' ? (this.route.snapshot.paramMap.get('token') || '') : null;
       this.markSource = { clubGameId: id };
-      if (shareToken === null) this.clubComparisonGameId = id;
+      if (shareToken === null) {
+        this.clubComparisonGameId = id;
+        this.canShareClub = this.auth.isLoggedIn && this.auth.has('league.view');
+        if (this.canShareClub) this.games.clubGameShare(id).subscribe({ next: r => this.clubGameLink.set(r.token), error: () => undefined });
+      }
       else { this.clubShareToken = shareToken; this.clubShareGameId = id; }
       this.loadComparisons();
       this.evalsUrl = shareToken !== null ? this.games.sharedClubEvalsUrl(shareToken, id) : this.games.clubEvalsUrl(id);
@@ -539,6 +560,23 @@ export class SharedGameComponent implements OnInit, DoCheck {
 
   /** Teilen-Link der eigenen Partie in die Zwischenablage — wie in der Liste. */
   share(): void { this.actions.copyShareLink(this.shareToken); }
+
+  /** „Teilen-Link kopieren" der Vereinspartie: legt ihn beim ersten Mal an. */
+  shareClub(): void {
+    const id = this.clubComparisonGameId;
+    const existing = this.clubGameLink();
+    if (id == null) return;
+    if (existing) { this.actions.copyClubGameLink(existing); return; }
+    this.games.createClubGameShare(id).subscribe({
+      next: r => { this.clubGameLink.set(r.token); this.actions.copyClubGameLink(r.token); },
+      error: () => this.snackbar.warn(this.translate.instant('games.loadError')),
+    });
+  }
+
+  /** Link der Vereinspartie widerrufen (Rückfrage wie bei der eigenen Partie). */
+  revokeClubShare(): void {
+    if (this.clubComparisonGameId != null) this.actions.revokeClubGameLink(this.clubComparisonGameId).subscribe(() => this.clubGameLink.set(null));
+  }
 
   /** Die Partie rechnen lassen (siehe {@link AnalyzeGameService}). Die Seite ist ohne Anmeldung
    *  erreichbar, der Einwurf nicht: ohne Konto geht es zur Anmeldung und danach wieder hierher. Danach
