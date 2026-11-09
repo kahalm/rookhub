@@ -57,7 +57,7 @@ public class EbookProcessingCapsTests : IDisposable
         var spine = new[] { "c1" }.Concat(Enumerable.Repeat("c2", 1000)).Append("c3").ToArray();
         using var zip = Epub(spine, 3);
         var blocks = EbookEpubContent.Read(zip);
-        Assert.Equal(["Kapitel 1", "Kapitel 2", "Kapitel 3"], blocks.Select(b => b.Text).ToArray());
+        Assert.Equal(["Kapitel 1", "Kapitel 2", "Kapitel 3"], blocks.Select(b => b.Text!).ToArray());
         Assert.Equal([1, 2, 1002], blocks.Select(b => b.Spine).ToArray());   // Spine-Nummer wie in der Spine (epub.js zählt gleich)
     }
 
@@ -68,7 +68,7 @@ public class EbookProcessingCapsTests : IDisposable
         var before = GC.GetAllocatedBytesForCurrentThread();
         var blocks = EbookEpubContent.Read(zip);
         var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-        Assert.Equal(["Kapitel 1", "Kapitel 3"], blocks.Select(b => b.Text).ToArray());
+        Assert.Equal(["Kapitel 1", "Kapitel 3"], blocks.Select(b => b.Text!).ToArray());
         Assert.True(allocated < 8L * 1024 * 1024, $"Read hat {allocated / 1024 / 1024} MB angelegt");
     }
 
@@ -78,7 +78,7 @@ public class EbookProcessingCapsTests : IDisposable
         using var zip = Epub(["c1", "c2", "c3"], 3, bigChapterBytes: 2L * 1024 * 1024);
         // Gesamtdeckel 1 MB: Kapitel 1 passt, Kapitel 2 (2 MB) sprengt den Rest, danach ist Schluss.
         var blocks = EbookEpubContent.Read(zip, maxTotalBytes: 1024 * 1024);
-        Assert.Equal(["Kapitel 1"], blocks.Select(b => b.Text).ToArray());
+        Assert.Equal(["Kapitel 1"], blocks.Select(b => b.Text!).ToArray());
         // Ohne Deckel-Argument (Vorgabe 128 MB) kommen alle drei.
         using var zip2 = Epub(["c1", "c2", "c3"], 3, bigChapterBytes: 2L * 1024 * 1024);
         Assert.Equal(3, EbookEpubContent.Read(zip2).Count);
