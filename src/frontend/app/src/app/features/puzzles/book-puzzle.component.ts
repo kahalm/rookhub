@@ -541,7 +541,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
   get attemptSolveMode(): SolveMode { return this.solveModes.attemptMode; }
 
   /**
-   * `sameAttempt`: dasselbe Puzzle neu aufsetzen (Zurücksetzen, „Nochmal“, Stufenwechsel) — der laufende Durchgang
+   * `sameAttempt`: dasselbe Puzzle neu aufsetzen (Zurücksetzen, „Nochmal“, Stufenwechsel, „Zurück zum Puzzle“ aus der
+   * ganzen Partie) — der laufende Durchgang
    * bleibt, ein schon gemeldeter Versuch also gemeldet (P-1). Ohne das Flag beginnt ein neuer, meldbarer Durchgang.
    */
   setupPuzzle(puzzle: BookPuzzleDto, sameAttempt = false): void {
@@ -555,7 +556,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
     if (!sameAttempt) {
       this.book.resetAttempt();
       this.course.attemptRecorded = false;
-      this.woodpecker.attemptRecorded = false;
+      this.woodpecker.resetAttempt(puzzle.id);
     }
     this.hintLevel = 0;
     // Tipps werden pro erwartetem Zug on-the-fly aus der aktuellen Stellung erzeugt (currentMoveHint) —
@@ -715,7 +716,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
     this.solutionReview = false;
     this.moveComment = null;
     this.reviewShapes = [];
-    if (this.puzzle) this.setupPuzzle(this.puzzle);
+    if (!this.puzzle) return;
+    // „Ganze Partie“ → „Zurück zum Puzzle“ ist derselbe Durchgang (P-1, F1-012): ein Fehlversuch bleibt der einzige.
+    if (this.inWoodpecker) this.woodpecker.repeatHint = this.woodpecker.attemptRecorded;
+    this.setupPuzzle(this.puzzle, true);
   }
 
   @HostListener('window:keydown', ['$event'])

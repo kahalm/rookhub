@@ -1,6 +1,6 @@
 import { Injector, runInInjectionContext } from '@angular/core';
 import { WoodpeckerService } from '../woodpecker/woodpecker.service';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { BookPuzzleComponent } from './book-puzzle.component';
 import { saveBookOffline, getDailyOffline, saveDailyOffline } from './book-offline.util';
@@ -557,6 +557,23 @@ describe('BookPuzzle erster Fehlzug meldet sofort (P-1)', () => {
     done(c);
   }));
 
+  it('Kurs: Fehlzug → „Ganze Partie“ → „Zurück zum Puzzle“ → Lösen meldet nichts mehr (F1-012)', fakeAsync(() => {
+    const c = makeComponent();
+    c.inCourse = true; c.course.bookId = 7;
+    const results: boolean[] = [];
+    c.courseService.recordResult = jasmine.createSpy('recordResult')
+      .and.callFake((_b: number, _p: number, solved: boolean) => { results.push(solved); return of({ solvedCount: 0, total: 9 }); });
+    start(c, LINE(4));
+    wrong(c);
+    expect(results).toEqual([false]);
+    c.enterReview();
+    c.exitReview(); tick(600);
+    solve(c);
+    expect(c.state).toBe('SOLVED');
+    expect(results).toEqual([false]);
+    done(c);
+  }));
+
   it('fehlerfrei gelöst: eine Meldung „gelöst“ (Einzel-Buchpuzzle)', fakeAsync(() => {
     const c = makeComponent();
     const calls: boolean[] = [];
@@ -697,6 +714,71 @@ describe('BookPuzzle Modus Woodpecker (0.882.0: dieselbe Oberfläche wie im Kurs
     expect(c.woodpecker.repeatHint).toBeTrue();
     c.giveUp();
     expect(svc.recordAttempt).toHaveBeenCalledTimes(1);
+    c.ngOnDestroy();
+  });
+
+  it('„Ganze Partie“ → „Zurück zum Puzzle“ nach dem Aufgeben: Hinweis, kein zweiter Versuch (F1-012)', () => {
+    const { c, svc } = make(of({ puzzle: { ...WP }, plan: plan() }));
+    c.giveUp();
+    c.enterReview();
+    c.exitReview();
+    expect(c.woodpecker.repeatHint).toBeTrue();
+    c.giveUp();
+    expect(svc.recordAttempt).toHaveBeenCalledTimes(1);
+    c.ngOnDestroy();
+  });
+
+  it('Meldung scheitert (Netz/5xx): Versuch in die Warteschlange, „Nochmal“ + Lösen meldet nichts mehr (F1-013)', () => {
+    const { c, svc } = make(of({ puzzle: { ...WP }, plan: plan() }));
+    c.offlineQueue.enqueue.and.returnValue(true);
+    svc.recordAttempt.and.returnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
+    c.giveUp();
+    expect(c.offlineQueue.enqueue).toHaveBeenCalledOnceWith('POST', '/api/woodpecker/3/attempts',
+      { bookPuzzleId: 501, solved: false, timeSeconds: jasmine.any(Number) });
+    expect(c.snackbar.warn).not.toHaveBeenCalled();
+    c.retry();
+    expect(c.woodpecker.repeatHint).toBeTrue();
+    c.onMoveMade({ orig: 'a1', dest: 'a8' });
+    expect(c.state).toBe('SOLVED');
+    expect(svc.recordAttempt).toHaveBeenCalledTimes(1);
+    expect(c.offlineQueue.enqueue).toHaveBeenCalledTimes(1);
+    // liefert der Server dieselbe Aufgabe noch einmal (der Versuch ist noch nicht dort), zählt der wartende Versuch
+    c.woodpecker.next();
+    expect(c.woodpecker.repeatHint).toBeTrue();
+    c.onMoveMade({ orig: 'a1', dest: 'a8' });
+    expect(svc.recordAttempt).toHaveBeenCalledTimes(1);
+    c.ngOnDestroy();
+  });
+
+  it('offline: Versuch direkt in die Warteschlange; Warteschlange voll → Warnung (F1-013)', () => {
+    const { c, svc } = make(of({ puzzle: { ...WP }, plan: plan() }));
+    c.offlineQueue.enqueue.and.returnValue(false);
+    offline(() => c.giveUp());
+    expect(svc.recordAttempt).not.toHaveBeenCalled();
+    expect(c.offlineQueue.enqueue).toHaveBeenCalledTimes(1);
+    expect(c.snackbar.warn).toHaveBeenCalledWith('woodpecker.saveFailed');
+    c.ngOnDestroy();
+  });
+
+  it('Server lehnt ab (409): Meldung mit Grund, kein Nachsenden (F1-013)', () => {
+    const { c, svc } = make(of({ puzzle: { ...WP }, plan: plan() }));
+    svc.recordAttempt.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { message: 'Zyklus vorbei' } })));
+    c.giveUp();
+    expect(c.offlineQueue.enqueue).not.toHaveBeenCalled();
+    expect(c.snackbar.warn).toHaveBeenCalledWith('Zyklus vorbei');
+    c.ngOnDestroy();
+  });
+
+  it('„Weiter“ während die Meldung unterwegs ist: die nächste Aufgabe wird erst nach der Antwort geholt (F1-013)', () => {
+    const { c, svc } = make(of({ puzzle: { ...WP }, plan: plan() }));
+    const answer = new Subject<any>();
+    svc.recordAttempt.and.returnValue(answer);
+    c.onMoveMade({ orig: 'a1', dest: 'a8' });
+    expect(c.state).toBe('SOLVED');
+    c.woodpecker.next();
+    expect(svc.next).toHaveBeenCalledTimes(1);
+    answer.next(plan()); answer.complete();
+    expect(svc.next).toHaveBeenCalledTimes(2);
     c.ngOnDestroy();
   });
 

@@ -25,6 +25,12 @@ export class BookWoodpeckerMode implements BookModeStrategy {
   attemptRecorded = false;
   /** Nach einem Wiederholen: der erste Versuch ist schon gewertet. */
   repeatHint = false;
+  /** Aufgaben, deren Versuch in der Offline-Warteschlange liegt (noch nicht beim Server, F1-013). Liefert der Server
+   *  sie noch einmal (in Zyklus 1 schließt erst der gespeicherte Versuch sie aus), wird nichts zweites gemeldet. */
+  private readonly queuedIds = new Set<number>();
+  /** Meldung unterwegs: „Weiter“ wartet darauf, sonst käme GET next vor dem POST an und brächte dieselbe Aufgabe. */
+  private recording = false;
+  private nextAfterRecord = false;
 
   constructor(private readonly h: BookWoodpeckerHost) {}
 
@@ -77,6 +83,8 @@ export class BookWoodpeckerMode implements BookModeStrategy {
         h.puzzle = r.puzzle;
         h.afterLineLoaded(r.puzzle, lang);
         h.setupPuzzle(r.puzzle);
+        // Versuch liegt noch in der Warteschlange: der zählt — Wiederholen ändert nichts mehr.
+        if (this.queuedIds.has(r.puzzle.id)) this.repeatHint = true;
       },
       error: (e: HttpErrorResponse) => {
         if (epoch !== h.loadEpoch) return;
@@ -87,22 +95,55 @@ export class BookWoodpeckerMode implements BookModeStrategy {
     });
   }
 
-  next(): void { this.loadNext(); }
+  next(): void {
+    if (this.recording) { this.nextAfterRecord = true; return; }
+    this.loadNext();
+  }
+
+  /** Neuer Durchgang an `puzzleId` (setupPuzzle ohne `sameAttempt`): meldbar, außer sein Versuch wartet noch. */
+  resetAttempt(puzzleId: number): void {
+    this.attemptRecorded = this.queuedIds.has(puzzleId);
+  }
 
   backToOverview(): void { this.h.router.navigate(['/woodpecker']); }
 
-  /** Meldet den Versuch einmal je Aufgabe; der Fortschritt im Kopf kommt aus der Antwort. */
+  /**
+   * Meldet den Versuch einmal je Aufgabe; der Fortschritt im Kopf kommt aus der Antwort. Offline oder bei Netz-/5xx-
+   * Fehler geht er in die Offline-Warteschlange (gleicher Body) statt verloren — und bleibt gemeldet: sonst würde ein
+   * späteres Lösen nach „Nochmal“ als erster (gewerteter) Versuch zählen (F1-013).
+   */
   recordAttempt(solved: boolean): void {
     const h = this.h;
     const svc = h.woodpeckerService;
     if (!h.inWoodpecker || this.planId == null || !h.puzzle || this.attemptRecorded) return;
     this.attemptRecorded = true;
-    svc.recordAttempt(this.planId, h.puzzle.id, solved, h.solveSeconds).subscribe({
-      next: plan => { this.plan = plan; },
+    const planId = this.planId;
+    const puzzleId = h.puzzle.id;
+    const timeSeconds = h.solveSeconds;
+    const queue = () => {
+      if (h.offlineQueue.enqueue('POST', `/api/woodpecker/${planId}/attempts`, { bookPuzzleId: puzzleId, solved, timeSeconds }))
+        this.queuedIds.add(puzzleId);
+      else h.snackbar.warn(h.translate.instant('woodpecker.saveFailed'));
+    };
+    if (!navigator.onLine) { queue(); return; }
+    this.recording = true;
+    svc.recordAttempt(planId, puzzleId, solved, timeSeconds).subscribe({
+      next: plan => { this.plan = plan; this.settled(); },
       error: err => {
-        this.attemptRecorded = false;
-        h.snackbar.warn(apiErrorText(err, h.translate, 'woodpecker.saveFailed'));
+        const status = (err as HttpErrorResponse | null)?.status ?? 0;
+        // 4xx (außer 408/429) = der Server lehnt ab (Zyklus vorbei, Aufgabe nicht im Satz): Nachsenden hilft nicht.
+        if (status >= 400 && status < 500 && status !== 408 && status !== 429)
+          h.snackbar.warn(apiErrorText(err, h.translate, 'woodpecker.saveFailed'));
+        else queue();
+        this.settled();
       },
     });
+  }
+
+  private settled(): void {
+    this.recording = false;
+    if (!this.nextAfterRecord) return;
+    this.nextAfterRecord = false;
+    this.loadNext();
   }
 }
