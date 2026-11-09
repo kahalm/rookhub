@@ -224,6 +224,7 @@ class BoardFailureTests(unittest.TestCase):
     def released(self):
         return [c[2] for c in self.calls if c[1].endswith('/release')]
 
+    @unittest.skipIf(np is None, 'numpy fehlt')   # board_once laedt cut/numpy vor dem Download (CI ohne numpy)
     def test_fixed_error_releases_with_text_and_lets_diagrams_run(self):
         def boom(): raise ValueError('tile cannot extend outside image')
         w.rh = self.fake_rh(download=boom)
@@ -231,6 +232,7 @@ class BoardFailureTests(unittest.TestCase):
         self.assertEqual(len(self.released()), 1)
         self.assertIn('tile cannot extend outside image', self.released()[0]['error'])
 
+    @unittest.skipIf(np is None, 'numpy fehlt')   # board_once laedt cut/numpy vor dem Download (CI ohne numpy)
     def test_network_error_releases_without_text(self):
         def down(): raise w.requests.RequestException('weg')
         w.rh = self.fake_rh(download=down)
