@@ -76,6 +76,25 @@ describe('SharePageComponent', () => {
     expect((el.querySelector('.cta-actions a') as HTMLAnchorElement).getAttribute('href')).toContain('TOKEN123~3');
   });
 
+  // UI-Sweep 2026-11-09: am Handy (390 px) war die Auswahl so breit wie ihr längster Eintrag — die Seite scrollte waagerecht.
+  it('Rundenauswahl bleibt in schmaler Breite in ihrem Kasten (kein waagerechtes Scrollen)', async () => {
+    api.shared.and.resolveTo({
+      league: 'Landesliga', season: '2026/27', round: 2, team: 'Schwaz/', generated: '27.09.2026 21:00', expires: '2027-01-24',
+      rounds: [...ROUNDS, { round: 4, date: 'Sa 21.11.2026', opp: 'Spielgemeinschaft Fügen-Zillertal mit sehr langem Namen 2', home: true, status: 'open' }],
+      fixture: { opp: 'Wörgl', home: true, status: 'open', boards: [], roster: [] },
+    } as any);
+    const f = create();
+    const host = f.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '300px';
+    await f.whenStable();
+    f.detectChanges();
+    const sel = host.querySelector('.share-round select') as HTMLSelectElement;
+    expect(sel).toBeTruthy();
+    expect(sel.getBoundingClientRect().width).toBeLessThanOrEqual(300);
+    expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
+  });
+
   // Codereview F4-004: zwei schnelle Rundenwechsel, die Antworten kommen vertauscht — es zählt die zuletzt gewählte Runde.
   it('schneller Rundenwechsel: eine späte Antwort für die vorige Wahl überschreibt die neue nicht', async () => {
     const R = (round: number) => ({ league: 'Landesliga', season: '2026/27', round, team: 'Schwaz/', generated: '', expires: '2027-01-24',

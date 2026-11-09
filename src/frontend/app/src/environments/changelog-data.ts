@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.941.7", date: "2026-11-09", changes: [
+    { en: "LeagueHub: on a phone, the round picker of a shared match no longer makes the whole page scroll sideways — it stays within the screen width.",
+      de: "LeagueHub: Am Handy lässt die Rundenauswahl eines geteilten Links nicht mehr die ganze Seite seitlich scrollen — sie bleibt in der Bildschirmbreite." },
+  ] },
   { version: "0.941.6", date: "2026-11-09", changes: [
     { en: "Scoresheets: discarded uploads that were never read no longer count towards the limit of three open readings — before, three discarded ones blocked further uploads for good (account or, via a share link, address).",
       de: "Partieformulare: Verworfene, nie gelesene Einlesungen zählen nicht mehr zur Grenze von drei offenen — vorher sperrten drei verworfene weitere Uploads für immer (Konto bzw. über den Teilen-Link die Adresse)." },

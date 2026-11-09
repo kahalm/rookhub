@@ -97,9 +97,12 @@ import { AuthService } from '@rh/core/auth.service';
     }
   `,
   styles: [`
-    .share-round { display: grid; gap: 4px; max-width: 420px; margin: 0 0 10px; font: 600 14px/1.2 var(--cond); color: var(--muted); }
+    /* Spalte minmax(0, 1fr) + max-width: die Auswahl ist sonst so breit wie ihr längster Eintrag („Runde 1 · Sa 03.10. · gegen
+       Spg …“) — am Handy 527 px auf 390 px, die ganze Seite scrollte waagerecht (UI-Sweep 2026-11-09). */
+    .share-round { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; max-width: 420px; margin: 0 0 10px;
+      font: 600 14px/1.2 var(--cond); color: var(--muted); }
     .share-round select { font: 500 16px/1.2 var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line);
-      border-radius: 6px; padding: 10px; min-height: 44px; }
+      border-radius: 6px; padding: 10px; min-height: 44px; min-width: 0; max-width: 100%; }
     .share-lineups { margin: 14px 0 6px; }
     .share-lineups .btn-link { display: inline-flex; align-items: center; gap: 6px; }
   `],
