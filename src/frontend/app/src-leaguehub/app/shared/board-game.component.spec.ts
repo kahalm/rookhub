@@ -4,6 +4,8 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { HandoffService } from '@rh/core/handoff.service';
 import { LineupGame, LineupsApiService } from '../core/lineups';
 import { BoardGameComponent } from './board-game.component';
+import { AuthService } from '@rh/core/auth.service';
+import { LeagueApiService } from '../core/league-api.service';
 
 // Erfundene Spieler.
 const GAME: LineupGame = { source: 'club', clubGameId: 168, plies: 61, result: '1/2-1/2', white: 'Ackermann, Anna', black: 'Brunner, Bert',
@@ -11,6 +13,9 @@ const GAME: LineupGame = { source: 'club', clubGameId: 168, plies: 61, result: '
 
 describe('BoardGameComponent', () => {
   let fixture: ComponentFixture<BoardGameComponent>;
+  let allowed = false;
+  const auth = { has: (p: string) => allowed && p === 'league.view' };
+  const leagueApi = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['createGameShare']);
 
   function render(game: LineupGame, rookHub: string | null): HTMLElement {
     fixture = TestBed.createComponent(BoardGameComponent);
@@ -28,7 +33,27 @@ describe('BoardGameComponent', () => {
     TestBed.configureTestingModule({ imports: [BoardGameComponent], providers: [
       { provide: LineupsApiService, useValue: jasmine.createSpyObj('LineupsApiService', ['clubGame', 'clubGameMarks', 'fixturePgn', 'sharedPgn']) },
       { provide: HandoffService, useValue: jasmine.createSpyObj('HandoffService', ['jumpToRookHub']) },
+      { provide: AuthService, useValue: auth }, { provide: LeagueApiService, useValue: leagueApi },
       provideRouter([]), provideTranslateService({ fallbackLang: 'de' })] });
+  });
+
+  afterEach(() => { allowed = false; });
+
+  it('„Teilen" nur mit Liga-Leserecht und nie auf einem Teilen-Link; der Klick erzeugt den Link der Partie', async () => {
+    expect(render(GAME, null).querySelector('.bg-share')).withContext('ohne Recht/Anmeldung').toBeNull();
+    allowed = true;
+    fixture.componentRef.setInput('shareToken', 'TOK');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.bg-share')).withContext('auf einem Teilen-Link').toBeNull();
+
+    leagueApi.createGameShare.and.resolveTo({ token: 'abc', expires: '2027-02-09' });
+    const el = render(GAME, null);
+    (el.querySelector('.bg-share') as HTMLElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(leagueApi.createGameShare).toHaveBeenCalledOnceWith(4711, 2, 'Bergheim', 1);
+    expect((el.querySelector('lh-game-share input') as HTMLInputElement).value).toBe(`${location.origin}/partie/abc`);
+    expect(el.querySelector('lh-game-share')?.textContent).toContain('09.02.2027');
   });
 
   // 0.727.2, Nutzer 2026-10-09: „die 4 links sind verschoben" — Nachspielen/Analyse waren .btn-link-Knöpfe,

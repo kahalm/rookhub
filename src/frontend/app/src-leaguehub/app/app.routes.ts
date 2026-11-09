@@ -39,6 +39,8 @@ export const routes: Routes = [
   { path: 's/:token/formular/:key',
     loadComponent: () => import('./features/club/club-scan-page.component').then(m => m.ClubScanPageComponent) },
   { path: 's/:token', loadComponent: () => import('./features/share/share-page.component').then(m => m.SharePageComponent) },
+  // Eine einzelne geteilte Ligapartie ohne Anmeldung (2026-11-09); eigener Pfad, kein /g (Link-Vorschau im nginx)
+  { path: 'partie/:token', loadComponent: () => import('./features/share/shared-game-page.component').then(m => m.SharedGamePageComponent) },
   { path: 'login', loadComponent: () => import('@rh/features/auth/login.component').then(m => m.LoginComponent), canActivate: [guestGuard] },
   { path: 'register', loadComponent: () => import('@rh/features/auth/register.component').then(m => m.RegisterComponent), canActivate: [guestGuard] },
   { path: 'forgot-password', loadComponent: () => import('@rh/features/auth/forgot-password.component').then(m => m.ForgotPasswordComponent) },

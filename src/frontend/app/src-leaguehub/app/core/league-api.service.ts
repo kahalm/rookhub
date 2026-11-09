@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Account, AccountChecks, AccountInput, AdminClub, Broadcast, ClubInput, FixturePairing, ForecastStats, GameSources, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, RhGroup, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
+import { Account, AccountChecks, AccountInput, AdminClub, Broadcast, ClubInput, FixturePairing, ForecastStats, GameSources, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, RhGroup, SharedFixture, SuggestionList, TreeFilter, UpdateStatus, SharedLeagueGame } from './league.models';
 import { TrainingLines, TrainingLinesQuery, TrainingRepertoireResult, trainingLinesParams, trainingRepertoireBody, Deviations } from '@rh/shared/player-card/training-lines';
 
 /** LeagueHub-Endpunkte (`/api/league/*`). Teilen-Links (`/api/league/s/{token}`) gehen ohne Anmeldung. */
@@ -197,6 +197,16 @@ export class LeagueApiService {
 
   createShare(tnr: number, round: number, team: string): Promise<{ token: string; expires: string }> {
     return firstValueFrom(this.http.post<{ token: string; expires: string }>('/api/league/share', { tnr, round, team }));
+  }
+
+  /** Link auf EINE Partie (`league.view`); 404 = an dem Brett gibt es keine. */
+  createGameShare(tnr: number, round: number, team: string, board: number): Promise<{ token: string; expires: string }> {
+    return firstValueFrom(this.http.post<{ token: string; expires: string }>('/api/league/game-share', { tnr, round, team, board }));
+  }
+
+  /** Die geteilte Partie, ohne Anmeldung. */
+  sharedGame(token: string): Promise<SharedLeagueGame> {
+    return firstValueFrom(this.http.get<SharedLeagueGame>(`/api/league/s-game/${encodeURIComponent(token)}`));
   }
 
   deleteShare(token: string): Promise<unknown> {

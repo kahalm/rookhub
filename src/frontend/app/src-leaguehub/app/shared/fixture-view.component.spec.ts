@@ -526,6 +526,36 @@ describe('FixtureViewComponent', () => {
     expect(el.querySelector('.share-out')).toBeNull();
   });
 
+  it('„Partie teilen" nur angemeldet mit Liga-Leserecht und nie auf einem Teilen-Link', async () => {
+    const pairing = { board: 1, white: 'A', whiteElo: null, black: 'B', blackElo: null, result: '1 - 0', forfeit: false, pgn: '1.e4 *', source: 'profile' as const, clubGameId: null };
+    api.fixtureGames.and.resolveTo([pairing]);
+    const auth = TestBed.inject(AuthService) as unknown as { has: (p: string) => boolean };
+    fixture.componentRef.setInput('leagueTnr', 42);
+    const played: Fixture = { ...OPEN, status: 'played' };
+    render(played);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.canShareGame()).withContext('ohne Recht').toBeFalse();
+
+    fixture = TestBed.createComponent(FixtureViewComponent);
+    auth.has = p => p === 'league.view';
+    fixture.componentRef.setInput('leagueTnr', 42);
+    render(played);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.canShareGame()).toBeTrue();
+    ((fixture.nativeElement as HTMLElement).querySelector('.more-btn') as HTMLElement).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.querySelector('.share-game')?.textContent).toContain('Partie teilen');
+
+    const viaLink = TestBed.createComponent(FixtureViewComponent);
+    fixture = viaLink;
+    fixture.componentRef.setInput('leagueTnr', 42);
+    render(played, { token: 'TOK' });
+    expect(viaLink.componentInstance.canShareGame()).withContext('auf einem Teilen-Link').toBeFalse();
+  });
+
   it('Teilen-Link: Absage des Servers steht als Fehler da', async () => {
     api.createShare.and.rejectWith({ error: { message: 'Runde ist gesperrt' } });
     render(OPEN, { tnr: 42 });

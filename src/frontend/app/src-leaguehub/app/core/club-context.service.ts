@@ -45,7 +45,7 @@ export function ownsTeam(prefix: string | null | undefined, team: string | null 
 /** Braucht dieser Aufruf den Verein? Alle LeagueHub-Endpunkte außer `/me` und den Teilen-Links (`/s/…`, Verein des Links). */
 export function needsClub(url: string): boolean {
   const path = url.split('?')[0].replace(/^https?:\/\/[^/]+/, '');
-  return path.startsWith('/api/league/') && !path.startsWith('/api/league/s/') && path !== '/api/league/me';
+  return path.startsWith('/api/league/') && !path.startsWith('/api/league/s/') && !path.startsWith('/api/league/s-game/') && path !== '/api/league/me';
 }
 
 function readRemembered(): number | null {

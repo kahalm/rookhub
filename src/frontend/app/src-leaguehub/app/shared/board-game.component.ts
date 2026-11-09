@@ -7,6 +7,8 @@ import { LineupGame, LineupsApiService, ReplayStart, formatMoves } from '../core
 import { MatDialog } from '@angular/material/dialog';
 import { openMarkedPositions } from './marked-positions-dialog.component';
 import { GameBadgesComponent } from './game-badges.component';
+import { GameShareComponent } from './game-share.component';
+import { AuthService } from '@rh/core/auth.service';
 
 /**
  * Die vorhandene Partie an einem Brett der Aufstellungen (0.724.0, Wunsch 2026-10-08: „wenn ich das hab, dann sollt er nicht
@@ -25,7 +27,7 @@ import { GameBadgesComponent } from './game-badges.component';
   selector: 'lh-board-game',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [GameReplayComponent, RouterLink, GameBadgesComponent],
+  imports: [GameReplayComponent, RouterLink, GameBadgesComponent, GameShareComponent],
   template: `
     @let g = game();
     <span class="bg">
@@ -46,8 +48,13 @@ import { GameBadgesComponent } from './game-badges.component';
             <a class="btn-link bg-fix" [routerLink]="['/verein/partie', g.clubGameId, 'korrigieren']">Korrigieren</a>
           }
         }
+        @if (canShare) {
+          <button type="button" class="btn-link bg-share" [attr.aria-label]="'Partie teilen, ' + title()"
+                  (click)="gameShare.create(tnr(), round(), team(), board())">Teilen</button>
+        }
       </span>
     </span>
+    <lh-game-share #gameShare />
     @if (open()) {
       @if (pgn(); as p) {
         <div class="bg-replay-box"><lh-game-replay [pgn]="p" [flipped]="flipped()" [evalsUrl]="evalsUrl()" [marks]="marks()" [startAt]="start()" /></div>
@@ -102,6 +109,9 @@ export class BoardGameComponent {
   /** Die Sprungmarken der Vereinspartie — erst beim Nachspielen geladen; still leer, wenn das scheitert. */
   readonly marks = signal<ReplayMark[]>([]);
   readonly rookHub = rookHubUrlForLeagueHub();
+  private readonly auth = inject(AuthService);
+  /** Angemeldet mit Liga-Leserecht und nicht über einen Teilen-Link (Wunsch 2026-11-09). */
+  get canShare(): boolean { return !this.shareToken() && this.auth.has('league.view'); }
 
   readonly shown = computed(() => {
     const g = this.game();

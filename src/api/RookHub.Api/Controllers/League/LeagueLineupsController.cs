@@ -65,6 +65,18 @@ public class LeagueLineupsController(LeagueGameMoves moves, LeagueClubResolver c
             return r.Reason is null ? NoContent() : Answer(r);
         });
 
+    public sealed record GameShareRequest(int Tnr, int Round, string? Team, int Board);
+
+    /// <summary>Link auf EINE Ligapartie anlegen (ohne Anmeldung lesbar, <see cref="LeagueGameShares"/>) → <c>{ token, expires }</c>;
+    /// 404 = an diesem Brett gibt es keine Partie.</summary>
+    [HttpPost("game-share")]
+    [HasPermission(Permissions.LeagueView)]
+    public Task<IActionResult> CreateGameShare([FromBody] GameShareRequest req, [FromServices] LeagueGameShares shares, CancellationToken ct) =>
+        WithClubAsync(ct, async club =>
+            !string.IsNullOrWhiteSpace(req.Team) && await shares.CreateAsync(club, req.Tnr, req.Round, req.Team, req.Board, ct) is { } s
+                ? Ok(new { token = s.Token, expires = s.Expires.ToString("yyyy-MM-dd") })
+                : NotFound());
+
     private IActionResult Answer(LeagueGameMoves.SaveResult r) => r.Reason switch
     {
         null => Ok(new { moves = r.Moves }),

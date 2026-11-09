@@ -390,6 +390,9 @@ public sealed class LeagueService
         return day.AddMonths(ShareKeepMonths);
     }
 
+    /// <summary>Dieselbe Frist für einen Rundentermin als Datum (Link auf eine einzelne Partie, <see cref="LeagueGameShares"/>).</summary>
+    public static DateOnly ExpiresForDate(DateOnly? date, DateOnly today) => (date is { } d && d > today ? d : today).AddMonths(ShareKeepMonths);
+
     /// <summary>Link anlegen (gleiche Begegnung = gleicher Link, solange er gilt — je Verein). null = nicht teilbar. Der Link
     /// gehört dem Verein <paramref name="club"/>: was darüber hochgeladen wird, landet in SEINER Vereins-Datenbank.</summary>
     public async Task<LeagueShare?> CreateShareAsync(LeagueClub club, int tnr, int round, string team, int? userId, CancellationToken ct)

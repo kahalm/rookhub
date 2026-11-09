@@ -241,6 +241,8 @@ export const ROUTES = [
   r('leaguehub', '/vereine', 'user', { main: ['table.clubs-tbl tbody tr', 'section.clubs-page', 'section.gate'] }),
   // Unbekannte Adresse (UX-026): Hinweisseite statt Umleitung.
   r('leaguehub', '/diese-seite-gibt-es-nicht', 'any', { label: 'not-found', main: ['section.not-found .nf-actions a', 'section.not-found'] }),
+  // Einzelne geteilte Ligapartie: ohne Marke im Seed die Seite „Link ungültig“.
+  r('leaguehub', '/partie/ungueltig', 'any', { label: 'shared-game-invalid', main: ['section.gate'] }),
   r('leaguehub', '/s/{leagueShareToken}', 'any', { main: LH_FIXTURE }),
   r('leaguehub', '/s/{leagueShareToken}/hochladen', 'anon', { main: LH_UPLOAD }),
   r('leaguehub', '/s/{leagueShareToken}/formular/{shareScanKey}', 'anon', { main: LH_SCAN }),

@@ -510,3 +510,12 @@ Rollenverwaltung an).
   = Live-Stand aus `/api/auth/permissions`, sonst Token-Rolle; sonst kein Link), nicht über Teilen-Links/Dev — die Foto-Seite
   ist ein eigener Python-Dienst außerhalb dieses Repos, `~/claude/liga-fotos-app`, Login per `rh_session` + `league.view`), reine Regeln in
   `core/league-format.ts`. „Daten aktualisieren" fragt alle 4 s `/api/league/update/status` nach und lädt danach frisch.
+
+## Link auf eine einzelne Ligapartie (2026-11-09)
+
+`POST /api/league/game-share` (`league.view`, Verein über `?club=`; Rumpf `{ tnr, round, team, board }`) → `{ token, expires }`; 404, wenn das Brett
+keine Partie hat. `GET /api/league/s-game/{token}` (anonym) liefert genau diese Partie, Seite `/partie/:token` (`LeagueGameShares`, ohne Tabelle: die
+Marke ist mit dem DataProtection-Schlüsselbund versiegelt, deshalb nicht einzeln widerrufbar). Teilbar ist, was `LeagueFixtureGames` an dem Brett mit
+PGN ausgibt (Vereinspartie des Vereins oder Partie aus einer Spielerkarte); kampflose Bretter und Paarungen ohne Partie nicht. Ablauf wie die
+Liga-Teilen-Links (3 Monate nach der Runde, frühestens ab heute). Beim Lesen wird das Brett neu aufgelöst und muss noch dieselbe Vereinspartie tragen.
+Anonymisierte Vereinspartie: Namen der Partie, Elo der eigenen Seite fehlt, kein Brett, keine Mannschaften.

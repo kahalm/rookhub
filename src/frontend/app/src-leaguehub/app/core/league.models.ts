@@ -57,6 +57,12 @@ export interface FixturePairing {
   homeWhite?: boolean | null;
 }
 
+/** Eine einzelne geteilte Ligapartie. `board`/`home`/`away` fehlen bei einer anonymisierten Vereinspartie. */
+export interface SharedLeagueGame {
+  league: string | null; season: string | null; round: number; board: number | null; home: string | null; away: string | null;
+  white: string | null; whiteElo: number | null; black: string | null; blackElo: number | null; result: string; pgn: string; expires: string;
+}
+
 export interface Board {
   board: number;
   /** Farbe des GEGNERS an diesem Brett ("w" | "s"). */

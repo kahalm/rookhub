@@ -15,6 +15,8 @@ import { GameMarkers, LineupMatch, LineupsApiService, ReplayStart } from '../cor
 import { MatDialog } from '@angular/material/dialog';
 import { openMarkedPositions } from './marked-positions-dialog.component';
 import { GameBadgesComponent } from './game-badges.component';
+import { GameShareComponent } from './game-share.component';
+import { AuthService } from '@rh/core/auth.service';
 
 /**
  * Eine Begegnung: Kopf (Runde, Datum, Ort, Paarung), Brett-Prognosen (drei Kandidaten je Brett,
@@ -28,7 +30,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
   selector: 'lh-fixture',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PlayerCardComponent, GameSourcesComponent, GameReplayComponent, RouterLink, MatMenuModule, BoardMovesComponent, GameBadgesComponent],
+  imports: [PlayerCardComponent, GameSourcesComponent, GameReplayComponent, RouterLink, MatMenuModule, BoardMovesComponent, GameBadgesComponent, GameShareComponent],
   template: `
     @let e = fixture();
     @if (!e) {
@@ -127,6 +129,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
             </tbody>
           </table>
           </div>
+          <lh-game-share #gameShare />
           <mat-menu #pairMenu="matMenu" xPosition="before" class="lh-menu">
             <ng-template matMenuContent let-p="p">
               <button mat-menu-item type="button" (click)="toggleBoard(p)">
@@ -134,6 +137,9 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
               @if (p.clubGameId && !shareToken() && p.canEdit) {
                 <a mat-menu-item [routerLink]="['/verein']" [queryParams]="{ bearbeiten: p.clubGameId }">Bearbeiten (Namen, Ergebnis)</a>
                 <a mat-menu-item [routerLink]="['/verein/partie', p.clubGameId, 'korrigieren']">Korrigieren (Züge)</a>
+              }
+              @if (canShareGame()) {
+                <button mat-menu-item type="button" class="share-game" (click)="gameShare.create(leagueTnr()!, round(), team(), p.board)">Partie teilen</button>
               }
             </ng-template>
           </mat-menu>
@@ -383,6 +389,9 @@ export class FixtureViewComponent {
   readonly home = computed(() => (this.fixture()?.home ? this.team() : this.fixture()?.opp ?? ''));
   readonly away = computed(() => (this.fixture()?.home ? this.fixture()?.opp ?? '' : this.team()));
   readonly canShareLink = computed(() => !this.shareToken() && this.tnr() !== null);
+  private readonly auth = inject(AuthService);
+  /** Eine einzelne Partie teilen: angemeldet mit Liga-Leserecht, nie auf einem Teilen-Link (Wunsch 2026-11-09). */
+  readonly canShareGame = computed(() => !this.shareToken() && this.leagueTnr() !== null && this.auth.has('league.view'));
   readonly phaseText = computed(() => PHASE_TEXT[this.fixture()?.phase ?? 'R1'] ?? this.fixture()?.phase);
   readonly hitText = computed(() => String(this.fixture()?.hit ?? '').replace('.', ','));
 

@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.935.0',
+    date: '2026-11-09',
+    changes: [
+      { en: 'LeagueHub: signed-in users with league access can share a single league game. „Teilen“ creates a link that shows only this game, without sign-in and read-only, valid for three months; anonymised names stay anonymised.',
+        de: 'LeagueHub: Angemeldete mit Liga-Leserecht können eine einzelne Ligapartie teilen. „Teilen“ erzeugt einen Link, der ohne Anmeldung nur diese Partie zeigt, nur lesend und drei Monate gültig; anonymisierte Namen bleiben anonymisiert.' },
+    ],
+  },
+  {
     version: '0.934.1',
     date: '2026-11-09',
     changes: [
