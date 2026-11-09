@@ -242,10 +242,21 @@ public class EbookTranslationService
         return row.Id;
     }
 
-    /// <summary>Beim Start: Läufe, die beim Herunterfahren mitten drin waren, wieder auf wartend.</summary>
+    /// <summary>Kennzeichen in <see cref="EbookTranslation.Model"/> für einen externen Übersetzer (<c>external:&lt;name&gt;</c>).</summary>
+    public const string ExternalModelPrefix = "external:";
+
+    /// <summary>Extern beansprucht (läuft oder ist beim Zusammenbauen gescheitert) — gehört dem externen Übersetzer, bis er
+    /// sie freigibt (<see cref="EbookExternalTranslationService.ReleaseAsync"/>); Worker und „Gescheiterte wiederholen“ lassen sie liegen.</summary>
+    public static bool IsExternalClaim(EbookTranslation t)
+        => t.Model != null && t.Model.StartsWith(ExternalModelPrefix, StringComparison.Ordinal)
+           && t.State is EbookTranslationState.Running or EbookTranslationState.Failed;
+
+    /// <summary>Beim Start: Läufe, die beim Herunterfahren mitten drin waren, wieder auf wartend — nicht die externen
+    /// (die laufen außerhalb des Dienstes weiter).</summary>
     public async Task<int> RequeueInterruptedAsync(CancellationToken ct)
     {
-        var rows = await _db.EbookTranslations.Where(t => t.State == EbookTranslationState.Running).ToListAsync(ct);
+        var rows = await _db.EbookTranslations.Where(t => t.State == EbookTranslationState.Running
+            && (t.Model == null || !t.Model.StartsWith(ExternalModelPrefix))).ToListAsync(ct);
         foreach (var r in rows) { r.State = EbookTranslationState.Pending; r.UpdatedAt = DateTime.UtcNow; }
         await _db.SaveChangesAsync(ct);
         return rows.Count;
@@ -299,7 +310,7 @@ public class EbookTranslationService
             return EbookTranslationOutcome.Failed;
         }
 
-        var cache = EbookTranslationCache.Open(_storage.ResolvePath(EbookSource.Upload, EbookStorage.TranslationCachePath(ebook.Id, row.Language)));
+        var cache = OpenCache(ebook.Id, row.Language);
         var unique = plan.UniqueTexts();
         var todo = unique.Where(t => !cache.Contains(t)).ToList();
         row.SourceFileId = source.Id;
@@ -362,27 +373,7 @@ public class EbookTranslationService
         }
 
         // Übersetztes EPUB schreiben (Zwischenspeicher → Blöcke; was fehlt oder nicht passt, bleibt im Original).
-        var relative = EbookStorage.TranslatedEpubPath(ebook.Id, row.Language);
-        var target = _storage.ResolvePath(EbookSource.Upload, relative);
-        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-        var tmp = target + ".part";
-        int rejected;
-        try
-        {
-            await using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
-                rejected = EbookEpubTranslation.Write(zip, plan, fs, row.Language, cache.Get, ebook.Language);
-            File.Move(tmp, target, overwrite: true);
-        }
-        catch
-        {
-            try { if (File.Exists(tmp)) File.Delete(tmp); } catch (IOException) { /* egal */ }
-            throw;
-        }
-
-        row.State = EbookTranslationState.Done;
-        row.Priority = false;
-        row.RelativePath = relative;
-        row.SizeBytes = new FileInfo(target).Length;
+        var rejected = await WriteTranslatedEpubAsync(ebook, row, zip, plan, cache.Get);
         row.SegmentsDone = unique.Count(cache.Contains);
         row.SegmentsFailed = failed.Distinct().Count() + rejected;
         row.CompletedAt = row.VerifiedAt = DateTime.UtcNow;
@@ -392,6 +383,42 @@ public class EbookTranslationService
             ebook.Id, row.Language, row.SegmentsDone, row.SegmentsTotal, row.SegmentsFailed, row.SizeBytes);
         return EbookTranslationOutcome.Done;
     }
+
+    /// <summary>
+    /// Das übersetzte EPUB schreiben (Worker UND externe Übersetzer, <see cref="EbookExternalTranslationService"/>):
+    /// <see cref="EbookEpubTranslation.Write"/> samt Figurenbuchstaben (<see cref="EbookNotationLetters"/>) über eine
+    /// <c>.part</c>-Datei nach <c>converted/&lt;id&gt;.&lt;lang&gt;.epub</c>; setzt Zustand <c>Done</c>, Pfad und Größe an der
+    /// Zeile (gespeichert wird beim Aufrufer). Antwort: Blöcke, deren Übersetzung nicht passte (im Original geblieben).
+    /// </summary>
+    internal async Task<int> WriteTranslatedEpubAsync(Ebook ebook, EbookTranslation row, ZipArchive zip, EpubTranslationPlan plan,
+        Func<string, string?> translate)
+    {
+        var relative = EbookStorage.TranslatedEpubPath(ebook.Id, row.Language);
+        var target = _storage.ResolvePath(EbookSource.Upload, relative);
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        var tmp = target + ".part";
+        int rejected;
+        try
+        {
+            await using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
+                rejected = EbookEpubTranslation.Write(zip, plan, fs, row.Language, translate, ebook.Language);
+            File.Move(tmp, target, overwrite: true);
+        }
+        catch
+        {
+            try { if (File.Exists(tmp)) File.Delete(tmp); } catch (IOException) { /* egal */ }
+            throw;
+        }
+        row.State = EbookTranslationState.Done;
+        row.Priority = false;
+        row.RelativePath = relative;
+        row.SizeBytes = new FileInfo(target).Length;
+        return rejected;
+    }
+
+    /// <summary>Zwischenspeicher eines Buchs + Sprache öffnen (Worker und externe Übersetzer teilen ihn).</summary>
+    internal EbookTranslationCache OpenCache(int ebookId, string language)
+        => EbookTranslationCache.Open(_storage.ResolvePath(EbookSource.Upload, EbookStorage.TranslationCachePath(ebookId, language)));
 
     // ── Titel ───────────────────────────────────────────────────────────────────────────────────
 
@@ -440,7 +467,7 @@ public class EbookTranslationService
     }
 
     /// <summary>Das Quell-EPUB — bei einem Text-PDF ohne EPUB erst das Fließtext-EPUB bauen. <c>null</c> + Ausgang, wenn keines geht.</summary>
-    private async Task<(EbookFile? File, EbookTranslationOutcome Outcome)> EnsureSourceAsync(Ebook ebook, EbookTranslation row, CancellationToken ct)
+    internal async Task<(EbookFile? File, EbookTranslationOutcome Outcome)> EnsureSourceAsync(Ebook ebook, EbookTranslation row, CancellationToken ct)
     {
         var epub = EbookFormats.Primary(ebook.Files.Where(f => f.Format == "epub"));
         if (epub != null && ExistingPath(ebook, epub) != null) return (epub, EbookTranslationOutcome.Done);
@@ -615,11 +642,13 @@ public class EbookTranslationService
         return Item(row, ebook);
     }
 
-    /// <summary>Gescheiterte und unvollständige (Texte im Original) wieder in die Reihe → Anzahl.</summary>
+    /// <summary>Gescheiterte und unvollständige (Texte im Original) wieder in die Reihe → Anzahl. Extern beanspruchte, beim
+    /// Zusammenbauen gescheiterte bleiben beim externen Übersetzer (freigeben über <c>DELETE …/external/{id}</c>).</summary>
     public async Task<int> RetryFailedAsync(CancellationToken ct)
     {
         var rows = await _db.EbookTranslations
-            .Where(t => t.State == EbookTranslationState.Failed || (t.State == EbookTranslationState.Done && t.SegmentsFailed > 0))
+            .Where(t => (t.State == EbookTranslationState.Failed && (t.Model == null || !t.Model.StartsWith(ExternalModelPrefix)))
+                        || (t.State == EbookTranslationState.Done && t.SegmentsFailed > 0))
             .ToListAsync(ct);
         foreach (var r in rows)
         {

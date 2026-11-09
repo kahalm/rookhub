@@ -77,7 +77,7 @@ public class EbookTranslationServiceTests : IDisposable
     }
 
     /// <summary>Kapitel 1 (deutsch, mit Notation, Markup, Bild), Kapitel 2 mit einer Wiederholung, Navigation, NCX, Bild, CSS.</summary>
-    internal static byte[] GermanEpub(int paragraphs = 3)
+    internal static byte[] GermanEpub(int paragraphs = 3, string? extraHtml = null)
     {
         var ch1 = new StringBuilder("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"de\" xml:lang=\"de\">" +
             "<head><title>Kapitel 1</title><link rel=\"stylesheet\" href=\"../Styles/s.css\"/></head><body>\n" +
@@ -85,6 +85,7 @@ public class EbookTranslationServiceTests : IDisposable
             "<p>Nach 12.Sf3 Sc6 13.<span class=\"f\">♗</span>b5 steht Weiß <b>deutlich</b> besser ±.</p>\n" +
             "<div class=\"d\"><img src=\"../Images/d1.png\" alt=\"\"/></div>\n");
         for (var i = 0; i < paragraphs; i++) ch1.Append($"<p>Absatz Nummer {i} erklärt den Plan mit dem Springer.</p>\n");
+        if (extraHtml != null) ch1.Append(extraHtml).Append('\n');
         ch1.Append("<p>1.e4 e5 2.Sf3 Sc6</p>\n</body></html>");
         const string ch2 = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>2</title></head><body>" +
             "<p class=\"t\">Weiß am Zug gewinnt.</p><p>Karpow – Kasparow, Moskau 1985</p><p>Ein ruhiger Zug.</p></body></html>";

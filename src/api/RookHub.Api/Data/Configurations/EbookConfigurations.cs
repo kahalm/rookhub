@@ -186,6 +186,16 @@ internal sealed class EbookTranslationConfiguration : IEntityTypeConfiguration<E
     }
 }
 
+// Externe Übersetzer: die Texte einer beanspruchten Übersetzung, je Übersetzung + Nummer eindeutig.
+internal sealed class EbookTranslationSegmentConfiguration : IEntityTypeConfiguration<EbookTranslationSegment>
+{
+    public void Configure(EntityTypeBuilder<EbookTranslationSegment> e)
+    {
+        e.HasIndex(s => new { s.EbookTranslationId, s.Index }).IsUnique();
+        e.HasOne(s => s.Translation).WithMany().HasForeignKey(s => s.EbookTranslationId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class EbookDiagramCorrectionConfiguration : IEntityTypeConfiguration<EbookDiagramCorrection>
 {
     public void Configure(EntityTypeBuilder<EbookDiagramCorrection> e)

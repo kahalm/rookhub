@@ -38,5 +38,7 @@ public static partial class DomainServicesSetup
         services.Configure<RookHub.Api.Services.Ebooks.EbookTranslationOptions>(configuration.GetSection(RookHub.Api.Services.Ebooks.EbookTranslationOptions.Section));
         services.AddSingleton<RookHub.Api.Services.Ebooks.EbookTranslationSignal>();
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookTranslationService>();
+        // Externe Übersetzer (Claude-Agenten): /api/admin/ebooks/translations/external — beanspruchen, Texte holen/zurückgeben, zusammenbauen.
+        services.AddScoped<RookHub.Api.Services.Ebooks.EbookExternalTranslationService>();
     }
 }

@@ -3041,6 +3041,43 @@ namespace RookHub.Api.Migrations
                     b.ToTable("EbookTranslations");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.EbookTranslationSegment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("DocumentPath")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<int>("EbookTranslationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Index")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Target")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EbookTranslationId", "Index")
+                        .IsUnique();
+
+                    b.ToTable("EbookTranslationSegments");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.EbookTree", b =>
                 {
                     b.Property<int>("EbookId")
@@ -10190,6 +10227,17 @@ namespace RookHub.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Ebook");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookTranslationSegment", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.EbookTranslation", "Translation")
+                        .WithMany()
+                        .HasForeignKey("EbookTranslationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Translation");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookTree", b =>
