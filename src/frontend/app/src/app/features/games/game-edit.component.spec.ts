@@ -7,6 +7,7 @@ import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { GameEditComponent } from './game-edit.component';
+import { SnackbarService } from '../../core/snackbar.service';
 
 describe('GameEditComponent', () => {
   /** Die Fotos lädt `ScanPhotos` nacheinander über Promises — kurz warten, bis die nächste Anfrage steht. */
@@ -347,6 +348,23 @@ describe('GameEditComponent', () => {
     const put = http.expectOne({ method: 'PUT', url: '/api/games/5' });
     expect(put.request.body.scoresheetPlies.length).toBe(5);
     put.flush(detail());
+  });
+
+  it('a failed save warns with the translated API error, not the raw message (F2-021)', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail());
+    fixture.detectChanges();
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { apiErrors: { rate_limited: 'Slow down, please.' } }, true);
+    translate.use('en');
+    const snackbar = TestBed.inject(SnackbarService);
+    const warn = spyOn(snackbar, 'warn');
+    const info = spyOn(snackbar, 'info');
+    c.save();
+    http.expectOne({ method: 'PUT', url: '/api/games/5' }).flush({ message: 'Too many requests', code: 'rate_limited' }, { status: 429, statusText: 'Too Many' });
+    expect(warn).toHaveBeenCalledOnceWith('Slow down, please.');
+    expect(info).not.toHaveBeenCalled();
   });
 
   it('a scanned game: confirming a move clears the mark', async () => {

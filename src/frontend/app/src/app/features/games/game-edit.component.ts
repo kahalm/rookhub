@@ -20,6 +20,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { apiErrorText } from '../../core/api-error';
 import { GamesService, SavedGameDetail } from './games.service';
 import { GameEvals } from './game-review.util';
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
@@ -534,7 +535,7 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
       },
       error: (err: HttpErrorResponse) => {
         this.saving.set(false);
-        this.snackbar.info(err.error?.message ?? this.translate.instant('games.edit.saveFailed'));
+        this.snackbar.warn(apiErrorText(err, this.translate, 'games.edit.saveFailed'));   // F2-021
       },
     });
   }
