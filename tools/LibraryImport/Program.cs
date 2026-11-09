@@ -19,7 +19,8 @@ using RookHub.Tools.LibraryImport.Infrastructure;
 //   tree             Eroeffnungsbaum einer Stellung gegen die echte Datenbank nachsehen
 //   embed            Kommentare fuer „Frag die Kommentare" einbetten (Embedding__BaseUrl)
 //   stats            zeigen, was drinsteht (Vorgabe ohne Befehl)
-//   migrate          Schema per Migrationen anlegen (nur fuer eine WEGWERF-MariaDB, z. B. zum Trainieren)
+//   migrate          Schema per Migrationen anlegen (nur fuer eine WEGWERF-MariaDB, z. B. zum Trainieren; verweigert
+//                    echte Schemanamen und Ziele mit Nutzern, ausser mit --i-know-this-is-a-scratch-db)
 //   league-import    eine Liga aus dem SBV-Ligamanager oder dem Schachkreis Zugspitze einspielen (ohne Ansichten;
 //                    --profiles = auch Spielerkarten) — siehe Commands/LeagueImportCommand
 //   league-train     Prognose-Modell einer Region trainieren + Backtest (--region bayern --out league-model-bayern.json)

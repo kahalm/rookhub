@@ -194,7 +194,7 @@ internal static class TranslateCommand
         services.AddSingleton(client);
         services.AddSingleton(loggers);
         services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
-        services.AddDbContext<AppDbContext>(o => o.UseMySql(ctx.Db.ConnectionString, new MariaDbServerVersion(new Version(11, 0, 0))));
+        services.AddDbContext<AppDbContext>(o => o.UseMySql(ctx.Db.ConnectionString, DbServerVersion.Current));
         services.AddScoped<CourseTranslationService>();
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();

@@ -70,7 +70,8 @@ public class DbServerVersionTests
     public void NurDbServerVersion_LegtEineFassungFest()
     {
         var root = RepoRoot();
-        var treffer = new[] { Path.Combine("src", "api", "RookHub.Api"), "tests" }
+        // „tools“ seit R3-007: LibraryImport schreibt auf Prod und nutzte den Dialekt 11.0.
+        var treffer = new[] { Path.Combine("src", "api", "RookHub.Api"), "tests", "tools" }
             .SelectMany(d => Directory.EnumerateFiles(Path.Combine(root, d), "*.cs", SearchOption.AllDirectories))
             .Select(f => (Pfad: Path.GetRelativePath(root, f).Replace('\\', '/'), Voll: f))
             .Where(f => !f.Pfad.Contains("/bin/") && !f.Pfad.Contains("/obj/") && !f.Pfad.Contains("/Migrations/"))

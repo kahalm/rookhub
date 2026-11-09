@@ -16,7 +16,7 @@ public sealed class ToolDb(string connectionString)
     public AppDbContext New(TimeSpan? commandTimeout = null)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySql(connectionString, new MariaDbServerVersion(new Version(11, 0, 0)),
+            .UseMySql(connectionString, DbServerVersion.Current,   // EINE Fassung wie die API (R3-007)
                 o => { if (commandTimeout is { } t) o.CommandTimeout((int)t.TotalSeconds); })
             .EnableSensitiveDataLogging(false)
             .Options;
