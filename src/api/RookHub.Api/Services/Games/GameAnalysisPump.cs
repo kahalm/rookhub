@@ -196,7 +196,7 @@ internal sealed class GameAnalysisPump
                     MultiPv = analysis.RefineMultiPv ?? analysis.MultiPv,
                     EngineId = analysis.EngineId,
                 }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: true,
-                    batch: GameAnalysisOrigins.IsBatch(analysis.Origin));
+                    batch: GameAnalysisOrigins.IsBatch(analysis.Origin), priority: PriorityOf(analysis));
                 pos.AnalysisJobId = job.Id;
                 changed = true;
             }
@@ -214,6 +214,10 @@ internal sealed class GameAnalysisPump
         }
         return changed;
     }
+
+    /// <summary>Stufe der Aufträge einer Analyse (<see cref="JobPriority"/>): Stapel nach Herkunft, eigene Partien → Vorgabe.</summary>
+    private static JobPriority? PriorityOf(GameAnalysis analysis) => GameAnalysisOrigins.IsBatch(analysis.Origin)
+        ? JobPriorities.ForBatch(analysis.Origin, analysis.CreatedAt, DateTime.UtcNow) : null;
 
     /// <summary>Bis zum Block-Limit neue Aufträge einreihen (in Zugreihenfolge). Meister- und Vereinspartien des Stapels
     /// (<see cref="GameAnalysisOrigins.IsBatch"/>) nur ausserhalb der Sperrzeiten und nur als Hintergrundarbeit.</summary>
@@ -258,7 +262,8 @@ internal sealed class GameAnalysisPump
                     EngineId = analysis.EngineId,
                     // Nicht in „Gemerkte Stellungen" spiegeln: eine Partie erzeugt je Halbzug einen
                     // Auftrag — 80 Zeilen je Partie wuerden die Merkliste des Nutzers zuschuetten.
-                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: batch, batch: batch);
+                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: batch, batch: batch,
+                    priority: PriorityOf(analysis));
                 pos.AnalysisJobId = job.Id;
                 changed = true;
             }

@@ -220,11 +220,17 @@ public sealed class MoveComparisonService
     private async Task<int> CreateJobAsync(MoveComparison c, string fen, int multiPv, CancellationToken ct)
     {
         var club = c.GameAnalysisId != null;
-        var batch = club && !await ClubMistakeComparisons.SummaryWantedAsync(_db, c.GameAnalysisId!.Value, ct);
+        var wanted = club && await ClubMistakeComparisons.SummaryWantedAsync(_db, c.GameAnalysisId!.Value, ct);
+        var batch = club && !wanted;
+        JobPriority? priority = wanted ? JobPriority.Waiting
+            : club ? JobPriorities.ForClub(await _db.GameAnalyses.Where(a => a.Id == c.GameAnalysisId)
+                .Select(a => a.CreatedAt).FirstAsync(ct), DateTime.UtcNow)
+            : null;
         var job = await _jobs.CreateAsync(c.UserId, new CreateAnalysisJobRequest
         {
             Fen = fen, TargetDepth = c.Depth, MultiPv = multiPv, Title = JobTitle,
-        }, ct, remember: false, engineOwnerUserId: c.EngineOwnerUserId ?? c.UserId, background: club, batch: batch);
+        }, ct, remember: false, engineOwnerUserId: c.EngineOwnerUserId ?? c.UserId, background: club, batch: batch,
+            priority: priority);
         return job.Id;
     }
 

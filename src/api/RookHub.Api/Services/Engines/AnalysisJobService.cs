@@ -180,7 +180,8 @@ public class AnalysisJobService
     }
 
     public async Task<AnalysisJobDto> CreateAsync(int userId, CreateAnalysisJobRequest req, CancellationToken ct = default,
-        bool remember = true, int? engineOwnerUserId = null, bool background = false, bool batch = false)
+        bool remember = true, int? engineOwnerUserId = null, bool background = false, bool batch = false,
+        JobPriority? priority = null)
     {
         var fen = (req.Fen ?? string.Empty).Trim();
         if (fen.Length is 0 or > 120 || !IsLegalFen(fen))
@@ -224,6 +225,7 @@ public class AnalysisJobService
             Status = AnalysisJobStatus.Queued, CreatedAt = now, UpdatedAt = now,
             Background = background,
             Batch = background && batch,
+            Priority = background ? priority ?? JobPriorities.Default(background, batch) : JobPriority.Interactive,
         };
         _db.AnalysisJobs.Add(job);
         await TrimAsync(userId, 1, ct);
@@ -504,10 +506,10 @@ public class AnalysisJobService
             .Where(j => j.EngineId == engineId
                 && (j.Status == AnalysisJobStatus.Queued || j.Status == AnalysisJobStatus.Paused)
                 && (j.NextAttemptAt == null || j.NextAttemptAt <= now))
-            // Hintergrundarbeit (Vertiefung) erst, wenn nichts anderes wartet — sonst stuende der schnelle erste
-            // Durchgang einer neuen Partie hinter der Vertiefung einer alten (seit 0.523.0). Darin die Vertiefung
-            // eigener Partien vor dem Stapel (Meister-/Vereins-/Liga-Partien, 0.817.1).
-            .OrderBy(j => j.Background).ThenBy(j => j.Batch).ThenBy(j => j.CreatedAt)
+            // Strenge Rangfolge (0.918.0, JobPriority): interaktiv, wartet jemand, neue Vereinspartien, alte
+            // Vereinspartien, Liga, Meisterpartien. Darunter wie bisher: Hintergrund nach normal (0.523.0), Stapel nach
+            // eigener Vertiefung (0.817.1), dann der älteste.
+            .OrderBy(j => j.Priority).ThenBy(j => j.Background).ThenBy(j => j.Batch).ThenBy(j => j.CreatedAt)
             .ToListAsync(ct);
         if (runnable.Count == 0) return null;
 
@@ -518,8 +520,8 @@ public class AnalysisJobService
             .FirstOrDefaultAsync(ct);
         // Die warme Hashtabelle zaehlt nur innerhalb derselben Stufe: ein Hintergrundauftrag darf sich nicht ueber
         // die Treppe „zuletzt gelaufen" vor einen normalen draengen.
-        return runnable.FirstOrDefault(j => j.Id == lastRunId && j.Background == runnable[0].Background
-            && j.Batch == runnable[0].Batch) ?? runnable[0];
+        return runnable.FirstOrDefault(j => j.Id == lastRunId && j.Priority == runnable[0].Priority
+            && j.Background == runnable[0].Background && j.Batch == runnable[0].Batch) ?? runnable[0];
     }
 
     /// <summary>Alle Engines mit laufbereiten Aufträgen (für den Worker-Tick).</summary>

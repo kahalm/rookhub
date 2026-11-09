@@ -151,3 +151,20 @@ Hintergrundarbeit eigener Partien (Vertiefung), zuletzt die Hintergrundarbeit de
 Liga-Partien, `AnalysisJob.Batch`); innerhalb einer Stufe der zuletzt gelaufene (warme Hashtabelle), sonst der älteste.
 `Batch` setzt die Pumpe beim Anlegen (`GameAnalysisOrigins.IsBatch`), die Migration `AnalysisJobBatch` hat die offenen
 Aufträge einmal nachgetragen. Anlass 21.10.2026: die Vertiefung von Partie 117 stand hinter früher angelegten Liga-Stellungen.
+
+**Strenge Rangfolge (0.918.0, `AnalysisJob.Priority` / `JobPriority`)** — Wunsch 2026-11-09 „mach ihn ruhig streng". Vor
+allen anderen Kriterien sortiert `PickNextForEngineAsync` nach der Stufe; eine niedrigere kommt erst, wenn in den höheren
+auf dieser Engine nichts mehr wartet (die warme Hashtabelle zählt nur innerhalb derselben Stufe):
+
+| Stufe | Wert | Wer |
+|---|---|---|
+| `Interactive` | 0 | jeder nicht-Hintergrund-Auftrag („Analysieren", erster Durchgang eigener Partien) |
+| `Waiting` | 1 | Vertiefung eigener Partien; Fehler-Vergleiche einer Vereinspartie mit angeforderter Zusammenfassung |
+| `ClubNew` | 2 | Vereinspartie, Analyse jünger als 14 Tage (`JobPriorities.ClubNewDays`): Analyse, Vertiefung, Vergleiche |
+| `ClubBackfill` | 3 | ältere Vereinspartien (Nachtrag der Vergleiche) |
+| `League` | 4 | Liga-Partien |
+| `Master` | 5 | Meisterpartien der Bibliothek |
+
+Gesetzt beim Anlegen (`GameAnalysisPump.PriorityOf`, `MoveComparisonService.CreateJobAsync`), nie verschoben; die
+Migration `AnalysisJobPriority` stuft die offenen Aufträge einmal ein. Ein höher eingestufter Auftrag verdrängt einen
+laufenden Hintergrundauftrag NICHT (nur interaktive tun das) — er kommt an die Reihe, sobald dieser fertig ist.

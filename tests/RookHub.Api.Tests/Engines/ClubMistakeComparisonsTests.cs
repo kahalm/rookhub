@@ -144,7 +144,7 @@ public class ClubMistakeComparisonsTests : IDisposable
         Assert.Equal(MoveComparisonStatus.Waiting, rows[1].Status);
         var jobs = await _db.AnalysisJobs.ToListAsync();
         Assert.Equal(2, jobs.Count);   // bester Zug + Partiezug
-        Assert.All(jobs, j => { Assert.True(j.Background); Assert.True(j.Batch); Assert.Equal(30, j.TargetDepth); });
+        Assert.All(jobs, j => { Assert.True(j.Background); Assert.True(j.Batch); Assert.Equal(30, j.TargetDepth); Assert.Equal(JobPriority.ClubNew, j.Priority); });
 
         // Für das Haus-Konto unsichtbar und ohne Wirkung auf seine Deckel.
         Assert.Empty(await _svc.ListAsync(House));
@@ -195,7 +195,7 @@ public class ClubMistakeComparisonsTests : IDisposable
         var urgentJobs = await _db.MoveComparisonLines.Where(l => l.Comparison!.GameAnalysisId == old.Id && l.AnalysisJobId != null)
             .Select(l => l.AnalysisJobId!.Value).ToListAsync();
         Assert.NotEmpty(urgentJobs);
-        Assert.All(await _db.AnalysisJobs.Where(j => urgentJobs.Contains(j.Id)).ToListAsync(), j => { Assert.True(j.Background); Assert.False(j.Batch); });
+        Assert.All(await _db.AnalysisJobs.Where(j => urgentJobs.Contains(j.Id)).ToListAsync(), j => { Assert.True(j.Background); Assert.False(j.Batch); Assert.Equal(JobPriority.Waiting, j.Priority); });
         Assert.Equal(MoveComparisonStatus.Waiting, (await _db.MoveComparisons.SingleAsync(c => c.GameAnalysisId == fresh.Id && c.Ply == 5)).Status);
     }
 

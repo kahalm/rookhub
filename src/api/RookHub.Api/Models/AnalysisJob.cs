@@ -132,4 +132,51 @@ public class AnalysisJob
     /// seit A4-016 gibt es ihn, das Merkmal am Auftrag erspart die Verknüpfung trotzdem).
     /// </summary>
     public bool Batch { get; set; }
+
+    /// <summary>Strenge Rangfolge der Engine-Warteschlange (0.918.0, siehe <see cref="JobPriority"/>): kleiner zuerst.</summary>
+    public JobPriority Priority { get; set; }
+}
+
+/// <summary>
+/// Rangfolge der Analyse-Aufträge (Wunsch 2026-11-09: „mach ihn ruhig streng"). Eine Engine nimmt immer den Auftrag mit
+/// der kleinsten Stufe; eine niedrigere kommt erst dran, wenn in allen höheren nichts mehr wartet. Gesetzt beim Anlegen
+/// (<see cref="JobPriorities"/>), nie nachträglich verschoben.
+/// </summary>
+public enum JobPriority : byte
+{
+    /// <summary>Jemand sitzt davor: „Analysieren", Live-Engine, erster Durchgang einer eigenen Partie.</summary>
+    Interactive = 0,
+    /// <summary>Jemand wartet auf das Ergebnis: Vertiefung eigener Partien, Fehler-Vergleiche einer Vereinspartie mit
+    /// angeforderter Zusammenfassung.</summary>
+    Waiting = 1,
+    /// <summary>Neue Vereinspartien (Analyse jünger als <see cref="JobPriorities.ClubNewDays"/> Tage): Analyse, Vertiefung,
+    /// Fehler-Vergleiche.</summary>
+    ClubNew = 2,
+    /// <summary>Ältere Vereinspartien — vor allem der Nachtrag der Fehler-Vergleiche.</summary>
+    ClubBackfill = 3,
+    /// <summary>Liga-Partien (Bestand).</summary>
+    League = 4,
+    /// <summary>Meisterpartien der Bibliothek (Bestand).</summary>
+    Master = 5,
+}
+
+public static class JobPriorities
+{
+    /// <summary>So lange gilt die Analyse einer Vereinspartie als neu.</summary>
+    public const int ClubNewDays = 14;
+
+    /// <summary>Stufe für Stapel-Arbeit einer Partie-Analyse (Meister-, Vereins-, Liga-Partie).</summary>
+    public static JobPriority ForBatch(GameAnalysisOrigin origin, DateTime analysisCreatedAt, DateTime now) => origin switch
+    {
+        GameAnalysisOrigin.League => JobPriority.League,
+        GameAnalysisOrigin.Library => JobPriority.Master,
+        _ => ForClub(analysisCreatedAt, now),
+    };
+
+    public static JobPriority ForClub(DateTime analysisCreatedAt, DateTime now) =>
+        now - analysisCreatedAt <= TimeSpan.FromDays(ClubNewDays) ? JobPriority.ClubNew : JobPriority.ClubBackfill;
+
+    /// <summary>Vorgabe, wenn der Aufrufer keine Stufe nennt.</summary>
+    public static JobPriority Default(bool background, bool batch) =>
+        !background ? JobPriority.Interactive : batch ? JobPriority.ClubBackfill : JobPriority.Waiting;
 }

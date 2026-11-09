@@ -238,6 +238,9 @@ namespace RookHub.Api.Migrations
                     b.Property<string>("NodeStepsJson")
                         .HasColumnType("longtext");
 
+                    b.Property<byte>("Priority")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<int>("ReachedDepth")
                         .HasColumnType("int");
 

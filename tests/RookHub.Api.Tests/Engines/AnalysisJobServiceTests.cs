@@ -528,6 +528,56 @@ public class AnalysisJobServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task PickNextForEngine_StrengeRangfolge_NeueVereinspartieVorNachtragVorLigaVorMeister()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var now = DateTime.UtcNow;
+        AnalysisJob Job(JobPriority p, int minutesAgo, DateTime? lastRun = null) => new()
+        {
+            UserId = u, Fen = START, EngineId = "e", TargetDepth = 20, MultiPv = 1, Status = AnalysisJobStatus.Queued,
+            CreatedAt = now.AddMinutes(-minutesAgo), LastRunAt = lastRun, Background = true, Batch = true, Priority = p,
+        };
+        var master = Job(JobPriority.Master, 90);
+        var league = Job(JobPriority.League, 80, lastRun: now.AddMinutes(-1));   // warm — zählt nur in derselben Stufe
+        var backfill = Job(JobPriority.ClubBackfill, 70);
+        var fresh = Job(JobPriority.ClubNew, 1);
+        _db.AnalysisJobs.AddRange(master, league, backfill, fresh);
+        await _db.SaveChangesAsync();
+
+        foreach (var expected in new[] { fresh, backfill, league, master })
+        {
+            Assert.Equal(expected.Id, (await _svc.PickNextForEngineAsync("e", now))!.Id);
+            expected.Status = AnalysisJobStatus.Done;
+            await _db.SaveChangesAsync();
+        }
+    }
+
+    [Fact]
+    public async Task CreateAsync_Stufe_InteraktivImmer0_HintergrundNachAngabeOderVorgabe()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        async Task<JobPriority> Of(bool background, bool batch, JobPriority? p, int depth) =>
+            (await _db.AnalysisJobs.FindAsync((await _svc.CreateAsync(u,
+                new CreateAnalysisJobRequest { Fen = START, TargetDepth = depth, MultiPv = 1 },
+                remember: false, background: background, batch: batch, priority: p)).Id))!.Priority;
+
+        Assert.Equal(JobPriority.Interactive, await Of(false, false, JobPriority.Master, 20));
+        Assert.Equal(JobPriority.Waiting, await Of(true, false, null, 21));
+        Assert.Equal(JobPriority.ClubBackfill, await Of(true, true, null, 22));
+        Assert.Equal(JobPriority.League, await Of(true, true, JobPriority.League, 23));
+    }
+
+    [Fact]
+    public void JobPriorities_ForBatch_NachHerkunftUndAlter()
+    {
+        var now = DateTime.UtcNow;
+        Assert.Equal(JobPriority.League, JobPriorities.ForBatch(GameAnalysisOrigin.League, now, now));
+        Assert.Equal(JobPriority.Master, JobPriorities.ForBatch(GameAnalysisOrigin.Library, now, now));
+        Assert.Equal(JobPriority.ClubNew, JobPriorities.ForBatch(GameAnalysisOrigin.Club, now.AddDays(-13), now));
+        Assert.Equal(JobPriority.ClubBackfill, JobPriorities.ForBatch(GameAnalysisOrigin.Club, now.AddDays(-15), now));
+    }
+
+    [Fact]
     public async Task CreateAsync_BatchNurAlsHintergrund()
     {
         var u = await UserWithBackgroundEngineAsync();
