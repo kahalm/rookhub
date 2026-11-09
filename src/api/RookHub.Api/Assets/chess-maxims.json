@@ -2483,5 +2483,61 @@
     "quote": "Wegen seiner großen Reichweite ist dies auch aus der Ferne möglich"
    }
   ]
+ },
+ {
+  "id": "springer-bauernduo",
+  "text": "Ein Springer auf g3 oder b3 (g6 oder b6) lässt sich mit dem Flügelbauern-Duo einschnüren: g- bzw. b-Bauer einen Schritt, dann der Randbauer vor.",
+  "category": "Figuren",
+  "when": "Ein Springer steht auf g3, b3, g6 oder b6, der Gegner hätte ihn mit g-/b-Bauer und Randbauer einengen oder vertreiben können oder hat es getan, und der Vorstoß schwächt den eigenen König nicht.",
+  "textEn": "A knight on g3 or b3 (g6 or b6) can be hemmed in by the duo of wing pawns: the g- or b-pawn one step, then the rook's pawn forward.",
+  "categoryEn": "Pieces",
+  "whenEn": "A knight stands on g3, b3, g6 or b6, the opponent could have restricted or driven it away with the g-/b-pawn and the rook's pawn, or did so, and the advance does not weaken their own king.",
+  "sources": [
+   {
+    "ebookId": 796,
+    "author": "Valeri Bronznik, Anatoli Terekhin",
+    "title": "Techniques of Positional Play",
+    "year": "2011",
+    "location": "E-Book ohne Seitenzahlen, bei ca. 2 %",
+    "percent": 2,
+    "quote": "restricting a knight by the wing pawns: Pawn g3/Pawn h4 against a Ng6 is the main subject with various mirror image variations"
+   },
+   {
+    "ebookId": 5537,
+    "author": "John Watson",
+    "title": "Chess Life 2023 (Besprechung von Bronznik/Terekhin)",
+    "year": "2023",
+    "location": "PDF-S. 807",
+    "page": 807,
+    "quote": "when White has a knight on g3 or b3, Black can both restrict the knight’s forward movement with … g7-g6 or … b7-b6"
+   },
+   {
+    "ebookId": 5537,
+    "author": "John Watson",
+    "title": "Chess Life 2023 (Besprechung von Bronznik/Terekhin)",
+    "year": "2023",
+    "location": "PDF-S. 807",
+    "page": 807,
+    "quote": "prepare to harass the knight with a further … h7-h5-h4 or … a7-a5-a4"
+   },
+   {
+    "ebookId": 1231,
+    "author": "Davorin Kuljasevic",
+    "title": "Ding Liren's Best Games",
+    "year": "2023",
+    "location": "PDF-S. 245",
+    "page": 245,
+    "quote": "The main downside of the knight’s position on g3 is that Black can harass it this way"
+   },
+   {
+    "ebookId": 6429,
+    "author": "Cyrus Lakdawala",
+    "title": "The Caro-Kann: Move by Move",
+    "year": "2012",
+    "location": "PDF-S. 258",
+    "page": 258,
+    "quote": "a knight on b3 is also vulnerable to future ... a5-a4 ideas"
+   }
+  ]
  }
 ]

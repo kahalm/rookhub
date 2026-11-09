@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.936.2',
+    date: '2026-11-09',
+    changes: [
+      {
+        en: 'Chess maxims: new maxim on restricting a knight on g3, b3, g6 or b6 with the duo of wing pawns.',
+        de: 'Merksätze: neuer Merksatz zum Einschnüren eines Springers auf g3, b3, g6 oder b6 mit dem Flügelbauern-Duo.',
+      },
+    ],
+  },
+  {
     version: '0.936.1',
     date: '2026-11-09',
     changes: [
