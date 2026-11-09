@@ -93,6 +93,20 @@ public class LeagueAccountChecksTests : IDisposable
         Assert.Equal("Italien — weder Österreich noch seine Föderation (AUT)", LeagueAccountChecks.CountryCheck(Max, Prof(flag: "IT"), null).Text);
     }
 
+    /// <summary>GA-04 (G1-003): Pseudo-Flaggen sind keine Landesangabe — die Prüfliste zeigt „kein Land im Profil“ statt eines
+    /// roten „_E — weder Österreich noch seine Föderation“, wie die Konto-Suche, die solche Konten vorschlägt.</summary>
+    [Theory]
+    [InlineData("_earth")]
+    [InlineData("_pirate")]
+    [InlineData("XX")]
+    [InlineData("EU")]
+    [InlineData("_united-nations")]
+    public void Country_PseudoFlag_IsNoCountry(string flag)
+    {
+        var item = LeagueAccountChecks.CountryCheck(Max, Prof(flag: flag), null);
+        Assert.Equal((LeagueAccountChecks.None, "kein Land im Profil"), (item.Status, item.Text));
+    }
+
     [Fact]
     public void Country_ByRegion_GermanyForAWeilheimer_FailForASchwazer()
     {

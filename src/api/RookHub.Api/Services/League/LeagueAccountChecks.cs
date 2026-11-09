@@ -347,14 +347,14 @@ public sealed class LeagueAccountChecks
         return new Item(key, label, None, $"„{user}“ — kein Bezug zum Namen erkennbar");
     }
 
-    /// <summary>Land im Profil: das Land seiner Region (Österreich bzw. Deutschland, 0.712.0) oder seine Föderation (Meldeliste bzw. FIDE).</summary>
+    /// <summary>Land im Profil: das Land seiner Region (Österreich bzw. Deutschland, 0.712.0) oder seine Föderation (Meldeliste bzw. FIDE).
+    /// Die Flagge liest <see cref="LeagueProfileFlags.Country"/> (Regionalflaggen zählen für ihr Land, Pseudo-Flaggen = keine Angabe).</summary>
     public static Item CountryCheck(LeagueAccountFinder.Player player, LeagueAccountFinder.Profile prof, string? fideFed)
     {
         const string key = "country", label = "Land";
         var region = player.OnlineRegion;
-        var flag = (prof.Flag ?? "").Trim();
-        if (flag.Length < 2) return new Item(key, label, None, "kein Land im Profil");
-        var code = flag[..2].ToUpperInvariant();
+        // Pseudo-Flaggen („_earth“, „EU“, „XX“ …) sind keine Landesangabe — wie in der Konto-Suche (GA-04/G1-003).
+        if (LeagueProfileFlags.Country(prof.Flag) is not { } code) return new Item(key, label, None, "kein Land im Profil");
         if (code == region.Country && player.Local) return new Item(key, label, Ok, region.CountryName);
         if (LeagueAccountFinder.AllowedCountries(player.Fed, fideFed, player.Local, player.Region).Contains(code))
             return new Item(key, label, Ok, $"{CountryNames.GermanName(code)} — seine Föderation ({fideFed ?? player.Fed})");
