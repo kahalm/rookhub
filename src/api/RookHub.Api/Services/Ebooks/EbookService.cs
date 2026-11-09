@@ -19,6 +19,9 @@ public class EbookService
     /// und <c>[RequestSizeLimit]</c> am Controller halten diesen Wert (DeploymentConfigTests).</summary>
     public const long MaxUploadRequestBytes = 1_100_000_000;
 
+    /// <summary>Meldung, wenn ohne Konto nicht hochgeladen werden darf (auch <c>AnonymousEbookUploadLimitAttribute</c>).</summary>
+    public const string AnonymousUploadDisabledMessage = "Sign in to upload e-books.";
+
     public const int MaxPageSize = 100;
 
     /// <summary>„Mit Diagrammen“ zeigt nur Bücher mit mindestens so vielen erkannten Diagrammen (0.780.4, Nutzerwunsch):
@@ -307,7 +310,7 @@ public class EbookService
         {
             manageAll = false;
             if (caller.AnonId == null || AnonQuota <= 0)
-                throw new ForbiddenException("Sign in to upload e-books.") { Code = ApiErrorCodes.EbookAnonymousUploadDisabled };
+                throw new ForbiddenException(AnonymousUploadDisabledMessage) { Code = ApiErrorCodes.EbookAnonymousUploadDisabled };
             meta.GroupIds = null;
         }
         var quota = caller.IsAnonymous ? AnonQuota : manageAll ? 0 : _storage.UserQuotaBytes;

@@ -93,6 +93,13 @@ Bücher kommen auch aus anonymen Uploads; ihr Inhalt ist fremder Code bzw. fremd
   `<Upload-Wurzel>/diagram-attempts/<id>`, nach jedem geordneten Ende (Erfolg, Fehler, Herunterfahren) gelöscht. Nur ein
   harter Absturz (OOM-Kill) lässt sie stehen; nach drei solchen Abbrüchen schließt der Worker das Buch als `Failed` ab,
   statt es nach jedem Neustart wieder zu nehmen.
+- **Rumpfgrenze für anonyme Uploads** (`AnonymousEbookUploadLimitAttribute` am `POST /api/ebooks`): ein
+  Ressourcen-Filter nach `[RequestSizeLimit]` und VOR dem Form-Binding. Ohne Konto: ungültige/fehlende `X-Visitor-Id`
+  bzw. anonymer Upload aus → dieselbe 403 (`ebook_anonymous_upload_disabled`) ohne den Rumpf zu lesen;
+  `Content-Length` über `min(MaxFileBytes, AnonymousQuotaBytes)` + 1 MB → **413** `ebook_file_too_large`; sonst wird
+  `IHttpMaxRequestBodySizeFeature` auf diese Grenze gesenkt (auch chunked bricht dort ab). Angemeldet bleibt es bei
+  1,1 GB. nginx (`location ^~ /api/ebooks`, 1100M) unterscheidet nicht nach Anmeldung — muss es nicht: mit
+  `proxy_request_buffering off` puffert nginx nichts, die frühe 413 der API beendet die Anfrage.
 
 ## Upload-Dublettenprüfung (0.863.0)
 

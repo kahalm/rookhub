@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Authorization;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs.Ebooks;
+using RookHub.Api.Filters;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Accounts;
@@ -70,12 +71,14 @@ public class EbooksController : BaseApiController
     }
 
     /// <summary>Hochladen (Multipart: <c>file</c> + Metadaten). Grenze 1 GiB je Datei — nginx hält dieselbe
-    /// (<c>location ^~ /api/ebooks</c>, DeploymentConfigTests).</summary>
+    /// (<c>location ^~ /api/ebooks</c>, DeploymentConfigTests). Ohne Konto senkt
+    /// <see cref="AnonymousEbookUploadLimitAttribute"/> die Rumpfgrenze VOR dem Lesen auf das anonyme Kontingent (F3-009).</summary>
     [HttpPost]
     [AllowAnonymous]
     [EnableRateLimiting("anonymous-write")]
     [RequestSizeLimit(EbookService.MaxUploadRequestBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = EbookService.MaxUploadRequestBytes)]
+    [AnonymousEbookUploadLimit]
     public async Task<ActionResult<EbookDto>> Upload([FromForm] EbookUploadForm form, CancellationToken ct)
     {
         if (form.File == null || form.File.Length == 0)
