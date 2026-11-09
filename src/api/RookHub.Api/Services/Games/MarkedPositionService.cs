@@ -116,7 +116,10 @@ public partial class MarkedPositionService
         row.BestUci ??= bestUci;
         if (row.Ply is null && row.VariationFromPly is null && fromPly is not null)
             (row.VariationFromPly, row.VariationUci) = (fromPly, line);
-        await _db.SaveChangesAsync(ct);
+        // Zwei gleichzeitige Markierungen derselben Stellung (Doppelklick, zwei Tabs): der Unique-Index lässt die zweite
+        // scheitern — deren Ergebnis ist die Zeile der ersten (idempotent, R4-014), kein 500.
+        if (!await _db.SaveIgnoringUniqueRaceAsync(_logger, ct))
+            return (Map(await Of(caller).AsNoTracking().FirstAsync(p => p.PositionKey == key, ct)), null);
         return (Map(row), null);
     }
 
