@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.940.2',
+    date: '2026-11-09',
+    changes: [
+      {
+        en: 'Further fixes from the November code review (backend, part 3): e-books with unusually deeply nested outlines are processed safely and reflow no longer stalls on PDFs with unusual page sizes; hiding a tournament hides all of its sections, also in nearby notifications; the radius search keeps the earliest tournaments when results are capped and postal-code place suggestions are faster; failing board-cut jobs no longer block diagram recognition and fail after three attempts; background analysis uses less memory with many pending refinements; account search no longer drops profiles with non-country flags; sharing a fixture twice at once returns the same link, two coaches saving the first attendance of a day both land in one session, and team scouting no longer stalls on one broken account; the daily limit for re-rolling roasts counts every roll; claiming collected Chessable lines respects the account’s storage quota. Technical refactoring (no visible change): the tactic harvest is split into steps, upkeep and league rounds, and the reprocessing of outdated courses and repertoires into separate parts.',
+        de: 'Weitere Korrekturen aus dem Codereview vom November (Backend, Teil 3): E-Books mit ungewöhnlich tief verschachteltem Inhaltsverzeichnis werden sicher verarbeitet, und die Fließtext-Umwandlung bleibt bei PDFs mit ungewöhnlichen Seitenmaßen nicht mehr hängen; ein ausgeblendetes Turnier bleibt mit allen seinen Gruppen ausgeblendet, auch in der Umkreis-Meldung; die Umkreissuche zeigt bei sehr vielen Treffern die frühesten Turniere und der Ortsvorschlag per Postleitzahl ist schneller; fehlerhafte Brett-Aufträge halten die Diagramm-Erkennung nicht mehr auf und gelten nach drei Versuchen als gescheitert; die Hintergrund-Analyse braucht bei vielen offenen Vertiefungen weniger Speicher; die Konto-Suche berücksichtigt Profile mit Fantasie-Flagge; zweimal schnell „Link teilen“ liefert denselben Link, zwei Trainer, die gleichzeitig die erste Anwesenheit des Tages speichern, landen in derselben Einheit, und die Team-Suche bleibt bei einem fehlerhaften Konto nicht mehr stehen; das tägliche Limit für „Neu würfeln“ zählt jeden Wurf; die Übernahme gesammelter Chessable-Linien hält das Speicherkontingent ein. Technischer Umbau (keine sichtbare Änderung): Die Taktik-Ernte ist in Schritte, Pflege und Ligarunden aufgeteilt, die Neu-Aufbereitung veralteter Kurse und Repertoires in eigene Bausteine.',
+      },
+    ],
+  },
+  {
     version: '0.940.1',
     date: '2026-11-09',
     changes: [
