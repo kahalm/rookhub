@@ -9,7 +9,7 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
-## [x] Formular-Leser: d/e verwechselbar + Engine nur als Gleichstands-Entscheider (2026-10-08, ERLEDIGT 2026-11-09 in (Version folgt))
+## [x] Formular-Leser: d/e verwechselbar + Engine nur als Gleichstands-Entscheider (2026-10-08, ERLEDIGT 2026-11-09 in 0.937.0)
 
 Erledigt: d/e stand schon seit 0.737.1 in `Confusable` (Se7 und Sa7 kosten aus „Sd7" jetzt je 2,0, Sd4 2,5 — ein echter
 Gleichstand). Den entscheidet jetzt `ScoresheetPlausibility` (Gleichstands-Entscheider, `TieMargin` 0,05 auf die
@@ -426,7 +426,7 @@ erreichbar ist, und scheitert leise.
   (Stücke „Zug 17.Lxh7+: Kommentar …"), Suche = Frage einbetten → nächste Stücke → nach Partie gruppiert, Sprung auf den
   Halbzug; dritte Suchart im Dialog „Partie anfordern", kombinierbar mit Spieler-/Stellungsfilter.
 
-## [x] Teil-Import laedt das ganze Roh-PGN, obwohl nur „leer?" gefragt ist (2026-09-23, ERLEDIGT 2026-11-09, Version folgt)
+## [x] Teil-Import laedt das ganze Roh-PGN, obwohl nur „leer?" gefragt ist (2026-09-23, ERLEDIGT 2026-11-09 in 0.937.0)
 
 > **Erledigt:** `ImportFileAsync` schliesst den Text nur noch ein, wenn er ersetzt (Vollimport) oder zusammengefuehrt
 > (`mergeSourcePgn`) wird. Bei `partial`/`preserveExistingSourcePgn` fragt eine Projektion auf einen bool, ob schon ein
@@ -482,7 +482,7 @@ Wenn der Kurs-Cache wieder gebraucht wird: kleiner Endpunkt bei piratechess
 Kursstruktur im Linien-Cache liegen. Bewusst nicht mitgebaut — der Fall trat bisher ohnehin nur bei
 Importen auf, die ganz durchliefen.
 
-## [x] Puzzle mit ungueltiger Zugfolge friert den Solver still ein (2026-09-13, ERLEDIGT 2026-11-09, Version folgt)
+## [x] Puzzle mit ungueltiger Zugfolge friert den Solver still ein (2026-09-13, ERLEDIGT 2026-11-09 in 0.937.0)
 
 > **Erledigt, beide Stellen:** der CSV-Import spielt jede Zugfolge auf der FEN nach (`WorkSanitizer.PositionError`)
 > und verwirft unpassende Zeilen — Antwort `{ imported, rejectedInvalidMoves, rejectedLineNumbers }` (erste zehn
@@ -649,7 +649,7 @@ Warum das ueberhaupt auffaellt: nps taugen NICHT als Vergleich zwischen Versione
 rechnet langsamer und spielt trotzdem staerker). Der Maszstab ist Elo aus der Veroeffentlichung —
 Stockfish 19 nennt gegen 18 bis zu 44 Elo.
 
-## [x] Stellungen pruefen, BEVOR sie an die Engine gehen (2026-09-10, ERLEDIGT 2026-11-09, Version folgt)
+## [x] Stellungen pruefen, BEVOR sie an die Engine gehen (2026-09-10, ERLEDIGT 2026-11-09 in 0.937.0)
 
 > **Stand 2026-11-09: alle Sendewege geprueft.** Die Regeln des `WorkSanitizer` gibt es jetzt auch einzeln als
 > `WorkSanitizer.PositionError(fen, moves)` (neben `PermissiveSan`, nicht darin). Der Lichess-Broker (Cloud-Engines,
@@ -682,7 +682,7 @@ Schach der Gegenseite — und eine ungueltige Stellung mit klarer Meldung ablehn
 weiterzugeben. `PermissiveSan` im API-Projekt kennt den Fall schon von der anderen Seite (es spielt
 illegale Stellungen bewusst nach), die Pruefung gehoert daneben und nicht hinein.
 
-## [x] FIDE-Detailangaben nachtragen — EIN Abruf je Ereignis, alle Felder da (2026-09-07, ERLEDIGT 2026-11-09, Version folgt)
+## [x] FIDE-Detailangaben nachtragen — EIN Abruf je Ereignis, alle Felder da (2026-09-07, ERLEDIGT 2026-11-09 in 0.937.0)
 
 Gemeldet als „bei den FIDE-Turnieren bist du noch sehr zaghaft mit den Details". Zu Recht. Am
 Dev-Stand gezaehlt:
@@ -740,7 +740,7 @@ durch eine Vorrangregel, sondern weil die FIDE-Jahresansicht die Detailfelder ni
 dem Nachlauf oben waere zu entscheiden, wer bei Widerspruch gilt (Vorschlag: chess-results fuer
 Termin/Ort, FIDE fuer die Bedenkzeit-Beschreibung — dort ist sie ausgeschrieben).
 
-**Erledigt (2026-11-09, Version folgt).** Der Grundbau stand schon seit 2026-09-07 (Crawler `GET
+**Erledigt (2026-11-09 in 0.937.0).** Der Grundbau stand schon seit 2026-09-07 (Crawler `GET
 /api/fide-calendar/event?id=`, `FideEventDetailService`, Migration `AddTournamentSystemAndFideDetails` mit
 `FideDetailCheckedAt`/`FideDetailVersion`, naechtlicher „FIDE-Detail-Durchgang", Admin `POST …/fide-details`); nur
 der Punkt hier war offen geblieben. Jetzt nachgezogen: Crawler liest Veranstalter + Hauptschiedsrichter (Karten
@@ -1035,7 +1035,7 @@ einmal holt und „schon geholt" an der `Url` des Herkunftsvermerks erkennt. Bei
 Erstbestand nach fuenf Naechten durch, danach kostet er fast nichts. Die Machinerie steht bei den
 vier genannten Quellen schon.
 
-## [x] Verschwundene Turniere der ZUSATZQUELLEN werden nie zurueckgezogen (2026-09-08, abgehakt 2026-11-09, Version folgt)
+## [x] Verschwundene Turniere der ZUSATZQUELLEN werden nie zurueckgezogen (2026-09-08, abgehakt 2026-11-09 in 0.937.0)
 
 **Stand 2026-11-09:** Der Nachlauf steht seit **0.454.1** im Code (`ExternalDirectorySource.RetireVanishedAsync`, seit
 der Zerlegung Z7 am Ende von `ExternalSweepRunner.RunAsync`; ChessCz und FIDE rufen es selbst) — der Eintrag hier war
@@ -1075,7 +1075,7 @@ Merkmal kam am 2026-09-07 um 12:43, der letzte Sweep lief 03:1x — also davor. 
 Sweep traegt es nach, aber erst ueber eine Rotationswoche; fuer eine einzelne Foederation sofort:
 `POST /api/admin/tournament-directory/sweep` mit `AUT`.
 
-## [x] Mannschaftsturnier ohne Rundenzahl importiert nichts (von Kopie 2 gemeldet, 2026-09-07, erledigt 2026-11-09, Version folgt)
+## [x] Mannschaftsturnier ohne Rundenzahl importiert nichts (von Kopie 2 gemeldet, 2026-09-07, erledigt 2026-11-09 in 0.937.0)
 
 **Erledigt 2026-11-09 im Crawler** (Branch `todo-3`): Ursache war der GET auf `art=0&turdet=YES` — er klappt die
 Turnierdetails nicht aus (das tut nur der Postback), bei der Liga steht dort nur die Kreuztabelle. Die

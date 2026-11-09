@@ -11,6 +11,30 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.937.0',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Engines: the own broker now accepts up to 64 engines per account (previously 32).',
+        de: 'Engines: Der eigene Broker nimmt jetzt bis zu 64 Engines je Konto an (vorher 32).' },
+      { en: 'Languages: all 21 additional interface languages (es, pt, it, fr, nl, sv, pl, cs, ro, el, tr, ru, uk, ar, fa, hi, id, vi, zh, ja, ko) are now complete — previously only about 15 % of the texts were translated and the rest fell back to English.',
+        de: 'Sprachen: Alle 21 weiteren Oberflächensprachen (es, pt, it, fr, nl, sv, pl, cs, ro, el, tr, ru, uk, ar, fa, hi, id, vi, zh, ja, ko) sind jetzt vollständig — bisher waren nur rund 15 % der Texte übersetzt, der Rest fiel auf Englisch zurück.' },
+      { en: 'Scoresheet reader: the engine now only breaks ties between readings of equal cost instead of overruling clearly written weak moves; ScoresheetBench can run with an engine (--engine).',
+        de: 'Formular-Leser: Die Engine entscheidet nur noch Gleichstände zwischen gleich teuren Lesarten, statt klar geschriebene schwache Züge zu überstimmen; ScoresheetBench kann mit Engine laufen (--engine).' },
+      { en: 'Engines: positions are validated before they reach the Lichess cloud engine, the live analysis and the hint generator (two kings, side to move not giving check); invalid positions are rejected with a clear message instead of crashing the engine.',
+        de: 'Engines: Stellungen werden vor Lichess-Cloud-Engine, Live-Analyse und Tipp-Generator geprüft (zwei Könige, Seite am Zug gibt kein Schach); ungültige Stellungen werden mit klarer Meldung abgewiesen statt die Engine abstürzen zu lassen.' },
+      { en: 'Puzzles: the CSV import replays every move sequence against its position and rejects lines that do not fit (counted in the response); a puzzle with an unplayable sequence now shows an error with „Next“ instead of hanging on „Watch the opponent’s move“.',
+        de: 'Puzzles: Der CSV-Import spielt jede Zugfolge gegen die Stellung nach und verwirft unpassende Zeilen (Zähler in der Antwort); ein Puzzle mit unspielbarer Zugfolge zeigt jetzt einen Fehler mit „Weiter“ statt auf „Warte auf den Zug des Gegners“ hängen zu bleiben.' },
+      { en: 'Courses: partial and gap imports no longer load the whole stored PGN (up to 6 MB per line) just to check whether it is empty.',
+        de: 'Kurse: Teil- und Lücken-Importe laden nicht mehr das ganze gespeicherte PGN (bis zu 6 MB je Linie), nur um zu prüfen, ob es leer ist.' },
+      { en: 'Tournament directory: FIDE event details now also take organizers, chief arbiter and city; an event FIDE no longer knows (404) counts as checked; chess-results wins for date and venue, FIDE for the time control text. Requires the crawler of the same version.',
+        de: 'Turnierverzeichnis: FIDE-Details übernehmen jetzt auch Veranstalter, Hauptschiedsrichter und Ort; ein bei FIDE unbekanntes Ereignis (404) gilt als nachgesehen; chess-results gilt für Termin und Ort, FIDE für die Bedenkzeit-Beschreibung. Braucht den Crawler derselben Version.' },
+      { en: 'Crawler: a league whose header lacks the round count now gets it from the round headings instead of importing no pairings at all; a warning is logged when none can be found.',
+        de: 'Crawler: Eine Liga ohne Rundenzahl im Kopf bekommt sie jetzt aus den Rundenüberschriften, statt gar keine Paarungen zu importieren; fehlt beides, steht eine Warnung im Log.' },
+      { en: 'Tests: retirement of vanished tournaments from the additional directory sources is now covered end to end (threshold, empty run, failed run, reappearance).',
+        de: 'Tests: Der Rückzug verschwundener Turniere der Zusatzquellen ist jetzt über den ganzen Durchgang abgedeckt (Schwelle, leerer Lauf, Fehler mittendrin, Wiederauftauchen).' },
+    ],
+  },
+  {
     version: '0.936.3',
     date: '2026-11-09',
     changes: [
