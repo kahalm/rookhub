@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { apiErrorText } from '../../core/api-error';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -404,7 +405,7 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.busy = false;
-        this.snackbar.warn(err?.error?.message || this.translate.instant('courses.detail.renameFailed'));
+        this.snackbar.warn(apiErrorText(err, this.translate, 'courses.detail.renameFailed'));
       },
     }));
   }

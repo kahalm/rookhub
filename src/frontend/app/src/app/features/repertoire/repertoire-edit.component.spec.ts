@@ -3,7 +3,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
 import { RepertoireEditComponent } from './repertoire-edit.component';
+import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 describe('RepertoireEditComponent batch upload', () => {
   it('emits fileUploaded once after all uploads finish (not per file)', () => {
@@ -82,5 +85,25 @@ describe('RepertoireEditComponent Gestaltung (a1)', () => {
     area.dispatchEvent(new Event('dragleave'));
     fixture.detectChanges();
     expect(area.classList).not.toContain('dragover');
+  });
+});
+
+/** Delta-Review 2026-11-09, F1-006: Löschen scheiterte still. */
+describe('RepertoireEditComponent Datei löschen (F1-006)', () => {
+  it('Fehlschlag → Warnung, kein fileDeleted', () => {
+    TestBed.configureTestingModule({
+      imports: [RepertoireEditComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(), provideTranslateService(),
+        { provide: ConfirmService, useValue: { ask: () => of(true) } }],
+    });
+    const component = TestBed.createComponent(RepertoireEditComponent).componentInstance;
+    component.repertoireId = 7;
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+    let deleted = 0;
+    component.fileDeleted.subscribe(() => deleted++);
+    component.deleteFile(3);
+    TestBed.inject(HttpTestingController).expectOne(r => r.method === 'DELETE').flush(null, { status: 500, statusText: 'err' });
+    expect(warn).toHaveBeenCalledWith('repertoire.edit.deleteFailed');
+    expect(deleted).toBe(0);
   });
 });

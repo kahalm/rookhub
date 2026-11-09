@@ -1,4 +1,5 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { apiErrorText } from '../../core/api-error';
 import { CommonModule } from '@angular/common';
 import { RepertoireService } from '../../core/repertoire.service';
 import { MatIconModule } from '@angular/material/icon';
@@ -128,7 +129,7 @@ export class RepertoireEditComponent {
       formData.append('file', file);
       return this.repertoireService.uploadFile(this.repertoireId, formData).pipe(
         map(() => ({ name: file.name, ok: true })),
-        catchError((err) => of({ name: file.name, ok: false, error: err?.error?.message || 'Upload failed' }))
+        catchError((err) => of({ name: file.name, ok: false, error: apiErrorText(err, this.translate, 'repertoire.edit.uploadFailed') }))
       );
     });
 
@@ -153,8 +154,10 @@ export class RepertoireEditComponent {
   deleteFile(fileId: number): void {
     this.confirm.ask('repertoire.edit.deleteConfirm').subscribe(ok => {
       if (!ok) return;
-      this.repertoireService.deleteFile(this.repertoireId, fileId).subscribe(() => {
-        this.fileDeleted.emit();
+      this.repertoireService.deleteFile(this.repertoireId, fileId).subscribe({
+        next: () => this.fileDeleted.emit(),
+        // Nutzeraktion: ein Fehlschlag wird gemeldet, die Datei bleibt sichtbar stehen (F1-006).
+        error: err => this.snackbar.warn(apiErrorText(err, this.translate, 'repertoire.edit.deleteFailed')),
       });
     });
   }

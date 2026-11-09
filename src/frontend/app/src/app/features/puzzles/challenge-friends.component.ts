@@ -1,4 +1,5 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
+import { apiErrorText } from '../../core/api-error';
 import { CommonModule } from '@angular/common';
 import { FriendsService } from '../../core/friends.service';
 import { MatButtonModule } from '@angular/material/button';
@@ -146,7 +147,7 @@ export class ChallengeFriendsComponent implements OnChanges {
       },
       error: err => {
         this.sending = false;
-        this.snackbar.info(err.error?.message || this.translate.instant('puzzles.challenge.error'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'puzzles.challenge.error'));
       }
     });
   }

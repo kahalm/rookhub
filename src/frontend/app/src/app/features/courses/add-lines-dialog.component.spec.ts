@@ -3,20 +3,21 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { AddLinesDialogComponent, AddLinesDialogData } from './add-lines-dialog.component';
 import { AddCourseLinesResult, CourseService } from './course.service';
 
 const FEN = 'r2q1r1k/1pp1bppb/p1np4/4p1Pp/2B1P2N/2PPB2P/PP1Q1P2/R3R1K1 w - - 0 18';
 
-function make(data: Partial<AddLinesDialogData>, result?: AddCourseLinesResult | 'error') {
+function make(data: Partial<AddLinesDialogData>, result?: AddCourseLinesResult | 'error' | { error: unknown }) {
   const sent: { chapter: string | null; text: string }[] = [];
   const closed: unknown[] = [];
   const courses = {
     addLines: (_bookId: number, chapter: string | null, text: string) => {
       sent.push({ chapter, text });
       if (result === 'error') return throwError(() => ({ error: { message: 'kaputt' } }));
+      if (result && 'error' in result) return throwError(() => result);
       return of(result ?? { added: 1, chapter, issues: [], totalLines: 1 });
     },
   };
@@ -24,6 +25,7 @@ function make(data: Partial<AddLinesDialogData>, result?: AddCourseLinesResult |
     { close: (v: unknown) => closed.push(v) } as unknown as MatDialogRef<AddLinesDialogComponent, boolean>,
     courses as unknown as CourseService,
     { bookId: 58, displayName: 'TestNoel', chapterLocked: false, ...data } as AddLinesDialogData,
+    { instant: (k: string) => (k === 'apiErrors.not_found' ? 'Nicht gefunden.' : k) } as unknown as TranslateService,
   );
   return { component, sent, closed };
 }
@@ -116,6 +118,18 @@ describe('AddLinesDialogComponent Verhalten', () => {
     component.save();
     expect(component.error).toBe('kaputt');
     expect(component.saving).toBeFalse();
+  });
+
+  // Delta-Review 2026-11-09, F1-008: Fehlertext über apiErrorText — Code übersetzt, sonst Schlüssel statt „Fehler“.
+  it('Fehler mit API-Code → übersetzter Text; ohne Text → Ersatzschlüssel statt fest „Fehler“', () => {
+    const coded = make({}, { error: { code: 'not_found', message: 'Book not found.' } }).component;
+    coded.text = FEN;
+    coded.save();
+    expect(coded.error).toBe('Nicht gefunden.');
+    const bare = make({}, { error: null }).component;
+    bare.text = FEN;
+    bare.save();
+    expect(bare.error).toBe('courses.detail.addLinesFailed');
   });
 
   it('beschriftet ein fehlendes Kapitel mit einem Strich', () => {

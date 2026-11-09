@@ -1,3 +1,4 @@
+import { SnackbarService } from '../../core/snackbar.service';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -110,6 +111,19 @@ describe('ChallengeFriendsComponent', () => {
     c.onMenuOpened();
     flushLoad();
     expect(emitted).toBeTrue();
+  });
+
+  // Delta-Review 2026-11-09, F1-008: Fehlertext über apiErrorText (Code → apiErrors.<code>, sonst Ersatzschlüssel).
+  it('send() scheitert ohne Text → Ersatzschlüssel in der Snackbar', () => {
+    const c = create().componentInstance;
+    const info = spyOn(TestBed.inject(SnackbarService), 'info');
+    c.loadFriends();
+    flushLoad();
+    c.toggle(7, true);
+    c.send();
+    httpMock.expectOne('/api/challenges').flush(null, { status: 500, statusText: 'err' });
+    expect(info).toHaveBeenCalledWith('puzzles.challenge.error');
+    expect(c.sending).toBeFalse();
   });
 
   it('send() does nothing without a selection', () => {

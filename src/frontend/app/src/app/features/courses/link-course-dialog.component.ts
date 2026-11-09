@@ -1,4 +1,5 @@
 import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
+import { apiErrorText } from '../../core/api-error';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -99,7 +100,7 @@ export class LinkCourseDialogComponent {
       },
       error: err => {
         this.busy = false;
-        this.snackbar.info(err?.error?.message || this.translate.instant('courses.link.failed'), { action: 'common.ok', duration: 3000 });
+        this.snackbar.info(apiErrorText(err, this.translate, 'courses.link.failed'), { action: 'common.ok', duration: 3000 });
       }
     });
   }

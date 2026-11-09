@@ -7,7 +7,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { apiErrorText } from '../../core/api-error';
 import { AddCourseLinesResult, CourseService } from './course.service';
 
 export interface AddLinesDialogData {
@@ -122,6 +123,7 @@ export class AddLinesDialogComponent {
     private ref: MatDialogRef<AddLinesDialogComponent, boolean>,
     private courses: CourseService,
     @Inject(MAT_DIALOG_DATA) public data: AddLinesDialogData,
+    private translate: TranslateService,
   ) {
     if (data.chapterLocked && typeof data.chapter === 'string') this.chapter = data.chapter;
   }
@@ -147,7 +149,7 @@ export class AddLinesDialogComponent {
       },
       error: err => {
         this.saving = false;
-        this.error = err?.error?.message || 'Fehler';
+        this.error = apiErrorText(err, this.translate, 'courses.detail.addLinesFailed');
       },
     });
   }

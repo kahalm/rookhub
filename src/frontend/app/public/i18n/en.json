@@ -1342,7 +1342,9 @@
       "uploadSuccessOne": "{{count}} file uploaded",
       "uploadPartial": "{{ok}} uploaded, {{failed}} failed",
       "downloadFailed": "Download failed",
-      "deleteConfirm": "Delete this file?"
+      "deleteConfirm": "Delete this file?",
+      "uploadFailed": "Upload failed",
+      "deleteFailed": "The file could not be deleted."
     },
     "share": {
       "action": "Share",
@@ -1831,7 +1833,8 @@
       "downloadChapterPgn": "Download chapter as PGN",
       "downloadLinePgn": "Download line as PGN",
       "createWeekly": "Create weekly post",
-      "source": "Source"
+      "source": "Source",
+      "addLinesFailed": "The lines could not be added."
     },
     "sequential": "Sequential",
     "random": "Random",
@@ -2968,7 +2971,8 @@
       "stopConfirm": "Stop sharing? The current link stops working — printed QR codes lead nowhere afterwards, and sharing again creates a different link.",
       "solutionWarning": "Note: the link also shows the solutions.",
       "scanHint": "Play it through at the board:",
-      "noSheetLink": "This sheet is not shared — the print-out gets no QR code."
+      "noSheetLink": "This sheet is not shared — the print-out gets no QR code.",
+      "failed": "Sharing could not be turned on – the sheet has no QR code yet."
     },
     "solve": {
       "notFound": "This link does not exist (any more).",

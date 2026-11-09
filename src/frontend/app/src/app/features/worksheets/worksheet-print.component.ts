@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { apiErrorText } from '../../core/api-error';
+import { SnackbarService } from '../../core/snackbar.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -94,6 +96,7 @@ export class WorksheetPrintComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
   private worksheets = inject(WorksheetService);
   private translate = inject(TranslateService);
+  private snackbar = inject(SnackbarService);
   private cdr = inject(ChangeDetectorRef);
 
   get lines(): number[] { return solutionLines(this.perPage); }
@@ -151,7 +154,12 @@ export class WorksheetPrintComponent implements OnInit {
         this.shareUrl = token ? this.worksheets.shareUrl(token) : '';
         this.cdr.markForCheck();
       },
-      error: () => { this.sharing = false; this.cdr.markForCheck(); },
+      // Nutzeraktion: sagen, warum kein QR-Code kommt (F1-007).
+      error: err => {
+        this.sharing = false;
+        this.snackbar.warn(apiErrorText(err, this.translate, 'worksheets.share.failed'));
+        this.cdr.markForCheck();
+      },
     });
   }
 

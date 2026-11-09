@@ -1342,7 +1342,9 @@
       "uploadSuccessOne": "{{count}} datoteka prenesena",
       "uploadPartial": "{{ok}} preneseno, {{failed}} neuspjelo",
       "downloadFailed": "Preuzimanje nije uspjelo",
-      "deleteConfirm": "Izbrisati ovu datoteku?"
+      "deleteConfirm": "Izbrisati ovu datoteku?",
+      "uploadFailed": "Učitavanje nije uspjelo",
+      "deleteFailed": "Datoteku nije moguće izbrisati."
     },
     "share": {
       "action": "Podijeli",
@@ -1831,7 +1833,8 @@
       "downloadChapterPgn": "Preuzmi poglavlje kao PGN",
       "downloadLinePgn": "Preuzmi varijantu kao PGN",
       "createWeekly": "Izradi tjednu objavu",
-      "source": "Izvor"
+      "source": "Izvor",
+      "addLinesFailed": "Retke nije moguće dodati."
     },
     "sequential": "Slijedno",
     "random": "Nasumično",
@@ -2968,7 +2971,8 @@
       "stopConfirm": "Prekinuti dijeljenje? Dosadašnja poveznica prestaje vrijediti — ispisani QR kodovi nakon toga ne vode nikamo, a novo dijeljenje stvara drugu poveznicu.",
       "solutionWarning": "Pažnja: poveznica prikazuje i rješenja.",
       "scanHint": "Prođi za pločom:",
-      "noSheetLink": "Ovaj list nije podijeljen — ispis neće dobiti QR kod."
+      "noSheetLink": "Ovaj list nije podijeljen — ispis neće dobiti QR kod.",
+      "failed": "Dijeljenje nije moguće uključiti – list još nema QR kod."
     },
     "solve": {
       "notFound": "Ova poveznica (više) ne postoji.",

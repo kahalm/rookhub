@@ -1,3 +1,10 @@
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
+import { throwError } from 'rxjs';
+import { SnackbarService } from '../../core/snackbar.service';
+import { WorksheetService } from './worksheet.service';
 import { PrintTask, WorksheetPrintComponent, solutionLines, toSheets } from './worksheet-print.component';
 
 const task = (no: number): PrintTask =>
@@ -51,5 +58,26 @@ describe('worksheet-print Diagrammkopf', () => {
     expect(phone).toMatch(/\.ws-task-head[^{]*\{ ?flex-wrap: wrap/);
     expect(phone).toMatch(/\.ws-turn[^{]*\{ ?flex-basis: 100%; text-align: center/);
     expect(phone).toMatch(/\.ws-grid[^{]*\{ ?align-items: start/);
+  });
+});
+
+/** Delta-Review 2026-11-09, F1-007: „Teilen einschalten“ scheiterte still — kein QR-Code, keine Erklärung. */
+describe('worksheet-print Teilen einschalten (F1-007)', () => {
+  it('Fehlschlag → Warnung, Knopf wieder frei, kein QR-Link', () => {
+    const warn = jasmine.createSpy('warn');
+    TestBed.configureTestingModule({
+      imports: [WorksheetPrintComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: WorksheetService, useValue: { share: () => throwError(() => ({ status: 500 })), shareUrl: (t: string) => t } },
+        { provide: SnackbarService, useValue: { warn, info: () => {} } },
+      ],
+    });
+    const c = TestBed.createComponent(WorksheetPrintComponent).componentInstance;
+    c.id = 5;
+    c.enableShare();
+    expect(warn).toHaveBeenCalledWith('worksheets.share.failed');
+    expect(c.sharing).toBeFalse();
+    expect(c.shareUrl).toBe('');
   });
 });

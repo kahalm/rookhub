@@ -1342,7 +1342,9 @@
       "uploadSuccessOne": "{{count}} Datei hochgeladen",
       "uploadPartial": "{{ok}} hochgeladen, {{failed}} fehlgeschlagen",
       "downloadFailed": "Download fehlgeschlagen",
-      "deleteConfirm": "Diese Datei löschen?"
+      "deleteConfirm": "Diese Datei löschen?",
+      "uploadFailed": "Hochladen fehlgeschlagen",
+      "deleteFailed": "Datei konnte nicht gelöscht werden."
     },
     "share": {
       "action": "Teilen",
@@ -1831,7 +1833,8 @@
       "downloadChapterPgn": "Kapitel als PGN herunterladen",
       "downloadLinePgn": "Linie als PGN herunterladen",
       "createWeekly": "Wochenpost erstellen",
-      "source": "Quelle"
+      "source": "Quelle",
+      "addLinesFailed": "Die Zeilen konnten nicht hinzugefügt werden."
     },
     "sequential": "Sequenziell",
     "random": "Zufällig",
@@ -2968,7 +2971,8 @@
       "stopConfirm": "Teilen beenden? Der bisherige Link wird ungültig — gedruckte QR-Codes laufen danach ins Leere, und ein erneutes Teilen erzeugt einen anderen Link.",
       "solutionWarning": "Achtung: Der Link zeigt auch die Lösungen.",
       "scanHint": "Am Brett nachspielen:",
-      "noSheetLink": "Dieses Blatt ist nicht geteilt — der Ausdruck bekommt keinen QR-Code."
+      "noSheetLink": "Dieses Blatt ist nicht geteilt — der Ausdruck bekommt keinen QR-Code.",
+      "failed": "Teilen ließ sich nicht einschalten – das Blatt hat noch keinen QR-Code."
     },
     "solve": {
       "notFound": "Diesen Link gibt es nicht (mehr).",
