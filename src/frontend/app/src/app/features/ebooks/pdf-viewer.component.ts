@@ -361,10 +361,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
       if (!page) {
         page = await doc.getPage(slot.index);
         this.pageCache.set(slot.index, page);
-        if (this.pageCache.size > 24) {
-          const oldest = this.pageCache.keys().next().value;
-          if (oldest != null && oldest !== slot.index) this.pageCache.delete(oldest);
-        }
+        evictOldestPage(this.pageCache, slot.index);
       }
       if (this.destroyed || doc !== this.doc) return;
       const base = page.getViewport({ scale: 1 });
@@ -391,6 +388,23 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
     await slot.rendering;
     if (!this.destroyed && this.scaleFor(slot) !== scaleAtStart) this.renderVisible();
   }
+}
+
+/** So viele Seiten hält der Leser offen (danach fliegt die älteste). */
+export const PDF_PAGE_CACHE_SIZE = 24;
+
+/**
+ * Älteste Seite aus dem Cache verdrängen, sobald er voll ist — mit `page.cleanup()`, sonst behielte pdf.js ihre
+ * Render-Ressourcen (Operator-Listen, Bilder im Worker) bis zum Schließen des Dokuments (F2-015). `keep` = die gerade
+ * geholte Seite. pdf.js räumt eine Seite, die noch zeichnet, erst nach dem Zeichnen ab.
+ */
+export function evictOldestPage(cache: Map<number, Pick<PdfPage, 'cleanup'>>, keep: number): void {
+  if (cache.size <= PDF_PAGE_CACHE_SIZE) return;
+  const oldest = cache.keys().next().value;
+  if (oldest == null || oldest === keep) return;
+  const page = cache.get(oldest);
+  cache.delete(oldest);
+  try { page?.cleanup(); } catch { /* Dokument schon zu */ }
 }
 
 /**

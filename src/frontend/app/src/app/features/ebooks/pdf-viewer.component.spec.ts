@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { PdfEngineLoader } from './pdf-engine';
-import { PdfViewerComponent } from './pdf-viewer.component';
+import { PDF_PAGE_CACHE_SIZE, PdfViewerComponent, evictOldestPage } from './pdf-viewer.component';
 
 describe('PdfViewerComponent', () => {
   it('„Breite einpassen“ passt jede Seite für sich ein (Querformat-Doppelseiten ragen nicht hinaus); Hand-Zoom gilt für alle', () => {
@@ -37,5 +37,20 @@ describe('PdfViewerComponent', () => {
     await v.renderPage(slot, document.createElement('canvas'));
     expect(seen).toEqual([{ status: 401 }]);
     expect(slot.rendered).toBe(0);
+  });
+});
+
+describe('evictOldestPage (F2-015)', () => {
+  it('verdrängt bei vollem Cache die älteste Seite und gibt sie mit cleanup() frei; die gerade geholte bleibt', () => {
+    const cleaned: number[] = [];
+    const cache = new Map<number, { cleanup(): boolean }>();
+    for (let i = 1; i <= PDF_PAGE_CACHE_SIZE; i++) cache.set(i, { cleanup: () => { cleaned.push(i); return true; } });
+    evictOldestPage(cache, PDF_PAGE_CACHE_SIZE);
+    expect(cleaned).toEqual([]);                        // noch nicht voll
+    cache.set(99, { cleanup: () => { cleaned.push(99); return true; } });
+    evictOldestPage(cache, 99);
+    expect(cleaned).toEqual([1]);
+    expect(cache.has(1)).toBeFalse();
+    expect(cache.size).toBe(PDF_PAGE_CACHE_SIZE);
   });
 });
