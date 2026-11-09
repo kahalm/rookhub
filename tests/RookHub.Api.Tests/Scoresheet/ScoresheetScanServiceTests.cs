@@ -202,6 +202,45 @@ public class ScoresheetScanServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_DiscardedOpenLeagueScans_DoNotCountAgainstTheOpenLimit()
+    {
+        // Verwerfen lässt den Status auf „wartet“ (nur Foto + Schlüssel gehen) — gezählt wurden sie trotzdem, drei verworfene
+        // sperrten das Konto für immer (Seed des UI-Sweeps auf Dev, 2026-11-09).
+        WithDailyLimit(20);
+        var u = await UserAsync();
+        var ids = new List<int>();
+        for (var i = 0; i < ScoresheetScanService.MaxOpenPerUser; i++)
+        {
+            var (scan, reason) = await _service.CreateAsync(u.Id, new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg") }, "auto", null,
+                ScoresheetScan.PurposeLeague);
+            Assert.Null(reason);
+            ids.Add(scan!.Id);
+        }
+        Assert.Equal("tooManyOpen", (await _service.CreateAsync(u.Id, new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg") }, "auto", null,
+            ScoresheetScan.PurposeLeague)).Reason);
+
+        Assert.True(await _service.CloseLeagueScanAsync(As(u.Id), ids[0]));
+        Assert.Null((await _service.CreateAsync(u.Id, new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg") }, "auto", null,
+            ScoresheetScan.PurposeLeague)).Reason);
+    }
+
+    [Fact]
+    public async Task CreateAnonymous_DiscardedOpenScans_DoNotCountAgainstTheOpenLimitOfTheAddress()
+    {
+        var keys = new List<string>();
+        for (var i = 0; i < ScoresheetScanService.MaxOpenPerUser; i++)
+        {
+            var (_, key, reason) = await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, "ip-verworfen");
+            Assert.Null(reason);
+            keys.Add(key!);
+        }
+        Assert.Equal("tooManyOpen", (await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, "ip-verworfen")).Reason);
+
+        Assert.True(await _service.CloseLeagueScanAsync(ScoresheetScanService.ScanActor.Anonymous(keys[0]), null));
+        Assert.Null((await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, "ip-verworfen")).Reason);
+    }
+
+    [Fact]
     public async Task Process_ReadsTheSheet_AndStoresAGameWithThePhoto()
     {
         var u = await UserAsync();

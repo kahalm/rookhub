@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.941.6", date: "2026-11-09", changes: [
+    { en: "Scoresheets: discarded uploads that were never read no longer count towards the limit of three open readings — before, three discarded ones blocked further uploads for good (account or, via a share link, address).",
+      de: "Partieformulare: Verworfene, nie gelesene Einlesungen zählen nicht mehr zur Grenze von drei offenen — vorher sperrten drei verworfene weitere Uploads für immer (Konto bzw. über den Teilen-Link die Adresse)." },
+  ] },
   { version: "0.941.5", date: "2026-11-09", changes: [
     { en: "UI sweep: the test data now create a real share link for a club game, so the sweep also captures „/cg/…“ and its summary page with content instead of only „link invalid“.",
       de: "UI-Sweep: Die Testdaten legen jetzt einen echten Teilen-Link einer Vereinspartie an, damit der Sweep „/cg/…“ und die Zusammenfassung mit Inhalt fotografiert statt nur „Link ungültig“." },

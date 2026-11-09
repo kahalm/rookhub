@@ -91,7 +91,9 @@ internal sealed class ScoresheetIntake
         {
             if (!admin && await _quota.CountingSince(uid, since, purpose).CountAsync() >= _quota.LimitFor(purpose))
                 return (null, "dailyLimit");
-            if (await _db.ScoresheetScans.CountAsync(s => s.UserId == uid
+            // Verworfene zählen nicht (FileName = DiscardedMark, der Status bleibt „wartet“): sonst sperrten drei verworfene,
+            // nie gelesene Einlesungen das Konto bzw. die Adresse für immer (UI-Sweep 2026-11-09, Seed „tooManyOpen“ auf Dev).
+            if (await _db.ScoresheetScans.CountAsync(s => s.UserId == uid && s.FileName != DiscardedMark
                     && (s.Status == ScoresheetScanStatus.Pending || s.Status == ScoresheetScanStatus.Running)) >= ScoresheetScanService.MaxOpenPerUser)
                 return (null, "tooManyOpen");
         }
@@ -308,7 +310,7 @@ internal sealed class ScoresheetIntake
                 if (await _quota.AnonCountingSince(since).CountAsync(s => s.AnonIpHash == ipHash) >= ScoresheetScanService.AnonPerIpDailyLimit)
                     return (null, null, "dailyLimit");
                 if (await _quota.AnonCountingSince(since).CountAsync() >= ScoresheetScanService.AnonDailyLimit) return (null, null, "anonDailyLimit");
-                if (await _db.ScoresheetScans.CountAsync(s => s.UserId == null && s.AnonIpHash == ipHash
+                if (await _db.ScoresheetScans.CountAsync(s => s.UserId == null && s.AnonIpHash == ipHash && s.FileName != DiscardedMark
                         && (s.Status == ScoresheetScanStatus.Pending || s.Status == ScoresheetScanStatus.Running)) >= ScoresheetScanService.MaxOpenPerUser)
                     return (null, null, "tooManyOpen");
             }
