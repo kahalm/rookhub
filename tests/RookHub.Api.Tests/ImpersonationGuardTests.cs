@@ -40,6 +40,12 @@ public class ImpersonationGuardTests
         { typeof(ClubController), nameof(ClubController.Redeem) },
         { typeof(ClubController), nameof(ClubController.SelfUnlink) },
         { typeof(NotificationController), nameof(NotificationController.PushSubscribe) },
+        // F3-007: Endless-Stände und -Läufe des Admin-Geräts landeten sonst im Zielkonto (Highscore, Bestenliste).
+        { typeof(RookHub.Api.Controllers.Puzzles.EndlessController), nameof(RookHub.Api.Controllers.Puzzles.EndlessController.SaveProgress) },
+        { typeof(RookHub.Api.Controllers.Puzzles.EndlessController), nameof(RookHub.Api.Controllers.Puzzles.EndlessController.ArchiveSessions) },
+        { typeof(RookHub.Api.Controllers.Puzzles.EndlessController), nameof(RookHub.Api.Controllers.Puzzles.EndlessController.RecordSession) },
+        { typeof(RookHub.Api.Controllers.Puzzles.EndlessController), nameof(RookHub.Api.Controllers.Puzzles.EndlessController.BulkImportSessions) },
+        { typeof(RookHub.Api.Controllers.Puzzles.EndlessController), nameof(RookHub.Api.Controllers.Puzzles.EndlessController.ClaimSession) },
     };
 
     [Theory]

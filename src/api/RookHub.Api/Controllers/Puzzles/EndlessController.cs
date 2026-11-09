@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using RookHub.Api.Authorization;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Puzzles;
@@ -19,6 +20,8 @@ public class EndlessController : BaseApiController
     public EndlessController(EndlessProgressService service) => _service = service;
 
     // --- Authenticated ---
+    // Die Schreibwege tragen [DenyWhileImpersonating] (F3-007, Entscheidung E4): ein Admin, der als Nutzer eingestiegen ist,
+    // schob sonst seine geräteweiten lokalen Läufe und seinen Highscore ins Zielkonto (migrateLocalToServer, saveConfig).
 
     [HttpGet("progress")]
     [Authorize]
@@ -30,6 +33,7 @@ public class EndlessController : BaseApiController
 
     [HttpPut("progress")]
     [Authorize]
+    [DenyWhileImpersonating]
     public async Task<ActionResult<EndlessProgressDto>> SaveProgress([FromBody] SaveEndlessProgressDto dto)
     {
         var result = await _service.SaveProgressAsync(GetUserId(), dto);
@@ -55,6 +59,7 @@ public class EndlessController : BaseApiController
 
     [HttpPost("archive")]
     [Authorize]
+    [DenyWhileImpersonating]
     public async Task<ActionResult<object>> ArchiveSessions([FromBody] ArchiveSessionsDto dto)
     {
         if (dto.SessionIds.Count == 0)
@@ -68,6 +73,7 @@ public class EndlessController : BaseApiController
 
     [HttpPost("sessions")]
     [Authorize]
+    [DenyWhileImpersonating]
     public async Task<ActionResult<EndlessSessionDto>> RecordSession([FromBody] RecordEndlessSessionDto dto)
     {
         var result = await _service.RecordSessionAsync(GetUserId(), dto);
@@ -76,6 +82,7 @@ public class EndlessController : BaseApiController
 
     [HttpPost("sessions/bulk")]
     [Authorize]
+    [DenyWhileImpersonating]
     [RequestSizeLimit(2 * 1024 * 1024)]
     public async Task<ActionResult<object>> BulkImportSessions([FromBody] BulkImportSessionDto dto)
     {
@@ -88,6 +95,7 @@ public class EndlessController : BaseApiController
 
     [HttpPost("claim-session")]
     [Authorize]
+    [DenyWhileImpersonating]
     public async Task<ActionResult<object>> ClaimSession([FromBody] ClaimEndlessSessionDto dto)
     {
         var transferred = await _service.ClaimSessionAsync(GetUserId(), dto.AnonymousSessionId);

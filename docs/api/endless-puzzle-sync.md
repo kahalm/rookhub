@@ -16,3 +16,7 @@
 | POST | `/api/endless/sessions/bulk` | Auth | Bulk-Import (localStorage-Migration) |
 | POST | `/api/endless/sessions/bulk/anonymous` | Anon+RL | Bulk-Import anonym (gleicher Gesamtdeckel; ein Paket, das nicht mehr passt, wird ganz abgewiesen) |
 | POST | `/api/endless/claim-session` | Auth | Anonyme Daten auf User übertragen |
+
+Die Schreibwege mit Konto (`PUT progress`, `POST archive`, `POST sessions`, `POST sessions/bulk`, `POST claim-session`) sind
+während einer Admin-Impersonation gesperrt (`[DenyWhileImpersonating]`, 403 `{ message }`; F3-007): die Endless-Schlüssel im
+Browser sind geräteweit, der Abgleich hätte Läufe und Highscore des Admins ins Zielkonto geschoben (und umgekehrt).
