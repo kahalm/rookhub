@@ -267,6 +267,10 @@ public class ChessableReviewLineService
         var now = DateTime.UtcNow;
         var claimed = 0;
         var bids = new List<string>();
+        // Die Übernahme zählt gegen dasselbe Kontingent wie das eigene Ablegen (G2-004): sonst brachte eine fremde Vorbelegung
+        // unter der uid (bis 5 000 × 128 KB) das Konto weit über den Deckel, und danach nahm TryTakeAsync keine eigene Linie und
+        // keinen Trainingsstand mehr an. Was nicht mehr passt, bleibt in der Anon-Senke liegen (die Retention entsorgt es).
+        var budget = _sinkBytes.ForUser(_db, userId, UserBytesCap, ct);
         foreach (var chunk in claimIds.Chunk(JsonChunkSize))
         {
             var rows = await _db.AnonymousChessableReviewLines.Where(r => chunk.Contains(r.Id)).ToListAsync(ct);
@@ -278,9 +282,15 @@ public class ChessableReviewLineService
                     .ToListAsync(ct))
                 .ToDictionary(r => (r.Bid, r.Oid));
 
+            var taken = new List<AnonymousChessableReviewLine>();
             foreach (var a in rows)
             {
-                if (!existing.TryGetValue((a.Bid, a.Oid), out var row))
+                existing.TryGetValue((a.Bid, a.Oid), out var row);
+                var delta = row is null
+                    ? ChessableSinkBytes.Utf8(a.Json) + ChessableSinkBytes.RowOverheadBytes
+                    : ChessableSinkBytes.Utf8(a.Json) - ChessableSinkBytes.Utf8(row.Json);
+                if (!await budget.TryTakeAsync(delta)) continue;   // Kontingent erschöpft → Zeile bleibt anonym liegen
+                if (row is null)
                 {
                     row = new ChessableReviewLine { UserId = userId, Bid = a.Bid, Oid = a.Oid };
                     _db.ChessableReviewLines.Add(row);
@@ -289,7 +299,15 @@ public class ChessableReviewLineService
                 row.Json = a.Json;
                 row.ChapterTitle = a.ChapterTitle;
                 row.UpdatedAt = now;
+                taken.Add(a);
             }
+            if (taken.Count == 0)
+            {
+                _db.ChangeTracker.Clear();
+                continue;
+            }
+            rows = taken;
+            chunkBids = rows.Select(r => r.Bid).Distinct().ToList();
             _db.AnonymousChessableReviewLines.RemoveRange(rows);
 
             try { await _db.SaveChangesAsync(ct); }

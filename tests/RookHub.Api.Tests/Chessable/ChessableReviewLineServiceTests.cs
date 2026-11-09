@@ -453,6 +453,23 @@ public class ChessableReviewLineServiceTests : IDisposable
         Assert.Equal("9", (await _db.AnonymousChessableReviewLines.SingleAsync()).Oid);
     }
 
+    /// <summary>G2-004: die Übernahme aus der Anon-Senke zählt gegen das Kontingent des Kontos. Vorher landeten alle
+    /// vorbelegten Zeilen im Konto, auch weit über dem Deckel; danach nahm das Konto nichts Wachsendes mehr an.</summary>
+    [Fact]
+    public async Task ClaimAnon_OverUserBudget_TakesOnlyWhatFits_RestStaysAnonymous()
+    {
+        var user = await CreateUserAsync();
+        await GiveUserCoursesAsync(user, "100");
+        // Je Zeile 8 Bytes JSON + 128 Aufschlag = 136; 300 Bytes reichen für zwei.
+        var svc = new ChessableReviewLineService(_db, new PgnImportService(_db)) { UserBytesCap = 300, JsonChunkSize = 2 };
+        for (var i = 1; i <= 5; i++)
+            await svc.UpsertAnonBatchAsync("790927", "100", new() { Entry(i.ToString(), $"{{\"v\":{i}}}") });
+
+        Assert.Equal(2, await svc.ClaimAnonForUidAsync(user.Id, "790927"));
+        Assert.Equal(2, await _db.ChessableReviewLines.CountAsync(r => r.UserId == user.Id));
+        Assert.Equal(3, await _db.AnonymousChessableReviewLines.CountAsync());   // liegen gelassen, nicht verloren
+    }
+
     [Fact]
     public async Task ClaimAnon_InSeveralPortions_TakesEveryOwnedLine_AndUpdatesExisting()
     {
