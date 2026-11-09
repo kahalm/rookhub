@@ -84,4 +84,29 @@ public class GameMoveClassesTests
         Assert.Equal("alt", done[990103].MoveClasses);   // aktueller Stand bleibt
         Assert.Null(done[990104].MoveClasses);           // unfertig: nicht ernten
     }
+
+    /// <summary>R4-007: eine werfende Analyse hält die Ernte nicht auf — die älteren werden gerechnet, die werfende mit
+    /// aktuellem Regelstand ohne Klassen vermerkt und beim nächsten Takt nicht wieder angefasst.</summary>
+    [Fact]
+    public async Task Harvest_WerfendeAnalyse_wirdUebersprungen_AeltereWerdenGerechnet()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        db.GameAnalyses.AddRange(
+            new GameAnalysis { Id = 990111, UserId = 1, Pgn = "", StartFen = "", Status = GameAnalysisStatus.Done, PlyCount = 71, Positions = Game228().Positions },
+            new GameAnalysis { Id = 990112, UserId = 1, Pgn = "", StartFen = "", Status = GameAnalysisStatus.Done, PlyCount = 71, Positions = Game228().Positions });
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        void Store(GameAnalysis a)
+        {
+            if (a.Id == 990112) throw new InvalidOperationException("kaputte Zeile");
+            GameMoveClasses.Store(a);
+        }
+
+        Assert.Equal(1, await MoveClassHarvestWorker.HarvestAsync(db, 10, store: Store));
+        Assert.Equal(0, await MoveClassHarvestWorker.HarvestAsync(db, 10, store: Store));   // nichts mehr offen
+
+        var rows = await db.GameAnalyses.AsNoTracking().ToDictionaryAsync(a => a.Id);
+        Assert.NotNull(rows[990111].MoveClasses);
+        Assert.Equal(((string?)null, (int?)GameMoveClasses.Version), (rows[990112].MoveClasses, rows[990112].MoveClassesVersion));
+    }
 }

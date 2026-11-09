@@ -250,7 +250,8 @@ flachere), aber mit eigenem Ursprung
   `MoveTactics.cs` der von `move-tactics.util.ts`, beide über das kleine Brett `TacticsBoard.cs` (Gera.Chess hat keine
   Angreifer-Abfrage). Gerechnet beim Fertigwerden und nach der Vertiefung (`GameAnalysisPump`, neben der Genauigkeit) und
   vom Erntelauf `MoveClassHarvestWorker` (jede Minute höchstens 200 fertige Analysen ohne oder mit älterem Regelstand,
-  jüngste zuerst, pausierbar). **Regeln ändern = `GameMoveClasses.Version` hochzählen und den Client im selben Commit
+  jüngste zuerst, pausierbar; eine werfende Analyse wird mit Warnung übersprungen und ohne Klassen auf dem aktuellen
+  Regelstand vermerkt, R4-007). **Regeln ändern = `GameMoveClasses.Version` hochzählen und den Client im selben Commit
   mitziehen** — der Erntelauf rechnet dann den Bestand neu. Parität beim Port an 300 Prod-Analysen Zeichen für Zeichen geprüft
   (111 „!!“, 917 „!“, 76 Miss; C# ~12 ms je Partie, der Client ~90 ms); fest abgesichert durch `GameMoveClassesTests`
   (Vereinspartie 228 als Fixture, chess.com-Markierungen literal), `MoveTacticsTests` ↔ `move-tactics.util.spec.ts`,

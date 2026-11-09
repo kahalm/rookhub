@@ -22,25 +22,56 @@ public class MoveClassHarvestWorker(IServiceScopeFactory scopeFactory, ILogger<M
 
     protected override async Task StepAsync(IServiceProvider services, CancellationToken ct)
     {
-        var n = await HarvestAsync(services.GetRequiredService<AppDbContext>(), BatchSize, ct);
+        var n = await HarvestAsync(services.GetRequiredService<AppDbContext>(), BatchSize, ct, Logger);
         if (n > 0) Logger.LogInformation("Zug-Klassen ernten: {Count} Analysen gerechnet (Regelstand {Version})", n, GameMoveClasses.Version);
     }
 
-    /// <summary>Höchstens <paramref name="max"/> Analysen nachrechnen; gibt die Zahl zurück (öffentlich für Tests).</summary>
-    public static async Task<int> HarvestAsync(AppDbContext db, int max, CancellationToken ct = default)
+    /// <summary>Höchstens <paramref name="max"/> Analysen nachrechnen; gibt die Zahl der gerechneten zurück (öffentlich für
+    /// Tests). Fehlerfang je Analyse (R4-007): eine werfende Analyse stand vorher bei jedem Takt wieder vorn
+    /// (OrderByDescending(Id)) und hielt alle älteren dauerhaft auf. Jetzt wird sie mit dem aktuellen Regelstand und OHNE
+    /// Klassen vermerkt (Warnung im Log) — die nächste Regeländerung versucht sie erneut. <paramref name="store"/> nur für
+    /// Tests (Vorgabe <see cref="GameMoveClasses.Store"/>).</summary>
+    public static async Task<int> HarvestAsync(AppDbContext db, int max, CancellationToken ct = default, ILogger? logger = null,
+        Action<GameAnalysis>? store = null)
     {
+        store ??= GameMoveClasses.Store;
         var ids = await db.GameAnalyses.AsNoTracking()
             .Where(a => a.Status == GameAnalysisStatus.Done
                 && (a.MoveClassesVersion == null || a.MoveClassesVersion < GameMoveClasses.Version))
             .OrderByDescending(a => a.Id)   // die jüngsten zuerst — die stehen in den Listen
             .Select(a => a.Id).Take(max).ToListAsync(ct);
+        var done = 0;
         foreach (var id in ids)
         {
-            var analysis = await db.GameAnalyses.Include(a => a.Positions).FirstAsync(a => a.Id == id, ct);
-            GameMoveClasses.Store(analysis);
-            await db.SaveChangesAsync(ct);
-            db.ChangeTracker.Clear();
+            try
+            {
+                var analysis = await db.GameAnalyses.Include(a => a.Positions).FirstOrDefaultAsync(a => a.Id == id, ct);
+                if (analysis is null) continue;   // inzwischen gelöscht
+                store(analysis);
+                await db.SaveChangesAsync(ct);
+                done++;
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                db.ChangeTracker.Clear();
+                logger?.LogWarning(ex, "Zug-Klassen ernten: Analyse {AnalysisId} übersprungen", id);
+                await SkipAsync(db, id, ct);
+            }
+            finally
+            {
+                db.ChangeTracker.Clear();
+            }
         }
-        return ids.Count;
+        return done;
+    }
+
+    /// <summary>Unrechenbare Analyse als „auf diesem Regelstand gesehen, ohne Klassen" vermerken.</summary>
+    private static async Task SkipAsync(AppDbContext db, int id, CancellationToken ct)
+    {
+        var row = await db.GameAnalyses.FirstOrDefaultAsync(a => a.Id == id, ct);
+        if (row is null) return;
+        row.MoveClasses = null;
+        row.MoveClassesVersion = GameMoveClasses.Version;
+        await db.SaveChangesAsync(ct);
     }
 }
