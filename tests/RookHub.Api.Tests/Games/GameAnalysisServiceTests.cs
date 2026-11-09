@@ -730,6 +730,22 @@ public class GameAnalysisServiceTests : IDisposable
             (await _db.GameAnalyses.FirstAsync(g => g.Id == first.Id)).Status);
     }
 
+    /// <summary>G1-002: der Takt teilt einen DbContext über alle Partien. Vorher blieb jede Analyse samt Stellungen getrackt
+    /// liegen (DetectChanges je Speichern über alles bisher Geladene); jetzt ist der Tracker nach dem Durchlauf leer.</summary>
+    [Fact]
+    public async Task Pump_leertDenTrackerJePartie()
+    {
+        var user = await CreateUserWithEngineAsync();
+        for (var i = 0; i < 3; i++)
+            await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Partie " + i });
+        _db.ChangeTracker.Clear();
+
+        await _svc.PumpAllAsync();
+
+        Assert.Empty(_db.ChangeTracker.Entries<GameAnalysisPosition>());
+        Assert.Empty(_db.ChangeTracker.Entries<GameAnalysis>());
+    }
+
     /// <summary>Je NUTZER, nicht global: zwei Leute bremsen sich nicht gegenseitig aus.</summary>
     [Fact]
     public async Task Pump_zweiNutzer_laufenNebeneinander()

@@ -66,6 +66,11 @@ internal sealed class GameAnalysisPump
                     _turns.Invalidate(row.UserId);
                     _logger.LogWarning(ex, "GameAnalysis {Id}: Durchlauf uebersprungen", row.Id);
                 }
+                // Je Partie den Tracker leeren (G1-002): alle Durchläufe eines Takts teilen EINEN DbContext, und jede Analyse kommt
+                // samt aller Stellungen (Kandidaten-JSON) getrackt — sonst lief jedes SaveChanges DetectChanges über alles bisher
+                // Geladene, und der Speicher wuchs mit dem Rückstau. Gespeichert hat PumpOneAsync schon; halbe Änderungen einer
+                // gescheiterten Partie gehen so auch nicht in die nächste Speicherung mit.
+                finally { _db.ChangeTracker.Clear(); }
             }
         }
         finally
