@@ -484,6 +484,9 @@ export class AnalysisEngineService implements OnDestroy {
   stop(): void {
     this.stopRemote();
     this.clearWatchdog();
+    // Eine vorgemerkte Stellung (analyze() während laufender Suche) mit verwerfen — sonst startet
+    // das `bestmove` der alten Suche sie über launchPending() trotz Anhalten (G3-001).
+    this.pendingGoFen = null;
     this.send('stop');
     const s = this.state$.value;
     if (s.running) this.state$.next({ ...s, running: false });
@@ -552,6 +555,10 @@ export class AnalysisEngineService implements OnDestroy {
     if (!parsed) return;
     if (stale) return;                    // Stellung hat gewechselt / externe Engine hat übernommen
     if (parsed.multipv > this.multiPv) return;
+    // Aspirationsfenster-Zwischenstand (`score cp 85 lowerbound`) bei MultiPV 1 ist keine volle
+    // Bewertung — dieselbe Regel wie der Server-Broker (EmitBuilder: multipv 1 nur ohne
+    // lowerbound/upperbound, bei multipv > 1 immer). Leistungswerte oben sind schon gelesen (G3-007).
+    if (parsed.multipv === 1 && AnalysisEngineService.isBoundLine(line)) return;
 
     this.clearWatchdog();   // Engine antwortet → kein Hänger
     this.crashStreak = 0;   // Engine liefert wieder → Recovery-Zähler zurücksetzen
@@ -562,6 +569,11 @@ export class AnalysisEngineService implements OnDestroy {
     const depth = Math.max(...lines.map(l => l.depth), 0);
     this.state$.next({ fen: this.currentFen, depth, lines, running: true,
                        nodes: this.lastNodes, nps: this.lastNps });
+  }
+
+  /** True, wenn die info-Zeile eine Schranke statt einer exakten Bewertung meldet. */
+  static isBoundLine(line: string): boolean {
+    return /\b(lower|upper)bound\b/.test(line);
   }
 
   /** Parst eine `info ... multipv k ... score cp|mate V ... pv m1 m2`-Zeile. */

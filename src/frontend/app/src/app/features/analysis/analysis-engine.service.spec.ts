@@ -194,6 +194,50 @@ describe('AnalysisEngineService UCI sequencing', () => {
   });
 });
 
+describe('AnalysisEngineService stop + bound lines (G3-001, G3-007)', () => {
+  const FEN2 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+
+  it('stop() drops a pending search: the old bestmove does not start it (G3-001)', async () => {
+    const eng = new TestEngine();
+    await eng.analyze(FEN);
+    eng.last.emit('info depth 10 multipv 1 score cp 20 pv e2e4');
+    await eng.analyze(FEN2);                          // vorgemerkt, alte Suche bekommt stop
+    eng.stop();
+    eng.last.emit('bestmove e2e4');
+    const posted = eng.last.posted;
+    expect(posted.filter(c => c.startsWith('go depth')).length).toBe(1);
+    expect(posted.some(c => c.startsWith('position fen ' + FEN2))).toBeFalse();
+    let running = true;
+    eng.analysis$.subscribe(s => running = s.running).unsubscribe();
+    expect(running).toBeFalse();
+  });
+
+  it('ignores lowerbound/upperbound lines at multipv 1 like the server broker (G3-007)', async () => {
+    const eng = new TestEngine();
+    eng.setMultiPv(1);
+    await eng.analyze(FEN);
+    const evals: string[] = [];
+    const sub = eng.analysis$.subscribe(s => { if (s.lines[0]) evals.push(s.lines[0].evalText); });
+    eng.last.emit('info depth 20 multipv 1 score cp 85 lowerbound nodes 11000000 nps 1000 pv e2e4');
+    eng.last.emit('info depth 20 multipv 1 score cp 12 upperbound nodes 11000001 nps 1000 pv d2d4');
+    eng.last.emit('info depth 20 multipv 1 score cp 30 nodes 11000002 nps 1000 pv e2e4');
+    sub.unsubscribe();
+    expect(evals).not.toContain('+0.85');
+    expect(evals).not.toContain('+0.12');
+    expect(evals[evals.length - 1]).toBe('+0.30');
+  });
+
+  it('keeps bound lines for multipv > 1 (server rule: always)', async () => {
+    const eng = new TestEngine();
+    eng.setMultiPv(2);
+    await eng.analyze(FEN);
+    eng.last.emit('info depth 20 multipv 2 score cp 40 lowerbound pv d2d4');
+    let lines = 0;
+    eng.analysis$.subscribe(s => lines = s.lines.length).unsubscribe();
+    expect(lines).toBe(1);
+  });
+});
+
 describe('AnalysisEngineService external engine (remote)', () => {
   const ENGINE = { id: 'eei_a', name: 'SF Heim-PC', maxThreads: 4, maxHash: 256 };
   const line = (depth: number, cp: number, moves: string[]) =>
