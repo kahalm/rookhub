@@ -293,6 +293,9 @@ export class EndlessStorageService {
   }
 
   private doSaveProgress(config: EndlessConfig, highscore: number, activeGameState: object | null): void {
+    // Während einer Admin-Impersonation nichts zum Server: der lokale (geräteweite) Stand ist der des Admins und
+    // landete sonst als Konfiguration/Rekord im Zielkonto (Codereview F3-007; der Server sperrt die Wege zusätzlich).
+    if (this.authService.isImpersonating) return;
     this.lastSaveTime = Date.now();
     // Highscore nie absenken: ein parallel (anderes Geraet/Tab) hoeher gemeldeter
     // Wert darf nicht durch einen lokal niedrigeren ueberschrieben werden.
@@ -462,6 +465,9 @@ export class EndlessStorageService {
   }
 
   migrateLocalToServer(config: EndlessConfig, highscore: number, history: EndlessSession[]): void {
+    // Impersonation: die lokalen Läufe gehören dem Admin, nicht dem Zielkonto — nichts hochladen und den Merker
+    // NICHT setzen, damit das Zielkonto später selbst migrieren kann (Codereview F3-007).
+    if (this.authService.isImpersonating) return;
     const key = this.syncedKey();
     try {
       // Legacy: frueher existierte nur ein globaler Flag. Ist er gesetzt und ein User

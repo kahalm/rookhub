@@ -83,6 +83,50 @@ describe('EndlessStorageService per-identity migration flag', () => {
   });
 });
 
+describe('EndlessStorageService während einer Impersonation (F3-007)', () => {
+  let svc: EndlessStorageService;
+  let http: HttpTestingController;
+  const auth: any = { isLoggedIn: true, isImpersonating: true, currentUser: { userId: 9, username: 'ziel' } };
+
+  beforeEach(() => {
+    localStorage.clear();
+    auth.isImpersonating = true;
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: auth },
+      ],
+    });
+    svc = TestBed.inject(EndlessStorageService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => { http.verify(); localStorage.clear(); });
+
+  it('lädt die lokalen Läufe des Admins nicht ins Zielkonto und setzt den Merker nicht', () => {
+    const run = { timestamp: 1, config: CONFIG, totalSolved: 3, maxRating: 2400, durationSeconds: 60, mistakeAtRatings: [] };
+    svc.migrateLocalToServer(CONFIG, 2400, [run]);
+    http.expectNone(r => r.url.includes('/progress') || r.url.includes('/sessions'));
+    expect(localStorage.getItem('rookhub_endless_synced:u9')).toBeNull();
+  });
+
+  it('schickt Konfiguration und Rekord (saveConfig-Weg) nicht zum Server', () => {
+    svc.saveProgressToServer(CONFIG, 2400, null);
+    svc.saveProgressImmediate(CONFIG, 2400, null);
+    http.expectNone(r => r.method === 'PUT');
+    expect().nothing();
+  });
+
+  it('ohne Impersonation geht der Rekord wie bisher hinaus', () => {
+    auth.isImpersonating = false;
+    svc.saveProgressImmediate(CONFIG, 2400, null);
+    const put = http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress'));
+    expect(put.request.body.highscore).toBe(2400);
+    put.flush({});
+  });
+});
+
 describe('EndlessStorageService anonyme Kennung (F2-018)', () => {
   // Vorher las Endless die Kennung roh: bei gesperrtem Speicher null -> Lauf und Fortschritt erreichten
   // den Server nie, während die Versuche desselben Laufs über PuzzleService (mit Rückfallebene) ankamen.

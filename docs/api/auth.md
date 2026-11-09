@@ -63,3 +63,8 @@ einen einmaligen Link (24 h), den er der Person weitergibt; eingelöst wird er w
 | `core/auth-response.ts` | `AuthResponse`, JWT-Payload/Ablauf |
 
 Aufrufer nutzen nur `AuthService`; die Teile sind `providedIn: 'root'` und ohne Rückbezug auf die Fassade.
+
+Während einer Impersonation schickt Endless keinen Stand zum Server (`EndlessStorageService`: kein
+`migrateLocalToServer`, kein Fortschritts-PUT aus `saveConfig`) — die geräteweiten Endless-Schlüssel gehören dem Admin
+und landeten sonst im Zielkonto (Codereview F3-007). Die lokalen Spuren werden beim Einstieg bewusst NICHT geräumt
+(`clearLocalTraces` löschte die Admin-Sicherung).
