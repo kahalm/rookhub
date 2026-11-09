@@ -16,8 +16,11 @@ public sealed class ScoresheetShareInbox
     /// <summary>Höchstens so viele Fotos liegen gleichzeitig — der Endpunkt ist offen, die Ablage darf nicht wachsen.</summary>
     public const int MaxEntries = 50;
     public const long MaxTotalBytes = 200L * 1024 * 1024;
+    /// <summary>Je Anschluss (<see cref="IpBucket.Key"/>) höchstens so viele gleichzeitig (R3-005): sonst füllte ein Skript
+    /// mit 50 Mini-Bildern die ganze Ablage, und jedes echte Teilen endete 15 min lang mit „busy“.</summary>
+    public const int MaxEntriesPerIp = 3;
 
-    private sealed record Entry(IReadOnlyList<ScoresheetUpload> Pages, DateTimeOffset ExpiresAt, long Bytes);
+    private sealed record Entry(IReadOnlyList<ScoresheetUpload> Pages, DateTimeOffset ExpiresAt, long Bytes, string? Ip);
 
     private readonly ConcurrentDictionary<string, Entry> _entries = new();
     private readonly TimeProvider _time;
@@ -25,16 +28,18 @@ public sealed class ScoresheetShareInbox
 
     public ScoresheetShareInbox(TimeProvider? time = null) => _time = time ?? TimeProvider.System;
 
-    /// <summary>Legt die Fotos ab und gibt den Abholschlüssel zurück; <c>null</c>, wenn die Ablage voll ist.</summary>
-    public string? Put(IReadOnlyList<ScoresheetUpload> pages)
+    /// <summary>Legt die Fotos ab und gibt den Abholschlüssel zurück; <c>null</c>, wenn die Ablage voll ist — insgesamt
+    /// oder für den Anschluss <paramref name="ipBucket"/> (<see cref="MaxEntriesPerIp"/>; <c>null</c> = ohne Zählung je Anschluss).</summary>
+    public string? Put(IReadOnlyList<ScoresheetUpload> pages, string? ipBucket = null)
     {
         var bytes = pages.Sum(p => (long)p.Data.Length);
         lock (_gate)
         {
             Prune();
             if (_entries.Count >= MaxEntries || _entries.Values.Sum(e => e.Bytes) + bytes > MaxTotalBytes) return null;
+            if (ipBucket != null && _entries.Values.Count(e => e.Ip == ipBucket) >= MaxEntriesPerIp) return null;
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
-            _entries[token] = new Entry(pages, _time.GetUtcNow() + Lifetime, bytes);
+            _entries[token] = new Entry(pages, _time.GetUtcNow() + Lifetime, bytes, ipBucket);
             return token;
         }
     }

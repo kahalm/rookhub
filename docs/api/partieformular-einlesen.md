@@ -357,7 +357,9 @@ liegt unter `/api/scoresheets`, also gilt die 64-MB-location von nginx, und der 
 
 * **Warum über den Server:** Android schickt das Bild ohne Bearer (die Anmeldung liegt im Browser-Speicher, nicht in
   einem Cookie). `ScoresheetShareController.Share` (anonym, Policy `anonymous-write`) legt die Fotos deshalb in die
-  `ScoresheetShareInbox` (Singleton, nur im Speicher, 15 min, höchstens 50 Einträge / 200 MB) unter einem
+  `ScoresheetShareInbox` (Singleton, nur im Speicher, 15 min, höchstens 50 Einträge / 200 MB, je Anschluss
+  (`IpBucket.Key`) höchstens 3 gleichzeitig; der Bildkopf wird wie beim Einlesen geprüft, `ScoresheetImage.CanDecode`,
+  R3-005) unter einem
   128-Bit-Zufallsschlüssel und antwortet **303** auf `/games/scoresheet?share=<schlüssel>` — bei Absage
   `?shareError=<grund>` (`noFile`, `tooManyPages`, `tooLarge`, `unsupportedImage`, `busy`), damit der Nutzer eine Seite
   sieht und keinen JSON-Fehler.

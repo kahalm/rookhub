@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.Controllers.Scoresheet;
 using RookHub.Api.Services.Scoresheet;
+using SkiaSharp;
 
 namespace RookHub.Api.Tests.Scoresheet;
 
@@ -9,9 +10,22 @@ namespace RookHub.Api.Tests.Scoresheet;
 /// Einlese-Seite, die Seite holt die Fotos angemeldet ab.</summary>
 public class ScoresheetShareTests
 {
-    private static IFormFile Photo(string type = "image/jpeg", int size = 100, string name = "sheet.jpg")
+    /// <summary>Ein echtes kleines Bild (<paramref name="size"/> × <paramref name="size"/> px; PNG für „image/png“, sonst JPEG) —
+    /// seit R3-005 prüft der Endpunkt den Bildkopf, Zufallsbytes gelten als „unsupportedImage“.</summary>
+    private static byte[] ImageBytes(string type, int size)
     {
-        var bytes = Enumerable.Range(0, size).Select(i => (byte)i).ToArray();
+        using var bmp = new SKBitmap(size, size);
+        using (var canvas = new SKCanvas(bmp)) canvas.Clear(SKColors.LightGray);
+        using var img = SKImage.FromBitmap(bmp);
+        using var data = img.Encode(type == "image/png" ? SKEncodedImageFormat.Png : SKEncodedImageFormat.Jpeg, 80);
+        return data.ToArray();
+    }
+
+    private static IFormFile Photo(string type = "image/jpeg", int size = 100, string name = "sheet.jpg")
+        => File(ImageBytes(type, size), type, name);
+
+    private static IFormFile File(byte[] bytes, string type, string name)
+    {
         return new FormFile(new MemoryStream(bytes), 0, bytes.Length, "file", name)
         {
             Headers = new HeaderDictionary(), ContentType = type,
@@ -44,7 +58,7 @@ public class ScoresheetShareTests
         Assert.NotNull(pages);
         Assert.Equal(2, pages!.Count);
         Assert.Equal("image/png", pages[1].ContentType);
-        Assert.Equal(50, pages[1].Data.Length);
+        Assert.Equal(ImageBytes("image/png", 50).Length, pages[1].Data.Length);
 
         Assert.IsType<OkObjectResult>(c.Info(token).Result);
         var file = Assert.IsType<FileContentResult>(c.Photo(token, 1));
@@ -92,6 +106,41 @@ public class ScoresheetShareTests
             Assert.NotNull(inbox.Put([new ScoresheetUpload([1], "image/jpeg", null)]));
 
         Assert.Null(inbox.Put([new ScoresheetUpload([1], "image/jpeg", null)]));
+    }
+
+    [Fact]
+    public async Task Share_ContentTypeAloneIsNotEnough_HeaderIsChecked()
+    {
+        // R3-005: Zufallsbytes mit „image/jpeg“ kamen bisher in die Ablage.
+        var inbox = new ScoresheetShareInbox();
+        var c = Controller(inbox);
+        var junk = Enumerable.Range(0, 100).Select(i => (byte)i).ToArray();
+        Assert.Equal("/games/scoresheet?shareError=unsupportedImage", Location(c, await c.Share([File(junk, "image/jpeg", "x.jpg")])));
+    }
+
+    [Fact]
+    public void Inbox_IsBoundedPerIp_OtherIpsStillGetIn()
+    {
+        // R3-005: von EINEM Anschluss höchstens drei gleichzeitig, andere Anschlüsse teilen weiter.
+        var inbox = new ScoresheetShareInbox();
+        for (var i = 0; i < ScoresheetShareInbox.MaxEntriesPerIp; i++)
+            Assert.NotNull(inbox.Put([new ScoresheetUpload([1], "image/jpeg", null)], "203.0.113.7"));
+        Assert.Null(inbox.Put([new ScoresheetUpload([1], "image/jpeg", null)], "203.0.113.7"));
+        Assert.NotNull(inbox.Put([new ScoresheetUpload([1], "image/jpeg", null)], "198.51.100.1"));
+    }
+
+    [Fact]
+    public async Task Share_FourthShareFromTheSameIp_IsBusy_ThenFreeAfterPickup()
+    {
+        var inbox = new ScoresheetShareInbox();
+        var c = Controller(inbox);
+        c.ControllerContext.HttpContext.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("203.0.113.7");
+        var tokens = new List<string>();
+        for (var i = 0; i < ScoresheetShareInbox.MaxEntriesPerIp; i++)
+            tokens.Add(Location(c, await c.Share([Photo()]))["/games/scoresheet?share=".Length..]);
+        Assert.Equal("/games/scoresheet?shareError=busy", Location(c, await c.Share([Photo()])));
+        c.Remove(tokens[0]);   // abgeholt → wieder Platz
+        Assert.StartsWith("/games/scoresheet?share=", Location(c, await c.Share([Photo()])));
     }
 
     [Fact]

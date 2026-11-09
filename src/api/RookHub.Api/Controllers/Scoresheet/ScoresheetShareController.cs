@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using RookHub.Api.Services;
 using RookHub.Api.Services.Scoresheet;
 
 namespace RookHub.Api.Controllers.Scoresheet;
@@ -47,9 +48,12 @@ public class ScoresheetShareController : BaseApiController
         {
             using var ms = new MemoryStream();
             await f.CopyToAsync(ms);
+            // Bildkopf wie beim Einlesen prüfen (R3-005): der Content-Type allein beweist nichts.
+            if (!ScoresheetImage.CanDecode(ms.ToArray())) return SeeOther($"{UploadPage}?shareError=unsupportedImage");
             pages.Add(new ScoresheetUpload(ms.ToArray(), f.ContentType, f.FileName));
         }
-        var token = _inbox.Put(pages);
+        // Je Anschluss gedeckelt (R3-005), nicht nur global.
+        var token = _inbox.Put(pages, IpBucket.Key(HttpContext?.Connection.RemoteIpAddress));
         return SeeOther(token == null ? $"{UploadPage}?shareError=busy" : $"{UploadPage}?share={token}");
     }
 
