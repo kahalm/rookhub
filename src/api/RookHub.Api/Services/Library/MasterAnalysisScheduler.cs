@@ -122,16 +122,8 @@ public class MasterAnalysisScheduler : BackgroundService, IBackgroundJobInfo
         var usable = await EngineAvailability.UsableAsync(db, owner.UserId,
             ExplicitOnlyEngines.Automatic(owner.BackgroundEngines, _explicitOnly), batch: true, _quiet, _quiet.Now, ct);
         if (usable.Count == 0) return null;
-        var slots = usable.Count;
-
-        var open = await db.GameAnalyses
-            // Die zweite Engine der Vereinspartien (EngineId gesetzt, 0.684.0) rechnet auf eigener Hardware — zählt hier nicht.
-            .Where(g => (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club || g.Origin == GameAnalysisOrigin.League)
-                && g.EngineId == null
-                && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running))
-            .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
-        if (open >= slots) return null;
-
+        // Vereinspartien warten nicht auf den Bestand (Wunsch 2026-11-09): sie stünden sonst hinter einer laufenden Liga- oder
+        // Meisterpartie, obwohl ihre Aufträge in der Rangfolge davor kommen (JobPriority).
         var club = await NextClubGameAsync(db, ct);
         if (club is not null)
         {
@@ -149,6 +141,16 @@ public class MasterAnalysisScheduler : BackgroundService, IBackgroundJobInfo
                 return null;
             }
         }
+
+        var slots = usable.Count;
+
+        var open = await db.GameAnalyses
+            // Die zweite Engine der Vereinspartien (EngineId gesetzt, 0.684.0) rechnet auf eigener Hardware — zählt hier nicht.
+            .Where(g => (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club || g.Origin == GameAnalysisOrigin.League)
+                && g.EngineId == null
+                && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running))
+            .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
+        if (open >= slots) return null;
 
         // Liga-Partien aktueller Ligaspieler (0.665.0): nach den Vereinspartien, vor den Meisterpartien
         if (await _league.NextAsync(db, DateTime.UtcNow, ct) is { } next)

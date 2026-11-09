@@ -27,7 +27,7 @@ wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:
   jede Partie der LeagueHub-Vereins-Datenbank (`LeagueClubGame`) ohne Analyse kommt VOR der nächsten Meisterpartie dran —
   `GameAnalysisOrigin.Club = 4`, verknüpft über `GameAnalysis.LeagueClubGameId` (Index, kein FK), angelegt mit
   `CreateClubBatchAsync` (Titel aus dem PGN-Kopf). Dieselben Zeiten, Engines und derselbe Vorrang; beide Etiketten
-  zählen gemeinsam in „offene Stellungen < Engines" und stehen in jeder Ausschluss-Abfrage ausgeschrieben
+  zählen gemeinsam in „offene Stellungen < Engines" (eine neue Vereinspartie wartet seit 0.924.1 nicht darauf, sie wird im nächsten Takt angelegt) und stehen in jeder Ausschluss-Abfrage ausgeschrieben
   (`Origin != Library && Origin != Club`; für C#-Seiten `GameAnalysisOrigins.IsBatch`). Kein Zeiger wie bei den
   Meisterpartien: je Takt die kleinste Id ohne Analyse (es sind wenige, neue kommen jederzeit dazu). **Anders als eine
   Meisterpartie NICHT für alle lesbar** (`GetPlayableHeadAsync`/Guess-Start lassen `Club` weg) — die Vereins-Datenbank

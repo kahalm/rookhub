@@ -280,6 +280,22 @@ public class MasterAnalysisSchedulerTests : IDisposable
     }
 
     [Fact]
+    public async Task Tick_Vereinspartie_wartetNichtAufLaufendenBestand()
+    {
+        Library(1); Library(2);
+        var scheduler = Scheduler(Never);
+        var svc = Analyses();
+        Assert.NotNull(await scheduler.TickOnceAsync(_db, svc, default));   // 10 offen
+        Assert.NotNull(await scheduler.TickOnceAsync(_db, svc, default));   // 20 offen ≥ 16: der Bestand ist voll
+        Assert.Null(await scheduler.TickOnceAsync(_db, svc, default));
+
+        var club = ClubGame();
+        var id = await scheduler.TickOnceAsync(_db, svc, default);
+
+        Assert.Equal(club.Id, (await _db.GameAnalyses.SingleAsync(g => g.Id == id)).LeagueClubGameId);
+    }
+
+    [Fact]
     public async Task Sperrzeit_angeforderteZusammenfassung_legtDieAnalyseSofortAn()
     {
         var game = ClubGame();
