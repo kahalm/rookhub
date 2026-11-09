@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.926.2", date: "2026-11-09", changes: [
+    { en: "Fixes the build after a merge conflict in the game summary header.",
+      de: "Behebt den Build nach einem Zusammenführungs-Konflikt in der Kopfzeile der Zusammenfassung." },
+  ] },
   { version: "0.926.1", date: "2026-11-09", changes: [
     { en: "Game summary: while it is being written, a timer shows how long it has been running.",
       de: "Partie-Zusammenfassung: Während sie geschrieben wird, zeigt ein Zähler, wie lange das schon läuft." },

@@ -116,13 +116,9 @@ export class ClubSummaryLinkComponent implements OnInit {
 
   private load(): void {
     // still bei Fehlern: ohne Stand gibt es einfach keinen Knopf
-<<<<<<< Updated upstream
     const token = this.shareToken();
     (token !== null ? this.service.getShared(token, this.gameId())
-      : this.kind() === 'own' ? this.service.getOwn(this.gameId()) : this.service.get(this.gameId())).subscribe({ next: s => this.state.set(s), error: () => this.state.set(null) });
-=======
-    (this.kind() === 'own' ? this.service.getOwn(this.gameId()) : this.service.get(this.gameId())).subscribe({ next: s => { this.sinceLoad.set(0); this.state.set(s); }, error: () => this.state.set(null) });
->>>>>>> Stashed changes
+      : this.kind() === 'own' ? this.service.getOwn(this.gameId()) : this.service.get(this.gameId())).subscribe({ next: s => { this.sinceLoad.set(0); this.state.set(s); }, error: () => this.state.set(null) });
   }
 
   /** „Vertiefung 56/62 · Fehler-Vergleiche 0/11" — was noch fehlt, knapp. */
