@@ -696,6 +696,71 @@ public class DeploymentConfigTests
     }
 
     /// <summary>
+    /// 2026-11-09, LeagueHub nach 0.940.1: ein vor dem Deploy geoeffneter Tab lud <c>/chunk-CUjRmzKB2.js</c> nach, den es
+    /// im neuen Image nicht mehr gab. Der SPA-Fallback antwortete mit 200 und der index.html, der Modul-Lader scheiterte
+    /// an text/html. Gehashte Buendel duerfen deshalb nie in <c>location /</c> landen: fehlt die Datei, ehrlich 404 (ohne
+    /// „immutable"), echte Buendel werden normal ausgeliefert, App-Routen laufen weiter in den Fallback.
+    /// Nachgebildet wird die Auswahl von nginx: der ERSTE passende Regex-Eintrag gewinnt (^~- und =-Eintraege ausgenommen).
+    /// </summary>
+    [Fact]
+    public void MissingHashedBundles_Get404_InsteadOfSpaFallback()
+    {
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        const string bundlePattern = @"^/(main|polyfills|chunk|styles|scripts|worker)-[A-Za-z0-9_-]{6,}\.(js|mjs|css)$";
+
+        var bundle = Regex.Match(nginx, "\n    location ~ \"" + Regex.Escape(bundlePattern) + "\" \\{\\n(?<body>.*?)\\n    \\}",
+            RegexOptions.Singleline);
+        Assert.True(bundle.Success, "location fuer gehashte Buendel fehlt in nginx.conf");
+        var body = bundle.Groups["body"].Value;
+        Assert.Contains("try_files $uri /__missing-bundle;", body);
+        Assert.DoesNotContain("index.html", body);
+        Assert.DoesNotContain("add_header", body);
+        Assert.Matches(@"location = /__missing-bundle \{\s*internal;\s*return 404;\s*\}", nginx);
+
+        // Dasselbe Muster wie die Cache-Control-map; die 404 traegt no-store statt „immutable".
+        var map = Regex.Match(nginx, @"map \$uri \$rookhub_cache_control \{(?<body>.*?)\n\}", RegexOptions.Singleline);
+        Assert.True(map.Success, "map $rookhub_cache_control fehlt");
+        Assert.Contains("\"~" + bundlePattern + "\"  \"public, max-age=31536000, immutable\";", map.Groups["body"].Value);
+        Assert.Contains("/__missing-bundle  \"no-store\";", map.Groups["body"].Value);
+
+        // Alle Regex-Locations auf oberster Ebene in Reihenfolge (Kopf mit oder ohne Anfuehrungszeichen).
+        var regexLocations = Regex.Matches(nginx, "\n    location (?<op>~\\*?) (?:\"(?<q>[^\"]+)\"|(?<re>\\S+)) \\{")
+            .Select(m => (Index: m.Index, Re: new Regex(m.Groups["q"].Success ? m.Groups["q"].Value : m.Groups["re"].Value,
+                m.Groups["op"].Value == "~*" ? RegexOptions.IgnoreCase : RegexOptions.None)))
+            .ToList();
+        var bundleIndex = bundle.Index;
+        int? FirstRegex(string path) => regexLocations.Where(l => l.Re.IsMatch(path)).Select(l => (int?)l.Index).FirstOrDefault();
+
+        // Fehlende und vorhandene Buendel landen beide in der Buendel-Location: try_files liefert die Datei oder 404.
+        foreach (var probe in new[]
+        {
+            "/chunk-CUjRmzKB2.js", "/main-PYSKSHQ7.js", "/polyfills-ABCDEF12.js", "/styles-QWERTY12.css",
+            "/scripts-AB12CD34.js", "/worker-Xy_9-abc.js", "/chunk-XYZ12345.js",
+        })
+            Assert.True(FirstRegex(probe) == bundleIndex, $"Buendel laeuft nicht in die 404-Regel: {probe}");
+
+        // .mjs: die MIME-Regel steht davor und gewinnt (ohne try_files, also ebenfalls kein Fallback).
+        Assert.True(nginx.IndexOf("location ~* \\.mjs$ {", StringComparison.Ordinal) < bundleIndex,
+            "Die .mjs-Regel muss vor der Buendel-Location stehen");
+
+        // App-Routen und andere Dateien: NICHT die Buendel-Location (weiter OG-Weiche bzw. location /).
+        foreach (var other in new[]
+        {
+            "/", "/index.html", "/leagues/5", "/verein/uebersicht", "/s/Ab3dEf9h", "/partie/abc", "/g/Ab3dEf9h",
+            "/main", "/chunk-abc.js", "/mainpage-ABCDEFGH.js", "/assets/chunk-ABCDEFGH.js", "/main-ABCDEFGH.json",
+            "/ngsw-worker.js", "/worker-basic.min.js", "/manifest.webmanifest", "/i18n/de.json",
+        })
+            Assert.False(FirstRegex(other) == bundleIndex, $"Pfad liefe faelschlich in die Buendel-404: {other}");
+        Assert.Null(FirstRegex("/leagues/5"));   // => location / mit index.html-Fallback
+
+        // Vor der OG-Weiche und dem SPA-Fallback; /api/ bleibt per ^~ unberuehrt.
+        Assert.True(bundleIndex < nginx.IndexOf("location ~ ^/(g|t|puzzles", StringComparison.Ordinal),
+            "Buendel-Location muss vor der OG-Location stehen");
+        Assert.True(bundleIndex < nginx.IndexOf("location / {", StringComparison.Ordinal));
+        Assert.Contains("try_files $uri $uri/ /index.html;", nginx);
+    }
+
+    /// <summary>
     /// Maia-Sparring im Analysebrett: das Modell (45 MB) liegt NICHT im Repo, der Docker-Build holt es per Pin.
     /// Drei Stellen muessen dabei zusammenpassen, und keine davon prueft ein Compiler:
     /// <list type="number">
