@@ -172,6 +172,9 @@ internal sealed class GameAnalysisIntake
         var entity = await _db.GameAnalyses.FirstAsync(g => g.Id == dto.Id, ct);
         entity.RefineDepth = GameAnalysisDefaults.ClubRefineDepth;
         entity.RefineMultiPv = GameAnalysisDefaults.MultiPv;
+        // Einträge in „Meine Partien" ohne Analyse zeigen ab jetzt auf diese (0.924.0: eine Partie, eine Analyse).
+        foreach (var entry in await _db.SavedGames.Where(s => s.LeagueClubGameId == leagueClubGameId && s.GameAnalysisId == null).ToListAsync(ct))
+            entry.GameAnalysisId = dto.Id;
         await _db.SaveChangesAsync(ct);
         return dto;
     }

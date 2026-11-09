@@ -269,3 +269,17 @@ CORS (Codereview A10-007): keine `ExtensionPolicy` mehr — sie öffnete die Ext
 **Glocke „Analyse fertig" (0.904.0):** „Partie analysieren" (auch als Gast auf `/g/{token}` und über die Erweiterung) merkt
 den Nutzer vor; ist die Analyse samt Vertiefung durch, kommt eine Glocke mit Link auf seine Partie. Schon fertige Analysen
 melden nichts. Einzelheiten: `docs/api/benachrichtigungen-glocke.md`, Abschnitt „Analyse fertig".
+
+## Verweise auf Vereinspartien (0.924.0, „eine Partie, eine Analyse“)
+
+Ein Eintrag mit `LeagueClubGameId` ist ein Verweis: `/games/:id` zeigt die Züge der Vereinspartie und deren Hauptanalyse. Persönlich bleiben, weil
+sie an der `SavedGame`-Id hängen: festgelegte Seite, Teilen-Link, ausgeblendete Fehler, eigene Linien, eigene Zusammenfassungen.
+
+- „Partie analysieren“ an einem Verweis rechnet keine eigene Analyse mehr, sondern nimmt die der Vereinspartie (fehlt sie: wird sofort angelegt, `Expedited`). Sie
+  verknüpft alle Einträge ohne Analyse.
+- Eine Korrektur der Vereinspartie geht in jeden Verweis; der Verweis bleibt auf derselben Analyse (die nur die geänderten Stellungen neu rechnet). Wer die
+  Vereinspartie nicht korrigieren darf und seinen Eintrag ändert, löst die Verbindung wie bisher (eigene Fassung).
+- Lesen über `/games/:id` braucht keine Mitgliedschaft in der Vereinsgruppe; `/club-games/:id` bleibt Vereinsmitgliedern vorbehalten.
+- Bestand: `GET /api/admin/club-game-references` (Probelauf) und `POST …/apply` stellen Kopien auf Verweise um (`ClubGameReferences`). Gibt es die Vereinsanalyse
+  noch nicht fertig, wartet der Eintrag (`waiting`); gehört die alte Analyse nur diesem Eintrag und stammt aus „Partie analysieren“, wird sie gelöscht.
+

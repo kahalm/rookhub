@@ -99,6 +99,19 @@ internal sealed class SavedGameAnalysisLink
             }
         }
 
+        // Eintrag, der auf eine Vereinspartie zeigt (0.924.0): eine Partie, eine Analyse — die der Vereinspartie, auch wenn sie
+        // erst jetzt entsteht. Partie 239/142 am 09.11.: ohne diesen Schritt rechnete die Kopie eine zweite.
+        if (game.LeagueClubGameId is int referenced && await ClubMainAnalysisAsync(referenced, ct) is int mainId)
+        {
+            if (isOwner && game.GameAnalysisId != mainId)
+            {
+                game.GameAnalysisId = mainId;
+                await _db.SaveChangesAsync(ct);
+            }
+            await WatchAsync(userId, game, mainId, ct);
+            return new GameAnalyzeResultDto { Analysis = await _analyses.GetHeadUncheckedAsync(mainId, ct), Reused = true };
+        }
+
         var ownId = await _db.GameAnalyses.AsNoTracking()
             .Where(a => a.UserId == userId && a.Status != GameAnalysisStatus.Failed && a.Pgn == game.Pgn)
             .OrderByDescending(a => a.CreatedAt).ThenByDescending(a => a.Id)
@@ -142,6 +155,24 @@ internal sealed class SavedGameAnalysisLink
         created.Analysis.Positions = null;
         return new GameAnalyzeResultDto { Analysis = created.Analysis };
     }
+
+    /// <summary>Die nicht gescheiterte Hauptanalyse der Vereinspartie; fehlt sie, wird sie angelegt (sofort, jemand wartet).
+    /// <c>null</c> = Vereinspartie weg oder archiviert, unspielbar oder keine Haus-Engine — dann gilt der normale Weg.</summary>
+    private async Task<int?> ClubMainAnalysisAsync(int clubGameId, CancellationToken ct)
+    {
+        var existing = await MainAnalysisIdAsync(_db, clubGameId, ct);
+        if (existing is not null) return existing;
+        var pgn = await _db.LeagueClubGames.AsNoTracking().Where(c => c.Id == clubGameId).Select(c => c.Pgn).FirstOrDefaultAsync(ct);
+        if (pgn is null || await Engines.EngineOwnerResolver.HouseOwnerAsync(_db, ct) is not { } owner) return null;
+        try { return (await _analyses.CreateClubBatchAsync(owner.UserId, clubGameId, pgn, ct, expedited: true)).Id; }
+        catch (ArgumentException) { return null; }
+    }
+
+    /// <summary>Hauptanalyse einer Vereinspartie (Origin Club, ohne Engine, nicht gescheitert), die jüngste.</summary>
+    internal static Task<int?> MainAnalysisIdAsync(AppDbContext db, int clubGameId, CancellationToken ct) =>
+        db.GameAnalyses.AsNoTracking()
+            .Where(a => a.LeagueClubGameId == clubGameId && a.Origin == GameAnalysisOrigin.Club && a.EngineId == null && a.Status != GameAnalysisStatus.Failed)
+            .OrderByDescending(a => a.Id).Select(a => (int?)a.Id).FirstOrDefaultAsync(ct);
 
     /// <summary>Glocke, sobald die Analyse endgültig (samt Vertiefung) fertig ist (0.904.0, <see cref="GameAnalysisWatchers"/>) —
     /// Link auf die Partie, wie DIESER Nutzer sie sieht: der Besitzer seine Partieseite, ein Gast den Teilen-Link. Schon
@@ -209,6 +240,8 @@ internal sealed class SavedGameAnalysisLink
         CancellationToken ct = default)
     {
         var copies = await db.SavedGames.Where(g => g.LeagueClubGameId == clubGameId && g.Id != except).ToListAsync(ct);
+        // Der Umbau behält die Analyse der Vereinspartie (gleiche Id) — der Eintrag zeigt weiter auf sie (0.924.0).
+        var mainId = await MainAnalysisIdAsync(db, clubGameId, ct);
         foreach (var g in copies)
         {
             var old = PgnParser.SplitGames(g.Pgn).FirstOrDefault();
@@ -223,7 +256,12 @@ internal sealed class SavedGameAnalysisLink
             g.Pgn = pgn;
             g.MoveCount = sans.Count;
             await SavedGameCorrection.MovesChangedAsync(db, g, ct);
+            g.GameAnalysisId = mainId;
         }
+        // Die Kopie, von der die Korrektur kam, hat ihre Züge schon; ihr Verweis fiel beim Speichern.
+        if (except is int from && mainId is not null
+            && await db.SavedGames.FirstOrDefaultAsync(g => g.Id == from && g.LeagueClubGameId == clubGameId, ct) is { } origin)
+            origin.GameAnalysisId = mainId;
         await db.SaveChangesAsync(ct);
         return copies.Count;
     }

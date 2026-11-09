@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.924.0',
+    date: '2026-11-09',
+    changes: [
+      { en: 'One game, one analysis: an entry in „My games“ that points to a club game now uses the club game\'s analysis instead of calculating its own, and keeps your side, share link, dismissed mistakes and own summaries.',
+        de: 'Eine Partie, eine Analyse: Ein Eintrag in „Meine Partien“, der auf eine Vereinspartie zeigt, nutzt jetzt deren Analyse statt eine eigene zu rechnen und behält deine Seite, den Teilen-Link, ausgeblendete Fehler und eigene Zusammenfassungen.' },
+    ],
+  },
+  {
     version: '0.923.0',
     date: '2026-11-09',
     changes: [

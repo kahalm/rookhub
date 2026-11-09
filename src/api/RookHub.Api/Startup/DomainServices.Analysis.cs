@@ -84,6 +84,7 @@ public static partial class DomainServicesSetup
     {
         services.AddScoped<GameAnalysisService>();
         services.AddScoped<SavedGameService>();
+        services.AddScoped<ClubGameReferences>();   // Kopien von Vereinspartien → Verweise (0.924.0)
         services.AddScoped<OwnGameSummaries>();   // Zusammenfassung eigener Partien (0.923.0)
         services.AddScoped<GameMistakeProgressService>();
         services.AddScoped<MarkedPositionService>();
