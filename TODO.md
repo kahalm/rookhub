@@ -422,7 +422,12 @@ erreichbar ist, und scheitert leise.
   (Stücke „Zug 17.Lxh7+: Kommentar …"), Suche = Frage einbetten → nächste Stücke → nach Partie gruppiert, Sprung auf den
   Halbzug; dritte Suchart im Dialog „Partie anfordern", kombinierbar mit Spieler-/Stellungsfilter.
 
-## [ ] Teil-Import laedt das ganze Roh-PGN, obwohl nur „leer?" gefragt ist (2026-09-23)
+## [x] Teil-Import laedt das ganze Roh-PGN, obwohl nur „leer?" gefragt ist (2026-09-23, ERLEDIGT 2026-11-09, Version folgt)
+
+> **Erledigt:** `ImportFileAsync` schliesst den Text nur noch ein, wenn er ersetzt (Vollimport) oder zusammengefuehrt
+> (`mergeSourcePgn`) wird. Bei `partial`/`preserveExistingSourcePgn` fragt eine Projektion auf einen bool, ob schon ein
+> Text da ist; ein leerer wird ueber einen angehaengten Stub erstmalig gesetzt (UPDATE der einen Spalte). Allowlist in
+> `BookSourceIncludeGuardTests` nachgezogen, Verhalten in `BookSourceTests` festgehalten.
 
 `PgnImportService.ImportFileAsync` laedt das Buch IMMER mit `.Include(b => b.Source)` — auch bei
 `partial`/`preserveExistingSourcePgn`, wo vom gespeicherten Text nur `string.IsNullOrEmpty` gebraucht

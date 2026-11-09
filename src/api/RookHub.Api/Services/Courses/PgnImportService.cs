@@ -369,8 +369,11 @@ public class PgnImportService
             playFromStartPosition: playFromStartPosition);
         var now = DateTime.UtcNow;
 
-        // Mit Source: der Kern liest das Roh-PGN (preserve/partial) und schreibt es ggf. neu.
-        var book = await _db.Books.Include(b => b.Source).FirstOrDefaultAsync(b => b.FileName == fileName, ct);
+        // Den Text selbst braucht nur, wer ihn zusammenführt oder (vollständiger Import) ersetzt. Teil-/Lücken-Import
+        // fragt nur „leer?" — der Live-Append läuft je Linie hier durch und zöge sonst jedes Mal bis zu 6 MB.
+        var keepsExisting = !mergeSourcePgn && (preserveExistingSourcePgn || partial);
+        IQueryable<Book> books = keepsExisting ? _db.Books : _db.Books.Include(b => b.Source);
+        var book = await books.FirstOrDefaultAsync(b => b.FileName == fileName, ct);
         if (book == null)
         {
             book = new Book
@@ -397,8 +400,23 @@ public class PgnImportService
             if (book.ImportVersion < ImportPipeline.CurrentVersion && !string.Equals(source, pgnText, StringComparison.Ordinal))
                 parse = ParsePgn(fileName, source, keepCommentOnlyAsInfo: true, playFromStartPosition: playFromStartPosition);
         }
+        else if (!keepsExisting)
+            source = pgnText;
         else
-            source = (!preserveExistingSourcePgn && !partial) || string.IsNullOrEmpty(book.Source.SourcePgn) ? pgnText : null;
+        {
+            // Leer-Prüfung per SQL statt über den geladenen Text (ist die Source schon getrackt — neues Buch oder
+            // früher im selben Kontext geladen —, gilt deren Wert).
+            var hasSource = book.Source is not null
+                ? !string.IsNullOrEmpty(book.Source.SourcePgn)
+                : await _db.BookSources.Where(s => s.Id == book.Id)
+                    .Select(s => s.SourcePgn != null && s.SourcePgn != "").FirstOrDefaultAsync(ct);
+            source = hasSource ? null : pgnText;
+            // Erstmalig setzen: Stub (SourcePgn = null, Unchanged) anhängen — der Kern weist den Text zu, und EF
+            // schreibt genau diese eine Spalte (UPDATE Books SET SourcePgn …). Ein Stub ersetzt hier nichts: der
+            // gespeicherte Text ist laut Prüfung leer.
+            if (source is not null && book.Source is null)
+                _db.BookSources.Attach(new BookSource { Id = book.Id });
+        }
 
         return await ImportIntoBookAsync(book, fileName, source, parse, now, partial, ct, ownerUserId);
     }
@@ -429,7 +447,8 @@ public class PgnImportService
     /// <summary>Gemeinsamer Import-Kern von <see cref="ImportFileAsync"/> und
     /// <see cref="ReprocessFromStoredSourceAsync"/>: gleicht die geparsten Linien mit dem Bestand des Buchs ab
     /// (anlegen / in-place aktualisieren / überspringen), merkt das Roh-PGN und setzt die Pipeline-Version.</summary>
-    /// <param name="book">Getrackt und MIT geladener <see cref="Book.Source"/>.</param>
+    /// <param name="book">Getrackt; <see cref="Book.Source"/> geladen (bzw. als Stub angehängt), sobald
+    /// <paramref name="sourcePgn"/> nicht <c>null</c> ist — sonst darf sie fehlen.</param>
     /// <param name="sourcePgn">Neues Roh-PGN des Buchs; <c>null</c> = das vorhandene bleibt.</param>
     /// <param name="ownerUserId">Besitzer laut Aufrufer (für die Tipp-Deckelung, falls das Buch noch keinen trägt).</param>
     private async Task<BookImportItemDto> ImportIntoBookAsync(Book book, string fileName, string? sourcePgn,

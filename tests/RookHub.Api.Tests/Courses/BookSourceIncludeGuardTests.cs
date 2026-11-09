@@ -21,7 +21,8 @@ public class BookSourceIncludeGuardTests
     {
         // GetBookPgnAsync, GetChapterPgnAsync, GetLinePgnAsync — Download/„Kurs → Repertoire" (EIN Buch).
         ["Services/Courses/CoursePgnExportService.cs"] = 3,
-        // ImportFileAsync + ReprocessFromStoredSourceAsync — Import/Neu-Aufbereitung EINES Buchs.
+        // ImportFileAsync + ReprocessFromStoredSourceAsync — Import/Neu-Aufbereitung EINES Buchs. ImportFileAsync
+        // schließt den Text nur ein, wenn es ihn ersetzt oder zusammenführt (Teil-/Lücken-Import: SQL-Leer-Prüfung).
         ["Services/Courses/PgnImportService.cs"] = 2,
         // RebuildFromCacheAsync („Aktualisieren", StaleAction.Cache): EIN Buch, AsNoTracking. Der Text wird
         // gebraucht, weil genau er umgeschrieben wird — die Zugtexte kommen je oid aus dem Linien-Cache, die
@@ -35,6 +36,9 @@ public class BookSourceIncludeGuardTests
     {
         // DeleteBookAsync: Stub anhängen, damit InMemory die Source mit löscht (lädt keinen Text).
         ["Services/Courses/BookAdminService.cs"] = 1,
+        // ImportFileAsync (Teil-/Lücken-Import): Leer-Prüfung per Projektion auf einen bool (lädt keinen Text) und
+        // Stub anhängen, um ein noch leeres Roh-PGN erstmalig zu setzen (UPDATE der einen Spalte).
+        ["Services/Courses/PgnImportService.cs"] = 2,
     };
 
     // .Include(b => b.Source) / .ThenInclude(x => x.Source!) — Lambda-Form, auch mit Klammern um den Parameter.

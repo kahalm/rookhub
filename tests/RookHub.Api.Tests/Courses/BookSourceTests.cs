@@ -198,6 +198,69 @@ public class BookSourceTests : IDisposable
         Assert.Equal(voll, book.Source.SourcePgn);
     }
 
+    // ===== Teil-/Lücken-Import: Leer-Prüfung per SQL, Text nur laden, wenn er ersetzt wird =====
+
+    private const string TeilPgn = "[Event \"X\"]\n[Round \"2\"]\n[FEN \"" + StartFen + "\"]\n\n1. d4 d5 2. c4 *\n";
+
+    [Theory]
+    [InlineData(true, false)]   // partial
+    [InlineData(false, true)]   // preserveExistingSourcePgn (getReview-Lücken-Merge)
+    public async Task ImportFile_TeilOderLuecke_VorhandenerText_WirdWederGeladenNochErsetzt(bool partial, bool preserve)
+    {
+        var id = await SeedBookAsync(RawPgn, importVersion: ImportPipeline.CurrentVersion, fileName: "teil.pgn");
+
+        var db = Fresh();
+        var res = await new PgnImportService(db).ImportFileAsync("teil.pgn", TeilPgn, CancellationToken.None,
+            preserveExistingSourcePgn: preserve, partial: partial);
+
+        Assert.Equal(1, res.Imported);
+        // Der bis zu 6 MB große Text kam gar nicht erst in den Kontext.
+        Assert.Empty(db.ChangeTracker.Entries<BookSource>());
+        Assert.Equal(RawPgn, (await Fresh().BookSources.SingleAsync(s => s.Id == id)).SourcePgn);
+    }
+
+    [Theory]
+    [InlineData(true, false, null)]
+    [InlineData(true, false, "")]
+    [InlineData(false, true, null)]
+    [InlineData(false, true, "")]
+    public async Task ImportFile_TeilOderLuecke_LeererText_WirdErstmaligGesetzt(bool partial, bool preserve, string? leer)
+    {
+        var id = await SeedBookAsync(leer, importVersion: ImportPipeline.CurrentVersion, fileName: "leer.pgn");
+
+        var db = Fresh();
+        await new PgnImportService(db).ImportFileAsync("leer.pgn", TeilPgn, CancellationToken.None,
+            preserveExistingSourcePgn: preserve, partial: partial);
+
+        Assert.Equal(TeilPgn, (await Fresh().BookSources.SingleAsync(s => s.Id == id)).SourcePgn);
+        // Über den Stub geschrieben: nur die eine Spalte geändert, Ursprungswert der (ungeladene) Stub-Wert.
+        var entry = db.ChangeTracker.Entries<BookSource>().Single();
+        Assert.Null(entry.Property(s => s.SourcePgn).OriginalValue);
+    }
+
+    [Fact]
+    public async Task ImportFile_Vollimport_ErsetztVorhandenenText()
+    {
+        var id = await SeedBookAsync(RawPgn, importVersion: ImportPipeline.CurrentVersion, fileName: "voll.pgn");
+
+        await new PgnImportService(Fresh()).ImportFileAsync("voll.pgn", TeilPgn, CancellationToken.None);
+
+        Assert.Equal(TeilPgn, (await Fresh().BookSources.SingleAsync(s => s.Id == id)).SourcePgn);
+    }
+
+    [Fact]
+    public async Task ImportFile_Teilimport_SourceSchonGetrackt_NimmtDerenWert_OhneStub()
+    {
+        var id = await SeedBookAsync(null, importVersion: ImportPipeline.CurrentVersion, fileName: "getrackt.pgn");
+        var db = Fresh();
+        var src = await db.BookSources.SingleAsync(s => s.Id == id);   // schon im Kontext (z. B. früherer Schritt)
+
+        await new PgnImportService(db).ImportFileAsync("getrackt.pgn", TeilPgn, CancellationToken.None, partial: true);
+
+        Assert.Same(src, db.ChangeTracker.Entries<BookSource>().Single().Entity);
+        Assert.Equal(TeilPgn, (await Fresh().BookSources.SingleAsync(s => s.Id == id)).SourcePgn);
+    }
+
     [Fact]
     public async Task ImportFile_NeuesBuch_LegtSourceMitAn()
     {
