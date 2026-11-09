@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Router, RouterLink, provideRouter } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { NAV_DOCKED_CLASS, NAV_WIDTH_VAR, NavbarComponent } from './navbar.component';
@@ -17,6 +17,7 @@ import { LocaleService } from '../core/locale.service';
 import { ThemeService } from '../core/theme.service';
 import { EinkService } from '../core/eink.service';
 import { HandoffService } from '../core/handoff.service';
+import { SnackbarService } from '../core/snackbar.service';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { DISCORD_INVITE_URL, FEEDBACK_URL, KOFI_URL } from '../core/community';
@@ -81,6 +82,31 @@ describe('NavbarComponent', () => {
     expect(event.stopPropagation).toHaveBeenCalled();
     expect(markAllSeen).toHaveBeenCalled();
     expect(nav.notifications.length).toBe(0); // gelesene bleiben nur über „Alle anzeigen" sichtbar
+  });
+
+  // Codereview F3-004: Ladefehler nicht als „keine Benachrichtigungen“, „Alle gelesen“ nur bei Erfolg leeren.
+  it('Ladefehler der Glocke: Fehlerzustand statt leerer Liste, Wiederholen lädt erneut', () => {
+    const list = jasmine.createSpy('list').and.returnValues(
+      throwError(() => ({ status: 503 })),
+      of([{ id: 1, type: 't', data: null, link: null, createdAt: '', seen: false }]));
+    const nav = build({ list });
+    nav.onBellOpened();
+    expect(nav.notifLoadFailed).toBeTrue();
+    const event = { stopPropagation: jasmine.createSpy('stopPropagation') } as unknown as Event;
+    nav.retryBell(event);
+    expect(event.stopPropagation).toHaveBeenCalled();
+    expect(nav.notifLoadFailed).toBeFalse();
+    expect(nav.notifications.length).toBe(1);
+  });
+
+  it('markAllRead mit Serverfehler: Liste bleibt, Snackbar meldet es', () => {
+    const markAllSeen = jasmine.createSpy('markAllSeen').and.returnValue(throwError(() => ({ status: 500 })));
+    const nav = build({ markAllSeen });
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+    nav.notifications = [{ id: 1, type: 't', data: null, link: null, createdAt: '', seen: false }];
+    nav.markAllRead({ stopPropagation: () => {} } as unknown as Event);
+    expect(nav.notifications.length).toBe(1);
+    expect(warn).toHaveBeenCalledWith('notifications.markAllFailed');
   });
 
   it('springt auf den Turnierkalender, nicht auf die Liste der geholten Turniere', () => {

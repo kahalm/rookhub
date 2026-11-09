@@ -1,5 +1,7 @@
 import { HandoffService } from '../core/handoff.service';
 import { Component, EventEmitter, Output, OnInit, DestroyRef, ElementRef, NgZone, inject, ChangeDetectionStrategy } from '@angular/core';
+import { SnackbarService } from '../core/snackbar.service';
+import { apiErrorText } from '../core/api-error';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { of, switchMap, catchError, merge, map, timer } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -87,7 +89,14 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
               </button>
             }
           </div>
-          @if (notifications.length === 0) {
+          @if (notifLoadFailed) {
+            <!-- Ladefehler nie als „keine Benachrichtigungen“ (Codereview F3-004) — mit Wiederholen im offenen Menü. -->
+            <div class="notif-empty notif-error" role="alert">{{ 'common.loadFailed' | translate }}</div>
+            <button mat-menu-item class="notif-retry" (click)="retryBell($event)">
+              <mat-icon>refresh</mat-icon>
+              <span>{{ 'common.retry' | translate }}</span>
+            </button>
+          } @else if (notifications.length === 0) {
             <div class="notif-empty">{{ 'notifications.empty' | translate }}</div>
           } @else {
             @for (n of notifications; track n.id) {
@@ -473,6 +482,9 @@ export class NavbarComponent implements OnInit {
   messagesUnread = 0;
 
   private destroyRef = inject(DestroyRef);
+  private snackbar = inject(SnackbarService);
+  /** Die Liste der Glocke konnte nicht geladen werden (Codereview F3-004). */
+  notifLoadFailed = false;
   /** Optional: einige Specs bauen die Navbar ohne Host-Element (reiner Injektor). */
   private host = inject<ElementRef<HTMLElement>>(ElementRef, { optional: true });
   private zone = inject(NgZone);
@@ -575,7 +587,17 @@ export class NavbarComponent implements OnInit {
   /** Glocke geöffnet: nur die UNGELESENEN laden — gelesene verschwinden aus der Glocke und
    * bleiben nur über „Alle anzeigen" (History) sichtbar. */
   onBellOpened(): void {
-    this.notif.list(20, true).subscribe({ next: list => this.notifications = list, error: () => {} });
+    this.notifLoadFailed = false;
+    this.notif.list(20, true).subscribe({
+      next: list => this.notifications = list,
+      error: () => this.notifLoadFailed = true,
+    });
+  }
+
+  /** „Wiederholen“ im Menü nach einem Ladefehler — das Menü bleibt offen. */
+  retryBell(event: Event): void {
+    event.stopPropagation();
+    this.onBellOpened();
   }
 
   /** Gibt es im aktuell geladenen Dropdown ungelesene Benachrichtigungen? (steuert den „Alle als gelesen"-Button) */
@@ -587,8 +609,12 @@ export class NavbarComponent implements OnInit {
    * „Alle anzeigen" sichtbar), ohne das Menü zu schließen. */
   markAllRead(event: Event): void {
     event.stopPropagation();
-    this.notif.markAllSeen().subscribe({ error: () => {} });
-    this.notifications = [];
+    // Erst nach Erfolg leeren: lehnt der Server ab, bleiben die Einträge stehen und eine Snackbar sagt es (F3-004) —
+    // vorher war die Liste leer und der Badge sprang beim nächsten Zählerabruf ohne Erklärung zurück.
+    this.notif.markAllSeen().subscribe({
+      next: () => this.notifications = [],
+      error: err => this.snackbar.warn(apiErrorText(err, this.translate, 'notifications.markAllFailed')),
+    });
   }
 
   /** Admin-Eintrag: dieselbe Regel wie adminAreaGuard (F5-005) — wer irgendeinen Admin-Tab sehen darf. */
