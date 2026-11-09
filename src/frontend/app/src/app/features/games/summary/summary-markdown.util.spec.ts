@@ -25,6 +25,20 @@ describe('summary-markdown.util (Partie-Zusammenfassung, 0.913.0)', () => {
       caption: [{ text: 'd6 ist ein ' }, { text: 'Loch', bold: true }], orientation: 'black' } });
   });
 
+  it('offener Code-Zaun ohne Abschluss endet an der Leerzeile, der Rest bleibt Text (F2-018)', () => {
+    const md = ['Vorher.', '', '```diagram', 'ply: 4', 'caption: Nach 2…Sc6', '', 'Danach geht es weiter.', '', '## Fehler', '- eins'].join('\n');
+    const b = parseSummary(md);
+    expect(b.map(x => x.kind)).toEqual(['paragraph', 'diagram', 'paragraph', 'heading', 'list']);
+    expect(b[2]).toEqual({ kind: 'paragraph', parts: [{ text: 'Danach geht es weiter.' }] });
+    const code = parseSummary(['```', 'x = 1', '', 'Text danach.'].join('\n'));
+    expect(code.map(x => x.kind)).toEqual(['paragraph', 'paragraph']);
+    expect(code[1]).toEqual({ kind: 'paragraph', parts: [{ text: 'Text danach.' }] });
+    // geschlossene Blöcke wie bisher — auch mit Leerzeile darin
+    const closed = parseSummary(['```', 'a', '', 'b', '```', 'Ende.'].join('\n'));
+    expect(closed.length).toBe(2);
+    expect((closed[0] as { parts: { text: string }[] }).parts[0].text).toBe('a\n\nb');
+  });
+
   it('Inline: fett, kursiv, Code; Zugnotation mit Sternchen bleibt Text', () => {
     expect(parseInline('a **b** *c* _d_ `e`')).toEqual([
       { text: 'a ' }, { text: 'b', bold: true }, { text: ' ' }, { text: 'c', italic: true }, { text: ' ' },

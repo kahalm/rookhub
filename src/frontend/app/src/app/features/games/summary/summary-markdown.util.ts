@@ -101,8 +101,16 @@ export function parseSummary(markdown: string): SummaryBlock[] {
     const fence = /^```\s*(\w*)/.exec(t);
     if (fence) {
       flush();
-      const body: string[] = [];
-      while (++i < lines.length && !lines[i].trim().startsWith('```')) body.push(lines[i]);
+      let end = i + 1;
+      while (end < lines.length && !lines[end].trim().startsWith('```')) end++;
+      if (end >= lines.length) {
+        // Kein Abschluss (F2-018: Text abgebrochen oder ``` vergessen): der Block endet an der nächsten Leerzeile, der Rest
+        // bleibt normaler Text — sonst verschluckte der offene Zaun das ganze übrige Dokument.
+        end = i + 1;
+        while (end < lines.length && lines[end].trim() !== '') end++;
+      }
+      const body = lines.slice(i + 1, end);
+      i = end;
       if (fence[1].toLowerCase() === 'diagram') {
         const spec = parseDiagram(body);
         if (spec) blocks.push({ kind: 'diagram', spec });
