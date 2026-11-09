@@ -148,6 +148,8 @@ public class AdminController : BaseApiController
     /// <summary>„Als Nutzer einsteigen": liefert ein Token, mit dem der Admin als Zielnutzer agiert.</summary>
     [HttpPost("users/{id}/impersonate")]
     [HasPermission(Permissions.UsersManage)]
+    // Kein Einstieg aus einem Einstieg (R1-005): imp-Claim und Audit-Zeile nennten sonst das Zwischenkonto statt des Admins.
+    [DenyWhileImpersonating]
     public async Task<IActionResult> Impersonate(int id)
     {
         var adminName = User.Identity?.Name ?? string.Empty;

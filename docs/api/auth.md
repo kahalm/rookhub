@@ -24,6 +24,12 @@ Altbestand ohne Claim gilt beim nächsten Einlösen als „jetzt angemeldet" (ke
 `Services/Accounts/SessionLifetime.cs`; Impersonations-Tokens (2 h) tragen ihren eigenen Zeitpunkt. Eine gesenkte
 Konfiguration wirkt auf bereits ausgegebene JWTs erst mit deren Ablauf.
 
+**Einstiegs-Tokens hängen am Einsteigenden** (R1-005, 09.11.2026): trägt ein Token den `imp`-Claim, prüft
+`JwtTokenGate.ImpersonatorRejectionAsync` bei jeder Anfrage zusätzlich dessen Konto — gesperrt/gelöscht
+(`impersonator-inactive`) oder ohne `users.manage`/Admin live (`impersonator-revoked`) → 401. `POST
+/api/admin/users/{id}/impersonate` trägt `[DenyWhileImpersonating]`: kein Einstieg aus einem Einstieg (imp-Claim und
+Audit-Zeile nennten sonst das Zwischenkonto).
+
 **API-Tokens (PATs, `rkh_…`) laufen ab** (Codereview S1-007/P-14, entschieden 25.10.2026): `POST /api/profile/tokens`
 befristet jeden neuen Token auf höchstens `Auth:PatMaxDays` (Vorgabe 365) — `expiresInDays` fehlt/`null` oder ist länger →
 genau die Höchstdauer (`ApiTokenService.CreateAsync`); die Oberfläche bietet „Nie" nicht mehr an. Abgelaufene Tokens lehnt

@@ -206,4 +206,42 @@ public class JwtTokenGateTests : IDisposable
         Assert.Equal("2001:db8:a10:1::77", _log.Events[0].State["IpAddress"]);
         Assert.Equal("/api/profile", _log.Events[0].State["Path"]);
     }
+
+    /// <summary>R1-005: ein Einstiegs-Token gilt nur, solange der Einsteigende aktiv ist und users.manage (oder Admin) live hat.</summary>
+    [Fact]
+    public async Task Einsteigender_gesperrtGeloeschtOderOhneRecht_wirdAbgelehnt_aktiverAdminNicht()
+    {
+        PermissionResolver.InvalidateAll();
+        var admin = new AppUser { Username = "admin", Email = "a@t.com", PasswordHash = "h", IsAdmin = true };
+        var locked = new AppUser { Username = "gesperrt", Email = "g@t.com", PasswordHash = "h", IsAdmin = true,
+            LockedUntil = DateTime.UtcNow.AddDays(1) };
+        var deleted = new AppUser { Username = "weg", Email = "w@t.com", PasswordHash = "h", IsAdmin = true, DeletedAt = DateTime.UtcNow };
+        var demoted = new AppUser { Username = "kein-admin-mehr", Email = "k@t.com", PasswordHash = "h" };
+        _db.AppUsers.AddRange(admin, locked, deleted, demoted);
+        await _db.SaveChangesAsync();
+
+        Task<string?> Of(int id) => JwtTokenGate.ImpersonatorRejectionAsync(_db, _cache, id, _log, default);
+        Assert.Null(await Of(admin.Id));
+        Assert.Equal("impersonator-inactive", await Of(locked.Id));
+        Assert.Equal("impersonator-inactive", await Of(deleted.Id));
+        Assert.Equal("impersonator-revoked", await Of(demoted.Id));
+        Assert.Equal("impersonator-inactive", await Of(999_999));   // unbekanntes Konto
+    }
+
+    /// <summary>Delegierte Rolle mit users.manage (kein Admin) bleibt als Einsteigender gültig.</summary>
+    [Fact]
+    public async Task Einsteigender_mitDelegiertemRecht_bleibtGueltig()
+    {
+        PermissionResolver.InvalidateAll();
+        var mod = new AppUser { Username = "mod", Email = "m@t.com", PasswordHash = "h" };
+        var role = new Role { Key = "nutzerverwaltung", Name = "Nutzerverwaltung" };
+        _db.AppUsers.Add(mod);
+        _db.Roles.Add(role);
+        await _db.SaveChangesAsync();
+        _db.RolePermissions.Add(new RolePermission { RoleId = role.Id, Permission = Permissions.UsersManage });
+        _db.UserRoles.Add(new UserRole { UserId = mod.Id, RoleId = role.Id });
+        await _db.SaveChangesAsync();
+
+        Assert.Null(await JwtTokenGate.ImpersonatorRejectionAsync(_db, _cache, mod.Id, _log, default));
+    }
 }

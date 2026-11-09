@@ -61,6 +61,33 @@ public static class JwtTokenGate
         };
     }
 
+    /// <summary>
+    /// Ein Einstiegs-Token trägt Identität und Stempel des ZIELS; der Einsteigende steht nur im <c>imp</c>-Claim (R1-005).
+    /// Ohne diese Prüfung liefen vorher geholte Einstiege bis zu 2 h weiter, wenn der Einsteigende gesperrt, gelöscht oder
+    /// seines Rechts beraubt wurde. Gültig bleibt das Token nur, solange er aktiv ist und <c>users.manage</c> (oder Admin)
+    /// live hat — derselbe 60-s-Speicher wie die übrigen Prüfungen. Fail-open bei Datenbankfehlern wie oben.
+    /// </summary>
+    public static async Task<string?> ImpersonatorRejectionAsync(
+        AppDbContext db, IMemoryCache cache, int impersonatorId, ILogger logger, CancellationToken ct)
+    {
+        try
+        {
+            if (!await AuthUserValidation.IsActiveUserAsync(db, cache, impersonatorId, ct)) return "impersonator-inactive";
+            var rights = await new PermissionResolver(db, cache).GetAsync(impersonatorId, ct);
+            return rights.Has(Models.Permissions.UsersManage) ? null : "impersonator-revoked";
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "JwtAuth: Prüfung des Einsteigenden {ImpersonatorId} übersprungen — Datenbank nicht erreichbar",
+                impersonatorId);
+            return null;
+        }
+    }
+
     /// <summary>Signatur und Laufzeit sind geprüft — jetzt gegen den Kontostand.</summary>
     public static async Task OnTokenValidatedAsync(TokenValidatedContext ctx)
     {
@@ -76,6 +103,9 @@ public static class JwtTokenGate
         var stamp = ctx.Principal?.FindFirstValue("sstamp");
 
         var reason = await RejectionReasonAsync(db, cache, uid, stamp, logger, ctx.HttpContext.RequestAborted);
+        // Einstiegs-Token („Als Nutzer einsteigen") hängen zusätzlich am Zustand des Einsteigenden (R1-005).
+        if (reason is null && int.TryParse(ctx.Principal?.FindFirstValue("imp"), out var impersonatorId))
+            reason = await ImpersonatorRejectionAsync(db, cache, impersonatorId, logger, ctx.HttpContext.RequestAborted);
         if (reason is null) return;
 
         logger.LogWarning("JwtAuth: Token von User {UserId} abgelehnt ({Reason}) auf {Path}",

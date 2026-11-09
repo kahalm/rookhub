@@ -46,6 +46,8 @@ public class ImpersonationGuardTests
         { typeof(RookHub.Api.Controllers.Puzzles.EndlessController), nameof(RookHub.Api.Controllers.Puzzles.EndlessController.RecordSession) },
         { typeof(RookHub.Api.Controllers.Puzzles.EndlessController), nameof(RookHub.Api.Controllers.Puzzles.EndlessController.BulkImportSessions) },
         { typeof(RookHub.Api.Controllers.Puzzles.EndlessController), nameof(RookHub.Api.Controllers.Puzzles.EndlessController.ClaimSession) },
+        // Kein Einstieg aus einem Einstieg (R1-005).
+        { typeof(AdminController), nameof(AdminController.Impersonate) },
     };
 
     [Theory]
