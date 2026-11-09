@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.941.2',
+    date: '2026-11-09',
+    changes: [
+      {
+        en: 'Further fixes from the November code review (frontend follow-ups): Woodpecker – if saving an attempt briefly fails on the server, it is resent automatically after a few seconds, so “Next” no longer repeats the same puzzle; e-books – if access expires while reading an EPUB, the reader renews it and reloads at the same spot instead of showing a blank page; endless puzzles – on slow connections an older game state no longer overwrites a newer one, and game states rejected by the server no longer stay stuck as “pending”.',
+        de: 'Weitere Korrekturen aus dem Codereview vom November (Oberfläche, Nacharbeiten): Woodpecker – scheitert das Speichern eines Versuchs kurz am Server, wird er nach wenigen Sekunden selbst nachgesendet, „Weiter“ bringt nicht mehr dieselbe Aufgabe; E-Books – läuft beim Lesen eines EPUB die Freigabe ab, erneuert der Leser sie und lädt an derselben Stelle neu, statt eine leere Seite zu zeigen; Endlos-Puzzles – bei langsamer Verbindung überschreibt ein älterer Spielstand nicht mehr den neueren, und vom Server abgelehnte Spielstände bleiben nicht mehr dauerhaft als „noch zu senden“ hängen.',
+      },
+    ],
+  },
+  {
     version: '0.941.1',
     date: '2026-11-09',
     changes: [
