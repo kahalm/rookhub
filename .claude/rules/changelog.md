@@ -8,6 +8,7 @@ paths:
 
 - Im Prosatext NUR typografische Anführungszeichen `„…“` — ein gerades `"` beendet den JS-String, `ng build` (CI) wird rot,
   `ng test` merkt es nicht. Nach jedem Edit hier: `cd src/frontend/app && npx ng build app`.
+- Nach 0.999.x folgt **1.000.0** (nicht 1.0.0), die Minor-Stelle bleibt dreistellig (1.001.0, 1.002.0 …; Nutzerentscheidung 2026-11-09).
 - `APP_VERSION` erst unmittelbar vor dem Commit vergeben, nach frischem `git fetch` — die andere Kopie verbraucht
   sonst dieselbe Nummer.
 - Rebase-Konflikte hier nach INHALT auflösen (beide Einträge behalten, eigene Version über die fremde heben),
