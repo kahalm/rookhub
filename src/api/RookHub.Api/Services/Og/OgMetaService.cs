@@ -11,6 +11,7 @@ using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Games;
 using RookHub.Api.Services.Repertoires;
+using RookHub.Api.Services.League;
 using RookHub.Api.Services.Tournaments;
 using RookHub.Api.DTOs.Games;
 
@@ -44,14 +45,19 @@ public partial class OgMetaService
     private readonly SharedLineService? _sharedLines;
     private readonly WeeklyPostService? _weekly;
     private readonly WorksheetService? _worksheets;
+    private readonly LeagueService? _league;
+    private readonly LeagueGameShares? _leagueGames;
 
     private const string StartFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     public OgMetaService(SavedGameService games, PuzzleService puzzles, BookPuzzleService bookPuzzles,
         CrawlerProxyService crawler, AppDbContext db, ILogger<OgMetaService> logger,
         GameReconstructionService? reconstructions = null, SharedLineService? sharedLines = null,
-        WeeklyPostService? weekly = null, WorksheetService? worksheets = null)
+        WeeklyPostService? weekly = null, WorksheetService? worksheets = null,
+        LeagueService? league = null, LeagueGameShares? leagueGames = null)
     {
+        _league = league;
+        _leagueGames = leagueGames;
         _worksheets = worksheets;
         _weekly = weekly;
         _reconstructions = reconstructions;
@@ -67,10 +73,12 @@ public partial class OgMetaService
     /// <summary>Die öffentliche Kennung eines Kalendereintrags: chess-results-Nummer oder <c>f&lt;FIDE-Nr.&gt;</c> usw.</summary>
     private static readonly Regex CalendarId = new("^[A-Za-z0-9_-]{1,24}$", RegexOptions.Compiled);
 
-    /// <summary>Zerlegt einen Original-Pfad in (kind, id), oder null wenn keine vorschaubare Route.</summary>
-    public static (string Kind, string Id)? ParsePath(string? path)
+    /// <summary>Zerlegt einen Original-Pfad in (kind, id), oder null wenn keine vorschaubare Route. <paramref name="site"/> = Wert von
+    /// <c>X-Og-Site</c>: LeagueHub hat eigene Routen (<c>/s/{token}</c>, <c>/partie/{token}</c>) und keine der RookHub-Routen.</summary>
+    public static (string Kind, string Id)? ParsePath(string? path, string? site = null)
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
+        if (string.Equals(site, OgIndexHtmlProvider.LeagueHubSite, StringComparison.OrdinalIgnoreCase)) return ParseLeagueHubPath(path);
         // Query abschneiden, führenden Slash entfernen.
         var q = path.IndexOf('?');
         var query = q >= 0 ? path[(q + 1)..] : string.Empty;
@@ -120,6 +128,18 @@ public partial class OgMetaService
         }
     }
 
+    /// <summary>LeagueHub: geteilte Begegnung <c>/s/{token}</c> (mit gewählter Runde <c>?runde=N</c> → <c>{token}~{N}</c>, wie die
+    /// Seite abfragt) und Ligapartie <c>/partie/{token}</c>. Hochladen/Formular unter <c>/s/{token}/…</c> bleiben ohne Vorschau.</summary>
+    private static (string Kind, string Id)? ParseLeagueHubPath(string path)
+    {
+        var segments = path.Split('?')[0].Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments is ["partie", var game]) return ("lgame", game);
+        if (segments is not ["s", var token] || token.Contains(LeagueService.ShareRoundSeparator)) return null;
+        return int.TryParse(QueryParam(path, "runde"), NumberStyles.None, CultureInfo.InvariantCulture, out var round) && round > 0
+            ? ("league", $"{token}{LeagueService.ShareRoundSeparator}{round}")
+            : ("league", token);
+    }
+
     /// <summary>Ein Wert aus dem Query-Teil des Pfads (oder null).</summary>
     internal static string? QueryParam(string? path, string name)
     {
@@ -129,9 +149,9 @@ public partial class OgMetaService
         return hit == null ? null : Uri.UnescapeDataString(hit[1]);
     }
 
-    public async Task<OgPage?> ResolvePageAsync(string? path, string baseUrl, CancellationToken ct = default)
+    public async Task<OgPage?> ResolvePageAsync(string? path, string baseUrl, CancellationToken ct = default, string? site = null)
     {
-        var parsed = ParsePath(path);
+        var parsed = ParsePath(path, site);
         if (parsed is null) return null;
         var (kind, id) = parsed.Value;
         var canonical = $"{baseUrl}{path}";
@@ -203,6 +223,9 @@ public partial class OgMetaService
                     return await ResolveSharedPageAsync(kind, id, img, canonical, ct);
                 case "worksheet":
                     return await ResolveWorksheetPageAsync(id, img, canonical);
+                case "league":
+                case "lgame":
+                    return await ResolveLeaguePageAsync(kind, id, img, canonical, ct);
                 case "puzzle":
                 case "book":
                 case "daily":
@@ -268,6 +291,9 @@ public partial class OgMetaService
                     return await ResolveSharedBoardAsync(kind, id, ct);
                 case "worksheet":
                     return await ResolveWorksheetBoardAsync(id);
+                case "league":
+                case "lgame":
+                    return await ResolveLeagueBoardAsync(kind, id, ct);
                 case "train":
                 {
                     // „white-<token>" bzw. „black-<token>" (das Token selbst darf Bindestriche tragen)

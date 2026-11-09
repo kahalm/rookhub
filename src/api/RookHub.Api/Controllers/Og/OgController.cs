@@ -8,7 +8,7 @@ namespace RookHub.Api.Controllers.Og;
 
 /// <summary>
 /// Open-Graph-/Twitter-Card-Vorschauen für öffentliche Routen (geteilte Partie <c>/g/…</c>,
-/// Puzzles <c>/puzzles/…</c>, Turnier <c>/t/…</c>). nginx leitet diese Pfade an <see cref="Render"/>,
+/// Puzzles <c>/puzzles/…</c>, Turnier <c>/t/…</c>, Aufgabenblatt, LeagueHub-Begegnung … — Liste: docs/api/link-vorschau.md). nginx leitet diese Pfade an <see cref="Render"/>,
 /// das die echte SPA-index.html mit stellungsspezifischen Meta-Tags anreichert (Mensch bekommt die
 /// normale SPA, Crawler liest die Tags). Das Brett-Bild liefert <see cref="Image"/> als PNG.
 /// </summary>
@@ -49,7 +49,7 @@ public class OgController : ControllerBase
         if (string.IsNullOrEmpty(html))
             return StatusCode(StatusCodes.Status502BadGateway, "frontend unavailable");
 
-        var page = await _meta.ResolvePageAsync(path, BaseUrl(site), ct);
+        var page = await _meta.ResolvePageAsync(path, BaseUrl(site), ct, site);
         if (page is not null)
             html = Inject(html, page);
 
@@ -87,10 +87,14 @@ public class OgController : ControllerBase
     /// Ohne eigene Konfiguration faellt die Turnierseite auf <c>App:BaseUrl</c> zurueck.
     /// </summary>
     private string? ConfiguredBaseUrl(string? site)
-        => ConfiguredBaseUrl(site, _config["App:BaseUrl"], _config["App:TurnierBaseUrl"]);
+        => ConfiguredBaseUrl(site, _config["App:BaseUrl"], _config["App:TurnierBaseUrl"], _config["App:LeagueHubBaseUrl"]);
 
-    internal static string? ConfiguredBaseUrl(string? site, string? appBaseUrl, string? turnierBaseUrl)
+    internal static string? ConfiguredBaseUrl(string? site, string? appBaseUrl, string? turnierBaseUrl, string? leagueHubBaseUrl = null)
     {
+        // LeagueHub-Links (/s/{token}, /partie/{token}) gibt es nur auf der LeagueHub-Domain.
+        if (string.Equals(site, OgIndexHtmlProvider.LeagueHubSite, StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(leagueHubBaseUrl))
+            return leagueHubBaseUrl;
         if (string.Equals(site, OgIndexHtmlProvider.TurnierSite, StringComparison.OrdinalIgnoreCase)
             && !string.IsNullOrWhiteSpace(turnierBaseUrl))
             return turnierBaseUrl;
@@ -115,11 +119,11 @@ public class OgController : ControllerBase
         return $"{proto}://{host}";
     }
 
-    private static string Inject(string html, OgPage page)
+    internal static string Inject(string html, OgPage page)
     {
         var sb = new StringBuilder();
         sb.Append("<meta property=\"og:type\" content=\"").Append(Esc(page.Type)).Append("\">\n");
-        sb.Append("<meta property=\"og:site_name\" content=\"RookHub\">\n");
+        sb.Append("<meta property=\"og:site_name\" content=\"").Append(Esc(page.SiteName)).Append("\">\n");
         sb.Append("<meta property=\"og:title\" content=\"").Append(Esc(page.Title)).Append("\">\n");
         sb.Append("<meta property=\"og:description\" content=\"").Append(Esc(page.Description)).Append("\">\n");
         sb.Append("<meta property=\"og:image\" content=\"").Append(Esc(page.ImageUrl)).Append("\">\n");

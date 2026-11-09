@@ -288,6 +288,7 @@ public partial class OgImageService
     internal static List<string> Wrap(string text, SKPaint paint, float maxWidth, int maxLines)
     {
         var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (maxLines <= 1) return [string.Join(' ', words)];
         var lines = new List<string>();
         var current = string.Empty;
         for (var i = 0; i < words.Length; i++)

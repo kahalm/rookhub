@@ -5,7 +5,7 @@ namespace RookHub.Api.Services.Og;
 /// Grund: der OG-Renderer reichert genau diese echte index.html mit Meta-Tags an — die gehashten
 /// Angular-Bootstrap-Scripts müssen unverändert erhalten bleiben, damit die SPA für Menschen bootet.
 ///
-/// Es gibt ZWEI Seiten mit je eigener Shell: RookHub und die Turnierseite (turnier.oberschmid.homes,
+/// Es gibt DREI Seiten mit je eigener Shell (seit 2026-11-09 auch LeagueHub, <see cref="LeagueHubSite"/>): RookHub und die Turnierseite (turnier.oberschmid.homes,
 /// eigenes Angular-Projekt, eigenes Image). Ein geteilter Turnier-Link <c>/t/{id}</c> liegt auf der
 /// Turnierseite — bekäme der Browser dort die RookHub-Shell, würde die falsche App booten und den Link
 /// auf das Dashboard umleiten. Welche Shell gemeint ist, sagt der nginx über <c>X-Og-Site</c>.
@@ -19,6 +19,10 @@ public class OgIndexHtmlProvider
 {
     /// <summary>Wert von <c>X-Og-Site</c> für die Turnierseite; alles andere = RookHub.</summary>
     public const string TurnierSite = "turnier";
+
+    /// <summary>Wert von <c>X-Og-Site</c> für LeagueHub (2026-11-09): eigene Shell aus dem LeagueHub-Container, eigene Routen
+    /// (<c>/s/{token}</c>, <c>/partie/{token}</c>). Vorher <c>none</c> — die Shell von RookHub ließ dort die Seite weiß (F8-012).</summary>
+    public const string LeagueHubSite = "leaguehub";
 
     private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<OgIndexHtmlProvider> _logger;
@@ -54,6 +58,11 @@ public class OgIndexHtmlProvider
             {
                 CandidateUrls = BuildCandidates(config["Frontend:TurnierInternalUrl"],
                     "http://turnier:8080", "http://rookhub-turnier:8080", "http://rookhub-turnier-dev:8080"),
+            },
+            [LeagueHubSite] = new()
+            {
+                CandidateUrls = BuildCandidates(config["Frontend:LeagueHubInternalUrl"],
+                    "http://leaguehub:8080", "http://rookhub-leaguehub:8080", "http://rookhub-leaguehub-dev:8080"),
             },
         };
     }

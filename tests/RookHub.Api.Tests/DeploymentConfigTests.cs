@@ -500,9 +500,10 @@ public class DeploymentConfigTests
         Assert.True(og.Success, "OG-Location in nginx.conf nicht gefunden");
         var body = og.Groups["body"].Value;
         // Seit 0.641.x laufen auch Kalender-Links der Turnierseite durch die Weiche (Eckdaten im Vorschaufenster).
-        // Seit 2026-11-09 auch rekonstruierte Partie /r/, Repertoire-Linie /l/, Aufgabenblatt /w/, Wochenpost /weekly/ und genau /analysis
+        // Seit 2026-11-09 auch rekonstruierte Partie /r/, Repertoire-Linie /l/, Aufgabenblatt /w/, Wochenpost /weekly/, LeagueHub
+        // /s/ und /partie/ und genau /analysis
         // (geteilte Stellung ?fen=) — Vorschaubilder, docs/api/link-vorschau.md.
-        Assert.Contains("location ~ ^/(g|t|puzzles|tournaments/calendar|l|r|w|weekly)(/|$)|^/analysis$ {", nginx);
+        Assert.Contains("location ~ ^/(g|t|puzzles|tournaments/calendar|l|r|w|weekly|s|partie)(/|$)|^/analysis$ {", nginx);
 
         Assert.Contains("proxy_intercept_errors on;", body);
         var errorPage = Regex.Match(body, @"error_page ([0-9 ]+)= @og_fallback;");
@@ -519,7 +520,7 @@ public class DeploymentConfigTests
     /// Cache-Control-Header auf der Antwort (API und map).
     /// </summary>
     [Fact]
-    public void OgPreview_IsOnlyForRookHubAndTheTournamentSite_OtherSitesServeTheirOwnShell()
+    public void OgPreview_RookHubTournamentAndLeagueHub_OtherSitesServeTheirOwnShell()
     {
         var nginx = ReadRepoFile("src/frontend/nginx.conf");
         var map = Regex.Match(nginx, @"map \$host \$rookhub_og_site \{(?<body>[^}]*)\}");
@@ -532,9 +533,13 @@ public class DeploymentConfigTests
         // Wie nginx: der erste passende Regex-Eintrag gewinnt, sonst default.
         string Site(string host) => rules.FirstOrDefault(r => r.Re.IsMatch(host)).Value ?? "";
 
-        foreach (var host in new[] { "kidhub.oberschmid.homes", "kidhub-dev.oberschmid.homes", "leaguehub.oberschmid.homes",
-                     "leaguehub-dev.oberschmid.homes", "clubhub.oberschmid.homes", "clubhub-dev.oberschmid.homes" })
+        foreach (var host in new[] { "kidhub.oberschmid.homes", "kidhub-dev.oberschmid.homes",
+                     "clubhub.oberschmid.homes", "clubhub-dev.oberschmid.homes" })
             Assert.Equal("none", Site(host));
+        // LeagueHub hat seit 2026-11-09 eigene Vorschauen (/s/{token}, /partie/{token}) — eigener Schluessel, damit die API die
+        // LeagueHub-Shell anreichert und nicht RookHubs (F8-012).
+        foreach (var host in new[] { "leaguehub.oberschmid.homes", "leaguehub-dev.oberschmid.homes" })
+            Assert.Equal("leaguehub", Site(host));
         foreach (var host in new[] { "tournament.oberschmid.homes", "turnier.oberschmid.homes", "turnier-dev.oberschmid.homes" })
             Assert.Equal("turnier", Site(host));
         foreach (var host in new[] { "rookhub.oberschmid.homes", "rookhub-dev.oberschmid.homes", "localhost", "172.18.0.5" })
@@ -552,6 +557,8 @@ public class DeploymentConfigTests
         var cache = Regex.Match(nginx, @"map \$uri \$rookhub_cache_control \{(?<body>.*?)\n\}", RegexOptions.Singleline);
         Assert.True(cache.Success);
         Assert.Contains("~^/(g|t|l|puzzles|", cache.Groups["body"].Value);
+        // Teilen-Links mit Vorschau (2026-11-09) stehen ebenfalls auf no-cache, must-revalidate
+        Assert.Contains("|r|w|s|partie)(/|$)", cache.Groups["body"].Value);
         Assert.Contains("~^/(index\\.html|", cache.Groups["body"].Value);
     }
 
