@@ -116,6 +116,13 @@ describe('linkSummaryMoves (klickbare Züge)', () => {
     expect(p[3].line!.length).toBe(6);
   });
 
+  it('eine spätere Folge hängt an der zuletzt genannten Variante, die Lücke füllt der zuletzt genannte Zug', () => {
+    const p = para('Nach 3.Lb5 a6 ist alles normal. Mit 3.Lc4 dagegen geht 4.Lxf7+ nicht.').filter(x => x.line);
+    expect(p.map(x => x.text)).toEqual(['3.Lb5', 'a6', '3.Lc4', '4.Lxf7+']);
+    expect(p[3].line!.map(m => m.san).slice(-3)).toEqual(['Bc4', 'a6', 'Bxf7+']);
+    expect(p[3].at).toBe(7);
+  });
+
   it('Illegales und Code bleiben Text, englische Buchstaben gehen', () => {
     expect(para('Hier 9.Dh5 und `2.Nf3`.').some(x => x.line)).toBeFalse();
     expect(para('Hier 2.Nf3 stark.').filter(x => x.line).map(x => x.at)).toEqual([3]);

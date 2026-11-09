@@ -6,7 +6,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { MoveComparison, MoveComparisonCandidate, numberedLine } from '../analysis/move-comparison.service';
 import { localizeSanText } from '../../shared/chess/keyboard-move.util';
-import { ExplanationPart, explanationParts } from './explanation-lines';
+import { ExplanationPart, explanationParts, sanLine } from './explanation-lines';
 import { LiveMove } from './live-engine-session';
 import { MaximNoteComponent } from '../../shared/maxims/maxim-note.component';
 import { splitMaxim } from '../../shared/maxims/chess-maxims.service';
@@ -48,6 +48,11 @@ export function comparisonRows(entry: ClubMistakeComparison, lang: string): Comp
 /** Die Begründung: beim schwächeren der beiden Züge (meist der Partiezug — die tiefere Rechnung kann anders urteilen). */
 export function comparisonExplanation(c: MoveComparison): string | null {
   return c.candidates.find(x => !x.isBest && x.state === 'done')?.explanation ?? null;
+}
+
+/** Die Linien der Kandidaten (Zug + Engine-Linie danach) ab der Stellung — füllen fehlende Zwischenzüge der Erklärung auf. */
+export function candidateLines(c: MoveComparison): LiveMove[][] {
+  return c.candidates.map(x => sanLine(c.fen, [x.san, ...(x.replies[0]?.line ?? [])])).filter(l => l.length);
 }
 
 function afterFen(fen: string, uci: string): string | null {
@@ -141,7 +146,7 @@ export class MistakeComparisonComponent {
   readonly explanationParts = computed<ExplanationPart[] | null>(() => {
     const e = this.entry();
     const text = this.explanation();
-    return e && text ? explanationParts(splitMaxim(text).body, e.comparison.fen) : null;
+    return e && text ? explanationParts(splitMaxim(text).body, e.comparison.fen, undefined, undefined, candidateLines(e.comparison)) : null;
   });
   /** Der Merksatz am Ende der Erklärung (fester Wortlaut aus der Liste), sonst `null`. */
   readonly maxim = computed(() => { const t = this.explanation(); return t ? splitMaxim(t).maxim : null; });

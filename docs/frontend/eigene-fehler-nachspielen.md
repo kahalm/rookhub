@@ -69,3 +69,8 @@ Kosten-Zeile `app-mistake-comparison` (`features/games/mistake-comparison.compon
 öffnen“ (`/analysis/compare/:id?clubGame=`). Die Partieseite lädt die Vergleiche (`GamesService.clubComparisons`) beim Öffnen
 und bei jedem Start des Trainers neu; über einen Teilen-Link nicht. Läuft der Vergleich noch: eine leise Zeile; keiner: nichts.
 Server: `docs/api/zuege-vergleichen.md`, Abschnitt „Zugvergleiche zu den Fehlern der Vereinspartien“.
+Die Züge der Begründung sind klickbar (`features/games/explanation-lines.ts`, `explanationParts`; Klick → `showLine` mit der
+ganzen Folge ab der Fehlerstellung, man steht nach dem angeklickten Zug). Eine Folge setzt an der zuletzt genannten Stellung an;
+beginnt sie später (z. B. „Gegen 17.Dh4 … 18.d5“), werden die fehlenden Halbzüge (höchstens 6) aufgefüllt — mit dem zuletzt im
+Text genannten Zug derselben Nummer und Seite („17...Sf6“), sonst aus den Linien der beiden Kandidaten (`candidateLines`); die
+aufgefüllten Züge stehen vorne in der Folge, ← → laufen durch alles. Geht keine Wahl legal auf, bleibt die Folge Text.
