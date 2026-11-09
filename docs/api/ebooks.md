@@ -854,6 +854,48 @@ Text zwischen Tags, Attribute bleiben. Umgestellt wird nur, wenn landestypische 
 | POST | `/api/admin/ebooks/{id:int}/translations/{lang}` | `ebooks.manage` | Buch vorziehen bzw. neu übersetzen (Vorrang, weckt den Worker); Buch schon in der Sprache → 400, unbekannt → 404 |
 | POST | `/api/admin/ebooks/translations/retry-failed` | `ebooks.manage` | Gescheiterte und unvollständige (`SegmentsFailed > 0`) wieder einreihen → `{ queued }` |
 
+### Externe Übersetzer (Claude-Agenten)
+
+Bücher, die die Spark noch nicht übersetzt hat, kann ein externer Übersetzer übernehmen (`EbookExternalTranslationService`,
+Werkzeug `tools/EbookTranslateExternal/uebersetzen.py` + README). Er bekommt dieselben Texte wie die Spark und gibt sie
+zurück; Prüfung und EPUB-Schreiben sind der Code des Workers. Läuft auch ohne `EbookTranslation:Languages` (nur
+`Ebooks:Root` nötig), jede Zielsprache aus zwei Buchstaben.
+
+- **Beanspruchen**: Zeile anlegen bzw. eine wartende/gescheiterte/`NoText` übernehmen → `Running`,
+  `Model = external:<translator>`. Nie eine laufende der Spark, nie eine fertige, nie einen fremden externen Anspruch
+  (409; derselbe Übersetzer noch einmal = idempotent). Buch in der Zielsprache, `LanguageSource = notext`, anonymer Upload
+  → 400. Quelle wie im Worker (`EnsureSourceAsync`: echtes EPUB, sonst Fließtext-EPUB aus dem Text-PDF — kann bei großen
+  PDFs dauern —, Diagramme noch nicht erkannt → 409 und `NotBefore`, kein Text → `NoText` + 409). Zerlegen mit
+  `EbookEpubTranslation.Plan`; jeder verschiedene Modelltext EINMAL (wie `UniqueTexts`) als Zeile in
+  `EbookTranslationSegments` (`Index` 0…n-1 in Lesereihenfolge, `DocumentPath` des ersten Vorkommens, `Source`,
+  `Target`); was der Zwischenspeicher schon hat (früherer Spark-Lauf), ist vorbelegt. `SegmentsTotal/Done` an der Zeile.
+- **Worker-Verträglichkeit**: `ClaimNextAsync` nimmt nur `Pending` (der externe Anspruch ist `Running`);
+  `RequeueInterruptedAsync` beim Start und „Gescheiterte wiederholen“ lassen externe Ansprüche (`IsExternalClaim`:
+  `external:` + Running/Failed) liegen. Fertig ist eine externe Übersetzung eine Zeile wie jede andere (Leser,
+  `translation`-Filter, `…/translations/{lang}/epub/…`, Prüfung auf geänderte Quelle, Titel-Nachholen).
+- **Prüfung beim PUT** je Text (wie `CommentTranslator` je Fuhre): Platzhalter identisch (`SamePlaceholders`), Einsetzen
+  samt Verschachtelung in JEDEN Block mit diesem Text (`EbookTextSegmenter.Apply`, Plan einer Übersetzung im Speicher),
+  nicht leer, kein offenes Zitat, ab 150 Zeichen ≥ 70 % der Quelllänge, ab 150 Zeichen Prosa Zielsprache
+  (`CommentLanguage`). Abgelehnte kommen mit `index`, `reason` (`unknown_index`, `duplicate`, `empty`, `placeholders`,
+  `nesting`, `open_quote`, `too_short`, `wrong_language`) und `message` zurück. Gültige werden gespeichert (erneutes PUT
+  überschreibt) UND an den Zwischenspeicher gehängt — nach einer Freigabe übersetzt die Spark nur den Rest.
+- **Zusammenbauen**: Quelle muss dieselbe sein (`SourceHash`, sonst `Failed`); offene Texte ohne `allowMissing` → 409
+  (`details.missing`, `details.misfit`); mit `allowMissing` bleiben sie im Original (`SegmentsFailed`). Geschrieben über
+  `EbookTranslationService.WriteTranslatedEpubAsync` — dieselbe Methode wie der Worker (`EbookEpubTranslation.Write` +
+  Figurenbuchstaben) → `converted/<id>.<lang>.epub`, `Done`, `CompletedAt`, optional `title`. Danach werden die Texte
+  gelöscht: der Zwischenspeicher hält jede Übersetzung, die Tabelle wäre doppelter Platz (Bücher mit 20 000+ Texten).
+- **Freigeben**: Zeile zurück auf `Pending`, `Model` leer, Texte weg, Worker geweckt.
+
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/admin/ebooks/translations/external` | `ebooks.manage` | Laufende (und beim Zusammenbauen gescheiterte) externe Ansprüche |
+| POST | `/api/admin/ebooks/translations/external/claim` | `ebooks.manage` | `{ ebookId, language, translator }` → Stand mit `translationId`, `segmentsTotal/Done/Open`, `notes` (Figurenbuchstaben werden umgestellt, unbekannte Quellsprache …) |
+| GET | `/api/admin/ebooks/translations/external/{id:int}` | `ebooks.manage` | Stand + `systemPrompt` (Auftrag der Spark wörtlich) + `instructions` |
+| GET | `/api/admin/ebooks/translations/external/{id:int}/segments?offset=&limit=&onlyOpen=true` | `ebooks.manage` | `{ total, offset, items: [{ index, source, target?, document }] }`, `limit` ≤ 500, `offset` über die gefilterte Liste |
+| PUT | `/api/admin/ebooks/translations/external/{id:int}/segments` | `ebooks.manage` | `[{ index, target }]` (≤ 500) → `{ accepted, rejected: [{ index, reason, message }], segmentsDone, segmentsTotal }` |
+| POST | `/api/admin/ebooks/translations/external/{id:int}/assemble` | `ebooks.manage` | `{ allowMissing, title? }` → `{ state, segmentsDone, segmentsFailed, relativePath, sizeBytes }`; offen → 409 |
+| DELETE | `/api/admin/ebooks/translations/external/{id:int}` | `ebooks.manage` | Anspruch zurücknehmen → 204; nicht extern → 409 |
+
 **Lesbare Bücher + übersetzte Titel (0.896.0):** `GET /api/ebooks?readable=de,en` (`EbookReadable`) zeigt nur Bücher, deren
 Sprache in der Liste steht ODER die eine fertige Übersetzung in eine davon haben; mit `language` gilt `readable` nicht, die
 Sprach-Facette zählt ohne `readable`. Die Oberfläche schickt per Vorgabe Oberflächensprache + Englisch
