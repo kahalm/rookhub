@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,6 +13,7 @@ import { PreferencesService } from '../../../core/preferences.service';
 import { GamesService, SharedGame } from '../games.service';
 import { ClubGameSummary, ClubGameSummaryService } from './club-game-summary.service';
 import { ClubSummaryLinkComponent } from './club-summary-link.component';
+import { SummaryGameBoardComponent } from './summary-game-board.component';
 import { DiagramSpec, InlinePart, SummaryBlock, moveLabel, parseSummary, positionsOf } from './summary-markdown.util';
 
 /** Ein fertig aufgelöstes Diagramm: Stellung, letzter Zug, Pfeile, Blickrichtung. */
@@ -35,14 +36,15 @@ interface ResolvedDiagram {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, TranslatePipe,
-    ChessBoardComponent, LoadErrorComponent, ClubSummaryLinkComponent],
+    ChessBoardComponent, LoadErrorComponent, ClubSummaryLinkComponent, SummaryGameBoardComponent],
   template: `
-    <div class="summary-page">
+    <div class="summary-page" [class.with-board]="hasBoard()">
       @if (loading()) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
       } @else if (failed()) {
         <mat-card class="load-card"><app-load-error [messageKey]="'games.loadError'" (retry)="load()" /></mat-card>
       } @else if (game(); as g) {
+        <div class="summary-layout">
         <mat-card class="summary-card">
           <div class="head">
             <a mat-icon-button [routerLink]="gameLink()" class="back" [attr.aria-label]="'common.back' | translate">
@@ -103,6 +105,9 @@ interface ResolvedDiagram {
                           @if (d.caption) { <ng-container *ngTemplateOutlet="inline; context: { $implicit: d.caption }" /> }
                           @if (b.spec.ply !== undefined) {
                             <a [routerLink]="gameLink()" [queryParams]="{ ply: b.spec.ply }" class="to-ply">{{ 'games.summary.showInGame' | translate }}</a>
+                            @if (hasBoard()) {
+                              <button type="button" class="to-board" (click)="sideBoard()?.showPly(b.spec.ply, d.flipped)">{{ 'games.summary.showOnBoard' | translate }}</button>
+                            }
                           }
                         </figcaption>
                       </figure>
@@ -114,6 +119,8 @@ interface ResolvedDiagram {
             @if (summary()?.model) { <p class="note model">{{ 'games.summary.writtenBy' | translate: { model: summary()!.model } }}</p> }
           }
         </mat-card>
+        @if (hasBoard()) { <app-summary-game-board [pgn]="g.pgn" [flipped]="g.ownerSide === 'black'" /> }
+        </div>
       }
     </div>
 
@@ -128,6 +135,11 @@ interface ResolvedDiagram {
   `,
   styles: [`
     .summary-page { max-width: 860px; margin: 0 auto; padding: 16px; }
+    .summary-page.with-board { max-width: min(var(--page-max-width), 96vw); }
+    .with-board .summary-text { max-width: 75ch; }
+    @media (min-width: 900px) {
+      .with-board .summary-layout { display: grid; grid-template-columns: minmax(0, 1fr) clamp(320px, 40vw, 520px); gap: 16px; align-items: start; }
+    }
     .center { display: flex; justify-content: center; padding: 48px; }
     .head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
     .head-main { display: flex; flex-direction: column; flex: 1 1 240px; min-width: 0; }
@@ -152,6 +164,7 @@ interface ResolvedDiagram {
     .diagram-board { width: 100%; }
     .diagram figcaption { margin-top: 6px; font-size: 0.875rem; display: flex; flex-wrap: wrap; gap: 4px 8px; }
     .to-ply { margin-left: auto; }
+    .to-board { background: none; border: 0; padding: 0; font: inherit; color: var(--rh-accent); text-decoration: underline; cursor: pointer; }
   `],
 })
 export class ClubGameSummaryComponent implements OnInit {
@@ -174,6 +187,9 @@ export class ClubGameSummaryComponent implements OnInit {
   readonly summary = signal<ClubGameSummary | null>(null);
   readonly blocks = computed<SummaryBlock[]>(() => parseSummary(this.summary()?.markdown ?? ''));
   private readonly positions = computed(() => positionsOf(this.game()?.pgn ?? ''));
+  /** Seitenbrett nur, wenn es Text gibt, neben dem es steht, und Züge zum Durchklicken. */
+  readonly hasBoard = computed(() => !!this.summary()?.markdown && this.positions().sans.length > 0);
+  readonly sideBoard = viewChild(SummaryGameBoardComponent);
 
   ngOnInit(): void {
     this.gameId = Number(this.route.snapshot.paramMap.get('id'));

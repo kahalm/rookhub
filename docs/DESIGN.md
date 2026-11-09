@@ -688,6 +688,7 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
 - **Knopfleiste unter dem Brett nie breiter als das Brett** (`max-width: 100%`, ◀ ▶ schrumpfen bis 44 px, Abstände
   wachsen mit dem Brett); am Handy (≤ 480 px) Nebenknöpfe 36 px, damit ◀ ▶ je ≥ 56 px bleiben (Partieseite,
   a1-rk-brettleiste-plus; die 36 px auch im Analysebrett).
+- **Partie-Zusammenfassung:** ab 900 px zweispaltig, Text | klebendes Brett mit ⏮ ◀ ▶ ⏭ und Zugliste (Spalte `clamp(320px, 40vw, 520px)`, Seite `--page-max-width`, Text ≤ 75ch, nie höher als das Fenster: Brett gibt nach, Zugliste scrollt); darunter Brett unter dem Text, „Am Brett zeigen“ holt es ins Bild.
 - **FEN nie roh anzeigen:** Mini-Brett + „Weiß am Zug · Zug 5“ + Kopierknopf (r2-rg-recon-fen).
 - **Kurs-Löser, Seitenspalte (2026-10-20, Nutzerwunsch):** Reihenfolge Kontext-Karte (Titel, Sprachwahl + ⓘ) →
   Kommentar → Status-Card (Uhr; „Eval“, „Überspringen“, „Aufgeben“) → Aktionszeile (Teilen + ⋮). Der Kurs-Fortschritt
@@ -1398,3 +1399,4 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-11-08 | 0.901.0 | Admin „Uploads“: „Einlesen“ als Knopf mit Menü der Arten (gesperrte Art mit Grund im Eintrag), Rückfrage mit „Einlesen“ als Knopf, Vermerk „eingelesen … → #id“ mit Links in der Zeile (5.4) | Stapel musste zum Einlesen heruntergeladen und neu hochgeladen werden | Wunsch User |
 | 2026-11-08 | 0.913.0 | RookHub, Partie-Zusammenfassung (`/club-games/:id/summary`): eine Karte ≤ 860 px, Kopf wie die Partieseite (← Partie, Spieler + Ergebnis, „Zur Partie“), Fließtext Zeilenhöhe 1,6; Diagramme mittig ≤ 360 px mit Unterschrift darunter (Zug fett, Satz, rechts „In der Partie zeigen“), Merksatz als Zitat mit Akzentlinie; Tabellen im eigenen Scrollkasten. In der Partie-Kopfzeile „Zusammenfassung“ als umrandeter Knopf, für Admins „anfordern“ als Textknopf bzw. Wartevermerk mit Sanduhr | Text + Bretter lesbar wie ein Artikel, ohne Analysebrett | Wunsch User 08.11. |
 | 2026-11-09 | 0.923.0 | RookHub, eigene Partie: „Zusammenfassung anfordern“ im Kopf wie bei Vereinspartien, dieselbe Seite `/games/:id/summary`; Tageskontingent verbraucht → Textvermerk statt Knopf | Ein Knopf, der nur scheitert, sagt nicht warum | Wunsch 09.11. |
+| 2026-11-09 | 0.928.0 | RookHub, Partie-Zusammenfassung: Seitenbrett neben dem Text (5.12), Seite mit Brett `--page-max-width` statt 860 px; unter 900 px Brett UNTER dem Text | Partie neben dem Text durchklicken; Text bleibt über der Falz (4.6) | Wunsch 09.11. |

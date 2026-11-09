@@ -3375,6 +3375,7 @@
       "stale": "Partija je ispravljena nakon što je sažetak napisan.",
       "none": "Za ovu partiju još nema sažetka.",
       "showInGame": "Prikaži u partiji",
+      "showOnBoard": "Prikaži na ploči",
       "writtenBy": "Napisao {{model}} na temelju analize enginea.",
       "waitingForAnalysis": "Zatraženo – čeka se analiza u pozadini, sažetak slijedi kad bude gotova:",
       "progressAnalysis": "analiza još traje",

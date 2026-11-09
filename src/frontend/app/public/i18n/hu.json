@@ -3752,6 +3752,7 @@
       "stale": "A játszmát az összefoglaló megírása után javították.",
       "none": "Ehhez a játszmához még nincs összefoglaló.",
       "showInGame": "Mutasd a játszmában",
+      "showOnBoard": "Megmutatás a táblán",
       "writtenBy": "Írta: {{model}}, a motoros elemzés alapján.",
       "waitingForAnalysis": "Kérve – a háttérelemzésre vár, az összefoglaló utána következik:",
       "progressAnalysis": "az elemzés még fut",

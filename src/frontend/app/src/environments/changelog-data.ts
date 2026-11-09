@@ -10,6 +10,13 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.928.0',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Game summary: the game now sits next to the text on a board that stays in view, with move list, buttons and left/right arrow keys; “Show on board” on a diagram jumps to that position. On narrow screens the board is below the text.', de: 'Partie-Zusammenfassung: Neben dem Text steht jetzt die Partie auf einem mitlaufenden Brett mit Zugliste, Knöpfen und Pfeiltasten links/rechts; „Am Brett zeigen“ an einem Diagramm springt auf diese Stellung. Auf schmalen Bildschirmen steht das Brett unter dem Text.' },
+    ],
+  },
   { version: "0.927.0", date: "2026-11-09", changes: [
     { en: "CI: the diagram worker image is no longer rebuilt for every release tag, only when the worker or the diagram recognition changes. A tag now shows one build in the admin CI list.",
       de: "CI: Das Image des Diagramm-Workers wird nicht mehr bei jedem Release-Tag gebaut, sondern nur, wenn sich der Worker oder die Diagrammerkennung ändert. Ein Tag zeigt in der Admin-CI-Liste jetzt einen Build." },

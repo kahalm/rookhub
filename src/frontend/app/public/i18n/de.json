@@ -3375,6 +3375,7 @@
       "stale": "Die Partie wurde nach dieser Zusammenfassung korrigiert.",
       "none": "Zu dieser Partie gibt es noch keine Zusammenfassung.",
       "showInGame": "In der Partie zeigen",
+      "showOnBoard": "Am Brett zeigen",
       "writtenBy": "Geschrieben von {{model}} aus der Engine-Analyse.",
       "waitingForAnalysis": "Angefordert – wartet auf die Hintergrund-Analyse, die Zusammenfassung kommt, sobald sie durch ist:",
       "progressAnalysis": "Analyse läuft noch",
