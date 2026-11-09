@@ -921,7 +921,6 @@
     "privacy": {
       "title": "Chính sách bảo mật",
       "link": "Chính sách quyền riêng tư",
-      "updated": "Cập nhật lần cuối: 26 tháng 10 năm 2026",
       "tocTitle": "Mục lục",
       "intro": "RookHub là nền tảng luyện tập cờ vua (bài tập, chế độ vô tận, khóa học, repertoire). Chính sách này giải thích cách xử lý dữ liệu cá nhân theo GDPR.",
       "introLeagueHub": "LeagueHub (một phần của RookHub) lập dự báo đội hình cho các trận đấu đồng đội và lưu cơ sở dữ liệu ván cờ của các câu lạc bộ tham gia. Tài khoản giống như trên RookHub. Tuyên bố này giải thích cách xử lý dữ liệu cá nhân theo GDPR.",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "Đang tải bài tập…",
       "watchOpponent": "Xem nước đi của đối thủ…",
+      "invalidPuzzle": "Không thể chơi bài tập này: các nước đi không khớp với thế cờ.",
       "correct": "Đúng rồi!",
       "checkmate": "Chiếu hết!",
       "altSolution": "Lời giải thay thế — bài tập có chuỗi nước đi dự kiến khác.",

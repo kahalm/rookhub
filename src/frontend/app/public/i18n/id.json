@@ -921,7 +921,6 @@
     "privacy": {
       "title": "Kebijakan Privasi",
       "link": "Kebijakan privasi",
-      "updated": "Terakhir diperbarui: 26 Oktober 2026",
       "tocTitle": "Daftar isi",
       "intro": "RookHub adalah platform pelatihan catur (puzzle, mode tanpa batas, kursus, repertoir). Kebijakan ini menjelaskan bagaimana data pribadi diproses berdasarkan GDPR.",
       "introLeagueHub": "LeagueHub (bagian dari RookHub) menyiapkan prakiraan susunan pemain untuk pertandingan beregu dan menyimpan basis data partai dari klub yang berpartisipasi. Akunnya sama dengan di RookHub. Pernyataan ini menjelaskan bagaimana data pribadi diproses berdasarkan GDPR.",
@@ -6258,6 +6257,7 @@
     "status": {
       "loading": "Memuat puzzle…",
       "watchOpponent": "Perhatikan langkah lawan…",
+      "invalidPuzzle": "Puzzle ini tidak bisa dimainkan: langkahnya tidak sesuai dengan posisi.",
       "correct": "Benar!",
       "checkmate": "Skakmat!",
       "altSolution": "Solusi alternatif — puzzle memiliki urutan langkah yang berbeda dari yang dimaksud.",
