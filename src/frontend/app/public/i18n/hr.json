@@ -795,7 +795,6 @@
       "listFailed": "Popis motora nije se mogao učitati s Lichessa. Pokušaj ponovno za koji trenutak.",
       "noEngines": "Još nema vanjskog motora — poveži ga izravno ili preko Lichessa.",
       "specs": "{{threads}} niti, {{hash}} MiB hash",
-      "backgroundLabel": "Pozadinski motor za zadatke",
       "backgroundHint": "Pozadinski motor obrađuje tvoje analize kad god je slobodan i pauzira dok analiziraš uživo vanjskim motorom. Ne prikazuje se u izboru za analizu uživo — najbolje je registrirati zaseban motor (ENGINE_COUNT=2 u provideru).",
       "backgroundSaved": "Pozadinski motor spremljen.",
       "backgroundFailed": "Pozadinski motor nije bilo moguće spremiti.",
@@ -814,8 +813,6 @@
       "lichessTitle": "Preko Lichessa (za motore u oblaku)",
       "lichessUnreachable": "Lichess trenutno ne odgovara — prikazani su samo izravno povezani motori.",
       "noLichessEngines": "Na tvom Lichess računu još nije registriran nijedan vanjski motor.",
-      "sourceRookhub": "RookHub",
-      "sourceLichess": "Lichess",
       "guide": "Otvori upute",
       "urlCopied": "Adresa kopirana",
       "noneOnline": "Trenutačno nijedan engine nije na mreži.",
@@ -823,7 +820,8 @@
       "neverSeen": "nikad povezan",
       "showOffline": "Prikaži enginee izvan mreže ({{count}})",
       "hideOffline": "Sakrij enginee izvan mreže ({{count}})",
-      "pruneHint": "Enginei koji se nisu javili 7 dana automatski se uklanjaju; vraćaju se čim se njihovo računalo ponovno poveže."
+      "pruneHint": "Enginei koji se nisu javili 7 dana automatski se uklanjaju; vraćaju se čim se njihovo računalo ponovno poveže.",
+      "backgroundShort": "Pozadina"
     },
     "offline": {
       "title": "Offline",

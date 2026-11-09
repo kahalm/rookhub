@@ -795,7 +795,6 @@
       "listFailed": "Could not load the engine list from Lichess. Try again in a moment.",
       "noEngines": "No external engine yet — connect one directly or via Lichess.",
       "specs": "{{threads}} threads, {{hash}} MiB hash",
-      "backgroundLabel": "Background engine for jobs",
       "backgroundHint": "The background engine works through your analysis jobs whenever it is free and pauses while you analyse live with an external engine. It is hidden from the live picker — best register a dedicated engine for it (ENGINE_COUNT=2 in the provider).",
       "backgroundSaved": "Background engine saved.",
       "backgroundFailed": "Could not save the background engine.",
@@ -814,8 +813,6 @@
       "lichessTitle": "Via Lichess (for cloud engines)",
       "lichessUnreachable": "Lichess is not answering right now — only the engines connected directly are shown.",
       "noLichessEngines": "No external engines registered on your Lichess account yet.",
-      "sourceRookhub": "RookHub",
-      "sourceLichess": "Lichess",
       "guide": "Open the guide",
       "urlCopied": "Address copied",
       "noneOnline": "No engine is online right now.",
@@ -823,7 +820,8 @@
       "neverSeen": "never connected",
       "showOffline": "Show offline engines ({{count}})",
       "hideOffline": "Hide offline engines ({{count}})",
-      "pruneHint": "Engines that have not connected for 7 days are removed automatically; they come back when their computer reconnects."
+      "pruneHint": "Engines that have not connected for 7 days are removed automatically; they come back when their computer reconnects.",
+      "backgroundShort": "Background"
     },
     "offline": {
       "title": "Offline",

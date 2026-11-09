@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -29,7 +28,7 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
   selector: 'app-engine-card',
   standalone: true,
   imports: [
-    MatSelectModule, MatCheckboxModule,
+    MatCheckboxModule,
     CommonModule, FormsModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatIconModule, TranslatePipe,
   ],
@@ -83,6 +82,10 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
                     }
                   </span>
                 }
+                <!-- 0.919.3 (Wunsch 2026-11-09): Hintergrund je Zeile als Häkchen statt Mehrfachauswahl. -->
+                <mat-checkbox class="bg-check" [checked]="isBackground(e)" (change)="toggleBackground(e, $event.checked)">
+                  {{ 'profile.engine.backgroundShort' | translate }}
+                </mat-checkbox>
                 <button mat-icon-button type="button" class="del" (click)="removeDirect(e)"
                         [attr.aria-label]="'profile.engine.deleteEngine' | translate"
                         [attr.title]="'profile.engine.deleteEngine' | translate">
@@ -148,7 +151,12 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
         @if (hasCredentials && lichessEngines.length > 0) {
           <ul class="engine-list">
             @for (e of lichessEngines; track e.id) {
-              <li><strong>{{ e.name }}</strong> — {{ 'profile.engine.specs' | translate: { threads: e.maxThreads, hash: e.maxHash } }}</li>
+              <li>
+                <strong>{{ e.name }}</strong> — {{ 'profile.engine.specs' | translate: { threads: e.maxThreads, hash: e.maxHash } }}
+                <mat-checkbox class="bg-check" [checked]="isBackground(e)" (change)="toggleBackground(e, $event.checked)">
+                  {{ 'profile.engine.backgroundShort' | translate }}
+                </mat-checkbox>
+              </li>
             }
           </ul>
         } @else if (hasCredentials && !tokenInvalid && !lichessUnreachable) {
@@ -156,17 +164,6 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
         }
 
         @if (engines.length > 0) {
-          <div class="engine-row">
-            <mat-form-field appearance="outline" class="bg-field" subscriptSizing="dynamic">
-              <mat-label>{{ 'profile.engine.backgroundLabel' | translate }}</mat-label>
-              <mat-select [(ngModel)]="backgroundEngineIds" name="backgroundEngine" multiple
-                          (selectionChange)="saveBackground()">
-                @for (e of engines; track e.id) {
-                  <mat-option [value]="e.id">{{ e.name }} · {{ sourceLabel(e) | translate }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-          </div>
           <p class="engine-hint">{{ 'profile.engine.backgroundHint' | translate }}</p>
           @if (canShareHouseEngine && backgroundEngineIds.length > 0) {
             <mat-checkbox [(ngModel)]="shareAsHouseEngine" name="shareAsHouseEngine"
@@ -187,11 +184,10 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
     .engine-hint a { color: var(--rh-accent); }
     .engine-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
     .token-field { width: 320px; max-width: 100%; }
-    .bg-field { width: 320px; max-width: 100%; margin-top: 8px; }
     /* b1-rk-profil-lichess-token-feld-schmal: am Handy so breit wie alle anderen Profilfelder (der Knopf bricht
        ohnehin in die nächste Zeile) — vorher endete das Feld 15 px früher. */
     @media (max-width: 599.98px) {
-      .token-field, .bg-field { width: 100%; }
+      .token-field { width: 100%; }
     }
     .setup-toggle { margin: 0 0 4px -12px; }
     .direct-setup { margin-bottom: 0.25rem; }
@@ -209,7 +205,8 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
     .state { color: color-mix(in srgb, currentColor 70%, transparent); font-size: 0.8rem; }
     .seen { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.8rem; }
     .offline-toggle { margin: 0 0 4px -12px; }
-    .del { margin-left: auto; }
+    .bg-check { margin-left: auto; }
+    .del { margin-left: 0; }
     .direct-url { margin-bottom: 0.25rem; }
     .url { background: color-mix(in srgb, currentColor 8%, transparent); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; overflow-wrap: anywhere; }
   `]
@@ -289,11 +286,6 @@ export class EngineCardComponent implements OnInit, OnDestroy {
     this.loadEngines();
   }
 
-  /** i18n-Schlüssel der Quelle für die Hintergrund-Auswahl. */
-  sourceLabel(e: ExternalEngineInfo): string {
-    return engineSourceOf(e) === 'rookhub' ? 'profile.engine.sourceRookhub' : 'profile.engine.sourceLichess';
-  }
-
   /** Registrierung einer direkt angemeldeten Engine entfernen (der Server nimmt sie auch aus der
    *  Hintergrund-Liste). Läuft ihr Provider noch, meldet er sich beim nächsten Start wieder an. */
   removeDirect(e: ExternalEngineInfo): void {
@@ -364,6 +356,18 @@ export class EngineCardComponent implements OnInit, OnDestroy {
    * Live-Picker. Mehrere sind erlaubt und der Sinn der Sache: der Server rechnet je Engine EINEN
    * Auftrag, es laufen also so viele nebeneinander, wie hier ausgewählt sind.
    */
+  isBackground(e: ExternalEngineInfo): boolean {
+    return this.backgroundEngineIds.includes(e.id);
+  }
+
+  /** Häkchen „Hintergrund“ einer Zeile: Liste anpassen und sofort speichern. */
+  toggleBackground(e: ExternalEngineInfo, on: boolean): void {
+    this.backgroundEngineIds = on
+      ? [...this.backgroundEngineIds.filter(id => id !== e.id), e.id]
+      : this.backgroundEngineIds.filter(id => id !== e.id);
+    this.saveBackground();
+  }
+
   saveBackground(): void {
     this.externalEngines.setBackgroundEngines(this.backgroundEngineIds).subscribe({
       next: r => { this.backgroundEngineIds = r.backgroundEngineIds ?? []; this.snackbar.success(this.translate.instant('profile.engine.backgroundSaved')); this.cdr.markForCheck(); },

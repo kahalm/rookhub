@@ -795,7 +795,6 @@
       "listFailed": "Die Engine-Liste konnte nicht von Lichess geladen werden. Versuch es gleich noch einmal.",
       "noEngines": "Noch keine externe Engine — verbinde eine direkt oder über Lichess.",
       "specs": "{{threads}} Threads, {{hash}} MiB Hash",
-      "backgroundLabel": "Hintergrund-Engine für Aufträge",
       "backgroundHint": "Die Hintergrund-Engine rechnet deine Analyse-Aufträge, sobald sie frei ist, und pausiert, solange du live mit einer externen Engine analysierst. Sie erscheint nicht im Live-Picker — am besten eine eigene Engine dafür registrieren (ENGINE_COUNT=2 im Provider).",
       "backgroundSaved": "Hintergrund-Engine gespeichert.",
       "backgroundFailed": "Hintergrund-Engine konnte nicht gespeichert werden.",
@@ -814,8 +813,6 @@
       "lichessTitle": "Über Lichess (für Cloud-Engines)",
       "lichessUnreachable": "Lichess antwortet gerade nicht — angezeigt werden nur die direkt verbundenen Engines.",
       "noLichessEngines": "Auf deinem Lichess-Konto ist noch keine External Engine registriert.",
-      "sourceRookhub": "RookHub",
-      "sourceLichess": "Lichess",
       "guide": "Anleitung öffnen",
       "urlCopied": "Adresse kopiert",
       "noneOnline": "Gerade ist keine Engine online.",
@@ -823,7 +820,8 @@
       "neverSeen": "noch nie verbunden",
       "showOffline": "Offline-Engines zeigen ({{count}})",
       "hideOffline": "Offline-Engines ausblenden ({{count}})",
-      "pruneHint": "Engines, die sich 7 Tage nicht gemeldet haben, werden automatisch entfernt; sie kommen wieder, sobald sich ihr Rechner wieder verbindet."
+      "pruneHint": "Engines, die sich 7 Tage nicht gemeldet haben, werden automatisch entfernt; sie kommen wieder, sobald sich ihr Rechner wieder verbindet.",
+      "backgroundShort": "Hintergrund"
     },
     "offline": {
       "title": "Offline",

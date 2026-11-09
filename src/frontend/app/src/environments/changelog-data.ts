@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.919.3", date: "2026-11-09", changes: [
+    { en: "Profile, external engines: each engine row has its own “Background” checkbox instead of the multi-select list.",
+      de: "Profil, externe Engines: Jede Engine-Zeile hat ein eigenes Häkchen „Hintergrund“ statt der Mehrfachauswahl." },
+  ] },
   {
     version: '0.919.2',
     date: '2026-11-09',

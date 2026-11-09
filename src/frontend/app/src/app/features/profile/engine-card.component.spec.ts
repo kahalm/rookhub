@@ -308,11 +308,40 @@ describe('EngineCardComponent', () => {
     expect(el.querySelector('.direct-setup')!.textContent).toContain('profile.engine.directHint');
   });
 
+  it('ticks a row as background engine and saves the whole list at once', () => {
+    fixture.detectChanges();
+    http.expectOne('/api/engine/credentials').flush({ hasCredentials: false, maskedToken: null });
+    http.expectOne('/api/engine/external').flush({
+      hasCredentials: false, tokenInvalid: false, backgroundEngineIds: ['rhe_aaaaaaaaaaaa'],
+      engines: [
+        { id: 'rhe_aaaaaaaaaaaa', name: 'Gross', maxThreads: 16, maxHash: 8192, source: 'rookhub', online: true },
+        { id: 'rhe_bbbbbbbbbbbb', name: 'Server', maxThreads: 2, maxHash: 1024, source: 'rookhub', online: true },
+      ],
+    });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const boxes = el.querySelectorAll('.direct-list .bg-check input[type=checkbox]');
+    expect(boxes.length).toBe(2);
+    expect((boxes[0] as HTMLInputElement).checked).toBeTrue();
+    expect((boxes[1] as HTMLInputElement).checked).toBeFalse();
+    expect(el.querySelector('mat-select')).toBeNull();
+
+    (boxes[1] as HTMLInputElement).click();
+    const req = http.expectOne('/api/engine/background');
+    expect(req.request.method).toBe('PUT');
+    expect(component.backgroundEngineIds).toEqual(['rhe_aaaaaaaaaaaa', 'rhe_bbbbbbbbbbbb']);
+    req.flush({ backgroundEngineIds: ['rhe_aaaaaaaaaaaa', 'rhe_bbbbbbbbbbbb'] });
+
+    component.toggleBackground(component.directEngines[0], false);
+    expect(component.backgroundEngineIds).toEqual(['rhe_bbbbbbbbbbbb']);
+    http.expectOne('/api/engine/background').flush({ backgroundEngineIds: ['rhe_bbbbbbbbbbbb'] });
+  });
+
   // UI-Sweep b1 (b1-rk-profil-lichess-token-feld-schmal): am Handy volle Breite wie die übrigen Profilfelder.
   it('token field spans the full width on phones (< 600 px)', () => {
     const css = (((EngineCardComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
       .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
-    expect(css).toMatch(/@media \(max-width: ?599\.98px\) ?\{ ?\.token-field, ?\.bg-field ?\{ ?width: ?100%/);
+    expect(css).toMatch(/@media \(max-width: ?599\.98px\) ?\{ ?\.token-field ?\{ ?width: ?100%/);
     expect(css).toMatch(/\.token-field ?\{ ?width: ?320px/);
   });
 });

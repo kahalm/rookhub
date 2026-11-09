@@ -544,7 +544,6 @@
       "listFailed": "A motorlistát nem sikerült betölteni a Lichessről. Próbáld újra egy pillanat múlva.",
       "noEngines": "Még nincs külső motor — csatlakoztass egyet közvetlenül vagy a Lichessen keresztül.",
       "specs": "{{threads}} szál, {{hash}} MiB hash",
-      "backgroundLabel": "Háttérmotor a feladatokhoz",
       "backgroundHint": "A háttérmotor akkor dolgozza fel az elemzési feladataidat, amikor éppen szabad, és szünetel, amíg élőben elemzel külső motorral. Az élő választóban nem jelenik meg — érdemes külön motort regisztrálni hozzá (ENGINE_COUNT=2 a szolgáltatónál).",
       "backgroundSaved": "Háttérmotor elmentve.",
       "backgroundFailed": "A háttérmotort nem sikerült elmenteni.",
@@ -563,8 +562,6 @@
       "lichessTitle": "Lichessen keresztül (felhőmotorokhoz)",
       "lichessUnreachable": "A Lichess most nem válaszol — csak a közvetlenül csatlakoztatott motorok látszanak.",
       "noLichessEngines": "A Lichess-fiókodon még nincs regisztrálva külső motor.",
-      "sourceRookhub": "RookHub",
-      "sourceLichess": "Lichess",
       "guide": "Útmutató megnyitása",
       "urlCopied": "Cím kimásolva",
       "noneOnline": "Jelenleg egy motor sem elérhető.",
@@ -572,7 +569,8 @@
       "neverSeen": "még sosem csatlakozott",
       "showOffline": "Offline motorok mutatása ({{count}})",
       "hideOffline": "Offline motorok elrejtése ({{count}})",
-      "pruneHint": "A 7 napja nem jelentkező motorokat a rendszer automatikusan eltávolítja; visszakerülnek, amint a gépük újra csatlakozik."
+      "pruneHint": "A 7 napja nem jelentkező motorokat a rendszer automatikusan eltávolítja; visszakerülnek, amint a gépük újra csatlakozik.",
+      "backgroundShort": "Háttér"
     },
     "changePwd": {
       "title": "Jelszó módosítása",
