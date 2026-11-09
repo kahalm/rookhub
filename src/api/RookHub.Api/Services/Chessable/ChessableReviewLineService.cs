@@ -271,8 +271,13 @@ public class ChessableReviewLineService
         // unter der uid (bis 5 000 × 128 KB) das Konto weit über den Deckel, und danach nahm TryTakeAsync keine eigene Linie und
         // keinen Trainingsstand mehr an. Was nicht mehr passt, bleibt in der Anon-Senke liegen (die Retention entsorgt es).
         var budget = _sinkBytes.ForUser(_db, userId, UserBytesCap, ct);
+        // Ist das Kontingent einmal erschöpft, bleibt der Rest liegen — ohne Abbruch lud jeder weitere Claim-Lauf (jedes
+        // Verknüpfen, jeder Kurslisten-Refresh) alle übrigen Portionen samt JSON, nur um sie zu überspringen (GA-05). Eine
+        // kleinere Zeile weiter hinten könnte theoretisch noch passen — vernachlässigt.
+        var exhausted = false;
         foreach (var chunk in claimIds.Chunk(JsonChunkSize))
         {
+            if (exhausted) break;
             var rows = await _db.AnonymousChessableReviewLines.Where(r => chunk.Contains(r.Id)).ToListAsync(ct);
             if (rows.Count == 0) continue;
             var chunkBids = rows.Select(r => r.Bid).Distinct().ToList();
@@ -289,7 +294,11 @@ public class ChessableReviewLineService
                 var delta = row is null
                     ? ChessableSinkBytes.Utf8(a.Json) + ChessableSinkBytes.RowOverheadBytes
                     : ChessableSinkBytes.Utf8(a.Json) - ChessableSinkBytes.Utf8(row.Json);
-                if (!await budget.TryTakeAsync(delta)) continue;   // Kontingent erschöpft → Zeile bleibt anonym liegen
+                if (!await budget.TryTakeAsync(delta))
+                {
+                    exhausted = true;   // Kontingent erschöpft → diese und alle folgenden Zeilen bleiben anonym liegen
+                    break;
+                }
                 if (row is null)
                 {
                     row = new ChessableReviewLine { UserId = userId, Bid = a.Bid, Oid = a.Oid };
@@ -322,6 +331,9 @@ public class ChessableReviewLineService
             foreach (var b in chunkBids)
                 if (!bids.Contains(b)) bids.Add(b);
         }
+        if (exhausted)
+            _log?.LogInformation("Claim uid {Uid}: Kontingent von Nutzer {UserId} erschöpft — {Count} Zeile(n) bleiben anonym liegen",
+                uid, userId, claimIds.Count - claimed);
         if (claimed == 0) return 0;
         _sinkBytes.ForgetAnon();
         _sinkBytes.ForgetUser(userId);

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -14,11 +15,26 @@ public class ChessableReviewLineServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly ChessableReviewLineService _service;
+    /// <summary>Statisch, damit EF nicht je Test einen neuen internen Dienstanbieter baut; die Tests einer Klasse laufen
+    /// nacheinander, der Zähler wird im Test zurückgesetzt.</summary>
+    private static readonly AnonRowLoads _anonLoads = new();
+
+    /// <summary>Zählt aus der Datenbank geladene Anon-Zeilen (GA-05: wie viele Portionen die Übernahme liest).</summary>
+    private sealed class AnonRowLoads : IMaterializationInterceptor
+    {
+        public int Count;
+        public object InitializedInstance(MaterializationInterceptionData data, object entity)
+        {
+            if (entity is AnonymousChessableReviewLine) Count++;
+            return entity;
+        }
+    }
 
     public ChessableReviewLineServiceTests()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(_anonLoads)
             .Options;
         _db = new AppDbContext(options);
         _service = new ChessableReviewLineService(_db, new PgnImportService(_db));
@@ -468,6 +484,31 @@ public class ChessableReviewLineServiceTests : IDisposable
         Assert.Equal(2, await svc.ClaimAnonForUidAsync(user.Id, "790927"));
         Assert.Equal(2, await _db.ChessableReviewLines.CountAsync(r => r.UserId == user.Id));
         Assert.Equal(3, await _db.AnonymousChessableReviewLines.CountAsync());   // liegen gelassen, nicht verloren
+    }
+
+    /// <summary>GA-05: nach erschöpftem Kontingent liest die Übernahme keine weitere Portion mehr. Vorher lud sie bei jedem
+    /// Lauf alle liegen gebliebenen Zeilen samt JSON, nur um sie zu überspringen.</summary>
+    [Fact]
+    public async Task ClaimAnon_BudgetExhausted_StopsLoadingFurtherPortions()
+    {
+        var user = await CreateUserAsync();
+        await GiveUserCoursesAsync(user, "100");
+        // Je Zeile 136 Bytes, 300 reichen für zwei; Portionen zu zwei: die zweite Portion erschöpft das Kontingent.
+        var svc = new ChessableReviewLineService(_db, new PgnImportService(_db)) { UserBytesCap = 300, JsonChunkSize = 2 };
+        for (var i = 1; i <= 7; i++)
+            await svc.UpsertAnonBatchAsync("790927", "100", new() { Entry(i.ToString(), $"{{\"v\":{i}}}") });
+        _db.ChangeTracker.Clear();
+        _anonLoads.Count = 0;
+
+        Assert.Equal(2, await svc.ClaimAnonForUidAsync(user.Id, "790927"));
+        Assert.Equal(4, _anonLoads.Count);   // Portion 1 (übernommen) + Portion 2 (erschöpft), Portionen 3 und 4 nicht geladen
+        Assert.Equal(5, await _db.AnonymousChessableReviewLines.CountAsync());
+
+        // Folgelauf: das Kontingent ist voll — nur noch die erste Portion wird gelesen.
+        _db.ChangeTracker.Clear();
+        _anonLoads.Count = 0;
+        Assert.Equal(0, await svc.ClaimAnonForUidAsync(user.Id, "790927"));
+        Assert.Equal(2, _anonLoads.Count);
     }
 
     [Fact]
