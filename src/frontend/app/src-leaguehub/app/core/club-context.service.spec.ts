@@ -1,4 +1,6 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
@@ -113,6 +115,32 @@ describe('club-context (Vereine als Mandanten, 0.698.0)', () => {
       ctx.useShare('tok');
       http.expectOne('/api/league/s/tok').flush({ club: { id: 1, name: 'SK Testdorf', anonName: 'Testdorf' } });
       expect(ctx.clubName()).toBe('SK Testdorf');
+    });
+  });
+
+  // Codereview F4-005: der Verein eines Teilen-Links galt nach dem Verlassen der /s/-Seiten weiter.
+  describe('Teilen-Verein nur auf den /s/-Seiten', () => {
+    @Component({ template: '' }) class Blank {}
+
+    it('gilt auf /s/…, nach dem Wechsel auf eine andere Seite wieder der eigene Verein', async () => {
+      TestBed.configureTestingModule({
+        providers: [
+          provideHttpClient(), provideHttpClientTesting(),
+          provideRouter([{ path: 's/:token', component: Blank }, { path: 'verein/neu', component: Blank }]),
+          { provide: AuthService, useValue: { currentUser: null } },
+        ],
+      });
+      const ctx = TestBed.inject(ClubContextService);
+      const router = TestBed.inject(Router);
+      ctx.current.set(SCHWAZ);
+      await router.navigateByUrl('/s/tok');
+      ctx.useShareClub(WEILER);
+      expect(ctx.club()).toEqual(WEILER);
+      await router.navigateByUrl('/s/tok?runde=3');
+      expect(ctx.club()).toEqual(WEILER);
+      await router.navigateByUrl('/verein/neu');
+      expect(ctx.shareClub()).toBeNull();
+      expect(ctx.club()).toEqual(SCHWAZ);
     });
   });
 });

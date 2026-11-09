@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpInterceptorFn } from '@angular/common/http';
+import { NavigationEnd, Router } from '@angular/router';
 import { Observable, catchError, map, of, shareReplay, switchMap } from 'rxjs';
 import { AuthService } from '@rh/core/auth.service';
 
@@ -81,6 +82,14 @@ export class ClubContextService {
   private pending: Observable<number | null> | null = null;
   private pendingFor: number | null = null;
 
+  constructor() {
+    // Codereview F4-005: der Verein eines Teilen-Links blieb nach dem Verlassen der /s/-Seiten für alle Seiten stehen —
+    // Texte wie „Spieler von X werden durch „Y“ ersetzt“ nannten den fremden Verein, der Server ersetzte die des eigenen.
+    inject(Router, { optional: true })?.events.subscribe(e => {
+      if (e instanceof NavigationEnd && !/^\/s\//.test(e.urlAfterRedirects)) this.leaveShare();
+    });
+  }
+
   /** Die Vereine des Kontos laden (einmal je Konto) → die Id des gewählten Vereins, ohne Anmeldung/Verein `null`. */
   ensure(): Observable<number | null> {
     const uid = this.auth.currentUser?.userId ?? null;
@@ -129,6 +138,12 @@ export class ClubContextService {
   }
 
   private shareFor: string | null = null;
+
+  /** Teilen-Seiten verlassen: wieder der Verein des Kontos. */
+  leaveShare(): void {
+    this.shareClub.set(null);
+    this.shareFor = null;
+  }
 
   /** Teilen-Seiten ohne eigene Begegnungs-Abfrage (Hochladen, Formular): den Verein des Links einmal holen. */
   useShare(token: string): void {
