@@ -192,8 +192,8 @@ public class AdminController : BaseApiController
             return BadRequest(new { message = "File exceeds 500 MB limit." });
 
         using var stream = file.OpenReadStream();
-        var imported = await _puzzleService.ImportFromCsvAsync(stream, minRating, maxRating, maxCount, ct);
-        return Ok(new { imported });
+        // { imported, rejectedInvalidMoves, rejectedLineNumbers } — `imported` wie bisher (E2E-Setup liest es).
+        return Ok(await _puzzleService.ImportFromCsvAsync(stream, minRating, maxRating, maxCount, ct));
     }
 
     [HttpGet("puzzles/count")]

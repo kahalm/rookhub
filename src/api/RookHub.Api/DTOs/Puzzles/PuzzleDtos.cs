@@ -15,6 +15,20 @@ public class PuzzleDto
     public bool HintsFlagged { get; set; }
 }
 
+/// <summary>Antwort von <c>POST /api/admin/puzzles/import</c> (CSV im Lichess-Format).</summary>
+public class PuzzleCsvImportResultDto
+{
+    /// <summary>Neu angelegte Puzzles.</summary>
+    public int Imported { get; set; }
+    /// <summary>Verworfene Zeilen, deren Zugfolge sich auf der FEN nicht nachspielen lässt (oder deren Stellung
+    /// ungültig ist) — der Solver bliebe an so einem Puzzle still hängen.</summary>
+    public int RejectedInvalidMoves { get; set; }
+    /// <summary>Die ersten <see cref="MaxRejectedLineNumbers"/> verworfenen Zeilen (1-basiert, Kopfzeile mitgezählt).</summary>
+    public List<int> RejectedLineNumbers { get; set; } = new();
+
+    public const int MaxRejectedLineNumbers = 10;
+}
+
 public class RandomBatchRequestDto
 {
     public List<RatingWindowDto> Windows { get; set; } = new();

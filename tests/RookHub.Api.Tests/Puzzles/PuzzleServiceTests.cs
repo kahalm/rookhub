@@ -516,7 +516,7 @@ public class PuzzleServiceTests : IDisposable
         var csv = "abc123,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,e2e4 d7d5,1500,75,90,1000,middlegame fork,https://lichess.org/abc,Italian_Game\n";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
-        var count = await _service.ImportFromCsvAsync(stream, null, null, null);
+        var count = (await _service.ImportFromCsvAsync(stream, null, null, null)).Imported;
 
         Assert.Equal(1, count);
         var puzzle = await _db.Puzzles.FirstAsync();
@@ -533,10 +533,10 @@ public class PuzzleServiceTests : IDisposable
     {
         await CreatePuzzleAsync(lichessId: "dup1");
 
-        var csv = "dup1,fen,moves,1500,75,90,1000,themes,,\nnew1,fen2,moves2,1600,80,85,500,endgame,,\n";
+        var csv = "dup1,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,e2e4 e7e5,1500,75,90,1000,themes,,\nnew1,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,d2d4 d7d5,1600,80,85,500,endgame,,\n";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
-        var count = await _service.ImportFromCsvAsync(stream, null, null, null);
+        var count = (await _service.ImportFromCsvAsync(stream, null, null, null)).Imported;
 
         Assert.Equal(1, count);
         Assert.Equal(2, await _db.Puzzles.CountAsync());
@@ -545,14 +545,66 @@ public class PuzzleServiceTests : IDisposable
     [Fact]
     public async Task Import_RespectsRatingFilter()
     {
-        var csv = "a,fen,moves,800,75,90,1000,,,\nb,fen,moves,1500,75,90,1000,,,\nc,fen,moves,2500,75,90,1000,,,\n";
+        var csv = "a,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,e2e4,800,75,90,1000,,,\nb,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,e2e4,1500,75,90,1000,,,\nc,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,e2e4,2500,75,90,1000,,,\n";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
 
-        var count = await _service.ImportFromCsvAsync(stream, minRating: 1000, maxRating: 2000, null);
+        var count = (await _service.ImportFromCsvAsync(stream, minRating: 1000, maxRating: 2000, null)).Imported;
 
         Assert.Equal(1, count);
         var puzzle = await _db.Puzzles.FirstAsync();
         Assert.Equal(1500, puzzle.Rating);
+    }
+
+    [Fact]
+    public async Task Import_UngueltigeZugfolge_WirdVerworfenUndGezaehlt()
+    {
+        // Zeile 1 Kopfzeile, 2 gültig, 3 Zug passt nicht zur FEN (wie die alten E2E-Seeds), 4 Stellung ohne König,
+        // 5 gültig, 6 zweiter Zug illegal, 7 ohne Züge.
+        var csv = "PuzzleId,FEN,Moves,Rating,RatingDeviation,Popularity,NbPlays,Themes,GameUrl,OpeningTags\n"
+            + "ok1,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,e2e4 e7e5,1500,75,90,1000,,,\n"
+            + "bad1,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,e2e5 e7e5,1500,75,90,1000,,,\n"
+            + "bad2,8/8/8/4p3/8/8/8/8 w - - 0 1,e4e5,1500,75,90,1000,,,\n"
+            + "ok2,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,g1f3,1500,75,90,1000,,,\n"
+            + "bad3,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,e2e4 e2e4,1500,75,90,1000,,,\n"
+            + "bad4,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,,1500,75,90,1000,,,\n";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(csv));
+
+        var res = await _service.ImportFromCsvAsync(stream, null, null, null);
+
+        Assert.Equal(2, res.Imported);
+        Assert.Equal(4, res.RejectedInvalidMoves);
+        Assert.Equal([3, 4, 6, 7], res.RejectedLineNumbers);
+        Assert.Equal(["ok1", "ok2"], await _db.Puzzles.OrderBy(p => p.LichessId).Select(p => p.LichessId).ToListAsync());
+    }
+
+    [Fact]
+    public async Task Import_VerworfeneZeilen_ZaehlenNichtGegenMaxCount_UndNurDieErstenZehnNummern()
+    {
+        var lines = Enumerable.Range(0, 12).Select(i => $"bad{i},rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,e2e5,1500,75,90,1000,,,")
+            .Append($"ok,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1,e2e4,1500,75,90,1000,,,");
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(string.Join('\n', lines)));
+
+        var res = await _service.ImportFromCsvAsync(stream, null, null, maxCount: 1);
+
+        Assert.Equal(1, res.Imported);
+        Assert.Equal(12, res.RejectedInvalidMoves);
+        Assert.Equal(Enumerable.Range(1, 10), res.RejectedLineNumbers);
+    }
+
+    [Fact]
+    public async Task Import_E2eSeedPuzzles_SindAlleGueltig()
+    {
+        // Die Seeds des E2E-Laufs (e2e/fixtures/test-puzzles.csv) trugen bis 0.475.13 Züge, die zur FEN nicht passten.
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "compose.dev.yml"))) dir = dir.Parent;
+        Assert.NotNull(dir);
+        var path = Path.Combine(dir!.FullName, "src", "frontend", "app", "e2e", "fixtures", "test-puzzles.csv");
+        await using var stream = File.OpenRead(path);
+
+        var res = await _service.ImportFromCsvAsync(stream, null, null, null);
+
+        Assert.Equal(0, res.RejectedInvalidMoves);
+        Assert.Equal(10, res.Imported);
     }
 
     // `GetRandom_ThemeWithSqlWildcard_DoesNotMatch` stand hier mit `Assert.True(true)` und dem

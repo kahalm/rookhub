@@ -579,17 +579,26 @@ public class PuzzleService
     }
 
 
-    public async Task<int> ImportFromCsvAsync(Stream csvStream, int? minRating, int? maxRating, int? maxCount, CancellationToken ct = default)
+    /// <summary>
+    /// CSV-Import im Lichess-Format (<c>PuzzleId,FEN,Moves,Rating,…</c>). Die Zugfolge jeder Zeile wird auf der FEN
+    /// nachgespielt (<see cref="EngineBroker.WorkSanitizer.PositionError"/> — dieselbe strenge Prüfung wie vor der
+    /// Engine); passt sie nicht, wird die Zeile verworfen und gezählt. Vorher kamen solche Puzzles still durch, und
+    /// der Solver blieb beim Setup-Zug für immer auf „Watch the opponent's move…" stehen (TODO 2026-09-13).
+    /// </summary>
+    public async Task<PuzzleCsvImportResultDto> ImportFromCsvAsync(Stream csvStream, int? minRating, int? maxRating, int? maxCount, CancellationToken ct = default)
     {
         var existingIds = await _db.Puzzles.Select(p => p.LichessId).ToHashSetAsync(ct);
         var tagCache = await _db.Tags.ToDictionaryAsync(t => t.Name, t => t.Id, ct);
         var imported = 0;
+        var result = new PuzzleCsvImportResultDto();
+        var lineNumber = 0;
         var batch = new List<Puzzle>();
 
         using var reader = new StreamReader(csvStream);
         while (await reader.ReadLineAsync(ct) is { } line)
         {
             ct.ThrowIfCancellationRequested();
+            lineNumber++;
 
             if (string.IsNullOrWhiteSpace(line)) continue;
 
@@ -604,11 +613,24 @@ public class PuzzleService
             if (minRating.HasValue && rating < minRating.Value) continue;
             if (maxRating.HasValue && rating > maxRating.Value) continue;
 
+            var fen = parts[1].Trim();
+            var moves = parts[2].Trim();
+            var moveList = moves.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (moveList.Length == 0 || EngineBroker.WorkSanitizer.PositionError(fen, moveList) is { } reason)
+            {
+                result.RejectedInvalidMoves++;
+                if (result.RejectedLineNumbers.Count < PuzzleCsvImportResultDto.MaxRejectedLineNumbers)
+                    result.RejectedLineNumbers.Add(lineNumber);
+                _logger.LogDebug("Puzzle-Import: Zeile {Line} ({LichessId}) verworfen: {Reason}",
+                    lineNumber, lichessId, reason ?? "no moves");
+                continue;
+            }
+
             var puzzle = new Puzzle
             {
                 LichessId = lichessId,
-                Fen = parts[1].Trim(),
-                Moves = parts[2].Trim(),
+                Fen = fen,
+                Moves = moves,
                 Rating = rating,
                 RatingDeviation = int.TryParse(parts[4].Trim(), out var rd) ? rd : 0,
                 Popularity = int.TryParse(parts[5].Trim(), out var pop) ? pop : 0,
@@ -641,7 +663,11 @@ public class PuzzleService
             await _tagging.SyncPuzzleTagsAsync(batch, tagCache, ct);
         }
 
-        return imported;
+        if (result.RejectedInvalidMoves > 0)
+            _logger.LogWarning("Puzzle-Import: {Rejected} Zeilen mit ungueltiger Zugfolge verworfen (erste: {Lines})",
+                result.RejectedInvalidMoves, string.Join(", ", result.RejectedLineNumbers));
+        result.Imported = imported;
+        return result;
     }
 
     private async Task<(int? Min, int? Max)> GetCachedIdRangeAsync()
