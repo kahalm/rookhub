@@ -85,3 +85,5 @@ Watcher: `GET /api/admin/own-game-summaries` → `[{ savedGameId, userId, reques
 `PUT …/{id}`, `PUT …/{id}/fail`, `GET …/{id}/game|evals|comparisons` (Form wie bei Vereinspartien). In `watch.sh` und `bin/*` trägt
 eine eigene Partie die Kennung `o<id>`; gegen eine ältere API (404, fehlende Tabelle) bleibt die Schiene bei den Vereinspartien.
 
+
+**Zähler (0.926.1)**: Die Stand-Antwort trägt `runningSeconds` (nur Status `running`, vom Server gerechnet). Die Kopfzeile zählt daraus je Sekunde hoch und fragt beim Schreiben alle 10 s nach dem Stand.

@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth.service';
-import { ClubSummaryLinkComponent } from './club-summary-link.component';
+import { ClubSummaryLinkComponent, formatElapsed } from './club-summary-link.component';
 
 describe('ClubSummaryLinkComponent (0.913.0)', () => {
   function setup(isAdmin: boolean, allowAgain = false) {
@@ -134,6 +134,26 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
     done.http.expectOne('/api/games/142/summary').flush({ ...none, status: 'done', markdown: '# x', quotaLeft: 0, quotaLimit: 2 });
     done.f.detectChanges();
     expect(done.el.querySelector('a.summary-link')?.getAttribute('href')).toBe('/games/142/summary');
+  });
+
+  it('zeigt beim Schreiben, wie lange es schon läuft', () => {
+    const { f, http, el } = setup(true);
+    http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'running', runningSeconds: 125 });
+    f.detectChanges();
+    expect(el.querySelector('.summary-timer')?.textContent).toBe('2:05');
+  });
+
+  it('ohne Schreiben kein Zähler', () => {
+    const { f, http, el } = setup(true);
+    http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'requested' });
+    f.detectChanges();
+    expect(el.querySelector('.summary-timer')).toBeNull();
+  });
+
+  it('formatElapsed: Minuten:Sekunden, ab einer Stunde mit Stunden', () => {
+    expect(formatElapsed(0)).toBe('0:00');
+    expect(formatElapsed(59)).toBe('0:59');
+    expect(formatElapsed(3725)).toBe('1:02:05');
   });
 
   it('0.914.0: bereit — wieder der normale Wartevermerk', () => {

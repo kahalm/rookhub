@@ -8,7 +8,7 @@ namespace RookHub.Api.Services.League;
 /// <c>running</c> | <c>done</c> | <c>failed</c>; <c>Markdown</c> ist auch während einer neuen Anforderung die letzte fertige
 /// Fassung. <c>Stale</c> = die Partie wurde nach dem Schreiben korrigiert.</summary>
 public sealed record ClubGameSummaryDto(string Status, string? Markdown, DateTime? DoneAt, DateTime? RequestedAt, bool Stale,
-    string? Model, string? Error, ClubGameSummaryReadiness? Readiness = null);
+    string? Model, string? Error, ClubGameSummaryReadiness? Readiness = null, int? RunningSeconds = null);
 
 /// <summary>Was die Hintergrund-Rechnung schon hat (0.914.0, Wunsch 2026-11-08: „wenn die Backgrounddinger noch nicht fertig
 /// sind, darauf hinweisen — die Summary kommt erst, wenn die durch sind"). <c>Ready</c> = Claude darf schreiben: Analyse fertig,
@@ -108,8 +108,14 @@ public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = nul
         return new ClubGameSummaryDto(StatusOf(s.Status), s.Markdown, s.DoneAt, s.RequestedAt,
             s.Markdown != null && s.MovesHash != null && s.MovesHash != hash.MovesHash, s.Model,
             s.Status == ClubGameSummaryStatus.Failed ? s.Error : null,
-            open ? await ReadinessAsync(clubGameId, ct) : null);
+            open ? await ReadinessAsync(clubGameId, ct) : null,
+            RunningSecondsOf(s.Status, s.StartedAt, Now));
     }
+
+    /// <summary>So lange schreibt Claude schon (Zähler auf der Seite, 0.926.1); vom Server gerechnet, damit Zeitzone und Uhr des
+    /// Browsers keine Rolle spielen. <c>null</c>, solange nicht geschrieben wird.</summary>
+    internal static int? RunningSecondsOf(ClubGameSummaryStatus status, DateTime? startedAt, DateTime now) =>
+        status == ClubGameSummaryStatus.Running && startedAt is { } t ? Math.Max(0, (int)(now - t).TotalSeconds) : null;
 
     /// <summary>Anfordern bzw. neu anfordern (auch nach Fehler oder wenn schon fertig). Läuft gerade einer, bleibt es dabei.
     /// <c>null</c> = Partie unbekannt oder fremd.</summary>

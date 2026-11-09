@@ -34,6 +34,7 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
                 <span class="wait-progress">{{ progressText(w) }}</span></span>
             } @else {
               {{ (s.status === 'running' ? 'games.summary.running' : 'games.summary.requested') | translate }}
+              @if (elapsed(); as e) { <span class="summary-timer">{{ e }}</span> }
             }
           </span>
         } @else if (kind() === 'own' && s.quotaLeft === 0 && (!s.markdown || allowAgain())) {
@@ -57,6 +58,7 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
     .summary-wait mat-icon { font-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; }
     .wait-text { display: inline-flex; flex-wrap: wrap; gap: 0 6px; }
     .wait-progress { white-space: nowrap; }
+    .summary-timer { font-variant-numeric: tabular-nums; }
   `],
 })
 export class ClubSummaryLinkComponent implements OnInit {
@@ -89,12 +91,24 @@ export class ClubSummaryLinkComponent implements OnInit {
     return s && (s.status === 'requested' || s.status === 'running') && r && !r.ready ? r : null;
   });
 
+  /** Sekunden, die seit der letzten Antwort des Servers vergangen sind (nur während Claude schreibt). */
+  private readonly sinceLoad = signal(0);
+  /** Zähler neben „wird geschrieben“: Minuten:Sekunden, `null`, solange nicht geschrieben wird. */
+  readonly elapsed = computed(() => {
+    const base = this.state()?.runningSeconds;
+    return this.state()?.status === 'running' && base != null ? formatElapsed(base + this.sinceLoad()) : null;
+  });
+
   constructor() {
-    // Solange eine Anforderung offen ist, jede Minute nachsehen (Fortschritt, fertig) — still bei Fehlern.
+    // Solange eine Anforderung offen ist, nachsehen (Fortschritt, fertig) — still bei Fehlern. Beim Schreiben läuft der
+    // Zähler je Sekunde und das Nachsehen alle 10 s: es dauert nur wenige Minuten, er soll nicht über das Ende hinauslaufen.
+    let seconds = 0;
     const timer = setInterval(() => {
       const st = this.state()?.status;
-      if (st === 'requested' || st === 'running') this.load();
-    }, 60_000);
+      if (st === 'running') this.sinceLoad.update(v => v + 1);
+      seconds++;
+      if ((st === 'running' && seconds % 10 === 0) || (st === 'requested' && seconds % 60 === 0)) this.load();
+    }, 1000);
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
 
@@ -102,9 +116,13 @@ export class ClubSummaryLinkComponent implements OnInit {
 
   private load(): void {
     // still bei Fehlern: ohne Stand gibt es einfach keinen Knopf
+<<<<<<< Updated upstream
     const token = this.shareToken();
     (token !== null ? this.service.getShared(token, this.gameId())
       : this.kind() === 'own' ? this.service.getOwn(this.gameId()) : this.service.get(this.gameId())).subscribe({ next: s => this.state.set(s), error: () => this.state.set(null) });
+=======
+    (this.kind() === 'own' ? this.service.getOwn(this.gameId()) : this.service.get(this.gameId())).subscribe({ next: s => { this.sinceLoad.set(0); this.state.set(s); }, error: () => this.state.set(null) });
+>>>>>>> Stashed changes
   }
 
   /** „Vertiefung 56/62 · Fehler-Vergleiche 0/11" — was noch fehlt, knapp. */
@@ -131,6 +149,7 @@ export class ClubSummaryLinkComponent implements OnInit {
       ? this.service.requestOwn(this.gameId(), this.translate.getCurrentLang() || 'de')
       : this.service.request(this.gameId())).subscribe({
       next: s => {
+        this.sinceLoad.set(0);
         this.state.set(s);
         this.busy.set(false);
         const waits = !!s.readiness && !s.readiness.ready;
@@ -142,4 +161,12 @@ export class ClubSummaryLinkComponent implements OnInit {
       },
     });
   }
+}
+
+/** „2:05“, ab einer Stunde „1:02:05“. */
+export function formatElapsed(totalSeconds: number): string {
+  const t = Math.max(0, Math.floor(totalSeconds));
+  const s = String(t % 60).padStart(2, '0');
+  if (t < 3600) return `${Math.floor(t / 60)}:${s}`;
+  return `${Math.floor(t / 3600)}:${String(Math.floor(t / 60) % 60).padStart(2, '0')}:${s}`;
 }

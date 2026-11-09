@@ -195,4 +195,14 @@ public class ClubGameSummariesTests : IDisposable
         Assert.IsType<Microsoft.AspNetCore.Mvc.ForbidResult>(await c.RequestSummary(id, Svc, default));
         Assert.Equal("none", (await Svc.GetAsync(TestClubs.Home, id))!.Status);
     }
+
+    [Fact]
+    public void RunningSecondsOf_NurBeimSchreiben_NieNegativ()
+    {
+        var now = new DateTime(2026, 11, 9, 10, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(125, ClubGameSummaries.RunningSecondsOf(ClubGameSummaryStatus.Running, now.AddSeconds(-125), now));
+        Assert.Equal(0, ClubGameSummaries.RunningSecondsOf(ClubGameSummaryStatus.Running, now.AddSeconds(5), now));
+        Assert.Null(ClubGameSummaries.RunningSecondsOf(ClubGameSummaryStatus.Requested, now, now));
+        Assert.Null(ClubGameSummaries.RunningSecondsOf(ClubGameSummaryStatus.Running, null, now));
+    }
 }

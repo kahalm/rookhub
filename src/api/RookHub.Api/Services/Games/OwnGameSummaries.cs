@@ -11,7 +11,7 @@ namespace RookHub.Api.Services.Games;
 /// <summary>Stand der Zusammenfassung einer eigenen Partie. <c>Source</c> = <c>own</c> oder <c>club</c> (die Partie ist mit einer
 /// Vereinspartie verbunden und nur dort gibt es einen Text). <c>QuotaLeft</c> = <c>null</c> für Admins.</summary>
 public sealed record OwnGameSummaryDto(string Status, string? Markdown, DateTime? DoneAt, DateTime? RequestedAt, bool Stale,
-    string? Model, string? Error, ClubGameSummaryReadiness? Readiness, string Source, int? QuotaLeft, int QuotaLimit);
+    string? Model, string? Error, ClubGameSummaryReadiness? Readiness, string Source, int? QuotaLeft, int QuotaLimit, int? RunningSeconds = null);
 
 /// <summary>Offener Auftrag für den Watcher.</summary>
 public sealed record OwnGameSummaryJob(int SavedGameId, int UserId, DateTime RequestedAt);
@@ -78,7 +78,8 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
             : null;
         return new OwnGameSummaryDto(StatusOf(s.Status), s.Markdown, s.DoneAt, s.RequestedAt,
             s.Markdown != null && s.MovesHash != null && s.MovesHash != MovesHashOf(g.Pgn), s.Model,
-            s.Status == ClubGameSummaryStatus.Failed ? s.Error : null, readiness, "own", left, DailyPerUser);
+            s.Status == ClubGameSummaryStatus.Failed ? s.Error : null, readiness, "own", left, DailyPerUser,
+            ClubGameSummaries.RunningSecondsOf(s.Status, s.StartedAt, DateTime.UtcNow));
     }
 
     /// <summary>Anfordern. Eine noch offene Anforderung kostet nichts; das Kontingent wird erst nach erfolgreichem Analyse-Start belastet.</summary>

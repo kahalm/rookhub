@@ -9,6 +9,8 @@ export interface ClubGameSummary {
   markdown: string | null;
   doneAt: string | null;
   requestedAt: string | null;
+  /** Solange Claude schreibt: seit wie vielen Sekunden (vom Server gerechnet). */
+  runningSeconds?: number | null;
   /** Die Partie wurde nach dem Schreiben korrigiert. */
   stale: boolean;
   model: string | null;

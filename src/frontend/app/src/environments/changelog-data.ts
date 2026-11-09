@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.926.1", date: "2026-11-09", changes: [
+    { en: "Game summary: while it is being written, a timer shows how long it has been running.",
+      de: "Partie-Zusammenfassung: Während sie geschrieben wird, zeigt ein Zähler, wie lange das schon läuft." },
+  ] },
   { version: "0.926.0", date: "2026-11-09", changes: [
     { en: "LeagueHub club games: when signed in, clicking the result, move sequence, move count or analysis opens the game page in RookHub.",
       de: "LeagueHub-Vereinspartien: Angemeldet öffnet ein Klick auf Ergebnis, Zugfolge, Züge oder Analyse die Partieseite in RookHub." },
