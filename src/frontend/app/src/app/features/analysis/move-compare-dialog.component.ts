@@ -86,9 +86,11 @@ const KNOWN_REASONS = new Set(['too-many-open', 'no-engine', 'too-many-jobs', 'i
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       @if (noEngine()) {
+        <!-- UI-Sweep 2026-11-10 (d10-rk-vergleichen-grund-doppelt, Nachbesserung): „·“ und „Zum Profil“ stehen gemeinsam in
+             einem nowrap-Span — am Handy brach sonst nur der Link um und der Punkt hing allein am Zeilenende (DESIGN 5.13). -->
         <span class="why">{{ 'moveCompare.dialog.noEngineWhy' | translate }}<span class="rh-nowrap">&nbsp;<app-help-hint
-          [text]="'moveCompare.dialog.noEngine' | translate" /></span> · <a routerLink="/profile" (click)="ref.close()">{{
-          'moveCompare.dialog.toProfile' | translate }}</a></span>
+          [text]="'moveCompare.dialog.noEngine' | translate" /></span> <span class="rh-nowrap to-profile">·&nbsp;<a routerLink="/profile"
+          (click)="ref.close()">{{ 'moveCompare.dialog.toProfile' | translate }}</a></span></span>
       }
       <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
       <button mat-flat-button color="primary" [disabled]="!canSubmit()" (click)="submit()">

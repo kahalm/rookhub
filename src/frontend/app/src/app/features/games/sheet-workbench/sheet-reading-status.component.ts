@@ -60,7 +60,10 @@ export const LONG_WAIT_SECONDS = 15 * 60;
   styles: [`
     :host { display: block; }
     .rs { display: grid; gap: 2px; }
-    .rs-line { margin: 0; }
+    /* UI-Sweep 2026-11-10 (d10-l-wartezeile-nachsatz-kontrast, Nachbesserung): LeagueHub setzt global
+       \`.club-intro p { max-width: 70ch }\` — die Wartezeile brach dadurch bei ~610 px um („Formularen“ allein), obwohl rechts
+       Platz war. Die Zeile nutzt die volle Breite des Behälters und bricht nur bei echtem Platzmangel um. */
+    .rs-line { margin: 0; max-width: none; }
     .rs-label { font-weight: 600; }
     .rs-line.done .rs-label { font-weight: 400; opacity: .75; }
     .rs-check { color: var(--ok, var(--rh-success)); font-weight: 700; }

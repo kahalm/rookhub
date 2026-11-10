@@ -129,4 +129,35 @@ describe('SheetReadingStatusComponent', () => {
       el.remove();
     }
   });
+  // UI-Sweep 2026-11-10 (d10-l-wartezeile-nachsatz-kontrast, Nachbesserung): LeagueHub setzt `.club-intro p { max-width: 70ch }`
+  // — die Wartezeile brach bei ~610 px um („Formularen“ allein), obwohl rechts Platz war.
+  it('Wartezeile nutzt die volle Breite: bei 900 px Behälter einzeilig, keine max-width darunter', () => {
+    TestBed.configureTestingModule({ imports: [SheetReadingStatusComponent], providers: [provideTranslateService({ fallbackLang: 'en' })] });
+    TestBed.inject(TranslateService).setTranslation('de', DE);
+    TestBed.inject(TranslateService).use('de');
+    const style = document.createElement('style');
+    style.textContent = '.club-intro p { margin: 0 0 14px; max-width: 70ch; } .club-intro { font: 16px/1.5 sans-serif; }';
+    document.head.appendChild(style);
+    const host = document.createElement('section');
+    host.className = 'club-intro';
+    host.style.width = '900px';
+    document.body.appendChild(host);
+    const f = TestBed.createComponent(SheetReadingStatusComponent);
+    host.appendChild(f.nativeElement);
+    f.componentRef.setInput('status', 'pending');
+    f.componentRef.setInput('createdAt', new Date(Date.now() - (29 * 86400 + 20 * 3600) * 1000).toISOString());
+    f.detectChanges();
+    try {
+      const line = (f.nativeElement as HTMLElement).querySelector('.rs-line') as HTMLElement;
+      expect(line.textContent).toContain('der Leser schaut jede Minute nach neuen Formularen');
+      expect(getComputedStyle(line).maxWidth).toBe('none');
+      expect(line.getBoundingClientRect().width).toBe(900);
+      const lh = parseFloat(getComputedStyle(line).lineHeight);
+      expect(line.getBoundingClientRect().height).toBeLessThan(lh * 1.5);
+    } finally {
+      f.destroy();
+      host.remove();
+      style.remove();
+    }
+  });
 });

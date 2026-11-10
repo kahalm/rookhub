@@ -98,6 +98,22 @@ describe('MoveCompareDialogComponent', () => {
     expect(el.querySelector('.foot')).toBeNull();
   });
 
+  // UI-Sweep 2026-11-10 (d10-rk-vergleichen-grund-doppelt, Nachbesserung): am Handy brach „Zum Profil“ um und der Trenner
+  // „·“ hing allein am Zeilenende — Punkt und Link stehen gemeinsam in EINEM nowrap-Element (DESIGN 5.13).
+  it('keeps the separator dot and the profile link together in one nowrap element', () => {
+    const { fixture } = make(undefined, false);
+    const el: HTMLElement = fixture.nativeElement;
+    const link = el.querySelector('mat-dialog-actions .why a[href="/profile"]') as HTMLAnchorElement;
+    const box = link.parentElement!;
+    expect(box.classList).toContain('rh-nowrap');
+    expect(getComputedStyle(box).whiteSpace).toBe('nowrap');
+    expect(box.textContent!.trim().startsWith('·')).toBeTrue();
+    expect(box.textContent).toContain('moveCompare.dialog.toProfile');
+    // Der Punkt steht nirgends außerhalb dieses Elements in der Grundzeile.
+    const why = el.querySelector('mat-dialog-actions .why')!;
+    expect(why.textContent!.split('·').length - 1).toBe(1);
+  });
+
   // UI-Sweep 2026-11-10 (d10-rk-sanpipe-dialoge-ebook-zugliste): die Zug-Chips laufen durch die SanPipe.
   it('shows the move chips in the piece letters of the UI language (de: Sf3)', () => {
     const { fixture } = make();

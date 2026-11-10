@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.951.1", date: "2026-11-10", changes: [
+    { en: "Design round d10, follow-up: in the “Compare moves” dialog the dot and “To profile” stay together on one line; the waiting line of the form reader uses the full width in LeagueHub instead of wrapping at 70 characters.",
+      de: "Design-Runde d10, Nachbesserung: Im Dialog „Züge vergleichen“ bleiben Punkt und „Zum Profil“ gemeinsam in einer Zeile; die Wartezeile des Formular-Lesers nutzt in LeagueHub die volle Breite statt bei 70 Zeichen umzubrechen." },
+  ] },
   { version: "0.951.0", date: "2026-11-10", changes: [
     { en: "Admin → Engines: on every engine card you can now maintain the background assignment — add the engine to its owner’s background list or remove it from any list it is in (each account separately, including foreign ones). The button says whose list changes; no confirmation, the page shows the new state right away. Same rules as in the profile (limit of 32, order kept, new engine at the end); jobs already waiting stay on the engine. New endpoint `PUT /api/admin/engines/{engineId}/background`.",
       de: "Admin → Engines: Auf jeder Engine-Karte pflegst du jetzt die Hintergrund-Zuordnung — Engine in die Hintergrund-Liste ihres Besitzers aufnehmen oder aus jeder Liste nehmen, in der sie steht (je Konto einzeln, auch fremde). Der Knopf sagt, wessen Liste sich ändert; ohne Rückfrage, die Seite zeigt sofort den neuen Stand. Gleiche Regeln wie im Profil (höchstens 32, Reihenfolge bleibt, neue Engine hinten); schon wartende Aufträge bleiben auf der Engine. Neuer Endpunkt `PUT /api/admin/engines/{engineId}/background`." },
