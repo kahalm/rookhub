@@ -191,7 +191,7 @@
     "error": "Algo ha salido mal.",
     "send": "Enviar",
     "undo": "Deshacer",
-    "previous": "Previous",
+    "previous": "Anterior",
     "next": "Siguiente",
     "day": "día",
     "days": "días"
@@ -4014,13 +4014,13 @@
         "t": "Woodpecker",
         "p": [
           "El método Woodpecker (Smith y Tikkanen) entrena el reconocimiento de patrones tácticos resolviendo los mismos ejercicios una y otra vez, cada vez más rápido. Elige uno o varios cursos e inicia un entrenamiento: las reglas son fijas, como en el libro.",
-          "Ciclo 1: tienes cuatro semanas para resolver tantos ejercicios como puedas, en el orden del curso; esos forman tu conjunto. Puedes retrasar la fecha de inicio: cuenta lo que hayas resuelto en estos cursos desde entonces. Tras al menos un día de descanso, cada ciclo siguiente trae el mismo conjunto en orden aleatorio y tiene la mitad de tiempo (14, 7, 4, 2, 1 días). En un ciclo solo cuenta tu primer intento por ejercicio. Terminas cuando resuelves el conjunto en un solo día, o tras el 7.º ciclo."
+          "Ciclo 1: tienes cuatro semanas para resolver tantos ejercicios como puedas, en el orden del curso; esos forman tu conjunto. Puedes retrasar la fecha de inicio: cuenta lo que hayas resuelto en estos cursos desde entonces. Tras al menos un día de descanso, cada ciclo siguiente trae el mismo conjunto en orden aleatorio y tiene la mitad de tiempo (14, 7, 4, 2, 1, 1 días). En un ciclo solo cuenta tu primer intento por ejercicio. Terminas cuando resuelves el conjunto en un solo día, o tras el 7.º ciclo."
         ]
       },
       "maxims": {
         "t": "Reglas prácticas",
         "p": [
-          "Una lista breve y seleccionada de máximas clásicas del ajedrez: “Caballo en el borde, caballo que se pierde”, “Las piezas sueltas se caen”, etc. Cada regla está respaldada por pasajes de libros de ajedrez de la biblioteca; la redacción es la misma en todas partes.",
+          "Una lista breve y seleccionada de máximas clásicas del ajedrez: “A knight on the rim is dim”, “Loose pieces drop off”, etc. Cada regla está respaldada por pasajes de libros de ajedrez de la biblioteca; la redacción es la misma en todas partes.",
           "Abre una regla para ver cuándo se aplica y qué libros la explican, con una cita breve. Si tienes acceso a un libro, el enlace lo abre directamente en la página (PDF) o en el libro (EPUB).",
           "Las explicaciones de tus errores terminan como máximo con una de estas reglas; la (i) junto a ella muestra los pasajes de los libros."
         ]
@@ -5875,7 +5875,7 @@
       "needPick": "Primero elige una colección.",
       "assigned": "Añadido a “{{name}}”.",
       "remove": "Quitar de la colección",
-      "removed": "{{n}} quitados de la colección.",
+      "removed": "Libros quitados de la colección: {{n}}.",
       "rename": "Renombrar colección",
       "dissolve": "Disolver colección",
       "dissolveConfirm": "¿Disolver “{{name}}”? Los libros permanecen en la biblioteca.",

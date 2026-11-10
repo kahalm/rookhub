@@ -191,7 +191,7 @@
     "error": "Något gick fel.",
     "send": "Skicka",
     "undo": "Ångra",
-    "previous": "Previous",
+    "previous": "Föregående",
     "next": "Nästa",
     "day": "dag",
     "days": "dagar"
@@ -4014,13 +4014,13 @@
         "t": "Woodpecker",
         "p": [
           "Woodpecker-metoden (Smith & Tikkanen) tränar igenkänning av taktiska mönster genom att lösa samma uppgifter om och om igen, snabbare varje gång. Välj en eller flera kurser och starta en träning – reglerna är fasta som i boken.",
-          "Cykel 1: du har fyra veckor på dig att lösa så många uppgifter du kan, i kursens ordning; de blir ditt set. Du får tillbakadatera starten – det du löst i dessa kurser sedan dess räknas. Efter minst en vilodag ger varje följande cykel samma set i slumpmässig ordning med halva tiden (14, 7, 4, 2, 1 dagar). Bara ditt första försök per uppgift räknas i en cykel. Du är klar när du löser setet inom en dag, eller efter den 7:e cykeln."
+          "Cykel 1: du har fyra veckor på dig att lösa så många uppgifter du kan, i kursens ordning; de blir ditt set. Du får tillbakadatera starten – det du löst i dessa kurser sedan dess räknas. Efter minst en vilodag ger varje följande cykel samma set i slumpmässig ordning med halva tiden (14, 7, 4, 2, 1, 1 dagar). Bara ditt första försök per uppgift räknas i en cykel. Du är klar när du löser setet inom en dag, eller efter den 7:e cykeln."
         ]
       },
       "maxims": {
         "t": "Tumregler",
         "p": [
-          "En kort, kurerad lista över klassiska schackmaximer – ”En springare på kanten är en skam”, ”Lösa pjäser faller” och så vidare. Varje regel stöds av avsnitt ur schackböcker i biblioteket; formuleringen är densamma överallt.",
+          "En kort, kurerad lista över klassiska schackmaximer – ”A knight on the rim is dim”, ”Loose pieces drop off” och så vidare. Varje regel stöds av avsnitt ur schackböcker i biblioteket; formuleringen är densamma överallt.",
           "Öppna en regel för att se när den gäller och vilka böcker som förklarar den, med ett kort citat. Om du har tillgång till en bok öppnar länken den direkt på sidan (PDF) eller boken (EPUB).",
           "Förklaringarna av dina misstag slutar med högst en av dessa regler; (i) bredvid visar bokavsnitten."
         ]
@@ -4705,7 +4705,7 @@
       "title": "Redan igång",
       "hint": "Dessa tävlingar startade före den valda perioden och pågår fortfarande in i den — mest ligor och evenemang som löper hela säsongen."
     },
-    "audienceHelp": "Individuell eller lag kommer från chess-results självt — och allt som inte känns igen som lagevenemang räknas som individuellt.\n\nÅldersgrupp och könsklass kommer inte från ett fält: det finns inget, så de läses ur turneringens namn. Det fungerar där namnet anger klassen (”U12 girls”, ”UNDER 16 BOYS”) och inte alls där det inte gör det.\n\n”Bara vuxna” döljer allt med en ungdomsmarkering i namnet. Seniorer finns kvar — seniorschack är vuxenschack.\n\nEn liga är en lagtävling som pågår en hel säsong, eller en som säger det i namnet.\n\nNågot i fel låda? En turneringssida har ”rapportera fel evenemang”, och där frågas vad turneringar av det slaget heter i din region. Det är det som förbättrar det för alla.",
+    "audienceHelp": "Individuell eller lag kommer från chess-results självt — och allt som inte känns igen som lagevenemang räknas som individuellt.\n\nÅldersgrupp och könsklass kommer inte från ett fält: det finns inget, så de läses ur turneringens namn. Det fungerar där namnet anger klassen (”U12 girls”, ”UNDER 16 BOYS”) och inte alls där det inte gör det.\n\n”Bara vuxna” döljer allt med en ungdomsmarkering i namnet. Seniorer finns kvar — seniorschack är vuxenschack.\n\nEn liga är en lagtävling som pågår en hel säsong, eller en som säger det i namnet.\n\nNågot i fel låda? En turneringssida har ”Rapportera en felaktig post”, och där frågas vad turneringar av det slaget heter i din region. Det är det som förbättrar det för alla.",
     "missing": {
       "cta": "Saknas ditt evenemang? Föreslå en källa",
       "blurb": "Inte alla arrangörer utlyser där det här registret läser. En länk till en officiell sida kan läggas till.",
@@ -4777,7 +4777,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Registrering för klubbfunktionärer och tränare. Kod från din tränare? Lös in den efter inloggningen."
+      "login": "Medlemsregister för klubbfunktionärer och tränare. Kod från din tränare? Lös in den efter inloggningen."
     }
   },
   "turnier": {
@@ -5875,7 +5875,7 @@
       "needPick": "Välj en samling först.",
       "assigned": "Tillagd i ”{{name}}”.",
       "remove": "Ta bort från samlingen",
-      "removed": "{{n}} borttagna från samlingen.",
+      "removed": "Böcker borttagna från samlingen: {{n}}.",
       "rename": "Byt namn på samlingen",
       "dissolve": "Upplös samlingen",
       "dissolveConfirm": "Upplösa ”{{name}}”? Böckerna finns kvar i biblioteket.",

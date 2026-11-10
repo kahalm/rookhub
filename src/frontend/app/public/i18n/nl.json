@@ -191,7 +191,7 @@
     "error": "Er is iets misgegaan.",
     "send": "Versturen",
     "undo": "Ongedaan maken",
-    "previous": "Previous",
+    "previous": "Vorige",
     "next": "Volgende",
     "day": "dag",
     "days": "dagen"
@@ -4014,13 +4014,13 @@
         "t": "Woodpecker",
         "p": [
           "De Woodpecker-methode (Smith & Tikkanen) traint tactische patroonherkenning door steeds dezelfde puzzels op te lossen, elke keer sneller. Kies een of meer cursussen en start een training – de regels liggen vast zoals in het boek.",
-          "Cyclus 1: je hebt vier weken om zoveel mogelijk puzzels op te lossen, in cursusvolgorde; die worden je set. Je mag de start terugdateren – wat je sindsdien in deze cursussen hebt opgelost, telt mee. Na minstens één rustdag brengt elke volgende cyclus dezelfde set in willekeurige volgorde met de helft van de tijd (14, 7, 4, 2, 1 dagen). Alleen je eerste poging per puzzel telt in een cyclus. Je bent klaar zodra je de set binnen één dag oplost, of na de 7e cyclus."
+          "Cyclus 1: je hebt vier weken om zoveel mogelijk puzzels op te lossen, in cursusvolgorde; die worden je set. Je mag de start terugdateren – wat je sindsdien in deze cursussen hebt opgelost, telt mee. Na minstens één rustdag brengt elke volgende cyclus dezelfde set in willekeurige volgorde met de helft van de tijd (14, 7, 4, 2, 1, 1 dagen). Alleen je eerste poging per puzzel telt in een cyclus. Je bent klaar zodra je de set binnen één dag oplost, of na de 7e cyclus."
         ]
       },
       "maxims": {
         "t": "Vuistregels",
         "p": [
-          "Een korte, samengestelde lijst klassieke schaakmaximes – \"Een paard aan de rand is een schand\", \"Losse stukken vallen eraf\" enzovoort. Elke regel wordt onderbouwd met passages uit schaakboeken in de bibliotheek; de formulering is overal dezelfde.",
+          "Een korte, samengestelde lijst klassieke schaakmaximes – “A knight on the rim is dim”, “Loose pieces drop off” enzovoort. Elke regel wordt onderbouwd met passages uit schaakboeken in de bibliotheek; de formulering is overal dezelfde.",
           "Open een regel om te zien wanneer hij geldt en welke boeken hem uitleggen, met een kort citaat. Heb je toegang tot een boek, dan opent de link het direct op de pagina (PDF) of het boek (EPUB).",
           "De uitleg van je fouten eindigt met hooguit één van deze regels; de (i) ernaast toont de boekpassages."
         ]
@@ -4705,7 +4705,7 @@
       "title": "Al bezig",
       "hint": "Deze competities begonnen vóór de gekozen periode en lopen er nog in door — vooral competities en evenementen die een heel seizoen duren."
     },
-    "audienceHelp": "Individueel of team komt van chess-results zelf — en alles wat niet als teamevenement wordt herkend, telt als individueel.\n\nLeeftijdsgroep en geslachtsgroep komen niet uit een veld: dat is er niet, dus ze worden uit de toernooinaam gelezen. Dat werkt waar de naam de categorie vermeldt (\"U12 girls\", \"UNDER 16 BOYS\") en helemaal niet waar dat niet zo is.\n\n\"Alleen volwassenen\" verbergt alles met een jeugdaanduiding in de naam. Senioren blijven — seniorenschaak is volwassenenschaak.\n\nEen competitie is een teamwedstrijd die een heel seizoen loopt, of een die dat in de naam zegt.\n\nIets in de verkeerde la? Een toernooipagina heeft \"fout evenement melden\", en daar wordt gevraagd hoe toernooien van dat soort in jouw regio heten. Dat maakt het voor iedereen beter.",
+    "audienceHelp": "Individueel of team komt van chess-results zelf — en alles wat niet als teamevenement wordt herkend, telt als individueel.\n\nLeeftijdsgroep en geslachtsgroep komen niet uit een veld: dat is er niet, dus ze worden uit de toernooinaam gelezen. Dat werkt waar de naam de categorie vermeldt (\"U12 girls\", \"UNDER 16 BOYS\") en helemaal niet waar dat niet zo is.\n\n\"Alleen volwassenen\" verbergt alles met een jeugdaanduiding in de naam. Senioren blijven — seniorenschaak is volwassenenschaak.\n\nEen competitie is een teamwedstrijd die een heel seizoen loopt, of een die dat in de naam zegt.\n\nIets in de verkeerde la? Een toernooipagina heeft \"Een foute vermelding melden\", en daar wordt gevraagd hoe toernooien van dat soort in jouw regio heten. Dat maakt het voor iedereen beter.",
     "missing": {
       "cta": "Mis je je evenement? Stel een bron voor",
       "blurb": "Niet elke organisator kondigt aan op de plekken die dit register leest. Een link naar een officiële pagina kan worden toegevoegd.",
@@ -4777,7 +4777,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Registratie voor clubfunctionarissen en trainers. Een code van je trainer? Wissel die in na het inloggen."
+      "login": "Ledenbestand voor clubfunctionarissen en trainers. Een code van je trainer? Wissel die in na het inloggen."
     }
   },
   "turnier": {
@@ -5875,7 +5875,7 @@
       "needPick": "Kies eerst een verzameling.",
       "assigned": "Toegevoegd aan \"{{name}}\".",
       "remove": "Uit verzameling verwijderen",
-      "removed": "{{n}} uit de verzameling verwijderd.",
+      "removed": "Boeken uit de verzameling verwijderd: {{n}}.",
       "rename": "Verzameling hernoemen",
       "dissolve": "Verzameling opheffen",
       "dissolveConfirm": "\"{{name}}\" opheffen? De boeken blijven in de bibliotheek.",

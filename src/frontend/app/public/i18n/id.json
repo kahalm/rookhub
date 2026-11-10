@@ -191,7 +191,7 @@
     "error": "Terjadi kesalahan.",
     "send": "Kirim",
     "undo": "Urungkan",
-    "previous": "Previous",
+    "previous": "Sebelumnya",
     "next": "Berikutnya",
     "day": "hari",
     "days": "hari"
@@ -4014,13 +4014,13 @@
         "t": "Woodpecker",
         "p": [
           "Metode Woodpecker (Smith & Tikkanen) melatih pengenalan pola taktik dengan memecahkan puzzle yang sama berulang kali, setiap kali lebih cepat. Pilih satu atau beberapa kursus dan mulai latihan – aturannya tetap seperti di buku.",
-          "Siklus 1: Anda punya empat minggu untuk memecahkan sebanyak mungkin puzzle, sesuai urutan kursus; puzzle itu menjadi set Anda. Anda boleh memundurkan tanggal mulai – yang Anda selesaikan di kursus ini sejak saat itu ikut dihitung. Setelah setidaknya satu hari libur, setiap siklus berikutnya membawa set yang sama dalam urutan acak dengan separuh waktu (14, 7, 4, 2, 1 hari). Hanya percobaan pertama per puzzle yang dihitung dalam satu siklus. Anda selesai jika memecahkan set dalam satu hari, atau setelah siklus ke-7."
+          "Siklus 1: Anda punya empat minggu untuk memecahkan sebanyak mungkin puzzle, sesuai urutan kursus; puzzle itu menjadi set Anda. Anda boleh memundurkan tanggal mulai – yang Anda selesaikan di kursus ini sejak saat itu ikut dihitung. Setelah setidaknya satu hari libur, setiap siklus berikutnya membawa set yang sama dalam urutan acak dengan separuh waktu (14, 7, 4, 2, 1, 1 hari). Hanya percobaan pertama per puzzle yang dihitung dalam satu siklus. Anda selesai jika memecahkan set dalam satu hari, atau setelah siklus ke-7."
         ]
       },
       "maxims": {
         "t": "Kaidah praktis",
         "p": [
-          "Daftar singkat pepatah catur klasik yang dikurasi – “Kuda di tepi papan itu lemah”, “Bidak yang tak terlindungi mudah jatuh”, dan seterusnya. Setiap kaidah didukung kutipan dari buku catur di perpustakaan; susunan katanya sama di mana pun.",
+          "Daftar singkat pepatah catur klasik yang dikurasi – “A knight on the rim is dim”, “Loose pieces drop off”, dan seterusnya. Setiap kaidah didukung kutipan dari buku catur di perpustakaan; susunan katanya sama di mana pun.",
           "Buka sebuah kaidah untuk melihat kapan berlaku dan buku mana yang menjelaskannya, dengan kutipan singkat. Jika Anda punya akses ke buku tersebut, tautan membukanya langsung di halaman itu (PDF) atau bukunya (EPUB).",
           "Penjelasan kesalahan Anda diakhiri dengan paling banyak satu kaidah ini; (i) di sebelahnya menampilkan kutipan bukunya."
         ]
@@ -4705,7 +4705,7 @@
       "title": "Sudah berlangsung",
       "hint": "Kompetisi ini dimulai sebelum periode yang dipilih dan masih berlangsung di dalamnya — kebanyakan liga dan acara sepanjang musim."
     },
-    "audienceHelp": "Perorangan atau beregu berasal dari chess-results sendiri — dan apa pun yang tidak dikenali sebagai acara beregu dihitung perorangan.\n\nKelompok umur dan bagian gender tidak berasal dari kolom: kolom itu tidak ada, jadi dibaca dari nama turnamen. Ini berhasil jika nama menyebutkan kelasnya (“U12 girls”, “UNDER 16 BOYS”) dan sama sekali tidak jika tidak.\n\n“Hanya dewasa” menyembunyikan semua yang namanya bertanda remaja. Senior tetap tampil — catur senior adalah catur dewasa.\n\nLiga adalah kompetisi beregu yang berlangsung sepanjang musim, atau yang menyebutnya dalam nama.\n\nAda yang masuk laci yang salah? Halaman turnamen punya “laporkan entri salah”, dan menanyakan apa sebutan turnamen semacam itu di wilayah Anda. Itulah yang memperbaikinya untuk semua orang.",
+    "audienceHelp": "Perorangan atau beregu berasal dari chess-results sendiri — dan apa pun yang tidak dikenali sebagai acara beregu dihitung perorangan.\n\nKelompok umur dan bagian gender tidak berasal dari kolom: kolom itu tidak ada, jadi dibaca dari nama turnamen. Ini berhasil jika nama menyebutkan kelasnya (“U12 girls”, “UNDER 16 BOYS”) dan sama sekali tidak jika tidak.\n\n“Hanya dewasa” menyembunyikan semua yang namanya bertanda remaja. Senior tetap tampil — catur senior adalah catur dewasa.\n\nLiga adalah kompetisi beregu yang berlangsung sepanjang musim, atau yang menyebutnya dalam nama.\n\nAda yang masuk laci yang salah? Halaman turnamen punya “Laporkan entri salah”, dan menanyakan apa sebutan turnamen semacam itu di wilayah Anda. Itulah yang memperbaikinya untuk semua orang.",
     "missing": {
       "cta": "Acara Anda tidak ada? Sarankan sumber",
       "blurb": "Tidak setiap penyelenggara mengumumkan di tempat yang dibaca direktori ini. Tautan ke halaman resmi dapat ditambahkan.",
@@ -4777,7 +4777,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Pendaftaran untuk pengurus klub dan pelatih. Dapat kode dari pelatih? Tukarkan setelah masuk."
+      "login": "Data anggota untuk pengurus klub dan pelatih. Dapat kode dari pelatih? Tukarkan setelah masuk."
     }
   },
   "turnier": {
@@ -5875,7 +5875,7 @@
       "needPick": "Pilih koleksi terlebih dahulu.",
       "assigned": "Ditambahkan ke “{{name}}”.",
       "remove": "Hapus dari koleksi",
-      "removed": "{{n}} dihapus dari koleksi.",
+      "removed": "Buku yang dihapus dari koleksi: {{n}}.",
       "rename": "Ganti nama koleksi",
       "dissolve": "Bubarkan koleksi",
       "dissolveConfirm": "Bubarkan “{{name}}”? Buku tetap ada di perpustakaan.",

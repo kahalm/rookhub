@@ -191,7 +191,7 @@
     "error": "Ceva nu a mers bine.",
     "send": "Trimite",
     "undo": "Anulează",
-    "previous": "Previous",
+    "previous": "Anterior",
     "next": "Următorul",
     "day": "zi",
     "days": "zile"
@@ -4014,13 +4014,13 @@
         "t": "Woodpecker",
         "p": [
           "Metoda Woodpecker (Smith și Tikkanen) antrenează recunoașterea tiparelor tactice prin rezolvarea acelorași probleme iar și iar, de fiecare dată mai repede. Alege unul sau mai multe cursuri și pornește un antrenament – regulile sunt fixe, ca în carte.",
-          "Ciclul 1: ai patru săptămâni să rezolvi cât mai multe probleme, în ordinea cursului; ele devin setul tău. Poți antedata începutul – contează ce ai rezolvat de atunci în aceste cursuri. După cel puțin o zi de pauză, fiecare ciclu următor aduce același set în ordine aleatorie și are jumătate din timp (14, 7, 4, 2, 1 zile). Într-un ciclu contează doar prima ta încercare la fiecare problemă. Ai terminat când rezolvi setul într-o zi sau după al 7-lea ciclu."
+          "Ciclul 1: ai patru săptămâni să rezolvi cât mai multe probleme, în ordinea cursului; ele devin setul tău. Poți antedata începutul – contează ce ai rezolvat de atunci în aceste cursuri. După cel puțin o zi de pauză, fiecare ciclu următor aduce același set în ordine aleatorie și are jumătate din timp (14, 7, 4, 2, 1, 1 zile). Într-un ciclu contează doar prima ta încercare la fiecare problemă. Ai terminat când rezolvi setul într-o zi sau după al 7-lea ciclu."
         ]
       },
       "maxims": {
         "t": "Reguli practice",
         "p": [
-          "O listă scurtă, atent selectată, de maxime clasice ale șahului – „Calul de pe margine e trist”, „Piesele neapărate cad” și așa mai departe. Fiecare regulă este susținută de pasaje din cărți de șah din bibliotecă; formularea rămâne aceeași peste tot.",
+          "O listă scurtă, atent selectată, de maxime clasice ale șahului – „A knight on the rim is dim”, „Loose pieces drop off” și așa mai departe. Fiecare regulă este susținută de pasaje din cărți de șah din bibliotecă; formularea rămâne aceeași peste tot.",
           "Deschide o regulă ca să vezi când se aplică și ce cărți o explică, cu un scurt citat. Dacă ai acces la o carte, linkul o deschide direct la pagină (PDF) sau cartea (EPUB).",
           "Explicațiile greșelilor tale se încheie cu cel mult una dintre aceste reguli; (i) de lângă ea arată pasajele din cărți."
         ]
@@ -4705,7 +4705,7 @@
       "title": "Deja în desfășurare",
       "hint": "Aceste competiții au început înaintea perioadei alese și încă se desfășoară în ea — mai ales ligi și evenimente pe tot sezonul."
     },
-    "audienceHelp": "Individual sau pe echipe provine chiar de la chess-results — iar tot ce nu e recunoscut ca eveniment pe echipe contează ca individual.\n\nGrupa de vârstă și categoria de gen nu provin dintr-un câmp: nu există unul, așa că sunt citite din numele turneului. Funcționează acolo unde numele indică categoria („U12 fete”, „UNDER 16 BOYS”) și deloc acolo unde nu.\n\n„Doar adulți” ascunde tot ce are un marcaj de juniori în nume. Seniorii rămân — șahul seniorilor este șah pentru adulți.\n\nO ligă este o competiție pe echipe care durează un sezon întreg sau una care spune asta în nume.\n\nCeva în sertarul greșit? Pagina unui turneu are „raportează o intrare greșită”, iar formularul întreabă cum se numesc astfel de turnee în regiunea ta. Asta îmbunătățește rezultatul pentru toți.",
+    "audienceHelp": "Individual sau pe echipe provine chiar de la chess-results — iar tot ce nu e recunoscut ca eveniment pe echipe contează ca individual.\n\nGrupa de vârstă și categoria de gen nu provin dintr-un câmp: nu există unul, așa că sunt citite din numele turneului. Funcționează acolo unde numele indică categoria („U12 fete”, „UNDER 16 BOYS”) și deloc acolo unde nu.\n\n„Doar adulți” ascunde tot ce are un marcaj de juniori în nume. Seniorii rămân — șahul seniorilor este șah pentru adulți.\n\nO ligă este o competiție pe echipe care durează un sezon întreg sau una care spune asta în nume.\n\nCeva în sertarul greșit? Pagina unui turneu are „Raportează o intrare greșită”, iar formularul întreabă cum se numesc astfel de turnee în regiunea ta. Asta îmbunătățește rezultatul pentru toți.",
     "missing": {
       "cta": "Lipsește evenimentul tău? Sugerează o sursă",
       "blurb": "Nu toți organizatorii anunță acolo de unde citește acest director. Se poate adăuga un link către o pagină oficială.",
@@ -4777,7 +4777,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Înregistrare pentru oficiali de club și antrenori. Ai un cod de la antrenor? Folosește-l după conectare."
+      "login": "Evidența membrilor pentru oficiali de club și antrenori. Ai un cod de la antrenor? Folosește-l după conectare."
     }
   },
   "turnier": {
@@ -5875,7 +5875,7 @@
       "needPick": "Alege mai întâi o colecție.",
       "assigned": "Adăugat în „{{name}}”.",
       "remove": "Elimină din colecție",
-      "removed": "{{n}} eliminate din colecție.",
+      "removed": "Cărți eliminate din colecție: {{n}}.",
       "rename": "Redenumește colecția",
       "dissolve": "Desființează colecția",
       "dissolveConfirm": "Desființezi „{{name}}”? Cărțile rămân în bibliotecă.",

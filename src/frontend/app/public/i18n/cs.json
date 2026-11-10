@@ -191,7 +191,7 @@
     "error": "Něco se pokazilo.",
     "send": "Odeslat",
     "undo": "Zpět",
-    "previous": "Previous",
+    "previous": "Předchozí",
     "next": "Další",
     "day": "den",
     "days": "dní"
@@ -4014,13 +4014,13 @@
         "t": "Woodpecker",
         "p": [
           "Metoda Woodpecker (Smith a Tikkanen) trénuje rozpoznávání taktických vzorů řešením stále stejných úloh, pokaždé rychleji. Vyberte jeden nebo více kurzů a začněte trénink – pravidla jsou pevná jako v knize.",
-          "Cyklus 1: máte čtyři týdny na vyřešení co nejvíce úloh v pořadí kurzu; stanou se vaší sadou. Začátek můžete zpětně posunout – počítá se, co jste od té doby v těchto kurzech vyřešili. Po alespoň jednom dni pauzy přináší každý další cyklus stejnou sadu v náhodném pořadí a má polovinu času (14, 7, 4, 2, 1 dní). V cyklu se počítá jen váš první pokus u úlohy. Hotovo je, když sadu vyřešíte během jednoho dne, nebo po 7. cyklu."
+          "Cyklus 1: máte čtyři týdny na vyřešení co nejvíce úloh v pořadí kurzu; stanou se vaší sadou. Začátek můžete zpětně posunout – počítá se, co jste od té doby v těchto kurzech vyřešili. Po alespoň jednom dni pauzy přináší každý další cyklus stejnou sadu v náhodném pořadí a má polovinu času (14, 7, 4, 2, 1, 1 dní). V cyklu se počítá jen váš první pokus u úlohy. Hotovo je, když sadu vyřešíte během jednoho dne, nebo po 7. cyklu."
         ]
       },
       "maxims": {
         "t": "Praktická pravidla",
         "p": [
-          "Krátký, pečlivě vybraný seznam klasických šachových zásad – „Jezdec na kraji je ubohý“, „Nekryté figury padají“ a podobně. Každé pravidlo je podloženo pasážemi ze šachových knih v knihovně; znění je všude stejné.",
+          "Krátký, pečlivě vybraný seznam klasických šachových zásad – „A knight on the rim is dim“, „Loose pieces drop off“ a podobně. Každé pravidlo je podloženo pasážemi ze šachových knih v knihovně; znění je všude stejné.",
           "Otevřete pravidlo a uvidíte, kdy platí a které knihy jej vysvětlují, s krátkou citací. Máte-li ke knize přístup, odkaz ji otevře přímo na stránce (PDF) nebo knihu (EPUB).",
           "Vysvětlení vašich chyb končí nejvýše jedním z těchto pravidel; (i) vedle něj ukáže pasáže z knih."
         ]
@@ -4705,7 +4705,7 @@
       "title": "Již probíhají",
       "hint": "Tyto soutěže začaly před zvoleným obdobím a stále do něj zasahují — většinou ligy a celosezónní akce."
     },
-    "audienceHelp": "Jednotlivci nebo družstva pochází přímo z chess-results — a vše, co není rozpoznáno jako soutěž družstev, se počítá jako soutěž jednotlivců.\n\nVěková kategorie a kategorie pohlaví nepocházejí z žádného pole: žádné neexistuje, proto se čtou z názvu turnaje. Funguje to tam, kde název kategorii uvádí („U12 dívky“, „UNDER 16 BOYS“), a vůbec ne tam, kde ne.\n\n„Jen dospělí“ skryje vše, co má v názvu označení mládeže. Senioři zůstávají — seniorský šach je šach dospělých.\n\nLiga je soutěž družstev běžící celou sezonu, nebo taková, která to uvádí v názvu.\n\nNěco ve špatném šuplíku? Na stránce turnaje je „nahlásit chybný záznam“ a formulář se ptá, jak se takové turnaje ve vašem regionu jmenují. Právě to zlepší výsledek pro všechny.",
+    "audienceHelp": "Jednotlivci nebo družstva pochází přímo z chess-results — a vše, co není rozpoznáno jako soutěž družstev, se počítá jako soutěž jednotlivců.\n\nVěková kategorie a kategorie pohlaví nepocházejí z žádného pole: žádné neexistuje, proto se čtou z názvu turnaje. Funguje to tam, kde název kategorii uvádí („U12 dívky“, „UNDER 16 BOYS“), a vůbec ne tam, kde ne.\n\n„Jen dospělí“ skryje vše, co má v názvu označení mládeže. Senioři zůstávají — seniorský šach je šach dospělých.\n\nLiga je soutěž družstev běžící celou sezonu, nebo taková, která to uvádí v názvu.\n\nNěco ve špatném šuplíku? Na stránce turnaje je „Nahlásit chybný záznam“ a formulář se ptá, jak se takové turnaje ve vašem regionu jmenují. Právě to zlepší výsledek pro všechny.",
     "missing": {
       "cta": "Chybí vaše akce? Navrhněte zdroj",
       "blurb": "Ne každý pořadatel ohlašuje tam, odkud tento adresář čte. Odkaz na oficiální stránku lze přidat.",
@@ -4777,7 +4777,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Registrace pro funkcionáře oddílů a trenéry. Máte kód od trenéra? Uplatněte ho po přihlášení."
+      "login": "Kartotéka pro funkcionáře oddílů a trenéry. Máte kód od trenéra? Uplatněte ho po přihlášení."
     }
   },
   "turnier": {
@@ -5875,7 +5875,7 @@
       "needPick": "Nejprve vyberte sbírku.",
       "assigned": "Přidáno do „{{name}}“.",
       "remove": "Odebrat ze sbírky",
-      "removed": "Odebráno ze sbírky: {{n}}.",
+      "removed": "Knihy odebrané ze sbírky: {{n}}.",
       "rename": "Přejmenovat sbírku",
       "dissolve": "Rozpustit sbírku",
       "dissolveConfirm": "Rozpustit „{{name}}“? Knihy zůstanou v knihovně.",

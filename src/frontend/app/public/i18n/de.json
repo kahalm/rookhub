@@ -4044,7 +4044,7 @@
         "t": "Woodpecker",
         "p": [
           "Die Woodpecker-Methode (Smith & Tikkanen) trainiert das Erkennen taktischer Muster: dieselben Aufgaben immer wieder lösen, jedes Mal schneller. Wähle einen oder mehrere Kurse und starte ein Training – die Regeln stehen fest wie im Buch.",
-          "Zyklus 1: Du hast vier Wochen, um so viele Aufgaben wie möglich in Kursreihenfolge zu lösen; sie werden dein Satz. Den Beginn kannst du zurückdatieren – was du seitdem in diesen Kursen gelöst hast, zählt mit. Nach mindestens einem Tag Pause kommt in jedem weiteren Zyklus derselbe Satz in zufälliger Reihenfolge, in der halben Zeit (14, 7, 4, 2, 1 Tage). Je Zyklus zählt nur dein erster Versuch an einer Aufgabe. Fertig bist du, sobald du den Satz an einem Tag schaffst, sonst nach dem 7. Zyklus."
+          "Zyklus 1: Du hast vier Wochen, um so viele Aufgaben wie möglich in Kursreihenfolge zu lösen; sie werden dein Satz. Den Beginn kannst du zurückdatieren – was du seitdem in diesen Kursen gelöst hast, zählt mit. Nach mindestens einem Tag Pause kommt in jedem weiteren Zyklus derselbe Satz in zufälliger Reihenfolge, in der halben Zeit (14, 7, 4, 2, 1, 1 Tage). Je Zyklus zählt nur dein erster Versuch an einer Aufgabe. Fertig bist du, sobald du den Satz an einem Tag schaffst, sonst nach dem 7. Zyklus."
         ]
       },
       "maxims": {
@@ -4736,7 +4736,7 @@
       "title": "Läuft bereits",
       "hint": "Diese Wettbewerbe haben vor dem gewählten Zeitraum begonnen und laufen noch hinein – meist Ligen und Saisonwettbewerbe."
     },
-    "audienceHelp": "Einzel oder Mannschaft kommt von chess-results selbst — und alles, was nicht als Mannschaftsturnier erkannt wird, zählt als Einzel.\n\nAltersklasse und Geschlechtsklasse kommen aus keinem Feld: es gibt keines, sie werden aus dem Turniernamen gelesen. Das klappt, wo der Name die Klasse nennt („U12 weiblich“, „UNDER 16 BOYS“) — und gar nicht, wo er das nicht tut.\n\n„Nur Erwachsene“ blendet alles mit einem Jugendmerkmal im Namen aus. Senioren bleiben — Seniorenschach ist Erwachsenenschach.\n\nEine Liga ist ein Mannschaftswettbewerb über eine ganze Saison, oder einer, der es im Namen sagt.\n\nEtwas in der falschen Schublade? Auf jeder Turnierseite gibt es „falsches Event melden“, und dort wird gefragt, wie solche Turniere in deiner Region heißen. Genau das verbessert es für alle.",
+    "audienceHelp": "Einzel oder Mannschaft kommt von chess-results selbst — und alles, was nicht als Mannschaftsturnier erkannt wird, zählt als Einzel.\n\nAltersklasse und Geschlechtsklasse kommen aus keinem Feld: es gibt keines, sie werden aus dem Turniernamen gelesen. Das klappt, wo der Name die Klasse nennt („U12 weiblich“, „UNDER 16 BOYS“) — und gar nicht, wo er das nicht tut.\n\n„Nur Erwachsene“ blendet alles mit einem Jugendmerkmal im Namen aus. Senioren bleiben — Seniorenschach ist Erwachsenenschach.\n\nEine Liga ist ein Mannschaftswettbewerb über eine ganze Saison, oder einer, der es im Namen sagt.\n\nEtwas in der falschen Schublade? Auf jeder Turnierseite gibt es „Falschen Eintrag melden“, und dort wird gefragt, wie solche Turniere in deiner Region heißen. Genau das verbessert es für alle.",
     "missing": {
       "cta": "Dein Turnier fehlt? Quelle vorschlagen",
       "blurb": "Nicht jeder Veranstalter schreibt dort aus, wo dieses Verzeichnis liest. Ein Link auf eine offizielle Seite lässt sich ergänzen.",
@@ -5969,7 +5969,7 @@
       "needPick": "Erst eine Sammlung wählen.",
       "assigned": "Zu „{{name}}“ hinzugefügt.",
       "remove": "Aus Sammlung nehmen",
-      "removed": "{{n}} aus der Sammlung genommen.",
+      "removed": "Bücher aus der Sammlung genommen: {{n}}.",
       "rename": "Sammlung umbenennen",
       "dissolve": "Sammlung auflösen",
       "dissolveConfirm": "„{{name}}“ auflösen? Die Bücher bleiben in der Bibliothek.",

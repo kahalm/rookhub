@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.944.2", date: "2026-11-10", changes: [
+    { en: "English texts reviewed: no German leftovers (“Board + online”, “regional league”), the opponent is no longer always “he”, the Woodpecker help names the real cycle times (14, 7, 4, 2, 1, 1 days), “Previous” on the step buttons, the ClubHub sign-in no longer starts with “Register”, the tournament help names the “Report a wrong entry” button, and consistent wording (point game, email, Chess.com, Lichess, “…”). The other languages got the content fixes too, and the help on maxims quotes the curated wording.",
+      de: "Englische Texte durchgesehen: keine deutschen Reste mehr („Board + online“, „regional league“), der Gegner ist nicht mehr immer „er“, die Woodpecker-Hilfe nennt die echten Zykluszeiten (14, 7, 4, 2, 1, 1 Tage), „Previous“ auf den Schrittknöpfen, die ClubHub-Anmeldung beginnt nicht mehr mit „Register“, die Turnier-Hilfe nennt den Knopf „Falschen Eintrag melden“, und einheitliche Begriffe (Punktepartie, E-Mail, Chess.com, Lichess, „…“). Die übrigen Sprachen bekamen die inhaltlichen Korrekturen ebenfalls, und die Merksatz-Hilfe zitiert den kuratierten Wortlaut." },
+  ] },
   { version: "0.944.1", date: "2026-11-10", changes: [
     { en: "Tournament directory: a tournament that chess-results no longer lists stays active as long as another calendar (e.g. chess.cz) has listed it within the last seven days — no more „probably cancelled“ notifications for tournaments that flip back the next night.",
       de: "Turnierverzeichnis: Ein Turnier, das chess-results nicht mehr führt, bleibt aktiv, solange ein anderer Kalender (etwa chess.cz) es in den letzten sieben Tagen gesehen hat — keine „vermutlich abgesagt“-Meldungen mehr für Turniere, die in der nächsten Nacht wieder auftauchen." },

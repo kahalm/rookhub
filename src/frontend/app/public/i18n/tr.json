@@ -191,7 +191,7 @@
     "error": "Bir şeyler ters gitti.",
     "send": "Gönder",
     "undo": "Geri al",
-    "previous": "Geri",
+    "previous": "Önceki",
     "next": "İleri",
     "day": "gün",
     "days": "gün"
@@ -4014,13 +4014,13 @@
         "t": "Woodpecker",
         "p": [
           "Woodpecker Yöntemi (Smith & Tikkanen), aynı problemleri tekrar tekrar ve her seferinde daha hızlı çözerek taktik örüntü tanımayı geliştirir. Bir veya birkaç kurs seçin ve bir antrenman başlatın – kurallar kitaptaki gibi sabittir.",
-          "1. döngü: kurs sırasına göre olabildiğince çok problem çözmek için dört haftanız var; bunlar setiniz olur. Başlangıcı geriye tarihleyebilirsiniz – o zamandan beri bu kurslarda çözdükleriniz sayılır. En az bir günlük aradan sonra her yeni döngü aynı seti rastgele sırayla getirir ve sürenin yarısına sahiptir (14, 7, 4, 2, 1 gün). Bir döngüde problem başına yalnızca ilk denemeniz sayılır. Seti bir gün içinde çözdüğünüzde veya 7. döngüden sonra bitirmiş olursunuz."
+          "1. döngü: kurs sırasına göre olabildiğince çok problem çözmek için dört haftanız var; bunlar setiniz olur. Başlangıcı geriye tarihleyebilirsiniz – o zamandan beri bu kurslarda çözdükleriniz sayılır. En az bir günlük aradan sonra her yeni döngü aynı seti rastgele sırayla getirir ve sürenin yarısına sahiptir (14, 7, 4, 2, 1, 1 gün). Bir döngüde problem başına yalnızca ilk denemeniz sayılır. Seti bir gün içinde çözdüğünüzde veya 7. döngüden sonra bitirmiş olursunuz."
         ]
       },
       "maxims": {
         "t": "Pratik kurallar",
         "p": [
-          "Klasik satranç özdeyişlerinden oluşan kısa, seçilmiş bir liste – “Kenardaki at kötü attır”, “Korumasız taşlar düşer” vb. Her kural kütüphanedeki satranç kitaplarından pasajlarla desteklenir; ifade her yerde aynı kalır.",
+          "Klasik satranç özdeyişlerinden oluşan kısa, seçilmiş bir liste – “A knight on the rim is dim”, “Loose pieces drop off” vb. Her kural kütüphanedeki satranç kitaplarından pasajlarla desteklenir; ifade her yerde aynı kalır.",
           "Ne zaman geçerli olduğunu ve hangi kitapların açıkladığını kısa bir alıntıyla görmek için bir kuralı açın. Bir kitaba erişiminiz varsa bağlantı onu doğrudan ilgili sayfada (PDF) veya kitapta (EPUB) açar.",
           "Hatalarınızın açıklamaları en fazla bu kurallardan biriyle biter; yanındaki (i) kitap pasajlarını gösterir."
         ]
@@ -4705,7 +4705,7 @@
       "title": "Devam edenler",
       "hint": "Bu yarışmalar seçilen dönemden önce başladı ve dönem içinde sürüyor — çoğunlukla ligler ve sezon boyu süren etkinlikler."
     },
-    "audienceHelp": "Bireysel veya takım bilgisi doğrudan chess-results'tan gelir — takım etkinliği olarak tanınmayan her şey bireysel sayılır.\n\nYaş grubu ve cinsiyet kategorisi bir alandan gelmez: böyle bir alan yoktur, bu yüzden turnuva adından okunur. Bu, adın kategoriyi belirttiği yerlerde (“U12 kızlar”, “UNDER 16 BOYS”) çalışır, belirtmediği yerlerde hiç çalışmaz.\n\n“Yalnızca yetişkinler”, adında gençlik işareti olan her şeyi gizler. Veteranlar kalır — veteran satrancı yetişkin satrancıdır.\n\nLig, bütün bir sezon süren veya adında bunu belirten bir takım yarışmasıdır.\n\nBir şey yanlış çekmecede mi? Turnuva sayfasında “yanlış girişi bildir” vardır ve bölgenizde bu tür turnuvaların nasıl adlandırıldığını sorar. Herkes için iyileştiren budur.",
+    "audienceHelp": "Bireysel veya takım bilgisi doğrudan chess-results'tan gelir — takım etkinliği olarak tanınmayan her şey bireysel sayılır.\n\nYaş grubu ve cinsiyet kategorisi bir alandan gelmez: böyle bir alan yoktur, bu yüzden turnuva adından okunur. Bu, adın kategoriyi belirttiği yerlerde (“U12 kızlar”, “UNDER 16 BOYS”) çalışır, belirtmediği yerlerde hiç çalışmaz.\n\n“Yalnızca yetişkinler”, adında gençlik işareti olan her şeyi gizler. Veteranlar kalır — veteran satrancı yetişkin satrancıdır.\n\nLig, bütün bir sezon süren veya adında bunu belirten bir takım yarışmasıdır.\n\nBir şey yanlış çekmecede mi? Turnuva sayfasında “Yanlış girişi bildir” vardır ve bölgenizde bu tür turnuvaların nasıl adlandırıldığını sorar. Herkes için iyileştiren budur.",
     "missing": {
       "cta": "Etkinliğiniz eksik mi? Kaynak önerin",
       "blurb": "Her organizatör, bu dizinin okuduğu yerlerde duyuru yapmaz. Resmî bir sayfanın bağlantısı eklenebilir.",
@@ -5875,7 +5875,7 @@
       "needPick": "Önce bir koleksiyon seçin.",
       "assigned": "“{{name}}” koleksiyonuna eklendi.",
       "remove": "Koleksiyondan kaldır",
-      "removed": "Koleksiyondan kaldırılan: {{n}}.",
+      "removed": "Koleksiyondan kaldırılan kitap: {{n}}.",
       "rename": "Koleksiyonu yeniden adlandır",
       "dissolve": "Koleksiyonu dağıt",
       "dissolveConfirm": "“{{name}}” dağıtılsın mı? Kitaplar kütüphanede kalır.",

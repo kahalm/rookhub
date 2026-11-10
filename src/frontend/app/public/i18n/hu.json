@@ -82,7 +82,7 @@
     "error": "Valami hiba történt.",
     "send": "Küldés",
     "undo": "Visszavonás",
-    "previous": "Vissza",
+    "previous": "Előző",
     "next": "Tovább",
     "day": "nap",
     "days": "nap"
@@ -4353,7 +4353,7 @@
       "title": "Már folyamatban",
       "hint": "Ezek a versenyek a kiválasztott időszak előtt kezdődtek, és még belenyúlnak – többnyire ligák és szezonális versenyek."
     },
-    "audienceHelp": "Az „egyéni vagy csapat” magától a chess-resultstól jön — és minden, amit nem ismer fel csapatversenyként, egyéninek számít.\n\nA korosztály és a nemi kategória nem mezőből jön: olyan nincs, ezért a verseny nevéből olvassuk ki. Ez ott működik, ahol a név megnevezi a kategóriát („U12 lány”, „UNDER 16 BOYS”) — és sehol ott, ahol nem.\n\nA „Csak felnőtt” mindent elrejt, aminek ifjúsági jelölés van a nevében. A szeniorok maradnak — a szeniorsakk felnőttsakk.\n\nA liga egy egész szezonon át futó csapatverseny, vagy olyan, amelyik ezt a nevében is kimondja.\n\nValami rossz fiókba került? Minden versenyoldalon van „hibás esemény jelentése”, és ott azt kérdezzük, hogyan hívják az ilyen versenyeket a te vidékeden. Épp ez az, ami mindenkinek javít rajta.",
+    "audienceHelp": "Az „egyéni vagy csapat” magától a chess-resultstól jön — és minden, amit nem ismer fel csapatversenyként, egyéninek számít.\n\nA korosztály és a nemi kategória nem mezőből jön: olyan nincs, ezért a verseny nevéből olvassuk ki. Ez ott működik, ahol a név megnevezi a kategóriát („U12 lány”, „UNDER 16 BOYS”) — és sehol ott, ahol nem.\n\nA „Csak felnőtt” mindent elrejt, aminek ifjúsági jelölés van a nevében. A szeniorok maradnak — a szeniorsakk felnőttsakk.\n\nA liga egy egész szezonon át futó csapatverseny, vagy olyan, amelyik ezt a nevében is kimondja.\n\nValami rossz fiókba került? Minden versenyoldalon van „Hibás bejegyzés jelentése”, és ott azt kérdezzük, hogyan hívják az ilyen versenyeket a te vidékeden. Épp ez az, ami mindenkinek javít rajta.",
     "missing": {
       "cta": "Hiányzik a versenyed? Javasolj forrást",
       "blurb": "Nem minden szervező ott hirdet, ahonnan ez a jegyzék olvas. Egy hivatalos oldalra mutató link pótolható.",
@@ -4890,7 +4890,7 @@
         "t": "Woodpecker",
         "p": [
           "A Woodpecker-módszer (Smith és Tikkanen) a taktikai minták felismerését edzi: ugyanazokat a feladatokat oldod meg újra és újra, minden alkalommal gyorsabban. Válassz egy vagy több tanfolyamot, és indíts edzést – a szabályok rögzítettek, mint a könyvben.",
-          "1. ciklus: négy heted van, hogy a tanfolyamok sorrendjében minél több feladatot megoldj; ezek lesznek a sorozatod. A kezdést visszadátumozhatod – ami azóta ezekben a tanfolyamokban megoldottál, beszámít. Legalább egy nap szünet után minden további ciklus ugyanazt a sorozatot hozza véletlen sorrendben, fele annyi idő alatt (14, 7, 4, 2, 1 nap). Egy ciklusban feladatonként csak az első próbálkozásod számít. Akkor végzel, ha a sorozatot egy nap alatt megoldod, különben a 7. ciklus után."
+          "1. ciklus: négy heted van, hogy a tanfolyamok sorrendjében minél több feladatot megoldj; ezek lesznek a sorozatod. A kezdést visszadátumozhatod – ami azóta ezekben a tanfolyamokban megoldottál, beszámít. Legalább egy nap szünet után minden további ciklus ugyanazt a sorozatot hozza véletlen sorrendben, fele annyi idő alatt (14, 7, 4, 2, 1, 1 nap). Egy ciklusban feladatonként csak az első próbálkozásod számít. Akkor végzel, ha a sorozatot egy nap alatt megoldod, különben a 7. ciklus után."
         ]
       },
       "maxims": {
@@ -5969,7 +5969,7 @@
       "needPick": "Előbb válassz egy gyűjteményt.",
       "assigned": "Hozzáadva ehhez: „{{name}}“.",
       "remove": "Eltávolítás a gyűjteményből",
-      "removed": "{{n}} eltávolítva a gyűjteményből.",
+      "removed": "A gyűjteményből eltávolított könyvek: {{n}}.",
       "rename": "Gyűjtemény átnevezése",
       "dissolve": "Gyűjtemény feloszlatása",
       "dissolveConfirm": "Feloszlatod: „{{name}}“? A könyvek a könyvtárban maradnak.",

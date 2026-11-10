@@ -58,7 +58,7 @@
     "freqToken": "“Most frequent first” needs a Lichess token in your profile – the usual order is used.",
     "freqFailed": "The frequencies could not be loaded – the usual order is used.",
     "freqIncomplete": "The frequencies are still incomplete – lines without a value come last.",
-    "opponentOrder": "Order by opponent: the lines this opponent is most likely to play come first (from the player card); only the chapters of your colour against him.",
+    "opponentOrder": "Order by opponent: the lines this opponent is most likely to play come first (from the player card); only the chapters of your colour against them.",
     "opponentFailed": "The opponent's order could not be loaded — the lines come in the usual order.",
     "opponentDone": "All {{n}} lines against this opponent done.",
     "opponentAgain": "Start over",
@@ -193,7 +193,7 @@
     "error": "Something went wrong.",
     "send": "Send",
     "undo": "Undo",
-    "previous": "Back",
+    "previous": "Previous",
     "next": "Next",
     "day": "day",
     "days": "days"
@@ -291,7 +291,7 @@
       "grantsTitle": "Who can see my catalog?",
       "grantsHint": "Selected users and group members see the list of your courses & repertoires and can request individual items.",
       "grantedUsers": "Users with access",
-      "searchUsers": "Search users (name, chess.com, lichess, FIDE …)",
+      "searchUsers": "Search users (name, Chess.com, Lichess, FIDE …)",
       "noGrantedUsers": "No individual users yet.",
       "noResults": "No matches.",
       "add": "Grant access",
@@ -422,7 +422,7 @@
       "fieldRequired": "Please fill in this field",
       "rememberMe": "Stay logged in",
       "submit": "Login",
-      "submitting": "Logging in...",
+      "submitting": "Logging in…",
       "registerLink": "Don't have an account? Register",
       "failed": "Login failed",
       "rateLimited": "Too many sign-in attempts. Please wait about {{seconds}} seconds, then try again.",
@@ -440,12 +440,12 @@
       "passwordLabel": "Password",
       "passwordHint": "At least {{min}} characters",
       "submit": "Register",
-      "submitting": "Registering...",
+      "submitting": "Registering…",
       "loginLink": "Already have an account? Log in",
       "failed": "Registration failed",
       "emailHint": "Optional – without an email you can’t reset a forgotten password.",
       "usernameTooShort": "At least {{min}} characters",
-      "taken": "That username or e-mail is already taken. Is it your account? Then log in. Otherwise pick a different username.",
+      "taken": "That username or email is already taken. Is it your account? Then log in. Otherwise pick a different username.",
       "toLogin": "Go to login",
       "passwordRejected": "That password can’t be used. Use at least {{min}} characters and nothing too common like “12345678”.",
       "invalid": "Please check your details – something isn’t right yet.",
@@ -655,10 +655,10 @@
       "selectNone": "None",
       "noneSelected": "No repertoire selected — pick at least one.",
       "mirrored": "Mirrored hits",
-      "mirroredHint": "Also compare with colors swapped and the board flipped, and keep the better value.",
-      "mirroredBadge": "Found with colors swapped (board mirrored).",
+      "mirroredHint": "Also compare with colours swapped and the board flipped, and keep the better value.",
+      "mirroredBadge": "Found with colours swapped (board mirrored).",
       "sameSide": "Same side to move",
-      "sameSideHint": "Only compare positions where the same color is to move.",
+      "sameSideHint": "Only compare positions where the same colour is to move.",
       "onlyWithMove": "only with {{move}}",
       "onlyWithMoveHint": "Hide hits where this move is not the repertoire move.",
       "none": "Nothing similar found in your repertoires.",
@@ -710,7 +710,7 @@
     "chessResultsId": "ChessResults ID",
     "chessComUsername": "Chess.com username",
     "lichessUsername": "Lichess username",
-    "saving": "Saving...",
+    "saving": "Saving…",
     "saved": "Profile saved",
     "loadFailed": "Your profile could not be loaded. The device settings below work without a connection.",
     "saveFailed": "Failed to save profile",
@@ -731,8 +731,8 @@
     },
     "tokens": {
       "title": "API tokens",
-      "subtitle": "For the chess.com extension or your own engine computer.",
-      "subtitleHelp": "Each token only works for its scope: “Extension” for the browser extension (chess.com, lichess.org, Chessable), “Engine” for the engine provider on your computer.",
+      "subtitle": "For the browser extension (Chess.com, lichess.org, Chessable) or your own engine computer.",
+      "subtitleHelp": "Each token only works for its scope: “Extension” for the browser extension (Chess.com, lichess.org, Chessable), “Engine” for the engine provider on your computer.",
       "empty": "No tokens yet.",
       "create": "Create token",
       "revoke": "Revoke token",
@@ -757,7 +757,7 @@
         "expires": "Expires",
         "create": "Create",
         "scope": "Scope",
-        "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",
+        "scopeExtension": "Extension (Chess.com, lichess.org, Chessable)",
         "scopeExtensionShort": "Extension",
         "scopeEngine": "Engine (engine provider on your computer)",
         "scopeEngineShort": "Engine",
@@ -809,7 +809,7 @@
       "backgroundSaved": "Background engine saved.",
       "backgroundFailed": "Could not save the background engine.",
       "houseLabel": "Also let my background engines work on games other people add",
-      "houseHint": "Registered users without an engine of their own can then add games on the points game page; they are computed on your machine, at a fixed depth.",
+      "houseHint": "Registered users without an engine of their own can then add games on the point game page; they are computed on your machine, at a fixed depth.",
       "houseSaved": "Sharing saved",
       "directTitle": "Directly with RookHub (recommended)",
       "directHint": "Start the engine provider on your computer with this address and an API token with the “Engine” scope (create it under “API tokens” on this page). No Lichess account needed.",
@@ -852,7 +852,7 @@
       "warn": "Warning: the account is deleted immediately and irreversibly – including your courses (also for everyone you shared them with), repertoires, games with scoresheet photos, worksheets, share links and your KidHub progress. Save what you want to keep first (PGN download in the course, in the repertoire list and in each game). Please enter your password to confirm.",
       "password": "Password",
       "confirm": "Delete permanently",
-      "deleting": "Deleting...",
+      "deleting": "Deleting…",
       "done": "Your account has been deleted.",
       "wrongPassword": "Password is incorrect.",
       "failed": "Could not delete account.",
@@ -865,7 +865,7 @@
       "new": "New password",
       "confirm": "Confirm new password",
       "save": "Change password",
-      "saving": "Saving...",
+      "saving": "Saving…",
       "done": "Password changed successfully.",
       "wrongPassword": "Current password is incorrect.",
       "mismatch": "Passwords do not match.",
@@ -909,7 +909,7 @@
       "removedTitle": "What is removed",
       "removed1": "Your identity and personal data (username, email, display/real name, FIDE/ChessResults ID, Chess.com/Lichess name, Discord link) and login access.",
       "removedCourses": "Your own courses (imported or created yourself) – also for everyone you shared them with: shares, group access and other people's learning progress in these courses go with them.",
-      "removed2": "Personal content and links: repertoires, tournament subscriptions/favourites, friendships and group memberships.",
+      "removed2": "Personal content and links: repertoires, tournament subscriptions/favorites, friendships and group memberships.",
       "removedGames": "Saved games including scoresheet photos and reconstructions, game analyses, point game runs, analysis jobs, calculation trees and remembered positions.",
       "removedShared": "Worksheets and your share links: links to shared games, lines, reconstructions and worksheets (including the QR code on the printout) no longer open.",
       "removedKids": "Your KidHub progress (levels, stars, courses) – KidHub uses the same account.",
@@ -936,7 +936,7 @@
       "clubTitle": "ClubHub (card index)",
       "clubIntro": "In ClubHub, the club's management and trainers keep a card for each child or young player. A card is not an account: the child does not need to be registered with us.",
       "clubData": "Stored on a card: first name (required), last name, date or year of birth, level, FIDE ID and national player ID, the child's groups, optionally a photo with a marked face area for the portrait, and dated trainer notes on learning progress.",
-      "clubContacts": "Contacts: phone numbers and e-mail addresses, each with a note such as “mother” or “father”.",
+      "clubContacts": "Contacts: phone numbers and email addresses, each with a note such as “mother” or “father”.",
       "clubAttendance": "Attendance per training session (present or absent), the topic and content of the session, and photos of the session.",
       "clubAccess": "Only signed-in club accounts with the matching role see the card index: management sees everything, trainers only the children of their own groups. Nothing of it is reachable without signing in; the server logs contain only ID numbers, no names.",
       "clubPhotos": "Whether photos of children may be taken and stored is agreed between the club and the parents; ClubHub does not record a consent.",
@@ -961,8 +961,8 @@
       "leagueSourcesPairings": "pairings, results and team rosters from chess-results.com and from the league manager of the Bavarian Chess Federation",
       "leagueSourcesGames": "games from Lumbra’s GigaBase, the ChessBase Mega Database and the chess-results.com game database",
       "leagueSourcesClub": "club games uploaded by members or submitted without logging in via a share link (also as a scoresheet photo, see “AI services”) — players of the uploading club appear in them only under the club’s name by default; their real name is stored internally for that club’s own analyses and is never displayed or passed on (if the replacement is deselected for a side when uploading, the real name is stored visibly)",
-      "leagueSourcesOnline": "public games of online accounts on Lichess and chess.com. To fetch these, our server sends the usernames of these accounts to the respective platform; chess.com is operated by a US provider (transfer to a third country). Unlike for the weekly “games” goal, the games themselves are stored here.",
-      "leagueData": "Categories: name, FIDE ID, club, rating and appearances according to the rosters; games and opening profiles calculated from them; a calculated probability of being lined up in a round (a model trained on previous seasons); online accounts on Lichess and chess.com that we assign to a player — from public profile information (such as real name and country) or entered by club officials, marked as “confirmed” or only presumed — together with a comment on the assignment and the public games of these accounts.",
+      "leagueSourcesOnline": "public games of online accounts on Lichess and Chess.com. To fetch these, our server sends the usernames of these accounts to the respective platform; Chess.com is operated by a US provider (transfer to a third country). Unlike for the weekly “games” goal, the games themselves are stored here.",
+      "leagueData": "Categories: name, FIDE ID, club, rating and appearances according to the rosters; games and opening profiles calculated from them; a calculated probability of being lined up in a round (a model trained on previous seasons); online accounts on Lichess and Chess.com that we assign to a player — from public profile information (such as real name and country) or entered by club officials, marked as “confirmed” or only presumed — together with a comment on the assignment and the public games of these accounts.",
       "leagueBasis": "Purpose and legal basis: preparing for team matches; legitimate interest of the club and its members (Art. 6(1)(f) GDPR). The data comes mostly from publicly accessible sources.",
       "leagueRecipients": "Recipients: logged-in accounts with LeagueHub access (the club group and administrators). Via a share link, anyone who has the link sees the shared match without logging in: the roster with predictions, player cards, opening trees and games of the players listed there — online accounts only if they are considered “confirmed”. A share link is valid until seven days after the round (for a round already played, seven days from sharing; without a known round date, 30 days) and can be revoked earlier.",
       "leagueRetention": "Retention: league data, games and profiles are kept as long as LeagueHub is operated, because the predictions are based on previous seasons. People who upload via a share link are not recorded by name — for the upload limits we only keep a check value (hash) of the IP address. For scoresheet photos it serves the daily limit and therefore remains after the reading has been accepted or discarded; after two days it is cleared the next time someone uploads a scoresheet without an account. For submitted game lists it remains until the list has been imported or discarded; a draft left open is deleted after 30 days without changes, the next time the drafts are opened. Scoresheet photos are deleted when the reading is accepted or discarded (details under “AI services”).",
@@ -991,7 +991,7 @@
       "thirdDiscord": "Discord: only on voluntary account linking (Discord ID/name) for display in the RookHub Discord bot.",
       "thirdChessresults": "chess-results.com: tournament data is fetched server-side when you set a ChessResults ID or load tournaments.",
       "thirdChesstools": "api.chesstools.org: when you search for a player in the FIDE rating list (for example in your profile or for the tournament history), our server sends the name you entered (last name, first name) to this service and receives matching entries of the FIDE list. Your IP address and your account are not transmitted.",
-      "thirdChesssites": "Chess.com / Lichess: if you store a username for these platforms in your profile, our server queries their public game APIs automatically — in the background every 6 hours by default while a weekly “games” goal is active for you, and whenever you trigger a manual sync in the training goals. Your username on that platform is transmitted to it; chess.com is operated by a US provider (transfer to a third country). We only store the number of your rapid/classical games per day and the time of the most recently fetched game — no game moves. Removing the username in your profile stops these queries.",
+      "thirdChesssites": "Chess.com / Lichess: if you store a username for these platforms in your profile, our server queries their public game APIs automatically — in the background every 6 hours by default while a weekly “games” goal is active for you, and whenever you trigger a manual sync in the training goals. Your username on that platform is transmitted to it; Chess.com is operated by a US provider (transfer to a third country). We only store the number of your rapid/classical games per day and the time of the most recently fetched game — no game moves. Removing the username in your profile stops these queries.",
       "thirdLogging": "Elasticsearch/Kibana: self-hosted logging/monitoring on our infrastructure.",
       "thirdPush": "Push services of the browser vendors: only if you turn on push notifications — details under “Push notifications”.",
       "thirdHosting": "Hosting: operated on our own server infrastructure with a TLS reverse proxy.",
@@ -1066,7 +1066,7 @@
           "period": "60 days without use"
         },
         "attempts": {
-          "data": "Attempts at puzzles, book and daily puzzles, guess-the-move games",
+          "data": "Attempts at puzzles, book and daily puzzles, point games",
           "period": "90 days"
         },
         "extension": {
@@ -1230,15 +1230,15 @@
       "convertedToCourse": "Repertoire moved to a course: {{name}}",
       "convertMoveConfirm": "Convert the repertoire “{{name}}” into a course? The repertoire is moved, not copied: it is deleted afterwards, together with the training progress and shares of ALL users.",
       "convertToCourseNoPuzzles": "This repertoire has no puzzle lines (Chessable-style FEN + training markers), so it can't become a course.",
-      "convertToCourseEmpty": "This repertoire is still empty - no PGN has been imported yet. Upload a PGN file or fetch the Chessable course with the RepCheck extension, then you can convert it to a course.",
+      "convertToCourseEmpty": "This repertoire is still empty – no PGN has been imported yet. Upload a PGN file or fetch the Chessable course with the RepCheck extension, then you can convert it to a course.",
       "convertToCourseFailed": "Could not convert the repertoire to a course",
       "updateFailed": "Repertoire could not be updated",
-      "extHint": "Tip: with the RepCheck browser extension (for Chrome and Firefox) you can see deviations from your repertoire right on chess.com and lichess.org — but only in analysis mode (the analysis board).",
+      "extHint": "Tip: with the RepCheck browser extension (for Chrome and Firefox) you can see deviations from your repertoire right on Chess.com and lichess.org — but only in analysis mode (the analysis board).",
       "newShort": "New",
       "infoLabel": "About RepCheck and these sections",
       "extHintLink": "Learn more in the help",
       "sectionExtension": "For RepCheck and preparation",
-      "sectionExtensionHint": "Repertoires that the RepCheck extension checks against on chess.com / lichess and that player preparation offers as training lines against an opponent.",
+      "sectionExtensionHint": "Repertoires that the RepCheck extension checks against on Chess.com / Lichess and that player preparation offers as training lines against an opponent.",
       "sectionOther": "Other repertoires",
       "sectionOtherHint": "Used neither by RepCheck nor by player preparation. Toggle “Use for extension and preparation” in the edit dialog to move a repertoire up.",
       "extensionBadge": "Used by the RepCheck extension and by player preparation",
@@ -1472,7 +1472,7 @@
       "toggleNameAria": "{{name}} as favorite",
       "saveFailed": "Could not save the favorite {{name}} — please try again.",
       "filterSaveFailed": "Could not save the favorites filter; it will reset on the next reload.",
-      "loadFailed": "Your favourites could not be loaded just now — so the stars do not show them."
+      "loadFailed": "Your favorites could not be loaded just now — so the stars do not show them."
     },
     "players": {
       "snr": "No.",
@@ -1703,7 +1703,7 @@
       "level4Name": "Invisible",
       "level0Desc": "Drag & drop — board visible, no restrictions.",
       "level1Desc": "Board frozen, moves shown only as text.",
-      "level2Desc": "Pieces are replaced by colored checkers after 3s.",
+      "level2Desc": "Pieces are replaced by coloured checkers after 3s.",
       "level3Desc": "Pieces are replaced by black tokens after 3s.",
       "level4Desc": "Pieces disappear completely after 3s."
     },
@@ -2368,8 +2368,8 @@
       "advanced": "Fine-tuning"
     },
     "game": {
-      "yourMove": "Your move...",
-      "opponentThinking": "Opponent is thinking...",
+      "yourMove": "Your move…",
+      "opponentThinking": "Opponent is thinking…",
       "gaveUp": "Gave up",
       "continue": "Continue",
       "levelRange": "Level {{level}} ({{min}}–{{max}})",
@@ -2393,7 +2393,7 @@
       "livesLostAt": "Lives lost at: {{ratings}}",
       "puzzleReview": "Puzzle Review",
       "newHighscore": "New Highscore!",
-      "archiving": "Archiving...",
+      "archiving": "Archiving…",
       "archiveRun": "Archive this run",
       "archived": "Archived",
       "playAgain": "Play again",
@@ -2433,7 +2433,7 @@
     "difficulty": "Difficulty",
     "offlineUnavailable": "This book is not available offline.",
     "status": {
-      "yourMoveVsStockfish": "Your move against Stockfish...",
+      "yourMoveVsStockfish": "Your move against Stockfish…",
       "gaveUpSolution": "Gave up — here's the solution",
       "fullGame": "Full game",
       "loadError": "Failed to load. Please check your connection."
@@ -2795,7 +2795,7 @@
       "writeLabel": "Your message",
       "unclaimed": "unclaimed",
       "claimedBy": "Handled by {{name}}",
-      "claim": "Take over",
+      "claim": "Claim",
       "takeOver": "Take over",
       "assignFailed": "The assignment could not be changed — please try again.",
       "release": "Release"
@@ -3061,7 +3061,7 @@
     "filterRemove": "Remove filter {{value}}",
     "filtersToggle": "Filter",
     "title": "Saved games",
-    "hint": "Games you save from chess.com or lichess with the RepCheck browser extension show up here.",
+    "hint": "Games you save from Chess.com or Lichess with the RepCheck browser extension show up here.",
     "empty": "No saved games yet.",
     "replay": "Replay",
     "openInAnalysis": "Open in analysis",
@@ -3239,7 +3239,7 @@
       "rightEquivalent": "Correct, {{san}} is just as good (engine: {{best}}).",
       "alsoGood": "Just as good: {{moves}}",
       "shown": "{{san}} was better.",
-      "cost": "{{san}} cost {{percent}} percentage points of winning chances.",
+      "cost": "{{san}} lowered the winning chances by {{percent}} percentage points.",
       "retry": "Try again",
       "show": "Show solution",
       "skip": "Skip",
@@ -3262,7 +3262,7 @@
         "hint": "Choose a platform/league and/or mode/season: all open mistakes of your analysed games in that selection come one after the other on one board.",
         "includeSolved": "Also mistakes you already found",
         "selection": "{{games}} games selected, {{analysed}} of them analysed",
-        "selectionOne": "1 game selected, {{analysed}} of them analysed",
+        "selectionOne": "1 game selected – {{analysed}} of 1 analysed",
         "loading": "Loading games … {{done}} of {{total}}",
         "start": "Start",
         "none": "No open mistakes in this selection.",
@@ -3307,7 +3307,7 @@
     "classifier": {
       "first": "Platform / league",
       "second": "Mode / season",
-      "firstPlaceholder": "e.g. Landesliga",
+      "firstPlaceholder": "e.g. regional league",
       "secondPlaceholder": "e.g. 2026/27",
       "all": "All",
       "none": "Not set"
@@ -3351,7 +3351,7 @@
       "saveFailed": "Saving failed.",
       "ownerSide": "My side",
       "sideNone": "not set",
-      "classifierHint": "Online: platform + mode are filled in automatically · league games: e.g. “Landesliga” + “2026/27”",
+      "classifierHint": "Online: platform + mode are filled in automatically · league games: e.g. “regional league” + “2026/27”",
       "clubLinked": "This game is a copy from the club database. If you correct moves and uploaded it (or are a manager), the correction also applies there and to all copies — otherwise your copy becomes a version of its own.",
       "sheetStateFailed": "The saved scoresheet state could not be loaded. Saving only changes the moves and details; the scoresheet reading stays unchanged."
     },
@@ -3512,7 +3512,7 @@
       "noGames": "No games in this position.",
       "move": "Move",
       "games": "Games",
-      "share": "Share",
+      "share": "Proportion",
       "thousands": "{{n}}K",
       "results": "White / Draw / Black",
       "total": "{{count}} games",
@@ -3858,8 +3858,8 @@
       "profile": {
         "t": "Profile & chess identity",
         "p": [
-          "In your profile you set your display name and your links: FIDE ID, ChessResults ID, chess.com and Lichess usernames. These connect RookHub to your external chess accounts.",
-          "If you store your ChessResults ID, upcoming tournaments are subscribed for you automatically. Your chess.com and Lichess names are used for the play tracking of your training goals.",
+          "In your profile you set your display name and your links: FIDE ID, ChessResults ID, Chess.com and Lichess usernames. These connect RookHub to your external chess accounts.",
+          "If you store your ChessResults ID, upcoming tournaments are subscribed for you automatically. Your Chess.com and Lichess names are used for the play tracking of your training goals.",
           "Use the player search (by last and first name) to find yourself in ChessResults/FIDE and adopt the right ID directly. Your public profile shows others only a reduced view – without your real name, ChessResults ID or Discord."
         ]
       },
@@ -3927,8 +3927,8 @@
         "t": "Training goals",
         "p": [
           "Set one daily training-time goal (in minutes) plus weekly goals for games played (rapid/classical) and full training days. Coaches can provide a default per group; your personal goal takes precedence.",
-          "The tracker colors each day by goal completion (none/partial/full) – the daily status comes from your training time (puzzles, courses, Chessable and logged offline activity), while playing is a weekly goal.",
-          "RookHub fetches rapid/classical games automatically from Lichess and chess.com (public, no login there). Use “Update playing time” to trigger it immediately. Bullet, blitz and correspondence do not count."
+          "The tracker colours each day by goal completion (none/partial/full) – the daily status comes from your training time (puzzles, courses, Chessable and logged offline activity), while playing is a weekly goal.",
+          "RookHub fetches rapid/classical games automatically from Lichess and Chess.com (public, no login there). Use “Update playing time” to trigger it immediately. Bullet, blitz and correspondence do not count."
         ]
       },
       "stats": {
@@ -3948,7 +3948,7 @@
         "t": "Repertoires",
         "p": [
           "Repertoires are collections of PGN files (opening/middlegame/endgame) you upload and manage. You can add files via drag & drop, download them and fetch the combined PGN (max 10 MB per file).",
-          "With the optional RepCheck browser extension, your opening repertoires are checked right on chess.com and lichess.org analysis pages (see “Browser extension (RepCheck)”)."
+          "With the optional RepCheck browser extension, your opening repertoires are checked right on Chess.com and lichess.org analysis pages (see “Browser extension (RepCheck)”)."
         ]
       },
       "offline": {
@@ -3974,7 +3974,7 @@
       "extension": {
         "t": "Browser extension (RepCheck)",
         "p": [
-          "RepCheck highlights, on chess.com and lichess.org analysis pages, the move at which your game leaves your stored opening repertoire. The repertoire stays on the server – the extension only sends the current game’s move list and gets the deviation back.",
+          "RepCheck highlights, on Chess.com and lichess.org analysis pages, the move at which your game leaves your stored opening repertoire. The repertoire stays on the server – the extension only sends the current game’s move list and gets the deviation back.",
           "RepCheck is a browser extension, available in the [Chrome Web Store]({{chromeUrl}}) and as a [signed Firefox add-on]({{firefoxUrl}}). Besides the repertoire check it saves games to RookHub, brings your Chessable courses over and keeps positions via “Remember line”.",
           "Setup: in the extension popup choose “Settings” → “Connect to RookHub” – RepCheck opens RookHub, waits for your sign-in and creates its access token itself. Entering a token by hand (created under “API tokens” in your profile, scope “extension”) remains as a fallback.",
           "Source code, version history and details on [GitHub](https://github.com/kahalm/repcheck)."
@@ -4002,7 +4002,7 @@
       "games": {
         "t": "Games & scoresheets",
         "p": [
-          "Your games are under ☰ → Analysis & collection → Games – saved with the RepCheck extension on chess.com or lichess, added via “Upload PGN” or read from a scoresheet photo. “Analyse game” computes it in the background – afterwards the evaluation curve with accuracy and move classes appears under the board. You can also share a game via link or download its PGN.",
+          "Your games are under ☰ → Analysis & collection → Games – saved with the RepCheck extension on Chess.com or Lichess, added via “Upload PGN” or read from a scoresheet photo. “Analyse game” computes it in the background – afterwards the evaluation curve with accuracy and move classes appears under the board. You can also share a game via link or download its PGN.",
           "“Read a scoresheet”: take a photo of your scoresheet; an AI model (Claude by Anthropic, USA) reads the moves, RookHub checks every move on the board and stores the game in your games. You fix uncertain moves via “Review and correct”. The number of scans per day is limited."
         ]
       },
@@ -4044,7 +4044,7 @@
         "t": "Woodpecker",
         "p": [
           "The Woodpecker Method (Smith & Tikkanen) trains tactical pattern recognition by solving the same puzzles over and over, faster each time. Pick one or more courses and start a training – the rules are fixed as in the book.",
-          "Cycle 1: you have four weeks to solve as many puzzles as you can, in course order; they become your set. You may backdate the start – what you solved in these courses since then counts. After at least one day off, each further cycle brings the same set in random order and has half the time (14, 7, 4, 2, 1 days). Only your first attempt per puzzle counts in a cycle. You are done once you solve the set within one day, or after the 7th cycle."
+          "Cycle 1: you have four weeks to solve as many puzzles as you can, in course order; they become your set. You may backdate the start – what you solved in these courses since then counts. After at least one day off, each further cycle brings the same set in random order and has half the time (14, 7, 4, 2, 1, 1 days). Only your first attempt per puzzle counts in a cycle. You are done once you solve the set within one day, or after the 7th cycle."
         ]
       },
       "maxims": {
@@ -4081,7 +4081,7 @@
     "useExtension": {
       "lead": "You now get Chessable courses with the RepCheck extension in your own browser.",
       "title": "Please use the RepCheck browser extension",
-      "body": "Importing Chessable courses through RookHub is switched off. RookHub would have to fetch them from Chessable server-side over datacenter IPs, which Chessable blocks and which can get your Chessable account banned. RepCheck runs in your own logged-in browser on your own IP instead: your courses reach RookHub without waiting in a queue, the risk is far lower, and your Chessable token never has to be stored with us."
+      "body": "Importing Chessable courses through RookHub is switched off. RookHub would have to fetch them from Chessable server-side over data-centre IPs, which Chessable blocks and which can get your Chessable account banned. RepCheck runs in your own logged-in browser on your own IP instead: your courses reach RookHub without waiting in a queue, the risk is far lower, and your Chessable token never has to be stored with us."
     }
   },
   "messages": {
@@ -4295,8 +4295,8 @@
     "startFailed": "Could not start the analysis",
     "loadFailed": "Could not load the game analyses",
     "deleteFailed": "Delete failed",
-    "deleteConfirm": "Delete “{{title}}”? The analysed positions and your points-game runs on it are deleted as well.",
-    "deleteConfirmPublic": "Delete “{{title}}”? Everyone can play this game as a points game: all runs on it — including other players’ runs — and the analysed positions are deleted as well.",
+    "deleteConfirm": "Delete “{{title}}”? The analysed positions and your point-game runs on it are deleted as well.",
+    "deleteConfirmPublic": "Delete “{{title}}”? Everyone can play this game as a point game: all runs on it — including other players’ runs — and the analysed positions are deleted as well.",
     "empty": "No game analysed yet.",
     "untitled": "Untitled",
     "toJobs": "Single positions",
@@ -4386,8 +4386,8 @@
     "gamePlayed": "Game: {{move}}",
     "gameMoveWouldBe": "The game move was {{move}}",
     "info": {
-      "gameMove": "Move from the game: {{move}} - evaluation {{eval}}",
-      "bestMove": "Best move: {{move}} - evaluation {{eval}}"
+      "gameMove": "Move from the game: {{move}} – evaluation {{eval}}",
+      "bestMove": "Best move: {{move}} – evaluation {{eval}}"
     },
     "toTaskMove": "Go to the task ({{move}})",
     "browsingHint": "Viewing the opening · {{count}} moves played",
@@ -4457,8 +4457,8 @@
       "pgnLabel": "Paste PGN",
       "placeholder": "[Event \"...\"]\n1. e4 e5 2. Nf3 ...",
       "submit": "Add game",
-      "hintOwn": "Add a game of your own — it is analysed in the background and then waits here as a points game. Depending on its length that takes minutes to hours.",
-      "hintHouse": "Add a game of your own — it is analysed on the house engine and then waits here as a points game. Depending on its length and the queue that takes minutes to hours.",
+      "hintOwn": "Add a game of your own — it is analysed in the background and then waits here as a point game. Depending on its length that takes minutes to hours.",
+      "hintHouse": "Add a game of your own — it is analysed on the house engine and then waits here as a point game. Depending on its length and the queue that takes minutes to hours.",
       "noEngine": "No engine is available right now to work through added games.",
       "quota": "{{open}} of {{max}} games being analysed",
       "started": "The game is being analysed. You can play it as soon as the first position is done.",
@@ -4488,7 +4488,7 @@
     "library": {
       "modeNames": "Names & events",
       "modeComments": "Ask the comments",
-      "ask": "Ask the annotations",
+      "ask": "Ask the comments",
       "askHint": "e.g. bishop sacrifice on h7, minority attack, knight outpost on d5",
       "askEmpty": "Describe an idea, a plan or a motif — the search looks for annotations that talk about it, in any language.",
       "askNone": "No annotation matches that — try other words.",
@@ -4541,7 +4541,7 @@
     "help": "Tournaments are read every night from the pages that publish their calendars — chess-results and the FIDE calendar today, more later. Save a search profile with your location and radius — the same profile drives the list, the map, the calendar and the notification about new tournaments nearby.",
     "search": "Search name, venue, organizer",
     "from": "From",
-    "to": "Until",
+    "to": "To",
     "weekendOnly": "Weekend",
     "reset": "Reset",
     "empty": "No tournaments match these filters.",
@@ -4588,13 +4588,13 @@
       "rounds": "Rounds",
       "organizer": "Organizer",
       "arbiter": "Chief arbiter",
-      "groups": "Sections",
+      "groups": "Groups",
       "back": "Back to the calendar",
       "director": "Tournament director",
       "results": "Entrants and results",
       "notImportedHint": "The entrants, pairings and standings are not on RookHub yet. Bookmark the tournament and they will be fetched right away.",
       "notImportedHintGuest": "The entrants, pairings and standings are not on RookHub yet. “Entrants and results” fetches them — this takes up to two minutes.",
-      "venueMap": "Venue",
+      "venueMap": "Venue on the map",
       "importing": "Fetching the tournament…",
       "importDone": "Tournament fetched — entrants and results are available.",
       "importFailed": "The tournament could not be fetched. It stays bookmarked and will be fetched again by itself.",
@@ -4736,10 +4736,10 @@
       "title": "Already under way",
       "hint": "These competitions started before the chosen period and are still running into it — mostly leagues and season-long events."
     },
-    "audienceHelp": "Individual or team comes from chess-results itself — and anything not recognised as a team event counts as individual.\n\nAge group and gender section do not come from a field: there is none, so they are read from the tournament name. That works where the name states the class (“U12 girls”, “UNDER 16 BOYS”) and not at all where it does not.\n\n“Adults only” hides everything with a youth marker in its name. Seniors stay — seniors’ chess is adult chess.\n\nA league is a team competition running a whole season, or one that says so in its name.\n\nSomething in the wrong drawer? A tournament page has “report wrong event”, and it asks what tournaments of that kind are called in your region. That is what improves it for everyone.",
+    "audienceHelp": "Individual or team comes from chess-results itself — and anything not recognised as a team event counts as individual.\n\nAge group and gender section do not come from a field: there is none, so they are read from the tournament name. That works where the name states the class (“U12 girls”, “UNDER 16 BOYS”) and not at all where it does not.\n\n“Adults only” hides everything with a youth marker in its name. Seniors stay — seniors’ chess is adult chess.\n\nA league is a team competition running a whole season, or one that says so in its name.\n\nSomething in the wrong drawer? A tournament page has “Report a wrong entry”, and it asks what tournaments of that kind are called in your region. That is what improves it for everyone.",
     "missing": {
       "cta": "Your event missing? Suggest a source",
-      "blurb": "Not every organiser announces where this directory reads. A link to an official page can be added.",
+      "blurb": "Not every organizer announces where this directory reads. A link to an official page can be added.",
       "title": "Suggest a missing tournament source",
       "lead": "This directory is filled from tournament sites that publish their calendars — whoever announces somewhere else does not appear here. What helps most is not a single date but a LINK: an official page where your tournaments are listed can be read regularly, so all of them show up from now on.",
       "link": "Link to the official page",
@@ -4759,7 +4759,7 @@
       "message": "What is wrong?",
       "learnTitle": "Two questions that help beyond this one tournament",
       "namePattern": "What are tournaments like this called in your region?",
-      "namePatternHint": "Age and audience are read from the tournament name, and those names are local — in Tyrol the youth event is a “Schachrallye”. Name such a pattern once and every future edition of that series is classified correctly.",
+      "namePatternHint": "Age and audience are read from the tournament name, and those names are local — in Tyrol, for example, the youth event is called “Schachrallye” (chess rally). Name such a pattern once and every future edition of that series is classified correctly.",
       "sourceLink": "A page where this is easier to see",
       "thanks": "Thank you — the report has arrived and we can reply to it.",
       "sendError": "The report could not be sent. Please try again."
@@ -4808,7 +4808,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Register for club officials and coaches. Code from your coach? Redeem it after signing in."
+      "login": "Member records for club officials and coaches. Code from your coach? Redeem it after signing in."
     }
   },
   "turnier": {
@@ -4859,7 +4859,7 @@
       "noRating": "no rating",
       "withoutDate": "Without a date",
       "speed": {
-        "standard": "Classical",
+        "standard": "Standard",
         "rapid": "Rapid",
         "blitz": "Blitz",
         "unknown": "no time control"
@@ -5413,7 +5413,7 @@
       "neverReached": "never reached",
       "transposition": "only by transposition: {{n}} games",
       "transpositionOne": "only by transposition: {{n}} game",
-      "untilTitle": "He plays the line up to {{move}}, after that he went a different way",
+      "untilTitle": "They play the line up to {{move}}, after that they went a different way",
       "until": "up to {{move}}",
       "prefix": "start {{p}}, {{n}} games",
       "prefixOne": "start {{p}}, {{n}} game",
@@ -5452,7 +5452,7 @@
       "suggTitle": "Suggestions from the account search",
       "scanning": "Searching …",
       "scan": "Search now",
-      "noSuggestions": "No open suggestions. LeagueHub searches Lichess and chess.com in the background for accounts whose name matches the player.",
+      "noSuggestions": "No open suggestions. LeagueHub searches Lichess and Chess.com in the background for accounts whose name matches the player.",
       "site": "Site",
       "user": "Name or profile address",
       "shareNote": "The account is added right away as “confirmed” and marked as “anonymous” — please only add what you know for sure.",
@@ -5516,7 +5516,7 @@
     "speedGroup": "Time control of the online games",
     "allSpeeds": "All time controls",
     "unsure": "also unsure accounts",
-    "unsureTitle": "Accounts that may not belong to him — not included by default",
+    "unsureTitle": "Accounts that may not belong to them — not included by default",
     "period": "Period",
     "allYears": "all years",
     "lastYear": "last year",
@@ -5604,23 +5604,23 @@
       "estimatedFrom": "estimated from {{move}} on (Lichess {{band}})",
       "pending": "estimate incomplete",
       "headerFew": "Only {{n}} matching games of {{who}} — gaps estimated from Lichess games of players rated {{band}}.",
-      "headerNone": "No matching games of {{who}} — estimated from Lichess games of players rated {{band}} (a typical player of his strength).",
+      "headerNone": "No matching games of {{who}} — estimated from Lichess games of players rated {{band}} (a typical player of their strength).",
       "headerGaps": "Where {{who}} has too few games, the lines are estimated from Lichess games of players rated {{band}}.",
       "incomplete": "Estimate incomplete — {{n}} positions still open.",
       "continue": "Keep calculating",
       "running": "Estimate running — {{n}} of {{total}} positions still open.",
-      "deviatesOne": "deviates: he plays {{move}} here ({{n}} game)",
-      "deviatesMany": "deviates: he plays {{move}} here ({{n}} games)",
-      "deviatesTip": "Contradicts his games — estimated as if he had continued here like a typical player of his strength",
+      "deviatesOne": "deviates: they play {{move}} here ({{n}} game)",
+      "deviatesMany": "deviates: they play {{move}} here ({{n}} games)",
+      "deviatesTip": "Contradicts their games — estimated as if they had continued here like a typical player of their strength",
       "chessable": "Chessable",
       "chessableLevel": "Chessable · level {{level}}",
-      "chessableTrained": "Open on Chessable — last trained {{date}}, level {{level}}",
-      "chessableLevelOnly": "Open on Chessable — level {{level}}, training date not recorded",
-      "chessableNever": "Open on Chessable — not trained there yet",
+      "chessableTrained": "View on Chessable — last trained {{date}}, level {{level}}",
+      "chessableLevelOnly": "View on Chessable — level {{level}}, training date not recorded",
+      "chessableNever": "View on Chessable — not trained there yet",
       "skippedAlternatives": "{{n}} unlearned Chessable alternatives left out.",
       "deviationsButton": "Train deviations ({{n}})",
-      "deviationsHint": "The places where he left your repertoire: you play the way there, he plays his move, you find the best answer (the engine judges); then his continuations and, if you like, against Maia at the end.",
-      "deviationsList": "Where he deviates ({{n}})",
+      "deviationsHint": "The places where they left your repertoire: you play the way there, they play their move, you find the best answer (the engine judges); then their continuations and, if you like, against Maia at the end.",
+      "deviationsList": "Where they deviate ({{n}})",
       "deviationItem": "{{move}} instead of {{instead}} — played {{n}}×",
       "deviationItemOne": "{{move}} instead of {{instead}} — played {{n}}×"
     },
@@ -5645,7 +5645,7 @@
     "noFide": "no FIDE ID",
     "accounts": {
       "title": "Find online accounts",
-      "intro": "Searches Lichess and chess.com for accounts whose name fits this player. You decide: accept or reject. One search at a time, at most {{perHour}} per hour.",
+      "intro": "Searches Lichess and Chess.com for accounts whose name fits this player. You decide: accept or reject. One search at a time, at most {{perHour}} per hour.",
       "scan": "Find online accounts",
       "scanning": "Searching …",
       "remaining": "{{n}} searches left this hour.",
@@ -5654,14 +5654,14 @@
       "foundNone": "Nothing new found.",
       "busy": "Another search or check is running right now — please try again in a moment.",
       "limit": "Your searches for this hour are used up.",
-      "rateLimited": "Lichess or chess.com is slowing us down — the search has ended. Please try again later.",
-      "unreachable": "Lichess or chess.com cannot be reached right now.",
+      "rateLimited": "Lichess or Chess.com is slowing us down — the search has ended. Please try again later.",
+      "unreachable": "Lichess or Chess.com cannot be reached right now.",
       "disabled": "The account search is not switched on.",
       "loadError": "The suggestions could not be loaded.",
       "checksBusy": "Another search or check is running right now — please open the (i) check again in a moment.",
-      "checksRateLimited": "Lichess or chess.com is slowing us down — please open the (i) check again later.",
+      "checksRateLimited": "Lichess or Chess.com is slowing us down — please open the (i) check again later.",
       "listTitle": "Linked accounts",
-      "leagueHub": "This player is also in LeagueHub — his accounts are maintained there.",
+      "leagueHub": "This player is also in LeagueHub — their accounts are maintained there.",
       "sure": "confirmed",
       "unsure": "unconfirmed",
       "games": "Games fetched: {{n}}",
@@ -5676,7 +5676,7 @@
       "leagueHubOnly": "This account belongs to a LeagueHub player — please maintain it there.",
       "accountGone": "This account no longer exists.",
       "actionFailed": "That did not work just now — please try again.",
-      "after": "Accepted accounts are then fetched in the background (games of the last five years); in the opening tree they can be chosen under “Brett + online”."
+      "after": "Accepted accounts are then fetched in the background (games of the last five years); in the opening tree they can be chosen under “Board + online”."
     }
   },
   "markPosition": {
@@ -5816,7 +5816,7 @@
         "calc": "Write down variations without moving the pieces for good – check them later",
         "solve": "Find the move yourself; it is checked against the book solution, or by the computer if there is none",
         "maia": "Play the position out against Maia",
-        "game": "play through the game this diagram comes from",
+        "game": "Play through the game this diagram comes from",
         "tree": "Click through the book’s opening lines"
       },
       "calcHint": "Play variations – they are noted as lines.",
@@ -5969,7 +5969,7 @@
       "needPick": "Choose a collection first.",
       "assigned": "Added to “{{name}}”.",
       "remove": "Remove from collection",
-      "removed": "{{n}} removed from the collection.",
+      "removed": "Books removed from the collection: {{n}}.",
       "rename": "Rename collection",
       "dissolve": "Dissolve collection",
       "dissolveConfirm": "Dissolve “{{name}}”? The books stay in the library.",
@@ -6023,7 +6023,7 @@
       "showSolution": "Show solution",
       "hideSolution": "Hide solution",
       "showPosition": "Show current position",
-      "hidePosition": "Show book position",
+      "hidePosition": "Hide current position",
       "toSolutionPage": "To the solution (page {{page}})",
       "solutionEngine": "Solution by Stockfish — the book has none.",
       "solutionDoubtful": "Solution doubtful: Stockfish rates the book’s first move clearly worse.",
@@ -6092,7 +6092,7 @@
       "eta": "about {{n}} min left",
       "done": "{{n}} done",
       "remaining": "{{n}} still to do",
-      "firstRound": "{{n}} before German",
+      "firstRound": "{{n}} in the first round (neither English nor German originals)",
       "failed": "{{n}} failed",
       "noText": "{{n}} without text",
       "bookLanguages": "Books by language",
@@ -6395,7 +6395,7 @@
     "thisOpponent": "the opponent",
     "reached": "In the games of {{who}}: reached {{n}}× (last {{year}})",
     "reachedNoYear": "In the games of {{who}}: reached {{n}}×",
-    "played": "he played {{moves}} here",
+    "played": "they played {{moves}} here",
     "never": "This position does not occur in the games of {{who}}.",
     "leftEstimated": "From {{move}} no more games of {{who}} — estimated from here (Lichess {{band}})",
     "leftRepertoire": "From {{move}} no more games of {{who}} — only your repertoire from here",
@@ -6414,7 +6414,7 @@
     "pathHint": "On the way to the deviation, {{move}} comes here.",
     "opponentMoves": "{{who}} is moving …",
     "askDeviation": "Here {{who}} plays {{move}} ({{n}}×) — that is not in your repertoire. What is the best answer?",
-    "askContinuation": "In his games {{move}} follows ({{n}}×). What is the best answer?",
+    "askContinuation": "In their games {{move}} follows ({{n}}×). What is the best answer?",
     "judging": "The engine is checking your answer …",
     "good": "{{move}} is good.",
     "bestWere": "Engine: {{moves}}",

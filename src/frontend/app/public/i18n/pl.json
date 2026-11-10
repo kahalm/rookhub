@@ -191,7 +191,7 @@
     "error": "Coś poszło nie tak.",
     "send": "Wyślij",
     "undo": "Cofnij",
-    "previous": "Previous",
+    "previous": "Poprzedni",
     "next": "Dalej",
     "day": "dzień",
     "days": "dni"
@@ -4014,13 +4014,13 @@
         "t": "Woodpecker",
         "p": [
           "Metoda Woodpecker (Smith i Tikkanen) trenuje rozpoznawanie wzorców taktycznych przez rozwiązywanie tych samych zadań raz za razem, za każdym razem szybciej. Wybierz jeden lub więcej kursów i rozpocznij trening – zasady są stałe, jak w książce.",
-          "Cykl 1: masz cztery tygodnie, aby rozwiązać jak najwięcej zadań w kolejności kursu; staną się twoim zestawem. Możesz cofnąć datę startu – liczy się to, co od tego czasu rozwiązałeś w tych kursach. Po co najmniej jednym dniu przerwy każdy kolejny cykl przynosi ten sam zestaw w losowej kolejności i ma połowę czasu (14, 7, 4, 2, 1 dni). W cyklu liczy się tylko twoja pierwsza próba na zadanie. Kończysz, gdy rozwiążesz zestaw w ciągu jednego dnia lub po 7. cyklu."
+          "Cykl 1: masz cztery tygodnie, aby rozwiązać jak najwięcej zadań w kolejności kursu; staną się twoim zestawem. Możesz cofnąć datę startu – liczy się to, co od tego czasu rozwiązałeś w tych kursach. Po co najmniej jednym dniu przerwy każdy kolejny cykl przynosi ten sam zestaw w losowej kolejności i ma połowę czasu (14, 7, 4, 2, 1, 1 dni). W cyklu liczy się tylko twoja pierwsza próba na zadanie. Kończysz, gdy rozwiążesz zestaw w ciągu jednego dnia lub po 7. cyklu."
         ]
       },
       "maxims": {
         "t": "Zasady praktyczne",
         "p": [
-          "Krótka, starannie dobrana lista klasycznych szachowych maksym – „Skoczek na brzegu to skoczek w biedzie”, „Niebronione figury spadają” itd. Każda zasada jest poparta fragmentami książek szachowych z biblioteki; sformułowanie wszędzie jest takie samo.",
+          "Krótka, starannie dobrana lista klasycznych szachowych maksym – „A knight on the rim is dim”, „Loose pieces drop off” itd. Każda zasada jest poparta fragmentami książek szachowych z biblioteki; sformułowanie wszędzie jest takie samo.",
           "Otwórz zasadę, aby zobaczyć, kiedy obowiązuje i które książki ją wyjaśniają, z krótkim cytatem. Jeśli masz dostęp do książki, link otwiera ją od razu na właściwej stronie (PDF) lub książkę (EPUB).",
           "Wyjaśnienia twoich błędów kończą się co najwyżej jedną z tych zasad; (i) obok niej pokazuje fragmenty książek."
         ]
@@ -4705,7 +4705,7 @@
       "title": "Już trwają",
       "hint": "Te rozgrywki zaczęły się przed wybranym okresem i wciąż w nim trwają — głównie ligi i wydarzenia całosezonowe."
     },
-    "audienceHelp": "Indywidualny lub drużynowy pochodzi z samego chess-results — a wszystko, czego nie rozpoznano jako drużynowe, liczy się jako indywidualne.\n\nGrupa wiekowa i kategoria płci nie pochodzą z pola: takiego nie ma, więc są odczytywane z nazwy turnieju. Działa to tam, gdzie nazwa podaje kategorię („U12 dziewczęta”, „UNDER 16 BOYS”), a wcale tam, gdzie nie podaje.\n\n„Tylko dorośli” ukrywa wszystko, co ma w nazwie oznaczenie młodzieżowe. Seniorzy zostają — szachy seniorów to szachy dorosłych.\n\nLiga to rozgrywki drużynowe trwające cały sezon lub takie, które mówią to w nazwie.\n\nCoś w złej szufladzie? Na stronie turnieju jest „zgłoś błędny wpis”, a formularz pyta, jak nazywają się takie turnieje w twoim regionie. To właśnie poprawia wynik dla wszystkich.",
+    "audienceHelp": "Indywidualny lub drużynowy pochodzi z samego chess-results — a wszystko, czego nie rozpoznano jako drużynowe, liczy się jako indywidualne.\n\nGrupa wiekowa i kategoria płci nie pochodzą z pola: takiego nie ma, więc są odczytywane z nazwy turnieju. Działa to tam, gdzie nazwa podaje kategorię („U12 dziewczęta”, „UNDER 16 BOYS”), a wcale tam, gdzie nie podaje.\n\n„Tylko dorośli” ukrywa wszystko, co ma w nazwie oznaczenie młodzieżowe. Seniorzy zostają — szachy seniorów to szachy dorosłych.\n\nLiga to rozgrywki drużynowe trwające cały sezon lub takie, które mówią to w nazwie.\n\nCoś w złej szufladzie? Na stronie turnieju jest „Zgłoś błędny wpis”, a formularz pyta, jak nazywają się takie turnieje w twoim regionie. To właśnie poprawia wynik dla wszystkich.",
     "missing": {
       "cta": "Brakuje twojego wydarzenia? Zaproponuj źródło",
       "blurb": "Nie każdy organizator ogłasza tam, skąd czyta ten katalog. Link do oficjalnej strony można dodać.",
@@ -4777,7 +4777,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Rejestracja dla działaczy klubowych i trenerów. Masz kod od trenera? Zrealizuj go po zalogowaniu."
+      "login": "Kartoteka dla działaczy klubowych i trenerów. Masz kod od trenera? Zrealizuj go po zalogowaniu."
     }
   },
   "turnier": {
@@ -5875,7 +5875,7 @@
       "needPick": "Najpierw wybierz kolekcję.",
       "assigned": "Dodano do „{{name}}”.",
       "remove": "Usuń z kolekcji",
-      "removed": "Usunięto z kolekcji: {{n}}.",
+      "removed": "Usunięto książki z kolekcji: {{n}}.",
       "rename": "Zmień nazwę kolekcji",
       "dissolve": "Rozwiąż kolekcję",
       "dissolveConfirm": "Rozwiązać „{{name}}”? Książki zostaną w bibliotece.",

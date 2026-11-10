@@ -191,7 +191,7 @@
     "error": "Algo correu mal.",
     "send": "Enviar",
     "undo": "Desfazer",
-    "previous": "Previous",
+    "previous": "Anterior",
     "next": "Seguinte",
     "day": "dia",
     "days": "dias"
@@ -4014,13 +4014,13 @@
         "t": "Woodpecker",
         "p": [
           "O método Woodpecker (Smith & Tikkanen) treina o reconhecimento de padrões táticos resolvendo os mesmos puzzles vezes sem conta, cada vez mais depressa. Escolha um ou mais cursos e inicie um treino – as regras são fixas, como no livro.",
-          "Ciclo 1: tem quatro semanas para resolver tantos puzzles quanto conseguir, pela ordem do curso; estes tornam-se o seu conjunto. Pode antedatar o início – o que resolveu nestes cursos desde então conta. Após pelo menos um dia de descanso, cada ciclo seguinte traz o mesmo conjunto em ordem aleatória e tem metade do tempo (14, 7, 4, 2, 1 dias). Só a sua primeira tentativa por puzzle conta num ciclo. Termina quando resolver o conjunto num só dia, ou após o 7.º ciclo."
+          "Ciclo 1: tem quatro semanas para resolver tantos puzzles quanto conseguir, pela ordem do curso; estes tornam-se o seu conjunto. Pode antedatar o início – o que resolveu nestes cursos desde então conta. Após pelo menos um dia de descanso, cada ciclo seguinte traz o mesmo conjunto em ordem aleatória e tem metade do tempo (14, 7, 4, 2, 1, 1 dias). Só a sua primeira tentativa por puzzle conta num ciclo. Termina quando resolver o conjunto num só dia, ou após o 7.º ciclo."
         ]
       },
       "maxims": {
         "t": "Regras práticas",
         "p": [
-          "Uma lista curta e selecionada de máximas clássicas do xadrez – “Cavalo na borda, cavalo sem força”, “Peças soltas caem” e assim por diante. Cada regra é apoiada por passagens de livros de xadrez da biblioteca; a formulação é a mesma em todo o lado.",
+          "Uma lista curta e selecionada de máximas clássicas do xadrez – “A knight on the rim is dim”, “Loose pieces drop off” e assim por diante. Cada regra é apoiada por passagens de livros de xadrez da biblioteca; a formulação é a mesma em todo o lado.",
           "Abra uma regra para ver quando se aplica e que livros a explicam, com uma citação curta. Se tiver acesso a um livro, a ligação abre-o diretamente na página (PDF) ou no livro (EPUB).",
           "As explicações dos seus erros terminam com no máximo uma destas regras; o (i) ao lado mostra as passagens dos livros."
         ]
@@ -4705,7 +4705,7 @@
       "title": "Já em curso",
       "hint": "Estas competições começaram antes do período escolhido e continuam a decorrer nele — sobretudo ligas e eventos que duram toda a época."
     },
-    "audienceHelp": "Individual ou equipas vem do próprio chess-results — e tudo o que não for reconhecido como evento por equipas conta como individual.\n\nO escalão etário e a categoria de género não vêm de um campo: não existe nenhum, por isso são lidos a partir do nome do torneio. Isso funciona quando o nome indica a categoria (“U12 girls”, “UNDER 16 BOYS”) e não funciona de todo quando não indica.\n\n“Só adultos” oculta tudo o que tem uma indicação de jovens no nome. Os seniores ficam — o xadrez de seniores é xadrez de adultos.\n\nUma liga é uma competição por equipas que dura toda a época, ou uma que o diga no nome.\n\nAlgo na gaveta errada? A página de um torneio tem “comunicar evento errado”, e pergunta como se chamam os torneios desse tipo na sua região. É isso que melhora o resultado para todos.",
+    "audienceHelp": "Individual ou equipas vem do próprio chess-results — e tudo o que não for reconhecido como evento por equipas conta como individual.\n\nO escalão etário e a categoria de género não vêm de um campo: não existe nenhum, por isso são lidos a partir do nome do torneio. Isso funciona quando o nome indica a categoria (“U12 girls”, “UNDER 16 BOYS”) e não funciona de todo quando não indica.\n\n“Só adultos” oculta tudo o que tem uma indicação de jovens no nome. Os seniores ficam — o xadrez de seniores é xadrez de adultos.\n\nUma liga é uma competição por equipas que dura toda a época, ou uma que o diga no nome.\n\nAlgo na gaveta errada? A página de um torneio tem “Comunicar uma entrada errada”, e pergunta como se chamam os torneios desse tipo na sua região. É isso que melhora o resultado para todos.",
     "missing": {
       "cta": "Falta o seu evento? Sugira uma fonte",
       "blurb": "Nem todos os organizadores anunciam onde este diretório lê. Pode ser adicionado um link para uma página oficial.",
@@ -4777,7 +4777,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Registo para dirigentes de clubes e treinadores. Tem um código do seu treinador? Utilize-o depois de iniciar sessão."
+      "login": "Ficheiro de membros para dirigentes de clubes e treinadores. Tem um código do seu treinador? Utilize-o depois de iniciar sessão."
     }
   },
   "turnier": {
@@ -5875,7 +5875,7 @@
       "needPick": "Escolha primeiro uma coleção.",
       "assigned": "Adicionado a “{{name}}”.",
       "remove": "Remover da coleção",
-      "removed": "{{n}} removidos da coleção.",
+      "removed": "Livros removidos da coleção: {{n}}.",
       "rename": "Mudar nome da coleção",
       "dissolve": "Desfazer coleção",
       "dissolveConfirm": "Desfazer “{{name}}”? Os livros ficam na biblioteca.",

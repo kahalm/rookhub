@@ -191,7 +191,7 @@
     "error": "Une erreur s'est produite.",
     "send": "Envoyer",
     "undo": "Annuler",
-    "previous": "Previous",
+    "previous": "Précédent",
     "next": "Suivant",
     "day": "jour",
     "days": "jours"
@@ -4014,13 +4014,13 @@
         "t": "Woodpecker",
         "p": [
           "La méthode Woodpecker (Smith & Tikkanen) entraîne la reconnaissance des motifs tactiques en résolvant les mêmes puzzles encore et encore, plus vite à chaque fois. Choisissez un ou plusieurs cours et lancez un entraînement – les règles sont fixées comme dans le livre.",
-          "Cycle 1 : vous avez quatre semaines pour résoudre autant de puzzles que possible, dans l'ordre du cours ; ils deviennent votre série. Vous pouvez antidater le début – ce que vous avez résolu dans ces cours depuis compte. Après au moins un jour de repos, chaque cycle suivant reprend la même série dans un ordre aléatoire avec moitié moins de temps (14, 7, 4, 2, 1 jours). Seule votre première tentative par puzzle compte dans un cycle. Vous avez terminé une fois la série résolue en un jour, ou après le 7e cycle."
+          "Cycle 1 : vous avez quatre semaines pour résoudre autant de puzzles que possible, dans l'ordre du cours ; ils deviennent votre série. Vous pouvez antidater le début – ce que vous avez résolu dans ces cours depuis compte. Après au moins un jour de repos, chaque cycle suivant reprend la même série dans un ordre aléatoire avec moitié moins de temps (14, 7, 4, 2, 1, 1 jours). Seule votre première tentative par puzzle compte dans un cycle. Vous avez terminé une fois la série résolue en un jour, ou après le 7e cycle."
         ]
       },
       "maxims": {
         "t": "Règles empiriques",
         "p": [
-          "Une courte liste sélectionnée de maximes d'échecs classiques – « Cavalier au bord, cavalier mort », « Les pièces non protégées tombent » et ainsi de suite. Chaque règle s'appuie sur des passages de livres d'échecs de la bibliothèque ; la formulation reste la même partout.",
+          "Une courte liste sélectionnée de maximes d'échecs classiques – « A knight on the rim is dim », « Loose pieces drop off » et ainsi de suite. Chaque règle s'appuie sur des passages de livres d'échecs de la bibliothèque ; la formulation reste la même partout.",
           "Ouvrez une règle pour voir quand elle s'applique et quels livres l'expliquent, avec une courte citation. Si vous avez accès à un livre, le lien l'ouvre directement à la page (PDF) ou au livre (EPUB).",
           "Les explications de vos erreurs se terminent par au plus une de ces règles ; le (i) à côté affiche les passages de livres."
         ]
@@ -4705,7 +4705,7 @@
       "title": "Déjà en cours",
       "hint": "Ces compétitions ont commencé avant la période choisie et se poursuivent pendant celle-ci — surtout des ligues et des événements sur toute la saison."
     },
-    "audienceHelp": "Individuel ou par équipes provient de chess-results lui-même — et tout ce qui n'est pas reconnu comme événement par équipes compte comme individuel.\n\nLa tranche d'âge et la section par genre ne proviennent pas d'un champ : il n'y en a pas, elles sont donc lues dans le nom du tournoi. Cela fonctionne quand le nom indique la catégorie (« U12 girls », « UNDER 16 BOYS ») et pas du tout sinon.\n\n« Adultes uniquement » masque tout ce qui porte une mention jeunes dans son nom. Les seniors restent — les échecs seniors sont des échecs adultes.\n\nUne ligue est une compétition par équipes sur toute une saison, ou une qui l'indique dans son nom.\n\nQuelque chose dans le mauvais tiroir ? Une page de tournoi propose « signaler une erreur », et demande comment s'appellent les tournois de ce type dans votre région. C'est ce qui l'améliore pour tous.",
+    "audienceHelp": "Individuel ou par équipes provient de chess-results lui-même — et tout ce qui n'est pas reconnu comme événement par équipes compte comme individuel.\n\nLa tranche d'âge et la section par genre ne proviennent pas d'un champ : il n'y en a pas, elles sont donc lues dans le nom du tournoi. Cela fonctionne quand le nom indique la catégorie (« U12 girls », « UNDER 16 BOYS ») et pas du tout sinon.\n\n« Adultes uniquement » masque tout ce qui porte une mention jeunes dans son nom. Les seniors restent — les échecs seniors sont des échecs adultes.\n\nUne ligue est une compétition par équipes sur toute une saison, ou une qui l'indique dans son nom.\n\nQuelque chose dans le mauvais tiroir ? Une page de tournoi propose « Signaler une entrée erronée », et demande comment s'appellent les tournois de ce type dans votre région. C'est ce qui l'améliore pour tous.",
     "missing": {
       "cta": "Votre événement manque ? Proposez une source",
       "blurb": "Tous les organisateurs n'annoncent pas là où cet annuaire lit. Un lien vers une page officielle peut être ajouté.",
@@ -4777,7 +4777,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Inscription pour les responsables de club et les entraîneurs. Un code de votre entraîneur ? Utilisez-le après vous être connecté."
+      "login": "Fichier des membres pour les responsables de club et les entraîneurs. Un code de votre entraîneur ? Utilisez-le après vous être connecté."
     }
   },
   "turnier": {
@@ -5875,7 +5875,7 @@
       "needPick": "Choisissez d'abord une collection.",
       "assigned": "Ajouté à « {{name}} ».",
       "remove": "Retirer de la collection",
-      "removed": "{{n}} retirés de la collection.",
+      "removed": "Livres retirés de la collection : {{n}}.",
       "rename": "Renommer la collection",
       "dissolve": "Dissoudre la collection",
       "dissolveConfirm": "Dissoudre « {{name}} » ? Les livres restent dans la bibliothèque.",

@@ -191,7 +191,7 @@
     "error": "Qualcosa è andato storto.",
     "send": "Invia",
     "undo": "Annulla",
-    "previous": "Previous",
+    "previous": "Precedente",
     "next": "Successivo",
     "day": "giorno",
     "days": "giorni"
@@ -4014,13 +4014,13 @@
         "t": "Woodpecker",
         "p": [
           "Il metodo Woodpecker (Smith & Tikkanen) allena il riconoscimento degli schemi tattici risolvendo gli stessi puzzle più e più volte, ogni volta più velocemente. Scegli uno o più corsi e avvia un allenamento – le regole sono fisse come nel libro.",
-          "Ciclo 1: hai quattro settimane per risolvere quanti più puzzle puoi, nell'ordine del corso; diventano il tuo set. Puoi retrodatare l'inizio – conta ciò che hai risolto in questi corsi da allora. Dopo almeno un giorno di pausa, ogni ciclo successivo propone lo stesso set in ordine casuale e ha metà del tempo (14, 7, 4, 2, 1 giorni). In un ciclo conta solo il primo tentativo per puzzle. Hai finito quando risolvi il set entro un giorno, oppure dopo il 7° ciclo."
+          "Ciclo 1: hai quattro settimane per risolvere quanti più puzzle puoi, nell'ordine del corso; diventano il tuo set. Puoi retrodatare l'inizio – conta ciò che hai risolto in questi corsi da allora. Dopo almeno un giorno di pausa, ogni ciclo successivo propone lo stesso set in ordine casuale e ha metà del tempo (14, 7, 4, 2, 1, 1 giorni). In un ciclo conta solo il primo tentativo per puzzle. Hai finito quando risolvi il set entro un giorno, oppure dopo il 7° ciclo."
         ]
       },
       "maxims": {
         "t": "Regole pratiche",
         "p": [
-          "Una breve lista curata di massime scacchistiche classiche – “Cavallo sul bordo, cavallo balordo”, “I pezzi indifesi cadono” e così via. Ogni regola è supportata da passi di libri di scacchi della biblioteca; la formulazione resta la stessa ovunque.",
+          "Una breve lista curata di massime scacchistiche classiche – “A knight on the rim is dim”, “Loose pieces drop off” e così via. Ogni regola è supportata da passi di libri di scacchi della biblioteca; la formulazione resta la stessa ovunque.",
           "Apri una regola per vedere quando si applica e quali libri la spiegano, con una breve citazione. Se hai accesso a un libro, il link lo apre direttamente alla pagina (PDF) o al libro (EPUB).",
           "Le spiegazioni dei tuoi errori terminano con al massimo una di queste regole; la (i) accanto mostra i passi dei libri."
         ]
@@ -4705,7 +4705,7 @@
       "title": "Già in corso",
       "hint": "Queste competizioni sono iniziate prima del periodo scelto e proseguono al suo interno — per lo più campionati a squadre ed eventi di una stagione intera."
     },
-    "audienceHelp": "Individuale o a squadre viene da chess-results stesso — e tutto ciò che non è riconosciuto come evento a squadre conta come individuale.\n\nFascia d'età e categoria di genere non vengono da un campo: non esiste, quindi si leggono dal nome del torneo. Funziona dove il nome indica la categoria (“U12 ragazze”, “UNDER 16 BOYS”) e per niente dove non lo fa.\n\n“Solo adulti” nasconde tutto ciò che ha un indicatore giovanile nel nome. I senior restano — gli scacchi senior sono scacchi per adulti.\n\nUn campionato a squadre (lega) è una competizione a squadre che dura un'intera stagione, o che lo dice nel nome.\n\nQualcosa nel cassetto sbagliato? La pagina di un torneo ha “segnala voce errata” e chiede come si chiamano nella tua regione i tornei di quel tipo. È questo che migliora le cose per tutti.",
+    "audienceHelp": "Individuale o a squadre viene da chess-results stesso — e tutto ciò che non è riconosciuto come evento a squadre conta come individuale.\n\nFascia d'età e categoria di genere non vengono da un campo: non esiste, quindi si leggono dal nome del torneo. Funziona dove il nome indica la categoria (“U12 ragazze”, “UNDER 16 BOYS”) e per niente dove non lo fa.\n\n“Solo adulti” nasconde tutto ciò che ha un indicatore giovanile nel nome. I senior restano — gli scacchi senior sono scacchi per adulti.\n\nUn campionato a squadre (lega) è una competizione a squadre che dura un'intera stagione, o che lo dice nel nome.\n\nQualcosa nel cassetto sbagliato? La pagina di un torneo ha “Segnala voce errata” e chiede come si chiamano nella tua regione i tornei di quel tipo. È questo che migliora le cose per tutti.",
     "missing": {
       "cta": "Manca il tuo evento? Suggerisci una fonte",
       "blurb": "Non tutti gli organizzatori pubblicano dove legge questo elenco. Si può aggiungere un link a una pagina ufficiale.",
@@ -4777,7 +4777,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Accesso per dirigenti del club e allenatori. Hai un codice dal tuo allenatore? Riscattalo dopo l'accesso."
+      "login": "Schedario per dirigenti del club e allenatori. Hai un codice dal tuo allenatore? Riscattalo dopo l'accesso."
     }
   },
   "turnier": {
@@ -5875,7 +5875,7 @@
       "needPick": "Scegli prima una raccolta.",
       "assigned": "Aggiunto a “{{name}}”.",
       "remove": "Rimuovi dalla raccolta",
-      "removed": "{{n}} rimossi dalla raccolta.",
+      "removed": "Libri rimossi dalla raccolta: {{n}}.",
       "rename": "Rinomina raccolta",
       "dissolve": "Sciogli raccolta",
       "dissolveConfirm": "Sciogliere “{{name}}”? I libri restano nella biblioteca.",

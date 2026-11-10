@@ -191,7 +191,7 @@
     "error": "Đã xảy ra lỗi.",
     "send": "Gửi",
     "undo": "Hoàn tác",
-    "previous": "Previous",
+    "previous": "Trước",
     "next": "Tiếp",
     "day": "ngày",
     "days": "ngày"
@@ -4014,13 +4014,13 @@
         "t": "Woodpecker",
         "p": [
           "Phương pháp Woodpecker (Smith & Tikkanen) rèn khả năng nhận diện mô thức chiến thuật bằng cách giải đi giải lại cùng các bài tập, lần sau nhanh hơn lần trước. Chọn một hoặc nhiều khóa học và bắt đầu luyện – luật cố định như trong sách.",
-          "Chu kỳ 1: bạn có bốn tuần để giải càng nhiều bài càng tốt, theo thứ tự khóa học; chúng trở thành bộ bài của bạn. Bạn có thể lùi ngày bắt đầu – những gì bạn đã giải trong các khóa này từ đó đều được tính. Sau ít nhất một ngày nghỉ, mỗi chu kỳ tiếp theo đưa ra cùng bộ bài theo thứ tự ngẫu nhiên với một nửa thời gian (14, 7, 4, 2, 1 ngày). Trong một chu kỳ chỉ tính lần thử đầu tiên của mỗi bài. Bạn hoàn thành khi giải hết bộ bài trong một ngày, hoặc sau chu kỳ thứ 7."
+          "Chu kỳ 1: bạn có bốn tuần để giải càng nhiều bài càng tốt, theo thứ tự khóa học; chúng trở thành bộ bài của bạn. Bạn có thể lùi ngày bắt đầu – những gì bạn đã giải trong các khóa này từ đó đều được tính. Sau ít nhất một ngày nghỉ, mỗi chu kỳ tiếp theo đưa ra cùng bộ bài theo thứ tự ngẫu nhiên với một nửa thời gian (14, 7, 4, 2, 1, 1 ngày). Trong một chu kỳ chỉ tính lần thử đầu tiên của mỗi bài. Bạn hoàn thành khi giải hết bộ bài trong một ngày, hoặc sau chu kỳ thứ 7."
         ]
       },
       "maxims": {
         "t": "Kinh nghiệm thực hành",
         "p": [
-          "Một danh sách ngắn, chọn lọc các châm ngôn cờ vua kinh điển – “Mã ở biên là mã yếu”, “Quân không được bảo vệ dễ rơi” v.v. Mỗi quy tắc đều có trích đoạn từ sách cờ trong thư viện làm căn cứ; câu chữ giữ nguyên ở mọi nơi.",
+          "Một danh sách ngắn, chọn lọc các châm ngôn cờ vua kinh điển – “A knight on the rim is dim”, “Loose pieces drop off” v.v. Mỗi quy tắc đều có trích đoạn từ sách cờ trong thư viện làm căn cứ; câu chữ giữ nguyên ở mọi nơi.",
           "Mở một quy tắc để xem khi nào nó áp dụng và sách nào giải thích nó, kèm trích dẫn ngắn. Nếu bạn có quyền truy cập sách, liên kết sẽ mở ngay tại trang đó (PDF) hoặc cuốn sách (EPUB).",
           "Phần giải thích lỗi của bạn kết thúc bằng tối đa một quy tắc như vậy; biểu tượng (i) bên cạnh hiện các trích đoạn sách."
         ]
@@ -4705,7 +4705,7 @@
       "title": "Đang diễn ra",
       "hint": "Các giải này bắt đầu trước khoảng thời gian đã chọn và vẫn đang diễn ra trong đó — chủ yếu là các giải liga và sự kiện kéo dài cả mùa."
     },
-    "audienceHelp": "Cá nhân hay đồng đội lấy từ chính chess-results — và mọi giải không được nhận ra là giải đồng đội đều tính là cá nhân.\n\nNhóm tuổi và bảng giới tính không lấy từ một trường nào: không có trường như vậy, nên chúng được đọc từ tên giải. Cách này hiệu quả khi tên ghi rõ hạng (“U12 girls”, “UNDER 16 BOYS”) và hoàn toàn không khi tên không ghi.\n\n“Chỉ người lớn” ẩn mọi giải có dấu hiệu trẻ trong tên. Giải cao tuổi vẫn hiện — cờ cao tuổi là cờ người lớn.\n\nGiải liga là giải đồng đội kéo dài cả mùa, hoặc giải có ghi như vậy trong tên.\n\nCó mục bị xếp nhầm? Trang giải đấu có “báo mục sai”, và nó hỏi ở vùng bạn các giải kiểu đó được gọi là gì. Chính điều đó giúp cải thiện cho mọi người.",
+    "audienceHelp": "Cá nhân hay đồng đội lấy từ chính chess-results — và mọi giải không được nhận ra là giải đồng đội đều tính là cá nhân.\n\nNhóm tuổi và bảng giới tính không lấy từ một trường nào: không có trường như vậy, nên chúng được đọc từ tên giải. Cách này hiệu quả khi tên ghi rõ hạng (“U12 girls”, “UNDER 16 BOYS”) và hoàn toàn không khi tên không ghi.\n\n“Chỉ người lớn” ẩn mọi giải có dấu hiệu trẻ trong tên. Giải cao tuổi vẫn hiện — cờ cao tuổi là cờ người lớn.\n\nGiải liga là giải đồng đội kéo dài cả mùa, hoặc giải có ghi như vậy trong tên.\n\nCó mục bị xếp nhầm? Trang giải đấu có “Báo mục sai”, và nó hỏi ở vùng bạn các giải kiểu đó được gọi là gì. Chính điều đó giúp cải thiện cho mọi người.",
     "missing": {
       "cta": "Không thấy giải của bạn? Đề xuất một nguồn",
       "blurb": "Không phải đơn vị tổ chức nào cũng công bố ở nơi danh bạ này đọc. Có thể thêm liên kết tới một trang chính thức.",
@@ -4777,7 +4777,7 @@
   },
   "clubhub": {
     "authIntro": {
-      "login": "Đăng ký dành cho cán bộ câu lạc bộ và huấn luyện viên. Có mã từ huấn luyện viên? Hãy đổi mã sau khi đăng nhập."
+      "login": "Hồ sơ thành viên dành cho cán bộ câu lạc bộ và huấn luyện viên. Có mã từ huấn luyện viên? Hãy đổi mã sau khi đăng nhập."
     }
   },
   "turnier": {
@@ -5875,7 +5875,7 @@
       "needPick": "Hãy chọn bộ sưu tập trước.",
       "assigned": "Đã thêm vào “{{name}}”.",
       "remove": "Bỏ khỏi bộ sưu tập",
-      "removed": "Đã bỏ {{n}} khỏi bộ sưu tập.",
+      "removed": "Đã bỏ {{n}} cuốn sách khỏi bộ sưu tập.",
       "rename": "Đổi tên bộ sưu tập",
       "dissolve": "Giải tán bộ sưu tập",
       "dissolveConfirm": "Giải tán “{{name}}”? Các sách vẫn ở trong thư viện.",
