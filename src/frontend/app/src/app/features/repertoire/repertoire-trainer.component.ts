@@ -472,6 +472,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         this.opponentRank = null;
         this.opponentNotice = 'repertoireTrainer.opponentFailed';
         if (wait) this.buildQueue();
+        else this.cdr.markForCheck();   // läuft schon die Einstiegslinie, zeichnet sonst nichts den Hinweis (OnPush)
       },
     });
   }

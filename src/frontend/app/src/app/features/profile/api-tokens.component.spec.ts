@@ -1,3 +1,4 @@
+import { NgZone } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -5,7 +6,7 @@ import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { ApiTokensComponent, CreateTokenDialogComponent } from './api-tokens.component';
+import { ApiTokensComponent, CreateTokenDialogComponent, ShowTokenDialogComponent } from './api-tokens.component';
 import { MatDialog } from '@angular/material/dialog';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { Subject, of } from 'rxjs';
@@ -242,4 +243,38 @@ describe('ApiTokensComponent', () => {
       expect(fixture.componentInstance.scopeShort[fixture.componentInstance.scope]).toBe('profile.tokens.dialog.scopeDiagramsShort');
     });
   }
+});
+
+/**
+ * Onpush-Audit 10.11.2026: der Dialog hat kein changeDetection und ist damit (Angular 22) OnPush. „Kopiert“ setzt erst
+ * die Clipboard-Promise — kein Template-Ereignis mehr, also zeichnete niemand den Hinweis. Gezeichnet wird nur über
+ * autoDetectChanges/whenStable.
+ */
+describe('ShowTokenDialogComponent „Kopiert“-Hinweis (OnPush)', () => {
+  it('erscheint, sobald die Zwischenablage das Kopieren bestätigt', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ShowTokenDialogComponent],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: MatDialogRef, useValue: { close: () => {} } }],
+    }).compileComponents();
+    let resolveWrite!: () => void;
+    spyOnProperty(navigator, 'clipboard', 'get').and.returnValue(
+      { writeText: () => new Promise<void>(r => (resolveWrite = r)) } as unknown as Clipboard);
+    ShowTokenDialogComponent.pendingToken = 'rh_test';
+    const fixture = TestBed.createComponent(ShowTokenDialogComponent);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+
+    (el.querySelector('.token-box button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(el.querySelector('.copied')).withContext('vor der Antwort der Zwischenablage').toBeNull();
+
+    // Die Zwischenablage antwortet in einem späteren Task (in der Zone, wie im Browser).
+    // NICHT whenStable: das wartete auch den 2-s-Rücksetz-Timer ab — hier zählt der Lauf direkt nach der Antwort.
+    TestBed.inject(NgZone).run(() => resolveWrite());
+    await new Promise(r => setTimeout(r, 20));
+    expect(el.querySelector('.copied')).not.toBeNull();
+    fixture.destroy();   // räumt den Rücksetz-Timer ab
+  });
 });

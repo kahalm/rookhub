@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, inject, model } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, inject, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -284,6 +284,10 @@ export class ProfileIdentityFormComponent {
   private readonly profiles = inject(ProfileService);
   private readonly snackbar = inject(SnackbarService);
   private readonly translate = inject(TranslateService);
+  /** Die Turnierseiten-Profilseite ist OnPush (Angular 22: ohne Angabe), und der Lauf nach der HTTP-Antwort steigt
+   *  nicht in ihre nicht markierte Ansicht hinab — ohne markForCheck drehte der Suchkreis dort ewig, Treffer und
+   *  übernommene Kennungen erschienen erst beim nächsten Klick. */
+  private readonly cdr = inject(ChangeDetectorRef);
 
   searching = false;
   results: PlayerSearchResult | null = null;
@@ -321,9 +325,11 @@ export class ProfileIdentityFormComponent {
         // schon eine (zu SEINEM Spieler gehoerende) FIDE-Kennung geliefert hat — sonst
         // ueberschreibt ein fremder Namensgleicher sie.
         if (fide && !(cr && cr.fideId)) this.selectFidePlayer(fide);
+        this.cdr.markForCheck();
       },
       error: () => {
         this.searching = false;
+        this.cdr.markForCheck();
         this.snackbar.info(this.translate.instant('profile.searchFailed'));
       },
     });

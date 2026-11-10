@@ -1,6 +1,6 @@
 import {
   Component, ElementRef, EventEmitter, HostListener, Input, OnChanges,
-  OnDestroy, AfterViewInit, Output, SimpleChanges, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+  OnDestroy, AfterViewInit, Output, SimpleChanges, ViewChild, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
@@ -213,6 +213,13 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   // liegen in PromotionPickerComponent - dieselbe, die auch das Analysebrett benutzt.
   pendingPromotion: { orig: Key; dest: Key } | null = null;
   promotionColor: 'w' | 'b' = 'w';
+  /**
+   * Umwandlungs-Auswahl und Viz-Ring kommen aus chessgrounds eigenem Zug-Ereignis bzw. aus den
+   * eigenen Pointer-Listenern — kein Template-Ereignis, also markiert Angular nichts. Unter einer
+   * OnPush-Seite (Repertoire-Trainer, Abweichungs-Trainer, KidHub) zeichnete das Brett die Auswahl
+   * dann nie (Angular 22: die nicht markierte OnPush-Elternansicht wird übersprungen).
+   */
+  private readonly cdr = inject(ChangeDetectorRef);
 
   // Zug-Eingabe per Tastatur (F2-004)
   private static nextKbdId = 0;
@@ -375,6 +382,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
    */
   private markVizSelection(key: Key): void {
     this.vizSelectedSquare = key;
+    this.cdr.markForCheck();
     if (!this.ground) return;
     this.ground.setShapes([{ orig: key, brush: 'green', modifiers: { lineWidth: 22 } }]);
     try { this.ground.selectSquare(key, true); } catch { /* alte chessground-Version */ }
@@ -382,6 +390,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   private clearVizSelection(): void {
     this.vizSelectedSquare = null;
+    this.cdr.markForCheck();
     if (!this.ground) return;
     this.ground.setShapes([]);
     try { this.ground.selectSquare(null); } catch { /* alte chessground-Version */ }
@@ -476,6 +485,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       } catch { /* fallback to orientation */ }
     }
     this.promotionColor = color;
+    this.cdr.markForCheck();
   }
 
   /** Enter im Eingabefeld: Zug ausführen; gelungen → Feld leeren (der Fokus bleibt für den nächsten Zug). */
@@ -799,6 +809,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     // Farbe von dort ableiten, sonst vom bereits gezogenen Bauern auf dest.
     const piece = this.ground?.state.pieces.get(dest) ?? this.ground?.state.pieces.get(orig);
     this.promotionColor = piece?.color === 'white' ? 'w' : 'b';
+    this.cdr.markForCheck();
   }
 
   selectPromotion(piece: PromotionPiece): void {

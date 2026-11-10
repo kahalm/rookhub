@@ -1,4 +1,4 @@
-import { SimpleChange } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Injector, NgZone, SimpleChange, runInInjectionContext } from '@angular/core';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -10,6 +10,12 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { Key } from 'chessground/types';
 
+/** Ohne TestBed gebaut: die Komponente holt ChangeDetectorRef per inject() — hier eine Attrappe. */
+function newBoard(): PuzzleBoardComponent {
+  const injector = Injector.create({ providers: [{ provide: ChangeDetectorRef, useValue: { markForCheck: () => {} } }] });
+  return runInInjectionContext(injector, () => new PuzzleBoardComponent());
+}
+
 /**
  * Der Ghost-Tap-Schutz und die Positionierung liegen seit der Zusammenführung in
  * PromotionPickerComponent (shared/promotion-picker/) und sind dort getestet — inklusive
@@ -19,7 +25,7 @@ import { Key } from 'chessground/types';
  */
 describe('PuzzleBoardComponent Promotion-Anbindung', () => {
   function create(): PuzzleBoardComponent {
-    const comp = new PuzzleBoardComponent();
+    const comp = newBoard();
     comp.pendingPromotion = { orig: 'a7' as Key, dest: 'a8' as Key };
     return comp;
   }
@@ -45,7 +51,7 @@ describe('PuzzleBoardComponent Promotion-Anbindung', () => {
   });
 
   it('tut nichts, wenn gar keine Umwandlung offen ist', () => {
-    const comp = new PuzzleBoardComponent();
+    const comp = newBoard();
     const emit = spyOn(comp.moveMade, 'emit');
 
     comp.selectPromotion('q');
@@ -55,7 +61,7 @@ describe('PuzzleBoardComponent Promotion-Anbindung', () => {
   });
 
   it('autoQueen: meldet sofort eine Dame, ohne Auswahl zu zeigen (Kinderseite)', () => {
-    const comp = new PuzzleBoardComponent();
+    const comp = newBoard();
     comp.autoQueen = true;
     const emit = spyOn(comp.moveMade, 'emit');
 
@@ -66,7 +72,7 @@ describe('PuzzleBoardComponent Promotion-Anbindung', () => {
   });
 
   it('ohne autoQueen bleibt es bei der Auswahl', () => {
-    const comp = new PuzzleBoardComponent();
+    const comp = newBoard();
     const emit = spyOn(comp.moveMade, 'emit');
 
     (comp as any).showPromotionDialog('a7' as Key, 'a8' as Key);
@@ -84,7 +90,7 @@ describe('PuzzleBoardComponent Viz-Drag', () => {
   const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
   function create(): PuzzleBoardComponent {
-    const comp = new PuzzleBoardComponent();
+    const comp = newBoard();
     comp.actualFen = START;
     comp.orientation = 'white';
     return comp;
@@ -148,7 +154,7 @@ describe('PuzzleBoardComponent Viz-Gesten', () => {
 
   // 800px-Brett → Feldbreite 100. Weiß: col=floor(x/100), rankIdx=7-floor(y/100).
   function mounted(): { comp: PuzzleBoardComponent; captures: number[] } {
-    const comp = new PuzzleBoardComponent();
+    const comp = newBoard();
     comp.actualFen = START;
     comp.orientation = 'white';
     comp.visualization = 2;
@@ -240,7 +246,7 @@ describe('PuzzleBoardComponent Promotion-Erkennung (Premove)', () => {
   type Priv = { isPromotion(orig: Key, dest: Key, fromOrigin?: boolean): boolean };
 
   function withPieces(entries: [Key, { role: string; color?: string }][]): PuzzleBoardComponent {
-    const comp = new PuzzleBoardComponent();
+    const comp = newBoard();
     (comp as unknown as { ground: unknown }).ground = { state: { pieces: new Map(entries) } };
     return comp;
   }
@@ -269,7 +275,7 @@ describe('PuzzleBoardComponent Promotion-Erkennung (Premove)', () => {
  */
 describe('PuzzleBoardComponent ngOnChanges: Stellung nur bei Stellungs-Eingaben', () => {
   function withFakeGround() {
-    const comp = new PuzzleBoardComponent();
+    const comp = newBoard();
     const set = jasmine.createSpy('set');
     (comp as unknown as { ground: unknown }).ground = {
       set, setAutoShapes: () => {}, selectSquare: () => {}, cancelPremove: () => {},
@@ -379,7 +385,7 @@ describe('PuzzleBoardComponent Zug-Eingabe per Tastatur (F2-004)', () => {
   const PROMO = '8/P6k/8/8/8/8/7K/8 w - - 0 1';
 
   function create(fen = START, dests: [string, string[]][] = [['g1', ['f3', 'h3']], ['e2', ['e3', 'e4']]]) {
-    const comp = new PuzzleBoardComponent();
+    const comp = newBoard();
     comp.fen = fen;
     comp.orientation = 'white';
     comp.turnColor = 'white';
@@ -555,7 +561,7 @@ describe('PuzzleBoardComponent autoSelect (KidHub-Sternenjagd)', () => {
 
 describe('PuzzleBoardComponent Markierungen auf ungemessenem Brett (NaN-Koordinaten)', () => {
   it('hält Markierungen zurück, solange cg-board keine Breite hat, und holt sie danach nach', () => {
-    const comp: any = new PuzzleBoardComponent();
+    const comp: any = newBoard();
     const board = document.createElement('cg-board');
     const wrap = document.createElement('div');
     wrap.appendChild(board);
@@ -647,5 +653,68 @@ describe('PuzzleBoardComponent Brett schrumpft auf 0 (NaN-Koordinaten, UI-Sweep 
     expect(custom().children[0].getAttribute('transform')).toMatch(/^translate\(-?[\d.]+,-?[\d.]+\)$/);
     fixture.destroy();
     el.remove();
+  });
+});
+
+/**
+ * Onpush-Audit 10.11.2026: Umwandlungs-Auswahl und Viz-Ring setzt das Brett aus chessgrounds eigenem Zug-Ereignis bzw.
+ * aus eigenen Pointer-Listenern — kein Template-Ereignis, Angular markiert nichts. Unter einer OnPush-Seite
+ * (Repertoire-/Abweichungs-Trainer, KidHub) übersprang Angular 22 die nicht markierte Elternansicht, die Auswahl erschien
+ * nie. Host hier OnPush; die Handler laufen in der Zone wie im Browser, gezeichnet nur über autoDetectChanges/whenStable.
+ */
+describe('PuzzleBoardComponent unter einer OnPush-Seite', () => {
+  @Component({
+    standalone: true,
+    imports: [PuzzleBoardComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `<div style="width:320px"><app-puzzle-board [fen]="fen" orientation="white" turnColor="white"
+      [visualization]="viz" [actualFen]="actualFen" [allowFullscreen]="false" /></div>`,
+  })
+  class OnPushBoardHost {
+    // Der Bauer steht schon auf a8 — so sieht chessground die Stellung NACH dem gezogenen Umwandlungszug.
+    fen = 'P6k/8/8/8/8/8/7K/8 w - - 0 1';
+    viz = 0;
+    actualFen: string | undefined = undefined;
+  }
+
+  async function open(viz = 0) {
+    await TestBed.configureTestingModule({
+      imports: [OnPushBoardHost],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(OnPushBoardHost);
+    fixture.componentInstance.viz = viz;
+    if (viz) {
+      fixture.componentInstance.fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+      fixture.componentInstance.actualFen = fixture.componentInstance.fen;
+    }
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const board = fixture.debugElement.query(By.directive(PuzzleBoardComponent)).componentInstance as PuzzleBoardComponent;
+    return { fixture, board, el: fixture.nativeElement as HTMLElement, zone: TestBed.inject(NgZone) };
+  }
+
+  it('gezogene Umwandlung: die Figurenauswahl erscheint', async () => {
+    const { fixture, board, el, zone } = await open();
+    const ground = (board as unknown as { ground: { state: { events: { move: (o: Key, d: Key) => void } } } }).ground;
+    expect(el.querySelector('app-promotion-picker')).withContext('vorher').toBeNull();
+
+    zone.run(() => ground.state.events.move('a7' as Key, 'a8' as Key));
+    await fixture.whenStable();
+
+    expect(board.pendingPromotion).toEqual({ orig: 'a7' as Key, dest: 'a8' as Key });
+    expect(el.querySelector('app-promotion-picker')).not.toBeNull();
+  });
+
+  it('Viz-Modus: das angetippte Feld bekommt seinen Ring', async () => {
+    const { fixture, board, el, zone } = await open(2);
+    expect(el.querySelector('.viz-select-overlay')).withContext('vorher').toBeNull();
+
+    // Was der pointerup-Listener nach einem Antippen ruft
+    zone.run(() => (board as unknown as { handleVizTap: (k: Key) => void }).handleVizTap('e2' as Key));
+    await fixture.whenStable();
+
+    expect(board.vizSelectedSquare).toBe('e2' as Key);
+    expect(el.querySelector('.viz-select-overlay')).not.toBeNull();
   });
 });

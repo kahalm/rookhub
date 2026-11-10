@@ -1015,7 +1015,8 @@ describe('RepertoireTrainerComponent: Reihenfolge nach einem Gegner (?opponent=,
   ].join('\n');
   const KEY_S = lineKeyFromSans(['e4', 'c5', 'Nf3', 'd6']);
 
-  function makeOpp(query: Record<string, string>, http: any, states: LineStateDto[] = [state(KEY_A, PAST()), state(KEY_B, PAST())]) {
+  function makeOpp(query: Record<string, string>, http: any, states: LineStateDto[] = [state(KEY_A, PAST()), state(KEY_B, PAST())],
+                   cdr: { markForCheck: () => void } = { markForCheck: () => {} }) {
     localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w', 'Chapter B': 'w', 'Chapter S': 'b' }));
     const route: any = { snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: (k: string) => query[k] ?? null } } };
     const training: any = {
@@ -1023,7 +1024,7 @@ describe('RepertoireTrainerComponent: Reihenfolge nach einem Gegner (?opponent=,
       promote: () => of({ affected: 1 }), makeDue: () => of({ affected: 1 }), reset: () => of({ deleted: 0 }),
     };
     const c = new RepertoireTrainerComponent(route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
-      { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
+      { instant: (k: string) => k } as any, cdr as any,
       { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any, { enqueue: () => {} } as any,
       NO_EXPLORER, NO_SNACKBAR, CONFIRM_YES, http);
     c.ngOnInit();
@@ -1077,6 +1078,19 @@ describe('RepertoireTrainerComponent: Reihenfolge nach einem Gegner (?opponent=,
     expect(c.phase).toBe('PLAYING');
     expect(c.queue.length).toBe(2);
     expect(c.opponentNotice).toBe('repertoireTrainer.opponentFailed');
+  });
+
+  it('Fehler der Reihung, während die Einstiegslinie schon läuft: der Hinweis wird gezeichnet (OnPush, Onpush-Audit 10.11.)', () => {
+    const answers = new Subject<any>();
+    const cdr = jasmine.createSpyObj('cdr', ['markForCheck']);
+    const c = makeOpp({ opponent: 'prep:42', color: 'w', line: KEY_B }, { get: () => answers }, [], cdr);
+    expect(c.phase).toBe('PLAYING');
+    cdr.markForCheck.calls.reset();
+
+    answers.error(new Error('500'));
+
+    expect(c.opponentNotice).toBe('repertoireTrainer.opponentFailed');
+    expect(cdr.markForCheck).toHaveBeenCalled();
   });
 
   it('ohne ?opponent= (oder mit unbrauchbarem) bleibt alles wie bisher — kein Aufruf', () => {

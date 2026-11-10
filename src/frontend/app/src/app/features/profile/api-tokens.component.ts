@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -145,6 +145,9 @@ export class ShowTokenDialogComponent implements OnDestroy {
   token: string;
   copied = false;
   private copyResetTimer?: ReturnType<typeof setTimeout>;
+  /** Ohne changeDetection = OnPush (Angular 22): Clipboard-Promise und Timer markieren nichts — der Hinweis
+   *  „Kopiert“ erschien sonst nie (bzw. erst beim nächsten Klick und verschwand dann nicht mehr). */
+  private readonly cdr = inject(ChangeDetectorRef);
   constructor(public dialogRef: MatDialogRef<ShowTokenDialogComponent>) {
     // Token via dialog data — Workaround mit injection via static (in OpenDialog gesetzt)
     this.token = ShowTokenDialogComponent.pendingToken;
@@ -157,8 +160,9 @@ export class ShowTokenDialogComponent implements OnDestroy {
     if (!clip) return; // Clipboard-API fehlt (unsicherer Kontext) — Token bleibt manuell kopierbar
     clip.writeText(this.token).then(() => {
       this.copied = true;
+      this.cdr.markForCheck();
       clearTimeout(this.copyResetTimer);
-      this.copyResetTimer = setTimeout(() => (this.copied = false), 2000);
+      this.copyResetTimer = setTimeout(() => { this.copied = false; this.cdr.markForCheck(); }, 2000);
     }).catch(() => {
       // Schreiben verweigert/nicht verfügbar — kein unbehandeltes Promise-Reject
     });

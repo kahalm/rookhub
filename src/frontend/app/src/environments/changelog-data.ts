@@ -10,6 +10,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.944.3", date: "2026-11-10", changes: [
+    { en: "Promotion: in the repertoire and deviation trainers and on KidHub the piece picker appears again after dragging a pawn to the last rank; in visualisation mode the tapped square gets its green ring again.",
+      de: "Umwandlung: In Repertoire- und Abweichungs-Trainer sowie auf KidHub erscheint nach dem Ziehen eines Bauern auf die letzte Reihe wieder die Figurenauswahl; im Visualisierungsmodus bekommt das angetippte Feld wieder seinen grünen Ring." },
+    { en: "Tournament site, profile: „Search player“ no longer keeps spinning — the hits and the applied IDs appear as soon as the answer arrives.",
+      de: "Turnierseite, Profil: „Spieler suchen“ dreht nicht mehr endlos — die Treffer und die übernommenen Kennungen erscheinen, sobald die Antwort da ist." },
+    { en: "API tokens: „Copied“ appears after copying a new token; repertoire trainer: the note that the opponent order could not be loaded shows up even while the first line is already running.",
+      de: "API-Tokens: Nach dem Kopieren eines neuen Tokens erscheint „Kopiert“; Repertoire-Trainer: Der Hinweis, dass die Gegner-Reihenfolge nicht geladen werden konnte, erscheint auch, wenn die erste Linie schon läuft." },
+  ] },
   { version: "0.944.2", date: "2026-11-10", changes: [
     { en: "English texts reviewed: no German leftovers (“Board + online”, “regional league”), the opponent is no longer always “he”, the Woodpecker help names the real cycle times (14, 7, 4, 2, 1, 1 days), “Previous” on the step buttons, the ClubHub sign-in no longer starts with “Register”, the tournament help names the “Report a wrong entry” button, and consistent wording (point game, email, Chess.com, Lichess, “…”). The other languages got the content fixes too, and the help on maxims quotes the curated wording.",
       de: "Englische Texte durchgesehen: keine deutschen Reste mehr („Board + online“, „regional league“), der Gegner ist nicht mehr immer „er“, die Woodpecker-Hilfe nennt die echten Zykluszeiten (14, 7, 4, 2, 1, 1 Tage), „Previous“ auf den Schrittknöpfen, die ClubHub-Anmeldung beginnt nicht mehr mit „Register“, die Turnier-Hilfe nennt den Knopf „Falschen Eintrag melden“, und einheitliche Begriffe (Punktepartie, E-Mail, Chess.com, Lichess, „…“). Die übrigen Sprachen bekamen die inhaltlichen Korrekturen ebenfalls, und die Merksatz-Hilfe zitiert den kuratierten Wortlaut." },

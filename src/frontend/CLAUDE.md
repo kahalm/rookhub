@@ -116,6 +116,14 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
   `provideRhHttpClient(extra)` / `rhInterceptors(extra)` in `core/http-chain.ts`: connectivity, retry, (extra — RookHub:
   `visitorInterceptor`), auth, renderAfterHttp. Oberflächeneigene Interceptoren gehören in `extra`, zwischen retry und
   auth (Codereview F8-014)
+- **Angular-22-Zeichenfalle** (0.943.1, Onpush-Audit 0.944.3) – ohne `changeDetection` ist eine Komponente OnPush,
+  `Default` heißt nur noch „Eager“. Der Lauf nach einer HTTP-Antwort (renderAfterHttp) bzw. der Zone erreicht keine
+  Ansicht unter einer NICHT markierten OnPush-Elternansicht. Normale Felder (keine Signale) brauchen deshalb
+  `inject(ChangeDetectorRef).markForCheck()`, wenn sie gesetzt werden aus: `subscribe`/`await`/Timern in einer
+  OnPush-Komponente, eigenen oder fremden Listenern (chessground-`events`, `addEventListener`), öffentlichen Methoden,
+  die eine andere Komponente per Referenz ruft (Fußzeile ← Navbar), sowie in Eager-Komponenten unter einer OnPush-Seite
+  (Admin-Reiter, Brett im Trainer, Identitätsformular im Turnierseiten-Profil). Specs dafür: OnPush-Host,
+  `autoDetectChanges` + `whenStable`, kein `detectChanges` nach der Antwort (Muster `admin-tabs-onpush.spec.ts`)
 - **Rückfragen und Texteingaben nie nativ** (Codereview F8-005/F5-016) – Rückfragen nur über `ConfirmService.ask`
   (`shared/confirm-dialog`), nie `window.confirm`; Texteingaben über `PromptService.ask` (`shared/prompt-dialog`), nie
   `window.prompt`; Verlustaktionen ohne Rückgängig fragen nach. LeagueHub/ClubHub geben die Knopftexte über

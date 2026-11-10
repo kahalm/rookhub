@@ -1,5 +1,7 @@
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { renderAfterHttpInterceptor } from '@rh/core/render-after-http.interceptor';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -295,5 +297,60 @@ describe('ProfileIdentityFormComponent', () => {
     expect(getComputedStyle(results).overflowY).toBe('auto');
     expect(results.scrollHeight).withContext('Liste rollt im eigenen Bereich')
       .toBeGreaterThan(results.clientHeight);
+  });
+});
+
+/**
+ * Onpush-Audit 10.11.2026: auf der Turnierseite steckt das Formular in `TurnierProfileComponent`, die ohne changeDetection
+ * und damit (Angular 22) OnPush ist. Der Lauf nach der HTTP-Antwort (renderAfterHttp) steigt nicht in die nicht markierte
+ * Elternansicht hinab: der Suchkreis drehte weiter, die Treffer erschienen erst beim nächsten Klick. Host hier OnPush wie
+ * dort, gezeichnet nur über autoDetectChanges/whenStable (Scheduler wie im Browser), kein detectChanges nach der Antwort.
+ */
+@Component({
+  selector: 'app-pif-onpush-host', standalone: true, imports: [ProfileIdentityFormComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: '<app-profile-identity-form [profile]="profile" [savedEmail]="null" />',
+})
+class OnPushProfileHost {
+  profile: ProfileIdentity = {
+    username: 'kahalm', email: null, firstName: 'Peter', lastName: 'Oberschmid',
+    displayName: null, fideId: null, chessResultsId: null,
+  };
+}
+
+describe('ProfileIdentityFormComponent unter einer OnPush-Seite (Turnierseiten-Profil)', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('Spielersuche: Suchkreis verschwindet und die Treffer erscheinen nach der Antwort', async () => {
+    await TestBed.configureTestingModule({
+      imports: [OnPushProfileHost],
+      providers: [
+        provideHttpClient(withInterceptors([renderAfterHttpInterceptor])), provideHttpClientTesting(), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isImpersonating: false } },
+      ],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(OnPushProfileHost);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+
+    (el.querySelector('button.pif-search') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(el.querySelector('button.pif-search mat-spinner')).withContext('während der Suche').not.toBeNull();
+
+    http.expectOne(r => r.url === '/api/profile/player-search').flush({
+      chessResultsResults: [
+        { name: 'Oberschmid, Peter', chessResultsId: '111', fideId: null, elo: 1700, title: null, country: 'AUT' },
+        { name: 'Oberschmid, Paul', chessResultsId: '222', fideId: null, elo: 1500, title: null, country: 'AUT' },
+      ],
+      fideResults: [],
+    });
+    await fixture.whenStable();
+
+    expect(el.querySelector('button.pif-search mat-spinner')).toBeNull();
+    expect(el.querySelectorAll('.pif-hit').length).toBe(2);
+    http.verify();
   });
 });
