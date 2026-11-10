@@ -174,6 +174,9 @@ internal static class ExternalSweepRunner
                 var match = await ExternalDirectorySource.FindByChessResultsIdAsync(db, source.ChessResultsId(row), ct)
                             ?? await ExternalDirectorySource.FindMatchAsync(db, federation, start, source.Name(row),
                                 new ExternalDirectorySource.MatchHint(source.Kind, key, source.MatchPlace(row)), ct);
+                // Ein zurueckgezogener Treffer ueber die Nummer lebt wieder auf: die Quelle fuehrt ihn,
+                // und ein zweiter Eintrag mit derselben Nummer scheiterte am eindeutigen Index.
+                ExternalDirectorySource.Revive(match, now);
                 // Ein eigener Eintrag, der die chess-results-Nummer selbst traegt (chess.sk: Nummer
                 // genannt, Turniersuche kennt sie noch nicht), wird von beiden Suchen wiedergefunden.
                 // Das ist keine Zuordnung: er nimmt den normalen Weg, sonst kaemen Termin- und

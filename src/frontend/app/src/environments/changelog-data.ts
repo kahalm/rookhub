@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.942.1", date: "2026-11-10", changes: [
+    { en: "Tournament directory: an external calendar (chess.cz, chess.sk and the others) that still lists a tournament the chess-results search had retired now brings the existing entry back instead of creating a second one with the same chess-results number — that duplicate broke the whole nightly chess.cz run since 9 November.",
+      de: "Turnierverzeichnis: Führt ein externer Kalender (chess.cz, chess.sk und die übrigen) ein Turnier weiter, das die chess-results-Suche zurückgezogen hatte, lebt der bestehende Eintrag wieder auf, statt dass ein zweiter mit derselben chess-results-Nummer entsteht — dieses Duplikat ließ seit 9. November jede Nacht den ganzen chess.cz-Lauf scheitern." },
+  ] },
   {
     version: '0.942.0',
     date: '2026-11-09',

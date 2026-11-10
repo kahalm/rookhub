@@ -146,6 +146,9 @@ public class ChessCzDirectorySweepService
 
         if (match is not null)
         {
+            // Auch ein zurueckgezogener Eintrag mit derselben Nummer wird gefunden (eindeutiger
+            // Index) — chess.cz fuehrt ihn, also gilt er wieder.
+            ExternalDirectorySource.Revive(match, now);
             await ExternalDirectorySource.NoteSourceAsync(_db, match,
                 DirectorySourceKind.CzechChessFederation, row.EventId, row.Url, now, ct);
             counts.Matched++;
@@ -233,6 +236,7 @@ public class ChessCzDirectorySweepService
 
         var entry = await FindWithRoundsAsync(chessResultsId, publicId, ct);
         var isOwn = entry is null || entry.PublicId == publicId;
+        ExternalDirectorySource.Revive(entry, now);
 
         if (entry is null)
         {
@@ -304,7 +308,9 @@ public class ChessCzDirectorySweepService
         var entry = chessResultsId is { Length: > 0 }
             ? await _db.TournamentDirectoryEntries
                 .Include(e => e.RoundDates)
-                .FirstOrDefaultAsync(e => e.ChessResultsId == chessResultsId && e.RemovedAt == null, ct)
+                // Auch zurueckgezogene: der Index auf ChessResultsId ist eindeutig, ein zweiter
+                // Eintrag mit derselben Nummer risse den ganzen Lauf mit (siehe FindByChessResultsIdAsync).
+                .FirstOrDefaultAsync(e => e.ChessResultsId == chessResultsId, ct)
             : null;
 
         return entry ?? await _db.TournamentDirectoryEntries

@@ -137,6 +137,35 @@ public class ChessSkDirectorySweepServiceTests : IDisposable
     }
 
     /// <summary>
+    /// Die Suche nach der Nummer findet auch einen ZURUECKGEZOGENEN Eintrag (eindeutiger Index auf
+    /// ChessResultsId) und belebt ihn wieder — sonst legte die Quelle einen zweiten mit derselben
+    /// Nummer an, und SaveChanges risse den ganzen Lauf mit (chess.cz, Prod 2026-11-09).
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_RetiredEntryWithTheSameNumber_IsRevivedNotDuplicated()
+    {
+        var removedAt = DateTime.UtcNow.AddDays(-1);
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = "1482875", ChessResultsId = "1482875",
+            Name = "Majstrovstvá SR amatérov 2026", Federation = "SVK",
+            StartDate = Soon, EndDate = Soon,
+            RemovedAt = removedAt, MissedSweeps = 2, LastMissAt = removedAt,
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await CreateService($"[{Row("Majstrovstvá SR amatérov 2026", chessResultsId: "1482875")}]")
+            .RunAsync();
+
+        Assert.Equal(0, result.Added);
+        Assert.Equal(1, result.Matched);
+        var entry = Assert.Single(_db.TournamentDirectoryEntries.ToList());
+        Assert.Null(entry.RemovedAt);
+        Assert.Equal(0, entry.MissedSweeps);
+        Assert.Null(entry.LastMissAt);
+    }
+
+    /// <summary>
     /// Ohne Nummer bleibt der Namensvergleich — und der verlangt ZWEI unterscheidende Woerter.
     /// In der Slowakei ist das wichtig: die „ŠACH-MAT NITRA"-Liga steht mit dreizehn Runden unter
     /// dreizehn fast gleichlautenden Namen im Kalender.

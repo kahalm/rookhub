@@ -285,15 +285,40 @@ public static class ExternalDirectorySource
     /// Wortvergleich, keine Verwechslung zweier Turniere derselben Woche am selben Ort. Nur
     /// chess.sk liefert sie heute mit (27 von 79 Eintraegen, Feld „Swiss manager URL"); wo sie
     /// fehlt, bleibt der Namensvergleich.</para>
+    ///
+    /// <para><b>Auch ZURUECKGEZOGENE Eintraege.</b> Auf <c>ChessResultsId</c> liegt ein eindeutiger
+    /// Index, es gibt also hoechstens einen. Filterte die Suche Zurueckgezogene aus, legte der
+    /// Aufrufer einen ZWEITEN Eintrag mit derselben Nummer an, und SaveChanges riss den ganzen
+    /// Lauf mit: ab 2026-11-09 brach der chess.cz-Kalender jede Nacht an „FIDE OPEN NA SMETANCE"
+    /// (1501638) ab, das die Turniersuche zurueckgezogen hatte, chess.cz aber weiter fuehrt.
+    /// Der Aufrufer belebt den Treffer mit <see cref="Revive"/> wieder.</para>
     /// </summary>
     public static Task<TournamentDirectoryEntry?> FindByChessResultsIdAsync(
         AppDbContext db, string? chessResultsId, CancellationToken ct) =>
         chessResultsId is { Length: > 0 }
             ? db.TournamentDirectoryEntries
                 .Include(e => e.Sources)
-                .FirstOrDefaultAsync(
-                    e => e.ChessResultsId == chessResultsId && e.RemovedAt == null, ct)
+                .FirstOrDefaultAsync(e => e.ChessResultsId == chessResultsId, ct)
             : Task.FromResult<TournamentDirectoryEntry?>(null);
+
+    /// <summary>
+    /// Einen zurueckgezogenen Eintrag wiederbeleben, den eine Quelle in diesem Lauf wieder liefert —
+    /// wie <c>DirectorySweepMerge.ApplyRowsAsync</c> es fuer die Turniersuche tut: nicht mehr
+    /// zurueckgezogen, Fehlschlagzaehler und -zeitpunkt zurueck, zuletzt gesehen jetzt. Ein aktiver
+    /// Eintrag bleibt unberuehrt (sein Zaehler gehoert der Quelle, die ihn fuehrt). Gibt zurueck,
+    /// ob etwas wiederbelebt wurde.
+    /// </summary>
+    public static bool Revive(TournamentDirectoryEntry? entry, DateTime now)
+    {
+        if (entry?.RemovedAt is null) return false;
+
+        entry.RemovedAt = null;
+        entry.MissedSweeps = 0;
+        entry.LastMissAt = null;
+        entry.LastSeenAt = now;
+        entry.UpdatedAt = now;
+        return true;
+    }
 
     /// <summary>
     /// Den eigenen, frueher angelegten Eintrag holen (<c>null</c>, wenn es keinen gibt).

@@ -115,6 +115,58 @@ public class ChessCzDirectorySweepServiceTests : IDisposable
     }
 
     /// <summary>
+    /// Prod 2026-11-09: die Turniersuche hatte „FIDE OPEN NA SMETANCE" (1501638) zurueckgezogen,
+    /// chess.cz fuehrt es weiter. Die Suche nach der Nummer liess Zurueckgezogene aus, der Lauf
+    /// legte einen ZWEITEN Eintrag mit derselben Nummer an, und der eindeutige Index riss jede
+    /// Nacht den ganzen chess.cz-Lauf mit. Jetzt: kein zweiter Eintrag, der alte lebt wieder.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_RetiredEntryWithTheSameNumber_IsRevivedNotDuplicated()
+    {
+        var removedAt = DateTime.UtcNow.AddDays(-1);
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = "1501638", ChessResultsId = "1501638", Name = "FIDE OPEN NA SMETANCE",
+            Federation = "CZE", StartDate = Soon, EndDate = Soon,
+            RemovedAt = removedAt, MissedSweeps = 2, LastMissAt = removedAt,
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await CreateService(
+                $"[{Row("FIDE OPEN NA SMETANCE", "fide-open-na-smetance", Soon, chessResultsId: "1501638")}]")
+            .RunAsync();
+
+        Assert.Equal(0, result.Added);
+        Assert.Equal(1, result.Matched);
+        var entry = Assert.Single(_db.TournamentDirectoryEntries.ToList());
+        Assert.Null(entry.RemovedAt);
+        Assert.Equal(0, entry.MissedSweeps);
+        Assert.Null(entry.LastMissAt);
+    }
+
+    /// <summary>Dasselbe fuer eine Meisterschaft mit Runden (eigener Suchweg <c>FindWithRoundsAsync</c>).</summary>
+    [Fact]
+    public async Task RunAsync_RoundsOnARetiredEntryWithTheSameNumber_ReviveIt()
+    {
+        var removedAt = DateTime.UtcNow.AddDays(-1);
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = "1464172", ChessResultsId = "1464172", Name = "Extraliga 2026/27",
+            Federation = "CZE", StartDate = Soon, EndDate = Soon.AddDays(200),
+            RemovedAt = removedAt, MissedSweeps = 2, LastMissAt = removedAt,
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await CreateService($"[{Rounds(3)}]").RunAsync();
+
+        Assert.Equal(0, result.Added);
+        var entry = Assert.Single(_db.TournamentDirectoryEntries.Include(e => e.RoundDates).ToList());
+        Assert.Null(entry.RemovedAt);
+        Assert.Equal(0, entry.MissedSweeps);
+        Assert.Equal(3, entry.RoundDates.Count);
+    }
+
+    /// <summary>
     /// Die Jugend-Lasche traegt einen Fall, den kein Namensmuster faengt: „Mistrovství Čech
     /// 8 – 10 let" nennt seine Altersklasse als Spanne, ohne das Wort „mládež".
     /// </summary>
