@@ -39,7 +39,12 @@ public class AnalysisJobService
     /// <para>150 seit 0.475.9: der Deckel muss ueber
     /// <see cref="Models.GameAnalysisDefaults.MaxOpenJobsPerGame"/> liegen, sonst bindet ER und die
     /// Blockgroesse der Partie waere wirkungslos. Eingefuehrt mit dem Block von 96 (0.475.9); seit der Block
-    /// in 0.475.10 wieder kleiner wurde, bleibt der Abstand fuer von Hand eingereihte Stellungen entsprechend groesser.</para></summary>
+    /// in 0.475.10 wieder kleiner wurde, bleibt der Abstand fuer von Hand eingereihte Stellungen entsprechend groesser.</para>
+    /// <para><b>Gilt nicht fuer Admins</b> (Wunsch 2026-11-10: „für admins solls kein limit geben"): entscheidend ist
+    /// <see cref="AppUser.IsAdmin"/> des Auftrags-BESITZERS (<c>userId</c>), nicht wer gerade fragt — so gilt die Ausnahme
+    /// auch fuer Auftraege, die Hintergrunddienste (Partie-Pumpe, Zugvergleiche der Vereinspartien, Meisterpartien) auf
+    /// dessen Konto einreihen. Anlass: auf Prod stand das Admin-Konto mit Vertiefungen bei 141 offenen, die Antwort-Tests
+    /// eines Zugvergleichs wurden abgewiesen und fehlten der angeforderten Zusammenfassung.</para></summary>
     public const int MaxOpenJobsPerUser = 150;
 
     private readonly AppDbContext _db;
@@ -213,7 +218,7 @@ public class AnalysisJobService
 
         var open = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId
             && j.Status != AnalysisJobStatus.Done && j.Status != AnalysisJobStatus.Failed, ct);
-        if (open >= MaxOpenJobsPerUser)
+        if (open >= MaxOpenJobsPerUser && !await HasNoOpenLimitAsync(userId, ct))
             throw new InvalidOperationException("Too many open analysis jobs");
 
         var now = DateTime.UtcNow;
@@ -268,6 +273,7 @@ public class AnalysisJobService
         var taken = existing.Select(RepertoireAnalyzeService.NormalizeFen).ToHashSet();
         var open = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId
             && j.Status != AnalysisJobStatus.Done && j.Status != AnalysisJobStatus.Failed, ct);
+        var unlimited = open + fens.Count > MaxOpenJobsPerUser && await HasNoOpenLimitAsync(userId, ct);
 
         // Gemerkte Stellungen EINMAL laden (normalisiert) statt je FEN erneut: bei 200 Stellungen und
         // 1.000 gemerkten Zeilen wären das sonst 200 Abfragen über die ganze Liste — und die im selben
@@ -283,7 +289,7 @@ public class AnalysisJobService
             if (fen.Length is 0 or > 120 || !IsLegalFen(fen)) { skipped.Add(new(fen, "invalid")); continue; }
             var norm = RepertoireAnalyzeService.NormalizeFen(fen);
             if (!taken.Add(norm)) { skipped.Add(new(fen, "duplicate")); continue; }   // auch Dubletten INNERHALB des Batches
-            if (open >= MaxOpenJobsPerUser) { skipped.Add(new(fen, "limit")); continue; }
+            if (open >= MaxOpenJobsPerUser && !unlimited) { skipped.Add(new(fen, "limit")); continue; }
             var job = new AnalysisJob
             {
                 UserId = userId, Fen = fen, EngineId = engineId, TargetDepth = req.TargetDepth, MultiPv = req.MultiPv,
@@ -300,6 +306,11 @@ public class AnalysisJobService
         return new AnalysisJobBatchResult(created.Select(ToDto).ToList(), skipped);
     }
 
+    /// <summary>Kein Deckel offener Aufträge (<see cref="MaxOpenJobsPerUser"/>) für dieses Konto: Admins. Gefragt wird nur,
+    /// wenn der Deckel sonst greifen würde — der Normalfall kostet keine Abfrage.</summary>
+    private Task<bool> HasNoOpenLimitAsync(int userId, CancellationToken ct) =>
+        _db.AppUsers.AnyAsync(u => u.Id == userId && u.IsAdmin, ct);
+
     /// <summary>Gesamtzahl behaltener Aufträge je User: <see cref="MaxOpenJobsPerUser"/> deckelt nur die OFFENEN;
     /// ohne diese Grenze wüchsen Done/Failed unbegrenzt, und jede Liste lüde deren Roh-Zeilen mit.</summary>
     public const int MaxJobsPerUser = 200;
@@ -308,10 +319,16 @@ public class AnalysisJobService
     /// liegt. Offene Aufträge bleiben immer stehen. Aufrufer speichert (Teil der laufenden Transaktion).</summary>
     /// <param name="incoming">Anzahl der in DIESEM Vorgang neu angelegten, noch nicht gespeicherten Aufträge —
     /// sie zählen mit, sonst stünde der User nach dem Speichern über der Grenze.</param>
+    /// <remarks>Die offenen zählen höchstens bis <see cref="MaxOpenJobsPerUser"/> mit — für Nutzer mit Deckel ändert das nichts,
+    /// ein Admin ohne Deckel (300 offene) behält so trotzdem mindestens 50 fertige. Sonst räumte jedes Anlegen ALLE fertigen
+    /// weg, auch die, deren Ergebnis die Pumpen (Partie-Analyse, Zugvergleich) noch nicht abgeholt haben.</remarks>
     private async Task TrimAsync(int userId, int incoming, CancellationToken ct)
     {
-        var total = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId, ct) + incoming;
-        var over = total - MaxJobsPerUser;
+        var open = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId
+            && j.Status != AnalysisJobStatus.Done && j.Status != AnalysisJobStatus.Failed, ct);
+        var finished = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId
+            && (j.Status == AnalysisJobStatus.Done || j.Status == AnalysisJobStatus.Failed), ct);
+        var over = Math.Min(open + incoming, MaxOpenJobsPerUser) + finished - MaxJobsPerUser;
         if (over <= 0) return;
         var old = await _db.AnalysisJobs
             .Where(j => j.UserId == userId && (j.Status == AnalysisJobStatus.Done || j.Status == AnalysisJobStatus.Failed))
@@ -511,7 +528,7 @@ public class AnalysisJobService
         // eigener Vertiefung (0.817.1), dann der älteste.
         // Kein Reihum über Nutzer innerhalb einer Stufe (R4-002, Produktentscheidung offen): FIFO nach CreatedAt. Gebremst
         // wird nur über die Zuführung — je Nutzer eine Partie zur Zeit (GameAnalysisTurns), je Partie höchstens
-        // MaxOpenJobsPerGame offen, MaxOpenJobsPerUser je Konto; ein Tagesdeckel für fremde Rechenzeit fehlt.
+        // MaxOpenJobsPerGame offen, MaxOpenJobsPerUser je Konto (Admins ohne); ein Tagesdeckel für fremde Rechenzeit fehlt.
         // Nur die Spitze holen, nur ihre Sortierschlüssel (R1-012/R4-008): früher kamen ALLE laufbereiten Aufträge der
         // Engine samt Fen/ResultJson je Worker-Takt als Entitäten, um einen zu nehmen. Index (EngineId, Status, Priority, …).
         var head = await runnable

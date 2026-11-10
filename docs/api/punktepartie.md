@@ -86,7 +86,7 @@ solange das Konto Admin ist. Geprueft wird sie zusaetzlich vor jedem Nachlegen u
 Auftraege mit „Haus-Engine nicht mehr freigegeben“, die Vertiefung endet mit dem Ergebnis des ersten Durchgangs. Der Auftrag BLEIBT dabei beim Einwerfer — nur `EngineOwnerUserId`
 (neu an `GameAnalysis` UND `AnalysisJob`, `null` = Besitzer) sagt dem Worker, wessen Token und
 Engine er benutzt. Den Auftrag stattdessen dem Haus-Konto zu geben waere einfacher gewesen und
-falsch: Deckel (`MaxOpenJobsPerUser` = 150), Trimmer, Auftragsliste und Sekundenanzeige haengen alle
+falsch: Deckel (`MaxOpenJobsPerUser` = 150, Admins ohne), Trimmer, Auftragsliste und Sekundenanzeige haengen alle
 am Besitzer — alle Einwerfer teilten sich dann hundertfuenfzig Plaetze, einer koennte alle aussperren, und
 in der Auftragsliste des Admins staenden fremde Partien. `PickBackgroundEngineAsync` zaehlt die
 kuerzeste Schlange entsprechend nach ENGINE-BESITZER (`EngineOwnerUserId ?? UserId`).

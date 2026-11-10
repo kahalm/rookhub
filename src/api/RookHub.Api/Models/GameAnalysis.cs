@@ -346,7 +346,7 @@ public static class GameAnalysisDefaults
     ///
     /// <para>Wer hier dreht, misst bitte nach — und nicht nur eine Richtung: diese Zahl, die Laenge
     /// der Engine-Liste im Profil und <c>AnalysisJobService.MaxOpenJobsPerUser</c> (150, muss ueber
-    /// dieser Zahl bleiben) wirken zusammen.</para>
+    /// dieser Zahl bleiben; gilt nicht fuer Admins) wirken zusammen.</para>
     /// </summary>
     public const int MaxOpenJobsPerGame = 32;
 

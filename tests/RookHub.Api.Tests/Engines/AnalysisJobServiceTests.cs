@@ -244,6 +244,71 @@ public class AnalysisJobServiceTests : IDisposable
         Assert.Equal("limit", res.Skipped.Single().Reason);
     }
 
+    private async Task FillOpenJobsAsync(int userId, int count)
+    {
+        for (var i = 0; i < count; i++)
+            _db.AnalysisJobs.Add(new AnalysisJob { UserId = userId, Fen = $"8/8/8/8/8/8/{i}", EngineId = "e", TargetDepth = 30, MultiPv = 1, Status = AnalysisJobStatus.Queued });
+        await _db.SaveChangesAsync();
+    }
+
+    // ── Kein Deckel offener Aufträge für Admins (Wunsch 2026-11-10: „für admins solls kein limit geben") ─────
+
+    [Fact]
+    public async Task Create_overOpenLimit_nonAdminRejected()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        await FillOpenJobsAsync(u, AnalysisJobService.MaxOpenJobsPerUser);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START }, remember: false));
+        Assert.Equal("Too many open analysis jobs", ex.Message);
+    }
+
+    [Fact]
+    public async Task Create_overOpenLimit_adminMayEnqueue_alsoAsBackgroundBatch()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        (await _db.AppUsers.SingleAsync(x => x.Id == u)).IsAdmin = true;
+        await FillOpenJobsAsync(u, AnalysisJobService.MaxOpenJobsPerUser + 10);
+
+        // Wie die Hintergrunddienste (Zugvergleich, Partie-Pumpe): Konto des Besitzers, Hintergrund + Stapel.
+        var job = await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START }, remember: false,
+            engineOwnerUserId: u, background: true, batch: true);
+        Assert.True(job.Id > 0);
+        Assert.Equal(AnalysisJobService.MaxOpenJobsPerUser + 11, await _db.AnalysisJobs.CountAsync(j => j.UserId == u));
+    }
+
+    [Fact]
+    public async Task CreateMany_overOpenLimit_adminNotSkipped()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        (await _db.AppUsers.SingleAsync(x => x.Id == u)).IsAdmin = true;
+        await FillOpenJobsAsync(u, AnalysisJobService.MaxOpenJobsPerUser);
+
+        var res = await _svc.CreateManyAsync(u, new CreateAnalysisJobsBatchRequest { Fens = new List<string> { START } });
+
+        Assert.Single(res.Created);
+        Assert.Empty(res.Skipped);
+    }
+
+    [Fact]
+    public async Task Create_adminFarOverOpenLimit_trimmerKeepsFinishedJobs()
+    {
+        // Ohne Deckel läge ein Admin mit 250 offenen über MaxJobsPerUser (200) — der Trimmer räumte dann jeden fertigen
+        // Auftrag weg, auch den, dessen Ergebnis eine Pumpe noch abholen muss. Die offenen zählen höchstens bis zum Deckel.
+        var u = await UserWithBackgroundEngineAsync();
+        (await _db.AppUsers.SingleAsync(x => x.Id == u)).IsAdmin = true;
+        await FillOpenJobsAsync(u, 250);
+        for (var i = 0; i < 10; i++)
+            _db.AnalysisJobs.Add(new AnalysisJob { UserId = u, Fen = $"8/8/8/8/8/1/{i}", EngineId = "e", TargetDepth = 30, MultiPv = 1,
+                Status = AnalysisJobStatus.Done, ResultJson = "[]", FinishedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+
+        await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START }, remember: false);
+
+        Assert.Equal(10, await _db.AnalysisJobs.CountAsync(j => j.UserId == u && j.Status == AnalysisJobStatus.Done));
+    }
+
     [Fact]
     public async Task Create_RejectsMoreThanFiveLines_ProtocolMaximum()
     {
