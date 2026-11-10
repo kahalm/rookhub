@@ -111,7 +111,7 @@ interface ResolvedDiagram {
                           <p class="book-why">{{ 'games.summary.neverSuggestDone' | translate }}
                             <button mat-button (click)="setBlocked(b.id, false)">{{ 'common.undo' | translate }}</button></p>
                         } @else {
-                          <p class="book-why">{{ b.why }}</p>
+                          <p class="book-why"><ng-container *ngTemplateOutlet="inline; context: { $implicit: b.whyParts ?? [{ text: b.why }] }" /></p>
                           @if (loggedIn) {
                             <button mat-button class="never" (click)="setBlocked(b.id, true)">
                               <mat-icon>block</mat-icon> {{ 'games.summary.neverSuggest' | translate }}
@@ -165,13 +165,14 @@ interface ResolvedDiagram {
       }
     </div>
 
+    <!-- Text ohne Leerraum drumherum: Leerzeichen um die Interpolation im Template machten „( 45.Ta1“ und „61.Kxg5 .“ (Partie 243). -->
     <ng-template #inline let-parts>
       @for (p of parts; track $index) {
         @if (p.line) { <button type="button" class="mv" [class.mv-b]="p.bold" [class.mv-i]="p.italic" (click)="showMove(p)">{{ p.text }}</button> }
         @else if (p.bold) { <strong>{{ p.text }}</strong> }
         @else if (p.italic) { <em>{{ p.text }}</em> }
         @else if (p.code) { <code>{{ p.text }}</code> }
-        @else { {{ p.text }} }
+        @else { <ng-container>{{ p.text }}</ng-container> }
       }
     </ng-template>
   `,

@@ -34,8 +34,8 @@ export type SummaryBlock =
   | { kind: 'diagram'; spec: DiagramSpec }
   /** `> **Merksatz:** <Kennung oder Wortlaut>` — nur Sätze der kuratierten Liste werden gezeigt, mit (i). */
   | { kind: 'maxim'; value: string }
-  /** ```book-Block der „Empfohlenen Literatur“: Buch und warum es passt. */
-  | { kind: 'book'; id: number; why: string };
+  /** ```book-Block der „Empfohlenen Literatur“: Buch und warum es passt; `whyParts` = die Begründung mit klickbaren Zügen. */
+  | { kind: 'book'; id: number; why: string; whyParts?: InlinePart[] };
 
 /** `**fett**`, `*kursiv*` / `_kursiv_`, `` `Code` `` — nicht verschachtelt, unvollständige Zeichen bleiben Text. */
 export function parseInline(text: string): InlinePart[] {
@@ -191,7 +191,10 @@ export function gamePositions({ fens, lastMoves, sans }: Positions): KnownPositi
   return out;
 }
 
-/** Züge in Überschriften, Absätzen, Listen, Zitaten, Tabellen und Bildunterschriften klickbar machen; Unauflösbares bleibt Text. */
+/**
+ * Züge in Überschriften, Absätzen, Listen, Zitaten, Tabellen, Bildunterschriften und Buch-Begründungen klickbar machen;
+ * Unauflösbares bleibt Text.
+ */
 export function linkSummaryMoves(blocks: SummaryBlock[], positions: Positions): SummaryBlock[] {
   const game = gamePositions(positions);
   const link = (parts: InlinePart[]): InlinePart[] => {
@@ -208,6 +211,8 @@ export function linkSummaryMoves(blocks: SummaryBlock[], positions: Positions): 
       case 'list': return { ...b, items: b.items.map(link) };
       case 'table': return { ...b, head: b.head.map(link), rows: b.rows.map(r => r.map(link)) };
       case 'diagram': return b.spec.caption ? { ...b, spec: { ...b.spec, caption: link(b.spec.caption) } } : b;
+      // Partie 243: „mit 35.axb5 und 45.Lxd5 jeweils sofort geerntet“ in der Literatur-Begründung blieb Text.
+      case 'book': return { ...b, whyParts: link([{ text: b.why }]) };
       default: return b;
     }
   });

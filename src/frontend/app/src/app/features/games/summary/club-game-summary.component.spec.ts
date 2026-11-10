@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -69,5 +70,44 @@ describe('ClubGameSummaryComponent — ungültiger Link', () => {
   it('Netzfehler (0) behält „Wiederholen“', () => {
     const el = render('own-share', { token: 'x' }, 0);
     expect(el.querySelector('app-load-error')).not.toBeNull();
+  });
+});
+
+/** Partie 243 (10.11.2026): Züge in der Literatur-Begründung klickbar, kein Leerzeichen zwischen „(“ und einem Zug-Knopf. */
+describe('ClubGameSummaryComponent — Zug-Knöpfe im Text', () => {
+  const md = [
+    '- Erst den Turm aktivieren (2.Nf3 vor Lxd5). Danach 2...Sc6.', '',
+    '## Empfohlene Literatur', '', '```book', 'id: 7', 'why: Mit 2.Nf3 und 2...Sc6 sofort entwickelt.', '```',
+  ].join('\n');
+
+  function render() {
+    TestBed.configureTestingModule({
+      imports: [ClubGameSummaryComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '243' }), data: {} } } },
+        { provide: GamesService, useValue: { clubGame: () => of({ pgn: '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6', ownerSide: 'white' }) } },
+        { provide: ClubGameSummaryService, useValue: {
+          get: () => of({ markdown: md }), suggestions: () => of([{ id: 7, title: 'Buch', accessible: false, blocked: false }]) } },
+        { provide: AuthService, useValue: { isLoggedIn: false, currentUser$: of(null) } },
+        { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ClubGameSummaryComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('Listenpunkt: Text klebt am Knopf, der Zug ohne Nummer bleibt Text', () => {
+    const li = render().querySelector('li')!;
+    expect(Array.from(li.querySelectorAll('button.mv')).map(b => b.textContent)).toEqual(['2.Nf3', '2...Sc6']);
+    expect(li.textContent).toBe('Erst den Turm aktivieren (2.Nf3 vor Lxd5). Danach 2...Sc6.');
+  });
+
+  it('Begründung des Buchs mit Zug-Knöpfen', () => {
+    const why = render().querySelector('.book-why')!;
+    expect(Array.from(why.querySelectorAll('button.mv')).map(b => b.textContent)).toEqual(['2.Nf3', '2...Sc6']);
+    expect(why.textContent).toBe('Mit 2.Nf3 und 2...Sc6 sofort entwickelt.');
   });
 });

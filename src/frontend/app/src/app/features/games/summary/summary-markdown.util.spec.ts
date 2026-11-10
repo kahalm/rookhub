@@ -1,4 +1,4 @@
-import { linkSummaryMoves, moveLabel, parseInline, parseSummary, positionsOf, visibleSummaryBlocks } from './summary-markdown.util';
+import { InlinePart, linkSummaryMoves, moveLabel, parseInline, parseSummary, positionsOf, visibleSummaryBlocks } from './summary-markdown.util';
 
 describe('summary-markdown.util (Partie-Zusammenfassung, 0.913.0)', () => {
   it('zerlegt Überschriften, Absätze, Listen, Zitat, Trennlinie und Tabelle', () => {
@@ -126,5 +126,44 @@ describe('linkSummaryMoves (klickbare Züge)', () => {
   it('Illegales und Code bleiben Text, englische Buchstaben gehen', () => {
     expect(para('Hier 9.Dh5 und `2.Nf3`.').some(x => x.line)).toBeFalse();
     expect(para('Hier 2.Nf3 stark.').filter(x => x.line).map(x => x.at)).toEqual([3]);
+  });
+});
+
+/**
+ * Partie 243 (Meldung 10.11.2026: „Züge im Abschnitt ‚Was man mitnehmen kann‘ nicht klickbar“): die nummerierten Züge der
+ * Liste waren klickbar (auch Abweichungen von der Partie), nur der Zug ohne Nummer bleibt Text. Nicht klickbar war die
+ * Begründung der Literatur darunter — „35.axb5 und 45.Lxd5“ dort sind jetzt Züge.
+ */
+describe('linkSummaryMoves — Partie 243', () => {
+  const pgn = '1. d4 d5 2. Nf3 Nf6 3. Bf4 e6 4. e3 c5 5. c3 Nc6 6. Nbd2 cxd4 7. exd4 Bd6 8. Bg3 Qc7 9. Bd3 O-O 10. O-O Bxg3 '
+    + '11. hxg3 e5 12. dxe5 Nxe5 13. Nxe5 Qxe5 14. Re1 Qd6 15. Nb3 Bg4 16. Qd2 Rfe8 17. Nd4 Bh5 18. Bb5 Ne4 19. Qf4 Red8 '
+    + '20. f3 Nf6 21. Re2 Bg6 22. Rae1 Qc5 23. g4 h6 24. Kh2 a6 25. Ba4 b5 26. Bb3 Qd6 27. Qxd6 Rxd6 28. Re5 Kf8 29. Kg3 Re8 '
+    + '30. Rxe8+ Nxe8 31. Rd1 Nc7 32. Ne2 f6 33. Nf4 Bf7 34. a4 Ke7 35. axb5 axb5 36. Ra1 Kd7 37. Ne2 Bg6 38. Nd4 Bd3 '
+    + '39. Ra7 Kc8 40. Kf2 Kb8 41. Ra1 Ne6 42. Ke3 Bg6 43. Rd1 Nxd4 44. Kxd4 Kc7 45. Bxd5 Bc2 46. Rd2 Bb3 47. Kc5 g5 1-0';
+  const md = [
+    '## Was man mitnehmen kann', '',
+    '- Gehört einem die einzige offene Linie, ist das Einbruchsfeld das Ziel. e7 war im 21., 23. und 28. Zug frei.',
+    '- Ein Damentausch ist nicht automatisch eine Vereinfachung zugunsten des Gegners: 21.Dxd6 hätte den Turm nach e7 gebracht.',
+    '- Vor einem Bauerntausch am Flügel prüfen, ob der Vorstoß daneben stärker ist. 35.a5 hätte zwei Schwächen festgelegt, 35.axb5 hat eine davon beseitigt.',
+    '- Im gewonnenen Endspiel erst den Turm aktivieren, dann den Bauern nehmen (45.Ta1 vor Lxd5).', '',
+    '## Empfohlene Literatur', '',
+    '```book', 'id: 7', 'why: Im besseren Endspiel wurde mit 35.axb5 und 45.Lxd5 jeweils sofort geerntet.', '```',
+  ].join('\n');
+  const blocks = linkSummaryMoves(parseSummary(md), positionsOf(pgn));
+  const moves = (parts: InlinePart[]) => parts.filter(p => p.line).map(p => `${p.text}@${p.at}`);
+
+  it('Listenpunkte: nummerierte Züge klickbar (Partiezug und Abweichung), Zugnummern-Text und Zug ohne Nummer bleiben Text', () => {
+    const list = blocks[1] as { kind: 'list'; items: InlinePart[][] };
+    expect(list.items.map(moves)).toEqual([[], ['21.Dxd6@41'], ['35.a5@69', '35.axb5@69'], ['45.Ta1@89']]);
+    const ta1 = list.items[3].find(p => p.text === '45.Ta1')!;
+    expect(ta1.line!.slice(0, 88).map(m => m.san)).toEqual(positionsOf(pgn).sans.slice(0, 88));
+    expect(ta1.line![88].san).toBe('Ra1');
+  });
+
+  it('Begründung eines Buchs: Partiezüge sind klickbar, der Rohtext bleibt erhalten', () => {
+    const book = blocks[3] as { kind: 'book'; why: string; whyParts?: InlinePart[] };
+    expect(book.why).toContain('35.axb5 und 45.Lxd5');
+    expect(moves(book.whyParts!)).toEqual(['35.axb5@69', '45.Lxd5@89']);
+    expect(book.whyParts!.map(p => p.text).join('')).toBe(book.why);
   });
 });
