@@ -11,6 +11,24 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.943.1',
+    date: '2026-11-10',
+    changes: [
+      {
+        en: 'Admin: the tabs Menu, Messages, Roles, Daily puzzle, Puzzles and Fetch courses no longer stay stuck on the loading spinner when opened by a direct link or from the bell.',
+        de: 'Admin: Die Reiter Menü, Nachrichten, Rollen, Tagespuzzle, Puzzles und „Kurse holen“ bleiben über einen direkten Link oder die Glocke nicht mehr am Ladekreis hängen.',
+      },
+      {
+        en: 'The “Changelog” entry in the account menu opens the changelog again.',
+        de: '„Changelog“ im Kontomenü öffnet das Änderungsprotokoll wieder.',
+      },
+      {
+        en: 'Game summary via an invalid or deleted share link: shows “this link does not exist” instead of a load error with Retry; server and network errors keep Retry.',
+        de: 'Partie-Zusammenfassung über einen ungültigen oder gelöschten Teilen-Link: zeigt „gibt es nicht“ statt eines Ladefehlers mit „Wiederholen“; Server- und Netzfehler behalten „Wiederholen“.',
+      },
+    ],
+  },
+  {
     version: '0.943.0',
     date: '2026-11-10',
     changes: [

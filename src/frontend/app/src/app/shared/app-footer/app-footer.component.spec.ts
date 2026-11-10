@@ -1,3 +1,4 @@
+import { Component, EventEmitter, Output, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
@@ -377,5 +378,47 @@ describe('AppFooterComponent Changelog seitenweise (F8-008)', () => {
     await fixture.componentInstance.changelogLoad;
     fixture.detectChanges();
     expect(el.querySelectorAll('.changelog-entry').length).toBe(AppFooterComponent.ChangelogPage);
+  });
+});
+
+/**
+ * UI-Sweep 10.11.2026: „Änderungsprotokoll“ im Kontomenü öffnete nichts. Das Menü (Overlay der Navbar) meldet den Klick
+ * per Output an die App-Hülle, die `footer.openChangelog()` ruft — die Fußzeile selbst erlebt kein DOM-Ereignis. Angular
+ * 22 zeichnete sie danach nie neu: das Changelog lud, das Overlay erschien nicht. Nachgebaut mit einer Navbar-Attrappe,
+ * gezeichnet nur über autoDetectChanges/whenStable (wie im Browser), ohne detectChanges nach dem Öffnen.
+ */
+@Component({ selector: 'app-fake-navbar', standalone: true, template: '' })
+class FakeNavbarComponent { @Output() changelogClick = new EventEmitter<void>(); }
+
+@Component({
+  selector: 'app-footer-host', standalone: true, imports: [FakeNavbarComponent, AppFooterComponent],
+  template: '<app-fake-navbar (changelogClick)="footer.openChangelog()" /><app-footer #footer />',
+})
+class FooterShellHost {
+  readonly navbar = viewChild.required(FakeNavbarComponent);
+  readonly footer = viewChild.required(AppFooterComponent);
+}
+
+describe('AppFooterComponent Changelog aus dem Kontomenü (UI-Sweep 10.11.2026)', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('zeigt das Overlay samt Einträgen, wenn die Navbar es öffnet', async () => {
+    TestBed.configureTestingModule({
+      imports: [FooterShellHost],
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' }), ...FOOTER_PROVIDERS],
+    });
+    const fixture = TestBed.createComponent(FooterShellHost);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.changelog-overlay')).toBeNull();
+
+    fixture.componentInstance.navbar().changelogClick.emit();
+    await fixture.whenStable();
+    expect(el.querySelector('.changelog-overlay .changelog-content')).withContext('Overlay sofort offen').not.toBeNull();
+
+    await answerChangelog(fixture.componentInstance.footer(), fakeChangelog(3));
+    await fixture.whenStable();
+    expect(el.querySelectorAll('.changelog-entry').length).toBe(3);
   });
 });

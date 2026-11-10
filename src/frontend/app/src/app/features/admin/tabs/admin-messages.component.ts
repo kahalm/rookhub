@@ -1,4 +1,4 @@
-import { Component, OnInit, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -54,6 +54,9 @@ export class AdminMessagesComponent implements OnInit {
   /** Per Deep-Link zu öffnender Thread (User-Id), sobald die Thread-Liste geladen ist. */
   private pendingThreadUserId: number | null = null;
   private destroyRef = inject(DestroyRef);
+  /** Die Admin-Seite ist OnPush, und Angular 22 zeichnet nach einer HTTP-Antwort nicht von selbst neu: ohne
+   *  markForCheck blieb der Tab per Direktlink/Glocke (`/admin?tab=messages`) am Ladekreis (UI-Sweep 10.11.2026). */
+  private readonly cdr = inject(ChangeDetectorRef);
   // Such-Trigger für die User-Suche: gedrosselt + switchMap, damit nicht jeder Tastendruck einen
   // Request feuert und eine ältere Antwort keine neuere überschreibt (Out-of-order-Race).
   private msgUserSearchTrigger = new Subject<string>();
@@ -74,10 +77,10 @@ export class AdminMessagesComponent implements OnInit {
     this.msgUserSearchTrigger.pipe(
       debounceTime(250),
       distinctUntilChanged(),
-      tap(() => this.msgSearching = true),
+      tap(() => { this.msgSearching = true; this.cdr.markForCheck(); }),
       switchMap(q => this.adminService.getUsers(q, 1, 10).pipe(catchError(() => of(null)))),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(res => { this.msgUserResults = res ? res.items : this.msgUserResults; this.msgSearching = false; });
+    ).subscribe(res => { this.msgUserResults = res ? res.items : this.msgUserResults; this.msgSearching = false; this.cdr.markForCheck(); });
 
     // Deep-Link aus Benachrichtigungen: /admin?tab=messages&thread=<userId>. Als laufendes Abo, damit
     // aufeinanderfolgende Glocken-Klicks auf verschiedene Threads jeweils greifen.
@@ -101,6 +104,7 @@ export class AdminMessagesComponent implements OnInit {
         this.threads = list;
         this.threadsLoading = false;
         this.threadsLoadError = false;
+        this.cdr.markForCheck();
         if (this.pendingThreadUserId != null) {
           const uid = this.pendingThreadUserId;
           this.pendingThreadUserId = null;
@@ -108,7 +112,7 @@ export class AdminMessagesComponent implements OnInit {
           if (t) this.openThread(uid, t.username);
         }
       },
-      error: () => { this.threadsLoading = false; this.threadsLoadError = true; },
+      error: () => { this.threadsLoading = false; this.threadsLoadError = true; this.cdr.markForCheck(); },
     });
   }
 
@@ -119,10 +123,12 @@ export class AdminMessagesComponent implements OnInit {
     this.msgUserResults = [];
     this.msgUserSearch = '';
     this.threadLoading = true;
+    this.cdr.markForCheck();   // auch aus dem queryParamMap-Abo (Glocke) aufgerufen, nicht nur per Klick
     this.threadRequest.run(this.messageService.getAdminThread(userId), {
       next: list => {
         this.threadMessages = list;
         this.threadLoading = false;
+        this.cdr.markForCheck();
         if (list.some(m => !m.fromAdmin && !m.readByRecipient)) {
           this.messageService.markAdminSeen(userId).subscribe({
             next: () => this.loadThreads(),
@@ -130,7 +136,7 @@ export class AdminMessagesComponent implements OnInit {
           });
         }
       },
-      error: () => { this.threadLoading = false; },
+      error: () => { this.threadLoading = false; this.cdr.markForCheck(); },
     });
   }
 
@@ -144,10 +150,12 @@ export class AdminMessagesComponent implements OnInit {
         this.threadMessages = [...this.threadMessages, m];
         this.adminDraft = '';
         this.adminSending = false;
+        this.cdr.markForCheck();
         this.loadThreads();
       },
       error: () => {
         this.adminSending = false;
+        this.cdr.markForCheck();
         this.snackbar.show(this.translate.instant('messages.sendError'), { duration: 3000 });
       },
     });

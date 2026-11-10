@@ -60,7 +60,10 @@ const LH_UPLOAD = ['section.panel', '.seg.club-kind', 'section.gate'];
 const LH_FIXTURE = ['lh-fixture article.fixture', 'lh-fixture .empty', 'section.gate', 'section.empty', 'section.cta'];
 const KID_PUZZLE = ['kid-puzzle cg-board', 'kid-puzzle app-puzzle-board', 'p.info', 'kid-error'];
 const KID_STARS = ['kid-stars-play cg-board', 'app-puzzle-board', 'p.info'];
-const SUMMARY = ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'];
+const SUMMARY = ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .empty-state', '.summary-page .center'];
+// Ungültiger Teilen-Link der Zusammenfassung: der „gibt es nicht“-Zustand OHNE Wiederholen (UI-Sweep 10.11.2026) — nicht
+// die Lade-Fehlerkarte; steht dort „Wiederholen“, ist die Seite rückfällig.
+const SUMMARY_INVALID = ['.summary-page .empty-state.not-found'];
 // Admin-Reiter (`/admin?tab=<key>`, Schlüssel aus admin-tabs.ts): Hauptsache = erstes Kind der Reiter-Komponente.
 const ADMIN_TAB = comp => [`.admin-container app-${comp} > *`, `.admin-container app-${comp}`, '.admin-container mat-tab-group'];
 const ADMIN_TABS = { books: 'admin-books-tab', daily: 'admin-daily-puzzle', puzzles: 'admin-puzzle-tags', groups: 'admin-groups-tab',
@@ -152,8 +155,8 @@ export const ROUTES = [
   r('rookhub', '/games/{analyzedGameId}', 'user', { label: 'games-analyzed', main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
   r('rookhub', '/club-games/{clubGameId}', 'user', { main: GAME_BOARD, expectedFailures: [/^GET \/api\/league\/club\/games\/\d+ → 403$/] }),
   // Zusammenfassung einer Vereinspartie (0.913.0): Text mit Diagrammen, ohne Anforderung der Leersatz
-  r('rookhub', '/games/{gameId}/summary', 'user', { main: ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'], expectedFailures: [/^GET \/api\/games\/\d+(\/summary)? → (403|404)$/] }),
-  r('rookhub', '/club-games/{clubGameId}/summary', 'user', { main: ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'], expectedFailures: [/^GET \/api\/league\/club\/games\/\d+(\/summary)? → (403|404)$/] }),
+  r('rookhub', '/games/{gameId}/summary', 'user', { main: SUMMARY, expectedFailures: [/^GET \/api\/games\/\d+(\/summary)? → (403|404)$/] }),
+  r('rookhub', '/club-games/{clubGameId}/summary', 'user', { main: SUMMARY, expectedFailures: [/^GET \/api\/league\/club\/games\/\d+(\/summary)? → (403|404)$/] }),
   // Vereinspartie über den LeagueHub-Teilen-Link (0.838.3, „Analyse“ ohne Konto)
   r('rookhub', '/s/{leagueShareGameToken}/club-games/{shareClubGameId}', 'any', { main: GAME_BOARD }),
   r('rookhub', '/g/{gameShareToken}', 'any', { main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
@@ -166,14 +169,14 @@ export const ROUTES = [
   r('rookhub', '/cg/ungueltig', 'any', { label: 'cg-invalid', main: GAME_BOARD, expectedFailures: [/^GET \/api\/league\/s-club-game\/ungueltig(\/\w+)? → 404$/] }),
   // Die Zusammenfassung holt Partie und Text gemeinsam (forkJoin, club-game-summary.component.ts): kommt die erste 404, bricht
   // RxJS die zweite ab — Chromium meldet sie als net::ERR_ABORTED. Welche zuerst antwortet, ist Zufall.
-  r('rookhub', '/cg/ungueltig/summary', 'any', { label: 'cg-summary-invalid', main: SUMMARY, expectedFailures: [
+  r('rookhub', '/cg/ungueltig/summary', 'any', { label: 'cg-summary-invalid', main: SUMMARY_INVALID, expectedFailures: [
     /^GET \/api\/league\/s-club-game\/ungueltig(\/summary)? → 404$/, /^GET \/api\/league\/s-club-game\/ungueltig(\/summary)? — net::ERR_ABORTED$/] }),
   // Ungültige Teilen-Links der übrigen Token-Seiten (2026-11-09): je die Fehlerseite statt einer leeren Seite.
   r('rookhub', '/g/ungueltig', 'any', { label: 'g-invalid', main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/shared\/ungueltig(\/[\w-]+)? → 404$/] }),
-  r('rookhub', '/g/ungueltig/summary', 'any', { label: 'g-summary-invalid', main: SUMMARY, expectedFailures: [
+  r('rookhub', '/g/ungueltig/summary', 'any', { label: 'g-summary-invalid', main: SUMMARY_INVALID, expectedFailures: [
     /^GET \/api\/games\/shared\/ungueltig(\/summary)? → 404$/, /^GET \/api\/games\/shared\/ungueltig(\/summary)? — net::ERR_ABORTED$/] }),
   r('rookhub', '/s/ungueltig/club-games/1', 'any', { label: 's-club-game-invalid', main: GAME_BOARD, expectedFailures: [/^GET \/api\/league\/s\/ungueltig\/club\/games\/1(\/[\w-]+)? → 404$/] }),
-  r('rookhub', '/s/ungueltig/club-games/1/summary', 'any', { label: 's-club-game-summary-invalid', main: SUMMARY, expectedFailures: [
+  r('rookhub', '/s/ungueltig/club-games/1/summary', 'any', { label: 's-club-game-summary-invalid', main: SUMMARY_INVALID, expectedFailures: [
     /^GET \/api\/league\/s\/ungueltig\/club\/games\/1(\/summary)? → 404$/, /^GET \/api\/league\/s\/ungueltig\/club\/games\/1(\/summary)? — net::ERR_ABORTED$/] }),
   r('rookhub', '/g/{analyzedShareToken}', 'any', { label: 'g-analyzed', main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
   r('rookhub', '/reconstruct', 'user', { main: ['.page mat-card.item', '.page .empty-state', '.page mat-card.new-card'] }),

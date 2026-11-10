@@ -1,4 +1,4 @@
-import { Component, HostListener, Input, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { DomSanitizer } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
@@ -255,6 +255,13 @@ export class AppFooterComponent implements OnInit, OnDestroy {
 
   private readonly presence = inject(FooterPresenceService);
   private readonly http = inject(HttpClient);
+  /**
+   * Das Kontomenü der Navbar ruft {@link openChangelog} über ein Output der App-Hülle auf — kein DOM-Ereignis in DIESER
+   * Ansicht. Ohne `changeDetection` ist die Fußzeile in Angular 22 OnPush (neue Vorgabe), eine nicht markierte
+   * OnPush-Ansicht zeichnet auch der Lauf nach der HTTP-Antwort nicht neu: das
+   * Changelog lud, das Overlay erschien aber nie („Änderungsprotokoll öffnet nichts“, UI-Sweep 10.11.2026).
+   */
+  private readonly cdr = inject(ChangeDetectorRef);
 
   /** Meldet, wo diese Fusszeile die Rechtslinks zeigt — die Anmeldemaske laesst ihre eigene Zeile dort weg. */
   ngOnInit(): void {
@@ -270,6 +277,7 @@ export class AppFooterComponent implements OnInit, OnDestroy {
   openChangelog(): void {
     this.showChangelog = true;
     this.changelogShown = AppFooterComponent.ChangelogPage;
+    this.cdr.markForCheck();
     this.changelogLoad = this.loadChangelog();
   }
 
@@ -307,6 +315,7 @@ export class AppFooterComponent implements OnInit, OnDestroy {
     if (this.changelog.length > 0) return;
     try {
       this.changelog = await firstValueFrom(this.http.get<ChangelogEntry[]>(AppFooterComponent.ChangelogUrl));
+      this.cdr.markForCheck();
     } catch {
       /* still: das Overlay bleibt bis zum naechsten Versuch leer */
     }

@@ -1,9 +1,13 @@
+import { ChangeDetectorRef, Injector, runInInjectionContext } from '@angular/core';
 import { fakeAsync, tick } from '@angular/core/testing';
 import { of, throwError, Subject } from 'rxjs';
 import { AdminRolesComponent } from './admin-roles.component';
 import { Group, Role } from '../../../core/admin.service';
 
 /** Die Gruppenliste kommt von der Admin-Seite herein (F5-020), der Tab lädt sie nicht selbst. */
+/** Die Reiter markieren sich nach HTTP selbst (`inject(ChangeDetectorRef)`, Admin-Seite OnPush) — hier ein Stub. */
+const cdrInjector = Injector.create({ providers: [{ provide: ChangeDetectorRef, useValue: { markForCheck: () => {} } }] });
+
 const GROUPS = [
   { id: 4, name: 'Everyone', isEveryone: true, memberCount: 99 }, { id: 1, name: 'Schwaz', memberCount: 10 }] as Group[];
 
@@ -23,7 +27,8 @@ function make(overrides: any = {}) {
   } as any;
   const snackbar = { info: jasmine.createSpy('info') } as any;
   const translate = { instant: (k: string) => k } as any;
-  return { c: new AdminRolesComponent(admin, snackbar, translate, {} as any), admin, snackbar };
+  const c = runInInjectionContext(cdrInjector, () => new AdminRolesComponent(admin, snackbar, translate, {} as any));
+  return { c, admin, snackbar };
 }
 
 const role = (over: Partial<Role>): Role =>

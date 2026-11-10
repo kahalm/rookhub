@@ -1,11 +1,15 @@
+import { ChangeDetectorRef, Injector, runInInjectionContext } from '@angular/core';
 import { Subject, of, throwError } from 'rxjs';
 import { AdminChessableDownloadComponent } from './admin-chessable-download.component';
+
+/** Die Reiter markieren sich nach HTTP selbst (`inject(ChangeDetectorRef)`, Admin-Seite OnPush) — hier ein Stub. */
+const cdrInjector = Injector.create({ providers: [{ provide: ChangeDetectorRef, useValue: { markForCheck: () => {} } }] });
 
 /** Reine Logik-Tests (ohne Template/ngOnInit) — Filter-Getter der Kurs-Download-Ansicht. */
 function make(chessable: any = {}) {
   const snackbar = { info: () => {}, show: () => {} } as any;
   const translate = { instant: (k: string) => k } as any;
-  return new AdminChessableDownloadComponent(chessable, snackbar, translate);
+  return runInInjectionContext(cdrInjector, () => new AdminChessableDownloadComponent(chessable, snackbar, translate));
 }
 
 describe('AdminChessableDownloadComponent', () => {

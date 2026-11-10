@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -23,6 +23,8 @@ import { apiErrorText } from '../../../core/api-error';
 })
 export class AdminPuzzleTagsComponent {
   puzzleTagsBackfilling = false;
+  /** Admin-Seite OnPush + Angular 22: nach Dialog/HTTP selbst markieren, sonst friert der Knopf ein. */
+  private readonly cdr = inject(ChangeDetectorRef);
 
   constructor(
     private adminService: AdminService,
@@ -36,13 +38,16 @@ export class AdminPuzzleTagsComponent {
     this.confirm.ask('admin.puzzles.backfillConfirm').subscribe(ok => {
       if (!ok || this.puzzleTagsBackfilling) return;
       this.puzzleTagsBackfilling = true;
+      this.cdr.markForCheck();
       this.adminService.backfillPuzzleTags().subscribe({
         next: () => {
           this.puzzleTagsBackfilling = false;
+          this.cdr.markForCheck();
           this.snackbar.info(this.translate.instant('admin.puzzles.backfillStarted'));
         },
         error: err => {
           this.puzzleTagsBackfilling = false;
+          this.cdr.markForCheck();
           this.snackbar.info(apiErrorText(err, this.translate, 'admin.puzzles.backfillError'));
         }
       });

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -38,6 +38,9 @@ export class AdminMenuVisibilityComponent implements OnInit {
    * wurden. `null` = noch nie geladen.
    */
   @Input() groups: GroupOption[] | null = null;
+  /** Die Admin-Seite ist OnPush, und Angular 22 zeichnet nach einer HTTP-Antwort nicht von selbst neu: ohne
+   *  markForCheck blieb der Tab per Direktlink (`/admin?tab=menu`) dauerhaft am Ladekreis (UI-Sweep 10.11.2026). */
+  private readonly cdr = inject(ChangeDetectorRef);
 
   constructor(
     private adminService: AdminService,
@@ -53,8 +56,12 @@ export class AdminMenuVisibilityComponent implements OnInit {
   loadMenuConfig(): void {
     this.menuLoading = true;
     this.adminService.getMenuConfig().subscribe({
-      next: cfg => { this.menuConfig = cfg; this.menuLoading = false; },
-      error: () => { this.snackbar.info(this.translate.instant('admin.menu.loadError')); this.menuLoading = false; }
+      next: cfg => { this.menuConfig = cfg; this.menuLoading = false; this.cdr.markForCheck(); },
+      error: () => {
+        this.snackbar.info(this.translate.instant('admin.menu.loadError'));
+        this.menuLoading = false;
+        this.cdr.markForCheck();
+      }
     });
   }
 
@@ -72,10 +79,15 @@ export class AdminMenuVisibilityComponent implements OnInit {
       next: cfg => {
         this.menuConfig = cfg;
         this.menuSaving = false;
+        this.cdr.markForCheck();
         this.menu.refresh(); // eigene Navbar sofort aktualisieren
         this.snackbar.info(this.translate.instant('admin.menu.saved'));
       },
-      error: () => { this.snackbar.info(this.translate.instant('admin.menu.saveError')); this.menuSaving = false; }
+      error: () => {
+        this.snackbar.info(this.translate.instant('admin.menu.saveError'));
+        this.menuSaving = false;
+        this.cdr.markForCheck();
+      }
     });
   }
 }

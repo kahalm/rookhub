@@ -1,4 +1,4 @@
-import { DestroyRef } from '@angular/core';
+import { ChangeDetectorRef, DestroyRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import { AdminMessagesComponent } from './admin-messages.component';
@@ -20,7 +20,10 @@ function make(svc: Record<string, unknown> = {}, snackbar: any = { show: () => {
 
 describe('AdminMessagesComponent', () => {
   beforeEach(() => TestBed.configureTestingModule({
-    providers: [{ provide: DestroyRef, useValue: { onDestroy: () => () => {} } }],
+    providers: [
+      { provide: DestroyRef, useValue: { onDestroy: () => () => {} } },
+      { provide: ChangeDetectorRef, useValue: { markForCheck: () => {} } },
+    ],
   }));
 
   it('selectedThread returns the summary of the open thread', () => {

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -44,6 +44,9 @@ export class AdminRolesComponent implements OnInit {
   roles: Role[] = [];
   allPermissions: string[] = [];
   loading = false;
+  /** Die Admin-Seite ist OnPush, und Angular 22 zeichnet nach einer HTTP-Antwort nicht von selbst neu: ohne
+   *  markForCheck blieb der Tab per Direktlink (`/admin?tab=roles`) dauerhaft am Ladekreis (UI-Sweep 10.11.2026). */
+  private readonly cdr = inject(ChangeDetectorRef);
 
   // Anlegen
   newKey = '';
@@ -104,27 +107,27 @@ export class AdminRolesComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadRoles();
-    this.admin.getPermissions().subscribe({ next: p => this.allPermissions = p, error: () => {} });
+    this.admin.getPermissions().subscribe({ next: p => { this.allPermissions = p; this.cdr.markForCheck(); }, error: () => {} });
     this.searchInput.pipe(
       debounceTime(300),
       distinctUntilChanged(),
       // catchError INNEN: ein fehlgeschlagener Such-Request darf den Strom nicht beenden — sonst
       // reagierte das Suchfeld bis zum Neuladen nicht mehr.
-      switchMap(q => { this.searchingUsers = true; return this.admin.getUsers(q, 1, 20).pipe(catchError(() => of(null))); }),
-    ).subscribe(res => { if (res) this.userResults = res.items; this.searchingUsers = false; });
+      switchMap(q => { this.searchingUsers = true; this.cdr.markForCheck(); return this.admin.getUsers(q, 1, 20).pipe(catchError(() => of(null))); }),
+    ).subscribe(res => { if (res) this.userResults = res.items; this.searchingUsers = false; this.cdr.markForCheck(); });
   }
 
   loadRoles(): void {
     this.loading = true;
     this.admin.getRoles().subscribe({
-      next: r => { this.roles = r; this.loading = false; },
-      error: () => { this.snackbar.info(this.translate.instant('admin.roles.loadError')); this.loading = false; },
+      next: r => { this.roles = r; this.loading = false; this.cdr.markForCheck(); },
+      error: () => { this.snackbar.info(this.translate.instant('admin.roles.loadError')); this.loading = false; this.cdr.markForCheck(); },
     });
   }
 
   /** Rollen ohne Lade-Spinner neu holen — das Formular (Entwurf, Bearbeitung) bleibt stehen. */
   private refreshRolesQuietly(): void {
-    this.admin.getRoles().subscribe({ next: r => this.roles = r, error: () => {} });
+    this.admin.getRoles().subscribe({ next: r => { this.roles = r; this.cdr.markForCheck(); }, error: () => {} });
   }
 
   /** Nur-lesbar: die admin-Rolle trägt implizit alle Permissions und wird nicht editiert. */
@@ -153,12 +156,14 @@ export class AdminRolesComponent implements OnInit {
     }).subscribe({
       next: () => {
         this.creating = false;
+        this.cdr.markForCheck();
         this.newKey = ''; this.newName = ''; this.newPerms.clear();
         this.snackbar.info(this.translate.instant('admin.roles.created'));
         this.loadRoles();
       },
       error: err => {
         this.creating = false;
+        this.cdr.markForCheck();
         this.snackbar.info(apiErrorText(err, this.translate, 'admin.roles.saveError'));
       },
     });
@@ -187,11 +192,13 @@ export class AdminRolesComponent implements OnInit {
       next: () => {
         this.savingRole = false;
         this.cancelEdit();
+        this.cdr.markForCheck();
         this.snackbar.info(this.translate.instant('admin.roles.saved'));
         this.loadRoles();
       },
       error: err => {
         this.savingRole = false;
+        this.cdr.markForCheck();
         this.snackbar.info(apiErrorText(err, this.translate, 'admin.roles.saveError'));
       },
     });
@@ -221,6 +228,7 @@ export class AdminRolesComponent implements OnInit {
         if (this.selectedGroup?.id !== group.id) return;   // veraltete Antwort einer vorher gewählten Gruppe
         this.groupRoleIds = new Set(gr.roleIds);
         this.groupRolesLoaded = true;
+        this.cdr.markForCheck();
       },
       error: () => {
         if (this.selectedGroup?.id !== group.id) return;
@@ -245,11 +253,13 @@ export class AdminRolesComponent implements OnInit {
     this.admin.setGroupRoles(this.selectedGroup.id, [...this.groupRoleIds]).subscribe({
       next: () => {
         this.savingGroupRoles = false;
+        this.cdr.markForCheck();
         this.snackbar.info(this.translate.instant('admin.roles.groupRolesSaved'));
         this.loadRoles();   // die Rollenkarten nennen ihre Gruppen
       },
       error: err => {
         this.savingGroupRoles = false;
+        this.cdr.markForCheck();
         this.snackbar.info(apiErrorText(err, this.translate, 'admin.roles.saveError'));
       },
     });
@@ -270,6 +280,7 @@ export class AdminRolesComponent implements OnInit {
         if (this.selectedUser?.id !== user.id) return;     // veraltete Antwort eines vorher gewählten Nutzers
         this.userRoleIds = new Set(ur.roleIds);
         this.userRolesLoaded = true;
+        this.cdr.markForCheck();
       },
       error: () => {
         if (this.selectedUser?.id !== user.id) return;
@@ -288,11 +299,13 @@ export class AdminRolesComponent implements OnInit {
     this.admin.setUserRoles(this.selectedUser.id, [...this.userRoleIds]).subscribe({
       next: () => {
         this.savingUserRoles = false;
+        this.cdr.markForCheck();
         this.snackbar.info(this.translate.instant('admin.roles.userRolesSaved'));
         this.loadRoles(); // Mitgliederzahlen aktualisieren
       },
       error: () => {
         this.savingUserRoles = false;
+        this.cdr.markForCheck();
         this.snackbar.info(this.translate.instant('admin.roles.saveError'));
       },
     });

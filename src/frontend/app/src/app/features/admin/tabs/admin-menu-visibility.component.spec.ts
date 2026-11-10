@@ -1,3 +1,4 @@
+import { ChangeDetectorRef, Injector, runInInjectionContext } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
@@ -7,6 +8,9 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AdminMenuVisibilityComponent } from './admin-menu-visibility.component';
 import { Group, MenuItemConfig } from '../../../core/admin.service';
+
+/** Die Reiter markieren sich nach HTTP selbst (`inject(ChangeDetectorRef)`, Admin-Seite OnPush) — hier ein Stub. */
+const cdrInjector = Injector.create({ providers: [{ provide: ChangeDetectorRef, useValue: { markForCheck: () => {} } }] });
 
 describe('AdminMenuVisibilityComponent', () => {
   it('creates (template AOT-compiles + DI resolves)', async () => {
@@ -32,8 +36,8 @@ describe('AdminMenuVisibilityComponent', () => {
         getGroups: jasmine.createSpy('getGroups').and.returnValue(of([])),
         saveMenuConfig: jasmine.createSpy('saveMenuConfig').and.callFake((items: MenuItemConfig[]) => of(items)),
       };
-      const c = new AdminMenuVisibilityComponent(
-        admin as any, { refresh: () => {} } as any, { info: () => {} } as any, { instant: (k: string) => k } as any);
+      const c = runInInjectionContext(cdrInjector, () => new AdminMenuVisibilityComponent(
+        admin as any, { refresh: () => {} } as any, { info: () => {} } as any, { instant: (k: string) => k } as any));
       c.groups = groups;
       c.menuConfig = [
         { key: 'courses', level: 'Groups', groupIds: [1, 2] },

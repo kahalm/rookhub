@@ -44,6 +44,20 @@ interface ResolvedDiagram {
     <div class="summary-page" [class.with-board]="hasBoard()">
       @if (loading()) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
+      } @else if (notFound()) {
+        <!-- Ungültiger oder gelöschter Link (404): kein „Wiederholen“ — das brächte dasselbe Ergebnis. Wie die
+             Partieseite selbst (shared-game, a1-rk-vereinspartie-fehler-sackgasse); andere Fehler bleiben unten. -->
+        <mat-card class="empty-state not-found">
+          <mat-icon>link_off</mat-icon>
+          <p>{{ notFoundKey() | translate }}</p>
+          <div class="gate-actions">
+            @if (own) {
+              <a mat-stroked-button routerLink="/games" class="to-games">{{ 'games.toMyGames' | translate }}</a>
+            } @else {
+              <a mat-stroked-button routerLink="/" class="to-home">{{ 'app.notFound.home' | translate }}</a>
+            }
+          </div>
+        </mat-card>
       } @else if (failed()) {
         <mat-card class="load-card"><app-load-error [messageKey]="'games.loadError'" (retry)="load()" /></mat-card>
       } @else if (game(); as g) {
@@ -169,6 +183,7 @@ interface ResolvedDiagram {
       .with-board .summary-layout { display: grid; grid-template-columns: minmax(0, 1fr) clamp(320px, 40vw, 520px); gap: 16px; align-items: start; }
     }
     .center { display: flex; justify-content: center; padding: 48px; }
+    .gate-actions { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
     .head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
     .head-main { display: flex; flex-direction: column; flex: 1 1 240px; min-width: 0; }
     .players { font-size: 1.1rem; }
@@ -228,6 +243,13 @@ export class ClubGameSummaryComponent implements OnInit {
   }
   readonly loading = signal(true);
   readonly failed = signal(false);
+  /** Partie bzw. Link gibt es nicht (404/410) — eigener Zustand ohne „Wiederholen“ (UI-Sweep 10.11.2026). */
+  readonly notFound = signal(false);
+  /** Text für {@link notFound}: über einen Teilen-Link „geteilte Partie gibt es nicht“, sonst „Partie gibt es nicht“. */
+  notFoundKey(): string {
+    return this.shareToken !== null || this.gameShareToken !== null || this.clubLinkToken !== null
+      ? 'games.shared.notFound' : 'games.notFound';
+  }
   readonly game = signal<SharedGame | null>(null);
   readonly summary = signal<ClubGameSummary | null>(null);
   readonly blocks = computed<SummaryBlock[]>(() => parseSummary(this.summary()?.markdown ?? ''));
@@ -257,6 +279,7 @@ export class ClubGameSummaryComponent implements OnInit {
   load(): void {
     this.loading.set(true);
     this.failed.set(false);
+    this.notFound.set(false);
     const token = this.shareToken;
     const ownToken = this.gameShareToken;
     const link = this.clubLinkToken;
@@ -271,7 +294,11 @@ export class ClubGameSummaryComponent implements OnInit {
       : forkJoin([this.games.clubGame(this.gameId), this.summaries.get(this.gameId)]);
     load.subscribe({
       next: ([g, s]) => { this.game.set(g); this.summary.set(s); this.loading.set(false); this.loadBooks(); },
-      error: () => { this.failed.set(true); this.loading.set(false); },
+      error: (e: { status?: number } | null) => {
+        const gone = e?.status === 404 || e?.status === 410;
+        (gone ? this.notFound : this.failed).set(true);
+        this.loading.set(false);
+      },
     });
   }
 

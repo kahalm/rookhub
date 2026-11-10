@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -35,6 +35,8 @@ export class AdminDailyPuzzleComponent implements OnInit {
   dailyPuzzle: DailyPuzzleInfo | null = null;
   dailyLoading = false;
   dailyRegenerating = false;
+  /** Admin-Seite OnPush + Angular 22: nach HTTP selbst markieren, sonst bleibt der Ladekreis stehen (UI-Sweep 10.11.2026). */
+  private readonly cdr = inject(ChangeDetectorRef);
 
   constructor(
     private adminService: AdminService,
@@ -58,9 +60,10 @@ export class AdminDailyPuzzleComponent implements OnInit {
     this.dailyLoading = true;
     this.dailyPuzzle = null;
     this.adminService.getDailyPuzzle(date).subscribe({
-      next: p => { this.dailyPuzzle = p; this.dailyLoading = false; },
+      next: p => { this.dailyPuzzle = p; this.dailyLoading = false; this.cdr.markForCheck(); },
       error: err => {
         this.dailyLoading = false;
+        this.cdr.markForCheck();
         // 404 = noch kein Tagespuzzle für dieses Datum (z. B. leerer Pool) — kein Fehler-Toast nötig.
         if (err.status !== 404) {
           this.snackbar.info(apiErrorText(err, this.translate, 'admin.daily.errors.load'));
@@ -76,14 +79,17 @@ export class AdminDailyPuzzleComponent implements OnInit {
       if (!ok) return;
 
       this.dailyRegenerating = true;
+      this.cdr.markForCheck();
       this.adminService.regenerateDailyPuzzle(date).subscribe({
         next: p => {
           this.dailyPuzzle = p;
           this.dailyRegenerating = false;
+          this.cdr.markForCheck();
           this.snackbar.info(this.translate.instant('admin.daily.regenerated'));
         },
         error: err => {
           this.dailyRegenerating = false;
+          this.cdr.markForCheck();
           this.snackbar.info(apiErrorText(err, this.translate, 'admin.daily.errors.regenerate'));
         }
       });

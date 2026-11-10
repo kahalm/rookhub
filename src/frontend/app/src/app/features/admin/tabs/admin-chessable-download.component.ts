@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -56,6 +56,8 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
   /** Kursliste des GEWÄHLTEN Users: ein Wechsel bricht das Laden der vorigen ab — sonst stünden A's Kurse
    *  unter B, und „Importieren" holte sie mit B's Bearer. */
   private dlCoursesRequest = new LatestRequest();
+  /** Admin-Seite OnPush + Angular 22: nach HTTP/Timer selbst markieren, sonst bleibt der Ladekreis stehen (UI-Sweep 10.11.2026). */
+  private readonly cdr = inject(ChangeDetectorRef);
 
   constructor(
     private chessable: ChessableService,
@@ -74,8 +76,8 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
   loadDlUsers(): void {
     this.dlUsersLoading = true;
     this.chessable.getCredentialedUsersAdmin().subscribe({
-      next: list => { this.dlUsers = list; this.dlUsersLoading = false; this.dlUsersError = false; },
-      error: () => { this.dlUsersLoading = false; this.dlUsersError = true; },
+      next: list => { this.dlUsers = list; this.dlUsersLoading = false; this.dlUsersError = false; this.cdr.markForCheck(); },
+      error: () => { this.dlUsersLoading = false; this.dlUsersError = true; this.cdr.markForCheck(); },
     });
   }
 
@@ -115,11 +117,13 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
     this.chessable.testUser(this.dlSelectedUserId).subscribe({
       next: r => {
         this.dlTesting = false;
+        this.cdr.markForCheck();
         this.snackbar.info(this.translate.instant('chessable.testOk', { uid: r.uid, count: r.courseCount }));
         this.loadDlUsers(); // Blocked-Flag aktualisieren
       },
       error: err => {
         this.dlTesting = false;
+        this.cdr.markForCheck();
         this.snackbar.info(apiErrorText(err, this.translate, 'chessable.testFailed'));
         this.loadDlUsers();
       },
@@ -140,10 +144,11 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
     this.dlCoursesLoading = true;
     this.dlCoursesError = null;
     this.dlCoursesRequest.run(this.chessable.getUserCoursesAdmin(this.dlSelectedUserId, refresh), {
-      next: res => { this.dlCourses = res.courses; this.dlCoursesLoading = false; },
+      next: res => { this.dlCourses = res.courses; this.dlCoursesLoading = false; this.cdr.markForCheck(); },
       error: err => {
         this.dlCoursesError = apiErrorText(err, this.translate, 'admin.courseDl.loadError');
         this.dlCoursesLoading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -167,8 +172,11 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
     if (this.dlEstimates[bid]?.loading) return;
     this.dlEstimates[bid] = { loading: true };
     this.chessable.estimateCourseForUser(this.dlSelectedUserId, bid).subscribe({
-      next: info => { this.dlEstimates[bid] = { info, loading: false }; },
-      error: err => { this.dlEstimates[bid] = { loading: false, error: apiErrorText(err, this.translate, 'admin.courseDl.estimateError') }; },
+      next: info => { this.dlEstimates[bid] = { info, loading: false }; this.cdr.markForCheck(); },
+      error: err => {
+        this.dlEstimates[bid] = { loading: false, error: apiErrorText(err, this.translate, 'admin.courseDl.estimateError') };
+        this.cdr.markForCheck();
+      },
     });
   }
 
@@ -177,9 +185,10 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
     const bid = course.bid;
     this.dlImports[bid] = { ...(this.dlImports[bid] ?? {} as ChessableImport), status: 'running', phase: 'queued', bid, target } as ChessableImport;
     this.chessable.importForUserAdmin(this.dlSelectedUserId, bid, target, course.name).subscribe({
-      next: imp => { this.dlImports[bid] = imp; this.pollDlImport(bid, imp.id); },
+      next: imp => { this.dlImports[bid] = imp; this.cdr.markForCheck(); this.pollDlImport(bid, imp.id); },
       error: err => {
         delete this.dlImports[bid];
+        this.cdr.markForCheck();
         this.snackbar.show(apiErrorText(err, this.translate, 'admin.courseDl.importError'), { duration: 3500 });
       },
     });
@@ -204,6 +213,7 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
             }
             delete this.dlImports[bid];
           }
+          this.cdr.markForCheck();
         },
         error: () => { this.dlPollSubs[bid]?.unsubscribe(); delete this.dlPollSubs[bid]; },
       });
