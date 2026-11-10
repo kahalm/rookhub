@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -19,24 +19,29 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CourseService } from '../courses/course.service';
 import { WoodpeckerCreateDialogComponent, WoodpeckerDialogData, isWoodpeckerCourse } from './woodpecker-create-dialog.component';
-import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './woodpecker.service';
+import { daysLeft, isArchivedWoodpeckerPlan, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './woodpecker.service';
 
 /**
  * `/woodpecker`: eigene Woodpecker-Trainings. Je Training eine Karte mit dem laufenden Zyklus (Frist, Fortschritt),
  * den bisherigen Zyklen als kleine Tabelle und GENAU einer Hauptaktion: „Weiter lösen“ bzw. „Zyklus N starten“.
+ *
+ * Seit 0.958.0 gibt es je Nutzer EIN aktives Training (Nutzerentscheidung 10.11.): „Archivieren“ im ⋮ legt es ab,
+ * „Neues Training“ archiviert das bisherige mit (Hinweis im Dialog). Archivierte stehen zugeklappt unter „Archiv (N)“
+ * — nur lesbar, mit „Wiederherstellen“ (nur ohne aktives Training, sonst Grund im Eintrag) und „Löschen“. Altbestand mit
+ * mehreren aktiven zeigt alle als Karten, bis archiviert wird.
  */
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-woodpecker-list',
   standalone: true,
-  imports: [DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatMenuModule, MatProgressBarModule,
+  imports: [DatePipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatMenuModule, MatProgressBarModule,
     TranslatePipe, PctPipe, HelpHintComponent, IconLabelDirective, LoadErrorComponent, LoadingSpinnerComponent],
   template: `
     <div class="page">
       <div class="header">
         <h1>{{ 'woodpecker.title' | translate }}</h1>
         <div class="header-actions">
-          @if (plans().length > 0) {
+          @if (active().length > 0) {
             <button mat-stroked-button (click)="create()"><mat-icon>add</mat-icon>{{ 'woodpecker.new' | translate }}</button>
           }
         </div>
@@ -49,7 +54,7 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
         <app-loading-spinner />
       } @else if (loadFailed()) {
         <app-load-error (retry)="load()" />
-      } @else if (plans().length === 0) {
+      } @else if (active().length === 0) {
         <!-- d3-rk-woodpecker-leerdialog-luecke-abbrechen: ohne lösbaren Kurs gleich der einzige Weg weiter („Zu den
              Kursen“) statt „Neues Training“ → Dialog → anderer Knopf. Solange die Kursliste lädt oder scheitert, bleibt
              „Neues Training“ (der Dialog meldet den Fehler selbst). -->
@@ -58,13 +63,13 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
             <p>{{ 'woodpecker.create.noCourses' | translate }}</p>
             <a mat-flat-button color="primary" routerLink="/courses">{{ 'woodpecker.create.toCourses' | translate }}</a>
           } @else {
-            <p>{{ 'woodpecker.empty' | translate }}</p>
+            <p>{{ (archived().length > 0 ? 'woodpecker.emptyArchived' : 'woodpecker.empty') | translate }}</p>
             <button mat-flat-button color="primary" (click)="create()"><mat-icon>add</mat-icon>{{ 'woodpecker.new' | translate }}</button>
           }
         </div>
       } @else {
         <div class="plans">
-          @for (p of plans(); track p.id) {
+          @for (p of active(); track p.id) {
             @let c = current(p);
             <mat-card appearance="outlined" class="plan">
               <div class="plan-head">
@@ -84,6 +89,7 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
                       <button mat-menu-item (click)="finishSet(p)"><mat-icon>flag</mat-icon>{{ 'woodpecker.finishSet' | translate }}</button>
                     }
                   }
+                  <button mat-menu-item (click)="archive(p)"><mat-icon>archive</mat-icon>{{ 'woodpecker.archive' | translate }}</button>
                   <button mat-menu-item class="delete-item" (click)="remove(p)"><mat-icon>delete</mat-icon>{{ 'common.delete' | translate }}</button>
                 </mat-menu>
               </div>
@@ -121,28 +127,7 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
               </div>
 
               @if (hasFinishedCycle(p)) {
-                <div class="cycles-wrap">
-                  <table class="cycles">
-                    <thead><tr>
-                      <th>{{ 'woodpecker.col.cycle' | translate }}</th>
-                      <th class="num">{{ 'woodpecker.col.puzzles' | translate }}</th>
-                      <th class="num">{{ 'woodpecker.col.solved' | translate }}</th>
-                      <th class="num">{{ 'woodpecker.col.time' | translate }}</th>
-                      <th class="num">{{ 'woodpecker.col.days' | translate }}</th>
-                    </tr></thead>
-                    <tbody>
-                      @for (cy of p.cycles; track cy.number) {
-                        <tr>
-                          <td>{{ cy.number }}</td>
-                          <td class="num">{{ cy.attempted }}</td>
-                          <td class="num">{{ cy.attempted ? (100 * cy.solved / cy.attempted | pct) : '–' }}</td>
-                          <td class="num">{{ clock(cy.timeSeconds) }}</td>
-                          <td class="num">{{ usedDays(cy) }} / {{ cy.targetDays }}</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
+                <ng-container *ngTemplateOutlet="cyclesTable; context: { $implicit: p }" />
               }
 
               <div class="actions">
@@ -165,7 +150,71 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
           }
         </div>
       }
+
+      <!-- 0.958.0: Archiv zugeklappt unter den aktiven; ohne archivierte kein Abschnitt. -->
+      @if (!loading() && !loadFailed() && archived().length > 0) {
+        <details class="archive">
+          <summary class="archive-summary">{{ 'woodpecker.archiveSection' | translate: { n: archived().length } }}</summary>
+          <div class="archive-list">
+            @for (p of archived(); track p.id) {
+              <mat-card appearance="outlined" class="plan archived-plan">
+                <div class="plan-head">
+                  <div class="plan-title">
+                    <h3 [title]="p.name">{{ p.name }}</h3>
+                    <div class="meta">
+                      <span>{{ 'woodpecker.archivedAt' | translate: { at: (p.archivedAt | date: 'mediumDate') } }}</span>
+                      <span class="sep">{{ 'woodpecker.cycleOf' | translate: { n: current(p).number, max: p.maxCycles } }}</span>
+                      @if (p.completedAt) {
+                        <span class="chip done">{{ 'woodpecker.status.completed' | translate }}</span>
+                      }
+                    </div>
+                  </div>
+                  <button mat-icon-button [matMenuTriggerFor]="archMenu" [appIconLabel]="'common.moreActions' | translate"><mat-icon>more_vert</mat-icon></button>
+                  <mat-menu #archMenu="matMenu">
+                    <!-- DESIGN 2.8/5.4: gesperrt nur mit Grund als zweite leise Zeile im Eintrag. -->
+                    <button mat-menu-item class="restore-item" [disabled]="active().length > 0 || busy() === p.id" (click)="restore(p)">
+                      <mat-icon>unarchive</mat-icon>
+                      <span class="mi-text">{{ 'woodpecker.restore' | translate }}
+                        @if (active().length > 0) { <span class="why">{{ 'woodpecker.restoreBlocked' | translate }}</span> }
+                      </span>
+                    </button>
+                    <button mat-menu-item class="delete-item" (click)="remove(p)"><mat-icon>delete</mat-icon>{{ 'common.delete' | translate }}</button>
+                  </mat-menu>
+                </div>
+                @if (hasAttempts(p)) {
+                  <ng-container *ngTemplateOutlet="cyclesTable; context: { $implicit: p }" />
+                }
+              </mat-card>
+            }
+          </div>
+        </details>
+      }
     </div>
+
+    <ng-template #cyclesTable let-p>
+      <div class="cycles-wrap">
+        <table class="cycles">
+          <thead><tr>
+            <th>{{ 'woodpecker.col.cycle' | translate }}</th>
+            <th class="num">{{ 'woodpecker.col.puzzles' | translate }}</th>
+            <th class="num">{{ 'woodpecker.col.solved' | translate }}</th>
+            <th class="num">{{ 'woodpecker.col.time' | translate }}</th>
+            <th class="num">{{ 'woodpecker.col.days' | translate }}</th>
+          </tr></thead>
+          <tbody>
+            @for (cy of asPlan(p).cycles; track cy.number) {
+              <tr>
+                <td>{{ cy.number }}</td>
+                <td class="num">{{ cy.attempted }}</td>
+                <td class="num">{{ cy.attempted ? (100 * cy.solved / cy.attempted | pct) : '–' }}</td>
+                <td class="num">{{ clock(cy.timeSeconds) }}</td>
+                <td class="num">{{ usedDays(cy, asPlan(p).archivedAt) }} / {{ cy.targetDays }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </ng-template>
   `,
   styles: [`
     /* c1-wp-woodpecker-seitenpolster-96vw: ohne 96vw — das zog am Handy/Tablet zusätzlich 2 vw je Seite ab (24/32 px
@@ -204,6 +253,16 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
     .actions { margin-top: auto; display: flex; gap: 8px; align-items: center; }
     .locked { display: flex; flex-direction: column; gap: 4px; max-width: 280px; }
     .reason { font-size: .8rem; color: var(--mat-sys-on-surface-variant); }
+    /* 0.958.0 Archiv: zugeklappt, kompakte Karten im selben Raster, Titel eine Stufe kleiner. */
+    .archive { margin-top: 24px; }
+    .archive-summary { cursor: pointer; font-size: 1.05rem; font-weight: 500; padding: 10px 0; min-height: 44px;
+      box-sizing: border-box; }
+    .archive-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 12px; }
+    .archived-plan { padding: 12px 16px; }
+    .archived-plan h3 { margin: 0; font-size: 1rem; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+      line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+    .mi-text { display: inline-flex; flex-direction: column; }
+    .why { display: block; font-size: .8em; color: var(--mat-sys-on-surface-variant); }
     /* c1-wp-uebersicht-ultrawide: Kartenraster nimmt die Breitbild-Stufe (DESIGN 4.1); darunter unverändert. */
     @media (min-width: 2400px) {
       .page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
@@ -224,6 +283,11 @@ export class WoodpeckerListComponent implements OnInit {
   private courses = inject(CourseService);
 
   readonly plans = signal<WoodpeckerPlan[]>([]);
+  /** Nicht archivierte Trainings (seit 0.958.0 höchstens eins; Altbestand kann mehrere haben). */
+  readonly active = computed(() => this.plans().filter(p => !isArchivedWoodpeckerPlan(p)));
+  /** Archivierte, zuletzt archiviertes zuerst. */
+  readonly archived = computed(() => this.plans().filter(isArchivedWoodpeckerPlan)
+    .sort((a, b) => (b.archivedAt ?? '').localeCompare(a.archivedAt ?? '')));
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
   /** Lösbare Kurse vorhanden? null = (noch) unbekannt; nur geprüft, solange es kein Training gibt. */
@@ -240,7 +304,7 @@ export class WoodpeckerListComponent implements OnInit {
       next: list => {
         this.plans.set(list);
         this.loading.set(false);
-        if (list.length === 0) this.checkCourses();
+        if (this.active().length === 0) this.checkCourses();
       },
       error: () => { this.loading.set(false); this.loadFailed.set(true); },
     });
@@ -256,6 +320,9 @@ export class WoodpeckerListComponent implements OnInit {
 
   current(p: WoodpeckerPlan): WoodpeckerCycle { return p.cycles[p.cycles.length - 1]; }
   hasFinishedCycle(p: WoodpeckerPlan): boolean { return p.cycles.some(c => c.finishedAt != null); }
+  hasAttempts(p: WoodpeckerPlan): boolean { return p.cycles.some(c => c.attempted > 0); }
+  /** Typ für die Vorlagen-Variable der Zyklen-Tabelle (`ng-template let-p` ist `any`). */
+  asPlan(p: WoodpeckerPlan): WoodpeckerPlan { return p; }
   left(c: WoodpeckerCycle): number { return daysLeft(c.deadline); }
   overdue(c: WoodpeckerCycle): boolean { return new Date(c.deadline).getTime() < Date.now(); }
   /** Zieltage des nächsten Zyklus: halbiert, aufgerundet (wie im Backend). */
@@ -273,18 +340,39 @@ export class WoodpeckerListComponent implements OnInit {
     return Math.min(c.targetDays, Math.max(0, Math.floor((Date.now() - new Date(c.startedAt).getTime()) / 86_400_000)));
   }
 
-  /** Gebrauchte Tage eines Zyklus (aufgerundet; laufend = bis jetzt). */
-  usedDays(c: WoodpeckerCycle): number {
-    const end = c.finishedAt ? new Date(c.finishedAt).getTime() : Date.now();
+  /** Gebrauchte Tage eines Zyklus (aufgerundet; laufend = bis jetzt, archiviert mitten im Zyklus = bis zur Archivierung). */
+  usedDays(c: WoodpeckerCycle, archivedAt?: string | null): number {
+    const end = c.finishedAt ? new Date(c.finishedAt).getTime() : archivedAt ? new Date(archivedAt).getTime() : Date.now();
     return Math.max(1, Math.ceil((end - new Date(c.startedAt).getTime()) / 86_400_000));
   }
 
+  /** Neues Training; ein vorhandenes aktives archiviert der Dialog mit (Hinweis + `archiveCurrent`). */
   create(): void {
-    const data: WoodpeckerDialogData = { mode: 'create' };
+    const current = this.active();
+    const data: WoodpeckerDialogData = { mode: 'create', current };
     this.dialog.open(WoodpeckerCreateDialogComponent, { data, width: '560px', maxWidth: '94vw', autoFocus: 'dialog' })
       .afterClosed().subscribe((plan: WoodpeckerPlan | null | undefined) => {
-        if (plan) this.plans.update(list => [plan, ...list]);
+        if (!plan) return;
+        this.plans.update(list => [plan, ...list]);
+        if (current.length > 0) this.refresh();   // die archivierten mit Zeitpunkt vom Server
       });
+  }
+
+  /** Ins Archiv — mit Rückfrage (bleibt lesbar, ein neues Training wird möglich). */
+  archive(p: WoodpeckerPlan): void {
+    this.confirm.ask('woodpecker.archiveConfirm', { name: p.name }, { confirm: this.translate.instant('woodpecker.archive') })
+      .subscribe(ok => { if (ok) this.run(p, this.service.archive(p.id)); });
+  }
+
+  /** Aus dem Archiv holen (nur ohne aktives Training; der Server prüft es auch). */
+  restore(p: WoodpeckerPlan): void {
+    if (this.active().length > 0) return;
+    this.run(p, this.service.unarchive(p.id));
+  }
+
+  /** Liste still neu holen (ohne Ladekreis), z. B. nach dem Anlegen mit Archivieren. */
+  private refresh(): void {
+    this.service.list().subscribe({ next: list => this.plans.set(list), error: () => { /* Stand bleibt */ } });
   }
 
   changeStart(p: WoodpeckerPlan): void {

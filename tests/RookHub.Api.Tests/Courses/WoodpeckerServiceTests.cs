@@ -322,6 +322,158 @@ public class WoodpeckerServiceTests : IDisposable
         await Assert.ThrowsAsync<DomainValidationException>(() => _service.UpdateStartAsync(UserId, plan.Id, _clock.Now.AddMinutes(-1)));
     }
 
+    // ===== Ein Training je Nutzer + Archiv (0.958.0, Nutzerentscheidung 10.11.) =====
+
+    [Fact]
+    public async Task Create_SecondWithoutArchiveCurrent_Conflict()
+    {
+        var (bookId, _) = await SeedBookAsync("WP", 2);
+        var (book2, _) = await SeedBookAsync("WP2", 2);
+        await CreateAsync(bookId);
+        var ex = await Assert.ThrowsAsync<ConflictException>(() => CreateAsync(book2));
+        Assert.Equal(ApiErrorCodes.WoodpeckerActiveExists, ex.Code);
+        Assert.Equal(1, await _db.WoodpeckerPlans.CountAsync());
+    }
+
+    [Fact]
+    public async Task Create_CompletedButNotArchived_StillBlocks()
+    {
+        var (bookId, _) = await SeedBookAsync("WP", 2);
+        var first = await CreateAsync(bookId);
+        var row = await _db.WoodpeckerPlans.SingleAsync(p => p.Id == first.Id);
+        row.CompletedAt = _clock.Now;
+        await _db.SaveChangesAsync();
+        await Assert.ThrowsAsync<ConflictException>(() => CreateAsync(bookId));
+    }
+
+    [Fact]
+    public async Task Create_WithArchiveCurrent_ArchivesOldAndCreatesNew()
+    {
+        var (bookId, _) = await SeedBookAsync("WP", 2);
+        var (book2, _) = await SeedBookAsync("WP2", 2);
+        var old = await CreateAsync(bookId);
+        _clock.Now = _clock.Now.AddHours(1);
+        var fresh = await _service.CreateAsync(UserId, false,
+            new CreateWoodpeckerPlanDto { BookIds = new() { book2 }, ArchiveCurrent = true });
+
+        Assert.Null(fresh.ArchivedAt);
+        Assert.Equal("solving", fresh.Status);
+        var list = await _service.ListAsync(UserId);
+        Assert.Equal(2, list.Count);
+        var archived = list.Single(p => p.Id == old.Id);
+        Assert.Equal(_clock.Now, archived.ArchivedAt);
+        Assert.Equal("archived", archived.Status);
+        Assert.Null(list.Single(p => p.Id == fresh.Id).ArchivedAt);   // Liste liefert archivedAt je Plan
+    }
+
+    [Fact]
+    public async Task Create_WithArchiveCurrent_ArchivesAllLegacyActives()
+    {
+        var (bookId, _) = await SeedBookAsync("WP", 2);
+        // Altbestand: zwei aktive aus der Zeit vor der Regel.
+        for (var i = 0; i < 2; i++)
+            _db.WoodpeckerPlans.Add(new WoodpeckerPlan
+            {
+                UserId = UserId, Name = "alt" + i, CreatedAt = _clock.Now.AddDays(-5),
+                Books = { new WoodpeckerPlanBook { BookId = bookId, Position = 0 } },
+                Cycles = { new WoodpeckerCycle { Number = 1, StartedAt = _clock.Now.AddDays(-5) } },
+            });
+        await _db.SaveChangesAsync();
+        await Assert.ThrowsAsync<ConflictException>(() => CreateAsync(bookId));
+
+        await _service.CreateAsync(UserId, false, new CreateWoodpeckerPlanDto { BookIds = new() { bookId }, ArchiveCurrent = true });
+        Assert.Equal(1, await _db.WoodpeckerPlans.CountAsync(p => p.UserId == UserId && p.ArchivedAt == null));
+        Assert.Equal(2, await _db.WoodpeckerPlans.CountAsync(p => p.UserId == UserId && p.ArchivedAt != null));
+    }
+
+    [Fact]
+    public async Task Create_OtherUsersActivePlan_DoesNotBlock()
+    {
+        var (bookId, _) = await SeedBookAsync("WP", 2);
+        await _service.CreateAsync(OtherUserId, true, new CreateWoodpeckerPlanDto { BookIds = new() { bookId } });
+        var mine = await CreateAsync(bookId);
+        Assert.Null(mine.ArchivedAt);
+    }
+
+    [Fact]
+    public async Task Archive_MidCycle_ThenNewPlanAllowed_AndUnarchiveBlockedWhileActive()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 3);
+        var plan = await CreateAsync(bookId);
+        await SolveAsync(plan.Id, ids[0]);
+
+        var archived = await _service.ArchiveAsync(UserId, plan.Id);
+        Assert.Equal("archived", archived.Status);
+        Assert.Equal(_clock.Now, archived.ArchivedAt);
+        Assert.Equal(1, archived.SetSize);                                     // bleibt lesbar
+        Assert.Equal(_clock.Now, (await _service.ArchiveAsync(UserId, plan.Id)).ArchivedAt);   // zweimal = unverändert
+
+        var fresh = await CreateAsync(bookId);                                 // ohne archiveCurrent möglich
+        var ex = await Assert.ThrowsAsync<ConflictException>(() => _service.UnarchiveAsync(UserId, plan.Id));
+        Assert.Equal(ApiErrorCodes.WoodpeckerActiveExists, ex.Code);
+
+        await _service.ArchiveAsync(UserId, fresh.Id);
+        var restored = await _service.UnarchiveAsync(UserId, plan.Id);
+        Assert.Null(restored.ArchivedAt);
+        Assert.Equal("solving", restored.Status);
+        await SolveAsync(plan.Id, ids[1]);                                     // wieder beschreibbar
+    }
+
+    [Fact]
+    public async Task ArchivedPlan_IsReadOnly_AllWritesAndNextConflict()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 3);
+        var plan = await CreateAsync(bookId);
+        await SolveAsync(plan.Id, ids[0]);
+        await _service.ArchiveAsync(UserId, plan.Id);
+
+        async Task AssertArchived(Func<Task> call) =>
+            Assert.Equal(ApiErrorCodes.WoodpeckerArchived, (await Assert.ThrowsAsync<ConflictException>(call)).Code);
+        await AssertArchived(() => _service.GetNextAsync(UserId, plan.Id));
+        await AssertArchived(() => SolveAsync(plan.Id, ids[1]));
+        await AssertArchived(() => _service.StartNextCycleAsync(UserId, plan.Id));
+        await AssertArchived(() => _service.FinishSetAsync(UserId, plan.Id));
+        await AssertArchived(() => _service.UpdateStartAsync(UserId, plan.Id, _clock.Now.AddDays(-1)));
+
+        Assert.Equal("archived", (await _service.GetAsync(UserId, plan.Id)).Status);   // lesen geht
+        await _service.DeleteAsync(UserId, plan.Id);                                   // löschen auch
+        Assert.Empty(await _service.ListAsync(UserId));
+    }
+
+    [Fact]
+    public async Task Refresh_LeavesArchivedPlanAlone_NoDeadlineNoImport()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 3);
+        var plan = await CreateAsync(bookId);
+        await SolveAsync(plan.Id, ids[0]);
+        await _service.ArchiveAsync(UserId, plan.Id);
+
+        // Kurs-Versuch nach der Archivierung, dann Frist von Zyklus 1 weit vorbei.
+        _db.CourseAttempts.Add(new CourseAttempt
+        {
+            UserId = UserId, BookId = bookId, BookPuzzleId = ids[1], Solved = true, TimeSeconds = 10,
+            AttemptedAt = _clock.Now.AddHours(1),
+        });
+        await _db.SaveChangesAsync();
+        _clock.Now = _clock.Now.AddDays(40);
+
+        var dto = await _service.GetAsync(UserId, plan.Id);
+        Assert.Null(dto.Cycles[0].FinishedAt);          // Frist zieht nicht nach
+        Assert.Equal(1, dto.SetSize);                    // kein Import
+        Assert.Equal("archived", (await _service.ListAsync(UserId)).Single().Status);
+        Assert.Equal(1, await _db.WoodpeckerSetItems.CountAsync());
+    }
+
+    [Fact]
+    public async Task ArchiveAndUnarchive_OtherUsersPlan_NotFound()
+    {
+        var (bookId, _) = await SeedBookAsync("WP", 2);
+        var plan = await CreateAsync(bookId);
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.ArchiveAsync(OtherUserId, plan.Id));
+        await _service.ArchiveAsync(UserId, plan.Id);
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.UnarchiveAsync(OtherUserId, plan.Id));
+    }
+
     [Fact]
     public async Task OtherUsersPlan_NotFound()
     {

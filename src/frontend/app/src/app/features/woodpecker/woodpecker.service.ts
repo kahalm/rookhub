@@ -4,8 +4,8 @@ import { Observable } from 'rxjs';
 import { BookPuzzleDto } from '../puzzles/puzzle.service';
 
 /** `solving` = Zyklus läuft, `break` = Pause (nächster Zyklus ab `nextCycleAt`), `ready` = nächster Zyklus kann
- *  beginnen, `completed` = Methode abgeschlossen. */
-export type WoodpeckerStatus = 'solving' | 'break' | 'ready' | 'completed';
+ *  beginnen, `completed` = Methode abgeschlossen, `archived` = im Archiv, nur lesbar (0.958.0; geht allem vor). */
+export type WoodpeckerStatus = 'solving' | 'break' | 'ready' | 'completed' | 'archived';
 
 export interface WoodpeckerBook { bookId: number; displayName: string; puzzleCount: number; }
 
@@ -29,6 +29,8 @@ export interface WoodpeckerPlan {
   name: string;
   createdAt: string;
   completedAt: string | null;
+  /** Archiviert am (0.958.0); fehlt/`null` = aktiv. Je Nutzer höchstens EIN nicht archiviertes Training. */
+  archivedAt?: string | null;
   books: WoodpeckerBook[];
   setSize: number;
   availableCount: number;
@@ -163,9 +165,20 @@ export class WoodpeckerService {
 
   get(planId: number): Observable<WoodpeckerPlan> { return this.http.get<WoodpeckerPlan>(`${this.base}/${planId}`); }
 
-  /** `startedAt` (ISO, UTC) leer = jetzt. */
-  create(bookIds: number[], startedAt?: string): Observable<WoodpeckerPlan> {
-    return this.http.post<WoodpeckerPlan>(this.base, { bookIds, startedAt: startedAt ?? null });
+  /** `startedAt` (ISO, UTC) leer = jetzt. `archiveCurrent`: das bisherige aktive Training dabei archivieren — ohne
+   *  das antwortet der Server mit 409, solange eins existiert. */
+  create(bookIds: number[], startedAt?: string, archiveCurrent = false): Observable<WoodpeckerPlan> {
+    return this.http.post<WoodpeckerPlan>(this.base, { bookIds, startedAt: startedAt ?? null, archiveCurrent });
+  }
+
+  /** Ins Archiv legen (jederzeit; bleibt lesbar). */
+  archive(planId: number): Observable<WoodpeckerPlan> {
+    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/archive`, {});
+  }
+
+  /** Aus dem Archiv holen — nur ohne anderes aktives Training (sonst 409). */
+  unarchive(planId: number): Observable<WoodpeckerPlan> {
+    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/unarchive`, {});
   }
 
   delete(planId: number): Observable<void> { return this.http.delete<void>(`${this.base}/${planId}`); }
@@ -215,7 +228,8 @@ export function todayYmd(now = new Date()): string {
 export function ymdOf(iso: string): string { return todayYmd(new Date(iso)); }
 
 /**
- * Das laufende Training fürs Dashboard: unter den nicht abgeschlossenen das zuletzt bewegte — der jüngste Zeitpunkt aus
+ * Das laufende Training fürs Dashboard: unter den nicht abgeschlossenen und nicht archivierten (seit 0.958.0 gibt es
+ * höchstens eins; Altbestand kann mehrere haben) das zuletzt bewegte — der jüngste Zeitpunkt aus
  * Anlage, Beginn und Ende des aktuellen Zyklus (ein Versuchszeitpunkt steht nicht im DTO). Gleichstand: Reihenfolge der
  * API (neueste zuerst). Keins → `null`.
  */
@@ -223,13 +237,18 @@ export function activeWoodpeckerPlan(plans: readonly WoodpeckerPlan[]): Woodpeck
   let best: WoodpeckerPlan | null = null;
   let bestAt = -Infinity;
   for (const p of plans) {
-    if (p.status === 'completed') continue;
+    if (p.status === 'completed' || isArchivedWoodpeckerPlan(p)) continue;
     const c = p.cycles[p.cycles.length - 1];
     const at = Math.max(...[p.createdAt, c?.startedAt, c?.finishedAt]
       .filter((x): x is string => !!x).map(x => new Date(x).getTime()));
     if (at > bestAt) { best = p; bestAt = at; }
   }
   return best;
+}
+
+/** Im Archiv? (`archivedAt` gesetzt oder Status `archived`.) */
+export function isArchivedWoodpeckerPlan(p: WoodpeckerPlan): boolean {
+  return p.status === 'archived' || !!p.archivedAt;
 }
 
 /** Ganze verbleibende Tage bis `deadline` (aufgerundet, nie negativ). */

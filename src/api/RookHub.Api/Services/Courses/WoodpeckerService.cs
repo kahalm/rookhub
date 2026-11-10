@@ -87,10 +87,74 @@ public class WoodpeckerService
             Books = bookIds.Select((id, i) => new WoodpeckerPlanBook { BookId = id, Position = i }).ToList(),
             Cycles = { new WoodpeckerCycle { Number = 1, StartedAt = startedAt } },
         };
-        _db.WoodpeckerPlans.Add(plan);
-        await _db.SaveChangesAsync(ct);
+
+        // EIN aktives Training je Nutzer (0.958.0): Prüfen, bisheriges archivieren und neues anlegen in EINER Transaktion
+        // (in der Execution-Strategy, docs/konventionen.md). Die Sperre auf die Nutzerzeile reiht zwei gleichzeitige
+        // Anlagen hintereinander — sonst sähen beide „keins da“. InMemory kennt weder Transaktion noch Sperre.
+        if (_db.Database.IsRelational())
+        {
+            var strategy = _db.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                await using var tx = await _db.Database.BeginTransactionAsync(ct);
+                await _db.Database.ExecuteSqlInterpolatedAsync($"SELECT Id FROM AppUsers WHERE Id = {userId} FOR UPDATE", ct);
+                await ArchiveCurrentAndAddAsync(userId, plan, dto.ArchiveCurrent, now, ct);
+                await tx.CommitAsync(ct);
+            });
+        }
+        else
+        {
+            await ArchiveCurrentAndAddAsync(userId, plan, dto.ArchiveCurrent, now, ct);
+        }
 
         await RefreshAsync(plan, userId, ct);
+        return await BuildDtoAsync(plan, ct);
+    }
+
+    /// <summary>Wiederholbarer Kern von <see cref="CreateAsync"/>: liest die nicht archivierten Trainings neu, bricht
+    /// ohne <paramref name="archiveCurrent"/> mit 409 ab, archiviert sonst ALLE (Altbestand kann mehrere haben) und legt
+    /// das neue an — ein <c>SaveChanges</c>.</summary>
+    private async Task ArchiveCurrentAndAddAsync(int userId, WoodpeckerPlan plan, bool archiveCurrent, DateTime now,
+        CancellationToken ct)
+    {
+        var active = await _db.WoodpeckerPlans.Where(p => p.UserId == userId && p.ArchivedAt == null && p.Id != plan.Id)
+            .ToListAsync(ct);
+        if (active.Count > 0 && !archiveCurrent)
+            throw new ConflictException("You already have a Woodpecker training. Archive it to start a new one.")
+            { Code = ApiErrorCodes.WoodpeckerActiveExists };
+        foreach (var old in active) old.ArchivedAt = now;
+        if (_db.Entry(plan).State == EntityState.Detached) _db.WoodpeckerPlans.Add(plan);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Training ins Archiv legen — jederzeit, auch mitten im Zyklus. Es bleibt lesbar (Zyklen, Statistik),
+    /// ändert sich aber nicht mehr (keine Fristen, kein Kurs-Import). Schon archiviert → unverändert.</summary>
+    public async Task<WoodpeckerPlanDto> ArchiveAsync(int userId, int planId, CancellationToken ct = default)
+    {
+        var plan = await LoadAsync(userId, planId, ct);
+        if (plan.ArchivedAt == null)
+        {
+            // Erst den Stand nachziehen (Frist von Zyklus 1 vorbei, Kurs-Versuche) — eingefroren wird, was bis jetzt galt.
+            await RefreshAsync(plan, userId, ct);
+            plan.ArchivedAt = Now;
+            await _db.SaveChangesAsync(ct);
+        }
+        return await BuildDtoAsync(plan, ct);
+    }
+
+    /// <summary>Archiviertes Training wieder aktiv machen — nur, wenn es kein anderes nicht archiviertes gibt (409).</summary>
+    public async Task<WoodpeckerPlanDto> UnarchiveAsync(int userId, int planId, CancellationToken ct = default)
+    {
+        var plan = await LoadAsync(userId, planId, ct);
+        if (plan.ArchivedAt != null)
+        {
+            if (await _db.WoodpeckerPlans.AnyAsync(p => p.UserId == userId && p.Id != planId && p.ArchivedAt == null, ct))
+                throw new ConflictException("Archive your current Woodpecker training before restoring another one.")
+                { Code = ApiErrorCodes.WoodpeckerActiveExists };
+            plan.ArchivedAt = null;
+            await _db.SaveChangesAsync(ct);
+            await RefreshAsync(plan, userId, ct);
+        }
         return await BuildDtoAsync(plan, ct);
     }
 
@@ -110,6 +174,7 @@ public class WoodpeckerService
         CancellationToken ct = default)
     {
         var plan = await LoadAsync(userId, planId, ct);
+        EnsureNotArchived(plan);
         if (plan.CompletedAt != null) throw new ConflictException("This Woodpecker training is already finished.");
         var current = Current(plan);
         if (current.FinishedAt != null) throw new ConflictException("This cycle is already finished.");
@@ -134,6 +199,7 @@ public class WoodpeckerService
     public async Task<WoodpeckerPlanDto> FinishSetAsync(int userId, int planId, CancellationToken ct = default)
     {
         var plan = await LoadAsync(userId, planId, ct);
+        EnsureNotArchived(plan);
         await RefreshAsync(plan, userId, ct);
         var current = Current(plan);
         if (current.Number != 1 || current.FinishedAt != null)
@@ -149,6 +215,7 @@ public class WoodpeckerService
     public async Task<WoodpeckerPlanDto> StartNextCycleAsync(int userId, int planId, CancellationToken ct = default)
     {
         var plan = await LoadAsync(userId, planId, ct);
+        EnsureNotArchived(plan);
         await RefreshAsync(plan, userId, ct);
         if (plan.CompletedAt != null) throw new ConflictException("This Woodpecker training is already finished.");
         var current = Current(plan);
@@ -166,6 +233,7 @@ public class WoodpeckerService
     public async Task<WoodpeckerNextDto> GetNextAsync(int userId, int planId, CancellationToken ct = default, bool isAdmin = false)
     {
         var plan = await LoadAsync(userId, planId, ct);
+        EnsureNotArchived(plan);
         await RefreshAsync(plan, userId, ct);
         var current = Current(plan);
         int? puzzleId = null;
@@ -191,6 +259,7 @@ public class WoodpeckerService
         CancellationToken ct = default, bool isAdmin = false)
     {
         var plan = await LoadAsync(userId, planId, ct);
+        EnsureNotArchived(plan);
         await RefreshAsync(plan, userId, ct);
         if (plan.CompletedAt != null) throw new ConflictException("This Woodpecker training is already finished.");
         var current = Current(plan);
@@ -274,6 +343,13 @@ public class WoodpeckerService
             .FirstOrDefaultAsync(p => p.Id == planId && p.UserId == userId, ct)
         ?? throw new NotFoundException("Woodpecker training not found.");
 
+    /// <summary>Archiviert = nur lesbar (0.958.0): jeder schreibende Schritt und <c>next</c> → 409.</summary>
+    private static void EnsureNotArchived(WoodpeckerPlan plan)
+    {
+        if (plan.ArchivedAt != null)
+            throw new ConflictException("This Woodpecker training is archived.") { Code = ApiErrorCodes.WoodpeckerArchived };
+    }
+
     private static WoodpeckerCycle Current(WoodpeckerPlan plan) => plan.Cycles.OrderBy(c => c.Number).Last();
 
     private static DateTime NormalizeUtc(DateTime t) => t.Kind switch
@@ -293,7 +369,8 @@ public class WoodpeckerService
     private async Task RefreshAsync(WoodpeckerPlan plan, int userId, CancellationToken ct)
     {
         var current = Current(plan);
-        if (plan.CompletedAt != null || current.FinishedAt != null || current.Number != 1) return;
+        // Archiviert: eingefroren — keine Frist, kein Kurs-Import (0.958.0).
+        if (plan.ArchivedAt != null || plan.CompletedAt != null || current.FinishedAt != null || current.Number != 1) return;
         await ImportCourseAttemptsAsync(plan, userId, current, ct);
         var deadline = WoodpeckerRules.Deadline(1, current.StartedAt);
         if (Now >= deadline && await SetSizeAsync(plan.Id, ct) > 0)
@@ -420,7 +497,8 @@ public class WoodpeckerService
         var current = cycles.Last();
         string status;
         DateTime? nextAt = null;
-        if (plan.CompletedAt != null) status = "completed";
+        if (plan.ArchivedAt != null) status = "archived";
+        else if (plan.CompletedAt != null) status = "completed";
         else if (current.FinishedAt == null) status = "solving";
         else
         {
@@ -434,6 +512,7 @@ public class WoodpeckerService
             Name = plan.Name,
             CreatedAt = plan.CreatedAt,
             CompletedAt = plan.CompletedAt,
+            ArchivedAt = plan.ArchivedAt,
             Books = plan.Books.OrderBy(b => b.Position).Select(pb =>
             {
                 var b = books.FirstOrDefault(x => x.Id == pb.BookId);

@@ -132,6 +132,8 @@
     "book_alias_taken": "Ovaj alias je već zauzet.",
     "course_pgn_is_repertoire": "Ova datoteka je repertoar otvaranja (partije od početnog položaja), a ne tečaj sa zadacima. Učitaj je pod „Repertoari“.",
     "course_no_lines": "Ovaj PGN ne sadrži nijednu igrivu liniju tečaja. Tečaj treba zadatke u Chessable stilu (pozicija + rješenje).",
+    "woodpecker_active_exists": "Već imaš Woodpecker trening. Arhiviraj ga da bi započeo novi.",
+    "woodpecker_archived": "Ovaj trening je arhiviran i može se samo pregledavati.",
     "ebooks_not_configured": "Knjižnica e-knjiga na ovom poslužitelju još nije postavljena.",
     "ebook_format_unsupported": "Ova vrsta datoteke nije podržana. Dopušteno: PDF, EPUB, DJVU, CBZ, CBR, MOBI, AZW3.",
     "ebook_file_too_large": "Datoteka je prevelika.",
@@ -6435,7 +6437,15 @@
     "intro": "Isti zadaci uvijek iznova, svaki put u pola vremena – po metodi Smitha i Tikkanena.",
     "rules": "Ciklus 1: četiri tjedna – riješi što više zadataka, oni postaju tvoj set.\n\nZatim barem jedan dan pauze. Svaki sljedeći ciklus: isti set nasumičnim redoslijedom, u pola vremena (14, 7, 4, 2, 1, 1 dan).\n\nU svakom ciklusu računa se samo prvi pokušaj po zadatku. Gotovo kad ciklus traje najviše jedan dan, inače nakon ciklusa 7.",
     "empty": "Još nema Woodpecker treninga. Odaberi jedan ili više tečajeva za početak.",
+    "archive": "Arhiviraj",
+    "archiveConfirm": "Arhivirati trening „{{name}}”? Ostaje čitljiv u arhivi, a možeš započeti novi trening.",
+    "archiveSection": "Arhiva ({{n}})",
+    "archivedAt": "Arhivirano {{at}}",
+    "restore": "Vrati",
+    "restoreBlocked": "Najprije arhiviraj aktivni trening.",
+    "emptyArchived": "Nema aktivnog treninga. Odaberi jedan ili više tečajeva za novi.",
     "status": {
+      "archived": "Arhivirano",
       "solving": "U tijeku",
       "break": "Pauza",
       "ready": "Spremno",
@@ -6493,6 +6503,8 @@
       "prev": "Ciklus {{n}}: riješeno {{pct}}, Ø {{time}}"
     },
     "create": {
+      "archiveNote": "Tvoj dosadašnji trening „{{name}}” bit će arhiviran – ostaje čitljiv.",
+      "submitArchive": "Arhiviraj i započni",
       "metaLast": "zadnje {{date}}",
       "metaPublic": "Dostupan tebi",
       "metaShared": "od {{name}}",

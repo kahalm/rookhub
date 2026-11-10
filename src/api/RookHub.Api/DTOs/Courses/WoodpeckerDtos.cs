@@ -10,6 +10,10 @@ public class CreateWoodpeckerPlanDto
 
     /// <summary>Beginn von Zyklus 1 (UTC); leer = jetzt. Darf in der Vergangenheit liegen, nicht in der Zukunft.</summary>
     public DateTime? StartedAt { get; set; }
+
+    /// <summary>Das bisherige nicht archivierte Training in derselben Transaktion archivieren (0.958.0). Ohne das →
+    /// 409, solange eins existiert: je Nutzer gibt es höchstens EIN aktives Training.</summary>
+    public bool ArchiveCurrent { get; set; }
 }
 
 /// <summary>Beginn des laufenden Zyklus verschieben (rückdatieren).</summary>
@@ -60,6 +64,8 @@ public class WoodpeckerPlanDto
     public string Name { get; set; } = "";
     public DateTime CreatedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+    /// <summary>Archiviert am (0.958.0); <c>null</c> = aktiv. Archiviert → <see cref="Status"/> = <c>archived</c>.</summary>
+    public DateTime? ArchivedAt { get; set; }
     public List<WoodpeckerBookDto> Books { get; set; } = new();
     /// <summary>Größe des Satzes (in Zyklus 1 wachsend).</summary>
     public int SetSize { get; set; }
@@ -68,7 +74,8 @@ public class WoodpeckerPlanDto
     public int CurrentCycle { get; set; }
     public int MaxCycles { get; set; }
     /// <summary><c>solving</c> (Zyklus läuft), <c>break</c> (Pause, nächster Zyklus ab <see cref="NextCycleAt"/>),
-    /// <c>ready</c> (nächster Zyklus kann starten), <c>completed</c>.</summary>
+    /// <c>ready</c> (nächster Zyklus kann starten), <c>completed</c>; <c>archived</c> (0.958.0) geht allem vor — ein
+    /// archiviertes Training läuft nie, auch wenn es mitten im Zyklus abgelegt wurde.</summary>
     public string Status { get; set; } = "solving";
     public DateTime? NextCycleAt { get; set; }
     public List<WoodpeckerCycleDto> Cycles { get; set; } = new();

@@ -21,6 +21,8 @@
     "book_alias_taken": "Ez az alias már foglalt.",
     "course_pgn_is_repertoire": "Ez a fájl egy megnyitási repertoár (játszmák a kezdőállásból), nem feladatokat tartalmazó kurzus. Töltsd fel a „Repertoárok” alatt.",
     "course_no_lines": "Ez a PGN nem tartalmaz játszható kurzusvonalat. Egy kurzushoz Chessable-stílusú feladatok kellenek (állás + megoldás).",
+    "woodpecker_active_exists": "Már van Woodpecker-edzésed. Archiváld, hogy újat kezdhess.",
+    "woodpecker_archived": "Ez az edzés archiválva van, csak megtekinthető.",
     "ebooks_not_configured": "Az e-könyvtár ezen a szerveren még nincs beállítva.",
     "ebook_format_unsupported": "Ez a fájltípus nem támogatott. Engedélyezett: PDF, EPUB, DJVU, CBZ, CBR, MOBI, AZW3.",
     "ebook_file_too_large": "A fájl túl nagy.",
@@ -6435,7 +6437,15 @@
     "intro": "Ugyanazok a feladatok újra és újra, mindig fele annyi idő alatt – Smith és Tikkanen módszere szerint.",
     "rules": "1. ciklus: négy hét – oldj meg minél több feladatot, ezek lesznek a sorozatod.\n\nUtána legalább egy nap szünet. Minden további ciklus: ugyanaz a sorozat véletlen sorrendben, fele annyi idő alatt (14, 7, 4, 2, 1, 1 nap).\n\nMinden ciklusban feladatonként csak az első próbálkozás számít. Kész, ha egy ciklus legfeljebb egy napig tart, különben a 7. ciklus után.",
     "empty": "Még nincs Woodpecker-edzés. Válassz egy vagy több tanfolyamot a kezdéshez.",
+    "archive": "Archiválás",
+    "archiveConfirm": "Archiválod a(z) „{{name}}” edzést? Az archívumban olvasható marad, és új edzést kezdhetsz.",
+    "archiveSection": "Archívum ({{n}})",
+    "archivedAt": "Archiválva: {{at}}",
+    "restore": "Visszaállítás",
+    "restoreBlocked": "Előbb archiváld az aktív edzést.",
+    "emptyArchived": "Nincs aktív edzés. Válassz egy vagy több tanfolyamot egy új kezdéséhez.",
     "status": {
+      "archived": "Archiválva",
       "solving": "Folyamatban",
       "break": "Szünet",
       "ready": "Kész az indításra",
@@ -6493,6 +6503,8 @@
       "prev": "{{n}}. ciklus: {{pct}} megoldva, átl. {{time}}"
     },
     "create": {
+      "archiveNote": "Az eddigi „{{name}}” edzésed archiválva lesz – olvasható marad.",
+      "submitArchive": "Archiválás és indítás",
       "metaLast": "utoljára {{date}}",
       "metaPublic": "Elérhető számodra",
       "metaShared": "{{name}} megosztása",

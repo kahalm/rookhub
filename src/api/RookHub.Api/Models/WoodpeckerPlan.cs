@@ -23,6 +23,10 @@ public class WoodpeckerPlan
     /// <summary>Methode abgeschlossen: ein Zyklus ab 2 an einem Tag geschafft, oder der 7. Zyklus beendet.</summary>
     public DateTime? CompletedAt { get; set; }
 
+    /// <summary>Archiviert (0.958.0): nur noch lesbar, keine Zustandswechsel und kein Kurs-Import mehr. <c>null</c> =
+    /// aktiv. Je Nutzer höchstens EIN nicht archiviertes Training (Regel im <c>WoodpeckerService</c>).</summary>
+    public DateTime? ArchivedAt { get; set; }
+
     public List<WoodpeckerPlanBook> Books { get; set; } = new();
     public List<WoodpeckerCycle> Cycles { get; set; } = new();
 }

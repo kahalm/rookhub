@@ -21,9 +21,10 @@ export function isWoodpeckerCourse(c: CourseListItem): boolean {
   return !c.isCalculation && c.puzzleCount > 0;
 }
 
-/** `create`: Kurse wählen + Start; `start`: nur den Start des laufenden Zyklus verschieben. */
+/** `create`: Kurse wählen + Start (`current` = die bisherigen aktiven Trainings, die dabei archiviert werden — seit
+ *  0.958.0 gibt es je Nutzer nur eins); `start`: nur den Start des laufenden Zyklus verschieben. */
 export type WoodpeckerDialogData =
-  | { mode: 'create' }
+  | { mode: 'create'; current?: readonly WoodpeckerPlan[] }
   | { mode: 'start'; plan: WoodpeckerPlan };
 
 /**
@@ -54,6 +55,14 @@ export type WoodpeckerDialogData =
             <a mat-flat-button color="primary" routerLink="/courses" mat-dialog-close>{{ 'woodpecker.create.toCourses' | translate }}</a>
           </div>
         }
+      }
+      @if (data.mode === 'create' && showForm() && archiveNames()) {
+        <!-- 0.958.0: EIN aktives Training — das bisherige wandert ins Archiv (bleibt lesbar). Deutlich vorn, damit
+             niemand überrascht wird; der Bestätigen-Knopf sagt es noch einmal. -->
+        <p class="archive-note" role="note">
+          <mat-icon aria-hidden="true">archive</mat-icon>
+          <span>{{ 'woodpecker.create.archiveNote' | translate: { name: archiveNames() } }}</span>
+        </p>
       }
       @if (showForm()) {
         <app-iso-date-field class="date" [label]="'woodpecker.create.start' | translate"
@@ -92,7 +101,7 @@ export type WoodpeckerDialogData =
       <button mat-button mat-dialog-close [disabled]="busy()">{{ (noCourses() ? 'common.close' : 'common.cancel') | translate }}</button>
       @if (showForm()) {
         <button mat-flat-button color="primary" (click)="save()" [disabled]="!canSave()">
-          {{ (data.mode === 'create' ? 'woodpecker.create.submit' : 'common.save') | translate }}
+          {{ (data.mode === 'create' ? (archiveNames() ? 'woodpecker.create.submitArchive' : 'woodpecker.create.submit') : 'common.save') | translate }}
         </button>
       }
     </mat-dialog-actions>
@@ -116,6 +125,11 @@ export type WoodpeckerDialogData =
     /* c1-wp-dialog-zahlformat: Zahl + Einheit bleiben zusammen (U+00A0 im Text, nowrap hier). */
     .c-count { font-size: .85em; color: var(--mat-sys-on-surface-variant); font-variant-numeric: tabular-nums; white-space: nowrap; }
     .date { display: block; margin-top: 8px; }
+    /* Hinweis „wird archiviert“: Warnton als Fläche (color-mix) + Rahmen links, Text in on-surface (Kontrast). */
+    .archive-note { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 4px; padding: 8px 12px; border-radius: 8px;
+      border-left: 3px solid var(--rh-warn); background: color-mix(in srgb, var(--rh-warn) 12%, transparent);
+      color: var(--mat-sys-on-surface); font-size: .9rem; }
+    .archive-note mat-icon { flex: none; color: var(--rh-warn); }
     /* c1-wp-dialog-leersatz-blass-hell: im Dialog ist currentColor schon on-surface-variant — nicht ein zweites Mal
        abblassen (DESIGN 5.10; hell sonst ≈ 3,1:1). */
     .empty-state { color: var(--mat-sys-on-surface-variant); }
@@ -139,6 +153,9 @@ export class WoodpeckerCreateDialogComponent implements OnInit {
   readonly busy = signal(false);
   readonly courses = signal<CourseListItem[]>([]);
   readonly query = signal('');
+  /** Namen der Trainings, die beim Anlegen archiviert werden („“ = keins). */
+  readonly archiveNames = computed(() =>
+    this.data.mode === 'create' ? (this.data.current ?? []).map(p => p.name).join(', ') : '');
   /** Gewählte Kurse in der Reihenfolge des Ankreuzens. */
   readonly selected = signal<number[]>([]);
 
@@ -192,7 +209,7 @@ export class WoodpeckerCreateDialogComponent implements OnInit {
     // Beginn des gewählten Tages — auch bei „heute“, damit schon heute Gelöstes mitzählt.
     const start = startOfLocalDayIso(this.startYmd());
     const call = this.data.mode === 'create'
-      ? this.woodpecker.create(this.selected(), start)
+      ? this.woodpecker.create(this.selected(), start, !!this.archiveNames())
       : this.woodpecker.updateStart(this.data.plan.id, start);
     call.subscribe({
       next: plan => this.ref.close(plan),

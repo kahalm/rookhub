@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.958.0", date: "2026-11-10", changes: [
+    { en: "Woodpecker: there is now only one Woodpecker at a time. To start a new one, the current one goes to the archive – the „New training“ dialog says so and does both in one step. Archived Woodpeckers stay readable (cycles, figures) in a collapsed „Archive“ section of the overview, but can no longer be solved; they can be restored while no other one is active, or deleted.",
+      de: "Woodpecker: Es gibt jetzt immer nur einen Woodpecker. Für einen neuen wandert der bisherige ins Archiv – der Dialog „Neues Training“ sagt das und erledigt beides in einem Schritt. Archivierte Woodpecker bleiben in der Übersicht in einem zugeklappten Abschnitt „Archiv“ lesbar (Zyklen, Zahlen), lassen sich aber nicht mehr lösen; sie können wiederhergestellt werden, solange kein anderer aktiv ist, oder gelöscht." },
+    { en: "Dashboard, Woodpecker tile: when the next cycle is ready, the button now starts it directly and opens the solving page.",
+      de: "Dashboard, Woodpecker-Kachel: Ist der nächste Zyklus bereit, startet ihn der Knopf jetzt direkt und öffnet die Lösen-Seite." },
+  ] },
   { version: "0.957.0", date: "2026-11-10", changes: [
     { en: "Woodpecker, solving page: the statistics are now collapsed by default behind a „Statistics“ button (your choice is remembered on this device). Opened, they show the three short lines from before and below them a detailed evaluation.",
       de: "Woodpecker, Lösen-Seite: Die Statistik ist jetzt standardmäßig eingeklappt hinter einem Knopf „Statistik“ (deine Wahl wird auf diesem Gerät gemerkt). Aufgeklappt zeigt sie die drei kurzen Zeilen von bisher und darunter eine ausführliche Auswertung." },

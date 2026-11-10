@@ -165,6 +165,62 @@ describe('WoodpeckerCreateDialogComponent (Design-Runde d3)', () => {
   });
 });
 
+describe('WoodpeckerCreateDialogComponent (ein Training, 0.958.0)', () => {
+  let en: I18n;
+  beforeAll(async () => { en = await loadI18n('en'); });
+
+  function render(current: { id: number; name: string }[] | undefined, create = jasmine.createSpy('create')) {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [WoodpeckerCreateDialogComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: MAT_DIALOG_DATA, useValue: { mode: 'create', current } },
+        { provide: MatDialogRef, useValue: { close: () => {} } },
+        { provide: CourseService, useValue: { getCourses: () => of([course(1, 'A', 10)]) } },
+        { provide: WoodpeckerService, useValue: { create } },
+        { provide: SnackbarService, useValue: { warn: () => {} } },
+      ],
+    });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', en as unknown as TranslationObject);
+    translate.use('en');
+    const fixture = TestBed.createComponent(WoodpeckerCreateDialogComponent);
+    fixture.detectChanges();
+    return { fixture, c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement, create };
+  }
+  const submit = (el: HTMLElement) => Array.from(el.querySelectorAll<HTMLButtonElement>('mat-dialog-actions button')).pop()!;
+
+  it('mit bisherigem Training: deutlicher Hinweis mit dessen Namen, Knopf „Archive and start“, sendet archiveCurrent', () => {
+    const { fixture, c, el, create } = render([{ id: 7, name: 'Taktik 1' }]);
+    create.and.returnValue(of({ id: 8 }));
+    const note = el.querySelector('.archive-note')!;
+    expect(note).not.toBeNull();
+    expect(note.textContent).toContain('“Taktik 1”');
+    expect(note.textContent).toContain('archived');
+    // Hinweis steht vorn, vor dem Datum
+    expect(note.compareDocumentPosition(el.querySelector('app-iso-date-field')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    c.toggle(1, true);
+    fixture.detectChanges();
+    expect(submit(el).textContent!.trim()).toBe('Archive and start');
+    submit(el).click();
+    expect(create).toHaveBeenCalledOnceWith([1], jasmine.any(String), true);
+  });
+
+  it('ohne bisheriges Training: kein Hinweis, „Start training“, archiveCurrent false', () => {
+    for (const current of [undefined, []]) {
+      const { fixture, c, el, create } = render(current);
+      create.and.returnValue(of({ id: 8 }));
+      expect(el.querySelector('.archive-note')).toBeNull();
+      c.toggle(1, true);
+      fixture.detectChanges();
+      expect(submit(el).textContent!.trim()).toBe('Start training');
+      submit(el).click();
+      expect(create).toHaveBeenCalledOnceWith([1], jasmine.any(String), false);
+    }
+  });
+});
+
 describe('Woodpecker-Texte halten Zyklus und Zahl zusammen (c2-wp-dialog-zyklus-zahl-umbruch)', () => {
   const load = async (lang: string) =>
     (await (await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`))).json()) as

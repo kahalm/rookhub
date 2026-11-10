@@ -132,6 +132,8 @@
     "book_alias_taken": "This alias is already taken.",
     "course_pgn_is_repertoire": "This file is an opening repertoire (games from the starting position), not a course with puzzles. Upload it under “Repertoires”.",
     "course_no_lines": "This PGN contains no playable course line. A course needs puzzles in Chessable style (position + solution).",
+    "woodpecker_active_exists": "You already have a Woodpecker training. Archive it to start a new one.",
+    "woodpecker_archived": "This training is archived and can only be viewed.",
     "ebooks_not_configured": "The e-book library is not set up on this server yet.",
     "ebook_format_unsupported": "This file type is not supported. Allowed: PDF, EPUB, DJVU, CBZ, CBR, MOBI, AZW3.",
     "ebook_file_too_large": "The file is too large.",
@@ -6435,7 +6437,15 @@
     "intro": "The same puzzles again and again, each time in half the time – after the method by Smith and Tikkanen.",
     "rules": "Cycle 1: four weeks – solve as many puzzles as you can, they become your set.\n\nThen at least one day off. Each further cycle: the same set in random order, in half the time (14, 7, 4, 2, 1, 1 days).\n\nOnly the first attempt per puzzle counts in each cycle. Done when a cycle takes one day or less, or after cycle 7.",
     "empty": "No Woodpecker training yet. Pick one or more courses to start.",
+    "archive": "Archive",
+    "archiveConfirm": "Archive the training “{{name}}”? It stays readable in the archive, and you can start a new training.",
+    "archiveSection": "Archive ({{n}})",
+    "archivedAt": "Archived on {{at}}",
+    "restore": "Restore",
+    "restoreBlocked": "Archive your current training first.",
+    "emptyArchived": "No active training. Pick one or more courses to start a new one.",
     "status": {
+      "archived": "Archived",
       "solving": "In progress",
       "break": "Break",
       "ready": "Ready",
@@ -6493,6 +6503,8 @@
       "prev": "Cycle {{n}}: {{pct}} solved, avg. {{time}}"
     },
     "create": {
+      "archiveNote": "Your current training “{{name}}” will be archived – it stays readable.",
+      "submitArchive": "Archive and start",
       "metaLast": "last practised {{date}}",
       "metaPublic": "Shared with you",
       "metaShared": "from {{name}}",

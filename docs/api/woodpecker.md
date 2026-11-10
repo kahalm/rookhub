@@ -30,9 +30,11 @@ diese Aufgaben im Satz. Umgekehrt schreibt der Woodpecker-Löser KEINE `CourseAt
 | Methode | Endpoint | Zweck |
 |---|---|---|
 | GET | `/api/woodpecker` | eigene Trainings, neueste zuerst (`WoodpeckerPlanDto[]`) |
-| POST | `/api/woodpecker` | `{ bookIds[], startedAt? }` — Kurse in Reihenfolge, Beginn UTC (leer = jetzt, Zukunft → 400). Kurs ohne Zugriff (`CourseAccess.CanAccessAsync`) → 404, Kalkulationsbuch → 400 |
+| POST | `/api/woodpecker` | `{ bookIds[], startedAt?, archiveCurrent? }` — Kurse in Reihenfolge, Beginn UTC (leer = jetzt, Zukunft → 400). Kurs ohne Zugriff (`CourseAccess.CanAccessAsync`) → 404, Kalkulationsbuch → 400. Schon ein nicht archiviertes Training → 409 `woodpecker_active_exists`, außer `archiveCurrent: true` (0.958.0, siehe „Ein Training, Archiv“) |
 | GET | `/api/woodpecker/{id}` | ein Training (fremdes → 404) |
-| DELETE | `/api/woodpecker/{id}` | löschen samt Zyklen, Satz, Versuchen |
+| DELETE | `/api/woodpecker/{id}` | löschen samt Zyklen, Satz, Versuchen (auch archivierte) |
+| POST | `/api/woodpecker/{id}/archive` | ins Archiv legen (jederzeit, auch mitten im Zyklus; schon archiviert = unverändert) → `plan` (0.958.0) |
+| POST | `/api/woodpecker/{id}/unarchive` | wiederherstellen — nur ohne anderes nicht archiviertes Training, sonst 409 `woodpecker_active_exists` (0.958.0) |
 | PUT | `/api/woodpecker/{id}/start` | `{ startedAt }` — Beginn des laufenden Zyklus verschieben: nicht in die Zukunft, nicht hinter dessen ersten Versuch, nicht vor das Ende des vorigen. Die Oberfläche bietet es nur in Zyklus 1 an |
 | POST | `/api/woodpecker/{id}/finish-set` | Zyklus 1 vorzeitig beenden (Satz leer → 400) |
 | POST | `/api/woodpecker/{id}/next-cycle` | nächsten Zyklus beginnen (Pause < 24 h oder Zyklus läuft → 409) |
@@ -104,11 +106,35 @@ Aufgaben → Wechsel je Aufgabe (+ Zeitstufen jetzt/damals) → Hochrechnung →
 „dieselben wie jetzt“) bzw. in Zyklus 1 „Je Tag“ (jüngste 14) + Zeitstufen → Sorgenkinder (Link „ansehen“ =
 `/puzzles/book/:id`).
 
-`WoodpeckerPlanDto.status`: `solving` (Zyklus läuft), `break` (Pause bis `nextCycleAt`), `ready`, `completed`.
+`WoodpeckerPlanDto.status`: `solving` (Zyklus läuft), `break` (Pause bis `nextCycleAt`), `ready`, `completed`, seit 0.958.0
+`archived` (geht allem vor; `completedAt` bleibt daneben erhalten) und `archivedAt`.
+
+**Ein Training, Archiv** (0.958.0, Nutzerentscheidung 10.11.: „soll nur ein Woodpecker geben – für einen neuen muss ein
+alter archiviert werden“): je Nutzer höchstens EIN nicht archiviertes Training (`WoodpeckerPlans.ArchivedAt IS NULL`) —
+egal ob laufend, in Pause, bereit oder abgeschlossen. Erzwungen im `WoodpeckerService`, nicht nur in der Oberfläche:
+
+| Fall | Antwort |
+|---|---|
+| `POST /api/woodpecker` mit vorhandenem nicht archiviertem Training | 409 `woodpecker_active_exists` |
+| dasselbe mit `archiveCurrent: true` | ALLE bisherigen nicht archivierten bekommen `ArchivedAt = jetzt`, das neue wird angelegt — Sperre auf die Nutzerzeile (`SELECT … FOR UPDATE`), Prüfen, Archivieren und Anlegen in EINER Transaktion in der Execution-Strategy |
+| `unarchive` neben einem aktiven | 409 `woodpecker_active_exists` |
+| `next`, `attempts`, `next-cycle`, `finish-set`, `start` auf ein archiviertes | 409 `woodpecker_archived` |
+| `GET`, Liste, `DELETE`, `archive` auf ein archiviertes | wie bisher |
+
+Ein archiviertes Training ist eingefroren: `RefreshAsync` lässt es aus (keine Frist von Zyklus 1 wird nachgezogen, kein
+Kurs-Versuch mehr übernommen). Beim Archivieren wird vorher einmal nachgezogen — eingefroren ist der Stand von da.
+Wiederherstellen macht es wieder aktiv; danach gelten die Fristen wie zuvor (eine inzwischen abgelaufene Frist von
+Zyklus 1 beendet den Zyklus beim nächsten Lesen). **Altbestand** mit mehreren nicht archivierten je Nutzer (vor 0.958.0
+möglich; Prod 10.11.: 3 Pläne bei 3 Nutzern, also keiner) bleibt lauffähig: die Liste zeigt alle, Anlegen ist bis zum
+Archivieren gesperrt (der Dialog archiviert alle mit), die Dashboard-Kachel nimmt `activeWoodpeckerPlan`. Die Migration
+`WoodpeckerPlanArchivedAt` legt nur die Spalte an und archiviert nichts.
 
 **Dashboard-Kachel** (0.955.0): das Dashboard ruft `GET /api/woodpecker` getrennt vom übrigen Laden ab (nur mit
 Menüpunkt `woodpecker`) und zeigt das laufende Training (`activeWoodpeckerPlan` in `woodpecker.service.ts`: nicht
-abgeschlossen, jüngster Zeitpunkt aus Anlage, Beginn und Ende des aktuellen Zyklus). Der Plan liegt im Zwischenstand
+abgeschlossen und nicht archiviert, jüngster Zeitpunkt aus Anlage, Beginn und Ende des aktuellen Zyklus). Seit 0.958.0
+startet der Knopf „Zyklus N starten“ im Zustand `ready` den Zyklus direkt (`next-cycle`) und springt in den Löser; ein
+409 (Pause läuft doch noch, archiviert) kommt als Snackbar, danach lädt die Kachel die Liste neu (`planChange` ans
+Dashboard). Der Plan liegt im Zwischenstand
 des Dashboards (`woodpeckerPlan`); ohne laufendes Training bleibt die Kachel unsichtbar. Gestaltung: DESIGN 8.1.
 
 **Client** (`book-woodpecker-mode.ts`): ein Versuch wird je Aufgabe einmal gemeldet; offline oder bei Netz-/408/429/5xx-
@@ -120,7 +146,7 @@ nächsten App-Start dieselbe Aufgabe bringt, sendet die Warteschlange online Vor
 60 s; GL-FE1-01).
 
 **Daten** (`Models/WoodpeckerPlan.cs`, `Data/Configurations/WoodpeckerConfigurations.cs`): `WoodpeckerPlans` (UserId
-Cascade), `WoodpeckerPlanBooks` (Position), `WoodpeckerCycles` (Number, StartedAt, FinishedAt), `WoodpeckerSetItems`
+Cascade, `ArchivedAt` seit 0.958.0), `WoodpeckerPlanBooks` (Position), `WoodpeckerCycles` (Number, StartedAt, FinishedAt), `WoodpeckerSetItems`
 (Position) und `WoodpeckerAttempts` (Cycle, Solved, TimeSeconds, HintsUsed seit 0.956.0, AttemptedAt). Satz und Versuche tragen `BookId` (Cascade — Kurs löschen nimmt sie mit)
 und einen Restrict-FK auf `BookPuzzle`, abgeräumt in `BookPuzzleDependents`. Die Kontolöschung lässt die Pläne stehen
 (keine PII, `ProfileServiceTests.DeletionExempt`).

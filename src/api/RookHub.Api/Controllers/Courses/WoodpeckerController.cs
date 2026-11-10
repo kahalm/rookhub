@@ -45,6 +45,16 @@ public class WoodpeckerController : BaseApiController
         return NoContent();
     }
 
+    /// <summary>Training archivieren (jederzeit; bleibt lesbar, ein neues wird möglich).</summary>
+    [HttpPost("{planId:int}/archive")]
+    public async Task<IActionResult> Archive(int planId, CancellationToken ct) =>
+        Ok(await _service.ArchiveAsync(GetUserId(), planId, ct));
+
+    /// <summary>Archiviertes Training wiederherstellen (nur ohne anderes aktives Training, sonst 409).</summary>
+    [HttpPost("{planId:int}/unarchive")]
+    public async Task<IActionResult> Unarchive(int planId, CancellationToken ct) =>
+        Ok(await _service.UnarchiveAsync(GetUserId(), planId, ct));
+
     /// <summary>Beginn des laufenden Zyklus verschieben (rückdatieren).</summary>
     [HttpPut("{planId:int}/start")]
     public async Task<IActionResult> UpdateStart(int planId, [FromBody] UpdateWoodpeckerStartDto dto, CancellationToken ct) =>

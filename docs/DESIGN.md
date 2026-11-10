@@ -902,8 +902,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   das laufende Training (nicht abgeschlossen; bei mehreren das zuletzt bewegte), Untertitel „Zyklus N von 7 · Status“
   (`.sub-part`), darunter der Name (bis zwei Zeilen), in Zyklus 1 „Satz: n Aufgaben von N“, ab Zyklus 2 „n von N
   erledigt“ mit 6-px-Balken, dann „noch N Tage“ bzw. „Frist überschritten“ (`--rh-warn`); genau eine Aktion: „Weiter
-  lösen“ (Kurs-Löser, gefüllt), bereit → „Zur Übersicht“ (gefüllt, dort startet der Zyklus), Pause → Pause-Satz +
-  Textknopf „Zur Übersicht“. Kein Prozent-Text; nur mit Menüpunkt `woodpecker`.
+  lösen“ (Kurs-Löser, gefüllt), bereit → „Zyklus N starten“ (gefüllt, startet den Zyklus direkt und springt in den Löser;
+  während des Aufrufs gesperrt mit 16-px-Spinner statt Symbol, Fehler als Snackbar mit dem API-Grund; seit 0.958.0,
+  vorher „Zur Übersicht“), Pause → Pause-Satz + Textknopf „Zur Übersicht“. Kein Prozent-Text; nur mit Menüpunkt
+  `woodpecker`. Archivierte Trainings erscheinen nie; einen Hinweis „+N weitere“ gibt es nicht (es gibt nur ein aktives
+  Training, Nutzerentscheidung 10.11.).
 - Löser: Aktionen über `PuzzleActionBarComponent`; Spielweise per `SolveModeService` (einmal je Bereich, für
   Kurse je Kurs; „für alle Puzzle-Bereiche übernehmen“).
 - Admin-Seiten: 1400 px, Tabellen mit Karten-Fassung am Handy; Admins werden zu ihren Konversationen geführt.
@@ -967,6 +970,19 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Wortlaut. Ohne lösbaren Kurs zeigt die leere Übersicht gleich „Zu den Kursen“; im Dialog sind Kurszeilen ganzzeilig
   ≥ 44 px, gleichnamige Kurse tragen eine Meta-Zeile (Herkunft, zuletzt geübt) (d3). Kartentitel (Kursname) bis zwei
   Zeilen, erst dann „…“; das ⋮ bleibt oben (d6).
+  **Ein Training + Archiv** (0.958.0, Nutzerentscheidung 10.11.: „soll nur ein Woodpecker geben – für einen neuen muss
+  ein alter archiviert werden“): oben steht das eine aktive Training wie bisher; sein ⋮ hat „Archivieren“ (`archive`,
+  vor „Löschen“) mit Rückfrage über `ConfirmService` („… archivieren? Es bleibt im Archiv lesbar, und du kannst ein
+  neues Training beginnen.“, Knopf „Archivieren“). „Neues Training“ bleibt immer bedienbar (kein gesperrter Knopf ohne
+  Ausweg, 2.8): gibt es ein aktives, zeigt der Dialog vorn — vor dem Datum — einen Hinweis mit Archiv-Symbol in
+  Warnton-Fläche (`color-mix(--rh-warn 12 %)`, 3-px-Rand links, Text in on-surface) „Dein bisheriges Training ‚…‘ wird
+  archiviert – es bleibt lesbar.“, und der Bestätigen-Knopf heißt „Archivieren und starten“. Darunter ein zugeklappter
+  Abschnitt `details.archive` „Archiv (N)“ (Zusammenfassung ≥ 44 px), darin kompakte Karten im selben Raster (Name als
+  h3 bis zwei Zeilen, „Archiviert am …“ · Zyklus N von 7, Abzeichen „Abgeschlossen“ falls fertig, Zyklen-Tabelle sobald
+  es Versuche gibt, keine Hauptaktion); ⋮ mit „Wiederherstellen“ (`unarchive`) und „Löschen“ (zuletzt, rot).
+  Wiederherstellen ist neben einem aktiven Training gesperrt und nennt den Grund als zweite leise Zeile im Eintrag
+  („Erst das aktive Training archivieren.“, Muster 5.4 „Aktion mit Arten“). Ohne archivierte kein Abschnitt; ohne
+  aktives, aber mit Archiv sagt der Leerzustand „Kein aktives Training. …“.
 - Repertoire-Trainer (d3): Kopf = Name des Repertoires, „Repertoire-Trainer“ leise daneben; „Häufigste Linien zuerst“
   als beschrifteter Umschalter (Häkchen, `aria-pressed`), Übungszyklen und „Fortschritt zurücksetzen“ (zuletzt, rot)
   im ⋮; Leerzustand mit genau einer Aktion — dort weder „Häufigste Linien zuerst“ noch „Fortschritt zurücksetzen“ (nur
@@ -1291,6 +1307,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-10 | 0.958.0 · Woodpecker | Dashboard-Kachel „bereit“: „Zyklus N starten“ startet direkt und springt in den Löser (Spinner im Knopf, Fehler als Snackbar); Übersicht: genau EIN aktives Training, ⋮ „Archivieren“ mit Rückfrage, „Neues Training“ mit Archiv-Hinweis im Dialog und Knopf „Archivieren und starten“, zugeklappter Abschnitt „Archiv (N)“ mit kompakten Karten, ⋮ „Wiederherstellen“ (gesperrt mit Grund neben einem aktiven) und „Löschen“; kein „+N weitere“ auf der Kachel (8.1) | Nutzerentscheidungen 10.11.: Knopf soll den Zyklus direkt starten; „soll nur ein Woodpecker geben – für einen neuen muss ein alter archiviert werden“ | User über die Sitzung „woodpecker“ |
 | 2026-11-10 | 0.957.0 · Woodpecker-Löser | Ganze Statistik standardmäßig eingeklappt, Textknopf „Statistik“ am Ende der Kopfzeile (aria-expanded, je Gerät gemerkt); aufgeklappt die drei Zeilen + ausführliche Statistik in benannten Abschnitten (Dieselben Aufgaben, Wechsel, Hochrechnung, Tipps, Verlauf bzw. Je Tag, Sorgenkinder), Tabellen im eigenen Scrollkasten (5.12) | Wunsch 10.11.: „umfangreiche statistik … die gleichen puzzle haben letztes mal 2h gebraucht“, „soviel mit sovielen hints … muss nicht immer da sein“, „Statistik standardmäßig eingeklappt → ausklappbar“ | User über die Sitzung „woodpecker“ |
 | 2026-11-10 | 0.956.0 · Woodpecker-Löser | Statistik des laufenden Zyklus in der Kontext-Card (5.12): Kennzahlzeile gelöst/Quote, ohne/mit Tipp, offen, Ø; Hochrechnung (Restzeit, nötig je Tag, Tempo, voraussichtliches Ende vs. Frist; Zyklus 1: ≈ Satz bis zur Frist); Vorzyklus zum Vergleich — leise, höchstens drei Zeilen unter dem Fortschritt | Wunsch 10.11.: „im Detail … gehen mir die Stats ab – wie viel gelöst, wie viel mit Hint, Hochrechnung“ | User über die betreuende Sitzung |
 | 2026-11-10 | 0.955.0 · Dashboard | Woodpecker-Kachel (8.1): laufendes Training mit Zyklus, Fortschritt, Frist und genau einer Aktion je Zustand; zweite Ausnahme in `DEFAULT_VISIBLE` nach dem Muster der angepinnten Kurse (nur mit eigenen Daten sichtbar, sonst nur im Anpassen-Modus) | Wunsch 10.11.: „Woodpecker braucht ein Panel auf dem Dashboard“ | User über die Sitzung „woodpecker“ |

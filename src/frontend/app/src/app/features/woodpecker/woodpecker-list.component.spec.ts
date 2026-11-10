@@ -28,7 +28,7 @@ describe('WoodpeckerListComponent', () => {
   let confirmAnswer = true;
 
   function render(plans: WoodpeckerPlan[], courses: Partial<CourseListItem>[] = [{ puzzleCount: 10, isCalculation: false }]) {
-    service = jasmine.createSpyObj<WoodpeckerService>('WoodpeckerService', ['list', 'startNextCycle', 'finishSet', 'delete']);
+    service = jasmine.createSpyObj<WoodpeckerService>('WoodpeckerService', ['list', 'startNextCycle', 'finishSet', 'delete', 'archive', 'unarchive']);
     service.list.and.returnValue(of(plans));
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -126,6 +126,94 @@ describe('WoodpeckerListComponent', () => {
     fixture.detectChanges();
     expect(service.delete).toHaveBeenCalledWith(7);
     expect(el.querySelector('.plan')).toBeNull();
+  });
+
+  // ===== Ein Training + Archiv (0.958.0) =====
+
+  const archivedPlan = (over: Partial<WoodpeckerPlan> = {}) => plan({
+    id: 9, name: 'Alt', status: 'archived', archivedAt: '2026-11-01T10:00:00Z',
+    cycles: [cycle({ attempted: 40, solved: 30 })], ...over,
+  });
+
+  /** ⋮ einer Archiv-Karte öffnen; die Menüeinträge liegen im Overlay am body. */
+  function openArchiveMenu(fixture: ReturnType<typeof render>['fixture'], el: HTMLElement) {
+    el.querySelector<HTMLButtonElement>('.archived-plan .plan-head button')!.click();
+    fixture.detectChanges();
+    return document.querySelector<HTMLButtonElement>('.restore-item')!;
+  }
+
+  it('Archiv-Abschnitt: zugeklappt unter den aktiven, mit Zahl; archivierte nicht als Karte oben', () => {
+    const { el } = render([plan(), archivedPlan(), archivedPlan({ id: 10, archivedAt: '2026-11-05T10:00:00Z' })]);
+    expect(el.querySelectorAll('.plans .plan').length).toBe(1);
+    const details = el.querySelector<HTMLDetailsElement>('details.archive')!;
+    expect(details).not.toBeNull();
+    expect(details.open).toBeFalse();
+    expect(details.querySelector('summary')!.textContent).toContain('woodpecker.archiveSection');
+    const cards = Array.from(details.querySelectorAll('.archived-plan'));
+    expect(cards.length).toBe(2);
+    expect(cards[0].textContent).toContain('woodpecker.archivedAt');            // zuletzt archiviertes zuerst
+    expect(cards[0].querySelector('table.cycles')).not.toBeNull();             // Zyklen-Tabelle bleibt lesbar
+    expect(el.querySelector('.archived-plan .actions')).toBeNull();            // keine Hauptaktion
+  });
+
+  it('ohne archivierte kein Archiv-Abschnitt', () => {
+    const { el } = render([plan()]);
+    expect(el.querySelector('details.archive')).toBeNull();
+  });
+
+  it('Archivieren fragt nach (Handlung im Knopf) und legt die Karte ins Archiv', () => {
+    const { fixture, c, el } = render([plan()]);
+    const ask = spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(true));
+    service.archive.and.returnValue(of(plan({ status: 'archived', archivedAt: new Date().toISOString() })));
+    c.archive(c.plans()[0]);
+    fixture.detectChanges();
+    expect(ask).toHaveBeenCalledOnceWith('woodpecker.archiveConfirm', { name: 'The Woodpecker Method' }, { confirm: 'woodpecker.archive' });
+    expect(service.archive).toHaveBeenCalledWith(7);
+    expect(el.querySelectorAll('.plans .plan').length).toBe(0);
+    expect(el.querySelectorAll('details.archive .archived-plan').length).toBe(1);
+    expect(el.querySelector('.empty-state')!.textContent).toContain('woodpecker.emptyArchived');
+  });
+
+  it('Archivieren abgelehnt → nichts passiert', () => {
+    const { c } = render([plan()]);
+    spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(false));
+    c.archive(c.plans()[0]);
+    expect(service.archive).not.toHaveBeenCalled();
+  });
+
+  it('Wiederherstellen ist neben einem aktiven Training gesperrt und nennt den Grund im Eintrag', () => {
+    const { fixture, el } = render([plan(), archivedPlan()]);
+    el.querySelector<HTMLDetailsElement>('details.archive')!.open = true;
+    const restore = openArchiveMenu(fixture, el);
+    expect(restore.disabled).toBeTrue();
+    expect(restore.querySelector('.why')?.textContent).toContain('woodpecker.restoreBlocked');
+    expect(document.querySelector('.cdk-overlay-container .delete-item')).not.toBeNull();   // Löschen bleibt
+  });
+
+  it('Wiederherstellen ohne aktives Training: frei, holt den Plan zurück nach oben', () => {
+    const { fixture, c, el } = render([archivedPlan()]);
+    const restore = openArchiveMenu(fixture, el);
+    expect(restore.disabled).toBeFalse();
+    expect(restore.querySelector('.why')).toBeNull();
+    service.unarchive.and.returnValue(of(archivedPlan({ status: 'solving', archivedAt: null })));
+    c.restore(c.plans()[0]);
+    fixture.detectChanges();
+    expect(service.unarchive).toHaveBeenCalledWith(9);
+    expect(el.querySelectorAll('.plans .plan').length).toBe(1);
+    expect(el.querySelector('details.archive')).toBeNull();
+  });
+
+  it('Neues Training mit aktivem: Dialog bekommt das bisherige zum Archivieren, danach Liste neu geladen', () => {
+    const { c } = render([plan()]);
+    const created = plan({ id: 11, name: 'Neu' });
+    const open = spyOn(TestBed.inject(MatDialog), 'open').and.returnValue({ afterClosed: () => of(created) } as never);
+    service.list.calls.reset();
+    service.list.and.returnValue(of([created, plan({ status: 'archived', archivedAt: new Date().toISOString() })]));
+    c.create();
+    expect((open.calls.mostRecent().args[1] as { data: { current: WoodpeckerPlan[] } }).data.current.map(p => p.id)).toEqual([7]);
+    expect(service.list).toHaveBeenCalledTimes(1);
+    expect(c.active().map(p => p.id)).toEqual([11]);
+    expect(c.archived().map(p => p.id)).toEqual([7]);
   });
 
   it('c1-Nachprüfung: letztes Wort + (?) in einem nicht umbrechenden Teil (Tablet brach das (?) allein um)', () => {

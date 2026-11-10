@@ -132,6 +132,8 @@
     "book_alias_taken": "Dieser Alias ist bereits vergeben.",
     "course_pgn_is_repertoire": "Diese Datei ist ein Eröffnungsrepertoire (Partien ab der Grundstellung), kein Kurs mit Aufgaben. Lade sie unter „Repertoires“ hoch.",
     "course_no_lines": "In dieser PGN steckt keine spielbare Kurs-Linie. Ein Kurs braucht Aufgaben im Chessable-Stil (Stellung + Lösung).",
+    "woodpecker_active_exists": "Du hast schon ein Woodpecker-Training. Archiviere es, um ein neues zu beginnen.",
+    "woodpecker_archived": "Dieses Training ist archiviert und kann nur noch angesehen werden.",
     "ebooks_not_configured": "Die E-Book-Bibliothek ist auf diesem Server noch nicht eingerichtet.",
     "ebook_format_unsupported": "Dieser Dateityp wird nicht unterstützt. Erlaubt: PDF, EPUB, DJVU, CBZ, CBR, MOBI, AZW3.",
     "ebook_file_too_large": "Die Datei ist zu groß.",
@@ -6435,7 +6437,15 @@
     "intro": "Dieselben Aufgaben immer wieder, jedes Mal in der halben Zeit – nach der Methode von Smith und Tikkanen.",
     "rules": "Zyklus 1: vier Wochen – so viele Aufgaben lösen wie möglich, sie werden dein Satz.\n\nDann mindestens einen Tag Pause. Jeder weitere Zyklus: derselbe Satz in zufälliger Reihenfolge, in der halben Zeit (14, 7, 4, 2, 1, 1 Tage).\n\nJe Zyklus zählt nur der erste Versuch an einer Aufgabe. Fertig, wenn ein Zyklus höchstens einen Tag dauert, sonst nach Zyklus 7.",
     "empty": "Noch kein Woodpecker-Training. Wähle einen oder mehrere Kurse, um zu beginnen.",
+    "archive": "Archivieren",
+    "archiveConfirm": "Das Training „{{name}}“ archivieren? Es bleibt im Archiv lesbar, und du kannst ein neues Training beginnen.",
+    "archiveSection": "Archiv ({{n}})",
+    "archivedAt": "Archiviert am {{at}}",
+    "restore": "Wiederherstellen",
+    "restoreBlocked": "Erst das aktive Training archivieren.",
+    "emptyArchived": "Kein aktives Training. Wähle einen oder mehrere Kurse, um ein neues zu beginnen.",
     "status": {
+      "archived": "Archiviert",
       "solving": "Läuft",
       "break": "Pause",
       "ready": "Bereit",
@@ -6493,6 +6503,8 @@
       "prev": "Zyklus {{n}}: {{pct}} gelöst, Ø {{time}}"
     },
     "create": {
+      "archiveNote": "Dein bisheriges Training „{{name}}“ wird archiviert – es bleibt lesbar.",
+      "submitArchive": "Archivieren und starten",
       "metaLast": "zuletzt {{date}}",
       "metaPublic": "Freigegeben",
       "metaShared": "von {{name}}",

@@ -196,7 +196,7 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
                 <button mat-button routerLink="/courses">{{ 'dashboard.pinnedCourses.viewAll' | translate }}</button>
               </mat-card-actions>
             } @else if (tile.id === 'woodpecker') {
-              <app-woodpecker-tile [plan]="woodpeckerPlan" />
+              <app-woodpecker-tile [plan]="woodpeckerPlan" (planChange)="setWoodpeckerPlan($event)" />
             } @else if (tile.id === 'activityTimer') {
               <mat-card-content>
                 <app-activity-timer-tile></app-activity-timer-tile>
@@ -530,6 +530,15 @@ export class DashboardComponent implements OnInit {
     return !this.hidden.has(tile.id);
   }
 
+  /** Woodpecker-Stand setzen (eigener Abruf oder neuer Stand aus der Kachel, z. B. gestarteter Zyklus) und den
+   *  vorhandenen Zwischenstand nur ergänzen — ohne Snapshot schreibt ihn gleich der forkJoin (samt diesem Plan), sonst
+   *  stünden dort die Vorgabewerte der übrigen Kacheln. */
+  setWoodpeckerPlan(plan: WoodpeckerPlan | null): void {
+    this.woodpeckerPlan = plan;
+    const snap = this.cache.load();
+    if (snap) this.cache.save({ ...snap, woodpeckerPlan: plan } as DashboardSnapshotWithWoodpecker);
+  }
+
   toggleEdit(): void {
     this.editing = !this.editing;
   }
@@ -628,12 +637,7 @@ export class DashboardComponent implements OnInit {
       switchMap(() => this.woodpecker.list().pipe(catchError(() => of(null)))),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(plans => {
-      if (!plans) return;
-      this.woodpeckerPlan = activeWoodpeckerPlan(plans);
-      // Vorhandenen Zwischenstand nur ergänzen — ohne Snapshot schreibt ihn gleich der forkJoin (samt diesem Plan),
-      // sonst stünden dort die Vorgabewerte der übrigen Kacheln.
-      const snap = this.cache.load();
-      if (snap) this.cache.save({ ...snap, woodpeckerPlan: this.woodpeckerPlan } as DashboardSnapshotWithWoodpecker);
+      if (plans) this.setWoodpeckerPlan(activeWoodpeckerPlan(plans));
     });
 
     // Freundeszahl reaktiv nachziehen, wenn eine Benachrichtigung eintrifft. Scheitert der Abruf, bleibt die

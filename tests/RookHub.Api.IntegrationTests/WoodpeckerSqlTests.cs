@@ -113,6 +113,48 @@ public class WoodpeckerSqlTests(WoodpeckerFixture fixture) : IAsyncLifetime, ICl
         Assert.Single(await service.ListAsync(userId));
     }
 
+    /// <summary>0.958.0: Anlegen mit <c>archiveCurrent</c> = Sperre auf die Nutzerzeile + Archivieren + Anlegen in EINER
+    /// Transaktion — mit <c>EnableRetryOnFailure</c> wie in der Anwendung, damit die Execution-Strategy greift
+    /// (ohne sie würfe <c>BeginTransactionAsync</c>). Danach sind archivierte Pläne nur lesbar und RefreshAsync fasst sie
+    /// nicht an.</summary>
+    [MySqlFact]
+    public async Task CreateWithArchiveCurrent_OneTransaction_OnMariaDb()
+    {
+        var (userId, bookId, ids) = await SeedAsync(3);
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseMySql(fixture.Schema.ConnectionString, DbServerVersion.Current, o => o.EnableRetryOnFailure())
+            .Options);
+        var service = new WoodpeckerService(db, _clock);
+
+        var first = await service.CreateAsync(userId, false, new CreateWoodpeckerPlanDto { BookIds = { bookId } });
+        await service.RecordAttemptAsync(userId, first.Id, new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 5 });
+        var ex = await Assert.ThrowsAsync<RookHub.Api.Exceptions.ConflictException>(() =>
+            service.CreateAsync(userId, false, new CreateWoodpeckerPlanDto { BookIds = { bookId } }));
+        Assert.Equal("woodpecker_active_exists", ex.Code);
+
+        _clock.Now = _clock.Now.AddHours(1);
+        var second = await service.CreateAsync(userId, false,
+            new CreateWoodpeckerPlanDto { BookIds = { bookId }, ArchiveCurrent = true });
+
+        db.ChangeTracker.Clear();
+        var rows = await db.WoodpeckerPlans.Where(p => p.UserId == userId).OrderBy(p => p.Id).ToListAsync();
+        Assert.Equal(2, rows.Count);
+        Assert.NotNull(rows[0].ArchivedAt);
+        Assert.Null(rows[1].ArchivedAt);
+        Assert.Equal(second.Id, rows[1].Id);
+
+        _clock.Now = _clock.Now.AddDays(40);   // Frist von Zyklus 1 des archivierten weit vorbei
+        var list = await service.ListAsync(userId);
+        var archived = list.Single(p => p.Id == first.Id);
+        Assert.Equal("archived", archived.Status);
+        Assert.Null(archived.Cycles[0].FinishedAt);
+        Assert.Equal(1, archived.SetSize);
+        await Assert.ThrowsAsync<RookHub.Api.Exceptions.ConflictException>(() => service.GetNextAsync(userId, first.Id));
+        await Assert.ThrowsAsync<RookHub.Api.Exceptions.ConflictException>(() => service.UnarchiveAsync(userId, first.Id));
+        await service.ArchiveAsync(userId, second.Id);
+        Assert.Null((await service.UnarchiveAsync(userId, first.Id)).ArchivedAt);
+    }
+
     [MySqlFact]
     public async Task DeletingLines_ClearsSetAndAttempts_ThroughDependents()
     {

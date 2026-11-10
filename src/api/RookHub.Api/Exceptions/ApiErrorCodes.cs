@@ -68,6 +68,12 @@ public static class ApiErrorCodes
     /// <summary>Kurs-Upload, aus dem keine einzige spielbare Linie entstand (Linien da, aber alle unbrauchbar).</summary>
     public const string CourseNoLines = "course_no_lines";
 
+    /// <summary>Neues Woodpecker-Training, obwohl ein nicht archiviertes existiert (ohne <c>archiveCurrent</c>), bzw.
+    /// Wiederherstellen neben einem aktiven (0.958.0).</summary>
+    public const string WoodpeckerActiveExists = "woodpecker_active_exists";
+    /// <summary>Schreibender Zugriff auf ein archiviertes Woodpecker-Training (0.958.0).</summary>
+    public const string WoodpeckerArchived = "woodpecker_archived";
+
     /// <summary>Hintergrund-Liste eines Kontos voll (<c>EngineSettingsService.MaxBackgroundEngines</c>), 0.951.0.</summary>
     public const string BackgroundListFull = "background_list_full";
     /// <summary>Engine gehört nicht dem genannten Konto bzw. ist nicht registriert (Admin-Reiter „Engines“, 0.951.0).</summary>
