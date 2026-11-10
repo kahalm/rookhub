@@ -13,6 +13,7 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
 import { FavoritesService } from '../../core/favorites.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { SnackbarService } from '../../core/snackbar.service';
+import { WoodpeckerPlan, WoodpeckerService } from '../woodpecker/woodpecker.service';
 
 const MENU = new Set<string>([
   'puzzles', 'friends', 'tournaments', 'repertoires', 'training-goals',
@@ -648,5 +649,92 @@ describe('DashboardComponent a1 (Mehrzahl, Prozent, Knopfzeile)', () => {
     const dup = icons.filter((ic, i) => icons.indexOf(ic) !== i);
     expect(dup).withContext(tiles.map(t => `${t.id}:${t.icon}`).join(', ')).toEqual([]);
     expect(tiles.find(t => t.id === 'guess')!.icon).toBe('track_changes');
+  });
+});
+
+// Woodpecker-Kachel (0.955.0): Muster der angepinnten Kurse — sichtbar nur mit laufendem Training (im Anpassen-Modus
+// immer), nie ohne Menüpunkt `woodpecker`; im Standard sichtbar (bewusste Ausnahme in DEFAULT_VISIBLE).
+describe('DashboardComponent Woodpecker-Kachel', () => {
+  const CACHE_KEY = 'rookhub_dashboard_cache_v1_u7';
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  const wp = (id: number, status: WoodpeckerPlan['status']): WoodpeckerPlan => ({
+    id, name: 'Plan ' + id, createdAt: new Date().toISOString(), completedAt: null, books: [], setSize: 4,
+    availableCount: 10, currentCycle: 2, maxCycles: 7, status, nextCycleAt: null,
+    cycles: [{ number: 2, targetDays: 14, startedAt: new Date().toISOString(), deadline: new Date(Date.now() + 86_400_000).toISOString(),
+      finishedAt: null, attempted: 1, solved: 1, timeSeconds: 30 }],
+  });
+
+  function mount(opts: { menu: string[]; plans: () => ReturnType<WoodpeckerService['list']>; render?: boolean }) {
+    const menu = new Set(opts.menu);
+    const list = jasmine.createSpy('list').and.callFake(opts.plans);
+    TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isAdmin: false, has: () => false, currentUser: { username: 'me', userId: 7 } } },
+        { provide: DashboardService, useValue: {
+          getRepertoires: () => of([]), getCourses: () => of([]), getSubscriptions: () => of([]),
+          getFriends: () => of([]), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }),
+        } },
+        { provide: MenuService, useValue: { visible$: of(menu), isVisible: (k: string) => menu.has(k) } },
+        { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
+        { provide: InAppNotificationService, useValue: { arrived$: new Subject<void>().asObservable() } },
+        { provide: FavoritesService, useValue: { count: () => of(0) } },
+        { provide: WoodpeckerService, useValue: { list } },
+      ],
+    });
+    if (!opts.render) TestBed.overrideComponent(DashboardComponent, { set: { template: '' } });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    return { fixture, component: fixture.componentInstance, list };
+  }
+
+  it('zeigt die Kachel im Standard, sobald ein Training läuft — mit dem zuletzt bewegten, nicht abgeschlossenen Plan', () => {
+    const { component } = mount({ menu: [...MENU, 'woodpecker'], plans: () => of([wp(1, 'completed'), wp(2, 'solving')]) });
+    expect(component.visibleTiles.map(t => t.id)).toEqual(['puzzles', 'weekly', 'woodpecker', 'courses', 'trainingGoals']);
+    expect(component.woodpeckerPlan?.id).toBe(2);
+    const tile = component.visibleTiles.find(t => t.id === 'woodpecker')!;
+    expect(tile.subtitle().parts!.map(p => p.key)).toEqual(['woodpecker.cycleOf', 'woodpecker.status.solving']);
+    expect(tile.subtitle().parts![0].params).toEqual({ n: 2, max: 7 });
+  });
+
+  it('ohne laufendes Training ausgeblendet, im Anpassen-Modus mit Leer-Satz positionierbar', () => {
+    const { component } = mount({ menu: [...MENU, 'woodpecker'], plans: () => of([wp(1, 'completed')]) });
+    expect(component.woodpeckerPlan).toBeNull();
+    expect(component.visibleTiles.map(t => t.id)).not.toContain('woodpecker');
+    component.toggleEdit();
+    expect(component.visibleTiles.map(t => t.id)).toContain('woodpecker');
+    expect(component.visibleTiles.find(t => t.id === 'woodpecker')!.subtitle().key).toBe('dashboard.woodpecker.subtitle');
+  });
+
+  it('Menüpunkt woodpecker aus: keine Kachel (auch nicht im Anpassen-Modus) und kein Abruf', () => {
+    const { component, list } = mount({ menu: [...MENU], plans: () => of([wp(1, 'solving')]) });
+    component.toggleEdit();
+    expect(component.visibleTiles.map(t => t.id)).not.toContain('woodpecker');
+    expect(list).not.toHaveBeenCalled();
+  });
+
+  it('rendert die Kachel mit „Weiter lösen“ in den Kurs-Löser', () => {
+    const { fixture } = mount({ menu: [...MENU, 'woodpecker'], plans: () => of([wp(9, 'solving')]), render: true });
+    const a = (fixture.nativeElement as HTMLElement).querySelector('app-woodpecker-tile a.wp-primary');
+    expect(a?.getAttribute('href')).toBe('/woodpecker/9/solve');
+  });
+
+  it('Ladefehler: der Plan aus dem Zwischenstand bleibt stehen; Erfolg schreibt ihn in den Zwischenstand', () => {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      repertoireCount: 0, courseCount: 0, pinnedCourses: [], subscriptions: [], subscriptionCount: 0,
+      friendCount: 0, favoriteCount: 0, puzzleSolved: 0, puzzleAccuracy: 0, puzzleElo: 1500, woodpeckerPlan: wp(4, 'break'),
+    }));
+    const failed = mount({ menu: [...MENU, 'woodpecker'], plans: () => throwError(() => new Error('offline')) });
+    expect(failed.component.woodpeckerPlan?.id).toBe(4);
+    expect(failed.component.visibleTiles.map(t => t.id)).toContain('woodpecker');
+
+    TestBed.resetTestingModule();
+    const ok = mount({ menu: [...MENU, 'woodpecker'], plans: () => of([wp(6, 'ready')]) });
+    expect(ok.component.woodpeckerPlan?.id).toBe(6);
+    expect(JSON.parse(localStorage.getItem(CACHE_KEY)!).woodpeckerPlan.id).toBe(6);
   });
 });

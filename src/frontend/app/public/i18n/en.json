@@ -550,6 +550,10 @@
       "empty": "Pin a course (📌 on the courses page) to start it right here.",
       "viewAll": "All courses"
     },
+    "woodpecker": {
+      "subtitle": "Same puzzles, faster every cycle",
+      "none": "No training in progress."
+    },
     "leaderboards": {
       "title": "Leaderboards",
       "subtitle": "See how you rank",

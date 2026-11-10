@@ -871,6 +871,14 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   sonst leerer 40-px-Platz — die Knöpfe springen nicht), Turnier als gedämpfte dritte Zeile unter den Namen, einzeilig mit
   „…“ und vollem Namen im Tooltip.
 - Dashboard: neue Kacheln nicht in `DEFAULT_VISIBLE`; angepinnte Kurse in eigener breiter Zeile (r2-rk-dash-stretch).
+  Ausnahme sind Kacheln, die nur mit eigenen Daten erscheinen (angepinnte Kurse, Woodpecker): sie stehen in
+  `DEFAULT_VISIBLE`, sind ohne Daten aber unsichtbar und zeigen sich nur im Anpassen-Modus (dort mit einem Leer-Satz),
+  damit man sie vorab einordnen kann. **Woodpecker-Kachel** (0.955.0, `features/dashboard/woodpecker-tile.component.ts`):
+  das laufende Training (nicht abgeschlossen; bei mehreren das zuletzt bewegte), Untertitel „Zyklus N von 7 · Status“
+  (`.sub-part`), darunter der Name (bis zwei Zeilen), in Zyklus 1 „Satz: n Aufgaben von N“, ab Zyklus 2 „n von N
+  erledigt“ mit 6-px-Balken, dann „noch N Tage“ bzw. „Frist überschritten“ (`--rh-warn`); genau eine Aktion: „Weiter
+  lösen“ (Kurs-Löser, gefüllt), bereit → „Zur Übersicht“ (gefüllt, dort startet der Zyklus), Pause → Pause-Satz +
+  Textknopf „Zur Übersicht“. Kein Prozent-Text; nur mit Menüpunkt `woodpecker`.
 - Löser: Aktionen über `PuzzleActionBarComponent`; Spielweise per `SolveModeService` (einmal je Bereich, für
   Kurse je Kurs; „für alle Puzzle-Bereiche übernehmen“).
 - Admin-Seiten: 1400 px, Tabellen mit Karten-Fassung am Handy; Admins werden zu ihren Konversationen geführt.
@@ -1258,6 +1266,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-10 | 0.955.0 · Dashboard | Woodpecker-Kachel (8.1): laufendes Training mit Zyklus, Fortschritt, Frist und genau einer Aktion je Zustand; zweite Ausnahme in `DEFAULT_VISIBLE` nach dem Muster der angepinnten Kurse (nur mit eigenen Daten sichtbar, sonst nur im Anpassen-Modus) | Wunsch 10.11.: „Woodpecker braucht ein Panel auf dem Dashboard“ | User über die Sitzung „woodpecker“ |
 | 2026-11-10 | 0.954.0 · RookHub `/games` | Zusammenfassungs-Symbol je Zeile (fertig = Icon-Link `article`, offen = Sanduhr ohne Knopf, fester Platz, Aktionsspalte 128 px); Turnier als dritte Zeile unter den Namen (gekürzt + Tooltip, alle Laschen außer bei Online-Partien); „Nur meine Partien“ als Häkchen unter dem Suchfeld (`?mine=1`); Partiekopf einer eigenen Partie zeigt den Stand der verbundenen Vereins-Zusammenfassung (Sanduhr/Link) statt „anfordern“ | Stand ohne Öffnen jeder Partie sehen; hochgeladene fremde Vereinspartien ausblenden; Turnier ohne Öffnen | Wunsch 10.11. über die betreuende Sitzung |
 | 2026-11-10 | 0.953.0 · Admin „Engines“ | Hinweis-Karte oben nur bei zutreffenden Hinweisen (Symbol + Satz); Engine-Karten je Maschine unter einem Aufklapper-Kopf (Knopf mit `aria-expanded`, ≥ 44 px, Kennzahlen als `.rh-dots`, Zeitplan-Zeile), Zustand je Betrachter in localStorage; Token-Tabelle im Scrollkasten | Wunsch 10.11.: Übersicht Tokens, Zeitplan, kN/s normal/Schonzeit, „was dir sonst noch einfällt“ | User über die betreuende Sitzung |
 | 2026-11-10 | 0.951.0 · Admin „Engines“ | Hintergrund-Zuordnung je Engine und Konto umschalten: Zeile mit Zustand als Satz + Symbol, `mat-stroked-button` nennt Handlung und Konto, ohne Rückfrage, Gruppe gesperrt beim Speichern (5.4) | Wunsch 10.11.: „lass mich … hier auch warten ob hintergrund oder nicht“ | User über die betreuende Sitzung |

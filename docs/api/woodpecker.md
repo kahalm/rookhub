@@ -41,6 +41,11 @@ diese Aufgaben im Satz. Umgekehrt schreibt der Woodpecker-Löser KEINE `CourseAt
 
 `WoodpeckerPlanDto.status`: `solving` (Zyklus läuft), `break` (Pause bis `nextCycleAt`), `ready`, `completed`.
 
+**Dashboard-Kachel** (0.955.0): das Dashboard ruft `GET /api/woodpecker` getrennt vom übrigen Laden ab (nur mit
+Menüpunkt `woodpecker`) und zeigt das laufende Training (`activeWoodpeckerPlan` in `woodpecker.service.ts`: nicht
+abgeschlossen, jüngster Zeitpunkt aus Anlage, Beginn und Ende des aktuellen Zyklus). Der Plan liegt im Zwischenstand
+des Dashboards (`woodpeckerPlan`); ohne laufendes Training bleibt die Kachel unsichtbar. Gestaltung: DESIGN 8.1.
+
 **Client** (`book-woodpecker-mode.ts`): ein Versuch wird je Aufgabe einmal gemeldet; offline oder bei Netz-/408/429/5xx-
 Fehler geht der POST in die Offline-Warteschlange (gleicher Body) und gilt weiter als gemeldet — „Nochmal“ oder „Ganze
 Partie“ → „Zurück zum Puzzle“ melden nichts mehr. „Weiter“ wartet auf eine laufende Meldung, damit `GET next` nicht vor

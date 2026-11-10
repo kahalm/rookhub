@@ -92,6 +92,24 @@ export function todayYmd(now = new Date()): string {
 /** Lokales `YYYY-MM-DD` eines ISO-Zeitpunkts. */
 export function ymdOf(iso: string): string { return todayYmd(new Date(iso)); }
 
+/**
+ * Das laufende Training fürs Dashboard: unter den nicht abgeschlossenen das zuletzt bewegte — der jüngste Zeitpunkt aus
+ * Anlage, Beginn und Ende des aktuellen Zyklus (ein Versuchszeitpunkt steht nicht im DTO). Gleichstand: Reihenfolge der
+ * API (neueste zuerst). Keins → `null`.
+ */
+export function activeWoodpeckerPlan(plans: readonly WoodpeckerPlan[]): WoodpeckerPlan | null {
+  let best: WoodpeckerPlan | null = null;
+  let bestAt = -Infinity;
+  for (const p of plans) {
+    if (p.status === 'completed') continue;
+    const c = p.cycles[p.cycles.length - 1];
+    const at = Math.max(...[p.createdAt, c?.startedAt, c?.finishedAt]
+      .filter((x): x is string => !!x).map(x => new Date(x).getTime()));
+    if (at > bestAt) { best = p; bestAt = at; }
+  }
+  return best;
+}
+
 /** Ganze verbleibende Tage bis `deadline` (aufgerundet, nie negativ). */
 export function daysLeft(deadline: string, now = Date.now()): number {
   return Math.max(0, Math.ceil((new Date(deadline).getTime() - now) / 86_400_000));

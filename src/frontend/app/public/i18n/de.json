@@ -550,6 +550,10 @@
       "empty": "Pinne einen Kurs an (📌 auf der Kurse-Seite), um ihn direkt hier zu starten.",
       "viewAll": "Alle Kurse"
     },
+    "woodpecker": {
+      "subtitle": "Dieselben Aufgaben, jeder Zyklus schneller",
+      "none": "Kein laufendes Training."
+    },
     "leaderboards": {
       "title": "Bestenlisten",
       "subtitle": "Sieh, wo du stehst",

@@ -550,6 +550,10 @@
       "empty": "Prikvači tečaj (📌 na stranici tečajeva) da ga pokreneš odavde.",
       "viewAll": "Svi tečajevi"
     },
+    "woodpecker": {
+      "subtitle": "Isti zadaci, svaki ciklus brže",
+      "none": "Nema treninga u tijeku."
+    },
     "leaderboards": {
       "title": "Ljestvice",
       "subtitle": "Pogledaj svoj poredak",

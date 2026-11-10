@@ -10,12 +10,12 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin, of, timer } from 'rxjs';
-import { catchError, filter, switchMap } from 'rxjs/operators';
+import { catchError, distinctUntilChanged, filter, map, switchMap, take } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth.service';
 import { Subscription } from '../../core/models';
 import { DashboardService, DashboardCourse } from '../../core/dashboard.service';
-import { DashboardCacheService } from '../../core/dashboard-cache.service';
+import { DashboardCacheService, DashboardSnapshot } from '../../core/dashboard-cache.service';
 import { DashboardLayoutService } from '../../core/dashboard-layout.service';
 import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
@@ -26,6 +26,12 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ActivityTimerTileComponent } from '../training-goals/activity-timer-tile.component';
 import { formatPct } from '../../shared/format/pct';
+import { activeWoodpeckerPlan, WoodpeckerPlan, WoodpeckerService } from '../woodpecker/woodpecker.service';
+import { WoodpeckerTileComponent } from './woodpecker-tile.component';
+
+/** Zwischenstand samt Woodpecker-Plan: der Typ bleibt hier, weil `core/` nichts aus `features/` importiert (F8-013);
+ *  der Cache speichert das Objekt als JSON, Felder kommen unverändert zurück. Fehlt das Feld (älterer Snapshot) = unbekannt. */
+type DashboardSnapshotWithWoodpecker = DashboardSnapshot & { woodpeckerPlan?: WoodpeckerPlan | null };
 
 /** Ein Schnellzugriff-Button auf einer Kachel. */
 interface TileButton { labelKey: string; link: string; }
@@ -54,15 +60,19 @@ interface TileDef {
 }
 
 /** Kuratierter Standard (UI-Welle 3): nur der Trainings-Kern ist anfänglich sichtbar —
- *  Puzzles, Punktepartie, Wochenpost, angepinnte Kurse, Kurse, Trainingsziele. Alles andere (auch
+ *  Puzzles, Punktepartie, Wochenpost, angepinnte Kurse, Woodpecker, Kurse, Trainingsziele. Alles andere (auch
  *  Repertoires/Bestenlisten) ist über „Anpassen" zuschaltbar; wer schon personalisiert
  *  hat, behält seinen gespeicherten Stand.
  *
  *  Die Punktepartie steht hier, weil sie seit 0.459.0 OHNE Anmeldung läuft und damit zum Einstieg
  *  gehört — genau wie die Puzzles. Die Regel „neue Features kommen NICHT in DEFAULT_VISIBLE" gilt
- *  weiter; sie hat hier eine bewusste Ausnahme bekommen, keine stillschweigende. */
+ *  weiter; sie hat hier eine bewusste Ausnahme bekommen, keine stillschweigende.
+ *
+ *  Zweite bewusste Ausnahme (0.955.0): Woodpecker. Die Kachel folgt dem Muster der angepinnten Kurse — sie erscheint
+ *  nur, wenn der Nutzer ein LAUFENDES Training hat (sonst nur im Anpassen-Modus), drängt sich also niemandem auf, der
+ *  das Training nicht selbst angelegt hat; wer es angelegt hat, soll es ohne „Anpassen“ auf der Startseite sehen. */
 const DEFAULT_VISIBLE = [
-  'puzzles', 'guess', 'weekly', 'pinnedCourses', 'courses', 'trainingGoals',
+  'puzzles', 'guess', 'weekly', 'pinnedCourses', 'woodpecker', 'courses', 'trainingGoals',
 ];
 /** Kanonische Reihenfolge ALLER bekannten Kacheln: Standard-sichtbare zuerst, Rest dahinter
  *  (der Rest ist im Standard ausgeblendet, im Bearbeitungsmodus aber zuschaltbar). */
@@ -81,7 +91,7 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
     MatListModule, MatProgressBarModule, IconLabelDirective, DragDropModule, TranslatePipe,
-    ActivityTimerTileComponent,
+    ActivityTimerTileComponent, WoodpeckerTileComponent,
   ],
   template: `
     <div class="dashboard">
@@ -185,6 +195,8 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
               <mat-card-actions>
                 <button mat-button routerLink="/courses">{{ 'dashboard.pinnedCourses.viewAll' | translate }}</button>
               </mat-card-actions>
+            } @else if (tile.id === 'woodpecker') {
+              <app-woodpecker-tile [plan]="woodpeckerPlan" />
             } @else if (tile.id === 'activityTimer') {
               <mat-card-content>
                 <app-activity-timer-tile></app-activity-timer-tile>
@@ -327,6 +339,7 @@ export class DashboardComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
   private confirm = inject(ConfirmService);
   private snackbar = inject(SnackbarService);
+  private woodpecker = inject(WoodpeckerService);
 
   repertoireCount = 0;
   courseCount = 0;
@@ -339,6 +352,8 @@ export class DashboardComponent implements OnInit {
   puzzleAccuracy = 0;
   puzzleElo = 1500;
   subscriptions: Subscription[] = [];
+  /** Laufendes Woodpecker-Training (`activeWoodpeckerPlan`) — `null` = keins (Kachel dann nur im Anpassen-Modus). */
+  woodpeckerPlan: WoodpeckerPlan | null = null;
 
   /** Admin: aktive Chessable-Importe aller User (laufend/pausiert), live gepollt. */
   chessableActive: (ChessableAdminImport & { statusLabel: string })[] = [];
@@ -396,6 +411,21 @@ export class DashboardComponent implements OnInit {
       // dann mit Leer-Hinweis. Inhalt wird im Template gesondert gerendert (Liste + je 2 Start-Buttons).
       eligible: () => this.menuKeys.has('courses') && (this.editing || this.pinnedCourses.length > 0),
       subtitle: () => ({ key: 'dashboard.pinnedCourses.subtitle', params: { count: this.pinnedCourses.length } }),
+      buttons: [],
+    },
+    woodpecker: {
+      // Wie die angepinnten Kurse: sichtbar nur mit laufendem Training (im Anpassen-Modus immer, dann mit Leer-Satz).
+      // Menüpunkt `woodpecker` aus → nie. Inhalt rendert <app-woodpecker-tile>.
+      id: 'woodpecker', icon: 'autorenew', titleKey: 'woodpecker.title',
+      eligible: () => this.menuKeys.has('woodpecker') && (this.editing || this.woodpeckerPlan !== null),
+      subtitle: () => {
+        const p = this.woodpeckerPlan;
+        if (!p) return { key: 'dashboard.woodpecker.subtitle' };
+        return { key: 'woodpecker.cycleOf', parts: [
+          { key: 'woodpecker.cycleOf', params: { n: p.currentCycle, max: p.maxCycles } },
+          { key: 'woodpecker.status.' + p.status },
+        ] };
+      },
       buttons: [],
     },
     leaderboards: {
@@ -571,7 +601,7 @@ export class DashboardComponent implements OnInit {
     // Zwischenstand aus dem letzten Aufruf sofort anzeigen (Repertoire-/Kurs-Zähler,
     // angepinnte Kurse, Elo/Solved). Ist rein optional; die forkJoin-Antwort überschreibt
     // gleich mit den frischen Werten.
-    const cached = this.cache.load();
+    const cached = this.cache.load() as DashboardSnapshotWithWoodpecker | null;
     if (cached) {
       this.repertoireCount = cached.repertoireCount;
       this.courseCount = cached.courseCount;
@@ -583,11 +613,28 @@ export class DashboardComponent implements OnInit {
       this.puzzleSolved = cached.puzzleSolved;
       this.puzzleAccuracy = cached.puzzleAccuracy;
       this.puzzleElo = cached.puzzleElo;
+      this.woodpeckerPlan = cached.woodpeckerPlan ?? null;
     }
 
     // Menü-Sichtbarkeit live nachziehen (steuert, welche Kacheln überhaupt erscheinen).
     this.menu.visible$.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(set => this.menuKeys = set);
+
+    // Woodpecker: eigener Abruf (nicht im forkJoin — `GET /api/woodpecker` übernimmt bei jedem Lesen die Kurs-Versuche
+    // und soll die übrigen Kacheln nicht aufhalten), und nur, wenn der Menüpunkt sichtbar ist. Scheitert er, bleibt der
+    // Stand aus dem Zwischenspeicher stehen (wie oben, F5-006).
+    this.menu.visible$.pipe(
+      map(set => set.has('woodpecker')), distinctUntilChanged(), filter(Boolean), take(1),
+      switchMap(() => this.woodpecker.list().pipe(catchError(() => of(null)))),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(plans => {
+      if (!plans) return;
+      this.woodpeckerPlan = activeWoodpeckerPlan(plans);
+      // Vorhandenen Zwischenstand nur ergänzen — ohne Snapshot schreibt ihn gleich der forkJoin (samt diesem Plan),
+      // sonst stünden dort die Vorgabewerte der übrigen Kacheln.
+      const snap = this.cache.load();
+      if (snap) this.cache.save({ ...snap, woodpeckerPlan: this.woodpeckerPlan } as DashboardSnapshotWithWoodpecker);
+    });
 
     // Freundeszahl reaktiv nachziehen, wenn eine Benachrichtigung eintrifft. Scheitert der Abruf, bleibt die
     // bisherige Zahl stehen (null statt [] — wie im forkJoin unten; sonst sprang die Kachel auf „0“, G3-006).
@@ -638,7 +685,7 @@ export class DashboardComponent implements OnInit {
       if ([repertoires, courses, subscriptions, friends, puzzleStats, favorites].every(v => v === null)) return;
       // Frischen Snapshot fürs nächste Öffnen ablegen (per User in localStorage); gescheiterte Zweige
       // behalten darin ihren alten Wert.
-      this.cache.save({
+      const snapshot: DashboardSnapshotWithWoodpecker = {
         repertoireCount: this.repertoireCount,
         courseCount: this.courseCount,
         pinnedCourses: this.pinnedCourses,
@@ -649,7 +696,9 @@ export class DashboardComponent implements OnInit {
         puzzleSolved: this.puzzleSolved,
         puzzleAccuracy: this.puzzleAccuracy,
         puzzleElo: this.puzzleElo,
-      });
+        woodpeckerPlan: this.woodpeckerPlan,
+      };
+      this.cache.save(snapshot);
     });
   }
 

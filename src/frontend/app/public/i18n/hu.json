@@ -333,6 +333,10 @@
       "empty": "Tűzz ki egy tanfolyamot (📌 a Tanfolyamok oldalon), hogy közvetlenül innen indíthasd.",
       "viewAll": "Összes tanfolyam"
     },
+    "woodpecker": {
+      "subtitle": "Ugyanazok a feladatok, minden ciklusban gyorsabban",
+      "none": "Nincs folyamatban lévő edzés."
+    },
     "leaderboards": {
       "title": "Ranglisták",
       "subtitle": "Nézd meg, hol állsz",

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.955.0", date: "2026-11-10", changes: [
+    { en: "Dashboard: new „Woodpecker“ tile. It shows your running Woodpecker training at a glance – name, cycle, progress of the set, days left until the deadline – with one button: „Continue“ while a cycle is running, otherwise the way to the overview (break or next cycle ready). The tile only appears while you have a training in progress.",
+      de: "Dashboard: neue Kachel „Woodpecker“. Sie zeigt dein laufendes Woodpecker-Training auf einen Blick – Name, Zyklus, Fortschritt des Satzes, verbleibende Tage bis zur Frist – mit einem Knopf: „Weiter lösen“, solange ein Zyklus läuft, sonst der Weg zur Übersicht (Pause oder nächster Zyklus bereit). Die Kachel erscheint nur, solange du ein Training laufen hast." },
+  ] },
   { version: "0.954.0", date: "2026-11-10", changes: [
     { en: "Saved games (/games): every row shows whether there is a summary – a finished one as a link (document symbol), a requested one or one being written as an hourglass. A summary of the linked club game counts as well (only if you may see that club game); your own summary takes precedence.",
       de: "Gespeicherte Partien (/games): Jede Zeile zeigt, ob es eine Zusammenfassung gibt – eine fertige als Link (Dokument-Symbol), eine angeforderte oder gerade geschriebene als Sanduhr. Die Zusammenfassung der verbundenen Vereinspartie zählt mit (nur, wenn man die Vereinspartie sehen darf); die eigene hat Vorrang." },
