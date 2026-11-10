@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.947.0", date: "2026-11-10", changes: [
+    { en: "E-books: the diagram detection for scanned books finds more boards — faintly printed diagrams are no longer rejected (contrast threshold 0.03 instead of 0.08), uneven lighting such as a shadow towards the spine is evened out per area, and boards whose position cannot be read plausibly are kept hidden for later reading instead of being dropped. Measured on 48 sample pages: 56 of 61 missed diagrams found, no false hits.",
+      de: "E-Books: Die Diagrammerkennung gescannter Bücher findet mehr Bretter — blass gedruckte Diagramme werden nicht mehr verworfen (Kontrastschwelle 0,03 statt 0,08), ungleichmäßige Ausleuchtung wie ein Schatten zum Bund hin wird je Stelle ausgeglichen, und Bretter, deren Stellung sich nicht plausibel lesen lässt, bleiben verborgen für die Nachlese erhalten, statt zu verschwinden. Gemessen an 48 Stichprobenseiten: 56 von 61 verpassten Diagrammen gefunden, keine Fehltreffer." },
+  ] },
   { version: "0.946.2", date: "2026-11-10", changes: [
     { en: "Tests: the queries of the admin „Engines“ tab and the throughput counter (insert, add onto the same bucket, clean-up, empty tables) are now checked against a real MariaDB.",
       de: "Tests: Die Abfragen des Admin-Reiters „Engines“ und der Durchsatz-Zähler (Einfügen, Addieren in denselben Korb, Aufräumen, leere Tabellen) werden jetzt gegen ein echtes MariaDB geprüft." },

@@ -52,7 +52,7 @@ public class EbookFrameLessBoardTests
     public void NormalizePaper_LiftsLightGreyPaperAboveTheBoardThreshold(float paper, bool lifted)
     {
         var g = Page(160, paper);
-        var n = EbookScanDiagramExtractor.NormalizePaper(g);
+        var n = EbookScanDiagramExtractor.NormalizeTint(g);
         Assert.Equal(lifted, !ReferenceEquals(g, n));
         if (lifted) Assert.True(n[5, 5] > 235f / 255f);
     }

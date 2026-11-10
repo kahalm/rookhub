@@ -26,9 +26,9 @@ public class EbookDiagramExtractor
     public sealed record Result(List<EbookDiagram> Diagrams, bool FontFound, int Pages, int Solutions = 0);
 
     /// <param name="scanPdfPath">PDF für die Scan-Erkennung (die leichte Lesefassung, falls es eine gibt); <c>null</c> = <paramref name="pdfPath"/>.</param>
-    /// <param name="keepUnread">Ergänzen-Modus (0.811.0): Scan-Bretter mit unplausibler Lesung als
-    /// <see cref="EbookDiagramVisibility.Unread"/> behalten statt verwerfen.</param>
-    public Result Extract(string pdfPath, int ebookId, CancellationToken ct, string? scanPdfPath = null, bool keepUnread = false)
+    /// <remarks>Scan-Bretter mit unplausibler Lesung kommen immer als <see cref="EbookDiagramVisibility.Unread"/> (0.947.0, vorher nur
+    /// im Ergänzen-Modus) — siehe <see cref="EbookScanDiagramExtractor.Scan"/>.</remarks>
+    public Result Extract(string pdfPath, int ebookId, CancellationToken ct, string? scanPdfPath = null)
     {
         var diagrams = new List<EbookDiagram>();
         var fontFound = false;
@@ -101,7 +101,7 @@ public class EbookDiagramExtractor
         if (!fontFound && _scanner != null && pages > 0)
         {
             scanned = true;
-            foreach (var scanned0 in _scanner.Scan(scanPdfPath ?? pdfPath, pages, ct, keepUnread))
+            foreach (var scanned0 in _scanner.Scan(scanPdfPath ?? pdfPath, pages, ct))
             {
                 var b = scanned0;
                 if (b.Side == null && captions.TryGetValue(b.Page, out var caps) && caps.Count > 0)

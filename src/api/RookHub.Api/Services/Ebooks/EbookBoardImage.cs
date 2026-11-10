@@ -556,13 +556,27 @@ public static class EbookBoardImage
     /// anderen Paritäts-Hintergrund liegt; −100 extra, wenn helle und dunkle Felder sich kaum unterscheiden. Ein echtes Brett
     /// kommt auf ≥ 52, ein als Brett gefundener Ausschnitt aus 3 × 3 Feldern nicht.
     /// </summary>
-    public static int GridScore(float[][,] cells) => Grid(cells).Hits;
+    public static int GridScore(float[][,] cells) => Grid(cells, MinParityContrast).Hits;
 
     /// <summary>Stetiges Maß für dasselbe Muster (mittlerer Vorsprung des eigenen vor dem fremden Hintergrund in der
     /// Randzone) — entscheidet zwischen fast gleich guten Rechtecken, wo die Trefferzahl gleich ist.</summary>
-    public static double GridFit(float[][,] cells) => Grid(cells).Fit;
+    public static double GridFit(float[][,] cells) => Grid(cells, FitParityContrast).Fit;
 
-    private static (int Hits, double Fit) Grid(float[][,] cells)
+    /// <summary>
+    /// Mindestunterschied der mittleren Helligkeit heller und dunkler Felder (0.947.0, vorher 0.08). Blass gedruckte Bretter
+    /// (4037, 4007, 3044) passen ins Schachbrettmuster (54–64 Treffer), liegen aber nur 0,013–0,07 auseinander und fielen an
+    /// der alten Sperre. Messung 10.11.2026 (Python-Nachbau des Detektors, 241 Kontroll-/Textseiten): 0,03 holt 21 von 26
+    /// blassen Brettern ohne Fehltreffer und ohne verlorene Prod-Box; 0,02 ist ebenfalls fehltrefferfrei, 0,01 lässt den
+    /// ersten Textschnipsel durch. Gegen Textblöcke schützen ohnehin <c>MinGridScore</c> und die Plausibilität der Lesung.
+    /// </summary>
+    internal const double MinParityContrast = 0.03;
+
+    /// <summary>Kontrastsperre für <see cref="GridFit"/> (Quadrat ergänzen, Entdoppelung) — bleibt bei 0,08: mit 0,03 auch dort
+    /// wählt <c>SquareUp</c> bei blassen Brettern ein anderes, leicht verschobenes Rechteck, und die Lesung wird schlechter
+    /// (Messung 10.11.2026, 289 Seiten: 192 statt 203 plausible Lesungen). Das Messinstrument (<c>det.py</c>) rechnet genauso.</summary>
+    internal const double FitParityContrast = 0.08;
+
+    private static (int Hits, double Fit) Grid(float[][,] cells, double minContrast)
     {
         var (light, dark) = ParityBackgrounds(cells);
         var hits = 0; double fit = 0;
@@ -580,7 +594,7 @@ public static class EbookBoardImage
             if (a / n < b / n) hits++;
             fit += (b - a) / n / 64;
         }
-        var contrast = Math.Abs(Mean(light) - Mean(dark)) >= 0.08;
+        var contrast = Math.Abs(Mean(light) - Mean(dark)) >= minContrast;
         return (hits + (contrast ? 0 : -100), contrast ? fit : fit - 100);
     }
 

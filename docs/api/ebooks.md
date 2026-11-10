@@ -399,6 +399,19 @@ Striche (Beim: 85 statt 166 Bretter). Gerendert wird die leichte Lesefassung, we
   `SideKnown=false`. Hat das PDF eine OCR-Textebene, sucht `EbookSolutionFinder` dort Lösungen; sonst übernimmt Stockfish.
 - Ablage wie Font-Diagramme (Seite, Lage als Seitenanteil → Zonen im PDF-Leser), `FontFamily = scan`. Migration
   `EbookScanDiagrams` setzt PDF-Bücher von `Unsupported` zurück auf Pending.
+- **Detektor-Paket 0.947.0** (Diagnose 10.11.2026, `/srv/media/claude-sessions/ebook-review/detektor/DIAGNOSE.md`; Messinstrument
+  `det.py` = Python-Nachbau, auf 94 Seiten exakt die Prod-Boxen): gefundene Bretter gingen an drei Stellen verloren.
+  1. **Kontrastsperre** `EbookBoardImage.MinParityContrast` 0,08 → **0,03** (mittlere Helligkeit heller − dunkler Felder, sonst
+     `GridScore` −100): blass gedruckte Bretter (4037, 4007, 3044; 0,013–0,07) passten ins Muster, fielen aber an der Sperre.
+     0,02 ebenfalls fehltrefferfrei, 0,01 lässt den ersten Textschnipsel durch. `GridFit` (Quadrat ergänzen, Entdoppelung) behält
+     `FitParityContrast` 0,08 — mit 0,03 auch dort verrutscht das Rechteck blasser Bretter (192 statt 203 plausible Lesungen).
+  2. **Lokale Ausleuchtung** (`EbookScanDiagramExtractor.FlattenIllumination`, am Ende von `NormalizePaper`): Papierhelligkeit
+     je Ort = Maximum über 31 px der ¼-Seite (≈ 1 cm), Gauß σ 8, Seite dadurch teilen, Untergrenze 0,3. Bundschatten (2293:
+     Papier 0,78–0,82 < 210/255) verschmolz sonst mit dem Brett zu einer nie quadratischen Fläche.
+  3. **Unplausible Scan-Bretter bleiben** immer als `unread` (vorher nur im Ergänzen-Modus; EPUB-Bilder unverändert nur dort):
+     Box sauber gefunden, nur das Netz kennt den Figurensatz nicht (5545 Chess Review: Könige vertauscht) → Opus-Nachlese.
+  Messung (48 Stichprobenseiten, 61 verpasste Diagramme): **56/61** bekommen eine Box (17 sofort mit gültiger FEN, 39 `unread`),
+  **0** Fehltreffer auf 241 Kontroll-/Textseiten, **0** Prod-Boxen verloren; die 5 übrigen haben Kontrast < 0,03.
 - Parität C# = Python-Referenz (Beim, 157/157 Stellungen). Laufzeit ~0,5 s je Seite. Gemessen: Beim 162, Hansen 46, Buckley 31
   Diagramme (Buckley: fremder Figurensatz, viele Bretter unlesbar — offen).
 
@@ -421,7 +434,7 @@ lässt alle vorhandenen Diagramme unverändert (FEN, Familie, Lösungen, Ids) un
 nur die neuen, ungeprüften — 0.811.1); Kurs-Verweise werden nur dann neu gesucht. Scheitert die Erkennung (Datei fehlt,
 Fehler), bleibt ein Buch mit Diagrammen `Done`. `DiagramsCurated` bleibt, wie es war.
 
-- **Ungelesene Bretter** (`FontFamily = "unread"`, `Confidence = 0`): im Ergänzen-Modus werden Brettbilder/Scan-Bretter mit
+- **Ungelesene Bretter** (`FontFamily = "unread"`, `Confidence = 0`): im Ergänzen-Modus (Scan-Bretter seit 0.947.0 immer) werden Brettbilder/Scan-Bretter mit
   unplausibler Lesung (`EbookBoardImage.GridToBoard` = null: nicht genau ein K/k, Bauern auf Reihe 1/8, Material) nicht mehr
   verworfen, sondern mit der rohen Lesung (`GridToPlacement`, immer syntaktisch gültig, Zugrecht w, ohne Lösungssuche)
   angelegt. Für Nutzer UNSICHTBAR über `EbookDiagramVisibility.Readable()`: Leser-Liste, „Diagramm falsch“, Kurs-Verknüpfung

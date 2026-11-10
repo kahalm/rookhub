@@ -182,7 +182,11 @@ public class EbookScanDiagramTests
         Assert.True(n[20, 1] < 0.4f);
         var white = new float[40, 40];
         for (var y = 0; y < 40; y++) for (var x = 0; x < 40; x++) white[y, x] = x < 4 ? 0.2f : 0.97f;
-        Assert.Same(white, EbookScanDiagramExtractor.NormalizePaper(white));
+        Assert.Same(white, EbookScanDiagramExtractor.NormalizeTint(white));
+        // Die lokale Ausleuchtung (0.947.0) hebt das fast weiße Papier auf 1, der Strich bleibt dunkel.
+        var flat = EbookScanDiagramExtractor.NormalizePaper(white);
+        Assert.Equal(1f, flat[20, 20], 3);
+        Assert.True(flat[20, 1] < 0.25f);
     }
 
     [Fact]

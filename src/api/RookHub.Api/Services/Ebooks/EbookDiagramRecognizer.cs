@@ -41,7 +41,7 @@ public static class EbookDiagramRecognizer
     {
         var result = primaryFormat == "epub"
             ? await Task.Run(() => epubExtractor().Extract(primaryPath, ebookId, ct, keepUnread: supplement), ct)
-            : await Task.Run(() => pdfExtractor.Extract(primaryPath, ebookId, ct, readingPath, keepUnread: supplement), ct);
+            : await Task.Run(() => pdfExtractor.Extract(primaryPath, ebookId, ct, readingPath), ct);
         if (primaryFormat != "pdf" || epubPath == null) return result;
         try
         {
