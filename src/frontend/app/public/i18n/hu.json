@@ -2640,10 +2640,10 @@
         "noScheduleLichess": "A Lichess-motorok nem jelentenek ütemtervet — kötegelt feladatokra a RookHub csendes ideje érvényes.",
         "statsLabel": "A gép mutatói",
         "doneDay": "kész 24 óra alatt: {{count}}",
-        "busyDay": "kihasználtság 24 óra: {{percent}} %",
+        "busyDay": "kihasználtság 24 óra: {{percent}}%",
         "speedNormal": "Ø tempó normál: {{value}}",
         "speedReduced": "Ø tempó csökkentett: {{value}}",
-        "statsHelp": "Kész 24 óra alatt = az utolsó 24 órában befejezett feladatok. Kihasználtság = az utolsó 24 óra számítási ideje ÷ (regisztrált motorok × 24 óra) — 2 % azt jelenti, hogy a motorok alig számoltak. Ø tempó = az utolsó 7 nap átlagos kN/s értéke, külön normál és csökkentett időre (100 % alatti ütemterv vagy ütemterv nélkül a RookHub csendes órái); „–” = abban a részben nem volt számítás.",
+        "statsHelp": "Kész 24 óra alatt = az utolsó 24 órában befejezett feladatok. Kihasználtság = az utolsó 24 óra számítási ideje ÷ (regisztrált motorok × 24 óra) — 2% azt jelenti, hogy a motorok alig számoltak. Ø tempó = az utolsó 7 nap átlagos kN/s értéke, külön normál és csökkentett időre (100% alatti ütemterv vagy ütemterv nélkül a RookHub csendes órái); „–” = abban a részben nem volt számítás.",
         "tokenPending": "token még nincs hozzárendelve"
       },
       "speedSplit": "Ø normál {{normal}} · kímélő {{reduced}}",
