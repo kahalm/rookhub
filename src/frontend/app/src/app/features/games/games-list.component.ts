@@ -670,12 +670,13 @@ export class GamesListComponent implements OnInit {
   private actions = inject(GameActionsService);
   private poll?: Subscription;
 
+  private route = inject(ActivatedRoute);
+
   constructor(
     private service: GamesService,
     private router: Router,
     private snackbar: SnackbarService,
     private translate: TranslateService,
-    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
