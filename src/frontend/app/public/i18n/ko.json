@@ -3001,7 +3001,65 @@
       "bgRemove": "{{name}}의 백그라운드 목록에서 제거",
       "bgAdded": "{{name}}의 백그라운드 목록에 추가했습니다",
       "bgRemoved": "{{name}}의 백그라운드 목록에서 제거했습니다",
-      "bgError": "백그라운드 목록을 변경할 수 없습니다"
+      "bgError": "백그라운드 목록을 변경할 수 없습니다",
+      "quietHours": "일정이 없는 엔진의 일괄 작업 휴식 시간: {{windows}} ({{zone}}).",
+      "quietNow": "{{until}}까지 적용 중.",
+      "quietNotNow": "현재 적용되지 않음.",
+      "quietOff": "RookHub 휴식 시간이 설정되지 않음.",
+      "estimate": "대기열이 약 {{time}} 후 비워짐 (지난 1시간 속도 기준).",
+      "hintsTitle": "알림",
+      "hint": {
+        "stuckJobs": "{{count}}개 작업이 {{since}}부터 {{name}}에서 대기 중",
+        "why": {
+          "offline": "엔진 오프라인",
+          "notInList": "엔진이 어떤 백그라운드 목록에도 없음"
+        },
+        "lastError": "마지막 오류: {{error}}",
+        "notInList": "{{name}}의 백그라운드 엔진 {{count}}개가 어떤 목록에도 없음: {{engines}}",
+        "listCap": "{{name}}의 백그라운드 목록: {{count}}/{{max}}",
+        "staleToken": "엔진 토큰 “{{name}}” ({{owner}}) {{since}} 이후 사용 안 함",
+        "staleTokenNever": "엔진 토큰 “{{name}}” ({{owner}}) 사용한 적 없음"
+      },
+      "m": {
+        "online": "온라인 {{online}}/{{total}}",
+        "working": "계산 중 {{count}}",
+        "token": "토큰: {{name}}",
+        "schedule": "일정: {{rule}} ({{zone}})",
+        "scheduleNow": "현재 {{percent}} %, {{reported}}개 중 {{open}}개 엔진 열림",
+        "scheduleNext": "{{when}}부터: {{percent}} %",
+        "reportedAt": "보고 {{when}}",
+        "noSchedule": "보고된 일정 없음 — 일괄 작업에는 RookHub 휴식 시간이 적용됩니다.",
+        "noScheduleLichess": "Lichess 엔진은 일정을 보고하지 않음 — 일괄 작업에는 RookHub 휴식 시간이 적용됩니다."
+      },
+      "speedSplit": "Ø 일반 {{normal}} · 절약 {{reduced}}",
+      "machinesHelp": "엔진을 기기별로 묶었습니다(같은 소유자, 같은 엔진 토큰, 같은 이름 어간). 지난 7일 Ø kN/s를 일반과 절약으로 나눕니다: 10분 단위 구간마다 오늘의 규칙으로 분류 — 100 % 미만 일정, 또는 일정이 없으면 RookHub 휴식 시간. 속도 = 노드 ÷ 엔진이 보고한 탐색 시간.",
+      "tokensTitle": "엔진 토큰",
+      "tokensHelp": "모든 계정의 범위 “engine” API 토큰 — 토큰 자체는 표시하지 않고 프로필처럼 접두사만. 마지막 접근은 5분 단위로 정확합니다. 엔진은 마지막으로 등록할 때 쓴 토큰에 연결됩니다(0.953.0부터; 이전 것은 제공자 재시작 후 표시).",
+      "tokensEmpty": "엔진 토큰 없음.",
+      "t": {
+        "name": "이름",
+        "owner": "소유자",
+        "created": "생성",
+        "lastUsed": "마지막 접근",
+        "expires": "만료",
+        "engines": "엔진",
+        "never": "없음",
+        "expired": "만료됨",
+        "engineCount": "엔진 {{count}}개 (온라인 {{online}})",
+        "noEngines": "연결 없음"
+      },
+      "idleBecause": "유휴: {{reason}}",
+      "idleReason": {
+        "paused": "백그라운드 작업 일시 중지",
+        "explicitOnly": "요청 시에만",
+        "notInList": "어떤 백그라운드 목록에도 없음",
+        "scheduleOff": "일정에 따라 꺼짐",
+        "quietHours": "일괄 작업 휴식 시간(일정 없음)",
+        "nothingWaiting": "대기 작업 없음",
+        "waitingElsewhere": "다른 엔진에서 작업 대기 중(곧 재분배)"
+      },
+      "scheduleOpen": "일정: {{total}} 중 {{slot}}번, 현재 {{percent}} % — 실행",
+      "scheduleClosed": "일정: {{total}} 중 {{slot}}번, 현재 {{percent}} % — 꺼짐"
     }
   },
   "favorites": {

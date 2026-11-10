@@ -3001,7 +3001,65 @@
       "bgRemove": "Odebrat ze seznamu na pozadí uživatele {{name}}",
       "bgAdded": "Přidáno do seznamu na pozadí uživatele {{name}}",
       "bgRemoved": "Odebráno ze seznamu na pozadí uživatele {{name}}",
-      "bgError": "Seznam na pozadí se nepodařilo změnit"
+      "bgError": "Seznam na pozadí se nepodařilo změnit",
+      "quietHours": "Klidové hodiny pro dávkové úlohy na motorech bez rozvrhu: {{windows}} ({{zone}}).",
+      "quietNow": "Aktivní do {{until}}.",
+      "quietNotNow": "Teď neaktivní.",
+      "quietOff": "Žádné klidové hodiny RookHub.",
+      "estimate": "Fronta prázdná asi za {{time}} (tempem poslední hodiny).",
+      "hintsTitle": "Upozornění",
+      "hint": {
+        "stuckJobs": "{{count}} úloh čeká od {{since}} na {{name}}",
+        "why": {
+          "offline": "motor offline",
+          "notInList": "motor není v žádném seznamu na pozadí"
+        },
+        "lastError": "poslední chyba: {{error}}",
+        "notInList": "{{count}} motorů na pozadí od {{name}} není v žádném seznamu: {{engines}}",
+        "listCap": "Seznam na pozadí uživatele {{name}}: {{count}} z {{max}}",
+        "staleToken": "Token motoru „{{name}}“ ({{owner}}) nepoužit od {{since}}",
+        "staleTokenNever": "Token motoru „{{name}}“ ({{owner}}) nikdy nepoužit"
+      },
+      "m": {
+        "online": "online {{online}}/{{total}}",
+        "working": "počítá {{count}}",
+        "token": "token: {{name}}",
+        "schedule": "Rozvrh: {{rule}} ({{zone}})",
+        "scheduleNow": "teď {{percent}} %, otevřeno {{open}} z {{reported}} motorů",
+        "scheduleNext": "od {{when}}: {{percent}} %",
+        "reportedAt": "nahlášeno {{when}}",
+        "noSchedule": "Rozvrh nenahlášen — pro dávkové úlohy platí klidové hodiny RookHub.",
+        "noScheduleLichess": "Motory Lichess rozvrh nehlásí — pro dávkové úlohy platí klidové hodiny RookHub."
+      },
+      "speedSplit": "Ø normálně {{normal}} · úsporně {{reduced}}",
+      "machinesHelp": "Motory seskupené podle stroje (stejný vlastník, stejný token motoru, stejný kmen názvu). Ø kN/s za posledních 7 dní rozdělené na normální a úsporný režim: každý 10minutový koš se řadí podle DNEŠNÍHO pravidla — rozvrh pod 100 % nebo bez rozvrhu klidové hodiny RookHub. Tempo = uzly ÷ doba hledání podle motoru.",
+      "tokensTitle": "Tokeny motorů",
+      "tokensHelp": "Všechny API tokeny s rozsahem „engine“ všech účtů — nikdy samotný token, jen předpona jako v profilu. Poslední přístup je přesný na 5 minut. Motory patří k tokenu, kterým se naposledy přihlásily (od 0.953.0; starší se objeví po dalším restartu provideru).",
+      "tokensEmpty": "Žádné tokeny motorů.",
+      "t": {
+        "name": "Název",
+        "owner": "Vlastník",
+        "created": "vytvořeno",
+        "lastUsed": "poslední přístup",
+        "expires": "vyprší",
+        "engines": "Motory",
+        "never": "nikdy",
+        "expired": "vypršel",
+        "engineCount": "{{count}} motorů ({{online}} online)",
+        "noEngines": "žádné přiřazené"
+      },
+      "idleBecause": "Nečinný: {{reason}}",
+      "idleReason": {
+        "paused": "úlohy na pozadí pozastaveny",
+        "explicitOnly": "jen na vyžádání",
+        "notInList": "v žádném seznamu na pozadí",
+        "scheduleOff": "podle rozvrhu vypnut",
+        "quietHours": "klidové hodiny pro dávkové úlohy (bez rozvrhu)",
+        "nothingWaiting": "nic nečeká",
+        "waitingElsewhere": "úlohy čekají na jiných motorech (brzy se přerozdělí)"
+      },
+      "scheduleOpen": "Rozvrh: místo {{slot}} z {{total}}, teď {{percent}} % — běží",
+      "scheduleClosed": "Rozvrh: místo {{slot}} z {{total}}, teď {{percent}} % — vypnut"
     }
   },
   "favorites": {

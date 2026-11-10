@@ -83,8 +83,10 @@ public class ExternalEngineRegistrationService
     /// AKTUALISIERT diesen Eintrag, statt einen zweiten anzulegen: der Name ist die Identität, und ein
     /// Provider, dessen GET-Liste gerade scheiterte, soll sich beim nächsten Start nicht verdoppeln.
     /// </summary>
+    /// <param name="apiTokenId">Engine-Token der Anfrage (Claim <c>api_token_id</c>) — wird an der Registrierung gemerkt
+    /// (<see cref="ExternalEngineRegistration.ApiTokenId"/>); <c>null</c> lässt den bisherigen Wert stehen.</param>
     public async Task<EngineRegistrationResult> SaveAsync(int userId, string? id,
-        ExternalEngineRegistrationRequest request, CancellationToken ct = default)
+        ExternalEngineRegistrationRequest request, CancellationToken ct = default, int? apiTokenId = null)
     {
         if (Validate(request) is { } error) return EngineRegistrationResult.Fail(400, error);
 
@@ -126,6 +128,7 @@ public class ExternalEngineRegistrationService
         target.MaxHash = request.MaxHash!.Value;
         target.Variants = string.Join(',', (request.Variants ?? []).Distinct(StringComparer.Ordinal));
         target.ProviderData = request.ProviderData;
+        if (apiTokenId is not null) target.ApiTokenId = apiTokenId;
         target.ProviderSelector = ProviderSecrets.Selector(request.ProviderSecret!);
         target.UpdatedAt = now;
 

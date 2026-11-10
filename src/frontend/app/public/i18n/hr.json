@@ -3056,7 +3056,65 @@
       "bgRemove": "Ukloni s pozadinskog popisa korisnika {{name}}",
       "bgAdded": "Dodano na pozadinski popis korisnika {{name}}",
       "bgRemoved": "Uklonjeno s pozadinskog popisa korisnika {{name}}",
-      "bgError": "Pozadinski popis nije moguće promijeniti"
+      "bgError": "Pozadinski popis nije moguće promijeniti",
+      "quietHours": "Mirno vrijeme za skupne poslove na engineima bez rasporeda: {{windows}} ({{zone}}).",
+      "quietNow": "Sada aktivno do {{until}}.",
+      "quietNotNow": "Sada nije aktivno.",
+      "quietOff": "RookHub mirno vrijeme nije postavljeno.",
+      "estimate": "Red prazan za otprilike {{time}} (brzinom posljednjeg sata).",
+      "hintsTitle": "Napomene",
+      "hint": {
+        "stuckJobs": "{{count}} poslova čeka od {{since}} na {{name}}",
+        "why": {
+          "offline": "engine offline",
+          "notInList": "engine nije ni na jednom pozadinskom popisu"
+        },
+        "lastError": "zadnja greška: {{error}}",
+        "notInList": "{{count}} pozadinskih enginea od {{name}} nije ni na jednom pozadinskom popisu: {{engines}}",
+        "listCap": "Pozadinski popis korisnika {{name}}: {{count}} od {{max}}",
+        "staleToken": "Engine token „{{name}}“ ({{owner}}) nije korišten od {{since}}",
+        "staleTokenNever": "Engine token „{{name}}“ ({{owner}}) nikad korišten"
+      },
+      "m": {
+        "online": "online {{online}}/{{total}}",
+        "working": "računa {{count}}",
+        "token": "token: {{name}}",
+        "schedule": "Raspored: {{rule}} ({{zone}})",
+        "scheduleNow": "sada {{percent}} %, {{open}} od {{reported}} enginea otvoreno",
+        "scheduleNext": "od {{when}}: {{percent}} %",
+        "reportedAt": "javljeno {{when}}",
+        "noSchedule": "Raspored nije javljen — za skupne poslove vrijedi RookHub mirno vrijeme.",
+        "noScheduleLichess": "Lichess engine ne javljaju raspored — za skupne poslove vrijedi RookHub mirno vrijeme."
+      },
+      "speedSplit": "Ø normalno {{normal}} · štedljivo {{reduced}}",
+      "machinesHelp": "Engine grupirani po stroju (isti vlasnik, isti engine token, isti korijen imena). Ø kN/s zadnjih 7 dana odvojeno na normalno i štedljivo: svaki 10-minutni odjeljak razvrstava se po DANAŠNJEM pravilu — raspored ispod 100 % ili, bez rasporeda, RookHub mirno vrijeme. Brzina je čvorovi ÷ vrijeme pretrage prema engineu.",
+      "tokensTitle": "Engine tokeni",
+      "tokensHelp": "Svi API tokeni s opsegom „engine“ svih računa — nikad sam token, samo prefiks kao u profilu. Zadnji pristup točan je na 5 minuta. Engine su vezani uz token kojim su se zadnji put prijavili (od 0.953.0; starije registracije pojavljuju se nakon ponovnog pokretanja providera).",
+      "tokensEmpty": "Nema engine tokena.",
+      "t": {
+        "name": "Naziv",
+        "owner": "Vlasnik",
+        "created": "stvoreno",
+        "lastUsed": "zadnji pristup",
+        "expires": "istječe",
+        "engines": "Engine",
+        "never": "nikad",
+        "expired": "isteklo",
+        "engineCount": "{{count}} enginea ({{online}} online)",
+        "noEngines": "nijedan povezan"
+      },
+      "idleBecause": "Neaktivno: {{reason}}",
+      "idleReason": {
+        "paused": "pozadinski poslovi pauzirani",
+        "explicitOnly": "samo na zahtjev",
+        "notInList": "ni na jednom pozadinskom popisu",
+        "scheduleOff": "prema rasporedu isključen",
+        "quietHours": "mirno vrijeme za skupne poslove (raspored nije javljen)",
+        "nothingWaiting": "ništa ne čeka",
+        "waitingElsewhere": "poslovi čekaju na drugim engineima (uskoro se preraspodjeljuju)"
+      },
+      "scheduleOpen": "Raspored: mjesto {{slot}} od {{total}}, sada {{percent}} % — radi",
+      "scheduleClosed": "Raspored: mjesto {{slot}} od {{total}}, sada {{percent}} % — isključen"
     }
   },
   "favorites": {

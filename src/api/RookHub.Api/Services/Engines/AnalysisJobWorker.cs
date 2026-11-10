@@ -33,6 +33,8 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         public bool Started;
         public EngineRunOutcome? Outcome;
         public long Nodes;
+        /// <summary>Gemeldetes Tempo der letzten Zeile (Knoten/s) — für die Suchzeit in der Durchsatz-Zählung.</summary>
+        public int Nps;
         public int DoneJobSeconds;
     }
 
@@ -244,7 +246,8 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         {
             if (ledger.Started)
                 _throughput?.Record(run.EngineId, ledger.Outcome ?? (ct.IsCancellationRequested ? EngineRunOutcome.Interrupted : EngineRunOutcome.Error),
-                    (DateTime.UtcNow - startedAt).TotalSeconds, ledger.Nodes, ledger.DoneJobSeconds, DateTime.UtcNow);
+                    (DateTime.UtcNow - startedAt).TotalSeconds, ledger.Nodes, ledger.DoneJobSeconds, DateTime.UtcNow,
+                    ledger.Nps > 0 && ledger.Nodes > 0 ? (double)ledger.Nodes / ledger.Nps : null);
             _live.Stop(jobId);
             _running.TryRemove(new KeyValuePair<string, Running>(run.EngineId, run));
             run.Cts.Dispose();
@@ -326,12 +329,14 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         if (await stream.ConsumeAsync(upstream.Ndjson, ct) == StreamEnd.Silent)
         {
             ledger.Nodes = stream.CurrentNodes;
+            ledger.Nps = stream.CurrentNps;
             await OnSilenceAsync(db, job, stream);
             ledger.Outcome = job.Status == AnalysisJobStatus.Failed ? EngineRunOutcome.Failed : EngineRunOutcome.Timeout;
             return;
         }
         await stream.FinishAsync();
         ledger.Nodes = stream.CurrentNodes;
+        ledger.Nps = stream.CurrentNps;
 
         var facts = stream.Facts(ct.IsCancellationRequested, _tracker.IsEngineBusy(run.EngineId), _settings.FruitlessMinRuntime);
         if (AnalysisJobRunEnd.EndedOwnSearch(facts))

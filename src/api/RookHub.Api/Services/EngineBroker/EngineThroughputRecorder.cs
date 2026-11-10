@@ -46,7 +46,11 @@ public sealed class EngineThroughputRecorder
 
     /// <summary>Ein Lauf ist zu Ende. <paramref name="doneJobSeconds"/> = gesamte Rechenzeit des Auftrags, nur bei
     /// <see cref="EngineRunOutcome.Done"/>; <paramref name="nodes"/> = Knoten der letzten Zeile (0 = keine gemeldet).</summary>
-    public void Record(string engineId, EngineRunOutcome outcome, double runSeconds, long nodes, int doneJobSeconds, DateTime nowUtc)
+    /// <param name="searchSeconds">Suchzeit laut Engine (Knoten ÷ gemeldetes nps der letzten Zeile, 0.953.0) — geht statt der
+    /// Wanduhr in <c>NodeSeconds</c> ein, damit kN/s nicht die Wartezeit auf die Kopfzeilen, den Start der Engine und das
+    /// Hochladen mitzählt. <c>null</c> (kein nps gemeldet) = Wanduhr wie bisher.</param>
+    public void Record(string engineId, EngineRunOutcome outcome, double runSeconds, long nodes, int doneJobSeconds, DateTime nowUtc,
+        double? searchSeconds = null)
     {
         if (string.IsNullOrEmpty(engineId)) return;
         var seconds = (long)Math.Max(0, Math.Round(runSeconds));
@@ -70,7 +74,7 @@ public sealed class EngineThroughputRecorder
             if (nodes > 0)
             {
                 b.Nodes += nodes;
-                b.NodeSeconds += seconds;
+                b.NodeSeconds += searchSeconds is > 0 ? Math.Max(1, (long)Math.Round(searchSeconds.Value)) : seconds;
             }
         }
     }

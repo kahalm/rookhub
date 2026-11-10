@@ -3001,7 +3001,65 @@
       "bgRemove": "Scoate din lista de fundal a lui {{name}}",
       "bgAdded": "Adăugat în lista de fundal a lui {{name}}",
       "bgRemoved": "Scos din lista de fundal a lui {{name}}",
-      "bgError": "Lista de fundal nu a putut fi modificată"
+      "bgError": "Lista de fundal nu a putut fi modificată",
+      "quietHours": "Ore de liniște pentru sarcini în lot pe motoarele fără program: {{windows}} ({{zone}}).",
+      "quietNow": "Active până la {{until}}.",
+      "quietNotNow": "Inactive acum.",
+      "quietOff": "Fără ore de liniște RookHub.",
+      "estimate": "Coada goală în circa {{time}} (în ritmul ultimei ore).",
+      "hintsTitle": "Observații",
+      "hint": {
+        "stuckJobs": "{{count}} sarcini așteaptă din {{since}} pe {{name}}",
+        "why": {
+          "offline": "motor offline",
+          "notInList": "motorul nu e în nicio listă de fundal"
+        },
+        "lastError": "ultima eroare: {{error}}",
+        "notInList": "{{count}} motoare de fundal ale lui {{name}} nu sunt în nicio listă: {{engines}}",
+        "listCap": "Lista de fundal a lui {{name}}: {{count}} din {{max}}",
+        "staleToken": "Tokenul de motor „{{name}}” ({{owner}}) nefolosit din {{since}}",
+        "staleTokenNever": "Tokenul de motor „{{name}}” ({{owner}}) niciodată folosit"
+      },
+      "m": {
+        "online": "online {{online}}/{{total}}",
+        "working": "calculează {{count}}",
+        "token": "token: {{name}}",
+        "schedule": "Program: {{rule}} ({{zone}})",
+        "scheduleNow": "acum {{percent}} %, {{open}} din {{reported}} motoare deschise",
+        "scheduleNext": "de la {{when}}: {{percent}} %",
+        "reportedAt": "raportat {{when}}",
+        "noSchedule": "Niciun program raportat — pentru sarcini în lot se aplică orele de liniște RookHub.",
+        "noScheduleLichess": "Motoarele Lichess nu raportează program — pentru sarcini în lot se aplică orele de liniște RookHub."
+      },
+      "speedSplit": "Ø normal {{normal}} · redus {{reduced}}",
+      "machinesHelp": "Motoare grupate pe mașini (același proprietar, același token de motor, aceeași rădăcină a numelui). Ø kN/s din ultimele 7 zile, separat în normal și redus: fiecare interval de 10 minute e clasat după regula de AZI — program sub 100 % sau, fără program, orele de liniște RookHub. Viteza = noduri ÷ timpul de căutare raportat de motor.",
+      "tokensTitle": "Tokenuri de motor",
+      "tokensHelp": "Toate tokenurile API cu domeniul „engine” ale tuturor conturilor — niciodată tokenul, doar prefixul ca în profil. Ultimul acces e precis la 5 minute. Motoarele sunt legate de tokenul cu care s-au înregistrat ultima dată (de la 0.953.0; cele mai vechi apar după repornirea providerului).",
+      "tokensEmpty": "Niciun token de motor.",
+      "t": {
+        "name": "Nume",
+        "owner": "Proprietar",
+        "created": "creat",
+        "lastUsed": "ultimul acces",
+        "expires": "expiră",
+        "engines": "Motoare",
+        "never": "niciodată",
+        "expired": "expirat",
+        "engineCount": "{{count}} motoare ({{online}} online)",
+        "noEngines": "niciunul legat"
+      },
+      "idleBecause": "Inactiv: {{reason}}",
+      "idleReason": {
+        "paused": "sarcinile de fundal sunt în pauză",
+        "explicitOnly": "doar la cerere",
+        "notInList": "în nicio listă de fundal",
+        "scheduleOff": "oprit conform programului",
+        "quietHours": "ore de liniște pentru loturi (fără program)",
+        "nothingWaiting": "nimic nu așteaptă",
+        "waitingElsewhere": "sarcini așteaptă pe alte motoare (redistribuite curând)"
+      },
+      "scheduleOpen": "Program: locul {{slot}} din {{total}}, acum {{percent}} % — rulează",
+      "scheduleClosed": "Program: locul {{slot}} din {{total}}, acum {{percent}} % — oprit"
     }
   },
   "favorites": {

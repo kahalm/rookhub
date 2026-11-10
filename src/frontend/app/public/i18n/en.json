@@ -3056,7 +3056,65 @@
       "bgRemove": "Remove from background list of {{name}}",
       "bgAdded": "Added to the background list of {{name}}",
       "bgRemoved": "Removed from the background list of {{name}}",
-      "bgError": "Could not change the background list"
+      "bgError": "Could not change the background list",
+      "quietHours": "Quiet hours for batch jobs on engines without a schedule: {{windows}} ({{zone}}).",
+      "quietNow": "Active now until {{until}}.",
+      "quietNotNow": "Not active now.",
+      "quietOff": "No RookHub quiet hours set.",
+      "estimate": "Queue empty in about {{time}} (at the pace of the last hour).",
+      "hintsTitle": "Notes",
+      "hint": {
+        "stuckJobs": "{{count}} jobs waiting since {{since}} on {{name}}",
+        "why": {
+          "offline": "engine offline",
+          "notInList": "engine in no background list"
+        },
+        "lastError": "last error: {{error}}",
+        "notInList": "{{count}} background engines of {{name}} are in no background list: {{engines}}",
+        "listCap": "Background list of {{name}}: {{count}} of {{max}}",
+        "staleToken": "Engine token “{{name}}” ({{owner}}) not used since {{since}}",
+        "staleTokenNever": "Engine token “{{name}}” ({{owner}}) never used"
+      },
+      "m": {
+        "online": "online {{online}}/{{total}}",
+        "working": "computing {{count}}",
+        "token": "token: {{name}}",
+        "schedule": "Schedule: {{rule}} ({{zone}})",
+        "scheduleNow": "now {{percent}}%, {{open}} of {{reported}} engines open",
+        "scheduleNext": "from {{when}}: {{percent}}%",
+        "reportedAt": "reported {{when}}",
+        "noSchedule": "No schedule reported — RookHub quiet hours apply to batch jobs.",
+        "noScheduleLichess": "Lichess engines report no schedule — RookHub quiet hours apply to batch jobs."
+      },
+      "speedSplit": "Ø normal {{normal}} · reduced {{reduced}}",
+      "machinesHelp": "Engines grouped by machine (same owner, same engine token, same name stem). Ø kN/s of the last 7 days split into normal and reduced time: each 10-minute bucket is classified by TODAY’s rule — schedule below 100% or, without a schedule, RookHub quiet hours. The speed is nodes ÷ search time reported by the engine.",
+      "tokensTitle": "Engine tokens",
+      "tokensHelp": "All API tokens with scope “engine” of all accounts — never the token itself, only its prefix as in the profile. Last access is accurate to 5 minutes. Engines are linked to the token they last registered with (from 0.953.0 on; older registrations show up after the provider restarts).",
+      "tokensEmpty": "No engine tokens.",
+      "t": {
+        "name": "Name",
+        "owner": "Owner",
+        "created": "Created",
+        "lastUsed": "Last access",
+        "expires": "Expires",
+        "engines": "Engines",
+        "never": "never",
+        "expired": "expired",
+        "engineCount": "{{count}} engines ({{online}} online)",
+        "noEngines": "none linked"
+      },
+      "idleBecause": "Idle: {{reason}}",
+      "idleReason": {
+        "paused": "background jobs paused",
+        "explicitOnly": "on request only",
+        "notInList": "in no background list",
+        "scheduleOff": "off according to schedule",
+        "quietHours": "quiet hours for batch jobs (no schedule reported)",
+        "nothingWaiting": "nothing waiting",
+        "waitingElsewhere": "jobs wait on other engines (redistributed shortly)"
+      },
+      "scheduleOpen": "Schedule: slot {{slot}} of {{total}}, now {{percent}}% — running",
+      "scheduleClosed": "Schedule: slot {{slot}} of {{total}}, now {{percent}}% — off"
     }
   },
   "favorites": {

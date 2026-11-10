@@ -68,6 +68,10 @@ public class ExternalEngineController : BaseApiController
     /// <summary>Scope des API-Tokens; <c>null</c> = Browser-Login (JWT).</summary>
     private string? TokenScope => User.FindFirst("scope")?.Value;
 
+    /// <summary>Id des Engine-Tokens dieser Anfrage (aus dem PAT-Handler), sonst <c>null</c>.</summary>
+    private int? TokenId => int.TryParse(User.FindFirst(ApiTokenAuthenticationHandler.TokenIdClaim)?.Value,
+        System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var id) ? id : null;
+
     private string Username => User.Identity?.Name ?? GetUserId().ToString();
 
     [HttpGet]
@@ -84,7 +88,7 @@ public class ExternalEngineController : BaseApiController
     public async Task<IActionResult> Create([FromBody] ExternalEngineRegistrationRequest request, CancellationToken ct)
     {
         if (!_options.Enabled) return NotFound();
-        return ToResult(await _registrations.SaveAsync(GetUserId(), null, request, ct));
+        return ToResult(await _registrations.SaveAsync(GetUserId(), null, request, ct, TokenId));
     }
 
     /// <summary>
@@ -109,7 +113,7 @@ public class ExternalEngineController : BaseApiController
     public async Task<IActionResult> Update(string id, [FromBody] ExternalEngineRegistrationRequest request, CancellationToken ct)
     {
         if (!_options.Enabled) return NotFound();
-        return ToResult(await _registrations.SaveAsync(GetUserId(), id, request, ct));
+        return ToResult(await _registrations.SaveAsync(GetUserId(), id, request, ct, TokenId));
     }
 
     [HttpDelete("{id}")]

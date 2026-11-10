@@ -36,7 +36,8 @@ public sealed class EngineOverviewService(
     AnalysisJobLive live,
     EngineThroughputRecorder throughput,
     BackgroundPause pause,
-    IConfiguration config)
+    IConfiguration config,
+    QuietHours? quiet = null)
 {
     public static readonly TimeSpan CacheFor = TimeSpan.FromSeconds(10);
     private const string CacheKey = "admin-engine-overview";
@@ -76,12 +77,18 @@ public sealed class EngineOverviewService(
         : engineId.StartsWith("eei_", StringComparison.Ordinal) ? "lichess"
         : "other";
 
+    /// <summary>Ab so vielen fertigen Aufträgen in der letzten Stunde gilt die Abschätzung „Warteschlange leer in …“.</summary>
+    public const int EstimateMinDonePerHour = 10;
+
+    /// <summary>Ein Engine-Token gilt nach so langer Zeit ohne Zugriff als verwaist (Hinweis oben).</summary>
+    public static readonly TimeSpan StaleTokenAfter = TimeSpan.FromDays(30);
+
     /// <summary>Ohne Zwischenspeicher (öffentlich für Tests).</summary>
     public async Task<EngineOverviewDto> BuildAsync(DateTime now, CancellationToken ct)
     {
         // ── Datenbank ────────────────────────────────────────────────────────────────────────────────────────
         var regs = await db.ExternalEngineRegistrations.AsNoTracking()
-            .Select(r => new { r.Id, r.UserId, r.Name, r.ProviderSelector, r.MaxThreads, r.MaxHash, r.Variants, r.CreatedAt, r.LastSeenAt })
+            .Select(r => new { r.Id, r.UserId, r.Name, r.ProviderSelector, r.MaxThreads, r.MaxHash, r.Variants, r.CreatedAt, r.LastSeenAt, r.ApiTokenId })
             .ToListAsync(ct);
         var creds = await db.LichessEngineCredentials.AsNoTracking()
             .Where(c => c.BackgroundEngineIds != null)
@@ -89,8 +96,8 @@ public sealed class EngineOverviewService(
             .ToListAsync(ct);
         var groups = await db.AnalysisJobs.AsNoTracking()
             .Where(j => OpenStatuses.Contains(j.Status))
-            .GroupBy(j => new { j.EngineId, j.Status, j.Priority })
-            .Select(g => new { g.Key.EngineId, g.Key.Status, g.Key.Priority, Count = g.Count(), Oldest = g.Min(j => j.CreatedAt) })
+            .GroupBy(j => new { j.EngineId, j.Status, j.Priority, j.Batch })
+            .Select(g => new { g.Key.EngineId, g.Key.Status, g.Key.Priority, g.Key.Batch, Count = g.Count(), Oldest = g.Min(j => j.CreatedAt) })
             .ToListAsync(ct);
         var running = await db.AnalysisJobs.AsNoTracking()
             .Where(j => j.Status == AnalysisJobStatus.Running)
@@ -116,17 +123,20 @@ public sealed class EngineOverviewService(
             .GroupBy(g => g.Status)
             .Select(g => new { Status = g.Key, Count = g.Count() })
             .ToListAsync(ct);
+        // Zeitpläne: eine Zeile je gemeldeter Engine (klein). Engine-Tokens: eine Handvoll Zeilen, ohne Hash.
+        var schedules = await db.EngineClientSchedules.AsNoTracking().ToListAsync(ct);
+        var tokens = await db.UserApiTokens.AsNoTracking()
+            .Where(t => t.Scope == Accounts.ApiTokenService.EngineScope)
+            .Select(t => new { t.Id, t.UserId, t.Name, t.Prefix, t.CreatedAt, t.LastUsedAt, t.ExpiresAt })
+            .ToListAsync(ct);
 
-        var hourWin = await WindowAsync(now.AddHours(-1), ct);
-        var dayWin = await WindowAsync(now.AddDays(-1), ct);
-        var weekWin = await WindowAsync(now.AddDays(-7), ct);
-        var pending = throughput.Pending();
-        AddPending(hourWin, pending, now.AddHours(-1));
-        AddPending(dayWin, pending, now.AddDays(-1));
-        AddPending(weekWin, pending, now.AddDays(-7));
+        // Durchsatz: die Körbe der letzten 7 Tage EINMAL laden (Index BucketStart) und im Speicher in Stunde/Tag/Woche
+        // und normal/Schonzeit aufteilen; dazu die noch nicht geschriebenen Zuwächse.
+        var buckets = await LoadBucketsAsync(now.AddDays(-7), ct);
+        buckets.AddRange(throughput.Pending().Where(b => b.BucketStart >= now.AddDays(-7)));
 
         var userIds = regs.Select(r => r.UserId).Concat(creds.Select(c => c.UserId)).Concat(running.Select(r => r.UserId))
-            .Distinct().ToList();
+            .Concat(tokens.Select(t => t.UserId)).Distinct().ToList();
         var names = userIds.Count == 0 ? new Dictionary<int, string>()
             : await db.AppUsers.AsNoTracking().Where(u => userIds.Contains(u.Id))
                 .Select(u => new { u.Id, u.Username }).ToDictionaryAsync(u => u.Id, u => u.Username, ct);
@@ -137,16 +147,21 @@ public sealed class EngineOverviewService(
         var liveStreams = tracker.LiveEngines();
         var liveRuns = live.Snapshot(now);
         var explicitOnly = ExplicitOnlyEngines.From(config);
+        var p = await pause.GetAsync(ct);
 
         // ── Zusammenführen ───────────────────────────────────────────────────────────────────────────────────
         var backgroundFor = new Dictionary<string, List<EngineOverviewUserDto>>(StringComparer.Ordinal);
         var house = new HashSet<string>(StringComparer.Ordinal);
+        var listOf = new Dictionary<int, List<string>>();
         foreach (var c in creds)
         {
-            foreach (var id in c.BackgroundEngineIds!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.Ordinal))
+            var list = c.BackgroundEngineIds!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.Ordinal).ToList();
+            listOf[c.UserId] = list;
+            foreach (var id in list)
             {
-                if (!backgroundFor.TryGetValue(id, out var list)) backgroundFor[id] = list = [];
-                list.Add(new EngineOverviewUserDto(c.UserId, NameOf(c.UserId)));
+                if (!backgroundFor.TryGetValue(id, out var users)) backgroundFor[id] = users = [];
+                users.Add(new EngineOverviewUserDto(c.UserId, NameOf(c.UserId)));
                 if (c.ShareAsHouseEngine) house.Add(id);
             }
         }
@@ -156,13 +171,33 @@ public sealed class EngineOverviewService(
         ids.UnionWith(backgroundFor.Keys);
         ids.UnionWith(groups.Select(g => g.EngineId));
         ids.UnionWith(liveStreams.Keys);
-        ids.UnionWith(hourWin.Keys);
-        ids.UnionWith(dayWin.Keys);
-        ids.UnionWith(weekWin.Keys);
+        ids.UnionWith(buckets.Select(b => b.EngineId));
         ids.Remove(string.Empty);
 
         var regById = regs.ToDictionary(r => r.Id, StringComparer.Ordinal);
+        var scheduleOf = new Dictionary<string, EngineClientSchedule>(StringComparer.Ordinal);
+        foreach (var r in regs)
+        {
+            var sch = schedules.FirstOrDefault(x => x.UserId == r.UserId && x.EngineName == r.Name);
+            if (sch is not null) scheduleOf[r.Id] = sch;
+        }
+        var bucketsOf = buckets.GroupBy(b => b.EngineId, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
+        bool Reduced(string engineId, DateTime start) =>
+            EngineOverviewSchedules.IsReduced(scheduleOf.GetValueOrDefault(engineId), quiet, start);
+
+        // Wartende je Besitzer der Engine (für den Leerlauf-Grund): gesamt und ohne Stapel.
+        int? OwnerOf(string engineId) => regById.TryGetValue(engineId, out var r) ? r.UserId
+            : backgroundFor.TryGetValue(engineId, out var b) && b.Count == 1 ? b[0].UserId : null;
+        var waitingByOwner = new Dictionary<int, (int All, int NonBatch)>();
+        foreach (var g in groups.Where(g => g.Status != AnalysisJobStatus.Running))
+        {
+            if (OwnerOf(g.EngineId) is not { } o) continue;
+            var cur = waitingByOwner.GetValueOrDefault(o);
+            waitingByOwner[o] = (cur.All + g.Count, cur.NonBatch + (g.Batch ? 0 : g.Count));
+        }
+
         var engines = new List<EngineOverviewEngineDto>();
+        var idleCandidates = new List<(int Index, int Owner)>();
         foreach (var id in ids)
         {
             regById.TryGetValue(id, out var reg);
@@ -188,7 +223,7 @@ public sealed class EngineOverviewService(
             if (job is not null)
             {
                 liveRuns.TryGetValue(job.Id, out var lr);
-                var pos = positions.FirstOrDefault(p => p.JobId == job.Id);
+                var pos = positions.FirstOrDefault(x => x.JobId == job.Id);
                 current = new EngineOverviewCurrentJobDto(job.Id, job.UserId, NameOf(job.UserId), job.Title, job.Fen,
                     KindOf(job.Priority), job.Background, job.Batch, job.TargetDepth, job.TargetNodes, job.MultiPv, job.ReachedDepth,
                     lr is { Depth: > 0 } ? lr.Depth : job.CurrentDepth,
@@ -207,6 +242,8 @@ public sealed class EngineOverviewService(
                 : "unknown";
             var waiting = mine.Where(g => g.Status != AnalysisJobStatus.Running).ToList();
             var counters = hub.Stats.For(id);
+            var own = bucketsOf.GetValueOrDefault(id) ?? [];
+            scheduleOf.TryGetValue(id, out var schedule);
 
             engines.Add(new EngineOverviewEngineDto(
                 id, reg?.Name, source, reg is not null, ownerId, ownerId is { } oid ? NameOf(oid) : null,
@@ -216,8 +253,35 @@ public sealed class EngineOverviewService(
                 waiting.Where(g => g.Status == AnalysisJobStatus.Queued).Sum(g => g.Count),
                 waiting.Where(g => g.Status == AnalysisJobStatus.Paused).Sum(g => g.Count),
                 waiting.Count == 0 ? null : waiting.Min(g => g.Oldest),
-                new EngineOverviewThroughputDto(WindowOf(hourWin, id), WindowOf(dayWin, id), WindowOf(weekWin, id)),
-                counters is null ? null : Counters(counters)));
+                new EngineOverviewThroughputDto(ToWindow(Sum(own, now.AddHours(-1))), ToWindow(Sum(own, now.AddDays(-1))),
+                    ToWindow(Sum(own, now.AddDays(-7)))),
+                counters is null ? null : Counters(counters),
+                EngineOverviewSchedules.MachineKey(ownerId, source, reg?.ApiTokenId, reg?.Name),
+                schedule is null ? null : EngineOverviewSchedules.ToDto(schedule, now),
+                null,
+                SplitMany(own, Reduced),
+                reg?.ApiTokenId));
+            if (state == "idle" && ownerId is { } owner) idleCandidates.Add((engines.Count - 1, owner));
+        }
+
+        // Leerlauf-Grund: dieselbe Prüfung wie die Vergabe (EngineAvailability.UsableAsync auf der Liste des Besitzers).
+        var nowOffset = new DateTimeOffset(DateTime.SpecifyKind(now, DateTimeKind.Utc));
+        foreach (var byOwner in idleCandidates.GroupBy(c => c.Owner))
+        {
+            var list = ExplicitOnlyEngines.Automatic(listOf.GetValueOrDefault(byOwner.Key) ?? [], explicitOnly);
+            var usableAll = (await EngineAvailability.UsableAsync(db, byOwner.Key, list, batch: false, quiet, nowOffset, ct)).ToHashSet(StringComparer.Ordinal);
+            var usableBatch = (await EngineAvailability.UsableAsync(db, byOwner.Key, list, batch: true, quiet, nowOffset, ct)).ToHashSet(StringComparer.Ordinal);
+            var w = waitingByOwner.GetValueOrDefault(byOwner.Key);
+            foreach (var (index, owner) in byOwner)
+            {
+                var e = engines[index];
+                engines[index] = e with
+                {
+                    IdleReason = EngineOverviewSchedules.IdleReason(e.Id, p.Paused, e.ExplicitOnly,
+                        listOf.GetValueOrDefault(owner)?.Contains(e.Id) ?? false,
+                        e.Schedule is not null, usableAll, usableBatch, w.All, w.NonBatch),
+                };
+            }
         }
 
         engines = engines
@@ -243,10 +307,114 @@ public sealed class EngineOverviewService(
             openGames.Where(g => g.Status == GameAnalysisStatus.Pending).Sum(g => g.Count),
             openGames.Where(g => g.Status == GameAnalysisStatus.Running).Sum(g => g.Count));
 
-        var p = await pause.GetAsync(ct);
+        var totals = new EngineOverviewThroughputDto(ToWindow(Sum(buckets, now.AddHours(-1))), ToWindow(Sum(buckets, now.AddDays(-1))),
+            ToWindow(Sum(buckets, now.AddDays(-7))));
+
+        // ── Maschinen ────────────────────────────────────────────────────────────────────────────────────────
+        var tokenById = tokens.ToDictionary(t => t.Id);
+        var machines = engines.GroupBy(e => e.MachineKey).Select(g =>
+        {
+            var list = g.ToList();
+            var first = list[0];
+            var name = first.Source switch
+            {
+                "rookhub" when first.Name is not null => EngineOverviewSchedules.Stem(list.Select(e => e.Name!).OrderBy(n => n.Length).First()),
+                "lichess" => "Lichess",
+                _ => "—",
+            };
+            var tokenId = list.Select(e => e.ApiTokenId).FirstOrDefault(t => t is not null);
+            var own = list.SelectMany(e => bucketsOf.GetValueOrDefault(e.Id) ?? []).ToList();
+            var day = Sum(own, now.AddDays(-1));
+            var reported = list.Select(e => scheduleOf.GetValueOrDefault(e.Id)).OfType<EngineClientSchedule>().ToList();
+            var registered = list.Count(e => e.Registered);
+            return new EngineOverviewMachineDto(g.Key, name, first.OwnerUserId, first.OwnerName, first.Source, tokenId,
+                tokenId is { } tid && tokenById.TryGetValue(tid, out var tok) ? tok.Name : null,
+                list.Select(e => e.Id).ToList(),
+                list.Count(e => e.Online == true), list.Count, list.Count(e => e.State == "working"),
+                list.Sum(e => e.MaxThreads ?? 0), day.Done,
+                registered == 0 ? null : (int)Math.Min(100, Math.Round(day.RunSeconds * 100.0 / (registered * 86_400.0))),
+                SplitMany(own, Reduced), EngineOverviewSchedules.MachineSchedule(reported, now));
+        })
+        .OrderByDescending(m => m.Working).ThenByDescending(m => m.Online)
+        .ThenBy(m => m.OwnerName ?? "￿", StringComparer.OrdinalIgnoreCase).ThenBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+        // ── Tokens ───────────────────────────────────────────────────────────────────────────────────────────
+        var tokenDtos = tokens
+            .Select(t => new EngineOverviewTokenDto(t.Id, t.Name, t.Prefix, t.UserId, NameOf(t.UserId), t.CreatedAt, t.LastUsedAt,
+                t.ExpiresAt, t.ExpiresAt is { } x && x < now,
+                engines.Where(e => e.ApiTokenId == t.Id).OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(e => new EngineOverviewTokenEngineDto(e.Id, e.Name ?? e.Id, e.Online)).ToList()))
+            .OrderBy(t => t.OwnerName ?? "￿", StringComparer.OrdinalIgnoreCase).ThenBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        // ── Hinweise ─────────────────────────────────────────────────────────────────────────────────────────
+        var hints = new List<EngineOverviewHintDto>();
+        var stuck = engines.Where(e => e.WaitingQueued + e.WaitingPaused > 0
+                && (e.State == "offline" || (e.OwnerUserId is { } o && !(listOf.GetValueOrDefault(o)?.Contains(e.Id) ?? false))))
+            .OrderByDescending(e => e.WaitingQueued + e.WaitingPaused).Take(10).ToList();
+        foreach (var e in stuck)
+        {
+            var lastError = await db.AnalysisJobs.AsNoTracking()
+                .Where(j => j.EngineId == e.Id && (j.Status == AnalysisJobStatus.Queued || j.Status == AnalysisJobStatus.Paused) && j.LastError != null)
+                .OrderByDescending(j => j.UpdatedAt).Select(j => j.LastError).FirstOrDefaultAsync(ct);
+            // Detail: Grund (offline | notInList), dahinter nach „|“ der letzte Fehlertext eines wartenden Auftrags.
+            var why = e.State == "offline" ? "offline" : "notInList";
+            hints.Add(new EngineOverviewHintDto("stuckJobs", e.Id, e.Name ?? e.Id, e.OwnerUserId, e.WaitingQueued + e.WaitingPaused,
+                null, e.OldestWaitingSince, lastError is null ? why : $"{why}|{Truncate(lastError, 200)}"));
+        }
+        foreach (var m in machines.Where(m => m.Source == "rookhub"))
+        {
+            var orphan = engines.Where(e => m.EngineIds.Contains(e.Id) && e.Registered && e.BackgroundFor.Count == 0
+                && (e.Schedule is { Slot: > 1 } || (e.Name ?? "").Contains("intergrund", StringComparison.OrdinalIgnoreCase)
+                    || (e.Name ?? "").Contains("ackground", StringComparison.OrdinalIgnoreCase))).ToList();
+            if (orphan.Count > 0)
+                hints.Add(new EngineOverviewHintDto("notInList", null, m.Name, m.OwnerUserId, orphan.Count, m.Total, null,
+                    string.Join(", ", orphan.Select(e => e.Name))));
+        }
+        foreach (var (owner, list) in listOf.Where(kv => kv.Value.Count * 2 >= LichessEngineCredential.MaxBackgroundEngines))
+            hints.Add(new EngineOverviewHintDto("listCap", null, NameOf(owner), owner, list.Count, LichessEngineCredential.MaxBackgroundEngines, null, null));
+        foreach (var t in tokenDtos.Where(t => !t.Expired && (t.LastUsedAt is null ? now - t.CreatedAt > StaleTokenAfter : now - t.LastUsedAt > StaleTokenAfter)))
+            hints.Add(new EngineOverviewHintDto("staleToken", null, t.Name, t.OwnerUserId, t.Engines.Count, null, t.LastUsedAt, t.OwnerName));
+
+        var waitingCount = queue.Queued + queue.Paused;
+        double? emptyIn = totals.Hour.Done >= EstimateMinDonePerHour && waitingCount > 0
+            ? Math.Round((double)waitingCount / totals.Hour.Done, 1, MidpointRounding.AwayFromZero) : null;
+
+        var quietDto = new EngineOverviewQuietDto(quiet?.Enabled == true, quiet?.IsQuiet(nowOffset) == true,
+            quiet is not null && quiet.IsQuiet(nowOffset) ? quiet.EndOf(nowOffset).UtcDateTime : null,
+            quiet?.TimeZoneId ?? QuietHours.DefaultTimeZone,
+            quiet?.Windows.Select(w => new EngineOverviewQuietWindowDto((int)w.Day, w.From.ToString(@"hh\:mm"), w.To.ToString(@"hh\:mm"))).ToList() ?? []);
+
         return new EngineOverviewDto(now, ServerStartedAt, EngineThroughputBucket.BucketMinutes,
-            new EngineOverviewPauseDto(p.Paused, p.ForcedByConfig, p.Since, p.By), queue,
-            new EngineOverviewThroughputDto(Total(hourWin), Total(dayWin), Total(weekWin)), engines);
+            new EngineOverviewPauseDto(p.Paused, p.ForcedByConfig, p.Since, p.By), queue, totals, engines,
+            machines, tokenDtos, hints, quietDto, emptyIn, LichessEngineCredential.MaxBackgroundEngines);
+    }
+
+    private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max] + "…";
+
+    /// <summary>Körbe ab <paramref name="since"/> (Index BucketStart) — einmal laden, im Speicher aufteilen.</summary>
+    private async Task<List<EngineThroughputBucket>> LoadBucketsAsync(DateTime since, CancellationToken ct)
+        => await db.EngineThroughputBuckets.AsNoTracking().Where(b => b.BucketStart >= since).ToListAsync(ct);
+
+    private static EngineThroughputBucket Sum(IEnumerable<EngineThroughputBucket> rows, DateTime since)
+    {
+        var sum = new EngineThroughputBucket();
+        foreach (var b in rows) if (b.BucketStart >= since) EngineThroughputRecorder.Add(sum, b);
+        return sum;
+    }
+
+    /// <summary>kN/s normal/Schonzeit über die übergebenen Körbe (je Korb nach der Regel SEINER Engine eingeordnet).</summary>
+    private static EngineSpeedSplitDto SplitMany(IEnumerable<EngineThroughputBucket> rows, Func<string, DateTime, bool> reduced)
+    {
+        long nN = 0, sN = 0, nR = 0, sR = 0;
+        foreach (var b in rows)
+        {
+            if (b.NodeSeconds <= 0) continue;
+            if (reduced(b.EngineId, b.BucketStart)) { nR += b.Nodes; sR += b.NodeSeconds; }
+            else { nN += b.Nodes; sN += b.NodeSeconds; }
+        }
+        return new EngineSpeedSplitDto(sN > 0 ? Math.Round(nN / 1000.0 / sN, 1) : null, sR > 0 ? Math.Round(nR / 1000.0 / sR, 1) : null);
     }
 
     private static int StateRank(string state) => state switch
@@ -259,58 +427,6 @@ public sealed class EngineOverviewService(
         if (!string.IsNullOrWhiteSpace(title)) return title;
         if (string.IsNullOrWhiteSpace(white) && string.IsNullOrWhiteSpace(black)) return null;
         return $"{white ?? "?"} – {black ?? "?"}";
-    }
-
-    /// <summary>Körbe ab <paramref name="since"/> je Engine summiert (Index BucketStart).</summary>
-    private async Task<Dictionary<string, EngineThroughputBucket>> WindowAsync(DateTime since, CancellationToken ct)
-    {
-        var rows = await db.EngineThroughputBuckets.AsNoTracking()
-            .Where(b => b.BucketStart >= since)
-            .GroupBy(b => b.EngineId)
-            .Select(g => new
-            {
-                EngineId = g.Key,
-                Runs = g.Sum(b => b.Runs),
-                Done = g.Sum(b => b.Done),
-                Failed = g.Sum(b => b.Failed),
-                Interrupted = g.Sum(b => b.Interrupted),
-                Retried = g.Sum(b => b.Retried),
-                Unavailable = g.Sum(b => b.Unavailable),
-                Timeouts = g.Sum(b => b.Timeouts),
-                Errors = g.Sum(b => b.Errors),
-                RunSeconds = g.Sum(b => b.RunSeconds),
-                DoneJobSeconds = g.Sum(b => b.DoneJobSeconds),
-                Nodes = g.Sum(b => b.Nodes),
-                NodeSeconds = g.Sum(b => b.NodeSeconds),
-            })
-            .ToListAsync(ct);
-        return rows.ToDictionary(r => r.EngineId, r => new EngineThroughputBucket
-        {
-            EngineId = r.EngineId, Runs = r.Runs, Done = r.Done, Failed = r.Failed, Interrupted = r.Interrupted,
-            Retried = r.Retried, Unavailable = r.Unavailable, Timeouts = r.Timeouts, Errors = r.Errors,
-            RunSeconds = r.RunSeconds, DoneJobSeconds = r.DoneJobSeconds, Nodes = r.Nodes, NodeSeconds = r.NodeSeconds,
-        }, StringComparer.Ordinal);
-    }
-
-    private static void AddPending(Dictionary<string, EngineThroughputBucket> window, IReadOnlyList<EngineThroughputBucket> pending,
-        DateTime since)
-    {
-        foreach (var b in pending.Where(b => b.BucketStart >= since))
-        {
-            if (!window.TryGetValue(b.EngineId, out var row))
-                window[b.EngineId] = row = new EngineThroughputBucket { EngineId = b.EngineId };
-            EngineThroughputRecorder.Add(row, b);
-        }
-    }
-
-    private static EngineThroughputWindowDto WindowOf(Dictionary<string, EngineThroughputBucket> window, string engineId)
-        => window.TryGetValue(engineId, out var b) ? ToWindow(b) : ToWindow(new EngineThroughputBucket());
-
-    private static EngineThroughputWindowDto Total(Dictionary<string, EngineThroughputBucket> window)
-    {
-        var sum = new EngineThroughputBucket();
-        foreach (var b in window.Values) EngineThroughputRecorder.Add(sum, b);
-        return ToWindow(sum);
     }
 
     internal static EngineThroughputWindowDto ToWindow(EngineThroughputBucket b) => new(

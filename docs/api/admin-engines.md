@@ -84,6 +84,59 @@ liegt in `EngineSettingsService.SetBackgroundMembershipAsync` und teilt Bereinig
 - Danach `EngineOverviewService.Invalidate()` (Cache-Schlüssel `admin-engine-overview`), Log
   `AdminEngines: Hintergrund {Action} engine={EngineId} konto={UserId} von admin={AdminId} ({AdminName})` mit `an`/`aus`.
 
+## Übersichten (0.953.0): Tokens, Zeitpläne, Tempo normal/Schonzeit, Leerlauf-Grund, Hinweise, Maschinen
+
+Wunsch 10.11.2026: „zeig auf der seite zusätzlich eine übersicht an: tokens (nur für engine) – registrierter name dazu.
+letzter zugriff. einstellungen zu schedule. durchschnittliche kn/s normal/schonzeit. was dir sonst noch einfällt“. Alles
+steckt in derselben Antwort (`GET /api/admin/engines/overview`, 10-s-Cache):
+
+| Feld | Inhalt | Quelle |
+|---|---|---|
+| `tokens[]` | `{ id, name, prefix, ownerUserId, ownerName, createdAt, lastUsedAt, expiresAt, expired, engines[{ id, name, online }] }` — alle API-Tokens mit Bereich `engine`, NIE Token oder Hash, nur das Präfix wie im Profil | `UserApiTokens` (eine Handvoll Zeilen) |
+| `engines[].apiTokenId` | Token, mit dem sich die Engine zuletzt angemeldet/geändert hat | neue Spalte `ExternalEngineRegistrations.ApiTokenId` |
+| `engines[].schedule` | `{ slot, total, scope, rule, timeZone, reportedAt, openNow, percentNow }` | `EngineClientSchedules` (eine Zeile je gemeldeter Engine), `EngineAvailability.IsOpen` |
+| `machines[]` | `{ key, name, ownerUserId, ownerName, source, apiTokenId, tokenName, engineIds, online, total, working, threads, doneDay, busyPercentDay, speed, schedule }`; `schedule` = `{ rule, timeZone, scope, total, reportedAt, reported, openNow, percentNow, nextChangeAt, nextPercent }` | Gruppierung im Speicher |
+| `engines[].speed`, `machines[].speed` | `{ normal, reduced }` Ø kN/s der letzten 7 Tage | Durchsatz-Körbe |
+| `engines[].idleReason` | nur im Zustand `idle`: `paused`, `explicitOnly`, `notInList`, `scheduleOff`, `quietHours`, `nothingWaiting`, `waitingElsewhere` | `EngineAvailability.UsableAsync` |
+| `hints[]` | `{ kind, engineId, name, userId, count, max, since, detail }`, `kind` ∈ `stuckJobs`, `notInList`, `listCap`, `staleToken` | siehe unten |
+| `quiet` | `{ enabled, quietNow, quietUntil, timeZone, windows[{ day (0 = So), from, to }] }` | `QuietHours` (`TextLlm:QuietHours`) |
+| `queueEmptyInHours` | Wartende ÷ fertige Aufträge der letzten Stunde, nur ab 10 fertigen (`EstimateMinDonePerHour`) | — |
+| `backgroundCap` | 64 | `LichessEngineCredential.MaxBackgroundEngines` |
+
+- **Token ↔ Registrierung** war bisher NICHT verknüpft. Schlankste Lösung: `ExternalEngineRegistrations.ApiTokenId`
+  (Migration `EngineRegistrationApiTokenId`, nullable, bewusst ohne Fremdschlüssel — ein gelöschter Token soll die
+  Registrierung nicht anfassen). Gesetzt beim An-/Ummelden des Providers (`POST`/`PUT /api/external-engine`) aus dem
+  Claim `api_token_id` des PAT-Handlers; ohne Claim bleibt der Wert stehen. Kein Schreiben je Poll. Registrierungen von
+  vor 0.953.0 tragen `null`, bis der Provider sich neu meldet (Neustart).
+- **„Letzter Zugriff“** = `UserApiTokens.LastUsedAt`, gedrosselt auf `ApiTokenService.LastUsedThrottle` (5 min) — auf 5
+  Minuten genau (steht in der Hilfe). Ein pollender Provider hält ihn also aktuell.
+- **Maschine** = gleicher Besitzer + gleicher Engine-Token + gleicher Namensstamm (`EngineOverviewSchedules.Stem`:
+  „RookHub Gross Hintergrund 12“ → „RookHub Gross“; Nummer nur nach Leerzeichen/`#`, „Lc0“ bleibt). Lichess-Engines je
+  Konto eine Gruppe. Kopf: online x/y, rechnet, Threads, 24 h fertig, Auslastung (Rechensekunden 24 h ÷ registrierte
+  Engines × 86 400), Ø kN/s normal/Schonzeit, Zeitplan.
+- **Zeitplan**: jüngste Meldung der Maschine gibt Regel/Zone vor; „jetzt offen x von y“ über `EngineAvailability.IsOpen`
+  je Engine; nächstes Umschalten = erste Minute binnen 7 Tagen mit anderem Prozentsatz (`EngineScheduleRules.PercentAt`,
+  höchstens 10 080 Schritte). Ohne Meldung: „kein Zeitplan — es gelten die RookHub-Sperrzeiten für Stapel-Aufträge“,
+  dazu oben die Fenster und ob gerade Sperrzeit ist.
+- **Normal/Schonzeit**: die Körbe der letzten 7 Tage werden EINMAL geladen (vorher drei Summen-Abfragen) und im Speicher
+  in Stunde/Tag/Woche und normal/Schonzeit geteilt. Schonzeit = der Zeitplan der Engine sah zum Korb-Beginn weniger als
+  100 % vor, ohne Zeitplan: RookHub-Sperrzeit. Eingeordnet wird nach der HEUTIGEN Regel (steht in der Hilfe). Bei
+  ~60 Engines × 1 008 Körben/Woche höchstens ~60 000 schmale Zeilen je 10 s, nur solange ein Admin den Reiter offen hat.
+- **kN/s geprüft**: bisher Knoten der letzten Zeile ÷ Wanduhr des Laufs. Die Knoten stimmen (jeder Lauf ist eine neue
+  Suche, auch bei fortgesetzten Aufträgen; beim Knotenziel endet die Suche am Ziel), die Wanduhr aber zählt das Warten auf
+  die Kopfzeilen, den Start der Engine und das Hochladen mit — das Tempo lag zu niedrig. Seit 0.953.0 geht die SUCHZEIT
+  laut Engine ein (Knoten ÷ gemeldetes nps der letzten Zeile, `EngineThroughputRecorder.Record(searchSeconds)`), also
+  zeitgewichtet über alle Läufe; ohne nps wie bisher die Wanduhr. Alte Körbe behalten ihre Wanduhr-Werte.
+- **Leerlauf-Grund** (nur `idle`): Pause → nur auf Anforderung → nicht in der Liste des Besitzers → Zeitplan aus
+  (`UsableAsync(batch: false)` nimmt sie nicht, Meldung vorhanden) → für den Besitzer wartet nichts → nur Stapel wartet
+  und `UsableAsync(batch: true)` nimmt sie nicht (Sperrzeit bzw. Zeitplan) → sonst „Aufträge warten auf anderen Engines“
+  (der Rebalancer verteilt im nächsten Takt). Je Besitzer zwei `UsableAsync`-Aufrufe (zwei kleine IN-Abfragen).
+- **Hinweise**: `stuckJobs` — wartende Aufträge auf einer Engine, die offline ist oder nicht in der Liste ihres Besitzers
+  steht (höchstens 10 Engines, je eine Abfrage nach dem jüngsten `LastError` über Index EngineId/Status; `detail` =
+  `offline|…` bzw. `notInList|…`); `notInList` — registrierte Hintergrund-Engines einer Maschine (Zeitplan-Platz > 1 oder
+  „Hintergrund/Background“ im Namen) in keiner Liste; `listCap` — Liste eines Kontos zur Hälfte voll oder mehr („35 von
+  64“); `staleToken` — Engine-Token seit > 30 Tagen (`StaleTokenAfter`) ohne Zugriff (bzw. nie benutzt).
+
 ## Woher die Zahlen kommen
 
 | Kennzahl | Quelle | Abfrage |
@@ -129,6 +182,7 @@ höchstens die letzte Minute. Höchstens 144 Zeilen je Engine und Tag.
 die Laufzeit der Läufe mit Knotenangabe. Live-Analysen im Analysebrett zählen NICHT mit (nur der Hintergrund-Worker).
 
 **Tests:** Unit `tests/RookHub.Api.Tests/EngineBroker/EngineOverviewTests.cs` (InMemory), Umschalten
-`tests/RookHub.Api.Tests/EngineBroker/AdminEngineBackgroundTests.cs`, SQL-Übersetzung gegen echtes
+`tests/RookHub.Api.Tests/EngineBroker/AdminEngineBackgroundTests.cs`, Deckel `BackgroundListCapTests.cs`, Übersichten
+`EngineOverviewInsightsTests.cs`, SQL-Übersetzung gegen echtes
 MariaDB `tests/RookHub.Api.IntegrationTests/EngineOverviewSqlTests.cs` (Übersicht mit Daten in allen Tabellen, leerer
-Stand, Schreiben/Addieren/Aufräumen der Körbe, Umschalten samt Merkliste; `ROOKHUB_TEST_MYSQL` auf einen Wegwerf-Container).
+Stand, Schreiben/Addieren/Aufräumen der Körbe, Umschalten samt Merkliste, 64 Kennungen in der Spalte, Übersichten; `ROOKHUB_TEST_MYSQL` auf einen Wegwerf-Container).

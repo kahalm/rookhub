@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { apiErrorText } from '../../../core/api-error';
+import { localStore, readJson, writeJson } from '../../../core/local-json-store';
 import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { HelpHintComponent } from '../../../shared/help-hint/help-hint.component';
@@ -49,6 +50,45 @@ export interface EngineOverviewEngine {
   state: EngineState; liveStreams: number; providerPolling: number; brokerQueued: number;
   current: EngineCurrentJob | null; waitingQueued: number; waitingPaused: number; oldestWaitingSince: string | null;
   throughput: EngineThroughput; broker: EngineBrokerCounters | null;
+  /** Gruppe (Maschine), siehe {@link EngineMachine}. */
+  machineKey: string;
+  schedule: EngineSchedule | null;
+  /** Warum eine freie Engine nichts rechnet (`admin.engines.idle.*`), nur im Zustand `idle`. */
+  idleReason: string | null;
+  speed: EngineSpeedSplit;
+  apiTokenId: number | null;
+}
+
+/** Ø kN/s der letzten 7 Tage, „normal“ und „Schonzeit“ (nach der heutigen Regel eingeordnet). */
+export interface EngineSpeedSplit { normal: number | null; reduced: number | null }
+
+export interface EngineSchedule {
+  slot: number; total: number; scope: string; rule: string; timeZone: string; reportedAt: string; openNow: boolean; percentNow: number;
+}
+
+export interface EngineMachineSchedule {
+  rule: string; timeZone: string; scope: string; total: number; reportedAt: string; reported: number; openNow: number;
+  percentNow: number; nextChangeAt: string | null; nextPercent: number | null;
+}
+
+export interface EngineMachine {
+  key: string; name: string; ownerUserId: number | null; ownerName: string | null; source: string; apiTokenId: number | null;
+  tokenName: string | null; engineIds: string[]; online: number; total: number; working: number; threads: number; doneDay: number;
+  busyPercentDay: number | null; speed: EngineSpeedSplit; schedule: EngineMachineSchedule | null;
+}
+
+export interface EngineToken {
+  id: number; name: string; prefix: string; ownerUserId: number; ownerName: string | null; createdAt: string;
+  lastUsedAt: string | null; expiresAt: string | null; expired: boolean; engines: { id: string; name: string; online: boolean | null }[];
+}
+
+export interface EngineHint {
+  kind: 'stuckJobs' | 'notInList' | 'listCap' | 'staleToken'; engineId: string | null; name: string | null; userId: number | null;
+  count: number; max: number | null; since: string | null; detail: string | null;
+}
+
+export interface EngineQuiet {
+  enabled: boolean; quietNow: boolean; quietUntil: string | null; timeZone: string; windows: { day: number; from: string; to: string }[];
 }
 
 export interface EngineQueueKind { kind: string; queued: number; paused: number; running: number; oldestWaitingSince: string | null }
@@ -65,6 +105,40 @@ export interface EngineOverview {
   };
   totals: EngineThroughput;
   engines: EngineOverviewEngine[];
+  machines: EngineMachine[];
+  tokens: EngineToken[];
+  hints: EngineHint[];
+  quiet: EngineQuiet;
+  /** Wartende ÷ fertige Aufträge der letzten Stunde (h); nur, wenn die Stunde belastbar war. */
+  queueEmptyInHours: number | null;
+  backgroundCap: number;
+}
+
+/** Gemerkte auf-/zugeklappte Maschinen je Betrachter (`core/local-storage-keys.ts`). */
+export const ENGINE_MACHINES_STORAGE_KEY = 'rh.adminEngines.machines';
+
+/** Sperrzeit-Fenster lesbar: aufeinanderfolgende Tage mit gleicher Zeit zusammengefasst („Mo–Do 08:00–17:00; Fr 08:00–14:00“). */
+export function formatQuietWindows(windows: { day: number; from: string; to: string }[], locale: string): string {
+  const dayName = (d: number) => new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' })
+    .format(new Date(Date.UTC(2026, 10, 1 + d)));            // 1.11.2026 = Sonntag (day 0)
+  const order = (d: number) => (d + 6) % 7;                    // Montag zuerst
+  const byTime = new Map<string, number[]>();
+  for (const w of windows) {
+    const k = `${w.from}–${w.to}`;
+    byTime.set(k, [...(byTime.get(k) ?? []), w.day]);
+  }
+  const parts: string[] = [];
+  for (const [time, days] of byTime) {
+    const sorted = [...new Set(days)].sort((a, b) => order(a) - order(b));
+    const runs: number[][] = [];
+    for (const d of sorted) {
+      const last = runs[runs.length - 1];
+      if (last && order(d) === order(last[last.length - 1]) + 1) last.push(d); else runs.push([d]);
+    }
+    const label = runs.map(r => r.length > 1 ? `${dayName(r[0])}–${dayName(r[r.length - 1])}` : dayName(r[0])).join(', ');
+    parts.push(`${label} ${time}`);
+  }
+  return parts.join('; ');
 }
 
 export const ENGINE_OVERVIEW_URL = '/api/admin/engines/overview';
@@ -151,6 +225,24 @@ export class AdminEnginesComponent implements OnInit {
   private loadSeq = 0;
 
   readonly engines = computed(() => this.data()?.engines ?? []);
+  /** Ausdrücklich auf-/zugeklappte Maschinen (Schlüssel → offen); fehlt eine, ist sie offen. Ganz offline Maschinen
+   *  verschwinden ohnehin mit „offline ausblenden“. */
+  readonly machineOpen = signal<Record<string, boolean>>(readJson<Record<string, boolean>>(localStore(), ENGINE_MACHINES_STORAGE_KEY) ?? {});
+  /** Maschinen mit ihren sichtbaren Engines (Offline-Engines wie bisher eingeklappt). */
+  readonly machineGroups = computed(() => {
+    const d = this.data();
+    if (!d) return [];
+    const visible = new Set(this.visibleEngines().map(e => e.id));
+    const byId = new Map(this.engines().map(e => [e.id, e]));
+    return (d.machines ?? []).map(m => ({
+      machine: m,
+      engines: m.engineIds.filter(id => visible.has(id)).map(id => byId.get(id)!).filter(Boolean),
+    })).filter(g => g.engines.length > 0);
+  });
+  readonly quietText = computed(() => {
+    const q = this.data()?.quiet;
+    return q && q.enabled ? formatQuietWindows(q.windows, this.locale) : '';
+  });
   readonly offlineCount = computed(() => this.engines().filter(e => e.state === 'offline').length);
   readonly visibleEngines = computed(() => this.showOffline() ? this.engines() : this.engines().filter(e => e.state !== 'offline'));
   readonly counts = computed(() => {
@@ -241,6 +333,22 @@ export class AdminEnginesComponent implements OnInit {
   }
 
   toggleOffline(): void { this.showOffline.update(v => !v); }
+
+  isMachineOpen(m: EngineMachine): boolean {
+    return this.machineOpen()[m.key] ?? true;
+  }
+
+  toggleMachine(m: EngineMachine): void {
+    const next = { ...this.machineOpen(), [m.key]: !this.isMachineOpen(m) };
+    this.machineOpen.set(next);
+    writeJson(localStore(), ENGINE_MACHINES_STORAGE_KEY, next);
+  }
+
+  onlineCount(t: EngineToken): number { return t.engines.filter(e => e.online).length; }
+
+  /** „stuckJobs“-Detail: Grund und (nach „|“) der letzte Fehlertext. */
+  hintReason(h: EngineHint): string { return (h.detail ?? '').split('|')[0]; }
+  hintError(h: EngineHint): string | null { const i = (h.detail ?? '').indexOf('|'); return i < 0 ? null : h.detail!.slice(i + 1); }
 
   stateIcon(s: EngineState): string { return STATE_ICON[s] ?? 'help_outline'; }
 

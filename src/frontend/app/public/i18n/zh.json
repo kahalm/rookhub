@@ -3001,7 +3001,65 @@
       "bgRemove": "从 {{name}} 的后台列表移除",
       "bgAdded": "已加入 {{name}} 的后台列表",
       "bgRemoved": "已从 {{name}} 的后台列表移除",
-      "bgError": "无法更改后台列表"
+      "bgError": "无法更改后台列表",
+      "quietHours": "无计划引擎的批量任务静默时段：{{windows}}（{{zone}}）。",
+      "quietNow": "生效至 {{until}}。",
+      "quietNotNow": "当前未生效。",
+      "quietOff": "未设置 RookHub 静默时段。",
+      "estimate": "按最近一小时的速度，队列约 {{time}} 后清空。",
+      "hintsTitle": "提示",
+      "hint": {
+        "stuckJobs": "{{count}} 个任务自 {{since}} 起在 {{name}} 上等待",
+        "why": {
+          "offline": "引擎离线",
+          "notInList": "引擎不在任何后台列表中"
+        },
+        "lastError": "最后错误：{{error}}",
+        "notInList": "{{name}} 的 {{count}} 个后台引擎不在任何列表中：{{engines}}",
+        "listCap": "{{name}} 的后台列表：{{count}} / {{max}}",
+        "staleToken": "引擎令牌“{{name}}”（{{owner}}）自 {{since}} 起未使用",
+        "staleTokenNever": "引擎令牌“{{name}}”（{{owner}}）从未使用"
+      },
+      "m": {
+        "online": "在线 {{online}}/{{total}}",
+        "working": "计算中 {{count}}",
+        "token": "令牌：{{name}}",
+        "schedule": "计划：{{rule}}（{{zone}}）",
+        "scheduleNow": "当前 {{percent}} %，{{reported}} 个引擎中 {{open}} 个开放",
+        "scheduleNext": "自 {{when}}：{{percent}} %",
+        "reportedAt": "上报于 {{when}}",
+        "noSchedule": "未上报计划——批量任务适用 RookHub 静默时段。",
+        "noScheduleLichess": "Lichess 引擎不上报计划——批量任务适用 RookHub 静默时段。"
+      },
+      "speedSplit": "Ø 正常 {{normal}} · 节能 {{reduced}}",
+      "machinesHelp": "引擎按机器分组（同一所有者、同一引擎令牌、同一名称词干）。最近 7 天的 Ø kN/s 分为正常和节能：每个 10 分钟桶按今天的规则归类——计划低于 100 % 或无计划时的 RookHub 静默时段。速度 = 节点数 ÷ 引擎报告的搜索时间。",
+      "tokensTitle": "引擎令牌",
+      "tokensHelp": "所有账户中范围为“engine”的 API 令牌——从不显示令牌本身，只显示与个人资料相同的前缀。最后访问精确到 5 分钟。引擎关联到其最后一次注册所用的令牌（自 0.953.0 起；较早的在提供方下次重启后显示）。",
+      "tokensEmpty": "没有引擎令牌。",
+      "t": {
+        "name": "名称",
+        "owner": "所有者",
+        "created": "创建",
+        "lastUsed": "最后访问",
+        "expires": "到期",
+        "engines": "引擎",
+        "never": "从未",
+        "expired": "已过期",
+        "engineCount": "{{count}} 个引擎（{{online}} 个在线）",
+        "noEngines": "未关联"
+      },
+      "idleBecause": "空闲：{{reason}}",
+      "idleReason": {
+        "paused": "后台任务已暂停",
+        "explicitOnly": "仅按需",
+        "notInList": "不在任何后台列表中",
+        "scheduleOff": "按计划关闭",
+        "quietHours": "批量任务静默时段（无计划）",
+        "nothingWaiting": "没有等待的任务",
+        "waitingElsewhere": "任务在其他引擎上等待（即将重新分配）"
+      },
+      "scheduleOpen": "计划：第 {{slot}} 位 / 共 {{total}}，当前 {{percent}} % —— 运行",
+      "scheduleClosed": "计划：第 {{slot}} 位 / 共 {{total}}，当前 {{percent}} % —— 关闭"
     }
   },
   "favorites": {

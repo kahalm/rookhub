@@ -3332,6 +3332,9 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
 
+                    b.Property<int?>("ApiTokenId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ClientSecret")
                         .IsRequired()
                         .HasMaxLength(64)

@@ -43,6 +43,9 @@ public sealed class QuietHours
     /// <summary>Es gibt überhaupt ein Fenster.</summary>
     public bool Enabled => _windows.Count > 0;
 
+    /// <summary>Zeitzone, in der die Fenster gemeint sind (Anzeige im Admin-Reiter „Engines“).</summary>
+    public string TimeZoneId => _zone.Id;
+
     public IReadOnlyList<Window> Windows => _windows;
 
     /// <summary>Die Uhr, nach der gesperrt wird (Tests setzen eine eigene).</summary>

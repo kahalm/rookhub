@@ -3001,7 +3001,65 @@
       "bgRemove": "Retirer de la liste d’arrière-plan de {{name}}",
       "bgAdded": "Ajouté à la liste d’arrière-plan de {{name}}",
       "bgRemoved": "Retiré de la liste d’arrière-plan de {{name}}",
-      "bgError": "Impossible de modifier la liste d’arrière-plan"
+      "bgError": "Impossible de modifier la liste d’arrière-plan",
+      "quietHours": "Heures creuses pour les tâches par lots sur les moteurs sans planning : {{windows}} ({{zone}}).",
+      "quietNow": "Actives jusqu’à {{until}}.",
+      "quietNotNow": "Pas actives en ce moment.",
+      "quietOff": "Aucune heure creuse RookHub définie.",
+      "estimate": "File vide dans environ {{time}} (au rythme de la dernière heure).",
+      "hintsTitle": "Remarques",
+      "hint": {
+        "stuckJobs": "{{count}} tâches attendent depuis {{since}} sur {{name}}",
+        "why": {
+          "offline": "moteur hors ligne",
+          "notInList": "moteur dans aucune liste d’arrière-plan"
+        },
+        "lastError": "dernière erreur : {{error}}",
+        "notInList": "{{count}} moteurs d’arrière-plan de {{name}} ne sont dans aucune liste : {{engines}}",
+        "listCap": "Liste d’arrière-plan de {{name}} : {{count}} sur {{max}}",
+        "staleToken": "Jeton moteur « {{name}} » ({{owner}}) inutilisé depuis {{since}}",
+        "staleTokenNever": "Jeton moteur « {{name}} » ({{owner}}) jamais utilisé"
+      },
+      "m": {
+        "online": "en ligne {{online}}/{{total}}",
+        "working": "calcule {{count}}",
+        "token": "jeton : {{name}}",
+        "schedule": "Planning : {{rule}} ({{zone}})",
+        "scheduleNow": "maintenant {{percent}} %, {{open}} moteurs sur {{reported}} ouverts",
+        "scheduleNext": "à partir de {{when}} : {{percent}} %",
+        "reportedAt": "signalé {{when}}",
+        "noSchedule": "Aucun planning signalé — les heures creuses RookHub s’appliquent aux tâches par lots.",
+        "noScheduleLichess": "Les moteurs Lichess ne signalent pas de planning — les heures creuses RookHub s’appliquent aux tâches par lots."
+      },
+      "speedSplit": "Ø normal {{normal}} · réduit {{reduced}}",
+      "machinesHelp": "Moteurs regroupés par machine (même propriétaire, même jeton moteur, même radical de nom). Ø kN/s des 7 derniers jours, séparé entre normal et réduit : chaque tranche de 10 minutes est classée selon la règle D’AUJOURD’HUI — planning sous 100 % ou, sans planning, heures creuses RookHub. La vitesse = nœuds ÷ temps de recherche indiqué par le moteur.",
+      "tokensTitle": "Jetons moteur",
+      "tokensHelp": "Tous les jetons API de portée « engine » de tous les comptes — jamais le jeton, seulement son préfixe comme dans le profil. Le dernier accès est précis à 5 minutes. Les moteurs sont liés au jeton de leur dernière inscription (depuis 0.953.0 ; les plus anciens apparaissent après le prochain redémarrage du fournisseur).",
+      "tokensEmpty": "Aucun jeton moteur.",
+      "t": {
+        "name": "Nom",
+        "owner": "Propriétaire",
+        "created": "créé",
+        "lastUsed": "dernier accès",
+        "expires": "expire",
+        "engines": "Moteurs",
+        "never": "jamais",
+        "expired": "expiré",
+        "engineCount": "{{count}} moteurs ({{online}} en ligne)",
+        "noEngines": "aucun lié"
+      },
+      "idleBecause": "Inactif : {{reason}}",
+      "idleReason": {
+        "paused": "tâches d’arrière-plan en pause",
+        "explicitOnly": "sur demande uniquement",
+        "notInList": "dans aucune liste d’arrière-plan",
+        "scheduleOff": "arrêté selon le planning",
+        "quietHours": "heures creuses pour les lots (pas de planning)",
+        "nothingWaiting": "rien en attente",
+        "waitingElsewhere": "des tâches attendent sur d’autres moteurs (redistribuées sous peu)"
+      },
+      "scheduleOpen": "Planning : place {{slot}} sur {{total}}, maintenant {{percent}} % — actif",
+      "scheduleClosed": "Planning : place {{slot}} sur {{total}}, maintenant {{percent}} % — arrêté"
     }
   },
   "favorites": {

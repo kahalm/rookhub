@@ -3001,7 +3001,65 @@
       "bgRemove": "Usuń z listy w tle użytkownika {{name}}",
       "bgAdded": "Dodano do listy w tle użytkownika {{name}}",
       "bgRemoved": "Usunięto z listy w tle użytkownika {{name}}",
-      "bgError": "Nie udało się zmienić listy w tle"
+      "bgError": "Nie udało się zmienić listy w tle",
+      "quietHours": "Godziny ciszy dla zadań wsadowych na silnikach bez harmonogramu: {{windows}} ({{zone}}).",
+      "quietNow": "Aktywne do {{until}}.",
+      "quietNotNow": "Teraz nieaktywne.",
+      "quietOff": "Brak godzin ciszy RookHub.",
+      "estimate": "Kolejka pusta za ok. {{time}} (w tempie ostatniej godziny).",
+      "hintsTitle": "Uwagi",
+      "hint": {
+        "stuckJobs": "{{count}} zadań czeka od {{since}} na {{name}}",
+        "why": {
+          "offline": "silnik offline",
+          "notInList": "silnik nie jest na żadnej liście w tle"
+        },
+        "lastError": "ostatni błąd: {{error}}",
+        "notInList": "{{count}} silników w tle od {{name}} nie ma na żadnej liście: {{engines}}",
+        "listCap": "Lista w tle użytkownika {{name}}: {{count}} z {{max}}",
+        "staleToken": "Token silnika „{{name}}” ({{owner}}) nieużywany od {{since}}",
+        "staleTokenNever": "Token silnika „{{name}}” ({{owner}}) nigdy nieużyty"
+      },
+      "m": {
+        "online": "online {{online}}/{{total}}",
+        "working": "liczy {{count}}",
+        "token": "token: {{name}}",
+        "schedule": "Harmonogram: {{rule}} ({{zone}})",
+        "scheduleNow": "teraz {{percent}} %, otwarte {{open}} z {{reported}} silników",
+        "scheduleNext": "od {{when}}: {{percent}} %",
+        "reportedAt": "zgłoszono {{when}}",
+        "noSchedule": "Brak zgłoszonego harmonogramu — dla zadań wsadowych obowiązują godziny ciszy RookHub.",
+        "noScheduleLichess": "Silniki Lichess nie zgłaszają harmonogramu — dla zadań wsadowych obowiązują godziny ciszy RookHub."
+      },
+      "speedSplit": "Ø normalnie {{normal}} · oszczędnie {{reduced}}",
+      "machinesHelp": "Silniki pogrupowane według maszyny (ten sam właściciel, ten sam token silnika, ten sam rdzeń nazwy). Ø kN/s z ostatnich 7 dni rozdzielone na normalnie i oszczędnie: każdy 10-minutowy koszyk klasyfikowany jest według DZISIEJSZEJ reguły — harmonogram poniżej 100 % albo, bez harmonogramu, godziny ciszy RookHub. Tempo = węzły ÷ czas wyszukiwania podany przez silnik.",
+      "tokensTitle": "Tokeny silników",
+      "tokensHelp": "Wszystkie tokeny API o zakresie „engine” wszystkich kont — nigdy sam token, tylko prefiks jak w profilu. Ostatni dostęp z dokładnością do 5 minut. Silniki są przypisane do tokenu, którym ostatnio się zarejestrowały (od 0.953.0; starsze pojawią się po ponownym uruchomieniu providera).",
+      "tokensEmpty": "Brak tokenów silników.",
+      "t": {
+        "name": "Nazwa",
+        "owner": "Właściciel",
+        "created": "utworzono",
+        "lastUsed": "ostatni dostęp",
+        "expires": "wygasa",
+        "engines": "Silniki",
+        "never": "nigdy",
+        "expired": "wygasł",
+        "engineCount": "{{count}} silników ({{online}} online)",
+        "noEngines": "brak przypisanych"
+      },
+      "idleBecause": "Bezczynny: {{reason}}",
+      "idleReason": {
+        "paused": "zadania w tle wstrzymane",
+        "explicitOnly": "tylko na żądanie",
+        "notInList": "nie ma na żadnej liście w tle",
+        "scheduleOff": "wyłączony wg harmonogramu",
+        "quietHours": "godziny ciszy dla zadań wsadowych (brak harmonogramu)",
+        "nothingWaiting": "nic nie czeka",
+        "waitingElsewhere": "zadania czekają na innych silnikach (zaraz zostaną przydzielone)"
+      },
+      "scheduleOpen": "Harmonogram: miejsce {{slot}} z {{total}}, teraz {{percent}} % — działa",
+      "scheduleClosed": "Harmonogram: miejsce {{slot}} z {{total}}, teraz {{percent}} % — wyłączony"
     }
   },
   "favorites": {

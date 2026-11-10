@@ -20,6 +20,16 @@ nur Admins), Deep-Link `/admin?tab=engines`. API und Herkunft der Zahlen: `docs/
   danach `quick`-Snackbar und Neuladen (`load(true)`; ein älterer Takt-Abruf wird über `loadSeq` verworfen); Fehler per
   `SnackbarService.show(apiErrorText(…, 'admin.engines.bgError'))` (`apiErrors.background_list_full`/`engine_not_found`).
   „Nur auf Anforderung“-, Haus- und Live-Kennzeichnung bleiben als Chips/Zustand daneben.
+- **Übersichten** (0.953.0): Kopfkarte zusätzlich mit RookHub-Sperrzeit (Fenster per `formatQuietWindows` in der
+  Oberflächensprache, „gerade aktiv bis …“) und „Warteschlange leer in etwa …“; darunter eine Karte **„Hinweise“** nur,
+  wenn welche zutreffen (Symbol + Satz, nie nur Farbe). Die Engine-Karten stehen jetzt **je Maschine** (`machineGroups`):
+  Kopfzeile ist ein Aufklapper (`button` mit `aria-expanded`/`aria-controls`, ≥ 44 px), darunter Kennzahlen (`.rh-dots`)
+  und die Zeitplan-Zeile; auf/zu je Betrachter in localStorage `rh.adminEngines.machines` (Gerät, `core/local-storage-keys.ts`),
+  Vorgabe offen; Offline-Engines bleiben über „N offline einblenden“ ausgeblendet (eine Maschine ganz ohne sichtbare
+  Engine fällt weg). Engine-Karte: Zeitplan-Zeile (Platz/Total, jetzt %, läuft/aus), Leerlauf mit Grund
+  („Leerlauf: Sperrzeit für Stapel-Aufträge …“), Tempo „Ø normal · Schonzeit“. Ganz unten Karte **„Engine-Tokens“** als
+  Tabelle im Scrollkasten (Name + Präfix, Besitzer, angelegt, letzter Zugriff, Ablauf, Engines x (y online)), Hilfe nennt
+  die 5-Minuten-Genauigkeit.
 - **Tabellen** bleiben auch am Handy Tabellen: `min-width` + eigener Scroll-Kasten (`.table-scroll`, DESIGN 5.3) — die
   Seite selbst läuft bei 390 px nicht über (Spec).
 - **Auffrischen**: `setInterval` 15 s (`ENGINE_OVERVIEW_POLL_MS`), übersprungen bei `document.visibilityState === 'hidden'`;

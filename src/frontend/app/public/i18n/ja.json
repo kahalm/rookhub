@@ -3001,7 +3001,65 @@
       "bgRemove": "{{name}} のバックグラウンドリストから外す",
       "bgAdded": "{{name}} のバックグラウンドリストに追加しました",
       "bgRemoved": "{{name}} のバックグラウンドリストから外しました",
-      "bgError": "バックグラウンドリストを変更できませんでした"
+      "bgError": "バックグラウンドリストを変更できませんでした",
+      "quietHours": "スケジュールのないエンジンでのバッチ処理の休止時間：{{windows}}（{{zone}}）。",
+      "quietNow": "{{until}} まで有効。",
+      "quietNotNow": "現在は無効。",
+      "quietOff": "RookHub の休止時間は未設定。",
+      "estimate": "キューは約 {{time}} で空になります（直近1時間のペース）。",
+      "hintsTitle": "注意",
+      "hint": {
+        "stuckJobs": "{{count}} 件のジョブが {{since}} から {{name}} で待機中",
+        "why": {
+          "offline": "エンジンがオフライン",
+          "notInList": "エンジンがどのバックグラウンドリストにもない"
+        },
+        "lastError": "最後のエラー：{{error}}",
+        "notInList": "{{name}} のバックグラウンドエンジン {{count}} 台がどのリストにもありません：{{engines}}",
+        "listCap": "{{name}} のバックグラウンドリスト：{{count}} / {{max}}",
+        "staleToken": "エンジントークン「{{name}}」（{{owner}}）は {{since}} 以降未使用",
+        "staleTokenNever": "エンジントークン「{{name}}」（{{owner}}）は未使用"
+      },
+      "m": {
+        "online": "オンライン {{online}}/{{total}}",
+        "working": "計算中 {{count}}",
+        "token": "トークン：{{name}}",
+        "schedule": "スケジュール：{{rule}}（{{zone}}）",
+        "scheduleNow": "現在 {{percent}} %、{{reported}} 台中 {{open}} 台が稼働可",
+        "scheduleNext": "{{when}} から：{{percent}} %",
+        "reportedAt": "報告 {{when}}",
+        "noSchedule": "スケジュール未報告 — バッチ処理には RookHub の休止時間が適用されます。",
+        "noScheduleLichess": "Lichess エンジンはスケジュールを報告しません — バッチ処理には RookHub の休止時間が適用されます。"
+      },
+      "speedSplit": "Ø 通常 {{normal}} · 省力 {{reduced}}",
+      "machinesHelp": "エンジンをマシンごとにまとめています（同じ所有者・同じエンジントークン・同じ名前の語幹）。直近7日の Ø kN/s を通常と省力に分けています：10分ごとの区間を今日のルールで分類 — 100 % 未満のスケジュール、またはスケジュールなしなら RookHub の休止時間。速度＝ノード数 ÷ エンジンが報告した探索時間。",
+      "tokensTitle": "エンジントークン",
+      "tokensHelp": "全アカウントのスコープ「engine」の API トークン — トークン本体は表示せず、プロフィールと同じ接頭辞のみ。最終アクセスは5分単位の精度。エンジンは最後に登録したトークンに紐づきます（0.953.0 以降。古いものはプロバイダの次回再起動後に表示）。",
+      "tokensEmpty": "エンジントークンはありません。",
+      "t": {
+        "name": "名前",
+        "owner": "所有者",
+        "created": "作成",
+        "lastUsed": "最終アクセス",
+        "expires": "期限",
+        "engines": "エンジン",
+        "never": "なし",
+        "expired": "期限切れ",
+        "engineCount": "{{count}} 台（{{online}} 台オンライン）",
+        "noEngines": "紐づけなし"
+      },
+      "idleBecause": "待機中：{{reason}}",
+      "idleReason": {
+        "paused": "バックグラウンド処理は一時停止中",
+        "explicitOnly": "要求時のみ",
+        "notInList": "どのバックグラウンドリストにもない",
+        "scheduleOff": "スケジュールにより停止中",
+        "quietHours": "バッチ処理の休止時間（スケジュールなし）",
+        "nothingWaiting": "待機ジョブなし",
+        "waitingElsewhere": "他のエンジンでジョブが待機中（まもなく再配分）"
+      },
+      "scheduleOpen": "スケジュール：{{total}} 中 {{slot}} 番、現在 {{percent}} % — 稼働",
+      "scheduleClosed": "スケジュール：{{total}} 中 {{slot}} 番、現在 {{percent}} % — 停止"
     }
   },
   "favorites": {

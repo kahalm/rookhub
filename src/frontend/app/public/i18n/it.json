@@ -3001,7 +3001,65 @@
       "bgRemove": "Rimuovi dalla lista in background di {{name}}",
       "bgAdded": "Aggiunto alla lista in background di {{name}}",
       "bgRemoved": "Rimosso dalla lista in background di {{name}}",
-      "bgError": "Impossibile modificare la lista in background"
+      "bgError": "Impossibile modificare la lista in background",
+      "quietHours": "Orari di riposo per i lavori in blocco sui motori senza orario: {{windows}} ({{zone}}).",
+      "quietNow": "Attivi fino alle {{until}}.",
+      "quietNotNow": "Non attivi ora.",
+      "quietOff": "Nessun orario di riposo RookHub impostato.",
+      "estimate": "Coda vuota tra circa {{time}} (al ritmo dell’ultima ora).",
+      "hintsTitle": "Avvisi",
+      "hint": {
+        "stuckJobs": "{{count}} lavori attendono dal {{since}} su {{name}}",
+        "why": {
+          "offline": "motore offline",
+          "notInList": "motore in nessuna lista in background"
+        },
+        "lastError": "ultimo errore: {{error}}",
+        "notInList": "{{count}} motori in background di {{name}} non sono in nessuna lista: {{engines}}",
+        "listCap": "Lista in background di {{name}}: {{count}} su {{max}}",
+        "staleToken": "Token motore «{{name}}» ({{owner}}) inutilizzato dal {{since}}",
+        "staleTokenNever": "Token motore «{{name}}» ({{owner}}) mai usato"
+      },
+      "m": {
+        "online": "online {{online}}/{{total}}",
+        "working": "calcola {{count}}",
+        "token": "token: {{name}}",
+        "schedule": "Orario: {{rule}} ({{zone}})",
+        "scheduleNow": "ora {{percent}} %, {{open}} motori su {{reported}} aperti",
+        "scheduleNext": "da {{when}}: {{percent}} %",
+        "reportedAt": "segnalato {{when}}",
+        "noSchedule": "Nessun orario segnalato: per i lavori in blocco valgono gli orari di riposo RookHub.",
+        "noScheduleLichess": "I motori Lichess non segnalano orari: per i lavori in blocco valgono gli orari di riposo RookHub."
+      },
+      "speedSplit": "Ø normale {{normal}} · ridotto {{reduced}}",
+      "machinesHelp": "Motori raggruppati per macchina (stesso proprietario, stesso token motore, stessa radice del nome). Ø kN/s degli ultimi 7 giorni diviso in normale e ridotto: ogni intervallo di 10 minuti è classificato secondo la regola di OGGI — orario sotto il 100 % o, senza orario, orari di riposo RookHub. La velocità = nodi ÷ tempo di ricerca riportato dal motore.",
+      "tokensTitle": "Token motore",
+      "tokensHelp": "Tutti i token API con ambito «engine» di tutti gli account — mai il token, solo il prefisso come nel profilo. L’ultimo accesso è preciso a 5 minuti. I motori sono collegati al token con cui si sono registrati l’ultima volta (dalla 0.953.0; quelli più vecchi compaiono dopo il riavvio del provider).",
+      "tokensEmpty": "Nessun token motore.",
+      "t": {
+        "name": "Nome",
+        "owner": "Proprietario",
+        "created": "creato",
+        "lastUsed": "ultimo accesso",
+        "expires": "scade",
+        "engines": "Motori",
+        "never": "mai",
+        "expired": "scaduto",
+        "engineCount": "{{count}} motori ({{online}} online)",
+        "noEngines": "nessuno collegato"
+      },
+      "idleBecause": "Inattivo: {{reason}}",
+      "idleReason": {
+        "paused": "lavori in background in pausa",
+        "explicitOnly": "solo su richiesta",
+        "notInList": "in nessuna lista in background",
+        "scheduleOff": "spento secondo l’orario",
+        "quietHours": "orari di riposo per i lavori in blocco (nessun orario)",
+        "nothingWaiting": "niente in attesa",
+        "waitingElsewhere": "lavori in attesa su altri motori (ridistribuiti a breve)"
+      },
+      "scheduleOpen": "Orario: posto {{slot}} di {{total}}, ora {{percent}} % — attivo",
+      "scheduleClosed": "Orario: posto {{slot}} di {{total}}, ora {{percent}} % — spento"
     }
   },
   "favorites": {

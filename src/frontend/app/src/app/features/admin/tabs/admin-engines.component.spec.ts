@@ -6,7 +6,8 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import {
   AdminEnginesComponent, ENGINE_OVERVIEW_POLL_MS, ENGINE_OVERVIEW_URL, EngineOverview, EngineOverviewEngine,
-  EngineThroughputWindow, backgroundRows, engineBackgroundUrl, problemCount,
+  EngineThroughputWindow, backgroundRows, engineBackgroundUrl, problemCount, ENGINE_MACHINES_STORAGE_KEY, EngineMachine,
+  formatQuietWindows,
 } from './admin-engines.component';
 import { SnackbarService } from '../../../core/snackbar.service';
 
@@ -21,7 +22,16 @@ function engine(id: string, p: Partial<EngineOverviewEngine> = {}): EngineOvervi
     lastSeenAt: '2026-11-10T11:59:50Z', registeredAt: '2026-11-07T12:00:00Z', maxThreads: 4, maxHash: 256, variants: ['chess'],
     backgroundFor: [], houseEngine: false, explicitOnly: false, state: 'idle', liveStreams: 0, providerPolling: 1,
     brokerQueued: 0, current: null, waitingQueued: 0, waitingPaused: 0, oldestWaitingSince: null,
-    throughput: { hour: W(), day: W(), week: W() }, broker: null, ...p,
+    throughput: { hour: W(), day: W(), week: W() }, broker: null,
+    machineKey: '990101|7|Server', schedule: null, idleReason: null, speed: { normal: null, reduced: null }, apiTokenId: 7, ...p,
+  };
+}
+
+function machine(key: string, ids: string[], p: Partial<EngineMachine> = {}): EngineMachine {
+  return {
+    key, name: 'Server', ownerUserId: 990101, ownerName: 'ov-owner', source: 'rookhub', apiTokenId: 7, tokenName: 'Server-Token',
+    engineIds: ids, online: 1, total: ids.length, working: 1, threads: 8, doneDay: 15, busyPercentDay: 50,
+    speed: { normal: 2000, reduced: 1000 }, schedule: null, ...p,
   };
 }
 
@@ -48,8 +58,23 @@ const overview: EngineOverview = {
       throughput: { hour: W({ done: 5 }), day: W({ done: 15, unavailable: 2, failed: 1, busySeconds: 43_200 }), week: W({ done: 16 }) },
     }),
     engine('eei_ovLichess01', { source: 'lichess', registered: false, online: null, state: 'unknown', maxThreads: null, maxHash: null }),
-    engine('rhe_ovC000000003', { name: 'Alter PC', online: false, state: 'offline' }),
+    engine('rhe_ovC000000003', { name: 'Alter PC', online: false, state: 'offline', machineKey: '990101|-|Alter PC' }),
   ],
+  machines: [
+    machine('990101|7|Server', ['rhe_ovA000000001', 'eei_ovLichess01'], {
+      schedule: { rule: 'Mo-Fr 08:00-17:00 50%', timeZone: 'Europe/Vienna', scope: 'background', total: 3,
+        reportedAt: '2026-11-10T10:00:00Z', reported: 3, openNow: 2, percentNow: 50, nextChangeAt: '2026-11-10T16:00:00Z', nextPercent: 100 },
+    }),
+    machine('990101|-|Alter PC', ['rhe_ovC000000003'], { name: 'Alter PC', online: 0, working: 0, apiTokenId: null, tokenName: null }),
+  ],
+  tokens: [{ id: 7, name: 'Server-Token', prefix: 'rkh_abcd1234', ownerUserId: 990101, ownerName: 'ov-owner', createdAt: '2026-09-01T00:00:00Z',
+    lastUsedAt: '2026-11-10T11:58:00Z', expiresAt: null, expired: false, engines: [{ id: 'rhe_ovA000000001', name: 'Server 1', online: true }] }],
+  hints: [{ kind: 'stuckJobs', engineId: 'rhe_ovC000000003', name: 'Alter PC', userId: 990101, count: 32, max: null,
+    since: '2026-11-09T12:00:00Z', detail: 'offline|Broker antwortete 503' }],
+  quiet: { enabled: true, quietNow: true, quietUntil: '2026-11-10T16:00:00Z', timeZone: 'Europe/Vienna',
+    windows: [1, 2, 3, 4].map(day => ({ day, from: '08:00', to: '17:00' })).concat([{ day: 5, from: '08:00', to: '14:00' }]) },
+  queueEmptyInHours: 0.5,
+  backgroundCap: 64,
 };
 
 describe('AdminEnginesComponent', () => {
@@ -240,6 +265,64 @@ describe('AdminEnginesComponent', () => {
     http.expectNone(ENGINE_OVERVIEW_URL);
     expect(fixture.componentInstance.saving()).toBeNull();
     expect((all('engine')[1].querySelector('[data-testid="bg-add"]') as HTMLButtonElement).disabled).toBeFalse();
+  });
+
+  // ── Übersichten (0.953.0) ────────────────────────────────────────────────────────────────────────────
+
+  it('Maschinen: Kopfzeile mit Stand und Zeitplan, Engines darunter; Offline-Maschine erst mit „offline einblenden“', async () => {
+    await loaded();
+    const machines = all('machine');
+    expect(machines.length).toBe(1);                       // „Alter PC“ hat nur eine Offline-Engine (ausgeblendet)
+    const m = machines[0];
+    expect(m.querySelector('[data-testid="machine-toggle"]')!.getAttribute('aria-expanded')).toBe('true');
+    expect(m.querySelector('[data-testid="machine-stats"]')!.textContent).toContain('admin.engines.m.online');
+    expect(m.querySelector('[data-testid="machine-stats"]')!.textContent).toContain('admin.engines.speedSplit');
+    expect(m.querySelector('[data-testid="machine-schedule"]')!.textContent).toContain('admin.engines.m.scheduleNext');
+    expect(m.querySelectorAll('[data-testid="engine"]').length).toBe(2);
+
+    (q('toggle-offline') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const pc = all('machine')[1];
+    expect(pc.querySelector('[data-testid="machine-toggle"]')!.getAttribute('aria-expanded')).toBe('true');
+    expect(pc.querySelectorAll('[data-testid="engine"]').length).toBe(1);
+    expect(pc.querySelector('[data-testid="machine-schedule"]')!.textContent).toContain('admin.engines.m.noSchedule');
+  });
+
+  it('Maschine auf-/zuklappen wird je Betrachter gemerkt', async () => {
+    localStorage.removeItem(ENGINE_MACHINES_STORAGE_KEY);
+    await loaded();
+    (all('machine')[0].querySelector('[data-testid="machine-toggle"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(all('machine')[0].querySelector('[data-testid="engine"]')).toBeNull();
+    expect(JSON.parse(localStorage.getItem(ENGINE_MACHINES_STORAGE_KEY)!)).toEqual({ '990101|7|Server': false });
+    localStorage.removeItem(ENGINE_MACHINES_STORAGE_KEY);
+  });
+
+  it('Hinweise, Sperrzeit, Abschätzung, Tokens und Leerlauf-Grund', async () => {
+    const d = structuredClone(overview);
+    d.engines[1] = { ...d.engines[1], state: 'idle', online: true, idleReason: 'quietHours' };
+    await loaded(d);
+    const hint = all('hint')[0];
+    expect(hint.getAttribute('data-kind')).toBe('stuckJobs');
+    expect(hint.textContent).toContain('admin.engines.hint.why.offline');
+    expect(hint.textContent).toContain('admin.engines.hint.lastError');
+    expect(q('quiet-hours')!.textContent).toContain('admin.engines.quietNow');
+    expect(q('estimate')).not.toBeNull();
+    expect(all('token').length).toBe(1);
+    expect(all('token')[0].textContent).toContain('rkh_abcd1234');
+    expect(all('engine')[1].querySelector('[data-testid="engine-idle"]')!.textContent).toContain('admin.engines.idleBecause');
+  });
+
+  it('ohne Hinweise und Tokens: keine Hinweiskarte, Leersatz bei den Tokens', async () => {
+    await loaded({ ...overview, hints: [], tokens: [], queueEmptyInHours: null });
+    expect(q('hints')).toBeNull();
+    expect(q('tokens-empty')).not.toBeNull();
+    expect(q('estimate')).toBeNull();
+  });
+
+  it('formatQuietWindows fasst Tage mit gleicher Zeit zusammen', () => {
+    const w = [1, 2, 3, 4].map(day => ({ day, from: '08:00', to: '17:00' })).concat([{ day: 5, from: '08:00', to: '14:00' }]);
+    expect(formatQuietWindows(w, 'en')).toBe('Mon–Thu 08:00–17:00; Fri 08:00–14:00');
   });
 
   it('Handybreite: die Seite läuft nicht über (Tabellen scrollen in ihrem Kasten)', async () => {

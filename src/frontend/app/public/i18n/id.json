@@ -3001,7 +3001,65 @@
       "bgRemove": "Hapus dari daftar latar belakang {{name}}",
       "bgAdded": "Ditambahkan ke daftar latar belakang {{name}}",
       "bgRemoved": "Dihapus dari daftar latar belakang {{name}}",
-      "bgError": "Daftar latar belakang tidak dapat diubah"
+      "bgError": "Daftar latar belakang tidak dapat diubah",
+      "quietHours": "Jam tenang untuk tugas batch pada mesin tanpa jadwal: {{windows}} ({{zone}}).",
+      "quietNow": "Aktif hingga {{until}}.",
+      "quietNotNow": "Sedang tidak aktif.",
+      "quietOff": "Tidak ada jam tenang RookHub.",
+      "estimate": "Antrean kosong dalam sekitar {{time}} (dengan laju satu jam terakhir).",
+      "hintsTitle": "Catatan",
+      "hint": {
+        "stuckJobs": "{{count}} tugas menunggu sejak {{since}} di {{name}}",
+        "why": {
+          "offline": "mesin offline",
+          "notInList": "mesin tidak ada di daftar latar belakang mana pun"
+        },
+        "lastError": "galat terakhir: {{error}}",
+        "notInList": "{{count}} mesin latar belakang milik {{name}} tidak ada di daftar mana pun: {{engines}}",
+        "listCap": "Daftar latar belakang {{name}}: {{count}} dari {{max}}",
+        "staleToken": "Token mesin “{{name}}” ({{owner}}) tidak dipakai sejak {{since}}",
+        "staleTokenNever": "Token mesin “{{name}}” ({{owner}}) belum pernah dipakai"
+      },
+      "m": {
+        "online": "online {{online}}/{{total}}",
+        "working": "menghitung {{count}}",
+        "token": "token: {{name}}",
+        "schedule": "Jadwal: {{rule}} ({{zone}})",
+        "scheduleNow": "kini {{percent}} %, {{open}} dari {{reported}} mesin terbuka",
+        "scheduleNext": "mulai {{when}}: {{percent}} %",
+        "reportedAt": "dilaporkan {{when}}",
+        "noSchedule": "Tidak ada jadwal yang dilaporkan — untuk tugas batch berlaku jam tenang RookHub.",
+        "noScheduleLichess": "Mesin Lichess tidak melaporkan jadwal — untuk tugas batch berlaku jam tenang RookHub."
+      },
+      "speedSplit": "Ø normal {{normal}} · hemat {{reduced}}",
+      "machinesHelp": "Mesin dikelompokkan per mesin fisik (pemilik sama, token mesin sama, akar nama sama). Ø kN/s 7 hari terakhir dipisah normal dan hemat: tiap keranjang 10 menit digolongkan menurut aturan HARI INI — jadwal di bawah 100 % atau, tanpa jadwal, jam tenang RookHub. Laju = node ÷ waktu pencarian menurut mesin.",
+      "tokensTitle": "Token mesin",
+      "tokensHelp": "Semua token API berlingkup “engine” dari semua akun — tidak pernah tokennya, hanya awalan seperti di profil. Akses terakhir akurat hingga 5 menit. Mesin terhubung ke token yang terakhir dipakai untuk mendaftar (sejak 0.953.0; yang lebih lama muncul setelah penyedia dijalankan ulang).",
+      "tokensEmpty": "Tidak ada token mesin.",
+      "t": {
+        "name": "Nama",
+        "owner": "Pemilik",
+        "created": "dibuat",
+        "lastUsed": "akses terakhir",
+        "expires": "kedaluwarsa",
+        "engines": "Mesin",
+        "never": "tidak pernah",
+        "expired": "kedaluwarsa",
+        "engineCount": "{{count}} mesin ({{online}} online)",
+        "noEngines": "tidak ada yang terhubung"
+      },
+      "idleBecause": "Menganggur: {{reason}}",
+      "idleReason": {
+        "paused": "tugas latar belakang dijeda",
+        "explicitOnly": "hanya atas permintaan",
+        "notInList": "tidak ada di daftar latar belakang mana pun",
+        "scheduleOff": "mati sesuai jadwal",
+        "quietHours": "jam tenang untuk tugas batch (tanpa jadwal)",
+        "nothingWaiting": "tidak ada yang menunggu",
+        "waitingElsewhere": "tugas menunggu di mesin lain (segera dibagi ulang)"
+      },
+      "scheduleOpen": "Jadwal: posisi {{slot}} dari {{total}}, kini {{percent}} % — berjalan",
+      "scheduleClosed": "Jadwal: posisi {{slot}} dari {{total}}, kini {{percent}} % — mati"
     }
   },
   "favorites": {

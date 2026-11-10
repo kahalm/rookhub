@@ -277,6 +277,58 @@ public class EngineOverviewSqlTests(EngineOverviewSqlFixture fixture) : IAsyncLi
         await using (var db = fixture.Schema.NewContext())
             Assert.Equal(64, (await db.LichessEngineCredentials.AsNoTracking().SingleAsync(c => c.UserId == Owner)).BackgroundEngines.Count);
     }
+
+    /// <summary>Übersichten (0.953.0) gegen echtes MariaDB: Engine-Tokens (Scope-Filter, ohne Hash), Zeitpläne, Körbe
+    /// einmal geladen, letzter Fehler je hängender Engine, Leerlauf-Grund über EngineAvailability, ApiTokenId-Spalte.</summary>
+    [MySqlFact]
+    public async Task Build_Insights_TranslateAndCount()
+    {
+        await using (var db = fixture.Schema.NewContext())
+        {
+            db.AppUsers.Add(new AppUser { Id = Owner, Username = "sql-owner", PasswordHash = "x" });
+            await db.SaveChangesAsync();
+            db.UserApiTokens.AddRange(
+                new UserApiToken { Id = 990951, UserId = Owner, Name = "Server", TokenHash = new string('a', 64), Prefix = "rkh_aaaa1111",
+                    Scope = "engine", CreatedAt = Now.AddDays(-50), LastUsedAt = Now.AddDays(-45) },
+                new UserApiToken { Id = 990952, UserId = Owner, Name = "Ext", TokenHash = new string('b', 64), Prefix = "rkh_bbbb2222",
+                    Scope = "extension", CreatedAt = Now });
+            await db.SaveChangesAsync();
+            db.ExternalEngineRegistrations.AddRange(
+                new ExternalEngineRegistration { Id = RheA, UserId = Owner, Name = "Server Hintergrund 1", ClientSecret = "cs", ProviderSelector = "selA",
+                    MaxThreads = 2, MaxHash = 64, Variants = "chess", CreatedAt = Now, LastSeenAt = Now, ApiTokenId = 990951 },
+                new ExternalEngineRegistration { Id = RheB, UserId = Owner, Name = "Server Hintergrund 2", ClientSecret = "cs", ProviderSelector = "selB",
+                    MaxThreads = 2, MaxHash = 64, Variants = "chess", CreatedAt = Now, LastSeenAt = Now.AddDays(-1), ApiTokenId = 990951 });
+            db.EngineClientSchedules.Add(new EngineClientSchedule { UserId = Owner, EngineName = "Server Hintergrund 1", Slot = 2, Total = 3,
+                Scope = "background", Rule = "Mo-Fr 08:00-17:00 0%", TimeZone = "Europe/Vienna", ReportedAt = Now });
+            db.LichessEngineCredentials.Add(new LichessEngineCredential { UserId = Owner, BackgroundEngineIds = $"{RheA},{RheB}", CreatedAt = Now, UpdatedAt = Now });
+            var j = Job(990971, Owner, RheB, AnalysisJobStatus.Paused, JobPriority.League, Now.AddHours(-20));
+            j.LastError = "Broker antwortete 503";
+            db.AnalysisJobs.Add(j);
+            db.EngineThroughputBuckets.Add(new EngineThroughputBucket { EngineId = RheA, BucketStart = Now.AddHours(-1), Runs = 1, Done = 1,
+                RunSeconds = 10, Nodes = 10_000_000, NodeSeconds = 10 });
+            await db.SaveChangesAsync();
+        }
+
+        await using var sp = Provider();
+        await using var ctx = fixture.Schema.NewContext();
+        var options = new LocalBrokerOptions();
+        var scopes = sp.GetRequiredService<IServiceScopeFactory>();
+        var svc = new EngineOverviewService(ctx, new MemoryCache(new MemoryCacheOptions()), new EngineHub(options, () => Now, startSweeper: false),
+            new EngineSelectorDirectory(scopes, () => Now), options, new EngineActivityTracker(), new AnalysisJobLive(), new EngineThroughputRecorder(),
+            new BackgroundPause(scopes, new ConfigurationBuilder().Build(), NullLogger<BackgroundPause>.Instance), new ConfigurationBuilder().Build(),
+            new QuietHours("Mon-Thu 08:00-17:00", "Europe/Vienna"));
+        var dto = await svc.BuildAsync(Now, CancellationToken.None);
+
+        var token = Assert.Single(dto.Tokens);
+        Assert.Equal(("Server", "rkh_aaaa1111", 2), (token.Name, token.Prefix, token.Engines.Count));
+        var machine = Assert.Single(dto.Machines);
+        Assert.Equal(("Server", 1, 2), (machine.Name, machine.Online, machine.Total));
+        Assert.Equal((0, 1, 0), (machine.Schedule!.PercentNow, machine.Schedule.Reported, machine.Schedule.OpenNow));
+        Assert.Equal(1000.0, machine.Speed.Reduced);
+        Assert.Equal("scheduleOff", dto.Engines.Single(e => e.Id == RheA).IdleReason);
+        Assert.Contains(dto.Hints, h => h.Kind == "stuckJobs" && h.EngineId == RheB && h.Detail == "offline|Broker antwortete 503");
+        Assert.Contains(dto.Hints, h => h.Kind == "staleToken" && h.Name == "Server");
+    }
 }
 
 public sealed class EngineOverviewSqlFixture() : MariaDbClassFixture("engov", withApp: false);

@@ -64,6 +64,13 @@ public class ExternalEngineRegistration
     /// minütlich nachgetragen. Daraus der Online-Punkt, auch nach einem API-Neustart.</summary>
     public DateTime? LastSeenAt { get; set; }
 
+    /// <summary>Der Engine-Token (<see cref="UserApiToken"/>, Bereich <c>engine</c>), mit dem sich der Provider zuletzt
+    /// angemeldet bzw. die Registrierung geändert hat (0.953.0, Admin-Reiter „Engines“: welche Maschine hängt an welchem
+    /// Token). <c>null</c> = vor 0.953.0 angemeldet und seither nicht neu gemeldet. Bewusst KEIN Fremdschlüssel: ein
+    /// gelöschter Token soll die Registrierung nicht anfassen (die Übersicht zeigt dann „Token gelöscht“), und der Wert
+    /// wird nur beim Anmelden geschrieben — kein Schreiben je Poll.</summary>
+    public int? ApiTokenId { get; set; }
+
     public IReadOnlyList<string> VariantList =>
         Variants.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }

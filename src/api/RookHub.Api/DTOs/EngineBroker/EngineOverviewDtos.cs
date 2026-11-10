@@ -11,7 +11,54 @@ public record EngineOverviewDto(
     EngineOverviewPauseDto Pause,
     EngineOverviewQueueDto Queue,
     EngineOverviewThroughputDto Totals,
-    IReadOnlyList<EngineOverviewEngineDto> Engines);
+    IReadOnlyList<EngineOverviewEngineDto> Engines,
+    IReadOnlyList<EngineOverviewMachineDto> Machines,
+    IReadOnlyList<EngineOverviewTokenDto> Tokens,
+    IReadOnlyList<EngineOverviewHintDto> Hints,
+    EngineOverviewQuietDto Quiet,
+    double? QueueEmptyInHours,
+    int BackgroundCap);
+
+/// <summary>Sperrzeiten von RookHub (<c>TextLlm:QuietHours</c>) — gelten für Stapel-Aufträge auf Engines OHNE gemeldeten
+/// Zeitplan. <paramref name="Windows"/>: <c>day</c> 0 = Sonntag … 6 = Samstag (wie <c>DayOfWeek</c>), Uhrzeit HH:mm in
+/// <paramref name="TimeZone"/>.</summary>
+public record EngineOverviewQuietDto(bool Enabled, bool QuietNow, DateTime? QuietUntil, string TimeZone,
+    IReadOnlyList<EngineOverviewQuietWindowDto> Windows);
+
+public record EngineOverviewQuietWindowDto(int Day, string From, string To);
+
+/// <summary>Mittleres Tempo (kN/s) der letzten 7 Tage, getrennt nach „normal“ (Zeitplan 100 % bzw. außerhalb der
+/// Sperrzeit) und „Schonzeit“ (Zeitplan &lt; 100 % bzw. RookHub-Sperrzeit) — eingeordnet nach der HEUTIGEN Regel.</summary>
+public record EngineSpeedSplitDto(double? Normal, double? Reduced);
+
+/// <summary>Gemeldeter Zeitplan einer Engine (<c>EngineClientSchedules</c>).</summary>
+public record EngineScheduleDto(int Slot, int Total, string Scope, string Rule, string TimeZone, DateTime ReportedAt,
+    bool OpenNow, int PercentNow);
+
+/// <summary>Eine Maschine: Engines eines Kontos mit gleichem Namensstamm (ohne „Hintergrund N“/Nummer) und gleichem
+/// Engine-Token; Lichess-Engines je Konto als eine Gruppe.</summary>
+public record EngineOverviewMachineDto(
+    string Key, string Name, int? OwnerUserId, string? OwnerName, string Source, int? ApiTokenId, string? TokenName,
+    IReadOnlyList<string> EngineIds, int Online, int Total, int Working, int Threads, int DoneDay, int? BusyPercentDay,
+    EngineSpeedSplitDto Speed, EngineMachineScheduleDto? Schedule);
+
+/// <summary>Zeitplan einer Maschine: Regel der jüngsten Meldung, wie viele Engines gemeldet haben und jetzt laufen
+/// dürfen (<c>EngineAvailability.IsOpen</c>), heutiger Prozentsatz und das nächste Umschalten (binnen 7 Tagen).</summary>
+public record EngineMachineScheduleDto(string Rule, string TimeZone, string Scope, int Total, DateTime ReportedAt,
+    int Reported, int OpenNow, int PercentNow, DateTime? NextChangeAt, int? NextPercent);
+
+/// <summary>Ein API-Token mit Bereich <c>engine</c> — NIE der Token oder sein Hash, nur das Präfix wie im Profil.</summary>
+public record EngineOverviewTokenDto(int Id, string Name, string Prefix, int OwnerUserId, string? OwnerName,
+    DateTime CreatedAt, DateTime? LastUsedAt, DateTime? ExpiresAt, bool Expired, IReadOnlyList<EngineOverviewTokenEngineDto> Engines);
+
+public record EngineOverviewTokenEngineDto(string Id, string Name, bool? Online);
+
+/// <summary>Hinweis oben auf der Seite. <paramref name="Kind"/>: <c>stuckJobs</c> (Aufträge auf einer Engine, die offline
+/// ist oder in keiner Liste steht), <c>notInList</c> (Hintergrund-Engines einer Maschine in keiner Liste), <c>listCap</c>
+/// (Hintergrund-Liste eines Kontos zur Hälfte oder mehr voll), <c>staleToken</c> (Engine-Token seit &gt; 30 Tagen ohne
+/// Zugriff).</summary>
+public record EngineOverviewHintDto(string Kind, string? EngineId, string? Name, int? UserId, int Count, int? Max,
+    DateTime? Since, string? Detail);
 
 /// <summary>Admin-Schalter „Hintergrundjobs pausieren" (nur lesend; umlegen im Reiter „Hintergrundjobs").</summary>
 public record EngineOverviewPauseDto(bool Paused, bool ForcedByConfig, DateTime? Since, string? By);
@@ -68,7 +115,12 @@ public record EngineOverviewEngineDto(
     int WaitingPaused,
     DateTime? OldestWaitingSince,
     EngineOverviewThroughputDto Throughput,
-    EngineBrokerCountersDto? Broker);
+    EngineBrokerCountersDto? Broker,
+    string MachineKey,
+    EngineScheduleDto? Schedule,
+    string? IdleReason,
+    EngineSpeedSplitDto Speed,
+    int? ApiTokenId);
 
 public record EngineOverviewUserDto(int UserId, string? Name);
 

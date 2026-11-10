@@ -3001,7 +3001,65 @@
       "bgRemove": "Ta bort från bakgrundslistan för {{name}}",
       "bgAdded": "Tillagd i bakgrundslistan för {{name}}",
       "bgRemoved": "Borttagen från bakgrundslistan för {{name}}",
-      "bgError": "Det gick inte att ändra bakgrundslistan"
+      "bgError": "Det gick inte att ändra bakgrundslistan",
+      "quietHours": "Vilotider för batchjobb på motorer utan schema: {{windows}} ({{zone}}).",
+      "quietNow": "Aktiva till {{until}}.",
+      "quietNotNow": "Inte aktiva nu.",
+      "quietOff": "Inga vilotider i RookHub.",
+      "estimate": "Kön tom om ungefär {{time}} (i takten från senaste timmen).",
+      "hintsTitle": "Anmärkningar",
+      "hint": {
+        "stuckJobs": "{{count}} jobb väntar sedan {{since}} på {{name}}",
+        "why": {
+          "offline": "motorn offline",
+          "notInList": "motorn finns inte i någon bakgrundslista"
+        },
+        "lastError": "senaste fel: {{error}}",
+        "notInList": "{{count}} bakgrundsmotorer från {{name}} finns inte i någon lista: {{engines}}",
+        "listCap": "Bakgrundslista för {{name}}: {{count}} av {{max}}",
+        "staleToken": "Motortoken ”{{name}}” ({{owner}}) oanvänd sedan {{since}}",
+        "staleTokenNever": "Motortoken ”{{name}}” ({{owner}}) aldrig använd"
+      },
+      "m": {
+        "online": "online {{online}}/{{total}}",
+        "working": "räknar {{count}}",
+        "token": "token: {{name}}",
+        "schedule": "Schema: {{rule}} ({{zone}})",
+        "scheduleNow": "nu {{percent}} %, {{open}} av {{reported}} motorer öppna",
+        "scheduleNext": "från {{when}}: {{percent}} %",
+        "reportedAt": "rapporterat {{when}}",
+        "noSchedule": "Inget schema rapporterat — RookHubs vilotider gäller för batchjobb.",
+        "noScheduleLichess": "Lichess-motorer rapporterar inget schema — RookHubs vilotider gäller för batchjobb."
+      },
+      "speedSplit": "Ø normal {{normal}} · sparläge {{reduced}}",
+      "machinesHelp": "Motorer grupperade per maskin (samma ägare, samma motortoken, samma namnstam). Ø kN/s de senaste 7 dagarna uppdelat i normal och sparläge: varje 10-minuterskorg klassas enligt DAGENS regel — schema under 100 % eller, utan schema, RookHubs vilotider. Takten = noder ÷ söktid enligt motorn.",
+      "tokensTitle": "Motortokens",
+      "tokensHelp": "Alla API-tokens med omfånget ”engine” för alla konton — aldrig själva token, bara prefixet som i profilen. Senaste åtkomst är exakt på 5 minuter. Motorer kopplas till den token de senast registrerade sig med (från 0.953.0; äldre syns efter nästa omstart av providern).",
+      "tokensEmpty": "Inga motortokens.",
+      "t": {
+        "name": "Namn",
+        "owner": "Ägare",
+        "created": "skapad",
+        "lastUsed": "senaste åtkomst",
+        "expires": "går ut",
+        "engines": "Motorer",
+        "never": "aldrig",
+        "expired": "utgången",
+        "engineCount": "{{count}} motorer ({{online}} online)",
+        "noEngines": "inga kopplade"
+      },
+      "idleBecause": "Ledig: {{reason}}",
+      "idleReason": {
+        "paused": "bakgrundsjobb pausade",
+        "explicitOnly": "bara på begäran",
+        "notInList": "i ingen bakgrundslista",
+        "scheduleOff": "av enligt schema",
+        "quietHours": "vilotid för batchjobb (inget schema)",
+        "nothingWaiting": "inget väntar",
+        "waitingElsewhere": "jobb väntar på andra motorer (omfördelas strax)"
+      },
+      "scheduleOpen": "Schema: plats {{slot}} av {{total}}, nu {{percent}} % — kör",
+      "scheduleClosed": "Schema: plats {{slot}} av {{total}}, nu {{percent}} % — av"
     }
   },
   "favorites": {

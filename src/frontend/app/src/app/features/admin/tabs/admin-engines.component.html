@@ -29,12 +29,57 @@
           </span>
           <a mat-button routerLink="/admin" [queryParams]="{ tab: 'jobs' }" data-testid="pause-link">{{ 'admin.engines.pauseLink' | translate }}</a>
         </div>
+        <p class="line" data-testid="quiet-hours">
+          <mat-icon aria-hidden="true" class="li">bedtime</mat-icon>
+          @if (d.quiet.enabled) {
+            <span>
+              {{ 'admin.engines.quietHours' | translate:{ windows: quietText(), zone: d.quiet.timeZone } }}
+              @if (d.quiet.quietNow && d.quiet.quietUntil) { <strong>{{ 'admin.engines.quietNow' | translate:{ until: (d.quiet.quietUntil | date:'shortTime') } }}</strong> }
+              @else { <span class="muted">{{ 'admin.engines.quietNotNow' | translate }}</span> }
+            </span>
+          } @else {
+            <span>{{ 'admin.engines.quietOff' | translate }}</span>
+          }
+        </p>
+        @if (d.queueEmptyInHours != null) {
+          <p class="line" data-testid="estimate"><mat-icon aria-hidden="true" class="li">timer</mat-icon>{{ 'admin.engines.estimate' | translate:{ time: duration(d.queueEmptyInHours * 3600) } }}</p>
+        }
         <p class="meta" data-testid="updated">
           {{ 'admin.engines.updated' | translate:{ when: (d.generatedAt | date:'mediumTime') } }}
           @if (stale()) { <span class="stale" role="status">{{ 'admin.engines.stale' | translate }}</span> }
         </p>
       </mat-card-content>
     </mat-card>
+
+    <!-- Hinweise: nur, was gerade zutrifft -->
+    @if (d.hints.length) {
+      <mat-card appearance="outlined" class="eng-card hints" data-testid="hints">
+        <mat-card-header><mat-card-title>{{ 'admin.engines.hintsTitle' | translate }}</mat-card-title></mat-card-header>
+        <mat-card-content>
+          <ul class="hint-list">
+            @for (h of d.hints; track $index) {
+              <li class="line" [attr.data-kind]="h.kind" data-testid="hint">
+                <mat-icon aria-hidden="true" class="li warn-text">warning_amber</mat-icon>
+                <span>
+                  @switch (h.kind) {
+                    @case ('stuckJobs') {
+                      {{ 'admin.engines.hint.stuckJobs' | translate:{ count: count(h.count), name: h.name, since: (h.since | date:'short') } }}
+                      ({{ ('admin.engines.hint.why.' + hintReason(h)) | translate }})
+                      @if (hintError(h); as err) { <span class="muted">· {{ 'admin.engines.hint.lastError' | translate:{ error: err } }}</span> }
+                    }
+                    @case ('notInList') { {{ 'admin.engines.hint.notInList' | translate:{ count: h.count, name: h.name, engines: h.detail } }} }
+                    @case ('listCap') { {{ 'admin.engines.hint.listCap' | translate:{ name: h.name, count: h.count, max: h.max } }} }
+                    @case ('staleToken') {
+                      {{ (h.since ? 'admin.engines.hint.staleToken' : 'admin.engines.hint.staleTokenNever') | translate:{ name: h.name, owner: h.detail || '?', since: (h.since | date:'mediumDate') } }}
+                    }
+                  }
+                </span>
+              </li>
+            }
+          </ul>
+        </mat-card-content>
+      </mat-card>
+    }
 
     <!-- Warteschlange -->
     <mat-card appearance="outlined" class="eng-card">
@@ -125,7 +170,7 @@
 
     <!-- Engines -->
     <div class="list-head">
-      <h2 class="list-title">{{ 'admin.engines.listTitle' | translate }}</h2>
+      <h2 class="list-title">{{ 'admin.engines.listTitle' | translate }}<span class="rh-nowrap">&nbsp;<app-help-hint [text]="'admin.engines.machinesHelp' | translate" /></span></h2>
       @if (offlineCount() > 0) {
         <button mat-button type="button" (click)="toggleOffline()" [attr.aria-pressed]="showOffline()" data-testid="toggle-offline">
           {{ (showOffline() ? 'admin.engines.hideOffline' : 'admin.engines.showOffline') | translate:{ count: offlineCount() } }}
@@ -135,8 +180,43 @@
     @if (!visibleEngines().length) {
       <p class="empty-state" data-testid="engines-empty">{{ 'admin.engines.noEngines' | translate }}</p>
     }
-    <div class="engine-list">
-      @for (e of visibleEngines(); track e.id) {
+    @for (g of machineGroups(); track g.machine.key) {
+      @let m = g.machine;
+      @let open = isMachineOpen(m);
+      <section class="machine" data-testid="machine">
+        <button type="button" class="machine-head" (click)="toggleMachine(m)" [attr.aria-expanded]="open"
+                [attr.aria-controls]="'machine-' + $index" data-testid="machine-toggle">
+          <mat-icon aria-hidden="true">{{ open ? 'expand_less' : 'expand_more' }}</mat-icon>
+          <span class="m-name">{{ m.name }}</span>
+          @if (m.ownerName) { <span class="muted">{{ 'admin.engines.owner' | translate:{ name: m.ownerName } }}</span> }
+        </button>
+        <div class="rh-dots m-stats" data-testid="machine-stats">
+          <span>{{ 'admin.engines.m.online' | translate:{ online: m.online, total: m.total } }}</span>
+          <span>{{ 'admin.engines.m.working' | translate:{ count: m.working } }}</span>
+          @if (m.threads) { <span>{{ 'admin.engines.threads' | translate:{ count: m.threads } }}</span> }
+          <span>{{ 'admin.engines.doneDay' | translate:{ count: count(m.doneDay) } }}</span>
+          @if (m.busyPercentDay != null) { <span>{{ 'admin.engines.busyDay' | translate:{ percent: m.busyPercentDay } }}</span> }
+          <span>{{ 'admin.engines.speedSplit' | translate:{ normal: knps(m.speed.normal), reduced: knps(m.speed.reduced) } }}</span>
+          @if (m.tokenName) { <span>{{ 'admin.engines.m.token' | translate:{ name: m.tokenName } }}</span> }
+        </div>
+        <p class="line m-schedule" data-testid="machine-schedule">
+          <mat-icon aria-hidden="true" class="li">schedule</mat-icon>
+          @if (m.schedule; as sc) {
+            <span>
+              {{ 'admin.engines.m.schedule' | translate:{ rule: sc.rule, zone: sc.timeZone } }}
+              · {{ 'admin.engines.m.scheduleNow' | translate:{ percent: sc.percentNow, open: sc.openNow, reported: sc.reported } }}
+              @if (sc.nextChangeAt) { · {{ 'admin.engines.m.scheduleNext' | translate:{ when: (sc.nextChangeAt | date:'short'), percent: sc.nextPercent } }} }
+              <span class="muted">· {{ 'admin.engines.m.reportedAt' | translate:{ when: (sc.reportedAt | date:'short') } }}</span>
+            </span>
+          } @else if (m.source === 'rookhub') {
+            <span>{{ 'admin.engines.m.noSchedule' | translate }}</span>
+          } @else {
+            <span class="muted">{{ 'admin.engines.m.noScheduleLichess' | translate }}</span>
+          }
+        </p>
+        @if (open) {
+        <div class="engine-list" [id]="'machine-' + $index">
+      @for (e of g.engines; track e.id) {
         <mat-card appearance="outlined" class="engine" data-testid="engine">
           <div class="e-head">
             <div class="e-title">
@@ -211,7 +291,15 @@
           } @else if (e.liveStreams > 0) {
             <p class="line"><mat-icon aria-hidden="true" class="li">visibility</mat-icon>{{ 'admin.engines.liveStreams' | translate:{ count: e.liveStreams } }}</p>
           } @else if (e.state === 'idle') {
-            <p class="line muted"><mat-icon aria-hidden="true" class="li">pause_circle</mat-icon>{{ (e.providerPolling > 0 ? 'admin.engines.idlePolling' : 'admin.engines.idle') | translate }}</p>
+            <p class="line muted" data-testid="engine-idle"><mat-icon aria-hidden="true" class="li">pause_circle</mat-icon>
+              @if (e.idleReason) { {{ 'admin.engines.idleBecause' | translate:{ reason: (('admin.engines.idleReason.' + e.idleReason) | translate) } }} }
+              @else { {{ (e.providerPolling > 0 ? 'admin.engines.idlePolling' : 'admin.engines.idle') | translate }} }
+            </p>
+          }
+          @if (e.schedule; as sc) {
+            <p class="line small" data-testid="engine-schedule"><mat-icon aria-hidden="true" class="li">schedule</mat-icon>
+              {{ (sc.openNow ? 'admin.engines.scheduleOpen' : 'admin.engines.scheduleClosed') | translate:{ slot: sc.slot, total: sc.total, percent: sc.percentNow } }}
+            </p>
           }
 
           @if (e.waitingQueued || e.waitingPaused) {
@@ -229,7 +317,7 @@
             <span>{{ 'admin.engines.doneDay' | translate:{ count: count(e.throughput.day.done) } }}</span>
             <span>{{ 'admin.engines.doneWeek' | translate:{ count: count(e.throughput.week.done) } }}</span>
             @if (e.throughput.day.avgJobSeconds != null) { <span>{{ 'admin.engines.avgShort' | translate:{ time: duration(e.throughput.day.avgJobSeconds) } }}</span> }
-            @if (e.throughput.day.kiloNodesPerSecond != null) { <span>{{ knps(e.throughput.day.kiloNodesPerSecond) }}</span> }
+            @if (e.speed.normal != null || e.speed.reduced != null) { <span>{{ 'admin.engines.speedSplit' | translate:{ normal: knps(e.speed.normal), reduced: knps(e.speed.reduced) } }}</span> }
             <span>{{ 'admin.engines.busyDay' | translate:{ percent: busyShare(e.throughput.day, 'day') } }}</span>
             @if (problems(e.throughput.day) > 0) {
               <span class="warn-text">{{ 'admin.engines.problemsDay' | translate:{ count: count(problems(e.throughput.day)) } }}</span>
@@ -242,7 +330,57 @@
           }
         </mat-card>
       }
-    </div>
+        </div>
+        }
+      </section>
+    }
+
+    <!-- Engine-Tokens -->
+    <mat-card appearance="outlined" class="eng-card" data-testid="tokens">
+      <mat-card-header>
+        <mat-card-title>{{ 'admin.engines.tokensTitle' | translate }}<span class="rh-nowrap">&nbsp;<app-help-hint [text]="'admin.engines.tokensHelp' | translate" /></span></mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (!d.tokens.length) {
+          <p class="empty-state" data-testid="tokens-empty">{{ 'admin.engines.tokensEmpty' | translate }}</p>
+        } @else {
+          <div class="table-scroll">
+            <table class="eng-table wide" data-testid="tokens-table">
+              <thead>
+                <tr>
+                  <th>{{ 'admin.engines.t.name' | translate }}</th>
+                  <th>{{ 'admin.engines.t.owner' | translate }}</th>
+                  <th>{{ 'admin.engines.t.created' | translate }}</th>
+                  <th>{{ 'admin.engines.t.lastUsed' | translate }}</th>
+                  <th>{{ 'admin.engines.t.expires' | translate }}</th>
+                  <th>{{ 'admin.engines.t.engines' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (t of d.tokens; track t.id) {
+                  <tr data-testid="token">
+                    <td>{{ t.name }} <code>{{ t.prefix }}…</code></td>
+                    <td>{{ t.ownerName || ('#' + t.ownerUserId) }}</td>
+                    <td>{{ t.createdAt | date:'mediumDate' }}</td>
+                    <td>{{ t.lastUsedAt ? (t.lastUsedAt | date:'short') : ('admin.engines.t.never' | translate) }}</td>
+                    <td>
+                      @if (t.expired) { <span class="warn-text">{{ 'admin.engines.t.expired' | translate }}</span> }
+                      @else if (t.expiresAt) { {{ t.expiresAt | date:'mediumDate' }} }
+                      @else { – }
+                    </td>
+                    <td class="wrap">
+                      @if (t.engines.length) {
+                        {{ 'admin.engines.t.engineCount' | translate:{ count: t.engines.length, online: onlineCount(t) } }}
+                      } @else { <span class="muted">{{ 'admin.engines.t.noEngines' | translate }}</span> }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
   } @else {
     <app-loading-spinner />
   }

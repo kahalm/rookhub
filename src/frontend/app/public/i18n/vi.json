@@ -3001,7 +3001,65 @@
       "bgRemove": "Gỡ khỏi danh sách nền của {{name}}",
       "bgAdded": "Đã thêm vào danh sách nền của {{name}}",
       "bgRemoved": "Đã gỡ khỏi danh sách nền của {{name}}",
-      "bgError": "Không thể thay đổi danh sách nền"
+      "bgError": "Không thể thay đổi danh sách nền",
+      "quietHours": "Giờ yên tĩnh cho việc theo lô trên engine không có lịch: {{windows}} ({{zone}}).",
+      "quietNow": "Có hiệu lực đến {{until}}.",
+      "quietNotNow": "Hiện không có hiệu lực.",
+      "quietOff": "Chưa đặt giờ yên tĩnh RookHub.",
+      "estimate": "Hàng đợi trống sau khoảng {{time}} (theo tốc độ giờ vừa qua).",
+      "hintsTitle": "Ghi chú",
+      "hint": {
+        "stuckJobs": "{{count}} việc chờ từ {{since}} trên {{name}}",
+        "why": {
+          "offline": "engine ngoại tuyến",
+          "notInList": "engine không có trong danh sách nền nào"
+        },
+        "lastError": "lỗi gần nhất: {{error}}",
+        "notInList": "{{count}} engine nền của {{name}} không có trong danh sách nào: {{engines}}",
+        "listCap": "Danh sách nền của {{name}}: {{count}}/{{max}}",
+        "staleToken": "Token engine “{{name}}” ({{owner}}) không dùng từ {{since}}",
+        "staleTokenNever": "Token engine “{{name}}” ({{owner}}) chưa từng dùng"
+      },
+      "m": {
+        "online": "trực tuyến {{online}}/{{total}}",
+        "working": "đang tính {{count}}",
+        "token": "token: {{name}}",
+        "schedule": "Lịch: {{rule}} ({{zone}})",
+        "scheduleNow": "hiện {{percent}} %, {{open}}/{{reported}} engine mở",
+        "scheduleNext": "từ {{when}}: {{percent}} %",
+        "reportedAt": "báo lúc {{when}}",
+        "noSchedule": "Chưa báo lịch — việc theo lô áp dụng giờ yên tĩnh RookHub.",
+        "noScheduleLichess": "Engine Lichess không báo lịch — việc theo lô áp dụng giờ yên tĩnh RookHub."
+      },
+      "speedSplit": "Ø bình thường {{normal}} · tiết kiệm {{reduced}}",
+      "machinesHelp": "Engine được nhóm theo máy (cùng chủ, cùng token engine, cùng gốc tên). Ø kN/s 7 ngày qua chia thành bình thường và tiết kiệm: mỗi giỏ 10 phút được xếp theo quy tắc HÔM NAY — lịch dưới 100 % hoặc, không có lịch, giờ yên tĩnh RookHub. Tốc độ = số nút ÷ thời gian tìm kiếm theo engine.",
+      "tokensTitle": "Token engine",
+      "tokensHelp": "Mọi token API phạm vi “engine” của mọi tài khoản — không bao giờ hiện token, chỉ tiền tố như trong hồ sơ. Lần truy cập cuối chính xác đến 5 phút. Engine gắn với token dùng để đăng ký gần nhất (từ 0.953.0; engine cũ hiện sau lần khởi động lại provider tiếp theo).",
+      "tokensEmpty": "Không có token engine.",
+      "t": {
+        "name": "Tên",
+        "owner": "Chủ",
+        "created": "tạo",
+        "lastUsed": "truy cập cuối",
+        "expires": "hết hạn",
+        "engines": "Engine",
+        "never": "chưa bao giờ",
+        "expired": "đã hết hạn",
+        "engineCount": "{{count}} engine ({{online}} trực tuyến)",
+        "noEngines": "chưa gắn"
+      },
+      "idleBecause": "Rảnh: {{reason}}",
+      "idleReason": {
+        "paused": "việc nền đang tạm dừng",
+        "explicitOnly": "chỉ khi yêu cầu",
+        "notInList": "không có trong danh sách nền nào",
+        "scheduleOff": "tắt theo lịch",
+        "quietHours": "giờ yên tĩnh cho việc theo lô (không có lịch)",
+        "nothingWaiting": "không có gì chờ",
+        "waitingElsewhere": "việc đang chờ trên engine khác (sắp phân lại)"
+      },
+      "scheduleOpen": "Lịch: vị trí {{slot}}/{{total}}, hiện {{percent}} % — chạy",
+      "scheduleClosed": "Lịch: vị trí {{slot}}/{{total}}, hiện {{percent}} % — tắt"
     }
   },
   "favorites": {

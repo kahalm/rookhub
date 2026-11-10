@@ -120,6 +120,7 @@ export const STORAGE_KEYS: readonly StorageKeyEntry[] = [
   d('rookhub_sw_recovery_reload', 'Service-Worker-Wiederanlauf (technisch)'),
   d('rh.ebooks.', 'E-Book-Leser: Breite, Schrift, Layout, Lösestil, Weiter', true),
   d('rh.repertoire.treeArrows', 'Baum-Pfeile'),
+  d('rh.adminEngines.machines', 'Admin „Engines“: auf-/zugeklappte Maschinen je Betrachter'),
   d('rh-kids-stars-free', 'KidHub: Figur und Zahl im freien Spiel'),
   d('lh-auto-my-games', 'LeagueHub: eigene Partien automatisch'),
   d('lh-overview-newest-first', 'LeagueHub: Vereinsübersicht „Neueste zuerst“'),

@@ -3056,7 +3056,65 @@
       "bgRemove": "Aus Hintergrund-Liste von {{name}} nehmen",
       "bgAdded": "In die Hintergrund-Liste von {{name}} aufgenommen",
       "bgRemoved": "Aus der Hintergrund-Liste von {{name}} genommen",
-      "bgError": "Hintergrund-Liste konnte nicht geändert werden"
+      "bgError": "Hintergrund-Liste konnte nicht geändert werden",
+      "quietHours": "Sperrzeit für Stapel-Aufträge auf Engines ohne Zeitplan: {{windows}} ({{zone}}).",
+      "quietNow": "Gerade aktiv bis {{until}}.",
+      "quietNotNow": "Gerade nicht aktiv.",
+      "quietOff": "Keine RookHub-Sperrzeit eingestellt.",
+      "estimate": "Warteschlange leer in etwa {{time}} (beim Tempo der letzten Stunde).",
+      "hintsTitle": "Hinweise",
+      "hint": {
+        "stuckJobs": "{{count}} Aufträge warten seit {{since}} auf {{name}}",
+        "why": {
+          "offline": "Engine offline",
+          "notInList": "Engine in keiner Hintergrund-Liste"
+        },
+        "lastError": "letzter Fehler: {{error}}",
+        "notInList": "{{count}} Hintergrund-Engines von {{name}} stehen in keiner Hintergrund-Liste: {{engines}}",
+        "listCap": "Hintergrund-Liste von {{name}}: {{count}} von {{max}}",
+        "staleToken": "Engine-Token „{{name}}“ ({{owner}}) seit {{since}} ohne Zugriff",
+        "staleTokenNever": "Engine-Token „{{name}}“ ({{owner}}) noch nie benutzt"
+      },
+      "m": {
+        "online": "online {{online}}/{{total}}",
+        "working": "rechnet {{count}}",
+        "token": "Token: {{name}}",
+        "schedule": "Zeitplan: {{rule}} ({{zone}})",
+        "scheduleNow": "jetzt {{percent}} %, {{open}} von {{reported}} Engines offen",
+        "scheduleNext": "ab {{when}}: {{percent}} %",
+        "reportedAt": "gemeldet {{when}}",
+        "noSchedule": "Kein Zeitplan gemeldet — für Stapel-Aufträge gelten die RookHub-Sperrzeiten.",
+        "noScheduleLichess": "Lichess-Engines melden keinen Zeitplan — für Stapel-Aufträge gelten die RookHub-Sperrzeiten."
+      },
+      "speedSplit": "Ø normal {{normal}} · Schonzeit {{reduced}}",
+      "machinesHelp": "Engines nach Maschine gruppiert (gleicher Besitzer, gleicher Engine-Token, gleicher Namensstamm). Ø kN/s der letzten 7 Tage getrennt nach normal und Schonzeit: jeder 10-Minuten-Korb wird nach der HEUTIGEN Regel eingeordnet — Zeitplan unter 100 % bzw. ohne Zeitplan die RookHub-Sperrzeit. Das Tempo ist Knoten ÷ Suchzeit laut Engine.",
+      "tokensTitle": "Engine-Tokens",
+      "tokensHelp": "Alle API-Tokens mit Bereich „engine“ aller Konten — nie der Token selbst, nur sein Präfix wie im Profil. Der letzte Zugriff ist auf 5 Minuten genau. Engines hängen am Token, mit dem sie sich zuletzt angemeldet haben (ab 0.953.0; ältere Registrierungen erscheinen nach dem nächsten Neustart des Providers).",
+      "tokensEmpty": "Keine Engine-Tokens.",
+      "t": {
+        "name": "Name",
+        "owner": "Besitzer",
+        "created": "angelegt",
+        "lastUsed": "letzter Zugriff",
+        "expires": "läuft ab",
+        "engines": "Engines",
+        "never": "nie",
+        "expired": "abgelaufen",
+        "engineCount": "{{count}} Engines ({{online}} online)",
+        "noEngines": "keine zugeordnet"
+      },
+      "idleBecause": "Leerlauf: {{reason}}",
+      "idleReason": {
+        "paused": "Hintergrundjobs pausiert",
+        "explicitOnly": "nur auf Anforderung",
+        "notInList": "in keiner Hintergrund-Liste",
+        "scheduleOff": "laut Zeitplan gerade aus",
+        "quietHours": "Sperrzeit für Stapel-Aufträge (kein Zeitplan gemeldet)",
+        "nothingWaiting": "nichts wartet",
+        "waitingElsewhere": "Aufträge warten auf anderen Engines (werden gleich umverteilt)"
+      },
+      "scheduleOpen": "Zeitplan: Platz {{slot}} von {{total}}, jetzt {{percent}} % — läuft",
+      "scheduleClosed": "Zeitplan: Platz {{slot}} von {{total}}, jetzt {{percent}} % — aus"
     }
   },
   "favorites": {

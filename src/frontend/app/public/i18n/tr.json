@@ -3001,7 +3001,65 @@
       "bgRemove": "{{name}} arka plan listesinden çıkar",
       "bgAdded": "{{name}} arka plan listesine eklendi",
       "bgRemoved": "{{name}} arka plan listesinden çıkarıldı",
-      "bgError": "Arka plan listesi değiştirilemedi"
+      "bgError": "Arka plan listesi değiştirilemedi",
+      "quietHours": "Zaman çizelgesi olmayan motorlarda toplu işler için sessiz saatler: {{windows}} ({{zone}}).",
+      "quietNow": "{{until}} saatine kadar etkin.",
+      "quietNotNow": "Şu an etkin değil.",
+      "quietOff": "RookHub sessiz saati ayarlı değil.",
+      "estimate": "Kuyruk yaklaşık {{time}} içinde boşalır (son saatin hızıyla).",
+      "hintsTitle": "Notlar",
+      "hint": {
+        "stuckJobs": "{{count}} iş {{since}} tarihinden beri {{name}} üzerinde bekliyor",
+        "why": {
+          "offline": "motor çevrimdışı",
+          "notInList": "motor hiçbir arka plan listesinde değil"
+        },
+        "lastError": "son hata: {{error}}",
+        "notInList": "{{name}} adlı makinenin {{count}} arka plan motoru hiçbir listede değil: {{engines}}",
+        "listCap": "{{name}} arka plan listesi: {{count}} / {{max}}",
+        "staleToken": "“{{name}}” motor jetonu ({{owner}}) {{since}} tarihinden beri kullanılmadı",
+        "staleTokenNever": "“{{name}}” motor jetonu ({{owner}}) hiç kullanılmadı"
+      },
+      "m": {
+        "online": "çevrimiçi {{online}}/{{total}}",
+        "working": "hesaplıyor {{count}}",
+        "token": "jeton: {{name}}",
+        "schedule": "Çizelge: {{rule}} ({{zone}})",
+        "scheduleNow": "şimdi %{{percent}}, {{reported}} motordan {{open}} açık",
+        "scheduleNext": "{{when}} itibarıyla: %{{percent}}",
+        "reportedAt": "bildirildi {{when}}",
+        "noSchedule": "Çizelge bildirilmedi — toplu işlerde RookHub sessiz saatleri geçerli.",
+        "noScheduleLichess": "Lichess motorları çizelge bildirmez — toplu işlerde RookHub sessiz saatleri geçerli."
+      },
+      "speedSplit": "Ø normal {{normal}} · tasarruf {{reduced}}",
+      "machinesHelp": "Motorlar makineye göre gruplanır (aynı sahip, aynı motor jetonu, aynı ad kökü). Son 7 günün Ø kN/s değeri normal ve tasarruf olarak ayrılır: her 10 dakikalık sepet BUGÜNKÜ kurala göre sınıflandırılır — %100’ün altındaki çizelge ya da çizelge yoksa RookHub sessiz saatleri. Hız = düğümler ÷ motorun bildirdiği arama süresi.",
+      "tokensTitle": "Motor jetonları",
+      "tokensHelp": "Tüm hesapların “engine” kapsamlı tüm API jetonları — asla jetonun kendisi değil, yalnızca profildeki gibi öneki. Son erişim 5 dakika hassasiyetindedir. Motorlar son kayıt oldukları jetona bağlanır (0.953.0’dan itibaren; eskiler sağlayıcının bir sonraki yeniden başlatılmasından sonra görünür).",
+      "tokensEmpty": "Motor jetonu yok.",
+      "t": {
+        "name": "Ad",
+        "owner": "Sahip",
+        "created": "oluşturuldu",
+        "lastUsed": "son erişim",
+        "expires": "sona erer",
+        "engines": "Motorlar",
+        "never": "hiç",
+        "expired": "süresi doldu",
+        "engineCount": "{{count}} motor ({{online}} çevrimiçi)",
+        "noEngines": "bağlı yok"
+      },
+      "idleBecause": "Boşta: {{reason}}",
+      "idleReason": {
+        "paused": "arka plan işleri duraklatıldı",
+        "explicitOnly": "yalnızca istek üzerine",
+        "notInList": "hiçbir arka plan listesinde değil",
+        "scheduleOff": "çizelgeye göre kapalı",
+        "quietHours": "toplu işler için sessiz saat (çizelge yok)",
+        "nothingWaiting": "bekleyen yok",
+        "waitingElsewhere": "işler başka motorlarda bekliyor (yakında yeniden dağıtılır)"
+      },
+      "scheduleOpen": "Çizelge: {{total}} yerden {{slot}}., şimdi %{{percent}} — çalışıyor",
+      "scheduleClosed": "Çizelge: {{total}} yerden {{slot}}., şimdi %{{percent}} — kapalı"
     }
   },
   "favorites": {

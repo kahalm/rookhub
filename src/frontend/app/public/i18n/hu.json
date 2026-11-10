@@ -2605,7 +2605,65 @@
       "bgRemove": "Eltávolítás {{name}} háttérlistájáról",
       "bgAdded": "Felvéve {{name}} háttérlistájára",
       "bgRemoved": "Eltávolítva {{name}} háttérlistájáról",
-      "bgError": "A háttérlista nem módosítható"
+      "bgError": "A háttérlista nem módosítható",
+      "quietHours": "Csendes idő kötegelt feladatokra ütemterv nélküli motorokon: {{windows}} ({{zone}}).",
+      "quietNow": "Most aktív eddig: {{until}}.",
+      "quietNotNow": "Most nem aktív.",
+      "quietOff": "Nincs RookHub csendes idő beállítva.",
+      "estimate": "A sor kb. {{time}} múlva üres (az utolsó óra tempójával).",
+      "hintsTitle": "Megjegyzések",
+      "hint": {
+        "stuckJobs": "{{count}} feladat vár {{since}} óta erre: {{name}}",
+        "why": {
+          "offline": "motor offline",
+          "notInList": "a motor egyik háttérlistán sincs"
+        },
+        "lastError": "utolsó hiba: {{error}}",
+        "notInList": "{{name}} {{count}} háttérmotorja egyik háttérlistán sincs: {{engines}}",
+        "listCap": "{{name}} háttérlistája: {{count}} / {{max}}",
+        "staleToken": "A(z) „{{name}}” motortoken ({{owner}}) {{since}} óta nem volt használva",
+        "staleTokenNever": "A(z) „{{name}}” motortoken ({{owner}}) még sosem volt használva"
+      },
+      "m": {
+        "online": "online {{online}}/{{total}}",
+        "working": "számol: {{count}}",
+        "token": "token: {{name}}",
+        "schedule": "Ütemterv: {{rule}} ({{zone}})",
+        "scheduleNow": "most {{percent}}%, {{reported}} motorból {{open}} nyitva",
+        "scheduleNext": "{{when}}-tól: {{percent}}%",
+        "reportedAt": "jelentve: {{when}}",
+        "noSchedule": "Nincs jelentett ütemterv — kötegelt feladatokra a RookHub csendes ideje érvényes.",
+        "noScheduleLichess": "A Lichess-motorok nem jelentenek ütemtervet — kötegelt feladatokra a RookHub csendes ideje érvényes."
+      },
+      "speedSplit": "Ø normál {{normal}} · kímélő {{reduced}}",
+      "machinesHelp": "Motorok gépenként csoportosítva (azonos tulajdonos, azonos motortoken, azonos névtő). Az utolsó 7 nap Ø kN/s értéke normál és kímélő időre bontva: minden 10 perces kosarat a MAI szabály szerint sorolunk be — 100% alatti ütemterv, ill. ütemterv nélkül a RookHub csendes ideje. A tempó: csomópontok ÷ a motor által jelentett keresési idő.",
+      "tokensTitle": "Motortokenek",
+      "tokensHelp": "Minden fiók összes „engine” hatókörű API-tokenje — soha maga a token, csak az előtagja, mint a profilban. Az utolsó hozzáférés 5 percre pontos. A motorok ahhoz a tokenhez tartoznak, amellyel utoljára regisztráltak (0.953.0-tól; a régebbiek a provider következő újraindítása után jelennek meg).",
+      "tokensEmpty": "Nincsenek motortokenek.",
+      "t": {
+        "name": "Név",
+        "owner": "Tulajdonos",
+        "created": "létrehozva",
+        "lastUsed": "utolsó hozzáférés",
+        "expires": "lejár",
+        "engines": "Motorok",
+        "never": "soha",
+        "expired": "lejárt",
+        "engineCount": "{{count}} motor ({{online}} online)",
+        "noEngines": "nincs hozzárendelve"
+      },
+      "idleBecause": "Tétlen: {{reason}}",
+      "idleReason": {
+        "paused": "háttérfeladatok szüneteltetve",
+        "explicitOnly": "csak kérésre",
+        "notInList": "egyik háttérlistán sincs",
+        "scheduleOff": "az ütemterv szerint most ki",
+        "quietHours": "csendes idő kötegelt feladatokra (nincs ütemterv)",
+        "nothingWaiting": "semmi sem vár",
+        "waitingElsewhere": "feladatok más motorokon várnak (hamarosan átosztva)"
+      },
+      "scheduleOpen": "Ütemterv: {{slot}}. hely / {{total}}, most {{percent}}% — fut",
+      "scheduleClosed": "Ütemterv: {{slot}}. hely / {{total}}, most {{percent}}% — ki"
     }
   },
   "analysis": {
