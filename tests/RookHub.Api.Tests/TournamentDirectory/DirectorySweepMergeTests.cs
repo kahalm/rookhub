@@ -92,6 +92,39 @@ public class DirectorySweepMergeTests
     }
 
     [Fact]
+    public void MarkVanished_OtherSourceWithinSevenDays_HoldsEntry_OlderSightingDoesNot()
+    {
+        TournamentDirectoryEntry WithCzSighting(string id, int daysAgo) => new()
+        {
+            PublicId = id, ChessResultsId = id, MissedSweeps = 1,
+            Sources =
+            [
+                new TournamentDirectorySource
+                {
+                    Kind = DirectorySourceKind.ChessResults, ExternalId = id,
+                    FirstSeenAt = Now.AddDays(-30), LastSeenAt = Now.AddDays(-3),
+                },
+                new TournamentDirectorySource
+                {
+                    Kind = DirectorySourceKind.CzechChessFederation, ExternalId = "cz-" + id,
+                    FirstSeenAt = Now.AddDays(-30), LastSeenAt = Now.AddDays(-daysAgo),
+                },
+            ],
+        };
+        var held = WithCzSighting("991511", daysAgo: 2);
+        var stale = WithCzSighting("991512", daysAgo: 10);
+
+        var removed = DirectorySweepMerge.MarkVanished([], [held, stale], Now,
+            truncated: false, missedSweepsUntilRemoved: 2, out var heldCount);
+
+        Assert.Equal([stale], removed);
+        Assert.Equal(1, heldCount);
+        Assert.Null(held.RemovedAt);
+        Assert.Equal(2, held.MissedSweeps);
+        Assert.Equal(Now, stale.RemovedAt);
+    }
+
+    [Fact]
     public void MarkVanished_TruncatedOrWithinCooldown_CountsNothing()
     {
         var a = new TournamentDirectoryEntry { PublicId = "2", ChessResultsId = "2" };

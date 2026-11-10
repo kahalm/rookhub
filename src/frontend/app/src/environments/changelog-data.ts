@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.944.1", date: "2026-11-10", changes: [
+    { en: "Tournament directory: a tournament that chess-results no longer lists stays active as long as another calendar (e.g. chess.cz) has listed it within the last seven days — no more „probably cancelled“ notifications for tournaments that flip back the next night.",
+      de: "Turnierverzeichnis: Ein Turnier, das chess-results nicht mehr führt, bleibt aktiv, solange ein anderer Kalender (etwa chess.cz) es in den letzten sieben Tagen gesehen hat — keine „vermutlich abgesagt“-Meldungen mehr für Turniere, die in der nächsten Nacht wieder auftauchen." },
+  ] },
   { version: "0.944.0", date: "2026-11-10", changes: [
     { en: "LeagueHub: the „Opponent | Own lineup“ switch above the forecast now remembers your choice — opened again without a link, the forecast shows your own team’s three most likely players per board right away; the info text says „your own players“ in that view.",
       de: "LeagueHub: Der Umschalter „Gegner | Eigene Aufstellung“ über der Prognose merkt sich die Wahl — ohne Link neu geöffnet, zeigt die Prognose gleich pro Brett die drei wahrscheinlichsten eigenen Spieler; der Info-Text nennt in dieser Sicht „die eigenen Spieler“." },

@@ -142,6 +142,11 @@ public class ChessCzDirectorySweepServiceTests : IDisposable
         Assert.Null(entry.RemovedAt);
         Assert.Equal(0, entry.MissedSweeps);
         Assert.Null(entry.LastMissAt);
+        // Die Sichtung ist als Quelle vermerkt — sie schuetzt den Eintrag sieben Tage lang vor dem
+        // naechsten Rueckzug durch die Turniersuche (DirectorySweepMerge.HeldByOtherSource).
+        var source = Assert.Single(_db.TournamentDirectorySources.Where(
+            s => s.TournamentDirectoryEntryId == entry.Id && s.Kind == DirectorySourceKind.CzechChessFederation).ToList());
+        Assert.True(source.LastSeenAt >= DateTime.UtcNow.AddMinutes(-5));
     }
 
     /// <summary>Dasselbe fuer eine Meisterschaft mit Runden (eigener Suchweg <c>FindWithRoundsAsync</c>).</summary>

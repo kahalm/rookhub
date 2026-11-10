@@ -280,7 +280,15 @@ public class TournamentDirectoryService
                 "Verschwunden-Erkennung uebersprungen", federation, rows.Count);
         }
 
-        return DirectorySweepMerge.MarkVanished(rows, existing, now, truncated, MissedSweepsUntilRemoved);
+        var removed = DirectorySweepMerge.MarkVanished(rows, existing, now, truncated, MissedSweepsUntilRemoved,
+            out var held);
+        if (held > 0)
+        {
+            _log.LogInformation(
+                "Verzeichnis-Sweep {Federation}: von chess-results nicht mehr geliefert, aber durch andere "
+                + "Quellen gehalten: {Held}", federation, held);
+        }
+        return removed;
     }
 
     /// <summary>

@@ -163,8 +163,25 @@ internal sealed class DirectorySweepMerge
     /// <param name="truncated">Die Trefferliste ist am Zeilenlimit abgeschnitten — dann zaehlt NICHTS als verschwunden
     /// (die Warnung dazu schreibt der Aufrufer).</param>
     internal static List<TournamentDirectoryEntry> MarkVanished(List<DirectorySearchRows.CrawlerDirectoryRow> rows,
-        List<TournamentDirectoryEntry> existing, DateTime now, bool truncated, int missedSweepsUntilRemoved)
+        List<TournamentDirectoryEntry> existing, DateTime now, bool truncated, int missedSweepsUntilRemoved) =>
+        MarkVanished(rows, existing, now, truncated, missedSweepsUntilRemoved, out _);
+
+    /// <summary>Wie lange die Sichtung durch eine ANDERE Quelle einen Eintrag vor dem Rueckzug durch
+    /// die Turniersuche schuetzt.</summary>
+    internal static readonly TimeSpan OtherSourceGrace = TimeSpan.FromDays(7);
+
+    /// <summary>Ob eine andere Quelle als chess-results den Eintrag in den letzten
+    /// <see cref="OtherSourceGrace"/> gesehen hat.</summary>
+    internal static bool HeldByOtherSource(TournamentDirectoryEntry entry, DateTime now) =>
+        entry.Sources.Any(s => s.Kind != DirectorySourceKind.ChessResults && s.LastSeenAt >= now - OtherSourceGrace);
+
+    /// <param name="heldByOtherSources">Wie viele Eintraege die Karenz zwar ueberschritten haben, aber
+    /// stehen bleiben, weil eine andere Quelle sie noch fuehrt (fuer die Sammelmeldung im Log).</param>
+    internal static List<TournamentDirectoryEntry> MarkVanished(List<DirectorySearchRows.CrawlerDirectoryRow> rows,
+        List<TournamentDirectoryEntry> existing, DateTime now, bool truncated, int missedSweepsUntilRemoved,
+        out int heldByOtherSources)
     {
+        heldByOtherSources = 0;
         var seen = rows.Select(r => r.ChessResultsId).ToHashSet(StringComparer.Ordinal);
         var removed = new List<TournamentDirectoryEntry>();
         // NUR Eintraege MIT chess-results-Nummer. Ein Eintrag ohne Nummer kann in dieser
@@ -193,6 +210,16 @@ internal sealed class DirectorySweepMerge
             entry.LastMissAt = now;
             entry.UpdatedAt = now;
             if (entry.MissedSweeps < missedSweepsUntilRemoved) continue;
+            // Fuehrt eine ANDERE Quelle das Turnier noch (Sichtung in den letzten sieben Tagen), ist
+            // sein Fehlen bei chess-results keine Absage. Ohne diese Schranke pendelte „FIDE OPEN NA
+            // SMETANCE" (1501638) ab 2026-11-10: chess-results zog es zurueck und meldete Abonnenten
+            // eine Absage, chess.cz belebte es in der naechsten Nacht wieder (Revive) — und so fort.
+            // Der Zaehler laeuft weiter; verstummt auch die andere Quelle, greift der Rueckzug sofort.
+            if (HeldByOtherSource(entry, now))
+            {
+                heldByOtherSources++;
+                continue;
+            }
             entry.RemovedAt = now;
             removed.Add(entry);
         }

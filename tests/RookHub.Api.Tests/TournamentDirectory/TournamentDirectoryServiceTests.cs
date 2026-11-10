@@ -338,6 +338,53 @@ public class TournamentDirectoryServiceTests : IDisposable
         Assert.Empty(_db.Notifications);
     }
 
+    /// <summary>
+    /// chess-results liefert das Turnier nicht mehr, chess.cz fuehrt es aber weiter (Sichtung vor zwei
+    /// Tagen): kein Rueckzug, keine Absage. Vorher pendelte „FIDE OPEN NA SMETANCE" (1501638) jede
+    /// Nacht zwischen zurueckgezogen (mit Meldung an Abonnenten) und wiederbelebt.
+    /// </summary>
+    [Theory]
+    [InlineData(2, false)]
+    [InlineData(10, true)]
+    public async Task SweepFederationAsync_MissingTwice_OtherSourceSeenRecently_IsHeld(int daysAgo, bool cancelled)
+    {
+        var id = cancelled ? "991502" : "991501";
+        var userId = await CreateSubscriptionAsync(id);
+        await CreateService($"[{Row(id, "FIDE Open na Smetance", "2026-12-18", "2026-12-20", "Praha")}]")
+            .SweepFederationAsync("AUT", Today);
+        var entry = await _db.TournamentDirectoryEntries.Include(e => e.Sources).SingleAsync();
+        var seenAt = DateTime.UtcNow.AddDays(-daysAgo);
+        entry.Sources.Add(new TournamentDirectorySource
+        {
+            Kind = DirectorySourceKind.CzechChessFederation,
+            ExternalId = "cz-" + id,
+            FirstSeenAt = seenAt,
+            LastSeenAt = seenAt,
+        });
+        await _db.SaveChangesAsync();
+
+        await CreateService("[]").SweepFederationAsync("AUT", Today);
+        await NextNightAsync();
+        var (result, _) = await CreateService("[]").SweepFederationAsync("AUT", Today);
+
+        var after = await _db.TournamentDirectoryEntries.SingleAsync();
+        Assert.Equal(2, after.MissedSweeps);   // der Zaehler laeuft weiter
+        if (cancelled)
+        {
+            Assert.Equal(1, result.Removed);
+            Assert.NotNull(after.RemovedAt);
+            var notification = Assert.Single(_db.Notifications);
+            Assert.Equal(NotificationType.TournamentCancelled, notification.Type);
+            Assert.Equal(userId, notification.UserId);
+        }
+        else
+        {
+            Assert.Equal(0, result.Removed);
+            Assert.Null(after.RemovedAt);
+            Assert.Empty(_db.Notifications);
+        }
+    }
+
     [Fact]
     public async Task SweepFederationAsync_ReappearsAfterAMiss_CounterResets()
     {
