@@ -143,7 +143,9 @@
     "ebook_tree_invalid": "L'albero delle aperture non è valido.",
     "summary_quota": "Hai esaurito i riassunti di oggi.",
     "summary_analysis_unavailable": "Questa partita non ha ancora un'analisi e non è stato possibile avviarne una.",
-    "summary_unsupported_start": "I riassunti sono disponibili solo per partite dalla posizione iniziale."
+    "summary_unsupported_start": "I riassunti sono disponibili solo per partite dalla posizione iniziale.",
+    "background_list_full": "La lista in background è piena. Rimuovi prima un motore.",
+    "engine_not_found": "Questo motore non appartiene a quell’account o non è più registrato."
   },
   "common": {
     "optional": "Facoltativo",
@@ -2908,7 +2910,7 @@
     },
     "engines": {
       "title": "Motori",
-      "help": "Tutti i motori registrati di tutti gli account: chi li usa in background, cosa è in attesa, cosa calcola ogni motore adesso e quanto è stato fatto. Sola lettura; si aggiorna ogni 15 secondi finché la scheda è visibile. I motori Lichess compaiono solo con il loro ID.",
+      "help": "Tutti i motori registrati di tutti gli account: chi li usa in background, cosa è in attesa, cosa calcola ogni motore adesso e quanto è stato fatto. Su ogni scheda puoi aggiungere il motore alla lista in background del suo proprietario o rimuoverlo da una lista; i lavori già in attesa restano sul motore. Si aggiorna ogni 15 secondi finché la scheda è visibile. I motori Lichess compaiono solo con il loro ID.",
       "state": {
         "working": "Calcola",
         "live": "Analisi dal vivo",
@@ -2972,7 +2974,6 @@
       "hash": "Hash: {{mb}} MB",
       "registeredAt": "registrato {{when}}",
       "lastSeen": "visto {{when}}",
-      "backgroundFor": "Background per: {{names}}",
       "liveOnly": "In nessuna lista di background (solo dal vivo)",
       "for": "per {{name}}",
       "ply": "semimossa {{ply}}",
@@ -2991,7 +2992,16 @@
       "avgShort": "media {{time}}",
       "busyDay": "occupato {{percent}} %",
       "problemsDay": "problemi (24 h): {{count}}",
-      "brokerSinceStart": "Dal {{when}}: nessun provider {{timeouts}}×, coda piena {{full}}×, provider sparito {{gone}}×"
+      "brokerSinceStart": "Dal {{when}}: nessun provider {{timeouts}}×, coda piena {{full}}×, provider sparito {{gone}}×",
+      "bgInList": "Nella lista in background di {{name}}",
+      "bgOwner": "(proprietario)",
+      "bgForeign": "non è il proprietario – questo account non può usarlo",
+      "bgNotInList": "Non è nella lista in background di {{name}} (solo live)",
+      "bgAdd": "Aggiungi alla lista in background di {{name}}",
+      "bgRemove": "Rimuovi dalla lista in background di {{name}}",
+      "bgAdded": "Aggiunto alla lista in background di {{name}}",
+      "bgRemoved": "Rimosso dalla lista in background di {{name}}",
+      "bgError": "Impossibile modificare la lista in background"
     }
   },
   "favorites": {

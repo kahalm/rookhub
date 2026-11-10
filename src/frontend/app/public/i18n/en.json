@@ -145,7 +145,9 @@
     "ebook_tree_invalid": "The opening tree is invalid.",
     "summary_quota": "You have used up today's summaries.",
     "summary_analysis_unavailable": "This game has no analysis yet and none could be started.",
-    "summary_unsupported_start": "Summaries are only available for games from the starting position."
+    "summary_unsupported_start": "Summaries are only available for games from the starting position.",
+    "background_list_full": "The background list is full. Remove an engine from it first.",
+    "engine_not_found": "This engine does not belong to that account or is no longer registered."
   },
   "common": {
     "optional": "Optional",
@@ -2963,7 +2965,7 @@
     },
     "engines": {
       "title": "Engines",
-      "help": "All registered engines of all accounts: who uses them in the background, what is waiting, what each engine is computing right now and how much got done. Read-only; refreshes every 15 seconds while the tab is visible. Lichess engines appear only by their ID.",
+      "help": "All registered engines of all accounts: who uses them in the background, what is waiting, what each engine is computing right now and how much got done. On each card you can add the engine to its owner’s background list or remove it from a list; jobs already waiting stay on the engine. Refreshes every 15 seconds while the tab is visible. Lichess engines appear only by their ID.",
       "state": {
         "working": "Computing",
         "live": "Live analysis",
@@ -3027,7 +3029,6 @@
       "hash": "Hash: {{mb}} MB",
       "registeredAt": "registered {{when}}",
       "lastSeen": "last seen {{when}}",
-      "backgroundFor": "Background for: {{names}}",
       "liveOnly": "Not in any background list (live only)",
       "for": "for {{name}}",
       "ply": "half-move {{ply}}",
@@ -3046,7 +3047,16 @@
       "avgShort": "avg. {{time}}",
       "busyDay": "busy {{percent}}%",
       "problemsDay": "problems (24 h): {{count}}",
-      "brokerSinceStart": "Since {{when}}: no provider {{timeouts}}×, queue full {{full}}×, provider gone {{gone}}×"
+      "brokerSinceStart": "Since {{when}}: no provider {{timeouts}}×, queue full {{full}}×, provider gone {{gone}}×",
+      "bgInList": "In the background list of {{name}}",
+      "bgOwner": "(owner)",
+      "bgForeign": "not the owner — this account cannot run it",
+      "bgNotInList": "Not in the background list of {{name}} (live only)",
+      "bgAdd": "Add to background list of {{name}}",
+      "bgRemove": "Remove from background list of {{name}}",
+      "bgAdded": "Added to the background list of {{name}}",
+      "bgRemoved": "Removed from the background list of {{name}}",
+      "bgError": "Could not change the background list"
     }
   },
   "favorites": {

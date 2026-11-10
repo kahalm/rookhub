@@ -50,7 +50,7 @@ public class EngineController : BaseApiController
 
     /// <summary>Absage einer Einstellung als 400 bzw. 404 mit <c>{ message }</c>.</summary>
     private IActionResult Rejected(EngineSettingsRejection r)
-        => r.NotFound ? NotFound(new { message = r.Message }) : BadRequest(new { message = r.Message });
+        => r.NotFound ? NotFound(ApiErrorResponses.Body(r.Message, r.Code)) : BadRequest(ApiErrorResponses.Body(r.Message, r.Code));
 
     [HttpGet("credentials")]
     public async Task<IActionResult> GetCredentials()

@@ -143,7 +143,9 @@
     "ebook_tree_invalid": "Strom zahájení je neplatný.",
     "summary_quota": "Dnešní shrnutí jste již vyčerpali.",
     "summary_analysis_unavailable": "Tato partie zatím nemá analýzu a žádnou se nepodařilo spustit.",
-    "summary_unsupported_start": "Shrnutí jsou k dispozici jen pro partie z výchozí pozice."
+    "summary_unsupported_start": "Shrnutí jsou k dispozici jen pro partie z výchozí pozice.",
+    "background_list_full": "Seznam na pozadí je plný. Nejdřív z něj odeber jeden motor.",
+    "engine_not_found": "Tento motor nepatří k tomuto účtu nebo už není registrován."
   },
   "common": {
     "optional": "Volitelné",
@@ -2908,7 +2910,7 @@
     },
     "engines": {
       "title": "Enginy",
-      "help": "Všechny registrované enginy všech účtů: kdo je používá na pozadí, co čeká, co který engine právě počítá a kolik je hotovo. Jen ke čtení; obnovuje se každých 15 sekund, dokud je karta viditelná. Enginy Lichess se zobrazují jen s ID.",
+      "help": "Všechny registrované enginy všech účtů: kdo je používá na pozadí, co čeká, co který engine právě počítá a kolik je hotovo. Na každé kartě můžeš motor přidat do seznamu na pozadí jeho vlastníka nebo ho ze seznamu odebrat; úlohy, které už čekají, zůstávají na motoru. Obnovuje se každých 15 sekund, dokud je karta viditelná. Enginy Lichess se zobrazují jen s ID.",
       "state": {
         "working": "Počítá",
         "live": "Živá analýza",
@@ -2972,7 +2974,6 @@
       "hash": "Hash: {{mb}} MB",
       "registeredAt": "registrován {{when}}",
       "lastSeen": "naposledy {{when}}",
-      "backgroundFor": "Pozadí pro: {{names}}",
       "liveOnly": "V žádném seznamu pozadí (jen živě)",
       "for": "pro {{name}}",
       "ply": "půltah {{ply}}",
@@ -2991,7 +2992,16 @@
       "avgShort": "prům. {{time}}",
       "busyDay": "vytížení {{percent}} %",
       "problemsDay": "problémy (24 h): {{count}}",
-      "brokerSinceStart": "Od {{when}}: žádný poskytovatel {{timeouts}}×, plná fronta {{full}}×, poskytovatel zmizel {{gone}}×"
+      "brokerSinceStart": "Od {{when}}: žádný poskytovatel {{timeouts}}×, plná fronta {{full}}×, poskytovatel zmizel {{gone}}×",
+      "bgInList": "V seznamu na pozadí uživatele {{name}}",
+      "bgOwner": "(vlastník)",
+      "bgForeign": "není vlastník – tento účet ho nemůže používat",
+      "bgNotInList": "Není v seznamu na pozadí uživatele {{name}} (jen živě)",
+      "bgAdd": "Přidat do seznamu na pozadí uživatele {{name}}",
+      "bgRemove": "Odebrat ze seznamu na pozadí uživatele {{name}}",
+      "bgAdded": "Přidáno do seznamu na pozadí uživatele {{name}}",
+      "bgRemoved": "Odebráno ze seznamu na pozadí uživatele {{name}}",
+      "bgError": "Seznam na pozadí se nepodařilo změnit"
     }
   },
   "favorites": {

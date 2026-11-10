@@ -161,15 +161,31 @@
             @if (e.lastSeenAt) { <span>{{ 'admin.engines.lastSeen' | translate:{ when: (e.lastSeenAt | date:'short') } }}</span> }
           </div>
 
-          <p class="line" data-testid="engine-background">
-            @if (e.backgroundFor.length) {
-              <mat-icon aria-hidden="true" class="li">schedule</mat-icon>
-              {{ 'admin.engines.backgroundFor' | translate:{ names: bgNames(e) } }}
-            } @else {
-              <mat-icon aria-hidden="true" class="li">bolt</mat-icon>
-              {{ 'admin.engines.liveOnly' | translate }}
+          <!-- Hintergrund-Listen: je Konto Zustand als Text + Symbol und ein Knopf, der sagt, wessen Liste er ändert -->
+          @let rows = bgRows(e);
+          <div class="bg-rows" data-testid="engine-background">
+            @if (!rows.length) {
+              <p class="line"><mat-icon aria-hidden="true" class="li">bolt</mat-icon>{{ 'admin.engines.liveOnly' | translate }}</p>
             }
-          </p>
+            @for (r of rows; track r.userId) {
+              <div class="bg-row" [class.in]="r.inList" data-testid="bg-row">
+                <p class="line bg-state">
+                  <mat-icon aria-hidden="true" class="li">{{ r.inList ? 'schedule' : 'bolt' }}</mat-icon>
+                  <span>
+                    {{ (r.inList ? 'admin.engines.bgInList' : 'admin.engines.bgNotInList') | translate:{ name: r.name } }}
+                    @if (r.owner && r.inList) { <span class="muted">{{ 'admin.engines.bgOwner' | translate }}</span> }
+                    @if (r.foreign) { <span class="warn-text">· {{ 'admin.engines.bgForeign' | translate }}</span> }
+                  </span>
+                </p>
+                <button mat-stroked-button type="button" class="bg-btn" (click)="toggleBackground(e, r)"
+                        [disabled]="saving() !== null" [attr.aria-busy]="isSaving(e, r) ? 'true' : null"
+                        [attr.data-testid]="r.inList ? 'bg-remove' : 'bg-add'">
+                  <mat-icon aria-hidden="true">{{ r.inList ? 'remove_circle_outline' : 'add_circle_outline' }}</mat-icon>
+                  {{ (r.inList ? 'admin.engines.bgRemove' : 'admin.engines.bgAdd') | translate:{ name: r.name } }}
+                </button>
+              </div>
+            }
+          </div>
 
           @if (e.current; as j) {
             <div class="current" data-testid="engine-current">

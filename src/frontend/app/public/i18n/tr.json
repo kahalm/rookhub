@@ -143,7 +143,9 @@
     "ebook_tree_invalid": "Açılış ağacı geçersiz.",
     "summary_quota": "Bugünkü özet hakkınızı doldurdunuz.",
     "summary_analysis_unavailable": "Bu oyunun henüz analizi yok ve başlatılamadı.",
-    "summary_unsupported_start": "Özetler yalnızca başlangıç pozisyonundan başlayan oyunlar için kullanılabilir."
+    "summary_unsupported_start": "Özetler yalnızca başlangıç pozisyonundan başlayan oyunlar için kullanılabilir.",
+    "background_list_full": "Arka plan listesi dolu. Önce bir motoru çıkar.",
+    "engine_not_found": "Bu motor o hesaba ait değil ya da artık kayıtlı değil."
   },
   "common": {
     "optional": "İsteğe bağlı",
@@ -2908,7 +2910,7 @@
     },
     "engines": {
       "title": "Motorlar",
-      "help": "Tüm hesapların kayıtlı tüm motorları: onları arka planda kimin kullandığı, neyin beklediği, her motorun şu anda ne hesapladığı ve ne kadarının bittiği. Salt okunur; sekme görünür olduğu sürece 15 saniyede bir yenilenir. Lichess motorları yalnızca kimlikleriyle görünür.",
+      "help": "Tüm hesapların kayıtlı tüm motorları: onları arka planda kimin kullandığı, neyin beklediği, her motorun şu anda ne hesapladığı ve ne kadarının bittiği. Her kartta motoru sahibinin arka plan listesine ekleyebilir ya da bir listeden çıkarabilirsin; zaten bekleyen işler motorda kalır. Sekme görünür olduğu sürece 15 saniyede bir yenilenir. Lichess motorları yalnızca kimlikleriyle görünür.",
       "state": {
         "working": "Hesaplıyor",
         "live": "Canlı analiz",
@@ -2972,7 +2974,6 @@
       "hash": "Hash: {{mb}} MB",
       "registeredAt": "kayıt: {{when}}",
       "lastSeen": "son görülme: {{when}}",
-      "backgroundFor": "Arka plan: {{names}}",
       "liveOnly": "Hiçbir arka plan listesinde değil (yalnızca canlı)",
       "for": "{{name}} için",
       "ply": "yarım hamle {{ply}}",
@@ -2991,7 +2992,16 @@
       "avgShort": "ort. {{time}}",
       "busyDay": "doluluk {{percent}} %",
       "problemsDay": "sorunlar (24 sa): {{count}}",
-      "brokerSinceStart": "{{when}} tarihinden beri: sağlayıcı yok {{timeouts}}×, kuyruk dolu {{full}}×, sağlayıcı gitti {{gone}}×"
+      "brokerSinceStart": "{{when}} tarihinden beri: sağlayıcı yok {{timeouts}}×, kuyruk dolu {{full}}×, sağlayıcı gitti {{gone}}×",
+      "bgInList": "{{name}} arka plan listesinde",
+      "bgOwner": "(sahibi)",
+      "bgForeign": "sahibi değil – bu hesap onu kullanamaz",
+      "bgNotInList": "{{name}} arka plan listesinde değil (yalnızca canlı)",
+      "bgAdd": "{{name}} arka plan listesine ekle",
+      "bgRemove": "{{name}} arka plan listesinden çıkar",
+      "bgAdded": "{{name}} arka plan listesine eklendi",
+      "bgRemoved": "{{name}} arka plan listesinden çıkarıldı",
+      "bgError": "Arka plan listesi değiştirilemedi"
     }
   },
   "favorites": {

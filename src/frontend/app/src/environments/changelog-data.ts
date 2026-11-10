@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.951.0", date: "2026-11-10", changes: [
+    { en: "Admin → Engines: on every engine card you can now maintain the background assignment — add the engine to its owner’s background list or remove it from any list it is in (each account separately, including foreign ones). The button says whose list changes; no confirmation, the page shows the new state right away. Same rules as in the profile (limit of 32, order kept, new engine at the end); jobs already waiting stay on the engine. New endpoint `PUT /api/admin/engines/{engineId}/background`.",
+      de: "Admin → Engines: Auf jeder Engine-Karte pflegst du jetzt die Hintergrund-Zuordnung — Engine in die Hintergrund-Liste ihres Besitzers aufnehmen oder aus jeder Liste nehmen, in der sie steht (je Konto einzeln, auch fremde). Der Knopf sagt, wessen Liste sich ändert; ohne Rückfrage, die Seite zeigt sofort den neuen Stand. Gleiche Regeln wie im Profil (höchstens 32, Reihenfolge bleibt, neue Engine hinten); schon wartende Aufträge bleiben auf der Engine. Neuer Endpunkt `PUT /api/admin/engines/{engineId}/background`." },
+  ] },
   { version: "0.950.1", date: "2026-11-10", changes: [
     { en: "Games list: route injected via inject() (lint rule), no visible change.",
       de: "Partienliste: Route per inject() eingebunden (Lint-Regel), keine sichtbare Änderung." },

@@ -143,7 +143,9 @@
     "ebook_tree_invalid": "Pohon pembukaan tidak valid.",
     "summary_quota": "Anda sudah menghabiskan ringkasan hari ini.",
     "summary_analysis_unavailable": "Partai ini belum dianalisis dan analisis tidak dapat dimulai.",
-    "summary_unsupported_start": "Ringkasan hanya tersedia untuk partai dari posisi awal."
+    "summary_unsupported_start": "Ringkasan hanya tersedia untuk partai dari posisi awal.",
+    "background_list_full": "Daftar latar belakang penuh. Hapus satu mesin dulu.",
+    "engine_not_found": "Mesin ini bukan milik akun itu atau sudah tidak terdaftar."
   },
   "common": {
     "optional": "Opsional",
@@ -2908,7 +2910,7 @@
     },
     "engines": {
       "title": "Mesin",
-      "help": "Semua mesin terdaftar dari semua akun: siapa yang memakainya di latar belakang, apa yang menunggu, apa yang sedang dihitung tiap mesin, dan berapa banyak yang selesai. Hanya baca; diperbarui setiap 15 detik selama tab terlihat. Mesin Lichess hanya tampil dengan ID-nya.",
+      "help": "Semua mesin terdaftar dari semua akun: siapa yang memakainya di latar belakang, apa yang menunggu, apa yang sedang dihitung tiap mesin, dan berapa banyak yang selesai. Di setiap kartu kamu bisa menambahkan mesin ke daftar latar belakang pemiliknya atau menghapusnya dari daftar; tugas yang sudah menunggu tetap di mesin itu. Diperbarui setiap 15 detik selama tab terlihat. Mesin Lichess hanya tampil dengan ID-nya.",
       "state": {
         "working": "Menghitung",
         "live": "Analisis langsung",
@@ -2972,7 +2974,6 @@
       "hash": "Hash: {{mb}} MB",
       "registeredAt": "terdaftar {{when}}",
       "lastSeen": "terakhir terlihat {{when}}",
-      "backgroundFor": "Latar belakang untuk: {{names}}",
       "liveOnly": "Tidak ada di daftar latar belakang (hanya langsung)",
       "for": "untuk {{name}}",
       "ply": "setengah langkah {{ply}}",
@@ -2991,7 +2992,16 @@
       "avgShort": "rata-rata {{time}}",
       "busyDay": "sibuk {{percent}} %",
       "problemsDay": "masalah (24 j): {{count}}",
-      "brokerSinceStart": "Sejak {{when}}: tanpa penyedia {{timeouts}}×, antrean penuh {{full}}×, penyedia hilang {{gone}}×"
+      "brokerSinceStart": "Sejak {{when}}: tanpa penyedia {{timeouts}}×, antrean penuh {{full}}×, penyedia hilang {{gone}}×",
+      "bgInList": "Di daftar latar belakang {{name}}",
+      "bgOwner": "(pemilik)",
+      "bgForeign": "bukan pemilik – akun ini tidak bisa memakainya",
+      "bgNotInList": "Tidak ada di daftar latar belakang {{name}} (hanya langsung)",
+      "bgAdd": "Tambahkan ke daftar latar belakang {{name}}",
+      "bgRemove": "Hapus dari daftar latar belakang {{name}}",
+      "bgAdded": "Ditambahkan ke daftar latar belakang {{name}}",
+      "bgRemoved": "Dihapus dari daftar latar belakang {{name}}",
+      "bgError": "Daftar latar belakang tidak dapat diubah"
     }
   },
   "favorites": {

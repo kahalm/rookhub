@@ -34,7 +34,9 @@
     "ebook_tree_invalid": "A megnyitási fa érvénytelen.",
     "summary_quota": "A mai összefoglalóid elfogytak.",
     "summary_analysis_unavailable": "Ehhez a játszmához nincs elemzés, és nem sikerült elindítani.",
-    "summary_unsupported_start": "Összefoglaló csak az alapállásból induló játszmákhoz érhető el."
+    "summary_unsupported_start": "Összefoglaló csak az alapállásból induló játszmákhoz érhető el.",
+    "background_list_full": "A háttérlista megtelt. Előbb távolíts el róla egy motort.",
+    "engine_not_found": "Ez a motor nem ehhez a fiókhoz tartozik, vagy már nincs regisztrálva."
   },
   "common": {
     "optional": "Nem kötelező",
@@ -2512,7 +2514,7 @@
     },
     "engines": {
       "title": "Motorok",
-      "help": "Minden fiók összes regisztrált motorja: ki használja őket a háttérben, mi vár, mit számol éppen az egyes motorok, és mennyi készült el. Csak olvasható; 15 másodpercenként frissül, amíg a lap látható. A Lichess-motorok csak azonosítóval jelennek meg.",
+      "help": "Minden fiók összes regisztrált motorja: ki használja őket a háttérben, mi vár, mit számol éppen az egyes motorok, és mennyi készült el. Minden kártyán felveheted a motort a tulajdonosa háttérlistájára, vagy eltávolíthatod egy listáról; a már várakozó feladatok a motoron maradnak. 15 másodpercenként frissül, amíg a lap látható. A Lichess-motorok csak azonosítóval jelennek meg.",
       "state": {
         "working": "Számol",
         "live": "Élő elemzés",
@@ -2576,7 +2578,6 @@
       "hash": "Hash: {{mb}} MB",
       "registeredAt": "regisztrálva: {{when}}",
       "lastSeen": "utoljára: {{when}}",
-      "backgroundFor": "Háttér ehhez: {{names}}",
       "liveOnly": "Egyik háttérlistán sincs (csak élő)",
       "for": "{{name}} számára",
       "ply": "{{ply}}. féllépés",
@@ -2595,7 +2596,16 @@
       "avgShort": "átl. {{time}}",
       "busyDay": "foglalt {{percent}}%",
       "problemsDay": "problémák (24 óra): {{count}}",
-      "brokerSinceStart": "{{when}} óta: nincs szolgáltató {{timeouts}}×, teli sor {{full}}×, szolgáltató eltűnt {{gone}}×"
+      "brokerSinceStart": "{{when}} óta: nincs szolgáltató {{timeouts}}×, teli sor {{full}}×, szolgáltató eltűnt {{gone}}×",
+      "bgInList": "{{name}} háttérlistáján",
+      "bgOwner": "(tulajdonos)",
+      "bgForeign": "nem a tulajdonos – ez a fiók nem használhatja",
+      "bgNotInList": "Nincs {{name}} háttérlistáján (csak élő)",
+      "bgAdd": "Felvétel {{name}} háttérlistájára",
+      "bgRemove": "Eltávolítás {{name}} háttérlistájáról",
+      "bgAdded": "Felvéve {{name}} háttérlistájára",
+      "bgRemoved": "Eltávolítva {{name}} háttérlistájáról",
+      "bgError": "A háttérlista nem módosítható"
     }
   },
   "analysis": {

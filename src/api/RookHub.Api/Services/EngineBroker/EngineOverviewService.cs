@@ -9,7 +9,8 @@ namespace RookHub.Api.Services.EngineBroker;
 
 /// <summary>
 /// Admin-Seite „Engines" (0.946.0, <c>GET /api/admin/engines/overview</c>): alle Engines aller Konten, wer sie im
-/// Hintergrund nutzt, was wartet, was gerade rechnet und der Durchsatz. Nur lesend.
+/// Hintergrund nutzt, was wartet, was gerade rechnet und der Durchsatz. Nur lesend (geschrieben wird die Zuordnung über
+/// <c>EngineSettingsService.SetBackgroundMembershipAsync</c>, danach <see cref="Invalidate"/>).
 ///
 /// <para><b>Quellen:</b> Registrierungen (<c>ExternalEngineRegistrations</c>, klein) und Hintergrund-Listen
 /// (<c>LichessEngineCredentials</c>, eine Zeile je Konto) aus der DB; Online-Stempel aus
@@ -52,6 +53,10 @@ public sealed class EngineOverviewService(
         cache.Set(CacheKey, dto, CacheFor);
         return dto;
     }
+
+    /// <summary>Zwischenspeicher verwerfen — nach einer Änderung der Hintergrund-Zuordnung (0.951.0), damit die Seite sofort
+    /// den neuen Stand zeigt.</summary>
+    public void Invalidate() => cache.Remove(CacheKey);
 
     /// <summary>Stufenname wie im Frontend (<c>admin.engines.kind.*</c>).</summary>
     public static string KindOf(JobPriority p) => p switch

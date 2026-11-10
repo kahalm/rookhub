@@ -143,7 +143,9 @@
     "ebook_tree_invalid": "A árvore de aberturas é inválida.",
     "summary_quota": "Já usou os resumos de hoje.",
     "summary_analysis_unavailable": "Esta partida ainda não tem análise e não foi possível iniciar nenhuma.",
-    "summary_unsupported_start": "Os resumos só estão disponíveis para partidas a partir da posição inicial."
+    "summary_unsupported_start": "Os resumos só estão disponíveis para partidas a partir da posição inicial.",
+    "background_list_full": "A lista de segundo plano está cheia. Remove primeiro um motor.",
+    "engine_not_found": "Este motor não pertence a essa conta ou já não está registado."
   },
   "common": {
     "optional": "Opcional",
@@ -2908,7 +2910,7 @@
     },
     "engines": {
       "title": "Motores",
-      "help": "Todos os motores registados de todas as contas: quem os usa em segundo plano, o que espera, o que cada motor está a calcular agora e quanto foi feito. Só leitura; atualiza a cada 15 segundos enquanto o separador estiver visível. Os motores Lichess aparecem apenas pelo ID.",
+      "help": "Todos os motores registados de todas as contas: quem os usa em segundo plano, o que espera, o que cada motor está a calcular agora e quanto foi feito. Em cada cartão podes adicionar o motor à lista de segundo plano do seu proprietário ou removê-lo de uma lista; as tarefas que já esperam ficam no motor. Atualiza a cada 15 segundos enquanto o separador estiver visível. Os motores Lichess aparecem apenas pelo ID.",
       "state": {
         "working": "A calcular",
         "live": "Análise ao vivo",
@@ -2972,7 +2974,6 @@
       "hash": "Hash: {{mb}} MB",
       "registeredAt": "registado {{when}}",
       "lastSeen": "visto {{when}}",
-      "backgroundFor": "Segundo plano para: {{names}}",
       "liveOnly": "Em nenhuma lista de segundo plano (só ao vivo)",
       "for": "para {{name}}",
       "ply": "meio-lance {{ply}}",
@@ -2991,7 +2992,16 @@
       "avgShort": "média {{time}}",
       "busyDay": "ocupado {{percent}} %",
       "problemsDay": "problemas (24 h): {{count}}",
-      "brokerSinceStart": "Desde {{when}}: sem fornecedor {{timeouts}}×, fila cheia {{full}}×, fornecedor saiu {{gone}}×"
+      "brokerSinceStart": "Desde {{when}}: sem fornecedor {{timeouts}}×, fila cheia {{full}}×, fornecedor saiu {{gone}}×",
+      "bgInList": "Na lista de segundo plano de {{name}}",
+      "bgOwner": "(proprietário)",
+      "bgForeign": "não é o proprietário – esta conta não o pode usar",
+      "bgNotInList": "Não está na lista de segundo plano de {{name}} (só ao vivo)",
+      "bgAdd": "Adicionar à lista de segundo plano de {{name}}",
+      "bgRemove": "Remover da lista de segundo plano de {{name}}",
+      "bgAdded": "Adicionado à lista de segundo plano de {{name}}",
+      "bgRemoved": "Removido da lista de segundo plano de {{name}}",
+      "bgError": "Não foi possível alterar a lista de segundo plano"
     }
   },
   "favorites": {

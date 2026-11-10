@@ -67,4 +67,9 @@ public static class ApiErrorCodes
     public const string CoursePgnIsRepertoire = "course_pgn_is_repertoire";
     /// <summary>Kurs-Upload, aus dem keine einzige spielbare Linie entstand (Linien da, aber alle unbrauchbar).</summary>
     public const string CourseNoLines = "course_no_lines";
+
+    /// <summary>Hintergrund-Liste eines Kontos voll (<c>EngineSettingsService.MaxBackgroundEngines</c>), 0.951.0.</summary>
+    public const string BackgroundListFull = "background_list_full";
+    /// <summary>Engine gehört nicht dem genannten Konto bzw. ist nicht registriert (Admin-Reiter „Engines“, 0.951.0).</summary>
+    public const string EngineNotFound = "engine_not_found";
 }

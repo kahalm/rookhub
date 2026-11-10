@@ -143,7 +143,9 @@
     "ebook_tree_invalid": "Drzewo debiutowe jest nieprawidłowe.",
     "summary_quota": "Wykorzystano dzisiejsze podsumowania.",
     "summary_analysis_unavailable": "Ta partia nie ma jeszcze analizy i nie udało się jej uruchomić.",
-    "summary_unsupported_start": "Podsumowania są dostępne tylko dla partii od pozycji wyjściowej."
+    "summary_unsupported_start": "Podsumowania są dostępne tylko dla partii od pozycji wyjściowej.",
+    "background_list_full": "Lista w tle jest pełna. Najpierw usuń jeden silnik.",
+    "engine_not_found": "Ten silnik nie należy do tego konta lub nie jest już zarejestrowany."
   },
   "common": {
     "optional": "Opcjonalnie",
@@ -2908,7 +2910,7 @@
     },
     "engines": {
       "title": "Silniki",
-      "help": "Wszystkie zarejestrowane silniki wszystkich kont: kto używa ich w tle, co czeka, co każdy silnik teraz liczy i ile zrobiono. Tylko odczyt; odświeża się co 15 sekund, gdy karta jest widoczna. Silniki Lichess są widoczne tylko z identyfikatorem.",
+      "help": "Wszystkie zarejestrowane silniki wszystkich kont: kto używa ich w tle, co czeka, co każdy silnik teraz liczy i ile zrobiono. Na każdej karcie możesz dodać silnik do listy w tle jego właściciela albo usunąć go z listy; zadania, które już czekają, zostają na silniku. Odświeża się co 15 sekund, gdy karta jest widoczna. Silniki Lichess są widoczne tylko z identyfikatorem.",
       "state": {
         "working": "Liczy",
         "live": "Analiza na żywo",
@@ -2972,7 +2974,6 @@
       "hash": "Hash: {{mb}} MB",
       "registeredAt": "zarejestrowany {{when}}",
       "lastSeen": "ostatnio {{when}}",
-      "backgroundFor": "W tle dla: {{names}}",
       "liveOnly": "Na żadnej liście w tle (tylko na żywo)",
       "for": "dla {{name}}",
       "ply": "półruch {{ply}}",
@@ -2991,7 +2992,16 @@
       "avgShort": "śr. {{time}}",
       "busyDay": "zajęty {{percent}} %",
       "problemsDay": "problemy (24 h): {{count}}",
-      "brokerSinceStart": "Od {{when}}: brak dostawcy {{timeouts}}×, pełna kolejka {{full}}×, dostawca zniknął {{gone}}×"
+      "brokerSinceStart": "Od {{when}}: brak dostawcy {{timeouts}}×, pełna kolejka {{full}}×, dostawca zniknął {{gone}}×",
+      "bgInList": "Na liście w tle użytkownika {{name}}",
+      "bgOwner": "(właściciel)",
+      "bgForeign": "nie jest właścicielem – to konto nie może go używać",
+      "bgNotInList": "Nie ma na liście w tle użytkownika {{name}} (tylko na żywo)",
+      "bgAdd": "Dodaj do listy w tle użytkownika {{name}}",
+      "bgRemove": "Usuń z listy w tle użytkownika {{name}}",
+      "bgAdded": "Dodano do listy w tle użytkownika {{name}}",
+      "bgRemoved": "Usunięto z listy w tle użytkownika {{name}}",
+      "bgError": "Nie udało się zmienić listy w tle"
     }
   },
   "favorites": {

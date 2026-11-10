@@ -143,7 +143,9 @@
     "ebook_tree_invalid": "Öppningsträdet är ogiltigt.",
     "summary_quota": "Du har förbrukat dagens sammanfattningar.",
     "summary_analysis_unavailable": "Det här partiet har ingen analys än och ingen kunde startas.",
-    "summary_unsupported_start": "Sammanfattningar finns bara för partier från utgångsställningen."
+    "summary_unsupported_start": "Sammanfattningar finns bara för partier från utgångsställningen.",
+    "background_list_full": "Bakgrundslistan är full. Ta bort en motor först.",
+    "engine_not_found": "Den här motorn tillhör inte det kontot eller är inte längre registrerad."
   },
   "common": {
     "optional": "Valfritt",
@@ -2908,7 +2910,7 @@
     },
     "engines": {
       "title": "Motorer",
-      "help": "Alla registrerade motorer för alla konton: vem som använder dem i bakgrunden, vad som väntar, vad varje motor räknar på just nu och hur mycket som blivit klart. Endast läsning; uppdateras var 15:e sekund medan fliken är synlig. Lichess-motorer visas bara med sitt ID.",
+      "help": "Alla registrerade motorer för alla konton: vem som använder dem i bakgrunden, vad som väntar, vad varje motor räknar på just nu och hur mycket som blivit klart. På varje kort kan du lägga till motorn i ägarens bakgrundslista eller ta bort den från en lista; jobb som redan väntar stannar på motorn. Uppdateras var 15:e sekund medan fliken är synlig. Lichess-motorer visas bara med sitt ID.",
       "state": {
         "working": "Räknar",
         "live": "Liveanalys",
@@ -2972,7 +2974,6 @@
       "hash": "Hash: {{mb}} MB",
       "registeredAt": "registrerad {{when}}",
       "lastSeen": "senast sedd {{when}}",
-      "backgroundFor": "Bakgrund för: {{names}}",
       "liveOnly": "Inte i någon bakgrundslista (bara live)",
       "for": "för {{name}}",
       "ply": "halvdrag {{ply}}",
@@ -2991,7 +2992,16 @@
       "avgShort": "medel {{time}}",
       "busyDay": "upptagen {{percent}} %",
       "problemsDay": "problem (24 h): {{count}}",
-      "brokerSinceStart": "Sedan {{when}}: ingen leverantör {{timeouts}}×, full kö {{full}}×, leverantör borta {{gone}}×"
+      "brokerSinceStart": "Sedan {{when}}: ingen leverantör {{timeouts}}×, full kö {{full}}×, leverantör borta {{gone}}×",
+      "bgInList": "I bakgrundslistan för {{name}}",
+      "bgOwner": "(ägare)",
+      "bgForeign": "inte ägaren – det här kontot kan inte använda den",
+      "bgNotInList": "Inte i bakgrundslistan för {{name}} (bara live)",
+      "bgAdd": "Lägg till i bakgrundslistan för {{name}}",
+      "bgRemove": "Ta bort från bakgrundslistan för {{name}}",
+      "bgAdded": "Tillagd i bakgrundslistan för {{name}}",
+      "bgRemoved": "Borttagen från bakgrundslistan för {{name}}",
+      "bgError": "Det gick inte att ändra bakgrundslistan"
     }
   },
   "favorites": {

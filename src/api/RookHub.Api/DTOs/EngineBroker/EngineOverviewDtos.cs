@@ -102,3 +102,12 @@ public record EngineOverviewCurrentJobDto(
 public record EngineBrokerCountersDto(
     long Jobs, long Completed, long WithoutBestmove, long RequesterGone, long ProviderGone, long ProviderTimeouts,
     long QueueFull, long OngoingExpired);
+
+/// <summary>Rumpf von <c>PUT /api/admin/engines/{engineId}/background</c> (0.951.0): die Engine in die Hintergrund-Liste
+/// des Kontos <paramref name="UserId"/> aufnehmen (<paramref name="Enabled"/> = true) bzw. daraus entfernen.</summary>
+public record SetEngineBackgroundRequest(int UserId, bool Enabled);
+
+/// <summary>Antwort darauf: <paramref name="Changed"/> = false, wenn sie schon drin bzw. schon draußen war;
+/// <paramref name="BackgroundEngineIds"/> = die Liste des Kontos danach.</summary>
+public record SetEngineBackgroundResponse(string EngineId, int UserId, bool Enabled, bool Changed,
+    IReadOnlyList<string> BackgroundEngineIds);

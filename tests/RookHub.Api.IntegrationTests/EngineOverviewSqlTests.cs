@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.EngineBroker;
 using RookHub.Api.Services.Engines;
 using Xunit;
@@ -187,6 +188,63 @@ public class EngineOverviewSqlTests(EngineOverviewSqlFixture fixture) : IAsyncLi
             await new EngineThroughputRecorder().FlushAsync(db, Now, CancellationToken.None);
             Assert.Equal(2, await db.EngineThroughputBuckets.CountAsync());
             Assert.False(await db.EngineThroughputBuckets.AnyAsync(b => b.BucketStart < Now.AddDays(-EngineThroughputBucket.RetentionDays)));
+        }
+    }
+
+    /// <summary>Admin-Umschalter (0.951.0) gegen echtes MariaDB: Namen der Registrierung lesen, Liste + Merkliste schreiben,
+    /// Zeile ohne Token neu anlegen — und die Übersicht danach liest den neuen Stand.</summary>
+    [MySqlFact]
+    public async Task SetBackgroundMembership_WritesListAndPrunedNames()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!",
+        }).Build();
+        await using (var db = fixture.Schema.NewContext())
+        {
+            db.AppUsers.AddRange(
+                new AppUser { Id = Owner, Username = "sql-owner", PasswordHash = "x" },
+                new AppUser { Id = Other, Username = "sql-other", PasswordHash = "x" });
+            db.ExternalEngineRegistrations.AddRange(
+                new ExternalEngineRegistration { Id = RheA, UserId = Owner, Name = "Server 1", ClientSecret = "cs", ProviderSelector = "selA",
+                    MaxThreads = 4, MaxHash = 256, Variants = "chess", CreatedAt = Now, LastSeenAt = Now },
+                new ExternalEngineRegistration { Id = RheB, UserId = Owner, Name = "Server 2", ClientSecret = "cs", ProviderSelector = "selB",
+                    MaxThreads = 4, MaxHash = 256, Variants = "chess", CreatedAt = Now, LastSeenAt = Now });
+            db.LichessEngineCredentials.Add(new LichessEngineCredential
+            {
+                UserId = Owner, BackgroundEngineIds = $"{RheA},{Eei}", PrunedBackgroundNames = "Server 1\nServer 2\nAlter PC",
+                CreatedAt = Now, UpdatedAt = Now,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        await using var sp = Provider();
+        async Task<(BackgroundMembershipResult? R, EngineSettingsRejection? X)> Set(int user, string id, bool on)
+        {
+            await using var db = fixture.Schema.NewContext();
+            var enc = new EncryptionService(config);
+            var registry = new EngineRegistry(db, enc,
+                new LichessEngineService(new HttpClient(), new MemoryCache(new MemoryCacheOptions()), config,
+                    NullLogger<LichessEngineService>.Instance),
+                new EngineSelectorDirectory(sp.GetRequiredService<IServiceScopeFactory>(), () => Now), new LocalBrokerOptions());
+            return await new EngineSettingsService(db, enc, registry).SetBackgroundMembershipAsync(user, id, on, CancellationToken.None);
+        }
+
+        Assert.True((await Set(Owner, RheA, false)).R!.Changed);
+        Assert.True((await Set(Owner, RheB, true)).R!.Changed);
+        Assert.False((await Set(Owner, RheB, true)).R!.Changed);
+        Assert.True((await Set(Other, RheA, true)).X!.NotFound);                      // fremde Engine → 404
+        Assert.True((await Set(Owner, Eei, false)).R!.Changed);                       // Lichess ohne Token: entfernen geht
+
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var cred = await db.LichessEngineCredentials.AsNoTracking().SingleAsync(c => c.UserId == Owner);
+            Assert.Equal([RheB], cred.BackgroundEngines);
+            Assert.Equal(["Alter PC"], cred.PrunedBackground);
+            Assert.False(await db.LichessEngineCredentials.AnyAsync(c => c.UserId == Other));
+            var dto = await Service(db, new EngineThroughputRecorder(), sp).BuildAsync(Now, CancellationToken.None);
+            Assert.Equal(["sql-owner"], dto.Engines.Single(e => e.Id == RheB).BackgroundFor.Select(u => u.Name));
+            Assert.Empty(dto.Engines.Single(e => e.Id == RheA).BackgroundFor);
         }
     }
 }

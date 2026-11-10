@@ -52,6 +52,11 @@
 .current { margin: 8px 0; padding: 8px 10px; border-radius: 8px;
   border: 1px solid var(--mat-sys-outline-variant);
   background: color-mix(in srgb, var(--rh-success) 8%, transparent); }
+.bg-rows { margin: 6px 0; display: flex; flex-direction: column; gap: 4px; }
+.bg-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.bg-state { flex: 1 1 220px; min-width: 0; margin: 0; }
+/* Beschriftung darf umbrechen (nennt das Konto), Knopf nie breiter als die Karte */
+.bg-btn { max-width: 100%; height: auto; min-height: 36px; white-space: normal; text-align: left; }
 .ellip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .stats { margin-top: 6px; font-size: .9em; }
 code { font-size: .85em; word-break: break-all; }

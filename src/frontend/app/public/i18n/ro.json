@@ -143,7 +143,9 @@
     "ebook_tree_invalid": "Arborele de deschideri este invalid.",
     "summary_quota": "Ai epuizat rezumatele de azi.",
     "summary_analysis_unavailable": "Această partidă nu are încă analiză și nu s-a putut porni niciuna.",
-    "summary_unsupported_start": "Rezumatele sunt disponibile doar pentru partide din poziția inițială."
+    "summary_unsupported_start": "Rezumatele sunt disponibile doar pentru partide din poziția inițială.",
+    "background_list_full": "Lista de fundal este plină. Scoate mai întâi un motor.",
+    "engine_not_found": "Acest motor nu aparține acelui cont sau nu mai este înregistrat."
   },
   "common": {
     "optional": "Opțional",
@@ -2908,7 +2910,7 @@
     },
     "engines": {
       "title": "Motoare",
-      "help": "Toate motoarele înregistrate ale tuturor conturilor: cine le folosește în fundal, ce așteaptă, ce calculează fiecare motor acum și cât s-a terminat. Doar citire; se reîmprospătează la 15 secunde cât timp fila este vizibilă. Motoarele Lichess apar doar cu ID-ul.",
+      "help": "Toate motoarele înregistrate ale tuturor conturilor: cine le folosește în fundal, ce așteaptă, ce calculează fiecare motor acum și cât s-a terminat. Pe fiecare card poți adăuga motorul în lista de fundal a proprietarului sau îl poți scoate dintr-o listă; sarcinile care așteaptă deja rămân pe motor. Se reîmprospătează la 15 secunde cât timp fila este vizibilă. Motoarele Lichess apar doar cu ID-ul.",
       "state": {
         "working": "Calculează",
         "live": "Analiză live",
@@ -2972,7 +2974,6 @@
       "hash": "Hash: {{mb}} MB",
       "registeredAt": "înregistrat {{when}}",
       "lastSeen": "văzut {{when}}",
-      "backgroundFor": "Fundal pentru: {{names}}",
       "liveOnly": "În nicio listă de fundal (doar live)",
       "for": "pentru {{name}}",
       "ply": "semimutarea {{ply}}",
@@ -2991,7 +2992,16 @@
       "avgShort": "medie {{time}}",
       "busyDay": "ocupat {{percent}} %",
       "problemsDay": "probleme (24 h): {{count}}",
-      "brokerSinceStart": "Din {{when}}: fără furnizor {{timeouts}}×, coadă plină {{full}}×, furnizor dispărut {{gone}}×"
+      "brokerSinceStart": "Din {{when}}: fără furnizor {{timeouts}}×, coadă plină {{full}}×, furnizor dispărut {{gone}}×",
+      "bgInList": "În lista de fundal a lui {{name}}",
+      "bgOwner": "(proprietar)",
+      "bgForeign": "nu este proprietarul – acest cont nu îl poate folosi",
+      "bgNotInList": "Nu este în lista de fundal a lui {{name}} (doar live)",
+      "bgAdd": "Adaugă în lista de fundal a lui {{name}}",
+      "bgRemove": "Scoate din lista de fundal a lui {{name}}",
+      "bgAdded": "Adăugat în lista de fundal a lui {{name}}",
+      "bgRemoved": "Scos din lista de fundal a lui {{name}}",
+      "bgError": "Lista de fundal nu a putut fi modificată"
     }
   },
   "favorites": {

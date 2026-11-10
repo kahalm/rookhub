@@ -7,8 +7,13 @@ using RookHub.Api.Services.Accounts;
 namespace RookHub.Api.Services.EngineBroker;
 
 /// <summary>Absage einer Engine-Einstellung — der Controller antwortet damit 400 (bzw. 404 bei
-/// <paramref name="NotFound"/>) mit <c>{ message }</c>.</summary>
-internal sealed record EngineSettingsRejection(string Message, bool NotFound = false);
+/// <paramref name="NotFound"/>) mit <c>{ message }</c>, mit <paramref name="Code"/> als <c>{ message, code }</c>.</summary>
+internal sealed record EngineSettingsRejection(string Message, bool NotFound = false, string? Code = null);
+
+/// <summary>Ergebnis von <see cref="EngineSettingsService.SetBackgroundMembershipAsync"/>: <paramref name="Changed"/> =
+/// die Liste wurde geschrieben (sonst stand die Engine schon drin bzw. schon nicht drin); <paramref name="Ids"/> = die
+/// Liste danach.</summary>
+internal sealed record BackgroundMembershipResult(bool Changed, IReadOnlyList<string> Ids);
 
 /// <summary>Geprüfte Hintergrund-Liste, bereit zum Speichern: die bereinigten Kennungen und die vorhandene Zeile
 /// (<c>null</c> = noch keine). <paramref name="NothingToStore"/>: keine Zeile UND leere Liste — es gibt nichts zu tun.</summary>
@@ -143,24 +148,101 @@ internal sealed class EngineSettingsService
     {
         var cred = await CredentialAsync(userId, ct);
 
-        var ids = (requested ?? [])
-            .Select(i => i?.Trim() ?? string.Empty)
-            .Where(i => i.Length > 0)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
+        var ids = NormalizeBackgroundIds(requested);
+        if (CheckBackgroundList(ids) is { } invalid) return (null, invalid);
+        if (CheckLichessToken(cred, ids) is { } noToken) return (null, noToken);
+        return (new BackgroundEnginePlan(cred, ids, NothingToStore: cred is null && ids.Count == 0), null);
+    }
+
+    /// <summary>Längste zulässige Engine-Kennung (beide Quellen sind 16 Zeichen lang; Spielraum für fremde).</summary>
+    internal const int MaxEngineIdLength = 64;
+
+    /// <summary>Bereinigt eine angefragte Liste: getrimmt, Leerwerte und Doppelte raus, Reihenfolge bleibt.</summary>
+    internal static List<string> NormalizeBackgroundIds(IEnumerable<string?>? requested) => (requested ?? [])
+        .Select(i => i?.Trim() ?? string.Empty)
+        .Where(i => i.Length > 0)
+        .Distinct(StringComparer.Ordinal)
+        .ToList();
+
+    /// <summary>Deckel (<see cref="MaxBackgroundEngines"/>, Code <c>background_list_full</c>) und Länge je Kennung.</summary>
+    private static EngineSettingsRejection? CheckBackgroundList(IReadOnlyCollection<string> ids)
+    {
         if (ids.Count > MaxBackgroundEngines)
-            return (null, new EngineSettingsRejection($"At most {MaxBackgroundEngines} background engines"));
-        if (ids.Any(i => i.Length > 64))
+            return new EngineSettingsRejection($"At most {MaxBackgroundEngines} background engines",
+                Code: Exceptions.ApiErrorCodes.BackgroundListFull);
+        if (ids.Any(i => i.Length > MaxEngineIdLength))
+            return new EngineSettingsRejection("Invalid engine id");
+        return null;
+    }
+
+    /// <summary>Lichess-Engines brauchen den Token (Meldungen wie bisher); „RookHub direkt" nicht — ein Nutzer ohne
+    /// Lichess-Konto bekommt die Zeile dann eben ohne Token.</summary>
+    private EngineSettingsRejection? CheckLichessToken(LichessEngineCredential? cred, IEnumerable<string> ids)
+    {
+        if (!ids.Any(i => !EngineRegistry.IsLocal(i))) return null;
+        // Zeile ohne Token (seit dem eigenen Broker möglich) heißt ebenfalls „kein Token“, nicht „unlesbar“.
+        if (!HasToken(cred)) return new EngineSettingsRejection("No Lichess token stored");
+        if (_encryption.TryDecrypt(cred!.EncryptedToken) is null) return new EngineSettingsRejection("Stored token unreadable");
+        return null;
+    }
+
+    /// <summary>
+    /// EINE Engine in die Hintergrund-Liste des Kontos <paramref name="userId"/> aufnehmen bzw. daraus entfernen (Admin-Reiter
+    /// „Engines", 0.951.0) — dieselben Regeln wie das Setzen der ganzen Liste im Profil (<see cref="PlanBackgroundAsync"/>
+    /// + <see cref="AllRegisteredAsync"/> + <see cref="SaveBackgroundAsync"/>), nur auf eine Kennung bezogen:
+    /// <list type="bullet">
+    /// <item><b>Idempotent</b>: steht sie schon drin (bzw. schon nicht drin), wird nichts geschrieben.</item>
+    /// <item><b>Aufnehmen</b>: hinten angehängt (Reihenfolge der übrigen bleibt), Deckel über die NEUE Liste; die Engine
+    /// muss diesem Konto gehören (<see cref="AllRegisteredAsync"/>: <c>rhe_</c> registriert auf dieses Konto, <c>eei_</c>
+    /// über dessen Lichess-Token — Netzfehler gehen an den Aufrufer); eine <c>eei_</c> braucht den Token.</item>
+    /// <item><b>Entfernen</b>: immer erlaubt, auch wenn die Liste über dem Deckel steht oder der Token fehlt — die Liste
+    /// wird nur kürzer. Auch für fremde und nicht (mehr) registrierte Kennungen.</item>
+    /// <item><b><see cref="LichessEngineCredential.PrunedBackgroundNames"/></b>: der Name der Engine (falls auf dieses
+    /// Konto registriert) fällt in BEIDEN Richtungen aus der Merkliste — die Wartung trägt eine von Hand entfernte Engine
+    /// bei Neuanmeldung nicht wieder ein, und eine von Hand aufgenommene nicht ein zweites Mal.</item>
+    /// </list>
+    /// Wartende Aufträge bleiben, wo sie sind (wie beim Bearbeiten im Profil).
+    /// </summary>
+    internal async Task<(BackgroundMembershipResult? Result, EngineSettingsRejection? Rejection)> SetBackgroundMembershipAsync(
+        int userId, string? engineId, bool enabled, CancellationToken ct)
+    {
+        var id = engineId?.Trim() ?? string.Empty;
+        if (id.Length == 0 || id.Length > MaxEngineIdLength)
             return (null, new EngineSettingsRejection("Invalid engine id"));
 
-        // Lichess-Engines brauchen den Token (Meldungen wie bisher); „RookHub direkt" nicht — ein Nutzer ohne
-        // Lichess-Konto bekommt die Zeile dann eben ohne Token.
-        var needsLichess = ids.Any(i => !EngineRegistry.IsLocal(i));
-        if (needsLichess && cred is null)
-            return (null, new EngineSettingsRejection("No Lichess token stored"));
-        if (needsLichess && _encryption.TryDecrypt(cred!.EncryptedToken) is null)
-            return (null, new EngineSettingsRejection("Stored token unreadable"));
-        return (new BackgroundEnginePlan(cred, ids, NothingToStore: cred is null && ids.Count == 0), null);
+        var cred = await CredentialAsync(userId, ct);
+        var current = cred?.BackgroundEngines ?? [];
+        if (current.Contains(id) == enabled)
+            return (new BackgroundMembershipResult(false, current), null);
+
+        var name = await _db.ExternalEngineRegistrations.AsNoTracking()
+            .Where(r => r.Id == id && r.UserId == userId).Select(r => r.Name).FirstOrDefaultAsync(ct);
+
+        if (!enabled)
+        {
+            // cred ist hier gesetzt: ohne Zeile stünde die Engine in keiner Liste.
+            cred!.SetBackgroundEngines(current.Where(e => e != id));
+            ForgetPruned(cred, name);
+            cred.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            return (new BackgroundMembershipResult(true, cred.BackgroundEngines), null);
+        }
+
+        var next = NormalizeBackgroundIds(current.Append(id));
+        if (CheckBackgroundList(next) is { } invalid) return (null, invalid);
+        if (CheckLichessToken(cred, [id]) is { } noToken) return (null, noToken);
+        if (!await AllRegisteredAsync(userId, [id], ct))
+            return (null, new EngineSettingsRejection("Engine not found", NotFound: true, Code: Exceptions.ApiErrorCodes.EngineNotFound));
+
+        if (cred is not null) ForgetPruned(cred, name);
+        var saved = await SaveBackgroundAsync(userId, new BackgroundEnginePlan(cred, next, NothingToStore: false), ct);
+        return (new BackgroundMembershipResult(true, saved), null);
+    }
+
+    private static void ForgetPruned(LichessEngineCredential cred, string? name)
+    {
+        if (name is not null && cred.PrunedBackground.Contains(name))
+            cred.SetPrunedBackground(cred.PrunedBackground.Where(n => n != name));
     }
 
     /// <summary>Ist JEDE Engine der Liste registriert? Bricht bei der ersten fehlenden ab. Eine nicht registrierte

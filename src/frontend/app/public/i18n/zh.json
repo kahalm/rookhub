@@ -143,7 +143,9 @@
     "ebook_tree_invalid": "开局树无效。",
     "summary_quota": "你今天的总结次数已用完。",
     "summary_analysis_unavailable": "这盘对局还没有分析，也无法启动分析。",
-    "summary_unsupported_start": "总结只适用于从初始局面开始的对局。"
+    "summary_unsupported_start": "总结只适用于从初始局面开始的对局。",
+    "background_list_full": "后台列表已满。请先移除一个引擎。",
+    "engine_not_found": "此引擎不属于该账户，或已不再注册。"
   },
   "common": {
     "optional": "可选",
@@ -2908,7 +2910,7 @@
     },
     "engines": {
       "title": "引擎",
-      "help": "所有账户的全部已注册引擎：谁在后台使用、什么在等待、每个引擎正在计算什么以及完成了多少。只读；标签页可见时每 15 秒刷新一次。Lichess 引擎只显示其 ID。",
+      "help": "所有账户的全部已注册引擎：谁在后台使用、什么在等待、每个引擎正在计算什么以及完成了多少。在每张卡片上，你可以把引擎加入其所有者的后台列表，或从某个列表中移除；已在等待的任务仍留在该引擎上。标签页可见时每 15 秒刷新一次。Lichess 引擎只显示其 ID。",
       "state": {
         "working": "计算中",
         "live": "实时分析",
@@ -2972,7 +2974,6 @@
       "hash": "Hash：{{mb}} MB",
       "registeredAt": "注册于 {{when}}",
       "lastSeen": "最后在线 {{when}}",
-      "backgroundFor": "后台用于：{{names}}",
       "liveOnly": "不在任何后台列表中（仅实时）",
       "for": "为 {{name}}",
       "ply": "第 {{ply}} 半步",
@@ -2991,7 +2992,16 @@
       "avgShort": "平均 {{time}}",
       "busyDay": "占用 {{percent}} %",
       "problemsDay": "问题（24 小时）：{{count}}",
-      "brokerSinceStart": "自 {{when}} 起：无提供方 {{timeouts}}×，队列已满 {{full}}×，提供方离开 {{gone}}×"
+      "brokerSinceStart": "自 {{when}} 起：无提供方 {{timeouts}}×，队列已满 {{full}}×，提供方离开 {{gone}}×",
+      "bgInList": "在 {{name}} 的后台列表中",
+      "bgOwner": "（所有者）",
+      "bgForeign": "不是所有者 – 此账户无法使用它",
+      "bgNotInList": "不在 {{name}} 的后台列表中（仅实时）",
+      "bgAdd": "加入 {{name}} 的后台列表",
+      "bgRemove": "从 {{name}} 的后台列表移除",
+      "bgAdded": "已加入 {{name}} 的后台列表",
+      "bgRemoved": "已从 {{name}} 的后台列表移除",
+      "bgError": "无法更改后台列表"
     }
   },
   "favorites": {

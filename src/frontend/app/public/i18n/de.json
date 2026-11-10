@@ -145,7 +145,9 @@
     "ebook_tree_invalid": "Der Buchbaum ist ungültig.",
     "summary_quota": "Deine Zusammenfassungen für heute sind verbraucht.",
     "summary_analysis_unavailable": "Für diese Partie gibt es keine Analyse und es ließ sich keine starten.",
-    "summary_unsupported_start": "Zusammenfassungen gibt es nur für Partien ab der Grundstellung."
+    "summary_unsupported_start": "Zusammenfassungen gibt es nur für Partien ab der Grundstellung.",
+    "background_list_full": "Die Hintergrund-Liste ist voll. Nimm zuerst eine Engine heraus.",
+    "engine_not_found": "Diese Engine gehört nicht zu diesem Konto oder ist nicht mehr registriert."
   },
   "common": {
     "optional": "Optional",
@@ -2963,7 +2965,7 @@
     },
     "engines": {
       "title": "Engines",
-      "help": "Alle registrierten Engines aller Konten: wer sie im Hintergrund nutzt, was wartet, was jede Engine gerade rechnet und wie viel erledigt wurde. Nur lesend; frischt sich alle 15 Sekunden auf, solange der Tab sichtbar ist. Lichess-Engines erscheinen nur mit ihrer Kennung.",
+      "help": "Alle registrierten Engines aller Konten: wer sie im Hintergrund nutzt, was wartet, was jede Engine gerade rechnet und wie viel erledigt wurde. Auf jeder Karte nimmst du die Engine in die Hintergrund-Liste ihres Besitzers auf oder aus einer Liste heraus; schon wartende Aufträge bleiben auf der Engine. Frischt sich alle 15 Sekunden auf, solange der Tab sichtbar ist. Lichess-Engines erscheinen nur mit ihrer Kennung.",
       "state": {
         "working": "Rechnet",
         "live": "Live-Analyse",
@@ -3027,7 +3029,6 @@
       "hash": "Hash: {{mb}} MB",
       "registeredAt": "registriert {{when}}",
       "lastSeen": "zuletzt da {{when}}",
-      "backgroundFor": "Hintergrund für: {{names}}",
       "liveOnly": "In keiner Hintergrund-Liste (nur live)",
       "for": "für {{name}}",
       "ply": "Halbzug {{ply}}",
@@ -3046,7 +3047,16 @@
       "avgShort": "Ø {{time}}",
       "busyDay": "ausgelastet {{percent}} %",
       "problemsDay": "Probleme (24 Std.): {{count}}",
-      "brokerSinceStart": "Seit {{when}}: kein Provider {{timeouts}}×, Schlange voll {{full}}×, Provider weg {{gone}}×"
+      "brokerSinceStart": "Seit {{when}}: kein Provider {{timeouts}}×, Schlange voll {{full}}×, Provider weg {{gone}}×",
+      "bgInList": "In der Hintergrund-Liste von {{name}}",
+      "bgOwner": "(Besitzer)",
+      "bgForeign": "nicht Besitzer – dieses Konto kann sie nicht nutzen",
+      "bgNotInList": "Nicht in der Hintergrund-Liste von {{name}} (nur live)",
+      "bgAdd": "In Hintergrund-Liste von {{name}} aufnehmen",
+      "bgRemove": "Aus Hintergrund-Liste von {{name}} nehmen",
+      "bgAdded": "In die Hintergrund-Liste von {{name}} aufgenommen",
+      "bgRemoved": "Aus der Hintergrund-Liste von {{name}} genommen",
+      "bgError": "Hintergrund-Liste konnte nicht geändert werden"
     }
   },
   "favorites": {

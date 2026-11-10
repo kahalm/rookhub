@@ -111,7 +111,7 @@ public class EngineOverviewTests : IDisposable
     // ── Berechtigung ─────────────────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Controller_IsAdminOnly_ReadOnly()
+    public void Controller_IsAdminOnly_WritesOnlyTheBackgroundToggle()
     {
         var type = typeof(AdminEnginesController);
         Assert.Equal("perm:" + Permissions.AdminOnly, type.GetCustomAttribute<AuthorizeAttribute>()!.Policy);
@@ -119,8 +119,10 @@ public class EngineOverviewTests : IDisposable
         Assert.Null(type.GetCustomAttribute<AllowAnonymousAttribute>());
         var actions = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
         Assert.DoesNotContain(actions, m => m.GetCustomAttribute<AllowAnonymousAttribute>() != null);
-        // Nur lesend: keine schreibende Aktion.
-        Assert.All(actions, m => Assert.DoesNotContain(m.GetCustomAttributes(), a => a is HttpPostAttribute or HttpPutAttribute or HttpDeleteAttribute or HttpPatchAttribute));
+        // Einzige schreibende Aktion: die Hintergrund-Zuordnung (0.951.0).
+        Assert.Equal([nameof(AdminEnginesController.SetBackground)], actions
+            .Where(m => m.GetCustomAttributes().Any(a => a is HttpPostAttribute or HttpPutAttribute or HttpDeleteAttribute or HttpPatchAttribute))
+            .Select(m => m.Name));
         Assert.Contains(actions, m => m.GetCustomAttribute<HttpGetAttribute>()?.Template == "overview");
     }
 

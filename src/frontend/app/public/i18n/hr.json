@@ -145,7 +145,9 @@
     "ebook_tree_invalid": "Stablo otvaranja nije ispravno.",
     "summary_quota": "Današnji sažeci su potrošeni.",
     "summary_analysis_unavailable": "Ova partija nema analizu i nije ju bilo moguće pokrenuti.",
-    "summary_unsupported_start": "Sažeci su dostupni samo za partije iz početne pozicije."
+    "summary_unsupported_start": "Sažeci su dostupni samo za partije iz početne pozicije.",
+    "background_list_full": "Pozadinski popis je pun. Najprije ukloni jedan engine.",
+    "engine_not_found": "Ovaj engine ne pripada tom računu ili više nije registriran."
   },
   "common": {
     "optional": "Neobavezno",
@@ -2963,7 +2965,7 @@
     },
     "engines": {
       "title": "Engine",
-      "help": "Svi registrirani engine svih računa: tko ih koristi u pozadini, što čeka, što svaki engine upravo računa i koliko je obavljeno. Samo za čitanje; osvježava se svakih 15 sekundi dok je kartica vidljiva. Lichess engine prikazuju se samo oznakom.",
+      "help": "Svi registrirani engine svih računa: tko ih koristi u pozadini, što čeka, što svaki engine upravo računa i koliko je obavljeno. Na svakoj kartici engine možeš dodati na pozadinski popis njegova vlasnika ili ga ukloniti s popisa; poslovi koji već čekaju ostaju na engineu. Osvježava se svakih 15 sekundi dok je kartica vidljiva. Lichess engine prikazuju se samo oznakom.",
       "state": {
         "working": "Računa",
         "live": "Analiza uživo",
@@ -3027,7 +3029,6 @@
       "hash": "Hash: {{mb}} MB",
       "registeredAt": "registriran {{when}}",
       "lastSeen": "zadnji put {{when}}",
-      "backgroundFor": "Pozadina za: {{names}}",
       "liveOnly": "Ni na jednom pozadinskom popisu (samo uživo)",
       "for": "za {{name}}",
       "ply": "polupotez {{ply}}",
@@ -3046,7 +3047,16 @@
       "avgShort": "prosj. {{time}}",
       "busyDay": "zauzeto {{percent}} %",
       "problemsDay": "problemi (24 h): {{count}}",
-      "brokerSinceStart": "Od {{when}}: nema pružatelja {{timeouts}}×, red pun {{full}}×, pružatelj nestao {{gone}}×"
+      "brokerSinceStart": "Od {{when}}: nema pružatelja {{timeouts}}×, red pun {{full}}×, pružatelj nestao {{gone}}×",
+      "bgInList": "Na pozadinskom popisu korisnika {{name}}",
+      "bgOwner": "(vlasnik)",
+      "bgForeign": "nije vlasnik – ovaj ga račun ne može koristiti",
+      "bgNotInList": "Nije na pozadinskom popisu korisnika {{name}} (samo uživo)",
+      "bgAdd": "Dodaj na pozadinski popis korisnika {{name}}",
+      "bgRemove": "Ukloni s pozadinskog popisa korisnika {{name}}",
+      "bgAdded": "Dodano na pozadinski popis korisnika {{name}}",
+      "bgRemoved": "Uklonjeno s pozadinskog popisa korisnika {{name}}",
+      "bgError": "Pozadinski popis nije moguće promijeniti"
     }
   },
   "favorites": {

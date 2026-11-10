@@ -6,7 +6,9 @@ import { firstValueFrom } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { SnackbarService } from '../../../core/snackbar.service';
+import { apiErrorText } from '../../../core/api-error';
 import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { HelpHintComponent } from '../../../shared/help-hint/help-hint.component';
@@ -67,6 +69,39 @@ export interface EngineOverview {
 
 export const ENGINE_OVERVIEW_URL = '/api/admin/engines/overview';
 
+/** `PUT` mit `{ userId, enabled }`: die Engine in die Hintergrund-Liste dieses Kontos aufnehmen bzw. daraus entfernen (0.951.0). */
+export function engineBackgroundUrl(engineId: string): string {
+  return `/api/admin/engines/${encodeURIComponent(engineId)}/background`;
+}
+
+/** Eine Zeile „Hintergrund-Liste“ auf der Engine-Karte: ein Konto und ob die Engine in seiner Liste steht. */
+export interface EngineBackgroundRow {
+  userId: number;
+  name: string;
+  /** Steht in der Liste dieses Kontos. */
+  inList: boolean;
+  /** Konto = Besitzer der Engine. */
+  owner: boolean;
+  /** Registrierte Engine in der Liste eines FREMDEN Kontos (der Worker kann sie dort nicht nutzen). */
+  foreign: boolean;
+}
+
+/**
+ * Die Konten, deren Hintergrund-Liste die Karte zeigt und umschalten lässt: jedes Konto, in dessen Liste die Engine steht
+ * (dort „entfernen“), und der Besitzer, falls sie bei ihm fehlt (dort „aufnehmen“). Ohne eindeutigen Besitzer (Lichess-
+ * Kennung in keiner oder mehreren Listen, verwaiste Kennung) gibt es kein „aufnehmen“. Besitzer zuerst.
+ */
+export function backgroundRows(e: EngineOverviewEngine): EngineBackgroundRow[] {
+  const label = (id: number, name: string | null) => name || '#' + id;
+  const rows: EngineBackgroundRow[] = e.backgroundFor.map(u => ({
+    userId: u.userId, name: label(u.userId, u.name), inList: true, owner: u.userId === e.ownerUserId,
+    foreign: e.registered && e.ownerUserId != null && u.userId !== e.ownerUserId,
+  }));
+  if (e.ownerUserId != null && !rows.some(r => r.owner))
+    rows.push({ userId: e.ownerUserId, name: label(e.ownerUserId, e.ownerName), inList: false, owner: true, foreign: false });
+  return rows.sort((a, b) => Number(b.owner) - Number(a.owner));
+}
+
 /** Auffrischen alle 15 s, solange der Tab sichtbar ist (der Server hält die Antwort 10 s vor). */
 export const ENGINE_OVERVIEW_POLL_MS = 15_000;
 
@@ -83,8 +118,8 @@ export function problemCount(w: EngineThroughputWindow): number {
 /**
  * Admin-Reiter „Engines" (0.946.0): alle registrierten Engines aller Konten — Quelle, Besitzer, online/offline, wer sie
  * im Hintergrund nutzt —, die Warteschlange der Analyse-Aufträge nach Art, was jede Engine gerade rechnet und der
- * Durchsatz (letzte Stunde / 24 h / 7 Tage). Nur lesend; die Pause der Hintergrundjobs wird im Reiter „Hintergrundjobs"
- * umgelegt (verlinkt). Frischt sich alle {@link ENGINE_OVERVIEW_POLL_MS} auf, nur bei sichtbarem Tab.
+ * Durchsatz (letzte Stunde / 24 h / 7 Tage). Seit 0.951.0 schaltet der Admin je Karte um, in welchen Hintergrund-Listen
+ * die Engine steht ({@link toggleBackground}); die Pause der Hintergrundjobs wird im Reiter „Hintergrundjobs" umgelegt (verlinkt). Frischt sich alle {@link ENGINE_OVERVIEW_POLL_MS} auf, nur bei sichtbarem Tab.
  */
 @Component({
   selector: 'app-admin-engines',
@@ -100,14 +135,20 @@ export class AdminEnginesComponent implements OnInit {
   private readonly locale = inject(LOCALE_ID);
   private readonly destroyRef = inject(DestroyRef);
   private readonly zone = inject(NgZone);
+  private readonly translate = inject(TranslateService);
+  private readonly snackbar = inject(SnackbarService);
 
   readonly data = signal<EngineOverview | null>(null);
   readonly error = signal(false);
   /** Auffrischen gescheitert, alter Stand steht noch. */
   readonly stale = signal(false);
   readonly showOffline = signal(false);
+  /** Laufendes Umschalten (`engineId|userId`); solange gesetzt, sind alle Hintergrund-Knöpfe gesperrt. */
+  readonly saving = signal<string | null>(null);
   private loading = false;
   private lastLoad = 0;
+  /** Nur die Antwort des jüngsten Abrufs zählt — ein langsamer Takt-Abruf darf den Stand nach dem Umschalten nicht überschreiben. */
+  private loadSeq = 0;
 
   readonly engines = computed(() => this.data()?.engines ?? []);
   readonly offlineCount = computed(() => this.engines().filter(e => e.state === 'offline').length);
@@ -148,22 +189,51 @@ export class AdminEnginesComponent implements OnInit {
     return typeof document === 'undefined' || document.visibilityState !== 'hidden';
   }
 
-  async load(): Promise<void> {
-    if (this.loading) return;
+  /** @param force auch während eines laufenden Abrufs (nach dem Umschalten); die ältere Antwort wird dann verworfen. */
+  async load(force = false): Promise<void> {
+    if (this.loading && !force) return;
     this.loading = true;
     this.lastLoad = Date.now();
+    const seq = ++this.loadSeq;
     try {
-      this.data.set(await firstValueFrom(this.http.get<EngineOverview>(ENGINE_OVERVIEW_URL)));
+      const d = await firstValueFrom(this.http.get<EngineOverview>(ENGINE_OVERVIEW_URL));
+      if (seq !== this.loadSeq) return;
+      this.data.set(d);
       this.error.set(false);
       this.stale.set(false);
     } catch {
+      if (seq !== this.loadSeq) return;
       // Erstes Laden gescheitert → Fehlerzustand; danach bleibt der alte Stand mit Hinweis stehen.
       if (this.data()) this.stale.set(true);
       else this.error.set(true);
     } finally {
-      this.loading = false;
+      if (seq === this.loadSeq) this.loading = false;
     }
   }
+
+  /**
+   * Die Engine in die Hintergrund-Liste von `row` aufnehmen bzw. daraus entfernen. Ohne Rückfrage: umkehrbar (DESIGN 5.4).
+   * Während des Speicherns sind alle Hintergrund-Knöpfe gesperrt; danach wird die Übersicht neu geladen (der Server hat
+   * seinen Zwischenspeicher verworfen). Fehler → Snackbar.
+   */
+  async toggleBackground(e: EngineOverviewEngine, row: EngineBackgroundRow): Promise<void> {
+    if (this.saving()) return;
+    const enabled = !row.inList;
+    this.saving.set(e.id + '|' + row.userId);
+    try {
+      await firstValueFrom(this.http.put(engineBackgroundUrl(e.id), { userId: row.userId, enabled }));
+      this.snackbar.quick(this.translate.instant(enabled ? 'admin.engines.bgAdded' : 'admin.engines.bgRemoved', { name: row.name }));
+      await this.load(true);
+    } catch (err) {
+      this.snackbar.show(apiErrorText(err, this.translate, 'admin.engines.bgError'));
+    } finally {
+      this.saving.set(null);
+    }
+  }
+
+  bgRows(e: EngineOverviewEngine): EngineBackgroundRow[] { return backgroundRows(e); }
+
+  isSaving(e: EngineOverviewEngine, row: EngineBackgroundRow): boolean { return this.saving() === e.id + '|' + row.userId; }
 
   retry(): void {
     this.error.set(false);
@@ -189,11 +259,6 @@ export class AdminEnginesComponent implements OnInit {
   busyShare(w: EngineThroughputWindow, key: string): number {
     const len = key === 'hour' ? 3600 : key === 'day' ? 86_400 : 604_800;
     return Math.min(100, Math.round(w.busySeconds / len * 100));
-  }
-
-  /** Konten, in deren Hintergrund-Liste die Engine steht. */
-  bgNames(e: EngineOverviewEngine): string {
-    return e.backgroundFor.map(u => u.name || '#' + u.userId).join(', ');
   }
 
   /** Anzeigename: Name, sonst die Kennung. */

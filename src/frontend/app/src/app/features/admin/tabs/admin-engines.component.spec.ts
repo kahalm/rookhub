@@ -6,8 +6,9 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import {
   AdminEnginesComponent, ENGINE_OVERVIEW_POLL_MS, ENGINE_OVERVIEW_URL, EngineOverview, EngineOverviewEngine,
-  EngineThroughputWindow, problemCount,
+  EngineThroughputWindow, backgroundRows, engineBackgroundUrl, problemCount,
 } from './admin-engines.component';
+import { SnackbarService } from '../../../core/snackbar.service';
 
 const W = (p: Partial<EngineThroughputWindow> = {}): EngineThroughputWindow => ({
   runs: 0, done: 0, failed: 0, interrupted: 0, retried: 0, unavailable: 0, timeouts: 0, errors: 0, busySeconds: 0,
@@ -85,7 +86,7 @@ describe('AdminEnginesComponent', () => {
     expect(cards[0].textContent).toContain('Server 1');
     expect(cards[0].querySelector('[data-testid="engine-state"]')!.textContent).toContain('admin.engines.state.working');
     expect(cards[0].textContent).toContain('admin.engines.house');
-    expect(cards[0].querySelector('[data-testid="engine-background"]')!.textContent).toContain('admin.engines.backgroundFor');
+    expect(cards[0].querySelector('[data-testid="engine-background"]')!.textContent).toContain('admin.engines.bgInList');
     const cur = cards[0].querySelector('[data-testid="engine-current"]')!;
     expect(cur.textContent).toContain('admin.engines.kind.league');
     expect(cur.textContent).toContain('Weiß – Schwarz');
@@ -165,6 +166,80 @@ describe('AdminEnginesComponent', () => {
 
   it('Probleme = gescheitert + kein Provider + Zeitüberschreitung + Fehler (nicht unterbrochen)', () => {
     expect(problemCount(W({ failed: 1, unavailable: 2, timeouts: 3, errors: 4, interrupted: 9, retried: 9 }))).toBe(10);
+  });
+
+  // ── Hintergrund-Zuordnung umschalten (0.951.0) ───────────────────────────────────────────────────────
+
+  const tick0 = () => new Promise<void>(r => setTimeout(r));
+
+  it('Hintergrund: je Konto der Liste ein „entfernen“, beim Besitzer ohne Eintrag ein „aufnehmen“, fremdes Konto markiert', async () => {
+    await loaded();
+    const [a, lichess] = all('engine');
+    const rows = Array.from(a.querySelectorAll('[data-testid="bg-row"]'));
+    expect(rows.length).toBe(2);
+    expect(rows[0].textContent).toContain('admin.engines.bgOwner');                    // Besitzer zuerst
+    expect(rows[1].textContent).toContain('admin.engines.bgForeign');                  // fremdes Konto
+    expect(a.querySelectorAll('[data-testid="bg-remove"]').length).toBe(2);
+    expect(a.querySelector('[data-testid="bg-add"]')).toBeNull();
+    // Lichess-Engine mit Besitzer, aber in keiner Liste: „aufnehmen“ beim Besitzer, der Zustand steht als Text da.
+    expect(lichess.querySelector('[data-testid="bg-add"]')!.textContent).toContain('admin.engines.bgAdd');
+    expect(lichess.querySelector('[data-testid="bg-row"]')!.textContent).toContain('admin.engines.bgNotInList');
+  });
+
+  it('backgroundRows: ohne eindeutigen Besitzer kein „aufnehmen“, Lichess-Kennung in der einzigen Liste nur „entfernen“', () => {
+    expect(backgroundRows(engine('eei_x', { registered: false, ownerUserId: null, backgroundFor: [] }))).toEqual([]);
+    const two = backgroundRows(engine('eei_x', {
+      registered: false, ownerUserId: null, backgroundFor: [{ userId: 1, name: 'a' }, { userId: 2, name: null }],
+    }));
+    expect(two.map(r => [r.userId, r.name, r.inList, r.owner, r.foreign])).toEqual([[1, 'a', true, false, false], [2, '#2', true, false, false]]);
+    const single = backgroundRows(engine('eei_x', { registered: false, ownerUserId: 1, backgroundFor: [{ userId: 1, name: 'a' }] }));
+    expect(single.map(r => [r.inList, r.owner])).toEqual([[true, true]]);
+  });
+
+  it('Hintergrund entfernen: PUT ans Konto der Zeile, Knöpfe gesperrt bis zur Antwort, danach neu geladen', async () => {
+    const snack = TestBed.inject(SnackbarService);
+    spyOn(snack, 'quick');
+    await loaded();
+    (all('engine')[0].querySelectorAll('[data-testid="bg-remove"]')[1] as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const req = http.expectOne(engineBackgroundUrl('rhe_ovA000000001'));
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ userId: 990102, enabled: false });
+    const buttons = Array.from(el().querySelectorAll<HTMLButtonElement>('[data-testid="bg-remove"], [data-testid="bg-add"]'));
+    expect(buttons.length).toBeGreaterThan(0);
+    expect(buttons.every(b => b.disabled)).toBeTrue();
+    expect(fixture.componentInstance.saving()).toBe('rhe_ovA000000001|990102');
+
+    req.flush({ engineId: 'rhe_ovA000000001', userId: 990102, enabled: false, changed: true, backgroundEngineIds: [] });
+    await tick0();
+    const after = structuredClone(overview);
+    after.engines[0].backgroundFor = [{ userId: 990101, name: 'ov-owner' }];
+    http.expectOne(ENGINE_OVERVIEW_URL).flush(after);
+    await tick0();
+    fixture.detectChanges();
+
+    expect(snack.quick).toHaveBeenCalled();
+    expect(fixture.componentInstance.saving()).toBeNull();
+    expect(all('engine')[0].querySelectorAll('[data-testid="bg-row"]').length).toBe(1);
+    expect((all('engine')[0].querySelector('[data-testid="bg-remove"]') as HTMLButtonElement).disabled).toBeFalse();
+  });
+
+  it('Hintergrund aufnehmen: volle Liste → Snackbar mit der Meldung, Stand bleibt, Knöpfe wieder frei', async () => {
+    const snack = TestBed.inject(SnackbarService);
+    spyOn(snack, 'show');
+    await loaded();
+    (all('engine')[1].querySelector('[data-testid="bg-add"]') as HTMLButtonElement).click();
+    const req = http.expectOne(engineBackgroundUrl('eei_ovLichess01'));
+    expect(req.request.body).toEqual({ userId: 990101, enabled: true });
+    req.flush({ message: 'At most 32 background engines', code: 'background_list_full' }, { status: 400, statusText: 'Bad Request' });
+    await tick0();
+    fixture.detectChanges();
+
+    expect(snack.show).toHaveBeenCalledWith('At most 32 background engines');   // ohne geladene Sprachdatei: message
+    http.expectNone(ENGINE_OVERVIEW_URL);
+    expect(fixture.componentInstance.saving()).toBeNull();
+    expect((all('engine')[1].querySelector('[data-testid="bg-add"]') as HTMLButtonElement).disabled).toBeFalse();
   });
 
   it('Handybreite: die Seite läuft nicht über (Tabellen scrollen in ihrem Kasten)', async () => {
