@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.947.1", date: "2026-11-10", changes: [
+    { en: "Maxims: new maxim „Let them capture, don’t capture“ on pawn tension — releasing the tension by capturing without need often helps the opponent (with three book sources).",
+      de: "Merksätze: Neuer Merksatz „Schlagen lassen, nicht schlagen“ zur Bauernspannung — wer die Spannung ohne Not durch Schlagen löst, hilft oft dem Gegner (mit drei Buchbelegen)." },
+  ] },
   { version: "0.947.0", date: "2026-11-10", changes: [
     { en: "E-books: the diagram detection for scanned books finds more boards — faintly printed diagrams are no longer rejected (contrast threshold 0.03 instead of 0.08), uneven lighting such as a shadow towards the spine is evened out per area, and boards whose position cannot be read plausibly are kept hidden for later reading instead of being dropped. Measured on 48 sample pages: 56 of 61 missed diagrams found, no false hits.",
       de: "E-Books: Die Diagrammerkennung gescannter Bücher findet mehr Bretter — blass gedruckte Diagramme werden nicht mehr verworfen (Kontrastschwelle 0,03 statt 0,08), ungleichmäßige Ausleuchtung wie ein Schatten zum Bund hin wird je Stelle ausgeglichen, und Bretter, deren Stellung sich nicht plausibel lesen lässt, bleiben verborgen für die Nachlese erhalten, statt zu verschwinden. Gemessen an 48 Stichprobenseiten: 56 von 61 verpassten Diagrammen gefunden, keine Fehltreffer." },

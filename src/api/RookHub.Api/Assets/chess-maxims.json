@@ -2539,5 +2539,41 @@
     "quote": "a knight on b3 is also vulnerable to future ... a5-a4 ideas"
    }
   ]
+ },
+ {
+  "id": "schlagen-lassen",
+  "text": "Schlagen lassen, nicht schlagen.",
+  "category": "Bauernstruktur",
+  "when": "Zwei Bauern (oder Figuren) greifen sich gegenseitig an, eine Seite löst die Spannung ohne Not durch Schlagen und öffnet dem Gegner damit eine Linie, entwickelt seine Figur oder verbessert seine Bauernstruktur; laut Engine war ein Zug besser, der die Spannung hält. Nicht, wenn die Spannung dem Gegner nützt.",
+  "textEn": "Let them capture, don't capture.",
+  "categoryEn": "Pawn structure",
+  "whenEn": "Two pawns (or pieces) attack each other, one side releases the tension by capturing without need and thereby opens a file for the opponent, develops their piece or improves their pawn structure; according to the engine, a move keeping the tension was better. Not when the tension favours the opponent.",
+  "sources": [
+   {
+    "ebookId": 790,
+    "author": "Rob Brunia, Cor van Wijgerden",
+    "title": "Learning Chess – Workbook Step 5",
+    "location": "PDF-S. 13",
+    "page": 13,
+    "quote": "It is usually advantageous to maintain the tension"
+   },
+   {
+    "ebookId": 1461,
+    "author": "Edward R. Brace",
+    "title": "An Illustrated Dictionary of Chess",
+    "location": "PDF-S. 172",
+    "page": 172,
+    "quote": "frequently the one who captures first weakens his pawn formation"
+   },
+   {
+    "ebookId": 5492,
+    "author": "US Chess Federation",
+    "title": "Chess Life 1978",
+    "year": "1978",
+    "location": "PDF-S. 135",
+    "page": 135,
+    "quote": "If the tension favors you, maintain it"
+   }
+  ]
  }
 ]
