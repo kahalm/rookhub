@@ -139,13 +139,18 @@ internal sealed class ClubGameReader
         return query;
     }
 
-    /// <param name="mine">Nur die eigenen (0.652.0, Lasche „Meine Partien"): mit Konto hochgeladen. Mit „Schwaz" hochgeladene
-    /// stehen nicht dabei — bei denen ist absichtlich nicht gespeichert, von wem sie stammen.</param>
+    /// <param name="mine">Nur die eigenen (0.652.0, Lasche „Meine Partien"): mit Konto hochgeladen ODER (0.948.0) mit einer
+    /// eigenen gespeicherten Partie verbunden (<see cref="SavedGame.LeagueClubGameId"/>). So stehen auch die mit „Schwaz"
+    /// hochgeladenen dabei, die man in „Meine Partien" übernommen hat — <see cref="LeagueClubGame.UploadedByUserId"/> bleibt
+    /// dort leer, Bearbeitungsrechte ändern sich nicht, und die Liste sieht nur der Nutzer selbst für sich (wer eine Partie
+    /// gespeichert hat, kommt in keiner Antwort an andere vor). <c>Any</c> statt Join: mehrere Kopien derselben Partie zählen
+    /// einmal.</param>
     public async Task<LeagueClubListDto> ListAsync(LeagueClub club, int userId, bool canManage, string? fide, string? q, int page, CancellationToken ct,
         bool mine = false)
     {
         var query = Filter(club, fide, q);
-        if (mine) query = query.Where(g => g.UploadedByUserId == userId);
+        if (mine) query = query.Where(g => g.UploadedByUserId == userId
+            || _db.SavedGames.Any(s => s.UserId == userId && s.LeagueClubGameId == g.Id));
         var total = await query.CountAsync(ct);
         (page, _) = Paging.Normalize(page, PageSize, PageSize);
         var rows = await query.OrderByDescending(g => g.Year ?? 0).ThenByDescending(g => g.Id)

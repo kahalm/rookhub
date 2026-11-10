@@ -157,6 +157,11 @@ Rollenverwaltung an).
   Zuordnung). Bearbeiten und Löschen brauchen seit 0.656.0 nur die Anmeldung (Regel im Dienst).
 - **Lasche „Meine Partien" (0.652.0–0.673.0) ist ENTFERNT** (0.673.1, Wunsch 2026-10-05: „entferne /verein/meine"): keine
   Route, kein Reiter, Links führen auf `/verein`. Der Endpunkt `GET …/club/games/mine` steht noch (ohne Oberfläche).
+  Seit 0.948.0 liefert er (`ClubGameReader.ListAsync(mine: true)`) mit Konto hochgeladene (`UploadedByUserId == ich`) ODER
+  über eine eigene gespeicherte Partie verbundene (`SavedGames.UserId == ich && LeagueClubGameId == Partie`, als `Any`, also
+  ohne Duplikate) — damit stehen auch „Schwaz"-Uploads dabei, die man in „Meine Partien" übernommen hat. Im Rahmen des
+  Vereinsfilters; `UploadedByUserId` bleibt leer, `canDelete` unverändert, und wer eine Partie gespeichert hat, steht in
+  keiner Antwort an andere.
 - **Formular prüfen (0.673.1)**: ein ausgewählter Spieler belegt die Elo vor (`LeagueRosterPersonDto.Elo` = jüngste
   Meldeliste nach `Tnr`, `EloI ?? EloN`, nur Ligaspieler); das Elo-Feld ist ein Textfeld mit `inputmode="numeric"` (kein
   Zahlenfeld mit Pfeilen). Häkchen „Automatisch zu meinen Partien hinzufügen" (nur angemeldet, standardmäßig an, Abwahl im

@@ -382,6 +382,52 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Equal(3, (await Club().ListAsync(TestClubs.Home, me, false, null, null, 1, default)).Total);
     }
 
+    /// <summary>Wunsch 2026-11-10: „Meine Partien" zeigt auch die mit „Schwaz" hochgeladenen, die mit einer eigenen gespeicherten
+    /// Partie verbunden sind (<see cref="SavedGame.LeagueClubGameId"/>) — ohne den Hochladenden einzutragen, ohne neue Rechte,
+    /// jede nur einmal, nur im Verein der Anfrage; eine Verbindung eines ANDEREN Nutzers zählt nicht.</summary>
+    [Fact]
+    public async Task List_Mine_AlsoLinkedViaOwnSavedGames_WithoutRevealingOrGrantingAnything()
+    {
+        var me = await SeedAsync();
+        var other = me + 1;
+        var own = new LeagueClubGame { ClubId = TestClubs.HomeId, White = "A", Black = "B", Pgn = "1. e4 *", MovesHash = "h1", UploadedByUserId = me, Year = 2026 };
+        var linked = new LeagueClubGame { ClubId = TestClubs.HomeId, White = "Testdorf", Black = "C", Pgn = "1. d4 *", MovesHash = "h2", Anonymized = true, Year = 2025 };
+        var unlinked = new LeagueClubGame { ClubId = TestClubs.HomeId, White = "Testdorf", Black = "D", Pgn = "1. c4 *", MovesHash = "h3", Anonymized = true, Year = 2025 };
+        var byOther = new LeagueClubGame { ClubId = TestClubs.HomeId, White = "Testdorf", Black = "E", Pgn = "1. f4 *", MovesHash = "h4", Anonymized = true, Year = 2025 };
+        var foreignClub = new LeagueClubGame { ClubId = TestClubs.OtherId, White = "Weiler", Black = "F", Pgn = "1. b4 *", MovesHash = "h5", Anonymized = true, Year = 2025 };
+        _db.LeagueClubGames.AddRange(own, linked, unlinked, byOther, foreignClub);
+        await _db.SaveChangesAsync();
+        SavedGame Copy(int user, int clubGame) => new()
+        {
+            UserId = user, Source = "pgn", Pgn = "1. d4 *", ShareToken = Guid.NewGuid().ToString("N"), LeagueClubGameId = clubGame,
+        };
+        _db.SavedGames.AddRange(
+            Copy(me, linked.Id), Copy(me, linked.Id),            // (e) zwei Kopien derselben Partie → einmal
+            Copy(me, own.Id),                                    // eigener Upload, zusätzlich verbunden → einmal
+            Copy(other, byOther.Id),                             // (d) verbunden, aber durch jemand anderen
+            Copy(me, foreignClub.Id),                            // fremder Verein bleibt draußen
+            Copy(me, 999_999));                                  // tote Verbindung stört nicht
+        await _db.SaveChangesAsync();
+
+        var mine = await Club().ListAsync(TestClubs.Home, me, false, null, null, 1, default, mine: true);
+        Assert.Equal(2, mine.Total);
+        Assert.Equal(new[] { own.Id, linked.Id }, mine.Items.Select(i => i.Id).ToArray());   // (a) + (b), nicht (c)/(d)
+        var l = mine.Items.Single(i => i.Id == linked.Id);
+        Assert.False(l.CanDelete);                                                           // keine neuen Rechte
+        Assert.Null(l.LeagueGameId);
+        Assert.True(mine.Items.Single(i => i.Id == own.Id).CanDelete);
+        Assert.Null((await _db.LeagueClubGames.AsNoTracking().SingleAsync(g => g.Id == linked.Id)).UploadedByUserId);   // bleibt anonym
+
+        var theirs = await Club().ListAsync(TestClubs.Home, other, false, null, null, 1, default, mine: true);
+        Assert.Equal(new[] { byOther.Id }, theirs.Items.Select(i => i.Id).ToArray());       // nur seine eigene Verbindung
+        var all = await Club().ListAsync(TestClubs.Home, other, false, null, null, 1, default);
+        Assert.Equal(4, all.Total);
+        Assert.All(all.Items, i => Assert.False(i.CanDelete));                              // die Gesamtliste verrät nichts Neues
+
+        var filtered = await Club().ListAsync(TestClubs.Home, me, false, null, "C", 1, default, mine: true);
+        Assert.Equal(new[] { linked.Id }, filtered.Items.Select(i => i.Id).ToArray());      // Suche greift weiter
+    }
+
     /// <summary>Wunsch 2026-10-04: „merk dir im Hintergrund den echten Namen der Schwazer Spieler, damit ich später
     /// Auswertungen fahren kann — niemals in der GUI ausgeben". Gespeichert in eigenen Spalten, in KEINER Ausgabe.</summary>
     [Fact]

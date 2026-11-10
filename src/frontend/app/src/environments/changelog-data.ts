@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.948.0", date: "2026-11-10", changes: [
+    { en: "Club database: „My games“ (`GET …/club/games/mine`) now also lists the club games linked to one of your own saved games — including those uploaded as the anonymised club player, which still store no uploader. Each game counts once; editing rights and what others see stay unchanged.",
+      de: "Vereinsdatenbank: „Meine Partien“ (`GET …/club/games/mine`) zeigt jetzt auch die Vereinspartien, die mit einer eigenen gespeicherten Partie verbunden sind — auch die als anonymer Vereinsspieler hochgeladenen, bei denen weiterhin kein Hochladender gespeichert ist. Jede Partie zählt einmal; Bearbeitungsrechte und was andere sehen bleiben unverändert." },
+  ] },
   { version: "0.947.2", date: "2026-11-10", changes: [
     { en: "Game summary: moves in the reason of a recommended book („with 35.axb5 and 45.Lxd5 …“) are now clickable like everywhere else in the text, and a move button no longer gets a stray space next to brackets or punctuation („( 45.Ta1“, „61.Kxg5 .“).",
       de: "Partie-Zusammenfassung: Züge in der Begründung eines empfohlenen Buchs („mit 35.axb5 und 45.Lxd5 …“) sind jetzt klickbar wie im übrigen Text, und neben einem Zug-Knopf steht kein überzähliges Leerzeichen mehr an Klammern oder Satzzeichen („( 45.Ta1“, „61.Kxg5 .“)." },
