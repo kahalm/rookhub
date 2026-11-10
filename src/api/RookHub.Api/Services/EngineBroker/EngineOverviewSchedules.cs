@@ -24,13 +24,38 @@ public static class EngineOverviewSchedules
         return s.Length == 0 ? (name ?? string.Empty).Trim() : s;
     }
 
-    /// <summary>Gruppen-Schlüssel: Konto + Token + Stamm (direkt angemeldet), Konto + „lichess“, sonst Konto + „other“.</summary>
-    public static string MachineKey(int? ownerId, string source, int? tokenId, string? name) => source switch
+    /// <summary>Grund-Schlüssel einer Maschine: Konto + Stamm (direkt angemeldet), Konto + „lichess“, sonst Konto + „other“.</summary>
+    public static string MachineKey(int? ownerId, string source, string? name) => source switch
     {
-        "rookhub" when name is not null => $"{ownerId}|{tokenId?.ToString() ?? "-"}|{Stem(name)}",
+        "rookhub" when name is not null => $"{ownerId}|{Stem(name)}",
         "lichess" => $"{ownerId}|lichess",
         _ => $"{ownerId}|other",
     };
+
+    /// <summary>
+    /// Maschinen-Schlüssel je Engine (gleiche Reihenfolge wie <paramref name="engines"/>). Engines mit gleichem Besitzer
+    /// und Stamm gehören zusammen, wenn ihr Token gleich ODER bei einem Teil noch unbekannt (<c>null</c>) ist — die
+    /// Spalte <c>ApiTokenId</c> füllt sich erst nach und nach (Anmeldung bzw. erster Poll nach 0.955.2), eine Maschine
+    /// darf daran nicht zerfallen. Nur VERSCHIEDENE bekannte Tokens unter einem Stamm trennen: dann je Token eine
+    /// Maschine (<c>…|t{id}</c>) und die noch unbekannten als eigene (<c>…|t-</c>); <c>Split</c> sagt, dass der Kopf
+    /// den Token im Namen braucht.
+    /// </summary>
+    public static IReadOnlyList<(string Key, bool Split)> MachineKeys(
+        IReadOnlyList<(int? OwnerId, string Source, int? TokenId, string? Name)> engines)
+    {
+        var bases = engines.Select(e => MachineKey(e.OwnerId, e.Source, e.Name)).ToList();
+        var tokensOf = new Dictionary<string, HashSet<int>>(StringComparer.Ordinal);
+        for (var i = 0; i < engines.Count; i++)
+            if (engines[i] is { Source: "rookhub", TokenId: { } t, Name: not null })
+            {
+                if (!tokensOf.TryGetValue(bases[i], out var set)) tokensOf[bases[i]] = set = [];
+                set.Add(t);
+            }
+        return engines.Select((e, i) =>
+            tokensOf.TryGetValue(bases[i], out var set) && set.Count > 1
+                ? ($"{bases[i]}|t{e.TokenId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "-"}", true)
+                : (bases[i], false)).ToList();
+    }
 
     /// <summary>Ortszeit einer Meldung (unbekannte Zone → Vorgabe wie <see cref="EngineAvailability.IsOpen"/>).</summary>
     private static TimeZoneInfo ZoneOf(EngineClientSchedule s) =>

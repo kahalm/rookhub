@@ -3029,12 +3029,19 @@
         "scheduleNext": "từ {{when}}: {{percent}} %",
         "reportedAt": "báo lúc {{when}}",
         "noSchedule": "Chưa báo lịch — việc theo lô áp dụng giờ yên tĩnh RookHub.",
-        "noScheduleLichess": "Engine Lichess không báo lịch — việc theo lô áp dụng giờ yên tĩnh RookHub."
+        "noScheduleLichess": "Engine Lichess không báo lịch — việc theo lô áp dụng giờ yên tĩnh RookHub.",
+        "statsLabel": "Số liệu của máy",
+        "doneDay": "xong trong 24 giờ: {{count}}",
+        "busyDay": "mức bận 24 giờ: {{percent}} %",
+        "speedNormal": "Ø tốc độ bình thường: {{value}}",
+        "speedReduced": "Ø tốc độ giảm: {{value}}",
+        "statsHelp": "Xong trong 24 giờ = các tác vụ hoàn tất trong 24 giờ qua. Mức bận = thời gian tính của 24 giờ qua ÷ (số engine đã đăng ký × 24 giờ) — 2 % nghĩa là các engine gần như không tính. Ø tốc độ = kN/s trung bình của 7 ngày qua, tách thành thời gian bình thường và thời gian giảm (lịch dưới 100 % hoặc, khi không có lịch, giờ yên tĩnh của RookHub); “–” = phần đó không tính gì.",
+        "tokenPending": "token chưa được gán"
       },
       "speedSplit": "Ø bình thường {{normal}} · tiết kiệm {{reduced}}",
-      "machinesHelp": "Engine được nhóm theo máy (cùng chủ, cùng token engine, cùng gốc tên). Ø kN/s 7 ngày qua chia thành bình thường và tiết kiệm: mỗi giỏ 10 phút được xếp theo quy tắc HÔM NAY — lịch dưới 100 % hoặc, không có lịch, giờ yên tĩnh RookHub. Tốc độ = số nút ÷ thời gian tìm kiếm theo engine.",
+      "machinesHelp": "Engine được nhóm theo máy: cùng chủ sở hữu và cùng gốc tên (“RookHub Gross Hintergrund 3” thuộc “RookHub Gross”). Token chưa được gán không tách máy; chỉ hai token engine khác nhau dưới cùng một tên mới thành hai máy (khi đó tên nêu token). Dấu ? cạnh tốc độ giải thích các số liệu ở đầu. Tốc độ = số nút ÷ thời gian tìm theo engine; mỗi khối 10 phút được xếp là bình thường hoặc giảm theo quy tắc HÔM NAY.",
       "tokensTitle": "Token engine",
-      "tokensHelp": "Mọi token API phạm vi “engine” của mọi tài khoản — không bao giờ hiện token, chỉ tiền tố như trong hồ sơ. Lần truy cập cuối chính xác đến 5 phút. Engine gắn với token dùng để đăng ký gần nhất (từ 0.953.0; engine cũ hiện sau lần khởi động lại provider tiếp theo).",
+      "tokensHelp": "Mọi token API phạm vi “engine” của mọi tài khoản — không bao giờ hiện chính token, chỉ tiền tố như trong hồ sơ. Lần truy cập cuối chính xác đến 5 phút. Một engine gắn với token mà nhà cung cấp của nó dùng để đăng ký và lấy việc; RookHub ghi liên kết khi lấy việc (trong khoảng một phút, không cần khởi động lại). “chưa được gán” = token được dùng trong 30 phút qua nhưng liên kết còn chờ; “không có liên kết” = lâu hơn không được dùng.",
       "tokensEmpty": "Không có token engine.",
       "t": {
         "name": "Tên",
@@ -3046,7 +3053,8 @@
         "never": "chưa bao giờ",
         "expired": "đã hết hạn",
         "engineCount": "{{count}} engine ({{online}} trực tuyến)",
-        "noEngines": "chưa gắn"
+        "noEngines": "chưa gắn",
+        "pendingLink": "chưa được gán — sẽ hiện ngay khi nhà cung cấp lấy việc lại (trong khoảng một phút)"
       },
       "idleBecause": "Rảnh: {{reason}}",
       "idleReason": {

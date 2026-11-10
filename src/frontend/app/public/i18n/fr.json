@@ -3029,12 +3029,19 @@
         "scheduleNext": "à partir de {{when}} : {{percent}} %",
         "reportedAt": "signalé {{when}}",
         "noSchedule": "Aucun planning signalé — les heures creuses RookHub s’appliquent aux tâches par lots.",
-        "noScheduleLichess": "Les moteurs Lichess ne signalent pas de planning — les heures creuses RookHub s’appliquent aux tâches par lots."
+        "noScheduleLichess": "Les moteurs Lichess ne signalent pas de planning — les heures creuses RookHub s’appliquent aux tâches par lots.",
+        "statsLabel": "Chiffres de la machine",
+        "doneDay": "terminés en 24 h : {{count}}",
+        "busyDay": "occupation 24 h : {{percent}} %",
+        "speedNormal": "Ø vitesse normale : {{value}}",
+        "speedReduced": "Ø vitesse réduite : {{value}}",
+        "statsHelp": "Terminés en 24 h = tâches achevées ces dernières 24 heures. Occupation = temps de calcul des dernières 24 h ÷ (moteurs enregistrés × 24 h) — 2 % signifie que les moteurs ont à peine calculé. Ø vitesse = kN/s moyens des 7 derniers jours, séparés en temps normal et temps réduit (planning sous 100 % ou, sans planning, heures calmes de RookHub) ; « – » = rien calculé dans cette partie.",
+        "tokenPending": "jeton pas encore attribué"
       },
       "speedSplit": "Ø normal {{normal}} · réduit {{reduced}}",
-      "machinesHelp": "Moteurs regroupés par machine (même propriétaire, même jeton moteur, même radical de nom). Ø kN/s des 7 derniers jours, séparé entre normal et réduit : chaque tranche de 10 minutes est classée selon la règle D’AUJOURD’HUI — planning sous 100 % ou, sans planning, heures creuses RookHub. La vitesse = nœuds ÷ temps de recherche indiqué par le moteur.",
+      "machinesHelp": "Moteurs regroupés par machine : même propriétaire et même radical de nom (« RookHub Gross Hintergrund 3 » appartient à « RookHub Gross »). Un jeton pas encore attribué ne sépare pas une machine ; seuls deux jetons moteur différents sous le même nom donnent deux machines (le nom indique alors le jeton). Le ? à côté de la vitesse explique les chiffres de l’en-tête. La vitesse est nœuds ÷ temps de recherche indiqué par le moteur ; chaque tranche de 10 minutes est classée normale ou réduite selon la règle d’AUJOURD’HUI.",
       "tokensTitle": "Jetons moteur",
-      "tokensHelp": "Tous les jetons API de portée « engine » de tous les comptes — jamais le jeton, seulement son préfixe comme dans le profil. Le dernier accès est précis à 5 minutes. Les moteurs sont liés au jeton de leur dernière inscription (depuis 0.953.0 ; les plus anciens apparaissent après le prochain redémarrage du fournisseur).",
+      "tokensHelp": "Tous les jetons API de portée « engine » de tous les comptes — jamais le jeton lui-même, seulement son préfixe comme dans le profil. Le dernier accès est précis à 5 minutes. Un moteur est lié au jeton avec lequel son fournisseur s’enregistre et récupère du travail ; RookHub enregistre ce lien lors de la récupération (en une minute environ, sans redémarrage). « pas encore attribué » = jeton utilisé ces 30 dernières minutes, mais le lien est encore en attente ; « aucun lié » = inutilisé depuis plus longtemps.",
       "tokensEmpty": "Aucun jeton moteur.",
       "t": {
         "name": "Nom",
@@ -3046,7 +3053,8 @@
         "never": "jamais",
         "expired": "expiré",
         "engineCount": "{{count}} moteurs ({{online}} en ligne)",
-        "noEngines": "aucun lié"
+        "noEngines": "aucun lié",
+        "pendingLink": "pas encore attribué — apparaît dès que le fournisseur récupère à nouveau du travail (en une minute environ)"
       },
       "idleBecause": "Inactif : {{reason}}",
       "idleReason": {

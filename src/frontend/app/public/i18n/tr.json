@@ -3029,12 +3029,19 @@
         "scheduleNext": "{{when}} itibarıyla: %{{percent}}",
         "reportedAt": "bildirildi {{when}}",
         "noSchedule": "Çizelge bildirilmedi — toplu işlerde RookHub sessiz saatleri geçerli.",
-        "noScheduleLichess": "Lichess motorları çizelge bildirmez — toplu işlerde RookHub sessiz saatleri geçerli."
+        "noScheduleLichess": "Lichess motorları çizelge bildirmez — toplu işlerde RookHub sessiz saatleri geçerli.",
+        "statsLabel": "Makine göstergeleri",
+        "doneDay": "24 saatte biten: {{count}}",
+        "busyDay": "24 saat doluluk: %{{percent}}",
+        "speedNormal": "Ø hız normal: {{value}}",
+        "speedReduced": "Ø hız azaltılmış: {{value}}",
+        "statsHelp": "24 saatte biten = son 24 saatte tamamlanan işler. Doluluk = son 24 saatin hesaplama süresi ÷ (kayıtlı motorlar × 24 saat) — %2, motorların neredeyse hiç hesaplamadığı anlamına gelir. Ø hız = son 7 günün ortalama kN/s değeri, normal ve azaltılmış süre için ayrı (%100'ün altındaki program ya da program yoksa RookHub sessiz saatleri); “–” = o bölümde hiçbir şey hesaplanmadı.",
+        "tokenPending": "token henüz atanmadı"
       },
       "speedSplit": "Ø normal {{normal}} · tasarruf {{reduced}}",
-      "machinesHelp": "Motorlar makineye göre gruplanır (aynı sahip, aynı motor jetonu, aynı ad kökü). Son 7 günün Ø kN/s değeri normal ve tasarruf olarak ayrılır: her 10 dakikalık sepet BUGÜNKÜ kurala göre sınıflandırılır — %100’ün altındaki çizelge ya da çizelge yoksa RookHub sessiz saatleri. Hız = düğümler ÷ motorun bildirdiği arama süresi.",
+      "machinesHelp": "Motorlar makineye göre gruplanır: aynı sahip ve aynı ad kökü (“RookHub Gross Hintergrund 3”, “RookHub Gross”a aittir). Henüz atanmamış bir token makineyi bölmez; yalnızca aynı ad altındaki iki farklı motor token'ı iki makine oluşturur (ad o zaman token'ı gösterir). Hızın yanındaki ? başlıktaki göstergeleri açıklar. Hız, motorun bildirdiği düğüm ÷ arama süresidir; her 10 dakikalık dilim BUGÜNKÜ kurala göre normal ya da azaltılmış sayılır.",
       "tokensTitle": "Motor jetonları",
-      "tokensHelp": "Tüm hesapların “engine” kapsamlı tüm API jetonları — asla jetonun kendisi değil, yalnızca profildeki gibi öneki. Son erişim 5 dakika hassasiyetindedir. Motorlar son kayıt oldukları jetona bağlanır (0.953.0’dan itibaren; eskiler sağlayıcının bir sonraki yeniden başlatılmasından sonra görünür).",
+      "tokensHelp": "Tüm hesapların “engine” kapsamlı tüm API token'ları — asla token'ın kendisi değil, yalnızca profildeki gibi öneki. Son erişim 5 dakika hassasiyetlidir. Bir motor, sağlayıcısının kaydolduğu ve iş aldığı token'a bağlıdır; RookHub bağlantıyı iş alınırken kaydeder (yaklaşık bir dakika içinde, yeniden başlatmadan). “henüz atanmadı” = token son 30 dakikada kullanıldı ama bağlantı henüz bekliyor; “bağlı yok” = daha uzun süredir kullanılmadı.",
       "tokensEmpty": "Motor jetonu yok.",
       "t": {
         "name": "Ad",
@@ -3046,7 +3053,8 @@
         "never": "hiç",
         "expired": "süresi doldu",
         "engineCount": "{{count}} motor ({{online}} çevrimiçi)",
-        "noEngines": "bağlı yok"
+        "noEngines": "bağlı yok",
+        "pendingLink": "henüz atanmadı — sağlayıcı yeniden iş aldığında görünür (yaklaşık bir dakika içinde)"
       },
       "idleBecause": "Boşta: {{reason}}",
       "idleReason": {

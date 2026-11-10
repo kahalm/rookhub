@@ -72,6 +72,10 @@ public class ExternalEngineController : BaseApiController
     private int? TokenId => int.TryParse(User.FindFirst(ApiTokenAuthenticationHandler.TokenIdClaim)?.Value,
         System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var id) ? id : null;
 
+    /// <summary>Konto des API-Tokens dieser Anfrage (am anonymen Poll ohne Wurf), sonst <c>null</c>.</summary>
+    private int? TokenUserId => int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+        System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var id) ? id : null;
+
     private string Username => User.Identity?.Name ?? GetUserId().ToString();
 
     [HttpGet]
@@ -153,6 +157,10 @@ public class ExternalEngineController : BaseApiController
                 return NoContent();
             }
             _directory.MarkSeen(selector);
+            // Der Provider schickt seinen Engine-Token bei jedem Poll mit: Zuordnung Engine ↔ Token im Speicher merken
+            // (kein Schreibzugriff hier; die Wartung trägt sie minütlich nach, nur bei Änderung).
+            if (TokenScope == ApiTokenService.EngineScope && TokenId is { } tokenId && TokenUserId is { } tokenUser)
+                _directory.NoteToken(selector, tokenUser, tokenId);
             var job = await _hub.AcquireAsync(selector, _options.AcquireWait, ct);
             _directory.MarkSeen(selector);
             if (job is null) return NoContent();

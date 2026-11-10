@@ -3029,12 +3029,19 @@
         "scheduleNext": "vanaf {{when}}: {{percent}} %",
         "reportedAt": "gemeld {{when}}",
         "noSchedule": "Geen schema gemeld — voor batchtaken gelden de RookHub-rusttijden.",
-        "noScheduleLichess": "Lichess-engines melden geen schema — voor batchtaken gelden de RookHub-rusttijden."
+        "noScheduleLichess": "Lichess-engines melden geen schema — voor batchtaken gelden de RookHub-rusttijden.",
+        "statsLabel": "Kengetallen van de machine",
+        "doneDay": "klaar in 24 u: {{count}}",
+        "busyDay": "bezetting 24 u: {{percent}} %",
+        "speedNormal": "Ø tempo normaal: {{value}}",
+        "speedReduced": "Ø tempo gereduceerd: {{value}}",
+        "statsHelp": "Klaar in 24 u = afgeronde opdrachten van de laatste 24 uur. Bezetting = rekentijd van de laatste 24 u ÷ (geregistreerde engines × 24 u) — 2 % betekent dat de engines nauwelijks rekenden. Ø tempo = gemiddelde kN/s van de laatste 7 dagen, gesplitst in normale tijd en gereduceerde tijd (schema onder 100 % of, zonder schema, de RookHub-rusttijden); ‘–’ = in dat deel niets gerekend.",
+        "tokenPending": "token nog niet toegewezen"
       },
       "speedSplit": "Ø normaal {{normal}} · zuinig {{reduced}}",
-      "machinesHelp": "Engines gegroepeerd per machine (zelfde eigenaar, zelfde engine-token, zelfde naamstam). Ø kN/s van de laatste 7 dagen, gesplitst in normaal en zuinig: elk blok van 10 minuten wordt ingedeeld volgens de regel van VANDAAG — schema onder 100 % of, zonder schema, RookHub-rusttijden. Het tempo = knopen ÷ zoektijd volgens de engine.",
+      "machinesHelp": "Engines gegroepeerd per machine: dezelfde eigenaar en dezelfde naamstam (‘RookHub Gross Hintergrund 3’ hoort bij ‘RookHub Gross’). Een nog niet toegewezen token splitst geen machine; alleen twee verschillende engine-tokens onder dezelfde naam geven twee machines (de naam noemt dan het token). Het ? naast het tempo legt de kengetallen in de kop uit. Het tempo is knopen ÷ zoektijd volgens de engine; elk blok van 10 minuten wordt volgens de regel van VANDAAG als normaal of gereduceerd ingedeeld.",
       "tokensTitle": "Engine-tokens",
-      "tokensHelp": "Alle API-tokens met bereik „engine” van alle accounts — nooit het token zelf, alleen het voorvoegsel zoals in het profiel. Laatste toegang is op 5 minuten nauwkeurig. Engines horen bij het token waarmee ze zich het laatst aanmeldden (vanaf 0.953.0; oudere verschijnen na de volgende herstart van de provider).",
+      "tokensHelp": "Alle API-tokens met bereik ‘engine’ van alle accounts — nooit het token zelf, alleen het voorvoegsel zoals in het profiel. De laatste toegang is op 5 minuten nauwkeurig. Een engine hoort bij het token waarmee haar provider zich aanmeldt en werk ophaalt; RookHub legt de koppeling vast bij het ophalen (binnen ongeveer een minuut, zonder herstart). ‘nog niet toegewezen’ = token in de laatste 30 minuten gebruikt, koppeling nog open; ‘geen gekoppeld’ = langer ongebruikt.",
       "tokensEmpty": "Geen engine-tokens.",
       "t": {
         "name": "Naam",
@@ -3046,7 +3053,8 @@
         "never": "nooit",
         "expired": "verlopen",
         "engineCount": "{{count}} engines ({{online}} online)",
-        "noEngines": "geen gekoppeld"
+        "noEngines": "geen gekoppeld",
+        "pendingLink": "nog niet toegewezen — verschijnt zodra de provider weer werk ophaalt (binnen ongeveer een minuut)"
       },
       "idleBecause": "Inactief: {{reason}}",
       "idleReason": {

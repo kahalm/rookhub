@@ -3029,12 +3029,19 @@
         "scheduleNext": "mulai {{when}}: {{percent}} %",
         "reportedAt": "dilaporkan {{when}}",
         "noSchedule": "Tidak ada jadwal yang dilaporkan — untuk tugas batch berlaku jam tenang RookHub.",
-        "noScheduleLichess": "Mesin Lichess tidak melaporkan jadwal — untuk tugas batch berlaku jam tenang RookHub."
+        "noScheduleLichess": "Mesin Lichess tidak melaporkan jadwal — untuk tugas batch berlaku jam tenang RookHub.",
+        "statsLabel": "Angka mesin",
+        "doneDay": "selesai dalam 24 jam: {{count}}",
+        "busyDay": "kesibukan 24 jam: {{percent}} %",
+        "speedNormal": "Ø kecepatan normal: {{value}}",
+        "speedReduced": "Ø kecepatan dikurangi: {{value}}",
+        "statsHelp": "Selesai dalam 24 jam = tugas yang selesai dalam 24 jam terakhir. Kesibukan = waktu hitung 24 jam terakhir ÷ (mesin terdaftar × 24 jam) — 2 % berarti mesin hampir tidak menghitung. Ø kecepatan = rata-rata kN/s 7 hari terakhir, dipisah untuk waktu normal dan waktu dikurangi (jadwal di bawah 100 % atau, tanpa jadwal, jam tenang RookHub); “–” = tidak ada yang dihitung di bagian itu.",
+        "tokenPending": "token belum ditautkan"
       },
       "speedSplit": "Ø normal {{normal}} · hemat {{reduced}}",
-      "machinesHelp": "Mesin dikelompokkan per mesin fisik (pemilik sama, token mesin sama, akar nama sama). Ø kN/s 7 hari terakhir dipisah normal dan hemat: tiap keranjang 10 menit digolongkan menurut aturan HARI INI — jadwal di bawah 100 % atau, tanpa jadwal, jam tenang RookHub. Laju = node ÷ waktu pencarian menurut mesin.",
+      "machinesHelp": "Mesin dikelompokkan per mesin fisik: pemilik sama dan akar nama sama (“RookHub Gross Hintergrund 3” termasuk “RookHub Gross”). Token yang belum ditautkan tidak memisahkan mesin; hanya dua token mesin berbeda di bawah nama yang sama menjadi dua mesin (namanya lalu menyebut token). Tanda ? di samping kecepatan menjelaskan angka di kepala. Kecepatan = node ÷ waktu pencarian menurut mesin; tiap blok 10 menit digolongkan normal atau dikurangi menurut aturan HARI INI.",
       "tokensTitle": "Token mesin",
-      "tokensHelp": "Semua token API berlingkup “engine” dari semua akun — tidak pernah tokennya, hanya awalan seperti di profil. Akses terakhir akurat hingga 5 menit. Mesin terhubung ke token yang terakhir dipakai untuk mendaftar (sejak 0.953.0; yang lebih lama muncul setelah penyedia dijalankan ulang).",
+      "tokensHelp": "Semua token API dengan cakupan “engine” dari semua akun — tidak pernah token itu sendiri, hanya prefiksnya seperti di profil. Akses terakhir akurat hingga 5 menit. Sebuah mesin tertaut ke token yang dipakai penyedianya untuk mendaftar dan mengambil pekerjaan; RookHub mencatat tautan saat pekerjaan diambil (dalam sekitar satu menit, tanpa mulai ulang). “belum ditautkan” = token dipakai dalam 30 menit terakhir tetapi tautannya masih tertunda; “tidak ada yang tertaut” = lebih lama tidak dipakai.",
       "tokensEmpty": "Tidak ada token mesin.",
       "t": {
         "name": "Nama",
@@ -3046,7 +3053,8 @@
         "never": "tidak pernah",
         "expired": "kedaluwarsa",
         "engineCount": "{{count}} mesin ({{online}} online)",
-        "noEngines": "tidak ada yang terhubung"
+        "noEngines": "tidak ada yang terhubung",
+        "pendingLink": "belum ditautkan — muncul begitu penyedia mengambil pekerjaan lagi (dalam sekitar satu menit)"
       },
       "idleBecause": "Menganggur: {{reason}}",
       "idleReason": {

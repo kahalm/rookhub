@@ -3088,12 +3088,19 @@
         "scheduleNext": "ab {{when}}: {{percent}} %",
         "reportedAt": "gemeldet {{when}}",
         "noSchedule": "Kein Zeitplan gemeldet — für Stapel-Aufträge gelten die RookHub-Sperrzeiten.",
-        "noScheduleLichess": "Lichess-Engines melden keinen Zeitplan — für Stapel-Aufträge gelten die RookHub-Sperrzeiten."
+        "noScheduleLichess": "Lichess-Engines melden keinen Zeitplan — für Stapel-Aufträge gelten die RookHub-Sperrzeiten.",
+        "statsLabel": "Kennzahlen der Maschine",
+        "doneDay": "fertig in 24 h: {{count}}",
+        "busyDay": "Auslastung 24 h: {{percent}} %",
+        "speedNormal": "Ø Tempo normal: {{value}}",
+        "speedReduced": "Ø Tempo Schonzeit: {{value}}",
+        "statsHelp": "Fertig in 24 h = abgeschlossene Aufträge der letzten 24 Stunden. Auslastung = Rechenzeit der letzten 24 h ÷ (registrierte Engines × 24 h) — 2 % heißt, die Engines haben kaum gerechnet. Ø Tempo = mittlere kN/s der letzten 7 Tage, getrennt nach normaler Zeit und Schonzeit (Zeitplan unter 100 %, ohne Zeitplan die RookHub-Sperrzeit); „–“ = in diesem Teil nichts gerechnet.",
+        "tokenPending": "Token noch nicht zugeordnet"
       },
       "speedSplit": "Ø normal {{normal}} · Schonzeit {{reduced}}",
-      "machinesHelp": "Engines nach Maschine gruppiert (gleicher Besitzer, gleicher Engine-Token, gleicher Namensstamm). Ø kN/s der letzten 7 Tage getrennt nach normal und Schonzeit: jeder 10-Minuten-Korb wird nach der HEUTIGEN Regel eingeordnet — Zeitplan unter 100 % bzw. ohne Zeitplan die RookHub-Sperrzeit. Das Tempo ist Knoten ÷ Suchzeit laut Engine.",
+      "machinesHelp": "Engines nach Maschine gruppiert: gleicher Besitzer und gleicher Namensstamm („RookHub Gross Hintergrund 3“ gehört zu „RookHub Gross“). Ein noch nicht zugeordneter Token trennt nicht; nur zwei verschiedene Engine-Tokens unter demselben Namen ergeben zwei Maschinen (der Name nennt dann den Token). Was die Kennzahlen im Kopf bedeuten, erklärt das ? neben dem Tempo. Das Tempo ist Knoten ÷ Suchzeit laut Engine; jeder 10-Minuten-Korb wird nach der HEUTIGEN Regel als normal oder Schonzeit eingeordnet.",
       "tokensTitle": "Engine-Tokens",
-      "tokensHelp": "Alle API-Tokens mit Bereich „engine“ aller Konten — nie der Token selbst, nur sein Präfix wie im Profil. Der letzte Zugriff ist auf 5 Minuten genau. Engines hängen am Token, mit dem sie sich zuletzt angemeldet haben (ab 0.953.0; ältere Registrierungen erscheinen nach dem nächsten Neustart des Providers).",
+      "tokensHelp": "Alle API-Tokens mit Bereich „engine“ aller Konten — nie der Token selbst, nur sein Präfix wie im Profil. Der letzte Zugriff ist auf 5 Minuten genau. Eine Engine hängt am Token, mit dem ihr Provider sich anmeldet und Arbeit abholt; RookHub trägt die Zuordnung beim Abholen nach (binnen etwa einer Minute, ohne Neustart). „noch nicht zugeordnet“ = der Token wurde in den letzten 30 Minuten benutzt, die Zuordnung steht aber noch aus; „keine zugeordnet“ = länger unbenutzt.",
       "tokensEmpty": "Keine Engine-Tokens.",
       "t": {
         "name": "Name",
@@ -3105,7 +3112,8 @@
         "never": "nie",
         "expired": "abgelaufen",
         "engineCount": "{{count}} Engines ({{online}} online)",
-        "noEngines": "keine zugeordnet"
+        "noEngines": "keine zugeordnet",
+        "pendingLink": "noch nicht zugeordnet — erscheint, sobald der Provider wieder Arbeit abholt (binnen etwa einer Minute)"
       },
       "idleBecause": "Leerlauf: {{reason}}",
       "idleReason": {

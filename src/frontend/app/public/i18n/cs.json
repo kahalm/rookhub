@@ -3029,12 +3029,19 @@
         "scheduleNext": "od {{when}}: {{percent}} %",
         "reportedAt": "nahlášeno {{when}}",
         "noSchedule": "Rozvrh nenahlášen — pro dávkové úlohy platí klidové hodiny RookHub.",
-        "noScheduleLichess": "Motory Lichess rozvrh nehlásí — pro dávkové úlohy platí klidové hodiny RookHub."
+        "noScheduleLichess": "Motory Lichess rozvrh nehlásí — pro dávkové úlohy platí klidové hodiny RookHub.",
+        "statsLabel": "Ukazatele stroje",
+        "doneDay": "hotovo za 24 h: {{count}}",
+        "busyDay": "vytížení 24 h: {{percent}} %",
+        "speedNormal": "Ø tempo normální: {{value}}",
+        "speedReduced": "Ø tempo snížené: {{value}}",
+        "statsHelp": "Hotovo za 24 h = úlohy dokončené za posledních 24 hodin. Vytížení = výpočetní čas za posledních 24 h ÷ (registrované enginy × 24 h) — 2 % znamená, že enginy skoro nepočítaly. Ø tempo = průměrné kN/s za posledních 7 dní, odděleně pro normální a snížený čas (rozvrh pod 100 % nebo bez rozvrhu klidové hodiny RookHubu); „–“ = v této části nic spočítáno.",
+        "tokenPending": "token zatím nepřiřazen"
       },
       "speedSplit": "Ø normálně {{normal}} · úsporně {{reduced}}",
-      "machinesHelp": "Motory seskupené podle stroje (stejný vlastník, stejný token motoru, stejný kmen názvu). Ø kN/s za posledních 7 dní rozdělené na normální a úsporný režim: každý 10minutový koš se řadí podle DNEŠNÍHO pravidla — rozvrh pod 100 % nebo bez rozvrhu klidové hodiny RookHub. Tempo = uzly ÷ doba hledání podle motoru.",
+      "machinesHelp": "Enginy seskupené podle stroje: stejný vlastník a stejný kmen názvu („RookHub Gross Hintergrund 3“ patří k „RookHub Gross“). Zatím nepřiřazený token stroj nerozdělí; jen dva různé tokeny enginu pod stejným názvem dají dva stroje (název pak uvádí token). ? vedle tempa vysvětluje ukazatele v záhlaví. Tempo je uzly ÷ čas hledání podle enginu; každý 10minutový úsek se řadí jako normální nebo snížený podle DNEŠNÍHO pravidla.",
       "tokensTitle": "Tokeny motorů",
-      "tokensHelp": "Všechny API tokeny s rozsahem „engine“ všech účtů — nikdy samotný token, jen předpona jako v profilu. Poslední přístup je přesný na 5 minut. Motory patří k tokenu, kterým se naposledy přihlásily (od 0.953.0; starší se objeví po dalším restartu provideru).",
+      "tokensHelp": "Všechny API tokeny s rozsahem „engine“ všech účtů — nikdy samotný token, jen jeho prefix jako v profilu. Poslední přístup je přesný na 5 minut. Engine patří k tokenu, kterým se jeho poskytovatel registruje a vyzvedává práci; RookHub si přiřazení zapíše při vyzvednutí (zhruba do minuty, bez restartu). „zatím nepřiřazeno“ = token použit v posledních 30 minutách, přiřazení ale ještě chybí; „žádné přiřazené“ = déle nepoužit.",
       "tokensEmpty": "Žádné tokeny motorů.",
       "t": {
         "name": "Název",
@@ -3046,7 +3053,8 @@
         "never": "nikdy",
         "expired": "vypršel",
         "engineCount": "{{count}} motorů ({{online}} online)",
-        "noEngines": "žádné přiřazené"
+        "noEngines": "žádné přiřazené",
+        "pendingLink": "zatím nepřiřazeno — objeví se, jakmile poskytovatel znovu vyzvedne práci (zhruba do minuty)"
       },
       "idleBecause": "Nečinný: {{reason}}",
       "idleReason": {

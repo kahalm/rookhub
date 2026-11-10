@@ -135,6 +135,56 @@ public class EngineOverviewInsightsTests : IDisposable
     public void Stem_StripsRoleAndNumber(string name, string stem) => Assert.Equal(stem, EngineOverviewSchedules.Stem(name));
 
     [Fact]
+    public void MachineKeys_UnknownTokenDoesNotSplit_TwoKnownTokensDo()
+    {
+        var keys = EngineOverviewSchedules.MachineKeys([
+            (Owner, "rookhub", 990951, "RookHub Gross"),
+            (Owner, "rookhub", null, "RookHub Gross Hintergrund 1"),        // noch nicht zugeordnet → dieselbe Maschine
+            (Owner, "rookhub", 990951, "RookHub Gross Hintergrund 2"),
+            (Owner, "rookhub", 990951, "Laptop"),
+            (Owner, "rookhub", 990952, "Laptop Hintergrund 1"),             // zweiter bekannter Token → zwei Maschinen
+            (Owner, "rookhub", null, "Laptop Hintergrund 2"),
+            (Other, "rookhub", null, "RookHub Gross"),                      // anderes Konto
+        ]);
+        Assert.Equal(1, keys.Take(3).Select(k => k.Key).Distinct().Count());
+        Assert.All(keys.Take(3), k => Assert.False(k.Split));
+        Assert.Equal([$"{Owner}|Laptop|t990951", $"{Owner}|Laptop|t990952", $"{Owner}|Laptop|t-"], keys.Skip(3).Take(3).Select(k => k.Key));
+        Assert.All(keys.Skip(3).Take(3), k => Assert.True(k.Split));
+        Assert.NotEqual(keys[0].Key, keys[6].Key);
+    }
+
+    [Fact]
+    public async Task Machines_MixedKnownAndUnknownToken_OneMachine_TwoTokens_NamedApart()
+    {
+        await using (var db = Db())
+        {
+            db.AppUsers.Add(new AppUser { Id = Owner, Username = "in-owner", PasswordHash = "x" });
+            db.UserApiTokens.AddRange(
+                new UserApiToken { Id = 990951, UserId = Owner, Name = "testprx3", TokenHash = "H1", Prefix = "rkh_a", Scope = ApiTokenService.EngineScope,
+                    CreatedAt = Now.AddDays(-1), LastUsedAt = Now.AddMinutes(-2) },
+                new UserApiToken { Id = 990952, UserId = Owner, Name = "laptop2026", TokenHash = "H2", Prefix = "rkh_b", Scope = ApiTokenService.EngineScope,
+                    CreatedAt = Now.AddDays(-1), LastUsedAt = Now.AddMinutes(-2) });
+            // Wie Prod 10.11.: 2 Gross-Engines nach dem Deploy neu gemeldet (Token bekannt), 2 von vorher (null).
+            db.ExternalEngineRegistrations.AddRange(
+                Reg("rhe_inGross00001", Owner, "RookHub Gross", null, Now.AddSeconds(-5)),
+                Reg("rhe_inGross00002", Owner, "RookHub Gross Hintergrund 1", null, Now.AddSeconds(-5)),
+                Reg("rhe_inGross00003", Owner, "RookHub Gross Hintergrund 2", 990951, Now.AddSeconds(-5)),
+                Reg("rhe_inGross00004", Owner, "RookHub Gross Hintergrund 3", 990951, Now.AddSeconds(-5)),
+                Reg("rhe_inLap000001", Owner, "Laptop", 990951, Now.AddSeconds(-5)),
+                Reg("rhe_inLap000002", Owner, "Laptop Hintergrund 1", 990952, Now.AddSeconds(-5)));
+            await db.SaveChangesAsync();
+        }
+        var dto = await BuildAsync();
+
+        var gross = Assert.Single(dto.Machines, m => m.Name.StartsWith("RookHub Gross", StringComparison.Ordinal));
+        Assert.Equal(("RookHub Gross", 4, 990951, "testprx3"), (gross.Name, gross.Total, gross.ApiTokenId, gross.TokenName));
+        var laptops = dto.Machines.Where(m => m.Name.StartsWith("Laptop", StringComparison.Ordinal)).Select(m => m.Name).Order().ToList();
+        Assert.Equal(["Laptop · laptop2026", "Laptop · testprx3"], laptops);
+        // Token-Tabelle: nur die Engines, die ihm wirklich zugeordnet sind.
+        Assert.Equal(3, dto.Tokens.Single(t => t.Id == 990951).Engines.Count);
+    }
+
+    [Fact]
     public void MachineSchedule_PercentNow_OpenNow_AndNextChange()
     {
         var rows = Enumerable.Range(1, 3).Select(slot => new EngineClientSchedule

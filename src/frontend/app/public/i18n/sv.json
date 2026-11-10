@@ -3029,12 +3029,19 @@
         "scheduleNext": "från {{when}}: {{percent}} %",
         "reportedAt": "rapporterat {{when}}",
         "noSchedule": "Inget schema rapporterat — RookHubs vilotider gäller för batchjobb.",
-        "noScheduleLichess": "Lichess-motorer rapporterar inget schema — RookHubs vilotider gäller för batchjobb."
+        "noScheduleLichess": "Lichess-motorer rapporterar inget schema — RookHubs vilotider gäller för batchjobb.",
+        "statsLabel": "Maskinens nyckeltal",
+        "doneDay": "klara på 24 h: {{count}}",
+        "busyDay": "belastning 24 h: {{percent}} %",
+        "speedNormal": "Ø tempo normalt: {{value}}",
+        "speedReduced": "Ø tempo reducerat: {{value}}",
+        "statsHelp": "Klara på 24 h = uppdrag som avslutats de senaste 24 timmarna. Belastning = beräkningstid de senaste 24 h ÷ (registrerade motorer × 24 h) — 2 % betyder att motorerna knappt räknade. Ø tempo = genomsnittliga kN/s de senaste 7 dagarna, uppdelat i normal tid och reducerad tid (schema under 100 % eller, utan schema, RookHubs vilotider); ”–” = inget beräknat i den delen.",
+        "tokenPending": "token ännu inte tilldelad"
       },
       "speedSplit": "Ø normal {{normal}} · sparläge {{reduced}}",
-      "machinesHelp": "Motorer grupperade per maskin (samma ägare, samma motortoken, samma namnstam). Ø kN/s de senaste 7 dagarna uppdelat i normal och sparläge: varje 10-minuterskorg klassas enligt DAGENS regel — schema under 100 % eller, utan schema, RookHubs vilotider. Takten = noder ÷ söktid enligt motorn.",
+      "machinesHelp": "Motorer grupperade per maskin: samma ägare och samma namnstam (”RookHub Gross Hintergrund 3” hör till ”RookHub Gross”). En token som ännu inte tilldelats delar inte en maskin; bara två olika motortokens under samma namn ger två maskiner (namnet visar då token). ? bredvid tempot förklarar nyckeltalen i rubriken. Tempot är noder ÷ söktid enligt motorn; varje 10-minutersblock klassas som normalt eller reducerat enligt DAGENS regel.",
       "tokensTitle": "Motortokens",
-      "tokensHelp": "Alla API-tokens med omfånget ”engine” för alla konton — aldrig själva token, bara prefixet som i profilen. Senaste åtkomst är exakt på 5 minuter. Motorer kopplas till den token de senast registrerade sig med (från 0.953.0; äldre syns efter nästa omstart av providern).",
+      "tokensHelp": "Alla API-tokens med omfånget ”engine” för alla konton — aldrig själva token, bara prefixet som i profilen. Senaste åtkomst är exakt på 5 minuter. En motor hör till den token som dess leverantör registrerar sig och hämtar arbete med; RookHub sparar kopplingen vid hämtningen (inom ungefär en minut, utan omstart). ”ännu inte tilldelad” = token använd de senaste 30 minuterna men kopplingen saknas än; ”ingen kopplad” = oanvänd längre.",
       "tokensEmpty": "Inga motortokens.",
       "t": {
         "name": "Namn",
@@ -3046,7 +3053,8 @@
         "never": "aldrig",
         "expired": "utgången",
         "engineCount": "{{count}} motorer ({{online}} online)",
-        "noEngines": "inga kopplade"
+        "noEngines": "inga kopplade",
+        "pendingLink": "ännu inte tilldelad — visas så snart leverantören hämtar arbete igen (inom ungefär en minut)"
       },
       "idleBecause": "Ledig: {{reason}}",
       "idleReason": {

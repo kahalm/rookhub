@@ -2637,12 +2637,19 @@
         "scheduleNext": "{{when}}-tól: {{percent}}%",
         "reportedAt": "jelentve: {{when}}",
         "noSchedule": "Nincs jelentett ütemterv — kötegelt feladatokra a RookHub csendes ideje érvényes.",
-        "noScheduleLichess": "A Lichess-motorok nem jelentenek ütemtervet — kötegelt feladatokra a RookHub csendes ideje érvényes."
+        "noScheduleLichess": "A Lichess-motorok nem jelentenek ütemtervet — kötegelt feladatokra a RookHub csendes ideje érvényes.",
+        "statsLabel": "A gép mutatói",
+        "doneDay": "kész 24 óra alatt: {{count}}",
+        "busyDay": "kihasználtság 24 óra: {{percent}} %",
+        "speedNormal": "Ø tempó normál: {{value}}",
+        "speedReduced": "Ø tempó csökkentett: {{value}}",
+        "statsHelp": "Kész 24 óra alatt = az utolsó 24 órában befejezett feladatok. Kihasználtság = az utolsó 24 óra számítási ideje ÷ (regisztrált motorok × 24 óra) — 2 % azt jelenti, hogy a motorok alig számoltak. Ø tempó = az utolsó 7 nap átlagos kN/s értéke, külön normál és csökkentett időre (100 % alatti ütemterv vagy ütemterv nélkül a RookHub csendes órái); „–” = abban a részben nem volt számítás.",
+        "tokenPending": "token még nincs hozzárendelve"
       },
       "speedSplit": "Ø normál {{normal}} · kímélő {{reduced}}",
-      "machinesHelp": "Motorok gépenként csoportosítva (azonos tulajdonos, azonos motortoken, azonos névtő). Az utolsó 7 nap Ø kN/s értéke normál és kímélő időre bontva: minden 10 perces kosarat a MAI szabály szerint sorolunk be — 100% alatti ütemterv, ill. ütemterv nélkül a RookHub csendes ideje. A tempó: csomópontok ÷ a motor által jelentett keresési idő.",
+      "machinesHelp": "Motorok gépenként csoportosítva: azonos tulajdonos és azonos névtő („RookHub Gross Hintergrund 3” a „RookHub Gross”-hoz tartozik). Egy még hozzá nem rendelt token nem bont szét egy gépet; csak két különböző motortoken ugyanazon név alatt ad két gépet (a név ekkor megnevezi a tokent). A tempó melletti ? elmagyarázza a fejléc mutatóit. A tempó csomópontok ÷ keresési idő a motor szerint; minden 10 perces sáv a MAI szabály szerint normál vagy csökkentett.",
       "tokensTitle": "Motortokenek",
-      "tokensHelp": "Minden fiók összes „engine” hatókörű API-tokenje — soha maga a token, csak az előtagja, mint a profilban. Az utolsó hozzáférés 5 percre pontos. A motorok ahhoz a tokenhez tartoznak, amellyel utoljára regisztráltak (0.953.0-tól; a régebbiek a provider következő újraindítása után jelennek meg).",
+      "tokensHelp": "Minden fiók összes „engine” hatókörű API-tokenje — soha nem maga a token, csak az előtagja, mint a profilban. Az utolsó hozzáférés 5 percre pontos. Egy motor ahhoz a tokenhez tartozik, amellyel a szolgáltatója regisztrál és munkát kér le; a RookHub a lekéréskor rögzíti a kapcsolatot (kb. egy percen belül, újraindítás nélkül). „még nincs hozzárendelve” = a tokent az utolsó 30 percben használták, de a kapcsolat még függőben van; „nincs kapcsolva” = régebben nem használt.",
       "tokensEmpty": "Nincsenek motortokenek.",
       "t": {
         "name": "Név",
@@ -2654,7 +2661,8 @@
         "never": "soha",
         "expired": "lejárt",
         "engineCount": "{{count}} motor ({{online}} online)",
-        "noEngines": "nincs hozzárendelve"
+        "noEngines": "nincs hozzárendelve",
+        "pendingLink": "még nincs hozzárendelve — megjelenik, amint a szolgáltató újra munkát kér le (kb. egy percen belül)"
       },
       "idleBecause": "Tétlen: {{reason}}",
       "idleReason": {

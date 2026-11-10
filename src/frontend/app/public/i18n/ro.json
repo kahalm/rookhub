@@ -3029,12 +3029,19 @@
         "scheduleNext": "de la {{when}}: {{percent}} %",
         "reportedAt": "raportat {{when}}",
         "noSchedule": "Niciun program raportat — pentru sarcini în lot se aplică orele de liniște RookHub.",
-        "noScheduleLichess": "Motoarele Lichess nu raportează program — pentru sarcini în lot se aplică orele de liniște RookHub."
+        "noScheduleLichess": "Motoarele Lichess nu raportează program — pentru sarcini în lot se aplică orele de liniște RookHub.",
+        "statsLabel": "Indicatorii mașinii",
+        "doneDay": "terminate în 24 h: {{count}}",
+        "busyDay": "încărcare 24 h: {{percent}} %",
+        "speedNormal": "Ø viteză normală: {{value}}",
+        "speedReduced": "Ø viteză redusă: {{value}}",
+        "statsHelp": "Terminate în 24 h = sarcini încheiate în ultimele 24 de ore. Încărcare = timpul de calcul din ultimele 24 h ÷ (motoare înregistrate × 24 h) — 2 % înseamnă că motoarele abia au calculat. Ø viteză = kN/s medii din ultimele 7 zile, separat pentru timp normal și timp redus (program sub 100 % sau, fără program, orele de liniște RookHub); „–” = nimic calculat în acea parte.",
+        "tokenPending": "token încă neatribuit"
       },
       "speedSplit": "Ø normal {{normal}} · redus {{reduced}}",
-      "machinesHelp": "Motoare grupate pe mașini (același proprietar, același token de motor, aceeași rădăcină a numelui). Ø kN/s din ultimele 7 zile, separat în normal și redus: fiecare interval de 10 minute e clasat după regula de AZI — program sub 100 % sau, fără program, orele de liniște RookHub. Viteza = noduri ÷ timpul de căutare raportat de motor.",
+      "machinesHelp": "Motoare grupate pe mașină: același proprietar și aceeași rădăcină a numelui („RookHub Gross Hintergrund 3” aparține de „RookHub Gross”). Un token încă neatribuit nu împarte o mașină; doar două tokenuri de motor diferite sub același nume dau două mașini (numele indică atunci tokenul). ? de lângă viteză explică indicatorii din antet. Viteza este noduri ÷ timp de căutare raportat de motor; fiecare interval de 10 minute este clasificat normal sau redus după regula de AZI.",
       "tokensTitle": "Tokenuri de motor",
-      "tokensHelp": "Toate tokenurile API cu domeniul „engine” ale tuturor conturilor — niciodată tokenul, doar prefixul ca în profil. Ultimul acces e precis la 5 minute. Motoarele sunt legate de tokenul cu care s-au înregistrat ultima dată (de la 0.953.0; cele mai vechi apar după repornirea providerului).",
+      "tokensHelp": "Toate tokenurile API cu domeniul „engine” ale tuturor conturilor — niciodată tokenul însuși, doar prefixul ca în profil. Ultimul acces are o precizie de 5 minute. Un motor aparține tokenului cu care furnizorul său se înregistrează și preia lucru; RookHub notează legătura la preluare (în aproximativ un minut, fără repornire). „încă neatribuit” = token folosit în ultimele 30 de minute, dar legătura e încă în așteptare; „niciunul legat” = nefolosit de mai mult timp.",
       "tokensEmpty": "Niciun token de motor.",
       "t": {
         "name": "Nume",
@@ -3046,7 +3053,8 @@
         "never": "niciodată",
         "expired": "expirat",
         "engineCount": "{{count}} motoare ({{online}} online)",
-        "noEngines": "niciunul legat"
+        "noEngines": "niciunul legat",
+        "pendingLink": "încă neatribuit — apare imediat ce furnizorul preia din nou lucru (în aproximativ un minut)"
       },
       "idleBecause": "Inactiv: {{reason}}",
       "idleReason": {

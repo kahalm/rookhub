@@ -3029,12 +3029,19 @@
         "scheduleNext": "da {{when}}: {{percent}} %",
         "reportedAt": "segnalato {{when}}",
         "noSchedule": "Nessun orario segnalato: per i lavori in blocco valgono gli orari di riposo RookHub.",
-        "noScheduleLichess": "I motori Lichess non segnalano orari: per i lavori in blocco valgono gli orari di riposo RookHub."
+        "noScheduleLichess": "I motori Lichess non segnalano orari: per i lavori in blocco valgono gli orari di riposo RookHub.",
+        "statsLabel": "Dati della macchina",
+        "doneDay": "completati in 24 h: {{count}}",
+        "busyDay": "occupazione 24 h: {{percent}} %",
+        "speedNormal": "Ø velocità normale: {{value}}",
+        "speedReduced": "Ø velocità ridotta: {{value}}",
+        "statsHelp": "Completati in 24 h = lavori conclusi nelle ultime 24 ore. Occupazione = tempo di calcolo delle ultime 24 h ÷ (motori registrati × 24 h) — 2 % significa che i motori hanno calcolato appena. Ø velocità = kN/s medi degli ultimi 7 giorni, divisi tra tempo normale e tempo ridotto (programma sotto il 100 % o, senza programma, le ore di quiete di RookHub); «–» = nulla calcolato in quella parte.",
+        "tokenPending": "token non ancora assegnato"
       },
       "speedSplit": "Ø normale {{normal}} · ridotto {{reduced}}",
-      "machinesHelp": "Motori raggruppati per macchina (stesso proprietario, stesso token motore, stessa radice del nome). Ø kN/s degli ultimi 7 giorni diviso in normale e ridotto: ogni intervallo di 10 minuti è classificato secondo la regola di OGGI — orario sotto il 100 % o, senza orario, orari di riposo RookHub. La velocità = nodi ÷ tempo di ricerca riportato dal motore.",
+      "machinesHelp": "Motori raggruppati per macchina: stesso proprietario e stessa radice del nome («RookHub Gross Hintergrund 3» appartiene a «RookHub Gross»). Un token non ancora assegnato non divide una macchina; solo due token motore diversi con lo stesso nome formano due macchine (il nome indica allora il token). Il ? accanto alla velocità spiega i dati dell’intestazione. La velocità è nodi ÷ tempo di ricerca riportato dal motore; ogni intervallo di 10 minuti è classificato normale o ridotto secondo la regola di OGGI.",
       "tokensTitle": "Token motore",
-      "tokensHelp": "Tutti i token API con ambito «engine» di tutti gli account — mai il token, solo il prefisso come nel profilo. L’ultimo accesso è preciso a 5 minuti. I motori sono collegati al token con cui si sono registrati l’ultima volta (dalla 0.953.0; quelli più vecchi compaiono dopo il riavvio del provider).",
+      "tokensHelp": "Tutti i token API con ambito «engine» di tutti gli account — mai il token stesso, solo il suo prefisso come nel profilo. L’ultimo accesso è preciso a 5 minuti. Un motore è collegato al token con cui il suo provider si registra e preleva lavoro; RookHub registra il collegamento al prelievo (entro circa un minuto, senza riavvio). «non ancora assegnato» = token usato negli ultimi 30 minuti, ma il collegamento è ancora in sospeso; «nessuno collegato» = inutilizzato da più tempo.",
       "tokensEmpty": "Nessun token motore.",
       "t": {
         "name": "Nome",
@@ -3046,7 +3053,8 @@
         "never": "mai",
         "expired": "scaduto",
         "engineCount": "{{count}} motori ({{online}} online)",
-        "noEngines": "nessuno collegato"
+        "noEngines": "nessuno collegato",
+        "pendingLink": "non ancora assegnato — compare appena il provider preleva di nuovo lavoro (entro circa un minuto)"
       },
       "idleBecause": "Inattivo: {{reason}}",
       "idleReason": {

@@ -3088,12 +3088,19 @@
         "scheduleNext": "od {{when}}: {{percent}} %",
         "reportedAt": "javljeno {{when}}",
         "noSchedule": "Raspored nije javljen — za skupne poslove vrijedi RookHub mirno vrijeme.",
-        "noScheduleLichess": "Lichess engine ne javljaju raspored — za skupne poslove vrijedi RookHub mirno vrijeme."
+        "noScheduleLichess": "Lichess engine ne javljaju raspored — za skupne poslove vrijedi RookHub mirno vrijeme.",
+        "statsLabel": "Pokazatelji stroja",
+        "doneDay": "gotovo u 24 h: {{count}}",
+        "busyDay": "opterećenje 24 h: {{percent}} %",
+        "speedNormal": "Ø brzina normalno: {{value}}",
+        "speedReduced": "Ø brzina smanjeno: {{value}}",
+        "statsHelp": "Gotovo u 24 h = zadaci završeni u zadnja 24 sata. Opterećenje = vrijeme računanja zadnja 24 h ÷ (registrirani enginei × 24 h) — 2 % znači da enginei gotovo nisu računali. Ø brzina = prosječni kN/s zadnjih 7 dana, odvojeno za normalno i smanjeno vrijeme (raspored ispod 100 % ili, bez rasporeda, RookHubovi sati mirovanja); „–” = u tom dijelu ništa izračunato.",
+        "tokenPending": "token još nije dodijeljen"
       },
       "speedSplit": "Ø normalno {{normal}} · štedljivo {{reduced}}",
-      "machinesHelp": "Engine grupirani po stroju (isti vlasnik, isti engine token, isti korijen imena). Ø kN/s zadnjih 7 dana odvojeno na normalno i štedljivo: svaki 10-minutni odjeljak razvrstava se po DANAŠNJEM pravilu — raspored ispod 100 % ili, bez rasporeda, RookHub mirno vrijeme. Brzina je čvorovi ÷ vrijeme pretrage prema engineu.",
+      "machinesHelp": "Enginei grupirani po stroju: isti vlasnik i isti korijen imena („RookHub Gross Hintergrund 3” pripada „RookHub Gross”). Token koji još nije dodijeljen ne dijeli stroj; tek dva različita engine-tokena pod istim imenom daju dva stroja (ime tada navodi token). ? pokraj brzine objašnjava pokazatelje u zaglavlju. Brzina je čvorovi ÷ vrijeme pretrage prema engineu; svaki 10-minutni odsječak razvrstava se kao normalan ili smanjen prema DANAŠNJEM pravilu.",
       "tokensTitle": "Engine tokeni",
-      "tokensHelp": "Svi API tokeni s opsegom „engine“ svih računa — nikad sam token, samo prefiks kao u profilu. Zadnji pristup točan je na 5 minuta. Engine su vezani uz token kojim su se zadnji put prijavili (od 0.953.0; starije registracije pojavljuju se nakon ponovnog pokretanja providera).",
+      "tokensHelp": "Svi API tokeni s opsegom „engine” svih računa — nikad sam token, samo njegov prefiks kao u profilu. Zadnji pristup točan je na 5 minuta. Engine pripada tokenu kojim se njegov pružatelj prijavljuje i preuzima posao; RookHub bilježi vezu pri preuzimanju (za otprilike minutu, bez ponovnog pokretanja). „još nije dodijeljeno” = token korišten u zadnjih 30 minuta, ali veza još čeka; „nijedan povezan” = dulje nekorišten.",
       "tokensEmpty": "Nema engine tokena.",
       "t": {
         "name": "Naziv",
@@ -3105,7 +3112,8 @@
         "never": "nikad",
         "expired": "isteklo",
         "engineCount": "{{count}} enginea ({{online}} online)",
-        "noEngines": "nijedan povezan"
+        "noEngines": "nijedan povezan",
+        "pendingLink": "još nije dodijeljeno — pojavit će se čim pružatelj ponovno preuzme posao (za otprilike minutu)"
       },
       "idleBecause": "Neaktivno: {{reason}}",
       "idleReason": {

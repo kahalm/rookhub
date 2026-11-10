@@ -133,6 +133,40 @@ public class EngineBrokerTests(EngineBrokerFixture fixture) : IAsyncLifetime, IC
         Assert.False(fromBrowser[0].TryGetProperty("clientSecret", out _));
     }
 
+    /// <summary>0.955.2: Registrierungen von vor 0.953.0 tragen keinen Token. Der Provider schickt seinen Bearer aber bei
+    /// JEDEM Poll mit (der anonyme Endpunkt läuft trotzdem durch den PAT-Handler) — die Wartung trägt ihn nach, ohne
+    /// dass sich der Provider neu anmeldet. Echter Kestrel + MariaDB: belegt, dass der Claim am Poll ankommt.</summary>
+    [MySqlFact]
+    public async Task Poll_WithEngineToken_LinksAnOldRegistrationToTheToken_WithoutReRegistering()
+    {
+        var (userId, _, engineToken) = await UserAsync();
+        var provider = new FakeProvider(Client(), engineToken, "Gross Hintergrund 1", (_, _, _) => Task.CompletedTask);
+        _providers.Add(provider);
+        await provider.RegisterAsync();
+        int tokenId;
+        using (var scope = fixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            tokenId = await db.UserApiTokens.Where(t => t.UserId == userId).Select(t => t.Id).SingleAsync();
+            Assert.Equal(tokenId, (await db.ExternalEngineRegistrations.SingleAsync()).ApiTokenId);
+            // So sah es auf Prod nach dem Deploy von 0.953.0 aus: angemeldet vor der Spalte.
+            await db.ExternalEngineRegistrations.ExecuteUpdateAsync(u => u.SetProperty(r => r.ApiTokenId, (int?)null));
+        }
+
+        provider.Start();
+        await provider.WaitForPollsAsync(2);
+        var maintenance = ActivatorUtilities.CreateInstance<EngineBrokerMaintenanceService>(fixture.Factory.Services);
+        await maintenance.FlushLastSeenAsync(CancellationToken.None);
+
+        using (var scope = fixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var reg = await db.ExternalEngineRegistrations.AsNoTracking().SingleAsync();
+            Assert.Equal(tokenId, reg.ApiTokenId);
+            Assert.NotNull(reg.LastSeenAt);
+        }
+    }
+
     [MySqlFact]
     public async Task Analyse_LinesArriveWhileTheUploadRuns_KeepaliveComesThrough_BestmoveEnds()
     {

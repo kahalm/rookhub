@@ -35,8 +35,10 @@ public record EngineSpeedSplitDto(double? Normal, double? Reduced);
 public record EngineScheduleDto(int Slot, int Total, string Scope, string Rule, string TimeZone, DateTime ReportedAt,
     bool OpenNow, int PercentNow);
 
-/// <summary>Eine Maschine: Engines eines Kontos mit gleichem Namensstamm (ohne „Hintergrund N“/Nummer) und gleichem
-/// Engine-Token; Lichess-Engines je Konto als eine Gruppe.</summary>
+/// <summary>Eine Maschine: Engines eines Kontos mit gleichem Namensstamm (ohne „Hintergrund N“/Nummer); ein noch
+/// unbekannter Token (<c>null</c>) trennt nicht, nur zwei verschiedene bekannte Tokens (dann trägt <c>Name</c> den
+/// Token-Namen). <c>ApiTokenId</c>/<c>TokenName</c> = der bekannte Token, <c>null</c> = noch nicht zugeordnet.
+/// Lichess-Engines je Konto als eine Gruppe.</summary>
 public record EngineOverviewMachineDto(
     string Key, string Name, int? OwnerUserId, string? OwnerName, string Source, int? ApiTokenId, string? TokenName,
     IReadOnlyList<string> EngineIds, int Online, int Total, int Working, int Threads, int DoneDay, int? BusyPercentDay,

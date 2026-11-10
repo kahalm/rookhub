@@ -190,15 +190,24 @@
           <span class="m-name">{{ m.name }}</span>
           @if (m.ownerName) { <span class="muted">{{ 'admin.engines.owner' | translate:{ name: m.ownerName } }}</span> }
         </button>
-        <div class="rh-dots m-stats" data-testid="machine-stats">
-          <span>{{ 'admin.engines.m.online' | translate:{ online: m.online, total: m.total } }}</span>
-          <span>{{ 'admin.engines.m.working' | translate:{ count: m.working } }}</span>
-          @if (m.threads) { <span>{{ 'admin.engines.threads' | translate:{ count: m.threads } }}</span> }
-          <span>{{ 'admin.engines.doneDay' | translate:{ count: count(m.doneDay) } }}</span>
-          @if (m.busyPercentDay != null) { <span>{{ 'admin.engines.busyDay' | translate:{ percent: m.busyPercentDay } }}</span> }
-          <span>{{ 'admin.engines.speedSplit' | translate:{ normal: knps(m.speed.normal), reduced: knps(m.speed.reduced) } }}</span>
-          @if (m.tokenName) { <span>{{ 'admin.engines.m.token' | translate:{ name: m.tokenName } }}</span> }
-        </div>
+        <!-- Kennzahlen als Liste: jede Angabe ein eigenes, beschriftetes Element — der Trennpunkt ist nur Gestaltung
+             (::before), kopierter Text und Bildschirmleser bekommen die Angaben einzeln statt „Threads: 1824 h: 90“. -->
+        <ul class="rh-dots m-stats" data-testid="machine-stats" [attr.aria-label]="'admin.engines.m.statsLabel' | translate">
+          <li>{{ 'admin.engines.m.online' | translate:{ online: m.online, total: m.total } }}</li>
+          <li>{{ 'admin.engines.m.working' | translate:{ count: m.working } }}</li>
+          @if (m.threads) { <li>{{ 'admin.engines.threads' | translate:{ count: m.threads } }}</li> }
+          <li>{{ 'admin.engines.m.doneDay' | translate:{ count: count(m.doneDay) } }}</li>
+          @if (m.busyPercentDay != null) { <li>{{ 'admin.engines.m.busyDay' | translate:{ percent: m.busyPercentDay } }}</li> }
+          <li>{{ 'admin.engines.m.speedNormal' | translate:{ value: knps(m.speed.normal) } }}</li>
+          <li>{{ 'admin.engines.m.speedReduced' | translate:{ value: knps(m.speed.reduced) } }}<span class="rh-nowrap">&nbsp;<app-help-hint [text]="'admin.engines.m.statsHelp' | translate" /></span></li>
+          @if (m.source === 'rookhub') {
+            @if (m.apiTokenId != null) {
+              <li data-testid="machine-token">{{ 'admin.engines.m.token' | translate:{ name: m.tokenName || ('#' + m.apiTokenId) } }}</li>
+            } @else {
+              <li class="muted" data-testid="machine-token">{{ 'admin.engines.m.tokenPending' | translate }}</li>
+            }
+          }
+        </ul>
         <p class="line m-schedule" data-testid="machine-schedule">
           <mat-icon aria-hidden="true" class="li">schedule</mat-icon>
           @if (m.schedule; as sc) {
@@ -371,6 +380,8 @@
                     <td class="wrap">
                       @if (t.engines.length) {
                         {{ 'admin.engines.t.engineCount' | translate:{ count: t.engines.length, online: onlineCount(t) } }}
+                      } @else if (recentlyUsed(t)) {
+                        <span class="muted" data-testid="token-pending">{{ 'admin.engines.t.pendingLink' | translate }}</span>
                       } @else { <span class="muted">{{ 'admin.engines.t.noEngines' | translate }}</span> }
                     </td>
                   </tr>

@@ -3029,12 +3029,19 @@
         "scheduleNext": "od {{when}}: {{percent}} %",
         "reportedAt": "zgłoszono {{when}}",
         "noSchedule": "Brak zgłoszonego harmonogramu — dla zadań wsadowych obowiązują godziny ciszy RookHub.",
-        "noScheduleLichess": "Silniki Lichess nie zgłaszają harmonogramu — dla zadań wsadowych obowiązują godziny ciszy RookHub."
+        "noScheduleLichess": "Silniki Lichess nie zgłaszają harmonogramu — dla zadań wsadowych obowiązują godziny ciszy RookHub.",
+        "statsLabel": "Wskaźniki maszyny",
+        "doneDay": "ukończone w 24 h: {{count}}",
+        "busyDay": "obciążenie 24 h: {{percent}} %",
+        "speedNormal": "Ø tempo normalne: {{value}}",
+        "speedReduced": "Ø tempo obniżone: {{value}}",
+        "statsHelp": "Ukończone w 24 h = zadania zakończone w ostatnich 24 godzinach. Obciążenie = czas obliczeń z ostatnich 24 h ÷ (zarejestrowane silniki × 24 h) — 2 % oznacza, że silniki prawie nie liczyły. Ø tempo = średnie kN/s z ostatnich 7 dni, osobno dla czasu normalnego i obniżonego (harmonogram poniżej 100 % lub, bez harmonogramu, godziny ciszy RookHub); „–” = w tej części nic nie liczono.",
+        "tokenPending": "token jeszcze nieprzypisany"
       },
       "speedSplit": "Ø normalnie {{normal}} · oszczędnie {{reduced}}",
-      "machinesHelp": "Silniki pogrupowane według maszyny (ten sam właściciel, ten sam token silnika, ten sam rdzeń nazwy). Ø kN/s z ostatnich 7 dni rozdzielone na normalnie i oszczędnie: każdy 10-minutowy koszyk klasyfikowany jest według DZISIEJSZEJ reguły — harmonogram poniżej 100 % albo, bez harmonogramu, godziny ciszy RookHub. Tempo = węzły ÷ czas wyszukiwania podany przez silnik.",
+      "machinesHelp": "Silniki pogrupowane według maszyny: ten sam właściciel i ten sam rdzeń nazwy („RookHub Gross Hintergrund 3” należy do „RookHub Gross”). Token jeszcze nieprzypisany nie dzieli maszyny; dopiero dwa różne tokeny silnika pod tą samą nazwą dają dwie maszyny (nazwa podaje wtedy token). ? obok tempa wyjaśnia wskaźniki w nagłówku. Tempo to węzły ÷ czas szukania według silnika; każdy 10-minutowy przedział jest klasyfikowany jako normalny lub obniżony według DZISIEJSZEJ reguły.",
       "tokensTitle": "Tokeny silników",
-      "tokensHelp": "Wszystkie tokeny API o zakresie „engine” wszystkich kont — nigdy sam token, tylko prefiks jak w profilu. Ostatni dostęp z dokładnością do 5 minut. Silniki są przypisane do tokenu, którym ostatnio się zarejestrowały (od 0.953.0; starsze pojawią się po ponownym uruchomieniu providera).",
+      "tokensHelp": "Wszystkie tokeny API z zakresem „engine” wszystkich kont — nigdy sam token, tylko jego prefiks jak w profilu. Ostatni dostęp jest dokładny do 5 minut. Silnik jest powiązany z tokenem, którym jego dostawca się rejestruje i pobiera pracę; RookHub zapisuje powiązanie przy pobieraniu (w ciągu około minuty, bez restartu). „jeszcze nieprzypisany” = token użyty w ostatnich 30 minutach, ale powiązanie jeszcze czeka; „brak powiązanych” = dłużej nieużywany.",
       "tokensEmpty": "Brak tokenów silników.",
       "t": {
         "name": "Nazwa",
@@ -3046,7 +3053,8 @@
         "never": "nigdy",
         "expired": "wygasł",
         "engineCount": "{{count}} silników ({{online}} online)",
-        "noEngines": "brak przypisanych"
+        "noEngines": "brak przypisanych",
+        "pendingLink": "jeszcze nieprzypisany — pojawi się, gdy dostawca znów pobierze pracę (w ciągu około minuty)"
       },
       "idleBecause": "Bezczynny: {{reason}}",
       "idleReason": {

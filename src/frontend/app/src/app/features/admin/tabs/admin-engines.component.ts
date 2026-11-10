@@ -114,6 +114,9 @@ export interface EngineOverview {
   backgroundCap: number;
 }
 
+/** Bis wann ein Token als „gerade benutzt“ gilt (Token-Tabelle, „noch nicht zugeordnet“). */
+export const TOKEN_RECENT_MS = 30 * 60_000;
+
 /** Gemerkte auf-/zugeklappte Maschinen je Betrachter (`core/local-storage-keys.ts`). */
 export const ENGINE_MACHINES_STORAGE_KEY = 'rh.adminEngines.machines';
 
@@ -345,6 +348,17 @@ export class AdminEnginesComponent implements OnInit {
   }
 
   onlineCount(t: EngineToken): number { return t.engines.filter(e => e.online).length; }
+
+  /**
+   * Token ohne zugeordnete Engine, aber kürzlich benutzt (≤ {@link TOKEN_RECENT_MS} vor dem Stand): ein Provider läuft
+   * damit, seine Engines sind nur noch nicht verknüpft (Registrierung von vor 0.953.0) — der Server trägt das beim
+   * nächsten Poll nach. „Letzter Zugriff“ ist auf 5 Minuten genau.
+   */
+  recentlyUsed(t: EngineToken): boolean {
+    const d = this.data();
+    if (!t.lastUsedAt || !d) return false;
+    return Date.parse(d.generatedAt) - Date.parse(t.lastUsedAt) <= TOKEN_RECENT_MS;
+  }
 
   /** „stuckJobs“-Detail: Grund und (nach „|“) der letzte Fehlertext. */
   hintReason(h: EngineHint): string { return (h.detail ?? '').split('|')[0]; }

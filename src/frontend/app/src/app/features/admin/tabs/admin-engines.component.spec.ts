@@ -276,7 +276,7 @@ describe('AdminEnginesComponent', () => {
     const m = machines[0];
     expect(m.querySelector('[data-testid="machine-toggle"]')!.getAttribute('aria-expanded')).toBe('true');
     expect(m.querySelector('[data-testid="machine-stats"]')!.textContent).toContain('admin.engines.m.online');
-    expect(m.querySelector('[data-testid="machine-stats"]')!.textContent).toContain('admin.engines.speedSplit');
+    expect(m.querySelector('[data-testid="machine-stats"]')!.textContent).toContain('admin.engines.m.speedNormal');
     expect(m.querySelector('[data-testid="machine-schedule"]')!.textContent).toContain('admin.engines.m.scheduleNext');
     expect(m.querySelectorAll('[data-testid="engine"]').length).toBe(2);
 
@@ -286,6 +286,44 @@ describe('AdminEnginesComponent', () => {
     expect(pc.querySelector('[data-testid="machine-toggle"]')!.getAttribute('aria-expanded')).toBe('true');
     expect(pc.querySelectorAll('[data-testid="engine"]').length).toBe(1);
     expect(pc.querySelector('[data-testid="machine-schedule"]')!.textContent).toContain('admin.engines.m.noSchedule');
+  });
+
+  it('Maschinenkopf: jede Kennzahl ein eigenes Listenelement (kopierbar, Bildschirmleser), Token bekannt oder „noch nicht zugeordnet“', async () => {
+    const d = structuredClone(overview);
+    d.machines[0] = { ...d.machines[0], threads: 18, doneDay: 90, busyPercentDay: 2, speed: { normal: 608, reduced: null } };
+    await loaded(d);
+    const stats = all('machine')[0].querySelector('[data-testid="machine-stats"]') as HTMLElement;
+    expect(stats.tagName).toBe('UL');
+    expect(stats.getAttribute('aria-label')).toBe('admin.engines.m.statsLabel');
+    const items = Array.from(stats.children).map(li => (li as HTMLElement).tagName);
+    expect(items.every(t => t === 'LI')).toBeTrue();
+    expect(items.length).toBe(8);                          // online, rechnet, Threads, fertig 24 h, Auslastung, 2 × Tempo, Token
+    const texts = Array.from(stats.children).map(li => li.textContent!.trim());
+    expect(texts).toContain('admin.engines.m.doneDay');    // „fertig in 24 h“ statt nackter „24 h: 90“
+    expect(texts).toContain('admin.engines.m.busyDay');
+    expect(stats.querySelector('app-help-hint')).not.toBeNull();   // Erklärung zu Auslastung und Tempo
+    expect(all('machine')[0].querySelector('[data-testid="machine-token"]')!.textContent).toContain('admin.engines.m.token');
+
+    d.machines[0] = { ...d.machines[0], apiTokenId: null, tokenName: null };
+    fixture.componentInstance.data.set(structuredClone(d));
+    fixture.detectChanges();
+    expect(all('machine')[0].querySelector('[data-testid="machine-token"]')!.textContent).toContain('admin.engines.m.tokenPending');
+  });
+
+  it('Token-Tabelle: kürzlich benutzt ohne Engines = „noch nicht zugeordnet“, lange unbenutzt = „keine“', async () => {
+    const d = structuredClone(overview);
+    const base = d.tokens[0];
+    d.tokens = [
+      { ...base, id: 8, name: 'laptop2026', engines: [], lastUsedAt: '2026-11-10T11:55:00Z' },
+      { ...base, id: 9, name: 'alt', engines: [], lastUsedAt: '2026-10-01T00:00:00Z' },
+      { ...base, id: 10, name: 'nie', engines: [], lastUsedAt: null },
+    ];
+    await loaded(d);
+    const rows = all('token');
+    expect(rows[0].querySelector('[data-testid="token-pending"]')!.textContent).toContain('admin.engines.t.pendingLink');
+    expect(rows[1].querySelector('[data-testid="token-pending"]')).toBeNull();
+    expect(rows[1].textContent).toContain('admin.engines.t.noEngines');
+    expect(rows[2].textContent).toContain('admin.engines.t.noEngines');
   });
 
   it('Maschine auf-/zuklappen wird je Betrachter gemerkt', async () => {

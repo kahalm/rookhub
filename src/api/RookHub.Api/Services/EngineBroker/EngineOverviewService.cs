@@ -256,7 +256,7 @@ public sealed class EngineOverviewService(
                 new EngineOverviewThroughputDto(ToWindow(Sum(own, now.AddHours(-1))), ToWindow(Sum(own, now.AddDays(-1))),
                     ToWindow(Sum(own, now.AddDays(-7)))),
                 counters is null ? null : Counters(counters),
-                EngineOverviewSchedules.MachineKey(ownerId, source, reg?.ApiTokenId, reg?.Name),
+                EngineOverviewSchedules.MachineKey(ownerId, source, reg?.Name), // endgültig unten (MachineKeys)
                 schedule is null ? null : EngineOverviewSchedules.ToDto(schedule, now),
                 null,
                 SplitMany(own, Reduced),
@@ -282,6 +282,16 @@ public sealed class EngineOverviewService(
                         e.Schedule is not null, usableAll, usableBatch, w.All, w.NonBatch),
                 };
             }
+        }
+
+        // Maschinen-Schlüssel erst mit ALLEN Engines: ob ein Stamm nach Token getrennt wird, hängt an den übrigen.
+        var machineKeys = EngineOverviewSchedules.MachineKeys(
+            engines.Select(e => (e.OwnerUserId, e.Source, e.ApiTokenId, e.Name)).ToList());
+        var splitKeys = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < engines.Count; i++)
+        {
+            engines[i] = engines[i] with { MachineKey = machineKeys[i].Key };
+            if (machineKeys[i].Split) splitKeys.Add(machineKeys[i].Key);
         }
 
         engines = engines
@@ -323,12 +333,15 @@ public sealed class EngineOverviewService(
                 _ => "—",
             };
             var tokenId = list.Select(e => e.ApiTokenId).FirstOrDefault(t => t is not null);
+            var tokenName = tokenId is { } tid && tokenById.TryGetValue(tid, out var tok) ? tok.Name : null;
+            // Zwei bekannte Tokens unter einem Stamm: der Kopf nennt den Token, sonst hießen beide gleich.
+            if (splitKeys.Contains(g.Key) && tokenId is { } splitId) name = $"{name} · {tokenName ?? $"#{splitId}"}";
             var own = list.SelectMany(e => bucketsOf.GetValueOrDefault(e.Id) ?? []).ToList();
             var day = Sum(own, now.AddDays(-1));
             var reported = list.Select(e => scheduleOf.GetValueOrDefault(e.Id)).OfType<EngineClientSchedule>().ToList();
             var registered = list.Count(e => e.Registered);
             return new EngineOverviewMachineDto(g.Key, name, first.OwnerUserId, first.OwnerName, first.Source, tokenId,
-                tokenId is { } tid && tokenById.TryGetValue(tid, out var tok) ? tok.Name : null,
+                tokenName,
                 list.Select(e => e.Id).ToList(),
                 list.Count(e => e.Online == true), list.Count, list.Count(e => e.State == "working"),
                 list.Sum(e => e.MaxThreads ?? 0), day.Done,

@@ -32,6 +32,8 @@ public sealed class EngineSelectorDirectory
     private volatile bool _stale;
     private readonly ConcurrentDictionary<string, DateTime> _lastSeen = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, DateTime> _unflushed = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, EngineTokenSighting> _tokenNoted = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, EngineTokenSighting> _tokenUnflushed = new(StringComparer.Ordinal);
 
     public EngineSelectorDirectory(IServiceScopeFactory scopes) : this(scopes, () => DateTime.UtcNow) { }
 
@@ -75,6 +77,38 @@ public sealed class EngineSelectorDirectory
         _unflushed[selector] = now;
     }
 
+    /// <summary>
+    /// Der Poll dieses (bekannten) Selectors trug den Engine-Token <paramref name="tokenId"/> von Konto
+    /// <paramref name="userId"/> — der offizielle Provider schickt den Bearer bei JEDEM Poll mit (eine
+    /// <c>aiohttp.ClientSession(headers=auth_headers)</c> für Registrierung und Poll). Nur im Speicher: vorgemerkt wird
+    /// nur, wenn sich das Paar für diesen Selector seit dem letzten Mal geändert hat (nach einem API-Start also
+    /// einmal je Selector); <c>EngineBrokerMaintenanceService</c> schreibt es minütlich in
+    /// <c>ExternalEngineRegistrations.ApiTokenId</c>, und zwar nur, wenn die Zeile einen anderen Wert trägt.
+    /// So bekommen Registrierungen von vor 0.953.0 ihren Token ohne Provider-Neustart (0.955.2).
+    /// </summary>
+    public void NoteToken(string selector, int userId, int tokenId)
+    {
+        var sighting = new EngineTokenSighting(userId, tokenId);
+        if (_tokenNoted.TryGetValue(selector, out var known) && known == sighting) return;
+        _tokenNoted[selector] = sighting;
+        _tokenUnflushed[selector] = sighting;
+    }
+
+    /// <summary>Die seit dem letzten Abholen vorgemerkten Token-Zuordnungen (für das minütliche Nachtragen).</summary>
+    public IReadOnlyDictionary<string, EngineTokenSighting> DrainTokens()
+    {
+        var result = new Dictionary<string, EngineTokenSighting>(StringComparer.Ordinal);
+        foreach (var key in _tokenUnflushed.Keys)
+            if (_tokenUnflushed.TryRemove(key, out var t)) result[key] = t;
+        return result;
+    }
+
+    /// <summary>Schreiben gescheitert: die Zuordnungen wieder vormerken — eine inzwischen neuere bleibt.</summary>
+    public void RestoreTokens(IReadOnlyDictionary<string, EngineTokenSighting> failed)
+    {
+        foreach (var (selector, sighting) in failed) _tokenUnflushed.TryAdd(selector, sighting);
+    }
+
     public DateTime? LastSeen(string selector) =>
         _lastSeen.TryGetValue(selector, out var t) ? t : null;
 
@@ -105,6 +139,8 @@ public sealed class EngineSelectorDirectory
             // Gesehen-Stempel verwaister Selectors nicht ewig mitschleppen.
             foreach (var key in _lastSeen.Keys)
                 if (!set.Contains(key)) _lastSeen.TryRemove(key, out _);
+            foreach (var key in _tokenNoted.Keys)
+                if (!set.Contains(key)) _tokenNoted.TryRemove(key, out _);
             return set;
         }
         finally
@@ -113,3 +149,6 @@ public sealed class EngineSelectorDirectory
         }
     }
 }
+
+/// <summary>Ein Poll mit Engine-Token: Konto und Token-Id aus dem PAT-Handler.</summary>
+public readonly record struct EngineTokenSighting(int UserId, int TokenId);

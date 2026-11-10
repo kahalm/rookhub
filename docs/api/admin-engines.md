@@ -106,14 +106,33 @@ steckt in derselben Antwort (`GET /api/admin/engines/overview`, 10-s-Cache):
 - **Token ↔ Registrierung** war bisher NICHT verknüpft. Schlankste Lösung: `ExternalEngineRegistrations.ApiTokenId`
   (Migration `EngineRegistrationApiTokenId`, nullable, bewusst ohne Fremdschlüssel — ein gelöschter Token soll die
   Registrierung nicht anfassen). Gesetzt beim An-/Ummelden des Providers (`POST`/`PUT /api/external-engine`) aus dem
-  Claim `api_token_id` des PAT-Handlers; ohne Claim bleibt der Wert stehen. Kein Schreiben je Poll. Registrierungen von
-  vor 0.953.0 tragen `null`, bis der Provider sich neu meldet (Neustart).
+  Claim `api_token_id` des PAT-Handlers; ohne Claim bleibt der Wert stehen.
+- **Nachtragen beim Poll (0.955.2)**: Prod 10.11.: nur die neun Gross-Engines, die nach dem Deploy nach Zeitplan neu
+  starteten, trugen den Token; alle anderen (seit vorher angemeldet) `null`. Der offizielle Provider (`example-provider.py`
+  d0eeb242, Docker wie Windows) benutzt EINE `aiohttp.ClientSession(headers={"Authorization": "Bearer …"})` für
+  Registrierung UND Long-Poll — jeder `POST /api/external-engine/work` trägt also den Engine-Token, und der anonyme
+  Endpunkt läuft trotzdem durch den PAT-Handler (daher auch der laufend frische „letzte Zugriff“). Die Engine ist am
+  `providerSecret` erkennbar (Selector). `Acquire` merkt sich deshalb nach `IsKnownAsync` das Paar (Konto, Token-Id) je
+  Selector in `EngineSelectorDirectory.NoteToken` — nur im Speicher, vorgemerkt nur bei Änderung (nach einem API-Start
+  einmal je Selector). `EngineBrokerMaintenanceService.FlushLastSeenAsync` schreibt es im minütlichen Lauf mit
+  `LastSeenAt` (dieselbe Abfrage, ein `SaveChanges`), nur wenn die Zeile einen anderen Wert trägt UND dem Konto des Tokens
+  gehört; Log `EngineBroker: Engine-Token zugeordnet engine=… token=… (vorher …)`. Scheitert das Schreiben, gehen die
+  Vormerkungen beim nächsten Lauf mit. Protokoll, Antwortzeiten, `[DisableRateLimiting]` und Scope-Zaun unverändert. Die
+  Zeitplan-Meldung (`PUT …/schedule`, mit Token und Engine-Namen) kommt nur beim Start und alle 6 h — taugt nicht.
+- **Token-Tabelle**: ohne zugeordnete Engine, aber in den letzten 30 Minuten benutzt (`TOKEN_RECENT_MS`, gemessen am
+  `generatedAt`) → „noch nicht zugeordnet — erscheint, sobald der Provider wieder Arbeit abholt“; länger unbenutzt → wie
+  bisher „keine zugeordnet“.
 - **„Letzter Zugriff“** = `UserApiTokens.LastUsedAt`, gedrosselt auf `ApiTokenService.LastUsedThrottle` (5 min) — auf 5
   Minuten genau (steht in der Hilfe). Ein pollender Provider hält ihn also aktuell.
-- **Maschine** = gleicher Besitzer + gleicher Engine-Token + gleicher Namensstamm (`EngineOverviewSchedules.Stem`:
-  „RookHub Gross Hintergrund 12“ → „RookHub Gross“; Nummer nur nach Leerzeichen/`#`, „Lc0“ bleibt). Lichess-Engines je
-  Konto eine Gruppe. Kopf: online x/y, rechnet, Threads, 24 h fertig, Auslastung (Rechensekunden 24 h ÷ registrierte
-  Engines × 86 400), Ø kN/s normal/Schonzeit, Zeitplan.
+- **Maschine** = gleicher Besitzer + gleicher Namensstamm (`EngineOverviewSchedules.Stem`: „RookHub Gross Hintergrund 12“
+  → „RookHub Gross“; Nummer nur nach Leerzeichen/`#`, „Lc0“ bleibt). Der Token trennt NICHT, solange unter einem Stamm
+  höchstens EIN bekannter Token vorkommt — eine Engine mit `ApiTokenId = null` gehört dazu (0.955.2; vorher stand der
+  Token im Schlüssel und „RookHub Gross“ zerfiel in „9 mit Token“ und „4 ohne“). Erst zwei VERSCHIEDENE bekannte Tokens
+  unter einem Stamm ergeben je Token eine Maschine (`…|t{id}`, Name „Stamm · Token-Name“) plus eine für die noch
+  unbekannten (`…|t-`) — `EngineOverviewSchedules.MachineKeys` über alle Engines. Maschinen-`apiTokenId`/`tokenName` =
+  der bekannte Token, `null` = „Token noch nicht zugeordnet“. Lichess-Engines je Konto eine Gruppe. Kopf: online x/y,
+  rechnet, Threads, fertig in 24 h, Auslastung 24 h (Rechensekunden 24 h ÷ registrierte Engines × 86 400), Ø Tempo normal,
+  Ø Tempo Schonzeit, Token, Zeitplan.
 - **Zeitplan**: jüngste Meldung der Maschine gibt Regel/Zone vor; „jetzt offen x von y“ über `EngineAvailability.IsOpen`
   je Engine; nächstes Umschalten = erste Minute binnen 7 Tagen mit anderem Prozentsatz (`EngineScheduleRules.PercentAt`,
   höchstens 10 080 Schritte). Ohne Meldung: „kein Zeitplan — es gelten die RookHub-Sperrzeiten für Stapel-Aufträge“,
@@ -183,6 +202,7 @@ die Laufzeit der Läufe mit Knotenangabe. Live-Analysen im Analysebrett zählen 
 
 **Tests:** Unit `tests/RookHub.Api.Tests/EngineBroker/EngineOverviewTests.cs` (InMemory), Umschalten
 `tests/RookHub.Api.Tests/EngineBroker/AdminEngineBackgroundTests.cs`, Deckel `BackgroundListCapTests.cs`, Übersichten
-`EngineOverviewInsightsTests.cs`, SQL-Übersetzung gegen echtes
+`EngineOverviewInsightsTests.cs` (u. a. Maschinen-Gruppierung mit gemischt bekanntem/unbekanntem Token), Nachtragen des
+Tokens `EngineBrokerMaintenanceServiceTests.cs`, Poll mit Token über echten Kestrel `EngineBrokerTests.Poll_WithEngineToken_…`, SQL-Übersetzung gegen echtes
 MariaDB `tests/RookHub.Api.IntegrationTests/EngineOverviewSqlTests.cs` (Übersicht mit Daten in allen Tabellen, leerer
 Stand, Schreiben/Addieren/Aufräumen der Körbe, Umschalten samt Merkliste, 64 Kennungen in der Spalte, Übersichten; `ROOKHUB_TEST_MYSQL` auf einen Wegwerf-Container).

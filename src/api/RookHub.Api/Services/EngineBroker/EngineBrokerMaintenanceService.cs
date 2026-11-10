@@ -90,18 +90,41 @@ public sealed class EngineBrokerMaintenanceService(
         await throughput.FlushAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), DateTime.UtcNow, ct);
     }
 
-    /// <summary>Schreibt die seit dem letzten Lauf gesehenen Selectors in <c>LastSeenAt</c> (öffentlich für Tests).</summary>
+    /// <summary>Schreibt die seit dem letzten Lauf gesehenen Selectors in <c>LastSeenAt</c> und die beim Poll gesehenen
+    /// Engine-Tokens in <c>ApiTokenId</c> (nur wenn die Zeile einen ANDEREN Wert trägt und dem Konto des Tokens gehört) —
+    /// dieselbe Abfrage, ein <c>SaveChanges</c> (öffentlich für Tests). Scheitert das Schreiben, gehen die Tokens beim
+    /// nächsten Mal mit.</summary>
     public async Task FlushLastSeenAsync(CancellationToken ct)
     {
         var seen = directory.DrainSeen();
-        if (seen.Count == 0) return;
-        using var scope = scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var selectors = seen.Keys.ToList();
-        var rows = await db.ExternalEngineRegistrations.Where(r => selectors.Contains(r.ProviderSelector)).ToListAsync(ct);
-        foreach (var r in rows)
-            if (seen.TryGetValue(r.ProviderSelector, out var t) && (r.LastSeenAt is null || r.LastSeenAt < t))
-                r.LastSeenAt = t;
-        await db.SaveChangesAsync(ct);
+        var tokens = directory.DrainTokens();
+        if (seen.Count == 0 && tokens.Count == 0) return;
+        try
+        {
+            using var scope = scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var selectors = seen.Keys.Union(tokens.Keys, StringComparer.Ordinal).ToList();
+            var rows = await db.ExternalEngineRegistrations.Where(r => selectors.Contains(r.ProviderSelector)).ToListAsync(ct);
+            var assigned = new List<(string EngineId, int? From, int To)>();
+            foreach (var r in rows)
+            {
+                if (seen.TryGetValue(r.ProviderSelector, out var t) && (r.LastSeenAt is null || r.LastSeenAt < t))
+                    r.LastSeenAt = t;
+                if (tokens.TryGetValue(r.ProviderSelector, out var token) && token.UserId == r.UserId && r.ApiTokenId != token.TokenId)
+                {
+                    assigned.Add((r.Id, r.ApiTokenId, token.TokenId));
+                    r.ApiTokenId = token.TokenId;
+                }
+            }
+            await db.SaveChangesAsync(ct);
+            foreach (var (engineId, from, to) in assigned)
+                logger.LogInformation("EngineBroker: Engine-Token zugeordnet engine={EngineId} token={TokenId} (vorher {Previous})",
+                    engineId, to, from?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "keiner");
+        }
+        catch
+        {
+            directory.RestoreTokens(tokens);
+            throw;
+        }
     }
 }

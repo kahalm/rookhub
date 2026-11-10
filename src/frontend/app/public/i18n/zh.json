@@ -3029,12 +3029,19 @@
         "scheduleNext": "自 {{when}}：{{percent}} %",
         "reportedAt": "上报于 {{when}}",
         "noSchedule": "未上报计划——批量任务适用 RookHub 静默时段。",
-        "noScheduleLichess": "Lichess 引擎不上报计划——批量任务适用 RookHub 静默时段。"
+        "noScheduleLichess": "Lichess 引擎不上报计划——批量任务适用 RookHub 静默时段。",
+        "statsLabel": "机器指标",
+        "doneDay": "24 小时完成：{{count}}",
+        "busyDay": "24 小时占用率：{{percent}} %",
+        "speedNormal": "Ø 速度（正常）：{{value}}",
+        "speedReduced": "Ø 速度（节能）：{{value}}",
+        "statsHelp": "24 小时完成 = 最近 24 小时内完成的任务数。占用率 = 最近 24 小时的计算时间 ÷（已注册引擎 × 24 小时）— 2 % 表示引擎几乎没有计算。Ø 速度 = 最近 7 天的平均 kN/s，分为正常时间和节能时间（计划低于 100 %，无计划时为 RookHub 静默时段）；“–” = 该部分没有计算。",
+        "tokenPending": "令牌尚未关联"
       },
       "speedSplit": "Ø 正常 {{normal}} · 节能 {{reduced}}",
-      "machinesHelp": "引擎按机器分组（同一所有者、同一引擎令牌、同一名称词干）。最近 7 天的 Ø kN/s 分为正常和节能：每个 10 分钟桶按今天的规则归类——计划低于 100 % 或无计划时的 RookHub 静默时段。速度 = 节点数 ÷ 引擎报告的搜索时间。",
+      "machinesHelp": "引擎按机器分组：同一所有者、同一名称词干（“RookHub Gross Hintergrund 3”属于“RookHub Gross”）。尚未关联的令牌不会拆分机器；只有同一名称下两个不同的引擎令牌才会成为两台机器（此时名称会注明令牌）。速度旁的 ? 解释标题中的指标。速度 = 引擎报告的节点数 ÷ 搜索时间；每个 10 分钟区间按今天的规则归为正常或节能。",
       "tokensTitle": "引擎令牌",
-      "tokensHelp": "所有账户中范围为“engine”的 API 令牌——从不显示令牌本身，只显示与个人资料相同的前缀。最后访问精确到 5 分钟。引擎关联到其最后一次注册所用的令牌（自 0.953.0 起；较早的在提供方下次重启后显示）。",
+      "tokensHelp": "所有账户中范围为“engine”的全部 API 令牌 — 从不显示令牌本身，只显示与个人资料中相同的前缀。最后访问精确到 5 分钟。引擎关联到其提供方注册和领取任务所用的令牌；RookHub 在领取任务时记录该关联（约一分钟内，无需重启）。“尚未关联” = 令牌在最近 30 分钟内被使用但关联尚未记录；“无关联” = 较长时间未使用。",
       "tokensEmpty": "没有引擎令牌。",
       "t": {
         "name": "名称",
@@ -3046,7 +3053,8 @@
         "never": "从未",
         "expired": "已过期",
         "engineCount": "{{count}} 个引擎（{{online}} 个在线）",
-        "noEngines": "未关联"
+        "noEngines": "未关联",
+        "pendingLink": "尚未关联 — 提供方下次领取任务时即会显示（约一分钟内）"
       },
       "idleBecause": "空闲：{{reason}}",
       "idleReason": {

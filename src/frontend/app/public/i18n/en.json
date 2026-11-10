@@ -3088,12 +3088,19 @@
         "scheduleNext": "from {{when}}: {{percent}}%",
         "reportedAt": "reported {{when}}",
         "noSchedule": "No schedule reported — RookHub quiet hours apply to batch jobs.",
-        "noScheduleLichess": "Lichess engines report no schedule — RookHub quiet hours apply to batch jobs."
+        "noScheduleLichess": "Lichess engines report no schedule — RookHub quiet hours apply to batch jobs.",
+        "statsLabel": "Machine figures",
+        "doneDay": "done in 24 h: {{count}}",
+        "busyDay": "busy (24 h): {{percent}}%",
+        "speedNormal": "Ø speed normal: {{value}}",
+        "speedReduced": "Ø speed reduced: {{value}}",
+        "statsHelp": "Done in 24 h = jobs finished in the last 24 hours. Busy = computing time of the last 24 h ÷ (registered engines × 24 h) — 2% means the engines barely computed. Ø speed = mean kN/s of the last 7 days, split into normal time and reduced time (schedule below 100% or, without a schedule, RookHub quiet hours); “–” = nothing computed in that part.",
+        "tokenPending": "token not assigned yet"
       },
       "speedSplit": "Ø normal {{normal}} · reduced {{reduced}}",
-      "machinesHelp": "Engines grouped by machine (same owner, same engine token, same name stem). Ø kN/s of the last 7 days split into normal and reduced time: each 10-minute bucket is classified by TODAY’s rule — schedule below 100% or, without a schedule, RookHub quiet hours. The speed is nodes ÷ search time reported by the engine.",
+      "machinesHelp": "Engines grouped by machine: same owner and same name stem (“RookHub Gross Background 3” belongs to “RookHub Gross”). A token not assigned yet does not split a machine; only two different engine tokens under the same name make two machines (the name then shows the token). The ? next to the speed explains the header figures. The speed is nodes ÷ search time reported by the engine; each 10-minute bucket is classified as normal or reduced by TODAY’s rule.",
       "tokensTitle": "Engine tokens",
-      "tokensHelp": "All API tokens with scope “engine” of all accounts — never the token itself, only its prefix as in the profile. Last access is accurate to 5 minutes. Engines are linked to the token they last registered with (from 0.953.0 on; older registrations show up after the provider restarts).",
+      "tokensHelp": "All API tokens with scope “engine” of all accounts — never the token itself, only its prefix as in the profile. Last access is accurate to 5 minutes. An engine is linked to the token its provider registers and fetches work with; RookHub records the link when work is fetched (within about a minute, no restart needed). “not assigned yet” = the token was used in the last 30 minutes but the link is still pending; “none linked” = unused for longer.",
       "tokensEmpty": "No engine tokens.",
       "t": {
         "name": "Name",
@@ -3105,7 +3112,8 @@
         "never": "never",
         "expired": "expired",
         "engineCount": "{{count}} engines ({{online}} online)",
-        "noEngines": "none linked"
+        "noEngines": "none linked",
+        "pendingLink": "not assigned yet — appears as soon as the provider fetches work again (within about a minute)"
       },
       "idleBecause": "Idle: {{reason}}",
       "idleReason": {
