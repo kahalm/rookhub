@@ -11,7 +11,9 @@
       <!-- 0.738.0, Wunsch 2026-10-10: „gleich mehrere Fotos hochladen, um die Erkennung zu verbessern" — ohne capture,
            sonst öffnet das Handy die Kamera (ein Foto) statt der Galerie -->
       @if (store().photosOfLastPage() < store().maxPhotosPerPage) {
-        <label class="field multi-pick small">Mehrere Fotos derselben Seite auf einmal (Galerie, höchstens {{ store().maxPhotosPerPage }})
+        <!-- 2026-11-10 (Formular 113): hieß „Mehrere Fotos derselben Seite" und machte jedes Foto zu Seite 1 — zwei Blätter aus
+             der Galerie wurden so EINE Seite. Jetzt wird jedes Foto erst die nächste Seite, je Foto umstellbar. -->
+        <label class="field multi-pick small">Mehrere Fotos auf einmal (Galerie) — jedes wird die nächste Seite, darunter je Foto umstellbar
           <input #multiInput class="multi-photo" type="file" lhFilePick accept="image/*" multiple (change)="store().pickMany($event)" />
         </label>
       }
@@ -26,6 +28,17 @@
             <label class="field">{{ store().extraLabels()[i] }}
               <input class="extra-photo" type="file" lhFilePick accept="image/*" capture="environment" (change)="store().pickExtra(i, $event)" />
             </label>
+          }
+          <!-- 2026-11-10: neue Seite oder dasselbe Blatt noch einmal — sichtbar je Foto statt nur über den Knopf beim Hinzufügen -->
+          <span class="seg page-kind" role="group" [attr.aria-label]="'Foto ' + (i + 2) + ': Seite'">
+            <button type="button" [attr.aria-pressed]="!store().extraSame()[i]" [disabled]="store().extraSame()[i] && !store().canToggle()[i]"
+                    (click)="store().setSame(i, false)">Neue Seite</button>
+            <button type="button" [attr.aria-pressed]="store().extraSame()[i]" [disabled]="!store().extraSame()[i] && !store().canToggle()[i]"
+                    (click)="store().setSame(i, true)">Dieselbe Seite</button>
+          </span>
+          @if (p && (i === 0 ? store().photo() : store().extraPhotos()[i - 1])) {
+            <button type="button" class="btn-sec move-up" (click)="store().moveUp(i)"
+                    [attr.aria-label]="p.name + ' eine Stelle nach vorn'" title="eine Stelle nach vorn">↑</button>
           }
           <button type="button" class="btn-sec" (click)="store().removeExtra(i)" [attr.aria-label]="store().extraLabels()[i] + ' entfernen'">✕</button>
         </div>

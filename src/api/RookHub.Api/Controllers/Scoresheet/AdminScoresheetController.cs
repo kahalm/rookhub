@@ -61,6 +61,30 @@ public class AdminScoresheetController(ScoresheetScanService scans) : BaseApiCon
             var reason => BadRequest(new { reason }),
         };
 
+    /// <summary>Aktuelle Aufteilung der Fotos auf Seiten (auch während gelesen wird); 404 unbekannt.</summary>
+    [HttpGet("{id:int}/layout")]
+    public async Task<ActionResult<ScoresheetLayoutDto>> Layout(int id, CancellationToken ct) =>
+        await scans.LayoutAsync(id, ct) is { } l ? Ok(l) : NotFound();
+
+    /// <summary>Fotos einer WARTENDEN Einlesung (pending/running) neu auf Seiten verteilen (Vorfall 2026-11-10, Formular 113):
+    /// <c>pages</c> in Seitenreihenfolge, je Seite die Fotos als <c>{ page, view }</c> der BISHERIGEN Aufteilung — das erste wird
+    /// Hauptfoto, die weiteren weitere Fotos der Seite. Jedes vorhandene Foto genau einmal. → die neue Aufteilung; 409
+    /// <c>notPending</c>, 400 <c>reason</c> ∈ emptyLayout/emptyPage/tooManyPages/tooManyViews/unknownPhoto/duplicatePhoto/
+    /// missingPhoto, 404 unbekannt.</summary>
+    [HttpPost("{id:int}/layout")]
+    public async Task<IActionResult> Rearrange(int id, [FromBody] LayoutRequest? req, CancellationToken ct)
+    {
+        var (layout, reason) = await scans.RearrangeLayoutAsync(id, req?.Pages, ct);
+        return reason switch
+        {
+            null => Ok(layout),
+            "notFound" => NotFound(),
+            "notPending" => Conflict(new { reason }),
+            _ => BadRequest(new { reason }),
+        };
+    }
+
+    public sealed record LayoutRequest(List<List<ScoresheetPhotoRef>>? Pages);
     public sealed record ExternalReadingRequest(System.Text.Json.JsonElement Transcription);
     public sealed record ExternalFailRequest(string? Reason);
 }

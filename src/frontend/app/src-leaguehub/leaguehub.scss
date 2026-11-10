@@ -535,6 +535,8 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .seg button + button { border-left: 1.5px solid var(--ink); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
 .forecast-side { margin: 14px 0 4px; }
+/* Partieformular: je weiterem Foto „Neue Seite | Dieselbe Seite" (2026-11-10); gesperrt mit fester Farbe, nicht per Deckkraft */
+.extra-page .seg.page-kind button:disabled { color: var(--muted); cursor: not-allowed; }
 
 /* ── Bereiche (Prognosen / Vereinspartien / Partien hinzufügen) ─────────────────────── */
 .tabs { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 14px; border-bottom: 1px solid var(--line); }

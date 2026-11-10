@@ -46,4 +46,28 @@ describe('ClubScoresheetPanelComponent', () => {
     store.dispose();
     flush();
   }));
+
+  it('weitere Fotos: Beschriftung „Seite N" bzw. „weiteres Foto von Seite N", Umschalter „Neue Seite | Dieselbe Seite"', fakeAsync(() => {
+    void store.loadStatus();
+    flushMicrotasks();
+    store.pickMany({ target: { files: [new File(['a'], 'a.jpg'), new File(['b'], 'b.jpg')], value: '' } } as unknown as Event);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const row = () => el.querySelector('.extra-page') as HTMLElement;
+    expect(row().textContent).toContain('Seite 2');
+    const [next, same] = Array.from(row().querySelectorAll('.page-kind button')) as HTMLButtonElement[];
+    expect(next.getAttribute('aria-pressed')).toBe('true');
+    expect(same.getAttribute('aria-pressed')).toBe('false');
+    same.click();
+    fixture.detectChanges();
+    expect(store.layout()).toEqual([1, 1]);
+    expect(row().textContent).toContain('weiteres Foto von Seite 1');
+    expect(same.getAttribute('aria-pressed')).toBe('true');
+    (row().querySelector('.move-up') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(store.photo()?.name).toBe('b.jpg');
+    expect(el.querySelector('.chosen')?.textContent).toContain('b.jpg');
+    store.dispose();
+    flush();
+  }));
 });

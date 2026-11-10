@@ -11,6 +11,9 @@ public sealed class ExternalPendingScanDto
     public int PageCount { get; set; }
     /// <summary>Weitere Fotos derselben Seiten zusammen (0.736.0); <c>GET …/{id}/photo?page=&amp;view=</c>.</summary>
     public int ViewCount { get; set; }
+    /// <summary>Je Seite (Index 0 = Seite 1) die Zahl der weiteren Fotos (2026-11-10) — so sieht der Leser die Aufteilung,
+    /// bevor er sie mit <c>POST …/{id}/layout</c> berichtigt.</summary>
+    public List<int> ViewsPerPage { get; set; } = new();
     public string NotationLanguage { get; set; } = "auto";
     public string? OwnerSide { get; set; }
     public DateTime CreatedAt { get; set; }

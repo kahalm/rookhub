@@ -54,13 +54,12 @@ export class ScoresheetUploadStore {
     return pages;
   });
   readonly photosOfLastPage = computed(() => { const l = this.layout(); return l.filter(p => p === l.at(-1)).length; });
-  readonly extraLabels = computed(() => {
-    const l = this.layout();
-    return l.slice(1).map((page, i) => {
-      const nth = l.slice(0, i + 2).filter(p => p === page).length;
-      return nth > 1 ? `Seite ${page}, Foto ${nth}` : `Seite ${page}`;
-    });
-  });
+  /** Beschriftung je weiterem Foto: „Seite N" (neue Seite) oder „weiteres Foto von Seite N" (2026-11-10, Formular 113: „Seite 1,
+   *  Foto 2" las sich nicht als „gehört NICHT zur nächsten Seite"). */
+  readonly extraLabels = computed(() =>
+    this.layout().slice(1).map((page, i) => this.extraSame()[i] ? `weiteres Foto von Seite ${page}` : `Seite ${page}`));
+  /** Je weiterem Foto: lässt sich „neue Seite" ↔ „dieselbe Seite" umschalten, ohne die Deckel zu sprengen? */
+  readonly canToggle = computed(() => this.extraSame().map((_, i) => this.fits(this.flipped(i))));
   readonly uploading = signal(false);
   readonly scanError = signal<string | null>(null);
   readonly scans = signal<ScanRef[]>([]);
@@ -158,8 +157,10 @@ export class ScoresheetUploadStore {
     this.photo.set((ev.target as HTMLInputElement).files?.[0] ?? null);
   }
 
-  /** Mehrere Fotos auf einmal (0.738.0): alle zeigen dieselbe Seite — ohne Hauptfoto wird das erste zum Hauptfoto, die
-   *  übrigen sind weitere Fotos der letzten Seite. Was über {@link maxPhotosPerPage} geht, bleibt weg (mit Hinweis). */
+  /** Mehrere Fotos auf einmal (0.738.0): ohne Hauptfoto wird das erste zum Hauptfoto. Seit 2026-11-10 (Formular 113: zwei
+   *  Blätter aus der Galerie landeten als „dieselbe Seite") wird jedes weitere Foto zunächst die NÄCHSTE Seite, solange
+   *  {@link maxPages} reicht, danach ein weiteres Foto der letzten Seite — je Foto umstellbar ({@link setSame}). Was über
+   *  {@link maxPhotosPerPage} geht, bleibt weg (mit Hinweis). */
   pickMany(ev: Event): void {
     const input = ev.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
@@ -172,11 +173,14 @@ export class ScoresheetUploadStore {
     if (!this.photo()) this.photo.set(files.shift()!);
     let skipped = 0;
     for (const f of files) {
-      if (this.photosOfLastPage() >= this.maxPhotosPerPage) { skipped++; continue; }
+      const newPage = (this.layout().at(-1) ?? 1) < this.maxPages;
+      if (!newPage && this.photosOfLastPage() >= this.maxPhotosPerPage) { skipped++; continue; }
       this.extraPhotos.set([...this.extraPhotos(), f]);
-      this.extraSame.set([...this.extraSame(), true]);
+      this.extraSame.set([...this.extraSame(), !newPage]);
     }
-    this.multiNote.set(skipped ? `${skipped} ${skipped === 1 ? 'Foto' : 'Fotos'} nicht übernommen — höchstens ${this.maxPhotosPerPage} je Seite.` : null);
+    this.multiNote.set(skipped
+      ? `${skipped} ${skipped === 1 ? 'Foto' : 'Fotos'} nicht übernommen — höchstens ${this.maxPages} Seiten mit je ${this.maxPhotosPerPage} Fotos.`
+      : null);
   }
 
   /** `same`: ein weiteres Foto der Seite davor statt einer neuen Seite (0.736.0). */
@@ -184,6 +188,42 @@ export class ScoresheetUploadStore {
     if (same ? this.photosOfLastPage() >= this.maxPhotosPerPage : (this.layout().at(-1) ?? 1) >= this.maxPages) return;
     this.extraPhotos.set([...this.extraPhotos(), null]);
     this.extraSame.set([...this.extraSame(), same]);
+  }
+
+  /** Weiteres Foto <i>i</i>: `same` = dieselbe Seite wie das Foto davor, sonst eine neue Seite. Was die Deckel sprengte
+   *  (mehr als {@link maxPages} Seiten oder {@link maxPhotosPerPage} Fotos je Seite), bleibt, wie es war. */
+  setSame(i: number, same: boolean): void {
+    if (this.extraSame()[i] === same) return;
+    const next = this.flipped(i);
+    if (this.fits(next)) this.extraSame.set(next);
+  }
+
+  /** Foto eine Stelle nach vorn: weiteres Foto <i>i</i> tauscht mit dem davor (bei 0 mit dem Hauptfoto) — die Gruppierung
+   *  (neue Seite / dieselbe Seite) bleibt an ihrer Stelle, nur die Fotos wandern. Für verdrehte Reihenfolge aus der Galerie. */
+  moveUp(i: number): void {
+    const extras = [...this.extraPhotos()];
+    const f = extras[i];
+    if (!f) return;
+    if (i === 0) {
+      const main = this.photo();
+      if (!main) return;
+      extras[0] = main;
+      this.photo.set(f);
+    } else {
+      if (!extras[i - 1]) return;
+      [extras[i - 1], extras[i]] = [f, extras[i - 1]];
+    }
+    this.extraPhotos.set(extras);
+  }
+
+  private flipped(i: number): boolean[] {
+    return this.extraSame().map((v, j) => j === i ? !v : v);
+  }
+
+  private fits(same: boolean[]): boolean {
+    const pages = [1];
+    for (const x of same) pages.push(x ? pages.at(-1)! : pages.at(-1)! + 1);
+    return pages.at(-1)! <= this.maxPages && pages.every(p => pages.filter(q => q === p).length <= this.maxPhotosPerPage);
   }
 
   pickExtra(i: number, ev: Event): void {

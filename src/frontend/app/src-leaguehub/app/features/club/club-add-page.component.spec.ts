@@ -364,8 +364,8 @@ describe('ClubAddPageComponent', () => {
     flush();
   }));
 
-  // 0.738.0, Wunsch 2026-10-10: „gleich mehrere Fotos hochladen" — alle als Fotos von Seite 1, höchstens vier
-  it('mehrere Fotos auf einmal: das erste wird Seite 1, die übrigen weitere Fotos derselben Seite, mehr als vier fallen weg', fakeAsync(() => {
+  // 0.738.0, Wunsch 2026-10-10: „gleich mehrere Fotos hochladen"; seit 2026-11-10 zuerst je Foto die nächste Seite
+  it('mehrere Fotos auf einmal: das erste wird Seite 1, die nächsten Seite 2 und 3, der Rest weitere Fotos von Seite 3', fakeAsync(() => {
     query = { art: 'formular' };
     const el = create();
     flushMicrotasks();
@@ -381,14 +381,15 @@ describe('ClubAddPageComponent', () => {
     input.dispatchEvent(new Event('change'));
     fixture.detectChanges();
     expect(c.photo()).toBe(files[0]);
-    expect(c.layout()).toEqual([1, 1, 1, 1]);
-    expect(el.textContent).toContain('1 Foto nicht übernommen');
-    expect(el.querySelector('.multi-photo')).toBeNull();                    // Seite voll
-    expect(el.querySelector('.extra-page')?.textContent).toContain('Seite 1, Foto 2: f2.jpg');
+    // 2026-11-10 (Formular 113): jedes weitere Foto erst die nächste Seite, nach Seite 3 weitere Fotos der letzten Seite
+    expect(c.layout()).toEqual([1, 2, 3, 3, 3]);
+    expect(el.textContent).not.toContain('nicht übernommen');
+    expect(el.querySelector('.extra-page')?.textContent).toContain('Seite 2: f2.jpg');
+    expect(el.querySelectorAll('.extra-page')[2]?.textContent).toContain('weiteres Foto von Seite 3: f4.jpg');
     api.upload.and.resolveTo({ ref: '7', scan: SCAN('pending') });
     void c.upload();
     flushMicrotasks();
-    expect(api.upload).toHaveBeenCalledWith(files.slice(0, 4), 'auto', 'auto', [1, 1, 1, 1]);
+    expect(api.upload).toHaveBeenCalledWith(files, 'auto', 'auto', [1, 2, 3, 3, 3]);
     flush();
   }));
 
@@ -405,7 +406,7 @@ describe('ClubAddPageComponent', () => {
     fixture.detectChanges();
     (el.querySelector('.add-view') as HTMLButtonElement).click();
     fixture.detectChanges();
-    expect(el.querySelector('.extra-page')?.textContent).toContain('Seite 1, Foto 2');
+    expect(el.querySelector('.extra-page')?.textContent).toContain('weiteres Foto von Seite 1');
     c.extraPhotos.set([p2]);
     fixture.detectChanges();
     expect(el.querySelector('.add-page')?.textContent).toContain('Seite 2');   // eine neue Seite geht weiter

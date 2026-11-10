@@ -1117,6 +1117,10 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   „Interessante Stellungen:“ steht unter Brett UND Zugliste, nie im Rollkasten der Zugliste (d8).
 - Reiter-Aktivmarke nur nach dem Pfad (`paths: 'exact', queryParams: 'ignored'`) — Prognosen und Vereinspartien tragen
   Query-Parameter (d8). Prozentangaben über `pct()` mit geschütztem Leerzeichen („55 %“ bricht nicht um).
+- Partieformular hochladen (Hinzufügen-Seite, Art „Partieformular“, 0.943.0): jede Zeile eines weiteren Fotos heißt „Seite N“
+  oder „weiteres Foto von Seite N“ und trägt den Umschalter `.seg.page-kind` „Neue Seite | Dieselbe Seite“ (`aria-pressed`;
+  was über 3 Seiten bzw. 4 Fotos je Seite ginge, ist gesperrt — Schrift `--muted`, nicht per Deckkraft) und „↑“ (eine Stelle
+  nach vorn). Mehrere Fotos aus der Galerie werden zunächst je Foto die nächste Seite.
 - Aufstellungen der Runde (`lh-round-lineups`): eigene Begegnung zuerst, darüber Sprungchips (eigene umrahmt), jede Begegnung
   ein `<details>` mit Kopf + Ergebnis; am Handy (≤ 640 px) fremde zugeklappt (d8-l-fold-long-aufstellungen-handy).
 
@@ -1234,6 +1238,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-10 | 0.943.0 · LeagueHub | Partieformular hochladen: je weiterem Foto Beschriftung „Seite N“ / „weiteres Foto von Seite N“, Umschalter „Neue Seite \| Dieselbe Seite“ (`.seg`) und „↑“; Galerie-Mehrfachauswahl zuerst „nächste Seite“ | Formular 113: zwei Blätter landeten als eine Seite (verkehrt herum), die Wahl war nach dem Hinzufügen nicht mehr sichtbar | Vorfall 10.11., Auftrag des Users über die betreuende Sitzung |
 | 2026-11-09 | 0.941.0 · LeagueHub | Prognose: Umschalter „Gegner \| Eigene Aufstellung“ als `.seg` über dem Prognose-Teil (unter den Paarungen, 44 px am Handy); nur angemeldet, weg auf Teilen-Links, bei spielfrei und gesperrt. In der eigenen Sicht heißt die Farblegende „Eigene Mannschaft hat …“, die Teilen-Knöpfe der Prognose fehlen | Wunsch 09.11.: eigene Prognose je Runde sehen | User |
 | 2026-11-09 | 0.938.0 · Link-Vorschau | Vorschaukarten (1200×630) für geteilte Partie, Stellung, Rekonstruktion, Repertoire-Linie, Aufgabenblatt, Puzzles, Wochenpost und LeagueHub-Begegnung/Ligapartie: Diagramm links, rechts Kicker/Titel/Untertitel in Marken-Farben (RookHub 3.1 dunkel, LeagueHub 8.4 mit rotem Balken), Wortmarke unten rechts, Schrift DejaVu Sans; Puzzles aus Löser-Sicht ohne Lösung | Wunsch 09.11.: „für alles, was öfters geteilt wird, passende Info-Vorschaubilder“ | `docs/api/link-vorschau.md`, `OgImageService.Cards.cs` |
 | 2026-11-09 | 0.929.0 · Zusammenfassung | „Empfohlene Literatur“ als umrandete Zeilen (Titel, Autor, Begründung, Textknopf „Nicht mehr vorschlagen“ → Zeile bleibt mit „Rückgängig“); wartende Anforderung in der Kopfzeile nur kurz, Fortschritt hinter (i)-Tooltip (auch per Antippen) | Wunsch 09.11.: Literatur je Fehler; langer Satz quetschte die Spielernamen | User |

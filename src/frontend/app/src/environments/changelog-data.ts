@@ -10,6 +10,20 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.943.0',
+    date: '2026-11-10',
+    changes: [
+      {
+        en: 'LeagueHub scoresheet upload: several photos picked from the gallery now start as consecutive pages (page 1, 2, 3) instead of all being extra photos of page 1. Every added photo is labelled „Page N“ or „extra photo of page N“ and has a visible „New page | Same page“ switch plus „↑“ to move it one place forward.',
+        de: 'LeagueHub, Partieformular hochladen: mehrere Fotos aus der Galerie werden jetzt zuerst aufeinanderfolgende Seiten (Seite 1, 2, 3) statt lauter weitere Fotos von Seite 1. Jedes weitere Foto heißt „Seite N“ oder „weiteres Foto von Seite N“ und hat sichtbar den Umschalter „Neue Seite | Dieselbe Seite“ sowie „↑“, um es eine Stelle nach vorn zu schieben.',
+      },
+      {
+        en: 'Scoresheet reader (admin): new endpoint POST /api/admin/scoresheets/{id}/layout re-arranges the photos of a waiting reading into pages and extra photos (every photo used exactly once), so move boxes land on the right main photo; GET …/{id}/layout and the pending list show photos per page.',
+        de: 'Formular-Leser (Admin): neuer Endpunkt POST /api/admin/scoresheets/{id}/layout verteilt die Fotos einer wartenden Einlesung neu auf Seiten und weitere Fotos (jedes Foto genau einmal), damit die Zugkästen auf dem richtigen Hauptfoto liegen; GET …/{id}/layout und die Warteliste zeigen die Fotos je Seite.',
+      },
+    ],
+  },
   { version: "0.942.1", date: "2026-11-10", changes: [
     { en: "Tournament directory: an external calendar (chess.cz, chess.sk and the others) that still lists a tournament the chess-results search had retired now brings the existing entry back instead of creating a second one with the same chess-results number — that duplicate broke the whole nightly chess.cz run since 9 November.",
       de: "Turnierverzeichnis: Führt ein externer Kalender (chess.cz, chess.sk und die übrigen) ein Turnier weiter, das die chess-results-Suche zurückgezogen hatte, lebt der bestehende Eintrag wieder auf, statt dass ein zweiter mit derselben chess-results-Nummer entsteht — dieses Duplikat ließ seit 9. November jede Nacht den ganzen chess.cz-Lauf scheitern." },

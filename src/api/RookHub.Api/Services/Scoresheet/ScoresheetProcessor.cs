@@ -52,8 +52,9 @@ internal sealed class ScoresheetProcessor
     }
 
     /// <summary>Wartende Einlesungen für den Leser von außen (<see cref="External"/>), älteste zuerst — ohne Fotos.</summary>
-    public async Task<List<ExternalPendingScanDto>> PendingForExternalAsync(CancellationToken ct = default) =>
-        await _db.ScoresheetScans.AsNoTracking()
+    public async Task<List<ExternalPendingScanDto>> PendingForExternalAsync(CancellationToken ct = default)
+    {
+        var list = await _db.ScoresheetScans.AsNoTracking()
             .Where(s => s.Status == ScoresheetScanStatus.Pending && s.FileName != DiscardedMark)   // „Photo.Length" übersetzt MariaDB nicht
             .OrderBy(s => s.CreatedAt)
             .Select(s => new ExternalPendingScanDto
@@ -62,6 +63,16 @@ internal sealed class ScoresheetProcessor
                 PageCount = s.PageCount, NotationLanguage = s.NotationLanguage, OwnerSide = s.OwnerSide, CreatedAt = s.CreatedAt,
                 ViewCount = s.Views.Count,
             }).ToListAsync(ct);
+        if (list.Count == 0) return list;
+        var ids = list.Select(x => x.Id).ToList();
+        var counts = await _db.ScoresheetScanViews.AsNoTracking().Where(v => ids.Contains(v.ScoresheetScanId))
+            .GroupBy(v => new { v.ScoresheetScanId, v.Page })
+            .Select(g => new { g.Key.ScoresheetScanId, g.Key.Page, Count = g.Count() }).ToListAsync(ct);
+        foreach (var x in list)
+            x.ViewsPerPage = Enumerable.Range(1, Math.Max(1, x.PageCount))
+                .Select(p => counts.FirstOrDefault(c => c.ScoresheetScanId == x.Id && c.Page == p)?.Count ?? 0).ToList();
+        return list;
+    }
 
     /// <summary>Foto einer Seite (ab 1) einer Einlesung — für den Leser von außen; <paramref name="view"/> ab 1 = ein weiteres
     /// Foto derselben Seite (0.736.0).</summary>

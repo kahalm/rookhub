@@ -33,7 +33,7 @@ describe('ScoresheetUploadStore', () => {
     s.addExtra(true);
     s.addExtra();
     expect(s.layout()).toEqual([1, 1, 2]);
-    expect(s.extraLabels()).toEqual(['Seite 1, Foto 2', 'Seite 2']);
+    expect(s.extraLabels()).toEqual(['weiteres Foto von Seite 1', 'Seite 2']);
     s.addExtra();
     s.addExtra();                                                    // höchstens drei Seiten
     expect(s.layout()).toEqual([1, 1, 2, 3]);
@@ -41,15 +41,61 @@ describe('ScoresheetUploadStore', () => {
     expect(s.layout()).toEqual([1, 2, 3]);
   });
 
-  it('mehrere Fotos auf einmal: das erste wird Hauptfoto, höchstens vier je Seite, Rest mit Hinweis', () => {
+  it('mehrere Fotos auf einmal: das erste wird Hauptfoto, jedes weitere die nächste Seite, dann weitere Fotos, Rest mit Hinweis', () => {
+    // Formular 113 (2026-11-10): zwei Blätter aus der Galerie wurden EINE Seite — jetzt zuerst „nächste Seite".
     const s = new ScoresheetUploadStore(deps);
-    const files = [1, 2, 3, 4, 5, 6].map(n => file(String(n)));
+    const files = [1, 2, 3, 4, 5, 6, 7].map(n => file(String(n)));
     const input = { files, value: 'x' };
     s.pickMany({ target: input } as unknown as Event);
     expect(input.value).toBe('');
     expect(s.photo()).toBe(files[0]);
-    expect(s.layout()).toEqual([1, 1, 1, 1]);
-    expect(s.multiNote()).toBe('2 Fotos nicht übernommen — höchstens 4 je Seite.');
+    expect(s.layout()).toEqual([1, 2, 3, 3, 3, 3]);
+    expect(s.extraLabels()).toEqual(['Seite 2', 'Seite 3', 'weiteres Foto von Seite 3', 'weiteres Foto von Seite 3', 'weiteres Foto von Seite 3']);
+    expect(s.multiNote()).toBe('1 Foto nicht übernommen — höchstens 3 Seiten mit je 4 Fotos.');
+  });
+
+  it('zwei Fotos aus der Galerie: Seite 1 + Seite 2, auf Wunsch dieselbe Seite und zurück', () => {
+    const s = new ScoresheetUploadStore(deps);
+    s.pickMany({ target: { files: [file('a'), file('b')], value: '' } } as unknown as Event);
+    expect(s.layout()).toEqual([1, 2]);
+    expect(s.canToggle()).toEqual([true]);
+    s.setSame(0, true);
+    expect(s.layout()).toEqual([1, 1]);
+    expect(s.extraLabels()).toEqual(['weiteres Foto von Seite 1']);
+    s.setSame(0, false);
+    expect(s.layout()).toEqual([1, 2]);
+  });
+
+  it('Umschalten hält die Deckel: keine vierte Seite, kein fünftes Foto je Seite', () => {
+    const s = new ScoresheetUploadStore(deps);
+    s.pickMany({ target: { files: [1, 2, 3, 4].map(n => file(String(n))), value: '' } } as unknown as Event);
+    expect(s.layout()).toEqual([1, 2, 3, 3]);
+    expect(s.canToggle()).toEqual([true, true, false]);            // das vierte Foto kann keine vierte Seite werden
+    s.setSame(2, false);
+    expect(s.layout()).toEqual([1, 2, 3, 3]);
+    const full = new ScoresheetUploadStore(deps);
+    full.pickMany({ target: { files: [1, 2].map(n => file(String(n))), value: '' } } as unknown as Event);
+    full.setSame(0, true);
+    for (let i = 0; i < 3; i++) full.addExtra(true);              // Seite 1 mit 4 Fotos …
+    full.addExtra();                                                // … dann Seite 2
+    expect(full.layout()).toEqual([1, 1, 1, 1, 2]);
+    full.setSame(3, true);                                          // ein fünftes Foto für Seite 1 geht nicht
+    expect(full.layout()).toEqual([1, 1, 1, 1, 2]);
+  });
+
+  it('eine Stelle nach vorn: tauscht mit dem Foto davor bzw. dem Hauptfoto, die Seiten bleiben', () => {
+    const s = new ScoresheetUploadStore(deps);
+    const [a, b, c] = [file('a'), file('b'), file('c')];
+    s.pickMany({ target: { files: [a, b, c], value: '' } } as unknown as Event);
+    s.moveUp(0);
+    expect(s.photo()).toBe(b);
+    expect(s.extraPhotos()).toEqual([a, c]);
+    s.moveUp(1);
+    expect(s.extraPhotos()).toEqual([c, a]);
+    expect(s.layout()).toEqual([1, 2, 3]);
+    s.addExtra(true);                                               // leere Zeile: nichts zu tauschen
+    s.moveUp(2);
+    expect(s.extraPhotos()).toEqual([c, a, null]);
   });
 
   it('Hochladen: schickt Fotos mit Seiten, merkt den Schlüssel ohne Konto, leert die Auswahl und das Feld', fakeAsync(() => {

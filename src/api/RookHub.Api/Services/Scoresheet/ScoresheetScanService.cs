@@ -35,6 +35,7 @@ public class ScoresheetScanService
     private readonly LeagueScoresheetScans _league;
     private readonly ScoresheetCorrection _correction;
     private readonly ScoresheetIntake _intake;
+    private readonly ScoresheetLayout _layout;
     private readonly AppDbContext _db;
 
     /// <summary>Größter angenommener Upload (je Foto).</summary>
@@ -115,6 +116,7 @@ public class ScoresheetScanService
         _league = new LeagueScoresheetScans(db, logger);
         _correction = new ScoresheetCorrection(db);
         _intake = new ScoresheetIntake(db, vision, logger, _quota, _processor, _league, External);
+        _layout = new ScoresheetLayout(db, logger);
     }
 
     /// <summary>
@@ -220,6 +222,14 @@ public class ScoresheetScanService
     /// <summary>Die Lesung einer WARTENDEN Einlesung von außen übernehmen (<see cref="ScoresheetProcessor.ProcessReadingAsync"/>).</summary>
     public Task<(ScoresheetScanDto? Scan, string? Reason)> ProcessReadingAsync(int scanId, string transcriptionJson,
         CancellationToken ct = default) => _processor.ProcessReadingAsync(scanId, transcriptionJson, ct);
+
+    /// <summary>Aufteilung der Fotos auf Seiten (<see cref="ScoresheetLayout.GetAsync"/>).</summary>
+    public Task<ScoresheetLayoutDto?> LayoutAsync(int scanId, CancellationToken ct = default) => _layout.GetAsync(scanId, ct);
+
+    /// <summary>Fotos einer wartenden Einlesung neu auf Seiten verteilen (<see cref="ScoresheetLayout.RearrangeAsync"/>).</summary>
+    public Task<(ScoresheetLayoutDto? Layout, string? Reason)> RearrangeLayoutAsync(int scanId,
+        IReadOnlyList<IReadOnlyList<ScoresheetPhotoRef>>? pages, CancellationToken ct = default) =>
+        _layout.RearrangeAsync(scanId, pages, ct);
 
     public Task<string?> StartExternalAsync(int scanId, CancellationToken ct = default) => _processor.StartExternalAsync(scanId, ct);
 

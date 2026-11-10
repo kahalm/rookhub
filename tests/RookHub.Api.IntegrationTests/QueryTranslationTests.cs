@@ -229,6 +229,37 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     }
 
     /// <summary>
+    /// Fotos neu auf Seiten verteilen (Vorfall 2026-11-10, Formular 113): Transaktion in der Execution-Strategy, ExecuteDelete
+    /// und die Fotozahlen je Seite in der wartenden Liste — gegen MariaDB.
+    /// </summary>
+    [MySqlFact]
+    public async Task Partieformular_FotosNeuAufteilen()
+    {
+        var userId = await SeedUserAsync("layout");
+        var scan = new ScoresheetScan
+        {
+            UserId = userId, Photo = new byte[] { 1 }, ContentType = "image/jpeg", FileName = "a.jpg",
+            Status = ScoresheetScanStatus.Pending, CreatedAt = DateTime.UtcNow,
+        };
+        scan.Views.Add(new ScoresheetScanView { Page = 1, View = 1, Photo = new byte[] { 2 }, ContentType = "image/jpeg" });
+        Db.ScoresheetScans.Add(scan);
+        await Db.SaveChangesAsync();
+        Db.ChangeTracker.Clear();
+
+        var scans = Get<ScoresheetScanService>();
+        Assert.Equal(new[] { 1 }, Assert.Single(await scans.PendingForExternalAsync()).ViewsPerPage);
+        var (layout, reason) = await scans.RearrangeLayoutAsync(scan.Id, new List<List<ScoresheetPhotoRef>>
+        {
+            new() { new(1, 1) }, new() { new(1, 0) },
+        });
+        Assert.Null(reason);
+        Assert.Equal(2, layout!.PageCount);
+        Assert.Equal(new byte[] { 2 }, (await scans.PhotoForExternalAsync(scan.Id, 1))!.Value.Data);
+        Assert.Equal(new byte[] { 1 }, (await scans.PhotoForExternalAsync(scan.Id, 2))!.Value.Data);
+        Assert.Equal(new[] { 0, 0 }, Assert.Single(await scans.PendingForExternalAsync()).ViewsPerPage);
+    }
+
+    /// <summary>
     /// Mehrere Fotos derselben Seite + Zusammenführen (0.736.0). Auf Prod lief das Zusammenführen sofort in einen 500
     /// („Photo.Any() could not be translated") — InMemory hatte die Abfrage im Speicher ausgewertet. Hier laufen alle neuen
     /// Wege gegen MariaDB: zusammenführen, Fotozahlen je Seite, die wartende Liste, Fotos abrufen, verwerfen.

@@ -270,6 +270,32 @@ Teilen-Link, Admin). Jeder Löschweg der Seiten räumt auch die weiteren Fotos a
 nimmt sie seit 0.756.0 MIT (`ScoresheetScanArchive.View`, 0 = Hauptfoto, eindeutig je Einlesung/Seite/View): „Korrigieren"
 einer Vereinspartie zeigt das zweite Exemplar wieder (`ScoresheetEditStateDto.ViewCounts`, `GET …/games/{id}/sheet/photo?page=&view=`).
 Vorher fielen sie beim Übernehmen weg (Stapel 2, 12.10.: 50 Partien ohne ihr zweites Exemplar übernommen).
+**Aufteilung der Fotos berichtigen** (2026-11-10, Vorfall LeagueHub-Formular 113): über einen Teilen-Link kamen zwei Blätter
+als EINE Seite mit „weiterem Foto" an (`ScoresheetScanViews`, View 1) statt als Seite 1 und 2 — und verkehrt herum (Hauptfoto
+= Fortsetzungsblatt mit den Zügen 61–62, das weitere Foto = Züge 1–60). Der Leser setzt Kästen nur aufs HAUPTFOTO je Seite,
+also bekamen die Züge 1–60 keine, und „Formular prüfen" hob nichts hervor. Darum darf der Leser (Watcher) die Aufteilung einer
+WARTENDEN Einlesung (`pending` oder `running`) vor dem Lesen neu setzen: `POST /api/admin/scoresheets/{id}/layout` mit
+`{ "pages": [[{ "page": 1, "view": 1 }], [{ "page": 1, "view": 0 }]] }` — `pages` in Seitenreihenfolge, je Seite die Fotos mit
+ihren BISHERIGEN Koordinaten (dieselben wie `GET …/{id}/photo?page=&view=`: Seite ab 1, `view` 0 = Hauptfoto, ab 1 die
+weiteren); das erste Foto einer Seite wird ihr Hauptfoto, die übrigen ihre weiteren Fotos in dieser Reihenfolge. Jedes
+vorhandene Foto muss genau einmal vorkommen (kein Verlust). `ScoresheetLayout.RearrangeAsync` schreibt `Photo`/`ContentType`/
+`FileName`/`PageCount` der Einlesung sowie alle `ScoresheetScanPages` und `ScoresheetScanViews` neu, in EINER Transaktion in der
+Execution-Strategy (wiederholbar: Fotos vorher gelesen, im Block `ChangeTracker.Clear`, `ExecuteDelete` der Seiten/weiteren
+Fotos, neu anlegen; der Status wird im Block noch einmal geprüft). Antwort = die neue Aufteilung `{ id, status, pageCount,
+viewsPerPage }` (`viewsPerPage[i]` = weitere Fotos von Seite i+1); 409 `notPending`, 400 `reason` ∈ `emptyLayout`/`emptyPage`/
+`tooManyPages` (über 3)/`tooManyViews` (über 4 je Seite)/`unknownPhoto`/`duplicatePhoto`/`missingPhoto`, 404 unbekannt.
+`GET /api/admin/scoresheets/{id}/layout` zeigt dieselbe Form (auch während gelesen wird), und `GET …/pending` trägt seitdem
+`viewsPerPage` neben `pageCount`/`viewCount`. Eine schon vorhandene Lesung bleibt unangetastet — also VOR `…/reading` aufrufen.
+
+**Hochladen in LeagueHub: „nächste Seite" ist die Vorgabe** (2026-11-10, gleicher Vorfall): Der Weg zu Formular 113 war das Feld
+„Mehrere Fotos derselben Seite auf einmal (Galerie)" — am Handy öffnet das Hauptfoto-Feld (`capture`) die Kamera, die GALERIE
+erreichte man nur über dieses Feld, und es machte jedes Foto zu einem weiteren Foto von Seite 1; das erste der Auswahl (Reihenfolge
+der Galerie) wurde Hauptfoto. Jetzt (`ScoresheetUploadStore.pickMany`): jedes weitere Foto wird zunächst die NÄCHSTE Seite (bis
+Seite 3), danach weitere Fotos der letzten Seite (bis 4 je Seite). Jede Zeile heißt „Seite N" bzw. „weiteres Foto von Seite N"
+(vorher „Seite 1, Foto 2") und trägt den Umschalter „Neue Seite | Dieselbe Seite" (`.seg`, `aria-pressed`, `setSame`; was die
+Deckel sprengte, ist gesperrt) und „↑" (`moveUp`: tauscht das Foto mit dem davor bzw. dem Hauptfoto, die Gruppierung bleibt
+stehen). Die Knöpfe „+ Seite N" und „+ weiteres Foto dieser Seite" bleiben, wie sie waren. Gilt angemeldet und über den
+Teilen-Link (dieselbe Seite `club-add-page`).
 **Bewertungskurve beim Korrigieren** (0.756.0, Wunsch 2026-10-12): die Korrigieren-Seite holt `GET …/games/{id}/evals` und zeigt
 die Kurve der GESPEICHERTEN Partie (`scan-eval-curve.ts`, `correctionCurve`) mit Punkten für Fehler/Patzer/verpasst; ein
 Zickzack (verschenkt, gleich zurückgegeben) ist fast immer ein falsch gelesener Zug, ein Klick springt hin. Ab der ersten
@@ -333,8 +359,10 @@ Stand je Halbzug (bestätigt, Lesarten) geht als `scoresheetPlies` mit und liegt
 | GET | `/api/games/{id}/photo?download=&page=` | Das Formular-Foto, Seite `page` (ab 1; 404 ohne) — Header `X-Page-Count` = Zahl der Seiten |
 | GET | `/api/games/{id}/scoresheet` | Formular-Einträge + Stand je Halbzug für die Korrekturseite; `pageCount` + `pages` (Seite je Eintrag) |
 | POST | `/api/games/{id}/scoresheet/resolve` | Rest neu aufbereiten `{ prefix[], writtenFrom }` → `{ plies, unresolved, unresolvedFrom }` |
-| GET | `/api/admin/scoresheets/pending` | messages.admin: wartende Einlesungen für den Leser von außen (0.687.0) `[{ id, purpose (own/league), userId, anonymous, pageCount, notationLanguage, ownerSide, createdAt }]`, älteste zuerst |
-| GET | `/api/admin/scoresheets/{id}/photo?page=` | messages.admin: Foto einer Seite |
+| GET | `/api/admin/scoresheets/pending` | messages.admin: wartende Einlesungen für den Leser von außen (0.687.0) `[{ id, purpose (own/league), userId, anonymous, pageCount, viewCount, viewsPerPage, notationLanguage, ownerSide, createdAt }]`, älteste zuerst |
+| GET | `/api/admin/scoresheets/{id}/photo?page=&view=` | messages.admin: Foto einer Seite (`view` 0 = Hauptfoto, ab 1 weitere Fotos derselben Seite) |
+| GET | `/api/admin/scoresheets/{id}/layout` | messages.admin: Aufteilung `{ id, status, pageCount, viewsPerPage }`; 404 |
+| POST | `/api/admin/scoresheets/{id}/layout` | messages.admin: Fotos einer wartenden Einlesung neu auf Seiten verteilen `{ pages: [[{ page, view }, …], …] }` → neue Aufteilung; 409 `notPending`, 400 `reason` ∈ emptyLayout/emptyPage/tooManyPages/tooManyViews/unknownPhoto/duplicatePhoto/missingPhoto, 404 (Abschnitt „Aufteilung der Fotos berichtigen“) |
 | POST | `/api/admin/scoresheets/{id}/reading` | messages.admin: Lesung übernehmen `{ transcription }` → die Einlesung; 400 `reason` ∈ notPending/invalidTranscription, 404 |
 | POST | `/api/admin/scoresheets/{id}/start` | messages.admin: der Leser fängt an — wartend → läuft, die Seite zeigt „wird gelesen“ (0.721.2) → 204 |
 | POST | `/api/admin/scoresheets/{id}/fail` | messages.admin: als gescheitert schließen `{ reason }` (unreadable/noMoves/failed, Glocke wie sonst) → 204 |
