@@ -581,6 +581,35 @@ describe('LeaguePageComponent', () => {
       expect(el.querySelector('.boards')!.textContent).toContain('Heim, Hanna');
     });
 
+    // Wunsch 2026-11-10: die Wahl bleibt gemerkt (localStorage), auch wenn die Seite ohne Adresse neu geöffnet wird.
+    it('merkt die eigene Sicht im localStorage und stellt sie beim frischen Öffnen wieder her', async () => {
+      query = { liga: '10', runde: '2', verein: 'Testdorf' };
+      const el = create();
+      await settle();
+      (el.querySelector('.side-own') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(JSON.parse(localStorage.getItem('leaguehub')!)).toEqual({ liga: 10, verein: 'Testdorf', sicht: 'eigene' });
+      fixture.destroy();
+      TestBed.resetTestingModule();
+      query = {};
+      const el2 = create();
+      await settle();
+      expect(fixture.componentInstance.forecastSide()).toBe('own');
+      expect(el2.querySelector('.boards')!.textContent).toContain('Heim, Hanna');
+      (el2.querySelector('.side-opp') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(JSON.parse(localStorage.getItem('leaguehub')!)).toEqual({ liga: 10, verein: 'Testdorf' });
+    });
+
+    it('ein Link mit Liga, aber ohne `sicht` zeigt den Gegner, auch wenn „Eigene" gemerkt ist', async () => {
+      localStorage.setItem('leaguehub', JSON.stringify({ liga: 10, verein: 'Testdorf', sicht: 'eigene' }));
+      query = { liga: '10', runde: '2', verein: 'Testdorf' };
+      const el = create();
+      await settle();
+      expect(fixture.componentInstance.forecastSide()).toBe('opp');
+      expect(el.querySelector('.boards')!.textContent).toContain('Gegner, Gustav');
+    });
+
     it('ein Gegner ohne passende Gegenrichtung liefert keine fremde Prognose', async () => {
       const L = paired();
       L.fixtures['Kufstein']['2'] = { opp: 'Wörgl', home: true, status: 'open', boards: [board('Falsch, Franz')], roster: [] };

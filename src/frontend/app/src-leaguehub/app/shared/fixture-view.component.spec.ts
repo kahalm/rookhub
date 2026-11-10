@@ -621,7 +621,7 @@ describe('FixtureViewComponent', () => {
       fixture.componentInstance.toggleInfo('forecast');
       fixture.detectChanges();
       const info = el.querySelector('.info-panel')!.textContent!;
-      expect(info).toContain('Prognose für Schwaz');
+      expect(info).toContain('Prognose für Schwaz: pro Brett die drei wahrscheinlichsten eigenen Spieler');
       expect(info).not.toContain('Spg Kufstein');
       expect(info).toContain('Farbe der eigenen Mannschaft');
     });

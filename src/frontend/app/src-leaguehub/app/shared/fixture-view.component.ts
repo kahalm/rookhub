@@ -195,7 +195,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
               <div class="info-panel">
                 <p class="note">
                   @if (f.status === 'played') { Pro Brett oben, wer tatsächlich gespielt hat, darunter die Prognose, die vor der Runde galt. }
-                  @else { Prognose für {{ tn(f.opp) }}: pro Brett die drei wahrscheinlichsten Spieler. }
+                  @else { Prognose für {{ tn(f.opp) }}: pro Brett die drei wahrscheinlichsten {{ ownView() ? 'eigenen ' : '' }}Spieler. }
                   @if (f.hit) { In alten Saisonen lagen in dieser Lage ({{ phaseText() }}) im Schnitt {{ hitText() }} von {{ f.boards?.length }} vorhergesagten Spielern richtig. }
                   Der Kreis neben der Brettnummer zeigt die Farbe {{ ownView() ? 'der eigenen Mannschaft' : 'des Gegners' }}. In Klammer hinter dem Namen: Partien im Bestand.
                 </p>

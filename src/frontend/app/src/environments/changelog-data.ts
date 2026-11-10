@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.944.0", date: "2026-11-10", changes: [
+    { en: "LeagueHub: the „Opponent | Own lineup“ switch above the forecast now remembers your choice — opened again without a link, the forecast shows your own team’s three most likely players per board right away; the info text says „your own players“ in that view.",
+      de: "LeagueHub: Der Umschalter „Gegner | Eigene Aufstellung“ über der Prognose merkt sich die Wahl — ohne Link neu geöffnet, zeigt die Prognose gleich pro Brett die drei wahrscheinlichsten eigenen Spieler; der Info-Text nennt in dieser Sicht „die eigenen Spieler“." },
+  ] },
   {
     version: '0.943.1',
     date: '2026-11-10',

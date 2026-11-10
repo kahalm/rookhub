@@ -231,6 +231,46 @@ public class LeagueEngineTests
         Assert.Equal(2.0, sum, 2);                                              // Summe der Einsätze = Bretter
     }
 
+    /// <summary>Wunsch 2026-11-09 („die eigene geschätzte Aufstellung je Runde"): die Oberfläche liest die Prognose der EIGENEN
+    /// Mannschaft aus der Begegnung des Gegners (<c>fixtures[Gegner][Runde]</c>, dort ist <c>opp</c> die eigene Mannschaft) —
+    /// dieselbe Rechnung mit vertauschten Rollen, keine zweite. Hier abgesichert: dort stehen nur eigene Spieler, der Farbkreis
+    /// zeigt die eigene Farbe (Gegenteil der Gegnerfarbe), gespielte Runden tragen die echte eigene Aufstellung.</summary>
+    [Fact]
+    public void View_OwnForecast_IsTheOpponentsFixture_WithRolesSwapped()
+    {
+        var w = TinyWorld();
+        var v = new LeagueViewBuilder(w, LeagueModel.FromEmbedded(), new Dictionary<string, int>(), new Dictionary<string, List<LeagueOnlineAccount>>())
+            .Build(1, w.Games);
+        var fixtures = v["fixtures"]!;
+        foreach (var rnd in new[] { "1", "2", "3" })
+        {
+            var mine = fixtures["A"]![rnd]!;
+            var oppTeam = mine["opp"]!.GetValue<string>();
+            var own = fixtures[oppTeam]![rnd]!;
+            Assert.Equal("A", own["opp"]!.GetValue<string>());
+            Assert.Equal(mine["home"]!.GetValue<bool>(), !own["home"]!.GetValue<bool>());
+            var ownBoards = own["boards"]!.AsArray();
+            var oppBoards = mine["boards"]!.AsArray();
+            Assert.Equal(oppBoards.Count, ownBoards.Count);
+            for (var k = 0; k < ownBoards.Count; k++)
+            {
+                var cand = ownBoards[k]!["cand"]!.AsArray();
+                Assert.InRange(cand.Count, 1, 3);                                                     // erste drei je Brett
+                Assert.All(cand, c => Assert.StartsWith("Aspieler", c!["n"]!.GetValue<string>()));    // nur eigene Spieler
+                Assert.All(oppBoards[k]!["cand"]!.AsArray(), c => Assert.StartsWith($"{oppTeam}spieler", c!["n"]!.GetValue<string>()));
+                Assert.NotEqual(oppBoards[k]!["opp_color"]!.GetValue<string>(), ownBoards[k]!["opp_color"]!.GetValue<string>());
+            }
+            Assert.All(own["roster"]!.AsArray(), r => Assert.StartsWith("Aspieler", r!["n"]!.GetValue<string>()));
+        }
+        // Runde 1 gespielt (A heim gegen B, A setzte Nr2 und Nr3): oben die echte eigene Aufstellung, darunter die damalige Prognose
+        var played = fixtures["B"]!["1"]!["boards"]!.AsArray();
+        Assert.Equal("Aspieler, Nr2", played[0]!["actual"]!["n"]!.GetValue<string>());
+        Assert.Equal("Bspieler, Nr1", played[0]!["actual"]!["vs"]!.GetValue<string>());
+        Assert.Equal("w", played[0]!["opp_color"]!.GetValue<string>());                             // A heim → Weiß an Brett 1
+        Assert.Equal("Aspieler, Nr3", played[1]!["actual"]!["n"]!.GetValue<string>());
+        Assert.NotNull(fixtures["B"]!["1"]!["eval"]);
+    }
+
     [Fact]
     public void View_PlayedFixture_CarriesItsHits_ConsistentWithTheBoards()
     {

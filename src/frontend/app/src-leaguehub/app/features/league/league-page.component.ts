@@ -22,7 +22,7 @@ const POLL_MS = 4000;
 /** Verwalter-Schalter „alle Ligen der Region" (0.710.0) — je Gerät gemerkt, Vorgabe aus. */
 const ALL_KEY = 'lh-all-leagues';
 
-interface Pick { liga?: number; verein?: string }
+interface Pick { liga?: number; verein?: string; sicht?: 'eigene' }
 
 /**
  * Admin-Ansicht: Liga, Runde und Verein wählen → die Begegnung mit den Gegner-Prognosen je Brett.
@@ -218,7 +218,8 @@ export class LeaguePageComponent implements OnInit {
   readonly teamPrefix = computed(() => this.index()?.club?.teamPrefix ?? this.clubs.current()?.teamPrefix ?? null);
 
   readonly fixture = computed(() => this.league()?.fixtures[this.team()]?.[String(this.round())]);
-  /** „Gegner | Eigene Aufstellung" (Wunsch 2026-11-09) — bleibt beim Rundenwechsel, in der Adresse `&sicht=eigene`. */
+  /** „Gegner | Eigene Aufstellung" (Wunsch 2026-11-09) — bleibt beim Rundenwechsel, in der Adresse `&sicht=eigene` und
+   *  gemerkt im localStorage (`leaguehub`.sicht, 2026-11-10). */
   readonly forecastSide = signal<ForecastSide>('opp');
   /** Die Prognose für die eigene Mannschaft ist die Begegnung aus Sicht des Gegners der Runde — keine eigene Rechnung nötig. */
   readonly ownFixture = computed(() => {
@@ -296,7 +297,8 @@ export class LeaguePageComponent implements OnInit {
     // z1-l-prognosen-filter-zu: am Handy immer zugeklappt starten — eine Vorwahl (erste eigene Liga, Verein) gibt es immer,
     // die Zeile „Liga · R1 · Verein" zeigt sie; wer anderes will, klappt auf.
     if (!keep) this.pickOpen.set(false);
-    if (!keep) this.forecastSide.set(q.get('sicht') === 'eigene' ? 'own' : 'opp');
+    // Die Adresse gewinnt; ohne Auswahl in der Adresse (frisch geöffnet) gilt die gemerkte Sicht (Wunsch 2026-11-10).
+    if (!keep) this.forecastSide.set(q.get('sicht') === 'eigene' || (!q.get('liga') && saved.sicht === 'eigene') ? 'own' : 'opp');
     const pref = keep ?? {
       liga: Number(q.get('liga')) || saved.liga || 0,
       runde: Number(q.get('runde')) || 0,
@@ -388,7 +390,8 @@ export class LeaguePageComponent implements OnInit {
         ...(this.forecastSide() === 'own' ? { sicht: 'eigene' } : {}) },
       replaceUrl: true,
     });
-    writeJson(localStore(), PICK_KEY, { liga: this.tnr(), verein: this.team() } satisfies Pick);
+    writeJson(localStore(), PICK_KEY, { liga: this.tnr(), verein: this.team(),
+      ...(this.forecastSide() === 'own' ? { sicht: 'eigene' as const } : {}) } satisfies Pick);
     writeJson(sessionStore(), ROUND_KEY, { liga: this.tnr(), runde: this.round(), ...(this.showLineups() ? { aufstellungen: true } : {}) });
   }
 
