@@ -93,6 +93,15 @@ describe('WoodpeckerListComponent', () => {
     expect(el.querySelectorAll('table.cycles tbody tr').length).toBe(1);
   });
 
+  it('Zyklus-Tabelle: „Gelöst“ in Prozentpunkten (220 von 250 → 88%, nicht 1%)', () => {
+    const c1 = cycle({ finishedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(), attempted: 250, solved: 220 });
+    const c2 = cycle({ number: 2, targetDays: 14, finishedAt: new Date().toISOString(), attempted: 58, solved: 29 });
+    const { el } = render([plan({ status: 'ready', cycles: [c1, c2] })]);
+    const solved = Array.from(el.querySelectorAll('table.cycles tbody tr'))
+      .map(tr => tr.querySelectorAll('td')[2].textContent!.trim());
+    expect(solved).toEqual(['88%', '50%']);
+  });
+
   it('bereit: Klick startet den nächsten Zyklus und ersetzt die Karte', () => {
     const finished = cycle({ finishedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(), attempted: 250 });
     const started = plan({ currentCycle: 2, cycles: [finished, cycle({ number: 2, targetDays: 14 })] });

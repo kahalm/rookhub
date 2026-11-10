@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.953.4", date: "2026-11-10", changes: [
+    { en: "Woodpecker: the „Solved“ column of the cycle table showed „1%“ for every cycle – the share was passed as a fraction instead of a percentage. It now shows the real rate (e.g. 337 of 388 = 87%). The stored results were always correct.",
+      de: "Woodpecker: Die Spalte „Gelöst“ der Zyklus-Tabelle zeigte bei jedem Zyklus „1 %“ – der Anteil wurde als Bruch statt als Prozentzahl übergeben. Jetzt steht dort die echte Quote (z. B. 337 von 388 = 87 %). Die gespeicherten Ergebnisse waren immer richtig." },
+  ] },
   { version: "0.953.3", date: "2026-11-10", changes: [
     { en: "Chessable courses and repertoires can be refreshed again („Update“, from the line cache, no Chessable request): their comments get the paragraph breaks that piratechess v1.0.53 keeps as a space („next few moves. In comparison …“ instead of „moves.In“).",
       de: "Chessable-Kurse und -Repertoires lassen sich wieder aktualisieren („Aktualisieren“, aus dem Linien-Cache, ohne Chessable-Abruf): ihre Kommentare bekommen die Absatzwechsel, die piratechess v1.0.53 als Leerzeichen erhält („next few moves. In comparison …“ statt „moves.In“)." },

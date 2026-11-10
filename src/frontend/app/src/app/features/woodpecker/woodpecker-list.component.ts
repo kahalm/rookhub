@@ -135,7 +135,7 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
                         <tr>
                           <td>{{ cy.number }}</td>
                           <td class="num">{{ cy.attempted }}</td>
-                          <td class="num">{{ cy.attempted ? (cy.solved / cy.attempted | pct) : '–' }}</td>
+                          <td class="num">{{ cy.attempted ? (100 * cy.solved / cy.attempted | pct) : '–' }}</td>
                           <td class="num">{{ clock(cy.timeSeconds) }}</td>
                           <td class="num">{{ usedDays(cy) }} / {{ cy.targetDays }}</td>
                         </tr>
