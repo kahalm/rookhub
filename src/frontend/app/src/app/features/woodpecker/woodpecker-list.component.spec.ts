@@ -97,8 +97,10 @@ describe('WoodpeckerListComponent', () => {
     const c1 = cycle({ finishedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(), attempted: 250, solved: 220 });
     const c2 = cycle({ number: 2, targetDays: 14, finishedAt: new Date().toISOString(), attempted: 58, solved: 29 });
     const { el } = render([plan({ status: 'ready', cycles: [c1, c2] })]);
+    // Ohne Leerzeichen verglichen: je Oberflächensprache „88%“ (en/hu) oder „88 %“ mit U+00A0 (de/hr) — und welche
+    // Sprache gerade gilt, hängt im vollen Lauf von den Specs davor ab (CI rot bei 0.953.4, lokal im Teil-Lauf grün).
     const solved = Array.from(el.querySelectorAll('table.cycles tbody tr'))
-      .map(tr => tr.querySelectorAll('td')[2].textContent!.trim());
+      .map(tr => tr.querySelectorAll('td')[2].textContent!.replace(/[\s\u00a0]/g, ''));
     expect(solved).toEqual(['88%', '50%']);
   });
 

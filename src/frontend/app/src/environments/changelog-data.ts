@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.955.1", date: "2026-11-10", changes: [
+    { en: "Tests: the new check for the Woodpecker „Solved“ rate compared against the English spelling „88%“ and failed in the full run, where the interface language is German at that point („88 %“). It now compares independent of the language. No change for users.",
+      de: "Tests: Die neue Prüfung der Woodpecker-Quote „Gelöst“ verglich mit der englischen Schreibweise „88%“ und schlug im vollen Lauf fehl, wo die Oberflächensprache an der Stelle Deutsch ist („88 %“). Sie vergleicht jetzt unabhängig von der Sprache. Für Nutzer ändert sich nichts." },
+  ] },
   { version: "0.955.0", date: "2026-11-10", changes: [
     { en: "Dashboard: new „Woodpecker“ tile. It shows your running Woodpecker training at a glance – name, cycle, progress of the set, days left until the deadline – with one button: „Continue“ while a cycle is running, otherwise the way to the overview (break or next cycle ready). The tile only appears while you have a training in progress.",
       de: "Dashboard: neue Kachel „Woodpecker“. Sie zeigt dein laufendes Woodpecker-Training auf einen Blick – Name, Zyklus, Fortschritt des Satzes, verbleibende Tage bis zur Frist – mit einem Knopf: „Weiter lösen“, solange ein Zyklus läuft, sonst der Weg zur Übersicht (Pause oder nächster Zyklus bereit). Die Kachel erscheint nur, solange du ein Training laufen hast." },
