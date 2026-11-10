@@ -26,6 +26,16 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
 {
     private sealed record Running(int JobId, string EngineId, CancellationTokenSource Cts, bool Background = false);
 
+    /// <summary>Was ein Lauf für die Durchsatz-Zählung hinterlässt (<see cref="EngineThroughputRecorder"/>): gesetzt von
+    /// dem Schritt, der den Lauf beendet; gezählt wird erst, wenn der Auftrag als laufend markiert war.</summary>
+    private sealed class RunLedger
+    {
+        public bool Started;
+        public EngineRunOutcome? Outcome;
+        public long Nodes;
+        public int DoneJobSeconds;
+    }
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly EngineActivityTracker _tracker;
     private readonly AnalysisJobLive _live;
@@ -39,11 +49,14 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
     /// <summary>Admin-Schalter „Hintergrundjobs pausieren" (ohne Registrierung, z. B. in Tests: läuft immer).</summary>
     private readonly BackgroundPause? _pauseSwitch;
     private readonly PauseGate _pause;
+    /// <summary>Durchsatz je Engine für die Admin-Seite „Engines" (ohne Registrierung, z. B. in Tests: nicht gezählt).</summary>
+    private readonly EngineThroughputRecorder? _throughput;
 
     public AnalysisJobWorker(IServiceScopeFactory scopeFactory, EngineActivityTracker tracker,
         IEngineBroker broker, ILogger<AnalysisJobWorker> logger, IConfiguration config, AnalysisJobLive live,
-        BackgroundPause? pause = null)
+        BackgroundPause? pause = null, EngineThroughputRecorder? throughput = null)
     {
+        _throughput = throughput;
         _scopeFactory = scopeFactory;
         _tracker = tracker;
         _live = live;
@@ -188,6 +201,8 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
     private async Task RunJobAsync(Running run, int jobId, CancellationToken shutdown)
     {
         var ct = run.Cts.Token;
+        var ledger = new RunLedger();
+        var startedAt = DateTime.UtcNow;
         try
         {
             using var scope = _scopeFactory.CreateScope();
@@ -196,6 +211,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             if (job is null) return;
             if (await AnalysisJobEngineResolver.ResolveAsync(_tracker, scope, db, job, run.EngineId, ct) is not { } engine) return;
             await MarkRunningAsync(db, job);
+            ledger.Started = true;
 
             // Frist NUR für die Antwort-KOPFZEILEN: der HttpClient des Brokers ist bewusst timeout-los
             // (eine Suche darf Stunden dauern), und der `firstLine`-Wächter (JobStreamRun) beginnt erst NACH den
@@ -206,24 +222,29 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             // Die Quelle lebt bis zum Ende des Laufs (wie vor der Zerlegung).
             using var headerCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             headerCts.CancelAfter(_settings.FirstLineTimeout);
-            if (await OpenUpstreamAsync(db, job, engine, headerCts.Token, ct) is not { } upstream) return;
+            if (await OpenUpstreamAsync(db, job, engine, headerCts.Token, ct, ledger) is not { } upstream) return;
 
             await using (upstream)
             {
-                if (!upstream.IsSuccess) await OnBrokerRejectedAsync(db, job, engine, upstream);
-                else await StreamAndClassifyAsync(db, job, run, upstream, ct);
+                if (!upstream.IsSuccess) await OnBrokerRejectedAsync(db, job, engine, upstream, ledger);
+                else await StreamAndClassifyAsync(db, job, run, upstream, ct, ledger);
             }
         }
         catch (DbUpdateConcurrencyException)
         {
             // Auftrag wurde parallel gelöscht — nichts zu retten.
+            ledger.Outcome ??= EngineRunOutcome.Interrupted;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            ledger.Outcome ??= EngineRunOutcome.Error;
             await RecoverAfterErrorAsync(jobId, ex);
         }
         finally
         {
+            if (ledger.Started)
+                _throughput?.Record(run.EngineId, ledger.Outcome ?? (ct.IsCancellationRequested ? EngineRunOutcome.Interrupted : EngineRunOutcome.Error),
+                    (DateTime.UtcNow - startedAt).TotalSeconds, ledger.Nodes, ledger.DoneJobSeconds, DateTime.UtcNow);
             _live.Stop(jobId);
             _running.TryRemove(new KeyValuePair<string, Running>(run.EngineId, run));
             run.Cts.Dispose();
@@ -242,13 +263,19 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
 
     /// <summary>Den Broker anfragen, bis die Kopfzeilen da sind. <c>null</c> = kein Stream, der Auftrag ist eingestellt.</summary>
     private async Task<EngineAnalysisSession?> OpenUpstreamAsync(AppDbContext db, AnalysisJob job, EngineRef engine,
-        CancellationToken headerCt, CancellationToken ct)
+        CancellationToken headerCt, CancellationToken ct, RunLedger ledger)
     {
         var work = AnalysisJobEngineResolver.WorkOf(job, engine);
         try { return await _broker.AnalyseAsync(engine, work, headerCt); }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { await AnalysisJobTransitions.PauseAsync(db, job, null); return null; }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            ledger.Outcome = EngineRunOutcome.Interrupted;
+            await AnalysisJobTransitions.PauseAsync(db, job, null);
+            return null;
+        }
         catch (OperationCanceledException)
         {
+            ledger.Outcome = EngineRunOutcome.Timeout;
             // Nur die Kopfzeilen-Frist ist abgelaufen (der Job-Token ist nicht abgebrochen).
             _logger.LogWarning("AnalysisJob {JobId}: Broker antwortete nicht binnen {Timeout} (keine Kopfzeilen) — pausiert",
                 job.Id, _settings.FirstLineTimeout);
@@ -257,6 +284,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
+            ledger.Outcome = EngineRunOutcome.Error;
             await AnalysisJobTransitions.ApplyAsync(db, job, BrokerFailurePolicy.Unreachable);
             return null;
         }
@@ -266,11 +294,15 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
     /// vorher auf die nächste Engine umhängen. 503/504 heisst beim Broker: fuer DIESE Engine ist gerade kein Provider
     /// verbunden — eine Aussage ueber die ENGINE und nicht ueber den Auftrag, also umhaengen statt zwei Minuten dieselbe
     /// Tuer anzuklopfen (2026-09-12 auf Prod: 309 solcher Antworten in 25 Minuten).</summary>
-    private async Task OnBrokerRejectedAsync(AppDbContext db, AnalysisJob job, EngineRef engine, EngineAnalysisSession upstream)
+    private async Task OnBrokerRejectedAsync(AppDbContext db, AnalysisJob job, EngineRef engine, EngineAnalysisSession upstream,
+        RunLedger ledger)
     {
         var code = upstream.StatusCode;
         var decision = BrokerFailurePolicy.OnStatus(code, engine.Source == EngineSource.Local,
             job.FruitlessAttempts, upstream.Error, upstream.InvalidWork);
+        ledger.Outcome = code is 503 or 504 ? EngineRunOutcome.Unavailable
+            : decision.Outcome.Kind == RunEndKind.Failed ? EngineRunOutcome.Failed
+            : EngineRunOutcome.Error;
         var alt = job.EngineId;
         if (decision.TryOtherEngine
             && await BackgroundEngineRotation.SwitchAsync(db, job, AnalysisJobEngineResolver.OwnerOf(job), _settings.ExplicitOnly, CancellationToken.None))
@@ -287,16 +319,19 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
     /// <summary>Den Stream lesen (<see cref="JobStreamRun"/>) und den Auftrag danach einordnen
     /// (<see cref="AnalysisJobRunEnd.ClassifyRunEnd"/>; Regeln und Begründungen dort).</summary>
     private async Task StreamAndClassifyAsync(AppDbContext db, AnalysisJob job, Running run, EngineAnalysisSession upstream,
-        CancellationToken ct)
+        CancellationToken ct, RunLedger ledger)
     {
         var stream = new JobStreamRun(db, job, run.EngineId, _live, _logger, _settings.SnapshotStep, _settings.PersistInterval,
             _settings.FirstLineTimeout, _settings.StallTimeout);
         if (await stream.ConsumeAsync(upstream.Ndjson, ct) == StreamEnd.Silent)
         {
+            ledger.Nodes = stream.CurrentNodes;
             await OnSilenceAsync(db, job, stream);
+            ledger.Outcome = job.Status == AnalysisJobStatus.Failed ? EngineRunOutcome.Failed : EngineRunOutcome.Timeout;
             return;
         }
         await stream.FinishAsync();
+        ledger.Nodes = stream.CurrentNodes;
 
         var facts = stream.Facts(ct.IsCancellationRequested, _tracker.IsEngineBusy(run.EngineId), _settings.FruitlessMinRuntime);
         if (AnalysisJobRunEnd.EndedOwnSearch(facts))
@@ -305,9 +340,20 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
                 + "Smart Pruning) — Ergebnis gilt", job.Id, stream.CurrentNodes, job.TargetNodes);
         var outcome = AnalysisJobRunEnd.ClassifyRunEnd(facts);
         await AnalysisJobTransitions.ApplyAsync(db, job, outcome);
+        ledger.Outcome = OutcomeOf(outcome);
+        if (outcome.Kind == RunEndKind.Done) ledger.DoneJobSeconds = job.SecondsSpent;
         if (outcome.Kind == RunEndKind.Done)
             _logger.LogInformation("AnalysisJob {JobId}: fertig bei Tiefe {Depth} ({Nodes} Knoten)", job.Id, job.ReachedDepth, stream.CurrentNodes);
     }
+
+    /// <summary>Zählung eines regulär eingeordneten Laufendes: Pause ohne Fehlertext = von uns unterbrochen
+    /// (Live-Vorrang, Admin-Pause, Ändern), mit Fehlertext = vorzeitig zu Ende, wird fortgesetzt.</summary>
+    internal static EngineRunOutcome OutcomeOf(RunOutcome outcome) => outcome.Kind switch
+    {
+        RunEndKind.Done => EngineRunOutcome.Done,
+        RunEndKind.Failed => EngineRunOutcome.Failed,
+        _ => outcome.Error is null ? EngineRunOutcome.Interrupted : EngineRunOutcome.Retried,
+    };
 
     /// <summary>Der Stillstands-Wächter hat ausgelöst (<see cref="AnalysisJobRunEnd.ClassifyStall"/>).</summary>
     private async Task OnSilenceAsync(AppDbContext db, AnalysisJob job, JobStreamRun stream)

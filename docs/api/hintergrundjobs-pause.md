@@ -55,6 +55,8 @@ erfolgreichen Takts (UTC; `null` bei nicht pausierbaren Diensten ohne `IBackgrou
 
 ## Oberfläche
 
+Lesend gespiegelt (Zustand + Link hierher) im Reiter „Engines“ (`/admin?tab=engines`, `docs/api/admin-engines.md`).
+
 Admin → Reiter „Hintergrundjobs" (`/admin?tab=jobs`, `features/admin/tabs/admin-background-jobs.component.ts`):
 Schalter „Hintergrundjobs pausieren", Zustand Läuft/Pausiert, „Pausiert seit … von …", Hinweis bei erzwungener Pause,
 Liste der Dienste mit „pausierbar"/„läuft immer" und letztem Lauf.

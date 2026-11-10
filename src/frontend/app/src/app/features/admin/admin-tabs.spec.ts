@@ -11,7 +11,8 @@ describe('admin-tabs', () => {
     expect(adminTabIndex('messages')).toBe(6);
     expect(adminTabIndex('ci')).toBe(8);
     expect(adminTabIndex('uploads')).toBe(10);
-    expect(adminTabIndex('jobs')).toBe(ADMIN_TAB_KEYS.length - 1);
+    expect(adminTabIndex('jobs')).toBe(12);
+    expect(adminTabIndex('engines')).toBe(ADMIN_TAB_KEYS.length - 1);
   });
 
   it('returns -1 for unknown / null / empty keys (deep-link ignored)', () => {
@@ -26,7 +27,7 @@ describe('admin-tabs', () => {
   // Umbenennen bricht außerdem die Glockenlinks des Servers: `AdminLinks` (Services/Accounts) liest diese Liste im Test `AdminLinksTests`.
   it('keeps the expected canonical tab order (sync with admin.component.html)', () => {
     expect([...ADMIN_TAB_KEYS]).toEqual(
-      ['users', 'books', 'daily', 'puzzles', 'groups', 'menu', 'messages', 'courseDl', 'ci', 'roles', 'uploads', 'diagrams', 'jobs']);
+      ['users', 'books', 'daily', 'puzzles', 'groups', 'menu', 'messages', 'courseDl', 'ci', 'roles', 'uploads', 'diagrams', 'jobs', 'engines']);
   });
 
   it('resolves the index over a given (visible) tab list', () => {
@@ -49,6 +50,7 @@ describe('admin-tabs', () => {
       users: 'users.manage', books: 'books.manage', daily: 'daily.manage', puzzles: 'puzzles.manage',
       groups: 'groups.manage', menu: 'menu.manage', messages: 'messages.admin', courseDl: 'chessable.admin',
       ci: 'ci.view', roles: 'roles.manage', uploads: 'messages.admin', diagrams: 'ebooks.manage', jobs: null,
+      engines: null,
     });
   });
 
@@ -68,6 +70,12 @@ describe('admin-tabs', () => {
     const all = Object.values(ADMIN_TAB_PERMISSIONS).filter((p): p is string => !!p);
     expect(canSeeAdminTab(access(all), 'jobs')).toBeFalse();
     expect(canSeeAdminTab(access([], true), 'jobs')).toBeTrue();
+  });
+
+  it('the engines tab needs the admin flag — no permission opens it', () => {
+    const all = Object.values(ADMIN_TAB_PERMISSIONS).filter((p): p is string => !!p);
+    expect(canSeeAdminTab(access(all), 'engines')).toBeFalse();
+    expect(canSeeAdminTab(access([], true), 'engines')).toBeTrue();
   });
 
   it('without any admin-tab permission the area stays closed', () => {

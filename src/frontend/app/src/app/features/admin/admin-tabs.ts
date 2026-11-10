@@ -19,6 +19,7 @@ export const ADMIN_TAB_KEYS = [
   'uploads',   // 10 — LeagueHub-Stapel-Uploads (0.651.0)
   'diagrams',  // 11 — E-Book-Diagramm-Meldungen (0.945.0)
   'jobs',      // 12 — Hintergrundjobs pausieren
+  'engines',   // 13 — Engines: Übersicht, Warteschlange, Durchsatz (0.946.0)
 ] as const;
 
 export type AdminTabKey = typeof ADMIN_TAB_KEYS[number];
@@ -43,6 +44,7 @@ export const ADMIN_TAB_PERMISSIONS: Readonly<Record<AdminTabKey, string | null>>
   uploads: 'messages.admin',    // AdminLeagueUploadController
   diagrams: 'ebooks.manage',    // EbooksAdminController (diagram-reports, missed-diagrams)
   jobs: null,                   // BackgroundJobsController — nur Admins
+  engines: null,                // AdminEnginesController — nur Admins
 };
 
 /** Was die Zugriffsprüfung vom {@link AuthService} braucht (in Tests leicht nachzubauen). */

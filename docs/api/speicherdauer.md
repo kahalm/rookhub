@@ -40,6 +40,7 @@ je DELETE), ohne große Spalten zu laden.
 | Passwort-Reset-Codes (`PasswordResetTokens`, Hash + Zeitstempel; gültig 1 h, Admin-Link 24 h) | 7 Tage nach Verbrauch bzw. Ablauf | Aufräumlauf | fest (`OneTimeCodeRetention.MaxAgeAfterEnd`) |
 | Übergabe-Codes zwischen den Oberflächen (`AuthHandoffTokens`, gültig 60 s) | 7 Tage nach Verbrauch bzw. Ablauf (außerdem beim nächsten Sprung desselben Kontos) | Aufräumlauf | fest (`OneTimeCodeRetention.MaxAgeAfterEnd`) |
 | Chessable-Trainingszeit der Extension (`ChessableActivities`) | bis zur Kontolöschung (Tracker- und Kurs-Verlauf); Zuwachs je Tag gedeckelt: 24 h Zeit, 1 500 Häppchen | beim Schreiben (R4-019) | fest (`TrainingCaps`) |
+| Durchsatz je Engine (`EngineThroughputBuckets`, Zähler je 10 min, kein Personenbezug außer der Engine-Kennung) | 8 Tage | `EngineBrokerMaintenanceService` (stündlich, `EngineThroughputRecorder.FlushAsync`) | fest (`EngineThroughputBucket.RetentionDays`) |
 | Konto selbst | bis zur Löschung durch den Nutzer (Kontolöschung räumt alles Zugehörige) | — | — |
 
 ## Außerhalb der Datenbank

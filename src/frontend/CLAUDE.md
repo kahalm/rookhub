@@ -13,6 +13,7 @@ stehen je Bereich in `rookhub/docs/frontend/` (Index unten); neue Feature-Doku d
 
 - Vollbild-Brett (`shared/fullscreen/`) → `docs/frontend/vollbild-brett.md`
 - Externe Engines: zwei Quellen, eine Liste (0.537.0) → `docs/frontend/externe-engines.md`
+- Admin-Reiter „Engines“: Übersicht, Warteschlange, Durchsatz (0.946.0) → `docs/frontend/admin-engines.md`
 - Linienzahl der Engine (0.738.0) → `docs/frontend/linienzahl-der-engine.md`
 - Maia-Sparring (`features/analysis/maia/`, 0.632.0) → `docs/frontend/maia-sparring.md`
 - Formular-Korrektur als geteilte Sitzung (0.573.0) → `docs/frontend/formular-korrektur-als-geteilte-sitzung.md`

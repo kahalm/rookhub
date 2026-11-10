@@ -64,6 +64,10 @@ public class EngineActivityTracker
     /// <summary>Offene Live-Streams dieses Nutzers (Deckel im Controller).</summary>
     public int ActiveCount(int userId) => _byUser.TryGetValue(userId, out var n) ? n : 0;
 
+    /// <summary>Engines mit offenen Live-Streams und deren Anzahl (Admin-Seite „Engines").</summary>
+    public IReadOnlyDictionary<string, int> LiveEngines()
+        => _byEngine.Where(kv => kv.Value > 0).ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+
     /// <summary>Rechnet gerade jemand live auf dieser Engine? Dann gehört sie ihm, nicht den Aufträgen.</summary>
     public bool IsEngineBusy(string engineId) => _byEngine.TryGetValue(engineId, out var n) && n > 0;
 

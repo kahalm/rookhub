@@ -68,7 +68,7 @@ const SUMMARY_INVALID = ['.summary-page .empty-state.not-found'];
 const ADMIN_TAB = comp => [`.admin-container app-${comp} > *`, `.admin-container app-${comp}`, '.admin-container mat-tab-group'];
 const ADMIN_TABS = { books: 'admin-books-tab', daily: 'admin-daily-puzzle', puzzles: 'admin-puzzle-tags', groups: 'admin-groups-tab',
   menu: 'admin-menu-visibility', messages: 'admin-messages', courseDl: 'admin-chessable-download', ci: 'admin-github-actions',
-  roles: 'admin-roles', uploads: 'admin-league-uploads', jobs: 'admin-background-jobs' };
+  roles: 'admin-roles', uploads: 'admin-league-uploads', jobs: 'admin-background-jobs', engines: 'admin-engines' };
 // Reiter der Trainingsziele (`?tab=`, TABS in training-goals.component.ts): der Inhalt des AKTIVEN Reiters.
 const TG_TAB = ['.tg-tabs .mat-mdc-tab-body-active .tab-body > *', '.tg-container app-load-error', '.tg-container app-loading-spinner'];
 const COURSE_BROWSE = ['.browse-container .board-pane app-puzzle-board', '.browse-container .line-list .line-row', '.browse-container .empty-state', '.browse-container app-loading-spinner'];

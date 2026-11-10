@@ -4,6 +4,10 @@ using RookHub.Api.DTOs.Engines;
 
 namespace RookHub.Api.Services.Engines;
 
+/// <summary>Stand eines laufenden Auftrags für die Admin-Übersicht: Tiefe/Tempo/Knoten der letzten Zeile, verbuchte
+/// Sekunden samt laufendem Lauf, Beginn dieses Laufs.</summary>
+public sealed record AnalysisJobLiveRun(int UserId, int Depth, int Nps, long Nodes, int Seconds, DateTime StartedUtc);
+
 /// <summary>Laufender Stand der gerade rechnenden Analyseaufträge — NUR im Arbeitsspeicher.
 ///
 /// Die Auftragsliste soll sekündlich mitlaufen (Zeit tickt, Tempo aktuell). Über die DB ginge das nicht
@@ -101,6 +105,11 @@ public sealed class AnalysisJobLive
     private static long HourOf(DateTime utc) => utc.Ticks / TimeSpan.TicksPerHour;
 
     public void Stop(int jobId) => _runs.TryRemove(jobId, out _);
+
+    /// <summary>Alle gerade rechnenden Läufe (Admin-Seite „Engines"): Auftrag → Stand.</summary>
+    public IReadOnlyDictionary<int, AnalysisJobLiveRun> Snapshot(DateTime nowUtc)
+        => _runs.ToDictionary(kv => kv.Key, kv => new AnalysisJobLiveRun(kv.Value.UserId, kv.Value.Depth, kv.Value.Nps,
+            kv.Value.Nodes, SecondsOf(kv.Value, nowUtc), kv.Value.StartedUtc));
 
     /// <summary>Laufende Aufträge dieses Nutzers mit ihrem aktuellen Stand.</summary>
     public List<AnalysisJobLiveDto> ForUser(int userId, DateTime nowUtc)

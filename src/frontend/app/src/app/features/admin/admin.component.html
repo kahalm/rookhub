@@ -115,5 +115,13 @@
         </mat-tab>
         }
 
+        @if (show('engines')) {
+        <mat-tab [label]="'admin.tabs.engines' | translate">
+          <ng-template matTabContent>
+            <app-admin-engines />
+          </ng-template>
+        </mat-tab>
+        }
+
       </mat-tab-group>
     </div>

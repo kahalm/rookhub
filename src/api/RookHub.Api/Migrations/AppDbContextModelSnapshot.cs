@@ -3274,6 +3274,58 @@ namespace RookHub.Api.Migrations
                     b.ToTable("EngineClientSchedules");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.EngineThroughputBucket", b =>
+                {
+                    b.Property<string>("EngineId")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime>("BucketStart")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Done")
+                        .HasColumnType("int");
+
+                    b.Property<long>("DoneJobSeconds")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Errors")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Failed")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Interrupted")
+                        .HasColumnType("int");
+
+                    b.Property<long>("NodeSeconds")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Nodes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Retried")
+                        .HasColumnType("int");
+
+                    b.Property<long>("RunSeconds")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Runs")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Timeouts")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Unavailable")
+                        .HasColumnType("int");
+
+                    b.HasKey("EngineId", "BucketStart");
+
+                    b.HasIndex("BucketStart");
+
+                    b.ToTable("EngineThroughputBuckets");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.ExternalEngineRegistration", b =>
                 {
                     b.Property<string>("Id")

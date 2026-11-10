@@ -490,6 +490,17 @@ internal sealed class AnalysisJobConfiguration : IEntityTypeConfiguration<Analys
     }
 }
 
+// Durchsatz je Engine in 10-Minuten-Körben (Admin-Seite „Engines", 0.946.0): Schlüssel Engine + Korb, die Fenster
+// (1 h / 24 h / 7 T) und das Aufräumen lesen über den Korbbeginn.
+internal sealed class EngineThroughputBucketConfiguration : IEntityTypeConfiguration<EngineThroughputBucket>
+{
+    public void Configure(EntityTypeBuilder<EngineThroughputBucket> e)
+    {
+        e.HasKey(b => new { b.EngineId, b.BucketStart });
+        e.HasIndex(b => b.BucketStart);
+    }
+}
+
 // Analyse-Verlauf (0.603.0): die letzten Analysen des Analysebretts je Nutzer.
 internal sealed class AnalysisHistoryEntryConfiguration : IEntityTypeConfiguration<AnalysisHistoryEntry>
 {

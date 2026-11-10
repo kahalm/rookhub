@@ -9,13 +9,16 @@ namespace RookHub.Api.Services.EngineBroker;
 /// in die Registrierungen schreiben (damit der Online-Punkt einen API-Neustart überlebt) und alle zehn
 /// Minuten die Zähler je Engine protokollieren — nur, wenn sich seitdem etwas getan hat.
 /// Das Aufräumen der Schlangen erledigt der Hub selbst (eigener Takt, läuft auch ohne diesen Dienst).
+/// Dazu minütlich die Durchsatz-Zähler des Auftrags-Workers (<see cref="EngineThroughputRecorder"/>) — auch bei
+/// abgeschaltetem eigenen Broker, die Lichess-Engines rechnen dann weiter.
 /// </summary>
 public sealed class EngineBrokerMaintenanceService(
     IServiceScopeFactory scopes,
     EngineSelectorDirectory directory,
     EngineHub hub,
     LocalBrokerOptions options,
-    ILogger<EngineBrokerMaintenanceService> logger) : BackgroundService
+    ILogger<EngineBrokerMaintenanceService> logger,
+    EngineThroughputRecorder? throughput = null) : BackgroundService
 {
     public static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan StatsInterval = TimeSpan.FromMinutes(10);
@@ -23,13 +26,20 @@ public sealed class EngineBrokerMaintenanceService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!options.Enabled) return;
+        if (!options.Enabled && throughput is null) return;
         var lastStats = DateTime.UtcNow;
         var lastPrune = DateTime.MinValue;
         long statsVersion = 0;
         using var timer = new PeriodicTimer(FlushInterval);
         while (await WaitAsync(timer, stoppingToken))
         {
+            try { await FlushThroughputAsync(stoppingToken); }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "EngineBroker: Durchsatz nachtragen fehlgeschlagen");
+            }
+            if (!options.Enabled) continue;
+
             try { await FlushLastSeenAsync(stoppingToken); }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -70,6 +80,14 @@ public sealed class EngineBrokerMaintenanceService(
         using var scope = scopes.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<ExternalEngineRegistrationService>()
             .PruneStaleAsync(DateTime.UtcNow, options.PruneAfter, ct);
+    }
+
+    /// <summary>Durchsatz-Zuwächse in die Datenbank (öffentlich für Tests).</summary>
+    public async Task FlushThroughputAsync(CancellationToken ct)
+    {
+        if (throughput is null) return;
+        using var scope = scopes.CreateScope();
+        await throughput.FlushAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), DateTime.UtcNow, ct);
     }
 
     /// <summary>Schreibt die seit dem letzten Lauf gesehenen Selectors in <c>LastSeenAt</c> (öffentlich für Tests).</summary>

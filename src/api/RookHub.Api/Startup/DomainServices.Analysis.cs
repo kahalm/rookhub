@@ -74,6 +74,9 @@ public static partial class DomainServicesSetup
         services.AddScoped<RookHub.Api.Services.EngineBroker.EngineClientScheduleService>();
         services.AddScoped<RookHub.Api.Services.EngineBroker.EngineRegistry>();
         services.AddSingleton<RookHub.Api.Services.EngineBroker.EngineHub>();
+        // Admin-Seite „Engines" (0.946.0): Durchsatz je Engine (Worker zählt, Wartungsdienst schreibt) + Übersicht.
+        services.AddSingleton<RookHub.Api.Services.EngineBroker.EngineThroughputRecorder>();
+        services.AddScoped<RookHub.Api.Services.EngineBroker.EngineOverviewService>();
         services.AddSingleton<RookHub.Api.Services.EngineBroker.LocalEngineBroker>();
         services.AddTransient<RookHub.Api.Services.EngineBroker.LichessEngineBroker>();
         services.AddTransient<RookHub.Api.Services.EngineBroker.IEngineBroker, RookHub.Api.Services.EngineBroker.EngineBrokerRouter>();

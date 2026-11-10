@@ -1,0 +1,233 @@
+<div class="engines-tab">
+  @if (error()) {
+    <app-load-error (retry)="retry()" />
+  } @else if (data(); as d) {
+    <!-- Kopf: Zustand aller Engines + Pause der Hintergrundjobs -->
+    <mat-card appearance="outlined" class="eng-card">
+      <mat-card-header>
+        <mat-card-title>{{ 'admin.engines.title' | translate }}<span class="rh-nowrap">&nbsp;<app-help-hint [text]="'admin.engines.help' | translate" /></span></mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <ul class="state-counts" data-testid="state-counts">
+          @for (s of shownStates(); track s) {
+            <li [class]="'state-pill st-' + s">
+              <mat-icon aria-hidden="true">{{ stateIcon(s) }}</mat-icon>
+              <span>{{ ('admin.engines.state.' + s) | translate }}</span>
+              <strong class="num">{{ counts()[s] }}</strong>
+            </li>
+          }
+        </ul>
+        <div class="pause-row" [class.paused]="d.pause.paused" data-testid="pause-state">
+          <mat-icon aria-hidden="true">{{ d.pause.paused ? 'pause_circle' : 'play_circle' }}</mat-icon>
+          <span class="pause-text">
+            @if (d.pause.paused) {
+              {{ 'admin.engines.pausedNow' | translate }}
+              @if (d.pause.since) { <span class="muted">{{ 'admin.engines.pausedSince' | translate:{ when: (d.pause.since | date:'short'), by: d.pause.by || '?' } }}</span> }
+            } @else {
+              {{ 'admin.engines.runningNow' | translate }}
+            }
+          </span>
+          <a mat-button routerLink="/admin" [queryParams]="{ tab: 'jobs' }" data-testid="pause-link">{{ 'admin.engines.pauseLink' | translate }}</a>
+        </div>
+        <p class="meta" data-testid="updated">
+          {{ 'admin.engines.updated' | translate:{ when: (d.generatedAt | date:'mediumTime') } }}
+          @if (stale()) { <span class="stale" role="status">{{ 'admin.engines.stale' | translate }}</span> }
+        </p>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Warteschlange -->
+    <mat-card appearance="outlined" class="eng-card">
+      <mat-card-header>
+        <mat-card-title>{{ 'admin.engines.queueTitle' | translate }}</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <ul class="kv" data-testid="queue-totals">
+          <li><span>{{ 'admin.engines.queued' | translate }}</span><strong class="num">{{ count(d.queue.queued) }}</strong></li>
+          <li><span>{{ 'admin.engines.paused' | translate }}</span><strong class="num">{{ count(d.queue.paused) }}</strong></li>
+          <li><span>{{ 'admin.engines.running' | translate }}</span><strong class="num">{{ count(d.queue.running) }}</strong></li>
+          <li><span>{{ 'admin.engines.openGames' | translate }}</span><strong class="num">{{ count(d.queue.gameAnalysesPending + d.queue.gameAnalysesRunning) }}</strong></li>
+        </ul>
+        @if (d.queue.oldestWaitingSince) {
+          <p class="meta">{{ 'admin.engines.oldestWaiting' | translate:{ when: (d.queue.oldestWaitingSince | date:'short') } }}</p>
+        }
+        @if (!d.queue.byKind.length) {
+          <p class="empty-state" data-testid="queue-empty">{{ 'admin.engines.queueEmpty' | translate }}</p>
+        } @else {
+          <div class="table-scroll">
+            <table class="eng-table" data-testid="queue-table">
+              <thead>
+                <tr>
+                  <th>{{ 'admin.engines.kindCol' | translate }}</th>
+                  <th class="n">{{ 'admin.engines.queued' | translate }}</th>
+                  <th class="n">{{ 'admin.engines.paused' | translate }}</th>
+                  <th class="n">{{ 'admin.engines.running' | translate }}</th>
+                  <th>{{ 'admin.engines.oldestCol' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (k of d.queue.byKind; track k.kind) {
+                  <tr data-testid="queue-kind">
+                    <td>{{ ('admin.engines.kind.' + k.kind) | translate }}</td>
+                    <td class="n">{{ count(k.queued) }}</td>
+                    <td class="n">{{ count(k.paused) }}</td>
+                    <td class="n">{{ count(k.running) }}</td>
+                    <td>{{ k.oldestWaitingSince ? (k.oldestWaitingSince | date:'short') : '–' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Durchsatz gesamt -->
+    <mat-card appearance="outlined" class="eng-card">
+      <mat-card-header>
+        <mat-card-title>{{ 'admin.engines.throughputTitle' | translate }}<span class="rh-nowrap">&nbsp;<app-help-hint [text]="'admin.engines.throughputHelp' | translate:{ minutes: d.bucketMinutes }" /></span></mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="table-scroll">
+          <table class="eng-table wide" data-testid="throughput-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th class="n">{{ 'admin.engines.done' | translate }}</th>
+                <th class="n">{{ 'admin.engines.avgJob' | translate }}</th>
+                <th class="n">{{ 'admin.engines.speed' | translate }}</th>
+                <th class="n">{{ 'admin.engines.failed' | translate }}</th>
+                <th class="n">{{ 'admin.engines.unavailable' | translate }}</th>
+                <th class="n">{{ 'admin.engines.timeouts' | translate }}</th>
+                <th class="n">{{ 'admin.engines.errors' | translate }}</th>
+                <th class="n">{{ 'admin.engines.interrupted' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of windows(); track row.key) {
+                <tr data-testid="throughput-row">
+                  <th scope="row">{{ ('admin.engines.window.' + row.key) | translate }}</th>
+                  <td class="n">{{ count(row.w.done) }}</td>
+                  <td class="n">{{ duration(row.w.avgJobSeconds) }}</td>
+                  <td class="n">{{ knps(row.w.kiloNodesPerSecond) }}</td>
+                  <td class="n">{{ count(row.w.failed) }}</td>
+                  <td class="n">{{ count(row.w.unavailable) }}</td>
+                  <td class="n">{{ count(row.w.timeouts) }}</td>
+                  <td class="n">{{ count(row.w.errors) }}</td>
+                  <td class="n">{{ count(row.w.interrupted + row.w.retried) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Engines -->
+    <div class="list-head">
+      <h2 class="list-title">{{ 'admin.engines.listTitle' | translate }}</h2>
+      @if (offlineCount() > 0) {
+        <button mat-button type="button" (click)="toggleOffline()" [attr.aria-pressed]="showOffline()" data-testid="toggle-offline">
+          {{ (showOffline() ? 'admin.engines.hideOffline' : 'admin.engines.showOffline') | translate:{ count: offlineCount() } }}
+        </button>
+      }
+    </div>
+    @if (!visibleEngines().length) {
+      <p class="empty-state" data-testid="engines-empty">{{ 'admin.engines.noEngines' | translate }}</p>
+    }
+    <div class="engine-list">
+      @for (e of visibleEngines(); track e.id) {
+        <mat-card appearance="outlined" class="engine" data-testid="engine">
+          <div class="e-head">
+            <div class="e-title">
+              <span class="e-name" [title]="e.id">{{ title(e) }}</span>
+              <span class="chip">{{ ('admin.engines.source.' + e.source) | translate }}</span>
+              @if (e.houseEngine) { <span class="chip">{{ 'admin.engines.house' | translate }}</span> }
+              @if (e.explicitOnly) { <span class="chip">{{ 'admin.engines.explicitOnly' | translate }}</span> }
+              @if (!e.registered && e.source === 'rookhub') { <span class="chip warn">{{ 'admin.engines.unregistered' | translate }}</span> }
+            </div>
+            <span class="state" [class]="'state st-' + e.state" data-testid="engine-state">
+              <mat-icon aria-hidden="true">{{ stateIcon(e.state) }}</mat-icon>
+              {{ ('admin.engines.state.' + e.state) | translate }}
+            </span>
+          </div>
+
+          <div class="rh-dots meta">
+            <span><code>{{ e.id }}</code></span>
+            @if (e.ownerName) { <span>{{ 'admin.engines.owner' | translate:{ name: e.ownerName } }}</span> }
+            @if (e.maxThreads) { <span>{{ 'admin.engines.threads' | translate:{ count: e.maxThreads } }}</span> }
+            @if (e.maxHash) { <span>{{ 'admin.engines.hash' | translate:{ mb: count(e.maxHash) } }}</span> }
+            @if (e.registeredAt) { <span>{{ 'admin.engines.registeredAt' | translate:{ when: (e.registeredAt | date:'mediumDate') } }}</span> }
+            @if (e.lastSeenAt) { <span>{{ 'admin.engines.lastSeen' | translate:{ when: (e.lastSeenAt | date:'short') } }}</span> }
+          </div>
+
+          <p class="line" data-testid="engine-background">
+            @if (e.backgroundFor.length) {
+              <mat-icon aria-hidden="true" class="li">schedule</mat-icon>
+              {{ 'admin.engines.backgroundFor' | translate:{ names: bgNames(e) } }}
+            } @else {
+              <mat-icon aria-hidden="true" class="li">bolt</mat-icon>
+              {{ 'admin.engines.liveOnly' | translate }}
+            }
+          </p>
+
+          @if (e.current; as j) {
+            <div class="current" data-testid="engine-current">
+              <div class="rh-dots">
+                <span><strong>{{ ('admin.engines.kind.' + j.kind) | translate }}</strong></span>
+                @if (j.ownerName) { <span>{{ 'admin.engines.for' | translate:{ name: j.ownerName } }}</span> }
+                @if (j.gameTitle) { <span class="ellip" [title]="j.gameTitle">{{ j.gameTitle }}</span> }
+                @if (j.ply != null) { <span>{{ 'admin.engines.ply' | translate:{ ply: j.ply } }}</span> }
+                @else if (j.title) { <span class="ellip" [title]="j.title">{{ j.title }}</span> }
+              </div>
+              <div class="rh-dots">
+                @if (j.targetNodes) {
+                  <span>{{ 'admin.engines.nodesProgress' | translate:{ nodes: count(j.nodes / 1000), target: count(j.targetNodes / 1000) } }}</span>
+                } @else {
+                  <span>{{ 'admin.engines.depthProgress' | translate:{ depth: j.depth, target: j.targetDepth } }}</span>
+                }
+                <span>{{ 'admin.engines.lines' | translate:{ count: j.multiPv } }}</span>
+                @if (j.nps > 0) { <span>{{ kiloNps(j.nps) }}</span> }
+                <span>{{ 'admin.engines.elapsed' | translate:{ time: duration(j.seconds) } }}</span>
+                @if (j.runningSince) { <span>{{ 'admin.engines.runningSince' | translate:{ when: (j.runningSince | date:'mediumTime') } }}</span> }
+              </div>
+            </div>
+          } @else if (e.liveStreams > 0) {
+            <p class="line"><mat-icon aria-hidden="true" class="li">visibility</mat-icon>{{ 'admin.engines.liveStreams' | translate:{ count: e.liveStreams } }}</p>
+          } @else if (e.state === 'idle') {
+            <p class="line muted"><mat-icon aria-hidden="true" class="li">pause_circle</mat-icon>{{ (e.providerPolling > 0 ? 'admin.engines.idlePolling' : 'admin.engines.idle') | translate }}</p>
+          }
+
+          @if (e.waitingQueued || e.waitingPaused) {
+            <div class="line" data-testid="engine-waiting">
+              <mat-icon aria-hidden="true" class="li">hourglass_empty</mat-icon>
+              <div class="rh-dots">
+                <span>{{ 'admin.engines.waiting' | translate:{ queued: count(e.waitingQueued), paused: count(e.waitingPaused) } }}</span>
+                @if (e.oldestWaitingSince) { <span class="muted">{{ 'admin.engines.oldestWaiting' | translate:{ when: (e.oldestWaitingSince | date:'short') } }}</span> }
+              </div>
+            </div>
+          }
+
+          <div class="rh-dots stats" data-testid="engine-throughput">
+            <span>{{ 'admin.engines.doneHour' | translate:{ count: count(e.throughput.hour.done) } }}</span>
+            <span>{{ 'admin.engines.doneDay' | translate:{ count: count(e.throughput.day.done) } }}</span>
+            <span>{{ 'admin.engines.doneWeek' | translate:{ count: count(e.throughput.week.done) } }}</span>
+            @if (e.throughput.day.avgJobSeconds != null) { <span>{{ 'admin.engines.avgShort' | translate:{ time: duration(e.throughput.day.avgJobSeconds) } }}</span> }
+            @if (e.throughput.day.kiloNodesPerSecond != null) { <span>{{ knps(e.throughput.day.kiloNodesPerSecond) }}</span> }
+            <span>{{ 'admin.engines.busyDay' | translate:{ percent: busyShare(e.throughput.day, 'day') } }}</span>
+            @if (problems(e.throughput.day) > 0) {
+              <span class="warn-text">{{ 'admin.engines.problemsDay' | translate:{ count: count(problems(e.throughput.day)) } }}</span>
+            }
+          </div>
+          @if (e.broker && (e.broker.providerTimeouts || e.broker.queueFull || e.broker.providerGone)) {
+            <p class="line muted small" data-testid="engine-broker">
+              {{ 'admin.engines.brokerSinceStart' | translate:{ when: (d.serverStartedAt | date:'short'), timeouts: e.broker.providerTimeouts, full: e.broker.queueFull, gone: e.broker.providerGone } }}
+            </p>
+          }
+        </mat-card>
+      }
+    </div>
+  } @else {
+    <app-loading-spinner />
+  }
+</div>

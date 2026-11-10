@@ -158,6 +158,7 @@ public partial class AppDbContext : DbContext
     public DbSet<LichessExplorerCacheEntry> LichessExplorerCacheEntries => Set<LichessExplorerCacheEntry>();
     public DbSet<LocalExplorerPosition> LocalExplorerPositions => Set<LocalExplorerPosition>();
     public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
+    public DbSet<EngineThroughputBucket> EngineThroughputBuckets => Set<EngineThroughputBucket>();
     public DbSet<AnalysisHistoryEntry> AnalysisHistoryEntries => Set<AnalysisHistoryEntry>();
     public DbSet<LineStudy> LineStudies => Set<LineStudy>();
     public DbSet<LineStudyPosition> LineStudyPositions => Set<LineStudyPosition>();

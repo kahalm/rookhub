@@ -220,6 +220,16 @@ public sealed class EngineHub : IDisposable
 
     public int OngoingCount => _ongoing.Count;
 
+    /// <summary>Je Selector: wartende gültige Aufträge und gerade wartende Long-Polls (ein wartender Poll = der Provider
+    /// ist da und hat nichts zu tun). Für die Admin-Seite „Engines".</summary>
+    public IReadOnlyDictionary<string, (int Queued, int Polling)> QueueSnapshot()
+    {
+        var result = new Dictionary<string, (int, int)>(StringComparer.Ordinal);
+        foreach (var (selector, q) in _queues)
+            lock (q) result[selector] = (q.Items.Count(j => j.IsValid), q.Waiters.Count);
+        return result;
+    }
+
     private PendingJob Claim(PendingJob job)
     {
         job.Id = ProviderSecrets.NewJobId();

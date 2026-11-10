@@ -125,6 +125,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
 - Externe Engine (auth) — eigener Broker ODER Lichess-External-Engine-Protokoll als CLIENT → `docs/api/externe-engine.md`
 - Eigener Engine-Broker (0.537.0) — der Provider spricht direkt mit RookHub → `docs/api/eigener-engine-broker.md`
 - Hintergrund-Analyseaufträge (auth) — „diese Stellung rechnen, sobald die Hintergrund-Engine frei ist" → `docs/api/hintergrund-analyseauftraege.md`
+- Engines-Übersicht (Admin, 0.946.0) — alle Engines, Hintergrund-Zuordnung, Warteschlange, wer rechnet was, Durchsatz → `docs/api/admin-engines.md`
 - Hintergrundjobs pausieren (Admin) — ein Schalter für alle pausierbaren Hintergrunddienste, ohne Neustart → `docs/api/hintergrundjobs-pause.md`
 - Speicherdauer — alle Aufbewahrungsfristen je Datenart, Aufräumlauf und `Retention:*`-Schlüssel → `docs/api/speicherdauer.md`
 - Analyse-Verlauf + Sterne (0.603.0, auth) → `docs/api/analyse-verlauf-sterne.md`
