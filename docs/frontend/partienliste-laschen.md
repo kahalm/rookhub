@@ -2,7 +2,10 @@
 
 Wunsch 2026-11-10: „unter /games gibt es atm saved games – da wäre eine unterscheidung vermutlich fein (in tabs?) –
 allgemeine saved games, online games, otb games“. Die Regel, welche Partie wohin gehört, steht am Server
-(`docs/api/gespeicherte-partien.md`, „Laschen der Partienliste“); das Frontend rechnet nichts davon nach.
+(`docs/api/gespeicherte-partien.md`, „Laschen der Partienliste“); das Frontend rechnet nichts davon nach. Seit 0.956.1 machen
+Turnierseiten-Adressen (chess-results.com, fide.com) im Kopf eine Partie nicht mehr zur Online-Partie, und eine
+lichess-Studie mit Turnier-Event und klassischer/leerer Bedenkzeit zählt als Brettpartie — die Zahlen der Laschen
+(`kind-counts`) ziehen ohne Frontend-Änderung mit.
 
 - **Komponente**: `features/games/games-list.component.ts`. Laschen als `mat-tab-nav-bar` + `mat-tab-link` mit
   `routerLink="."` und `[queryParams]="{ kind }"` (`queryParamsHandling: 'merge'`, „Alle“ = Parameter weg), die Liste

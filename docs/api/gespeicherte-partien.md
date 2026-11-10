@@ -79,7 +79,18 @@ PGN-Köpfe oder eine nachträgliche Liga-Zuordnung erscheinen ohne weiteres Zutu
   1. `[Event]` oder `[Site]` trägt einen echten Wert (mindestens ein Buchstabe/eine Ziffer; „?“, „-“, leer zählen nicht),
   2. weder `[Event]`, `[Site]` noch `[Link]` nennt eine Plattform/Adresse/Online-Partie (`https?:`, `www.`, chess.com,
      lichess, chess24, playchess, chesstempo, playok, online, offline, internet, rated, casual, live chess —
-     Groß-/Kleinschreibung egal; „iChessOne offline game“ ist eine App-Partie),
+     Groß-/Kleinschreibung egal; „iChessOne offline game“ ist eine App-Partie). **Ausnahmen** (Fix 0.956.1, 143
+     Brettpartien bekamen chess-results-Links als Site): (i) eine Kopfzeile, deren Wert eine Turnier-/Wertungsseite ist
+     (chess-results.com samt Unterseiten s1/s2…, fide.com samt ratings.fide.com; Adresse am Wertanfang, mit/ohne
+     `https://`/`www.`), zählt nie als Online-Hinweis; (ii) **lichess-Studie mit Turnier-Event**: Site/Link ist nur
+     `lichess.org` bzw. `lichess.org/study/…` oder `/broadcast/…` UND `[Event]` trägt einen Turniernamen (ganzes Wort
+     Open/Liga/Cup oder Turnier, Tournament, Meisterschaft, Championship, Pokal, Festival, Memorial, Olympia(d),
+     Masters, Mannschaft, Bundes-/Landesliga, Stadtmst, Staatsmeister) UND sonst kein Online-Hinweis im Kopf. Bewusst
+     ausgeschlossen bleiben: eine Partie-Adresse `lichess.org/<id>` in Site ODER Link (echte Online-Partie, auch mit
+     Turnier-Event), lichess-Arena/Swiss/Titled (kein Turnierwort), „Rated …“/„Lichess Open“ (Online-Wort im Event),
+     Bullet/Blitz/Rapid (Bedingung 3), chess.com/chess24 usw. sowie schach-tirol-/chessbase-Seiten (nicht eindeutig
+     Turnierseiten; bleiben Online-Hinweis). Muster `TournamentSiteValue`, `LichessStudyValue`, `TournamentEventPattern`,
+     `OnlineHeadIgnoringStudyPattern`,
   3. die Bedenkzeit (`SavedGames.TimeControl`, beim Import aus `[TimeControl]`) ist leer/unverständlich (`-`,
      `40/7200:3600`) ODER klassisch nach `GameClassifier.Mode` (Grundzeit + 40 × Inkrement ≥ 1500 s). Bullet, Blitz,
      Schnellschach und Fernschach (`1/86400`) schließen aus. Geprüft wird in C# über die wenigen VERSCHIEDENEN Werte
@@ -90,7 +101,9 @@ PGN-Köpfe oder eine nachträgliche Liga-Zuordnung erscheinen ohne weiteres Zutu
 * Quelle `rookhub` (Analysebrett) ohne Verbindung und PGN-Importe ohne Brett-Hinweis stehen nur unter **Alle**.
 * Stand Prod 10.11.2026 (UserId 5, 135 Partien, nachgerechnet per Lese-SQL): Online 41, Am Brett 86 (63 verbundene PGN
   + 7 Formulare + 16 PGN mit Brett-Kopf), nur unter Alle 8 (1 `rookhub`; 7 PGN: dreimal Event/Site nur „?“, dreimal
-  „iChessOne offline game“, einmal ein lichess-Bullet mit Adresse im Kopf). Frontend: `docs/frontend/partienliste-laschen.md`.
+  „iChessOne offline game“, einmal ein lichess-Bullet mit Adresse im Kopf). Nach dem Fix 0.956.1 (Lese-SQL 10.11.2026 abends, 196
+  Partien): Am Brett 111 → 149 (+28 mit chess-results-Site, +10 lichess-Studien Graz Open 2024/Hallein Open 2024 B; eigene
+  per Namensregel etwa 52 → 82); weiter nicht „Am Brett“: dreimal „iChessOne offline game“, das lichess-Bullet. Frontend: `docs/frontend/partienliste-laschen.md`.
 
 **Elo im Kopf** (0.737.0, Wunsch 2026-10-10): Partieseite und Teilen-Link zeigen „Name (Elo n)", der og:title des Teilen-Links
 ebenso. Fehlt einer Kopie mit `LeagueClubGameId` die Wertung (PGN-Kopf), liefert `SavedGameSharing.WithLeagueEloAsync` sie beim

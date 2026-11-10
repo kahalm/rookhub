@@ -44,18 +44,45 @@ internal static class SavedGameKinds
     /// </summary>
     internal const string NamedHeadPattern = Head + @"\[(?:Event|Site) ""[^""\n]*[0-9a-z]";
 
-    /// <summary>
-    /// Ausschluss: <c>[Event]</c>, <c>[Site]</c> oder <c>[Link]</c> nennt eine Plattform, eine Adresse oder eine
-    /// Online-/App-Partie („rated bullet game“, „Live Chess“, „iChessOne offline game“).
-    /// </summary>
-    internal const string OnlineHeadPattern = Head
-        + @"\[(?:Event|Site|Link) ""[^""\n]*(?:https?:|www\.|chess\.com|lichess|chess24|playchess|chesstempo|playok"
+    /// <summary>Werte, die nie als Online-Hinweis zählen: Adressen von Turnier-/Wertungsseiten (chess-results.com samt
+    /// Unterseiten s1/s2…, fide.com samt ratings.fide.com; Fix 0.956.1 — 143 Brettpartien bekamen chess-results als Site).
+    /// Als Vorausschau am Wertanfang, damit die ganze Kopfzeile übersprungen wird.</summary>
+    private const string TournamentSiteValue = @"\s*(?:https?://)?(?:[a-z0-9-]+\.)*(?:chess-results\.com|fide\.com)(?:[/:?#""]|$)";
+
+    /// <summary>Wert einer lichess-STUDIE/Übertragung (oder bloß „lichess.org“) — keine Partie-Adresse
+    /// (lichess.org/&lt;8 Zeichen&gt;); zählt nur mit Turnier-Event als Brettpartie (<see cref="TournamentEventPattern"/>).</summary>
+    private const string LichessStudyValue = @"\s*(?:https?://)?(?:www\.)?lichess\.org(?:/(?:study|broadcast)/[^""\n]*)?/?\s*""";
+
+    private const string OnlineMarkers = @"(?:https?:|www\.|chess\.com|lichess|chess24|playchess|chesstempo|playok"
         + @"|online|offline|internet|rated|casual|live chess)";
 
+    /// <summary>
+    /// Ausschluss: <c>[Event]</c>, <c>[Site]</c> oder <c>[Link]</c> nennt eine Plattform, eine Adresse oder eine
+    /// Online-/App-Partie („rated bullet game“, „Live Chess“, „iChessOne offline game“). Adressen von Turnierseiten
+    /// (<see cref="TournamentSiteValue"/>) zählen nicht.
+    /// </summary>
+    internal const string OnlineHeadPattern = Head
+        + @"\[(?:Event|Site|Link) ""(?!" + TournamentSiteValue + @")[^""\n]*" + OnlineMarkers;
+
+    /// <summary>Wie <see cref="OnlineHeadPattern"/>, überspringt aber zusätzlich Site/Link einer lichess-Studie
+    /// (<see cref="LichessStudyValue"/>). Eine Partie-Adresse lichess.org/&lt;id&gt; trifft weiter.</summary>
+    internal const string OnlineHeadIgnoringStudyPattern = Head
+        + @"\[(?:Event|Site|Link) ""(?!" + TournamentSiteValue + @")(?!" + LichessStudyValue + @")[^""\n]*" + OnlineMarkers;
+
+    /// <summary>Event trägt einen echten Turniernamen (ganzes Wort Open, Turnier, Meisterschaft …). Nur für die
+    /// lichess-Studie; ein Event mit Online-Wort („Rated …“, „Lichess Open“) fängt schon
+    /// <see cref="OnlineHeadIgnoringStudyPattern"/>. Arena/Swiss/Titled zählen bewusst nicht.</summary>
+    internal const string TournamentEventPattern = Head
+        + @"\[Event ""[^""\n]*(?:\bopen\b|turnier|tournament|meisterschaft|championship|\bliga\b|league|\bcup\b"
+        + @"|pokal|festival|memorial|olympia|olympiad|masters|mannschaft|landesliga|bundesliga|stadtmst|staatsmeister)";
+
     /// <summary>Für die Doku/Tests: ein PGN-Kopf gilt als Brettpartie, wenn <see cref="NamedHeadPattern"/> trifft und
-    /// <see cref="OnlineHeadPattern"/> nicht (die Bedenkzeit prüft <see cref="IsOtbTimeControl"/> zusätzlich).</summary>
+    /// <see cref="OnlineHeadPattern"/> nicht — oder es eine lichess-Studie mit Turnier-Event ist (Turnier-Event UND
+    /// <see cref="OnlineHeadIgnoringStudyPattern"/> trifft nicht). Die Bedenkzeit prüft <see cref="IsOtbTimeControl"/>.</summary>
     internal static bool IsOtbHeadPattern(string pgn)
-        => Regex.IsMatch(pgn, NamedHeadPattern) && !Regex.IsMatch(pgn, OnlineHeadPattern);
+        => Regex.IsMatch(pgn, NamedHeadPattern)
+           && (!Regex.IsMatch(pgn, OnlineHeadPattern)
+               || (Regex.IsMatch(pgn, TournamentEventPattern) && !Regex.IsMatch(pgn, OnlineHeadIgnoringStudyPattern)));
 
     /// <summary>
     /// Bedenkzeit einer PGN-Partie: fehlend oder unverständlich (<c>-</c>, <c>40/7200:3600</c>) sagt nichts; eine
@@ -100,7 +127,9 @@ internal static class SavedGameKinds
                 || (g.Source == SavedGameService.ImportSource
                     && (g.TimeControl == null || !notOtbTimeControls.Contains(g.TimeControl))
                     && Regex.IsMatch(g.Pgn, NamedHeadPattern)
-                    && !Regex.IsMatch(g.Pgn, OnlineHeadPattern)));
+                    && (!Regex.IsMatch(g.Pgn, OnlineHeadPattern)
+                        || (Regex.IsMatch(g.Pgn, TournamentEventPattern)
+                            && !Regex.IsMatch(g.Pgn, OnlineHeadIgnoringStudyPattern)))));
 
     /// <summary>Zählung je Lasche über alle Partien des Kontos (ohne Suche) — drei <c>COUNT</c>.</summary>
     internal static async Task<(int All, int Online, int Otb)> CountAsync(IQueryable<SavedGame> games, CancellationToken ct = default)

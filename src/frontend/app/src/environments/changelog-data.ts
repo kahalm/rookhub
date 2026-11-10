@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.956.1", date: "2026-11-10", changes: [
+    { en: "Saved games, tab „Over the board“: links to tournament or rating pages (chess-results.com, fide.com) in the PGN header no longer make a game an online game, and a lichess study with a real tournament event and classical or no time control counts as an over-the-board game. Links to a lichess game still count as online.",
+      de: "Gespeicherte Partien, Lasche „Am Brett“: Adressen von Turnier- und Wertungsseiten (chess-results.com, fide.com) im PGN-Kopf machen eine Partie nicht mehr zur Online-Partie, und eine lichess-Studie mit echtem Turnier-Event und klassischer oder fehlender Bedenkzeit zählt als Brettpartie. Adressen einer lichess-Partie zählen weiter als online." },
+  ] },
   { version: "0.956.0", date: "2026-11-10", changes: [
     { en: "Woodpecker: the solving page now shows the statistics of the running cycle – solved of attempted with the rate, how many without and with a hint, how many are still open and the average time per puzzle. Below it a projection: remaining solving time, puzzles needed per day until the deadline, your pace so far and the expected finish date (green when in time). In cycle 1 it estimates how large your set will be by the deadline. The previous cycle is shown for comparison.",
       de: "Woodpecker: Die Lösen-Seite zeigt jetzt die Statistik des laufenden Zyklus – gelöst von bearbeitet mit Quote, wie viele ohne und mit Tipp, wie viele noch offen sind und die durchschnittliche Zeit je Aufgabe. Darunter eine Hochrechnung: verbleibende Lösezeit, nötige Aufgaben pro Tag bis zur Frist, dein bisheriges Tempo und das voraussichtliche Enddatum (grün, wenn rechtzeitig). In Zyklus 1 schätzt sie, wie groß dein Satz bis zur Frist wird. Der vorige Zyklus steht zum Vergleich dabei." },

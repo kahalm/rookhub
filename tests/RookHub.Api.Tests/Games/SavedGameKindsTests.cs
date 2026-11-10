@@ -90,6 +90,37 @@ public class SavedGameKindsTests : IDisposable
         Assert.Single(await ListAsync("all"));
     }
 
+    [Theory] // Fix Turnierseiten-Adressen + lichess-Studie mit Turnier-Event
+    [InlineData("[Event \"Tiroler Landesliga\"]\n[Site \"https://chess-results.com/tnr1107064.aspx?lan=0&art=3\"]", null, true)]
+    [InlineData("[Event \"?\"]\n[Site \"https://s2.chess-results.com/tnr1107064.aspx\"]", "5400+30", true)]
+    [InlineData("[Event \"Open\"]\n[Site \"www.chess-results.com/tnr1.aspx\"]", null, true)]
+    [InlineData("[Event \"Mitropa Cup\"]\n[Site \"https://ratings.fide.com/profile/1\"]", null, true)]
+    [InlineData("[Event \"Graz Open 2024\"]\n[Site \"lichess.org\"]", "5400+30", true)]
+    [InlineData("[Event \"Hallein Open 2024 B\"]\n[Site \"https://lichess.org/study/AbCdEfGh/IjKlMnOp\"]", null, true)]
+    [InlineData("[Event \"Schwazer Stadtmeisterschaft\"]\n[Site \"https://lichess.org/broadcast/x/round-1/abcd1234\"]", "-", true)]
+    [InlineData("[Event \"Graz Open 2024\"]\n[Site \"https://lichess.org/AgKIX7a9\"]", null, false)]          // Partie-Adresse
+    [InlineData("[Event \"Graz Open 2024\"]\n[Site \"lichess.org\"]\n[Link \"https://lichess.org/AgKIX7a9\"]", null, false)]
+    [InlineData("[Event \"Graz Open 2024\"]\n[Site \"lichess.org\"]", "60+0", false)]               // Bullet
+    [InlineData("[Event \"Sicilian Opening\"]\n[Site \"lichess.org\"]", null, false)]              // kein Turnier
+    [InlineData("[Event \"Hourly Bullet Arena\"]\n[Site \"https://lichess.org/study/x\"]", null, false)]
+    [InlineData("[Event \"Rated Classical Open\"]\n[Site \"lichess.org\"]", null, false)]
+    [InlineData("[Event \"Club Open\"]\n[Site \"https://www.chess.com/game/live/1\"]", null, false)]  // chess.com
+    [InlineData("[Event \"Open\"]\n[Site \"https://chess-results.com.evil.example/x\"]", null, false)]
+    public async Task List_Otb_TournamentSitesAndLichessStudies(string headers, string? tc, bool otb)
+    {
+        var id = await AddAsync("pgn", Pgn(headers), timeControl: tc);
+        Assert.Equal(otb ? new[] { id } : Array.Empty<int>(), await ListAsync("otb"));
+        Assert.Equal(otb, SavedGameKinds.IsOtbHeadPattern(Pgn(headers)) && SavedGameKinds.IsOtbTimeControl(tc));
+    }
+
+    [Fact]
+    public async Task List_ChessComSource_StaysOnline_EvenWithTournamentEvent()
+    {
+        var id = await AddAsync("chess.com", Pgn("[Event \"Graz Open 2024\"]\n[Site \"https://chess-results.com/tnr1.aspx\"]"));
+        Assert.Equal(new[] { id }, await ListAsync("online"));
+        Assert.Empty(await ListAsync("otb"));
+    }
+
     [Theory]
     [InlineData("180+2", false)]     // Blitz
     [InlineData("600+5", false)]     // Schnellschach

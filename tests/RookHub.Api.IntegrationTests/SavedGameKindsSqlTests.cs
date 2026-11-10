@@ -56,14 +56,18 @@ public class SavedGameKindsSqlTests(SavedGameKindsSqlFixture fixture)
         await AddAsync(user, "k8", "pgn", "[Event \"rated bullet game\"]\n[Site \"https://lichess.org/AgKIX7a9\"]\n\n1. e4 *\n", tc: "120+1");
         await AddAsync(user, "k9", "pgn", "[Event \"Blitz Open\"]\n\n1. e4 *\n", tc: "180+2");
         await AddAsync(user, "k10", "rookhub", "1. e4 *\n");
+        var cr = await AddAsync(user, "k11", "pgn", "[Event \"?\"]\n[Site \"https://s2.chess-results.com/tnr1107064.aspx?lan=0\"]\n\n1. e4 *\n");
+        var fide = await AddAsync(user, "k12", "pgn", "[Event \"Open\"]\n[Site \"https://ratings.fide.com/x\"]\n\n1. e4 *\n");
+        var study = await AddAsync(user, "k13", "pgn", "[Event \"Graz Open 2024\"]\n[Site \"https://lichess.org/study/AbCdEfGh\"]\n\n1. e4 *\n", tc: "5400+30");
+        await AddAsync(user, "k14", "pgn", "[Event \"Graz Open 2024\"]\n[Site \"https://lichess.org/AgKIX7a9\"]\n\n1. e4 *\n");
 
         Assert.Equal(new[] { com, li }, await ListAsync(user, "online"));
-        Assert.Equal(new[] { linked, sheet, board }, await ListAsync(user, "otb"));
-        Assert.Equal(10, (await ListAsync(user, "all")).Count);
+        Assert.Equal(new[] { linked, sheet, board, cr, fide, study }, await ListAsync(user, "otb"));
+        Assert.Equal(14, (await ListAsync(user, "all")).Count);
 
         await using var db = fixture.Schema.NewContext();
         var counts = await new SavedGameListing(db).KindCountsAsync(user);
-        Assert.Equal((10, 2, 3), (counts.All, counts.Online, counts.Otb));
+        Assert.Equal((14, 2, 6), (counts.All, counts.Online, counts.Otb));
     }
 }
 
