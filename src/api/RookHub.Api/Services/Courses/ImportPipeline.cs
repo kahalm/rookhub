@@ -144,10 +144,14 @@ namespace RookHub.Api.Services.Courses;
 ///   derselbe Bump die REPERTOIRES: ein Chessable-Repertoire, dessen Dateien <c>[ChessableOid]</c> tragen, bekommt
 ///   seine Zugtexte ebenfalls aus dem Linien-Cache (je Datei, ausgeblendete Partien bleiben) statt nur den
 ///   Versions-Mark — kein eigener Bump, weil 20 bei Einführung des Repertoire-Wegs noch nirgends ausgerollt war.</item>
+/// <item><c>21</c> (0.953.3) — piratechess v1.0.53 macht Absatzwechsel in Chessable-Kommentaren (<c>&lt;br&gt;</c>,
+///   <c>&lt;/p&gt;&lt;p&gt;</c>, Blockquote-/Header-Marker) zu einem Leerzeichen statt sie ersatzlos zu streichen
+///   („next few moves.In comparison" → „moves. In comparison"); dazu Header ohne Einrückung. Reiner Bump: Chessable-Kurse
+///   und -Repertoires mit <c>[ChessableOid]</c> holen ihre Zugtexte über <see cref="StaleAction.Cache"/> neu.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 20;
+    public const int CurrentVersion = 21;
 }

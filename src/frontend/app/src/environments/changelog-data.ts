@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.953.3", date: "2026-11-10", changes: [
+    { en: "Chessable courses and repertoires can be refreshed again („Update“, from the line cache, no Chessable request): their comments get the paragraph breaks that piratechess v1.0.53 keeps as a space („next few moves. In comparison …“ instead of „moves.In“).",
+      de: "Chessable-Kurse und -Repertoires lassen sich wieder aktualisieren („Aktualisieren“, aus dem Linien-Cache, ohne Chessable-Abruf): ihre Kommentare bekommen die Absatzwechsel, die piratechess v1.0.53 als Leerzeichen erhält („next few moves. In comparison …“ statt „moves.In“)." },
+  ] },
   { version: "0.953.2", date: "2026-11-10", changes: [
     { en: "Repertoire viewer: comments of Chessable lines now sit on the right move again. Lines imported through piratechess carried the header „[ChessableColor …]“ indented; the viewer read it as two moves and showed every comment two half-moves too late (e.g. the comment on 2...e6 only after 3...cxd4). Indented header lines are now recognised, so already imported repertoires display correctly without re-import. piratechess itself writes the headers without indentation again and keeps paragraph breaks in Chessable comments as a space („next few moves. In comparison …“ instead of „moves.In“) — effective for new imports once piratechess is deployed.",
       de: "Repertoire-Ansicht: Kommentare von Chessable-Linien stehen wieder am richtigen Zug. Über piratechess importierte Linien trugen den Header „[ChessableColor …]“ eingerückt; die Ansicht las ihn als zwei Züge und zeigte jeden Kommentar zwei Halbzüge zu spät (z. B. den Kommentar zu 2...e6 erst nach 3...cxd4). Eingerückte Kopfzeilen werden jetzt erkannt, bereits importierte Repertoires erscheinen also ohne Neu-Import richtig. piratechess selbst schreibt die Header wieder ohne Einrückung und macht Absatzwechsel in Chessable-Kommentaren zu einem Leerzeichen („next few moves. In comparison …“ statt „moves.In“) — wirksam für neue Importe, sobald piratechess ausgerollt ist." },
