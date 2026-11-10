@@ -1,13 +1,21 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
-import { BookContextCardComponent } from './book-context-card.component';
+import { BookContextCardComponent, WOODPECKER_STATS_OPEN_KEY } from './book-context-card.component';
 
 describe('BookContextCardComponent (Zerlegung Z18)', () => {
+  const providers = () => [provideTranslateService({ fallbackLang: 'en' }), provideRouter([]), provideHttpClient(), provideHttpClientTesting()];
+  /** Woodpecker-Statistik: Vorgabe zugeklappt (10.11.2026); Tests, die die Zeilen sehen wollen, klappen über den Gerätespeicher auf. */
+  const setStatsOpen = (open: boolean) => { try { localStorage.setItem(WOODPECKER_STATS_OPEN_KEY, JSON.stringify(open)); } catch { /* gesperrt */ } };
+  beforeEach(() => { try { localStorage.removeItem(WOODPECKER_STATS_OPEN_KEY); } catch { /* gesperrt */ } });
+  afterEach(() => { try { localStorage.removeItem(WOODPECKER_STATS_OPEN_KEY); } catch { /* gesperrt */ } });
+
   function make(inputs: Record<string, unknown>) {
     TestBed.configureTestingModule({
       imports: [BookContextCardComponent],
-      providers: [provideTranslateService({ fallbackLang: 'en' }), provideRouter([])],
+      providers: providers(),
     });
     const fixture = TestBed.createComponent(BookContextCardComponent);
     for (const [k, v] of Object.entries(inputs)) fixture.componentRef.setInput(k, v);
@@ -91,6 +99,7 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
       wpCycle({ number: 2, targetDays: 14, deadline: new Date(Date.now() + 10 * DAY).toISOString(),
         attempted: 40, solved: 30, timeSeconds: 2400, hinted: 6, solvedWithHint: 5 }),
     ] });
+    setStatsOpen(true);
     const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
     const rows = Array.from(el.querySelectorAll('.wp-stats .wp-stats-row'));
     const kinds = (row: Element) => Array.from(row.children).map(x => x.textContent!.trim());
@@ -107,9 +116,10 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
       wpCycle({ attempted: 100, solved: 75, timeSeconds: 9000 }),
       wpCycle({ number: 2, attempted: 40, solved: 30, timeSeconds: 2400 }),
     ] });
+    setStatsOpen(true);
     TestBed.configureTestingModule({
       imports: [BookContextCardComponent],
-      providers: [provideTranslateService({ fallbackLang: 'en' }), provideRouter([])],
+      providers: providers(),
     });
     const t = TestBed.inject(TranslateService);
     t.setTranslation('en', { woodpecker: { stats: { solvedOf: '{{solved}}/{{done}} ({{pct}})', avg: 'avg {{time}}', prev: 'C{{n}} {{pct}} {{time}}' } } });
@@ -126,6 +136,7 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
   });
 
   it('Woodpecker-Statistik Zyklus 1: Kennzahlen ohne „offen“, dazu ≈ Satz bis zur Frist; ohne Versuch nichts', () => {
+    setStatsOpen(true);
     const one = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true,
       woodpeckerPlan: wpPlan({ currentCycle: 1, setSize: 40, cycles: [wpCycle({ attempted: 40, solved: 30, timeSeconds: 1200 })] }) });
     expect(one.el.querySelector('.wp-open')).toBeNull();
@@ -141,10 +152,38 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
       wpCycle({ attempted: 20, solved: 10, timeSeconds: 100 }),
       wpCycle({ number: 2, startedAt: new Date(Date.now() - 3 * DAY).toISOString(), deadline: new Date(Date.now() - DAY).toISOString() }),
     ] });
+    setStatsOpen(true);
     const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
     const forecast = el.querySelector('.wp-forecast')!;
     expect(Array.from(forecast.children).map(x => x.textContent!.trim())).toEqual(['woodpecker.overdue']);
     expect(el.querySelector('.wp-solved')).toBeNull();
+  });
+
+  it('Woodpecker-Statistik ist standardmäßig zugeklappt: nur der Textknopf, kein Abruf; Aufklappen merkt es je Gerät und lädt /stats', () => {
+    const plan = wpPlan({ setSize: 100, cycles: [
+      wpCycle({ attempted: 100, solved: 75, timeSeconds: 9000 }),
+      wpCycle({ number: 2, attempted: 40, solved: 30, timeSeconds: 2400 }),
+    ] });
+    const { el, fixture } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
+    const http = TestBed.inject(HttpTestingController);
+    const btn = el.querySelector('.wp-meta > .wp-stats-toggle') as HTMLButtonElement;   // in der Kopfzeile, nicht eigene Zeile
+    expect(btn.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelector('.wp-stats')).toBeNull();
+    expect(el.querySelector('app-woodpecker-stats-panel')).toBeNull();
+    http.expectNone(r => r.url.includes('/stats'));
+
+    btn.click();
+    fixture.detectChanges();
+    expect(btn.getAttribute('aria-expanded')).toBe('true');
+    expect(localStorage.getItem(WOODPECKER_STATS_OPEN_KEY)).toBe('true');
+    expect(el.querySelector('.wp-stats .wp-solved')).not.toBeNull();   // die drei kompakten Zeilen zuerst …
+    expect(el.querySelector('.wp-stats app-woodpecker-stats-panel')).not.toBeNull();   // … darunter das Ausführliche
+    http.expectOne(r => r.url === '/api/woodpecker/3/stats');
+
+    btn.click();
+    fixture.detectChanges();
+    expect(el.querySelector('.wp-stats')).toBeNull();
+    expect(localStorage.getItem(WOODPECKER_STATS_OPEN_KEY)).toBe('false');
   });
 
   it('Woodpecker ohne Aufgabe: Abschluss bzw. „gibt es nicht (mehr)“ (c1-wp-loeser-404-verbindung), je mit „Zur Übersicht“', () => {

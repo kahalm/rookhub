@@ -37,6 +37,7 @@ diese Aufgaben im Satz. Umgekehrt schreibt der Woodpecker-Löser KEINE `CourseAt
 | POST | `/api/woodpecker/{id}/finish-set` | Zyklus 1 vorzeitig beenden (Satz leer → 400) |
 | POST | `/api/woodpecker/{id}/next-cycle` | nächsten Zyklus beginnen (Pause < 24 h oder Zyklus läuft → 409) |
 | GET | `/api/woodpecker/{id}/next` | `{ puzzle: BookPuzzleDto \| null, plan }` — `null`, wenn der Zyklus erledigt ist; `?lang=` übersetzt die Kommentare wie `GET /api/courses/{id}/next` (0.882.0). Nur aus Kursen, auf die das Konto JETZT Zugriff hat (R3-003: ein Kurs ohne Zugang ruht, die übrigen laufen weiter); ein Kalkulationsbuch kommt ohne Lösung |
+| GET | `/api/woodpecker/{id}/stats` | ausführliche Statistik (`WoodpeckerStatsDto`, 0.957.0; `?utcOffsetMinutes=`), fremdes → 404 — siehe unten |
 | POST | `/api/woodpecker/{id}/attempts` | `{ bookPuzzleId, solved, timeSeconds, hintsUsed? }` → `plan` (`hintsUsed` 0–3, geklemmt über `AttemptRecording`, fehlt = 0; 0.956.0); Aufgabe nicht im Plan (Zyklus 1: nicht in den Kursen, ab 2: nicht im Satz) oder Kurs ohne Zugang (R3-003) → 404; zweiter Versuch im selben Zyklus ändert nichts |
 
 **Statistik je Zyklus** (`WoodpeckerCycleDto`): `attempted`, `solved`, `timeSeconds` und seit 0.956.0 `hinted` (Versuche
@@ -61,6 +62,47 @@ Kontext-Karte des Lösers zeigt den laufenden Zyklus — gerechnet im Client aus
 | voraussichtlich fertig (ab 2) | `jetzt + offen / Tempo` Tage; „rechtzeitig“, wenn ≤ Frist, sonst mit Frist daneben; ohne Versuch keins |
 | Zyklus 1 | kein Ziel, stattdessen „bei diesem Tempo ≈ N Aufgaben im Satz bis zur Frist“ = `attempted + Tempo × Resttage (anteilig)`, höchstens `availableCount` |
 | Vorzyklus | Quote und Ø des Zyklus davor (nur mit Versuchen) |
+
+**Seit 0.957.0 ist die ganze Statistik im Löser standardmäßig ZUGEKLAPPT** (Nutzerentscheidung 10.11.2026): sichtbar
+bleiben Zyklus-Kopf, Balken und Frist plus der Textknopf „Statistik“ am Ende der Kopfzeile (`aria-expanded`, Zustand je
+Gerät `rh.woodpecker.statsOpen`). Aufgeklappt stehen zuerst die drei Zeilen oben, darunter die ausführliche Statistik.
+
+### Ausführliche Statistik (`GET /api/woodpecker/{id}/stats`, 0.957.0)
+
+Wunsch 10.11.: „momentan hast du 1 h für 50 Puzzle gebraucht, die gleichen Puzzle haben letztes Mal 2 h gebraucht“ +
+Tipp-Auswertung. Eigener Abruf (NICHT in `BuildDtoAsync`, das bei jedem Versuch und in Liste/Dashboard läuft); fremder Plan
+→ 404. `?utcOffsetMinutes=` (Minuten östlich von UTC, ±14 h geklemmt) legt die Tageszeilen fest. Der Dienst
+(`WoodpeckerService.GetStatsAsync`) zieht wie `GET` erst nach (Frist, Kurs-Import), lädt dann ALLE Versuche des Plans in
+einer Abfrage und die Satz-Ids; gerechnet wird rein und statisch in `Services/Courses/WoodpeckerStatsCalculator.cs`
+(Tests mit literalen Zahlen: `WoodpeckerStatsCalculatorTests`, MariaDB: `WoodpeckerSqlTests.Stats_…`). Keine Migration.
+
+| Feld | Formel |
+|---|---|
+| `cycles[]` | je Zyklus `attempted`, `solved`, `solvedClean` (gelöst ohne Tipp), `hinted`, `timeSeconds`, `ratePct` (Prozentpunkte), `avgSeconds`, `daysUsed` = (Ende bzw. jetzt − Beginn) in Tagen, `hintsTrackedCount` (Versuche ab Tipp-Stichtag) |
+| `cycles[k].sameAsNow` (k < N) | **Schnittmenge** über `BookPuzzleId`: Aufgaben, die im laufenden Zyklus N bearbeitet sind UND in k einen Versuch haben — `count`, `secondsNow`/`secondsThen`, `solvedNow`/`solvedThen`, `hintedNow`/`hintedThen`, Quoten, `timeRatio` = secondsNow / secondsThen (0,5 = halbe Zeit), `speedFactor` = secondsThen / secondsNow. Aufgaben nur in einem der beiden zählen nicht |
+| `changes` (gegen N−1) | je gemeinsamer Aufgabe: `improved` (damals verfehlt → jetzt gelöst), `worsened`, `bothSolved`, `bothMissed`; `faster`/`slower`/`sameTime`; `muchFaster`/`muchSlower` (≥ 60 s Unterschied); `savedSeconds`/`lostSeconds` (Summen der Differenzen); `bucketsNow`/`bucketsThen` (Zeitstufen auf denselben Aufgaben) |
+| `forecast` (gegen N−1, ab 10 gemeinsamen Aufgaben) | r = `timeRatio` der Schnittmenge; Rest = Σ über die OFFENEN Aufgaben des Satzes von r × Zeit in N−1 (offen ohne Versuch in N−1: Ø jetzt); gesamt = bisher + Rest (≈ r × Gesamtzeit N−1); `goalReached` = r ≤ 0,5 (Buchziel „halbe Zeit“). Genauer als „offen × Ø“, weil die offenen Aufgaben die schweren sein können |
+| `days[]` | laufender Zyklus je lokalem Tag: Aufgaben, gelöst, Zeit |
+| `timeBuckets` | laufender Zyklus: schnell < 30 s, mittel 30–120 s, lang > 120 s |
+| `hints` | laufender Zyklus, NUR Versuche ab Stichtag (`tracked`; ältere = `untracked`): gelöst mit 0/1/2/3 Tipps, verfehlt ohne/mit Tipp |
+| `hintChanges` (gegen N−1) | nur gemeinsame Aufgaben, deren BEIDE Versuche ab Stichtag liegen: `more`/`fewer`/`same` Tipps, `sumNow`/`sumThen` (Summe der Stufen); sonst `null` |
+| `slowest[]` | die 10 langsamsten Aufgaben von N (Zeit jetzt + in N−1), nur Bezeichnung (Titel, sonst Kapitel) — nie Stellung/Lösung |
+| `alwaysMissedCount` / `alwaysMissed[]` | Aufgaben mit Versuchen in ≥ 2 Zyklen, in keinem gelöst (Liste höchstens 10) |
+
+**Tipp-Stichtag** (`hintsTrackedSince`, Konstante `WoodpeckerStatsCalculator.HintsTrackedSince` = 10.11.2026 17:34 UTC,
+Prod-Deploy von 0.956.0): `HintsUsed` gibt es erst seitdem; ältere Versuche stehen auf 0, auch die in Zyklus 1 aus
+Kurs-Versuchen übernommenen. Sie zählen in keiner Tipp-Auswertung; die Oberfläche sagt „Tipps werden erst seit … gezählt“
+und zeigt in der Verlaufstabelle „ohne Tipp“ nur für Zyklen, deren Versuche ALLE Tipp-Daten haben (sonst „–“).
+
+**Entscheidung „Rest ≈“:** die obere Zeile bleibt `offen × Ø` (aus `plan`, ohne zusätzlichen Abruf); die genauere
+Hochrechnung steht im ausführlichen Teil mit ihrer Grundlage („aus dem Vergleich mit Zyklus N−1“) — eine Zahl, die sich
+beim Aufklappen ändert, wäre verwirrender als zwei klar benannte.
+
+**Oberfläche** (`features/woodpecker/woodpecker-stats-panel.component`): entsteht erst beim Aufklappen, lädt dann sofort
+und nach jeder gemeldeten Aufgabe (neuer Stand `planId:Zyklus:bearbeitet`) entprellt 800 ms neu. Abschnitte: Dieselben
+Aufgaben → Wechsel je Aufgabe (+ Zeitstufen jetzt/damals) → Hochrechnung → Tipps → Verlauf (Tabelle je Zyklus mit Spalte
+„dieselben wie jetzt“) bzw. in Zyklus 1 „Je Tag“ (jüngste 14) + Zeitstufen → Sorgenkinder (Link „ansehen“ =
+`/puzzles/book/:id`).
 
 `WoodpeckerPlanDto.status`: `solving` (Zyklus läuft), `break` (Pause bis `nextCycleAt`), `ready`, `completed`.
 

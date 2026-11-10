@@ -739,6 +739,22 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   ein Satz „Bei diesem Tempo (10 pro Tag) ≈ 290 Aufgaben im Satz bis zur Frist“; (3) „Zyklus 1: 75 % gelöst, Ø 1:30“.
   Ohne Versuch nur die Hochrechnungszeile (Zyklus 2+: nötig je Tag). Gelöst mit Tipp zählt als gelöst. Prozent über
   `| pct`, Zeiten `formatSecondsClock`, Datum `mediumDate`, Tempo `number:'1.0-1'`.
+  **Seit 0.957.0 standardmäßig eingeklappt** (Nutzerentscheidung 10.11.2026: „Statistik standardmäßig eingeklappt →
+  ausklappbar“): sichtbar sind nur Zyklus-Kopf, Balken und Frist; am Ende der Kopfzeile (`.wp-meta`, `.rh-dots`) steht
+  der Textknopf „Statistik ▾“ (Link-Optik in `--mat-sys-primary`, `aria-expanded`, Trefferfläche über `::after` ≥ 44 px,
+  nicht als eigene Zeile, 5.11). Zustand je Gerät (`rh.woodpecker.statsOpen`, `core/local-json-store`), Vorgabe zu.
+  Aufgeklappt zuerst die drei Zeilen oben, darunter die **ausführliche Statistik** (`app-woodpecker-stats-panel`, lädt
+  `/stats` erst dann, danach entprellt nach jeder Meldung): Abschnitte mit kleiner h3 (0,85 rem, halbfett,
+  `--mat-sys-on-surface`) in fester Reihenfolge — Dieselben Aufgaben (gemeinsam · jetzt · damals · Anteil der Zeit, ≤ 50 %
+  in `--rh-success` · Faktor „2,2× schneller“ über `DecimalPipe` `1.1-1`; Quote jetzt/damals) → Wechsel je Aufgabe
+  (verbessert in `--rh-success`, verschlechtert in `--rh-warn`; schneller/langsamer, gespart/verloren; Zeitstufen-Tabelle
+  jetzt/damals) → Hochrechnung (gesamt, Vorzyklus, Rest; Ziel „halbe Zeit“ erreicht/nicht) → Tipps (Tabelle Anzahl +
+  Anteil je Stufe; vor dem Stichtag ein Satz „Tipps werden erst seit … gezählt“, nie eine vorgetäuschte 0) → Verlauf
+  (Tabelle je Zyklus, laufender halbfett, Spalte „dieselben wie jetzt“, „–“ wo nichts belastbar ist) bzw. in Zyklus 1
+  „Je Tag“ (jüngste 14) → Sorgenkinder (Bezeichnung · Zeiten · Link „ansehen“, nie Stellung/Lösung, 2.7). Jede Angabe als
+  eigenes `.rh-dots`-Kind ohne Umbruch in sich; Tabellen rechtsbündig + `tabular-nums` in eigenem `overflow-x: auto`-Kasten
+  (Verlaufstabelle `min-width: 420px`), damit die Seite bei 390 px nie waagerecht scrollt (4.4, 5.3). Laden = schmaler
+  `mat-progress-bar` statt Seiten-Spinner, Fehler = `app-load-error` mit „Erneut versuchen“, leer = ein Satz (5.10).
 - **Tagespuzzle** nennt sich: Chip „Tagespuzzle“ + Datum (`mediumDate`, UTC) in der Kontext-Card wie der Wochenpost-Chip (d4).
 - Gleiche Erweiterung in allen drei Puzzle-Modi prüfen (Standard, Endless, Buch/Kurs; `rookhub/CLAUDE.md`).
 
@@ -1275,6 +1291,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-10 | 0.957.0 · Woodpecker-Löser | Ganze Statistik standardmäßig eingeklappt, Textknopf „Statistik“ am Ende der Kopfzeile (aria-expanded, je Gerät gemerkt); aufgeklappt die drei Zeilen + ausführliche Statistik in benannten Abschnitten (Dieselben Aufgaben, Wechsel, Hochrechnung, Tipps, Verlauf bzw. Je Tag, Sorgenkinder), Tabellen im eigenen Scrollkasten (5.12) | Wunsch 10.11.: „umfangreiche statistik … die gleichen puzzle haben letztes mal 2h gebraucht“, „soviel mit sovielen hints … muss nicht immer da sein“, „Statistik standardmäßig eingeklappt → ausklappbar“ | User über die Sitzung „woodpecker“ |
 | 2026-11-10 | 0.956.0 · Woodpecker-Löser | Statistik des laufenden Zyklus in der Kontext-Card (5.12): Kennzahlzeile gelöst/Quote, ohne/mit Tipp, offen, Ø; Hochrechnung (Restzeit, nötig je Tag, Tempo, voraussichtliches Ende vs. Frist; Zyklus 1: ≈ Satz bis zur Frist); Vorzyklus zum Vergleich — leise, höchstens drei Zeilen unter dem Fortschritt | Wunsch 10.11.: „im Detail … gehen mir die Stats ab – wie viel gelöst, wie viel mit Hint, Hochrechnung“ | User über die betreuende Sitzung |
 | 2026-11-10 | 0.955.0 · Dashboard | Woodpecker-Kachel (8.1): laufendes Training mit Zyklus, Fortschritt, Frist und genau einer Aktion je Zustand; zweite Ausnahme in `DEFAULT_VISIBLE` nach dem Muster der angepinnten Kurse (nur mit eigenen Daten sichtbar, sonst nur im Anpassen-Modus) | Wunsch 10.11.: „Woodpecker braucht ein Panel auf dem Dashboard“ | User über die Sitzung „woodpecker“ |
 | 2026-11-10 | 0.954.0 · RookHub `/games` | Zusammenfassungs-Symbol je Zeile (fertig = Icon-Link `article`, offen = Sanduhr ohne Knopf, fester Platz, Aktionsspalte 128 px); Turnier als dritte Zeile unter den Namen (gekürzt + Tooltip, alle Laschen außer bei Online-Partien); „Nur meine Partien“ als Häkchen unter dem Suchfeld (`?mine=1`); Partiekopf einer eigenen Partie zeigt den Stand der verbundenen Vereins-Zusammenfassung (Sanduhr/Link) statt „anfordern“ | Stand ohne Öffnen jeder Partie sehen; hochgeladene fremde Vereinspartien ausblenden; Turnier ohne Öffnen | Wunsch 10.11. über die betreuende Sitzung |

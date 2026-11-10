@@ -234,6 +234,39 @@ public class WoodpeckerService
         return await BuildDtoAsync(plan, ct);
     }
 
+    /// <summary>Ausführliche Statistik (Vergleich auf denselben Aufgaben, Hochrechnung, Verlauf, Sorgenkinder) — eigener
+    /// Abruf, damit <see cref="BuildDtoAsync"/> (läuft bei jedem Versuch, in Liste und Dashboard) schlank bleibt. Lädt die
+    /// Versuche des Plans in EINER Abfrage und verbindet im Speicher (<see cref="WoodpeckerStatsCalculator"/>).</summary>
+    public async Task<WoodpeckerStatsDto> GetStatsAsync(int userId, int planId, int utcOffsetMinutes = 0, CancellationToken ct = default)
+    {
+        var plan = await LoadAsync(userId, planId, ct);
+        await RefreshAsync(plan, userId, ct);
+        var attempts = await _db.WoodpeckerAttempts.AsNoTracking().Where(a => a.PlanId == planId)
+            .Select(a => new WoodpeckerStatsCalculator.Attempt(a.Cycle, a.BookPuzzleId, a.BookId, a.Solved, a.TimeSeconds, a.HintsUsed, a.AttemptedAt))
+            .ToListAsync(ct);
+        var setIds = await _db.WoodpeckerSetItems.AsNoTracking().Where(i => i.PlanId == planId)
+            .Select(i => i.BookPuzzleId).ToListAsync(ct);
+        var cycles = plan.Cycles.Select(c => new WoodpeckerStatsCalculator.Cycle(c.Number, c.StartedAt, c.FinishedAt)).ToList();
+        var dto = WoodpeckerStatsCalculator.Compute(plan.Id, cycles, attempts, setIds, Now, utcOffsetMinutes);
+
+        // Bezeichnungen der Sorgenkinder: nur Titel bzw. Kapitel — nie Stellung oder Lösung (DESIGN 2.7).
+        var trouble = dto.Slowest.Concat(dto.AlwaysMissed).ToList();
+        if (trouble.Count > 0)
+        {
+            var ids = trouble.Select(t => t.BookPuzzleId).Distinct().ToList();
+            var labels = await _db.BookPuzzles.AsNoTracking().Where(bp => ids.Contains(bp.Id))
+                .Select(bp => new { bp.Id, bp.Title, bp.Chapter })
+                .ToListAsync(ct);
+            foreach (var t in trouble)
+            {
+                var l = labels.FirstOrDefault(x => x.Id == t.BookPuzzleId);
+                t.Label = !string.IsNullOrWhiteSpace(l?.Title) ? l.Title.Trim()
+                    : !string.IsNullOrWhiteSpace(l?.Chapter) ? l.Chapter.Trim() : "";
+            }
+        }
+        return dto;
+    }
+
     // ===== intern =====
 
     private async Task<WoodpeckerPlan> LoadAsync(int userId, int planId, CancellationToken ct) =>

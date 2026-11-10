@@ -67,3 +67,11 @@
 .context-card .wp-ok { color: var(--rh-success); }
 .context-card .wp-late { color: var(--rh-warn); }
 .context-card .wp-hinted { color: var(--rh-hint); }
+
+/* „Statistik“-Textknopf am Ende der Kopfzeile (0.957.0): sieht aus wie ein Link, Trefferfläche über ::after auf ≥ 44 px
+   Höhe vergrößert (::before ist der .rh-dots-Punkt). */
+.wp-meta > .wp-stats-toggle { position: relative; background: none; border: 0; padding: 0; margin: 0; font: inherit;
+  color: var(--mat-sys-primary); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+.wp-meta > .wp-stats-toggle::after { content: ''; position: absolute; inset: -14px -6px; }
+.wp-meta > .wp-stats-toggle:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; }
+.wp-stats-caret { margin-left: 2px; text-decoration: none; display: inline-block; }

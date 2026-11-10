@@ -1,4 +1,8 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Controllers.Courses;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs.Courses;
 using RookHub.Api.Exceptions;
@@ -337,5 +341,68 @@ public class WoodpeckerServiceTests : IDisposable
         Assert.Empty(await _service.ListAsync(UserId));
         Assert.Equal(0, await _db.WoodpeckerSetItems.CountAsync());
         Assert.Equal(0, await _db.WoodpeckerAttempts.CountAsync());
+    }
+
+    private Task<WoodpeckerPlanDto> SolveTimedAsync(int planId, int puzzleId, bool solved, int seconds) =>
+        _service.RecordAttemptAsync(UserId, planId, new RecordWoodpeckerAttemptDto { BookPuzzleId = puzzleId, Solved = solved, TimeSeconds = seconds });
+
+    [Fact]
+    public async Task Stats_SecondCycle_ComparesSamePuzzles_WithLabels()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 4);   // Aufgabe 4 bleibt außerhalb des Satzes
+        foreach (var bp in _db.BookPuzzles.Where(b => ids.Contains(b.Id))) bp.Title = "Exercise " + bp.Round;
+        await _db.SaveChangesAsync();
+        var plan = await CreateAsync(bookId);
+        await SolveTimedAsync(plan.Id, ids[0], true, 100);
+        await SolveTimedAsync(plan.Id, ids[1], false, 200);
+        await SolveTimedAsync(plan.Id, ids[2], true, 300);
+        await _service.FinishSetAsync(UserId, plan.Id);
+        _clock.Now = _clock.Now.AddDays(1).AddMinutes(1);
+        await _service.StartNextCycleAsync(UserId, plan.Id);
+        await SolveTimedAsync(plan.Id, ids[0], true, 50);
+        await SolveTimedAsync(plan.Id, ids[1], true, 100);
+
+        var stats = await _service.GetStatsAsync(UserId, plan.Id);
+        Assert.Equal(2, stats.CurrentCycle);
+        Assert.Equal(3, stats.SetSize);
+        var same = stats.Cycles[0].SameAsNow!;
+        Assert.Equal(2, same.Count);           // Aufgabe 3 ist in Zyklus 2 noch offen
+        Assert.Equal(150, same.SecondsNow);
+        Assert.Equal(300, same.SecondsThen);
+        Assert.Equal(0.5, same.TimeRatio!.Value, 6);
+        Assert.Equal(1, stats.Changes!.Improved);
+        Assert.Null(stats.Forecast);           // 2 gemeinsame < 10
+        Assert.Equal("Exercise 2", stats.Slowest[0].Label);
+        Assert.Equal(200, stats.Slowest[0].SecondsPrev);
+    }
+
+    [Fact]
+    public async Task Stats_OtherUsersPlan_NotFound()
+    {
+        var (bookId, _) = await SeedBookAsync("WP", 2);
+        var plan = await CreateAsync(bookId);
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.GetStatsAsync(OtherUserId, plan.Id));
+    }
+
+    [Fact]
+    public async Task StatsEndpoint_OwnPlanOk_ForeignPlanNotFound()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 2);
+        var plan = await CreateAsync(bookId);
+        await SolveAsync(plan.Id, ids[0]);
+        WoodpeckerController As(int user) => new(_service)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, user.ToString())], "Test")),
+                },
+            },
+        };
+        var ok = Assert.IsType<OkObjectResult>(await As(UserId).Stats(plan.Id, 60, CancellationToken.None));
+        var dto = Assert.IsType<WoodpeckerStatsDto>(ok.Value);
+        Assert.Equal(1, dto.Cycles[0].Attempted);
+        await Assert.ThrowsAsync<NotFoundException>(() => As(OtherUserId).Stats(plan.Id, 0, CancellationToken.None));
     }
 }

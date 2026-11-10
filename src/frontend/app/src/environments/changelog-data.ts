@@ -10,6 +10,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.957.0", date: "2026-11-10", changes: [
+    { en: "Woodpecker, solving page: the statistics are now collapsed by default behind a „Statistics“ button (your choice is remembered on this device). Opened, they show the three short lines from before and below them a detailed evaluation.",
+      de: "Woodpecker, Lösen-Seite: Die Statistik ist jetzt standardmäßig eingeklappt hinter einem Knopf „Statistik“ (deine Wahl wird auf diesem Gerät gemerkt). Aufgeklappt zeigt sie die drei kurzen Zeilen von bisher und darunter eine ausführliche Auswertung." },
+    { en: "Woodpecker: comparison on the same puzzles – for the puzzles you have already done in this cycle, how long they took now and in each earlier cycle (e.g. „73 puzzles: now 1:25:06, in cycle 1 3:06:30, 46% of the time, 2.2× faster“), with the solve rate now and then and whether the book’s goal „half the time“ is reached.",
+      de: "Woodpecker: Vergleich auf denselben Aufgaben – für die Aufgaben, die du in diesem Zyklus schon bearbeitet hast, wie lange sie jetzt und in jedem früheren Zyklus gedauert haben (z. B. „73 Aufgaben: jetzt 1:25:06, in Zyklus 1 3:06:30, 46 % der Zeit, 2,2× schneller“), mit der Quote jetzt und damals und ob das Buchziel „halbe Zeit“ erreicht ist." },
+    { en: "Woodpecker: further sections – changes per puzzle (improved, worsened, faster, slower, time saved and lost), a projection of the whole cycle from that comparison, hints by level and compared with the previous cycle, the history of all cycles, and the puzzles that took longest or were missed in every cycle. Hints are only counted since 10 November 2026; where there is no data the page says so.",
+      de: "Woodpecker: weitere Abschnitte – Wechsel je Aufgabe (verbessert, verschlechtert, schneller, langsamer, gesparte und verlorene Zeit), eine Hochrechnung des ganzen Zyklus aus diesem Vergleich, Tipps nach Stufe und im Vergleich zum Vorzyklus, der Verlauf aller Zyklen sowie die Aufgaben, die am längsten dauerten oder in jedem Zyklus verfehlt wurden. Tipps werden erst seit dem 10. November 2026 gezählt; wo Daten fehlen, sagt die Seite das." },
+  ] },
   { version: "0.956.1", date: "2026-11-10", changes: [
     { en: "Saved games, tab „Over the board“: links to tournament or rating pages (chess-results.com, fide.com) in the PGN header no longer make a game an online game, and a lichess study with a real tournament event and classical or no time control counts as an over-the-board game. Links to a lichess game still count as online.",
       de: "Gespeicherte Partien, Lasche „Am Brett“: Adressen von Turnier- und Wertungsseiten (chess-results.com, fide.com) im PGN-Kopf machen eine Partie nicht mehr zur Online-Partie, und eine lichess-Studie mit echtem Turnier-Event und klassischer oder fehlender Bedenkzeit zählt als Brettpartie. Adressen einer lichess-Partie zählen weiter als online." },

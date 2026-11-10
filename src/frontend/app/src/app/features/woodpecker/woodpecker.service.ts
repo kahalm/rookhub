@@ -41,6 +41,118 @@ export interface WoodpeckerPlan {
 
 export interface WoodpeckerNext { puzzle: BookPuzzleDto | null; plan: WoodpeckerPlan; }
 
+/** Laufender Zyklus gegen einen früheren auf DENSELBEN Aufgaben (Schnittmenge über die Aufgabe, 0.957.0). */
+export interface WoodpeckerOverlap {
+  cycle: number;
+  count: number;
+  secondsNow: number;
+  secondsThen: number;
+  solvedNow: number;
+  solvedThen: number;
+  hintedNow: number;
+  hintedThen: number;
+  /** Prozentpunkte (0–100). */
+  ratePctNow: number | null;
+  ratePctThen: number | null;
+  /** Anteil der damaligen Zeit (0,5 = halbe Zeit). */
+  timeRatio: number | null;
+  /** damals / jetzt (2,0 = doppelt so schnell). */
+  speedFactor: number | null;
+}
+
+export interface WoodpeckerStatsCycle {
+  number: number;
+  targetDays: number;
+  startedAt: string;
+  finishedAt: string | null;
+  attempted: number;
+  solved: number;
+  solvedClean: number;
+  hinted: number;
+  timeSeconds: number;
+  ratePct: number | null;
+  avgSeconds: number | null;
+  daysUsed: number;
+  /** Versuche ab dem Tipp-Stichtag — nur deren Tipp-Zahl ist belastbar. */
+  hintsTrackedCount: number;
+  sameAsNow: WoodpeckerOverlap | null;
+}
+
+export interface WoodpeckerTimeBuckets { fast: number; medium: number; slow: number; }
+
+export interface WoodpeckerChanges {
+  cycle: number;
+  improved: number;
+  worsened: number;
+  bothSolved: number;
+  bothMissed: number;
+  faster: number;
+  slower: number;
+  sameTime: number;
+  muchFaster: number;
+  muchSlower: number;
+  savedSeconds: number;
+  lostSeconds: number;
+  bucketsNow: WoodpeckerTimeBuckets;
+  bucketsThen: WoodpeckerTimeBuckets;
+}
+
+export interface WoodpeckerForecast {
+  basisCycle: number;
+  sample: number;
+  timeRatio: number;
+  basisTotalSeconds: number;
+  spentSeconds: number;
+  openCount: number;
+  remainingSeconds: number;
+  projectedTotalSeconds: number;
+  goalRatio: number;
+  goalReached: boolean;
+}
+
+export interface WoodpeckerHintBreakdown {
+  tracked: number;
+  untracked: number;
+  solvedNoHint: number;
+  solvedHint1: number;
+  solvedHint2: number;
+  solvedHint3: number;
+  missedNoHint: number;
+  missedWithHint: number;
+}
+
+export interface WoodpeckerHintChanges { cycle: number; count: number; more: number; fewer: number; same: number; sumNow: number; sumThen: number; }
+
+export interface WoodpeckerStatsDay { date: string; attempted: number; solved: number; timeSeconds: number; }
+
+export interface WoodpeckerTrouble {
+  bookPuzzleId: number;
+  bookId: number;
+  label: string;
+  secondsNow: number | null;
+  secondsPrev: number | null;
+  solvedNow: boolean | null;
+  cycles: number;
+}
+
+/** `GET /api/woodpecker/{id}/stats` — ausführliche Statistik (Formeln: docs/api/woodpecker.md). */
+export interface WoodpeckerStats {
+  planId: number;
+  currentCycle: number;
+  setSize: number;
+  cycles: WoodpeckerStatsCycle[];
+  changes: WoodpeckerChanges | null;
+  forecast: WoodpeckerForecast | null;
+  days: WoodpeckerStatsDay[];
+  hintsTrackedSince: string;
+  hints: WoodpeckerHintBreakdown;
+  hintChanges: WoodpeckerHintChanges | null;
+  timeBuckets: WoodpeckerTimeBuckets;
+  slowest: WoodpeckerTrouble[];
+  alwaysMissedCount: number;
+  alwaysMissed: WoodpeckerTrouble[];
+}
+
 /** Woodpecker-Training über Kurse (`/api/woodpecker`, Regeln fest im Backend: `WoodpeckerRules`). */
 @Injectable({ providedIn: 'root' })
 export class WoodpeckerService {
@@ -74,6 +186,11 @@ export class WoodpeckerService {
   next(planId: number, lang?: string | null): Observable<WoodpeckerNext> {
     const params: Record<string, string> = lang ? { lang } : {};
     return this.http.get<WoodpeckerNext>(`${this.base}/${planId}/next`, { params });
+  }
+
+  /** Ausführliche Statistik; Tageszeilen in der Zeitzone dieses Geräts. */
+  stats(planId: number, utcOffsetMinutes = -new Date().getTimezoneOffset()): Observable<WoodpeckerStats> {
+    return this.http.get<WoodpeckerStats>(`${this.base}/${planId}/stats`, { params: { utcOffsetMinutes: String(utcOffsetMinutes) } });
   }
 
   /** `hintsUsed` = höchste aufgedeckte Tipp-Stufe (0–3), der Server klemmt. */

@@ -142,4 +142,33 @@ public class WoodpeckerSqlTests(WoodpeckerFixture fixture) : IAsyncLifetime, ICl
         Assert.Equal(0, await _db.WoodpeckerCycles.CountAsync());
         Assert.Equal(0, await _db.WoodpeckerPlanBooks.CountAsync());
     }
+
+    /// <summary>0.957.0: <c>GET stats</c> lädt die Versuche des Plans in einer Abfrage (Projektion in einen Record) und
+    /// die Bezeichnungen der Sorgenkinder über <c>Contains</c> — beides muss MariaDB übersetzen.</summary>
+    [MySqlFact]
+    public async Task Stats_TranslatesOnMariaDb_ComparesSamePuzzles()
+    {
+        var (userId, bookId, ids) = await SeedAsync(3);
+        var service = new WoodpeckerService(_db, _clock);
+        var plan = await service.CreateAsync(userId, false, new CreateWoodpeckerPlanDto { BookIds = { bookId } });
+        await service.RecordAttemptAsync(userId, plan.Id, new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 120 });
+        await service.RecordAttemptAsync(userId, plan.Id, new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[1], Solved = false, TimeSeconds = 80 });
+        await service.FinishSetAsync(userId, plan.Id);
+        _clock.Now = _clock.Now.AddDays(1).AddMinutes(1);
+        await service.StartNextCycleAsync(userId, plan.Id);
+        await service.RecordAttemptAsync(userId, plan.Id, new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 60, HintsUsed = 1 });
+
+        var stats = await service.GetStatsAsync(userId, plan.Id, 60);
+        Assert.Equal(2, stats.CurrentCycle);
+        Assert.Equal(2, stats.SetSize);
+        var same = stats.Cycles[0].SameAsNow!;
+        Assert.Equal(1, same.Count);
+        Assert.Equal(60, same.SecondsNow);
+        Assert.Equal(120, same.SecondsThen);
+        Assert.Equal(200, stats.Cycles[0].TimeSeconds);
+        Assert.Equal(1, stats.Cycles[1].Hinted);
+        Assert.Single(stats.Days);
+        Assert.Equal(ids[0], stats.Slowest.Single().BookPuzzleId);
+        Assert.Equal(120, stats.Slowest[0].SecondsPrev);
+    }
 }

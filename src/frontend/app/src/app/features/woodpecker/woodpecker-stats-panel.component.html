@@ -1,0 +1,244 @@
+<!-- Ausführliche Woodpecker-Statistik (0.957.0, DESIGN 5.12): nur im aufgeklappten Block, Abschnitte mit h3, Zahlen
+     rechtsbündig mit tabular-nums, Tabellen in eigenem waagerechten Scrollkasten (DESIGN 4.4/5.3). Laden, Fehler und
+     leer sind drei Zustände (5.10). -->
+<div class="wps">
+  @if (stats(); as s) {
+    @if (loading()) { <mat-progress-bar class="wps-busy" mode="indeterminate" /> }
+    @if (error()) { <app-load-error [error]="error()" (retry)="retry()" /> }
+    @if (!current()?.attempted) {
+      <p class="wps-empty">{{ 'woodpecker.panel.empty' | translate }}</p>
+    } @else {
+      <!-- 1 Dieselben Aufgaben: laufender Zyklus gegen den Vorzyklus auf der Schnittmenge -->
+      @if (prevRow(); as pr) {
+        <section class="wps-sec wps-same">
+          <h3>{{ 'woodpecker.panel.sameTitle' | translate }}</h3>
+          @if (pr.sameAsNow; as o) {
+            @if (o.count > 0) {
+              <p class="wps-line rh-dots">
+                <span class="wps-strong">{{ (o.count === 1 ? 'woodpecker.panel.sameCountOne' : 'woodpecker.panel.sameCount') | translate: { n: o.count, k: o.cycle } }}</span>
+                <span class="wps-now">{{ 'woodpecker.panel.nowTime' | translate: { time: clock(o.secondsNow) } }}</span>
+                <span class="wps-then">{{ 'woodpecker.panel.thenTime' | translate: { k: o.cycle, time: clock(o.secondsThen) } }}</span>
+                @if (o.timeRatio !== null) {
+                  <span class="wps-share" [class.wps-ok]="o.timeRatio <= 0.5">{{ 'woodpecker.panel.share' | translate: { pct: (o.timeRatio * 100 | pct) } }}</span>
+                }
+                @if (o.speedFactor !== null && o.speedFactor >= 1) {
+                  <span class="wps-factor">{{ 'woodpecker.panel.faster' | translate: { x: (o.speedFactor | number: '1.1-1') } }}</span>
+                } @else if (o.speedFactor !== null && o.speedFactor > 0) {
+                  <span class="wps-factor wps-late">{{ 'woodpecker.panel.slower' | translate: { x: (1 / o.speedFactor | number: '1.1-1') } }}</span>
+                }
+              </p>
+              <p class="wps-line rh-dots">
+                <span class="wps-rate">{{ 'woodpecker.panel.rateNowThen' | translate: { now: (o.ratePctNow | pct), then: (o.ratePctThen | pct) } }}</span>
+                <span>{{ 'woodpecker.panel.solvedNowThen' | translate: { now: o.solvedNow, then: o.solvedThen, n: o.count } }}</span>
+              </p>
+              @for (old of olderOverlaps(); track old.cycle) {
+                <p class="wps-line wps-older">{{ 'woodpecker.panel.older' | translate: { k: old.cycle, n: old.count, time: clock(old.secondsThen), pct: (old.timeRatio === null ? '' : (old.timeRatio * 100 | pct)) } }}</p>
+              }
+            } @else {
+              <p class="wps-line">{{ 'woodpecker.panel.noOverlap' | translate: { k: o.cycle } }}</p>
+            }
+          }
+        </section>
+      }
+
+      <!-- 2 Wechsel je Aufgabe gegen den Vorzyklus -->
+      @if (s.changes; as ch) {
+        <section class="wps-sec wps-changes">
+          <h3>{{ 'woodpecker.panel.changesTitle' | translate: { k: ch.cycle } }}</h3>
+          <p class="wps-line rh-dots">
+            <span class="wps-ok">{{ 'woodpecker.panel.improved' | translate: { n: ch.improved } }}</span>
+            <span [class.wps-late]="ch.worsened > 0">{{ 'woodpecker.panel.worsened' | translate: { n: ch.worsened } }}</span>
+            <span>{{ 'woodpecker.panel.bothSolved' | translate: { n: ch.bothSolved } }}</span>
+            <span>{{ 'woodpecker.panel.bothMissed' | translate: { n: ch.bothMissed } }}</span>
+          </p>
+          <p class="wps-line rh-dots">
+            <span>{{ 'woodpecker.panel.fasterCount' | translate: { n: ch.faster } }}</span>
+            <span>{{ 'woodpecker.panel.slowerCount' | translate: { n: ch.slower } }}</span>
+            @if (ch.sameTime > 0) { <span>{{ 'woodpecker.panel.sameTime' | translate: { n: ch.sameTime } }}</span> }
+            <span>{{ 'woodpecker.panel.saved' | translate: { time: clock(ch.savedSeconds) } }}</span>
+            @if (ch.lostSeconds > 0) { <span>{{ 'woodpecker.panel.lost' | translate: { time: clock(ch.lostSeconds) } }}</span> }
+          </p>
+          @if (ch.muchFaster > 0 || ch.muchSlower > 0) {
+            <p class="wps-line rh-dots">
+              <span>{{ 'woodpecker.panel.muchFaster' | translate: { n: ch.muchFaster } }}</span>
+              <span>{{ 'woodpecker.panel.muchSlower' | translate: { n: ch.muchSlower } }}</span>
+            </p>
+          }
+          <div class="wps-scroll">
+            <table class="wps-table wps-buckets">
+              <caption>{{ 'woodpecker.panel.bucketsTitle' | translate }}</caption>
+              <thead><tr><th scope="col"></th><th scope="col" class="num">{{ 'woodpecker.panel.colNow' | translate }}</th><th scope="col" class="num">{{ 'woodpecker.panel.colCycle' | translate: { k: ch.cycle } }}</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">{{ 'woodpecker.panel.bucketFast' | translate }}</th><td class="num">{{ ch.bucketsNow.fast }}</td><td class="num">{{ ch.bucketsThen.fast }}</td></tr>
+                <tr><th scope="row">{{ 'woodpecker.panel.bucketMedium' | translate }}</th><td class="num">{{ ch.bucketsNow.medium }}</td><td class="num">{{ ch.bucketsThen.medium }}</td></tr>
+                <tr><th scope="row">{{ 'woodpecker.panel.bucketSlow' | translate }}</th><td class="num">{{ ch.bucketsNow.slow }}</td><td class="num">{{ ch.bucketsThen.slow }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+
+      <!-- 3 Hochrechnung aus dem Vergleich (genauer als offen × Ø: die offenen können die schweren sein) -->
+      @if (s.currentCycle > 1) {
+        <section class="wps-sec wps-forecast">
+          @if (s.forecast; as f) {
+            <h3>{{ 'woodpecker.panel.forecastTitle' | translate: { k: f.basisCycle } }}</h3>
+            <p class="wps-line rh-dots">
+              <span class="wps-strong">{{ 'woodpecker.panel.projectedTotal' | translate: { time: clock(f.projectedTotalSeconds) } }}</span>
+              <span>{{ 'woodpecker.panel.basisTotal' | translate: { k: f.basisCycle, time: clock(f.basisTotalSeconds) } }}</span>
+              @if (f.openCount > 0) {
+                <span>{{ (f.openCount === 1 ? 'woodpecker.panel.remainingOne' : 'woodpecker.panel.remaining') | translate: { time: clock(f.remainingSeconds), n: f.openCount } }}</span>
+              }
+            </p>
+            <p class="wps-line" [class.wps-ok]="f.goalReached" [class.wps-late]="!f.goalReached">
+              {{ (f.goalReached ? 'woodpecker.panel.goalReached' : 'woodpecker.panel.goalMissed') | translate: { pct: (f.timeRatio * 100 | pct) } }}
+            </p>
+          } @else {
+            <h3>{{ 'woodpecker.panel.forecastPlain' | translate }}</h3>
+            <p class="wps-line">{{ 'woodpecker.panel.forecastLater' | translate: { n: minSample } }}</p>
+          }
+        </section>
+      }
+
+      <!-- 4 Tipps: nur Versuche ab dem Stichtag (HintsUsed wird erst seit 0.956.0 gespeichert) -->
+      <section class="wps-sec wps-hints">
+        <h3>{{ 'woodpecker.panel.hintsTitle' | translate }}</h3>
+        @if (s.hints.tracked > 0) {
+          <div class="wps-scroll">
+            <table class="wps-table wps-hint-table">
+              <tbody>
+                <tr><th scope="row">{{ 'woodpecker.panel.hintSolved0' | translate }}</th><td class="num">{{ s.hints.solvedNoHint }}</td><td class="num">{{ pctOf(s.hints.solvedNoHint, s.hints.tracked) | pct }}</td></tr>
+                <tr><th scope="row">{{ 'woodpecker.panel.hintSolved1' | translate }}</th><td class="num">{{ s.hints.solvedHint1 }}</td><td class="num">{{ pctOf(s.hints.solvedHint1, s.hints.tracked) | pct }}</td></tr>
+                <tr><th scope="row">{{ 'woodpecker.panel.hintSolved2' | translate }}</th><td class="num">{{ s.hints.solvedHint2 }}</td><td class="num">{{ pctOf(s.hints.solvedHint2, s.hints.tracked) | pct }}</td></tr>
+                <tr><th scope="row">{{ 'woodpecker.panel.hintSolved3' | translate }}</th><td class="num">{{ s.hints.solvedHint3 }}</td><td class="num">{{ pctOf(s.hints.solvedHint3, s.hints.tracked) | pct }}</td></tr>
+                <tr><th scope="row">{{ 'woodpecker.panel.hintMissed0' | translate }}</th><td class="num">{{ s.hints.missedNoHint }}</td><td class="num">{{ pctOf(s.hints.missedNoHint, s.hints.tracked) | pct }}</td></tr>
+                <tr><th scope="row">{{ 'woodpecker.panel.hintMissedWith' | translate }}</th><td class="num">{{ s.hints.missedWithHint }}</td><td class="num">{{ pctOf(s.hints.missedWithHint, s.hints.tracked) | pct }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (s.hints.untracked > 0) {
+          <p class="wps-line wps-note">{{ 'woodpecker.panel.hintsSince' | translate: { date: (hintsSince() | date: 'mediumDate') } }}
+            {{ (s.hints.untracked === 1 ? 'woodpecker.panel.hintsUntrackedOne' : 'woodpecker.panel.hintsUntracked') | translate: { n: s.hints.untracked } }}</p>
+        }
+        @if (s.hintChanges; as hc) {
+          <p class="wps-line rh-dots">
+            <span class="wps-strong">{{ (hc.count === 1 ? 'woodpecker.panel.hintSameOne' : 'woodpecker.panel.hintSame') | translate: { n: hc.count, k: hc.cycle } }}</span>
+            <span>{{ 'woodpecker.panel.hintMore' | translate: { n: hc.more } }}</span>
+            <span>{{ 'woodpecker.panel.hintFewer' | translate: { n: hc.fewer } }}</span>
+            <span>{{ 'woodpecker.panel.hintEqual' | translate: { n: hc.same } }}</span>
+            <span>{{ 'woodpecker.panel.hintSums' | translate: { now: hc.sumNow, then: hc.sumThen } }}</span>
+          </p>
+        } @else if (s.currentCycle > 1) {
+          <p class="wps-line wps-note">{{ 'woodpecker.panel.hintCompareLater' | translate: { k: s.currentCycle - 1, date: (hintsSince() | date: 'mediumDate') } }}</p>
+        }
+      </section>
+
+      <!-- 5 Verlauf über alle Zyklen (ab Zyklus 2), Spalte „dieselben wie jetzt“ macht die Zeilen vergleichbar -->
+      @if (s.cycles.length > 1) {
+        <section class="wps-sec wps-history">
+          <h3>{{ 'woodpecker.panel.historyTitle' | translate }}</h3>
+          <div class="wps-scroll">
+            <table class="wps-table wps-wide">
+              <thead>
+                <tr>
+                  <th scope="col">{{ 'woodpecker.panel.colCycleShort' | translate }}</th>
+                  <th scope="col" class="num">{{ 'woodpecker.panel.colAttempted' | translate }}</th>
+                  <th scope="col" class="num">{{ 'woodpecker.panel.colSolved' | translate }}</th>
+                  <th scope="col" class="num">{{ 'woodpecker.panel.colClean' | translate }}</th>
+                  <th scope="col" class="num">{{ 'woodpecker.panel.colAvg' | translate }}</th>
+                  <th scope="col" class="num">{{ 'woodpecker.panel.colTime' | translate }}</th>
+                  <th scope="col" class="num">{{ 'woodpecker.panel.colDays' | translate }}</th>
+                  <th scope="col" class="num">{{ 'woodpecker.panel.colSame' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of s.cycles; track c.number) {
+                  <tr [class.wps-current]="c.number === s.currentCycle">
+                    <th scope="row" class="num">{{ c.number }}</th>
+                    <td class="num">{{ c.attempted }}</td>
+                    <td class="num">{{ c.ratePct | pct }}</td>
+                    <td class="num">{{ hintsComplete(c) ? c.solvedClean : '–' }}</td>
+                    <td class="num">{{ c.avgSeconds === null ? '–' : clock(c.avgSeconds) }}</td>
+                    <td class="num">{{ clock(c.timeSeconds) }}</td>
+                    <td class="num">{{ 'woodpecker.panel.daysOf' | translate: { used: (c.daysUsed | number: '1.0-1'), target: c.targetDays } }}</td>
+                    <td class="num">{{ c.sameAsNow && c.sameAsNow.count > 0 ? clock(c.sameAsNow.secondsThen) : '–' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      } @else {
+        <!-- Zyklus 1: kein Vorzyklus — Verlauf je Tag und Zeitstufen des laufenden Zyklus -->
+        <section class="wps-sec wps-days">
+          <h3>{{ 'woodpecker.panel.daysTitle' | translate }}</h3>
+          <div class="wps-scroll">
+            <table class="wps-table">
+              <thead>
+                <tr>
+                  <th scope="col">{{ 'woodpecker.panel.colDate' | translate }}</th>
+                  <th scope="col" class="num">{{ 'woodpecker.panel.colAttempted' | translate }}</th>
+                  <th scope="col" class="num">{{ 'woodpecker.panel.colSolved' | translate }}</th>
+                  <th scope="col" class="num">{{ 'woodpecker.panel.colTime' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of days(); track d.date) {
+                  <tr>
+                    <th scope="row">{{ d.at | date: 'mediumDate' }}</th>
+                    <td class="num">{{ d.attempted }}</td>
+                    <td class="num">{{ d.ratePct | pct }}</td>
+                    <td class="num">{{ clock(d.timeSeconds) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="wps-line rh-dots wps-buckets-line">
+            <span>{{ 'woodpecker.panel.bucketFastN' | translate: { n: s.timeBuckets.fast } }}</span>
+            <span>{{ 'woodpecker.panel.bucketMediumN' | translate: { n: s.timeBuckets.medium } }}</span>
+            <span>{{ 'woodpecker.panel.bucketSlowN' | translate: { n: s.timeBuckets.slow } }}</span>
+          </p>
+        </section>
+      }
+
+      <!-- 6 Sorgenkinder: nur Bezeichnung + Zeiten + „ansehen“, nie Stellung oder Lösung (DESIGN 2.7) -->
+      @if (s.slowest.length || s.alwaysMissedCount) {
+        <section class="wps-sec wps-trouble">
+          <h3>{{ 'woodpecker.panel.troubleTitle' | translate }}</h3>
+          @if (s.alwaysMissedCount > 0) {
+            <p class="wps-sub">{{ 'woodpecker.panel.missedTitle' | translate: { n: s.alwaysMissedCount } }}</p>
+            <ul class="wps-list wps-missed">
+              @for (t of s.alwaysMissed; track t.bookPuzzleId) {
+                <li class="rh-dots">
+                  <span class="wps-label">{{ t.label || ('woodpecker.panel.puzzleFallback' | translate) }}</span>
+                  <span>{{ 'woodpecker.panel.missedCycles' | translate: { n: t.cycles } }}</span>
+                  <a [routerLink]="['/puzzles/book', t.bookPuzzleId]">{{ 'woodpecker.panel.view' | translate }}</a>
+                </li>
+              }
+            </ul>
+          }
+          @if (s.slowest.length) {
+            <p class="wps-sub">{{ 'woodpecker.panel.slowestTitle' | translate }}</p>
+            <ul class="wps-list wps-slowest">
+              @for (t of s.slowest; track t.bookPuzzleId) {
+                <li class="rh-dots">
+                  <span class="wps-label">{{ t.label || ('woodpecker.panel.puzzleFallback' | translate) }}</span>
+                  <span class="num">{{ clock(t.secondsNow ?? 0) }}</span>
+                  @if (t.secondsPrev !== null) { <span class="num">{{ 'woodpecker.panel.prevTime' | translate: { time: clock(t.secondsPrev) } }}</span> }
+                  @if (t.solvedNow === false) { <span class="wps-late">{{ 'woodpecker.panel.missedMark' | translate }}</span> }
+                  <a [routerLink]="['/puzzles/book', t.bookPuzzleId]">{{ 'woodpecker.panel.view' | translate }}</a>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      }
+    }
+  } @else if (error()) {
+    <app-load-error [error]="error()" (retry)="retry()" />
+  } @else {
+    <mat-progress-bar class="wps-busy" mode="indeterminate" [attr.aria-label]="'woodpecker.panel.loading' | translate" />
+  }
+</div>
