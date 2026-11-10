@@ -3558,7 +3558,9 @@
       "neverSuggest": "다시 제안하지 않음",
       "neverSuggestDone": "다시 제안되지 않습니다.",
       "neverSuggestFailed": "저장할 수 없습니다."
-    }
+    },
+    "onlyMine": "내 대국만",
+    "onlyMineEmpty": "여기에 내 대국이 없습니다 – 모두 보려면 “내 대국만”을 해제하세요."
   },
   "analysis": {
     "title": "분석",

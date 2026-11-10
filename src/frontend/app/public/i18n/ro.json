@@ -3558,7 +3558,9 @@
       "neverSuggest": "Nu mai sugera niciodată",
       "neverSuggestDone": "Nu îți va mai fi sugerat.",
       "neverSuggestFailed": "Nu s-a putut salva asta."
-    }
+    },
+    "onlyMine": "Doar partidele mele",
+    "onlyMineEmpty": "Nicio partidă proprie aici – debifează „Doar partidele mele“ ca să le vezi pe toate."
   },
   "analysis": {
     "title": "Analiză",

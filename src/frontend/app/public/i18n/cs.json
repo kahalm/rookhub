@@ -3558,7 +3558,9 @@
       "neverSuggest": "Už nikdy nenavrhovat",
       "neverSuggestDone": "Už vám to nebude navrhováno.",
       "neverSuggestFailed": "To se nepodařilo uložit."
-    }
+    },
+    "onlyMine": "Jen moje partie",
+    "onlyMineEmpty": "Žádná vlastní partie – zrušte „Jen moje partie“ a uvidíte všechny."
   },
   "analysis": {
     "title": "Analýza",

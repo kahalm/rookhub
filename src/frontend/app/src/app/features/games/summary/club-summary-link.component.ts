@@ -12,6 +12,8 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
 /**
  * Kopfzeile der Vereinspartie (0.913.0): „Zusammenfassung" führt zur eigenen Seite, sobald es eine gibt. Ein Admin kann
  * sie anfordern bzw. neu anfordern — geschrieben wird sie vom Watcher (Claude), das dauert einige Minuten.
+ * Eigene Partie (`kind="own"`, 0.954.0): ohne eigene Zusammenfassung zeigt sie den Stand der verbundenen Vereinspartie
+ * (Sanduhr + Zähler bzw. Link nach `/club-games/:id/summary`), wenn der Server ihn liefert (`source: 'club'`, `clubGameId`).
  */
 @Component({
   selector: 'app-club-summary-link',
@@ -97,6 +99,9 @@ export class ClubSummaryLinkComponent implements OnInit {
     const own = this.gameShareToken();
     if (own !== null) return ['/g', own, 'summary'];
     const token = this.shareToken();
+    // 0.954.0: eigene Partie ohne eigenen Stand, aber mit dem der verbundenen Vereinspartie → deren Seite.
+    const club = this.kind() === 'own' ? this.state()?.clubGameId : null;
+    if (club != null && token === null) return ['/club-games', club, 'summary'];
     return token !== null ? ['/s', token, 'club-games', this.gameId(), 'summary']
       : [this.kind() === 'own' ? '/games' : '/club-games', this.gameId(), 'summary'];
   }

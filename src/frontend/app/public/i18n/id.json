@@ -3558,7 +3558,9 @@
       "neverSuggest": "Jangan sarankan lagi",
       "neverSuggestDone": "Tidak akan disarankan kepada Anda lagi.",
       "neverSuggestFailed": "Tidak dapat menyimpannya."
-    }
+    },
+    "onlyMine": "Hanya permainan saya",
+    "onlyMineEmpty": "Tidak ada permainan Anda di sini – hapus centang “Hanya permainan saya” untuk melihat semua."
   },
   "analysis": {
     "title": "Analisis",

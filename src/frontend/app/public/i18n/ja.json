@@ -3558,7 +3558,9 @@
       "neverSuggest": "今後提案しない",
       "neverSuggestDone": "今後は提案されません。",
       "neverSuggestFailed": "保存できませんでした。"
-    }
+    },
+    "onlyMine": "自分の対局のみ",
+    "onlyMineEmpty": "ここに自分の対局はありません –“自分の対局のみ”を外すとすべて表示されます。"
   },
   "analysis": {
     "title": "解析",

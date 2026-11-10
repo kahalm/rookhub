@@ -89,9 +89,10 @@ describe('UI-Sweep b1 — Partie-Seite (SharedGameComponent)', () => {
 describe('UI-Sweep b1 — Gespeicherte Partien (GamesListComponent)', () => {
   it('b1-rk-breitstufe-zeilen-auseinander: ab 2400 px wachsen die Zahlenspalten mit, darunter bleibt das feste Raster', () => {
     const all = css(GamesListComponent);
+    // 0.954.0: die Aktionsspalte trägt zusätzlich den Platz des Zusammenfassungs-Symbols (88 → 128 px).
     const wide = block(all, '@media (min-width: 2400px)');
-    expect(wide).toContain('grid-template-columns: 78px minmax(0, 1.4fr) minmax(72px, 0.5fr) minmax(84px, 0.5fr) minmax(48px, 0.5fr) minmax(104px, 0.5fr) 88px');
-    expect(all.replace(wide, '')).toContain('grid-template-columns: 78px minmax(0, 1fr) 72px 84px 48px 104px 88px');
+    expect(wide).toContain('grid-template-columns: 78px minmax(0, 1.4fr) minmax(72px, 0.5fr) minmax(84px, 0.5fr) minmax(48px, 0.5fr) minmax(104px, 0.5fr) 128px');
+    expect(all.replace(wide, '')).toContain('grid-template-columns: 78px minmax(0, 1fr) 72px 84px 48px 104px 128px');
   });
 
   it('b1-rk-games-menue-loeschen-rot: „Löschen" im ⋮ trägt .delete-item (rotes Symbol), kein color="warn"', async () => {

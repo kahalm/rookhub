@@ -6,8 +6,8 @@ Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
-| GET | `/api/games?take=200` | Auth | Eigene gespeicherte Partien (neueste zuerst, ohne PGN). Seit 0.515.0 je Partie `analysis` = Stand der VERKNÜPFTEN Analyse (`status`, `analyzed`/`total`, `accuracyWhite`/`accuracyBlack` bei `done`) oder `null` — EINE gruppierte Zählung über alle verknüpften Ids, kein Abruf je Partie; fertige Analysen ohne abgelegte Genauigkeit (vor 0.515.0) werden dabei nachgerechnet (`AccuracyBackfillPerCall` = 10 je Aufruf). **`&q=`** = Freitextsuche über ALLE eigenen Partien (`SavedGameSearch`): Wörter UND-verknüpft (höchstens 8, Eingabe ≤ 200 Zeichen), je Wort Weiß, Schwarz, Quelle, Klassifizierer-Spalten, Tags (LIKE, maskiert) oder die PGN-Kopfzeilen Event/Site/Opening/Variation/ECO (regulärer Ausdruck, am Textanfang verankert, endet an der ersten Zugzeile; Züge und Kommentare nicht). Abgeleitete Klassifizierer (Blitz …) stehen nicht in der Spalte und werden nicht gefunden. Die Liste kennt kein Paging: `take` deckelt auch die Treffer (Seite: 500, dann Hinweis „Suche eingrenzen“) **`&kind=`** (0.949.0) = Lasche `all` (Vorgabe, auch für Unbekanntes) / `online` / `otb`, UND-verknüpft mit `q`, `take` deckelt innerhalb der Lasche (Regel unten, „Laschen der Partienliste“) |
-| GET | `/api/games/kind-counts` | Auth | Zahl der eigenen Partien je Lasche `{ all, online, otb }` über das ganze Konto, OHNE Suche (0.949.0, Beschriftung der Laschen auf `/games`); drei `COUNT` + eine `DISTINCT`-Abfrage der Bedenkzeiten |
+| GET | `/api/games?take=200` | Auth | Eigene gespeicherte Partien (neueste zuerst, ohne PGN). Seit 0.515.0 je Partie `analysis` = Stand der VERKNÜPFTEN Analyse (`status`, `analyzed`/`total`, `accuracyWhite`/`accuracyBlack` bei `done`) oder `null` — EINE gruppierte Zählung über alle verknüpften Ids, kein Abruf je Partie; fertige Analysen ohne abgelegte Genauigkeit (vor 0.515.0) werden dabei nachgerechnet (`AccuracyBackfillPerCall` = 10 je Aufruf). **`&q=`** = Freitextsuche über ALLE eigenen Partien (`SavedGameSearch`): Wörter UND-verknüpft (höchstens 8, Eingabe ≤ 200 Zeichen), je Wort Weiß, Schwarz, Quelle, Klassifizierer-Spalten, Tags (LIKE, maskiert) oder die PGN-Kopfzeilen Event/Site/Opening/Variation/ECO (regulärer Ausdruck, am Textanfang verankert, endet an der ersten Zugzeile; Züge und Kommentare nicht). Abgeleitete Klassifizierer (Blitz …) stehen nicht in der Spalte und werden nicht gefunden. Die Liste kennt kein Paging: `take` deckelt auch die Treffer (Seite: 500, dann Hinweis „Suche eingrenzen“) **`&kind=`** (0.949.0) = Lasche `all` (Vorgabe, auch für Unbekanntes) / `online` / `otb`, UND-verknüpft mit `q`, `take` deckelt innerhalb der Lasche (Regel unten, „Laschen der Partienliste“). **`&mine=true`** (0.954.0) = nur Partien, in denen der Kontoinhaber selbst spielt (Regel unten, „Nur meine Partien“), UND-verknüpft mit `q` und `kind`. Seit 0.954.0 je Partie zusätzlich **`summary`** `{ status: done\|requested\|running, link }` oder `null` (Regel unten, „Zusammenfassung in der Liste“), **`event`** (Turnier, „Turnier in der Liste“) und `clubGameId` |
+| GET | `/api/games/kind-counts` | Auth | Zahl der eigenen Partien je Lasche `{ all, online, otb }` über das ganze Konto, OHNE Suche (0.949.0, Beschriftung der Laschen auf `/games`); drei `COUNT` + eine `DISTINCT`-Abfrage der Bedenkzeiten. `?mine=true` (0.954.0) zählt nur die eigenen Partien — dieselbe Menge wie die Liste mit `mine=true` |
 | GET | `/api/games/shared/{token}` | AllowAnonymous | Öffentliche Sicht einer geteilten Partie inkl. PGN (ohne Besitzer-Daten). Literal-Route VOR `{id}`. Seit 0.526.3 `ownGameId` = die Partie-Id, NUR wenn der angemeldete Aufrufer der Besitzer ist — die Seite leitet dann auf `/games/{id}` um (eigener Link = dieselbe Ansicht wie aus „Partien") |
 | GET | `/api/games/shared/{token}/evals` | AllowAnonymous | Bewertungen der geteilten Partie für Kurve/Genauigkeit/Zug-Klassen (`GameEvalsDto`). Anonym NUR die vom Besitzer verknüpfte Analyse; angemeldet ersatzweise die EIGENE mit gleichem PGN. Globaler IP-Limiter wie `GET shared/{token}` |
 | GET | `/api/games/shared/{token}/summary` | AllowAnonymous | Nur der fertige Text der Zusammenfassung (0.934.0), `docs/api/partie-zusammenfassung.md`; 404 unbekannter Link |
@@ -34,6 +34,41 @@ Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess
 | GET | `/api/games/shared/{token}/similar` | AllowAnonymous | Dasselbe für den Teilen-Link (Kopfdaten ohne Züge, derselbe Zuschnitt wie die anonyme Bestandssuche; anonym trägt nur `inPool`) |
 | GET | `/api/library-games/{id}/view?lang=` | Auth | „Anschauen" einer Meisterpartie (0.567.0, `LibraryGameService.ViewAsync`) → `{ id, pgn, language, languages }`: PGN aus der HAUPTVARIANTE und den Kommentar-Sätzen in `lang` (`CommentSetService.ForLibraryAsync`: dieselbe Regel wie beim Nachspielen, fehlende Halbzüge aus der Quelle, Quell-Sätze entstehen beim ersten Bedarf), nicht das rohe Quell-PGN (zwei Sprachen hintereinander, ChessBase-Figurenschrift). Nur angemeldet wie das Anfordern; 404 unbekannt/aussortiert/nicht nachspielbar |
 | GET | `/api/games/{id}/recap` | Auth | „Kurz erzählt" (0.541.0): die Nacherzählung der eigenen Partie `{ available, hasAnalysis, text?, language?, createdAt?, pending }`. Fehlt sie bei fertiger Analyse (Analyse von vor 0.541.0, gescheiterter Lauf), stößt schon dieser Abruf sie im Hintergrund an (`pending: true`, die Seite fragt alle 15 s nach, höchstens achtmal); 404 fremde Partie. Der Teilen-Link bekommt denselben Text als `recap` in `GET /api/games/shared/{token}` |
+
+**Nur meine Partien** (0.954.0, Wunsch 2026-11-10: unter den Partien stehen viele Vereinspartien der eigenen Mannschaft,
+die man nur hochgeladen hat; `Services/Games/SavedGameOwnership.cs`). Eine Partie ist EIGENE, wenn eine Regel trifft,
+der Reihe nach; im Zweifel NICHT:
+1. `SavedGames.OwnerSide` = `white`/`black` (selbst festgelegt oder beim Einlesen bestimmt).
+2. Die verbundene Vereinspartie trägt die FIDE-ID des Profils (`UserProfiles.FideId`) auf einer Seite (`WhiteFide`,
+   `WhiteRealFide`, `BlackFide`, `BlackRealFide`).
+3. Weiß oder Schwarz ist ein Online-Konto des Profils (`ChessComUsername`, `LichessUsername`, ab 3 Zeichen; je Quelle egal),
+   genau oder als ganzes Wort im Namen („Rapid Chess • kahalm“), Groß-/Kleinschreibung egal. Online-Partien anderer Leute
+   (zugeschaut und gespeichert) fallen damit heraus.
+4. Weiß oder Schwarz enthält Vor- UND Nachname des Profils (`FirstName`/`LastName`) als Wörter, beliebige Reihenfolge, mit
+   oder ohne Komma, Initialen („M.“) übergangen, Umlaute gleichgesetzt (ü = ue = u, ß = ss, Akzente weg). Ein Tippfehler
+   im Nachnamen (eine Ersetzung, ein Zeichen mehr/weniger oder zwei vertauschte Nachbarn, Nachname ab 6 Zeichen) zählt
+   nur bei genau stimmendem Vornamen („Obercshmid, Patrik“). Nur der Nachname („Oberschmid“) oder nur der Vorname reicht nicht.
+
+Gerechnet wird in C# über die schlanken Spalten ALLER Partien der Lasche (Namen, `OwnerSide`, FIDE-IDs per `LEFT JOIN`,
+kein PGN), danach filtert die Datenbank per `Id IN (…)` — Suche, `take` und Zählung sehen dieselbe Menge. Ohne Profilnamen
+und Konten bleibt nur Regel 1–2.
+
+**Zusammenfassung in der Liste** (0.954.0, `OwnGameSummaries.ListStatesAsync`; Wunsch 2026-11-10 „zeig an, wenn es eine
+fertige gibt oder eine angefragt wurde“). Drei Abfragen je Seite (eigene Zusammenfassungen, Vereins-Zusammenfassungen der
+verbundenen Partien, Vereine des Nutzers), keine je Partie. Vorrang: (1) eigene Zusammenfassung mit Text oder offener
+Anforderung → `{ status, link: "/games/{id}/summary" }` (offene Neuanforderung schlägt einen alten Text: `requested`/
+`running`); (2) sonst die der verbundenen Vereinspartie mit Text oder offener Anforderung → `link: "/club-games/{id}/summary"`
+— NUR, wenn der Nutzer die Vereinspartie sehen darf (dieselben Rechte wie `GET /api/league/club/games/{id}/summary`: Admin,
+oder `league.view` UND Mitglied des Vereins der Partie); für fremde Vereine nichts. Eine gescheiterte Anforderung ohne Text
+zeigt nichts (Neuversuch auf der Partieseite). „Veraltet“ (`stale`, Partie seit dem Text geändert) steht bewusst NICHT in
+der Liste: dafür bräuchte jede Zeile ihr PGN, und die Zusammenfassungsseite sagt es selbst. Dieselbe Vorrangregel gilt auf
+der Partieseite (`GET /api/games/{id}/summary`, `docs/api/partie-zusammenfassung.md`).
+
+**Turnier in der Liste** (0.954.0, `Services/Games/SavedGameEventLabel.cs`): `event` z. B. „TMM Landesliga 2025/2026 · R5“.
+Quelle der Reihe nach: verbundene Vereinspartie mit Liga (`LeagueTournaments.Name` über `LeagueTnr`, Runde `LeagueRound`),
+sonst deren `Event`, sonst der PGN-Kopf `[Event]` (+ `[Round]`, gelesen aus den ersten 2 000 Zeichen). Nur echte Werte
+(nicht leer, „?“, „-“). Online-Partien (chess.com/lichess) bekommen keins. Gelesen wird bei jedem Abruf: korrigierte
+PGN-Köpfe oder eine nachträgliche Liga-Zuordnung erscheinen ohne weiteres Zutun. Zwei Abfragen je Seite.
 
 **Laschen der Partienliste** (0.949.0, Wunsch 2026-11-10 „allgemeine saved games, online games, otb games“,
 `Services/Games/SavedGameKinds.cs`). Alles läuft in der Datenbank, damit Suche, `take` und Zählung dieselbe Menge sehen:

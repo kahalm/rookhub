@@ -3558,7 +3558,9 @@
       "neverSuggest": "Nunca mais sugerir",
       "neverSuggestDone": "Não lhe será sugerido de novo.",
       "neverSuggestFailed": "Não foi possível guardar isso."
-    }
+    },
+    "onlyMine": "Só as minhas partidas",
+    "onlyMineEmpty": "Nenhuma partida sua aqui – desmarque “Só as minhas partidas” para ver todas."
   },
   "analysis": {
     "title": "Análise",

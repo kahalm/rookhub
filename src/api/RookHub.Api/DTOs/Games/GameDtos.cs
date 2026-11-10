@@ -114,7 +114,19 @@ public class SavedGameDto
 
     /// <summary>Eigene Tags der Partie (0.662.0) — nur für den Besitzer sichtbar.</summary>
     public List<string> Tags { get; set; } = new();
+
+    /// <summary>Turnier der Partie für die Liste (0.954.0, <see cref="Services.Games.SavedGameEventLabel"/>), z. B.
+    /// „TMM Landesliga 2025/2026 · R5“; <c>null</c> = keins bekannt oder Online-Partie.</summary>
+    public string? Event { get; set; }
+
+    /// <summary>Zusammenfassung zur Partie (0.954.0, <see cref="Services.Games.OwnGameSummaries.ListStatesAsync"/>): fertig,
+    /// angefordert oder beim Schreiben — eigene oder die der verbundenen Vereinspartie; <c>null</c> = keine.</summary>
+    public SavedGameSummaryStateDto? Summary { get; set; }
 }
+
+/// <summary>Stand der Zusammenfassung in der Partienliste. <c>Status</c> = <c>done</c> | <c>requested</c> | <c>running</c>;
+/// <c>Link</c> = Seite der Zusammenfassung (<c>/games/12/summary</c> oder <c>/club-games/38/summary</c>).</summary>
+public sealed record SavedGameSummaryStateDto(string Status, string Link);
 
 /// <summary>Fortschritt im Fehler-Training einer Partie („4 von 7 · 3 offen").</summary>
 public class GameMistakeProgressDto

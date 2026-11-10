@@ -186,6 +186,29 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
     expect(done.el.querySelector('a.summary-link')?.getAttribute('href')).toBe('/games/142/summary');
   });
 
+  it('0.954.0: eigene Partie, angeforderte Vereins-Zusammenfassung — Sanduhr + Zähler statt Anfordern', () => {
+    const { f, http, el } = setupOwn();
+    http.expectOne('/api/games/142/summary').flush({ ...none, status: 'requested', source: 'club', clubGameId: 38,
+      runningSeconds: 65, readiness: null, quotaLeft: 2, quotaLimit: 2 });
+    f.detectChanges();
+    expect(el.querySelector('.summary-request')).toBeNull();
+    expect(el.querySelector('.summary-wait mat-icon')?.textContent).toBe('hourglass_top');
+    expect(el.querySelector('.summary-timer')?.textContent).toBe('1:05');
+  });
+
+  it('0.954.0: eigene Partie, fertige Vereins-Zusammenfassung — Link zur Vereinspartie; ohne clubGameId zur eigenen Seite', () => {
+    const { f, http, el } = setupOwn();
+    http.expectOne('/api/games/142/summary').flush({ ...none, status: 'done', markdown: '# v', source: 'club', clubGameId: 38, quotaLeft: 2, quotaLimit: 2 });
+    f.detectChanges();
+    expect(el.querySelector('a.summary-link')?.getAttribute('href')).toBe('/club-games/38/summary');
+    expect(el.querySelector('.summary-request')).toBeNull();
+    TestBed.resetTestingModule();
+    const e7 = setupOwn();
+    e7.http.expectOne('/api/games/142/summary').flush({ ...none, status: 'done', markdown: '# v', source: 'club', clubGameId: null, quotaLeft: 2, quotaLimit: 2 });
+    e7.f.detectChanges();
+    expect(e7.el.querySelector('a.summary-link')?.getAttribute('href')).toBe('/games/142/summary');
+  });
+
   it('zeigt beim Schreiben, wie lange es schon läuft', () => {
     const { f, http, el } = setup(true);
     http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'running', runningSeconds: 125 });

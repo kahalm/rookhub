@@ -37,6 +37,16 @@ export interface SavedGame {
   classifier2Set?: string | null;
   /** Eigene Tags (0.662.0), nur für den Besitzer. */
   tags?: string[];
+  /** Turnier der Partie (0.954.0, vom Server gelesen: Liga der Vereinspartie, sonst PGN-Kopf), z. B. „TMM Landesliga 2025/2026 · R5“; `null` = keins. */
+  event?: string | null;
+  /** Zusammenfassung zur Partie (0.954.0): eigene oder die der verbundenen Vereinspartie; `null` = keine. */
+  summary?: SavedGameSummaryState | null;
+}
+
+/** Stand der Zusammenfassung in der Partienliste; `link` = Seite der Zusammenfassung (`/games/12/summary`, `/club-games/38/summary`). */
+export interface SavedGameSummaryState {
+  status: 'done' | 'requested' | 'running';
+  link: string;
 }
 
 /** Kopf der verknüpften Analyse für die Partienliste: Fortschritt, und wenn fertig die Genauigkeit je Seite. */
@@ -243,15 +253,15 @@ export class GamesService {
 
   /** `q` = Freitextsuche des Servers über alle eigenen Partien; ohne die neuesten `take`. */
   /** Eigene Partien; `q` = Freitextsuche, `kind` = Lasche (`all` lässt den Parameter weg, wie bisher). */
-  list(take = 200, q?: string, kind: GameKind = 'all'): Observable<SavedGame[]> {
+  list(take = 200, q?: string, kind: GameKind = 'all', mine = false): Observable<SavedGame[]> {
     const search = q ? `&q=${encodeURIComponent(q)}` : '';
     const tab = kind !== 'all' ? `&kind=${kind}` : '';
-    return this.http.get<SavedGame[]>(`/api/games?take=${take}${search}${tab}`);
+    return this.http.get<SavedGame[]>(`/api/games?take=${take}${search}${tab}${mine ? '&mine=true' : ''}`);
   }
 
-  /** Zahl der eigenen Partien je Lasche über das ganze Konto (ohne Suche). */
-  kindCounts(): Observable<GameKindCounts> {
-    return this.http.get<GameKindCounts>('/api/games/kind-counts');
+  /** Zahl der eigenen Partien je Lasche über das ganze Konto (ohne Suche); `mine` = nur Partien, in denen man selbst spielt (0.954.0). */
+  kindCounts(mine = false): Observable<GameKindCounts> {
+    return this.http.get<GameKindCounts>(mine ? '/api/games/kind-counts?mine=true' : '/api/games/kind-counts');
   }
 
   get(id: number): Observable<SavedGameDetail> {

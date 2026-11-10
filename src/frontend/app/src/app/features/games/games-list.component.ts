@@ -18,7 +18,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable, Subject, Subscription, of, timer } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
-import { GAME_KINDS, GameKind, GameKindCounts, GamesService, PgnImportResult, SavedGame } from './games.service';
+import { GAME_KINDS, GameKind, GameKindCounts, GamesService, PgnImportResult, SavedGame, SavedGameSummaryState } from './games.service';
 import { PgnImportDialogComponent } from './pgn-import-dialog.component';
 import { formatTimeControl, TimeControlLabel } from './time-control.util';
 import { distinctTags, filterByTag } from './tags.util';
@@ -44,6 +44,16 @@ export const SEARCH_TAKE = 500;
 /** `?kind=` der Adresse → Lasche; Unbekanntes und Fehlendes = „Alle“ (wie am Server). */
 export function parseGameKind(value: string | null | undefined): GameKind {
   return (GAME_KINDS as readonly string[]).includes(value ?? '') ? value as GameKind : 'all';
+}
+
+/** `?mine=` der Adresse → „Nur meine Partien“; nur `1` (und `true`) schaltet ein, Vorgabe aus. */
+export function parseMine(value: string | null | undefined): boolean {
+  return value === '1' || value === 'true';
+}
+
+/** Tooltip/aria-label des Zusammenfassungs-Symbols einer Zeile (0.954.0). */
+export function summaryLabelKey(s: SavedGameSummaryState): string {
+  return s.status === 'done' ? 'games.summary.open' : s.status === 'running' ? 'games.summary.running' : 'games.summary.requested';
 }
 
 /** Was die Liste zu einer Partie zeigt: Knopf (keine/gescheiterte Analyse), Prozent (läuft) oder nichts (fertig). */
@@ -115,6 +125,14 @@ export type AnalysisState = 'none' | 'running' | 'done';
               </button>
             }
           </mat-form-field>
+        }
+        <!-- „Nur meine Partien“ (0.954.0, Wunsch 10.11.2026): blendet hochgeladene Vereinspartien aus, in denen man nicht selbst
+             spielt. Serverseitig (mine=true, Regel in docs/api/gespeicherte-partien.md), Zustand in der Adresse (?mine=1),
+             gilt in allen Laschen, die Zahlen der Laschen folgen ihm. -->
+        @if (hasGames()) {
+          <mat-checkbox class="only-mine" [checked]="mine()" (change)="setMine($event.checked)">
+            {{ 'games.onlyMine' | translate }}
+          </mat-checkbox>
         }
         <!-- „Wo liegt noch Arbeit?" — der Filter zeigt nur Partien mit offenen Fehlern. Er erscheint erst,
              wenn es überhaupt welche gibt, sonst stünde ein Schalter da, der nichts tut. -->
@@ -190,9 +208,10 @@ export type AnalysisState = 'none' | 'running' | 'done';
       } @else if (loadError && games.length === 0) {
         <!-- F2-006: ein gescheitertes Laden ist nicht „noch keine Partien“. -->
         <app-load-error class="list-load-error" [error]="loadError" (retry)="reloadList()" />
-      } @else if (games.length === 0 && kind() !== 'all') {
-        <!-- Leere Lasche: ein Satz mit dem Weg dorthin, nicht der Leerzustand des ganzen Kontos (DESIGN 5.10). -->
-        <p class="kind-empty">{{ (kind() === 'online' ? 'games.kind.emptyOnline' : 'games.kind.emptyOtb') | translate }}</p>
+      } @else if (games.length === 0 && (kind() !== 'all' || mine())) {
+        <!-- Leere Lasche: ein Satz mit dem Weg dorthin, nicht der Leerzustand des ganzen Kontos (DESIGN 5.10). Mit „Nur meine“
+             (0.954.0) sagt der Satz, dass das Häkchen filtert — das Häkchen bleibt stehen. -->
+        <p class="kind-empty">{{ (mine() ? 'games.onlyMineEmpty' : kind() === 'online' ? 'games.kind.emptyOnline' : 'games.kind.emptyOtb') | translate }}</p>
       } @else if (games.length === 0) {
         <mat-card class="empty-state">
           <mat-icon>sports_esports</mat-icon>
@@ -237,6 +256,10 @@ export type AnalysisState = 'none' | 'running' | 'done';
               <a class="players" [routerLink]="['/games', g.id]">
                 <span class="p"><i class="dot white"></i><span class="name">{{ g.white || '?' }}</span>@if (g.whiteElo) { <span class="elo">({{ g.whiteElo }})</span> }</span>
                 <span class="p"><i class="dot black"></i><span class="name">{{ g.black || '?' }}</span>@if (g.blackElo) { <span class="elo">({{ g.blackElo }})</span> }</span>
+                <!-- Turnier (0.954.0): Liga der Vereinspartie oder PGN-Kopf, vom Server; gekürzt, voller Name im Tooltip. -->
+                @if (g.event) {
+                  <span class="event" [matTooltip]="g.event">{{ g.event }}</span>
+                }
                 @if (g.classifier1 || g.classifier2 || g.tags?.length) {
                   <span class="classifiers">
                     @if (g.classifier1) { <span class="chip">{{ g.classifier1 }}</span> }
@@ -280,6 +303,23 @@ export type AnalysisState = 'none' | 'running' | 'done';
               <div class="moves mid"><span class="moves-num">{{ g.moveCount }}</span><span class="moves-label">{{ 'games.movesCount' | translate:{ count: g.moveCount } }}</span></div>
               <div class="date">{{ (g.playedAt || g.createdAt) | date:'mediumDate' }}</div>
               <div class="actions">
+                <!-- Zusammenfassung (0.954.0): fertig = Link dorthin, angefordert/beim Schreiben = Sanduhr (kein Knopf). Eigene
+                     vor der Vereinspartie; die der Vereinspartie nur, wenn man sie sehen darf (Server). Leerer Platz sonst,
+                     damit die Knöpfe nicht springen. -->
+                @if (g.summary; as s) {
+                  @if (s.status === 'done') {
+                    <a mat-icon-button class="summary-done" [routerLink]="s.link" [appIconLabel]="summaryLabelKey(s) | translate">
+                      <mat-icon>article</mat-icon>
+                    </a>
+                  } @else {
+                    <span class="summary-wait" role="img" [matTooltip]="summaryLabelKey(s) | translate"
+                          [attr.aria-label]="summaryLabelKey(s) | translate">
+                      <mat-icon aria-hidden="true">hourglass_top</mat-icon>
+                    </span>
+                  }
+                } @else {
+                  <span class="summary-none" aria-hidden="true"></span>
+                }
                 <a mat-icon-button [routerLink]="['/games', g.id]" [appIconLabel]="'games.replay' | translate">
                   <mat-icon>play_arrow</mat-icon>
                 </a>
@@ -364,7 +404,14 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty-state > mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
-    .only-open { margin-top: 4px; }
+    .only-open, .only-mine { margin-top: 4px; }
+    .only-mine { display: block; }
+    /* Turnier unter den Namen (0.954.0): eine Zeile, gekürzt; der volle Name im Tooltip. */
+    .event { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem;
+      line-height: 1.35; color: color-mix(in srgb, currentColor 60%, transparent); }
+    /* Zusammenfassungs-Platz so breit wie ein Icon-Knopf — die Knöpfe stehen in jeder Zeile an derselben Stelle. */
+    .summary-wait, .summary-none { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: none; }
+    .summary-wait { color: color-mix(in srgb, currentColor 65%, transparent); cursor: default; }
     .kind-tabs { margin: 0 0 4px; }
     .kind-tab { min-width: 0; padding: 0 16px; }
     .kind-empty { padding: 24px 0; text-align: center; color: var(--mat-sys-on-surface-variant); }
@@ -410,7 +457,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
       /* Die Ergebnis-Spalte traegt zwei Zeichen, ihre Beschriftung aber acht („Ergebnis", „Rezultat",
          „Eredmény"): unter 72px lief die Kopfzeile in die naechste hinein bzw. wurde abgeschnitten
          (im Bild nachgemessen). */
-      grid-template-columns: 78px minmax(0, 1fr) 72px 84px 48px 104px 88px;
+      grid-template-columns: 78px minmax(0, 1fr) 72px 84px 48px 104px 128px;
       align-items: center;
       gap: 8px;
       padding: 6px 8px;
@@ -506,7 +553,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
       .games-page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
       /* b1-rk-breitstufe-zeilen-auseinander: in 1 880 px nahm die Spielerspalte den ganzen Rest (~1 000 px Lücke bis zum
          Ergebnis) — die Zahlenspalten wachsen jetzt mit (Mindestbreiten wie darunter), die Zeile bleibt verfolgbar. */
-      .row { grid-template-columns: 78px minmax(0, 1.4fr) minmax(72px, 0.5fr) minmax(84px, 0.5fr) minmax(48px, 0.5fr) minmax(104px, 0.5fr) 88px; }
+      .row { grid-template-columns: 78px minmax(0, 1.4fr) minmax(72px, 0.5fr) minmax(84px, 0.5fr) minmax(48px, 0.5fr) minmax(104px, 0.5fr) 128px; }
       .row > .date, .head-row > span:nth-child(6) { text-align: center; }
     }
   `]
@@ -540,17 +587,26 @@ export class GamesListComponent implements OnInit {
 
   private filterBase(): SavedGame[] { return this.activeQuery ? this.unsearched : this.games; }
   /** Hat das Konto überhaupt Partien — unabhängig davon, ob die aktuelle Suche oder Lasche etwas findet. */
-  hasGames(): boolean { return this.filterBase().length > 0 || (this.counts()?.all ?? 0) > 0; }
+  hasGames(): boolean { return this.filterBase().length > 0 || (this.counts()?.all ?? 0) > 0 || this.mine(); }
 
   /** Die Laschen in ihrer Reihenfolge; die gewählte kommt aus `?kind=` (unbekannt/fehlend = „Alle“). */
   readonly kinds = GAME_KINDS;
   readonly kindLabel: Record<GameKind, string> = { all: 'games.kind.all', online: 'games.kind.online', otb: 'games.kind.otb' };
   readonly kind = signal<GameKind>('all');
+  /** „Nur meine Partien“ (0.954.0) aus `?mine=1`; Vorgabe aus. */
+  readonly mine = signal(false);
+  readonly summaryLabelKey = summaryLabelKey;
+
+  /** Häkchen → Adresse; die Adresse lädt Liste und Zahlen neu (ngOnInit). */
+  setMine(on: boolean): void {
+    this.router.navigate([], { relativeTo: this.route, queryParams: { mine: on ? 1 : null }, queryParamsHandling: 'merge' });
+  }
   /** Zahl je Lasche über das ganze Konto; `null` = (noch) unbekannt, dann stehen die Laschen ohne Zahl da. */
   readonly counts = signal<GameKindCounts | null>(null);
 
   private refreshCounts(): void {
-    this.service.kindCounts().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    const mine = this.mine();
+    this.service.kindCounts(mine).pipe(filter(() => mine === this.mine()), takeUntilDestroyed(this.destroyRef)).subscribe({
       next: c => this.counts.set(c),
       error: () => { /* Laschen bleiben ohne Zahl benutzbar */ },
     });
@@ -579,7 +635,8 @@ export class GamesListComponent implements OnInit {
     // Mit Suche braucht die Lasche zusätzlich ihre Liste OHNE Suche (Grundlage der Filterwerte, `unsearched`).
     if (this.activeQuery) {
       const kind = this.kind();
-      this.service.list(undefined, undefined, kind).pipe(filter(() => kind === this.kind()), takeUntilDestroyed(this.destroyRef))
+      const mine = this.mine();
+      this.service.list(undefined, undefined, kind, mine).pipe(filter(() => kind === this.kind() && mine === this.mine()), takeUntilDestroyed(this.destroyRef))
         .subscribe({ next: list => this.unsearched = list, error: () => { /* Filterwerte bleiben die alten */ } });
     }
     this.fetchList().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -592,8 +649,9 @@ export class GamesListComponent implements OnInit {
   private fetchList(): Observable<SavedGame[]> {
     const q = this.activeQuery;
     const kind = this.kind();
-    return (q ? this.service.list(SEARCH_TAKE, q, kind) : this.service.list(undefined, undefined, kind))
-      .pipe(filter(() => q === this.activeQuery && kind === this.kind()));
+    const mine = this.mine();
+    return (q ? this.service.list(SEARCH_TAKE, q, kind, mine) : this.service.list(undefined, undefined, kind, mine))
+      .pipe(filter(() => q === this.activeQuery && kind === this.kind() && mine === this.mine()));
   }
 
   private applyList(list: SavedGame[]): void {
@@ -680,13 +738,21 @@ export class GamesListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Die Lasche folgt der Adresse: erster Wert = erstes Laden, jeder Wechsel (Klick, Zurück) lädt die Liste neu.
+    // Lasche und „Nur meine“ folgen der Adresse: erster Wert = erstes Laden, jeder Wechsel (Klick, Zurück) lädt die Liste
+    // neu; ein Wechsel von „Nur meine“ auch die Zahlen der Laschen (sie gelten für dieselbe Menge).
+    let first = true;
     this.route.queryParamMap.pipe(
-      map(p => parseGameKind(p.get('kind'))),
-      distinctUntilChanged(),
+      map(p => ({ kind: parseGameKind(p.get('kind')), mine: parseMine(p.get('mine')) })),
+      distinctUntilChanged((a, b) => a.kind === b.kind && a.mine === b.mine),
       takeUntilDestroyed(this.destroyRef),
-    ).subscribe(kind => { this.kind.set(kind); this.reloadList(); });
-    this.refreshCounts();
+    ).subscribe(({ kind, mine }) => {
+      const mineChanged = first || mine !== this.mine();
+      first = false;
+      this.kind.set(kind);
+      this.mine.set(mine);
+      this.reloadList();
+      if (mineChanged) this.refreshCounts();
+    });
     this.search$.pipe(
       debounceTime(SEARCH_DEBOUNCE_MS),
       distinctUntilChanged(),

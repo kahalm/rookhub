@@ -19,33 +19,42 @@ public class GamesController : BaseApiController
 {
     private readonly SavedGameService _service;
     private readonly GameMistakeProgressService _mistakes;
+    private readonly OwnGameSummaries? _summaries;
 
-    public GamesController(SavedGameService service, GameMistakeProgressService mistakes)
+    public GamesController(SavedGameService service, GameMistakeProgressService mistakes, OwnGameSummaries? summaries = null)
     {
         _service = service;
         _mistakes = mistakes;
+        _summaries = summaries;
     }
 
     /// <summary>Eigene gespeicherte Partien (neueste zuerst, ohne PGN) samt Stand des Fehler-Trainings; <c>q</c> = Freitextsuche
     /// über alle eigenen Partien (Wörter UND-verknüpft, siehe <see cref="SavedGameSearch"/>); <c>kind</c> = Lasche
-    /// <c>all</c> (Vorgabe, auch für Unbekanntes) / <c>online</c> / <c>otb</c> (<see cref="SavedGameKinds"/>).</summary>
+    /// <c>all</c> (Vorgabe, auch für Unbekanntes) / <c>online</c> / <c>otb</c> (<see cref="SavedGameKinds"/>); <c>mine=true</c> = nur
+    /// Partien, in denen der Kontoinhaber selbst spielt (<see cref="SavedGameOwnership"/>). Je Partie dazu <c>summary</c>
+    /// (<see cref="OwnGameSummaries.ListStatesAsync"/>) und <c>event</c> (<see cref="SavedGameEventLabel"/>).</summary>
     [HttpGet]
     public async Task<ActionResult<List<SavedGameDto>>> List([FromQuery] int take = 200, [FromQuery] string? q = null,
-        [FromQuery] string? kind = null, CancellationToken ct = default)
+        [FromQuery] string? kind = null, [FromQuery] bool mine = false, CancellationToken ct = default)
     {
         var userId = GetUserId();
-        var games = await _service.ListAsync(userId, take, q, kind);
+        var games = await _service.ListAsync(userId, take, q, kind, mine);
         // EINE Abfrage fuer die ganze Liste statt einer je Partie.
         var stand = await _mistakes.ForGamesAsync(userId, games.Select(g => g.Id).ToList(), ct);
+        var summaries = _summaries is null ? new()
+            : await _summaries.ListStatesAsync(userId, IsAdmin, games.Select(g => (g.Id, g.ClubGameId)).ToList(), ct);
         foreach (var g in games)
+        {
             if (stand.TryGetValue(g.Id, out var m)) g.Mistakes = m;
+            if (summaries.TryGetValue(g.Id, out var s)) g.Summary = s;
+        }
         return Ok(games);
     }
 
     /// <summary>Zahl der eigenen Partien je Lasche (<c>all</c>/<c>online</c>/<c>otb</c>) über das ganze Konto, ohne Suche.</summary>
     [HttpGet("kind-counts")]
-    public async Task<ActionResult<SavedGameKindCountsDto>> KindCounts(CancellationToken ct = default)
-        => Ok(await _service.KindCountsAsync(GetUserId(), ct));
+    public async Task<ActionResult<SavedGameKindCountsDto>> KindCounts([FromQuery] bool mine = false, CancellationToken ct = default)
+        => Ok(await _service.KindCountsAsync(GetUserId(), ct, mine));
 
     /// <summary>
     /// PGN hochladen (Datei oder eingefügt): jede Partie des Textes wird eine eigene Partie (Quelle <c>pgn</c>).

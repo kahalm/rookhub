@@ -4027,7 +4027,9 @@
       "neverSuggest": "Ne javasold többé",
       "neverSuggestDone": "Többé nem javasoljuk.",
       "neverSuggestFailed": "Nem sikerült menteni."
-    }
+    },
+    "onlyMine": "Csak a saját játszmáim",
+    "onlyMineEmpty": "Itt nincs saját játszmád – a „Csak a saját játszmáim“ jelölését kivéve mindet látod."
   },
   "analysisJobs": {
     "loadFailed": "A megbízásokat nem sikerült betölteni.",

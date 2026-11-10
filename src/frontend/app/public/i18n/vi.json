@@ -3558,7 +3558,9 @@
       "neverSuggest": "Không gợi ý nữa",
       "neverSuggestDone": "Sẽ không gợi ý cho bạn nữa.",
       "neverSuggestFailed": "Không thể lưu."
-    }
+    },
+    "onlyMine": "Chỉ ván của tôi",
+    "onlyMineEmpty": "Không có ván nào của bạn ở đây – bỏ chọn “Chỉ ván của tôi” để xem tất cả."
   },
   "analysis": {
     "title": "Phân tích",

@@ -19,6 +19,8 @@ export interface ClubGameSummary {
   readiness?: ClubGameSummaryReadiness | null;
   /** Eigene Partie (0.923.0): `club` = der Text gehört zur verbundenen Vereinspartie. */
   source?: 'own' | 'club';
+  /** Eigene Partie (0.954.0): der Stand kommt von der verbundenen Vereinspartie und man darf sie sehen — der Link führt dorthin. */
+  clubGameId?: number | null;
   /** Eigene Partie: heute noch mögliche Anforderungen; `null` = unbegrenzt (Admin). */
   quotaLeft?: number | null;
   quotaLimit?: number;

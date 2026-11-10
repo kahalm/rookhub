@@ -3558,7 +3558,9 @@
       "neverSuggest": "Nigdy więcej nie proponuj",
       "neverSuggestDone": "Nie będzie ci to już proponowane.",
       "neverSuggestFailed": "Nie udało się tego zapisać."
-    }
+    },
+    "onlyMine": "Tylko moje partie",
+    "onlyMineEmpty": "Brak tu twoich partii – odznacz „Tylko moje partie“, aby zobaczyć wszystkie."
   },
   "analysis": {
     "title": "Analiza",

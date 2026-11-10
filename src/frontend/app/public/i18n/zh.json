@@ -3558,7 +3558,9 @@
       "neverSuggest": "不再建议",
       "neverSuggestDone": "不会再向你建议。",
       "neverSuggestFailed": "无法保存。"
-    }
+    },
+    "onlyMine": "仅我的对局",
+    "onlyMineEmpty": "这里没有你自己的对局 – 取消勾选“仅我的对局”即可查看全部。"
   },
   "analysis": {
     "title": "分析",

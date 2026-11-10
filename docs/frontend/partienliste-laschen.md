@@ -23,3 +23,18 @@ allgemeine saved games, online games, otb games“. Die Regel, welche Partie woh
   die Laschen auch nach einer HTTP-Antwort ohne Markierung neu zeichnen (Angular-22-Falle, `src/frontend/CLAUDE.md`).
 - **Specs**: `games-list-kinds.spec.ts` (RouterTestingHarness: `?kind=` → Aufruf, Klick → Adresse + neuer Aufruf,
   „Alle“ entfernt den Parameter, leere Lasche, Suche innerhalb der Lasche), `games.service.spec.ts`.
+
+## Nur meine Partien, Zusammenfassung, Turnier (0.954.0)
+
+- **„Nur meine Partien“**: `mat-checkbox.only-mine` unter dem Suchfeld (nur mit Partien), Zustand in der Adresse
+  (`?mine=1`, aus = Parameter weg, `parseMine()`); der Strom der Adresse trägt `{ kind, mine }`. Wechselt `mine`, lädt die
+  Liste UND die Laschen-Zahlen neu (`kindCounts(mine)`), ein Laschenwechsel nur die Liste (die Laschen-Links mergen die
+  Parameter, `mine` bleibt). `GamesService.list(take, q, kind, mine)` hängt `&mine=true` an. Regel am Server.
+- **Zusammenfassung**: in `.actions` vor ▶ ein 40-px-Platz: `done` = `a.summary-done` (`article`, Link `summary.link`,
+  `appIconLabel` „Zusammenfassung“), `requested`/`running` = `span.summary-wait` (`hourglass_top`, `role="img"`,
+  aria-label + Tooltip „Zusammenfassung angefordert …“ bzw. „wird geschrieben …“, kein Knopf), sonst leerer Platz
+  (`.summary-none`), damit die Knöpfe nicht springen. Aktionsspalte 128 px. Kein Nachfragen: der Stand gilt beim Laden.
+- **Turnier**: `span.event` als dritte Zeile unter den Namen im Spieler-Link, eine Zeile mit „…“, voller Name im Tooltip.
+  In allen Laschen, wo der Server eins liefert (nie bei Online-Partien) — dieselbe Partie sieht in „Alle“ und „Am Brett“
+  gleich aus, und in „Alle“ unterscheidet die Zeile so Turnier- von Freizeitpartien.
+- **Specs**: `games-list-summary.spec.ts` (drei Zustände, Turnier, Häkchen ↔ Adresse ↔ Aufruf), `games.service.spec.ts`.

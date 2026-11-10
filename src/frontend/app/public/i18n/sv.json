@@ -3558,7 +3558,9 @@
       "neverSuggest": "Föreslå aldrig igen",
       "neverSuggestDone": "Föreslås inte för dig igen.",
       "neverSuggestFailed": "Kunde inte spara det."
-    }
+    },
+    "onlyMine": "Bara mina partier",
+    "onlyMineEmpty": "Inga egna partier här – avmarkera “Bara mina partier” för att se alla."
   },
   "analysis": {
     "title": "Analys",

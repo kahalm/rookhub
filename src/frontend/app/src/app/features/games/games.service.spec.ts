@@ -33,6 +33,13 @@ describe('GamesService', () => {
     httpMock.expectOne('/api/games/kind-counts').flush({ all: 0, online: 0, otb: 0 });
   });
 
+  it('„Nur meine Partien“ (0.954.0): mine=true an Liste und Zählung, sonst nichts', () => {
+    service.list(200, 'x', 'otb', true).subscribe();
+    httpMock.expectOne('/api/games?take=200&q=x&kind=otb&mine=true').flush([]);
+    service.kindCounts(true).subscribe();
+    httpMock.expectOne('/api/games/kind-counts?mine=true').flush({ all: 0, online: 0, otb: 0 });
+  });
+
   it('get lädt eine einzelne Partie', () => {
     service.get(7).subscribe();
     const req = httpMock.expectOne('/api/games/7');

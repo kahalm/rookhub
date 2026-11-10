@@ -3558,7 +3558,9 @@
       "neverSuggest": "Bir daha önerme",
       "neverSuggestDone": "Size bir daha önerilmeyecek.",
       "neverSuggestFailed": "Bu kaydedilemedi."
-    }
+    },
+    "onlyMine": "Yalnızca oyunlarım",
+    "onlyMineEmpty": "Burada kendi oyununuz yok – hepsini görmek için “Yalnızca oyunlarım” işaretini kaldırın."
   },
   "analysis": {
     "title": "Analiz",

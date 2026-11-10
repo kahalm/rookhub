@@ -3,15 +3,19 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs.Engines;
 using RookHub.Api.DTOs.Games;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.League;
 
 namespace RookHub.Api.Services.Games;
 
 /// <summary>Stand der Zusammenfassung einer eigenen Partie. <c>Source</c> = <c>own</c> oder <c>club</c> (die Partie ist mit einer
-/// Vereinspartie verbunden und nur dort gibt es einen Text). <c>QuotaLeft</c> = <c>null</c> für Admins.</summary>
+/// Vereinspartie verbunden und nur dort gibt es einen Text bzw. eine Anforderung). <c>QuotaLeft</c> = <c>null</c> für Admins.
+/// <c>ClubGameId</c> (0.954.0) = die Vereinspartie, wenn der Stand von dort kommt UND der Nutzer sie sehen darf (Link
+/// <c>/club-games/{id}/summary</c>); sonst <c>null</c>.</summary>
 public sealed record OwnGameSummaryDto(string Status, string? Markdown, DateTime? DoneAt, DateTime? RequestedAt, bool Stale,
-    string? Model, string? Error, ClubGameSummaryReadiness? Readiness, string Source, int? QuotaLeft, int QuotaLimit, int? RunningSeconds = null);
+    string? Model, string? Error, ClubGameSummaryReadiness? Readiness, string Source, int? QuotaLeft, int QuotaLimit, int? RunningSeconds = null,
+    int? ClubGameId = null);
 
 /// <summary>Offener Auftrag für den Watcher.</summary>
 /// <summary>Zusammenfassung über den Teilen-Link <c>/g/{token}</c>: nur der fertige Text, nichts zur Anforderung, zum Besitzer oder zum Kontingent.</summary>
@@ -30,7 +34,7 @@ public sealed record OwnGameSummaryGame(int Id, string? White, string? Black, st
 /// wie bei Vereinspartien außerhalb des Servers (Watcher, <c>api/admin/own-game-summaries</c>).
 /// </summary>
 public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, ClubGameSummaries clubSummaries,
-    MoveComparisonService comparisons, TimeProvider? clock = null, IConfiguration? config = null)
+    MoveComparisonService comparisons, TimeProvider? clock = null, IConfiguration? config = null, PermissionResolver? permissions = null)
 {
     public const int DefaultDailyPerUser = 2;
     private int DailyPerUser => Math.Max(0, config?.GetValue<int?>("OwnGameSummaries:DailyPerUser") ?? DefaultDailyPerUser);
@@ -67,17 +71,32 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
         if (g is null) return null;
         var left = await QuotaLeftAsync(userId, isAdmin, ct);
         var s = await db.OwnGameSummaries.AsNoTracking().FirstOrDefaultAsync(x => x.SavedGameId == savedGameId, ct);
-        if (s is null || (s.Markdown is null && !Open(s.Status) && s.Status != ClubGameSummaryStatus.Failed))
+        // Vorrang (0.954.0, wie die Liste, ListStatesAsync): eine eigene mit Text oder offener Anforderung; sonst die der verbundenen
+        // Vereinspartie, wenn es dort einen Text oder eine offene Anforderung gibt; sonst der eigene Stand (auch „failed“).
+        if (!(s is not null && (s.Markdown != null || Open(s.Status))) && g.LeagueClubGameId is int clubId
+            && await db.ClubGameSummaries.AsNoTracking().FirstOrDefaultAsync(x => x.ClubGameId == clubId, ct) is { } club
+            && (club.Markdown != null || Open(club.Status)))
         {
-            // Verbundene Vereinspartie: deren fertiger Text gilt auch hier, solange es keinen eigenen gibt. Bewusst OHNE erneute
-            // Prüfung der Vereinszugehörigkeit (R4-015, Entscheidung E7 „so lassen"): die Verbindung entsteht nur für Mitglieder
-            // (SavedGameAnalysisLink) und gilt danach als bleibend wie die übernommene Analyse — auch nach einem Austritt.
-            if (g.LeagueClubGameId is int clubId
-                && await db.ClubGameSummaries.AsNoTracking().FirstOrDefaultAsync(x => x.ClubGameId == clubId && x.Markdown != null, ct) is { } club)
-                return new OwnGameSummaryDto("done", club.Markdown, club.DoneAt, club.RequestedAt, club.MovesHash != null && club.MovesHash != MovesHashOf(g.Pgn),
+            var clubStale = club.Markdown != null && club.MovesHash != null && club.MovesHash != MovesHashOf(g.Pgn);
+            var clubOf = await db.LeagueClubGames.AsNoTracking().Where(c => c.Id == clubId).Select(c => (int?)c.ClubId).FirstOrDefaultAsync(ct);
+            if (clubOf is int cid && (await VisibleClubsAsync(userId, isAdmin, ct)).Contains(cid))
+            {
+                // Darf der Nutzer die Vereinspartie sehen (Rechte wie GET /api/league/club/games/{id}/summary): ihr ganzer Stand,
+                // auch angefordert/beim Schreiben, mit Link dorthin.
+                var clubReadiness = Open(club.Status) ? await clubSummaries.ReadinessAsync(clubId, ct) : null;
+                return new OwnGameSummaryDto(Open(club.Status) ? StatusOf(club.Status) : "done", club.Markdown, club.DoneAt, club.RequestedAt,
+                    clubStale, club.Model, null, clubReadiness, "club", left, DailyPerUser,
+                    ClubGameSummaries.ElapsedSecondsOf(club.Status, club.RequestedAt, club.StartedAt, Now, clubReadiness?.Ready == true), clubId);
+            }
+            // Sonst nur ein fertiger Text, ohne Link zur Vereinspartie. Bewusst OHNE erneute Prüfung der Vereinszugehörigkeit
+            // (R4-015, Entscheidung E7 „so lassen"): die Verbindung entsteht nur für Mitglieder (SavedGameAnalysisLink) und gilt
+            // danach als bleibend wie die übernommene Analyse — auch nach einem Austritt.
+            if (club.Markdown != null)
+                return new OwnGameSummaryDto("done", club.Markdown, club.DoneAt, club.RequestedAt, clubStale,
                     club.Model, null, null, "club", left, DailyPerUser);
-            return new OwnGameSummaryDto("none", null, null, null, false, null, null, null, "own", left, DailyPerUser);
         }
+        if (s is null || (s.Markdown is null && !Open(s.Status) && s.Status != ClubGameSummaryStatus.Failed))
+            return new OwnGameSummaryDto("none", null, null, null, false, null, null, null, "own", left, DailyPerUser);
         var readiness = Open(s.Status)
             ? g.GameAnalysisId is int a ? await clubSummaries.ReadinessOfAnalysisAsync(a, ct) : ClubGameSummaries.NoAnalysis
             : null;
@@ -85,6 +104,51 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
             s.Markdown != null && s.MovesHash != null && s.MovesHash != MovesHashOf(g.Pgn), s.Model,
             s.Status == ClubGameSummaryStatus.Failed ? s.Error : null, readiness, "own", left, DailyPerUser,
             ClubGameSummaries.ElapsedSecondsOf(s.Status, s.RequestedAt, s.StartedAt, Now, readiness?.Ready == true));
+    }
+
+    /// <summary>Die Vereine, deren Vereinspartien der Nutzer sehen darf — dieselben Rechte wie
+    /// <c>GET /api/league/club/games/{id}/summary</c>: Admin alle; sonst <see cref="Permissions.LeagueView"/> UND Mitglied
+    /// (<see cref="LeagueClubResolver.ClubIdsOfAsync"/>). Ohne <see cref="PermissionResolver"/> (Tests ohne Rechte) keine.</summary>
+    private async Task<HashSet<int>> VisibleClubsAsync(int userId, bool isAdmin, CancellationToken ct)
+    {
+        if (!isAdmin && (permissions is null || !(await permissions.GetAsync(userId, ct)).Has(Permissions.LeagueView))) return [];
+        return isAdmin ? (await db.LeagueClubs.AsNoTracking().Select(c => c.Id).ToListAsync(ct)).ToHashSet()
+            : await LeagueClubResolver.ClubIdsOfAsync(db, userId, ct);
+    }
+
+    /// <summary>
+    /// Stand der Zusammenfassung je Partie für die Liste <c>GET /api/games</c> (0.954.0, Wunsch 10.11.2026: „zeig an, wenn es eine
+    /// fertige gibt oder eine angefragt wurde“). Drei Abfragen für die ganze Seite, keine je Partie. Vorrang wie <see cref="GetAsync"/>:
+    /// eine eigene mit Text oder offener Anforderung, sonst die der verbundenen Vereinspartie — die aber nur, wenn der Nutzer die
+    /// Vereinspartie sehen darf (<see cref="VisibleClubsAsync"/>); dann führt der Link zu ihr. Eine fehlgeschlagene Anforderung ohne
+    /// Text zeigt nichts (Neuversuch auf der Partieseite). „Veraltet“ (Partie seit dem Text geändert) kommt hier bewusst nicht vor:
+    /// dafür bräuchte jede Zeile ihr PGN, und die Zusammenfassungsseite sagt es selbst.
+    /// </summary>
+    public async Task<Dictionary<int, SavedGameSummaryStateDto>> ListStatesAsync(int userId, bool isAdmin,
+        IReadOnlyCollection<(int Id, int? ClubGameId)> games, CancellationToken ct = default)
+    {
+        var result = new Dictionary<int, SavedGameSummaryStateDto>();
+        if (games.Count == 0) return result;
+        var ids = games.Select(g => g.Id).ToList();
+        var own = await db.OwnGameSummaries.AsNoTracking().Where(x => ids.Contains(x.SavedGameId) && x.UserId == userId)
+            .Select(x => new { x.SavedGameId, x.Status, HasText = x.Markdown != null }).ToListAsync(ct);
+        foreach (var o in own)
+            if (o.HasText || Open(o.Status))
+                result[o.SavedGameId] = new(Open(o.Status) ? StatusOf(o.Status) : "done", $"/games/{o.SavedGameId}/summary");
+
+        var clubIds = games.Where(g => g.ClubGameId != null && !result.ContainsKey(g.Id)).Select(g => g.ClubGameId!.Value).Distinct().ToList();
+        if (clubIds.Count == 0) return result;
+        var clubs = await (from c in db.ClubGameSummaries.AsNoTracking()
+                           join cg in db.LeagueClubGames.AsNoTracking() on c.ClubGameId equals cg.Id
+                           where clubIds.Contains(c.ClubGameId)
+                           select new { c.ClubGameId, cg.ClubId, c.Status, HasText = c.Markdown != null }).ToListAsync(ct);
+        if (clubs.Count == 0) return result;
+        var visible = await VisibleClubsAsync(userId, isAdmin, ct);
+        var byClubGame = clubs.Where(c => visible.Contains(c.ClubId) && (c.HasText || Open(c.Status))).ToDictionary(c => c.ClubGameId);
+        foreach (var g in games)
+            if (!result.ContainsKey(g.Id) && g.ClubGameId is int cg && byClubGame.TryGetValue(cg, out var c))
+                result[g.Id] = new(Open(c.Status) ? StatusOf(c.Status) : "done", $"/club-games/{cg}/summary");
+        return result;
     }
 
     /// <summary>Fertiger Text der über <paramref name="token"/> geteilten Partie (Wunsch 2026-11-09); ohne Text <c>none</c>, auch bei

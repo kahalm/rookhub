@@ -10,6 +10,16 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.954.0", date: "2026-11-10", changes: [
+    { en: "Saved games (/games): every row shows whether there is a summary – a finished one as a link (document symbol), a requested one or one being written as an hourglass. A summary of the linked club game counts as well (only if you may see that club game); your own summary takes precedence.",
+      de: "Gespeicherte Partien (/games): Jede Zeile zeigt, ob es eine Zusammenfassung gibt – eine fertige als Link (Dokument-Symbol), eine angeforderte oder gerade geschriebene als Sanduhr. Die Zusammenfassung der verbundenen Vereinspartie zählt mit (nur, wenn man die Vereinspartie sehen darf); die eigene hat Vorrang." },
+    { en: "Game page of a saved game linked to a club game: without a summary of its own it now shows the state of the club game’s summary (hourglass with timer, or a link to it) instead of offering „Request summary“.",
+      de: "Partieseite einer gespeicherten Partie, die mit einer Vereinspartie verbunden ist: ohne eigene Zusammenfassung zeigt sie jetzt den Stand der Zusammenfassung der Vereinspartie (Sanduhr mit Zähler bzw. Link dorthin) statt „Zusammenfassung anfordern“." },
+    { en: "/games: new checkbox „Only my games“ in all tabs (?mine=1) – hides uploaded club games in which you do not play yourself. A game counts as yours by its own side, the FIDE ID of the club game, your chess.com/lichess account name or your first and last name; when in doubt it does not. The tab counts follow the checkbox.",
+      de: "/games: neues Häkchen „Nur meine Partien“ in allen Laschen (?mine=1) – blendet hochgeladene Vereinspartien aus, in denen man nicht selbst spielt. Eigene Partie über die eigene Seite, die FIDE-ID der Vereinspartie, den chess.com-/lichess-Kontonamen oder Vor- und Nachnamen; im Zweifel nicht. Die Zahlen der Laschen folgen dem Häkchen." },
+    { en: "/games: the tournament of a game is shown under the player names (league of the club game with round, otherwise [Event] and [Round] of the PGN header), shortened on small screens with the full name in the tooltip.",
+      de: "/games: Das Turnier einer Partie steht unter den Spielernamen (Liga der Vereinspartie mit Runde, sonst [Event] und [Round] aus dem PGN-Kopf), am Handy gekürzt, voller Name im Tooltip." },
+  ] },
   { version: "0.953.4", date: "2026-11-10", changes: [
     { en: "Woodpecker: the „Solved“ column of the cycle table showed „1%“ for every cycle – the share was passed as a fraction instead of a percentage. It now shows the real rate (e.g. 337 of 388 = 87%). The stored results were always correct.",
       de: "Woodpecker: Die Spalte „Gelöst“ der Zyklus-Tabelle zeigte bei jedem Zyklus „1 %“ – der Anteil wurde als Bruch statt als Prozentzahl übergeben. Jetzt steht dort die echte Quote (z. B. 337 von 388 = 87 %). Die gespeicherten Ergebnisse waren immer richtig." },

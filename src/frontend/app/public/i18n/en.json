@@ -3617,7 +3617,9 @@
       "neverSuggest": "Never suggest again",
       "neverSuggestDone": "Won’t be suggested to you again.",
       "neverSuggestFailed": "Could not save that."
-    }
+    },
+    "onlyMine": "Only my games",
+    "onlyMineEmpty": "None of your own games here – untick “Only my games” to see all."
   },
   "analysis": {
     "title": "Analysis",

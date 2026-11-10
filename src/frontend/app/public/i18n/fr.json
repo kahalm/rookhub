@@ -3558,7 +3558,9 @@
       "neverSuggest": "Ne plus jamais proposer",
       "neverSuggestDone": "Ne vous sera plus proposé.",
       "neverSuggestFailed": "Impossible d'enregistrer cela."
-    }
+    },
+    "onlyMine": "Seulement mes parties",
+    "onlyMineEmpty": "Aucune de vos parties ici – décochez “Seulement mes parties” pour tout voir."
   },
   "analysis": {
     "title": "Analyse",

@@ -3558,7 +3558,9 @@
       "neverSuggest": "Nooit meer voorstellen",
       "neverSuggestDone": "Wordt je niet meer voorgesteld.",
       "neverSuggestFailed": "Kon dat niet opslaan."
-    }
+    },
+    "onlyMine": "Alleen mijn partijen",
+    "onlyMineEmpty": "Hier staan geen eigen partijen – vink “Alleen mijn partijen” uit om alles te zien."
   },
   "analysis": {
     "title": "Analyse",

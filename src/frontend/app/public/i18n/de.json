@@ -3617,7 +3617,9 @@
       "neverSuggest": "Nicht mehr vorschlagen",
       "neverSuggestDone": "Wird dir nicht mehr vorgeschlagen.",
       "neverSuggestFailed": "Das ließ sich nicht speichern."
-    }
+    },
+    "onlyMine": "Nur meine Partien",
+    "onlyMineEmpty": "Hier ist keine eigene Partie – ohne Häkchen bei „Nur meine Partien“ siehst du alle."
   },
   "analysis": {
     "title": "Analyse",

@@ -50,20 +50,25 @@ internal sealed class SavedGameListing
             .ToList();
     }
 
-    /// <summary>Zahl der Partien je Lasche über ALLE Partien des Users (ohne Suche) — für die Beschriftung der Laschen.</summary>
-    public async Task<SavedGameKindCountsDto> KindCountsAsync(int userId, CancellationToken ct = default)
+    /// <summary>Zahl der Partien je Lasche über ALLE Partien des Users (ohne Suche) — für die Beschriftung der Laschen;
+    /// <paramref name="mine"/> = nur eigene Partien (<see cref="SavedGameOwnership"/>), dieselbe Menge wie die Liste mit <c>mine</c>.</summary>
+    public async Task<SavedGameKindCountsDto> KindCountsAsync(int userId, CancellationToken ct = default, bool mine = false)
     {
-        var (all, online, otb) = await SavedGameKinds.CountAsync(_db.SavedGames.AsNoTracking().Where(g => g.UserId == userId), ct);
+        var games = _db.SavedGames.AsNoTracking().Where(g => g.UserId == userId);
+        if (mine) games = await SavedGameOwnership.ApplyAsync(_db, games, userId, ct);
+        var (all, online, otb) = await SavedGameKinds.CountAsync(games, ct);
         return new SavedGameKindCountsDto { All = all, Online = online, Otb = otb };
     }
 
     /// <summary>Gespeicherte Partien des Users, neueste zuerst (ohne PGN); mit <paramref name="search"/> nur die Treffer
     /// der Freitextsuche (<see cref="SavedGameSearch"/>) aus ALLEN Partien des Users; <paramref name="kind"/> = Lasche
-    /// (<see cref="SavedGameKinds"/>: <c>all</c>/<c>online</c>/<c>otb</c>), UND-verknüpft mit der Suche.</summary>
-    public async Task<List<SavedGameDto>> ListAsync(int userId, int take = 200, string? search = null, string? kind = null)
+    /// (<see cref="SavedGameKinds"/>: <c>all</c>/<c>online</c>/<c>otb</c>), UND-verknüpft mit der Suche; <paramref name="mine"/> =
+    /// nur Partien, in denen der Kontoinhaber selbst spielt (<see cref="SavedGameOwnership"/>), ebenfalls UND-verknüpft.</summary>
+    public async Task<List<SavedGameDto>> ListAsync(int userId, int take = 200, string? search = null, string? kind = null, bool mine = false)
     {
         take = Math.Clamp(take, 1, 500);
         var own = await SavedGameKinds.ApplyAsync(_db.SavedGames.AsNoTracking().Where(g => g.UserId == userId), kind);
+        if (mine) own = await SavedGameOwnership.ApplyAsync(_db, own, userId);
         // Das PGN (LONGTEXT) wird NUR fuer Zeilen mitgeholt, deren Zaehler noch fehlt. Frueher
         // stand hier CountPlies(g.Pgn) in der Projektion - eine C#-Methode, die EF nicht
         // uebersetzen kann: die Spalte wanderte damit fuer JEDE der bis zu 500 Partien ueber die
@@ -77,6 +82,10 @@ internal sealed class SavedGameListing
                 g.SourceUrl, g.ShareToken, g.MoveCount, g.CreatedAt, g.GameAnalysisId,
                 g.WhiteElo, g.BlackElo, g.TimeControl, g.HeadersScanned, g.Classifier1, g.Classifier2, g.Tags,
                 PgnIfUncounted = g.MoveCount == null ? g.Pgn : null,
+                g.LeagueClubGameId,
+                // Nur der Kopf, und nur wo ein Turnier stehen kann (SavedGameEventLabel) — nicht das ganze LONGTEXT.
+                PgnHead = SavedGameKinds.OnlineSources.Contains(g.Source) ? null
+                    : g.Pgn.Length > SavedGameEventLabel.HeadChars ? g.Pgn.Substring(0, SavedGameEventLabel.HeadChars) : g.Pgn,
                 ScanId = _db.ScoresheetScans.Where(sc => sc.SavedGameId == g.Id).Select(sc => (int?)sc.Id).FirstOrDefault(),
             })
             .ToListAsync();
@@ -88,6 +97,9 @@ internal sealed class SavedGameListing
 
         var analyses = await AnalysisStatesAsync(
             rows.Where(r => r.GameAnalysisId != null).Select(r => r.GameAnalysisId!.Value).Distinct().ToList());
+
+        var events = await EventsAsync(rows.Where(r => r.PgnHead != null)
+            .Select(r => (r.Id, r.LeagueClubGameId, r.PgnHead)).ToList());
 
         var healed = new Dictionary<int, int>();
         foreach (var r in rows)
@@ -125,12 +137,35 @@ internal sealed class SavedGameListing
             TimeControl = r.TimeControl,
             Analysis = r.GameAnalysisId is int aid && analyses.TryGetValue(aid, out var state) ? state : null,
             ScanId = r.ScanId,
+            ClubGameId = r.LeagueClubGameId,
+            Event = events.GetValueOrDefault(r.Id),
             Classifier1 = GameClassifier.Effective(r.Source, r.TimeControl, r.Classifier1, r.Classifier2).First,
             Classifier2 = GameClassifier.Effective(r.Source, r.TimeControl, r.Classifier1, r.Classifier2).Second,
             Classifier1Set = GameClassifier.Clean(r.Classifier1),
             Classifier2Set = GameClassifier.Clean(r.Classifier2),
             Tags = GameTags.Parse(r.Tags),
         }).ToList();
+    }
+
+    /// <summary>Turnier je Partie (<see cref="SavedGameEventLabel"/>): zwei Abfragen für die ganze Seite (Vereinspartien, Ligen).</summary>
+    private async Task<Dictionary<int, string>> EventsAsync(List<(int Id, int? ClubGameId, string? PgnHead)> rows)
+    {
+        var clubIds = rows.Where(r => r.ClubGameId != null).Select(r => r.ClubGameId!.Value).Distinct().ToList();
+        var clubs = clubIds.Count == 0 ? new()
+            : await _db.LeagueClubGames.AsNoTracking().Where(c => clubIds.Contains(c.Id))
+                .Select(c => new { c.Id, c.Event, c.LeagueTnr, c.LeagueRound }).ToDictionaryAsync(c => c.Id);
+        var tnrs = clubs.Values.Where(c => c.LeagueTnr != null).Select(c => c.LeagueTnr!.Value).Distinct().ToList();
+        var leagues = tnrs.Count == 0 ? new()
+            : await _db.LeagueTournaments.AsNoTracking().Where(t => tnrs.Contains(t.Tnr)).ToDictionaryAsync(t => t.Tnr, t => t.Name);
+        var result = new Dictionary<int, string>();
+        foreach (var r in rows)
+        {
+            var c = r.ClubGameId is int cid ? clubs.GetValueOrDefault(cid) : null;
+            var league = c?.LeagueTnr is int tnr ? leagues.GetValueOrDefault(tnr) : null;
+            if (SavedGameEventLabel.Of(league, league is null ? null : c!.LeagueRound, c?.Event, r.PgnHead) is { } label)
+                result[r.Id] = label;
+        }
+        return result;
     }
 
     /// <summary>

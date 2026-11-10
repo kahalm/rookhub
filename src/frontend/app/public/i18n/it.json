@@ -3558,7 +3558,9 @@
       "neverSuggest": "Non suggerire più",
       "neverSuggestDone": "Non ti verrà più suggerito.",
       "neverSuggestFailed": "Impossibile salvare."
-    }
+    },
+    "onlyMine": "Solo le mie partite",
+    "onlyMineEmpty": "Nessuna tua partita qui – togli la spunta a “Solo le mie partite” per vederle tutte."
   },
   "analysis": {
     "title": "Analisi",

@@ -3558,7 +3558,9 @@
       "neverSuggest": "No volver a sugerir",
       "neverSuggestDone": "No se te volverá a sugerir.",
       "neverSuggestFailed": "No se pudo guardar."
-    }
+    },
+    "onlyMine": "Solo mis partidas",
+    "onlyMineEmpty": "Aquí no hay partidas tuyas – desmarca “Solo mis partidas” para verlas todas."
   },
   "analysis": {
     "title": "Análisis",
