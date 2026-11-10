@@ -187,6 +187,7 @@ Diagramm-Fonts (`ChessDiagramFonts`) werden Felder, `DiagramGridBuilder` macht d
 | POST | `/api/admin/ebooks/{id:int}/diagrams/supplement` | `ebooks.manage` | EIN Buch „ergänzen statt ersetzen“ (0.811.0, auch kuratierte) → 202 `{ ebookId, queued }`, unbekannt 404 — siehe unten |
 | POST / DELETE | `/api/ebooks/{id:int}/diagrams/{diagramId:int}/report` | Auth | „Diagramm falsch“ melden (`{ note? }`, idempotent) bzw. eigene Meldung zurücknehmen → `{ reported }`. Tabelle `EbookDiagramReports` (Seite + FEN mitgeschrieben, `DiagramId` ohne FK — überlebt eine Neuerkennung, die die Diagramm-Zeilen ersetzt; unique je Nutzer + Diagramm). Im Diagramm-DTO `reportedByMe`, `reportCount` (nur Verwalter) |
 | GET | `/api/admin/ebooks/diagram-reports` | `ebooks.manage` | Meldungen, neueste zuerst (≤ 500) mit Buchtitel, Seite, FEN, Font-Familie, Hinweis, Nutzer, `diagramExists` |
+| GET | `/api/admin/ebooks/missed-diagrams?ebookId=&limit=` | `ebooks.manage` | „Fehlende Diagramme“ (0.945.0), neueste zuerst (`limit` 1–500, Standard 500) mit Buchtitel, Seite, Lage, Antwort, `note`, `source`, Nutzer — siehe „Nicht erkanntes Diagramm?“ |
 
 **Leser**: hat das Buch Diagramme, wird er zweispaltig — Buch links, Brett rechts (`clamp(300px, 32vw, 460px)`). Über jedem
 Diagramm liegt eine Zone (`PdfViewerComponent.zones`, Prozent der Seite → zoomfest); Doppelklick (oder Fokus + Enter) holt die
@@ -699,7 +700,17 @@ Logik: `EbookCollectionService`; Oberfläche: Auswahl → „Zu Sammlung …“ 
 Doppelklick im PDF-Leser auf eine Stelle OHNE Diagramm-Zone (nur angemeldet) → Rückfrage „Ist hier ein Diagramm, das nicht
 erkannt wurde?“ (Ja/Nein; Schließen speichert nichts). `POST /api/ebooks/{id}/missed-diagram` `{ page, x, y, isDiagram }`
 legt eine Zeile in `EbookMissedDiagrams` an (Klickpunkt als Seitenanteil, Nutzer, Zeit) — Rohmaterial für die Auswertung,
-welche Bücher/Seiten die Erkennung verpasst. Keine Oberfläche zum Auswerten; abfragen per SQL.
+welche Bücher/Seiten die Erkennung verpasst.
+
+**Hinweis, Quelle, Admin-Liste (0.945.0):** `EbookMissedDiagrams` hat zusätzlich `Note` (≤ 300, Freitext, z. B. Lage +
+Beschreibung aus einer Buchdurchsicht: „oben links, grauer Rahmen, Lehrdiagramm“) und `Source` (≤ 40; `null` = Rückfrage im
+Leser, beim Import frei gesetzt, z. B. `review-2026-11`). Der POST nimmt beides optional mit (`{ …, note?, source? }`,
+getrimmt, leer → `null`); der Leser schickt keins. `GET /api/admin/ebooks/missed-diagrams?ebookId=&limit=` (`ebooks.manage`)
+liefert neueste zuerst (`limit` 1–500, Standard 500; `ebookId` filtert) `[{ id, ebookId, ebookTitle, page, x, y, epubRef,
+epubChapter, isDiagram, note, source, userId, username, createdAt }]`. Kein DELETE (auch `diagram-reports` hat keins).
+Oberfläche: Admin-Tab „Diagramm-Meldungen“ (`/admin?tab=diagrams`, `AdminDiagramReportsComponent`) zeigt beide Listen —
+falsche Stellungen und fehlende Diagramme — mit Buchfilter, Link in den Leser (`/ebooks/{id}?page=N`), Lage als Drittel-Raster
+(„oben links“) + Prozent, Hinweis, Quelle und Datum.
 
 **EPUB (0.798.0):** im EPUB-Leser fragt ein Doppelklick auf ein Bild OHNE erkanntes Diagramm (oder auf Text) dasselbe
 (`epub-viewer` → `missedPick`). Gespeichert wird `{ page: 0, isDiagram, epubRef, epubChapter }`: `EpubRef` = Bildpfad im

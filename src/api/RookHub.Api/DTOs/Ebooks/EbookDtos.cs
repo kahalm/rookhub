@@ -435,6 +435,29 @@ public class EbookMissedDiagramDto
     /// <summary>EPUB: Kapitel (Spine-href).</summary>
     [MaxLength(500)] public string? EpubChapter { get; set; }
     public bool IsDiagram { get; set; }
+    /// <summary>Optionaler Freitext (0.945.0; der Leser schickt keinen).</summary>
+    [MaxLength(300)] public string? Note { get; set; }
+    /// <summary>Optionale Herkunft (0.945.0), z. B. beim Import einer Buchdurchsicht; ohne = Leser.</summary>
+    [MaxLength(40)] public string? Source { get; set; }
+}
+
+/// <summary>Eine „fehlendes Diagramm“-Meldung in der Verwalter-Liste (<c>GET /api/admin/ebooks/missed-diagrams</c>, 0.945.0).</summary>
+public class EbookMissedDiagramAdminDto
+{
+    public int Id { get; set; }
+    public int EbookId { get; set; }
+    public string EbookTitle { get; set; } = string.Empty;
+    public int Page { get; set; }
+    public double X { get; set; }
+    public double Y { get; set; }
+    public string? EpubRef { get; set; }
+    public string? EpubChapter { get; set; }
+    public bool IsDiagram { get; set; }
+    public string? Note { get; set; }
+    public string? Source { get; set; }
+    public int UserId { get; set; }
+    public string? Username { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
 /// <summary>„Stellung korrigieren“ (0.798.0): die neue, vollständige FEN des Diagramms.</summary>

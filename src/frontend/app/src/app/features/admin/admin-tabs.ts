@@ -17,7 +17,8 @@ export const ADMIN_TAB_KEYS = [
   'ci',        // 8
   'roles',     // 9
   'uploads',   // 10 — LeagueHub-Stapel-Uploads (0.651.0)
-  'jobs',      // 11 — Hintergrundjobs pausieren
+  'diagrams',  // 11 — E-Book-Diagramm-Meldungen (0.945.0)
+  'jobs',      // 12 — Hintergrundjobs pausieren
 ] as const;
 
 export type AdminTabKey = typeof ADMIN_TAB_KEYS[number];
@@ -40,6 +41,7 @@ export const ADMIN_TAB_PERMISSIONS: Readonly<Record<AdminTabKey, string | null>>
   ci: 'ci.view',                // CiController
   roles: 'roles.manage',        // RolesAdminController
   uploads: 'messages.admin',    // AdminLeagueUploadController
+  diagrams: 'ebooks.manage',    // EbooksAdminController (diagram-reports, missed-diagrams)
   jobs: null,                   // BackgroundJobsController — nur Admins
 };
 

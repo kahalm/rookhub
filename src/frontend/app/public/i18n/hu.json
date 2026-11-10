@@ -2070,7 +2070,8 @@
       "ci": "CI / Actions",
       "roles": "Szerepek",
       "uploads": "Feltöltések",
-      "jobs": "Háttérfeladatok"
+      "jobs": "Háttérfeladatok",
+      "diagrams": "Diagram-bejelentések"
     },
     "users": {
       "searchLabel": "Felhasználók keresése",
@@ -2476,6 +2477,37 @@
       "resumedNow": "A háttérfeladatok újra futnak",
       "saveError": "A kapcsolót nem sikerült átállítani.",
       "confirmPause": "Leállítod mind a(z) {{count}} szüneteltethető háttérszolgáltatást (elemzés, gyűjtés, átfésülések …)? A szünet újraindítás után is megmarad, amíg itt fel nem oldod."
+    },
+    "diagrams": {
+      "intro": "Olvasók vagy könyvátnézés által bejelentett könyvdiagramok: hibás állások és ki nem vágott diagramok. A hivatkozás az olvasót azon az oldalon nyitja meg.",
+      "book": "Könyv",
+      "allBooks": "Összes könyv",
+      "wrongTitle": "Hibás állások",
+      "missedTitle": "Hiányzó diagramok",
+      "empty": "Nincs bejelentés.",
+      "page": "Oldal",
+      "note": "Megjegyzés",
+      "who": "Bejelentő",
+      "when": "Dátum",
+      "gone": "A diagram már nem létezik (újrafelismerve).",
+      "place": "Hely",
+      "answer": "Diagram?",
+      "yes": "igen",
+      "no": "nem",
+      "source": "Forrás",
+      "reader": "Olvasó",
+      "pct": "{{x}}% · {{y}}%",
+      "pos": {
+        "tl": "bal felül",
+        "tc": "középen felül",
+        "tr": "jobb felül",
+        "ml": "bal középen",
+        "mc": "középen",
+        "mr": "jobb középen",
+        "bl": "bal alul",
+        "bc": "középen alul",
+        "br": "jobb alul"
+      }
     }
   },
   "analysis": {

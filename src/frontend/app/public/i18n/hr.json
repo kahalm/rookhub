@@ -2521,7 +2521,8 @@
       "ci": "CI / Actions",
       "roles": "Uloge",
       "uploads": "Prijenosi",
-      "jobs": "Pozadinski poslovi"
+      "jobs": "Pozadinski poslovi",
+      "diagrams": "Prijave dijagrama"
     },
     "ci": {
       "title": "GitHub Actions",
@@ -2927,6 +2928,37 @@
       "resumedNow": "Pozadinski poslovi ponovno rade",
       "saveError": "Prekidač nije moguće promijeniti.",
       "confirmPause": "Zaustaviti svih {{count}} pozadinskih usluga koje se mogu pauzirati (analiza, prikupljanje, pregledi …)? Pauza ostaje i nakon ponovnog pokretanja, dok je ovdje ne ukloniš."
+    },
+    "diagrams": {
+      "intro": "Dijagrami iz knjiga koje su prijavili čitatelji ili pregled knjige: pogrešne pozicije i neizrezani dijagrami. Poveznica otvara čitač na toj stranici.",
+      "book": "Knjiga",
+      "allBooks": "Sve knjige",
+      "wrongTitle": "Pogrešne pozicije",
+      "missedTitle": "Nedostajući dijagrami",
+      "empty": "Ništa nije prijavljeno.",
+      "page": "Stranica",
+      "note": "Napomena",
+      "who": "Prijavio",
+      "when": "Datum",
+      "gone": "Dijagram više ne postoji (ponovno prepoznat).",
+      "place": "Položaj",
+      "answer": "Dijagram?",
+      "yes": "da",
+      "no": "ne",
+      "source": "Izvor",
+      "reader": "Čitač",
+      "pct": "{{x}} % · {{y}} %",
+      "pos": {
+        "tl": "gore lijevo",
+        "tc": "gore sredina",
+        "tr": "gore desno",
+        "ml": "sredina lijevo",
+        "mc": "sredina",
+        "mr": "sredina desno",
+        "bl": "dolje lijevo",
+        "bc": "dolje sredina",
+        "br": "dolje desno"
+      }
     }
   },
   "favorites": {

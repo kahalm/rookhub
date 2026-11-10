@@ -54,6 +54,12 @@ public class EbooksAdminController : BaseApiController
     public async Task<ActionResult<List<EbookDiagramReportDto>>> DiagramReports(CancellationToken ct)
         => Ok(await _service.ListDiagramReportsAsync(ct));
 
+    /// <summary>„Fehlende Diagramme“ (0.945.0): Leser-Rückfragen und importierte Funde, neueste zuerst; <c>ebookId</c> filtert,
+    /// <c>limit</c> 1–500 (Standard 500).</summary>
+    [HttpGet("missed-diagrams")]
+    public async Task<ActionResult<List<EbookMissedDiagramAdminDto>>> MissedDiagrams([FromQuery] int? ebookId, CancellationToken ct, [FromQuery] int limit = 500)
+        => Ok(await _service.ListMissedDiagramsAsync(ebookId, limit, ct));
+
     /// <summary>Diagramm-Erkennung aller PDF-Bücher neu anstoßen (nach neuen Font-Belegungen) → <c>{ queued }</c>.</summary>
     [HttpPost("diagrams/rescan")]
     public async Task<IActionResult> RescanDiagrams(CancellationToken ct)

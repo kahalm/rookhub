@@ -2521,7 +2521,8 @@
       "ci": "CI / Actions",
       "roles": "Roles",
       "uploads": "Uploads",
-      "jobs": "Background jobs"
+      "jobs": "Background jobs",
+      "diagrams": "Diagram reports"
     },
     "ci": {
       "title": "GitHub Actions",
@@ -2927,6 +2928,37 @@
       "resumedNow": "Background jobs running again",
       "saveError": "Could not change the switch.",
       "confirmPause": "Pause all {{count}} pausable background services (analysis, harvesting, sweeps …)? The pause survives restarts until you lift it here."
+    },
+    "diagrams": {
+      "intro": "Book diagrams readers or a book review reported: wrong positions and diagrams that were not cut out. The link opens the reader on that page.",
+      "book": "Book",
+      "allBooks": "All books",
+      "wrongTitle": "Wrong positions",
+      "missedTitle": "Missing diagrams",
+      "empty": "Nothing reported.",
+      "page": "Page",
+      "note": "Note",
+      "who": "Reported by",
+      "when": "Date",
+      "gone": "Diagram no longer exists (re-scanned).",
+      "place": "Position",
+      "answer": "Diagram?",
+      "yes": "yes",
+      "no": "no",
+      "source": "Source",
+      "reader": "Reader",
+      "pct": "{{x}}% · {{y}}%",
+      "pos": {
+        "tl": "top left",
+        "tc": "top centre",
+        "tr": "top right",
+        "ml": "middle left",
+        "mc": "centre",
+        "mr": "middle right",
+        "bl": "bottom left",
+        "bc": "bottom centre",
+        "br": "bottom right"
+      }
     }
   },
   "favorites": {

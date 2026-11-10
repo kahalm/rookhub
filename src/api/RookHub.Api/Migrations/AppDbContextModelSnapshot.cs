@@ -2888,8 +2888,16 @@ namespace RookHub.Api.Migrations
                     b.Property<bool>("IsDiagram")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<string>("Note")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
                     b.Property<int>("Page")
                         .HasColumnType("int");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");

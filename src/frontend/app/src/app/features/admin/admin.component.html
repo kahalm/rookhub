@@ -99,6 +99,14 @@
         </mat-tab>
         }
 
+        @if (show('diagrams')) {
+        <mat-tab [label]="'admin.tabs.diagrams' | translate">
+          <ng-template matTabContent>
+            <app-admin-diagram-reports />
+          </ng-template>
+        </mat-tab>
+        }
+
         @if (show('jobs')) {
         <mat-tab [label]="'admin.tabs.jobs' | translate">
           <ng-template matTabContent>

@@ -505,6 +505,12 @@ public class EbookMissedDiagram
     public string? EpubChapter { get; set; }
     /// <summary>Antwort: true = „ja, hier ist ein Diagramm“, false = „nein“.</summary>
     public bool IsDiagram { get; set; }
+    /// <summary>Freitext (0.945.0), z. B. Lage und Beschreibung aus einer Buchdurchsicht („oben links, grauer Rahmen“).</summary>
+    [MaxLength(300)]
+    public string? Note { get; set; }
+    /// <summary>Herkunft (0.945.0): <c>null</c>/„reader“ = Rückfrage im Leser, sonst frei beim Import gesetzt (z. B. „review-2026-11“).</summary>
+    [MaxLength(40)]
+    public string? Source { get; set; }
     public int UserId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

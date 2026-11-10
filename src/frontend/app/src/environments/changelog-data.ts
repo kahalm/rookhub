@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.945.0", date: "2026-11-10", changes: [
+    { en: "Admin: new tab “Diagram reports” — wrong positions and missing diagrams from the e-book library in two lists, filterable by book, each with a link into the reader on that page, the position on the page (“top left”), note, source and date. “Missing diagram” reports can now carry a note and a source, so a book review can be imported without losing its descriptions.",
+      de: "Admin: Neuer Reiter „Diagramm-Meldungen“ — falsche Stellungen und fehlende Diagramme der E-Book-Bibliothek in zwei Listen, nach Buch filterbar, je Zeile mit Link in den Leser auf die Seite, Lage auf der Seite („oben links“), Hinweis, Quelle und Datum. „Fehlendes Diagramm“-Meldungen tragen jetzt einen Hinweis und eine Quelle, damit eine Buchdurchsicht ohne Verlust der Beschreibungen importiert werden kann." },
+  ] },
   { version: "0.944.3", date: "2026-11-10", changes: [
     { en: "Promotion: in the repertoire and deviation trainers and on KidHub the piece picker appears again after dragging a pawn to the last rank; in visualisation mode the tapped square gets its green ring again.",
       de: "Umwandlung: In Repertoire- und Abweichungs-Trainer sowie auf KidHub erscheint nach dem Ziehen eines Bauern auf die letzte Reihe wieder die Figurenauswahl; im Visualisierungsmodus bekommt das angetippte Feld wieder seinen grünen Ring." },

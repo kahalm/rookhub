@@ -17,6 +17,7 @@ import { AdminMessagesComponent } from './tabs/admin-messages.component';
 import { AdminRolesComponent } from './tabs/admin-roles.component';
 import { AdminLeagueUploadsComponent } from './tabs/admin-league-uploads.component';
 import { AdminBackgroundJobsComponent } from './tabs/admin-background-jobs.component';
+import { AdminDiagramReportsComponent } from './tabs/admin-diagram-reports.component';
 import { AdminUsersTabComponent } from './tabs/admin-users-tab.component';
 import { AdminBooksTabComponent } from './tabs/admin-books-tab.component';
 import { AdminGroupsTabComponent } from './tabs/admin-groups-tab.component';
@@ -40,6 +41,7 @@ import { adminTabIndex, AdminTabKey, visibleAdminTabs } from './admin-tabs';
     AdminRolesComponent,
     AdminLeagueUploadsComponent,
     AdminBackgroundJobsComponent,
+    AdminDiagramReportsComponent,
   ],
   providers: [AdminGroupsStore],
   templateUrl: './admin.component.html',

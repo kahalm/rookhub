@@ -26,7 +26,7 @@ describe('admin-tabs', () => {
   // Umbenennen bricht außerdem die Glockenlinks des Servers: `AdminLinks` (Services/Accounts) liest diese Liste im Test `AdminLinksTests`.
   it('keeps the expected canonical tab order (sync with admin.component.html)', () => {
     expect([...ADMIN_TAB_KEYS]).toEqual(
-      ['users', 'books', 'daily', 'puzzles', 'groups', 'menu', 'messages', 'courseDl', 'ci', 'roles', 'uploads', 'jobs']);
+      ['users', 'books', 'daily', 'puzzles', 'groups', 'menu', 'messages', 'courseDl', 'ci', 'roles', 'uploads', 'diagrams', 'jobs']);
   });
 
   it('resolves the index over a given (visible) tab list', () => {
@@ -48,7 +48,7 @@ describe('admin-tabs', () => {
     expect(ADMIN_TAB_PERMISSIONS).toEqual({
       users: 'users.manage', books: 'books.manage', daily: 'daily.manage', puzzles: 'puzzles.manage',
       groups: 'groups.manage', menu: 'menu.manage', messages: 'messages.admin', courseDl: 'chessable.admin',
-      ci: 'ci.view', roles: 'roles.manage', uploads: 'messages.admin', jobs: null,
+      ci: 'ci.view', roles: 'roles.manage', uploads: 'messages.admin', diagrams: 'ebooks.manage', jobs: null,
     });
   });
 

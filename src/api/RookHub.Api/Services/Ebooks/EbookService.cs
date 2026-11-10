@@ -795,8 +795,26 @@ public class EbookService
         {
             EbookId = id, Page = Math.Max(0, dto.Page), X = Math.Clamp(dto.X, 0, 1), Y = Math.Clamp(dto.Y, 0, 1), IsDiagram = dto.IsDiagram,
             EpubRef = epubRef, EpubChapter = epubChapter, UserId = userId,
+            Note = string.IsNullOrWhiteSpace(dto.Note) ? null : Clip(dto.Note.Trim(), 300),
+            Source = string.IsNullOrWhiteSpace(dto.Source) ? null : Clip(dto.Source.Trim(), 40),
         });
         await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>„Fehlende Diagramme“ für Verwalter (0.945.0): neueste zuerst, wahlweise nur ein Buch, höchstens <paramref name="limit"/> (1–500).</summary>
+    public async Task<List<EbookMissedDiagramAdminDto>> ListMissedDiagramsAsync(int? ebookId, int limit = 500, CancellationToken ct = default)
+    {
+        limit = Math.Clamp(limit, 1, 500);
+        var q = _db.EbookMissedDiagrams.AsQueryable();
+        if (ebookId is int bid) q = q.Where(m => m.EbookId == bid);
+        return await q.OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id).Take(limit)
+            .Select(m => new EbookMissedDiagramAdminDto
+            {
+                Id = m.Id, EbookId = m.EbookId, EbookTitle = m.Ebook.Title, Page = m.Page, X = m.X, Y = m.Y,
+                EpubRef = m.EpubRef, EpubChapter = m.EpubChapter, IsDiagram = m.IsDiagram, Note = m.Note, Source = m.Source,
+                UserId = m.UserId, Username = _db.AppUsers.Where(u => u.Id == m.UserId).Select(u => u.Username).FirstOrDefault(),
+                CreatedAt = m.CreatedAt,
+            }).ToListAsync(ct);
     }
 
     /// <summary>

@@ -2521,7 +2521,8 @@
       "ci": "CI / Actions",
       "roles": "Rollen",
       "uploads": "Uploads",
-      "jobs": "Hintergrundjobs"
+      "jobs": "Hintergrundjobs",
+      "diagrams": "Diagramm-Meldungen"
     },
     "ci": {
       "title": "GitHub Actions",
@@ -2927,6 +2928,37 @@
       "resumedNow": "Hintergrundjobs laufen wieder",
       "saveError": "Schalter konnte nicht umgelegt werden.",
       "confirmPause": "Alle {{count}} pausierbaren Hintergrunddienste anhalten (Analyse, Ernte, Sweeps …)? Die Pause bleibt auch über Neustarts bestehen, bis du sie hier aufhebst."
+    },
+    "diagrams": {
+      "intro": "Von Lesern oder einer Buchdurchsicht gemeldete Buchdiagramme: falsche Stellungen und nicht ausgeschnittene Diagramme. Der Link öffnet den Leser auf der Seite.",
+      "book": "Buch",
+      "allBooks": "Alle Bücher",
+      "wrongTitle": "Falsche Stellungen",
+      "missedTitle": "Fehlende Diagramme",
+      "empty": "Nichts gemeldet.",
+      "page": "Seite",
+      "note": "Hinweis",
+      "who": "Gemeldet von",
+      "when": "Datum",
+      "gone": "Diagramm gibt es nicht mehr (neu erkannt).",
+      "place": "Lage",
+      "answer": "Diagramm?",
+      "yes": "ja",
+      "no": "nein",
+      "source": "Quelle",
+      "reader": "Leser",
+      "pct": "{{x}} % · {{y}} %",
+      "pos": {
+        "tl": "oben links",
+        "tc": "oben Mitte",
+        "tr": "oben rechts",
+        "ml": "Mitte links",
+        "mc": "Mitte",
+        "mr": "Mitte rechts",
+        "bl": "unten links",
+        "bc": "unten Mitte",
+        "br": "unten rechts"
+      }
     }
   },
   "favorites": {
