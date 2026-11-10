@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "Quitar filtro {{value}}",
     "filtersToggle": "Filtrar",
+    "kind": {
+      "label": "Tipo de partida",
+      "all": "Todas",
+      "online": "En línea",
+      "otb": "Sobre el tablero",
+      "emptyOnline": "Aún no hay partidas en línea: la extensión RepCheck las guarda desde chess.com y lichess.",
+      "emptyOtb": "Aún no hay partidas sobre el tablero: sube un PGN o lee una planilla."
+    },
     "title": "Partidas guardadas",
     "hint": "Aquí aparecen las partidas que guardas desde chess.com o lichess con la extensión de navegador RepCheck.",
     "empty": "Aún no hay partidas guardadas.",

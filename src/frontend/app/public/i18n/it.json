@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "Rimuovi filtro {{value}}",
     "filtersToggle": "Filtro",
+    "kind": {
+      "label": "Tipo di partita",
+      "all": "Tutte",
+      "online": "Online",
+      "otb": "Alla scacchiera",
+      "emptyOnline": "Ancora nessuna partita online – l’estensione RepCheck le salva da chess.com e lichess.",
+      "emptyOtb": "Ancora nessuna partita alla scacchiera – carica un PGN o leggi un formulario."
+    },
     "title": "Partite salvate",
     "hint": "Qui compaiono le partite che salvi da chess.com o lichess con l'estensione del browser RepCheck.",
     "empty": "Ancora nessuna partita salvata.",

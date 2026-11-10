@@ -200,6 +200,24 @@ public class GamesControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task List_KindParameter_FiltersAndKindCountsCount()
+    {
+        var user = await CreateUserAsync();
+        var online = await SeedGameAsync(user.Id);
+        _db.SavedGames.Add(new SavedGame { UserId = user.Id, Source = "scoresheet", Pgn = "1. e4 *", ShareToken = "sheet-kind" });
+        await _db.SaveChangesAsync();
+        SetUser(user.Id);
+
+        var onlineList = (List<SavedGameDto>)((await _controller.List(kind: "online")).Result as OkObjectResult)!.Value!;
+        Assert.Equal(new[] { online.Id }, onlineList.Select(g => g.Id));
+        var otbList = (List<SavedGameDto>)((await _controller.List(kind: "otb")).Result as OkObjectResult)!.Value!;
+        Assert.Equal("scoresheet", Assert.Single(otbList).Source);
+
+        var counts = (SavedGameKindCountsDto)((await _controller.KindCounts()).Result as OkObjectResult)!.Value!;
+        Assert.Equal((2, 1, 1), (counts.All, counts.Online, counts.Otb));
+    }
+
+    [Fact]
     public async Task Get_OwnGame_ReturnsPgn()
     {
         var user = await CreateUserAsync();

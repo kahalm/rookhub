@@ -50,16 +50,25 @@ internal sealed class SavedGameListing
             .ToList();
     }
 
+    /// <summary>Zahl der Partien je Lasche über ALLE Partien des Users (ohne Suche) — für die Beschriftung der Laschen.</summary>
+    public async Task<SavedGameKindCountsDto> KindCountsAsync(int userId, CancellationToken ct = default)
+    {
+        var (all, online, otb) = await SavedGameKinds.CountAsync(_db.SavedGames.AsNoTracking().Where(g => g.UserId == userId), ct);
+        return new SavedGameKindCountsDto { All = all, Online = online, Otb = otb };
+    }
+
     /// <summary>Gespeicherte Partien des Users, neueste zuerst (ohne PGN); mit <paramref name="search"/> nur die Treffer
-    /// der Freitextsuche (<see cref="SavedGameSearch"/>) aus ALLEN Partien des Users.</summary>
-    public async Task<List<SavedGameDto>> ListAsync(int userId, int take = 200, string? search = null)
+    /// der Freitextsuche (<see cref="SavedGameSearch"/>) aus ALLEN Partien des Users; <paramref name="kind"/> = Lasche
+    /// (<see cref="SavedGameKinds"/>: <c>all</c>/<c>online</c>/<c>otb</c>), UND-verknüpft mit der Suche.</summary>
+    public async Task<List<SavedGameDto>> ListAsync(int userId, int take = 200, string? search = null, string? kind = null)
     {
         take = Math.Clamp(take, 1, 500);
+        var own = await SavedGameKinds.ApplyAsync(_db.SavedGames.AsNoTracking().Where(g => g.UserId == userId), kind);
         // Das PGN (LONGTEXT) wird NUR fuer Zeilen mitgeholt, deren Zaehler noch fehlt. Frueher
         // stand hier CountPlies(g.Pgn) in der Projektion - eine C#-Methode, die EF nicht
         // uebersetzen kann: die Spalte wanderte damit fuer JEDE der bis zu 500 Partien ueber die
         // Leitung, obwohl das Listen-DTO das PGN gar nicht traegt.
-        var rows = await SavedGameSearch.Apply(_db.SavedGames.AsNoTracking().Where(g => g.UserId == userId), search)
+        var rows = await SavedGameSearch.Apply(own, search)
             .OrderByDescending(g => g.CreatedAt)
             .Take(take)
             .Select(g => new

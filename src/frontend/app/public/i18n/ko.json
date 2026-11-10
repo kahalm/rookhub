@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "필터 {{value}} 제거",
     "filtersToggle": "필터",
+    "kind": {
+      "label": "게임 종류",
+      "all": "전체",
+      "online": "온라인",
+      "otb": "대면",
+      "emptyOnline": "아직 온라인 게임이 없습니다 – RepCheck 확장 프로그램이 chess.com과 lichess에서 저장합니다.",
+      "emptyOtb": "아직 대면 게임이 없습니다 – PGN을 올리거나 기보지를 읽어 들이세요."
+    },
     "title": "저장된 게임",
     "hint": "RepCheck 브라우저 확장으로 chess.com이나 lichess에서 저장한 게임이 여기에 표시됩니다.",
     "empty": "아직 저장된 게임이 없습니다.",

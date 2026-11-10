@@ -224,6 +224,12 @@ function toClubGame(g: ClubGameDto): SharedGame {
   };
 }
 
+/** Laschen der Partienliste (`GET /api/games?kind=`): Alle, Online (chess.com/lichess), Am Brett (Vereinspartie,
+ *  Formular oder PGN mit Brett-Kopf — Regel in `SavedGameKinds` am Server). */
+export type GameKind = 'all' | 'online' | 'otb';
+export const GAME_KINDS: readonly GameKind[] = ['all', 'online', 'otb'];
+export interface GameKindCounts { all: number; online: number; otb: number; }
+
 @Injectable({ providedIn: 'root' })
 export class GamesService {
   constructor(private http: HttpClient) {}
@@ -236,9 +242,16 @@ export class GamesService {
   }
 
   /** `q` = Freitextsuche des Servers über alle eigenen Partien; ohne die neuesten `take`. */
-  list(take = 200, q?: string): Observable<SavedGame[]> {
+  /** Eigene Partien; `q` = Freitextsuche, `kind` = Lasche (`all` lässt den Parameter weg, wie bisher). */
+  list(take = 200, q?: string, kind: GameKind = 'all'): Observable<SavedGame[]> {
     const search = q ? `&q=${encodeURIComponent(q)}` : '';
-    return this.http.get<SavedGame[]>(`/api/games?take=${take}${search}`);
+    const tab = kind !== 'all' ? `&kind=${kind}` : '';
+    return this.http.get<SavedGame[]>(`/api/games?take=${take}${search}${tab}`);
+  }
+
+  /** Zahl der eigenen Partien je Lasche über das ganze Konto (ohne Suche). */
+  kindCounts(): Observable<GameKindCounts> {
+    return this.http.get<GameKindCounts>('/api/games/kind-counts');
   }
 
   get(id: number): Observable<SavedGameDetail> {

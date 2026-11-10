@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "Bỏ bộ lọc {{value}}",
     "filtersToggle": "Lọc",
+    "kind": {
+      "label": "Loại ván",
+      "all": "Tất cả",
+      "online": "Trực tuyến",
+      "otb": "Trên bàn cờ",
+      "emptyOnline": "Chưa có ván trực tuyến – tiện ích RepCheck lưu chúng từ chess.com và lichess.",
+      "emptyOtb": "Chưa có ván trên bàn cờ – tải lên PGN hoặc đọc biên bản ván cờ."
+    },
     "title": "Ván đã lưu",
     "hint": "Các ván bạn lưu từ chess.com hoặc lichess bằng tiện ích trình duyệt RepCheck sẽ hiện ở đây.",
     "empty": "Chưa có ván nào được lưu.",

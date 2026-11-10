@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "Usuń filtr {{value}}",
     "filtersToggle": "Filtr",
+    "kind": {
+      "label": "Rodzaj partii",
+      "all": "Wszystkie",
+      "online": "Online",
+      "otb": "Przy szachownicy",
+      "emptyOnline": "Brak partii online – rozszerzenie RepCheck zapisuje je z chess.com i lichess.",
+      "emptyOtb": "Brak partii przy szachownicy – wgraj PGN lub wczytaj blankiet."
+    },
     "title": "Zapisane partie",
     "hint": "Pojawiają się tu partie zapisane z chess.com lub lichess rozszerzeniem przeglądarki RepCheck.",
     "empty": "Brak zapisanych partii.",

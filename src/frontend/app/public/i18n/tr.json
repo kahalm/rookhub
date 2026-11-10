@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "{{value}} filtresini kaldır",
     "filtersToggle": "Filtre",
+    "kind": {
+      "label": "Oyun türü",
+      "all": "Tümü",
+      "online": "Çevrimiçi",
+      "otb": "Tahta başında",
+      "emptyOnline": "Henüz çevrimiçi oyun yok – RepCheck eklentisi bunları chess.com ve lichess’ten kaydeder.",
+      "emptyOtb": "Henüz tahta başında oyun yok – bir PGN yükleyin veya bir oyun formu okutun."
+    },
     "title": "Kayıtlı oyunlar",
     "hint": "RepCheck tarayıcı eklentisiyle chess.com veya lichess'ten kaydettiğiniz oyunlar burada görünür.",
     "empty": "Henüz kayıtlı oyun yok.",

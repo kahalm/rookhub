@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "Odebrat filtr {{value}}",
     "filtersToggle": "Filtr",
+    "kind": {
+      "label": "Druh partie",
+      "all": "Vše",
+      "online": "Online",
+      "otb": "U šachovnice",
+      "emptyOnline": "Zatím žádné online partie – rozšíření RepCheck je ukládá z chess.com a lichess.",
+      "emptyOtb": "Zatím žádné partie u šachovnice – nahrajte PGN nebo načtěte zápis partie."
+    },
     "title": "Uložené partie",
     "hint": "Zde se objeví partie, které uložíte z chess.com nebo lichess rozšířením prohlížeče RepCheck.",
     "empty": "Zatím žádné uložené partie.",

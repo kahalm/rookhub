@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.949.0", date: "2026-11-10", changes: [
+    { en: "Saved games (`/games`): tabs „All“, „Online“ and „Over the board“, each with its count. Online = saved from chess.com or lichess; over the board = linked to a club game, read from a scoresheet, or an uploaded PGN whose header names a real event or site without any online platform and without a fast time control (when in doubt it stays under „All“). The tab is part of the address (`?kind=`), so Back and shared links keep it; search and filters work within the tab, the server filters (`GET /api/games?kind=`, counts `GET /api/games/kind-counts`).",
+      de: "Gespeicherte Partien (`/games`): Laschen „Alle“, „Online“ und „Am Brett“, jeweils mit Anzahl. Online = von chess.com oder lichess gespeichert; am Brett = mit einer Vereinspartie verbunden, aus einem Partieformular eingelesen oder ein hochgeladenes PGN, dessen Kopf ein echtes Turnier oder einen Ort nennt, ohne Online-Plattform und ohne schnelle Bedenkzeit (im Zweifel bleibt sie unter „Alle“). Die Lasche steht in der Adresse (`?kind=`), Zurück und geteilte Links behalten sie; Suche und Filter wirken innerhalb der Lasche, gefiltert wird am Server (`GET /api/games?kind=`, Zahlen `GET /api/games/kind-counts`)." },
+  ] },
   { version: "0.948.0", date: "2026-11-10", changes: [
     { en: "Club database: „My games“ (`GET …/club/games/mine`) now also lists the club games linked to one of your own saved games — including those uploaded as the anonymised club player, which still store no uploader. Each game counts once; editing rights and what others see stay unchanged.",
       de: "Vereinsdatenbank: „Meine Partien“ (`GET …/club/games/mine`) zeigt jetzt auch die Vereinspartien, die mit einer eigenen gespeicherten Partie verbunden sind — auch die als anonymer Vereinsspieler hochgeladenen, bei denen weiterhin kein Hochladender gespeichert ist. Jede Partie zählt einmal; Bearbeitungsrechte und was andere sehen bleiben unverändert." },

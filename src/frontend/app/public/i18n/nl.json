@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "Filter {{value}} verwijderen",
     "filtersToggle": "Filter",
+    "kind": {
+      "label": "Soort partij",
+      "all": "Alle",
+      "online": "Online",
+      "otb": "Aan het bord",
+      "emptyOnline": "Nog geen onlinepartijen – de RepCheck-extensie bewaart ze van chess.com en lichess.",
+      "emptyOtb": "Nog geen partijen aan het bord – upload een PGN of lees een notatieformulier in."
+    },
     "title": "Opgeslagen partijen",
     "hint": "Partijen die je met de browserextensie RepCheck van chess.com of lichess opslaat, verschijnen hier.",
     "empty": "Nog geen opgeslagen partijen.",

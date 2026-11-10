@@ -853,6 +853,10 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Material 22 (M3, Azure), dunkel als Vorgabe, `ThemeService` (3.1). Navbar (`shell/navbar.component.ts`, Messung in `shared/navbar/nav-edge.ts`): ≤ 768 px
   Hamburger; abgemeldet ≤ 480 px nur „Anmelden“ und ☰ (0.740.0). Fußzeile (`shared/app-footer/`) bleibt auf
   kurzen Seiten unten; Links ≥ 44 px.
+- Partienliste `/games` (0.949.0): Laschen „Alle | Online | Am Brett“ als `mat-tab-nav-bar` mit `mat-tab-link` (die
+  Lasche ist ein Filter derselben Liste, kein eigener Inhalt — deshalb Links mit `?kind=`, nicht `mat-tab-group`), Zahl
+  des ganzen Kontos in Klammern hinter dem Namen, zwischen Erklärsatz und Suchfeld; nur sichtbar, wenn das Konto
+  Partien hat. Leere Lasche: ein Satz mit dem Weg dorthin (`.kind-empty`), nicht die Leerkarte des Kontos (5.10).
 - Dashboard: neue Kacheln nicht in `DEFAULT_VISIBLE`; angepinnte Kurse in eigener breiter Zeile (r2-rk-dash-stretch).
 - Löser: Aktionen über `PuzzleActionBarComponent`; Spielweise per `SolveModeService` (einmal je Bereich, für
   Kurse je Kurs; „für alle Puzzle-Bereiche übernehmen“).
@@ -1238,6 +1242,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-10 | 0.949.0 · RookHub `/games` | Laschen „Alle / Online / Am Brett“ (`mat-tab-nav-bar`, Wahl in `?kind=`, Zahl je Lasche), leere Lasche als ein Satz statt Leerkarte | Wunsch 10.11.: „unterscheidung … allgemeine saved games, online games, otb games“ | User über die betreuende Sitzung |
 | 2026-11-10 | 0.946.0 · Admin „Engines“ | Admin-Reiter mit Zustands-Pillen (Symbol + Text), Karten „Warteschlange“/„Durchsatz“ mit Tabellen, die auch am Handy Tabellen bleiben (`min-width` + `.table-scroll`), darunter eine Karte je Engine im Raster (≥ 420 px Spalte); Offline-Engines eingeklappt; Auffrischen 15 s nur bei sichtbarem Tab | Wunsch 10.11.: Übersicht der registrierten Engines, Hintergrund, Warteschlange, wer rechnet was, Durchsatz | User über die betreuende Sitzung |
 | 2026-11-10 | 0.943.0 · LeagueHub | Partieformular hochladen: je weiterem Foto Beschriftung „Seite N“ / „weiteres Foto von Seite N“, Umschalter „Neue Seite \| Dieselbe Seite“ (`.seg`) und „↑“; Galerie-Mehrfachauswahl zuerst „nächste Seite“ | Formular 113: zwei Blätter landeten als eine Seite (verkehrt herum), die Wahl war nach dem Hinzufügen nicht mehr sichtbar | Vorfall 10.11., Auftrag des Users über die betreuende Sitzung |
 | 2026-11-09 | 0.941.0 · LeagueHub | Prognose: Umschalter „Gegner \| Eigene Aufstellung“ als `.seg` über dem Prognose-Teil (unter den Paarungen, 44 px am Handy); nur angemeldet, weg auf Teilen-Links, bei spielfrei und gesperrt. In der eigenen Sicht heißt die Farblegende „Eigene Mannschaft hat …“, die Teilen-Knöpfe der Prognose fehlen | Wunsch 09.11.: eigene Prognose je Runde sehen | User |

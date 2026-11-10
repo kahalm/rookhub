@@ -27,18 +27,25 @@ public class GamesController : BaseApiController
     }
 
     /// <summary>Eigene gespeicherte Partien (neueste zuerst, ohne PGN) samt Stand des Fehler-Trainings; <c>q</c> = Freitextsuche
-    /// über alle eigenen Partien (Wörter UND-verknüpft, siehe <see cref="SavedGameSearch"/>).</summary>
+    /// über alle eigenen Partien (Wörter UND-verknüpft, siehe <see cref="SavedGameSearch"/>); <c>kind</c> = Lasche
+    /// <c>all</c> (Vorgabe, auch für Unbekanntes) / <c>online</c> / <c>otb</c> (<see cref="SavedGameKinds"/>).</summary>
     [HttpGet]
-    public async Task<ActionResult<List<SavedGameDto>>> List([FromQuery] int take = 200, [FromQuery] string? q = null, CancellationToken ct = default)
+    public async Task<ActionResult<List<SavedGameDto>>> List([FromQuery] int take = 200, [FromQuery] string? q = null,
+        [FromQuery] string? kind = null, CancellationToken ct = default)
     {
         var userId = GetUserId();
-        var games = await _service.ListAsync(userId, take, q);
+        var games = await _service.ListAsync(userId, take, q, kind);
         // EINE Abfrage fuer die ganze Liste statt einer je Partie.
         var stand = await _mistakes.ForGamesAsync(userId, games.Select(g => g.Id).ToList(), ct);
         foreach (var g in games)
             if (stand.TryGetValue(g.Id, out var m)) g.Mistakes = m;
         return Ok(games);
     }
+
+    /// <summary>Zahl der eigenen Partien je Lasche (<c>all</c>/<c>online</c>/<c>otb</c>) über das ganze Konto, ohne Suche.</summary>
+    [HttpGet("kind-counts")]
+    public async Task<ActionResult<SavedGameKindCountsDto>> KindCounts(CancellationToken ct = default)
+        => Ok(await _service.KindCountsAsync(GetUserId(), ct));
 
     /// <summary>
     /// PGN hochladen (Datei oder eingefügt): jede Partie des Textes wird eine eigene Partie (Quelle <c>pgn</c>).

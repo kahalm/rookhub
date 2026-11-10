@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "Elimină filtrul {{value}}",
     "filtersToggle": "Filtru",
+    "kind": {
+      "label": "Tipul partidei",
+      "all": "Toate",
+      "online": "Online",
+      "otb": "La tablă",
+      "emptyOnline": "Încă nicio partidă online – extensia RepCheck le salvează de pe chess.com și lichess.",
+      "emptyOtb": "Încă nicio partidă la tablă – încarcă un PGN sau citește o foaie de partidă."
+    },
     "title": "Partide salvate",
     "hint": "Aici apar partidele pe care le salvezi de pe chess.com sau lichess cu extensia de browser RepCheck.",
     "empty": "Încă nicio partidă salvată.",

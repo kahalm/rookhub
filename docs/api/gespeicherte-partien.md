@@ -6,7 +6,8 @@ Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
-| GET | `/api/games?take=200` | Auth | Eigene gespeicherte Partien (neueste zuerst, ohne PGN). Seit 0.515.0 je Partie `analysis` = Stand der VERKNÜPFTEN Analyse (`status`, `analyzed`/`total`, `accuracyWhite`/`accuracyBlack` bei `done`) oder `null` — EINE gruppierte Zählung über alle verknüpften Ids, kein Abruf je Partie; fertige Analysen ohne abgelegte Genauigkeit (vor 0.515.0) werden dabei nachgerechnet (`AccuracyBackfillPerCall` = 10 je Aufruf). **`&q=`** = Freitextsuche über ALLE eigenen Partien (`SavedGameSearch`): Wörter UND-verknüpft (höchstens 8, Eingabe ≤ 200 Zeichen), je Wort Weiß, Schwarz, Quelle, Klassifizierer-Spalten, Tags (LIKE, maskiert) oder die PGN-Kopfzeilen Event/Site/Opening/Variation/ECO (regulärer Ausdruck, am Textanfang verankert, endet an der ersten Zugzeile; Züge und Kommentare nicht). Abgeleitete Klassifizierer (Blitz …) stehen nicht in der Spalte und werden nicht gefunden. Die Liste kennt kein Paging: `take` deckelt auch die Treffer (Seite: 500, dann Hinweis „Suche eingrenzen“) |
+| GET | `/api/games?take=200` | Auth | Eigene gespeicherte Partien (neueste zuerst, ohne PGN). Seit 0.515.0 je Partie `analysis` = Stand der VERKNÜPFTEN Analyse (`status`, `analyzed`/`total`, `accuracyWhite`/`accuracyBlack` bei `done`) oder `null` — EINE gruppierte Zählung über alle verknüpften Ids, kein Abruf je Partie; fertige Analysen ohne abgelegte Genauigkeit (vor 0.515.0) werden dabei nachgerechnet (`AccuracyBackfillPerCall` = 10 je Aufruf). **`&q=`** = Freitextsuche über ALLE eigenen Partien (`SavedGameSearch`): Wörter UND-verknüpft (höchstens 8, Eingabe ≤ 200 Zeichen), je Wort Weiß, Schwarz, Quelle, Klassifizierer-Spalten, Tags (LIKE, maskiert) oder die PGN-Kopfzeilen Event/Site/Opening/Variation/ECO (regulärer Ausdruck, am Textanfang verankert, endet an der ersten Zugzeile; Züge und Kommentare nicht). Abgeleitete Klassifizierer (Blitz …) stehen nicht in der Spalte und werden nicht gefunden. Die Liste kennt kein Paging: `take` deckelt auch die Treffer (Seite: 500, dann Hinweis „Suche eingrenzen“) **`&kind=`** (0.949.0) = Lasche `all` (Vorgabe, auch für Unbekanntes) / `online` / `otb`, UND-verknüpft mit `q`, `take` deckelt innerhalb der Lasche (Regel unten, „Laschen der Partienliste“) |
+| GET | `/api/games/kind-counts` | Auth | Zahl der eigenen Partien je Lasche `{ all, online, otb }` über das ganze Konto, OHNE Suche (0.949.0, Beschriftung der Laschen auf `/games`); drei `COUNT` + eine `DISTINCT`-Abfrage der Bedenkzeiten |
 | GET | `/api/games/shared/{token}` | AllowAnonymous | Öffentliche Sicht einer geteilten Partie inkl. PGN (ohne Besitzer-Daten). Literal-Route VOR `{id}`. Seit 0.526.3 `ownGameId` = die Partie-Id, NUR wenn der angemeldete Aufrufer der Besitzer ist — die Seite leitet dann auf `/games/{id}` um (eigener Link = dieselbe Ansicht wie aus „Partien") |
 | GET | `/api/games/shared/{token}/evals` | AllowAnonymous | Bewertungen der geteilten Partie für Kurve/Genauigkeit/Zug-Klassen (`GameEvalsDto`). Anonym NUR die vom Besitzer verknüpfte Analyse; angemeldet ersatzweise die EIGENE mit gleichem PGN. Globaler IP-Limiter wie `GET shared/{token}` |
 | GET | `/api/games/shared/{token}/summary` | AllowAnonymous | Nur der fertige Text der Zusammenfassung (0.934.0), `docs/api/partie-zusammenfassung.md`; 404 unbekannter Link |
@@ -33,6 +34,28 @@ Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess
 | GET | `/api/games/shared/{token}/similar` | AllowAnonymous | Dasselbe für den Teilen-Link (Kopfdaten ohne Züge, derselbe Zuschnitt wie die anonyme Bestandssuche; anonym trägt nur `inPool`) |
 | GET | `/api/library-games/{id}/view?lang=` | Auth | „Anschauen" einer Meisterpartie (0.567.0, `LibraryGameService.ViewAsync`) → `{ id, pgn, language, languages }`: PGN aus der HAUPTVARIANTE und den Kommentar-Sätzen in `lang` (`CommentSetService.ForLibraryAsync`: dieselbe Regel wie beim Nachspielen, fehlende Halbzüge aus der Quelle, Quell-Sätze entstehen beim ersten Bedarf), nicht das rohe Quell-PGN (zwei Sprachen hintereinander, ChessBase-Figurenschrift). Nur angemeldet wie das Anfordern; 404 unbekannt/aussortiert/nicht nachspielbar |
 | GET | `/api/games/{id}/recap` | Auth | „Kurz erzählt" (0.541.0): die Nacherzählung der eigenen Partie `{ available, hasAnalysis, text?, language?, createdAt?, pending }`. Fehlt sie bei fertiger Analyse (Analyse von vor 0.541.0, gescheiterter Lauf), stößt schon dieser Abruf sie im Hintergrund an (`pending: true`, die Seite fragt alle 15 s nach, höchstens achtmal); 404 fremde Partie. Der Teilen-Link bekommt denselben Text als `recap` in `GET /api/games/shared/{token}` |
+
+**Laschen der Partienliste** (0.949.0, Wunsch 2026-11-10 „allgemeine saved games, online games, otb games“,
+`Services/Games/SavedGameKinds.cs`). Alles läuft in der Datenbank, damit Suche, `take` und Zählung dieselbe Menge sehen:
+* **Online** = Quelle `chess.com` oder `lichess`. Die Quelle entscheidet allein: eine mit einer Vereinspartie verbundene
+  Online-Partie bleibt Online (und ist NICHT „Am Brett“); ein PGN-Import mit lichess-Adresse im Kopf ist nicht Online.
+* **Am Brett (`otb`)** = keine Online-Quelle UND eines davon: (a) `LeagueClubGameId` gesetzt (jede Quelle, auch `rookhub`),
+  (b) Quelle `scoresheet`, (c) Quelle `pgn` und der Kopf deutet auf eine Brettpartie — **alle** drei Bedingungen:
+  1. `[Event]` oder `[Site]` trägt einen echten Wert (mindestens ein Buchstabe/eine Ziffer; „?“, „-“, leer zählen nicht),
+  2. weder `[Event]`, `[Site]` noch `[Link]` nennt eine Plattform/Adresse/Online-Partie (`https?:`, `www.`, chess.com,
+     lichess, chess24, playchess, chesstempo, playok, online, offline, internet, rated, casual, live chess —
+     Groß-/Kleinschreibung egal; „iChessOne offline game“ ist eine App-Partie),
+  3. die Bedenkzeit (`SavedGames.TimeControl`, beim Import aus `[TimeControl]`) ist leer/unverständlich (`-`,
+     `40/7200:3600`) ODER klassisch nach `GameClassifier.Mode` (Grundzeit + 40 × Inkrement ≥ 1500 s). Bullet, Blitz,
+     Schnellschach und Fernschach (`1/86400`) schließen aus. Geprüft wird in C# über die wenigen VERSCHIEDENEN Werte
+     des Kontos, gefiltert per `NOT IN`.
+  Kopfzeilen werden wie bei der Suche nur bis zur ersten Zugzeile gelesen (regulärer Ausdruck am Textanfang, InMemory
+  .NET = MariaDB PCRE2, `SavedGameKindsSqlTests`); ein `[Event …]` in einem Kommentar zählt nicht. Bewusst
+  konservativ: im Zweifel nicht „Am Brett“ (ein ChessBase-Export mit nur „?“ bleibt unter „Alle“).
+* Quelle `rookhub` (Analysebrett) ohne Verbindung und PGN-Importe ohne Brett-Hinweis stehen nur unter **Alle**.
+* Stand Prod 10.11.2026 (UserId 5, 135 Partien, nachgerechnet per Lese-SQL): Online 41, Am Brett 86 (63 verbundene PGN
+  + 7 Formulare + 16 PGN mit Brett-Kopf), nur unter Alle 8 (1 `rookhub`; 7 PGN: dreimal Event/Site nur „?“, dreimal
+  „iChessOne offline game“, einmal ein lichess-Bullet mit Adresse im Kopf). Frontend: `docs/frontend/partienliste-laschen.md`.
 
 **Elo im Kopf** (0.737.0, Wunsch 2026-10-10): Partieseite und Teilen-Link zeigen „Name (Elo n)", der og:title des Teilen-Links
 ebenso. Fehlt einer Kopie mit `LeagueClubGameId` die Wertung (PGN-Kopf), liefert `SavedGameSharing.WithLeagueEloAsync` sie beim

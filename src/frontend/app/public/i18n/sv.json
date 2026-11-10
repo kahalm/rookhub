@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "Ta bort filter {{value}}",
     "filtersToggle": "Filter",
+    "kind": {
+      "label": "Typ av parti",
+      "all": "Alla",
+      "online": "Online",
+      "otb": "Vid brädet",
+      "emptyOnline": "Inga onlinepartier än – tillägget RepCheck sparar dem från chess.com och lichess.",
+      "emptyOtb": "Inga partier vid brädet än – ladda upp en PGN eller läs in ett protokoll."
+    },
     "title": "Sparade partier",
     "hint": "Partier du sparar från chess.com eller lichess med webbläsarutökningen RepCheck visas här.",
     "empty": "Inga sparade partier än.",

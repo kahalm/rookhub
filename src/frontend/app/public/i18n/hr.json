@@ -3180,6 +3180,14 @@
     },
     "filterRemove": "Ukloni filtar {{value}}",
     "filtersToggle": "Filtri",
+    "kind": {
+      "label": "Vrsta partije",
+      "all": "Sve",
+      "online": "Online",
+      "otb": "Za pločom",
+      "emptyOnline": "Još nema online partija – proširenje RepCheck sprema ih s chess.com i lichessa.",
+      "emptyOtb": "Još nema partija za pločom – učitajte PGN ili očitajte zapisnik."
+    },
     "title": "Spremljene partije",
     "hint": "Partije koje spremiš s chess.com ili lichess pomoću RepCheck proširenja preglednika pojavljuju se ovdje.",
     "empty": "Još nema spremljenih partija.",

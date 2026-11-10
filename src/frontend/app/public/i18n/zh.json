@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "移除筛选 {{value}}",
     "filtersToggle": "筛选",
+    "kind": {
+      "label": "对局类型",
+      "all": "全部",
+      "online": "线上",
+      "otb": "棋盘对局",
+      "emptyOnline": "还没有线上对局——RepCheck 扩展会从 chess.com 和 lichess 保存它们。",
+      "emptyOtb": "还没有棋盘对局——上传 PGN 或读取记录纸。"
+    },
     "title": "已保存的对局",
     "hint": "你用 RepCheck 浏览器扩展从 chess.com 或 lichess 保存的对局会显示在这里。",
     "empty": "还没有保存的对局。",

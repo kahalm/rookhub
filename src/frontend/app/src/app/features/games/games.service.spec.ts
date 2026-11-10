@@ -24,6 +24,15 @@ describe('GamesService', () => {
     req.flush([]);
   });
 
+  it('list hängt Suche und Lasche an, „all“ ohne Parameter; kindCounts fragt die Zahlen je Lasche', () => {
+    service.list(500, 'a b', 'otb').subscribe();
+    httpMock.expectOne('/api/games?take=500&q=a%20b&kind=otb').flush([]);
+    service.list(200, undefined, 'all').subscribe();
+    httpMock.expectOne('/api/games?take=200').flush([]);
+    service.kindCounts().subscribe();
+    httpMock.expectOne('/api/games/kind-counts').flush({ all: 0, online: 0, otb: 0 });
+  });
+
   it('get lädt eine einzelne Partie', () => {
     service.get(7).subscribe();
     const req = httpMock.expectOne('/api/games/7');

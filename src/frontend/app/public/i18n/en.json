@@ -3180,6 +3180,14 @@
     },
     "filterRemove": "Remove filter {{value}}",
     "filtersToggle": "Filter",
+    "kind": {
+      "label": "Kind of game",
+      "all": "All",
+      "online": "Online",
+      "otb": "Over the board",
+      "emptyOnline": "No online games yet — the RepCheck extension saves them from chess.com and lichess.",
+      "emptyOtb": "No over-the-board games yet — upload a PGN or read in a scoresheet."
+    },
     "title": "Saved games",
     "hint": "Games you save from Chess.com or Lichess with the RepCheck browser extension show up here.",
     "empty": "No saved games yet.",

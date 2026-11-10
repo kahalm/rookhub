@@ -3590,6 +3590,14 @@
     },
     "filterRemove": "{{value}} szűrő eltávolítása",
     "filtersToggle": "Szűrők",
+    "kind": {
+      "label": "Játszma típusa",
+      "all": "Mind",
+      "online": "Online",
+      "otb": "Táblás",
+      "emptyOnline": "Még nincsenek online játszmák – a RepCheck bővítmény menti őket a chess.com-ról és a lichessről.",
+      "emptyOtb": "Még nincsenek táblás játszmák – tölts fel PGN-t vagy olvass be egy játszmalapot."
+    },
     "title": "Mentett játszmák",
     "hint": "Azok a játszmák, amelyeket a chess.com-on vagy a lichessen a RepCheck böngészőbővítménnyel mentesz, itt jelennek meg.",
     "empty": "Még nincsenek mentett játszmák.",

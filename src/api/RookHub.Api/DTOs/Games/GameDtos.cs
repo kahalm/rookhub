@@ -49,6 +49,14 @@ public class SaveGameInputDto
     public string? TimeControl { get; set; }
 }
 
+/// <summary>Zahl der eigenen Partien je Lasche der Partienliste (<c>GET /api/games/kind-counts</c>).</summary>
+public class SavedGameKindCountsDto
+{
+    public int All { get; set; }
+    public int Online { get; set; }
+    public int Otb { get; set; }
+}
+
 /// <summary>Listeneintrag einer gespeicherten Partie (ohne PGN, für die Übersicht).</summary>
 public class SavedGameDto
 {

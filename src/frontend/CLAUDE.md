@@ -33,6 +33,7 @@ stehen je Bereich in `rookhub/docs/frontend/` (Index unten); neue Feature-Doku d
 - Live-Engine + eigene Züge auf der Partieseite (0.525.0) → `docs/frontend/live-engine-eigene-zuege-auf-der-partieseite.md`
 - ⋮-Menü für die Stellung (0.527.0) → `docs/frontend/menue-fuer-die-stellung.md`
 - Eigene Fehler nachspielen (0.516.0) → `docs/frontend/eigene-fehler-nachspielen.md`
+- Partienliste: Laschen Alle / Online / Am Brett (`?kind=`, 0.949.0) → `docs/frontend/partienliste-laschen.md`
 - Zugliste: der aktive Zug scrollt NUR seinen Kasten, nie die Seite (0.514.1) → `docs/frontend/zugliste.md`
 
 ## Zusammenspiel

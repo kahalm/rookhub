@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "Retirer le filtre {{value}}",
     "filtersToggle": "Filtre",
+    "kind": {
+      "label": "Type de partie",
+      "all": "Toutes",
+      "online": "En ligne",
+      "otb": "Sur l’échiquier",
+      "emptyOnline": "Pas encore de parties en ligne – l’extension RepCheck les enregistre depuis chess.com et lichess.",
+      "emptyOtb": "Pas encore de parties sur l’échiquier – importez un PGN ou lisez une feuille de partie."
+    },
     "title": "Parties enregistrées",
     "hint": "Les parties que vous enregistrez depuis chess.com ou lichess avec l'extension de navigateur RepCheck apparaissent ici.",
     "empty": "Aucune partie enregistrée pour l'instant.",

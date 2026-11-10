@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "フィルター {{value}} を解除",
     "filtersToggle": "フィルター",
+    "kind": {
+      "label": "対局の種類",
+      "all": "すべて",
+      "online": "オンライン",
+      "otb": "盤上",
+      "emptyOnline": "オンライン対局はまだありません – RepCheck 拡張機能が chess.com と lichess から保存します。",
+      "emptyOtb": "盤上の対局はまだありません – PGN をアップロードするか棋譜用紙を読み込んでください。"
+    },
     "title": "保存した対局",
     "hint": "RepCheck ブラウザ拡張機能で chess.com や lichess から保存した対局がここに表示されます。",
     "empty": "保存した対局はまだありません。",

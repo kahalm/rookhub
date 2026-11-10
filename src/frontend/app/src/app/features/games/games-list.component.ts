@@ -2,7 +2,8 @@ import { Component, OnInit, inject, DestroyRef, ChangeDetectionStrategy, signal 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,7 +18,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable, Subject, Subscription, of, timer } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
-import { GamesService, PgnImportResult, SavedGame } from './games.service';
+import { GAME_KINDS, GameKind, GameKindCounts, GamesService, PgnImportResult, SavedGame } from './games.service';
 import { PgnImportDialogComponent } from './pgn-import-dialog.component';
 import { formatTimeControl, TimeControlLabel } from './time-control.util';
 import { distinctTags, filterByTag } from './tags.util';
@@ -40,6 +41,11 @@ export const SEARCH_DEBOUNCE_MS = 300;
 /** So viele Treffer holt die Suche (Serverdeckel); sind es so viele, bittet die Seite ums Eingrenzen. */
 export const SEARCH_TAKE = 500;
 
+/** `?kind=` der Adresse → Lasche; Unbekanntes und Fehlendes = „Alle“ (wie am Server). */
+export function parseGameKind(value: string | null | undefined): GameKind {
+  return (GAME_KINDS as readonly string[]).includes(value ?? '') ? value as GameKind : 'all';
+}
+
 /** Was die Liste zu einer Partie zeigt: Knopf (keine/gescheiterte Analyse), Prozent (läuft) oder nichts (fertig). */
 export type AnalysisState = 'none' | 'running' | 'done';
 
@@ -52,7 +58,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
   imports: [IconLabelDirective,
     CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, MatInputModule, LoadErrorComponent,
     MatProgressSpinnerModule, MatCheckboxModule, MatMenuModule, MatDialogModule, MatFormFieldModule, MatSelectModule,
-    TranslatePipe, PctPipe, HelpHintComponent,
+    TranslatePipe, PctPipe, HelpHintComponent, MatTabsModule,
   ],
   template: `
     <div class="games-page">
@@ -84,6 +90,16 @@ export type AnalysisState = 'none' | 'running' | 'done';
           </div>
         </div>
         <p class="hint" [class.has-games]="hasGames()">{{ 'games.hint' | translate }}</p>
+        <!-- Laschen (Wunsch 10.11.2026): Alle / Online / Am Brett, serverseitig gefiltert (kind=), die Wahl steht in der
+             Adresse (?kind=, „Alle“ ohne Parameter) — Zurück und Teilen-Link treffen dieselbe Lasche. Zahlen = ganzes Konto. -->
+        @if (hasGames()) {
+          <nav mat-tab-nav-bar class="kind-tabs" [tabPanel]="kindPanel" [attr.aria-label]="'games.kind.label' | translate">
+            @for (k of kinds; track k) {
+              <a mat-tab-link class="kind-tab" [attr.data-kind]="k" routerLink="." [queryParams]="{ kind: k === 'all' ? null : k }"
+                 queryParamsHandling="merge" [active]="kind() === k">{{ kindLabel[k] | translate }}@if (counts(); as c) {&nbsp;({{ c[k] }})}</a>
+            }
+          </nav>
+        }
         <!-- Freitextsuche: der Server sucht über ALLE Partien des Kontos, nicht nur über die geladenen 200. -->
         @if (hasGames()) {
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="games-search">
@@ -161,6 +177,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
         }
       </div>
 
+      <mat-tab-nav-panel #kindPanel>
       @if (loading) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
       } @else if (activeQuery && searchFailed) {
@@ -173,6 +190,9 @@ export type AnalysisState = 'none' | 'running' | 'done';
       } @else if (loadError && games.length === 0) {
         <!-- F2-006: ein gescheitertes Laden ist nicht „noch keine Partien“. -->
         <app-load-error class="list-load-error" [error]="loadError" (retry)="reloadList()" />
+      } @else if (games.length === 0 && kind() !== 'all') {
+        <!-- Leere Lasche: ein Satz mit dem Weg dorthin, nicht der Leerzustand des ganzen Kontos (DESIGN 5.10). -->
+        <p class="kind-empty">{{ (kind() === 'online' ? 'games.kind.emptyOnline' : 'games.kind.emptyOtb') | translate }}</p>
       } @else if (games.length === 0) {
         <mat-card class="empty-state">
           <mat-icon>sports_esports</mat-icon>
@@ -329,6 +349,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
           }
         </div>
       }
+      </mat-tab-nav-panel>
     </div>
   `,
   styles: [`
@@ -344,6 +365,10 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty-state > mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
     .only-open { margin-top: 4px; }
+    .kind-tabs { margin: 0 0 4px; }
+    .kind-tab { min-width: 0; padding: 0 16px; }
+    .kind-empty { padding: 24px 0; text-align: center; color: var(--mat-sys-on-surface-variant); }
+    @media (max-width: 599.98px) { .kind-tab { padding: 0 10px; } }
     .games-search { display: block; width: 100%; max-width: 640px; margin-top: 8px; }
     .no-hits { padding: 24px 0; text-align: center; color: var(--mat-sys-on-surface-variant); }
     .no-hits p { margin: 0 0 12px; overflow-wrap: anywhere; }
@@ -514,8 +539,22 @@ export class GamesListComponent implements OnInit {
   private unsearched: SavedGame[] = [];
 
   private filterBase(): SavedGame[] { return this.activeQuery ? this.unsearched : this.games; }
-  /** Hat das Konto überhaupt Partien — unabhängig davon, ob die aktuelle Suche etwas findet. */
-  hasGames(): boolean { return this.filterBase().length > 0; }
+  /** Hat das Konto überhaupt Partien — unabhängig davon, ob die aktuelle Suche oder Lasche etwas findet. */
+  hasGames(): boolean { return this.filterBase().length > 0 || (this.counts()?.all ?? 0) > 0; }
+
+  /** Die Laschen in ihrer Reihenfolge; die gewählte kommt aus `?kind=` (unbekannt/fehlend = „Alle“). */
+  readonly kinds = GAME_KINDS;
+  readonly kindLabel: Record<GameKind, string> = { all: 'games.kind.all', online: 'games.kind.online', otb: 'games.kind.otb' };
+  readonly kind = signal<GameKind>('all');
+  /** Zahl je Lasche über das ganze Konto; `null` = (noch) unbekannt, dann stehen die Laschen ohne Zahl da. */
+  readonly counts = signal<GameKindCounts | null>(null);
+
+  private refreshCounts(): void {
+    this.service.kindCounts().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: c => this.counts.set(c),
+      error: () => { /* Laschen bleiben ohne Zahl benutzbar */ },
+    });
+  }
 
   onSearch(value: string): void {
     this.searchText = value;
@@ -532,10 +571,17 @@ export class GamesListComponent implements OnInit {
     });
   }
 
-  /** Liste (neu) laden — beim Start und über „Erneut versuchen“ (F2-006). */
+  /** Liste (neu) laden — beim Start, beim Laschenwechsel und über „Erneut versuchen“ (F2-006). */
   reloadList(): void {
     this.loading = true;
     this.loadError = null;
+    this.poll?.unsubscribe();
+    // Mit Suche braucht die Lasche zusätzlich ihre Liste OHNE Suche (Grundlage der Filterwerte, `unsearched`).
+    if (this.activeQuery) {
+      const kind = this.kind();
+      this.service.list(undefined, undefined, kind).pipe(filter(() => kind === this.kind()), takeUntilDestroyed(this.destroyRef))
+        .subscribe({ next: list => this.unsearched = list, error: () => { /* Filterwerte bleiben die alten */ } });
+    }
     this.fetchList().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: list => { this.loading = false; this.applyList(list); },
       error: (err: unknown) => { this.loading = false; this.loadError = err ?? true; },
@@ -545,7 +591,9 @@ export class GamesListComponent implements OnInit {
   /** Die Liste zur aktuellen Suche. Eine Antwort, die zu einer inzwischen geänderten Suche gehört, fällt weg. */
   private fetchList(): Observable<SavedGame[]> {
     const q = this.activeQuery;
-    return (q ? this.service.list(SEARCH_TAKE, q) : this.service.list()).pipe(filter(() => q === this.activeQuery));
+    const kind = this.kind();
+    return (q ? this.service.list(SEARCH_TAKE, q, kind) : this.service.list(undefined, undefined, kind))
+      .pipe(filter(() => q === this.activeQuery && kind === this.kind()));
   }
 
   private applyList(list: SavedGame[]): void {
@@ -627,10 +675,17 @@ export class GamesListComponent implements OnInit {
     private router: Router,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
-    this.reloadList();
+    // Die Lasche folgt der Adresse: erster Wert = erstes Laden, jeder Wechsel (Klick, Zurück) lädt die Liste neu.
+    this.route.queryParamMap.pipe(
+      map(p => parseGameKind(p.get('kind'))),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(kind => { this.kind.set(kind); this.reloadList(); });
+    this.refreshCounts();
     this.search$.pipe(
       debounceTime(SEARCH_DEBOUNCE_MS),
       distinctUntilChanged(),
@@ -718,6 +773,7 @@ export class GamesListComponent implements OnInit {
           return;
         }
         this.fetchList().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(list => this.applyList(list));
+        this.refreshCounts();
       });
   }
 
@@ -762,6 +818,7 @@ export class GamesListComponent implements OnInit {
     this.actions.deleteGame(g.id).subscribe(() => {
       this.games = this.games.filter(x => x.id !== g.id);
       this.unsearched = this.unsearched.filter(x => x.id !== g.id);
+      this.refreshCounts();
     });
   }
 }

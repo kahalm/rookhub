@@ -3124,6 +3124,14 @@
     },
     "filterRemove": "Hapus filter {{value}}",
     "filtersToggle": "Filter",
+    "kind": {
+      "label": "Jenis partai",
+      "all": "Semua",
+      "online": "Daring",
+      "otb": "Di papan",
+      "emptyOnline": "Belum ada partai daring – ekstensi RepCheck menyimpannya dari chess.com dan lichess.",
+      "emptyOtb": "Belum ada partai di papan – unggah PGN atau baca formulir partai."
+    },
     "title": "Partai tersimpan",
     "hint": "Partai yang Anda simpan dari chess.com atau lichess dengan ekstensi browser RepCheck muncul di sini.",
     "empty": "Belum ada partai tersimpan.",

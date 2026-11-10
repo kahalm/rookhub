@@ -3180,6 +3180,14 @@
     },
     "filterRemove": "Filter {{value}} entfernen",
     "filtersToggle": "Filter",
+    "kind": {
+      "label": "Art der Partie",
+      "all": "Alle",
+      "online": "Online",
+      "otb": "Am Brett",
+      "emptyOnline": "Noch keine Online-Partien – die RepCheck-Erweiterung speichert sie von chess.com und lichess.",
+      "emptyOtb": "Noch keine Partien am Brett – PGN hochladen oder ein Partieformular einlesen."
+    },
     "title": "Gespeicherte Partien",
     "hint": "Partien, die du auf chess.com oder lichess mit der RepCheck-Browser-Erweiterung speicherst, erscheinen hier.",
     "empty": "Noch keine gespeicherten Partien.",
