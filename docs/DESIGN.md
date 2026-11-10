@@ -730,6 +730,15 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   „Eigene Fehler“); das Vollbild-Abzeichen zählt die gezeigten Tipps und sagt es im `title` (d4).
 - **Hinweiszeile unter dem Brett** (`.board-hint`, Zugrecht/Tipp): EINE Grundregel in `styles.scss`, 0,875 rem in allen
   Modi (vorher Standard 1em, Buch/Endlos 0,88em, d4).
+- **Woodpecker-Statistik im Löser** (0.956.0): unter dem Zyklus-Fortschritt der Kontext-Card, leise (0,85 rem,
+  `--mat-sys-on-surface-variant`, Ziffern `tabular-nums`) und höchstens drei Zeilen, damit die Status-Card oben bleibt:
+  (1) Kennzahlen als EINE `.rh-dots`-Zeile — „30 von 40 gelöst (75 %)“ halbfett in `--mat-sys-on-surface`, „25 ohne Tipp“,
+  „6 mit Tipp“ in `--rh-hint` (nur mit Tipp-Versuchen), „60 offen“ (ab Zyklus 2), „Ø 1:00 je Aufgabe“; (2) Hochrechnung
+  ab Zyklus 2 als `.rh-dots`-Zeile „Rest ≈ 1:00:00 Lösezeit · 6 pro Tag nötig · bisher 10 pro Tag · fertig ≈ 14.11.2026,
+  rechtzeitig“ (`--rh-success`; zu langsam „…, Frist 18.11.2026“ und „Frist überschritten“ in `--rh-warn`), in Zyklus 1
+  ein Satz „Bei diesem Tempo (10 pro Tag) ≈ 290 Aufgaben im Satz bis zur Frist“; (3) „Zyklus 1: 75 % gelöst, Ø 1:30“.
+  Ohne Versuch nur die Hochrechnungszeile (Zyklus 2+: nötig je Tag). Gelöst mit Tipp zählt als gelöst. Prozent über
+  `| pct`, Zeiten `formatSecondsClock`, Datum `mediumDate`, Tempo `number:'1.0-1'`.
 - **Tagespuzzle** nennt sich: Chip „Tagespuzzle“ + Datum (`mediumDate`, UTC) in der Kontext-Card wie der Wochenpost-Chip (d4).
 - Gleiche Erweiterung in allen drei Puzzle-Modi prüfen (Standard, Endless, Buch/Kurs; `rookhub/CLAUDE.md`).
 
@@ -1266,6 +1275,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-10 | 0.956.0 · Woodpecker-Löser | Statistik des laufenden Zyklus in der Kontext-Card (5.12): Kennzahlzeile gelöst/Quote, ohne/mit Tipp, offen, Ø; Hochrechnung (Restzeit, nötig je Tag, Tempo, voraussichtliches Ende vs. Frist; Zyklus 1: ≈ Satz bis zur Frist); Vorzyklus zum Vergleich — leise, höchstens drei Zeilen unter dem Fortschritt | Wunsch 10.11.: „im Detail … gehen mir die Stats ab – wie viel gelöst, wie viel mit Hint, Hochrechnung“ | User über die betreuende Sitzung |
 | 2026-11-10 | 0.955.0 · Dashboard | Woodpecker-Kachel (8.1): laufendes Training mit Zyklus, Fortschritt, Frist und genau einer Aktion je Zustand; zweite Ausnahme in `DEFAULT_VISIBLE` nach dem Muster der angepinnten Kurse (nur mit eigenen Daten sichtbar, sonst nur im Anpassen-Modus) | Wunsch 10.11.: „Woodpecker braucht ein Panel auf dem Dashboard“ | User über die Sitzung „woodpecker“ |
 | 2026-11-10 | 0.954.0 · RookHub `/games` | Zusammenfassungs-Symbol je Zeile (fertig = Icon-Link `article`, offen = Sanduhr ohne Knopf, fester Platz, Aktionsspalte 128 px); Turnier als dritte Zeile unter den Namen (gekürzt + Tooltip, alle Laschen außer bei Online-Partien); „Nur meine Partien“ als Häkchen unter dem Suchfeld (`?mine=1`); Partiekopf einer eigenen Partie zeigt den Stand der verbundenen Vereins-Zusammenfassung (Sanduhr/Link) statt „anfordern“ | Stand ohne Öffnen jeder Partie sehen; hochgeladene fremde Vereinspartien ausblenden; Turnier ohne Öffnen | Wunsch 10.11. über die betreuende Sitzung |
 | 2026-11-10 | 0.953.0 · Admin „Engines“ | Hinweis-Karte oben nur bei zutreffenden Hinweisen (Symbol + Satz); Engine-Karten je Maschine unter einem Aufklapper-Kopf (Knopf mit `aria-expanded`, ≥ 44 px, Kennzahlen als `.rh-dots`, Zeitplan-Zeile), Zustand je Betrachter in localStorage; Token-Tabelle im Scrollkasten | Wunsch 10.11.: Übersicht Tokens, Zeitplan, kN/s normal/Schonzeit, „was dir sonst noch einfällt“ | User über die betreuende Sitzung |

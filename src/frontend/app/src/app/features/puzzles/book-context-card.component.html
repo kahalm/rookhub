@@ -142,6 +142,57 @@
                             [attr.aria-label]="'woodpecker.cycleProgress' | translate: { done: woodpeckerAttempted(), total: woodpeckerPlan()?.setSize }"></mat-progress-bar>
         </div>
       }
+      <!-- Statistik des laufenden Zyklus (Wunsch 2026-11-10, 0.956.0): Kennzahlen als EINE .rh-dots-Zeile, darunter die
+           Hochrechnung als ein Satz und der Vorzyklus — leise Schrift, damit die Bedienung (Status-Card) oben bleibt
+           (DESIGN 5.12). Gelöst mit Tipp zählt als gelöst; „ohne Tipp“ = sauber gelöst. -->
+      @if (woodpeckerStats(); as s) {
+        <div class="wp-stats">
+          @if (s.attempted > 0) {
+            <div class="wp-stats-row rh-dots">
+              <span class="wp-solved">{{ 'woodpecker.stats.solvedOf' | translate: { solved: s.solved, done: s.attempted, pct: (s.ratePct | pct) } }}</span>
+              @if (s.hinted > 0) {
+                <span class="wp-clean">{{ 'woodpecker.stats.clean' | translate: { n: s.solvedClean } }}</span>
+                <span class="wp-hinted">{{ (s.hinted === 1 ? 'woodpecker.stats.hintedOne' : 'woodpecker.stats.hinted') | translate: { n: s.hinted } }}</span>
+              }
+              @if (s.open !== null) {
+                <span class="wp-open">{{ 'woodpecker.stats.open' | translate: { n: s.open } }}</span>
+              }
+              @if (s.avgSeconds !== null) {
+                <span class="wp-avg">{{ 'woodpecker.stats.avg' | translate: { time: clock(s.avgSeconds) } }}</span>
+              }
+            </div>
+          }
+          @if (s.cycle > 1) {
+            @if (s.open) {
+              <div class="wp-stats-row wp-forecast rh-dots">
+                @if (s.remainingSeconds !== null) {
+                  <span>{{ 'woodpecker.stats.remaining' | translate: { time: clock(s.remainingSeconds) } }}</span>
+                }
+                @if (s.overdue) {
+                  <span class="wp-late">{{ 'woodpecker.overdue' | translate }}</span>
+                } @else if (s.neededPerDay !== null) {
+                  <span>{{ 'woodpecker.stats.needed' | translate: { n: s.neededPerDay } }}</span>
+                }
+                @if (s.attempted > 0) {
+                  <span>{{ 'woodpecker.stats.pace' | translate: { n: (s.perDay | number: '1.0-1') } }}</span>
+                }
+                @if (s.etaIso) {
+                  @if (s.onTrack) {
+                    <span class="wp-ok">{{ 'woodpecker.stats.etaOnTrack' | translate: { date: (s.etaIso | date: 'mediumDate') } }}</span>
+                  } @else {
+                    <span class="wp-late">{{ 'woodpecker.stats.etaLate' | translate: { date: (s.etaIso | date: 'mediumDate'), deadline: (s.deadlineIso | date: 'mediumDate') } }}</span>
+                  }
+                }
+              </div>
+            }
+          } @else if (s.projectedSet !== null) {
+            <p class="wp-stats-row wp-forecast">{{ (s.projectedSet === 1 ? 'woodpecker.stats.projectionOne' : 'woodpecker.stats.projection') | translate: { n: s.projectedSet, pace: (s.perDay | number: '1.0-1') } }}</p>
+          }
+          @if (s.prev; as pv) {
+            <p class="wp-stats-row wp-prev">{{ 'woodpecker.stats.prev' | translate: { n: pv.number, pct: (pv.ratePct | pct), time: clock(pv.avgSeconds) } }}</p>
+          }
+        </div>
+      }
       @if (inWoodpecker() && woodpeckerRepeatHint()) {
         <p class="wp-repeat">{{ 'woodpecker.repeatHint' | translate }}</p>
       }

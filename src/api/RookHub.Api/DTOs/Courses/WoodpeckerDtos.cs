@@ -24,6 +24,8 @@ public class RecordWoodpeckerAttemptDto
     public int BookPuzzleId { get; set; }
     public bool Solved { get; set; }
     public int TimeSeconds { get; set; }
+    /// <summary>Höchste aufgedeckte Tipp-Stufe (0–3); geklemmt über <c>AttemptRecording</c>, fehlt = 0.</summary>
+    public int HintsUsed { get; set; }
 }
 
 public class WoodpeckerBookDto
@@ -46,6 +48,10 @@ public class WoodpeckerCycleDto
     public int Solved { get; set; }
     /// <summary>Summe der Lösezeiten in diesem Zyklus.</summary>
     public int TimeSeconds { get; set; }
+    /// <summary>Versuche dieses Zyklus mit mindestens einem Tipp (gelöst oder nicht).</summary>
+    public int Hinted { get; set; }
+    /// <summary>Davon gelöst — zählen in <see cref="Solved"/> mit; „sauber gelöst“ = <see cref="Solved"/> − dieser Wert.</summary>
+    public int SolvedWithHint { get; set; }
 }
 
 public class WoodpeckerPlanDto

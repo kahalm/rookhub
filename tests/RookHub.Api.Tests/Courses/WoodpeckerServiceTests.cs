@@ -167,6 +167,70 @@ public class WoodpeckerServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordAttempt_StoresHintsUsed_Clamped()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 4);
+        var plan = await CreateAsync(bookId);
+        await _service.RecordAttemptAsync(UserId, plan.Id, new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 10, HintsUsed = 2 });
+        await _service.RecordAttemptAsync(UserId, plan.Id, new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[1], Solved = true, TimeSeconds = 10, HintsUsed = 9 });
+        await _service.RecordAttemptAsync(UserId, plan.Id, new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[2], Solved = false, TimeSeconds = 10, HintsUsed = -4 });
+        await _service.RecordAttemptAsync(UserId, plan.Id, new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[3], Solved = true, TimeSeconds = 10 });   // ohne Feld = 0
+
+        var hints = await _db.WoodpeckerAttempts.OrderBy(a => a.BookPuzzleId).Select(a => a.HintsUsed).ToListAsync();
+        Assert.Equal(new[] { 2, 3, 0, 0 }, hints);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_SecondAttemptWithHint_ChangesNothing()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 2);
+        var plan = await CreateAsync(bookId);
+        await SolveAsync(plan.Id, ids[0]);
+        var dto = await _service.RecordAttemptAsync(UserId, plan.Id, new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 5, HintsUsed = 3 });
+        Assert.Equal(0, dto.Cycles[0].Hinted);
+        Assert.Equal(0, (await _db.WoodpeckerAttempts.SingleAsync()).HintsUsed);
+    }
+
+    [Fact]
+    public async Task CycleStats_CountHintedAndSolvedWithHint_SolvedWithHintStaysSolved()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 5);
+        var plan = await CreateAsync(bookId);
+        Task<WoodpeckerPlanDto> Rec(int i, bool solved, int hints) => _service.RecordAttemptAsync(UserId, plan.Id,
+            new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[i], Solved = solved, TimeSeconds = 20, HintsUsed = hints });
+        await Rec(0, true, 0);
+        await Rec(1, true, 1);
+        await Rec(2, false, 2);
+        var dto = await Rec(3, true, 3);
+
+        var c = dto.Cycles[0];
+        Assert.Equal(4, c.Attempted);
+        Assert.Equal(3, c.Solved);            // gelöst mit Tipp zählt als gelöst
+        Assert.Equal(3, c.Hinted);            // inkl. des gescheiterten Versuchs mit Tipp
+        Assert.Equal(2, c.SolvedWithHint);    // sauber gelöst = 3 − 2 = 1
+        Assert.Equal(80, c.TimeSeconds);
+    }
+
+    [Fact]
+    public async Task Import_TakesCourseAttemptHintsUsed()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 3);
+        var start = _clock.Now.AddHours(-6);
+        _db.CourseAttempts.AddRange(
+            new CourseAttempt { UserId = UserId, BookId = bookId, BookPuzzleId = ids[0], Solved = true, TimeSeconds = 20, HintsUsed = 2, AttemptedAt = start.AddHours(1) },
+            new CourseAttempt { UserId = UserId, BookId = bookId, BookPuzzleId = ids[1], Solved = true, TimeSeconds = 20, HintsUsed = 0, AttemptedAt = start.AddHours(2) },
+            new CourseAttempt { UserId = UserId, BookId = bookId, BookPuzzleId = ids[2], Solved = false, TimeSeconds = 20, HintsUsed = 7, AttemptedAt = start.AddHours(3) });
+        await _db.SaveChangesAsync();
+
+        var plan = await _service.CreateAsync(UserId, false, new CreateWoodpeckerPlanDto { BookIds = { bookId }, StartedAt = start });
+
+        var hints = await _db.WoodpeckerAttempts.OrderBy(a => a.BookPuzzleId).Select(a => a.HintsUsed).ToListAsync();
+        Assert.Equal(new[] { 2, 0, 3 }, hints);   // geklemmt wie beim Melden
+        Assert.Equal(2, plan.Cycles[0].Hinted);
+        Assert.Equal(1, plan.Cycles[0].SolvedWithHint);
+    }
+
+    [Fact]
     public async Task RecordAttempt_PuzzleOfOtherCourse_NotFound()
     {
         var (bookId, _) = await SeedBookAsync("WP", 3);

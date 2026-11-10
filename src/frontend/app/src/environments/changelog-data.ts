@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.956.0", date: "2026-11-10", changes: [
+    { en: "Woodpecker: the solving page now shows the statistics of the running cycle – solved of attempted with the rate, how many without and with a hint, how many are still open and the average time per puzzle. Below it a projection: remaining solving time, puzzles needed per day until the deadline, your pace so far and the expected finish date (green when in time). In cycle 1 it estimates how large your set will be by the deadline. The previous cycle is shown for comparison.",
+      de: "Woodpecker: Die Lösen-Seite zeigt jetzt die Statistik des laufenden Zyklus – gelöst von bearbeitet mit Quote, wie viele ohne und mit Tipp, wie viele noch offen sind und die durchschnittliche Zeit je Aufgabe. Darunter eine Hochrechnung: verbleibende Lösezeit, nötige Aufgaben pro Tag bis zur Frist, dein bisheriges Tempo und das voraussichtliche Enddatum (grün, wenn rechtzeitig). In Zyklus 1 schätzt sie, wie groß dein Satz bis zur Frist wird. Der vorige Zyklus steht zum Vergleich dabei." },
+    { en: "Woodpecker: hints are now recorded per attempt. A puzzle solved with a hint still counts as solved but is listed separately. Attempts from before this version count as „without hint“.",
+      de: "Woodpecker: Tipps werden jetzt je Versuch gespeichert. Eine mit Tipp gelöste Aufgabe zählt weiter als gelöst, wird aber getrennt ausgewiesen. Versuche von vor dieser Version zählen als „ohne Tipp“." },
+  ] },
   { version: "0.955.3", date: "2026-11-10", changes: [
     { en: "Admin „Engines“, Hungarian: two new texts of the machine header wrote percent with a space („2 %“); Hungarian writes it without, like English. This had turned the build red since 0.955.2. No change in other languages.",
       de: "Admin „Engines“, Ungarisch: Zwei neue Texte des Maschinenkopfs schrieben Prozent mit Leerzeichen („2 %“); Ungarisch schreibt es ohne, wie Englisch. Das hatte den Build seit 0.955.2 rot gemacht. In den anderen Sprachen ändert sich nichts." },

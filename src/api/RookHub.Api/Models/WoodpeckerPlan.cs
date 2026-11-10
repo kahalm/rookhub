@@ -77,5 +77,9 @@ public class WoodpeckerAttempt
     public BookPuzzle? BookPuzzle { get; set; }
     public bool Solved { get; set; }
     public int TimeSeconds { get; set; }
+    /// <summary>Höchste angesehene Tipp-Stufe (0 = keine, 1–3, wie <see cref="CourseAttempt.HintsUsed"/>; 0.956.0).
+    /// Ein Versuch mit Tipp bleibt gelöst, wenn er gelöst wurde — die Statistik weist ihn nur getrennt aus
+    /// („sauber gelöst“ = gelöst ohne Tipp). Versuche von vor 0.956 stehen auf 0.</summary>
+    public int HintsUsed { get; set; }
     public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
 }

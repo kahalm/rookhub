@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -12,6 +12,9 @@ import { CourseLangPickerComponent } from '../courses/course-lang-picker.compone
 import { CourseLineEbookRef, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { WeeklyMode } from '../weekly/weekly.service';
 import { WoodpeckerPlan } from '../woodpecker/woodpecker.service';
+import { woodpeckerCycleStats } from '../woodpecker/woodpecker-stats.util';
+import { PctPipe } from '../../shared/format/pct';
+import { formatSecondsClock } from '../../shared/clock-format.util';
 import { BookPuzzleDto } from './puzzle.service';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { CourseStatsPanelComponent } from './course-stats-panel.component';
@@ -26,7 +29,7 @@ import { dailyDateValue } from './book-daily-mode';
 @Component({
   selector: 'app-book-context-card',
   imports: [
-    DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatTooltipModule,
+    DatePipe, DecimalPipe, PctPipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatTooltipModule,
     TranslatePipe, IconLabelDirective, CourseLangPickerComponent, PuzzleTagsComponent, CourseStatsPanelComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -127,6 +130,10 @@ export class BookContextCardComponent {
   readonly randomInBook = output<void>();
   readonly prevDaily = output<void>();
   readonly nextDaily = output<void>();
+
+  /** Statistik + Hochrechnung des laufenden Woodpecker-Zyklus (0.956.0); neu bei jedem Planstand (nach jeder Meldung). */
+  readonly woodpeckerStats = computed(() => (this.inWoodpecker() ? woodpeckerCycleStats(this.woodpeckerPlan(), Date.now()) : null));
+  readonly clock = formatSecondsClock;
 
   /** Tag des Tagespuzzles als Datum für die DatePipe (nur mit Tagespuzzle). */
   readonly day = computed(() => (this.isDaily() ? dailyDateValue(this.dailyDate()) : null));

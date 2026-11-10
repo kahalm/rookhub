@@ -701,15 +701,23 @@ describe('BookPuzzle Modus Woodpecker (0.882.0: dieselbe Oberfläche wie im Kurs
     const { c, svc } = make(of({ puzzle: { ...WP }, plan: plan() }));
     c.onMoveMade({ orig: 'a1', dest: 'a8' });
     expect(c.state).toBe('SOLVED');
-    expect(svc.recordAttempt).toHaveBeenCalledOnceWith(3, 501, true, jasmine.any(Number));
+    expect(svc.recordAttempt).toHaveBeenCalledOnceWith(3, 501, true, jasmine.any(Number), 0);
     expect(c.woodpecker.cycle.attempted).toBe(5);
+    c.ngOnDestroy();
+  });
+
+  it('meldet die höchste aufgedeckte Tipp-Stufe mit (0.956.0, „mit Tipp“ in der Statistik)', () => {
+    const { c, svc } = make(of({ puzzle: { ...WP }, plan: plan() }));
+    c.maxHintLevel = 2;
+    c.giveUp();
+    expect(svc.recordAttempt).toHaveBeenCalledOnceWith(3, 501, false, jasmine.any(Number), 2);
     c.ngOnDestroy();
   });
 
   it('Aufgeben meldet genau einen Fehlversuch; „Nochmal“ zeigt den Hinweis und meldet nichts mehr', () => {
     const { c, svc } = make(of({ puzzle: { ...WP }, plan: plan() }));
     c.giveUp();
-    expect(svc.recordAttempt).toHaveBeenCalledOnceWith(3, 501, false, jasmine.any(Number));
+    expect(svc.recordAttempt).toHaveBeenCalledOnceWith(3, 501, false, jasmine.any(Number), 0);
     c.retry();
     expect(c.woodpecker.repeatHint).toBeTrue();
     c.giveUp();
@@ -734,7 +742,7 @@ describe('BookPuzzle Modus Woodpecker (0.882.0: dieselbe Oberfläche wie im Kurs
     svc.recordAttempt.and.returnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
     c.giveUp();
     expect(c.offlineQueue.enqueue).toHaveBeenCalledOnceWith('POST', '/api/woodpecker/3/attempts',
-      { bookPuzzleId: 501, solved: false, timeSeconds: jasmine.any(Number) });
+      { bookPuzzleId: 501, solved: false, timeSeconds: jasmine.any(Number), hintsUsed: 0 });
     expect(c.snackbar.warn).not.toHaveBeenCalled();
     c.retry();
     expect(c.woodpecker.repeatHint).toBeTrue();
@@ -787,7 +795,7 @@ describe('BookPuzzle Modus Woodpecker (0.882.0: dieselbe Oberfläche wie im Kurs
     const { c, svc } = make(of({ puzzle: two, plan: plan() }));
     c.moveLog.push('a1a7');
     c.resetPuzzle();
-    expect(svc.recordAttempt).toHaveBeenCalledOnceWith(3, 501, false, jasmine.any(Number));
+    expect(svc.recordAttempt).toHaveBeenCalledOnceWith(3, 501, false, jasmine.any(Number), 0);
     c.ngOnDestroy();
   });
 

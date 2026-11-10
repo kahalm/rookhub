@@ -211,6 +211,7 @@ public class WoodpeckerService
         if (!already)
         {
             var now = Now;
+            var core = AttemptRecording.From(dto.Solved, dto.TimeSeconds, dto.HintsUsed, null, now);
             if (!inSet)
                 _db.WoodpeckerSetItems.Add(new WoodpeckerSetItem
                 {
@@ -220,8 +221,9 @@ public class WoodpeckerService
             _db.WoodpeckerAttempts.Add(new WoodpeckerAttempt
             {
                 PlanId = planId, Cycle = current.Number, BookId = bookId, BookPuzzleId = puzzle.Id,
-                Solved = dto.Solved,
-                TimeSeconds = Math.Clamp(dto.TimeSeconds, 0, AttemptRecording.MaxSeconds),
+                Solved = core.Solved,
+                TimeSeconds = core.TimeSeconds,
+                HintsUsed = core.HintsUsed,
                 AttemptedAt = now,
             });
             if (await _db.SaveIgnoringUniqueRaceAsync(ct: ct))
@@ -284,7 +286,7 @@ public class WoodpeckerService
             .Where(a => a.UserId == userId && bookIds.Contains(a.BookId) && a.AttemptedAt >= from && a.AttemptedAt < to)
             .Where(a => !_db.WoodpeckerSetItems.Any(i => i.PlanId == plan.Id && i.BookPuzzleId == a.BookPuzzleId))
             .Where(a => _db.BookPuzzles.Any(bp => bp.Id == a.BookPuzzleId && !bp.IsInfoOnly))
-            .Select(a => new { a.BookId, a.BookPuzzleId, a.Solved, a.TimeSeconds, a.AttemptedAt })
+            .Select(a => new { a.BookId, a.BookPuzzleId, a.Solved, a.TimeSeconds, a.HintsUsed, a.AttemptedAt })
             .ToListAsync(ct);
         if (attempts.Count == 0) return;
 
@@ -299,7 +301,8 @@ public class WoodpeckerService
             _db.WoodpeckerAttempts.Add(new WoodpeckerAttempt
             {
                 PlanId = plan.Id, Cycle = 1, BookId = a.BookId, BookPuzzleId = a.BookPuzzleId,
-                Solved = a.Solved, TimeSeconds = a.TimeSeconds, AttemptedAt = a.AttemptedAt,
+                Solved = a.Solved, TimeSeconds = a.TimeSeconds,
+                HintsUsed = Math.Clamp(a.HintsUsed, 0, AttemptRecording.MaxHints), AttemptedAt = a.AttemptedAt,
             });
         }
         // Läuft ein zweiter Abruf parallel, gewinnt einer — der andere sieht beim nächsten Lesen alles.
@@ -373,7 +376,11 @@ public class WoodpeckerService
             .ToListAsync(ct);
         var stats = await _db.WoodpeckerAttempts.Where(a => a.PlanId == plan.Id)
             .GroupBy(a => a.Cycle)
-            .Select(g => new { Cycle = g.Key, Attempted = g.Count(), Solved = g.Count(a => a.Solved), Time = g.Sum(a => a.TimeSeconds) })
+            .Select(g => new
+            {
+                Cycle = g.Key, Attempted = g.Count(), Solved = g.Count(a => a.Solved), Time = g.Sum(a => a.TimeSeconds),
+                Hinted = g.Count(a => a.HintsUsed > 0), SolvedWithHint = g.Count(a => a.Solved && a.HintsUsed > 0),
+            })
             .ToListAsync(ct);
 
         var cycles = plan.Cycles.OrderBy(c => c.Number).ToList();
@@ -423,6 +430,8 @@ public class WoodpeckerService
                     Attempted = s?.Attempted ?? 0,
                     Solved = s?.Solved ?? 0,
                     TimeSeconds = s?.Time ?? 0,
+                    Hinted = s?.Hinted ?? 0,
+                    SolvedWithHint = s?.SolvedWithHint ?? 0,
                 };
             }).ToList(),
         };

@@ -18,6 +18,10 @@ export interface WoodpeckerCycle {
   attempted: number;
   solved: number;
   timeSeconds: number;
+  /** Versuche mit mindestens einem Tipp (0.956.0; ältere Server ohne Feld). */
+  hinted?: number;
+  /** Davon gelöst — zählen in `solved` mit („sauber gelöst“ = solved − solvedWithHint). */
+  solvedWithHint?: number;
 }
 
 export interface WoodpeckerPlan {
@@ -72,8 +76,9 @@ export class WoodpeckerService {
     return this.http.get<WoodpeckerNext>(`${this.base}/${planId}/next`, { params });
   }
 
-  recordAttempt(planId: number, bookPuzzleId: number, solved: boolean, timeSeconds: number): Observable<WoodpeckerPlan> {
-    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/attempts`, { bookPuzzleId, solved, timeSeconds });
+  /** `hintsUsed` = höchste aufgedeckte Tipp-Stufe (0–3), der Server klemmt. */
+  recordAttempt(planId: number, bookPuzzleId: number, solved: boolean, timeSeconds: number, hintsUsed = 0): Observable<WoodpeckerPlan> {
+    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/attempts`, { bookPuzzleId, solved, timeSeconds, hintsUsed });
   }
 }
 

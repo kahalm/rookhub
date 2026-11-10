@@ -6476,6 +6476,22 @@
     "doneCompleted": "Woodpecker completed – well done!",
     "doneCycle": "Cycle {{n}} is finished. Take a break, then start the next cycle in the overview.",
     "repeatHint": "Repetition – only your first attempt counts in this cycle.",
+    "stats": {
+      "solvedOf": "{{solved}} of {{done}} solved ({{pct}})",
+      "clean": "{{n}} without hints",
+      "hinted": "{{n}} with hints",
+      "hintedOne": "{{n}} with a hint",
+      "open": "{{n}} left",
+      "avg": "avg. {{time}} per puzzle",
+      "remaining": "≈ {{time}} solving time left",
+      "needed": "{{n}} per day needed",
+      "pace": "so far {{n}} per day",
+      "etaOnTrack": "done ≈ {{date}}, on time",
+      "etaLate": "done ≈ {{date}}, deadline {{deadline}}",
+      "projection": "At this pace ({{pace}} per day) ≈ {{n}} puzzles in your set by the deadline",
+      "projectionOne": "At this pace ({{pace}} per day) ≈ {{n}} puzzle in your set by the deadline",
+      "prev": "Cycle {{n}}: {{pct}} solved, avg. {{time}}"
+    },
     "create": {
       "metaLast": "last practised {{date}}",
       "metaPublic": "Shared with you",

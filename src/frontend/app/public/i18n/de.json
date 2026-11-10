@@ -6476,6 +6476,22 @@
     "doneCompleted": "Woodpecker abgeschlossen – stark!",
     "doneCycle": "Zyklus {{n}} ist geschafft. Mach Pause und starte danach den nächsten Zyklus in der Übersicht.",
     "repeatHint": "Wiederholung – in diesem Zyklus zählt nur dein erster Versuch.",
+    "stats": {
+      "solvedOf": "{{solved}} von {{done}} gelöst ({{pct}})",
+      "clean": "{{n}} ohne Tipp",
+      "hinted": "{{n}} mit Tipp",
+      "hintedOne": "{{n}} mit Tipp",
+      "open": "{{n}} offen",
+      "avg": "Ø {{time}} je Aufgabe",
+      "remaining": "Rest ≈ {{time}} Lösezeit",
+      "needed": "{{n}} pro Tag nötig",
+      "pace": "bisher {{n}} pro Tag",
+      "etaOnTrack": "fertig ≈ {{date}}, rechtzeitig",
+      "etaLate": "fertig ≈ {{date}}, Frist {{deadline}}",
+      "projection": "Bei diesem Tempo ({{pace}} pro Tag) ≈ {{n}} Aufgaben im Satz bis zur Frist",
+      "projectionOne": "Bei diesem Tempo ({{pace}} pro Tag) ≈ {{n}} Aufgabe im Satz bis zur Frist",
+      "prev": "Zyklus {{n}}: {{pct}} gelöst, Ø {{time}}"
+    },
     "create": {
       "metaLast": "zuletzt {{date}}",
       "metaPublic": "Freigegeben",

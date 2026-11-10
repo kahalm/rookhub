@@ -70,7 +70,7 @@ public class WoodpeckerSqlTests(WoodpeckerFixture fixture) : IAsyncLifetime, ICl
         var start = _clock.Now.AddHours(-5);
         _db.CourseAttempts.Add(new CourseAttempt
         {
-            UserId = userId, BookId = bookId, BookPuzzleId = ids[1], Solved = true, TimeSeconds = 12, AttemptedAt = start.AddHours(1),
+            UserId = userId, BookId = bookId, BookPuzzleId = ids[1], Solved = true, TimeSeconds = 12, HintsUsed = 1, AttemptedAt = start.AddHours(1),
         });
         await _db.SaveChangesAsync();
         var service = new WoodpeckerService(_db, _clock);
@@ -82,7 +82,7 @@ public class WoodpeckerSqlTests(WoodpeckerFixture fixture) : IAsyncLifetime, ICl
         // Zyklus 1 in Lesereihenfolge, ohne die schon übernommene Aufgabe.
         var next = await service.GetNextAsync(userId, plan.Id);
         Assert.Equal(ids[0], next.Puzzle!.Id);
-        await service.RecordAttemptAsync(userId, plan.Id, new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[0], Solved = false, TimeSeconds = 30 });
+        await service.RecordAttemptAsync(userId, plan.Id, new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[0], Solved = false, TimeSeconds = 30, HintsUsed = 2 });
         next = await service.GetNextAsync(userId, plan.Id);
         Assert.Equal(ids[2], next.Puzzle!.Id);
 
@@ -91,6 +91,9 @@ public class WoodpeckerSqlTests(WoodpeckerFixture fixture) : IAsyncLifetime, ICl
         Assert.Equal(2, dto.Cycles[0].Attempted);
         Assert.Equal(1, dto.Cycles[0].Solved);
         Assert.Equal(42, dto.Cycles[0].TimeSeconds);
+        // Bedingtes Zählen mit Tipp (0.956.0): beide Versuche mit Tipp, gelöst nur der übernommene Kurs-Versuch.
+        Assert.Equal(2, dto.Cycles[0].Hinted);
+        Assert.Equal(1, dto.Cycles[0].SolvedWithHint);
 
         _clock.Now = _clock.Now.AddDays(1).AddMinutes(1);
         dto = await service.StartNextCycleAsync(userId, plan.Id);
@@ -105,6 +108,8 @@ public class WoodpeckerSqlTests(WoodpeckerFixture fixture) : IAsyncLifetime, ICl
         Assert.Equal(new[] { ids[0], ids[1] }, seen.OrderBy(x => x));
         dto = await service.GetAsync(userId, plan.Id);
         Assert.Equal("completed", dto.Status);
+        Assert.Equal(0, dto.Cycles[1].Hinted);
+        Assert.Equal(0, dto.Cycles[1].SolvedWithHint);
         Assert.Single(await service.ListAsync(userId));
     }
 

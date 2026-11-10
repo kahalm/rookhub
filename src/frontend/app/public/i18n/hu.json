@@ -6476,6 +6476,22 @@
     "doneCompleted": "Woodpecker befejezve – szép munka!",
     "doneCycle": "A(z) {{n}}. ciklus kész. Tarts szünetet, majd indítsd a következő ciklust az áttekintésben.",
     "repeatHint": "Ismétlés – ebben a ciklusban csak az első próbálkozásod számít.",
+    "stats": {
+      "solvedOf": "{{solved}}/{{done}} megoldva ({{pct}})",
+      "clean": "{{n}} tipp nélkül",
+      "hinted": "{{n}} tippel",
+      "hintedOne": "{{n}} tippel",
+      "open": "{{n}} hátra",
+      "avg": "átl. {{time}} feladatonként",
+      "remaining": "hátra ≈ {{time}} megoldási idő",
+      "needed": "naponta {{n}} kell",
+      "pace": "eddig naponta {{n}}",
+      "etaOnTrack": "kész ≈ {{date}}, időben",
+      "etaLate": "kész ≈ {{date}}, határidő {{deadline}}",
+      "projection": "Ebben a tempóban (naponta {{pace}}) ≈ {{n}} feladat lesz a sorozatban a határidőig",
+      "projectionOne": "Ebben a tempóban (naponta {{pace}}) ≈ {{n}} feladat lesz a sorozatban a határidőig",
+      "prev": "{{n}}. ciklus: {{pct}} megoldva, átl. {{time}}"
+    },
     "create": {
       "metaLast": "utoljára {{date}}",
       "metaPublic": "Elérhető számodra",

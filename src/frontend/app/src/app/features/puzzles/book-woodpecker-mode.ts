@@ -120,14 +120,15 @@ export class BookWoodpeckerMode implements BookModeStrategy {
     const planId = this.planId;
     const puzzleId = h.puzzle.id;
     const timeSeconds = h.solveSeconds;
+    const hintsUsed = h.hintsUsed;
     const queue = () => {
-      if (h.offlineQueue.enqueue('POST', `/api/woodpecker/${planId}/attempts`, { bookPuzzleId: puzzleId, solved, timeSeconds }))
+      if (h.offlineQueue.enqueue('POST', `/api/woodpecker/${planId}/attempts`, { bookPuzzleId: puzzleId, solved, timeSeconds, hintsUsed }))
         this.queuedIds.add(puzzleId);
       else h.snackbar.warn(h.translate.instant('woodpecker.saveFailed'));
     };
     if (!navigator.onLine) { queue(); return; }
     this.recording = true;
-    svc.recordAttempt(planId, puzzleId, solved, timeSeconds).subscribe({
+    svc.recordAttempt(planId, puzzleId, solved, timeSeconds, hintsUsed).subscribe({
       next: plan => { this.plan = plan; this.settled(); },
       error: err => {
         const status = (err as HttpErrorResponse | null)?.status ?? 0;

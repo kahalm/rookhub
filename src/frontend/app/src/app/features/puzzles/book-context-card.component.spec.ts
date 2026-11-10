@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { BookContextCardComponent } from './book-context-card.component';
 
 describe('BookContextCardComponent (Zerlegung Z18)', () => {
@@ -75,6 +75,76 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
     expect(el.querySelector('.wp-meta')?.textContent).toContain('woodpecker.setGrowing');
     expect(el.querySelector('mat-progress-bar')).toBeNull();
     expect(el.querySelector('.wp-repeat')?.textContent).toContain('woodpecker.repeatHint');
+  });
+
+  // 0.956.0: Statistik des laufenden Zyklus (gelöst, mit Tipp, offen, Ø, Hochrechnung, Vorzyklus).
+  const DAY = 86_400_000;
+  const wpCycle = (over: Record<string, unknown>) => ({
+    number: 1, targetDays: 28, startedAt: new Date(Date.now() - 3 * DAY).toISOString(),
+    deadline: new Date(Date.now() + 25 * DAY).toISOString(), finishedAt: null,
+    attempted: 0, solved: 0, timeSeconds: 0, hinted: 0, solvedWithHint: 0, ...over,
+  });
+
+  it('Woodpecker-Statistik Zyklus 2+: gelöst/bearbeitet mit Quote, ohne/mit Tipp, offen, Ø; Hochrechnung; Vorzyklus', () => {
+    const plan = wpPlan({ setSize: 100, cycles: [
+      wpCycle({ attempted: 100, solved: 75, timeSeconds: 9000 }),
+      wpCycle({ number: 2, targetDays: 14, deadline: new Date(Date.now() + 10 * DAY).toISOString(),
+        attempted: 40, solved: 30, timeSeconds: 2400, hinted: 6, solvedWithHint: 5 }),
+    ] });
+    const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
+    const rows = Array.from(el.querySelectorAll('.wp-stats .wp-stats-row'));
+    const kinds = (row: Element) => Array.from(row.children).map(x => x.textContent!.trim());
+    expect(kinds(rows[0])).toEqual(['woodpecker.stats.solvedOf', 'woodpecker.stats.clean', 'woodpecker.stats.hinted',
+      'woodpecker.stats.open', 'woodpecker.stats.avg']);
+    expect(rows[0].classList).toContain('rh-dots');
+    expect(kinds(rows[1])).toEqual(['woodpecker.stats.remaining', 'woodpecker.stats.needed', 'woodpecker.stats.pace',
+      'woodpecker.stats.etaOnTrack']);   // 40 in 4 Kalendertagen = 10/Tag → 60 offen in 6 Tagen, Frist in 10
+    expect(rows[2].textContent).toContain('woodpecker.stats.prev');
+  });
+
+  it('Woodpecker-Statistik: Werte gehen formatiert in die Übersetzung (Prozent über formatPct, Zeit als Uhr)', () => {
+    const plan = wpPlan({ setSize: 100, cycles: [
+      wpCycle({ attempted: 100, solved: 75, timeSeconds: 9000 }),
+      wpCycle({ number: 2, attempted: 40, solved: 30, timeSeconds: 2400 }),
+    ] });
+    TestBed.configureTestingModule({
+      imports: [BookContextCardComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' }), provideRouter([])],
+    });
+    const t = TestBed.inject(TranslateService);
+    t.setTranslation('en', { woodpecker: { stats: { solvedOf: '{{solved}}/{{done}} ({{pct}})', avg: 'avg {{time}}', prev: 'C{{n}} {{pct}} {{time}}' } } });
+    t.use('en');
+    const fixture = TestBed.createComponent(BookContextCardComponent);
+    for (const [k, v] of Object.entries({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan }))
+      fixture.componentRef.setInput(k, v);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.wp-solved')?.textContent?.trim()).toBe('30/40 (75%)');   // Prozentpunkte, nie 0,75
+    expect(el.querySelector('.wp-avg')?.textContent?.trim()).toBe('avg 1:00');
+    expect(el.querySelector('.wp-prev')?.textContent?.trim()).toBe('C1 75% 1:30');
+    expect(el.querySelector('.wp-hinted')).toBeNull();   // ohne Tipp-Versuche keine Tipp-Angaben
+  });
+
+  it('Woodpecker-Statistik Zyklus 1: Kennzahlen ohne „offen“, dazu ≈ Satz bis zur Frist; ohne Versuch nichts', () => {
+    const one = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true,
+      woodpeckerPlan: wpPlan({ currentCycle: 1, setSize: 40, cycles: [wpCycle({ attempted: 40, solved: 30, timeSeconds: 1200 })] }) });
+    expect(one.el.querySelector('.wp-open')).toBeNull();
+    expect(one.el.querySelector('.wp-forecast')?.textContent).toContain('woodpecker.stats.projection');
+    TestBed.resetTestingModule();
+    const empty = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true,
+      woodpeckerPlan: wpPlan({ currentCycle: 1, setSize: 0, cycles: [wpCycle({})] }) });
+    expect(empty.el.querySelector('.wp-stats-row')).toBeNull();
+  });
+
+  it('Woodpecker-Statistik Zyklus 2 ohne Versuch, Frist vorbei: „Frist überschritten“ statt nötig/Tag, kein Tempo', () => {
+    const plan = wpPlan({ setSize: 20, cycles: [
+      wpCycle({ attempted: 20, solved: 10, timeSeconds: 100 }),
+      wpCycle({ number: 2, startedAt: new Date(Date.now() - 3 * DAY).toISOString(), deadline: new Date(Date.now() - DAY).toISOString() }),
+    ] });
+    const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
+    const forecast = el.querySelector('.wp-forecast')!;
+    expect(Array.from(forecast.children).map(x => x.textContent!.trim())).toEqual(['woodpecker.overdue']);
+    expect(el.querySelector('.wp-solved')).toBeNull();
   });
 
   it('Woodpecker ohne Aufgabe: Abschluss bzw. „gibt es nicht (mehr)“ (c1-wp-loeser-404-verbindung), je mit „Zur Übersicht“', () => {

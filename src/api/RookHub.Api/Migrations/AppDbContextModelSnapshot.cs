@@ -9124,6 +9124,9 @@ namespace RookHub.Api.Migrations
                     b.Property<int>("Cycle")
                         .HasColumnType("int");
 
+                    b.Property<int>("HintsUsed")
+                        .HasColumnType("int");
+
                     b.Property<int>("PlanId")
                         .HasColumnType("int");
 
