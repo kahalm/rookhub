@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "Datum",
       "time": "Tijd",
-      "titleOptional": "Titel (optioneel)",
-      "descriptionOptional": "Beschrijving (optioneel)"
+      "title": "Titel",
+      "description": "Beschrijving"
     },
     "columns": {
       "title": "Titel"

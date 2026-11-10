@@ -129,4 +129,29 @@ describe('ReportEntryDialogComponent', () => {
     expect(component.failed()).toBeTrue();
     expect(closed).not.toHaveBeenCalled();
   });
+
+  // UI-Sweep 2026-11-10 (d10-t-melden-dialog-einleitung-absatz + d10-t-gerade-anfuehrungszeichen-melden)
+  it('Einleitung und Lern-Hinweis je ein Satz, die Erklärungen hinter ? am Titel und an „Zwei Fragen …“ (d10)', async () => {
+    setup();
+    const fixture = TestBed.createComponent(ReportEntryDialogComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[mat-dialog-title] app-help-hint button')!.getAttribute('aria-label'))
+      .toBe('tournamentDirectory.report.leadMore');
+    expect(el.querySelector('h3.learn app-help-hint button')!.getAttribute('aria-label'))
+      .toBe('tournamentDirectory.report.namePatternMore');
+    const load = async (lang: string) =>
+      (await (await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`))).json())
+        .tournamentDirectory.report;
+    for (const lang of ['de', 'en', 'hr', 'hu']) {
+      const r = await load(lang);
+      for (const key of ['lead', 'namePatternHint']) {
+        const sentences = (r[key] as string).split(/[.!?](\s|$)/).filter(x => x && x.trim());
+        expect(sentences.length).withContext(`${lang}.${key}: ein Satz`).toBe(1);
+      }
+      for (const key of ['lead', 'leadMore', 'namePatternHint', 'namePatternMore']) {
+        expect(r[key]).withContext(`${lang}.${key}`).not.toContain('"');
+      }
+    }
+  });
 });

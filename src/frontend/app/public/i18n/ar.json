@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "التاريخ",
       "time": "الوقت",
-      "titleOptional": "العنوان (اختياري)",
-      "descriptionOptional": "الوصف (اختياري)"
+      "title": "العنوان",
+      "description": "الوصف"
     },
     "columns": {
       "title": "العنوان"

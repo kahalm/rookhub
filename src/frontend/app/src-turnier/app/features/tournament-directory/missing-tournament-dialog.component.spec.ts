@@ -103,7 +103,7 @@ describe('MissingTournamentDialogComponent', () => {
     TestBed.inject(TranslateService).setTranslation('de', { tournamentDirectory: { missing: {
       link: 'Link auf die offizielle Seite',
       linkHint: 'Verbandskalender, Vereinsseite, Seite der Turnierreihe — je offizieller, desto besser',
-      message: 'Anmerkung (freiwillig)',
+      message: 'Anmerkung',   // UI-Sweep 2026-11-10 (d10-t-freiwillig-im-label): ohne „(freiwillig)“
       messagePlaceholder: 'Sonst noch etwas, das wir wissen sollten?',
     } } });
     TestBed.inject(TranslateService).use('de');
@@ -120,7 +120,7 @@ describe('MissingTournamentDialogComponent', () => {
       const message = el.querySelector('.message-field')!;
       expect(hint.getBoundingClientRect().height).toBeGreaterThan(20);   // wirklich zweizeilig
       expect(hint.getBoundingClientRect().bottom).toBeLessThanOrEqual(message.getBoundingClientRect().top - 8);
-      expect(message.querySelector('mat-label')!.textContent!.trim()).toBe('Anmerkung (freiwillig)');
+      expect(message.querySelector('mat-label')!.textContent!.trim()).toBe('Anmerkung');
       expect(message.querySelector('textarea')!.getAttribute('placeholder')).toBe('Sonst noch etwas, das wir wissen sollten?');
     } finally {
       el.remove();
@@ -142,6 +142,28 @@ describe('MissingTournamentDialogComponent', () => {
       expect(m.cta).not.toMatch(/eintragen|add it/i);
       expect(m.message.length).toBeLessThanOrEqual(25);   // passt am Handy ungekürzt ins Label
       expect(m.messagePlaceholder).toContain('?');
+    }
+  });
+
+  // UI-Sweep 2026-11-10 (d10-t-freiwillig-im-label + d10-t-melden-dialog-einleitung-absatz)
+  it('„Optional“ steht als Hinweis unter dem Notizfeld, nicht im Label; Einleitung ein Satz, Rest hinter dem ? (d10)', async () => {
+    const component = setup();
+    expect(component).toBeTruthy();
+    const fixture = TestBed.createComponent(MissingTournamentDialogComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.message-field mat-hint')!.textContent!.trim()).toBe('common.optional');
+    expect(el.querySelector('[mat-dialog-title] app-help-hint button')!.getAttribute('aria-label'))
+      .toBe('tournamentDirectory.missing.leadMore');
+    const load = async (lang: string) =>
+      (await (await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`))).json())
+        .tournamentDirectory.missing;
+    for (const lang of ['de', 'en', 'hr', 'hu']) {
+      const m = await load(lang);
+      expect(m.message).withContext(lang).not.toMatch(/\(|freiwillig|optional|neobavezno|nem kötelező/i);
+      expect(m.lead.split(/[.!?](\s|$)/).filter((x: string | undefined) => x && x.trim()).length).withContext(`${lang}: ein Satz`).toBe(1);
+      expect(m.lead).withContext(lang).not.toContain('LINK');
+      expect(m.leadMore).withContext(lang).toBeTruthy();
     }
   });
 });

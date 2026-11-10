@@ -64,13 +64,17 @@ interface WeeklyPostRow extends WeeklyPost {
               </button>
               <app-weekly-schedule-fields [(date)]="uploadDate" [(time)]="uploadTime" />
               <mat-form-field appearance="outline" class="f-title">
-                <mat-label>{{ 'weekly.fields.titleOptional' | translate }}</mat-label>
+                <!-- UI-Sweep 2026-11-10 (d10-rk-wochenpost-optional-im-label): „Optional“ als Hinweis unter dem Feld, nicht im Label -->
+                <mat-label>{{ 'weekly.fields.title' | translate }}</mat-label>
                 <input matInput [(ngModel)]="uploadTitle" [placeholder]="'weekly.upload.titlePlaceholder' | translate">
+                <mat-hint>{{ 'common.optional' | translate }}</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline" class="f-desc">
-                <mat-label>{{ 'weekly.fields.descriptionOptional' | translate }}</mat-label>
+                <!-- UI-Sweep 2026-11-10 (d10-rk-wochenpost-optional-im-label): „Optional“ als Hinweis unter dem Feld, nicht im Label -->
+                <mat-label>{{ 'weekly.fields.description' | translate }}</mat-label>
                 <input matInput [(ngModel)]="uploadDescription" maxlength="500"
                        [placeholder]="'weekly.upload.descriptionPlaceholder' | translate">
+                <mat-hint>{{ 'common.optional' | translate }}</mat-hint>
               </mat-form-field>
               <button mat-flat-button color="primary"
                       [disabled]="!uploadFile || !uploadDate || !uploadTime || uploading" (click)="upload()">
@@ -109,8 +113,10 @@ interface WeeklyPostRow extends WeeklyPost {
                       <input matInput [(ngModel)]="d.title">
                     </mat-form-field>
                     <mat-form-field appearance="outline" class="f-desc">
-                      <mat-label>{{ 'weekly.fields.descriptionOptional' | translate }}</mat-label>
+                      <!-- UI-Sweep 2026-11-10 (d10-rk-wochenpost-optional-im-label): „Optional“ als Hinweis unter dem Feld, nicht im Label -->
+                      <mat-label>{{ 'weekly.fields.description' | translate }}</mat-label>
                       <input matInput [(ngModel)]="d.description" maxlength="500">
+                      <mat-hint>{{ 'common.optional' | translate }}</mat-hint>
                     </mat-form-field>
                     <app-weekly-schedule-fields [(date)]="d.date" [(time)]="d.time" />
                   </div>

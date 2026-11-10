@@ -43,6 +43,28 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
     expect(page.el.querySelector('.summary-request')?.textContent).toContain('games.summary.requestAgain');
   });
 
+  // UI-Sweep 2026-11-10 (d10-rk-zusammenfassung-anfordern-textknopf): im Leerzustand der Zusammenfassungsseite ist
+  // „Zusammenfassung anfordern“ die Hauptaktion; in der Partie-Kopfzeile bleibt es ein Textknopf.
+  it('prominent: ohne Text ein gefüllter Anfordern-Knopf, sonst Textknopf', () => {
+    const header = setup(true);
+    header.http.expectOne('/api/league/club/games/236/summary').flush(none);
+    header.f.detectChanges();
+    expect(header.el.querySelector('.summary-request')!.classList).not.toContain('mat-mdc-unelevated-button');
+    TestBed.resetTestingModule();
+    const page = setup(true);
+    page.f.componentRef.setInput('prominent', true);
+    page.http.expectOne('/api/league/club/games/236/summary').flush(none);
+    page.f.detectChanges();
+    const btn = page.el.querySelector('.summary-request')!;
+    expect(btn.classList).toContain('mat-mdc-unelevated-button');
+    expect(btn.textContent).toContain('games.summary.request');
+    // Mit vorhandenem Text bleibt „Neu schreiben“ unauffällig.
+    page.f.componentRef.setInput('allowAgain', true);
+    page.f.componentInstance.state.set({ ...none, status: 'done', markdown: '# x' } as never);
+    page.f.detectChanges();
+    expect(page.el.querySelector('.summary-request')!.classList).not.toContain('mat-mdc-unelevated-button');
+  });
+
   it('Teilen-Link: liest über den Link, zeigt den Text-Link, nie einen Anforder-Knopf — auch für Admins', () => {
     TestBed.configureTestingModule({
       imports: [ClubSummaryLinkComponent],

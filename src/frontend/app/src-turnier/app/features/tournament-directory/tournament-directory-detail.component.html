@@ -135,11 +135,10 @@
         @if (entry.chessResultsId === null) {
           <span class="muted">{{ 'tournamentDirectory.detail.notOnChessResults' | translate }}</span>
         } @else if (!entry.subscribed) {
-          <!-- Derselbe Rahmen-Knopf wie alle daneben: gefuellt stach er als einziger heraus und
-               sah aus wie aus einer anderen Seite (gemeldet 27.09.). -->
-          <!-- Am Handy ist Merken die Hauptaktion und gefuellt (UI-Sweep t-dir-buttons, .primary-mobile); am Breitbild
-               bleibt es umrandet wie die Knoepfe daneben (gemeldet 27.09.). -->
-          <button mat-stroked-button class="primary-mobile" (click)="bookmark()" [disabled]="busy()">
+          <!-- UI-Sweep 2026-11-10 (d10-t-merken-kein-hauptknopf-ab-tablet): Merken ist an allen Breiten
+               die gefuellte Hauptaktion, gleich wie auf /tournaments/:id und /t/:id (loest die
+               Rahmen-Regel vom 27.09. ab). -->
+          <button mat-flat-button color="primary" class="bookmark-primary" (click)="bookmark()" [disabled]="busy()">
             <mat-icon>bookmark_add</mat-icon>
             {{ 'tournamentDirectory.bookmark' | translate }}
           </button>

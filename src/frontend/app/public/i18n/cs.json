@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "Datum",
       "time": "Čas",
-      "titleOptional": "Název (volitelné)",
-      "descriptionOptional": "Popis (volitelné)"
+      "title": "Název",
+      "description": "Popis"
     },
     "columns": {
       "title": "Název"

@@ -4,7 +4,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
+import { mountWithComponentStyles, setDarkTheme, textContrast } from '../../testing/contrast';
 import { DeepAnalysisDialogComponent } from './deep-analysis-dialog.component';
 import { DeepStored } from './deep-analysis.util';
 
@@ -53,4 +54,30 @@ describe('DeepAnalysisDialogComponent', () => {
     expect(el.textContent).toContain('games.deep.live');
     expect(el.textContent).toContain('games.deep.noLc0');
   });
+  // UI-Sweep 2026-11-10 (d10-rk-sanpipe-dialoge-ebook-zugliste): Engine-Linien in den Figurenbuchstaben der Oberflächensprache.
+  it('zeigt die Linien auf Deutsch mit deutschen Figurenbuchstaben (Sf3 statt Nf3)', () => {
+    const { fixture, http, el } = setup();
+    TestBed.inject(TranslateService).use('de');
+    http.expectOne('/api/deep-analysis').flush({
+      stockfish: job(1, { reachedDepth: 24, resultJson: '{"depth":24,"pvs":[{"moves":["g8f6","g1f3","b8c6"],"cp":28}]}' }),
+      lc0: null, stockfishDepth: 40, lc0Nodes: 500000 });
+    fixture.detectChanges();
+    expect(sans(el)[0]).toContain('Sf6');
+    expect(sans(el)[0]).toContain('Sf3');
+    expect(sans(el)[0]).not.toContain('Nf');
+  });
+
+  // UI-Sweep 2026-11-10 (d10-rk-tiefe-analyse-lc0-orange-kontrast): „Lc0“ trug #ff9800 — hell nur ≈ 2:1.
+  for (const dark of [false, true]) {
+    it(`„Lc0“-Überschrift erreicht 4,5:1 auf der Dialogfläche (${dark ? 'dunkel' : 'hell'})`, () => {
+      const was = setDarkTheme(dark);
+      const dispose = mountWithComponentStyles(DeepAnalysisDialogComponent,
+        '<section class="side lc0"><div class="side-head"><span class="name">Lc0</span></div></section>',
+        'var(--mat-sys-surface-container-high)');
+      try {
+        const ratio = textContrast(document.querySelector('.side.lc0 .name')!);
+        expect(ratio).withContext(`${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+      } finally { dispose(); setDarkTheme(was); }
+    });
+  }
 });

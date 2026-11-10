@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "Дата",
       "time": "Час",
-      "titleOptional": "Заголовок (необов'язково)",
-      "descriptionOptional": "Опис (необов'язково)"
+      "title": "Заголовок",
+      "description": "Опис"
     },
     "columns": {
       "title": "Заголовок"

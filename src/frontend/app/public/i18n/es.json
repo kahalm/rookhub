@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "Fecha",
       "time": "Hora",
-      "titleOptional": "Título (opcional)",
-      "descriptionOptional": "Descripción (opcional)"
+      "title": "Título",
+      "description": "Descripción"
     },
     "columns": {
       "title": "Título"

@@ -1,4 +1,13 @@
     <div class="puzzle-page">
+      <!-- UI-Sweep 2026-11-10 (d10-rk-woodpecker-nicht-gefunden-mit-brett): gelöschtes/fremdes Training als zentrierter
+           Leerzustand statt Grundstellungs-Brett, das eine lösbare Aufgabe vortäuscht (DESIGN 5.10). -->
+      @if (inWoodpecker && woodpecker.missing) {
+        <div class="empty-state wp-missing-state" role="status">
+          <mat-icon>event_busy</mat-icon>
+          <p>{{ 'woodpecker.notFound' | translate }}</p>
+          <button mat-flat-button color="primary" type="button" (click)="woodpecker.backToOverview()">{{ 'woodpecker.toOverview' | translate }}</button>
+        </div>
+      } @else {
       <div class="puzzle-layout">
 
         <!-- Brett-Spalte -->
@@ -236,4 +245,5 @@
 
         </div>
       </div>
+      }
     </div>

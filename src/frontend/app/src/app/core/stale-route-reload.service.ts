@@ -8,7 +8,8 @@ import { SwUpdate } from '@angular/service-worker';
 export const STALE_ROUTE_RELOAD_KEY = 'rookhub_stale_route_reload';
 
 /** So lange darf die Suche dauern, bevor die normale Nicht-gefunden-Seite erscheint. */
-export const STALE_ROUTE_CHECK_TIMEOUT_MS = 10_000;
+// UI-Sweep 2026-11-10 (d10-rk-404-ladekreis-haengt-ohne-sw-steuerung): 10 s Ladekreis vor der Meldung waren zu lang.
+export const STALE_ROUTE_CHECK_TIMEOUT_MS = 4_000;
 
 /**
  * „Seite nicht gefunden“ auf einer ALTEN Fassung: Der geöffnete Link kann eine Route meinen, die es erst in einer
@@ -32,6 +33,9 @@ export class StaleRouteReloadService {
   /** Lohnt sich die Suche? Falls nein, zeigt die Seite sofort ihren Text, ohne Ladekreis. */
   canTry(): boolean {
     if (!this.swUpdate?.isEnabled) return false;
+    // UI-Sweep 2026-11-10 (d10-rk-404-ladekreis-haengt-ohne-sw-steuerung): ohne steuernden Service Worker antwortet
+    // checkForUpdate nie — dann gar nicht erst suchen.
+    if (!this.swControlsTab()) return false;
     const done = this.readLocks();
     return done !== null && !done.includes(this.address());
   }
@@ -82,6 +86,11 @@ export class StaleRouteReloadService {
   /** In eine Methode gekapselt, damit Tests den harten Reload abfangen können. */
   protected reloadApp(): void {
     document.location.reload();
+  }
+
+  /** Steuert ein Service Worker diesen Tab? (Methode, damit Tests ihn vortäuschen können.) */
+  protected swControlsTab(): boolean {
+    return !!navigator.serviceWorker?.controller;
   }
 
   private address(): string {

@@ -28,7 +28,10 @@ import { StockfishService } from '../puzzles/stockfish.service';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { tryFreeMove, tryLoadFen } from '../../shared/chess/puzzle-move.util';
 import { EbookDiagram, EbookGame, EbookService } from './ebook.service';
+import { cardDate, cardLang } from '../../shared/player-card/card-lang';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
+// UI-Sweep 2026-11-10 (d10-rk-sanpipe-dialoge-ebook-zugliste): Zuglisten in den Figurenbuchstaben der Oberflächensprache.
+import { SanPipe } from '../../shared/chess/san.pipe';
 import { sideToMove, whiteToMove } from '../../shared/chess/fen-side';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { EbookOpeningTree } from './ebook-tree.util';
@@ -68,13 +71,19 @@ export const ENGINE_SOLUTION_PLIES = 7;
  *   Brettzüge, die im Buch stehen, gehen weiter, andere werden mit „nicht im Buch“ zurückgenommen. Nur mit Baum.
  * Die Engine (Stockfish im Browser, {@link LiveEngineSession}) ist in jedem Modus zuschaltbar.
  */
+/** UI-Sweep 2026-11-10 (d10-rk-ebook-partiekopf-pgn-rohwerte): PGN-Ergebnis zum Anzeigen (wie game-replay), „*“ ohne Anzeige. */
+export function ebookResultLabel(r: string | null | undefined): string {
+  if (!r || r === '*') return '';
+  return r === '1/2-1/2' ? '½–½' : r.replace('-', '–');
+}
+
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-ebook-board',
   standalone: true,
   imports: [RouterLink, NgTemplateOutlet, MatButtonModule, MatIconModule, MatMenuModule, MatProgressBarModule,
     TranslatePipe, IconLabelDirective, ChessBoardComponent, PuzzleBoardComponent, CalcLinesComponent, LiveEnginePanelComponent, HelpHintComponent,
-    EbookTreePanelComponent],
+    EbookTreePanelComponent, SanPipe],
   templateUrl: './ebook-board.component.html',
   styleUrls: ['./ebook-board.component.scss'],
 })
@@ -683,10 +692,18 @@ export class EbookBoardComponent implements OnChanges {
     return rows;
   });
 
-  get gameHead(): string {
+  /** UI-Sweep 2026-11-10 (d10-rk-ebook-partiekopf-pgn-rohwerte): Kopf als Feldliste (Trenner `.rh-dots`), Datum im
+   *  Locale-Format, PGN-Platzhalter „*“ fällt weg. */
+  get gameHead(): string[] {
     const g = this.gameLine()?.game;
-    if (!g) return '';
-    return [[g.white, g.black].filter(Boolean).join(' – '), g.event, g.date, g.result].filter(Boolean).join(' · ');
+    if (!g) return [];
+    return [[g.white, g.black].filter(Boolean).join(' – '), g.event, cardDate(g.date, cardLang(this.translate)), this.gameResult]
+      .filter((x): x is string => !!x);
+  }
+
+  /** Ergebnis zum Anzeigen: „*“/leer → leer, „1/2-1/2“ → „½–½“, sonst „1–0“/„0–1“. */
+  get gameResult(): string {
+    return ebookResultLabel(this.gameLine()?.game?.result);
   }
 
   /** Die Nebenlinie mit Zugnummern ab der Partiestellung, von der sie abzweigt. */

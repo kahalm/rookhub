@@ -77,4 +77,19 @@ describe('DateTimeFieldsComponent', () => {
     expect(time).toBeLessThanOrEqual(120);
     expect(date).toBeGreaterThan(2 * time);
   });
+
+  it('UI-Sweep 2026-11-10 (d10-rk-datumzeit-uhrzeit-gestreckt): mit Hinweis bleibt die Uhrzeit so hoch wie ohne, nicht gestreckt', () => {
+    const { fixture, host: h, el } = make('');
+    (el.querySelector('app-date-time-fields') as HTMLElement).style.width = '600px';
+    document.body.appendChild(el);
+    const plain = el.querySelector('.dtf-time')!.getBoundingClientRect().height;
+    h.hint.set('Optional');
+    fixture.detectChanges();
+    const date = el.querySelector('.dtf-date')!.getBoundingClientRect();
+    const time = el.querySelector('.dtf-time')!.getBoundingClientRect();
+    el.remove();
+    expect(time.height).toBeCloseTo(plain, 0);
+    expect(date.height).toBeGreaterThan(time.height);   // der Hinweis macht nur das Datum höher
+    expect(time.top).toBeCloseTo(date.top, 0);           // beide fluchten oben
+  });
 });

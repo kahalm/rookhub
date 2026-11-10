@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { Router, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MoveCompareDialogComponent, legalMoves } from './move-compare-dialog.component';
 
@@ -75,23 +75,38 @@ describe('MoveCompareDialogComponent', () => {
     expect(c.busy()).toBeFalse();
   });
 
-  // d9-rk-vergleichen-dialog-engine-hinweis: ohne Server-Engine sagt der Dialog, dass der Vergleich auf dem SERVER rechnet
-  // (die Browser-Engine zählt nicht), färbt das leise statt als Warnung, verlinkt das Profil, zeigt den Grund neben dem
-  // gesperrten Knopf und keinen Zähler/keine Tiefe, die nichts bewirken.
-  it('without a server engine explains it quietly, links the profile and names the reason next to the locked button', () => {
+  // d9-rk-vergleichen-dialog-engine-hinweis + UI-Sweep 2026-11-10 (d10-rk-vergleichen-grund-doppelt): ohne Server-Engine
+  // steht der Grund EINMAL — in der Knopfleiste (.why) mit ? (Erklärung: rechnet auf dem Server) und Profil-Link; keine
+  // zweite Info-Zeile im Inhalt, kein Zähler/keine Tiefe, die nichts bewirken.
+  it('without a server engine names the reason once, next to the locked button, with ? and a profile link', () => {
     const { c, fixture, ref } = make(undefined, false);
     const el: HTMLElement = fixture.nativeElement;
     expect(c.noEngine()).toBeTrue();
     expect(c.canSubmit()).toBeFalse();
-    const note = el.querySelector('.note.no-engine')!;
-    expect(note.textContent).toContain('moveCompare.dialog.noEngine');
+    expect(el.querySelector('.no-engine')).toBeNull();
+    expect(el.querySelector('mat-dialog-content')!.textContent).not.toContain('moveCompare.dialog.noEngine');
     expect(el.querySelector('p.warn')).toBeNull();
-    const link = note.querySelector('a[href="/profile"]') as HTMLAnchorElement;
+    const why = el.querySelector('mat-dialog-actions .why')!;
+    expect(why.textContent).toContain('moveCompare.dialog.noEngineWhy');
+    expect(el.querySelectorAll('.why').length).toBe(1);
+    expect(why.querySelector('app-help-hint button')?.getAttribute('aria-label')).toBe('moveCompare.dialog.noEngine');
+    expect(why.querySelector('app-help-hint mat-icon')?.textContent?.trim()).toBe('help_outline');
+    const link = why.querySelector('a[href="/profile"]') as HTMLAnchorElement;
     expect(link).not.toBeNull();
     link.click();
     expect(ref.close).toHaveBeenCalled();
-    expect(el.querySelector('mat-dialog-actions .why')?.textContent).toContain('moveCompare.dialog.noEngineWhy');
     expect(el.querySelector('.foot')).toBeNull();
+  });
+
+  // UI-Sweep 2026-11-10 (d10-rk-sanpipe-dialoge-ebook-zugliste): die Zug-Chips laufen durch die SanPipe.
+  it('shows the move chips in the piece letters of the UI language (de: Sf3)', () => {
+    const { fixture } = make();
+    TestBed.inject(TranslateService).use('de');
+    fixture.detectChanges();
+    const chips = Array.from(fixture.nativeElement.querySelectorAll('.mv') as NodeListOf<HTMLElement>).map(b => b.textContent!);
+    expect(chips.some(t => t.includes('Sf3'))).toBeTrue();
+    expect(chips.some(t => t.includes('Nf3'))).toBeFalse();
+    expect(chips.some(t => t.includes('Sc3'))).toBeTrue();
   });
 
   it('with an engine shows neither the note nor a reason', () => {

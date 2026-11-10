@@ -5,6 +5,8 @@ import { Location } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
@@ -20,6 +22,7 @@ import { cardLang, cardSan } from '../../../shared/player-card/card-lang';
 import { localStore, readRaw, writeRaw } from '../../../core/local-json-store';
 import { isBoardHotkey } from '../../../shared/keyboard.util';
 import { IconLabelDirective } from '../../../shared/icon-label/icon-label.directive';
+import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
 import { destsAt } from '../repertoire-trainer.util';
 import { OpponentNoteView, opponentNoteView } from '../opponent-note.util';
 import { TrainerReviewEngine, readReviewEngineOn, saveReviewEngineOn } from '../repertoire-trainer-review-engine';
@@ -45,7 +48,8 @@ function readThreshold(): number {
   selector: 'app-deviation-trainer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatCardModule, MatIconModule, MatTooltipModule, TranslatePipe, PuzzleBoardComponent, IconLabelDirective],
+  imports: [MatButtonModule, MatCardModule, MatIconModule, MatFormFieldModule, MatSelectModule, MatTooltipModule, TranslatePipe, PuzzleBoardComponent,
+    IconLabelDirective, LoadErrorComponent],
   templateUrl: './deviation-trainer.component.html',
   styleUrls: ['./deviation-trainer.component.scss'],
 })
@@ -55,6 +59,8 @@ export class DeviationTrainerComponent implements OnInit, OnDestroy {
   name: string | null = null;
   data: Deviations | null = null;
   loadError = false;
+  /** Fehler des Abrufs (für die Ursache in `app-load-error`). */
+  loadFailure: unknown = null;
   threshold = readThreshold();
   readonly thresholdOptions = THRESHOLD_OPTIONS;
 
@@ -93,8 +99,18 @@ export class DeviationTrainerComponent implements OnInit, OnDestroy {
     const q = this.route.snapshot.queryParamMap;
     this.opponent = deviationsUrl(q.get('deviations')) ? q.get('deviations') : null;
     this.name = q.get('name');
+    this.load();
+  }
+
+  /** UI-Sweep 2026-11-10 (d10-rk-abweichungen-ladefehler-ohne-erneut): Abruf aus ngOnInit gezogen, damit „Erneut versuchen“ neu laden kann. */
+  load(): void {
+    const q = this.route.snapshot.queryParamMap;
     const url = deviationsUrl(this.opponent);
     if (!url) { this.session.phase = 'EMPTY'; return; }
+    this.loadError = false;
+    this.loadFailure = null;
+    this.session.phase = 'LOADING';
+    this.sub?.unsubscribe();
     let params = new HttpParams();
     const color = q.get('color');
     if (color === 'w' || color === 'b') params = params.set('color', color);
@@ -115,7 +131,7 @@ export class DeviationTrainerComponent implements OnInit, OnDestroy {
         this.data = d;
         this.session.start(linesOf(d.deviations), d.positions, d.color);
       },
-      error: () => { this.loadError = true; this.session.phase = 'EMPTY'; this.cdr.markForCheck(); },
+      error: err => { this.loadError = true; this.loadFailure = err ?? true; this.session.phase = 'EMPTY'; this.cdr.markForCheck(); },
     });
   }
 
@@ -140,7 +156,15 @@ export class DeviationTrainerComponent implements OnInit, OnDestroy {
   // ===== Anzeige =====
   get s(): DeviationSession { return this.session; }
   get lang(): string { return cardLang(this.translate); }
+  // UI-Sweep 2026-11-10 (d10-rk-abweichungen-von-des-gegners): Ersatz ohne Namen je Fall — `who` für „von …“ (de Dativ),
+  // `whoNom` als Satzsubjekt, `whoStart` am Satzanfang groß; sonst stand „Abweichungen von des Gegners“ / „Hier spielt des Gegners“.
   get who(): string { return this.name?.trim() || this.translate.instant('opponentNote.thisOpponent'); }
+  get whoNom(): string { return this.name?.trim() || this.translate.instant('opponentNote.thisOpponentNom'); }
+  get whoStart(): string { const w = this.whoNom; return w.charAt(0).toLocaleUpperCase() + w.slice(1); }
+  /** Seitentitel: mit Namen „Abweichungen von Muster“, ohne „Abweichungen deines Gegners“. */
+  get titleText(): string {
+    return this.name?.trim() ? this.translate.instant('deviations.title', { who: this.name.trim() }) : this.translate.instant('deviations.titleNoName');
+  }
   get orientation(): 'white' | 'black' { return this.s.color === 'w' ? 'white' : 'black'; }
   get reviewing(): boolean { return this.s.phase === 'END' && this.reviewPly !== this.s.played.length; }
   get fen(): string { return this.reviewing ? this.s.fens[this.reviewPly] : this.s.fen; }
@@ -172,7 +196,7 @@ export class DeviationTrainerComponent implements OnInit, OnDestroy {
     const line = this.s.current;
     const first = !!line && ply === line.path.length;   // der Abweichungszug selbst (nicht seine Fortsetzung)
     return this.translate.instant(first ? 'deviations.askDeviation' : 'deviations.askContinuation',
-      { who: this.who, move, n: this.s.askGames });
+      { who: this.whoNom, move, n: this.s.askGames });
   }
 
   /** „Im Repertoire stattdessen: 3…Sf6" der laufenden Abweichung — erst NACH dem Abweichungszug (Hotfix 0.893.1: vorher stand

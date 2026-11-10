@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
@@ -12,7 +12,7 @@ import { StockfishService } from '../puzzles/stockfish.service';
 import { By } from '@angular/platform-browser';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
-import { EbookBoardComponent, EbookBoardMode } from './ebook-board.component';
+import { EbookBoardComponent, EbookBoardMode, ebookResultLabel } from './ebook-board.component';
 import { EbookDiagram } from './ebook.service';
 
 /** Woodpecker Nr. 1 (Hamppe – Steinitz): Schwarz am Zug, Lösung 17… Txh2+ 18. Kxh2 Th8+. */
@@ -575,6 +575,23 @@ describe('EbookBoardComponent', () => {
     return { fixture, http };
   }
 
+  it('d10-rk-ebook-partiekopf-pgn-rohwerte: PGN-Datum im Locale-Format, offenes „*“ weder im Kopf noch unter der Zugliste', () => {
+    const { fixture, http } = makeGame();
+    http.expectOne('/api/ebooks/9/diagrams/21/game').flush({ ...GAME, white: 'Muster, Weiß', black: 'Probe, Schwarz', event: 'ui-test',
+      date: '2026.10.29', result: '*' });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const head = el.querySelector('.eb-game-head.rh-dots')!;
+    const spans = Array.from(head.querySelectorAll(':scope > span')).map(x => x.textContent!.trim());
+    expect(spans.length).toBe(3);
+    expect(spans[2]).not.toContain('2026.10.29');
+    expect(spans[2]).toContain('2026');
+    expect(head.textContent).not.toContain('*');
+    expect(el.querySelector('.eb-gm-result')).toBeNull();
+    expect(ebookResultLabel('1-0')).toBe('1–0');
+    expect(ebookResultLabel('1/2-1/2')).toBe('½–½');
+  });
+
   it('Partie: lädt die Partie, steht auf dem Diagrammzug und klickt sich durch die Hauptlinie', () => {
     const { fixture, http } = makeGame();
     http.expectOne('/api/ebooks/9/diagrams/21/game').flush(GAME);
@@ -583,7 +600,7 @@ describe('EbookBoardComponent', () => {
     expect(c.gameState()).toBe('ready');
     expect(c.gamePly()).toBe(5);
     expect(c.boardFen()).toBe(G_DIAGRAM.fen);
-    expect(c.gameHead).toBe('Spassky, Boris – Tal, Mikhail · Riga · 1958 · 1/2-1/2');
+    expect(c.gameHead).toEqual(['Spassky, Boris – Tal, Mikhail', 'Riga', '1958', '½–½']);
     c.gameStep(1);
     expect(c.boardFen()).toBe('r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4');
     c.gameGo(0);
@@ -593,6 +610,23 @@ describe('EbookBoardComponent', () => {
     expect(moves.length).toBe(6);
     (moves[2] as HTMLButtonElement).click();
     expect(c.gamePly()).toBe(3);
+    http.verify();
+  });
+
+  // UI-Sweep 2026-11-10 (d10-rk-sanpipe-dialoge-ebook-zugliste): Zugliste und Nebenlinie in deutschen Figurenbuchstaben.
+  it('Partie: Zugliste und Nebenlinie laufen durch die SanPipe (de: Sf3, Lb5, Sf6)', () => {
+    const { fixture, http } = makeGame();
+    TestBed.inject(TranslateService).use('de');
+    http.expectOne('/api/ebooks/9/diagrams/21/game').flush({ ...GAME, white: 'Muster, Weiß', black: 'Probe, Schwarz', event: 'ui-test' });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const moves = Array.from(el.querySelectorAll('.eb-gm')).map(m => m.textContent!.trim());
+    expect(moves).toEqual(['e4', 'e5', 'Sf3', 'Sc6', 'Lb5', 'a6']);
+    const c = fixture.componentInstance;
+    c.onBoardMove({ from: 'g8', to: 'f6', san: 'Nf6', fen: 'r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4' });
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-game-side .eb-moves-text')!.textContent).toContain('Sf6');
+    expect(el.querySelector('.eb-game-side .eb-moves-text')!.textContent).not.toContain('Nf6');
     http.verify();
   });
 

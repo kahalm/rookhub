@@ -60,6 +60,7 @@ import { GamesService } from '../games/games.service';
 import { AnalyzeGameService } from '../games/analyze-game.service';
 import { AnalysisGameActionsComponent } from './analysis-game-actions.component';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { apiErrorText } from '../../core/api-error';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -73,7 +74,7 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, AnalysisEngineCardComponent, PositionSetupComponent,
     PositionRepertoiresComponent, OpeningExplorerComponent, PositionMenuComponent, MarkPositionButtonComponent, AnalysisMoveTreeComponent,
     IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent, LineStudyCardComponent,
-    CalcAnnotateCardComponent, AnalysisGameActionsComponent, LoadErrorComponent
+    CalcAnnotateCardComponent, AnalysisGameActionsComponent, LoadErrorComponent, HelpHintComponent
   ],
   templateUrl: './analysis.component.html',
   styleUrl: './analysis.component.scss',

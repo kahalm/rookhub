@@ -111,4 +111,22 @@ describe('SheetReadingStatusComponent', () => {
       el.remove();
     }
   });
+
+  // UI-Sweep 2026-11-10 (d10-l-wartezeile-nachsatz-kontrast): Nachsatz und Zeit leise per Farbe, nicht per Deckkraft —
+  // opacity auf dem ohnehin leisen --muted fiel unter 4,5:1.
+  it('Nachsatz und Wartezeit ohne Deckkraft-Dämpfung, Farbe aus --muted', () => {
+    const { el, f } = render('running', 200, 50);
+    el.style.setProperty('--muted', 'rgb(90, 104, 120)');
+    document.body.appendChild(el);
+    try {
+      for (const sel of ['.rs-why', '.rs-time']) {
+        const cs = getComputedStyle(el.querySelector(sel)!);
+        expect(cs.opacity).withContext(sel).toBe('1');
+        expect(cs.color).withContext(sel).toBe('rgb(90, 104, 120)');
+      }
+    } finally {
+      f.destroy();
+      el.remove();
+    }
+  });
 });

@@ -111,3 +111,64 @@ describe('ClubGameSummaryComponent — Zug-Knöpfe im Text', () => {
     expect(why.textContent).toBe('Mit 2.Nf3 und 2...Sc6 sofort entwickelt.');
   });
 });
+
+/** UI-Sweep 2026-11-10 (d10): Sperrkarte bei 403, Kartenpolster und Leerzustand mit Anfordern als Hauptknopf. */
+describe('ClubGameSummaryComponent — Design-Runde d10', () => {
+  const err = (status: number) => throwError(() => new HttpErrorResponse({ status }));
+
+  function render(mode: string, params: Record<string, string>, games: object, summary: object = {}) {
+    TestBed.configureTestingModule({
+      imports: [ClubGameSummaryComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params), data: { mode } } } },
+        { provide: GamesService, useValue: games },
+        { provide: ClubGameSummaryService, useValue: { get: () => of(summary), getOwn: () => of(summary) } },
+        { provide: AuthService, useValue: { isLoggedIn: true, isAdmin: false } },
+        { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ClubGameSummaryComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  // d10-rk-zusammenfassung-ladefehler-sackgasse
+  it('Vereinspartie ohne Zugang (403): Sperrkarte mit Grund und Weg zur Startseite, kein „Wiederholen“', () => {
+    const f = render('club', { id: '5' }, { clubGame: () => err(403) });
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.querySelector('.empty-state mat-icon')?.textContent).toContain('lock');
+    expect(el.querySelector('.empty-state p')?.textContent).toContain('games.clubNoAccess');
+    const home = el.querySelector('.gate-actions a.to-home')!;
+    expect(home.getAttribute('href')).toBe('/');
+    expect(home.classList).toContain('mat-mdc-unelevated-button');
+    f.nativeElement.remove();
+  });
+
+  it('Serverfehler (500) bei der Vereinspartie: weiter app-load-error', () => {
+    const f = render('club', { id: '5' }, { clubGame: () => err(500) });
+    expect((f.nativeElement as HTMLElement).querySelector('app-load-error')).not.toBeNull();
+    f.nativeElement.remove();
+  });
+
+  // d10-rk-zusammenfassung-karte-ohne-polster + d10-rk-zusammenfassung-anfordern-textknopf
+  it('ohne Zusammenfassung: Karte mit Polster, Leersatz in .empty-state, Anfordern als Hauptknopf darunter', () => {
+    const game = { id: 5, white: 'Weiss, Erfunden', black: 'Schwarz, Erfunden', result: '1-0', pgn: '1. e4 e5 1-0' };
+    const f = render('own', { id: '5' }, { get: () => of(game) }, { status: 'none', markdown: null });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    const card = el.querySelector('.summary-card') as HTMLElement;
+    expect(parseFloat(getComputedStyle(card).paddingLeft)).toBeGreaterThanOrEqual(12);
+    expect(parseFloat(getComputedStyle(card).paddingTop)).toBeGreaterThanOrEqual(12);
+    const empty = el.querySelector('.summary-card .empty-state') as HTMLElement;
+    expect(empty.textContent).toContain('games.summary.none');
+    expect(getComputedStyle(empty).textAlign).toBe('center');
+    const req = empty.querySelector('button.summary-request')!;
+    expect(req.classList).toContain('mat-mdc-unelevated-button');
+    // Im Kopf steht dann nur „Zur Partie“.
+    expect(el.querySelector('.head-actions .summary-request')).toBeNull();
+    f.nativeElement.remove();
+  });
+});

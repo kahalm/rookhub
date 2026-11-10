@@ -2180,6 +2180,31 @@ describe('BookPuzzleComponent Spielweise-Umschalter im ⋮-Menü und als Handlun
   });
 });
 
+// UI-Sweep 2026-11-10 (d10-rk-woodpecker-nicht-gefunden-mit-brett): gelöschtes/fremdes Training ohne Brett.
+describe('BookPuzzleComponent Woodpecker-Training gibt es nicht (mehr) (d10)', () => {
+  beforeEach(() => spyOn(BookPuzzleComponent.prototype, 'ngOnInit'));
+
+  it('missing: zentrierter Leerzustand mit Satz + „Zur Übersicht“, kein Brett, keine Kontextkarte', () => {
+    const { el, c } = renderBookPuzzle(c => {
+      c.inWoodpecker = true; c.woodpecker.missing = true; c.puzzle = null; c.state = 'COURSE_DONE';
+    }, '/woodpecker/3/solve');
+    const empty = el.querySelector('.empty-state.wp-missing-state');
+    expect(empty?.getAttribute('role')).toBe('status');
+    expect(empty?.textContent).toContain('woodpecker.notFound');
+    expect(el.querySelector('app-puzzle-board')).toBeNull();
+    expect(el.querySelector('.puzzle-layout')).toBeNull();
+    const back = spyOn(c.woodpecker, 'backToOverview');
+    (empty!.querySelector('button') as HTMLButtonElement).click();
+    expect(back).toHaveBeenCalledTimes(1);
+  });
+
+  it('Training vorhanden: Brett wie gewohnt, kein Leerzustand', () => {
+    const { el } = renderBookPuzzle(c => { c.inWoodpecker = true; c.woodpecker.missing = false; }, '/woodpecker/3/solve');
+    expect(el.querySelector('.wp-missing-state')).toBeNull();
+    expect(el.querySelector('.puzzle-layout')).not.toBeNull();
+  });
+});
+
 // Codereview UX-047: mat-progress-bar ohne Namen (axe aria-progressbar-name, serious, auf /weekly/:id) — ein
 // Screenreader sagte nur „Fortschrittsbalken". Dieselbe Form hatten die Buch-, Kapitel- und Kursbalken.
 describe('BookPuzzleComponent Fortschrittsbalken mit Namen (UX-047)', () => {

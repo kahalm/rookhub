@@ -59,4 +59,17 @@ describe('AnalysisEngineCardComponent', () => {
     expect(toggled).toEqual([false]);
     expect(compare).toBe(1);
   });
+  // UI-Sweep 2026-11-10 (d10-rk-engine-hilfe-info-statt-fragezeichen): Tiefe/Linien und Vergleichs-Engine zeigten ⓘ (info_outline)
+  // — Hilfe von app-help-hint ist immer das Standard-? (DESIGN 5.11).
+  it('alle Hilfe-Symbole der Karte zeigen das Standard-? (help_outline), auch beim Vergleich', async () => {
+    const fixture = await render({
+      engineOn: true, displayLines: [{ evalText: '+0.33', san: 'e4 e5', positive: true }],
+      compareOn: true, compareRunning: true, compareEngineName: 'Test-PC', mainEngineName: 'Browser',
+      compareLines: [{ evalText: '+0.10', san: 'c4', positive: true }],
+    });
+    const icons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('app-help-hint mat-icon'))
+      .map(i => i.textContent!.trim());
+    expect(icons.length).toBe(2);
+    expect(icons.every(i => i === 'help_outline')).toBeTrue();
+  });
 });

@@ -89,14 +89,18 @@ export interface WeeklyFromChapterDialogData {
         </div>
 
         <mat-form-field appearance="outline">
-          <mat-label>{{ 'weekly.fields.titleOptional' | translate }}</mat-label>
+          <!-- UI-Sweep 2026-11-10 (d10-rk-wochenpost-optional-im-label): „Optional“ als Hinweis unter dem Feld, nicht im Label -->
+          <mat-label>{{ 'weekly.fields.title' | translate }}</mat-label>
           <input matInput [(ngModel)]="title" [placeholder]="'weekly.fromChapter.titlePlaceholder' | translate">
+          <mat-hint>{{ 'common.optional' | translate }}</mat-hint>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>{{ 'weekly.fields.descriptionOptional' | translate }}</mat-label>
+          <!-- UI-Sweep 2026-11-10 (d10-rk-wochenpost-optional-im-label): „Optional“ als Hinweis unter dem Feld, nicht im Label -->
+          <mat-label>{{ 'weekly.fields.description' | translate }}</mat-label>
           <input matInput [(ngModel)]="description" maxlength="500"
                  [placeholder]="'weekly.upload.descriptionPlaceholder' | translate">
+          <mat-hint>{{ 'common.optional' | translate }}</mat-hint>
         </mat-form-field>
       </div>
     </mat-dialog-content>

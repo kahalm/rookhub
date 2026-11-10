@@ -232,13 +232,15 @@ export interface PuzzleSettingsDialogResult {
     }
     .psd-row:last-child { border-bottom: none; }
     .psd-label { font-size: 14px; flex: 1; }
-    .psd-sublabel { display: block; font-size: 12px; opacity: 0.6; margin-top: 2px; }
+    /* UI-Sweep 2026-11-10 (d10-rk-puzzle-einstellungen-unterzeile-blass): Hinweisfarbe per Token statt Deckkraft (4,5:1). */
+    .psd-sublabel { display: block; font-size: 12px; margin-top: 2px; color: var(--mat-sys-on-surface-variant); }
     .psd-select { width: 140px; flex-shrink: 0; }
     .psd-toggle-row { gap: 16px; }
+    /* UI-Sweep 2026-11-10 (d10-rk-puzzle-einstellungen-zahlenfeld-klein): Tippziel 44 px, 16 px Schrift gegen iOS-Zoom. */
     .psd-number-input {
-      width: 70px; padding: 6px 8px;
-      border: 1px solid rgba(128,128,128,0.4); border-radius: 4px;
-      font-size: 14px; text-align: center; background: transparent;
+      width: 72px; min-height: 44px; box-sizing: border-box; padding: 8px; flex-shrink: 0;
+      border: 1px solid var(--mat-sys-outline); border-radius: 4px;
+      font-size: 16px; text-align: center; background: transparent;
       color: inherit;
     }
     .psd-info-btn {
@@ -260,7 +262,7 @@ export interface PuzzleSettingsDialogResult {
     }
     .psd-viz-info-row.current .psd-viz-name { font-weight: 600; color: var(--mat-sys-primary); }
     .psd-viz-name { font-weight: 500; min-width: 72px; flex-shrink: 0; }
-    .psd-viz-desc { opacity: 0.75; line-height: 1.4; }
+    .psd-viz-desc { line-height: 1.4; color: var(--mat-sys-on-surface-variant); }   /* UI-Sweep 2026-11-10 (d10-rk-puzzle-einstellungen-unterzeile-blass): wie .psd-sublabel */
   `]
 })
 export class PuzzleSettingsDialogComponent {

@@ -8,7 +8,7 @@ import { SessionPhotosComponent } from '../../shared/session-photos.component';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { Group, SessionDetail, Status } from '../../core/club.models';
-import { dateNeighbours, dayText, longDate, nameHead, nameTail, parseDay, shortDate, trainingDate } from '../../core/club-format';
+import { dateNeighbours, dayText, longDate, nameHead, nameTail, parseDay, shortDate, trainingDate, weekdayText } from '../../core/club-format';
 import { ClubGateComponent } from '../../shared/club-gate.component';
 
 /** „7 von 12 da" */
@@ -56,7 +56,8 @@ export function tallyText(present: number, total: number): string {
       <!-- Gruppe/Datum und Blätterzeile in EINER Zeile, „Was wurde gemacht?" unter der Liste (d2-c-attendance-lead: die
            Abhakliste begann erst bei 70 % der Höhe). -->
       <div class="roll-meta">
-      <p class="kid-meta"><a [routerLink]="['/gruppen', g.id]">{{ g.name }}</a><span>{{ long(date()) }}</span></p>
+      <!-- UI-Sweep 2026-11-10 (d10-c-anwesenheit-datum-langform): nur der Wochentag, das Datum steht als TT.MM.JJJJ im Feld darunter. -->
+      <p class="kid-meta"><a [routerLink]="['/gruppen', g.id]">{{ g.name }}</a><span>{{ weekday(date()) }}</span></p>
       <nav class="pager" aria-label="Einheiten blättern">
         <button type="button" class="btn slim prev" [disabled]="!around().prev || busy()" (click)="changeDate(around().prev ?? '')">
           <span aria-hidden="true">‹</span> {{ around().prev ? short(around().prev!) : 'keine frühere' }}</button>
@@ -192,7 +193,7 @@ export class AttendancePageComponent implements OnInit {
   readonly hasPhotos = computed(() => this.listed().some(m => m.photoVersion != null));
   readonly present = computed(() => this.listed().filter(m => this.marks()[m.id] === 'present').length);
   readonly tally = computed(() => tallyText(this.present(), this.listed().length));
-  readonly long = longDate;
+  readonly weekday = weekdayText;
   readonly short = shortDate;
   readonly day = dayText;
   /** Der getippte Tag war so nicht lesbar — das Feld zeigt wieder den Tag, auf dem man steht. */

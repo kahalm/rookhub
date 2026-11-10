@@ -110,3 +110,24 @@ describe('PuzzleStatusCardComponent', () => {
     expect(el.textContent).not.toContain('solver.status.loading');
   });
 });
+
+// UI-Sweep 2026-11-10 (d10-rk-puzzle-lieben-statt-favorit): der Herz-Knopf spricht vom Merken/Favoriten wie die Zielseite.
+describe('PuzzleStatusCardComponent Herz-Knopf-Texte', () => {
+  async function load(lang: string): Promise<{ favorites: Record<string, string> }> {
+    for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+      const res = await fetch(url);
+      if (res.ok) return res.json();
+    }
+    throw new Error(lang + '.json nicht ladbar');
+  }
+
+  it('de: „Merken“/„Gemerkt“, Leerzustand nennt die Favoriten; en ohne “Love”', async () => {
+    const [de, en] = await Promise.all([load('de'), load('en')]);
+    expect(de.favorites['love']).toBe('Merken');
+    expect(de.favorites['loved']).toBe('Gemerkt');
+    expect(de.favorites['empty']).toBe('Noch keine Favoriten.');
+    for (const lang of [de, en]) {
+      for (const k of ['love', 'loved', 'empty']) expect(lang.favorites[k]).not.toMatch(/lieb|love/i);
+    }
+  });
+});

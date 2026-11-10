@@ -8,6 +8,8 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AnalysisHistoryEntry, AnalysisHistoryService } from './analysis-history.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+// UI-Sweep 2026-11-10 (d10-rk-sanpipe-dialoge-ebook-zugliste): Vorschau-Zugfolge in den Figurenbuchstaben der Oberflächensprache.
+import { SanPipe } from '../../shared/chess/san.pipe';
 
 const START_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
 
@@ -19,7 +21,7 @@ const START_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
   selector: 'app-analysis-history-dialog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconLabelDirective, DatePipe, MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslatePipe],
+  imports: [IconLabelDirective, DatePipe, MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslatePipe, SanPipe],
   template: `
     <h2 mat-dialog-title>{{ 'analysis.history.title' | translate }}</h2>
     <mat-dialog-content>
@@ -37,7 +39,7 @@ const START_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
                   @if (e.starCount > 0) { <span class="stars">★ {{ e.starCount }}</span> }
                   <span class="muted small">{{ e.updatedAt | date:'short' }}</span>
                 </span>
-                <span class="preview">{{ e.preview || ('analysis.history.noMoves' | translate) }}</span>
+                <span class="preview">{{ (e.preview | san:'text') || ('analysis.history.noMoves' | translate) }}</span>
                 <span class="muted small">{{ 'analysis.history.moves' | translate:{ count: e.moveCount } }}@if (e.nodeCount > e.moveCount) { · {{ 'analysis.history.variationMoves' | translate:{ count: e.nodeCount - e.moveCount } }}}</span>
               </button>
               <button mat-icon-button type="button" (click)="remove(e)" [appIconLabel]="'common.delete' | translate">

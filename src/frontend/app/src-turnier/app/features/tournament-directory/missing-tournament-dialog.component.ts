@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '@rh/core/snackbar.service';
+import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
 
 /**
@@ -22,10 +23,14 @@ import { TournamentDirectoryService } from './tournament-directory.service';
   standalone: true,
   imports: [
     FormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatIconModule,
-    MatInputModule, TranslatePipe,
+    MatInputModule, TranslatePipe, HelpHintComponent,
   ],
   template: `
-    <h2 mat-dialog-title>{{ 'tournamentDirectory.missing.title' | translate }}</h2>
+    <!-- UI-Sweep 2026-11-10 (d10-t-melden-dialog-einleitung-absatz): ein Satz Einleitung, die Erklaerung hinter dem ?. -->
+    <h2 mat-dialog-title>
+      {{ 'tournamentDirectory.missing.title' | translate }}
+      <app-help-hint [text]="'tournamentDirectory.missing.leadMore' | translate" />
+    </h2>
 
     <!-- d8-t-dialog-scroll-hint-fehlt: scrollt am Laptop/Handy/Boox — Weiterscroll-Schatten (DESIGN 5.6) -->
     <mat-dialog-content class="rh-scroll-hint">
@@ -45,6 +50,8 @@ import { TournamentDirectoryService } from './tournament-directory.service';
         <mat-label>{{ 'tournamentDirectory.missing.message' | translate }}</mat-label>
         <textarea matInput rows="4" [(ngModel)]="message"
                   [placeholder]="'tournamentDirectory.missing.messagePlaceholder' | translate"></textarea>
+        <!-- UI-Sweep 2026-11-10 (d10-t-freiwillig-im-label): „Optional“ als Hinweis unter dem Feld, nicht im Label (DESIGN 5.6). -->
+        <mat-hint>{{ 'common.optional' | translate }}</mat-hint>
       </mat-form-field>
 
       @if (error(); as key) {

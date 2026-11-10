@@ -7,7 +7,7 @@ import { EbookLanguageFacet, EbookTagFacet } from './ebook.service';
 
 describe('EbookFilterPanelComponent', () => {
   async function render(inputs: { tags?: EbookTagFacet[]; languages?: EbookLanguageFacet[]; translations?: EbookLanguageFacet[]; tag?: string | null;
-    readable?: string[]; allLanguages?: boolean; language?: string | null }, lang = 'en') {
+    readable?: string[]; allLanguages?: boolean; language?: string | null; translation?: string | null }, lang = 'en') {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [EbookFilterPanelComponent],
@@ -31,6 +31,7 @@ describe('EbookFilterPanelComponent', () => {
     fixture.componentRef.setInput('readable', inputs.readable ?? []);
     fixture.componentRef.setInput('allLanguages', inputs.allLanguages ?? false);
     fixture.componentRef.setInput('language', inputs.language ?? null);
+    fixture.componentRef.setInput('translation', inputs.translation ?? null);
     fixture.detectChanges();
     return fixture;
   }
@@ -96,6 +97,16 @@ describe('EbookFilterPanelComponent', () => {
     fixture.componentRef.setInput('language', 'ru');
     fixture.detectChanges();
     expect([readable.getAttribute('aria-pressed'), all.getAttribute('aria-pressed')]).toEqual(['false', 'false']);
+  });
+
+  it('d10-rk-ebook-sprachchips-doppelt-gewaehlt: gewählte Übersetzung = genau ein gedrückter Chip', async () => {
+    for (const allLanguages of [false, true]) {
+      const fixture = await render({ languages: [{ language: 'fr', count: 1 }], translations: [{ language: 'en', count: 1 }],
+        readable: ['de', 'en'], allLanguages, translation: 'en' });
+      const pressed = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.eb-langs [aria-pressed="true"]'));
+      expect(pressed.length).toBe(1);
+      expect(pressed[0].getAttribute('data-translation')).toBe('en');
+    }
   });
 
   it('Sprachen in der Oberflächensprache, unbestimmte als „Unknown“, Übersetzungen als eigener Wahlpunkt', async () => {

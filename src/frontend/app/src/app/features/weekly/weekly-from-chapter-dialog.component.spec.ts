@@ -116,4 +116,29 @@ describe('WeeklyFromChapterDialogComponent Grund für gesperrtes Anlegen', () =>
     expect(src).toMatch(/@if \(blockReason && !saving\) \{ <span class="why" role="status">/);
     expect(src).not.toContain('pickBookFirst');
   });
+
+  // UI-Sweep 2026-11-10 (d10-rk-wochenpost-optional-im-label)
+  it('„Optional“ steht als Hinweis unter Titel und Beschreibung, nicht im Label (DESIGN 5.6)', async () => {
+    for (const file of ['weekly-from-chapter-dialog.component.ts', 'weekly-list.component.ts']) {
+      const src = await (await fetch('/base/src/app/features/weekly/' + file)).text();
+      expect(src).withContext(file).not.toMatch(/weekly\.fields\.(title|description)Optional/);
+      const fields = src.split('<mat-form-field').filter(f => /'weekly\.fields\.(title|description)'/.test(f));
+      expect(fields.length).withContext(file).toBeGreaterThan(0);
+      for (const f of fields) {
+        expect(f.slice(0, f.indexOf('</mat-form-field>'))).withContext(file)
+          .toContain("<mat-hint>{{ 'common.optional' | translate }}</mat-hint>");
+      }
+    }
+    const load = async (l: string) => {
+      for (const url of [`/i18n/${l}.json`, `/base/i18n/${l}.json`]) {
+        const res = await fetch(url);
+        if (res.ok) return res.json();
+      }
+      throw new Error(l + '.json nicht ladbar');
+    };
+    const [de, en] = await Promise.all(['de', 'en'].map(load));
+    expect(de.weekly.fields.title).toBe('Titel');
+    expect(de.weekly.fields.description).toBe('Beschreibung');
+    expect(en.weekly.fields.title).toBe('Title');
+  });
 });

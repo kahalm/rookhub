@@ -1769,8 +1769,8 @@
     "fields": {
       "date": "Dátum",
       "time": "Idő",
-      "titleOptional": "Cím (opcionális)",
-      "descriptionOptional": "Leírás (opcionális)"
+      "title": "Cím",
+      "description": "Leírás"
     },
     "columns": {
       "title": "Cím"
@@ -2726,7 +2726,7 @@
       "promote": "Változat előléptetése",
       "makeMainline": "Legyen főváltozat",
       "deleteFrom": "Törlés innentől",
-      "hint": "Jobb kattintás egy lépésen (telefonon hosszan nyomva): csillag, változat előléptetése, főváltozattá tétel vagy törlés onnantól.",
+      "hint": "Jobb kattintás egy lépésen (telefonon hosszan nyomva): csillag, változat előléptetése, főváltozattá tétel vagy törlés onnantól.\n\nBillentyűzettel: helyi menü billentyű vagy Shift+F10.",
       "label": "Lépésfa"
     },
     "tablebase": {
@@ -3437,7 +3437,7 @@
       "publishAt": "Megjelenés időpontja",
       "publishRequired": "Előbb válaszd ki a megjelenés időpontját.",
       "testerPreviewAt": "Tesztelői előnézet",
-      "hint": "A tesztelők a tesztelői időponttól látják ezt a fejezetet, mindenki más a megjelenéstől. Hagyd üresen a tesztelői mezőt, ha nincs korai hozzáférés.",
+      "hint": "A tesztelők a tesztelői előnézettől látják ezt a fejezetet, mindenki más a megjelenéstől. Tesztelői előnézet nélkül nincs korai hozzáférés.",
       "watchVideo": "Videó megtekintése",
       "releasesOn": "megjelenik: {{date}}",
       "saved": "Kiadás mentve",
@@ -3445,11 +3445,11 @@
       "saveFailed": "A kiadást nem sikerült menteni.",
       "members": "Sorozat terjesztési listája",
       "membersHint": "Tagokat felhasználónévvel adhatsz hozzá.",
-      "membersHelp": "Amint a könyvet nyilvánosról privátra állítod, már csak a listán szereplő tagok nyithatják meg. A tesztelők ráadásul egy hetet már a tesztelői előnézet időpontjától látnak.",
+      "membersHelp": "Amint a könyvet nyilvánosról privátra állítod, már csak a listán szereplő tagok nyithatják meg. A tesztelők ráadásul egy hetet már a tesztelői előnézettől látnak.",
       "membersLoadFailed": "A tagokat nem sikerült betölteni.",
       "username": "Felhasználónév",
       "tester": "Tesztelő",
-      "testerHint": "Egy hetet már a tesztelői előnézet időpontjától lát.",
+      "testerHint": "Egy hetet már a tesztelői előnézettől lát.",
       "noMembers": "Még nincsenek tagok.",
       "userNotFound": "Nincs ilyen nevű felhasználó.",
       "memberAdded": "Tag hozzáadva",
@@ -3471,7 +3471,7 @@
     "removeError": "A kedvencet nem sikerült eltávolítani.",
     "sourceStandard": "Standard feladvány",
     "sourceBook": "Tanfolyam-⁠/könyvfeladvány",
-    "love": "Szeretem",
+    "love": "Kedvencekhez",
     "loved": "Kedvenc",
     "loveLast": "Utolsó feladvány",
     "emptyHint": "Egy feladvány után koppints a szívre, hogy itt gyűjtsd.",
@@ -4486,11 +4486,12 @@
       "cta": "Hiányzik a versenyed? Javasolj forrást",
       "blurb": "Nem minden szervező ott hirdet, ahonnan ez a jegyzék olvas. Egy hivatalos oldalra mutató link pótolható.",
       "title": "Hiányzó versenyforrás bejelentése",
-      "lead": "Ez a jegyzék olyan versenyoldalakból töltődik fel, amelyek közzéteszik a naptárukat — aki máshol hirdet, az itt nem szerepel. A legtöbbet nem egyetlen időpont segít, hanem egy LINK: egy hivatalos oldal, amelyen a versenyeitek szerepelnek, rendszeresen kiolvasható, és onnantól mind megjelenik.",
+      "lead": "A legtöbbet egy link segít egy hivatalos oldalra, amelyen a versenyeitek szerepelnek.",
+      "leadMore": "Ez a jegyzék olyan versenyoldalakból töltődik fel, amelyek közzéteszik a naptárukat — aki máshol hirdet, az itt nem szerepel. Egy hivatalos oldal rendszeresen kiolvasható, és onnantól minden versenyetek megjelenik.",
       "link": "Link a hivatalos oldalra",
       "linkHint": "Szövetségi naptár, klubhonlap, versenysorozat oldala — minél hivatalosabb, annál jobb",
       "linkRequired": "Adj meg egy teljes linket, amely http:// vagy https:// kezdetű.",
-      "message": "Megjegyzés (nem kötelező)",
+      "message": "Megjegyzés",
       "messagePlaceholder": "Van még valami, amit tudnunk kellene?",
       "thanks": "Köszönjük — megnézzük az oldalt.",
       "sendError": "Az üzenetet nem sikerült elküldeni. Próbáld meg még egyszer."
@@ -4498,13 +4499,15 @@
     "report": {
       "cta": "Hibás bejegyzés jelentése",
       "title": "Hibás bejegyzés jelentése",
-      "lead": "Mondd el, mi a hibás itt. Minden mező szabadon hagyható — a szöveg is: ha egy szó nélkül küldöd el, az is annyit mond, hogy „ezzel itt valami nem stimmel”.",
+      "lead": "Mondd el, mi a hibás itt – minden mező szabadon hagyható.",
+      "leadMore": "A szöveg is szabadon hagyható: ha egy szó nélkül küldöd el, az is annyit mond, hogy „ezzel itt valami nem stimmel”.",
       "current": "Jelenleg tárolva",
       "league": "Csapatbajnokság",
       "message": "Mi a hiba?",
       "learnTitle": "Két kérdés, amely ezen az egy versenyen túl is segít",
       "namePattern": "Hogyan hívják az ilyen versenyeket a te vidékeden?",
-      "namePatternHint": "A kort és a közönséget a verseny nevéből olvassuk ki, és ezek a nevek helyiek — Tirolban az utánpótlásversenyt „Schachrallye”-nak hívják. Aki egyszer megnevez egy ilyen jelölést, azzal eléri, hogy a sorozat minden jövőbeli kiírása jó helyre kerüljön.",
+      "namePatternHint": "Egy helyi név segít, hogy minden jövőbeli kiírás jó helyre kerüljön.",
+      "namePatternMore": "A kort és a közönséget a verseny nevéből olvassuk ki, és ezek a nevek helyiek — Tirolban az utánpótlásversenyt „Schachrallye”-nak hívják. Aki egyszer megnevez egy ilyen jelölést, azzal eléri, hogy a sorozat minden jövőbeli kiírása jó helyre kerüljön.",
       "sourceLink": "Egy oldal, amelyen ez jobban látszik",
       "thanks": "Köszönjük — a jelzés megérkezett, és tudunk rá válaszolni.",
       "sendError": "A jelzést nem sikerült elküldeni. Próbáld meg még egyszer."
@@ -6521,6 +6524,7 @@
   },
   "opponentNote": {
     "thisOpponent": "az ellenfél",
+    "thisOpponentNom": "az ellenfél",
     "reached": "{{who}} játszmáiban: {{n}}× elérve (utoljára {{year}})",
     "reachedNoYear": "{{who}} játszmáiban: {{n}}× elérve",
     "played": "itt ezt játszotta: {{moves}}",
@@ -6531,6 +6535,7 @@
   },
   "deviations": {
     "title": "{{who}} eltérései",
+    "titleNoName": "Az ellenfeled eltérései",
     "threshold": "Jó eddig",
     "thresholdTip": "Egy válasz akkor jó, ha legfeljebb ennyi század gyaloggal rosszabb a legjobb lépésnél (motor).",
     "loadFailed": "Az eltéréseket nem sikerült betölteni.",

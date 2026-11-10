@@ -15,7 +15,9 @@ const HEADING_MAX = 80;
 // d3-rk-kommentar-text-ohne-leerzeichen: auch eine Partieangabe endet so — „…, Hastings 2012In this game …“. Die Daten
 // kommen schon so aus dem Import (Chessable-Absatz ohne Trenner, kein Quell-PGN mehr da); repariert wird nur die Anzeige.
 // Deshalb zählt zusätzlich eine vierstellige Jahreszahl (1500–2099), die nicht Teil einer längeren Zahl ist.
-const GLUED = /(?<!\p{L})(\p{Lu}\p{Ll}{3,}|\p{Ll}{4,}|(?<!\d)(?:1[5-9]|20)\d{2})(?=\p{Lu}\p{Ll})/gu;
+// UI-Sweep 2026-11-10 (d10-rk-kommentar-feldname-angeklebt): auch eine Überschrift, die auf ein Feld endet („Das Matt auf
+// d7Wenn …“) — das Feld nur direkt nach einem Leerzeichen, damit Züge wie „Sd7“ oder „1.d4“ nicht greifen.
+const GLUED = /(?<!\p{L})(\p{Lu}\p{Ll}{3,}|\p{Ll}{4,}|(?<!\d)(?:1[5-9]|20)\d{2}|(?<=\s)[a-h][1-8])(?=\p{Lu}\p{Ll})/gu;
 // Engine-/Markennamen in Binnenmajuskel („AlphaZero", „LeelaZero", „DeepMind") sind keine angeklebte Überschrift —
 // seit v1-rk-course-comment-ueberschrift-angeklebt läuft die Erkennung auch über die RookHub-Kurskommentare.
 const GLUE_KEEP = new Set(['Chess', 'You', 'Play', 'Alpha', 'Leela', 'Deep']);

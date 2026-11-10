@@ -59,7 +59,9 @@ export function splitLocalDateTime(s: string | null | undefined): [string, strin
     </mat-form-field>
   `,
   styles: [`
-    :host { display: flex; flex-wrap: wrap; gap: 12px; min-width: 0; }
+    /* UI-Sweep 2026-11-10 (d10-rk-datumzeit-uhrzeit-gestreckt): oben ausrichten, sonst streckt der Hinweis unter dem Datum
+       das Uhrzeit-Feld auf seine Höhe. */
+    :host { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; min-width: 0; }
     /* d9-rk-datepicker-label-eng: das Datum bekommt den Platz, die Uhrzeit (5 Zeichen) bleibt schmal — die Beschriftung
        stieß sonst ans Kalender-Symbol. Zusätze wie „optional“ stehen als Hinweis darunter, nicht im Label. */
     .dtf-date { flex: 2 1 200px; min-width: 0; }

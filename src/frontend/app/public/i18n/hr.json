@@ -2183,7 +2183,7 @@
       "publishAt": "Vrijeme objave",
       "publishRequired": "Najprije odaberi vrijeme objave.",
       "testerPreviewAt": "Pregled za testere",
-      "hint": "Testeri vide ovo poglavlje od termina za testere, ostali od objave. Bez termina za testere nema ranog pristupa.",
+      "hint": "Testeri vide ovo poglavlje od pregleda za testere, ostali od objave. Bez pregleda za testere nema ranog pristupa.",
       "watchVideo": "Pogledaj videozapis",
       "releasesOn": "objava {{date}}",
       "saved": "Izdanje spremljeno",
@@ -2191,11 +2191,11 @@
       "saveFailed": "Izdanje nije moguće spremiti.",
       "members": "Popis pretplatnika serije",
       "membersHint": "Dodaj članove prema korisničkom imenu.",
-      "membersHelp": "Kad knjigu prebaciš s javne na privatnu, mogu je otvoriti samo članovi s popisa. Testeri usto vide tjedan već od njegova termina za testere.",
+      "membersHelp": "Kad knjigu prebaciš s javne na privatnu, mogu je otvoriti samo članovi s popisa. Testeri usto vide tjedan već od njegova pregleda za testere.",
       "membersLoadFailed": "Članove nije moguće učitati.",
       "username": "Korisničko ime",
       "tester": "Tester",
-      "testerHint": "Vidi tjedan već od njegova termina za testere.",
+      "testerHint": "Vidi tjedan već od njegova pregleda za testere.",
       "noMembers": "Još nema članova.",
       "userNotFound": "Nema korisnika s tim imenom.",
       "memberAdded": "Član dodan",
@@ -2220,8 +2220,8 @@
     "fields": {
       "date": "Datum",
       "time": "Vrijeme",
-      "titleOptional": "Naslov (neobavezno)",
-      "descriptionOptional": "Opis (neobavezno)"
+      "title": "Naslov",
+      "description": "Opis"
     },
     "columns": {
       "title": "Naslov"
@@ -3052,7 +3052,7 @@
   "favorites": {
     "title": "Voljene zagonetke",
     "hint": "Zagonetke koje označiš srcem nakon rješavanja ili predaje pojavljuju se ovdje — ponovno ih riješi ili analiziraj bilo kada.",
-    "empty": "Još nema omiljenih zagonetki.",
+    "empty": "Još nema favorita.",
     "rating": "Rejting",
     "replay": "Riješi ponovno",
     "analyze": "Analiziraj",
@@ -3061,8 +3061,8 @@
     "removeError": "Favorit se nije mogao ukloniti.",
     "sourceStandard": "Standardna zagonetka",
     "sourceBook": "Zagonetka tečaja / knjige",
-    "love": "Sviđa mi se",
-    "loved": "Voljeno",
+    "love": "U favorite",
+    "loved": "U favoritima",
     "loveLast": "Zadnja zagonetka",
     "emptyHint": "Nakon zagonetke dodirni srce da je spremiš ovdje.",
     "solvePuzzles": "Rješavaj zagonetke"
@@ -3462,7 +3462,7 @@
       "notFound": "Partija nije pronađena.",
       "title": "Ispravi partiju",
       "headersSummary": "Podaci: {{white}} – {{black}} · {{result}}",
-      "help": "Klik na potez postavlja ploču na poziciju PRIJE njega. Potez odigran na ploči ga zamjenjuje (ili se u načinu umetanja stavlja ispred njega); potezi nakon njega ostaju dok su legalni. „Obriši potez\" uklanja potez. Spremaju se samo legalni potezi.",
+      "help": "Klik na potez postavlja ploču na poziciju PRIJE njega. Potez odigran na ploči ga zamjenjuje (ili se u načinu umetanja stavlja ispred njega); potezi nakon njega ostaju dok su legalni. „Obriši potez“ uklanja potez. Spremaju se samo legalni potezi.",
       "helpScoresheet": "Klik na potez postavlja ploču na poziciju PRIJE njega — dosadašnji potez je žuta strelica. Narančasti potezi su nesigurni: odaberi jedno od ponuđenih čitanja ili odigraj drugi potez na ploči. Nakon svake promjene ostatak partije ponovno se sastavlja iz zapisa na zapisniku.\n\nUmetanje: za potez koji nedostaje na zapisniku. Brisanje: za zapis koji je dvaput ili pogrešno upisan.",
       "white": "Bijeli",
       "black": "Crni",
@@ -3679,7 +3679,7 @@
       "promote": "Unaprijedi varijantu",
       "makeMainline": "Postavi kao glavnu varijantu",
       "deleteFrom": "Obriši odavde",
-      "hint": "Desni klik na potez (na mobitelu dugi pritisak, na tipkovnici tipka izbornika ili Shift+F10): zvjezdica, unaprijedi varijantu, postavi kao glavnu ili obriši odande.",
+      "hint": "Desni klik na potez (na mobitelu dugi pritisak): zvjezdica, unaprijedi varijantu, postavi kao glavnu ili obriši odande.\n\nTipkovnicom: tipka izbornika ili Shift+F10.",
       "label": "Stablo poteza"
     },
     "tablebase": {
@@ -4869,11 +4869,12 @@
       "cta": "Tvoj turnir nedostaje? Predloži izvor",
       "blurb": "Ne svaki organizator objavljuje tamo gdje ovaj imenik čita. Link na službenu stranicu može se dodati.",
       "title": "Prijavi izvor turnira koji nedostaje",
-      "lead": "Ovaj imenik puni se iz turnirskih stranica koje objavljuju svoje kalendare — kdo objavljuje drugdje, ovdje se ne pojavljuje. Najviše pomaže ne pojedinačni datum, nego LINK: službena stranica na kojoj su navedeni tvoji turniri može se redovno čitati, i tada se od tada pojavljuju svi.",
+      "lead": "Najviše pomaže link na službenu stranicu na kojoj su navedeni tvoji turniri.",
+      "leadMore": "Ovaj imenik puni se iz turnirskih stranica koje objavljuju svoje kalendare — tko objavljuje drugdje, ovdje se ne pojavljuje. Službena stranica može se redovno čitati, i od tada se pojavljuju svi tvoji turniri.",
       "link": "Link na službenu stranicu",
       "linkHint": "Kalendar saveza, stranica kluba, stranica serije turnira — što službenije, to bolje",
       "linkRequired": "Navedi potpuni link koji počinje s http:// ili https://.",
-      "message": "Napomena (neobavezno)",
+      "message": "Napomena",
       "messagePlaceholder": "Još nešto što bismo trebali znati?",
       "thanks": "Hvala — pogledat ćemo stranicu.",
       "sendError": "Poruka se nije mogla poslati. Pokušaj ponovno."
@@ -4881,13 +4882,15 @@
     "report": {
       "cta": "Prijavi pogrešan unos",
       "title": "Prijavi pogrešan unos",
-      "lead": "Reci nam što je ovdje pogrešno. Sve je neobavezno — i tekst: slanje bez ijedne riječi ipak kaže „s ovim nešto nije u redu\".",
+      "lead": "Reci nam što je ovdje pogrešno – sva su polja neobavezna.",
+      "leadMore": "I tekst je neobavezan: slanje bez ijedne riječi ipak kaže „s ovim nešto nije u redu“.",
       "current": "Trenutno zapisano",
       "league": "Liga",
       "message": "Što je pogrešno?",
       "learnTitle": "Dva pitanja koja pomažu i izvan ovog jednog turnira",
       "namePattern": "Kako se takvi turniri zovu u tvojoj regiji?",
-      "namePatternHint": "Uzrast i publika čitaju se iz imena turnira, a ta imena su lokalna — u Tirolu se turnir za mlade zove „Schachrallye\". Kdo takvu oznaku jednom navede, osigurava da se svako buduće izdanje te serije ispravno razvrsta.",
+      "namePatternHint": "Regionalni naziv pomaže da se svako buduće izdanje ispravno razvrsta.",
+      "namePatternMore": "Uzrast i publika čitaju se iz imena turnira, a ta imena su lokalna — u Tirolu se turnir za mlade zove „Schachrallye“. Tko takvu oznaku jednom navede, osigurava da se svako buduće izdanje te serije ispravno razvrsta.",
       "sourceLink": "Stranica na kojoj se to bolje vidi",
       "thanks": "Hvala — prijava je došla i možemo na nju odgovoriti.",
       "sendError": "Prijava se nije mogla poslati. Pokušaj ponovno."
@@ -6521,6 +6524,7 @@
   },
   "opponentNote": {
     "thisOpponent": "protivnika",
+    "thisOpponentNom": "protivnik",
     "reached": "U partijama igrača {{who}}: dosegnuto {{n}}× (zadnji put {{year}})",
     "reachedNoYear": "U partijama igrača {{who}}: dosegnuto {{n}}×",
     "played": "ovdje je igrao {{moves}}",
@@ -6531,6 +6535,7 @@
   },
   "deviations": {
     "title": "Odstupanja igrača {{who}}",
+    "titleNoName": "Odstupanja tvog protivnika",
     "threshold": "Dobro do",
     "thresholdTip": "Odgovor je dobar ako je najviše toliko stotinki pješaka lošiji od najboljeg poteza (engine).",
     "loadFailed": "Odstupanja se nisu mogla učitati.",

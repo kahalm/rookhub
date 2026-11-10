@@ -441,4 +441,18 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
     expect(box(desk, 'b2').top).toBe(box(desk, 'b1').top);
     expect(box(desk, 'b3').top).toBeGreaterThan(box(desk, 'b1').top);
   });
+
+  // UI-Sweep 2026-11-10 (d10-l-prognose-brett1-alternativen-gestreckt): zweispaltig ist Brett 1 so hoch wie Brett 2 (mit
+  // „jemand anderer“) — die Kandidaten bleiben trotzdem oben gepackt, gleicher Abstand wie daneben.
+  it('Prognose zweispaltig: Kandidaten des kürzeren Bretts nicht auseinandergezogen', async () => {
+    const cand = (id: string, n: string) => `<div class="cand" id="${id}"><span class="name">${n}</span><span class="elo">1800</span><span class="pct">50 %</span></div>`;
+    const body = `<main class="wrap mid"><ol class="boards">
+      <li class="board"><span class="bno">1</span><span class="sq w"></span><div class="cands">${cand('a1', 'Spieler A')}${cand('a2', 'Spieler B')}${cand('a3', 'Spieler C')}</div></li>
+      <li class="board"><span class="bno">2</span><span class="sq s"></span><div class="cands">${cand('b1', 'Spieler B')}${cand('b2', 'Spieler C')}${cand('b3', 'Spieler D')}
+        <p style="margin:0;height:60px">jemand anderer: 2 %</p></div></li></ol></main>`;
+    const doc = await render(1400, body);
+    const gapA = box(doc, 'a2').top - box(doc, 'a1').top;
+    const gapB = box(doc, 'b2').top - box(doc, 'b1').top;
+    expect(Math.abs(gapA - gapB)).toBeLessThan(1);
+  });
 });

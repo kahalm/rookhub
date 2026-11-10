@@ -1,3 +1,5 @@
+import { Pipe, PipeTransform, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { Sort } from '@angular/material/sort';
 import { CrawlerPairing, DisplayPairing, TeamPairingResponse, TournamentPairing } from '@rh/core/models';
 
@@ -84,3 +86,47 @@ function isIndividualPairing(item: CrawlerPairing): item is TournamentPairing {
   return !isTeamPairing(item);
 }
 
+
+/** Dezimalzeichen je Sprache, einmal ueber Intl ermittelt. */
+const decimalSeparators = new Map<string, string>();
+
+function decimalSeparator(lang: string): string {
+  let sep = decimalSeparators.get(lang);
+  if (sep === undefined) {
+    try {
+      sep = new Intl.NumberFormat(lang).formatToParts(1.5).find(p => p.type === 'decimal')?.value ?? '.';
+    } catch {
+      sep = '.';   // unbekannte Sprachkennung
+    }
+    decimalSeparators.set(lang, sep);
+  }
+  return sep;
+}
+
+/**
+ * UI-Sweep 2026-11-10 (d10-t-ergebnis-dezimalpunkt): Ergebnis- und Punkte-Texte kommen vom Crawler mit
+ * Dezimalpunkt („1.5 : 6.5"); angezeigt im Zahlenformat der App-Sprache („1,5 : 6,5" in de).
+ * Ganze Zahlen und alles ohne Dezimalstelle bleiben unveraendert.
+ */
+export function localScore(text: string | number | null | undefined, lang: string | null | undefined): string {
+  if (text === null || text === undefined) return '';
+  const raw = String(text);
+  const sep = decimalSeparator(lang || 'en');
+  return sep === '.' ? raw : raw.replace(/(\d)\.(\d)/g, `$1${sep}$2`);
+}
+
+/** `{{ p.result | localScore }}` in der aktuellen Oberflaechensprache; unrein wie tournamentDate, die Sprache kann wechseln. */
+@Pipe({ name: 'localScore', standalone: true, pure: false })
+export class LocalScorePipe implements PipeTransform {
+  private readonly translate = inject(TranslateService);
+  private last?: { text: string | number | null | undefined; lang: string; out: string };
+
+  transform(text: string | number | null | undefined): string {
+    const lang = this.translate.currentLang() || 'en';
+    const last = this.last;
+    if (last && last.text === text && last.lang === lang) return last.out;
+    const out = localScore(text, lang);
+    this.last = { text, lang, out };
+    return out;
+  }
+}

@@ -112,8 +112,9 @@ describe('SharedGameComponent (Design-Runde d3)', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.analyze-no-engine')).not.toBeNull();
     const btn = (el.querySelector('button.analyze') as HTMLElement).getBoundingClientRect();
-    const share = (el.querySelector('button.share.wide-only') as HTMLElement).getBoundingClientRect();
-    expect(Math.abs(btn.top - share.top)).toBeLessThanOrEqual(2);
+    // Teilen steht seit d10-rk-partiekopf-fuenf-sekundaerknoepfe im ⋮ — Nachbar ist jetzt „Ohne Engine“.
+    const blind = (el.querySelector('button.blind-btn') as HTMLElement).getBoundingClientRect();
+    expect(Math.abs(btn.top - blind.top)).toBeLessThanOrEqual(2);
     fixture.nativeElement.remove();
   });
 

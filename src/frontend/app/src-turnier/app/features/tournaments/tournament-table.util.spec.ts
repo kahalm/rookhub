@@ -1,4 +1,4 @@
-import { chessTitle, sortTableData, toDisplayPairings, PLAYER_COLUMNS } from './tournament-table.util';
+import { chessTitle, localScore, sortTableData, toDisplayPairings, PLAYER_COLUMNS } from './tournament-table.util';
 
 describe('tournament-table.util', () => {
   describe('chessTitle (t-title-col)', () => {
@@ -83,5 +83,22 @@ describe('tournament-table.util', () => {
     ];
     const sorted = sortTableData(rows, { active: 'team', direction: 'asc' });
     expect(sorted.map(r => r.name)).toEqual(['C', 'A', 'B']);
+  });
+
+  // UI-Sweep 2026-11-10 (d10-t-ergebnis-dezimalpunkt): Mannschaftsergebnis im Zahlenformat der App-Sprache.
+  describe('localScore (d10-t-ergebnis-dezimalpunkt)', () => {
+    it('setzt in de, hr und hu das Komma als Dezimalzeichen', () => {
+      expect(localScore('1.5 : 6.5', 'de')).toBe('1,5 : 6,5');
+      expect(localScore('2.5', 'hr')).toBe('2,5');
+      expect(localScore('10.5 : 5.5', 'hu')).toBe('10,5 : 5,5');
+      expect(localScore(3.5, 'de')).toBe('3,5');
+    });
+
+    it('laesst en und ganze Ergebnisse unveraendert', () => {
+      expect(localScore('1.5 : 6.5', 'en')).toBe('1.5 : 6.5');
+      expect(localScore('4 : 4', 'de')).toBe('4 : 4');
+      expect(localScore('1 - 0', 'de')).toBe('1 - 0');
+      expect(localScore(null, 'de')).toBe('');
+    });
   });
 });

@@ -302,11 +302,13 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
       .pick { justify-content: center; }
       /* d2-k-free-lead: Figur und Sternzahl nebeneinander, Hinweiszeile weg (steht im Titel des Zaehlers). */
       .picker-row { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
-      .picker-row .seg { grid-template-columns: repeat(4, 38px); }
+      /* UI-Sweep 2026-11-10 (d10-k-figurenwahl-tippziel-38px): Figurenknoepfe 44 px breit (Tippziel), dafuer schmalere
+         Luecken und Zaehler, damit Figurenwahl und Sternzahl bei 358 px weiter in eine Zeile passen. */
+      .picker-row .seg { grid-template-columns: repeat(4, 44px); gap: 2px; padding: 2px; }
       .picker-row .seg-btn { font-size: 1.75rem; min-height: 44px; }
       .picker-row .stepper { gap: 6px; }
       .picker-row .step { width: 44px; height: 44px; font-size: 1.6rem; }
-      .picker-row .count { min-width: 2.6em; font-size: 1.6rem; }
+      .picker-row .count { min-width: 2em; font-size: 1.6rem; }
       .range { display: none; }
       .task { font-size: 1.3rem; }
       .head .round { margin-left: 0; }

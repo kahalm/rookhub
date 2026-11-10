@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "Tarih",
       "time": "Saat",
-      "titleOptional": "Başlık (isteğe bağlı)",
-      "descriptionOptional": "Açıklama (isteğe bağlı)"
+      "title": "Başlık",
+      "description": "Açıklama"
     },
     "columns": {
       "title": "Başlık"

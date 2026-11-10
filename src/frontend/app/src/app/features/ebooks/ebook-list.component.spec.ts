@@ -231,6 +231,10 @@ describe('EbookListComponent', () => {
     sessionStorage.removeItem('rh.ebooks.listState');
   });
 
+  it('d10-rk-ebook-gesamtzeile-dateien-ohne-abgeleitete: abgeleitetes EPUB zählt auf der Karte nicht mit', () => {
+    expect(ebookFormats([{ format: 'pdf' }, { format: 'epub', derived: true }])).toEqual([{ label: 'PDF', n: 1 }]);
+  });
+
   // d6-rk-ebook-format-chip-doppelt
   it('zeigt je Format EIN Abzeichen (2× PDF + DJVU → „PDF“, „DJVU“), mehrere Dateien im Tooltip', () => {
     expect(ebookFormats([{ format: 'pdf' }, { format: 'PDF' }, { format: 'djvu' }]))
@@ -409,6 +413,17 @@ describe('EbookListComponent', () => {
     const mobile = css.slice(css.indexOf('@media(max-width:599.98px)'));
     expect(mobile).toMatch(/\.eb-upload(\[[^\]]*\])?\{min-width:44px;width:44px;height:44px;padding:0;border-radius:50%/);
     expect(mobile).toMatch(/\.eb-upload(\[[^\]]*\])?mat-icon(\[[^\]]*\])?\{margin:0/);
+    fixture.destroy();
+  });
+
+  it('d10-rk-ebook-auswahlmodus-zwei-hauptknoepfe: im Auswahlmodus nur „Sichtbarkeit setzen“ gefüllt, kein „Hochladen“', () => {
+    const fixture = render([book({ canManage: true })], { canManageAll: true });
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.eb-upload')).not.toBeNull();
+    fixture.componentInstance.toggleSelecting();
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-upload')).toBeNull();
+    expect(el.querySelectorAll('.header [mat-flat-button], .eb-bulk [mat-flat-button]').length).toBe(1);
     fixture.destroy();
   });
 

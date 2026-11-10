@@ -49,8 +49,10 @@
         <div class="header-actions">
           <!-- Umschalter Partieseite ⇄ Analysebrett ohne Engine (0.900.0): hier „Mit Engine“, der Knopf führt zu „Ohne Engine“
                (dort zurück hierher). -->
+          <!-- UI-Sweep 2026-11-10 (d10-rk-partie-handy-ohne-engine-eigene-zeile): am Handy im ⋮ — allein in einer eigenen
+               Zeile schob der Knopf das Brett über 40 % der Höhe (DESIGN 4.6 Regel 3). -->
           @if (game.pgn) {
-            <button mat-stroked-button class="blind-btn" (click)="analyzeWithoutEngine()">
+            <button mat-stroked-button class="blind-btn wide-only" (click)="analyzeWithoutEngine()">
               <mat-icon>visibility_off</mat-icon> {{ 'analysis.withoutEngine' | translate }}
             </button>
           }
@@ -88,34 +90,28 @@
             <!-- /g/:token (Wunsch 2026-11-09): ebenso nur lesend; der Besitzer ist da schon nach /games/:id umgeleitet. -->
             <app-club-summary-link [gameShareToken]="publicToken" />
           }
-          @if (game.sourceUrl) {
-            <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original wide-only">
-              <mat-icon>open_in_new</mat-icon> {{ 'games.openOriginal' | translate }}
-            </a>
-          }
+          <!-- UI-Sweep 2026-11-10 (d10-rk-partiekopf-fuenf-sekundaerknoepfe): „Originalpartie öffnen“ und „Teilen-Link kopieren“
+               stehen auf allen Breiten im ⋮ — fünf gleichrangige Kopfknöpfe ohne Hauptaktion (DESIGN 2 Grundsatz 1, 5.4). -->
           <!-- „Eigene Fehler nachspielen" (0.516.0) — erscheint erst, wenn die Analyse Aufgaben hergibt.
                Seit 0.518.1 auf dem Brett DIESER Seite; solange das Training läuft, steht die Leiste unter
                dem Brett und der Knopf entfällt. -->
           @if (mistakeTotal() > 0 && !training()) {
             <!-- d3-rk-eigene-fehler-fremde-partie: „Eigene …“ nur für den Besitzer; sonst nennt der Knopf, wessen Fehler. -->
-            <button mat-stroked-button class="mistakes" (click)="trainMistakes()">
-              <mat-icon>replay</mat-icon> {{ (own ? 'games.mistakes.button' : 'games.mistakes.buttonSide') | translate: { count: mistakeTotal(), player: sidePlayer(mistakeSide()) } }}
-            </button>
+            @if (club || reviewStatus() === 'done') {
+              <!-- UI-Sweep 2026-11-10 (d10-rk-partiekopf-fuenf-sekundaerknoepfe): ohne „Partie analysieren“ ist das Nachspielen die Hauptaktion. -->
+              <button mat-flat-button color="primary" class="mistakes" (click)="trainMistakes()">
+                <mat-icon>replay</mat-icon> {{ (own ? 'games.mistakes.button' : 'games.mistakes.buttonSide') | translate: { count: mistakeTotal(), player: sidePlayer(mistakeSide()) } }}
+              </button>
+            } @else {
+              <button mat-stroked-button class="mistakes" (click)="trainMistakes()">
+                <mat-icon>replay</mat-icon> {{ (own ? 'games.mistakes.button' : 'games.mistakes.buttonSide') | translate: { count: mistakeTotal(), player: sidePlayer(mistakeSide()) } }}
+              </button>
+            }
           }
           <!-- Ausgeblendete Fehler („nicht mehr zeigen", 0.748.0) lassen sich hier alle wieder einblenden. -->
           @if (own && dismissedPlies().length > 0 && !training()) {
             <button mat-button class="restore-dismissed" (click)="restoreDismissed()">
               <mat-icon>visibility</mat-icon> {{ 'games.mistakes.restore' | translate: { count: dismissedPlies().length } }}
-            </button>
-          }
-          @if (own && shareToken) {
-            <button mat-stroked-button class="share wide-only" (click)="share()">
-              <mat-icon>share</mat-icon> {{ 'games.share' | translate }}
-            </button>
-          }
-          @if (canShareClub) {
-            <button mat-stroked-button class="share club-share wide-only" (click)="shareClub()">
-              <mat-icon>share</mat-icon> {{ 'games.share' | translate }}
             </button>
           }
           <!-- ⋮: PGN kopieren/herunterladen für JEDEN Betrachter (das PGN liegt ohnehin im Browser, 0.553.0);
@@ -131,9 +127,10 @@
               <button mat-menu-item class="to-analysis" (click)="openInAnalysis()">
                 <mat-icon>biotech</mat-icon><span>{{ 'games.openInAnalysis' | translate }}</span>
               </button>
-              <!-- Am Handy steht „Original öffnen“ hier statt als Knopf in der Kopfzeile (v1-rk-first-view-lead-long-mobile). -->
+              <!-- „Original öffnen“ steht auf allen Breiten hier (v1-rk-first-view-lead-long-mobile, seit UI-Sweep 2026-11-10
+                   d10-rk-partiekopf-fuenf-sekundaerknoepfe auch am PC). -->
               @if (game.sourceUrl) {
-                <a mat-menu-item class="original-item narrow-only" [href]="game.sourceUrl" target="_blank" rel="noopener">
+                <a mat-menu-item class="original-item" [href]="game.sourceUrl" target="_blank" rel="noopener">
                   <mat-icon>open_in_new</mat-icon><span>{{ 'games.openOriginal' | translate }}</span>
                 </a>
               }
@@ -154,7 +151,8 @@
                   <mat-icon>memory</mat-icon><span>{{ 'games.live.engineMenu' | translate }}</span>
                 </button>
               }
-              @if (loggedIn && game.pgn) {
+              <!-- UI-Sweep 2026-11-10 (d10-rk-partie-handy-ohne-engine-eigene-zeile): auch ohne Anmeldung — am Handy der einzige Weg, der Kopfknopf ist dort aus. -->
+              @if (game.pgn) {
                 <!-- „Ohne Engine analysieren" (0.855.0, Engine-Gruppe der Menüordnung DESIGN 5.5): eigene Linien ohne Bewertung, aufgedeckt wird später. -->
                 <button mat-menu-item class="without-engine" (click)="analyzeWithoutEngine()">
                   <mat-icon>visibility_off</mat-icon><span>{{ 'games.analyzeChoice.blind' | translate }}</span>
@@ -197,14 +195,14 @@
                   </button>
                 }
               }
-              <!-- Am Handy steht „Teilen-Link kopieren“ hier statt als Knopf in der Kopfzeile. -->
+              <!-- „Teilen-Link kopieren“ steht auf allen Breiten hier (UI-Sweep 2026-11-10 d10-rk-partiekopf-fuenf-sekundaerknoepfe). -->
               @if (own && shareToken) {
-                <button mat-menu-item class="share-item narrow-only" (click)="share()">
+                <button mat-menu-item class="share-item" (click)="share()">
                   <mat-icon>share</mat-icon><span>{{ 'games.share' | translate }}</span>
                 </button>
               }
               @if (canShareClub) {
-                <button mat-menu-item class="share-item club-share-item narrow-only" (click)="shareClub()">
+                <button mat-menu-item class="share-item club-share-item" (click)="shareClub()">
                   <mat-icon>share</mat-icon><span>{{ 'games.share' | translate }}</span>
                 </button>
                 @if (clubGameLink()) {

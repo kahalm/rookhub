@@ -63,6 +63,29 @@ describe('MaximsComponent (0.917.0)', () => {
     expect(el.textContent).toContain('Loose pieces drop off');
   });
 
+  // UI-Sweep 2026-11-10 (d10-rk-merksaetze-zeile-feste-hoehe)
+  it('bei 390 px wächst die Kopfzeile mit einem dreizeiligen Satz, nichts wird angeschnitten', () => {
+    TestBed.configureTestingModule({
+      imports: [MaximsComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const f = TestBed.createComponent(MaximsComponent);
+    const host = f.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '390px';
+    f.detectChanges();
+    const long = 'Ein langer Testsatz, der am Handy sicher über drei Zeilen läuft, weil er so viele Wörter hat, '
+      + 'dass er nicht in eine oder zwei Zeilen passt.';
+    TestBed.inject(HttpTestingController).expectOne('/api/maxims').flush([{ ...LIST[0], text: long }]);
+    f.detectChanges();
+    const header = host.querySelector('mat-expansion-panel-header') as HTMLElement;
+    const text = host.querySelector('.text') as HTMLElement;
+    expect(text.getBoundingClientRect().height).toBeGreaterThan(40);   // wirklich mehrzeilig
+    expect(header.getBoundingClientRect().height).toBeGreaterThanOrEqual(text.scrollHeight + 20);
+    expect(header.getBoundingClientRect().height).toBeGreaterThanOrEqual(48);
+  });
+
   it('Ladefehler zeigt app-load-error mit Wiederholen statt „0 Merksätze“ (F3-003)', () => {
     TestBed.configureTestingModule({
       imports: [MaximsComponent],

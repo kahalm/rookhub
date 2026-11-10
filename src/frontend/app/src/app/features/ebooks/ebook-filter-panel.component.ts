@@ -58,9 +58,10 @@ export function ebookLanguageLabel(code: string | null | undefined, translate: P
         <h3 class="ebf-head" id="ebf-lang">{{ 'ebooks.filter.language' | translate }}</h3>
         <div class="eb-langs" role="group" aria-labelledby="ebf-lang">
           <!-- 0.896.0: Vorgabe nur lesbare Bücher (eigene Sprache + Englisch); „Alle Sprachen“ hebt das auf. -->
-          <button type="button" class="eb-chip" [class.eb-chip--on]="!allLanguages() && !language()" [attr.aria-pressed]="!allLanguages() && !language()"
+          <!-- UI-Sweep 2026-11-10 (d10-rk-ebook-sprachchips-doppelt-gewaehlt): bei gewählter Übersetzung ist nur deren Chip an. -->
+          <button type="button" class="eb-chip" [class.eb-chip--on]="!allLanguages() && noSingleChoice()" [attr.aria-pressed]="!allLanguages() && noSingleChoice()"
                   data-scope="readable" [matTooltip]="'ebooks.filter.readableHint' | translate" (click)="allLanguagesChange.emit(false)">{{ readableLabel() }}</button>
-          <button type="button" class="eb-chip" [class.eb-chip--on]="allLanguages() && !language()" [attr.aria-pressed]="allLanguages() && !language()"
+          <button type="button" class="eb-chip" [class.eb-chip--on]="allLanguages() && noSingleChoice()" [attr.aria-pressed]="allLanguages() && noSingleChoice()"
                   data-scope="all" (click)="allLanguagesChange.emit(true)">{{ 'ebooks.filter.allLanguages' | translate }}</button>
           @for (o of languageOptions(); track o.value) {
             <button type="button" class="eb-chip" [class.eb-chip--on]="language() === o.value" [attr.aria-pressed]="language() === o.value"
@@ -140,6 +141,9 @@ export class EbookFilterPanelComponent {
   readonly translationChange = output<string>();
   readonly allLanguagesChange = output<boolean>();
   readonly eloChange = output<{ which: 'min' | 'max'; value: string | number | null }>();
+
+  /** UI-Sweep 2026-11-10 (d10-rk-ebook-sprachchips-doppelt-gewaehlt): weder Einzelsprache noch Übersetzung gewählt — erst dann gilt „lesbar“/„alle“. */
+  readonly noSingleChoice = computed(() => !this.language() && !this.translation());
 
   /** Schlagwort-Gruppe ganz aufgeklappt (sonst nur die häufigsten + das aktive). */
   readonly tagsOpen = signal(false);

@@ -1,4 +1,4 @@
-import { TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
+import { TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Component } from '@angular/core';
 import { RouterLink, Routes, provideRouter } from '@angular/router';
@@ -8,7 +8,7 @@ import { SwUpdate } from '@angular/service-worker';
 import { STALE_ROUTE_RELOAD_KEY, StaleRouteReloadService } from '../../core/stale-route-reload.service';
 import { ClientLogService } from '../../core/client-log.service';
 import { SnackbarService } from '../../core/snackbar.service';
-import { NotFoundComponent } from './not-found.component';
+import { NOT_FOUND_CHECK_CAP_MS, NotFoundComponent } from './not-found.component';
 import { AppUpdateCheck, AppUpdateService } from '../../core/app-update.service';
 
 @Component({ standalone: true, template: '' })
@@ -72,13 +72,17 @@ describe('NotFoundComponent', () => {
 describe('NotFoundComponent Versionsprüfung (U1)', () => {
   const routes: Routes = [{ path: '', component: StubComponent }];
 
-  it('während der Prüfung der Ladekreis statt Text', async () => {
-    const { el, update } = await render(routes, updateStub(new Promise<AppUpdateCheck>(() => {})));
+  // fakeAsync statt whenStable: die Gesamtgrenze (UI-Sweep 2026-11-10) ist ein offener Timer, whenStable wartete auf ihn.
+  it('während der Prüfung der Ladekreis statt Text', fakeAsync(() => {
+    const { fixture, el, update } = setup(routes, updateStub(new Promise<AppUpdateCheck>(() => {})));
+    flushMicrotasks();
+    fixture.detectChanges();
     expect(update.checkNow).toHaveBeenCalledTimes(1);
     expect(el.querySelector('mat-spinner')).not.toBeNull();
     expect(el.querySelector('.nf-checking')?.getAttribute('aria-label')).toBe('common.loading');
     expect(el.querySelector('h1')).toBeNull();
-  });
+    fixture.destroy();
+  }));
 
   it('neuere Version: Hinweis mit Nummer und „Aktualisieren“, der Knopf aktiviert und lädt neu', async () => {
     const { el, fixture, update } = await render(routes, updateStub(Promise.resolve({ available: true, version: '0.999.0' })));
@@ -102,6 +106,21 @@ describe('NotFoundComponent Versionsprüfung (U1)', () => {
     expect(el.textContent).toContain('app.notFound.text');
     expect(el.querySelector('button.nf-reload')).toBeNull();
   });
+
+  // UI-Sweep 2026-11-10 (d10-rk-404-ladekreis-haengt-ohne-sw-steuerung): ein hängender Ladekreis ist ein Fehler.
+  it('Prüfung hängt → nach der Gesamtgrenze (≤ 6 s) trotzdem Titel, Text und „Zur Startseite“', fakeAsync(() => {
+    const { fixture, el, links } = setup(routes, updateStub(new Promise<AppUpdateCheck>(() => {})),
+      reloaderStub(true, new Promise<boolean>(() => {})));
+    expect(el.querySelector('mat-spinner')).not.toBeNull();
+    tick(NOT_FOUND_CHECK_CAP_MS);
+    fixture.detectChanges();
+    expect(NOT_FOUND_CHECK_CAP_MS).toBeLessThanOrEqual(6000);
+    expect(el.querySelector('mat-spinner')).toBeNull();
+    expect(el.querySelector('section.not-found h1')?.textContent).toContain('app.notFound.title');
+    expect(el.textContent).toContain('app.notFound.text');
+    expect(links()).toEqual(['/']);
+    fixture.destroy();
+  }));
 
   it('Prüfung scheitert → normale Seite', async () => {
     const { el } = await render(routes, updateStub(Promise.reject(new Error('offline'))));
@@ -189,6 +208,10 @@ describe('NotFoundComponent mit echten Diensten (Stufe 1 + Fallback)', () => {
     type Reloads = { reloadApp: () => void };
     appReload = spyOn(AppUpdateService.prototype as unknown as Reloads, 'reloadApp');
     staleReload = spyOn(StaleRouteReloadService.prototype as unknown as Reloads, 'reloadApp');
+    // Im Testbrowser steuert kein Service Worker den Tab; die Fälle mit `swStub` tun so, als ob.
+    type Controls = { swControlsTab: () => boolean };
+    spyOn(StaleRouteReloadService.prototype as unknown as Controls, 'swControlsTab').and.returnValue(true);
+    spyOn(AppUpdateService.prototype as unknown as Controls, 'swControlsTab').and.returnValue(true);
   });
   afterEach(() => sessionStorage.removeItem(STALE_ROUTE_RELOAD_KEY));
 
@@ -261,6 +284,19 @@ describe('NotFoundComponent mit echten Diensten (Stufe 1 + Fallback)', () => {
     expect(staleReload).not.toHaveBeenCalled();
     expect(el.querySelector('.nf-update')?.textContent).toContain('app.notFound.updateText');
     expect(JSON.parse(sessionStorage.getItem(STALE_ROUTE_RELOAD_KEY) ?? '[]')).not.toContain(address());
+  });
+
+  // UI-Sweep 2026-11-10 (d10-rk-404-ladekreis-haengt-ohne-sw-steuerung)
+  it('Service Worker steuert den Tab nicht, checkForUpdate hängt → keine Suche, gleich die Meldung', async () => {
+    (StaleRouteReloadService.prototype as unknown as { swControlsTab: jasmine.Spy }).swControlsTab.and.returnValue(false);
+    (AppUpdateService.prototype as unknown as { swControlsTab: jasmine.Spy }).swControlsTab.and.returnValue(false);
+    serverAnswers({}, 404);
+    const sw = swStub();
+    sw.checkForUpdate.and.returnValue(new Promise<boolean>(() => {}));
+    const { el } = await renderReal(sw);
+    expect(sw.checkForUpdate).not.toHaveBeenCalled();
+    expect(el.querySelector('mat-spinner')).toBeNull();
+    expect(el.textContent).toContain('app.notFound.text');
   });
 
   it('Stufe 1 lädt neu → Ladekreis bleibt, keine Versionsprüfung', async () => {

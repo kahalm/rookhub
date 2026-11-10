@@ -7,6 +7,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe } from '@ngx-translate/core';
+// UI-Sweep 2026-11-10 (d10-rk-sanpipe-dialoge-ebook-zugliste): Engine-Linien in den Figurenbuchstaben der Oberflächensprache.
+import { SanPipe } from '../../shared/chess/san.pipe';
 import { interval } from 'rxjs';
 import { AnalysisJob, AnalysisJobLive, AnalysisJobsService } from '../analysis/analysis-jobs.service';
 import { mapBrokerLine, toDisplayLines } from '../analysis/engine-lines.util';
@@ -39,7 +41,7 @@ class DeepSide {
   selector: 'app-deep-analysis-dialog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe, RouterLink, MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslatePipe],
+  imports: [DecimalPipe, RouterLink, MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslatePipe, SanPipe],
   template: `
     <h2 mat-dialog-title>{{ 'games.deep.title' | translate }}</h2>
     <mat-dialog-content>
@@ -74,7 +76,7 @@ class DeepSide {
           }
           <ol class="lines">
             @for (l of linesOf(s); track $index) {
-              <li><span class="line-eval" [class.white]="l.positive">{{ l.evalText }}</span><span class="line-san">{{ l.san }}</span></li>
+              <li><span class="line-eval" [class.white]="l.positive">{{ l.evalText }}</span><span class="line-san">{{ l.san | san:'text' }}</span></li>
             } @empty {
               @if (!(s.kind === 'lc0' && noLc0())) { <li class="muted">{{ 'games.deep.noLines' | translate }}</li> }
             }
@@ -94,8 +96,9 @@ class DeepSide {
     .side { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; min-width: min(520px, 80vw); }
     .side-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: .85rem; }
     .name { font-weight: 600; }
-    .side.lc0 .name { color: #ff9800; }
-    .side.lc0 { --mdc-linear-progress-active-indicator-color: #ff9800; --mat-progress-bar-active-indicator-color: #ff9800; }
+    /* UI-Sweep 2026-11-10 (d10-rk-tiefe-analyse-lc0-orange-kontrast): Token statt #ff9800 — Orange hatte hell nur ~2:1. */
+    .side.lc0 .name { color: var(--rh-hint); }
+    .side.lc0 { --mdc-linear-progress-active-indicator-color: var(--rh-hint); --mat-progress-bar-active-indicator-color: var(--rh-hint); }
     .state { font-variant-numeric: tabular-nums; color: color-mix(in srgb, currentColor 70%, transparent); }
     .label { font-size: .72rem; font-weight: 600; opacity: .7; margin-top: 4px; }
     .lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: .82rem; }

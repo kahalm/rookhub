@@ -1,4 +1,4 @@
-import { STATUS_LABEL, ageClass, attendanceText, byInitial, dateNeighbours, dayText, parseDay, emptyInput, firstPhone, formatBirth, formatLinkCode, fullName, isoDate, longDate, nameHead, nameTail, parseBirth, shortDate, sortName, telHref, trainingDate, trainsToday, weekdayName } from './club-format';
+import { STATUS_LABEL, ageClass, attendanceText, byInitial, dateNeighbours, dayText, parseDay, emptyInput, firstPhone, formatBirth, formatLinkCode, fullName, isoDate, longDate, nameHead, nameTail, parseBirth, shortDate, sortName, telHref, trainingDate, trainsToday, weekdayName, weekdayText } from './club-format';
 
 describe('club-format', () => {
   it('Blättern: die Einheit davor und danach — der Tag, für den die Liste aufgeht, zählt als letzter Halt mit', () => {
@@ -88,6 +88,13 @@ describe('club-format', () => {
     expect(shortDate('2026-09-25')).toBe('Fr 25.09.');
     expect(longDate('2026-09-25')).toBe('Freitag, 25. September 2026');
     expect(longDate('2026-01-02')).toBe('Freitag, 2. Jänner 2026');
+  });
+
+  // UI-Sweep 2026-11-10 (d10-c-anwesenheit-datum-langform)
+  it('nennt nur den Wochentag eines Tages, leer ohne lesbares Datum', () => {
+    expect(weekdayText('2026-11-06')).toBe('Freitag');
+    expect(weekdayText('2026-11-09')).toBe('Montag');
+    expect(weekdayText('')).toBe('');
   });
 
   it('Einmal-Code in zwei Gruppen, Anwesenheit in Worten', () => {

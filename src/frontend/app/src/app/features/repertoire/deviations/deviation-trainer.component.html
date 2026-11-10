@@ -1,24 +1,34 @@
 <div class="dev">
   <div class="bar">
     <button mat-button (click)="back()"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}</button>
-    <span class="title">{{ 'deviations.title' | translate: { who: who } }}</span>
-    <!-- Schwelle „gut“ (Vorgabe 30 cp, je Gerät) -->
-    <label class="threshold" [matTooltip]="'deviations.thresholdTip' | translate">
-      <span>{{ 'deviations.threshold' | translate }}</span>
-      <select [value]="threshold" (change)="setThreshold(+$any($event.target).value)">
-        @for (o of thresholdOptions; track o) { <option [value]="o" [selected]="o === threshold">{{ o }} cp</option> }
-      </select>
-    </label>
+    <!-- UI-Sweep 2026-11-10 (d10-rk-abweichungen-von-des-gegners): ohne Namen eigener Titel statt „Abweichungen von des Gegners“ -->
+    <span class="title">{{ titleText }}</span>
+    <!-- Schwelle „gut“ (Vorgabe 30 cp, je Gerät).
+         UI-Sweep 2026-11-10 (d10-rk-abweichungen-schwelle-natives-select): Material-Auswahl mit 44-px-Tippziel statt winzigem nativem Select;
+         UI-Sweep 2026-11-10 (d10-rk-abweichungen-ladefehler-ohne-erneut): ohne Linien (Ladefehler/leer) nichts zu bewerten → ausgeblendet -->
+    @if (!loadError && s.phase !== 'EMPTY') {
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="threshold" [matTooltip]="'deviations.thresholdTip' | translate">
+        <mat-label>{{ 'deviations.threshold' | translate }}</mat-label>
+        <mat-select [value]="threshold" (selectionChange)="setThreshold($event.value)">
+          @for (o of thresholdOptions; track o) { <mat-option [value]="o">{{ o }} cp</mat-option> }
+        </mat-select>
+      </mat-form-field>
+    }
   </div>
 
   @switch (s.phase) {
     @case ('LOADING') { <p class="center">{{ 'common.loading' | translate }}</p> }
     @case ('EMPTY') {
-      <mat-card class="msg">
-        <mat-icon>{{ loadError ? 'error_outline' : 'check_circle' }}</mat-icon>
-        <p>{{ (loadError ? 'deviations.loadFailed' : 'deviations.none') | translate: { who: who } }}</p>
-        <button mat-stroked-button (click)="back()">{{ 'common.back' | translate }}</button>
-      </mat-card>
+      <!-- UI-Sweep 2026-11-10 (d10-rk-abweichungen-ladefehler-ohne-erneut): Ladefehler mit „Erneut versuchen“ (DESIGN 5.10) statt Leer-Karte -->
+      @if (loadError) {
+        <mat-card class="msg"><app-load-error messageKey="deviations.loadFailed" [error]="loadFailure" (retry)="load()" /></mat-card>
+      } @else {
+        <mat-card class="msg">
+          <mat-icon>check_circle</mat-icon>
+          <p>{{ 'deviations.none' | translate: { who: who } }}</p>
+          <button mat-stroked-button (click)="back()">{{ 'common.back' | translate }}</button>
+        </mat-card>
+      }
     }
     @case ('DONE') {
       <mat-card class="msg">
@@ -53,7 +63,7 @@
               <p class="hint">{{ 'deviations.playPath' | translate }}</p>
               @if (pathHintText) { <p class="warn" role="status">{{ pathHintText }}</p> }
             }
-            @case ('OPP') { <p class="hint">{{ 'deviations.opponentMoves' | translate: { who: who } }}</p> }
+            @case ('OPP') { <p class="hint">{{ 'deviations.opponentMoves' | translate: { who: whoStart } }}</p> }
             @case ('ASK') {
               <p class="ask" role="status"><mat-icon>help_outline</mat-icon>{{ askText }}</p>
             }
@@ -72,10 +82,10 @@
             }
             @case ('END') {
               <div class="end">
-                <p class="hint"><mat-icon>flag</mat-icon>{{ 'deviations.end' | translate: { who: who } }}</p>
+                <p class="hint"><mat-icon>flag</mat-icon>{{ 'deviations.end' | translate: { who: whoStart } }}</p>
                 <a mat-flat-button color="primary" class="maia" [href]="maiaLink" target="_blank" rel="noopener">
                   <mat-icon>smart_toy</mat-icon>{{ 'deviations.maia' | translate: { elo: maiaElo } }}</a>
-                <p class="small">{{ 'deviations.maiaHint' | translate: { elo: maiaElo, who: who } }}</p>
+                <p class="small">{{ 'deviations.maiaHint' | translate: { elo: maiaElo, who: whoNom } }}</p>
                 <div class="review-nav" role="group" [attr.aria-label]="'repertoireTrainer.reviewNav' | translate">
                   <button mat-icon-button (click)="reviewTo(0)" [disabled]="reviewPly === 0" [appIconLabel]="'repertoireTrainer.reviewStart' | translate"><mat-icon>first_page</mat-icon></button>
                   <button mat-icon-button (click)="reviewTo(reviewPly - 1)" [disabled]="reviewPly === 0" [appIconLabel]="'common.previous' | translate"><mat-icon>chevron_left</mat-icon></button>

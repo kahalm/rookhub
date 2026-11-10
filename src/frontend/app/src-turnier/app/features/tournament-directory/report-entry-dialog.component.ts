@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '@rh/core/snackbar.service';
+import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { DirectoryEntry } from './tournament-directory.model';
 
@@ -35,10 +36,14 @@ export interface ReportEntryDialogData {
   standalone: true,
   imports: [
     FormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatIconModule,
-    MatInputModule, TranslatePipe,
+    MatInputModule, TranslatePipe, HelpHintComponent,
   ],
   template: `
-    <h2 mat-dialog-title>{{ 'tournamentDirectory.report.title' | translate }}</h2>
+    <!-- UI-Sweep 2026-11-10 (d10-t-melden-dialog-einleitung-absatz): ein Satz Einleitung, der Rest hinter dem ?. -->
+    <h2 mat-dialog-title>
+      {{ 'tournamentDirectory.report.title' | translate }}
+      <app-help-hint [text]="'tournamentDirectory.report.leadMore' | translate" />
+    </h2>
 
     <!-- d8-t-dialog-scroll-hint-fehlt: scrollt am Laptop/Handy/Boox — Weiterscroll-Schatten (DESIGN 5.6) -->
     <mat-dialog-content class="rh-scroll-hint">
@@ -54,7 +59,11 @@ export interface ReportEntryDialogData {
         <textarea matInput rows="4" [(ngModel)]="message"></textarea>
       </mat-form-field>
 
-      <h3 class="learn">{{ 'tournamentDirectory.report.learnTitle' | translate }}</h3>
+      <!-- UI-Sweep 2026-11-10 (d10-t-melden-dialog-einleitung-absatz): Erklaerabsatz gekuerzt, das Tirol-Beispiel hinter dem ?. -->
+      <h3 class="learn">
+        {{ 'tournamentDirectory.report.learnTitle' | translate }}
+        <app-help-hint [text]="'tournamentDirectory.report.namePatternMore' | translate" />
+      </h3>
 
       <p class="learn-hint">{{ 'tournamentDirectory.report.namePatternHint' | translate }}</p>
 

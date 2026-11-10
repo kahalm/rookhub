@@ -50,10 +50,17 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
         } @else if (!s.markdown || allowAgain()) {
           <!-- 0.916.0 (Wunsch 2026-11-09): „Neu schreiben" nicht prominent in der Partie-Kopfzeile, nur auf der
                Zusammenfassungsseite selbst; die Kopfzeile bietet nur das erste Anfordern an. -->
-          <button mat-button class="summary-request" [disabled]="busy()" (click)="request()">
-            <mat-icon>auto_awesome</mat-icon>
-            {{ (s.markdown ? 'games.summary.requestAgain' : 'games.summary.request') | translate }}
-          </button>
+          @if (prominent() && !s.markdown) {
+            <!-- UI-Sweep 2026-11-10 (d10-rk-zusammenfassung-anfordern-textknopf): im Leerzustand der Zusammenfassungsseite die Hauptaktion. -->
+            <button mat-flat-button color="primary" class="summary-request" [disabled]="busy()" (click)="request()">
+              <mat-icon>auto_awesome</mat-icon> {{ 'games.summary.request' | translate }}
+            </button>
+          } @else {
+            <button mat-button class="summary-request" [disabled]="busy()" (click)="request()">
+              <mat-icon>auto_awesome</mat-icon>
+              {{ (s.markdown ? 'games.summary.requestAgain' : 'games.summary.request') | translate }}
+            </button>
+          }
         }
       }
     }
@@ -76,6 +83,8 @@ export class ClubSummaryLinkComponent implements OnInit {
   readonly allowAgain = input(false);
   /** `own` (0.923.0): eigene Partie — der Besitzer fordert an (Kontingent); `club`: Vereinspartie, nur Admins. */
   readonly kind = input<'club' | 'own'>('club');
+  /** Anfordern als Hauptknopf (UI-Sweep 2026-11-10 d10-rk-zusammenfassung-anfordern-textknopf): nur im Leerzustand der Zusammenfassungsseite. */
+  readonly prominent = input(false);
   /** LeagueHub-Teilen-Link (Wunsch 2026-11-09): nur der Link zur fertigen Zusammenfassung, nichts anfordern. */
   readonly shareToken = input<string | null>(null);
   /** Teilen-Link einer eigenen Partie `/g/:token` (Wunsch 2026-11-09): ebenso nur der Link zum fertigen Text. */

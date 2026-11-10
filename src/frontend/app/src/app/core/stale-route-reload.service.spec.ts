@@ -9,6 +9,7 @@ describe('StaleRouteReloadService', () => {
   let check: jasmine.Spy;
   let activate: jasmine.Spy;
   let reload: jasmine.Spy;
+  let controls: jasmine.Spy;
 
   function setup(sw: 'on' | 'off' | 'missing' = 'on'): StaleRouteReloadService {
     check = jasmine.createSpy('checkForUpdate').and.resolveTo(true);
@@ -21,6 +22,8 @@ describe('StaleRouteReloadService', () => {
     });
     const service = TestBed.inject(StaleRouteReloadService);
     reload = spyOn(service as unknown as { reloadApp(): void }, 'reloadApp');
+    // Im Testbrowser steuert kein Service Worker den Tab; hier so tun, als ob (Ausnahme: der Test unten).
+    controls = spyOn(service as unknown as { swControlsTab(): boolean }, 'swControlsTab').and.returnValue(true);
     return service;
   }
 
@@ -83,6 +86,19 @@ describe('StaleRouteReloadService', () => {
     expect(check).not.toHaveBeenCalled();
     expect(reload).not.toHaveBeenCalled();
   }));
+
+  // UI-Sweep 2026-11-10 (d10-rk-404-ladekreis-haengt-ohne-sw-steuerung)
+  it('Service Worker steuert den Tab nicht (Erstbesuch, Strg+Umschalt+R): keine Suche, kein Warten', fakeAsync(() => {
+    const service = setup();
+    controls.and.returnValue(false);
+    expect(service.canTry()).toBeFalse();
+    expect(run(service)).toBeFalse();
+    expect(check).not.toHaveBeenCalled();
+  }));
+
+  it('Zeitgrenze höchstens 4 s', () => {
+    expect(STALE_ROUTE_CHECK_TIMEOUT_MS).toBeLessThanOrEqual(4000);
+  });
 
   it('ohne SwUpdate-Anbieter (LeagueHub): nichts passiert', fakeAsync(() => {
     const service = setup('missing');

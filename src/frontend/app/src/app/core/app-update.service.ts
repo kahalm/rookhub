@@ -36,6 +36,9 @@ export interface AppUpdateCheck {
   version: string | null;
 }
 
+/** Höchstens so lange wartet {@link AppUpdateService.checkNow} auf den Service Worker. */
+export const SW_CHECK_TIMEOUT_MS = 3000;
+
 @Injectable({ providedIn: 'root' })
 export class AppUpdateService {
   // Optional: LeagueHub (und ClubHub) registrieren keinen Service Worker, nutzen aber die geteilte Nicht-gefunden-Seite,
@@ -147,8 +150,14 @@ export class AppUpdateService {
    */
   async checkNow(): Promise<AppUpdateCheck> {
     let swFound = false;
-    if (this.swUpdate?.isEnabled) {
-      try { swFound = await this.swUpdate.checkForUpdate(); } catch { /* offline / SW nicht bereit */ }
+    // UI-Sweep 2026-11-10 (d10-rk-404-ladekreis-haengt-ohne-sw-steuerung): ohne steuernden Service Worker (Erstbesuch,
+    // Strg+Umschalt+R, SW blockiert) löst checkForUpdate nie auf — dann gar nicht fragen, sonst höchstens 3 s warten.
+    if (this.swUpdate?.isEnabled && this.swControlsTab()) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<boolean>(resolve => { timer = setTimeout(() => resolve(false), SW_CHECK_TIMEOUT_MS); });
+      try { swFound = await Promise.race([this.swUpdate.checkForUpdate(), timeout]); }
+      catch { /* offline / SW nicht bereit */ }
+      finally { clearTimeout(timer); }
     }
     const server = await this.serverVersion();
     if (server && isNewerVersion(server, this.currentVersion)) return { available: true, version: server };
@@ -171,5 +180,7 @@ export class AppUpdateService {
 
   /** In Methoden gekapselt, damit Tests Netz und Navigation abfangen können. */
   protected serverVersion(): Promise<string | null> { return fetchServerVersion(); }
+  /** Steuert ein Service Worker diesen Tab? Nur dann antwortet `checkForUpdate` überhaupt (Methode für Tests). */
+  protected swControlsTab(): boolean { return !!navigator.serviceWorker?.controller; }
   protected replaceLocation(url: string): void { document.location.replace(url); }
 }

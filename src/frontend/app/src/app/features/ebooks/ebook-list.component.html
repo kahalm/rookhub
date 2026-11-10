@@ -28,10 +28,13 @@
         </mat-menu>
       }
       <!-- d4-rk-ebooks-upload-knopf-aussermittig: unter 600 px nur Symbol → Name im aria-label + title (DESIGN 5.4). -->
-      <button mat-flat-button color="primary" type="button" class="eb-upload" (click)="openUpload()"
-              [attr.aria-label]="'ebooks.upload' | translate" [title]="'ebooks.upload' | translate">
-        <mat-icon>upload</mat-icon><span class="eb-upload-text">{{ 'ebooks.upload' | translate }}</span>
-      </button>
+      <!-- UI-Sweep 2026-11-10 (d10-rk-ebook-auswahlmodus-zwei-hauptknoepfe): im Auswahlmodus ist „Sichtbarkeit setzen“ der einzige Primärknopf. -->
+      @if (!selecting()) {
+        <button mat-flat-button color="primary" type="button" class="eb-upload" (click)="openUpload()"
+                [attr.aria-label]="'ebooks.upload' | translate" [title]="'ebooks.upload' | translate">
+          <mat-icon>upload</mat-icon><span class="eb-upload-text">{{ 'ebooks.upload' | translate }}</span>
+        </button>
+      }
     </div>
   </div>
   <!-- d3-rk-ebooks-anon-vorlauf-zu-lang: ohne Anmeldung erklärt das Banner, was man sieht — der Einleitungssatz steht

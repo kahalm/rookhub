@@ -557,7 +557,8 @@ describe('SharedGameComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     const board = el.querySelector('.board-wrap') as HTMLElement;
     const moves = el.querySelector('.moves-section') as HTMLElement;
-    expect(el.querySelector('.header .original')).not.toBeNull();
+    // UI-Sweep 2026-11-10 (d10-rk-partiekopf-fuenf-sekundaerknoepfe): „Originalpartie öffnen“ steht im ⋮, nicht im Kopf.
+    expect(el.querySelector('.header .original')).toBeNull();
 
     if (window.innerWidth > 768) {
       // Brett hängt am Fenster: schmal clamp(360, min(100vh − 260, 100vw − 440), 760); ab 1280 px ein festes Raster
@@ -803,13 +804,17 @@ describe('SharedGameComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(fixture.componentInstance.flipped).toBeTrue();
     expect(el.querySelector('a.back')?.getAttribute('href')).toBe('/games');
-    expect(el.querySelector('button.share')).not.toBeNull();
     expect(el.querySelector('.header .analyze')).not.toBeNull();
 
     (el.querySelector('button.analyze') as HTMLButtonElement).click();
     http.expectOne('/api/view-state/analyze.choice').flush({ mode: 'engine' });   // Vorgabe „mit Engine“ (0.855.0)
     http.expectOne({ method: 'POST', url: '/api/games/4/analyze' }).flush({ analysis: { id: 9 }, reused: false });
     flushEvals(http, '/api/games/4/evals', { status: 'pending', analyzed: 0, total: 2, targetDepth: 20, plies: [], final: null });
+    // „Teilen-Link kopieren“ steht seit UI-Sweep 2026-11-10 (d10-rk-partiekopf-fuenf-sekundaerknoepfe) im ⋮.
+    (el.querySelector('.game-menu') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    http.match('/api/engine/external').forEach(r => r.flush({ engines: [] }));
+    expect(TestBed.inject(OverlayContainer).getContainerElement().querySelector('button.share-item')).not.toBeNull();
   });
 
   // 0.855.2 (Wunsch 2026-10-27: „club-games/226 — keine Frage wegen Analysieren"): der „Analyse"-Sprung aus LeagueHub hängt
@@ -913,8 +918,8 @@ describe('SharedGameComponent', () => {
   // Auf-/Zuklappen samt sichtbarem „Mehr": game-recap.component.spec.ts.
 
   // UI-Sweep v1 (v1-rk-first-view-lead-long-mobile): „Originalpartie öffnen" und „Teilen-Link kopieren" stehen am Handy
-  // im ⋮ statt als eigene Knöpfe; am PC bleiben die Knöpfe (die Menüpunkte sind dort ausgeblendet).
-  it('also offers the original and the share link in the ⋮ menu (shown on phones only)', async () => {
+  // im ⋮ statt als eigene Knöpfe; seit UI-Sweep 2026-11-10 (d10-rk-partiekopf-fuenf-sekundaerknoepfe) auf allen Breiten.
+  it('offers the original and the share link only in the ⋮ menu, on every width', async () => {
     const { fixture, http } = await setup(true, true);
     fixture.detectChanges();
     http.expectOne('/api/games/4').flush({
@@ -927,17 +932,18 @@ describe('SharedGameComponent', () => {
     flushEvals(http, '/api/games/4/evals', { status: 'none', analyzed: 0, total: 0, targetDepth: 0, plies: [], final: null });
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelector('.header a.original.wide-only')).not.toBeNull();
-    expect(el.querySelector('.header button.share.wide-only')).not.toBeNull();
+    expect(el.querySelector('.header-actions > a.original')).toBeNull();
+    expect(el.querySelector('.header-actions > button.share')).toBeNull();
     (el.querySelector('.game-menu') as HTMLButtonElement).click();
     fixture.detectChanges();
     http.match('/api/engine/external').forEach(r => r.flush({ engines: [] }));
     // Eigener Container dieses Tests — ein liegengebliebener aus einem früheren Test ließ den Test kippen.
     const overlay = TestBed.inject(OverlayContainer).getContainerElement();
-    const original = overlay.querySelector('a.original-item.narrow-only') as HTMLAnchorElement;
+    const original = overlay.querySelector('a.original-item') as HTMLAnchorElement;
+    expect(original.classList).not.toContain('narrow-only');
     expect(original.getAttribute('href')).toBe('https://lichess.org/abc');
     const share = spyOn(fixture.componentInstance, 'share');
-    (overlay.querySelector('button.share-item.narrow-only') as HTMLButtonElement).click();
+    (overlay.querySelector('button.share-item') as HTMLButtonElement).click();
     expect(share).toHaveBeenCalled();
   });
 
@@ -1175,8 +1181,9 @@ describe('SharedGameComponent Layout', () => {
   it('puts the header actions in one row on phones and moves rare ones to the ⋮', () => {
     expect(mobile).toMatch(/\.header-actions \{ ?grid-column: 1 \/ -1; flex-direction: row;/);
     expect(mobile).toMatch(/\.wide-only \{ ?display: none/);
-    expect(mobile).toMatch(/\.narrow-only \{ ?display: flex/);
-    expect(desk).toMatch(/\.narrow-only \{ ?display: none/);
+    // UI-Sweep 2026-11-10 (d10-rk-partiekopf-fuenf-sekundaerknoepfe): Original/Teilen stehen überall im ⋮ — kein .narrow-only mehr.
+    expect(css).not.toContain('.narrow-only');
+    expect(desk).not.toMatch(/\.wide-only \{ ?display: none/);
     // „Kurz erzählt" kürzt seit der Nachrunde gemessen auf drei Zeilen (game-recap.component.spec.ts).
   });
 });
@@ -1204,7 +1211,11 @@ describe('SharedGameComponent — Teilen-Link der Vereinspartie (2026-11-09)', (
     http.expectOne('/api/league/club/games/241/share').flush({ token: null });
     http.expectOne('/api/league/club/games/241').flush({ ...dto, id: 241 });
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('button.club-share')).toBeTruthy();
+    // Seit UI-Sweep 2026-11-10 (d10-rk-partiekopf-fuenf-sekundaerknoepfe) im ⋮ statt als Kopfknopf.
+    (fixture.nativeElement.querySelector('.game-menu') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    http.match('/api/engine/external').forEach(r => r.flush({ engines: [] }));
+    expect(TestBed.inject(OverlayContainer).getContainerElement().querySelector('button.club-share-item')).toBeTruthy();
     fixture.destroy();
   });
 

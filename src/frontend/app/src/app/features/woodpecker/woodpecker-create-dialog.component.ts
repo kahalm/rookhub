@@ -84,6 +84,10 @@ export type WoodpeckerDialogData =
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
+      <!-- UI-Sweep 2026-11-10 (d10-rk-woodpecker-grund-unter-knopfleiste): Grund des gesperrten Knopfs links IN der Knopfleiste (DESIGN 5.6). -->
+      @if (data.mode === 'create' && showForm() && selected().length === 0) {
+        <span class="why" role="status">{{ 'woodpecker.create.chooseCourse' | translate }}</span>
+      }
       <!-- d3-rk-woodpecker-leerdialog-luecke-abbrechen: ohne Kurs läuft kein Vorgang → „Schließen“ statt „Abbrechen“. -->
       <button mat-button mat-dialog-close [disabled]="busy()">{{ (noCourses() ? 'common.close' : 'common.cancel') | translate }}</button>
       @if (showForm()) {
@@ -92,9 +96,6 @@ export type WoodpeckerDialogData =
         </button>
       }
     </mat-dialog-actions>
-    @if (data.mode === 'create' && showForm() && selected().length === 0) {
-      <p class="reason">{{ 'woodpecker.create.chooseCourse' | translate }}</p>
-    }
   `,
   styles: [`
     :host { display: block; }
@@ -121,7 +122,6 @@ export type WoodpeckerDialogData =
     /* d3-rk-woodpecker-leerdialog-luecke-abbrechen: mat-dialog-content polstert schon — die 2rem der globalen
        .empty-state rissen große Lücken über und unter dem Satz. */
     .wp-content .empty-state { padding: 8px 0 0; }
-    .reason { margin: 0 24px 12px; text-align: right; font-size: .8rem; color: var(--mat-sys-on-surface-variant); }
   `],
 })
 export class WoodpeckerCreateDialogComponent implements OnInit {

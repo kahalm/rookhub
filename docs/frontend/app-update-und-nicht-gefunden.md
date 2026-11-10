@@ -17,7 +17,10 @@ den Ladekreis (`mat-spinner`, `aria-label` = `common.loading`) und geht zwei Stu
    die Adresse in diesem Tab noch nicht gesperrt ist (`canTry()`, Sperrliste im `sessionStorage` unter
    `rookhub_stale_route_reload`): `checkForUpdate()`, Sperre setzen, `activateUpdate()`; liefert das `true`, wird
    dieselbe Adresse neu geladen und die Seite bleibt beim Ladekreis. Sonst wird die Sperre wieder gelöst. Zeitgrenze
-   10 s.
+   4 s (`STALE_ROUTE_CHECK_TIMEOUT_MS`; bis 0.947 10 s). Ohne steuernden Service Worker (`navigator.serviceWorker.controller`)
+   wird gar nicht erst geprüft — `checkForUpdate()` löst sich dann nie auf (UI-Sweep 2026-11-10, d10-rk-404-ladekreis-haengt-ohne-sw-steuerung).
+   `AppUpdateService.checkNow()` deckelt den Aufruf zusätzlich mit `SW_CHECK_TIMEOUT_MS` = 3 s, die Nicht-gefunden-Seite
+   insgesamt mit `NOT_FOUND_CHECK_CAP_MS` = 6 s; danach zeigt sie die Meldung ohne Versionshinweis.
 2. **Fallback-Hinweis** (U1) — nur wenn Stufe 1 NICHT neu lädt (kein Service Worker, Adresse schon einmal neu geladen,
    nichts zu aktivieren, Zeitgrenze, Fehler): `AppUpdateService.checkNow()`:
    - `SwUpdate.checkForUpdate()`, wenn ein Service Worker läuft;

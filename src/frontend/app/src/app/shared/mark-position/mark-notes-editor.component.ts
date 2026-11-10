@@ -117,6 +117,13 @@ import { KNOWN_MARK_TAGS, MAX_MARK_COMMENT_LENGTH, MAX_MARK_TAG_LENGTH, addMarkT
       border: 1px solid color-mix(in srgb, currentColor 35%, transparent); background: transparent; color: inherit; }
     .mn-chip.on { background: var(--rh-success); border-color: var(--rh-success); color: var(--mat-sys-surface); }
     .mn-chip.other { border-style: dashed; }
+    /* UI-Sweep 2026-11-10 (d10-rk-markieren-chips-tippziel-klein): Umschalt-Chips am Touch-Gerät sichtbar 36 px, Trefferfläche
+       44 px (DESIGN 7); nur die Bearbeiten-Knöpfe (button), nicht die Lese-Ansicht (span). */
+    @media (pointer: coarse) {
+      .mn-chips[role="group"] { gap: 8px; }
+      button.mn-chip { min-height: 36px; padding: 6px 12px; position: relative; }
+      button.mn-chip::after { content: ''; position: absolute; inset: -4px 0; }
+    }
     .mn-chip:focus-visible, .mn-add:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
     .mn-own { display: flex; gap: 6px; margin-top: 8px; }
     .mn-input, .mn-text { font: inherit; color: inherit; background: transparent; box-sizing: border-box; width: 100%;

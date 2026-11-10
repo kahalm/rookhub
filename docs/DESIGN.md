@@ -1,6 +1,6 @@
 # RookHub-Frontends — Gestaltungsregeln
 
-Stand: 2026-10-11 (v0.751.2). Gilt für alle fünf Oberflächen im Angular-Workspace `src/frontend/app`.
+Stand: 2026-11-10 (v0.950.0). Gilt für alle fünf Oberflächen im Angular-Workspace `src/frontend/app`.
 Pfade unten sind relativ zu `src/frontend/app/`, sofern nicht anders angegeben.
 
 ---
@@ -475,6 +475,10 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 - Ins ⋮ wandert, was in der Kopfzeile nicht mehr passt (Rekonstruktion: in der Kopfzeile nur ✓ und ⋮,
   r2-rg-recon-actions; Turnierseite am Handy, 0.746.0).
 - Am Handy bleibt das ⋮ **in derselben Zeile** wie die Knöpfe (0.751.2, Kursseite).
+- **Partiekopf (0.948.0, d10):** „Originalpartie öffnen“ und die Teilen-Einträge stehen auf ALLEN Breiten nur im ⋮; im Kopf
+  bleiben „Ohne Engine“ (ab 600 px), „Zusammenfassung“ und „Fehler nachspielen“ — das wird der Hauptknopf (`mat-flat-button`),
+  sobald es „Partie analysieren“ nicht mehr gibt (analysierte oder Vereinspartie); nie fünf gleichrangige Knöpfe
+  (d10-rk-partiekopf-fuenf-sekundaerknoepfe). Am Handy steht „Ohne Engine“ nur im ⋮ (d10-rk-partie-handy-ohne-engine-eigene-zeile).
 - Brett-Stellungen haben ein eigenes ⋮ (`features/analysis/position-menu.component.ts`).
 - **Untermenüs am Handy** (☰ → Konto usw., `class="nav-submenu"`): unter 600 px liegen sie deckungsgleich über dem
   Hauptmenü (8 px vom rechten Rand, mindestens 232 px breit), statt an den linken Rand geschoben das Hauptmenü
@@ -978,6 +982,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Gleichnamiges Turnier am selben Tag: eigene Karte mit Hinweis (r2-t-dup-cards). Titel nur echte (GM, IM …).
 - Geteilter Turnier-Link: dieselbe Knopfreihe wie die Detailseite — Merken (primär), Beobachten, Volle Ansicht,
   Teilen (r2-t-public-actions).
+- **Merken ist auf allen Breiten der gefüllte Hauptknopf** (`mat-flat-button color="primary"`, Klasse `bookmark-primary`) —
+  die Entscheidung vom 27.09. (Rahmenknopf am Laptop) ist mit d10 aufgehoben; „Merken aufheben“ bleibt ein Rahmenknopf
+  (d10-t-merken-kein-hauptknopf-ab-tablet). Mannschaftsergebnisse über `LocalScorePipe` (de „1,5 : 6,5“, d10-t-ergebnis-dezimalpunkt).
 - Datenschutz mit eigener Einleitung (`LegalSiteKind 'turnier'`).
 - **Kalender am Handy** (Agenda, d7): 3 Turniere je Tag („+n weitere“ klappt auf), nach Kalenderwochen gegliedert
   (Kopf „KW 41 · 5.–11. Okt.“) mit Wochen-Sprungleiste darüber (nicht klebend — die Reiter-Hülle ist ein
@@ -1242,6 +1249,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-10 | 0.950.0 · Runde d10 | 41 Funde des Volllaufs 09.11. (5 Rollen × 4 Breiten × hell/dunkel): „Seite nicht gefunden“ wartet höchstens 6 s auf die Versionsprüfung und prüft den Service Worker nur, wenn einer die Seite steuert (5.10); Merksätze mit automatischer Zeilenhöhe; Partiekopf: Original/Teilen nur im ⋮, „Fehler nachspielen“ als Hauptknopf nach der Analyse, Titelspalte ≥ 280 px, „Ohne Engine“ am Handy nur im ⋮ (5.5, 8.1); Zusammenfassungs-Karte mit 16-px-Polster, `.empty-state`, Sperrkarte bei 403, „Zusammenfassung anfordern“ als Hauptknopf im Leerzustand; SanPipe in Tiefe-Analyse-, Verlauf- und Vergleichs-Dialog sowie E-Book-Zugliste (5.14); E-Book-Partiekopf mit Locale-Datum und „½–½“ statt roher PGN-Werte (5.13); Zugbaum-Hinweis als ? statt Dauertext, Engine-Hilfe als ? statt ⓘ (5.11); Grund für gesperrtes „Vergleichen“ einmal in der Knopfleiste (5.6); Schlagwort-Chips ≥ 44 px Trefferfläche (7); E-Books: Sprach-Chips nur einer gewählt, Karten zählen nur Originaldateien, im Auswahlmodus ein gefüllter Knopf; Abweichungs-Trainer: „deines Gegners“ (Genitiv-Schlüssel), `app-load-error` mit „Erneut versuchen“, Schwelle als `mat-select`; Datum/Uhrzeit-Felder gleich hoch; „(optional)“/„(freiwillig)“ als Hinweis statt im Label (5.6); Favoriten „Merken/Gemerkt“ statt „Lieben“; Woodpecker-Grund in der Knopfleiste, „nicht gefunden“ ohne Brett; LeagueHub: „Link ungültig“ mit Weg zurück, Kandidaten-Raster `align-content: start`, Wartezeile ohne doppelte Abblassung; Turnier: Merken überall gefüllt (8.2), Ergebnisse mit Dezimalkomma, Paarungskarten-Nummer in on-surface-variant, Melden-Dialoge mit einem Satz + ?, typografische Anführungszeichen; KidHub Figurenwahl ≥ 44 px; ClubHub Datum einmal als TT.MM.JJJJ | Design-Durchsicht d10 (Prüfseite, vom User bestätigt; 3 Funde „Nicht beheben“: Zielpunkte dunkle Felder, „+“-Fenster-Grund, Sperrgrund Tablet) | d10-* |
 | 2026-11-10 | 0.949.0 · RookHub `/games` | Laschen „Alle / Online / Am Brett“ (`mat-tab-nav-bar`, Wahl in `?kind=`, Zahl je Lasche), leere Lasche als ein Satz statt Leerkarte | Wunsch 10.11.: „unterscheidung … allgemeine saved games, online games, otb games“ | User über die betreuende Sitzung |
 | 2026-11-10 | 0.946.0 · Admin „Engines“ | Admin-Reiter mit Zustands-Pillen (Symbol + Text), Karten „Warteschlange“/„Durchsatz“ mit Tabellen, die auch am Handy Tabellen bleiben (`min-width` + `.table-scroll`), darunter eine Karte je Engine im Raster (≥ 420 px Spalte); Offline-Engines eingeklappt; Auffrischen 15 s nur bei sichtbarem Tab | Wunsch 10.11.: Übersicht der registrierten Engines, Hintergrund, Warteschlange, wer rechnet was, Durchsatz | User über die betreuende Sitzung |
 | 2026-11-10 | 0.943.0 · LeagueHub | Partieformular hochladen: je weiterem Foto Beschriftung „Seite N“ / „weiteres Foto von Seite N“, Umschalter „Neue Seite \| Dieselbe Seite“ (`.seg`) und „↑“; Galerie-Mehrfachauswahl zuerst „nächste Seite“ | Formular 113: zwei Blätter landeten als eine Seite (verkehrt herum), die Wahl war nach dem Hinzufügen nicht mehr sichtbar | Vorfall 10.11., Auftrag des Users über die betreuende Sitzung |

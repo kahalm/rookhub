@@ -135,4 +135,20 @@ describe('CalcEditionDialogComponent', () => {
 
     expect(closed).toEqual([]);
   });
+
+  it('UI-Sweep 2026-11-10 (d10-rk-ausgabe-tester-begriff-uneinheitlich): ein Begriff „Tester-Vorschau“ in Feld, Hinweis und Verteiler', async () => {
+    // Wortstamm des Feldnamens je Sprache (Beugung zugelassen: hr „pregleda“, hu „előnézettől“)
+    const stems: Record<string, string> = { de: 'tester-vorschau', en: 'tester preview', hr: 'pregled', hu: 'tesztelői előnézet' };
+    for (const [lang, stem] of Object.entries(stems)) {
+      const res = await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`));
+      const series = (await res.json()).calc.series as Record<string, string>;
+      for (const k of ['testerPreviewAt', 'hint', 'membersHelp', 'testerHint']) {
+        expect(series[k].toLocaleLowerCase()).withContext(`${lang}.${k}`).toContain(stem);
+      }
+    }
+    const res = await fetch('/i18n/de.json').then(r => r.ok ? r : fetch('/base/i18n/de.json'));
+    const text = await res.text();
+    expect(text).not.toContain('Tester-Zeitpunkt');
+    expect(text).not.toContain('Tester-Vorschau-Zeitpunkt');
+  });
 });

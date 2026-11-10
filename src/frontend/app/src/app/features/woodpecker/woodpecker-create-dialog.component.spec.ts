@@ -55,7 +55,7 @@ describe('WoodpeckerCreateDialogComponent (UI-Sweep c1)', () => {
     expect(link?.hasAttribute('mat-dialog-close')).toBeTrue();
     expect(el.querySelector('app-iso-date-field')).toBeNull();
     expect(el.querySelectorAll('mat-dialog-actions button').length).toBe(1); // nur „Abbrechen“
-    expect(el.querySelector('.reason')).toBeNull();
+    expect(el.querySelector('.why')).toBeNull();
   });
 
   it('c1-wp-dialog-kasten-im-kasten: Beginn steht vor der Kursliste, die Liste hat keinen eigenen Scrollkasten', () => {
@@ -130,6 +130,15 @@ describe('WoodpeckerCreateDialogComponent (Design-Runde d3)', () => {
   it('mit Kursen bleibt es „Cancel“', () => {
     const { el } = render([course(1, 'A', 10)]);
     expect(el.querySelector('mat-dialog-actions button')!.textContent!.trim()).toBe('Cancel');
+  });
+
+  it('d10-rk-woodpecker-grund-unter-knopfleiste: Grund steht als .why direkt in der Knopfleiste, vor den Knöpfen', () => {
+    const { el } = render([course(1, 'A', 10)]);
+    const why = el.querySelector('mat-dialog-actions > .why');
+    expect(why?.getAttribute('role')).toBe('status');
+    expect(why?.textContent?.trim()).toBe(en.woodpecker['create'] ? (en.woodpecker['create'] as unknown as Record<string, string>)['chooseCourse'] : '');
+    expect(el.querySelector('mat-dialog-actions')!.firstElementChild).toBe(why);
+    expect(el.querySelector('.reason')).toBeNull();
   });
 
   it('d3-rk-woodpecker-dialog-kurswahl-tippziel: jede Kurszeile ist ganzzeilig ≥ 44 px hoch', () => {

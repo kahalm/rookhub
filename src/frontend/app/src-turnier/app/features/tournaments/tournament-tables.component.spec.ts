@@ -682,4 +682,61 @@ describe('TournamentTablesComponent', () => {
     expect(cell.getAttribute('title')).toBe('ŠK Prakovce - www.sachovetreningy.sk');
     expect(cell.querySelector('.cell-clip')!.textContent).toContain('ŠK Prakovce');
   });
+
+  // ----- UI-Sweep 2026-11-10 (d10) -----
+
+  const teamPairings = () => {
+    component.pairingColumns = ['board', 'white', 'result', 'black'];
+    component.hasTeamPairings = true;
+    component.rounds = [1];
+    component.selectedRound = 1;
+    component.selectedTabIndex = 2;
+    component.displayedPairings = [
+      { board: 1, white: 'Musterverein Nord', black: 'Beispielklub Süd', result: '1.5 : 6.5' },
+      { board: 2, white: 'Testklub West', black: 'Probeverein Ost', result: '4 : 4' },
+    ];
+  };
+
+  // d10-t-ergebnis-dezimalpunkt: der Crawler liefert „1.5 : 6.5", angezeigt im Format der App-Sprache.
+  it('zeigt Mannschaftsergebnisse in de mit Dezimalkomma, in Tabelle und Karte (d10-t-ergebnis-dezimalpunkt)', async () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.use('de');
+    teamPairings();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const cards = [...el.querySelectorAll('.pairing-result')].map(r => r.textContent!.trim());
+    expect(cards).toEqual(['1,5 : 6,5', '4 : 4']);
+    expect(el.querySelector('td.result-cell')!.textContent!.trim()).toBe('1,5 : 6,5');
+    translate.use('en');
+    fixture.detectChanges();
+    expect(el.querySelector('.pairing-result')!.textContent!.trim()).toBe('1.5 : 6.5');
+  });
+
+  // d10-t-paarungskarte-handy-nummer-blass: Nummer >= 4,5:1, Ergebnis fett in Textfarbe, keine Hinweiszeile unterm Rundenfeld.
+  for (const dark of [false, true]) {
+    it(`Paarungskarte: Nummer >= 4,5:1, Ergebnis fett und gleich gross wie die Teams (${dark ? 'dunkel' : 'hell'}) (d10-t-paarungskarte-handy-nummer-blass)`, async () => {
+      const was = setDarkTheme(dark);
+      try {
+        teamPairings();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+        const el = fixture.nativeElement as HTMLElement;
+        const board = el.querySelector('.pairing-board') as HTMLElement;
+        const ratio = textContrast(board);
+        expect(ratio).withContext(`Nummer ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+        const result = getComputedStyle(el.querySelector('.pairing-result')!);
+        const team = getComputedStyle(el.querySelector('.pairing-team')!);
+        expect(result.fontWeight).toBe('600');
+        expect(result.fontSize).toBe(team.fontSize);
+        expect(result.color).toBe(getComputedStyle(el.querySelector('.pairing-teams')!).color);
+        expect(el.querySelector('.round-selector .mat-mdc-form-field-subscript-dynamic-size')).not.toBeNull();
+        expect(getComputedStyle(el.querySelector('.pairing-cards')!).paddingTop).toBe('0px');
+      } finally {
+        setDarkTheme(was);
+      }
+    });
+  }
 });

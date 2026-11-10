@@ -2183,7 +2183,7 @@
       "publishAt": "Freigabe-Zeitpunkt",
       "publishRequired": "Erst den Freigabe-Zeitpunkt wählen.",
       "testerPreviewAt": "Tester-Vorschau",
-      "hint": "Tester sehen dieses Kapitel ab dem Tester-Zeitpunkt, alle anderen ab der Freigabe. Ohne Tester-Zeitpunkt gibt es keinen Frühzugang.",
+      "hint": "Tester sehen dieses Kapitel ab der Tester-Vorschau, alle anderen ab der Freigabe. Ohne Tester-Vorschau gibt es keinen Frühzugang.",
       "watchVideo": "Video ansehen",
       "releasesOn": "kommt am {{date}}",
       "saved": "Ausgabe gespeichert",
@@ -2191,11 +2191,11 @@
       "saveFailed": "Ausgabe konnte nicht gespeichert werden.",
       "members": "Serien-Verteiler",
       "membersHint": "Mitglieder per Benutzername hinzufügen.",
-      "membersHelp": "Sobald du das Buch von öffentlich auf privat stellst, können nur noch gelistete Mitglieder es öffnen. Außerdem sehen Tester eine Woche schon ab deren Tester-Vorschau-Zeitpunkt.",
+      "membersHelp": "Sobald du das Buch von öffentlich auf privat stellst, können nur noch gelistete Mitglieder es öffnen. Außerdem sehen Tester eine Woche schon ab deren Tester-Vorschau.",
       "membersLoadFailed": "Mitglieder konnten nicht geladen werden.",
       "username": "Benutzername",
       "tester": "Tester",
-      "testerHint": "Sieht eine Woche schon ab deren Tester-Vorschau-Zeitpunkt.",
+      "testerHint": "Sieht eine Woche schon ab deren Tester-Vorschau.",
       "noMembers": "Noch keine Mitglieder.",
       "userNotFound": "Kein Nutzer mit diesem Namen.",
       "memberAdded": "Mitglied hinzugefügt",
@@ -2220,8 +2220,8 @@
     "fields": {
       "date": "Datum",
       "time": "Uhrzeit",
-      "titleOptional": "Titel (optional)",
-      "descriptionOptional": "Beschreibung (optional)"
+      "title": "Titel",
+      "description": "Beschreibung"
     },
     "columns": {
       "title": "Titel"
@@ -3052,7 +3052,7 @@
   "favorites": {
     "title": "Geliebte Puzzles",
     "hint": "Puzzles, die du nach dem Lösen oder Aufgeben mit dem Herz markiert hast, landen hier — jederzeit nachspielen oder analysieren.",
-    "empty": "Noch keine geliebten Puzzles.",
+    "empty": "Noch keine Favoriten.",
     "rating": "Wertung",
     "replay": "Nochmal lösen",
     "analyze": "Analysieren",
@@ -3061,8 +3061,8 @@
     "removeError": "Favorit konnte nicht entfernt werden.",
     "sourceStandard": "Standard-Puzzle",
     "sourceBook": "Kurs-⁠/Buch-Puzzle",
-    "love": "Lieben",
-    "loved": "Geliebt",
+    "love": "Merken",
+    "loved": "Gemerkt",
     "loveLast": "Letztes Puzzle",
     "emptyHint": "Tippe nach einem Puzzle aufs Herz, um es hier zu sammeln.",
     "solvePuzzles": "Puzzles lösen"
@@ -3462,7 +3462,7 @@
       "notFound": "Partie nicht gefunden.",
       "title": "Partie korrigieren",
       "headersSummary": "Angaben: {{white}} – {{black}} · {{result}}",
-      "help": "Ein Klick auf einen Zug stellt das Brett auf die Stellung DAVOR. Ein Zug am Brett ersetzt ihn (oder kommt im Einfügen-Modus davor); die Züge danach bleiben, solange sie legal sind. „Zug löschen\" nimmt einen Zug heraus. Gespeichert werden nur legale Züge.",
+      "help": "Ein Klick auf einen Zug stellt das Brett auf die Stellung DAVOR. Ein Zug am Brett ersetzt ihn (oder kommt im Einfügen-Modus davor); die Züge danach bleiben, solange sie legal sind. „Zug löschen“ nimmt einen Zug heraus. Gespeichert werden nur legale Züge.",
       "helpScoresheet": "Ein Klick auf einen Zug stellt das Brett auf die Stellung DAVOR — der bisherige Zug ist der gelbe Pfeil. Orange Züge sind unsicher: eine der angebotenen Lesarten wählen oder am Brett einen anderen Zug spielen. Nach jeder Änderung wird der Rest der Partie aus den Formular-Einträgen neu aufbereitet.\n\nEinfügen: für einen Zug, der auf dem Formular fehlt. Löschen: für einen doppelt oder falsch notierten Eintrag.",
       "white": "Weiß",
       "black": "Schwarz",
@@ -3679,7 +3679,7 @@
       "promote": "Variante hochstufen",
       "makeMainline": "Zur Hauptvariante machen",
       "deleteFrom": "Ab hier löschen",
-      "hint": "Rechtsklick auf einen Zug (am Handy lange drücken, mit der Tastatur Kontextmenü-Taste bzw. Umschalt+F10): Stern, Variante hochstufen, zur Hauptvariante machen oder ab dort löschen.",
+      "hint": "Rechtsklick auf einen Zug (am Handy lange drücken): Stern, Variante hochstufen, zur Hauptvariante machen oder ab dort löschen.\n\nMit der Tastatur: Kontextmenü-Taste oder Umschalt+F10.",
       "label": "Zugbaum"
     },
     "tablebase": {
@@ -4869,11 +4869,12 @@
       "cta": "Dein Turnier fehlt? Quelle vorschlagen",
       "blurb": "Nicht jeder Veranstalter schreibt dort aus, wo dieses Verzeichnis liest. Ein Link auf eine offizielle Seite lässt sich ergänzen.",
       "title": "Fehlende Turnierquelle melden",
-      "lead": "Dieses Verzeichnis füllt sich aus Turnierseiten, die ihre Kalender veröffentlichen — wer woanders ausschreibt, kommt hier nicht vor. Am meisten hilft dabei nicht ein einzelner Termin, sondern ein LINK: eine offizielle Seite, auf der deine Turniere stehen, lässt sich regelmäßig auslesen, und dann erscheinen von da an alle.",
+      "lead": "Am meisten hilft ein Link auf eine offizielle Seite, auf der deine Turniere stehen.",
+      "leadMore": "Dieses Verzeichnis füllt sich aus Turnierseiten, die ihre Kalender veröffentlichen — wer woanders ausschreibt, kommt hier nicht vor. Eine offizielle Seite lässt sich regelmäßig auslesen, dann erscheinen von da an alle deine Turniere.",
       "link": "Link auf die offizielle Seite",
       "linkHint": "Verbandskalender, Vereinsseite, Seite der Turnierreihe — je offizieller, desto besser",
       "linkRequired": "Bitte einen vollständigen Link angeben, der mit http:// oder https:// beginnt.",
-      "message": "Anmerkung (freiwillig)",
+      "message": "Anmerkung",
       "messagePlaceholder": "Sonst noch etwas, das wir wissen sollten?",
       "thanks": "Danke — wir sehen uns die Seite an.",
       "sendError": "Die Nachricht konnte nicht gesendet werden. Bitte noch einmal versuchen."
@@ -4881,13 +4882,15 @@
     "report": {
       "cta": "Falschen Eintrag melden",
       "title": "Falschen Eintrag melden",
-      "lead": "Sag uns, was hier falsch steht. Alles ist freiwillig — auch der Text: Absenden ohne ein Wort sagt immerhin „mit dem hier stimmt etwas nicht\".",
+      "lead": "Sag uns, was hier falsch steht – alle Felder sind freiwillig.",
+      "leadMore": "Auch der Text ist freiwillig: Absenden ohne ein Wort sagt immerhin „mit dem hier stimmt etwas nicht“.",
       "current": "Aktuell gespeichert",
       "league": "Liga",
       "message": "Was ist falsch?",
       "learnTitle": "Zwei Fragen, die über dieses eine Turnier hinaus helfen",
       "namePattern": "Wie heißen solche Turniere in deiner Region?",
-      "namePatternHint": "Alter und Publikum werden aus dem Turniernamen gelesen, und diese Namen sind regional — in Tirol heißt das Nachwuchsturnier „Schachrallye\". Wer so eine Kennung einmal nennt, sorgt dafür, dass jede künftige Ausgabe dieser Reihe richtig eingeordnet wird.",
+      "namePatternHint": "Ein regionaler Name hilft, jede künftige Ausgabe richtig einzuordnen.",
+      "namePatternMore": "Alter und Publikum werden aus dem Turniernamen gelesen, und diese Namen sind regional — in Tirol heißt das Nachwuchsturnier „Schachrallye“. Wer so eine Kennung einmal nennt, sorgt dafür, dass jede künftige Ausgabe dieser Reihe richtig eingeordnet wird.",
       "sourceLink": "Eine Seite, auf der man das besser sieht",
       "thanks": "Danke — die Meldung ist angekommen, und wir können darauf antworten.",
       "sendError": "Die Meldung konnte nicht gesendet werden. Bitte noch einmal versuchen."
@@ -6520,7 +6523,8 @@
     }
   },
   "opponentNote": {
-    "thisOpponent": "des Gegners",
+    "thisOpponent": "deinem Gegner",
+    "thisOpponentNom": "dein Gegner",
     "reached": "In den Partien von {{who}}: {{n}}× erreicht (zuletzt {{year}})",
     "reachedNoYear": "In den Partien von {{who}}: {{n}}× erreicht",
     "played": "er spielte hier {{moves}}",
@@ -6531,6 +6535,7 @@
   },
   "deviations": {
     "title": "Abweichungen von {{who}}",
+    "titleNoName": "Abweichungen deines Gegners",
     "threshold": "Gut bis",
     "thresholdTip": "Eine Antwort gilt als gut, wenn sie höchstens so viele Hundertstel Bauern schlechter ist als der beste Zug (Engine).",
     "loadFailed": "Die Abweichungen konnten nicht geladen werden.",

@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { MatDialogRef } from '@angular/material/dialog';
 import { AnalysisHistoryDialogComponent } from './analysis-history-dialog.component';
 
@@ -41,6 +41,17 @@ describe('AnalysisHistoryDialogComponent', () => {
     (fixture.nativeElement.querySelector('.pick') as HTMLButtonElement).click();
     expect(ref.close).toHaveBeenCalledWith(jasmine.objectContaining({ id: 1 }));
     expect(c.fromStart(entry(1) as any)).toBeTrue();
+  });
+
+  // UI-Sweep 2026-11-10 (d10-rk-sanpipe-dialoge-ebook-zugliste): die Vorschau-Zugfolge läuft durch die SanPipe.
+  it('shows the preview in the piece letters of the UI language (de: Sf3, Lb5)', () => {
+    const { fixture, http } = make();
+    TestBed.inject(TranslateService).use('de');
+    http.expectOne('/api/analysis-history').flush([entry(1, { preview: '1.e4 e5 2.Nf3 Nc6 3.Bb5' })]);
+    fixture.detectChanges();
+    const preview = (fixture.nativeElement.querySelector('.preview') as HTMLElement).textContent!;
+    expect(preview).toContain('2.Sf3 Sc6 3.Lb5');
+    expect(preview).not.toContain('Nf3');
   });
 
   it('deletes an entry', () => {

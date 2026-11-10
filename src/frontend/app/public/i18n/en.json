@@ -2183,7 +2183,7 @@
       "publishAt": "Release date/time",
       "publishRequired": "Choose the release date and time first.",
       "testerPreviewAt": "Tester preview",
-      "hint": "Testers see this chapter from the tester date, everyone else from the release date. Leave the tester field empty for no early access.",
+      "hint": "Testers see this chapter from the tester preview, everyone else from the release date. Without a tester preview there is no early access.",
       "watchVideo": "Watch video",
       "releasesOn": "releases {{date}}",
       "saved": "Edition saved",
@@ -2191,11 +2191,11 @@
       "saveFailed": "Could not save the edition.",
       "members": "Series distribution list",
       "membersHint": "Add members by username.",
-      "membersHelp": "When you switch the book from public to private, only listed members can open it. Testers also see a week already from its tester-preview time.",
+      "membersHelp": "When you switch the book from public to private, only listed members can open it. Testers also see a week already from its tester preview.",
       "membersLoadFailed": "Could not load the members.",
       "username": "Username",
       "tester": "Tester",
-      "testerHint": "Sees a week already from its tester-preview time.",
+      "testerHint": "Sees a week already from its tester preview.",
       "noMembers": "No members yet.",
       "userNotFound": "No user with that name.",
       "memberAdded": "Member added",
@@ -2220,8 +2220,8 @@
     "fields": {
       "date": "Date",
       "time": "Time",
-      "titleOptional": "Title (optional)",
-      "descriptionOptional": "Description (optional)"
+      "title": "Title",
+      "description": "Description"
     },
     "columns": {
       "title": "Title"
@@ -3052,7 +3052,7 @@
   "favorites": {
     "title": "Loved puzzles",
     "hint": "Puzzles you marked with the heart after solving or giving up land here — replay or analyse them anytime.",
-    "empty": "No loved puzzles yet.",
+    "empty": "No favorites yet.",
     "rating": "Rating",
     "replay": "Solve again",
     "analyze": "Analyse",
@@ -3061,8 +3061,8 @@
     "removeError": "Could not remove favorite.",
     "sourceStandard": "Standard puzzle",
     "sourceBook": "Course / book puzzle",
-    "love": "Love it",
-    "loved": "Loved",
+    "love": "Favorite",
+    "loved": "Favorited",
     "loveLast": "Last puzzle",
     "emptyHint": "Tap the heart after a puzzle to collect it here.",
     "solvePuzzles": "Solve puzzles"
@@ -3679,7 +3679,7 @@
       "promote": "Promote variation",
       "makeMainline": "Make main line",
       "deleteFrom": "Delete from here",
-      "hint": "Right-click a move (long press on a phone, menu key or Shift+F10 on the keyboard): star, promote a variation, make it the main line or delete from there.",
+      "hint": "Right-click a move (long press on a phone): star, promote a variation, make it the main line or delete from there.\n\nWith the keyboard: menu key or Shift+F10.",
       "label": "Move tree"
     },
     "tablebase": {
@@ -4869,11 +4869,12 @@
       "cta": "Your event missing? Suggest a source",
       "blurb": "Not every organizer announces where this directory reads. A link to an official page can be added.",
       "title": "Suggest a missing tournament source",
-      "lead": "This directory is filled from tournament sites that publish their calendars — whoever announces somewhere else does not appear here. What helps most is not a single date but a LINK: an official page where your tournaments are listed can be read regularly, so all of them show up from now on.",
+      "lead": "What helps most is a link to an official page that lists your tournaments.",
+      "leadMore": "This directory is filled from tournament sites that publish their calendars — whoever announces somewhere else does not appear here. An official page can be read regularly, so all your tournaments show up from then on.",
       "link": "Link to the official page",
       "linkHint": "Association calendar, club page, series page — the more official, the better",
       "linkRequired": "Please give a complete link starting with http:// or https://.",
-      "message": "Note (optional)",
+      "message": "Note",
       "messagePlaceholder": "Anything else we should know?",
       "thanks": "Thank you — we will look at the page.",
       "sendError": "The message could not be sent. Please try again."
@@ -4881,13 +4882,15 @@
     "report": {
       "cta": "Report a wrong entry",
       "title": "Report a wrong entry",
-      "lead": "Tell us what is wrong here. Everything is optional — even the text: pressing send with nothing filled in still says “something is off with this one”.",
+      "lead": "Tell us what is wrong here – all fields are optional.",
+      "leadMore": "Even the text is optional: pressing send with nothing filled in still says “something is off with this one”.",
       "current": "Currently stored",
       "league": "League",
       "message": "What is wrong?",
       "learnTitle": "Two questions that help beyond this one tournament",
       "namePattern": "What are tournaments like this called in your region?",
-      "namePatternHint": "Age and audience are read from the tournament name, and those names are local — in Tyrol, for example, the youth event is called “Schachrallye” (chess rally). Name such a pattern once and every future edition of that series is classified correctly.",
+      "namePatternHint": "A regional name helps classify every future edition correctly.",
+      "namePatternMore": "Age and audience are read from the tournament name, and those names are local — in Tyrol, for example, the youth event is called “Schachrallye” (chess rally). Name such a pattern once and every future edition of that series is classified correctly.",
       "sourceLink": "A page where this is easier to see",
       "thanks": "Thank you — the report has arrived and we can reply to it.",
       "sendError": "The report could not be sent. Please try again."
@@ -6520,7 +6523,8 @@
     }
   },
   "opponentNote": {
-    "thisOpponent": "the opponent",
+    "thisOpponent": "your opponent",
+    "thisOpponentNom": "your opponent",
     "reached": "In the games of {{who}}: reached {{n}}× (last {{year}})",
     "reachedNoYear": "In the games of {{who}}: reached {{n}}×",
     "played": "they played {{moves}} here",
@@ -6531,6 +6535,7 @@
   },
   "deviations": {
     "title": "Deviations of {{who}}",
+    "titleNoName": "Your opponent’s deviations",
     "threshold": "Good up to",
     "thresholdTip": "An answer counts as good if it is at most this many hundredths of a pawn worse than the best move (engine).",
     "loadFailed": "The deviations could not be loaded.",

@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, TranslationObject, provideTranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 import { Chess } from 'chess.js';
 import { AnalysisEngineService } from '../../analysis/analysis-engine.service';
@@ -164,4 +164,81 @@ describe('DeviationTrainerComponent (Abweichungen trainieren, 0.892.0)', () => {
     host.remove();
     fixture.componentInstance.ngOnDestroy();
   }));
+
+  // ===== UI-Sweep 2026-11-10 =====
+  let de: TranslationObject = {};
+  beforeAll(async () => {
+    const res = await fetch('/i18n/de.json').then(r => r.ok ? r : fetch('/base/i18n/de.json'));
+    de = await res.json();
+  });
+  function german(): void {
+    const t = TestBed.inject(TranslateService);
+    t.setTranslation('de', de);
+    t.use('de');
+    fixture.detectChanges();
+  }
+
+  it('d10-rk-abweichungen-von-des-gegners: ohne Namen richtiger Fall in Titel, Notiz und Frage', fakeAsync(() => {
+    const c = setup({ deviations: 'prep:42', color: 'w' });
+    http.expectOne(() => true).flush(ANSWER);
+    german();
+    const el = fixture.nativeElement as HTMLElement;
+    const title = el.querySelector('.bar .title')!.textContent!.trim();
+    expect(title).toBe('Abweichungen deines Gegners');
+    expect(el.querySelector('.opponent-note')!.textContent).toContain('In den Partien von deinem Gegner');
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+    tick(DEV_OPP_DELAY_MS);
+    fixture.detectChanges();
+    expect(c.askText).toContain('Hier spielt dein Gegner');
+    expect(el.textContent).not.toContain('des Gegners');
+    expect(c.whoStart).toBe('Dein Gegner');
+    c.ngOnDestroy();
+    tick(5000);
+  }));
+
+  it('d10-rk-abweichungen-von-des-gegners: mit Namen bleibt der Name in allen Sätzen', () => {
+    const c = setup({ deviations: 'prep:42', color: 'w', name: 'Musterfrau' });
+    http.expectOne(() => true).flush(ANSWER);
+    german();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.bar .title')!.textContent!.trim()).toBe('Abweichungen von Musterfrau');
+    expect(c.who).toBe('Musterfrau');
+    expect(c.whoNom).toBe('Musterfrau');
+    c.ngOnDestroy();
+  });
+
+  it('d10-rk-abweichungen-ladefehler-ohne-erneut: Ladefehler mit „Erneut versuchen“, ohne Schwelle; Wiederholen lädt neu', () => {
+    const c = setup({ deviations: 'prep:42', color: 'w' });
+    http.expectOne(() => true).flush('kaputt', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const err = el.querySelector('app-load-error [role="alert"]');
+    expect(err).not.toBeNull();
+    expect(err!.textContent).toContain('deviations.loadFailed');
+    expect(el.querySelector('.threshold')).toBeNull();
+    (el.querySelector('app-load-error button.retry') as HTMLButtonElement).click();
+    expect(c.loadError).toBeFalse();
+    http.expectOne(r => r.url === '/api/prep/player/42/deviations').flush(ANSWER);
+    fixture.detectChanges();
+    expect(c.session.phase).toBe('PATH');
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.querySelector('.threshold')).not.toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('d10-rk-abweichungen-schwelle-natives-select: Schwelle als Material-Auswahl, Tippziel ≥ 44 px bei 390 px', () => {
+    const c = setup({ deviations: 'prep:42', color: 'w' });
+    http.expectOne(() => true).flush(ANSWER);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '390px';
+    document.body.appendChild(host);
+    fixture.detectChanges();
+    expect(host.querySelector('select')).toBeNull();
+    const field = host.querySelector('mat-form-field.threshold') as HTMLElement;
+    expect(field).not.toBeNull();
+    expect(field.querySelector('mat-select')).not.toBeNull();
+    expect(field.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    host.remove();
+    c.ngOnDestroy();
+  });
 });

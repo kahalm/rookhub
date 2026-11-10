@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "Tanggal",
       "time": "Waktu",
-      "titleOptional": "Judul (opsional)",
-      "descriptionOptional": "Deskripsi (opsional)"
+      "title": "Judul",
+      "description": "Deskripsi"
     },
     "columns": {
       "title": "Judul"

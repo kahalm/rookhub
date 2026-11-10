@@ -141,6 +141,9 @@
                 <mat-icon>{{ currentNode.starred ? 'star' : 'star_border' }}</mat-icon>
               </button>
             }
+            <!-- UI-Sweep 2026-11-10 (d10-rk-zugbaum-hinweis-lang-tastatur): Bedienhinweis zum Zugbaum hinter das ? statt
+                 dauerhaft als blasser Mehrzeiler unter der Zugliste (DESIGN 2 Grundsatz 2, 5.11). -->
+            <app-help-hint class="tree-help" [text]="'analysis.tree.hint' | translate" />
             <span class="spacer"></span>
             <button mat-icon-button (click)="flip()" [appIconLabel]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
             @if (!study) {
@@ -171,7 +174,6 @@
                  Rechtsklick bzw. langer Druck: Stern, hochstufen, zur Hauptvariante, ab hier löschen. -->
             <app-analysis-move-tree class="movetree" [root]="root" [current]="currentNode" [version]="treeVersion" [canStar]="!study" [hideEngine]="blind"
                                     (select)="goToNode($event)" (action)="onTreeAction($event)" />
-            <p class="tree-hint">{{ 'analysis.tree.hint' | translate }}</p>
           }
         </mat-card-content>
       </mat-card>

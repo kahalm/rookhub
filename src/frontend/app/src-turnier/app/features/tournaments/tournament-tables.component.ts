@@ -17,7 +17,7 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { TournamentPlayer, TournamentTeam, DisplayPairing } from '@rh/core/models';
-import { chessTitle } from './tournament-table.util';
+import { chessTitle, LocalScorePipe } from './tournament-table.util';
 
 /**
  * Rein präsentationale Darstellung der Turnier-Tabs (Spieler/Teams/Paarungen)
@@ -33,7 +33,7 @@ import { chessTitle } from './tournament-table.util';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-tournament-tables',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatTabsModule, MatTableModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, MatTooltipModule, MatSlideToggleModule, MatSortModule, MatMenuModule, RouterLink, IconLabelDirective, TranslatePipe, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatTabsModule, MatTableModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, MatTooltipModule, MatSlideToggleModule, MatSortModule, MatMenuModule, RouterLink, IconLabelDirective, TranslatePipe, LoadingSpinnerComponent, LocalScorePipe],
   templateUrl: './tournament-tables.component.html',
   styleUrls: ['./tournament-tables.component.scss'],
 })

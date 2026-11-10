@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "Datum",
       "time": "Tid",
-      "titleOptional": "Titel (valfritt)",
-      "descriptionOptional": "Beskrivning (valfri)"
+      "title": "Titel",
+      "description": "Beskrivning"
     },
     "columns": {
       "title": "Titel"

@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Title } from '@angular/platform-browser';
+import { AuthService } from '@rh/core/auth.service';
 import { GameReplayComponent } from '@rh/shared/player-card/game-replay.component';
 import { LeagueApiService } from '../../core/league-api.service';
 import { SharedLeagueGame } from '../../core/league.models';
@@ -12,10 +13,21 @@ import { tn } from '../../core/league-format';
   selector: 'lh-shared-game-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [GameReplayComponent],
+  imports: [GameReplayComponent, RouterLink],
   template: `
     @if (invalid()) {
-      <section class="gate"><h2>Link ungültig</h2><p>Dieser Link ist abgelaufen oder die Partie ist nicht mehr verfügbar.</p></section>
+      <section class="gate">
+        <h2>Link ungültig</h2>
+        <p>Dieser Link ist abgelaufen oder die Partie ist nicht mehr verfügbar.</p>
+        <!-- UI-Sweep 2026-11-10 (d10-l-partie-link-ungueltig-ohne-weg): Sperrkarte mit Weg zurück statt Sackgasse -->
+        <div class="actions">
+          @if (loggedIn) {
+            <a class="btn-sec" routerLink="/verein">← Zu den Vereinspartien</a>
+          } @else {
+            <a class="btn-sec" routerLink="/">← Zur Startseite</a>
+          }
+        </div>
+      </section>
     } @else if (failed()) {
       <section class="gate" role="alert">
         <h2>Gerade nicht erreichbar</h2>
@@ -42,6 +54,8 @@ import { tn } from '../../core/league-format';
 export class SharedGamePageComponent implements OnInit {
   private readonly api = inject(LeagueApiService);
   private readonly title = inject(Title);
+  /** UI-Sweep 2026-11-10 (d10-l-partie-link-ungueltig-ohne-weg): wohin der Weg aus „Link ungültig“ führt. */
+  readonly loggedIn = inject(AuthService).isLoggedIn;
   private readonly token = inject(ActivatedRoute).snapshot.paramMap.get('token') ?? '';
 
   readonly game = signal<SharedLeagueGame | null>(null);

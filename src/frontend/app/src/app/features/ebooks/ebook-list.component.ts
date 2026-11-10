@@ -64,9 +64,11 @@ export interface EbookFormatBadge { label: string; n: number; }
  * Formate eines Buchs, je Format EIN Abzeichen in der Reihenfolge des ersten Vorkommens (d6-rk-ebook-format-chip-doppelt:
  * zwei PDF-Dateien, etwa Scan und Textfassung, zeigten „PDF PDF“). Die einzelnen Dateien bleiben im Download-Menü.
  */
-export function ebookFormats(files: readonly { format: string }[] | null | undefined): EbookFormatBadge[] {
+export function ebookFormats(files: readonly { format: string; derived?: boolean }[] | null | undefined): EbookFormatBadge[] {
   const out: EbookFormatBadge[] = [];
   for (const f of files ?? []) {
+    // UI-Sweep 2026-11-10 (d10-rk-ebook-gesamtzeile-dateien-ohne-abgeleitete): wie die Gesamtzeile nur Originaldateien zählen.
+    if (f.derived) continue;
     const label = (f.format ?? '').toUpperCase();
     if (!label) continue;
     const hit = out.find(x => x.label === label);

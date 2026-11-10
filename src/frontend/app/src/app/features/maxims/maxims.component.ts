@@ -69,7 +69,11 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
     .intro { margin: 0; color: var(--mat-sys-on-surface-variant); }
     .count { margin: 8px 0 0; font-size: 0.85rem; color: var(--mat-sys-on-surface-variant); }
     h2 { font-size: 1.05rem; margin: 20px 0 8px; }
-    .text { font-weight: 500; white-space: normal; line-height: 1.35; padding: 6px 0; }
+    /* UI-Sweep 2026-11-10 (d10-rk-merksaetze-zeile-feste-hoehe): mehrzeilige Sätze lassen die Kopfzeile wachsen statt in
+       Materials fester 48-px-Höhe angeschnitten zu werden. */
+    :host { --mat-expansion-header-collapsed-state-height: auto; --mat-expansion-header-expanded-state-height: auto; }
+    mat-expansion-panel-header { min-height: 48px; padding-top: 10px; padding-bottom: 10px; }
+    .text { font-weight: 500; white-space: normal; line-height: 1.35; padding: 0; }
     .label { margin: 8px 0 2px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
       color: var(--mat-sys-on-surface-variant); }
     .when { margin: 0; line-height: 1.45; }

@@ -32,13 +32,15 @@ export const SHARED_GAME_STYLES = `
     /* „Kurz erzählt“ steht über dem Brett — sein Platz geht von der Höhe ab, sonst ragt das Brett samt Leiste unten raus. */
     .viewer:has(> app-game-recap.has-text) { --recap-room: 80px; }
     .header {
-      display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center;
+      /* UI-Sweep 2026-11-10 (d10-rk-partiekopf-namen-laptop-gequetscht): die Titelspalte hält mindestens 280 px, die Knöpfe
+         brechen in sich um — vorher schrumpfte sie am Laptop auf ~80 px und „ukker1992“ brach mitten im Namen. */
+      display: grid; grid-template-columns: auto minmax(min(100%, 280px), 1fr) auto; align-items: center;
       gap: 8px 16px; margin-bottom: 14px;
     }
-    .header:not(:has(.back)) { grid-template-columns: minmax(0, 1fr) auto; }
+    .header:not(:has(.back)) { grid-template-columns: minmax(min(100%, 280px), 1fr) auto; }
     .header-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
     .players { font-size: 1.2rem; line-height: 1.3; }
-    .players strong { font-weight: 600; overflow-wrap: anywhere; }
+    .players strong { font-weight: 600; overflow-wrap: break-word; }
     /* a1-rk-elo-verwaist: Name und Elo brechen nur gemeinsam um, „(Elo 1689)" nie in sich (DESIGN 5.13). */
     .players .pl { display: inline-block; max-width: 100%; }
     .players .elo { font-weight: 400; font-size: 0.8em; white-space: nowrap; color: color-mix(in srgb, currentColor 60%, transparent); }
@@ -61,8 +63,8 @@ export const SHARED_GAME_STYLES = `
     /* d5-rk-nachspielen-knopf-handy-umbruch: „Fehler von … nachspielen (5)“ bricht am Handy ausgewogen um; der Zähler
        hängt per geschütztem Leerzeichen (i18n) am letzten Wort statt allein in Zeile 2 zu stehen. */
     .mistakes { text-wrap: balance; }
-    /* Am Handy wandern „Originalpartie öffnen" und „Teilen-Link kopieren" ins ⋮ (v1-rk-first-view-lead-long-mobile). */
-    .narrow-only { display: none; }
+    /* „Originalpartie öffnen" und „Teilen-Link kopieren" stehen auf allen Breiten im ⋮ (UI-Sweep 2026-11-10
+       d10-rk-partiekopf-fuenf-sekundaerknoepfe) — die Regel .narrow-only ist damit entfallen. */
     /* UI-Sweep 2026-10-11 (r2-rg-analyze-disabled): der Grund leise unter dem gesperrten Knopf. Seit a1-rk-shared-kopf-grund
        in einer eigenen Hülle mit dem Knopf (höchstens 280 px breit): das ⋮ bleibt in der Knopfzeile, die Kopfspalte schmal. */
     /* b1-rk-partie-grund-unter-knopf: die Hülle ist so breit wie der Knopf (mindestens 220 px), nicht wie der Satz —
@@ -186,12 +188,11 @@ export const SHARED_GAME_STYLES = `
       .viewer { width: auto; padding: 0; border-radius: 0; }
       .header { position: relative; grid-template-columns: auto minmax(0, 1fr); padding: 12px 52px 12px 16px; margin-bottom: 4px; }
       /* Eine Zeile statt einer 48-px-Zeile je Knopf (v1-rk-first-view-lead-long-mobile, DESIGN 4.6 Regel 3): das
-         Brett begann sonst erst bei 49 % der Höhe. Selten Gebrauchtes steht am Handy im ⋮ (.wide-only/.narrow-only). */
+         Brett begann sonst erst bei 49 % der Höhe. Selten Gebrauchtes steht am Handy im ⋮ (.wide-only, z. B. „Ohne Engine“). */
       .header-actions { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
       .header-actions > .analyze-wrap, .header-actions > .mistakes { flex: 1 1 auto; }
       .analyze-wrap { align-items: stretch; max-width: none; }
       .wide-only { display: none; }
-      .narrow-only { display: flex; }
       .analyze-no-engine { text-align: left; }
       /* Nur das ⋮ (es sitzt absolut oben rechts): die leere Zeile samt Abstand fällt weg. */
       .header-actions:not(:has(> .analyze-wrap, > button:not(.game-menu):not(.wide-only), > a:not(.wide-only))) { margin-top: -8px; }

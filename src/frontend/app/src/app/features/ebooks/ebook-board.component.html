@@ -97,7 +97,7 @@
 @switch (mode()) {
   @case ('free') {
     <div class="eb-moves">
-      <span class="eb-moves-text">{{ movesText || ('ebooks.reader.playHint' | translate) }}</span>
+      <span class="eb-moves-text">{{ (movesText | san:'text') || ('ebooks.reader.playHint' | translate) }}</span>
       <button mat-icon-button (click)="undo()" [disabled]="played().length === 0" [appIconLabel]="'ebooks.reader.undo' | translate"><mat-icon>undo</mat-icon></button>
       <button mat-icon-button (click)="reset()" [disabled]="played().length === 0" [appIconLabel]="'ebooks.reader.resetPosition' | translate"><mat-icon>restart_alt</mat-icon></button>
     </div>
@@ -149,7 +149,7 @@
       }
     </div>
     }
-    @if (movesText) { <p class="eb-moves-text">{{ movesText }}</p> }
+    @if (movesText) { <p class="eb-moves-text">{{ movesText | san:'text' }}</p> }
     @if (solutionLine.length > 0) {
       @if (showSolution()) {
         <div class="eb-solution">
@@ -172,7 +172,8 @@
       @case ('loading') { <div class="eb-busy"><mat-progress-bar mode="indeterminate" /><span>{{ 'ebooks.board.gameLoading' | translate }}</span></div> }
       @case ('missing') { <p class="eb-note">{{ 'ebooks.board.gameMissing' | translate }}</p> }
       @case ('ready') {
-        @if (gameHead) { <p class="eb-game-head">{{ gameHead }}</p> }
+        <!-- UI-Sweep 2026-11-10 (d10-rk-ebook-partiekopf-pgn-rohwerte): je Angabe ein span mit .rh-dots, Datum/Ergebnis aufbereitet. -->
+        @if (gameHead.length) { <p class="eb-game-head rh-dots">@for (part of gameHead; track $index) { <span>{{ part }}</span> }</p> }
         <div class="eb-game-nav" role="group" [attr.aria-label]="'ebooks.board.gameNav' | translate">
           <button mat-icon-button type="button" (click)="gameGo(0)" [disabled]="gamePly() === 0 && played().length === 0" [appIconLabel]="'ebooks.board.gameStart' | translate"><mat-icon>first_page</mat-icon></button>
           <button mat-icon-button type="button" (click)="gameStep(-1)" [disabled]="gamePly() === 0 && played().length === 0" [appIconLabel]="'common.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
@@ -186,24 +187,25 @@
             <button mat-button type="button" class="eb-game-diagram" (click)="gameGo(gameLine()?.game?.ply ?? 0)"><mat-icon>center_focus_strong</mat-icon>{{ 'ebooks.board.gameToDiagram' | translate }}</button>
           }
         </div>
-        <!-- Zugliste: eine Zeile je Vollzug (DESIGN „Zuglisten“), läuft mit der Brett-Spalte (kein Kasten im Kasten). -->
+        <!-- Zugliste: eine Zeile je Vollzug (DESIGN „Zuglisten“), läuft mit der Brett-Spalte (kein Kasten im Kasten).
+             UI-Sweep 2026-11-10 (d10-rk-sanpipe-dialoge-ebook-zugliste): Züge und Zugzeilen über die SanPipe (DESIGN 5.14). -->
         <div class="eb-game-moves" role="list">
           @for (r of gameRows(); track r.no) {
             <div class="eb-gm-row" role="listitem">
               <span class="eb-gm-no">{{ r.no }}.</span>
               <button type="button" class="eb-gm" [class.eb-gm--on]="r.white.ply === gamePly()" [class.eb-gm--diagram]="r.white.ply === gameLine()?.game?.ply"
-                      [attr.aria-current]="r.white.ply === gamePly() ? 'step' : null" (click)="gameGo(r.white.ply)">{{ r.white.san }}</button>
+                      [attr.aria-current]="r.white.ply === gamePly() ? 'step' : null" (click)="gameGo(r.white.ply)">{{ r.white.san | san }}</button>
               @if (r.black; as b) {
                 <button type="button" class="eb-gm" [class.eb-gm--on]="b.ply === gamePly()" [class.eb-gm--diagram]="b.ply === gameLine()?.game?.ply"
-                        [attr.aria-current]="b.ply === gamePly() ? 'step' : null" (click)="gameGo(b.ply)">{{ b.san }}</button>
+                        [attr.aria-current]="b.ply === gamePly() ? 'step' : null" (click)="gameGo(b.ply)">{{ b.san | san }}</button>
               }
             </div>
           }
-          @if (gameLine()?.game?.result; as r) { <div class="eb-gm-result">{{ r }}</div> }
+          @if (gameResult; as r) { <div class="eb-gm-result">{{ r }}</div> }
         </div>
         @if (played().length > 0) {
           <div class="eb-moves eb-game-side">
-            <span class="eb-moves-text">{{ sideLineText }}</span>
+            <span class="eb-moves-text">{{ sideLineText | san:'text' }}</span>
             <button mat-icon-button (click)="undo()" [appIconLabel]="'ebooks.reader.undo' | translate"><mat-icon>undo</mat-icon></button>
             <button mat-icon-button (click)="reset()" [appIconLabel]="'ebooks.board.gameBack' | translate"><mat-icon>keyboard_return</mat-icon></button>
           </div>
@@ -247,7 +249,7 @@
         <div class="eb-moves">
           <span class="eb-moves-text">
             <span class="eb-maia-state">{{ 'ebooks.board.maiaElo' | translate: { elo: maiaElo() } }} · {{ (maiaThinking() ? 'ebooks.board.maiaThinking' : 'ebooks.board.maiaYourMove') | translate }}</span>
-            {{ movesText }}
+            {{ movesText | san:'text' }}
           </span>
           <button mat-icon-button (click)="undo()" [disabled]="played().length === 0 || maiaThinking()" [appIconLabel]="'ebooks.reader.undo' | translate"><mat-icon>undo</mat-icon></button>
           <button mat-icon-button (click)="reset()" [disabled]="played().length === 0" [appIconLabel]="'ebooks.reader.resetPosition' | translate"><mat-icon>restart_alt</mat-icon></button>

@@ -2,8 +2,8 @@
 .dev { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 8px; }
 .bar { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .bar .title { font-weight: 600; flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
-.threshold { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; }
-.threshold select { font: inherit; padding: 2px 4px; }
+/* UI-Sweep 2026-11-10 (d10-rk-abweichungen-schwelle-natives-select): Material-Auswahl statt nativem Select (Tippziel ≥ 44 px). */
+.threshold { width: 140px; }
 .center, .msg { text-align: center; padding: 32px; }
 .msg { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .msg > mat-icon { font-size: 40px; height: 40px; width: 40px; }

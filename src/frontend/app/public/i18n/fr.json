@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "Date",
       "time": "Heure",
-      "titleOptional": "Titre (facultatif)",
-      "descriptionOptional": "Description (facultative)"
+      "title": "Titre",
+      "description": "Description"
     },
     "columns": {
       "title": "Titre"

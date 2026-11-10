@@ -452,7 +452,18 @@ describe('TournamentDirectoryDetailComponent', () => {
       'tournamentDirectory.card.short.calendar', 'tournamentDirectory.source.ChessResults', 'tournamentDirectory.card.short.report']);
     expect(icons.map(b => b.getAttribute('aria-label'))).toEqual([
       'tournamentDirectory.detail.toCalendar', 'tournamentDirectory.openChessResults', 'tournamentDirectory.report.cta']);
-    expect(fixture.nativeElement.querySelector('.detail-actions .primary-mobile')?.textContent).toContain('tournamentDirectory.bookmark');
+    expect(fixture.nativeElement.querySelector('.detail-actions .bookmark-primary')?.textContent).toContain('tournamentDirectory.bookmark');
+  });
+
+  // UI-Sweep 2026-11-10 (d10-t-merken-kein-hauptknopf-ab-tablet): Merken ist an jeder Breite der gefuellte Hauptknopf.
+  it('zeigt Merken als gefuellten Hauptknopf wie auf den anderen Turnierseiten (d10-t-merken-kein-hauptknopf-ab-tablet)', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    const btn = fixture.nativeElement.querySelector('.detail-actions .bookmark-primary') as HTMLElement;
+    expect(btn.classList).toContain('mat-mdc-unelevated-button');
+    expect(btn.classList).not.toContain('mat-mdc-outlined-button');
   });
 
   // a1-t-quelle-link-standardfarbe: der Quell-Link stand in der Browser-Standardfarbe statt im Primaer.

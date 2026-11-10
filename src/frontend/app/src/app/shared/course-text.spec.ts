@@ -79,4 +79,14 @@ describe('splitCourseText', () => {
     const t = 'Nach 12345Ab und e4 bleibt alles. Seit 1999 Weiß am Zug.';
     expect(splitCourseText(t)).toEqual([{ kind: 'p', text: t }]);
   });
+  it('UI-Sweep 2026-11-10 (d10-rk-kommentar-feldname-angeklebt): Überschrift, die auf ein Feld endet, wird abgesetzt', () => {
+    expect(splitCourseText('Das Matt auf d7Wenn sich der König innerhalb der Gewinnzone befindet, müssen wir aufpassen.'))
+      .toEqual([
+        { kind: 'h', text: 'Das Matt auf d7' },
+        { kind: 'p', text: 'Wenn sich der König innerhalb der Gewinnzone befindet, müssen wir aufpassen.' },
+      ]);
+    // Züge mit Figur oder Nummer davor bleiben stehen
+    const t = 'Nach Sd7Weiß und 1.d4Schwarz bleibt alles, wie es ist.';
+    expect(splitCourseText(t)).toEqual([{ kind: 'p', text: t }]);
+  });
 });

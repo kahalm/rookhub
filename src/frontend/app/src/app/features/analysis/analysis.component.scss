@@ -81,7 +81,8 @@
   .controls ::ng-deep .mat-mdc-icon-button .mat-mdc-button-touch-target { width: 36px; height: 36px; }
 }
 .movetree { margin-top: 8px; }
-.tree-hint { margin: 6px 0 0; font-size: .75rem; color: color-mix(in srgb, currentColor 50%, transparent); }
+// UI-Sweep 2026-11-10 (d10-rk-zugbaum-hinweis-lang-tastatur): .tree-hint entfällt, der Text steht hinter dem ? der Zugreihe.
+.controls .tree-help { margin: 0 4px; }
 .io-card .full { width: 100%; }
 .io-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .board-tap { display: none; }

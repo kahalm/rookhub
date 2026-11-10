@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "दिनांक",
       "time": "समय",
-      "titleOptional": "शीर्षक (वैकल्पिक)",
-      "descriptionOptional": "विवरण (वैकल्पिक)"
+      "title": "शीर्षक",
+      "description": "विवरण"
     },
     "columns": {
       "title": "शीर्षक"

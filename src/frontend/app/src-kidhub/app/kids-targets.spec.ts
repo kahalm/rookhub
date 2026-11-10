@@ -113,4 +113,20 @@ describe('KidHub: Tippziele', () => {
       }
     }
   });
+
+  // UI-Sweep 2026-11-10 (d10-k-figurenwahl-tippziel-38px): die Figurenknoepfe im freien Spiel waren am Handy 38 × 44 px.
+  it(`/stars/free: Figurenwahl am Handy ${MIN_TARGET} × ${MIN_TARGET} px, mit dem Sternzaehler in einer Zeile`, async () => {
+    const page = await renderPage('/stars/free');
+    for (const [w, h] of [[390, 844]] as const) {
+      const buttons = boxesAt(page, w, h, '.picker-row .seg-btn');
+      expect(buttons.length).withContext(`${w}×${h}: Anzahl`).toBe(4);
+      buttons.forEach((b, i) => {
+        expect(b.width).withContext(`${w}×${h} #${i + 1}: Breite`).toBeGreaterThanOrEqual(MIN_TARGET);
+        expect(b.height).withContext(`${w}×${h} #${i + 1}: Hoehe`).toBeGreaterThanOrEqual(MIN_TARGET);
+      });
+      const [seg] = boxesAt(page, w, h, '.picker-row .seg');
+      const [stepper] = boxesAt(page, w, h, '.picker-row .stepper');
+      expect(stepper.top).withContext(`${w}×${h}: Zaehler neben der Figurenwahl`).toBeLessThan(seg.bottom);
+    }
+  });
 });

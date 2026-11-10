@@ -1,9 +1,9 @@
 import { DestroyRef, Injector, runInInjectionContext } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { SwUpdate } from '@angular/service-worker';
 import { TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
-import { AppUpdateService } from './app-update.service';
+import { AppUpdateService, SW_CHECK_TIMEOUT_MS } from './app-update.service';
 import { ClientLogService } from './client-log.service';
 import { SnackbarService } from './snackbar.service';
 
@@ -118,7 +118,8 @@ describe('AppUpdateService', () => {
 
 /** U1: sofortige Prüfung für die Nicht-gefunden-Seite — Service Worker und Server-Changelog. */
 describe('AppUpdateService.checkNow / activateAndReload (U1)', () => {
-  function make(sw: { isEnabled: boolean; found?: boolean } | null, server: string | null, own = '0.935.0') {
+  function make(sw: { isEnabled: boolean; found?: boolean; check?: () => Promise<boolean> } | null, server: string | null,
+                own = '0.935.0', controls = true) {
     const activateUpdate = jasmine.createSpy('activateUpdate').and.resolveTo(true);
     const providers: unknown[] = [
       { provide: SnackbarService, useValue: { show: () => ({ onAction: () => new Subject() }) } },
@@ -127,7 +128,7 @@ describe('AppUpdateService.checkNow / activateAndReload (U1)', () => {
     ];
     if (sw) providers.push({ provide: SwUpdate, useValue: {
       isEnabled: sw.isEnabled, versionUpdates: new Subject(), unrecoverable: new Subject(),
-      checkForUpdate: () => Promise.resolve(!!sw.found), activateUpdate,
+      checkForUpdate: sw.check ?? (() => Promise.resolve(!!sw.found)), activateUpdate,
     } });
     TestBed.configureTestingModule({ providers: providers as never[] });
     const s = TestBed.inject(AppUpdateService) as any;
@@ -135,6 +136,7 @@ describe('AppUpdateService.checkNow / activateAndReload (U1)', () => {
     s.serverVersion = () => Promise.resolve(server);
     s.replaceLocation = jasmine.createSpy('replaceLocation');
     s.reloadApp = jasmine.createSpy('reloadApp');
+    s.swControlsTab = () => controls;
     return { s: s as AppUpdateService & { replaceLocation: jasmine.Spy; reloadApp: jasmine.Spy }, activateUpdate };
   }
 
@@ -160,6 +162,26 @@ describe('AppUpdateService.checkNow / activateAndReload (U1)', () => {
     expect(s.reloadApp).toHaveBeenCalledTimes(1);
     expect(s.replaceLocation).not.toHaveBeenCalled();
   });
+
+  // UI-Sweep 2026-11-10 (d10-rk-404-ladekreis-haengt-ohne-sw-steuerung)
+  it('Service Worker steuert den Tab nicht: checkForUpdate wird gar nicht gefragt, nur das Changelog zählt', async () => {
+    const check = jasmine.createSpy('checkForUpdate').and.returnValue(new Promise<boolean>(() => {}));
+    const { s } = make({ isEnabled: true, check }, '0.935.0', '0.935.0', false);
+    expect(await s.checkNow()).toEqual({ available: false, version: null });
+    expect(check).not.toHaveBeenCalled();
+  });
+
+  it('checkForUpdate hängt: nach höchstens 3 s ist das Ergebnis da', fakeAsync(() => {
+    const { s } = make({ isEnabled: true, check: () => new Promise<boolean>(() => {}) }, '0.936.0');
+    let result: unknown;
+    void s.checkNow().then(r => (result = r));
+    tick(SW_CHECK_TIMEOUT_MS - 1);
+    expect(result).toBeUndefined();
+    tick(1);
+    flushMicrotasks();
+    expect(SW_CHECK_TIMEOUT_MS).toBeLessThanOrEqual(3000);
+    expect(result).toEqual({ available: true, version: '0.936.0' });
+  }));
 
   it('mit Service Worker: erst aktivieren, dann dieselbe Adresse frisch laden', async () => {
     const { s, activateUpdate } = make({ isEnabled: true, found: true }, '0.936.0');

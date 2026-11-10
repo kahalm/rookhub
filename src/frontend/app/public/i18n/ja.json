@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "日付",
       "time": "時刻",
-      "titleOptional": "タイトル（任意）",
-      "descriptionOptional": "説明（任意）"
+      "title": "タイトル",
+      "description": "説明"
     },
     "columns": {
       "title": "タイトル"

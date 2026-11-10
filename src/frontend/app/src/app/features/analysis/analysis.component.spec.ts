@@ -1429,6 +1429,19 @@ describe('AnalysisComponent Brett-Steuerknöpfe (zugänglicher Name)', () => {
     expect(debugButtons.map(d => d.injector.get(MatTooltip).message)).toEqual(buttons.map(b => b.getAttribute('aria-label')!));
   });
 
+  // UI-Sweep 2026-11-10 (d10-rk-zugbaum-hinweis-lang-tastatur): der Bedienhinweis zum Zugbaum steht hinter dem ? der
+  // Zugreihe, nicht mehr als dauerhafter Absatz unter der Zugliste.
+  it('Zugbaum-Hinweis: ? in der Zugreihe, kein Hinweistext unter dem Baum', () => {
+    const c: any = fixture.componentInstance;
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    expect(c.root.children.length).toBe(1);
+    fixture.detectChanges();
+    const hint = fixture.nativeElement.querySelector('.moves-card .controls app-help-hint') as HTMLElement & { text?: string };
+    expect(hint).not.toBeNull();
+    expect(hint.text).toBe('analysis.tree.hint');
+    expect(fixture.nativeElement.querySelector('.tree-hint')).toBeNull();
+  });
+
   it('während des Sparrings: Engine-Schalter gesperrt, „Engine pausiert" statt „Engine aus"', async () => {
     const c: any = fixture.componentInstance;
     c.spar.sparring = { start: c.root, tip: c.root, userColor: 'white', engineWasOn: true };

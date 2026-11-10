@@ -72,7 +72,9 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
     await create(new Date(2026, 8, 25, 17, 5));
     expect(api.sessionByDate).toHaveBeenCalledWith(1, '2026-09-25');
     expect(el().querySelector<HTMLInputElement>('input[name=date]')!.value).toBe('25.09.2026');
-    expect(el().textContent).toContain('Freitag, 25. September 2026');
+    // UI-Sweep 2026-11-10 (d10-c-anwesenheit-datum-langform): Metazeile nur mit Wochentag, kein zweites Datum in Langform.
+    expect(el().querySelector('.kid-meta span')!.textContent!.trim()).toBe('Freitag');
+    expect(el().textContent).not.toContain('25. September 2026');
     expect(ticks().map(t => t.textContent!.trim().replace(/\s+/g, ' '))).toEqual(['Auer Anna', 'Berger Ben', 'Carla']);
     expect(pressed()).toEqual(['false', 'false', 'false']);
     expect(el().querySelector('.tally strong')!.textContent).toBe('0 von 3 da');

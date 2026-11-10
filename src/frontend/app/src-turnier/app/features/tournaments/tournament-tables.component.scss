@@ -157,7 +157,8 @@
     .result-cell { white-space: nowrap; }
 
     /* Mobile card list for pairings */
-    .pairing-cards { padding: 0.5rem 0; }
+    /* UI-Sweep 2026-11-10 (d10-t-paarungskarte-handy-nummer-blass): keine Luecke zwischen Rundenfeld und erster Karte. */
+    .pairing-cards { padding: 0 0 0.5rem; }
     .pairing-card {
       display: flex;
       gap: 0.75rem;
@@ -165,7 +166,8 @@
       border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent);
       align-items: center;
     }
-    .pairing-board { color: color-mix(in srgb, currentColor 47%, transparent); min-width: 1.5rem; font-size: 0.85rem; }
+    /* UI-Sweep 2026-11-10 (d10-t-paarungskarte-handy-nummer-blass): Nummer in on-surface-variant (>= 4,5:1) statt 47 % Textfarbe. */
+    .pairing-board { color: var(--mat-sys-on-surface-variant); min-width: 1.5rem; font-size: 0.93rem; font-variant-numeric: tabular-nums; }
     .pairing-teams { flex: 1; min-width: 0; }
     .pairing-team {
       font-size: 0.93rem;
@@ -173,9 +175,12 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+    /* UI-Sweep 2026-11-10 (d10-t-paarungskarte-handy-nummer-blass): das Ergebnis ist die Hauptinformation, keine graue Metazeile. */
     .pairing-result {
-      font-size: 0.82rem;
-      color: color-mix(in srgb, currentColor 60%, transparent);
+      font-size: 0.93rem;
+      font-weight: 600;
+      color: inherit;
+      font-variant-numeric: tabular-nums;
       padding: 0.15rem 0;
       white-space: nowrap;
     }

@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "Dată",
       "time": "Oră",
-      "titleOptional": "Titlu (opțional)",
-      "descriptionOptional": "Descriere (opțional)"
+      "title": "Titlu",
+      "description": "Descriere"
     },
     "columns": {
       "title": "Titlu"

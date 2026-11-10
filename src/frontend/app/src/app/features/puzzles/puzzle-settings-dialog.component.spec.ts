@@ -3,6 +3,7 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData } from './puzzle-settings-dialog.component';
+import { mountWithComponentStyles, setDarkTheme, textContrast } from '../../testing/contrast';
 
 describe('PuzzleSettingsDialogComponent', () => {
   function create(overrides: Partial<PuzzleSettingsDialogData> = {}): PuzzleSettingsDialogComponent {
@@ -109,5 +110,38 @@ describe('PuzzleSettingsDialogComponent', () => {
       expect(values[0]).toBe('Klassisch');
       expect(values[1]).toBe('Braun');
     });
+  });
+
+  // UI-Sweep 2026-11-10 (d10-rk-puzzle-einstellungen-zahlenfeld-klein, d10-rk-puzzle-einstellungen-unterzeile-blass)
+  describe('Zahlenfelder und Unterzeilen (UI-Sweep 2026-11-10)', () => {
+    const DIALOG = 'var(--mat-sys-surface-container-high)';
+    const HTML = '<div class="psd-row"><span class="psd-label">Rechentiefe'
+      + '<span class="psd-sublabel">Höher = stärkere Antworten, dauert aber länger.</span></span>'
+      + '<input class="psd-number-input" type="number" value="16"></div>'
+      + '<div class="psd-viz-info"><div class="psd-viz-info-row"><span class="psd-viz-name">Stufe</span>'
+      + '<span class="psd-viz-desc">Beschreibung der Stufe</span></div></div>';
+    let wasDark: boolean;
+    let dispose: (() => void) | undefined;
+    beforeEach(() => { wasDark = document.documentElement.classList.contains('dark-theme'); });
+    afterEach(() => { dispose?.(); dispose = undefined; setDarkTheme(wasDark); });
+
+    it('Zahlenfelder sind mindestens 44 px hoch, Schrift 16 px', () => {
+      dispose = mountWithComponentStyles(PuzzleSettingsDialogComponent, HTML, DIALOG);
+      const input = document.querySelector<HTMLInputElement>('.psd-number-input')!;
+      expect(input.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+      expect(getComputedStyle(input).fontSize).toBe('16px');
+    });
+
+    for (const dark of [false, true]) {
+      it(`Unterzeile und Stufenbeschreibung ohne Deckkraft, mindestens 4,5:1 (${dark ? 'dunkel' : 'hell'})`, () => {
+        setDarkTheme(dark);
+        dispose = mountWithComponentStyles(PuzzleSettingsDialogComponent, HTML, DIALOG);
+        for (const sel of ['.psd-sublabel', '.psd-viz-desc']) {
+          const el = document.querySelector(sel)!;
+          expect(getComputedStyle(el).opacity).withContext(sel).toBe('1');
+          expect(textContrast(el)).withContext(sel).toBeGreaterThanOrEqual(4.5);
+        }
+      });
+    }
   });
 });

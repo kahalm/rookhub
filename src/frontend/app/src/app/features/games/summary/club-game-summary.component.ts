@@ -47,11 +47,15 @@ interface ResolvedDiagram {
       } @else if (notFound()) {
         <!-- Ungültiger oder gelöschter Link (404): kein „Wiederholen“ — das brächte dasselbe Ergebnis. Wie die
              Partieseite selbst (shared-game, a1-rk-vereinspartie-fehler-sackgasse); andere Fehler bleiben unten. -->
-        <mat-card class="empty-state not-found">
-          <mat-icon>link_off</mat-icon>
+        <!-- UI-Sweep 2026-11-10 (d10-rk-zusammenfassung-ladefehler-sackgasse): 403 = Sperrkarte mit Grund und Weg zur Startseite
+             statt „Wiederholen“, das bei fehlendem Vereinszugang nie hilft (DESIGN 2 Grundsatz 10, 5.11). -->
+        <mat-card class="empty-state not-found" [class.gate]="locked()">
+          <mat-icon>{{ locked() ? 'lock' : 'link_off' }}</mat-icon>
           <p>{{ notFoundKey() | translate }}</p>
           <div class="gate-actions">
-            @if (own) {
+            @if (locked()) {
+              <a mat-flat-button color="primary" routerLink="/" class="to-home">{{ 'app.notFound.home' | translate }}</a>
+            } @else if (own) {
               <a mat-stroked-button routerLink="/games" class="to-games">{{ 'games.toMyGames' | translate }}</a>
             } @else {
               <a mat-stroked-button routerLink="/" class="to-home">{{ 'app.notFound.home' | translate }}</a>
@@ -77,14 +81,22 @@ interface ResolvedDiagram {
               <a mat-stroked-button [routerLink]="gameLink()" class="to-game">
                 <mat-icon>sports_esports</mat-icon> {{ 'games.summary.toGame' | translate }}
               </a>
-              @if (shareToken === null && gameShareToken === null && clubLinkToken === null) { <app-club-summary-link [gameId]="gameId" [allowAgain]="true" [kind]="own ? 'own' : 'club'" /> }
+              <!-- UI-Sweep 2026-11-10 (d10-rk-zusammenfassung-anfordern-textknopf): ohne Text steht „Anfordern“ als Hauptknopf im Leerzustand. -->
+              @if (summary()?.markdown && shareToken === null && gameShareToken === null && clubLinkToken === null) { <app-club-summary-link [gameId]="gameId" [allowAgain]="true" [kind]="own ? 'own' : 'club'" /> }
             </div>
           </div>
           @if (summary()?.stale) {
             <p class="note stale"><mat-icon>info</mat-icon> {{ 'games.summary.stale' | translate }}</p>
           }
           @if (!summary()?.markdown) {
-            <p class="note empty">{{ 'games.summary.none' | translate }}</p>
+            <!-- UI-Sweep 2026-11-10 (d10-rk-zusammenfassung-karte-ohne-polster): Leerzustand nach DESIGN 5.10 statt Fließtext an der Kante. -->
+            <div class="empty-state empty">
+              <mat-icon>article</mat-icon>
+              <p>{{ 'games.summary.none' | translate }}</p>
+              @if (shareToken === null && gameShareToken === null && clubLinkToken === null) {
+                <app-club-summary-link [gameId]="gameId" [kind]="own ? 'own' : 'club'" [prominent]="true" />
+              }
+            </div>
           } @else {
             <article class="summary-text">
               @for (b of visibleBlocks(); track $index) {
@@ -184,6 +196,11 @@ interface ResolvedDiagram {
       .with-board .summary-layout { display: grid; grid-template-columns: minmax(0, 1fr) clamp(320px, 40vw, 520px); gap: 16px; align-items: start; }
     }
     .center { display: flex; justify-content: center; padding: 48px; }
+    /* UI-Sweep 2026-11-10 (d10-rk-zusammenfassung-karte-ohne-polster): mat-card hat im M3-Thema kein Eigenpolster — Text,
+       Kopf und Knöpfe klebten an der Kartenkante (DESIGN 3.2/5.2). Der Pfeil rückt so weit heraus, dass er mit dem Text fluchtet. */
+    .summary-card, .load-card { padding: 16px; }
+    .back { margin-left: -8px; }
+    @media (max-width: 599.98px) { .summary-card, .load-card { padding: 12px; } }
     .gate-actions { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
     .head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
     .head-main { display: flex; flex-direction: column; flex: 1 1 240px; min-width: 0; }
@@ -246,8 +263,11 @@ export class ClubGameSummaryComponent implements OnInit {
   readonly failed = signal(false);
   /** Partie bzw. Link gibt es nicht (404/410) — eigener Zustand ohne „Wiederholen“ (UI-Sweep 10.11.2026). */
   readonly notFound = signal(false);
+  /** Vereinspartie ohne Mitgliedschaft (403, UI-Sweep 2026-11-10 d10-rk-zusammenfassung-ladefehler-sackgasse): Sperrkarte. */
+  readonly locked = signal(false);
   /** Text für {@link notFound}: über einen Teilen-Link „geteilte Partie gibt es nicht“, sonst „Partie gibt es nicht“. */
   notFoundKey(): string {
+    if (this.locked()) return 'games.clubNoAccess';
     return this.shareToken !== null || this.gameShareToken !== null || this.clubLinkToken !== null
       ? 'games.shared.notFound' : 'games.notFound';
   }
@@ -281,6 +301,7 @@ export class ClubGameSummaryComponent implements OnInit {
     this.loading.set(true);
     this.failed.set(false);
     this.notFound.set(false);
+    this.locked.set(false);
     const token = this.shareToken;
     const ownToken = this.gameShareToken;
     const link = this.clubLinkToken;
@@ -296,7 +317,12 @@ export class ClubGameSummaryComponent implements OnInit {
     load.subscribe({
       next: ([g, s]) => { this.game.set(g); this.summary.set(s); this.loading.set(false); this.loadBooks(); },
       error: (e: { status?: number } | null) => {
-        const gone = e?.status === 404 || e?.status === 410;
+        // UI-Sweep 2026-11-10 (d10-rk-zusammenfassung-ladefehler-sackgasse): wie die Partieseite — 403 bei einer Vereinspartie
+        // = gesperrt, sonst 4xx = gibt es nicht; nur Netz/5xx (und 408/429) behalten „Wiederholen“.
+        const status = e?.status ?? 0;
+        const locked = status === 403 && !this.own && this.gameShareToken === null;
+        const gone = status >= 400 && status < 500 && status !== 408 && status !== 429;
+        this.locked.set(locked);
         (gone ? this.notFound : this.failed).set(true);
         this.loading.set(false);
       },

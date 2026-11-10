@@ -10,6 +10,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
+// UI-Sweep 2026-11-10 (d10-rk-sanpipe-dialoge-ebook-zugliste): Zug-Chips in den Figurenbuchstaben der Oberflächensprache.
+import { SanPipe } from '../../shared/chess/san.pipe';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { MoveComparisonService, MoveComparisonStatusInfo } from './move-comparison.service';
 
 /** Ein Vorschlag der Engine (erster Zug einer Linie) mit ihrer Bewertung — vorausgewählt. */
@@ -37,19 +40,15 @@ const KNOWN_REASONS = new Set(['too-many-open', 'no-engine', 'too-many-jobs', 'i
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, RouterLink, MatDialogModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule,
-    MatProgressSpinnerModule, TranslatePipe],
+    MatProgressSpinnerModule, TranslatePipe, SanPipe, HelpHintComponent],
   template: `
     <h2 mat-dialog-title>{{ 'moveCompare.dialog.title' | translate }}</h2>
     <mat-dialog-content>
       <p class="hint">{{ 'moveCompare.dialog.hint' | translate:{ max: max() } }}</p>
       @if (status(); as s) {
-        @if (!s.engineAvailable) {
-          <!-- d9-rk-vergleichen-dialog-engine-hinweis: der Vergleich rechnet auf dem SERVER (Hintergrund-Aufträge), die
-               Engine im Browser zählt nicht — das sagt der Text; leise Farbe statt --rh-warn (DESIGN 5.11). -->
-          <p class="note no-engine"><mat-icon>info_outline</mat-icon>
-            <span>{{ 'moveCompare.dialog.noEngine' | translate }}
-              <a routerLink="/profile" (click)="ref.close()">{{ 'moveCompare.dialog.toProfile' | translate }}</a></span></p>
-        } @else {
+        <!-- UI-Sweep 2026-11-10 (d10-rk-vergleichen-grund-doppelt): ohne Server-Engine keine eigene Info-Zeile mehr —
+             der Grund steht einmal, in der Knopfleiste (.why), die Erklärung dort hinter dem ? (DESIGN 5.6). -->
+        @if (s.engineAvailable) {
           @if (!s.ownEngine) { <p class="muted small">{{ 'moveCompare.dialog.houseEngine' | translate:{ depth: s.maxDepth } }}</p> }
           @if (!s.explanations) { <p class="muted small">{{ 'moveCompare.dialog.noExplanations' | translate }}</p> }
         }
@@ -60,7 +59,7 @@ const KNOWN_REASONS = new Set(['too-many-open', 'no-engine', 'too-many-jobs', 'i
         <div class="moves">
           @for (m of engineMoves(); track m.uci) {
             <button type="button" class="mv" [class.on]="isSelected(m.uci)" [disabled]="!isSelected(m.uci) && full()"
-                    (click)="toggle(m.uci)">{{ m.san }}@if (m.evalText) { <span class="ev">{{ m.evalText }}</span> }</button>
+                    (click)="toggle(m.uci)">{{ m.san | san }}@if (m.evalText) { <span class="ev">{{ m.evalText }}</span> }</button>
           }
         </div>
       }
@@ -68,7 +67,7 @@ const KNOWN_REASONS = new Set(['too-many-open', 'no-engine', 'too-many-jobs', 'i
       <div class="moves">
         @for (m of otherMoves(); track m.uci) {
           <button type="button" class="mv" [class.on]="isSelected(m.uci)" [disabled]="!isSelected(m.uci) && full()"
-                  (click)="toggle(m.uci)">{{ m.san }}</button>
+                  (click)="toggle(m.uci)">{{ m.san | san }}</button>
         }
       </div>
 
@@ -86,7 +85,11 @@ const KNOWN_REASONS = new Set(['too-many-open', 'no-engine', 'too-many-jobs', 'i
       @if (error(); as e) { <p class="warn"><mat-icon>error_outline</mat-icon> {{ e }}</p> }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      @if (noEngine()) { <span class="why">{{ 'moveCompare.dialog.noEngineWhy' | translate }}</span> }
+      @if (noEngine()) {
+        <span class="why">{{ 'moveCompare.dialog.noEngineWhy' | translate }}<span class="rh-nowrap">&nbsp;<app-help-hint
+          [text]="'moveCompare.dialog.noEngine' | translate" /></span> · <a routerLink="/profile" (click)="ref.close()">{{
+          'moveCompare.dialog.toProfile' | translate }}</a></span>
+      }
       <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
       <button mat-flat-button color="primary" [disabled]="!canSubmit()" (click)="submit()">
         @if (busy()) { <mat-spinner diameter="18" /> } @else { {{ 'moveCompare.dialog.submit' | translate }} }
@@ -98,8 +101,6 @@ const KNOWN_REASONS = new Set(['too-many-open', 'no-engine', 'too-many-jobs', 'i
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; margin: 2px 0; }
     .warn { display: flex; align-items: center; gap: 6px; color: var(--rh-warn); font-size: .85rem; }
-    .note { display: flex; align-items: flex-start; gap: 6px; color: var(--mat-sys-on-surface-variant); font-size: .85rem; }
-    .note mat-icon { font-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; }
     .warn mat-icon { font-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; }
     .group-label { font-size: .78rem; font-weight: 600; margin: 12px 0 6px; color: color-mix(in srgb, currentColor 70%, transparent); }
     .moves { display: flex; flex-wrap: wrap; gap: 6px; }

@@ -64,10 +64,12 @@ export const LONG_WAIT_SECONDS = 15 * 60;
     .rs-label { font-weight: 600; }
     .rs-line.done .rs-label { font-weight: 400; opacity: .75; }
     .rs-check { color: var(--ok, var(--rh-success)); font-weight: 700; }
-    .rs-time { font-size: .9em; opacity: .75; font-variant-numeric: tabular-nums; }
+    /* UI-Sweep 2026-11-10 (d10-l-wartezeile-nachsatz-kontrast): leise Farbe statt Deckkraft — opacity auf --muted fiel unter 4,5:1 */
+    .rs-time { font-size: .9em; color: var(--muted, var(--rh-text-secondary)); font-variant-numeric: tabular-nums; }
     .rs-clock { font-variant-numeric: tabular-nums; }
     /* Der Nachsatz: Strich hängt am Folgewort (a1-l-formular-wartezeit, d6-l-wartet-leser-gedankenstrich) */
-    .rs-why { font-size: .9em; opacity: .75; }
+    /* UI-Sweep 2026-11-10 (d10-l-wartezeile-nachsatz-kontrast): leise Farbe statt Deckkraft (DESIGN.md 7) */
+    .rs-why { font-size: .9em; color: var(--muted, var(--rh-text-secondary)); }
     .rs-why::before { content: "\\00a0–\\00a0"; }
     .rs-long { font-size: .9em; color: var(--warn, var(--rh-warn)); }
   `],

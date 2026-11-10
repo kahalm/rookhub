@@ -118,6 +118,15 @@ export function parseDay(text: string): string | null {
   return read?.birthDate ?? null;
 }
 
+/**
+ * „Freitag" — nur der Wochentag eines Tages. UI-Sweep 2026-11-10 (d10-c-anwesenheit-datum-langform): in der Metazeile der
+ * Anwesenheit, weil das Datum als TT.MM.JJJJ direkt darunter im Feld steht; leer, wenn kein Tag lesbar ist.
+ */
+export function weekdayText(iso: string): string {
+  const d = parts(iso);
+  return d ? WEEKDAYS[isoWeekday(d) - 1] : '';
+}
+
 /** „Freitag, 25. September 2026". */
 export function longDate(iso: string): string {
   const d = parts(iso);

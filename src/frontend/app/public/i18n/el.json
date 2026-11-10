@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "Ημερομηνία",
       "time": "Ώρα",
-      "titleOptional": "Τίτλος (προαιρετικό)",
-      "descriptionOptional": "Περιγραφή (προαιρετικό)"
+      "title": "Τίτλος",
+      "description": "Περιγραφή"
     },
     "columns": {
       "title": "Τίτλος"

@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "Ngày",
       "time": "Giờ",
-      "titleOptional": "Tiêu đề (tùy chọn)",
-      "descriptionOptional": "Mô tả (tùy chọn)"
+      "title": "Tiêu đề",
+      "description": "Mô tả"
     },
     "columns": {
       "title": "Tiêu đề"

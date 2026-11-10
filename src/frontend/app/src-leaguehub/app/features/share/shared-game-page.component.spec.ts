@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { AuthService } from '@rh/core/auth.service';
 import { LeagueApiService } from '../../core/league-api.service';
 import { SharedLeagueGame } from '../../core/league.models';
 import { SharedGamePageComponent } from './shared-game-page.component';
@@ -12,10 +13,11 @@ const GAME: SharedLeagueGame = { league: 'Landesliga', season: '2026/27', round:
 
 describe('SharedGamePageComponent', () => {
   let api: jasmine.SpyObj<LeagueApiService>;
+  let auth: { isLoggedIn: boolean };
 
   async function create() {
     TestBed.configureTestingModule({ imports: [SharedGamePageComponent], providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'de' }),
-      { provide: LeagueApiService, useValue: api },
+      { provide: LeagueApiService, useValue: api }, { provide: AuthService, useValue: auth },
       { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ token: 'T' }) } } }] });
     const f = TestBed.createComponent(SharedGamePageComponent);
     f.detectChanges();
@@ -24,7 +26,7 @@ describe('SharedGamePageComponent', () => {
     return f.nativeElement as HTMLElement;
   }
 
-  beforeEach(() => { api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['sharedGame']); });
+  beforeEach(() => { api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['sharedGame']); auth = { isLoggedIn: false }; });
 
   it('zeigt die eine Partie samt Nachspielen, nur lesend', async () => {
     api.sharedGame.and.resolveTo(GAME);
@@ -51,5 +53,19 @@ describe('SharedGamePageComponent', () => {
     const el = await create();
     expect(el.textContent).not.toContain('Link ungültig');
     expect(el.textContent).toContain('Neu laden');
+  });
+
+  // UI-Sweep 2026-11-10 (d10-l-partie-link-ungueltig-ohne-weg): „Link ungültig“ bietet immer einen Weg zurück.
+  it('„Link ungültig“: angemeldet zu den Vereinspartien, abgemeldet zur Startseite', async () => {
+    api.sharedGame.and.rejectWith(new HttpErrorResponse({ status: 404 }));
+    auth.isLoggedIn = true;
+    let a = (await create()).querySelector<HTMLAnchorElement>('.gate .actions a.btn-sec');
+    expect(a?.textContent).toContain('Zu den Vereinspartien');
+    expect(a?.getAttribute('href')).toBe('/verein');
+    TestBed.resetTestingModule();
+    auth.isLoggedIn = false;
+    a = (await create()).querySelector<HTMLAnchorElement>('.gate .actions a.btn-sec');
+    expect(a?.textContent).toContain('Zur Startseite');
+    expect(a?.getAttribute('href')).toBe('/');
   });
 });

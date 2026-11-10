@@ -73,7 +73,8 @@ export interface EngineChoice { id: string; name: string; tag: string | null }
             </mat-form-field>
           }
           @if (engineOn && !terminal) {
-            <app-help-hint icon="info_outline" [text]="speedHint" />
+            <!-- UI-Sweep 2026-11-10 (d10-rk-engine-hilfe-info-statt-fragezeichen): Hilfe immer mit dem Standard-? (DESIGN 5.11). -->
+            <app-help-hint [text]="speedHint" />
           }
           @if (engineOn && (engines.length > 0 || compareOn)) {
             <button mat-icon-button class="cmp-btn" [class.on]="compareOn"
@@ -133,7 +134,8 @@ export interface EngineChoice { id: string; name: string; tag: string | null }
             <div class="cmp-block">
               <p class="eng-label">
                 {{ compareEngineName }} <span class="eng-depth">· {{ 'analysis.depth' | translate }} {{ compareDepth }}</span>
-                <app-help-hint icon="info_outline" [text]="compareSpeedHint" />
+                <!-- UI-Sweep 2026-11-10 (d10-rk-engine-hilfe-info-statt-fragezeichen): Standard-? statt ⓘ. -->
+                <app-help-hint [text]="compareSpeedHint" />
                 @if (compareFallback) {
                   <mat-icon class="cmp-warn" [matTooltip]="'analysis.remoteFallback' | translate">cloud_off</mat-icon>
                 }

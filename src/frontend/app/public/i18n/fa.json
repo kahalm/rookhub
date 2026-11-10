@@ -2200,8 +2200,8 @@
     "fields": {
       "date": "تاریخ",
       "time": "ساعت",
-      "titleOptional": "عنوان (اختیاری)",
-      "descriptionOptional": "توضیحات (اختیاری)"
+      "title": "عنوان",
+      "description": "توضیحات"
     },
     "columns": {
       "title": "عنوان"

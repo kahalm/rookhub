@@ -9,6 +9,7 @@ import { AuthService } from '../../core/auth.service';
 import { MarkNotesDialogComponent } from './mark-notes-dialog.component';
 import { MarkedPositionsService } from './marked-positions.service';
 import { addMarkTag, knownMarkTag } from './mark-tags';
+import { coarseRuleFor } from '../../testing/coarse-pointer-rules';
 
 /** Schlagworte + Kommentar am „+"-Knopf (0.862.0, Wunsch 2026-10-27). */
 describe('MarkNotesDialogComponent', () => {
@@ -143,4 +144,22 @@ describe('MarkNotesDialogComponent', () => {
     expect(top('button[mat-dialog-close]')).toBe(save);
     ref.close();
   });
+  // UI-Sweep 2026-11-10 (d10-rk-markieren-chips-tippziel-klein): die Schlagwort-Umschalter waren ~26 px hoch. Headless-Chrome
+  // hat einen feinen Zeiger — geprüft wird die Regel unter (pointer: coarse): sichtbar 36 px + 2 × 4 px Trefferfläche = 44 px.
+  it('Schlagwort-Chips: unter grobem Zeiger mind. 36 px hoch und 44 px Trefferfläche, nur im Bearbeiten', () => {
+    const { el } = setup();
+    expect(el.querySelectorAll('button.mn-chip').length).toBeGreaterThan(0);
+    const chip = coarseRuleFor('button.mn-chip')!;
+    expect(chip).withContext('Regel für button.mn-chip unter (pointer: coarse)').toBeDefined();
+    const minH = parseFloat(chip.style.minHeight);
+    expect(minH).toBeGreaterThanOrEqual(36);
+    const hit = coarsePointerAfter();
+    expect(hit).withContext('::after-Trefferfläche').toBeDefined();
+    const grow = -parseFloat(hit!.style.top || hit!.style.inset.split(' ')[0]);
+    expect(minH + 2 * grow).toBeGreaterThanOrEqual(44);
+    const gap = parseFloat(coarseRuleFor('.mn-chips[role="group"]')!.style.gap);
+    expect(gap).toBeGreaterThanOrEqual(2 * grow);   // Nachbarzeilen überlappen nicht
+    expect(coarseRuleFor('span.mn-chip')).toBeUndefined();
+  });
+  function coarsePointerAfter() { return coarseRuleFor('button.mn-chip', '::after'); }
 });

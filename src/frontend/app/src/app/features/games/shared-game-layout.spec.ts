@@ -116,6 +116,43 @@ describe('SharedGameComponent Layout (UI-Sweep a1)', () => {
     expect(mobile.indexOf('.shared-page:has(')).toBeGreaterThan(mobile.indexOf('.shared-page { padding: 0; }'));
   });
 
+  it('d10-rk-partiekopf-namen-laptop-gequetscht: Titelspalte mindestens 280 px, Namen brechen nicht mitten im Wort', () => {
+    expect(base).toMatch(/\.header \{[^}]*grid-template-columns: auto minmax\(min\(100%, ?280px\), ?1fr\) auto;/);
+    expect(base).toMatch(/\.header:not\(:has\(\.back\)\) \{ ?grid-template-columns: minmax\(min\(100%, ?280px\), ?1fr\) auto;/);
+    expect(base).toMatch(/\.players strong \{[^}]*overflow-wrap: break-word/);
+    expect(base).not.toContain('overflow-wrap: anywhere');
+  });
+
+  it('d10-rk-partiekopf-namen-laptop-gequetscht: am Laptop bleibt der Titel ≥ 280 px breit und höchstens zweizeilig', () => {
+    const style = document.createElement('style');
+    style.textContent = base;
+    const host = document.createElement('div');
+    host.style.fontSize = '14px';
+    // Kopf so breit wie die Karte am Laptop (1 366 px), dazu absichtlich die alte Reihe aus fünf breiten Knöpfen.
+    host.innerHTML = `<div class="header" style="width:1240px">
+        <a class="back" style="display:block;width:48px;height:40px"></a>
+        <div class="header-main"><span class="players">
+          <span class="pl"><strong>spielerin1</strong><span class="elo"> (Elo 1706)</span></span> –
+          <span class="pl"><strong>langername2024</strong><span class="elo"> (Elo 1689)</span></span></span>
+          <span class="meta"><span>1-0</span><span>Chess.com</span><span>08.10.2026</span></span></div>
+        <div class="header-actions">${'<button style="width:200px;height:40px;flex:none">x</button>'.repeat(5)}
+          <button class="game-menu" style="width:40px;height:40px">⋮</button></div></div>`;
+    document.head.appendChild(style);
+    document.body.appendChild(host);
+    const main = host.querySelector('.header-main') as HTMLElement;
+    const players = host.querySelector('.players') as HTMLElement;
+    expect(main.getBoundingClientRect().width).toBeGreaterThanOrEqual(280);
+    const lh = parseFloat(getComputedStyle(players).lineHeight);
+    expect(players.offsetHeight).toBeLessThanOrEqual(2 * lh + 2);
+    host.remove(); style.remove();
+  });
+
+  it('d10-rk-partie-handy-ohne-engine-eigene-zeile: am Handy ist „Ohne Engine“ (.wide-only) ausgeblendet', () => {
+    const mobile = blockOf(css, '@media (max-width: 768px)');
+    expect(mobile).toMatch(/\.wide-only \{ ?display: none; ?\}/);
+    expect(base).not.toMatch(/\.wide-only \{ ?display: none/);
+  });
+
   it('a1-rk-recap-zeilenlaenge: „Kurz erzählt" bricht nach ~75 Zeichen um', () => {
     expect(cssOf(GameRecapComponent)).toMatch(/\.recap-text \{ ?flex: 1 1 auto; min-width: 0; max-width: 75ch/);
   });

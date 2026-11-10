@@ -247,7 +247,8 @@ main.wrap.mid > lh-club-add-page { display: block; max-width: 748px; }
 .sq-legend .sq.mini { margin-left: 2px; }
 .sq.w { background: var(--sq-white); }
 .sq.s { background: var(--sq-black); }
-.cands { display: grid; gap: 7px; min-width: 0; }
+/* UI-Sweep 2026-11-10 (d10-l-prognose-brett1-alternativen-gestreckt): Kandidaten oben packen — gestreckte Gitterzeile zog sie auseinander */
+.cands { display: grid; gap: 7px; min-width: 0; align-content: start; }
 .cand {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 3.4rem 3.2rem;

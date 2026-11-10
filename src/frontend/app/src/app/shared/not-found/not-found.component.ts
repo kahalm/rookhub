@@ -26,6 +26,9 @@ import { StaleRouteReloadService } from '../../core/stale-route-reload.service';
  *    Adresse neu; ohne Service Worker ein einfacher Reload), sonst und bei jedem Fehler die normale Meldung.
  * `phase` ist ein Signal, weil die Ergebnisse asynchron eintreffen und die OnPush-View sonst nicht neu gezeichnet würde.
  */
+/** Spätestens dann steht die Meldung, auch wenn eine Versionsprüfung noch hängt. */
+export const NOT_FOUND_CHECK_CAP_MS = 6000;
+
 @Component({
   selector: 'app-not-found',
   standalone: true,
@@ -77,6 +80,7 @@ export class NotFoundComponent {
   private readonly staleRoute = inject(StaleRouteReloadService);
   private readonly appUpdate = inject(AppUpdateService);
   private destroyed = false;
+  private capTimer?: ReturnType<typeof setTimeout>;
 
   /** `checking`: Stufe 1 oder 2 läuft (bleibt so, wenn neu geladen wird); `update`: Server neuer; `none`: Text. */
   readonly phase = signal<'checking' | 'update' | 'none'>('checking');
@@ -84,15 +88,19 @@ export class NotFoundComponent {
   readonly reloading = signal(false);
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => (this.destroyed = true));
-    void this.run();
+    inject(DestroyRef).onDestroy(() => { this.destroyed = true; clearTimeout(this.capTimer); });
+    // UI-Sweep 2026-11-10 (d10-rk-404-ladekreis-haengt-ohne-sw-steuerung): Gesamtgrenze — hängt eine Prüfung, erscheint
+    // die Meldung trotzdem nach höchstens NOT_FOUND_CHECK_CAP_MS (ein Ladekreis, der stehen bleibt, ist ein Fehler).
+    this.capTimer = setTimeout(() => { if (this.phase() === 'checking') this.phase.set('none'); }, NOT_FOUND_CHECK_CAP_MS);
+    void this.run().finally(() => clearTimeout(this.capTimer));
   }
 
   private async run(): Promise<void> {
     if (this.staleRoute.canTry() && await this.staleRoute.reloadIfNewer(() => this.destroyed)) return;
-    if (this.destroyed) return;
+    if (this.destroyed || this.phase() !== 'checking') return;
     try {
       const r = await this.appUpdate.checkNow();
+      if (this.phase() !== 'checking') return;   // Gesamtgrenze schon abgelaufen: Meldung steht, nicht mehr umschalten
       this.update.set(r);
       this.phase.set(r.available ? 'update' : 'none');
     } catch {

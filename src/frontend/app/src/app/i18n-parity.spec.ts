@@ -107,6 +107,15 @@ describe('i18n Sprachdateien', () => {
     expect(bad).withContext('de: »…« statt „…“').toEqual([]);
   });
 
+  /** UI-Sweep 2026-11-10 (d10-t-gerade-anfuehrungszeichen-melden): ein deutsches Zitat „… schließt typografisch, nie mit geradem ". */
+  for (const lang of ['de', 'hr']) {
+    it(`${lang}: auf „ folgt kein gerades " als Schluss`, async () => {
+      const texts = await load(lang);
+      const bad = Object.entries(texts).filter(([, v]) => /„[^“"]*"/.test(v)).map(([k, v]) => `${k} = ${v.slice(0, 80)}`);
+      expect(bad).withContext(`${lang}: „…" statt „…“`).toEqual([]);
+    });
+  }
+
   /**
    * a1-rk-datenschutz-ergaenzungsstrich (DESIGN 5.13): „Fortschritt und -Statistiken“ brach nach dem Strich um („und -“
    * am Zeilenende). Ergänzungsstrich nach „und/oder“ mit geschütztem Leerzeichen davor und Wortverbinder (U+2060) danach.
