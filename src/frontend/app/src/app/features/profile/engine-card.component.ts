@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
+import { apiErrorText } from '../../core/api-error';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../analysis/external-engine.service';
 
@@ -362,16 +363,24 @@ export class EngineCardComponent implements OnInit, OnDestroy {
 
   /** Häkchen „Hintergrund“ einer Zeile: Liste anpassen und sofort speichern. */
   toggleBackground(e: ExternalEngineInfo, on: boolean): void {
+    const before = this.backgroundEngineIds;
     this.backgroundEngineIds = on
       ? [...this.backgroundEngineIds.filter(id => id !== e.id), e.id]
       : this.backgroundEngineIds.filter(id => id !== e.id);
-    this.saveBackground();
+    this.saveBackground(before);
   }
 
-  saveBackground(): void {
+  /** @param before Stand vor der Änderung — scheitert das Speichern, gilt wieder er (sonst zeigte das Häkchen einen
+   *  Zustand, den der Server nicht kennt). Der Grund kommt vom Server (`apiErrors.background_list_full`: „höchstens N
+   *  Hintergrund-Engines“), nicht mehr nur „konnte nicht speichern“ (0.952.0). */
+  saveBackground(before?: string[]): void {
     this.externalEngines.setBackgroundEngines(this.backgroundEngineIds).subscribe({
       next: r => { this.backgroundEngineIds = r.backgroundEngineIds ?? []; this.snackbar.success(this.translate.instant('profile.engine.backgroundSaved')); this.cdr.markForCheck(); },
-      error: () => { this.snackbar.warn(this.translate.instant('profile.engine.backgroundFailed')); this.cdr.markForCheck(); },
+      error: err => {
+        if (before) this.backgroundEngineIds = before;
+        this.snackbar.warn(apiErrorText(err, this.translate, 'profile.engine.backgroundFailed'));
+        this.cdr.markForCheck();
+      },
     });
   }
 

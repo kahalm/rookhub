@@ -144,7 +144,7 @@
     "summary_quota": "Anda sudah menghabiskan ringkasan hari ini.",
     "summary_analysis_unavailable": "Partai ini belum dianalisis dan analisis tidak dapat dimulai.",
     "summary_unsupported_start": "Ringkasan hanya tersedia untuk partai dari posisi awal.",
-    "background_list_full": "Daftar latar belakang penuh. Hapus satu mesin dulu.",
+    "background_list_full": "Daftar latar belakang penuh: paling banyak 64 mesin latar belakang. Hapus satu dulu.",
     "engine_not_found": "Mesin ini bukan milik akun itu atau sudah tidak terdaftar."
   },
   "common": {

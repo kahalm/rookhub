@@ -144,7 +144,7 @@
     "summary_quota": "Je hebt de samenvattingen van vandaag opgebruikt.",
     "summary_analysis_unavailable": "Deze partij heeft nog geen analyse en er kon er geen worden gestart.",
     "summary_unsupported_start": "Samenvattingen zijn alleen beschikbaar voor partijen vanaf de beginstelling.",
-    "background_list_full": "De achtergrondlijst is vol. Haal er eerst een engine uit.",
+    "background_list_full": "De achtergrondlijst is vol: hoogstens 64 achtergrond-engines. Haal er eerst een uit.",
     "engine_not_found": "Deze engine hoort niet bij dat account of is niet meer geregistreerd."
   },
   "common": {

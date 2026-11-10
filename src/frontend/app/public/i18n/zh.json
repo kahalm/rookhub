@@ -144,7 +144,7 @@
     "summary_quota": "你今天的总结次数已用完。",
     "summary_analysis_unavailable": "这盘对局还没有分析，也无法启动分析。",
     "summary_unsupported_start": "总结只适用于从初始局面开始的对局。",
-    "background_list_full": "后台列表已满。请先移除一个引擎。",
+    "background_list_full": "后台列表已满：最多 64 个后台引擎。请先移除一个。",
     "engine_not_found": "此引擎不属于该账户，或已不再注册。"
   },
   "common": {

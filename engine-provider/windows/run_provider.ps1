@@ -61,8 +61,8 @@ $liveHash    = 4096      # MiB
 # 5 Linien): eine Suche wird von 1 auf 8 Threads nur um den Faktor 1,13 schneller, vier Suchen
 # nebeneinander um fast das Dreifache.
 #
-# 16 x 4 Threads fuellen 64 Kerne - und 16 ist gleichzeitig die Hoechstzahl, die RookHub als
-# Hintergrund-Liste annimmt. Auf einem Rechner mit weniger Kernen: $bgCount = Kerne / 4.
+# 16 x 4 Threads fuellen 64 Kerne. Die Hintergrund-Liste in RookHub fasst hoechstens 64 Engines
+# je Konto (seit 0.952.0, vorher 32/16) - fuer ALLE Rechner zusammen. Auf einem Rechner mit weniger Kernen: $bgCount = Kerne / 4.
 # ARBEITSSPEICHER: $bgCount * $bgHash + $liveHash, hier 16 * 1024 + 4096 = rund 20 GiB. Unter
 # 32 GiB RAM $bgHash auf 512 setzen - eine zu grosse Hashtabelle laesst Windows auslagern, und
 # dann rechnet die Engine langsamer als mit einer kleinen.

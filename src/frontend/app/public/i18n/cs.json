@@ -144,7 +144,7 @@
     "summary_quota": "Dnešní shrnutí jste již vyčerpali.",
     "summary_analysis_unavailable": "Tato partie zatím nemá analýzu a žádnou se nepodařilo spustit.",
     "summary_unsupported_start": "Shrnutí jsou k dispozici jen pro partie z výchozí pozice.",
-    "background_list_full": "Seznam na pozadí je plný. Nejdřív z něj odeber jeden motor.",
+    "background_list_full": "Seznam na pozadí je plný: nejvýše 64 motorů na pozadí. Nejdřív jeden odeber.",
     "engine_not_found": "Tento motor nepatří k tomuto účtu nebo už není registrován."
   },
   "common": {

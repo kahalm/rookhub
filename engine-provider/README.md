@@ -662,9 +662,9 @@ Engines pausieren, solange live gerechnet wird — die Threadzahlen dürfen sich
 | 32 | 16 | 8 | 4 | 8 × 1024 + 4096 = 12 GiB |
 | 64 | 24 | 16 | 4 | 16 × 1024 + 4096 = 20 GiB |
 
-**Mehr als 16 Hintergrund-Engines lohnen nicht**: so viele nimmt RookHub als Hintergrund-Liste an
-(Profil → *Externe Engine*). Stehen dort auch die Engines eines Servers, bleiben entsprechend
-weniger Plätze für den PC. Und bleib beim Arbeitsspeicher unter dem, was der Rechner wirklich hat:
+**Die Hintergrund-Liste fasst höchstens 64 Engines je Konto** (Profil → *Externe Engine*; bis
+0.951.x waren es 32, davor 16) — für ALLE Rechner zusammen. Stehen dort auch die Engines eines
+Servers oder eines zweiten Rechners, bleiben entsprechend weniger Plätze für den PC. Und bleib beim Arbeitsspeicher unter dem, was der Rechner wirklich hat:
 eine Hashtabelle, die Windows auslagert, macht die Engine langsamer als eine kleine.
 
 Nach dem ersten Start die neuen Engines im Profil unter *Externe Engine* als Hintergrund-Engines

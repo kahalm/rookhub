@@ -146,7 +146,7 @@
     "summary_quota": "Današnji sažeci su potrošeni.",
     "summary_analysis_unavailable": "Ova partija nema analizu i nije ju bilo moguće pokrenuti.",
     "summary_unsupported_start": "Sažeci su dostupni samo za partije iz početne pozicije.",
-    "background_list_full": "Pozadinski popis je pun. Najprije ukloni jedan engine.",
+    "background_list_full": "Pozadinski popis je pun: najviše 64 pozadinska enginea. Najprije ukloni jedan.",
     "engine_not_found": "Ovaj engine ne pripada tom računu ili više nije registriran."
   },
   "common": {

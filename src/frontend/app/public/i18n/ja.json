@@ -144,7 +144,7 @@
     "summary_quota": "本日の要約を使い切りました。",
     "summary_analysis_unavailable": "この対局にはまだ解析がなく、開始することもできませんでした。",
     "summary_unsupported_start": "要約は初期局面からの対局でのみ利用できます。",
-    "background_list_full": "バックグラウンドリストがいっぱいです。先にエンジンを1つ外してください。",
+    "background_list_full": "バックグラウンドリストがいっぱいです（最大 64 エンジン）。先に1つ外してください。",
     "engine_not_found": "このエンジンはそのアカウントのものではないか、登録が解除されています。"
   },
   "common": {

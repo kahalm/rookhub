@@ -144,7 +144,7 @@
     "summary_quota": "Ai epuizat rezumatele de azi.",
     "summary_analysis_unavailable": "Această partidă nu are încă analiză și nu s-a putut porni niciuna.",
     "summary_unsupported_start": "Rezumatele sunt disponibile doar pentru partide din poziția inițială.",
-    "background_list_full": "Lista de fundal este plină. Scoate mai întâi un motor.",
+    "background_list_full": "Lista de fundal este plină: cel mult 64 de motoare de fundal. Scoate mai întâi unul.",
     "engine_not_found": "Acest motor nu aparține acelui cont sau nu mai este înregistrat."
   },
   "common": {

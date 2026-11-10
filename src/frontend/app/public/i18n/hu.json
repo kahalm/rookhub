@@ -35,7 +35,7 @@
     "summary_quota": "A mai összefoglalóid elfogytak.",
     "summary_analysis_unavailable": "Ehhez a játszmához nincs elemzés, és nem sikerült elindítani.",
     "summary_unsupported_start": "Összefoglaló csak az alapállásból induló játszmákhoz érhető el.",
-    "background_list_full": "A háttérlista megtelt. Előbb távolíts el róla egy motort.",
+    "background_list_full": "A háttérlista megtelt: legfeljebb 64 háttérmotor lehet. Előbb távolíts el egyet.",
     "engine_not_found": "Ez a motor nem ehhez a fiókhoz tartozik, vagy már nincs regisztrálva."
   },
   "common": {

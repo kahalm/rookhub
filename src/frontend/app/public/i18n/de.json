@@ -146,7 +146,7 @@
     "summary_quota": "Deine Zusammenfassungen für heute sind verbraucht.",
     "summary_analysis_unavailable": "Für diese Partie gibt es keine Analyse und es ließ sich keine starten.",
     "summary_unsupported_start": "Zusammenfassungen gibt es nur für Partien ab der Grundstellung.",
-    "background_list_full": "Die Hintergrund-Liste ist voll. Nimm zuerst eine Engine heraus.",
+    "background_list_full": "Die Hintergrund-Liste ist voll: höchstens 64 Hintergrund-Engines. Nimm zuerst eine heraus.",
     "engine_not_found": "Diese Engine gehört nicht zu diesem Konto oder ist nicht mehr registriert."
   },
   "common": {

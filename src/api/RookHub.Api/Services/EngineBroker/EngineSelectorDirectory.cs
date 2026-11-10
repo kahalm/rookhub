@@ -12,7 +12,7 @@ namespace RookHub.Api.Services.EngineBroker;
 /// ist anonym und vom Rate-Limiter ausgenommen (13 Provider = 78 Abrufe je Minute). Eine
 /// Datenbankabfrage je Abruf wäre für echte Provider billig — für jemanden, der mit erfundenen
 /// Secrets anklopft, wäre sie eine Tür zur Datenbank. Die Menge der Selectors ist klein (höchstens
-/// 32 je Nutzer) und ändert sich nur über die Registrierung, die hier selbst Bescheid gibt. Zur
+/// 64 je Nutzer) und ändert sich nur über die Registrierung, die hier selbst Bescheid gibt. Zur
 /// Sicherheit wird sie höchstens alle <see cref="RefreshInterval"/> neu gelesen — ein Fehlgriff kostet
 /// also höchstens eine Abfrage je Minute, egal wie viele fremde Secrets ankommen.</para>
 ///

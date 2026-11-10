@@ -144,7 +144,7 @@
     "summary_quota": "Du har förbrukat dagens sammanfattningar.",
     "summary_analysis_unavailable": "Det här partiet har ingen analys än och ingen kunde startas.",
     "summary_unsupported_start": "Sammanfattningar finns bara för partier från utgångsställningen.",
-    "background_list_full": "Bakgrundslistan är full. Ta bort en motor först.",
+    "background_list_full": "Bakgrundslistan är full: högst 64 bakgrundsmotorer. Ta bort en först.",
     "engine_not_found": "Den här motorn tillhör inte det kontot eller är inte längre registrerad."
   },
   "common": {

@@ -144,7 +144,7 @@
     "summary_quota": "Hai esaurito i riassunti di oggi.",
     "summary_analysis_unavailable": "Questa partita non ha ancora un'analisi e non è stato possibile avviarne una.",
     "summary_unsupported_start": "I riassunti sono disponibili solo per partite dalla posizione iniziale.",
-    "background_list_full": "La lista in background è piena. Rimuovi prima un motore.",
+    "background_list_full": "La lista in background è piena: al massimo 64 motori. Rimuovine prima uno.",
     "engine_not_found": "Questo motore non appartiene a quell’account o non è più registrato."
   },
   "common": {

@@ -144,7 +144,7 @@
     "summary_quota": "Vous avez épuisé les résumés du jour.",
     "summary_analysis_unavailable": "Cette partie n'a pas encore d'analyse et aucune n'a pu être lancée.",
     "summary_unsupported_start": "Les résumés ne sont disponibles que pour les parties depuis la position initiale.",
-    "background_list_full": "La liste d’arrière-plan est pleine. Retire d’abord un moteur.",
+    "background_list_full": "La liste d’arrière-plan est pleine : 64 moteurs d’arrière-plan au maximum. Retire d’abord un moteur.",
     "engine_not_found": "Ce moteur n’appartient pas à ce compte ou n’est plus enregistré."
   },
   "common": {

@@ -144,7 +144,7 @@
     "summary_quota": "Wykorzystano dzisiejsze podsumowania.",
     "summary_analysis_unavailable": "Ta partia nie ma jeszcze analizy i nie udało się jej uruchomić.",
     "summary_unsupported_start": "Podsumowania są dostępne tylko dla partii od pozycji wyjściowej.",
-    "background_list_full": "Lista w tle jest pełna. Najpierw usuń jeden silnik.",
+    "background_list_full": "Lista w tle jest pełna: najwyżej 64 silniki w tle. Najpierw usuń jeden.",
     "engine_not_found": "Ten silnik nie należy do tego konta lub nie jest już zarejestrowany."
   },
   "common": {

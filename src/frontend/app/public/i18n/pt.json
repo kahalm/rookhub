@@ -144,7 +144,7 @@
     "summary_quota": "Já usou os resumos de hoje.",
     "summary_analysis_unavailable": "Esta partida ainda não tem análise e não foi possível iniciar nenhuma.",
     "summary_unsupported_start": "Os resumos só estão disponíveis para partidas a partir da posição inicial.",
-    "background_list_full": "A lista de segundo plano está cheia. Remove primeiro um motor.",
+    "background_list_full": "A lista de segundo plano está cheia: no máximo 64 motores. Remove primeiro um.",
     "engine_not_found": "Este motor não pertence a essa conta ou já não está registado."
   },
   "common": {

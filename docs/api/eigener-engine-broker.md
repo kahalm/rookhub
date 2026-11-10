@@ -18,8 +18,8 @@ Lichess-Konto ging gar nichts. Direkt gibt es keine fremde Drossel, keinen Liche
   verlässt den Server nie Richtung Browser), `ProviderSelector` = sha256(`"providerSecret:" + secret`) hex — das
   Geheimnis des Providers selbst wird NIE gespeichert. Identität = der NAME je Konto: der Provider fragt `GET`, dann
   `PUT` auf den gleichnamigen Eintrag bzw. `POST`; ein `POST` mit exakt vorhandenem Namen aktualisiert ebenfalls
-  (zwei Provider, die gleichzeitig starten). Ein Name, der sich nur in Groß/Klein unterscheidet → 409; höchstens 32
-  je Konto. Anlegen/Ändern NUR mit Engine-Token (der Provider registriert, der Browser nicht → 403), Löschen auch
+  (zwei Provider, die gleichzeitig starten). Ein Name, der sich nur in Groß/Klein unterscheidet → 409; höchstens 64
+  je Konto (`MaxEnginesPerUser`, seit 0.937.0). Anlegen/Ändern NUR mit Engine-Token (der Provider registriert, der Browser nicht → 403), Löschen auch
   aus dem Profil.
 * **`EngineHub`** (Singleton, Arbeitsspeicher): Schlange je Selector, Übergabe direkt an einen wartenden Poll.
   `POST /api/external-engine/work` wartet `AcquireWaitSeconds` (10) → 200 `{ id, work, engine }` oder 204. Der

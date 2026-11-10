@@ -146,7 +146,7 @@
     "summary_quota": "You have used up today's summaries.",
     "summary_analysis_unavailable": "This game has no analysis yet and none could be started.",
     "summary_unsupported_start": "Summaries are only available for games from the starting position.",
-    "background_list_full": "The background list is full. Remove an engine from it first.",
+    "background_list_full": "The background list is full: at most 64 background engines. Remove one from the list first.",
     "engine_not_found": "This engine does not belong to that account or is no longer registered."
   },
   "common": {

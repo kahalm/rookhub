@@ -41,8 +41,51 @@ public class LichessEngineCredential
     /// ausschliesslich ueber <see cref="BackgroundEngines"/> / <see cref="SetBackgroundEngines"/>,
     /// damit die Zerlegung an EINER Stelle steht.</para>
     /// </summary>
-    [MaxLength(600)]
+    [MaxLength(BackgroundEngineIdsMaxLength)]
     public string? BackgroundEngineIds { get; set; }
+
+    /// <summary>Höchstzahl hinterlegbarer Hintergrund-Engines — EINE Stelle für alle Wege, die die Liste vergrößern
+    /// (Profil, Admin-Reiter „Engines“, Wiedereintragen bei Neuanmeldung), geprüft über <see cref="CheckBackgroundList"/>.
+    ///
+    /// <para>Verlauf: 8 → 16 (2026-09-11, 40-Kern-Maschine mit zwölf Hintergrund-Engines) → 32 (2026-10-05, zweiter
+    /// Rechner mit sechzehn) → 64 (2026-11-10, 0.952.0: fünf Maschinen — Gross 12, Server 4, PC 16, Laptop 4, Spark —
+    /// passten nicht mehr in 32; Prod stand von Hand schon bei 35). 64 ist zugleich
+    /// <c>ExternalEngineRegistrationService.MaxEnginesPerUser</c>: mehr Engines als Registrierungen gibt es nicht.</para></summary>
+    public const int MaxBackgroundEngines = 64;
+
+    /// <summary>Spaltenlänge von <see cref="BackgroundEngineIds"/>: eine Kennung ist 16 Zeichen (<c>rhe_</c>/<c>eei_</c> + 12),
+    /// mit Komma 17 — 64 Kennungen belegen 64 × 17 − 1 = 1 087 Zeichen; 1 200 lässt Reserve für längere fremde Kennungen.
+    /// Bis 0.951.x 600 Zeichen (= höchstens 35 Kennungen).</summary>
+    public const int BackgroundEngineIdsMaxLength = 1200;
+
+    /// <summary>Warum eine Liste nicht gespeichert werden darf.</summary>
+    public enum BackgroundListProblem { None, TooMany, TooLong }
+
+    /// <summary>
+    /// Darf <paramref name="next"/> an die Stelle einer Liste mit <paramref name="currentCount"/> Einträgen treten?
+    /// <see cref="BackgroundListProblem.TooMany"/> nur, wenn sie über <see cref="MaxBackgroundEngines"/> liegt UND
+    /// länger wird als bisher — eine Liste, die schon über dem Deckel steht (von Hand geschrieben), lässt sich so weiter
+    /// verkleinern oder umstellen, nur nicht vergrößern. <see cref="BackgroundListProblem.TooLong"/>, wenn sie nicht in die
+    /// Spalte passt — dann wird nie abgeschnitten gespeichert (eine halbe Kennung in der CSV wäre schlimmer).
+    /// </summary>
+    public static BackgroundListProblem CheckBackgroundList(IReadOnlyCollection<string> next, int currentCount)
+    {
+        if (next.Count > MaxBackgroundEngines && next.Count > currentCount) return BackgroundListProblem.TooMany;
+        if (string.Join(',', next).Length > BackgroundEngineIdsMaxLength) return BackgroundListProblem.TooLong;
+        return BackgroundListProblem.None;
+    }
+
+    /// <summary>Hängt <paramref name="engineId"/> hinten an, wenn Deckel und Spalte es erlauben (<see cref="CheckBackgroundList"/>).
+    /// Steht sie schon drin: <see cref="BackgroundListProblem.None"/>, nichts geändert.</summary>
+    public BackgroundListProblem TryAppendBackgroundEngine(string engineId)
+    {
+        var current = BackgroundEngines;
+        if (current.Contains(engineId)) return BackgroundListProblem.None;
+        var next = current.Append(engineId).ToList();
+        var problem = CheckBackgroundList(next, current.Count);
+        if (problem == BackgroundListProblem.None) SetBackgroundEngines(next);
+        return problem;
+    }
 
     /// <summary>Die hinterlegten Hintergrund-Engines, in der gespeicherten Reihenfolge.</summary>
     public IReadOnlyList<string> BackgroundEngines =>
@@ -50,14 +93,20 @@ public class LichessEngineCredential
             ? []
             : BackgroundEngineIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-    /// <summary>Setzt die Liste (Duplikate und Leerwerte fallen raus, Reihenfolge bleibt).</summary>
+    /// <summary>Setzt die Liste (Duplikate und Leerwerte fallen raus, Reihenfolge bleibt). Den Deckel prüft der Aufrufer
+    /// (<see cref="CheckBackgroundList"/>); passt die Liste nicht in die Spalte, wirft es — lieber kein Speichern als ein
+    /// abgeschnittenes.</summary>
     public void SetBackgroundEngines(IEnumerable<string> ids)
     {
         var clean = ids.Select(i => i?.Trim() ?? string.Empty)
                        .Where(i => i.Length > 0)
                        .Distinct(StringComparer.Ordinal)
                        .ToList();
-        BackgroundEngineIds = clean.Count == 0 ? null : string.Join(',', clean);
+        var csv = string.Join(',', clean);
+        if (csv.Length > BackgroundEngineIdsMaxLength)
+            throw new InvalidOperationException(
+                $"Background engine list too long ({csv.Length} > {BackgroundEngineIdsMaxLength} characters)");
+        BackgroundEngineIds = clean.Count == 0 ? null : csv;
     }
 
     /// <summary>

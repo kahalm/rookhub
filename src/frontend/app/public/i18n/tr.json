@@ -144,7 +144,7 @@
     "summary_quota": "Bugünkü özet hakkınızı doldurdunuz.",
     "summary_analysis_unavailable": "Bu oyunun henüz analizi yok ve başlatılamadı.",
     "summary_unsupported_start": "Özetler yalnızca başlangıç pozisyonundan başlayan oyunlar için kullanılabilir.",
-    "background_list_full": "Arka plan listesi dolu. Önce bir motoru çıkar.",
+    "background_list_full": "Arka plan listesi dolu: en fazla 64 arka plan motoru. Önce birini çıkar.",
     "engine_not_found": "Bu motor o hesaba ait değil ya da artık kayıtlı değil."
   },
   "common": {

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.952.0", date: "2026-11-10", changes: [
+    { en: "Background engines: up to 64 per account instead of 32 (the list column now holds them). A list that is already over the limit no longer blocks editing — removing and rearranging always work, only growing it beyond the limit is refused. Every path that adds engines (profile, Admin → Engines, automatic re-adding after a provider re-registers) checks the same limit and never stores a cut-off list. The profile now shows the reason („at most 64 background engines“) instead of „could not save“ and resets the checkbox.",
+      de: "Hintergrund-Engines: bis zu 64 je Konto statt 32 (die Spalte der Liste fasst sie jetzt). Eine Liste, die schon über dem Deckel liegt, blockiert das Bearbeiten nicht mehr — Entfernen und Umstellen gehen immer, abgelehnt wird nur, was sie über den Deckel vergrößert. Alle Wege, die Engines eintragen (Profil, Admin → Engines, automatisches Wiedereintragen nach Neuanmeldung eines Providers), prüfen denselben Deckel und speichern nie eine abgeschnittene Liste. Das Profil zeigt jetzt den Grund („höchstens 64 Hintergrund-Engines“) statt „konnte nicht speichern“ und setzt das Häkchen zurück." },
+  ] },
   { version: "0.951.1", date: "2026-11-10", changes: [
     { en: "Design round d10, follow-up: in the “Compare moves” dialog the dot and “To profile” stay together on one line; the waiting line of the form reader uses the full width in LeagueHub instead of wrapping at 70 characters.",
       de: "Design-Runde d10, Nachbesserung: Im Dialog „Züge vergleichen“ bleiben Punkt und „Zum Profil“ gemeinsam in einer Zeile; die Wartezeile des Formular-Lesers nutzt in LeagueHub die volle Breite statt bei 70 Zeichen umzubrechen." },

@@ -144,7 +144,7 @@
     "summary_quota": "Bạn đã dùng hết lượt tóm tắt hôm nay.",
     "summary_analysis_unavailable": "Ván cờ này chưa có phân tích và không thể bắt đầu phân tích.",
     "summary_unsupported_start": "Tóm tắt chỉ có cho các ván từ thế ban đầu.",
-    "background_list_full": "Danh sách nền đã đầy. Hãy gỡ bớt một engine trước.",
+    "background_list_full": "Danh sách nền đã đầy: tối đa 64 engine nền. Hãy gỡ bớt một engine trước.",
     "engine_not_found": "Engine này không thuộc tài khoản đó hoặc không còn được đăng ký."
   },
   "common": {

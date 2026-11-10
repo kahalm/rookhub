@@ -247,6 +247,36 @@ public class EngineOverviewSqlTests(EngineOverviewSqlFixture fixture) : IAsyncLi
             Assert.Empty(dto.Engines.Single(e => e.Id == RheA).BackgroundFor);
         }
     }
+
+    /// <summary>Deckel 64 (0.952.0): 64 echte lange Kennungen passen in die verbreiterte Spalte (vorher varchar(600) = 35),
+    /// eine 65. wird über die gemeinsame Regel abgelehnt — und eine zu lange Liste ERREICHT die Datenbank nie.</summary>
+    [MySqlFact]
+    public async Task BackgroundList_SixtyFourIds_FitTheColumn_SixtyFifthIsRejected()
+    {
+        var ids = Enumerable.Range(0, LichessEngineCredential.MaxBackgroundEngines).Select(i => $"eei_sql{i:D9}").ToList();
+        await using (var db = fixture.Schema.NewContext())
+        {
+            db.AppUsers.Add(new AppUser { Id = Owner, Username = "sql-owner", PasswordHash = "x" });
+            var cred = new LichessEngineCredential { UserId = Owner, CreatedAt = Now, UpdatedAt = Now };
+            cred.SetBackgroundEngines(ids);
+            db.LichessEngineCredentials.Add(cred);
+            await db.SaveChangesAsync();
+        }
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var cred = await db.LichessEngineCredentials.SingleAsync(c => c.UserId == Owner);
+            Assert.Equal(ids, cred.BackgroundEngines);
+            Assert.Equal(64 * 17 - 1, cred.BackgroundEngineIds!.Length);
+            Assert.Equal(LichessEngineCredential.BackgroundListProblem.TooMany, cred.TryAppendBackgroundEngine("eei_sql999999999"));
+            await db.SaveChangesAsync();
+            var width = await db.Database.SqlQueryRaw<long>(
+                "SELECT CHARACTER_MAXIMUM_LENGTH AS Value FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() " +
+                "AND TABLE_NAME = 'LichessEngineCredentials' AND COLUMN_NAME = 'BackgroundEngineIds'").SingleAsync();
+            Assert.Equal(LichessEngineCredential.BackgroundEngineIdsMaxLength, width);
+        }
+        await using (var db = fixture.Schema.NewContext())
+            Assert.Equal(64, (await db.LichessEngineCredentials.AsNoTracking().SingleAsync(c => c.UserId == Owner)).BackgroundEngines.Count);
+    }
 }
 
 public sealed class EngineOverviewSqlFixture() : MariaDbClassFixture("engov", withApp: false);

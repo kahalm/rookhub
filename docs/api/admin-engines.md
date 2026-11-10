@@ -48,7 +48,7 @@ liegt in `EngineSettingsService.SetBackgroundMembershipAsync` und teilt Bereinig
 |---|---|
 | geändert | 200 `{ engineId, userId, enabled, changed: true, backgroundEngineIds }` |
 | schon drin / schon draußen | 200 mit `changed: false`, nichts geschrieben, kein Log |
-| Liste voll (neue Liste > `MaxBackgroundEngines` = 32) | 400 `{ message: "At most 32 background engines", code: "background_list_full" }` |
+| Liste voll (neue Liste > `MaxBackgroundEngines` = 64, bzw. passt nicht in die Spalte) | 400 `{ message: "At most 64 background engines", code: "background_list_full" }` |
 | Engine gehört dem Konto nicht / nicht registriert (nur beim Aufnehmen) | 404 `code: "engine_not_found"` |
 | Konto gibt es nicht | 404 `code: "user_not_found"` |
 | Lichess-Engine ohne Token beim Konto | 400 „No Lichess token stored“ (Token unlesbar: „Stored token unreadable“) |
@@ -57,10 +57,23 @@ liegt in `EngineSettingsService.SetBackgroundMembershipAsync` und teilt Bereinig
 
 - **Aufnehmen** hängt hinten an, die Reihenfolge der übrigen bleibt; eine Zeile ohne Token wird angelegt, wenn das Konto
   keine hat. Nur Engines, die DIESEM Konto gehören (`rhe_` auf das Konto registriert, `eei_` über dessen Lichess-Token).
-- **Entfernen** geht immer — auch bei einer Liste über dem Deckel (Prod 10.11.2026: 33 Einträge bei Deckel 32 — kein
-  Codepfad schreibt mehr als 32, die Liste kam von außen), ohne Token und für fremde oder nicht mehr registrierte Kennungen.
-- **Deckel**: 32 wie im Profil und bei der Wiederaufnahme nach dem Aufräumen (`RestorePrunedBackgroundAsync`), begrenzt
-  durch die 600-Zeichen-Spalte. Gemessen wird die Liste NACH dem Aufnehmen.
+- **Entfernen** geht immer — auch bei einer Liste über dem Deckel, ohne Token und für fremde oder nicht mehr registrierte
+  Kennungen.
+- **Deckel** (0.952.0): 64, Spalte `varchar(1200)` (64 × 17 − 1 = 1 087 Zeichen + Reserve). EINE Regel für alle Wege, die
+  die Liste vergrößern — Profil, dieser Schalter, Wiedereintragen nach dem Aufräumen (`RestorePrunedBackgroundAsync`):
+  `LichessEngineCredential.CheckBackgroundList(next, currentCount)` lehnt ab, was über 64 liegt UND länger wird als bisher,
+  und was nicht in die Spalte passt; `SetBackgroundEngines` wirft statt abzuschneiden. Ist die Liste beim Wiedereintragen
+  voll, bleibt sie, wie sie ist (Warnung `… NICHT wieder eingetragen — Hintergrund-Liste voll …`).
+- **Was mit der Listenlänge skaliert** (bei 64 geprüft): der `AnalysisJobWorker` startet je Engine EINEN Lauf ohne
+  weiteren Deckel — 64 Hintergrund-Engines = bis zu 64 gleichzeitige Broker-Streams, jeder hält beim Fortschritt kurz einen
+  DB-Scope (MySqlConnector-Pool Vorgabe 100); `MasterAnalysisScheduler` füllt so viele Meisterpartien vor, wie Engines
+  nutzbar sind; `EngineAvailability.UsableAsync` macht je Aufruf zwei Abfragen mit IN-Liste ≤ 64 (Index UserId); der
+  Rebalancer ist O(Engines × Wartende) im Speicher. Nichts davon ist bei 64 teuer; die Pool-Grenze ist die erste, die bei
+  deutlich mehr Engines zählen würde.
+- **Vorgeschichte 10.11.2026**: Prod hatte 33 Einträge bei Deckel 32 und im Profil ließ sich nichts mehr ankreuzen
+  („can not save“). Nachgewiesen: KEIN Codepfad — die Liste wurde am 09.11. 20:12:39 UTC per SQL-UPDATE einer
+  Claude-Sitzung um 17 PC-Engines ergänzt (16 → 33, geprüft wurde nur die Spaltenlänge 600); kein PUT, kein Log
+  „wieder als Hintergrund-Engine eingetragen“. Danach von Hand auf 35 (594 Zeichen).
 - **`PrunedBackgroundNames`**: der Name der Engine (wenn auf dieses Konto registriert) fällt in beiden Richtungen aus der
   Merkliste — eine von Hand entfernte Engine trägt die Wartung bei Neuanmeldung nicht wieder ein, eine von Hand aufgenommene
   nicht ein zweites Mal.

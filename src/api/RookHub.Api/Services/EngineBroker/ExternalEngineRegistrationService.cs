@@ -210,11 +210,15 @@ public class ExternalEngineRegistrationService
         var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
         if (cred is null || !cred.PrunedBackground.Contains(reg.Name)) return;
         cred.SetPrunedBackground(cred.PrunedBackground.Where(n => n != reg.Name));
-        if (cred.BackgroundEngines.Count < EngineSettingsService.MaxBackgroundEngines)
-            cred.SetBackgroundEngines(cred.BackgroundEngines.Append(reg.Id));
+        // Dieselbe Regel wie Profil und Admin-Reiter (Deckel UND Spaltenlänge): ist die Liste voll, wird nicht eingetragen.
+        var problem = cred.TryAppendBackgroundEngine(reg.Id);
         cred.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
-        _logger.LogInformation("EngineBroker: Engine {EngineId} ({Name}) wieder als Hintergrund-Engine eingetragen", reg.Id, reg.Name);
+        if (problem == LichessEngineCredential.BackgroundListProblem.None)
+            _logger.LogInformation("EngineBroker: Engine {EngineId} ({Name}) wieder als Hintergrund-Engine eingetragen", reg.Id, reg.Name);
+        else
+            _logger.LogWarning("EngineBroker: Engine {EngineId} ({Name}) NICHT wieder eingetragen — Hintergrund-Liste voll ({Problem}, {Count} Eintraege)",
+                reg.Id, reg.Name, problem, cred.BackgroundEngines.Count);
     }
 
     public static ExternalEngineRegistrationDto ToDto(ExternalEngineRegistration r, string username, bool withSecret) => new()

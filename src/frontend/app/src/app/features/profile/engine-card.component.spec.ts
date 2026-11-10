@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { SnackbarService } from '../../core/snackbar.service';
 import { of } from 'rxjs';
 import { EngineCardComponent } from './engine-card.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
@@ -179,6 +180,26 @@ describe('EngineCardComponent', () => {
     expect(req.request.body).toEqual({ engineIds: ['eei_b', 'eei_a'] });
     req.flush({ backgroundEngineIds: ['eei_b', 'eei_a'] });
     expect(component.backgroundEngineIds).toEqual(['eei_b', 'eei_a']);
+  });
+
+  // 0.952.0: auf Prod stand nur „can not save“ da, der Grund (Deckel) blieb verborgen — und das Häkchen log weiter.
+  it('background list full: shows the server reason (apiErrorText) and reverts the checkbox', () => {
+    const snack = TestBed.inject(SnackbarService);
+    spyOn(snack, 'warn');
+    fixture.detectChanges();
+    http.expectOne('/api/engine/credentials').flush({ hasCredentials: true, maskedToken: '****abcd' });
+    http.expectOne('/api/engine/external').flush({
+      hasCredentials: true, tokenInvalid: false, backgroundEngineIds: ['eei_a'],
+      engines: [{ id: 'eei_a', name: 'A', maxThreads: 8, maxHash: 512 }, { id: 'eei_b', name: 'B', maxThreads: 8, maxHash: 512 }],
+    });
+
+    component.toggleBackground(component.engines.find(e => e.id === 'eei_b')!, true);
+    expect(component.backgroundEngineIds).toEqual(['eei_a', 'eei_b']);
+    http.expectOne('/api/engine/background').flush(
+      { message: 'At most 64 background engines', code: 'background_list_full' }, { status: 400, statusText: 'Bad Request' });
+
+    expect(snack.warn).toHaveBeenCalledWith('At most 64 background engines');   // ohne Sprachdatei: message statt Ersatztext
+    expect(component.backgroundEngineIds).toEqual(['eei_a']);
   });
 
   it('flags a rejected token instead of showing an empty list', () => {

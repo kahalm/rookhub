@@ -22,6 +22,8 @@ using RookHub.Api.Controllers.EngineBroker;
 using RookHub.Api.DTOs.EngineBroker;
 using RookHub.Api.DTOs.Engines;
 
+using RookHub.Api.Tests.Accounts;
+
 namespace RookHub.Api.Tests.EngineBroker;
 
 /// <summary>
@@ -470,38 +472,67 @@ public class EngineControllerTests : IDisposable
     private static List<string> BackgroundIds(int count) =>
         [.. Enumerable.Range(1, count).Select(BackgroundId)];
 
-    /// <summary>Zweiunddreissig muessen durchgehen (0.669.2): zwoelf Hintergrund-Engines der grossen
-    /// Maschine, sechzehn eines zweiten Rechners und vier von Lichess.</summary>
+    /// <summary>Vierundsechzig muessen durchgehen (0.952.0; vorher 32 seit 0.669.2, davor 16): fuenf Maschinen —
+    /// Gross 12, Server 4, PC 16, Laptop 4, Spark — passten nicht mehr in 32.</summary>
     [Fact]
-    public async Task SetBackgroundEngine_ThirtyTwoEngines_AreStored()
+    public async Task SetBackgroundEngine_SixtyFourEngines_AreStored_AndFitTheColumn()
     {
+        Assert.Equal(64, LichessEngineCredential.MaxBackgroundEngines);           // Deckel alt 32 → neu 64
         await CreateUserAsync();
         await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
-        _handler.ListJson = EnginesJsonWith(32);
+        _handler.ListJson = EnginesJsonWith(64);
 
         var result = await _controller.SetBackgroundEngine(
-            new SetBackgroundEngineRequest { EngineIds = BackgroundIds(32) }, CancellationToken.None);
+            new SetBackgroundEngineRequest { EngineIds = BackgroundIds(64) }, CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result);
         var stored = _db.LichessEngineCredentials.Single();
-        Assert.Equal(32, stored.BackgroundEngines.Count);
-        // Die Spalte fasst 600 Zeichen — der Deckel MUSS darunter bleiben, sonst scheitert erst das
-        // Speichern, und zwar mit einer Meldung, die nichts mit Engines zu tun hat.
-        Assert.True(stored.BackgroundEngineIds!.Length <= 600, $"CSV zu lang: {stored.BackgroundEngineIds.Length}");
+        Assert.Equal(64, stored.BackgroundEngines.Count);
+        // Die Spalte MUSS den vollen Deckel fassen, sonst scheitert erst das Speichern mit einer Meldung, die nichts
+        // mit Engines zu tun hat (bis 0.951.x: 600 Zeichen = 35 Kennungen bei Deckel 32 — Prod stand von Hand bei 35).
+        Assert.True(stored.BackgroundEngineIds!.Length <= LichessEngineCredential.BackgroundEngineIdsMaxLength,
+            $"CSV zu lang: {stored.BackgroundEngineIds.Length}");
     }
 
     [Fact]
-    public async Task SetBackgroundEngine_AboveLimit_Returns400()
+    public async Task SetBackgroundEngine_AboveLimit_Returns400_WithCodeAndLimit()
     {
         await CreateUserAsync();
         await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
-        _handler.ListJson = EnginesJsonWith(33);
+        _handler.ListJson = EnginesJsonWith(65);
 
         var result = await _controller.SetBackgroundEngine(
-            new SetBackgroundEngineRequest { EngineIds = BackgroundIds(33) }, CancellationToken.None);
+            new SetBackgroundEngineRequest { EngineIds = BackgroundIds(65) }, CancellationToken.None);
 
-        Assert.IsType<BadRequestObjectResult>(result);
+        var bad = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("background_list_full", ApiErrorCodesTests.CodeOf(bad));
+        Assert.Contains("64", System.Text.Json.JsonSerializer.Serialize(bad.Value));
         Assert.Null(_db.LichessEngineCredentials.Single().BackgroundEngineIds);
+    }
+
+    /// <summary>Prod 10.11.2026: die Liste stand (von Hand) über dem Deckel — ab da ließ sich im Profil gar nichts mehr
+    /// ankreuzen. Verkleinern und Umstellen muss gehen, nur Vergrößern nicht.</summary>
+    [Fact]
+    public async Task SetBackgroundEngine_ListAlreadyOverTheCap_ShrinkWorks_GrowIsRejected()
+    {
+        await CreateUserAsync();
+        await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
+        _handler.ListJson = EnginesJsonWith(67);
+        var cred = _db.LichessEngineCredentials.Single();
+        cred.BackgroundEngineIds = string.Join(',', BackgroundIds(66));                  // 66 > 64, von Hand
+        await _db.SaveChangesAsync();
+
+        var grow = await _controller.SetBackgroundEngine(
+            new SetBackgroundEngineRequest { EngineIds = BackgroundIds(67) }, CancellationToken.None);
+        Assert.Equal("background_list_full", ApiErrorCodesTests.CodeOf(Assert.IsType<BadRequestObjectResult>(grow)));
+
+        var same = BackgroundIds(65).Append(BackgroundId(67)).ToList();                   // gleich groß, umgestellt
+        Assert.IsType<OkObjectResult>(await _controller.SetBackgroundEngine(
+            new SetBackgroundEngineRequest { EngineIds = same }, CancellationToken.None));
+
+        Assert.IsType<OkObjectResult>(await _controller.SetBackgroundEngine(
+            new SetBackgroundEngineRequest { EngineIds = BackgroundIds(65) }, CancellationToken.None));
+        Assert.Equal(65, _db.LichessEngineCredentials.Single().BackgroundEngines.Count);
     }
 
     // ---- Eigener Broker („RookHub direkt", rhe_) ----

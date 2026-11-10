@@ -116,23 +116,10 @@ internal sealed class EngineSettingsService
 
     // ===== Hintergrund-Engines ===============================================
 
-    /// <summary>Hoechstzahl hinterlegbarer Hintergrund-Engines. Nicht die Welt begrenzen, aber auch
-    /// nicht unbegrenzt: die Liste steht als CSV in einer Spalte, und jede Engine kostet den Worker
-    /// einen eigenen Broker-Stream.
-    ///
-    /// <para>Seit 2026-09-11 sechzehn statt acht: ein Provider auf einer 40-Kern-Maschine meldet
-    /// eine Live-Engine und zwoelf Hintergrund-Engines an, und mit acht blieb die Haelfte davon
-    /// unbenutzbar, sobald die vier einer zweiten Maschine noch in der Liste standen. Sechzehn
-    /// passen in die Spalte: <see cref="LichessEngineCredential.BackgroundEngineIds"/> fasst 600
-    /// Zeichen, eine Kennung ist rund 17 lang (<c>eei_</c> + 12 + Komma) — 16 belegen also etwa
-    /// 272. Der Worker rechnet je Engine EINEN Auftrag; der Deckel von vier gleichzeitigen Stroemen
-    /// (<c>EngineStreamProxy.MaxConcurrentStreamsPerUser</c>) gilt nur dem Live-Proxy, nicht ihm.</para>
-    ///
-    /// <para>Seit 2026-10-05 zweiunddreissig: ein zweiter Rechner („RookHub PC") meldet sechzehn
-    /// Hintergrund-Engines an, neben den zwoelf der grossen Maschine und den vier von Lichess — mit
-    /// sechzehn blieb er ganz aussen vor. 32 Kennungen belegen rund 32 × 17 − 1 = 543 der 600 Zeichen,
-    /// mehr passt ohne breitere Spalte nicht.</para></summary>
-    internal const int MaxBackgroundEngines = 32;
+    /// <summary>Höchstzahl hinterlegbarer Hintergrund-Engines — steht am Modell
+    /// (<see cref="LichessEngineCredential.MaxBackgroundEngines"/>, Verlauf und Begründung dort), damit jeder Weg, der die
+    /// Liste vergrößert, denselben Deckel prüft.</summary>
+    internal const int MaxBackgroundEngines = LichessEngineCredential.MaxBackgroundEngines;
 
     /// <summary>
     /// Hintergrund-Engines fuer Analyseauftraege festlegen, Schritt 1: Liste bereinigen und prüfen (leere Liste =
@@ -149,7 +136,7 @@ internal sealed class EngineSettingsService
         var cred = await CredentialAsync(userId, ct);
 
         var ids = NormalizeBackgroundIds(requested);
-        if (CheckBackgroundList(ids) is { } invalid) return (null, invalid);
+        if (CheckBackgroundList(ids, cred?.BackgroundEngines.Count ?? 0) is { } invalid) return (null, invalid);
         if (CheckLichessToken(cred, ids) is { } noToken) return (null, noToken);
         return (new BackgroundEnginePlan(cred, ids, NothingToStore: cred is null && ids.Count == 0), null);
     }
@@ -164,15 +151,21 @@ internal sealed class EngineSettingsService
         .Distinct(StringComparer.Ordinal)
         .ToList();
 
-    /// <summary>Deckel (<see cref="MaxBackgroundEngines"/>, Code <c>background_list_full</c>) und Länge je Kennung.</summary>
-    private static EngineSettingsRejection? CheckBackgroundList(IReadOnlyCollection<string> ids)
+    /// <summary>Länge je Kennung, dann Deckel und Spaltenlänge über die gemeinsame Regel
+    /// <see cref="LichessEngineCredential.CheckBackgroundList"/> (Code <c>background_list_full</c>). Abgelehnt wird nur, was
+    /// die Liste über den Deckel VERGRÖSSERT — eine schon zu lange Liste lässt sich weiter verkleinern.</summary>
+    private static EngineSettingsRejection? CheckBackgroundList(IReadOnlyCollection<string> ids, int currentCount)
     {
-        if (ids.Count > MaxBackgroundEngines)
-            return new EngineSettingsRejection($"At most {MaxBackgroundEngines} background engines",
-                Code: Exceptions.ApiErrorCodes.BackgroundListFull);
         if (ids.Any(i => i.Length > MaxEngineIdLength))
             return new EngineSettingsRejection("Invalid engine id");
-        return null;
+        return LichessEngineCredential.CheckBackgroundList(ids, currentCount) switch
+        {
+            LichessEngineCredential.BackgroundListProblem.TooMany => new EngineSettingsRejection(
+                $"At most {MaxBackgroundEngines} background engines", Code: Exceptions.ApiErrorCodes.BackgroundListFull),
+            LichessEngineCredential.BackgroundListProblem.TooLong => new EngineSettingsRejection(
+                "Background engine list too long", Code: Exceptions.ApiErrorCodes.BackgroundListFull),
+            _ => null,
+        };
     }
 
     /// <summary>Lichess-Engines brauchen den Token (Meldungen wie bisher); „RookHub direkt" nicht — ein Nutzer ohne
@@ -229,7 +222,7 @@ internal sealed class EngineSettingsService
         }
 
         var next = NormalizeBackgroundIds(current.Append(id));
-        if (CheckBackgroundList(next) is { } invalid) return (null, invalid);
+        if (CheckBackgroundList(next, current.Count) is { } invalid) return (null, invalid);
         if (CheckLichessToken(cred, [id]) is { } noToken) return (null, noToken);
         if (!await AllRegisteredAsync(userId, [id], ct))
             return (null, new EngineSettingsRejection("Engine not found", NotFound: true, Code: Exceptions.ApiErrorCodes.EngineNotFound));
