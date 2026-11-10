@@ -333,3 +333,27 @@ describe('pgn-parser: großes Repertoire in Portionen', () => {
   });
 });
 
+
+describe('eingerückte Kopfzeile (piratechess bis 2026-11-10)', () => {
+  // piratechess schrieb „[ChessableColor …]" mit 24 Leerzeichen davor, gefolgt von einer Leerzeichen-Zeile. Die
+  // Zeile blieb im Zugtext, ihre zwei Wörter zählten als Züge, jeder Kommentar landete zwei Halbzüge zu spät.
+  const PGN = '[Event "Kurs"]\n[Result "*"]\n[ChessableOid "75350264"]\n'
+    + '                        [ChessableColor "white"]\n                        \n'
+    + '1. e4 {[%alt d4 Nf3 c4]} c5 2. Nf3 e6 {Flexibel.} 3. d4 cxd4 4. Nxd4 {[%alt c3]} Nc6 *';
+
+  it('liest die eingerückte Zeile als Header und hängt die Kommentare an den richtigen Zug', () => {
+    const [g] = parsePgnText(PGN);
+    expect(g.headers['ChessableColor']).toBe('white');
+    expect(g.headers['ChessableOid']).toBe('75350264');
+    expect(g.moves.length).toBe(8);
+    expect(g.moves[3].san).toBe('e6');
+    expect(g.comments[3]).toBe('Flexibel.');
+    expect(g.comments[5]).toBeUndefined();
+  });
+
+  it('nimmt eingerückt nur echte Tag-Paare, keine Zugtext-Zeile mit eckigen Klammern', () => {
+    const [g] = parsePgnText('[Event "x"]\n[Result "*"]\n\n1. e4 {Siehe\n  [Kapitel 3]\n} e5 2. Nf3 *');
+    expect(g.moves.length).toBe(3);
+    expect(g.comments[0]).toContain('[Kapitel 3]');
+  });
+});

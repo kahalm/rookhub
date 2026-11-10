@@ -241,14 +241,17 @@ export function parseOneGame(raw: string, opts?: ParsePgnOptions): ParsedGameWit
     try {
       // Separate headers from move text
       // Use line-anchored regex so ] inside comments like {[%tqu ...]} is not matched
-      const headerRegex = /^\[.*\]\s*$/gm;
+      // Eingerückt nur ECHTE Tag-Paare: piratechess schrieb bis 2026-11-10 „[ChessableColor …]" mit 24 Leerzeichen
+      // davor — ohne Treffer blieb die Zeile im Zugtext, extractComments zählte ihre zwei Wörter als Züge und jeder
+      // Kommentar landete zwei Halbzüge zu spät (gespeicherte PGNs behalten die Einrückung).
+      const headerRegex = /^(?:\[.*\]|[ \t]+\[[A-Za-z0-9_]+[ \t]+"(?:[^"\\\r\n]|\\.)*"\])\s*$/gm;
       const headers: string[] = [];
       let moveText = trimmed;
       let lastHeaderEnd = 0;
 
       let match;
       while ((match = headerRegex.exec(trimmed)) !== null) {
-        headers.push(match[0]);
+        headers.push(match[0].trim());
         lastHeaderEnd = match.index + match[0].length;
       }
 
