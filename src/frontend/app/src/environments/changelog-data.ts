@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.946.1", date: "2026-11-10", changes: [
+    { en: "Build: the diagram-reports admin tab no longer carries a fixed fallback colour (stylelint ratchet was red on master).",
+      de: "Build: Der Admin-Reiter „Diagramm-Meldungen“ trägt keine feste Ersatzfarbe mehr (die stylelint-Ratsche war auf master rot)." },
+  ] },
   { version: "0.946.0", date: "2026-11-10", changes: [
     { en: "Admin: new tab „Engines“ — all registered engines of all accounts with source, owner, online status, threads/hash and in whose background list they are; the queue of analysis jobs by kind with the oldest waiting time; what each engine is computing right now (game, half-move, depth, speed, time) and the throughput per engine and in total for the last hour, 24 hours and 7 days (done, average per job, kN/s, failures, „no provider“, timeouts). Read-only, refreshes every 15 seconds while the tab is visible.",
       de: "Admin: neuer Reiter „Engines“ — alle registrierten Engines aller Konten mit Quelle, Besitzer, Online-Stand, Threads/Hash und in wessen Hintergrund-Liste sie stehen; die Warteschlange der Analyse-Aufträge nach Art mit der ältesten Wartezeit; was jede Engine gerade rechnet (Partie, Halbzug, Tiefe, Tempo, Zeit) und der Durchsatz je Engine und gesamt für die letzte Stunde, 24 Stunden und 7 Tage (fertig, Ø je Auftrag, kN/s, Fehlschläge, „kein Provider“, Zeitüberschreitungen). Nur lesend, frischt sich alle 15 Sekunden auf, solange der Tab sichtbar ist." },

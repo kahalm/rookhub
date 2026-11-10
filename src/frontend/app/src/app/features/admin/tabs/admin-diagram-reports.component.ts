@@ -118,7 +118,7 @@ export function positionKey(x: number, y: number): string {
   `,
   styles: [`
     .diag { padding: 16px 0; }
-    .intro { color: var(--mat-sys-on-surface-variant, #666); }
+    .intro { color: var(--mat-sys-on-surface-variant); }
     .book-filter { min-width: 260px; max-width: 100%; margin-bottom: 8px; }
     h3 { margin: 16px 0 8px; }
     .scroll { overflow-x: auto; }
