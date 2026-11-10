@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.946.2", date: "2026-11-10", changes: [
+    { en: "Tests: the queries of the admin „Engines“ tab and the throughput counter (insert, add onto the same bucket, clean-up, empty tables) are now checked against a real MariaDB.",
+      de: "Tests: Die Abfragen des Admin-Reiters „Engines“ und der Durchsatz-Zähler (Einfügen, Addieren in denselben Korb, Aufräumen, leere Tabellen) werden jetzt gegen ein echtes MariaDB geprüft." },
+  ] },
   { version: "0.946.1", date: "2026-11-10", changes: [
     { en: "Build: the diagram-reports admin tab no longer carries a fixed fallback colour (stylelint ratchet was red on master).",
       de: "Build: Der Admin-Reiter „Diagramm-Meldungen“ trägt keine feste Ersatzfarbe mehr (die stylelint-Ratsche war auf master rot)." },

@@ -77,3 +77,7 @@ höchstens die letzte Minute. Höchstens 144 Zeilen je Engine und Tag.
 
 `busySeconds` = Wanduhr-Sekunden aller Läufe (Auslastung), `kiloNodesPerSecond` = Knoten der letzten Zeile je Lauf durch
 die Laufzeit der Läufe mit Knotenangabe. Live-Analysen im Analysebrett zählen NICHT mit (nur der Hintergrund-Worker).
+
+**Tests:** Unit `tests/RookHub.Api.Tests/EngineBroker/EngineOverviewTests.cs` (InMemory), SQL-Übersetzung gegen echtes
+MariaDB `tests/RookHub.Api.IntegrationTests/EngineOverviewSqlTests.cs` (Übersicht mit Daten in allen Tabellen, leerer
+Stand, Schreiben/Addieren/Aufräumen der Körbe; `ROOKHUB_TEST_MYSQL` auf einen Wegwerf-Container).
