@@ -6522,7 +6522,8 @@
     "start": {
       "title": "Promijeni početak"
     },
-    "statsToggle": "Statistika",
+    "statsShow": "Prikaži statistiku",
+    "statsHide": "Sakrij statistiku",
     "panel": {
       "empty": "U ovom ciklusu još nema zadatka.",
       "loading": "Učitavanje statistike",

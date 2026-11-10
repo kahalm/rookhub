@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, inject, Injector, input, output, signal, viewChild } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -148,6 +148,19 @@ export class BookContextCardComponent {
     const open = !this.wpStatsOpen();
     this.wpStatsOpen.set(open);
     writeJson(localStore(), WOODPECKER_STATS_OPEN_KEY, open);   // gescheitert = nur nicht gemerkt, Anzeige stimmt trotzdem
+  }
+
+  private readonly injector = inject(Injector);
+  private readonly wpStatsTop = viewChild('wpStatsTop', { read: ElementRef<HTMLButtonElement> });
+
+  /** Zuklappen über den Knopf am Blockende (0.958.1): danach steht man sonst irgendwo auf der Seite — Fokus auf den
+   *  oberen Knopf und ihn nach dem Zusammenfallen des Blocks in den Blick holen. */
+  hideWpStatsFromEnd(): void {
+    if (this.wpStatsOpen()) this.toggleWpStats();
+    const top = this.wpStatsTop()?.nativeElement;
+    if (!top) return;
+    top.focus({ preventScroll: true });
+    afterNextRender(() => top.scrollIntoView({ block: 'nearest' }), { injector: this.injector });
   }
 
   /** Tag des Tagespuzzles als Datum für die DatePipe (nur mit Tagespuzzle). */

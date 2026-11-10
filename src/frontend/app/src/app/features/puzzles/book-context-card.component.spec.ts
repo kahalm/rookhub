@@ -159,31 +159,71 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
     expect(el.querySelector('.wp-solved')).toBeNull();
   });
 
-  it('Woodpecker-Statistik ist standardmäßig zugeklappt: nur der Textknopf, kein Abruf; Aufklappen merkt es je Gerät und lädt /stats', () => {
+  it('Woodpecker-Statistik ist standardmäßig zugeklappt: eigener Knopf „anzeigen“, kein Abruf; Aufklappen merkt es je Gerät und lädt /stats', () => {
     const plan = wpPlan({ setSize: 100, cycles: [
       wpCycle({ attempted: 100, solved: 75, timeSeconds: 9000 }),
       wpCycle({ number: 2, attempted: 40, solved: 30, timeSeconds: 2400 }),
     ] });
     const { el, fixture } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
     const http = TestBed.inject(HttpTestingController);
-    const btn = el.querySelector('.wp-meta > .wp-stats-toggle') as HTMLButtonElement;   // in der Kopfzeile, nicht eigene Zeile
+    // Knopf in eigener Zeile unter der Zyklus-Zeile (0.958.1), nicht mehr als Textlink in der .rh-dots-Zeile
+    expect(el.querySelector('.wp-meta .wp-stats-toggle')).toBeNull();
+    const btn = el.querySelector('.wp-stats-actions > button.wp-stats-toggle[mat-stroked-button]') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
     expect(btn.getAttribute('aria-expanded')).toBe('false');
+    expect(btn.getAttribute('aria-controls')).toBe('wp-stats-block');
+    expect(btn.textContent).toContain('woodpecker.statsShow');   // ohne geladene Sprache = Schlüssel
+    expect(btn.querySelector('mat-icon')?.textContent?.trim()).toBe('expand_more');
     expect(el.querySelector('.wp-stats')).toBeNull();
+    expect(el.querySelector('.wp-stats-hide-end')).toBeNull();   // unterer Knopf nur offen
     expect(el.querySelector('app-woodpecker-stats-panel')).toBeNull();
     http.expectNone(r => r.url.includes('/stats'));
 
     btn.click();
     fixture.detectChanges();
     expect(btn.getAttribute('aria-expanded')).toBe('true');
+    expect(btn.textContent).toContain('woodpecker.statsHide');
+    expect(btn.querySelector('mat-icon')?.textContent?.trim()).toBe('expand_less');
     expect(localStorage.getItem(WOODPECKER_STATS_OPEN_KEY)).toBe('true');
     expect(el.querySelector('.wp-stats .wp-solved')).not.toBeNull();   // die drei kompakten Zeilen zuerst …
     expect(el.querySelector('.wp-stats app-woodpecker-stats-panel')).not.toBeNull();   // … darunter das Ausführliche
+    const end = el.querySelector('#wp-stats-block > .wp-stats-end > button.wp-stats-hide-end') as HTMLButtonElement;
+    expect(end).not.toBeNull();   // … und ganz unten der zweite Knopf
+    expect(end.textContent).toContain('woodpecker.statsHide');
     http.expectOne(r => r.url === '/api/woodpecker/3/stats');
 
     btn.click();
     fixture.detectChanges();
     expect(el.querySelector('.wp-stats')).toBeNull();
+    expect(el.querySelector('.wp-stats-hide-end')).toBeNull();
+    expect(btn.textContent).toContain('woodpecker.statsShow');
     expect(localStorage.getItem(WOODPECKER_STATS_OPEN_KEY)).toBe('false');
+  });
+
+  it('Woodpecker-Statistik: gemerkt offen startet aufgeklappt; Zuklappen über den unteren Knopf fokussiert den oberen und holt ihn in den Blick', async () => {
+    setStatsOpen(true);
+    const plan = wpPlan({ setSize: 100, cycles: [
+      wpCycle({ attempted: 100, solved: 75, timeSeconds: 9000 }),
+      wpCycle({ number: 2, attempted: 40, solved: 30, timeSeconds: 2400 }),
+    ] });
+    const { el, fixture } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
+    document.body.appendChild(el);   // fokussierbar nur im Dokument
+    try {
+      const top = el.querySelector('.wp-stats-toggle') as HTMLButtonElement;
+      expect(top.getAttribute('aria-expanded')).toBe('true');
+      const scrolled = spyOn(top, 'scrollIntoView');
+      (el.querySelector('.wp-stats-hide-end') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(el.querySelector('.wp-stats')).toBeNull();
+      expect(el.querySelector('.wp-stats-hide-end')).toBeNull();
+      expect(top.getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).toBe(top);
+      expect(scrolled).toHaveBeenCalledWith({ block: 'nearest' });
+      expect(localStorage.getItem(WOODPECKER_STATS_OPEN_KEY)).toBe('false');
+    } finally {
+      el.remove();
+    }
   });
 
   it('Woodpecker ohne Aufgabe: Abschluss bzw. „gibt es nicht (mehr)“ (c1-wp-loeser-404-verbindung), je mit „Zur Übersicht“', () => {

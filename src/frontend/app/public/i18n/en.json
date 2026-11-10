@@ -6522,7 +6522,8 @@
     "start": {
       "title": "Change start"
     },
-    "statsToggle": "Statistics",
+    "statsShow": "Show statistics",
+    "statsHide": "Hide statistics",
     "panel": {
       "empty": "No puzzle in this cycle yet.",
       "loading": "Loading statistics",

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.958.1", date: "2026-11-10", changes: [
+    { en: "Woodpecker, solving page: the switch for the statistics is now a proper small button below the cycle line – „Show statistics“ when collapsed, „Hide statistics“ when open – instead of an inconspicuous text link at the end of the line. A second „Hide statistics“ button sits at the end of the long block; after hiding, the page jumps back to the upper button.",
+      de: "Woodpecker, Lösen-Seite: Der Umschalter für die Statistik ist jetzt ein richtiger kleiner Knopf unter der Zyklus-Zeile – zugeklappt „Statistik anzeigen“, aufgeklappt „Statistik ausblenden“ – statt eines unauffälligen Textlinks am Zeilenende. Am Ende des langen Blocks steht ein zweiter Knopf „Statistik ausblenden“; nach dem Ausblenden springt die Seite zurück zum oberen Knopf." },
+  ] },
   { version: "0.958.0", date: "2026-11-10", changes: [
     { en: "Woodpecker: there is now only one Woodpecker at a time. To start a new one, the current one goes to the archive – the „New training“ dialog says so and does both in one step. Archived Woodpeckers stay readable (cycles, figures) in a collapsed „Archive“ section of the overview, but can no longer be solved; they can be restored while no other one is active, or deleted.",
       de: "Woodpecker: Es gibt jetzt immer nur einen Woodpecker. Für einen neuen wandert der bisherige ins Archiv – der Dialog „Neues Training“ sagt das und erledigt beides in einem Schritt. Archivierte Woodpecker bleiben in der Übersicht in einem zugeklappten Abschnitt „Archiv“ lesbar (Zyklen, Zahlen), lassen sich aber nicht mehr lösen; sie können wiederhergestellt werden, solange kein anderer aktiv ist, oder gelöscht." },

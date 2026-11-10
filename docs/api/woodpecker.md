@@ -66,8 +66,10 @@ Kontext-Karte des Lösers zeigt den laufenden Zyklus — gerechnet im Client aus
 | Vorzyklus | Quote und Ø des Zyklus davor (nur mit Versuchen) |
 
 **Seit 0.957.0 ist die ganze Statistik im Löser standardmäßig ZUGEKLAPPT** (Nutzerentscheidung 10.11.2026): sichtbar
-bleiben Zyklus-Kopf, Balken und Frist plus der Textknopf „Statistik“ am Ende der Kopfzeile (`aria-expanded`, Zustand je
-Gerät `rh.woodpecker.statsOpen`). Aufgeklappt stehen zuerst die drei Zeilen oben, darunter die ausführliche Statistik.
+bleiben Zyklus-Kopf, Balken und Frist plus — seit 0.958.1 — ein eigener kleiner Knopf „Statistik anzeigen“ bzw.
+„Statistik ausblenden“ unter der Zyklus-Zeile (`aria-expanded`, Zustand je Gerät `rh.woodpecker.statsOpen`). Aufgeklappt
+stehen zuerst die drei Zeilen oben, darunter die ausführliche Statistik und am Ende ein zweiter Knopf „Statistik
+ausblenden“, der nach dem Zuklappen den Fokus auf den oberen Knopf setzt (DESIGN 5.12).
 
 ### Ausführliche Statistik (`GET /api/woodpecker/{id}/stats`, 0.957.0)
 

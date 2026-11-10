@@ -6522,7 +6522,8 @@
     "start": {
       "title": "Kezdés módosítása"
     },
-    "statsToggle": "Statisztika",
+    "statsShow": "Statisztika megjelenítése",
+    "statsHide": "Statisztika elrejtése",
     "panel": {
       "empty": "Ebben a ciklusban még nincs feladat.",
       "loading": "Statisztika betöltése",

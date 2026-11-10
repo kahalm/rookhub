@@ -740,9 +740,15 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   Ohne Versuch nur die Hochrechnungszeile (Zyklus 2+: nötig je Tag). Gelöst mit Tipp zählt als gelöst. Prozent über
   `| pct`, Zeiten `formatSecondsClock`, Datum `mediumDate`, Tempo `number:'1.0-1'`.
   **Seit 0.957.0 standardmäßig eingeklappt** (Nutzerentscheidung 10.11.2026: „Statistik standardmäßig eingeklappt →
-  ausklappbar“): sichtbar sind nur Zyklus-Kopf, Balken und Frist; am Ende der Kopfzeile (`.wp-meta`, `.rh-dots`) steht
-  der Textknopf „Statistik ▾“ (Link-Optik in `--mat-sys-primary`, `aria-expanded`, Trefferfläche über `::after` ≥ 44 px,
-  nicht als eigene Zeile, 5.11). Zustand je Gerät (`rh.woodpecker.statsOpen`, `core/local-json-store`), Vorgabe zu.
+  ausklappbar“): sichtbar sind nur Zyklus-Kopf, Balken und Frist. **Seit 0.958.1 ein richtiger Knopf** (der Textlink
+  „Statistik ▾“ am Ende der `.rh-dots`-Zeile wurde nicht gefunden, „nein da steht nichts“): eigene kleine Aktionszeile
+  direkt unter der Zyklus-Zeile, linksbündig, nicht volle Breite — `mat-stroked-button` kompakt (32 px, mit
+  `(pointer: coarse)` 44 px hoch, 7) mit Symbol + Beschriftung, die den Zustand sagt: zu `expand_more` „Statistik
+  anzeigen“, offen `expand_less` „Statistik ausblenden“ (`aria-expanded` + `aria-controls`). Zugeklappt macht er die Karte
+  nur um diese eine Zeile höher. Am Ende des aufgeklappten Blocks steht ein zweiter Knopf „Statistik ausblenden“
+  (nur offen, gleicher Zustand); nach dem Zuklappen darüber bekommt der obere Knopf den Fokus und wird per
+  `scrollIntoView({ block: 'nearest' })` in den Blick geholt — sonst stünde man nach dem Zusammenfallen des Blocks
+  irgendwo auf der Seite. Zustand je Gerät (`rh.woodpecker.statsOpen`, `core/local-json-store`), Vorgabe zu.
   Aufgeklappt zuerst die drei Zeilen oben, darunter die **ausführliche Statistik** (`app-woodpecker-stats-panel`, lädt
   `/stats` erst dann, danach entprellt nach jeder Meldung): Abschnitte mit kleiner h3 (0,85 rem, halbfett,
   `--mat-sys-on-surface`) in fester Reihenfolge — Dieselben Aufgaben (gemeinsam · jetzt · damals · Anteil der Zeit, ≤ 50 %
@@ -1307,6 +1313,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-10 | 0.958.1 · Woodpecker-Löser | Statistik-Umschalter als kompakter `mat-stroked-button` in eigener Zeile unter der Zyklus-Zeile (Symbol + Zustand: „Statistik anzeigen“/„Statistik ausblenden“, 44 px bei grobem Zeiger) statt Textlink am Ende der `.rh-dots`-Zeile; zweiter Knopf „Statistik ausblenden“ am Ende des aufgeklappten Blocks, danach Fokus + `scrollIntoView` auf den oberen Knopf (5.12) | Nutzer fand den Umschalter nicht: „wie blend ich die statistik wieder aus?“ – „nein da steht nichts“ | User über die Sitzung „woodpecker“ |
 | 2026-11-10 | 0.958.0 · Woodpecker | Dashboard-Kachel „bereit“: „Zyklus N starten“ startet direkt und springt in den Löser (Spinner im Knopf, Fehler als Snackbar); Übersicht: genau EIN aktives Training, ⋮ „Archivieren“ mit Rückfrage, „Neues Training“ mit Archiv-Hinweis im Dialog und Knopf „Archivieren und starten“, zugeklappter Abschnitt „Archiv (N)“ mit kompakten Karten, ⋮ „Wiederherstellen“ (gesperrt mit Grund neben einem aktiven) und „Löschen“; kein „+N weitere“ auf der Kachel (8.1) | Nutzerentscheidungen 10.11.: Knopf soll den Zyklus direkt starten; „soll nur ein Woodpecker geben – für einen neuen muss ein alter archiviert werden“ | User über die Sitzung „woodpecker“ |
 | 2026-11-10 | 0.957.0 · Woodpecker-Löser | Ganze Statistik standardmäßig eingeklappt, Textknopf „Statistik“ am Ende der Kopfzeile (aria-expanded, je Gerät gemerkt); aufgeklappt die drei Zeilen + ausführliche Statistik in benannten Abschnitten (Dieselben Aufgaben, Wechsel, Hochrechnung, Tipps, Verlauf bzw. Je Tag, Sorgenkinder), Tabellen im eigenen Scrollkasten (5.12) | Wunsch 10.11.: „umfangreiche statistik … die gleichen puzzle haben letztes mal 2h gebraucht“, „soviel mit sovielen hints … muss nicht immer da sein“, „Statistik standardmäßig eingeklappt → ausklappbar“ | User über die Sitzung „woodpecker“ |
 | 2026-11-10 | 0.956.0 · Woodpecker-Löser | Statistik des laufenden Zyklus in der Kontext-Card (5.12): Kennzahlzeile gelöst/Quote, ohne/mit Tipp, offen, Ø; Hochrechnung (Restzeit, nötig je Tag, Tempo, voraussichtliches Ende vs. Frist; Zyklus 1: ≈ Satz bis zur Frist); Vorzyklus zum Vergleich — leise, höchstens drei Zeilen unter dem Fortschritt | Wunsch 10.11.: „im Detail … gehen mir die Stats ab – wie viel gelöst, wie viel mit Hint, Hochrechnung“ | User über die betreuende Sitzung |

@@ -6522,7 +6522,8 @@
     "start": {
       "title": "Beginn ändern"
     },
-    "statsToggle": "Statistik",
+    "statsShow": "Statistik anzeigen",
+    "statsHide": "Statistik ausblenden",
     "panel": {
       "empty": "Noch keine Aufgabe in diesem Zyklus.",
       "loading": "Statistik wird geladen",

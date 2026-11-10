@@ -33,9 +33,15 @@
                 <span>{{ 'woodpecker.cycleProgress' | translate: { done: woodpeckerAttempted(), total: p.setSize } }}</span>
               }
               <span>{{ (woodpeckerDaysLeft() === 1 ? 'woodpecker.daysLeftOne' : 'woodpecker.daysLeft') | translate: { days: woodpeckerDaysLeft() } }}</span>
-              <!-- „Statistik“ als Textknopf in der Zeile (DESIGN 5.11), Vorgabe zugeklappt (Nutzerentscheidung 10.11.2026) -->
-              <button type="button" class="wp-stats-toggle" [attr.aria-expanded]="wpStatsOpen()" aria-controls="wp-stats-block"
-                      (click)="toggleWpStats()">{{ 'woodpecker.statsToggle' | translate }}<span class="wp-stats-caret" aria-hidden="true">{{ wpStatsOpen() ? '▴' : '▾' }}</span></button>
+            </div>
+            <!-- Statistik-Umschalter als eigener kleiner Rahmenknopf unter der Zyklus-Zeile (0.958.1, DESIGN 5.12): der
+                 Textlink am Zeilenende wurde nicht gefunden. Beschriftung sagt den Zustand; Vorgabe zugeklappt, je Gerät gemerkt. -->
+            <div class="wp-stats-actions">
+              <button #wpStatsTop mat-stroked-button type="button" class="wp-stats-toggle" [attr.aria-expanded]="wpStatsOpen()"
+                      aria-controls="wp-stats-block" (click)="toggleWpStats()">
+                <mat-icon aria-hidden="true">{{ wpStatsOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+                {{ (wpStatsOpen() ? 'woodpecker.statsHide' : 'woodpecker.statsShow') | translate }}
+              </button>
             </div>
           }
           <!-- d4-rk-daily-puzzle-ohne-tagesbezug: das Tagespuzzle sagt, dass es eins ist und für welchen Tag
@@ -196,6 +202,14 @@
           }
           <!-- Ausführlich (0.957.0): Vergleich auf denselben Aufgaben, Wechsel, Hochrechnung, Tipps, Verlauf, Sorgenkinder -->
           <app-woodpecker-stats-panel [plan]="woodpeckerPlan()" />
+          <!-- Zweiter Knopf am Blockende (0.958.1): der Block ist lang; nach dem Zuklappen Fokus + Blick auf den oberen Knopf. -->
+          <div class="wp-stats-actions wp-stats-end">
+            <button mat-stroked-button type="button" class="wp-stats-hide-end" aria-expanded="true" aria-controls="wp-stats-block"
+                    (click)="hideWpStatsFromEnd()">
+              <mat-icon aria-hidden="true">expand_less</mat-icon>
+              {{ 'woodpecker.statsHide' | translate }}
+            </button>
+          </div>
         </div>
       }
       @if (inWoodpecker() && woodpeckerRepeatHint()) {
