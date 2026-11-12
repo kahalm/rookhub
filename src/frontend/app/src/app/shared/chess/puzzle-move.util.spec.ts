@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
-import { parseUci, applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml, tryLoadFen, fenSideToMove, moveNumberLabels } from './puzzle-move.util';
+import { parseUci, applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml, tryLoadFen, dropImpossibleCastling, fenSideToMove, moveNumberLabels } from './puzzle-move.util';
 
 describe('puzzle-move.util', () => {
   describe('parseUci', () => {
@@ -128,6 +128,24 @@ describe('puzzle-move.util', () => {
       expect(moveNumberLabels('8/8/8/8/8/8/8/8 w', 2)).toEqual(['1.', null]);
       expect(moveNumberLabels('8/8/8/8/8/8/8/8 b - - 0 0', 1)).toEqual(['1…']);
       expect(moveNumberLabels('8/8/8/8/8/8/8/8 w - - 0 5', 0)).toEqual([]);
+    });
+  });
+
+  describe('dropImpossibleCastling (unmögliche Rochaderechte in Diagramm-FENs, gemeldet 2026-11-12)', () => {
+    const BAD = 'K1k5/P7/8/8/8/8/8/6N1 w KQkq - 0 1';   // Buch-Aufgabe 10172
+    it('streicht Rechte ohne König/Turm auf dem Ausgangsfeld', () => {
+      expect(dropImpossibleCastling(BAD)).toBe('K1k5/P7/8/8/8/8/8/6N1 w - - 0 1');
+      expect(dropImpossibleCastling('r3k3/8/8/8/8/8/8/4K2R w KQkq - 0 1')).toBe('r3k3/8/8/8/8/8/8/4K2R w Kq - 0 1');
+    });
+    it('lässt eine stimmige FEN unverändert', () => {
+      const ok = 'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 3 9';
+      expect(dropImpossibleCastling(ok)).toBe(ok);
+      expect(dropImpossibleCastling('8/8/8/8/8/8/8/K1k5 w - - 0 1')).toBe('8/8/8/8/8/8/8/K1k5 w - - 0 1');
+    });
+    it('tryLoadFen: die Lösung der Aufgabe lässt sich spielen, ohne dass chess.js wirft', () => {
+      const c = tryLoadFen(BAD)!;
+      expect(() => c.moves()).not.toThrow();
+      for (const u of ['g1e2', 'c8c7', 'e2c3', 'c7c8', 'c3b5', 'c8d7', 'a8b8']) expect(applyUci(c, u)).withContext(u).toBeTruthy();
     });
   });
 });

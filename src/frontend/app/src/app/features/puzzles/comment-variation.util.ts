@@ -90,8 +90,15 @@ const SQUARE_BEFORE = /(?:^|[^\p{L}])(?:auf|von|vom|über|ueber|zum|zur|feld|fel
 const SQUARE_AFTER =
   /^(?:\s|-)(?:feld|felder|felds|square|squares|bauer|bauern|pawn|pawns|bishop|bishops|knight|knights|rook|rooks|queen|queens|king|kings|l[äa]ufer|springer|turm|t[üu]rme|dame|k[öo]nig)(?![\p{L}])/iu;
 
+// „Qd5/g4" ist Kurzschrift für „Dd5 oder Dg4": das Feld hinter dem Schrägstrich hängt an der FIGUR
+// davor und ist kein Bauernzug g4. Als Zug gelesen eröffnete es einen numerlosen Zweig, an dem die
+// folgende Variante („B 1...Qa5 2.Ng5") hängen blieb (Buch-Aufgabe 35965, gemeldet 2026-11-12).
+// „c5/a5" (zwei Bauernzüge) bleibt: dort steht vor dem Schrägstrich kein Figurenzug.
+const PIECE_MOVE_SLASH = /[KQRBNDTLS][a-h]?[1-8]?x?[a-h][1-8][+#!?]*\/$/;
+
 function isSquareMention(text: string, san: string, hasNumber: boolean, start: number, end: number): boolean {
   if (hasNumber || !BARE_SQUARE.test(san)) return false;
+  if (PIECE_MOVE_SLASH.test(text.slice(Math.max(0, start - 12), start))) return true;
   return SQUARE_BEFORE.test(text.slice(Math.max(0, start - 20), start)) || SQUARE_AFTER.test(text.slice(end, end + 12));
 }
 
@@ -391,7 +398,7 @@ function resolveInSubline(
 /** Löst einen Zweig auf (siehe Datei-Kopf, „VORWÄRTS-SPRUNG"): ein aufgelöster Schritt je Zug oder null. */
 function resolveBranch(
   startFen: string, ucis: string[], b: CommentBranch, ctx?: BranchContext, priorFens: PriorFen[] = [],
-): { out: (VariationStep | null)[]; ctx?: BranchContext } {
+): { out: (VariationStep | null)[]; ctx?: BranchContext; guessed: number } {
   let steps: VariationStep[];
   let usedFen: string | undefined;
   if (b.startPly === undefined && ctx) {
@@ -406,8 +413,15 @@ function resolveBranch(
       if (sub) [steps, usedFen] = [sub.steps, sub.fen];
     }
   }
-  const out: (VariationStep | null)[] = b.sans.map((_s, k) => (k < steps.length ? steps[k] : null));
   const plies = b.plies ?? [];
+  // Numerloser Zweig ohne Rahmen: sein Anfang ist per Suche irgendwo in der Partie gelandet — bis zum
+  // ersten Zug, dessen Zugnummer die gefundene Stelle bestätigt (ab dort ist sie kein Raten mehr).
+  let guessed = 0;
+  if (b.startPly === undefined && !ctx) {
+    const confirmed = steps.findIndex((_st, k) => k > 0 && b.plies?.[k] !== undefined && baseStartPly(steps[k - 1].fen) === b.plies[k]);
+    guessed = confirmed < 0 ? steps.length : confirmed;
+  }
+  const out: (VariationStep | null)[] = b.sans.map((_s, k) => (k < steps.length ? steps[k] : null));
   let k = steps.length;
   while (k < b.sans.length) {
     const ply = plies[k];
@@ -422,7 +436,7 @@ function resolveBranch(
     rest.forEach((step, j) => { out[k + j] = step; });
     k += rest.length;
   }
-  return { out, ctx: nextContext(startFen, ucis, b, out, usedFen ?? ctx?.altFen, usedFen) };
+  return { out, ctx: nextContext(startFen, ucis, b, out, usedFen ?? ctx?.altFen, usedFen), guessed };
 }
 
 /** Hauptlinien-Stellung, an der der Halbzug `ply` dran ist; `undefined` außerhalb der Linie. */
@@ -462,8 +476,12 @@ export function buildCommentSegments(text: string, startFen: string, ucis: strin
   for (const b of branches(text)) {
     const r = resolveBranch(startFen, ucis, b, ctx, priorFens);
     perToken.push(...r.out);
+    // Auf per Suche gefundene Züge (`guessed`, erwähnte Pläne wie „with Rfe1 and Qd5") baut kein späterer
+    // Zweig auf; was dahinter an seiner Zugnummer verankert wurde, zählt.
     // Zweig-Ende nur, wenn der Zweig bis zum letzten Zug aufging — sonst weiß niemand, wo er endet.
-    r.out.forEach((step, k) => { if (step) priorFens.push({ fen: step.fen, end: k === r.out.length - 1 }); });
+    r.out.forEach((step, k) => {
+      if (step && k >= r.guessed) priorFens.push({ fen: step.fen, end: k === r.out.length - 1 });
+    });
     ctx = r.ctx;
   }
 

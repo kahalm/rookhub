@@ -383,3 +383,21 @@ describe('comment-variation.util — nummerierter Zweig setzt eine Untervariante
     expect(s2.find(x => x.move === '3.Bb5')!.fen).toBe(c.fen());
   });
 });
+
+describe('comment-variation.util — „Qd5/g4" ist Kurzschrift, kein Bauernzug (Buch-Aufgabe 35965, gemeldet 2026-11-12)', () => {
+  it('das Feld hinter dem Schrägstrich bleibt Text; zwei Bauernzüge „c5/a5" bleiben Züge', () => {
+    expect(extractSanTokens('with Rfe1 and Qd5/g4. B 1...Qa5 2.Ng5!+–')).toEqual(['Rfe1', 'Qd5', 'Qa5', 'Ng5']);
+    expect(extractSanTokens('entweder c5/a5')).toEqual(['c5', 'a5']);
+  });
+
+  it('die Variante danach steht wieder an ihrer Zugnummer in der Partie', () => {
+    const FEN = 'rn2kb1r/pp1n1pp1/4p3/5q2/2PpNB1p/5Q1P/PP2BPP1/R4RK1 w kq - 0 1';
+    const UCIS = ['e2d3', 'f5h5', 'e4f6', 'g7f6', 'f3b7'];
+    const segs = buildCommentSegments('White has a winning attack with Rfe1 and Qd5/g4. B 1...Qa5 2.Ng5!+– Double threat.', FEN, UCIS);
+    const c = new Chess(FEN);
+    c.move('Bd3'); c.move('Qa5');
+    expect(segs.find(s => s.move === '1...Qa5')!.fen).toBe(c.fen());
+    c.move('Ng5');
+    expect(segs.find(s => s.move === '2.Ng5')!.fen).toBe(c.fen());
+  });
+});

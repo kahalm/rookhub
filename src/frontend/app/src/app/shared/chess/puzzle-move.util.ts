@@ -31,10 +31,35 @@ export function applyUci(chess: Chess, uci: string): Move {
  */
 export function tryLoadFen(fen: string): Chess | null {
   try {
-    return new Chess(fen);
+    return new Chess(dropImpossibleCastling(fen));
   } catch {
     return null;
   }
+}
+
+// Rochaderecht → wo König und Turm dafür stehen müssen (Reihe von oben gezählt, Linie 0 = a).
+const CASTLING_NEEDS: Record<string, [number, number, string][]> = {
+  K: [[7, 4, 'K'], [7, 7, 'R']], Q: [[7, 4, 'K'], [7, 0, 'R']],
+  k: [[0, 4, 'k'], [0, 7, 'r']], q: [[0, 4, 'k'], [0, 0, 'r']],
+};
+
+/**
+ * Streicht Rochaderechte, die es in der Stellung nicht geben kann (König oder Turm nicht auf dem
+ * Ausgangsfeld). Importierte Diagramm-FENs tragen oft pauschal „KQkq" — chess.js nimmt das beim Laden
+ * hin, wirft dann aber bei einem Königszug („Cannot mix BigInt and other types", z. B.
+ * `K1k5/P7/8/8/8/8/8/6N1 w KQkq`): die Lösung ließ sich nicht spielen, Kommentar-Züge nicht auflösen
+ * (gemeldet 2026-11-12, 15 Buch-Aufgaben auf Prod). Eine stimmige FEN bleibt Zeichen für Zeichen gleich.
+ */
+export function dropImpossibleCastling(fen: string): string {
+  const parts = fen.split(' ');
+  const rights = parts[2];
+  if (!rights || rights === '-') return fen;
+  const rows = parts[0].split('/').map(r => r.replace(/\d/g, d => ' '.repeat(+d)));
+  if (rows.length !== 8) return fen;
+  const kept = [...rights].filter(f => !CASTLING_NEEDS[f] || CASTLING_NEEDS[f].every(([r, c, pc]) => rows[r][c] === pc)).join('');
+  if (kept === rights) return fen;
+  parts[2] = kept || '-';
+  return parts.join(' ');
 }
 
 /** Farbe am Zug aus dem 2. FEN-Feld (roh, ohne chess.js). Fallback: Weiß. */
