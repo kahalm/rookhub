@@ -335,3 +335,51 @@ describe('comment-variation.util — mehrdeutiger Zug (Kurs Lifetime Repertoires
     ]);
   });
 });
+
+describe('comment-variation.util — nummerierter Zweig setzt eine Untervariante fort (Woodpecker, Aufgabe 345, gemeldet 2026-11-12)', () => {
+  const FEN = '5r2/6k1/p1r3p1/5PQ1/2q1PN2/1p6/P6P/5R1K w - - 0 1';
+  const UCIS = ['f5f6', 'f8f6', 'f4h5', 'g7h7', 'h5f6', 'h7g7', 'f6h5', 'g7h7', 'g5e7', 'h7h6', 'h5g3'];
+  const TEXT = 'No better is 2...Kh8 3.Qh6+ Kg8 4.Qg7# \u2714 Black had to play 2...Kf7 3.Rxf6+ Rxf6 4.Qxf6+ Ke8. '
+    + 'Without rooks, he threatens both 5...bxa2 and a lot of checks. The trick is to take on g6, defend the '
+    + 'f1-square and the e4-pawn with check, and then take on b3: 5.Qxg6+ \u2714 Kd8 6.Qf6+ Kc7 7.Qf4+ Kb7 8.axb3+-';
+  const segs = buildCommentSegments(TEXT, FEN, UCIS);
+  const move = (m: string) => segs.find(s => s.move === m);
+
+  it('„5.Qxg6+" steht hinter 4…Ke8, nicht in der Partie (dort stünde der König auf h7)', () => {
+    const ke8 = move('Ke8')!;
+    const c = new Chess(ke8.fen!);
+    const mv = c.move('Qxg6+');
+    expect(move('5.Qxg6+')!.fen).toBe(c.fen());
+    expect(mv.from).toBe('f6');
+    expect(move('5.Qxg6+')!.fen).toContain('4k3');   // schwarzer König auf e8
+  });
+
+  it('die ganze Fortsetzung bis 8.axb3 ist klickbar und endet mit dem König auf b7', () => {
+    for (const m of ['Kd8', '6.Qf6+', 'Kc7', '7.Qf4+', 'Kb7', '8.axb3']) expect(move(m)).withContext(m).toBeTruthy();
+    expect(move('8.axb3')!.fen!.split(' ')[0]).toBe('8/1k6/p7/7N/2q1PQ2/1P6/7P/7K');
+  });
+
+  it('die erwähnte Drohung „5...bxa2" bleibt Text; der Text bleibt vollständig', () => {
+    expect(move('5...bxa2')).toBeUndefined();
+    expect(segs.map(s => s.move ?? s.text).join('')).toBe(TEXT);
+  });
+
+  it('eine Zugnummer, die keine Untervariante erreicht hat, bleibt an der Hauptlinie', () => {
+    // „2...Kf7" ist Alternative zum Partiezug 2…Kh7 — die erste Untervariante begann genau dort.
+    const kf7 = move('2...Kf7')!;
+    const c = new Chess(FEN);
+    for (const san of ['f6+', 'Rfxf6', 'Nh5+', 'Kf7']) c.move(san);
+    expect(kf7.fen).toBe(c.fen());
+  });
+
+  it('nach einer eingeschobenen Nebenvariante geht es am Ende der ÄUSSEREN weiter', () => {
+    // PGN-Schachtelung als Prosa: 1.e4 e5 2.Nf3 (2.Nc3 Nf6 3.f4) 2...Nc6 — „2...Nc6" gehört hinter 2.Nf3
+    // (Zweig-Ende), nicht hinter 2.Nc3 (dort ist der Halbzug mit Nf6 schon vergeben). Partie: 1.d4 d5 2.c4 e6.
+    const s2 = buildCommentSegments('Or 1.e4 e5 2.Nf3 2.Nc3 Nf6 3.f4 2...Nc6 3.Bb5', START, ['d2d4', 'd7d5', 'c2c4', 'e7e6']);
+    const c = new Chess();
+    for (const san of ['e4', 'e5', 'Nf3', 'Nc6']) c.move(san);
+    expect(s2.find(x => x.move === '2...Nc6')!.fen).toBe(c.fen());
+    c.move('Bb5');
+    expect(s2.find(x => x.move === '3.Bb5')!.fen).toBe(c.fen());
+  });
+});

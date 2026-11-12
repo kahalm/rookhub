@@ -353,9 +353,44 @@ function resolveAtAnchor(startFen: string, ucis: string[], sans: string[], start
  */
 interface BranchContext { altFen: string; contFen?: string; }
 
+/**
+ * Ein NUMMERIERTER Zweig, der die Hauptlinie gar nicht meint, sondern eine Untervariante desselben
+ * Kommentars fortsetzt: „… 2...Kf7 3.Rxf6+ Rxf6 4.Qxf6+ Ke8. Without rooks, he threatens both 5...bxa2
+ * and a lot of checks. The trick is …: 5.Qxg6+ Kd8 6.Qf6+ …" (Woodpecker, Aufgabe 345, gemeldet
+ * 2026-11-12). „5.Qxg6+" gehört hinter 4…Ke8 — an der Hauptlinien-Stellung von Zug 5 war Dxg6+
+ * zufällig auch legal, die Vorschau sprang in die Partie.
+ *
+ * <p>`prior` sind die Stellungen aller bisher aufgelösten Kommentar-Züge (jüngste zuletzt). Ihre FEN
+ * zählt ab der Start-FEN weiter, trägt also dieselbe Ply-Zählung wie die Zugnummern. Kandidat ist
+ * jede, an der genau der Halbzug `startPly` dran ist und die NICHT die Hauptlinien-Stellung ist. Es
+ * gewinnt die längste Folge; bei Gleichstand die Untervariante — sie steht im Text unmittelbar davor,
+ * die Hauptlinie zeigt das Brett ohnehin.</p>
+ *
+ * <p>Unter den Untervarianten zählt zuerst ein ZWEIG-ENDE, dann erst eine Stellung mitten in einem
+ * Zweig (je jüngste zuerst): „5...Kd6 6.Rd8+ Ke7 6...Ke5 7.Qe6 7.Qc7+" ist die aus dem PGN geklopfte
+ * Schachtelung 6…Ke7 (6…Ke5 7.Qe6) 7.Qc7+ — die äußere Variante wartet hinter 6…Ke7 auf ihren
+ * 7. Zug, in der eingeschobenen ist er mit 7.Qe6 schon vergeben.</p>
+ */
+interface PriorFen { fen: string; end: boolean; }
+
+function resolveInSubline(
+  b: CommentBranch, mainSteps: VariationStep[], mainFen: string | undefined, prior: PriorFen[],
+): { steps: VariationStep[]; fen: string } | undefined {
+  let best: { steps: VariationStep[]; fen: string } | undefined;
+  for (const wantEnd of [true, false]) {
+    for (let i = prior.length - 1; i >= 0; i--) {
+      const { fen, end } = prior[i];
+      if (end !== wantEnd || fen === mainFen || baseStartPly(fen) !== b.startPly) continue;
+      const steps = playPrefix(fen, b.sans);
+      if (steps.length > (best?.steps.length ?? 0)) best = { steps, fen };
+    }
+  }
+  return best && best.steps.length >= mainSteps.length ? best : undefined;
+}
+
 /** Löst einen Zweig auf (siehe Datei-Kopf, „VORWÄRTS-SPRUNG"): ein aufgelöster Schritt je Zug oder null. */
 function resolveBranch(
-  startFen: string, ucis: string[], b: CommentBranch, ctx?: BranchContext,
+  startFen: string, ucis: string[], b: CommentBranch, ctx?: BranchContext, priorFens: PriorFen[] = [],
 ): { out: (VariationStep | null)[]; ctx?: BranchContext } {
   let steps: VariationStep[];
   let usedFen: string | undefined;
@@ -366,6 +401,10 @@ function resolveBranch(
     [steps, usedFen] = cont.length > alt.length ? [cont, ctx.contFen] : [alt, ctx.altFen];
   } else {
     steps = resolveVariation(startFen, ucis, b.sans, b.startPly);
+    if (b.startPly !== undefined && priorFens.length) {
+      const sub = resolveInSubline(b, steps, anchorFen(startFen, ucis, b.startPly), priorFens);
+      if (sub) [steps, usedFen] = [sub.steps, sub.fen];
+    }
   }
   const out: (VariationStep | null)[] = b.sans.map((_s, k) => (k < steps.length ? steps[k] : null));
   const plies = b.plies ?? [];
@@ -383,20 +422,27 @@ function resolveBranch(
     rest.forEach((step, j) => { out[k + j] = step; });
     k += rest.length;
   }
-  return { out, ctx: nextContext(startFen, ucis, b, out, usedFen ?? ctx?.altFen) };
+  return { out, ctx: nextContext(startFen, ucis, b, out, usedFen ?? ctx?.altFen, usedFen) };
+}
+
+/** Hauptlinien-Stellung, an der der Halbzug `ply` dran ist; `undefined` außerhalb der Linie. */
+function anchorFen(startFen: string, ucis: string[], ply: number): string | undefined {
+  const bases = mainlineFens(startFen, ucis);
+  const anchor = ply - baseStartPly(startFen);
+  return anchor >= 0 && anchor < bases.length ? bases[anchor] : undefined;
 }
 
 /** Der Rahmen für den NÄCHSTEN Zweig (siehe {@link BranchContext}). */
 function nextContext(
   startFen: string, ucis: string[], b: CommentBranch, out: (VariationStep | null)[], inheritedAlt?: string,
+  sublineFen?: string,
 ): BranchContext | undefined {
   let altFen = inheritedAlt;
   if (b.startPly !== undefined) {
     // Nur eine Zugnummer INNERHALB der Linie gibt einen Ort; liegt sie außerhalb, weiß niemand, wo der
-    // Zweig stand — dann bleibt es für den nächsten bei der alten Suche.
-    const bases = mainlineFens(startFen, ucis);
-    const anchor = b.startPly - baseStartPly(startFen);
-    altFen = anchor >= 0 && anchor < bases.length ? bases[anchor] : undefined;
+    // Zweig stand — dann bleibt es für den nächsten bei der alten Suche. Ausnahme: der Zweig stand in
+    // einer Untervariante ({@link resolveInSubline}) — dann ist DEREN Stellung der Ort.
+    altFen = sublineFen ?? anchorFen(startFen, ucis, b.startPly);
   }
   if (!altFen) return undefined;
   const last = out[out.length - 1];
@@ -412,9 +458,12 @@ export function buildCommentSegments(text: string, startFen: string, ucis: strin
   // Pro Token in Original-Reihenfolge den aufgelösten Schritt (oder null) bestimmen.
   const perToken: (VariationStep | null)[] = [];
   let ctx: BranchContext | undefined;
+  const priorFens: PriorFen[] = [];   // Stellungen der bisher aufgelösten Kommentar-Züge, siehe resolveInSubline
   for (const b of branches(text)) {
-    const r = resolveBranch(startFen, ucis, b, ctx);
+    const r = resolveBranch(startFen, ucis, b, ctx, priorFens);
     perToken.push(...r.out);
+    // Zweig-Ende nur, wenn der Zweig bis zum letzten Zug aufging — sonst weiß niemand, wo er endet.
+    r.out.forEach((step, k) => { if (step) priorFens.push({ fen: step.fen, end: k === r.out.length - 1 }); });
     ctx = r.ctx;
   }
 
