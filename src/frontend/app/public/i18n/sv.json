@@ -3566,7 +3566,30 @@
       "quotaUsed": "Dagens kvot på {{limit}} sammanfattningar är förbrukad – försök igen imorgon.",
       "neverSuggest": "Föreslå aldrig igen",
       "neverSuggestDone": "Föreslås inte för dig igen.",
-      "neverSuggestFailed": "Kunde inte spara det."
+      "neverSuggestFailed": "Kunde inte spara det.",
+      "exercises": {
+        "title": "Rekommenderade övningar",
+        "intro": "Problem med samma mattbild som ställningar ur detta parti — lös dem direkt här.",
+        "reason": {
+          "missedMate": "missad matt i {{n}}",
+          "playedMate": "matt i {{n}} på brädet"
+        },
+        "also": "Samma bild även vid {{moves}}",
+        "more": "Fler ställningar ({{count}})",
+        "match": {
+          "strict": "Samma mattbild",
+          "family": "Liknande mattbild",
+          "theme": "Matt i {{n}}"
+        },
+        "rating": "Rating {{rating}}",
+        "solve": "Lös",
+        "solved": "Löst!",
+        "wrong": "Inte rätt drag — försök igen.",
+        "shown": "Lösningen visas.",
+        "showSolution": "Visa lösning",
+        "retry": "Igen",
+        "counter": "Problem {{i}} av {{n}}"
+      }
     },
     "onlyMine": "Bara mina partier",
     "onlyMineEmpty": "Inga egna partier här – avmarkera “Bara mina partier” för att se alla."

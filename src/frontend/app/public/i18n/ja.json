@@ -3566,7 +3566,30 @@
       "quotaUsed": "本日のまとめ {{limit}} 件の上限に達しました。明日もう一度お試しください。",
       "neverSuggest": "今後提案しない",
       "neverSuggestDone": "今後は提案されません。",
-      "neverSuggestFailed": "保存できませんでした。"
+      "neverSuggestFailed": "保存できませんでした。",
+      "exercises": {
+        "title": "おすすめの練習問題",
+        "intro": "この対局の局面と同じメイトパターンの問題 — ここで直接解けます。",
+        "reason": {
+          "missedMate": "見逃したメイト（{{n}}手）",
+          "playedMate": "盤上のメイト（{{n}}手）"
+        },
+        "also": "同じパターン: {{moves}}",
+        "more": "ほかの局面（{{count}}）",
+        "match": {
+          "strict": "同じメイトパターン",
+          "family": "似たメイトパターン",
+          "theme": "{{n}}手メイト"
+        },
+        "rating": "レーティング {{rating}}",
+        "solve": "解く",
+        "solved": "正解！",
+        "wrong": "正しい手ではありません — もう一度。",
+        "shown": "解答を表示しました。",
+        "showSolution": "解答を表示",
+        "retry": "もう一度",
+        "counter": "問題 {{i}} / {{n}}"
+      }
     },
     "onlyMine": "自分の対局のみ",
     "onlyMineEmpty": "ここに自分の対局はありません –“自分の対局のみ”を外すとすべて表示されます。"

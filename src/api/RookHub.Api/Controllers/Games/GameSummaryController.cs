@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Services.Games;
+using RookHub.Api.Services.Puzzles;
 
 namespace RookHub.Api.Controllers.Games;
 
@@ -22,6 +23,17 @@ public class GameSummaryController(OwnGameSummaries summaries) : BaseApiControll
     [AllowAnonymous]
     public async Task<IActionResult> GetShared(string token, CancellationToken ct) =>
         await summaries.GetSharedAsync(token, ct) is { } dto ? Ok(dto) : NotFound();
+
+    /// <summary>Empfohlene Übungen zur Partie (0.960.0, <see cref="GameExercises"/>) → <c>{ groups }</c>; 404 unbekannt/fremd.</summary>
+    [HttpGet("{id:int}/summary/exercises")]
+    public async Task<IActionResult> Exercises(int id, [FromServices] GameExercises exercises, CancellationToken ct) =>
+        await exercises.ForOwnGameAsync(GetUserId(), id, ct) is { } dto ? Ok(dto) : NotFound();
+
+    /// <summary>Dasselbe über den Teilen-Link <c>/g/{token}</c>, ohne Anmeldung; 404 unbekannter Link.</summary>
+    [HttpGet("shared/{token}/summary/exercises")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SharedExercises(string token, [FromServices] GameExercises exercises, CancellationToken ct) =>
+        await exercises.ForSharedOwnGameAsync(token, ct) is { } dto ? Ok(dto) : NotFound();
 
     public sealed record RequestBody(string? Lang);
 

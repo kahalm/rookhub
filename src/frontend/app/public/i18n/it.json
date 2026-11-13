@@ -3566,7 +3566,30 @@
       "quotaUsed": "La quota giornaliera di {{limit}} riepiloghi è esaurita – riprova domani.",
       "neverSuggest": "Non suggerire più",
       "neverSuggestDone": "Non ti verrà più suggerito.",
-      "neverSuggestFailed": "Impossibile salvare."
+      "neverSuggestFailed": "Impossibile salvare.",
+      "exercises": {
+        "title": "Esercizi consigliati",
+        "intro": "Problemi con lo stesso schema di matto di posizioni di questa partita — da risolvere qui.",
+        "reason": {
+          "missedMate": "matto in {{n}} mancato",
+          "playedMate": "matto in {{n}} sulla scacchiera"
+        },
+        "also": "Stesso schema anche a {{moves}}",
+        "more": "Altre posizioni ({{count}})",
+        "match": {
+          "strict": "Stesso schema di matto",
+          "family": "Schema di matto simile",
+          "theme": "Matto in {{n}}"
+        },
+        "rating": "Punteggio {{rating}}",
+        "solve": "Risolvi",
+        "solved": "Risolto!",
+        "wrong": "Non è la mossa giusta — riprova.",
+        "shown": "Soluzione mostrata.",
+        "showSolution": "Mostra soluzione",
+        "retry": "Riprova",
+        "counter": "Problema {{i}} di {{n}}"
+      }
     },
     "onlyMine": "Solo le mie partite",
     "onlyMineEmpty": "Nessuna tua partita qui – togli la spunta a “Solo le mie partite” per vederle tutte."

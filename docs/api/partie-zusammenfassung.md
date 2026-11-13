@@ -148,3 +148,45 @@ statische Datei der App, läuft also auch über die Teilen-Links ohne Anmeldung;
 | `…/evals`, `…/comparisons`, `…/summary` | anonym | Bewertungen; Vergleiche ohne Titel/Fehler; nur fertiger Text (ohne Modell und Stand) |
 
 Anonymisierte Partie: PGN neu gebaut (nur Hauptvariante, ohne Event und Elo der ersetzten Seite); `Event` leer. Im Text der Zusammenfassung werden „Runde N“/„Brett N“ gelöscht (der Watcher bekommt `leagueGameLabel`); steht ein interner Name (jeder Namensteil ab drei Zeichen) oder die interne FIDE-ID darin, gibt es `none`. Die Seite reicht bei einem Treffer keinen Text heraus — lieber keine Zusammenfassung als ein Klarname.
+
+## Empfohlene Übungen (0.960.0)
+
+Wunsch 2026-11-13: „am ende eine kleine sammlung von empfohlenen übungen … z. B. M2/M3 mit so motiven (Df7 Kf6 und bauer auf f4, aber
+kann dann natürlich auch ein springer sein der das deckt)“; „direkt auf der seite lösbar“; „erzwinge keine motive/aufgaben — wenn es bei
+einer partie nichts gibt ists auch vollkommen in ordnung“. Die Seite setzt den Abschnitt selbst hinter den Text (nach der Literatur) —
+aus den Daten der Partie, ohne Claude, also auch für alle schon fertigen Zusammenfassungen.
+
+**Stellen** (`GameExercises.Occurrences`, beide Seiten): *verpasstes Matt* — die Seite am Zug hatte laut Analyse Matt in ≤ 5, nach ihrem
+Zug steht der Gegner nicht mehr matt bzw. die Partie endet ohne Matt (Bild aus der Engine-Linie); *gespieltes Matt* — die Partie endet
+matt (Bild aus der Schlussstellung, Stelle = Beginn der Mattfolge). Gleiches Bild mehrfach → eine Gruppe (`alsoPlies`), höchstens 8.
+Andere taktische Motive und Buchkapitel kommen in eigenen Schritten (siehe TODO.md).
+
+**Mattbild** (`Services/Puzzles/MatePattern.cs`, Regelstand `Version`): Schlussstellung relativ zum mattgesetzten König, farb- und
+spiegelunabhängig — Lage des Königs (Ecke/Grundreihe/Rand/offen), schachgebende Figur(en) mit Lage (Kontakt diagonal/gerade, Linie,
+Springer, Bauer) und Deckung, die acht Nachbarfelder (Rand / eigener Stein / vom Angreifer beherrscht). **Streng** = mit den Typen der
+deckenden und beherrschenden Figuren und dem genauen Versatz, **Familie** = ohne Typen: „Dame g7 gedeckt vom Bauern f6“ und „… vom
+Springer h5“ sind dieselbe Familie.
+
+**Auswahl je Stelle** (bis 6): gleiche strenge Signatur, dann gleiche Familie; NUR wenn beides nichts liefert, Aufgaben des Themas
+`mateInN` (auch solange die Signaturen noch nicht berechnet sind). Rating-Fenster ±250 um die Stärke der Seite, die das Motiv hatte
+(`EbookSuggestions.StrengthAsync`, ein Band zählt mit seiner Mitte; sonst die andere Seite, sonst 1500), Beliebtheit ≥ 80, ≥ 200 mal
+gespielt, Tipps nicht als irreführend markiert. Je Partie und Stelle fest gesät — derselbe Aufruf liefert dieselben Aufgaben. Keine
+Stelle → `groups: []`, die Seite zeigt nichts.
+
+| Weg | Recht |
+|---|---|
+| `GET api/league/club/games/{id}/summary/exercises` | wie `GET …/summary` (`league.view`, Verein der Partie) |
+| `GET api/league/s/{token}/club/games/{id}/summary/exercises` | anonym über den Liga-Teilen-Link (Partie der Begegnung) |
+| `GET api/league/s-club-game/{token}/summary/exercises` | anonym über den Link der Vereinspartie |
+| `GET api/games/{id}/summary/exercises` | Besitzer |
+| `GET api/games/shared/{token}/summary/exercises` | anonym über den Teilen-Link |
+
+Antwort `{ groups: [{ ply, white, reason: missedMate|playedMate, mateIn, alsoPlies, exercises: [{ id, fen, moves, rating, themes,
+match: strict|family|theme }] }] }` — `fen` vor dem Zug des Gegners, `moves` = Gegnerzug + Lösung (Lichess-Form). Ohne Analyse leer.
+
+**Mattbilder berechnen** (`PuzzleSignatureWorker`, Tabelle `PuzzleSignatures`): startet 5 min nach dem API-Start von selbst, je 3 s
+1 000 Matt-Aufgaben (Beliebtheit ≥ 80) in Id-Reihenfolge, Fortschritt `SystemSettings.PuzzleSignatures.MateCursor` (`v1:<PuzzleId>`,
+übersteht Neustarts); pausierbar über „Hintergrundjobs pausieren“; ruht in `PuzzleSignatures:QuietHours` (Vorgabe
+`Mon-Sun 00:40-01:40; Mon-Sun 04:15-05:00`, Europe/Vienna — Sicherung und Datenbank-Abzug); `PuzzleSignatures:Enabled=false` schaltet
+ab. Prod (13.11.): ~1,25 Mio. Aufgaben → ~1 250 Schritte ≈ 1,5–2 h. Danach sieht er alle 30 min nach neuen Aufgaben. Neuer
+`MatePattern.Version` → alles wird neu gerechnet.

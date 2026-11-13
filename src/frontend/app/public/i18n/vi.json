@@ -3566,7 +3566,30 @@
       "quotaUsed": "Đã dùng hết hạn mức {{limit}} bản tóm tắt hôm nay – mai thử lại nhé.",
       "neverSuggest": "Không gợi ý nữa",
       "neverSuggestDone": "Sẽ không gợi ý cho bạn nữa.",
-      "neverSuggestFailed": "Không thể lưu."
+      "neverSuggestFailed": "Không thể lưu.",
+      "exercises": {
+        "title": "Bài tập đề xuất",
+        "intro": "Câu đố có cùng hình chiếu hết như các thế cờ trong ván này — giải ngay tại đây.",
+        "reason": {
+          "missedMate": "bỏ lỡ chiếu hết sau {{n}} nước",
+          "playedMate": "chiếu hết sau {{n}} nước trên bàn cờ"
+        },
+        "also": "Cùng hình cũng ở {{moves}}",
+        "more": "Thêm thế cờ ({{count}})",
+        "match": {
+          "strict": "Cùng hình chiếu hết",
+          "family": "Hình chiếu hết tương tự",
+          "theme": "Chiếu hết sau {{n}} nước"
+        },
+        "rating": "Hệ số {{rating}}",
+        "solve": "Giải",
+        "solved": "Đã giải!",
+        "wrong": "Không đúng nước — thử lại.",
+        "shown": "Đã hiện lời giải.",
+        "showSolution": "Hiện lời giải",
+        "retry": "Thử lại",
+        "counter": "Câu đố {{i}} / {{n}}"
+      }
     },
     "onlyMine": "Chỉ ván của tôi",
     "onlyMineEmpty": "Không có ván nào của bạn ở đây – bỏ chọn “Chỉ ván của tôi” để xem tất cả."

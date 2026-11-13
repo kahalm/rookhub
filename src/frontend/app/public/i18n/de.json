@@ -3631,7 +3631,30 @@
       "quotaUsed": "Das Tageskontingent von {{limit}} Zusammenfassungen ist verbraucht – morgen wieder.",
       "neverSuggest": "Nicht mehr vorschlagen",
       "neverSuggestDone": "Wird dir nicht mehr vorgeschlagen.",
-      "neverSuggestFailed": "Das ließ sich nicht speichern."
+      "neverSuggestFailed": "Das ließ sich nicht speichern.",
+      "exercises": {
+        "title": "Empfohlene Übungen",
+        "intro": "Aufgaben mit demselben Mattbild wie Stellungen aus dieser Partie — direkt hier lösbar.",
+        "reason": {
+          "missedMate": "verpasstes Matt in {{n}}",
+          "playedMate": "Matt in {{n}} am Brett"
+        },
+        "also": "Gleiches Bild auch bei {{moves}}",
+        "more": "Weitere Stellen ({{count}})",
+        "match": {
+          "strict": "Gleiches Mattbild",
+          "family": "Ähnliches Mattbild",
+          "theme": "Matt in {{n}}"
+        },
+        "rating": "Wertung {{rating}}",
+        "solve": "Aufgabe lösen",
+        "solved": "Gelöst!",
+        "wrong": "Nicht der richtige Zug — versuch es noch einmal.",
+        "shown": "Lösung gezeigt.",
+        "showSolution": "Lösung zeigen",
+        "retry": "Nochmal",
+        "counter": "Aufgabe {{i}} von {{n}}"
+      }
     },
     "onlyMine": "Nur meine Partien",
     "onlyMineEmpty": "Hier ist keine eigene Partie – ohne Häkchen bei „Nur meine Partien“ siehst du alle."

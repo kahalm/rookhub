@@ -547,6 +547,12 @@ public class LeagueShareClubController : ControllerBase
             : new ClubGameSummaryDto("done", s.Markdown, s.DoneAt, null, s.Stale, null, null));
     }
 
+    /// <summary>Empfohlene Übungen derselben Partie (0.960.0), Regel wie <see cref="Game"/>.</summary>
+    [HttpGet("games/{id:int}/summary/exercises")]
+    public async Task<IActionResult> GameSummaryExercises(string token, int id, [FromServices] LeagueFixtureGames fixtures,
+        [FromServices] RookHub.Api.Services.Puzzles.GameExercises exercises, CancellationToken ct) =>
+        await ClubOfLinkedGameAsync(token, id, fixtures, ct) is null ? NotFound() : Ok(await exercises.ForClubGameAsync(id, ct));
+
     [HttpPost("games/preview")]
     [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
     public async Task<IActionResult> Preview(string token, [FromBody] LeagueClubPreviewRequest req, CancellationToken ct)

@@ -218,7 +218,7 @@ describe('ClubGameSummaryComponent mit Seitenbrett', () => {
         { provide: ActivatedRoute, useValue: route },
         { provide: PreferencesService, useValue: prefs },
         { provide: GamesService, useValue: { sharedClubGame: () => of({ pgn, white: 'A', black: 'B', result, ownerSide: 'black' }) } },
-        { provide: ClubGameSummaryService, useValue: { getShared: () => of({ status: 'done', markdown }) } },
+        { provide: ClubGameSummaryService, useValue: { getShared: () => of({ status: 'done', markdown }), exercises: () => of([]) } },
       ],
     });
     const fixture = TestBed.createComponent(ClubGameSummaryComponent);

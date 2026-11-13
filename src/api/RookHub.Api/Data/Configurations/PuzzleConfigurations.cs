@@ -97,6 +97,18 @@ internal sealed class PuzzleTagConfiguration : IEntityTypeConfiguration<PuzzleTa
     }
 }
 
+internal sealed class PuzzleSignatureConfiguration : IEntityTypeConfiguration<PuzzleSignature>
+{
+    public void Configure(EntityTypeBuilder<PuzzleSignature> e)
+    {
+        e.HasKey(s => new { s.PuzzleId, s.Kind });
+        // „Aufgaben gleicher Signatur im Rating-Fenster“ → reiner Index-Bereich, je Stufe einer.
+        e.HasIndex(s => new { s.Strict, s.Rating });
+        e.HasIndex(s => new { s.Family, s.Rating });
+        e.HasOne(s => s.Puzzle).WithMany().HasForeignKey(s => s.PuzzleId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class KidsPuzzleConfiguration : IEntityTypeConfiguration<KidsPuzzle>
 {
     public void Configure(EntityTypeBuilder<KidsPuzzle> e)

@@ -3631,7 +3631,30 @@
       "quotaUsed": "Today's quota of {{limit}} summaries is used up – try again tomorrow.",
       "neverSuggest": "Never suggest again",
       "neverSuggestDone": "Won’t be suggested to you again.",
-      "neverSuggestFailed": "Could not save that."
+      "neverSuggestFailed": "Could not save that.",
+      "exercises": {
+        "title": "Recommended exercises",
+        "intro": "Puzzles with the same mating pattern as positions from this game — solve them right here.",
+        "reason": {
+          "missedMate": "missed mate in {{n}}",
+          "playedMate": "mate in {{n}} on the board"
+        },
+        "also": "Same pattern also at {{moves}}",
+        "more": "More positions ({{count}})",
+        "match": {
+          "strict": "Same mating pattern",
+          "family": "Similar mating pattern",
+          "theme": "Mate in {{n}}"
+        },
+        "rating": "Rating {{rating}}",
+        "solve": "Solve puzzle",
+        "solved": "Solved!",
+        "wrong": "Not the right move — try again.",
+        "shown": "Solution shown.",
+        "showSolution": "Show solution",
+        "retry": "Try again",
+        "counter": "Puzzle {{i}} of {{n}}"
+      }
     },
     "onlyMine": "Only my games",
     "onlyMineEmpty": "None of your own games here – untick “Only my games” to see all."

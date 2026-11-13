@@ -3566,7 +3566,30 @@
       "quotaUsed": "今天 {{limit}} 份总结的额度已用完——明天再试。",
       "neverSuggest": "不再建议",
       "neverSuggestDone": "不会再向你建议。",
-      "neverSuggestFailed": "无法保存。"
+      "neverSuggestFailed": "无法保存。",
+      "exercises": {
+        "title": "推荐练习",
+        "intro": "与本局中局面相同将杀图形的谜题——直接在这里解。",
+        "reason": {
+          "missedMate": "错过的{{n}}步杀",
+          "playedMate": "棋盘上的{{n}}步杀"
+        },
+        "also": "同样的图形还出现在 {{moves}}",
+        "more": "更多局面（{{count}}）",
+        "match": {
+          "strict": "相同的将杀图形",
+          "family": "相似的将杀图形",
+          "theme": "{{n}}步杀"
+        },
+        "rating": "等级分 {{rating}}",
+        "solve": "解题",
+        "solved": "解对了！",
+        "wrong": "不是正确的着法——再试一次。",
+        "shown": "已显示答案。",
+        "showSolution": "显示答案",
+        "retry": "再试一次",
+        "counter": "谜题 {{i}} / {{n}}"
+      }
     },
     "onlyMine": "仅我的对局",
     "onlyMineEmpty": "这里没有你自己的对局 – 取消勾选“仅我的对局”即可查看全部。"

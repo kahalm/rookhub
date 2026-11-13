@@ -3566,7 +3566,30 @@
       "quotaUsed": "Se ha agotado la cuota de hoy de {{limit}} resúmenes; inténtalo de nuevo mañana.",
       "neverSuggest": "No volver a sugerir",
       "neverSuggestDone": "No se te volverá a sugerir.",
-      "neverSuggestFailed": "No se pudo guardar."
+      "neverSuggestFailed": "No se pudo guardar.",
+      "exercises": {
+        "title": "Ejercicios recomendados",
+        "intro": "Problemas con el mismo patrón de mate que posiciones de esta partida: resuélvelos aquí mismo.",
+        "reason": {
+          "missedMate": "mate en {{n}} perdido",
+          "playedMate": "mate en {{n}} en el tablero"
+        },
+        "also": "Mismo patrón también en {{moves}}",
+        "more": "Más posiciones ({{count}})",
+        "match": {
+          "strict": "Mismo patrón de mate",
+          "family": "Patrón de mate similar",
+          "theme": "Mate en {{n}}"
+        },
+        "rating": "Puntuación {{rating}}",
+        "solve": "Resolver",
+        "solved": "¡Resuelto!",
+        "wrong": "No es la jugada correcta: inténtalo de nuevo.",
+        "shown": "Solución mostrada.",
+        "showSolution": "Mostrar solución",
+        "retry": "Reintentar",
+        "counter": "Problema {{i}} de {{n}}"
+      }
     },
     "onlyMine": "Solo mis partidas",
     "onlyMineEmpty": "Aquí no hay partidas tuyas – desmarca “Solo mis partidas” para verlas todas."

@@ -89,7 +89,8 @@ describe('ClubGameSummaryComponent — Zug-Knöpfe im Text', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '243' }), data: {} } } },
         { provide: GamesService, useValue: { clubGame: () => of({ pgn: '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6', ownerSide: 'white' }) } },
         { provide: ClubGameSummaryService, useValue: {
-          get: () => of({ markdown: md }), suggestions: () => of([{ id: 7, title: 'Buch', accessible: false, blocked: false }]) } },
+          get: () => of({ markdown: md }), suggestions: () => of([{ id: 7, title: 'Buch', accessible: false, blocked: false }]),
+          exercises: () => of([]) } },
         { provide: AuthService, useValue: { isLoggedIn: false, currentUser$: of(null) } },
         { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
       ],
@@ -170,5 +171,58 @@ describe('ClubGameSummaryComponent — Design-Runde d10', () => {
     // Im Kopf steht dann nur „Zur Partie“.
     expect(el.querySelector('.head-actions .summary-request')).toBeNull();
     f.nativeElement.remove();
+  });
+});
+
+/** Empfohlene Übungen (0.960.0): Abschnitt nur mit Stellen; ohne (Partie ohne Mattbild) oder bei Fehler gar keiner. */
+describe('ClubGameSummaryComponent — Empfohlene Übungen', () => {
+  const group = { ply: 28, white: true, reason: 'missedMate', mateIn: 4, alsoPlies: [], exercises: [
+    { id: 11, fen: '6k1/p4p1p/5P2/6Q1/8/8/8/K7 b - - 0 1', moves: ['a7a6', 'g5g7'], rating: 1500, themes: ['mateIn1'], match: 'strict' }] };
+
+  function render(exercises: () => unknown, data: Record<string, string> = {}, params: Record<string, string> = { id: '5' }) {
+    const calls: unknown[] = [];
+    TestBed.configureTestingModule({
+      imports: [ClubGameSummaryComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params), data } } },
+        { provide: GamesService, useValue: { clubGame: () => of({ pgn: '1. e4 e5', ownerSide: 'white' }), getShared: () => of({ pgn: '1. e4 e5' }) } },
+        { provide: ClubGameSummaryService, useValue: {
+          get: () => of({ markdown: '# Titel\n\nText.' }), getSharedOwn: () => of({ markdown: '# Titel' }),
+          exercises: (src: unknown) => { calls.push(src); return exercises(); } } },
+        { provide: AuthService, useValue: { isLoggedIn: false, currentUser$: of(null) } },
+        { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ClubGameSummaryComponent);
+    fixture.detectChanges();
+    return { el: fixture.nativeElement as HTMLElement, calls };
+  }
+
+  it('mit Stellen: Abschnitt nach dem Text, Karten mit Brett', () => {
+    const { el, calls } = render(() => of([group]));
+    expect(calls).toEqual([{ kind: 'club', id: 5 }]);
+    const sec = el.querySelector('app-summary-exercises')!;
+    expect(sec).not.toBeNull();
+    expect(sec.querySelectorAll('.card app-chess-board').length).toBe(1);
+    expect(sec.querySelector('h3')?.textContent).toContain('15.');
+  });
+
+  it('Partie ohne Mattbild (keine Stellen): kein Abschnitt, kein Platzhalter', () => {
+    const { el } = render(() => of([]));
+    expect(el.querySelector('app-summary-exercises')).toBeNull();
+    expect(el.textContent).not.toContain('games.summary.exercises');
+  });
+
+  it('Fehler beim Laden: still kein Abschnitt', () => {
+    const { el } = render(() => throwError(() => new HttpErrorResponse({ status: 500 })));
+    expect(el.querySelector('app-summary-exercises')).toBeNull();
+    expect(el.querySelector('app-load-error')).toBeNull();
+  });
+
+  it('Teilen-Link der eigenen Partie fragt über denselben Weg', () => {
+    const { calls } = render(() => of([]), { mode: 'own-share' }, { token: 'abc' });
+    expect(calls).toEqual([{ kind: 'own-share', token: 'abc' }]);
   });
 });

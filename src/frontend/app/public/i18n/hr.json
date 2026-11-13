@@ -3631,7 +3631,30 @@
       "quotaUsed": "Dnevna kvota od {{limit}} sažetaka je potrošena – pokušaj sutra.",
       "neverSuggest": "Ne predlaži više",
       "neverSuggestDone": "Više ti se neće predlagati.",
-      "neverSuggestFailed": "Spremanje nije uspjelo."
+      "neverSuggestFailed": "Spremanje nije uspjelo.",
+      "exercises": {
+        "title": "Preporučene vježbe",
+        "intro": "Zadaci s istom matnom slikom kao pozicije iz ove partije — riješi ih ovdje.",
+        "reason": {
+          "missedMate": "propušten mat u {{n}}",
+          "playedMate": "mat u {{n}} na ploči"
+        },
+        "also": "Ista slika i kod {{moves}}",
+        "more": "Više pozicija ({{count}})",
+        "match": {
+          "strict": "Ista matna slika",
+          "family": "Slična matna slika",
+          "theme": "Mat u {{n}}"
+        },
+        "rating": "Rejting {{rating}}",
+        "solve": "Riješi zadatak",
+        "solved": "Riješeno!",
+        "wrong": "To nije pravi potez — pokušaj ponovno.",
+        "shown": "Rješenje prikazano.",
+        "showSolution": "Prikaži rješenje",
+        "retry": "Ponovno",
+        "counter": "Zadatak {{i}} od {{n}}"
+      }
     },
     "onlyMine": "Samo moje partije",
     "onlyMineEmpty": "Ovdje nema tvojih partija – makni kvačicu „Samo moje partije“ za sve."

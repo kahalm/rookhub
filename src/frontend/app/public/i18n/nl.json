@@ -3566,7 +3566,30 @@
       "quotaUsed": "Het dagquotum van {{limit}} samenvattingen is op – probeer het morgen opnieuw.",
       "neverSuggest": "Nooit meer voorstellen",
       "neverSuggestDone": "Wordt je niet meer voorgesteld.",
-      "neverSuggestFailed": "Kon dat niet opslaan."
+      "neverSuggestFailed": "Kon dat niet opslaan.",
+      "exercises": {
+        "title": "Aanbevolen oefeningen",
+        "intro": "Opgaven met hetzelfde matpatroon als stellingen uit deze partij — hier direct op te lossen.",
+        "reason": {
+          "missedMate": "gemist mat in {{n}}",
+          "playedMate": "mat in {{n}} op het bord"
+        },
+        "also": "Zelfde patroon ook bij {{moves}}",
+        "more": "Meer stellingen ({{count}})",
+        "match": {
+          "strict": "Zelfde matpatroon",
+          "family": "Vergelijkbaar matpatroon",
+          "theme": "Mat in {{n}}"
+        },
+        "rating": "Rating {{rating}}",
+        "solve": "Oplossen",
+        "solved": "Opgelost!",
+        "wrong": "Niet de juiste zet — probeer het opnieuw.",
+        "shown": "Oplossing getoond.",
+        "showSolution": "Oplossing tonen",
+        "retry": "Opnieuw",
+        "counter": "Opgave {{i}} van {{n}}"
+      }
     },
     "onlyMine": "Alleen mijn partijen",
     "onlyMineEmpty": "Hier staan geen eigen partijen – vink “Alleen mijn partijen” uit om alles te zien."

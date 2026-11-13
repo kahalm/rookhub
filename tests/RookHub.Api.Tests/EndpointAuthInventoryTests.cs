@@ -80,6 +80,7 @@ public class EndpointAuthInventoryTests
         "GET /api/league/s-club-game/{token}/evals",                 // ClubGameLinkController.Evals (Bewertungen derselben Partie)
         "GET /api/league/s-club-game/{token}/comparisons",           // ClubGameLinkController.Comparisons (Fehler-Vergleiche ohne Titel/Fehler)
         "GET /api/league/s-club-game/{token}/summary",               // ClubGameLinkController.Summary (nur fertiger Text, Namensprüfung)
+        "GET /api/league/s-club-game/{token}/summary/exercises",     // ClubGameLinkController.SummaryExercises (Lichess-Aufgaben zu den Mattbildern, 0.960.0)
         "GET /api/league/s/{token}/sources",                         // LeagueShareController.Sources (nur Zahlen: Partien je Quelle, 0.627.0)
         "GET /api/league/s/{token}/forecast-stats",                  // LeagueShareController.ForecastStats (nur Zahlen + Liga-Namen, 0.650.0)
         "GET /api/league/s/{token}/games",                           // LeagueShareController.FixtureGames (Paarungen der geteilten Begegnung, 0.673.0)
@@ -104,6 +105,7 @@ public class EndpointAuthInventoryTests
         "GET /api/league/s/{token}/club/games/{id:int}",         // LeagueShareClubController.Game (nur Partien der Begegnung des Links, 0.838.3)
         "GET /api/league/s/{token}/club/games/{id:int}/comparisons",   // LeagueShareClubController.GameComparisons (nur lesend, dito)
         "GET /api/league/s/{token}/club/games/{id:int}/summary",       // LeagueShareClubController.GameSummary (nur lesend, dito)
+        "GET /api/league/s/{token}/club/games/{id:int}/summary/exercises", // LeagueShareClubController.GameSummaryExercises (0.960.0)
         "GET /api/league/s/{token}/club/games/{id:int}/evals",   // LeagueShareClubController.GameEvals (dito)
         "POST /api/league/s/{token}/club/match",
         "POST /api/league/s/{token}/club/pairings",                  // LeagueClubShareController.Pairings (Vorschläge Ligapaarung, 0.678.0)
@@ -151,6 +153,7 @@ public class EndpointAuthInventoryTests
         // „Warum war das ein Fehler?" (0.534.0): die Erklaerungen der vom Besitzer verknuepften Analyse LESEN —
         // wie die Kurve hinter dem Teilen-Link. Erzeugen bleibt angemeldet (POST nur an der eigenen Partie).
         "GET /api/games/shared/{token}/summary",                     // GameSummaryController.GetShared (nur der fertige Text, 0.934.0)
+        "GET /api/games/shared/{token}/summary/exercises",           // GameSummaryController.SharedExercises (Lichess-Aufgaben, 0.960.0)
         "GET /api/games/shared/{token}/explanations",                // GameExplanationController.GetShared
         "GET /api/games/shared/{token}/similar",                     // SimilarGamesController.Shared (Kopfdaten des Rohbestands, ohne Züge)
         "GET /api/reconstructions/shared/{token}",                   // GameReconstructionController.Shared (Teilen-Link /r/{token})

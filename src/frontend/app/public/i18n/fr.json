@@ -3566,7 +3566,30 @@
       "quotaUsed": "Le quota du jour de {{limit}} résumés est épuisé – réessayez demain.",
       "neverSuggest": "Ne plus jamais proposer",
       "neverSuggestDone": "Ne vous sera plus proposé.",
-      "neverSuggestFailed": "Impossible d'enregistrer cela."
+      "neverSuggestFailed": "Impossible d'enregistrer cela.",
+      "exercises": {
+        "title": "Exercices recommandés",
+        "intro": "Problèmes avec le même motif de mat que des positions de cette partie — à résoudre ici même.",
+        "reason": {
+          "missedMate": "mat en {{n}} manqué",
+          "playedMate": "mat en {{n}} sur l'échiquier"
+        },
+        "also": "Même motif aussi en {{moves}}",
+        "more": "Autres positions ({{count}})",
+        "match": {
+          "strict": "Même motif de mat",
+          "family": "Motif de mat similaire",
+          "theme": "Mat en {{n}}"
+        },
+        "rating": "Classement {{rating}}",
+        "solve": "Résoudre",
+        "solved": "Résolu !",
+        "wrong": "Ce n'est pas le bon coup — réessaie.",
+        "shown": "Solution affichée.",
+        "showSolution": "Afficher la solution",
+        "retry": "Réessayer",
+        "counter": "Problème {{i}} sur {{n}}"
+      }
     },
     "onlyMine": "Seulement mes parties",
     "onlyMineEmpty": "Aucune de vos parties ici – décochez “Seulement mes parties” pour tout voir."

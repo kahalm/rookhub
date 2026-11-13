@@ -38,4 +38,9 @@ public class ClubGameLinkController(ClubGameLinks links) : ControllerBase
 
     [HttpGet("summary")]
     public async Task<IActionResult> Summary(string token, CancellationToken ct) => await links.SummaryAsync(token, ct) is { } s ? Ok(s) : NotFound();
+
+    /// <summary>Empfohlene Übungen derselben Partie (0.960.0).</summary>
+    [HttpGet("summary/exercises")]
+    public async Task<IActionResult> SummaryExercises(string token, [FromServices] RookHub.Api.Services.Puzzles.GameExercises exercises, CancellationToken ct) =>
+        await exercises.ForClubLinkAsync(token, ct) is { } e ? Ok(e) : NotFound();
 }

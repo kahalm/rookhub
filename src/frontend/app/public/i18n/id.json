@@ -3566,7 +3566,30 @@
       "quotaUsed": "Kuota hari ini sebanyak {{limit}} ringkasan sudah habis – coba lagi besok.",
       "neverSuggest": "Jangan sarankan lagi",
       "neverSuggestDone": "Tidak akan disarankan kepada Anda lagi.",
-      "neverSuggestFailed": "Tidak dapat menyimpannya."
+      "neverSuggestFailed": "Tidak dapat menyimpannya.",
+      "exercises": {
+        "title": "Latihan yang disarankan",
+        "intro": "Teka-teki dengan pola skakmat yang sama seperti posisi dari permainan ini — selesaikan di sini.",
+        "reason": {
+          "missedMate": "skakmat dalam {{n}} terlewat",
+          "playedMate": "skakmat dalam {{n}} di papan"
+        },
+        "also": "Pola yang sama juga di {{moves}}",
+        "more": "Posisi lainnya ({{count}})",
+        "match": {
+          "strict": "Pola skakmat sama",
+          "family": "Pola skakmat mirip",
+          "theme": "Skakmat dalam {{n}}"
+        },
+        "rating": "Rating {{rating}}",
+        "solve": "Selesaikan",
+        "solved": "Terpecahkan!",
+        "wrong": "Bukan langkah yang tepat — coba lagi.",
+        "shown": "Solusi ditampilkan.",
+        "showSolution": "Tampilkan solusi",
+        "retry": "Coba lagi",
+        "counter": "Teka-teki {{i}} dari {{n}}"
+      }
     },
     "onlyMine": "Hanya permainan saya",
     "onlyMineEmpty": "Tidak ada permainan Anda di sini – hapus centang “Hanya permainan saya” untuk melihat semua."

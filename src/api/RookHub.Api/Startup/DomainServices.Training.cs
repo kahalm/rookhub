@@ -22,6 +22,8 @@ public static partial class DomainServicesSetup
         services.AddScoped<WeeklyPostService>();
         services.AddScoped<LeaderboardService>();
         services.AddScoped<HintGenerationService>();
+        // Empfohlene Übungen der Partie-Zusammenfassung (0.960.0): Mattbilder der Partie → Lichess-Aufgaben.
+        services.AddScoped<GameExercises>();
         // Eigene Queue fuer die Tipp-Generierung (Stockfish + LLM je Linie): ein grosser Kurs-Upload hielt den
         // einzigen allgemeinen Consumer sonst stundenlang fest; persoenliche Kurse sind dort gedeckelt (A4-002).
         services.AddSingleton<IHintTaskQueue, HintTaskQueue>();

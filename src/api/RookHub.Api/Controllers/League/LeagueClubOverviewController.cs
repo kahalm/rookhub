@@ -102,6 +102,15 @@ public class LeagueClubOverviewController(LeagueClubResolver clubs, LeagueClubOv
         await WithClubAsync(ct, async c => await summaries.GetAsync(c, id, ct) is { } dto ? Ok(dto) : NotFound(),
             await club.ClubOfGameAsync(id, ct));
 
+    /// <summary>Empfohlene Übungen zur Vereinspartie (0.960.0, <see cref="RookHub.Api.Services.Puzzles.GameExercises"/>) → <c>{ groups }</c>;
+    /// Rechte wie <c>GET …/summary</c>, 404 unbekannt oder fremd.</summary>
+    [HttpGet("games/{id:int}/summary/exercises")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> SummaryExercises(int id, [FromServices] ClubGameSummaries summaries,
+        [FromServices] RookHub.Api.Services.Puzzles.GameExercises exercises, CancellationToken ct) =>
+        await WithClubAsync(ct, async c => await summaries.GetAsync(c, id, ct) is null ? NotFound() : Ok(await exercises.ForClubGameAsync(id, ct)),
+            await club.ClubOfGameAsync(id, ct));
+
     /// <summary>Zusammenfassung anfordern bzw. neu anfordern — nur Admins (Wunsch 2026-11-08: „auf Wunsch vom Admin");
     /// geschrieben wird vom Watcher. → wie <c>GET …/summary</c>; 403 kein Admin, 404 unbekannt oder fremd.</summary>
     [HttpPost("games/{id:int}/summary")]

@@ -4041,7 +4041,30 @@
       "quotaUsed": "A napi {{limit}} összefoglaló elfogyott – próbáld holnap.",
       "neverSuggest": "Ne javasold többé",
       "neverSuggestDone": "Többé nem javasoljuk.",
-      "neverSuggestFailed": "Nem sikerült menteni."
+      "neverSuggestFailed": "Nem sikerült menteni.",
+      "exercises": {
+        "title": "Ajánlott feladatok",
+        "intro": "Feladatok ugyanazzal a mattképpel, mint e játszma állásai — itt helyben megoldhatók.",
+        "reason": {
+          "missedMate": "elszalasztott matt {{n}} lépésben",
+          "playedMate": "matt {{n}} lépésben a táblán"
+        },
+        "also": "Ugyanez a kép itt is: {{moves}}",
+        "more": "További állások ({{count}})",
+        "match": {
+          "strict": "Azonos mattkép",
+          "family": "Hasonló mattkép",
+          "theme": "Matt {{n}} lépésben"
+        },
+        "rating": "Értékszám {{rating}}",
+        "solve": "Feladat megoldása",
+        "solved": "Megoldva!",
+        "wrong": "Nem ez a lépés — próbáld újra.",
+        "shown": "Megoldás megjelenítve.",
+        "showSolution": "Megoldás mutatása",
+        "retry": "Újra",
+        "counter": "{{i}}. feladat / {{n}}"
+      }
     },
     "onlyMine": "Csak a saját játszmáim",
     "onlyMineEmpty": "Itt nincs saját játszmád – a „Csak a saját játszmáim“ jelölését kivéve mindet látod."

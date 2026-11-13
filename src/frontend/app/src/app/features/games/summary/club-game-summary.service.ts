@@ -40,6 +40,17 @@ export interface ClubGameSummaryReadiness {
   analyzedPositions?: number;
 }
 
+/** Eine Lichess-Aufgabe der „Empfohlenen Übungen“ (0.960.0): `fen` VOR dem Zug des Gegners, `moves` = Gegnerzug, dann abwechselnd Löser/Gegner (UCI). */
+export interface SummaryExercise { id: number; fen: string; moves: string[]; rating: number; themes: string[]; match: 'strict' | 'family' | 'theme'; }
+
+/** Eine Stelle der Partie mit ihren Aufgaben; `ply` = Stellung VOR dem Halbzug, `reason` → `games.summary.exercises.reason.*`. */
+export interface SummaryExerciseGroup { ply: number; white: boolean; reason: 'missedMate' | 'playedMate'; mateIn: number | null; alsoPlies: number[]; exercises: SummaryExercise[]; }
+
+/** Woher die Seite kommt — dieselben fünf Wege wie die Zusammenfassung selbst. */
+export type SummarySource =
+  | { kind: 'club'; id: number } | { kind: 'own'; id: number } | { kind: 'club-share'; token: string; id: number }
+  | { kind: 'club-link'; token: string } | { kind: 'own-share'; token: string };
+
 /** Ein Buch der „Empfohlenen Literatur“ (`GET /api/ebook-suggestions`). */
 export interface EbookSuggestionInfo { id: number; title: string; author: string | null; year: string | null; accessible: boolean; blocked: boolean; }
 
@@ -54,6 +65,17 @@ export class ClubGameSummaryService {
   setSuggestionBlocked(id: number, blocked: boolean): Observable<void> {
     const url = `/api/ebook-suggestions/${id}/block`;
     return blocked ? this.http.put<void>(url, {}) : this.http.delete<void>(url);
+  }
+
+  /** Empfohlene Übungen (0.960.0, `GET …/summary/exercises`): Lichess-Aufgaben zu den Mattbildern der Partie. */
+  exercises(src: SummarySource): Observable<SummaryExerciseGroup[]> {
+    const t = (x: string) => encodeURIComponent(x);
+    const url = src.kind === 'club' ? `/api/league/club/games/${src.id}/summary/exercises`
+      : src.kind === 'own' ? `/api/games/${src.id}/summary/exercises`
+      : src.kind === 'club-share' ? `/api/league/s/${t(src.token)}/club/games/${src.id}/summary/exercises`
+      : src.kind === 'club-link' ? `/api/league/s-club-game/${t(src.token)}/summary/exercises`
+      : `/api/games/shared/${t(src.token)}/summary/exercises`;
+    return this.http.get<{ groups: SummaryExerciseGroup[] }>(url).pipe(map(r => r.groups ?? []));
   }
 
   get(gameId: number): Observable<ClubGameSummary> {

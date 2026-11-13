@@ -9,6 +9,20 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [~] Empfohlene Übungen in der Zusammenfassung — Mattbilder gebaut in 0.960.0 (2026-11-13)
+
+`docs/api/partie-zusammenfassung.md` → „Empfohlene Übungen“. Fertig: Mattbilder beider Seiten (gespielt/verpasst) → Lichess-Aufgaben
+gleicher Signatur/Familie, Thema-Rückfall nur dann; lösbar auf der Seite. Offen (Wunsch 13.11., in dieser Reihenfolge):
+- [ ] Motiv-Erkenner für taktische Fehler (fork mit Figur + Zielen, pin, skewer, discoveredAttack/doubleCheck, hangingPiece,
+      trappedPiece, backRankMate, promotion/advancedPawn, capturingDefender; unscharfe nur wenn sicher) — eigene Umsetzung nach den
+      dokumentierten Lichess-Themen (lichess-puzzler `tagger/cook.py` ist AGPL: keine Code-Kopie); Figuren-Signatur der Lösung für alle
+      Aufgaben im selben Lauf (`PuzzleSignatureKind` erweitern), Stellen aus `GameMistakes`/Engine-Linie, positionelle Fehler ohne Motiv
+      bekommen nichts.
+- [ ] Buchkapitel vor Lichess: Beispiele/Aufgaben aus dem Kapitel, das genau dieses Motiv behandelt (EbookDiagrams + geprüfte Lösung,
+      sonst „Beispiel im Buch“ mit Sprung in den Leser), Zugriffsrechte der Bücher, anonym im Zweifel nur Lichess; Quelle an der Karte.
+- [ ] Strenge Mattbild-Signatur ist sehr fein (Partie 221: 0 strenge, 107 Familien-Treffer im Fenster ±250) — nach dem Prod-Lauf
+      Treffer zählen und ggf. die Typen der beherrschenden Figuren aus der strengen Stufe nehmen (nur Deckung behalten).
+
 ## [~] Nacharbeiten der Fixwelle B8 — Codereview 2026-11-09 (Hauptteil in 0.936.1–0.940.3 + Satelliten, Stand 09.11.)
 
 Bericht `CODE_REVIEW_2026-11-09.md` (Umsetzungsstand in §6). Alle kritischen, hohen und mittleren Funde sind behoben;

@@ -42,6 +42,7 @@ namespace RookHub.Api.Startup;
 /// ClubSecondEngineScheduler           intern: ClubSecondEngine:EngineName   Vereinspartien zusätzlich auf Lc0
 /// TacticHarvestScheduler              intern: TacticHarvest:Enabled         Taktik-Ernte aus fertigen Analysen
 /// MoveClassHarvestWorker              immer                                 Zug-Klassen vorrechnen (Version)
+/// PuzzleSignatureWorker               PuzzleSignatures:Enabled (Vorgabe an) Mattbilder der Lichess-Aufgaben (Übungen)
 /// LineStudyWorker                     immer                                 Linien „ohne Engine" rechnen
 /// TrainingPrewarmScheduler            intern: Prep:TrainingPrewarm+LocalUrl Trainingslinien-Schätzung nachts vorrechnen
 /// LeagueOnlineSyncScheduler           intern: LeagueOnline:Enabled          Online-Partien der Ligaspieler
@@ -103,6 +104,8 @@ public static class BackgroundServicesSetup
         services.AddHostedService<TacticHarvestScheduler>();
         // Zug-Klassen ernten (0.854.0): fertige Analysen ohne oder mit altem Regelstand (GameMoveClasses.Version) nachrechnen.
         services.AddHostedService<MoveClassHarvestWorker>();
+        // Mattbilder der beliebten Matt-Aufgaben (0.960.0) für die Empfohlenen Übungen der Zusammenfassung — einmalig, portioniert.
+        services.AddHostedService<RookHub.Api.Services.Puzzles.PuzzleSignatureWorker>();
         // „Ohne Engine analysieren" (0.855.0): Stellungen der eigenen Linien gedrosselt rechnen und übernehmen.
         services.AddHostedService<LineStudyWorker>();
         // Trainingslinien nachts vorrechnen (0.884.0): Explorer-Stellungen aller markierten Repertoires in den dauerhaften Speicher.

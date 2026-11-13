@@ -16,7 +16,8 @@ import { GamesService, SharedGame } from '../games.service';
 import { AuthService } from '../../../core/auth.service';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { MaximNoteComponent } from '../../../shared/maxims/maxim-note.component';
-import { ClubGameSummary, ClubGameSummaryService, EbookSuggestionInfo } from './club-game-summary.service';
+import { ClubGameSummary, ClubGameSummaryService, EbookSuggestionInfo, SummaryExerciseGroup, SummarySource } from './club-game-summary.service';
+import { SummaryExercisesComponent } from './summary-exercises.component';
 import { ClubSummaryLinkComponent } from './club-summary-link.component';
 import { SummaryGameBoardComponent, SummaryJump } from './summary-game-board.component';
 import { SummaryBoardSheetComponent } from './summary-board-sheet.component';
@@ -43,7 +44,8 @@ interface ResolvedDiagram {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, TranslatePipe,
-    ChessBoardComponent, LoadErrorComponent, ClubSummaryLinkComponent, SummaryGameBoardComponent, MaximNoteComponent, SanPipe],
+    ChessBoardComponent, LoadErrorComponent, ClubSummaryLinkComponent, SummaryGameBoardComponent, MaximNoteComponent, SanPipe,
+    SummaryExercisesComponent],
   template: `
     <div class="summary-page" [class.with-board]="hasBoard()">
       @if (loading()) {
@@ -180,6 +182,8 @@ interface ResolvedDiagram {
                 }
               }
             </article>
+            <!-- Empfohlene Übungen (0.960.0): nach der Literatur, aus den Daten der Partie — ohne Stellen kein Abschnitt. -->
+            @if (exercises().length) { <app-summary-exercises [groups]="exercises()" (showPly)="showGamePly($event)" /> }
             @if (summary()?.model) { <p class="note model">{{ 'games.summary.writtenBy' | translate: { model: summary()!.model } }}</p> }
           }
         </mat-card>
@@ -298,6 +302,8 @@ export class ClubGameSummaryComponent implements OnInit {
   /** In dieser Sitzung gesperrt — die Zeile bleibt mit „Rückgängig“ stehen. */
   readonly justBlocked = signal<ReadonlySet<number>>(new Set());
   readonly loggedIn = inject(AuthService).isLoggedIn;
+  /** „Empfohlene Übungen“ (0.960.0): Stellen der Partie mit ihren Aufgaben; leer = kein Abschnitt (auch bei Fehlern). */
+  readonly exercises = signal<SummaryExerciseGroup[]>([]);
   /** Ohne Bücher und ohne deren Überschrift, wenn von der Literatur-Liste nichts übrig bleibt. */
   /** Züge im Text werden klickbar, sobald es das Seitenbrett gibt, das sie zeigen kann. */
   private readonly linkedBlocks = computed<SummaryBlock[]>(() => this.hasBoard() ? linkSummaryMoves(this.blocks(), this.positions()) : this.blocks());
@@ -343,7 +349,7 @@ export class ClubGameSummaryComponent implements OnInit {
       ? forkJoin([this.games.get(this.gameId), this.summaries.getOwn(this.gameId)])
       : forkJoin([this.games.clubGame(this.gameId), this.summaries.get(this.gameId)]);
     load.subscribe({
-      next: ([g, s]) => { this.game.set(g); this.summary.set(s); this.loading.set(false); this.loadBooks(); },
+      next: ([g, s]) => { this.game.set(g); this.summary.set(s); this.loading.set(false); this.loadBooks(); this.loadExercises(); },
       error: (e: { status?: number } | null) => {
         // UI-Sweep 2026-11-10 (d10-rk-zusammenfassung-ladefehler-sackgasse): wie die Partieseite — 403 bei einer Vereinspartie
         // = gesperrt, sonst 4xx = gibt es nicht; nur Netz/5xx (und 408/429) behalten „Wiederholen“.
@@ -363,6 +369,24 @@ export class ClubGameSummaryComponent implements OnInit {
     this.summaries.suggestions(ids).subscribe({
       next: list => this.books.set(new Map(list.filter(x => !x.blocked).map(x => [x.id, x]))),
       error: () => this.books.set(new Map()),   // still: dann eben keine Literatur-Liste
+    });
+  }
+
+  /** Woher die Seite liest — dieselben fünf Wege für die Übungen. */
+  private source(): SummarySource {
+    if (this.clubLinkToken !== null) return { kind: 'club-link', token: this.clubLinkToken };
+    if (this.gameShareToken !== null) return { kind: 'own-share', token: this.gameShareToken };
+    if (this.shareToken !== null) return { kind: 'club-share', token: this.shareToken, id: this.gameId };
+    return this.own ? { kind: 'own', id: this.gameId } : { kind: 'club', id: this.gameId };
+  }
+
+  /** Nur zu einem fertigen Text; ein Fehler lässt den Abschnitt still weg (Zusatz, kein Kern der Seite). */
+  private loadExercises(): void {
+    this.exercises.set([]);
+    if (!this.summary()?.markdown) return;
+    this.summaries.exercises(this.source()).subscribe({
+      next: groups => this.exercises.set(groups.filter(g => g.exercises.length > 0)),
+      error: () => this.exercises.set([]),
     });
   }
 

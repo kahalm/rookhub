@@ -7062,6 +7062,38 @@ namespace RookHub.Api.Migrations
                     b.ToTable("PuzzleChallenges");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.PuzzleSignature", b =>
+                {
+                    b.Property<int>("PuzzleId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<long>("Family")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte>("MateIn")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<long>("Strict")
+                        .HasColumnType("bigint");
+
+                    b.Property<short>("Version")
+                        .HasColumnType("smallint");
+
+                    b.HasKey("PuzzleId", "Kind");
+
+                    b.HasIndex("Family", "Rating");
+
+                    b.HasIndex("Strict", "Rating");
+
+                    b.ToTable("PuzzleSignatures");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.PuzzleTag", b =>
                 {
                     b.Property<int>("PuzzleId")
@@ -10971,6 +11003,17 @@ namespace RookHub.Api.Migrations
                     b.Navigation("FromUser");
 
                     b.Navigation("ToUser");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.PuzzleSignature", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Puzzle", "Puzzle")
+                        .WithMany()
+                        .HasForeignKey("PuzzleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Puzzle");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.PuzzleTag", b =>

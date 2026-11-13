@@ -1,0 +1,18 @@
+# Empfohlene Übungen in der Zusammenfassung (0.960.0)
+
+Backend, Auswahl und Mattbild: `docs/api/partie-zusammenfassung.md`, Abschnitt „Empfohlene Übungen“.
+
+- `ClubGameSummaryComponent` lädt die Übungen nur zu einem fertigen Text (`ClubGameSummaryService.exercises(source)`, dieselben fünf
+  Wege wie die Zusammenfassung: Vereinspartie, eigene Partie, Liga-Teilen-Link, `/cg/{token}`, `/g/{token}`). Keine Stellen oder ein
+  Fehler → kein Abschnitt, kein Platzhalter.
+- `SummaryExercisesComponent` (`features/games/summary/summary-exercises.component.ts`): `h2` „Empfohlene Übungen“, Einleitungssatz,
+  je Stelle eine `h3` mit der Zugnummer als Textknopf (springt wie ein Zug im Text aufs Brett bzw. öffnet am Handy das Brett-Blatt) und
+  dem Grund („verpasstes Matt in 4“); darunter Karten (`auto-fill`, ≥ 140 px) mit kleinem Brett — Stellung NACH dem Gegnerzug, aus Sicht
+  des Lösers, letzter Zug markiert —, Art der Übereinstimmung und „Lichess · Wertung“. Drei Stellen offen, der Rest hinter „Weitere
+  Stellen (N)“. Gelöst/nicht gelöst als Häkchen/Kreuz an der Karte (nur im Speicher der Seite).
+- Lösen: ab 900 px im Abschnitt über den Karten (`SummaryExerciseSolverComponent` mit `PuzzleBoardComponent` + gemeinsamem
+  `LineSolver`), darunter als Blatt `SummaryExerciseSheetComponent` (Muster wie `SummaryBoardSheetComponent`: Griff, Titel, X, Wischen,
+  Zurück-Taste). Richtig → der Gegner antwortet nach 450 ms; falsch → der Zug steht 700 ms und wird zurückgenommen; beim letzten Zug
+  zählt jedes Matt; „Lösung zeigen“ spielt den Rest vor; „Weiter“ = nächste Aufgabe der Stelle.
+- Angemeldet wird der ERSTE Ausgang je Aufgabe über `PuzzleService.recordAttempt` verbucht (wie der normale Löser, also mit
+  Puzzle-Wertung); anonym nur lösen.
