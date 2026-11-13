@@ -183,12 +183,15 @@ public class DiscordLinkServiceTests
         // Bis 0.829 lebte der Vermerk im Speicher des Dienstes: nach einem Neustart galt das weitergeleitete
         // Rätsel-Token wieder für jedes Konto. Jetzt steht er in DiscordLinkReleases.
         var name = Guid.NewGuid().ToString();
+        // exp VOR dem Freiwerden festlegen: exp hat nur Sekunden, ein danach berechnetes now+30 Tage kann über
+        // freiAm+30 Tage springen, wenn dazwischen eine Sekundengrenze liegt (CI-Flake v0.961.0).
+        var oldExp = DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(30));
         using (var db = Db(name))
             await ReleaseAsync(DiscordTokenTestHelper.Service(db: db), db, "42", userId: 1);
 
         using var restarted = Db(name);
         var svc = DiscordTokenTestHelper.Service(db: restarted);   // neue Dienst-Instanz, neuer Kontext
-        var old = svc.Verify(DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(30))))!;
+        var old = svc.Verify(DiscordTokenTestHelper.Make("42", "x", oldExp))!;
         Assert.True(await svc.IsReservedForOtherAsync(old, userId: 2));
         Assert.False(await svc.IsReservedForOtherAsync(old, userId: 1));
     }
@@ -234,10 +237,13 @@ public class DiscordLinkServiceTests
         // FK SetNull: verschwindet das Konto hart, bleibt der Vermerk und sperrt die alten Tokens für alle.
         using var db = Db(Guid.NewGuid().ToString());
         var svc = DiscordTokenTestHelper.Service(db: db);
+        // exp VOR dem Freiwerden festlegen: exp hat nur Sekunden, ein danach berechnetes now+30 Tage kann über
+        // freiAm+30 Tage springen, wenn dazwischen eine Sekundengrenze liegt (CI-Flake v0.961.0).
+        var oldExp = DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(30));
         db.DiscordLinkReleases.Add(new DiscordLinkRelease { DiscordId = "42", UserId = null, ReleasedAt = DateTime.UtcNow });
         await db.SaveChangesAsync();
 
-        var old = svc.Verify(DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(30))))!;
+        var old = svc.Verify(DiscordTokenTestHelper.Make("42", "x", oldExp))!;
         Assert.True(await svc.IsReservedForOtherAsync(old, userId: 1));
         Assert.True(await svc.IsReservedForOtherAsync(old, userId: 2));
     }

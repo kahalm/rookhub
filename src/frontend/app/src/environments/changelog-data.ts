@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.961.1", date: "2026-11-13", changes: [
+    { en: "Tests: two Discord-link tests no longer fail now and then when a second boundary passes between the release and the token expiry.",
+      de: "Tests: zwei Discord-Verknüpfungstests schlagen nicht mehr gelegentlich fehl, wenn zwischen dem Freiwerden und dem Token-Ablauf eine Sekundengrenze liegt." },
+  ] },
   { version: "0.961.0", date: "2026-11-13", changes: [
     { en: "Recommended exercises in the game summary now also cover tactical mistakes: where a player missed a fork, pin, skewer, discovered attack, double check, hanging piece or promotion – or allowed the opponent one – the page shows Lichess puzzles with the same motif, preferably with the same pieces (e.g. a knight fork of king and rook). Only clear tactics count (the best line wins at least two pawns and the motif is recognised for sure); positional mistakes get no exercises.",
       de: "Die Empfohlenen Übungen in der Zusammenfassung decken jetzt auch taktische Fehler ab: Wo jemand eine Gabel, Fesselung, einen Spieß, Abzugsangriff, Doppelschach, eine hängende Figur oder Umwandlung übersehen oder dem Gegner erlaubt hat, zeigt die Seite Lichess-Aufgaben mit demselben Motiv, am liebsten mit denselben Figuren (z. B. Springergabel auf König und Turm). Es zählen nur klare Taktiken (die beste Linie gewinnt mindestens zwei Bauern, das Motiv ist sicher erkannt); positionelle Fehler bekommen keine Übungen." },
