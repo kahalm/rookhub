@@ -3553,6 +3553,7 @@
       "showOnBoard": "Visa på brädet",
       "variation": "Variant",
       "backToGame": "Tillbaka till partiet",
+      "theGame": "Partiet",
       "writtenBy": "Skrivet av {{model}} utifrån motoranalysen.",
       "waitingForAnalysis": "Begärd – väntar på bakgrundsanalysen, sammanfattningen följer när den är klar:",
       "progressAnalysis": "analysen pågår fortfarande",

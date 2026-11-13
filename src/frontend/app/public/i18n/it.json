@@ -3553,6 +3553,7 @@
       "showOnBoard": "Mostra sulla scacchiera",
       "variation": "Variante",
       "backToGame": "Torna alla partita",
+      "theGame": "La partita",
       "writtenBy": "Scritto da {{model}} in base all'analisi del motore.",
       "waitingForAnalysis": "Richiesto – in attesa dell'analisi in background, il riepilogo segue al termine:",
       "progressAnalysis": "analisi ancora in corso",

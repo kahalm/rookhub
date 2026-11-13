@@ -10,6 +10,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.959.0", date: "2026-11-13", changes: [
+    { en: "Game summary: right after the “Summary” section the page now shows the whole game (“1. e4 c5 2. Nf3 d6 …” up to the result) – every move is clickable and shows its position on the board next to the text; the move on the board is highlighted. It comes straight from the game, so it appears in every existing summary without rewriting it.",
+      de: "Partie-Zusammenfassung: Direkt nach dem Abschnitt „Zusammenfassung“ steht jetzt die ganze Partie („1. e4 c5 2. Sf3 d6 …“ bis zum Ergebnis) – jeder Zug ist anklickbar und zeigt seine Stellung auf dem Brett neben dem Text, der Zug auf dem Brett ist hervorgehoben. Sie kommt direkt aus der Partie und erscheint deshalb in jeder bestehenden Zusammenfassung, ohne sie neu schreiben zu lassen." },
+    { en: "Game summary on the phone: tapping a move no longer jumps to the end of the page. The board opens as a sheet over the text, with step buttons, the move list underneath and Stockfish running in the browser (also without an account); you can move pieces freely and go back to the game. Close it with X, the back button or by swiping down – the text stays where you were reading. The board next to the text on larger screens got the same engine button.",
+      de: "Partie-Zusammenfassung am Handy: Ein Tipp auf einen Zug springt nicht mehr ans Seitenende. Das Brett öffnet sich als Blatt über dem Text, mit Blätter-Knöpfen, der Zugliste darunter und Stockfish im Browser (auch ohne Konto); man kann frei ziehen und zurück zur Partie. Schließen per X, Zurück-Taste oder Wischen nach unten – der Text bleibt an der Lesestelle. Das Brett neben dem Text auf größeren Bildschirmen hat denselben Engine-Knopf bekommen." },
+    { en: "Game summary: in a variation on the board the move numbers are right again (“3. Nf3” instead of “1…Nf3”).",
+      de: "Partie-Zusammenfassung: In einer Variante auf dem Brett stimmen die Zugnummern wieder („3. Sf3“ statt „1…Sf3“)." },
+  ] },
   { version: "0.958.3", date: "2026-11-12", changes: [
     { en: "Book puzzles whose diagram claims castling rights that cannot exist (king or rook not on its home square) can be solved again: with such a position every king move failed, so the solution could not be played and the moves in the comments were not clickable. The impossible rights are now dropped when the position is loaded; 15 book puzzles were affected.",
       de: "Buch-Aufgaben, deren Diagramm Rochaderechte angibt, die es nicht geben kann (König oder Turm nicht auf dem Ausgangsfeld), lassen sich wieder lösen: Bei so einer Stellung scheiterte jeder Königszug, die Lösung ließ sich nicht spielen und die Züge in den Kommentaren waren nicht anklickbar. Die unmöglichen Rechte werden jetzt beim Laden der Stellung gestrichen; betroffen waren 15 Buch-Aufgaben." },

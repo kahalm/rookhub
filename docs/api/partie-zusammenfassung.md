@@ -117,6 +117,26 @@ Wunsch 2026-11-09: „die empfehlungen sollen getrennt für weiß & schwarz sein
 
 Züge im Text (Überschriften, Absätze, Listen, Zitate, Tabellen, Bildunterschriften) werden über `linkSummaryMoves` klickbar, sobald es das Seitenbrett gibt. Nummer + Seite treffen zuerst die zuletzt genannte Stellung, wenn sie neben der Partie liegt (Kontext einer Variante), dann den tatsächlichen Partiezug, dann zuletzt genannte Stellungen des Absatzes, dann die Partiestellung als Abzweig (`explanationParts(text, root, game, shared)`); liegt die angesetzte Stellung bis zu 6 Halbzüge vor der Folge, füllt der zuletzt genannte Zug gleicher Nummer und Seite die Lücke, sonst der Partiezug (wie im Zugvergleich, `docs/frontend/eigene-fehler-nachspielen.md`). Illegales bleibt Text. Eine Folge, die die Partie verlässt, wird auf dem Brett zur Variante ab dem Abzweig. Eigene Züge auf dem Brett ergeben ebenfalls eine Variante. Varianten liegen nur im Speicher der Seite, ohne Schreibzugriff, und verschwinden beim Blättern in der Partie, beim Neuladen oder Verlassen.
 
+## „Die Partie“ und Brett am Handy (0.959.0)
+
+Wunsch 2026-11-13: „ich hätt gern dass die zusammenfassung auch die ganze partie abbildet … zum durchklicken“. Die Seite
+setzt den Block **„Die Partie“** (`games.summary.theGame`) selbst ein — aus dem PGN der Partie, nicht aus dem Markdown;
+er gilt damit für jede bestehende Zusammenfassung. Platz (`gameBlockIndex` in `summary-markdown.util.ts`): hinter den
+Abschnitt `## Zusammenfassung` (Überschrift auch in anderen Sprachen, „Summary“ …), also vor die nächste `##`; fehlt er,
+hinter die Kopfzeile unter dem `#`-Titel, ohne Titel an den Anfang. Inhalt: Zugpaare (`gameMovePairs`, Nummer aus der FEN
+vor dem Zug — eine Partie ab FEN mit Schwarz am Zug beginnt mit „17…“), jeder Halbzug ein Zug-Knopf (`.gm`, Figurenbuchstaben
+der Oberflächensprache über `SanPipe` wie die Zugliste des Bretts), am Ende das Ergebnis (nicht bei `*`). Der Zug, den das
+Seitenbrett zeigt, ist hervorgehoben. Leeres oder ungültiges PGN → kein Brett, kein Block. Zug-Klassen (!!/!) trägt der
+Block nicht: die Seite lädt keine Analyse.
+
+**Am Handy (unter 900 px)** springt ein Klick auf einen Zug (Text, „Die Partie“, „Am Brett zeigen“) nicht mehr zum
+Seitenbrett am Ende, sondern öffnet `SummaryBoardSheetComponent` — `MatDialog` als Blatt nach DESIGN 5.6, darin dasselbe
+`SummaryGameBoardComponent` (`inSheet`, Startsprung `jump`) mit Blättern, Zugliste, Varianten und eigenen Zügen. Schließen
+per X, Hintergrund, Esc, Wischen am Griff nach unten oder Zurück-Taste (eigener Verlaufseintrag). Leseposition und
+Seitenbrett bleiben unverändert. **Engine**: Knopf `memory` am Brett (Desktop und Blatt; im Blatt beim Öffnen an) —
+`LiveEngineSession` mit Stockfish im Browser, rechnet die Stellung auf dem Brett, drei Linien + Pfeil. Die Engine ist eine
+statische Datei der App, läuft also auch über die Teilen-Links ohne Anmeldung; externe Engines bietet die Seite nicht an.
+
 ## Teilen-Link einer Vereinspartie (`/cg/{token}`, 2026-11-09)
 
 „Teilen-Link kopieren“ auf `/club-games/{id}` (Recht `league.view`, wie „Partie teilen“ der Ligapartie) legt `LeagueClubGames.ShareToken` an; gültig bis zum Widerruf (⋮ → „Teilen-Link widerrufen“, Token wird gelöscht, ein neues Teilen vergibt ein neues) oder bis die Partie archiviert wird.

@@ -3618,6 +3618,7 @@
       "showOnBoard": "Show on board",
       "variation": "Variation",
       "backToGame": "Back to the game",
+      "theGame": "The game",
       "writtenBy": "Written by {{model}} from the engine analysis.",
       "waitingForAnalysis": "Requested – waiting for the background analysis, the summary follows once it is done:",
       "progressAnalysis": "analysis still running",

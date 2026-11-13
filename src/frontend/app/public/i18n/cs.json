@@ -3553,6 +3553,7 @@
       "showOnBoard": "Zobrazit na šachovnici",
       "variation": "Varianta",
       "backToGame": "Zpět k partii",
+      "theGame": "Partie",
       "writtenBy": "Napsal {{model}} z analýzy enginu.",
       "waitingForAnalysis": "Vyžádáno – čeká na analýzu na pozadí, shrnutí následuje po jejím dokončení:",
       "progressAnalysis": "analýza ještě běží",

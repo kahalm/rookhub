@@ -1,4 +1,4 @@
-import { InlinePart, linkSummaryMoves, moveLabel, parseInline, parseSummary, positionsOf, visibleSummaryBlocks } from './summary-markdown.util';
+import { InlinePart, gameBlockIndex, gameMovePairs, linkSummaryMoves, moveLabel, parseInline, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock } from './summary-markdown.util';
 
 describe('summary-markdown.util (Partie-Zusammenfassung, 0.913.0)', () => {
   it('zerlegt Überschriften, Absätze, Listen, Zitat, Trennlinie und Tabelle', () => {
@@ -165,5 +165,47 @@ describe('linkSummaryMoves — Partie 243', () => {
     expect(book.why).toContain('35.axb5 und 45.Lxd5');
     expect(moves(book.whyParts!)).toEqual(['35.axb5@69', '45.Lxd5@89']);
     expect(book.whyParts!.map(p => p.text).join('')).toBe(book.why);
+  });
+});
+
+/** „Die Partie“ (Wunsch 2026-11-13): ganze Zugfolge aus dem PGN, eingesetzt hinter den Abschnitt „Zusammenfassung“. */
+describe('summary-markdown.util — Block „Die Partie“', () => {
+  const kinds = (md: string) => withGameBlock(parseSummary(md)).map(b => b.kind === 'heading' ? `h${b.level}` : b.kind);
+
+  it('steht hinter dem Abschnitt „Zusammenfassung“, vor der nächsten ##-Überschrift (### darin zählt dazu)', () => {
+    const md = ['# A – B (1-0)', '', 'Sizilianisch, 24 Züge', '', '## Zusammenfassung', '', 'Eins.', '', 'Zwei.', '', '### Kurz', '', 'Drei.',
+      '', '## Schlüsselstellungen', '', '### 7.Lc4', '', 'Text'].join('\n');
+    expect(kinds(md)).toEqual(['h1', 'paragraph', 'h2', 'paragraph', 'paragraph', 'h3', 'paragraph', 'game', 'h2', 'h3', 'paragraph']);
+  });
+
+  it('Abschnitt am Ende: Block ganz unten; englische Überschrift „Summary“ zählt auch', () => {
+    expect(kinds('# T\n\n## Summary\n\nText.')).toEqual(['h1', 'h2', 'paragraph', 'game']);
+  });
+
+  it('ohne Abschnitt: hinter der Kopfzeile, ohne Kopfzeile hinter dem Titel, ohne Titel am Anfang', () => {
+    expect(kinds('# T\n\nKopf\n\n## Schlüsselstellungen\n\nX')).toEqual(['h1', 'paragraph', 'game', 'h2', 'paragraph']);
+    expect(kinds('# T\n\n## Fehler\n\nX')).toEqual(['h1', 'game', 'h2', 'paragraph']);
+    expect(gameBlockIndex(parseSummary('Nur Text.'))).toBe(0);
+    expect(gameBlockIndex([])).toBe(0);
+  });
+
+  it('Zugpaare mit Nummern; Halbzug = Stellung danach', () => {
+    const pairs = gameMovePairs(positionsOf('1. e4 c5 2. Nf3 d6 3. d4 1-0'));
+    expect(pairs.map(p => p.number)).toEqual(['1.', '2.', '3.']);
+    expect(pairs[1].moves).toEqual([{ ply: 3, san: 'Nf3' }, { ply: 4, san: 'd6' }]);
+    expect(pairs[2].moves).toEqual([{ ply: 5, san: 'd4' }]);
+  });
+
+  it('Partie ab FEN mit Schwarz am Zug: „17…“ zuerst, dann weiter mit Weiß', () => {
+    const pgn = '[SetUp "1"]\n[FEN "4k3/8/8/8/8/8/4P3/4K2R b K - 0 17"]\n\n17... Kd7 18. Rh7+ Kd6 *';
+    const pairs = gameMovePairs(positionsOf(pgn));
+    expect(pairs.map(p => p.number)).toEqual(['17…', '18.']);
+    expect(pairs[0].moves).toEqual([{ ply: 1, san: 'Kd7' }]);
+    expect(pairs[1].moves.map(m => m.san)).toEqual(['Rh7+', 'Kd6']);
+  });
+
+  it('leeres oder kaputtes PGN: keine Züge', () => {
+    expect(gameMovePairs(positionsOf(''))).toEqual([]);
+    expect(gameMovePairs(positionsOf('1. e4 e5 2. Ke9 ???'))).toEqual([]);
   });
 });

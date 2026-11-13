@@ -5,6 +5,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialog } from '@angular/material/dialog';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable, forkJoin } from 'rxjs';
 import { ChessBoardComponent, BoardArrow } from '../../../shared/pgn-viewer/chess-board.component';
@@ -16,8 +18,10 @@ import { SnackbarService } from '../../../core/snackbar.service';
 import { MaximNoteComponent } from '../../../shared/maxims/maxim-note.component';
 import { ClubGameSummary, ClubGameSummaryService, EbookSuggestionInfo } from './club-game-summary.service';
 import { ClubSummaryLinkComponent } from './club-summary-link.component';
-import { SummaryGameBoardComponent } from './summary-game-board.component';
-import { DiagramSpec, InlinePart, SummaryBlock, moveLabel, linkSummaryMoves, parseSummary, positionsOf, visibleSummaryBlocks } from './summary-markdown.util';
+import { SummaryGameBoardComponent, SummaryJump } from './summary-game-board.component';
+import { SummaryBoardSheetComponent } from './summary-board-sheet.component';
+import { SanPipe } from '../../../shared/chess/san.pipe';
+import { DiagramSpec, InlinePart, SummaryBlock, gameMovePairs, moveLabel, linkSummaryMoves, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock } from './summary-markdown.util';
 
 /** Ein fertig aufgelöstes Diagramm: Stellung, letzter Zug, Pfeile, Blickrichtung. */
 interface ResolvedDiagram {
@@ -39,7 +43,7 @@ interface ResolvedDiagram {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, TranslatePipe,
-    ChessBoardComponent, LoadErrorComponent, ClubSummaryLinkComponent, SummaryGameBoardComponent, MaximNoteComponent],
+    ChessBoardComponent, LoadErrorComponent, ClubSummaryLinkComponent, SummaryGameBoardComponent, MaximNoteComponent, SanPipe],
   template: `
     <div class="summary-page" [class.with-board]="hasBoard()">
       @if (loading()) {
@@ -109,6 +113,13 @@ interface ResolvedDiagram {
                   @case ('paragraph') { <p><ng-container *ngTemplateOutlet="inline; context: { $implicit: b.parts }" /></p> }
                   @case ('quote') { <blockquote><ng-container *ngTemplateOutlet="inline; context: { $implicit: b.parts }" /></blockquote> }
                   @case ('rule') { <hr /> }
+                  @case ('game') {
+                    <!-- „Die Partie“ (Wunsch 2026-11-13): ganze Zugfolge aus dem PGN, jeder Halbzug ein Zug-Knopf; Paare brechen nie in sich um. -->
+                    <section class="game-moves">
+                      <h2>{{ 'games.summary.theGame' | translate }}</h2>
+                      <p class="game-line">@for (pair of gameMoves(); track $index) {<span class="gm-pair"><span class="gm-no">{{ pair.number }}</span>@for (m of pair.moves; track m.ply) {<button type="button" class="gm" [class.gm-on]="m.ply === boardPly()" [attr.aria-current]="m.ply === boardPly() ? 'step' : null" (click)="showGamePly(m.ply)">{{ m.san | san }}</button>}</span>}@if (g.result && g.result !== '*') {<span class="gm-result">{{ g.result }}</span>}</p>
+                    </section>
+                  }
                   @case ('maxim') { <app-maxim-note class="maxim" [text]="b.value" /> }
                   @case ('book') {
                     @if (books().get(b.id); as info) {
@@ -159,7 +170,7 @@ interface ResolvedDiagram {
                           @if (b.spec.ply !== undefined) {
                             <a [routerLink]="gameLink()" [queryParams]="{ ply: b.spec.ply }" class="to-ply">{{ 'games.summary.showInGame' | translate }}</a>
                             @if (hasBoard()) {
-                              <button type="button" class="to-board" (click)="sideBoard()?.showPly(b.spec.ply, d.flipped)">{{ 'games.summary.showOnBoard' | translate }}</button>
+                              <button type="button" class="to-board" (click)="showOnBoard({ ply: b.spec.ply, flipped: d.flipped })">{{ 'games.summary.showOnBoard' | translate }}</button>
                             }
                           }
                         </figcaption>
@@ -234,6 +245,14 @@ interface ResolvedDiagram {
     .mv.mv-b { font-weight: 700; }
     .mv.mv-i { font-style: italic; }
     .to-ply { margin-left: auto; }
+    .game-line { line-height: 1.9; overflow-wrap: normal; }
+    .gm-pair { display: inline-block; white-space: nowrap; margin-right: 0.6em; }
+    .gm-no { color: var(--mat-sys-on-surface-variant); margin-right: 0.15em; }
+    .gm { all: unset; cursor: pointer; padding: 0 2px; margin-right: 0.2em; border-radius: 3px; font-weight: 500; color: var(--rh-accent, inherit);
+      text-decoration: underline dotted; text-underline-offset: 2px; }
+    .gm:hover, .gm:focus-visible { background: color-mix(in srgb, currentColor 12%, transparent); outline: none; }
+    .gm.gm-on { background: color-mix(in srgb, var(--rh-accent) 18%, transparent); font-weight: 700; text-decoration: none; }
+    .gm-result { font-weight: 700; white-space: nowrap; }
     .to-board { background: none; border: 0; padding: 0; font: inherit; color: var(--rh-accent); text-decoration: underline; cursor: pointer; }
   `],
 })
@@ -282,11 +301,20 @@ export class ClubGameSummaryComponent implements OnInit {
   /** Ohne Bücher und ohne deren Überschrift, wenn von der Literatur-Liste nichts übrig bleibt. */
   /** Züge im Text werden klickbar, sobald es das Seitenbrett gibt, das sie zeigen kann. */
   private readonly linkedBlocks = computed<SummaryBlock[]>(() => this.hasBoard() ? linkSummaryMoves(this.blocks(), this.positions()) : this.blocks());
-  readonly visibleBlocks = computed<SummaryBlock[]>(() => visibleSummaryBlocks(this.linkedBlocks(), b => this.books().has(b.id)));
+  /** Mit Brett (= es gibt Züge) setzt die Seite „Die Partie“ selbst ein — aus dem PGN, für jede bestehende Zusammenfassung. */
+  readonly visibleBlocks = computed<SummaryBlock[]>(() => {
+    const shown = visibleSummaryBlocks(this.linkedBlocks(), b => this.books().has(b.id));
+    return this.hasBoard() ? withGameBlock(shown) : shown;
+  });
+  readonly gameMoves = computed(() => gameMovePairs(this.positions()));
   private readonly positions = computed(() => positionsOf(this.game()?.pgn ?? ''));
   /** Seitenbrett nur, wenn es Text gibt, neben dem es steht, und Züge zum Durchklicken. */
   readonly hasBoard = computed(() => !!this.summary()?.markdown && this.positions().sans.length > 0);
   readonly sideBoard = viewChild(SummaryGameBoardComponent);
+  /** Halbzug, den das Seitenbrett zeigt (für die Hervorhebung in „Die Partie“); in einer Variante keiner. */
+  readonly boardPly = computed(() => { const b = this.sideBoard(); return b && !b.variation() ? b.ply() : -1; });
+  private readonly dialog = inject(MatDialog);
+  private readonly breakpoints = inject(BreakpointObserver);
 
   ngOnInit(): void {
     this.gameId = Number(this.route.snapshot.paramMap.get('id'));
@@ -348,7 +376,27 @@ export class ClubGameSummaryComponent implements OnInit {
 
   /** Klick auf einen Zug im Text: Partiezug oder Variante aufs Seitenbrett. */
   showMove(p: InlinePart): void {
-    if (p.line && p.at) this.sideBoard()?.showLine(p.line, p.at);
+    if (p.line && p.at) this.showOnBoard({ line: p.line, at: p.at });
+  }
+
+  /** Klick auf einen Zug in „Die Partie“. */
+  showGamePly(ply: number): void {
+    this.showOnBoard({ ply });
+  }
+
+  /**
+   * Ab 900 px (Brett neben dem Text) springt das Seitenbrett. Darunter (Wunsch 2026-11-13) öffnet sich das Brett als Blatt
+   * über dem Text — kein Sprung ans Seitenende, die Leseposition und das Seitenbrett bleiben, wie sie sind.
+   */
+  showOnBoard(jump: SummaryJump): void {
+    const g = this.game();
+    if (g && this.breakpoints.isMatched('(max-width: 899.98px)')) {
+      SummaryBoardSheetComponent.open(this.dialog, { pgn: g.pgn, flipped: g.ownerSide === 'black', jump });
+      return;
+    }
+    const board = this.sideBoard();
+    if (!board) return;
+    if ('line' in jump) board.showLine(jump.line, jump.at); else board.showPly(jump.ply, jump.flipped);
   }
 
   /** Diagramm-Block → Brett; `null`, wenn der Halbzug außerhalb der Partie liegt (dann lieber keins als ein falsches). */

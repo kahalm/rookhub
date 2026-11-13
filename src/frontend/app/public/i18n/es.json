@@ -3553,6 +3553,7 @@
       "showOnBoard": "Mostrar en el tablero",
       "variation": "Variante",
       "backToGame": "Volver a la partida",
+      "theGame": "La partida",
       "writtenBy": "Escrito por {{model}} a partir del análisis del motor.",
       "waitingForAnalysis": "Solicitado: esperando al análisis en segundo plano; el resumen llegará cuando termine:",
       "progressAnalysis": "análisis aún en curso",

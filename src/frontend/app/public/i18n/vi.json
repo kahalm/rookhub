@@ -3553,6 +3553,7 @@
       "showOnBoard": "Hiện trên bàn cờ",
       "variation": "Biến",
       "backToGame": "Quay lại ván cờ",
+      "theGame": "Ván đấu",
       "writtenBy": "Do {{model}} viết từ phân tích của công cụ.",
       "waitingForAnalysis": "Đã yêu cầu – đang chờ phân tích nền, tóm tắt sẽ có khi xong:",
       "progressAnalysis": "phân tích vẫn đang chạy",

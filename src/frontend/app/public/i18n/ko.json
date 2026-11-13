@@ -3553,6 +3553,7 @@
       "showOnBoard": "보드에서 보기",
       "variation": "변화",
       "backToGame": "게임으로 돌아가기",
+      "theGame": "기보",
       "writtenBy": "엔진 분석을 바탕으로 {{model}}이(가) 작성했습니다.",
       "waitingForAnalysis": "요청됨: 백그라운드 분석을 기다리는 중이며, 완료되면 요약이 이어집니다:",
       "progressAnalysis": "분석 진행 중",

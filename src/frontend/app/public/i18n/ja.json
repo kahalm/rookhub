@@ -3553,6 +3553,7 @@
       "showOnBoard": "盤で表示",
       "variation": "変化",
       "backToGame": "対局に戻る",
+      "theGame": "棋譜",
       "writtenBy": "エンジン解析をもとに {{model}} が作成しました。",
       "waitingForAnalysis": "依頼済み: バックグラウンド解析を待っています。完了後にまとめが作成されます:",
       "progressAnalysis": "解析はまだ実行中",

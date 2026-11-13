@@ -3553,6 +3553,7 @@
       "showOnBoard": "在棋盘上显示",
       "variation": "变例",
       "backToGame": "返回对局",
+      "theGame": "棋谱",
       "writtenBy": "由 {{model}} 根据引擎分析撰写。",
       "waitingForAnalysis": "已请求——正在等待后台分析，完成后将生成总结：",
       "progressAnalysis": "分析仍在进行",

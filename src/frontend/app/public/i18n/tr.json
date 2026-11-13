@@ -3553,6 +3553,7 @@
       "showOnBoard": "Tahtada göster",
       "variation": "Varyant",
       "backToGame": "Oyuna dön",
+      "theGame": "Oyun",
       "writtenBy": "{{model}} tarafından motor analizinden yazıldı.",
       "waitingForAnalysis": "İstendi – arka plan analizi bekleniyor, analiz bitince özet gelir:",
       "progressAnalysis": "analiz hâlâ sürüyor",

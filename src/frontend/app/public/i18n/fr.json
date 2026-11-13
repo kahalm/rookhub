@@ -3553,6 +3553,7 @@
       "showOnBoard": "Afficher sur l'échiquier",
       "variation": "Variante",
       "backToGame": "Retour à la partie",
+      "theGame": "La partie",
       "writtenBy": "Rédigé par {{model}} à partir de l'analyse du moteur.",
       "waitingForAnalysis": "Demandé – en attente de l'analyse en arrière-plan, le résumé suivra une fois celle-ci terminée :",
       "progressAnalysis": "analyse toujours en cours",

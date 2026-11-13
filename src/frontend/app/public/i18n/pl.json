@@ -3553,6 +3553,7 @@
       "showOnBoard": "Pokaż na szachownicy",
       "variation": "Wariant",
       "backToGame": "Wróć do partii",
+      "theGame": "Partia",
       "writtenBy": "Napisane przez {{model}} na podstawie analizy silnika.",
       "waitingForAnalysis": "Zamówione – czeka na analizę w tle, podsumowanie nastąpi po jej zakończeniu:",
       "progressAnalysis": "analiza wciąż trwa",

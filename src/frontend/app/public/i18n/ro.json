@@ -3553,6 +3553,7 @@
       "showOnBoard": "Arată pe tablă",
       "variation": "Variantă",
       "backToGame": "Înapoi la partidă",
+      "theGame": "Partida",
       "writtenBy": "Scris de {{model}} din analiza motorului.",
       "waitingForAnalysis": "Solicitat – așteaptă analiza din fundal, rezumatul urmează după ce aceasta se termină:",
       "progressAnalysis": "analiza încă rulează",

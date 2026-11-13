@@ -1,4 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ApplicationRef, signal } from '@angular/core';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { MatDialog } from '@angular/material/dialog';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
@@ -6,7 +10,23 @@ import { PreferencesService } from '../../../core/preferences.service';
 import { GamesService } from '../games.service';
 import { ClubGameSummaryComponent } from './club-game-summary.component';
 import { ClubGameSummaryService } from './club-game-summary.service';
-import { SummaryGameBoardComponent } from './summary-game-board.component';
+import { SUMMARY_ENGINE_SESSION, SummaryGameBoardComponent } from './summary-game-board.component';
+import { SummaryBoardSheetComponent } from './summary-board-sheet.component';
+import type { LiveEngineSession } from '../live-engine-session';
+
+/** Engine-Attrappe: merkt sich die gerechneten Stellungen, liefert eine feste Linie und einen Pfeil. */
+function fakeEngine() {
+  const synced: string[] = [];
+  const session = {
+    synced, destroyed: false,
+    sync: (_i: number, fen: string) => { synced.push(fen); },
+    lines: signal([{ evalText: '+0.3', san: '1. e4 e5', positive: true }]),
+    depth: signal(12),
+    arrows: signal([{ from: 'e2', to: 'e4', brush: 'blue' }]),
+    destroy() { this.destroyed = true; },
+  };
+  return session;
+}
 
 const PGN = '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *';
 const prefs = { boardTheme: 'brown', pieceSet: 'cburnett' };
@@ -127,6 +147,57 @@ describe('SummaryGameBoardComponent', () => {
     expect(c.ply()).toBe(0);
   });
 
+  it('Engine-Knopf: rechnet die Stellung auf dem Brett, zeigt Linie + Pfeil, aus beendet die Sitzung', () => {
+    const fake = fakeEngine();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [SummaryGameBoardComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' }), { provide: PreferencesService, useValue: prefs },
+        { provide: SUMMARY_ENGINE_SESSION, useValue: () => fake as unknown as LiveEngineSession }],
+    });
+    fixture = TestBed.createComponent(SummaryGameBoardComponent);
+    fixture.componentRef.setInput('pgn', PGN);
+    c = fixture.componentInstance;
+    fixture.detectChanges();
+    expect(el().querySelector('.engine')).toBeNull();
+    click('.nav-engine');
+    expect(c.engineOn()).toBeTrue();
+    expect(el().querySelector('.engine-lines li')!.textContent).toContain('+0.3');
+    expect(c.arrows().length).toBe(1);
+    expect(fake.synced.at(-1)).toBe(c.positions().fens[0]);
+    c.goTo(2);
+    fixture.detectChanges();
+    expect(fake.synced.at(-1)).toBe(c.positions().fens[2]);
+    // eigener Zug (Variante): die Engine rechnet die neue Stellung
+    c.onUserMove({ from: 'd2', to: 'd4', san: 'd4', fen: FEN_A });
+    fixture.detectChanges();
+    expect(fake.synced.at(-1)).toBe(FEN_A);
+    click('.nav-engine');
+    expect(fake.destroyed).toBeTrue();
+    expect(el().querySelector('.engine')).toBeNull();
+  });
+
+  it('jump + engineAtStart (Blatt): startet auf dem Sprung, Engine an', () => {
+    const fake = fakeEngine();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [SummaryGameBoardComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' }), { provide: PreferencesService, useValue: prefs },
+        { provide: SUMMARY_ENGINE_SESSION, useValue: () => fake as unknown as LiveEngineSession }],
+    });
+    fixture = TestBed.createComponent(SummaryGameBoardComponent);
+    fixture.componentRef.setInput('pgn', PGN);
+    fixture.componentRef.setInput('inSheet', true);
+    fixture.componentRef.setInput('jump', { ply: 5, flipped: true });
+    fixture.componentRef.setInput('engineAtStart', true);
+    c = fixture.componentInstance;
+    fixture.detectChanges();
+    expect(c.ply()).toBe(5);
+    expect(c.isFlipped()).toBeTrue();
+    expect(c.engineOn()).toBeTrue();
+    expect(el().classList).toContain('in-sheet');
+  });
+
   it('Blickrichtung ohne Sprung kommt vom Aufrufer', () => {
     expect(c.isFlipped()).toBeFalse();
     fixture.componentRef.setInput('flipped', true);
@@ -137,14 +208,16 @@ describe('SummaryGameBoardComponent', () => {
 describe('ClubGameSummaryComponent mit Seitenbrett', () => {
   const route = { snapshot: { paramMap: new Map([['id', '7'], ['token', 'abc']]), data: { mode: 'club-share' } } };
 
-  function setup(pgn: string, markdown: string): ComponentFixture<ClubGameSummaryComponent> {
+  function setup(pgn: string, markdown: string, mobile = false, result = '*'): ComponentFixture<ClubGameSummaryComponent> {
     TestBed.configureTestingModule({
       imports: [ClubGameSummaryComponent],
       providers: [
-        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }), provideNoopAnimations(),
+        { provide: BreakpointObserver, useValue: { isMatched: () => mobile, observe: () => of({ matches: mobile, breakpoints: {} }) } },
+        { provide: SUMMARY_ENGINE_SESSION, useValue: () => fakeEngine() as unknown as LiveEngineSession },
         { provide: ActivatedRoute, useValue: route },
         { provide: PreferencesService, useValue: prefs },
-        { provide: GamesService, useValue: { sharedClubGame: () => of({ pgn, white: 'A', black: 'B', result: '*', ownerSide: 'black' }) } },
+        { provide: GamesService, useValue: { sharedClubGame: () => of({ pgn, white: 'A', black: 'B', result, ownerSide: 'black' }) } },
         { provide: ClubGameSummaryService, useValue: { getShared: () => of({ status: 'done', markdown }) } },
       ],
     });
@@ -190,5 +263,107 @@ describe('ClubGameSummaryComponent mit Seitenbrett', () => {
     expect(host.querySelector('app-summary-game-board')).toBeNull();
     expect(host.querySelector('.to-board')).toBeNull();
     expect(host.querySelector('.summary-page.with-board')).toBeNull();
+  });
+
+  /** „Die Partie“ (Wunsch 2026-11-13). */
+  const MD = '# A – B\n\nKopf\n\n## Zusammenfassung\n\nEine Kurzpartie.\n\n## Schlüsselstellungen\n\n```diagram\nply: 3\n```\n';
+
+  it('„Die Partie“ steht hinter der Zusammenfassung, mit allen Halbzügen und dem Ergebnis am Ende', () => {
+    const fixture = setup('1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 1-0', MD, false, '1-0');
+    const host = fixture.nativeElement as HTMLElement;
+    const heads = Array.from(host.querySelectorAll('.summary-text h2')).map(h => h.textContent!.trim());
+    expect(heads).toEqual(['Zusammenfassung', 'games.summary.theGame', 'Schlüsselstellungen']);
+    const line = host.querySelector('.game-line')!;
+    expect(Array.from(line.querySelectorAll('.gm-no')).map(n => n.textContent)).toEqual(['1.', '2.', '3.']);
+    expect(Array.from(line.querySelectorAll('button.gm')).map(b => b.textContent)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6']);
+    expect(line.lastElementChild!.classList).toContain('gm-result');
+    expect(line.lastElementChild!.textContent).toBe('1-0');
+    // keine Zug-Knöpfe des Textes (.mv) dazugekommen
+    expect(host.querySelectorAll('.game-line button.mv').length).toBe(0);
+  });
+
+  it('Klick auf einen Halbzug stellt das Seitenbrett auf die Stellung danach und hebt ihn hervor', () => {
+    const fixture = setup(PGN, MD);
+    const host = fixture.nativeElement as HTMLElement;
+    const buttons = host.querySelectorAll<HTMLButtonElement>('button.gm');
+    buttons[3].click();
+    fixture.detectChanges();
+    const board = fixture.componentInstance.sideBoard()!;
+    expect(board.ply()).toBe(4);
+    expect(board.currentFen()).toBe(board.positions().fens[4]);
+    expect(host.querySelector('button.gm.gm-on')!.textContent).toBe('Nc6');
+  });
+
+  it('ohne Ergebnis (*) kein Ergebnis am Ende; leeres oder kaputtes PGN → kein Block', () => {
+    expect((setup(PGN, MD).nativeElement as HTMLElement).querySelector('.gm-result')).toBeNull();
+    TestBed.resetTestingModule();
+    expect((setup('', MD).nativeElement as HTMLElement).querySelector('.game-moves')).toBeNull();
+    TestBed.resetTestingModule();
+    expect((setup('1. e4 e5 2. Ke9', MD).nativeElement as HTMLElement).querySelector('.game-moves')).toBeNull();
+  });
+
+  describe('am Handy (unter 900 px)', () => {
+    afterEach(() => TestBed.inject(MatDialog).closeAll());
+    /** Das Blatt hängt an der Anwendung, nicht am Fixture. */
+    const tick = () => TestBed.inject(ApplicationRef).tick();
+
+    it('Zug-Klick öffnet das Brett als Blatt statt zu scrollen; Seitenbrett und Leseposition bleiben', () => {
+      spyOn(history, 'pushState');
+      const fixture = setup(PGN, '**2.Sf3** war gut.\n\n' + MD, true);
+      const host = fixture.nativeElement as HTMLElement;
+      const board = fixture.componentInstance.sideBoard()!;
+      const scroll = spyOn(board['host'].nativeElement, 'scrollIntoView');
+      host.querySelector<HTMLButtonElement>('button.mv')!.click();
+      fixture.detectChanges();
+      tick();
+      const sheet = document.querySelector('app-summary-board-sheet')!;
+      expect(sheet).not.toBeNull();
+      expect(history.pushState).toHaveBeenCalled();
+      expect(scroll).not.toHaveBeenCalled();
+      expect(board.ply()).toBe(0);
+      // im Blatt: dasselbe Brett mit Zugliste, auf 2.Nf3 (Halbzug 3), Engine an
+      const inner = sheet.querySelector('app-summary-game-board')!;
+      expect(inner.classList).toContain('in-sheet');
+      expect(inner.querySelector('app-move-list')).not.toBeNull();
+      expect(inner.querySelector('.move.active')!.textContent).toContain('f3');
+      expect(inner.querySelector('.engine')).not.toBeNull();
+    });
+
+    it('Klick in „Die Partie“ und am Diagramm öffnen ebenfalls das Blatt; Schließen stellt nichts um', async () => {
+      spyOn(history, 'pushState');
+      const fixture = setup(PGN, MD, true);
+      const host = fixture.nativeElement as HTMLElement;
+      const board = fixture.componentInstance.sideBoard()!;
+      host.querySelectorAll<HTMLButtonElement>('button.gm')[1].click();
+      fixture.detectChanges();
+      tick();
+      expect(document.querySelector('app-summary-board-sheet .move.active')!.textContent).toContain('e5');
+      document.querySelector<HTMLButtonElement>('app-summary-board-sheet .sheet-close')!.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(document.querySelector('app-summary-board-sheet')).toBeNull();
+      expect(board.ply()).toBe(0);
+      expect(board.variation()).toBeNull();
+      host.querySelector<HTMLButtonElement>('.to-board')!.click();
+      fixture.detectChanges();
+      expect(document.querySelector('app-summary-board-sheet')).not.toBeNull();
+      expect(board.ply()).toBe(0);
+    });
+
+    it('Wischen am Griff nach unten schließt das Blatt', () => {
+      spyOn(history, 'pushState');
+      const fixture = setup(PGN, MD, true);
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button.gm')!.click();
+      fixture.detectChanges();
+      const ref = TestBed.inject(MatDialog).openDialogs[0];
+      const sheet = ref.componentInstance as SummaryBoardSheetComponent;
+      const close = spyOn(ref, 'close').and.callThrough();
+      sheet.touchStart({ touches: [{ clientY: 100 }] } as unknown as TouchEvent);
+      sheet.touchEnd({ changedTouches: [{ clientY: 130 }] } as unknown as TouchEvent);
+      expect(close).not.toHaveBeenCalled();
+      sheet.touchStart({ touches: [{ clientY: 100 }] } as unknown as TouchEvent);
+      sheet.touchEnd({ changedTouches: [{ clientY: 260 }] } as unknown as TouchEvent);
+      expect(close).toHaveBeenCalled();
+    });
   });
 });

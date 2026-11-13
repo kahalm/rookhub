@@ -35,7 +35,10 @@ export type SummaryBlock =
   /** `> **Merksatz:** <Kennung oder Wortlaut>` — nur Sätze der kuratierten Liste werden gezeigt, mit (i). */
   | { kind: 'maxim'; value: string }
   /** ```book-Block der „Empfohlenen Literatur“: Buch und warum es passt; `whyParts` = die Begründung mit klickbaren Zügen. */
-  | { kind: 'book'; id: number; why: string; whyParts?: InlinePart[] };
+  | { kind: 'book'; id: number; why: string; whyParts?: InlinePart[] }
+  /** „Die Partie“ (Wunsch 2026-11-13): die ganze Zugfolge zum Durchklicken — kommt nie aus dem Markdown, die Seite setzt
+   *  sie aus dem PGN ein ({@link withGameBlock}). */
+  | { kind: 'game' };
 
 /** `**fett**`, `*kursiv*` / `_kursiv_`, `` `Code` `` — nicht verschachtelt, unvollständige Zeichen bleiben Text. */
 export function parseInline(text: string): InlinePart[] {
@@ -254,4 +257,48 @@ export function moveLabel(ply: number, san?: string): string {
   if (ply <= 0) return '';
   const n = Math.ceil(ply / 2);
   return ply % 2 === 1 ? `${n}.${san ?? ''}` : `${n}…${san ?? ''}`;
+}
+
+/** Ein Zugpaar der ganzen Partie: Nummer („12.“ bzw. „12…“, wenn Schwarz die Zeile beginnt) und seine Halbzüge (`ply` = Stellung danach). */
+export interface GameMovePair { number: string; moves: { ply: number; san: string }[]; }
+
+/**
+ * Die ganze Partie als Zugpaare für den Block „Die Partie“. Die Nummer kommt aus der FEN vor dem Zug — so stimmt sie
+ * auch für eine Partie ab einer FEN-Stellung, in der Schwarz anfängt („17… Kd7 18. Tc1 …“).
+ */
+export function gameMovePairs({ fens, sans }: Positions): GameMovePair[] {
+  const pairs: GameMovePair[] = [];
+  sans.forEach((san, i) => {
+    const [, turn, , , , full] = fens[i].split(' ');
+    const move = { ply: i + 1, san };
+    if (turn === 'w' || !pairs.length) pairs.push({ number: turn === 'w' ? `${full}.` : `${full}…`, moves: [move] });
+    else pairs[pairs.length - 1].moves.push(move);
+  });
+  return pairs;
+}
+
+/** Überschrift des Abschnitts „Zusammenfassung“ in den Sprachen, in denen der Watcher schreibt (nur der Anfang zählt). */
+const SUMMARY_HEADING = /^(zusammenfassung|summary|sažetak|összefoglal|résumé|resumen|riepilogo|sommario|samenvatting|podsumowanie|shrnutí|rezumat|resumo|sammanfattning|özet|резюме|підсумок|итог)/i;
+
+/**
+ * Wo „Die Partie“ hingehört: hinter den Abschnitt „## Zusammenfassung“, also vor die nächste Überschrift gleicher oder
+ * höherer Stufe (meist „Schlüsselstellungen“). Fehlt er: hinter die Kopfzeile (der Absatz direkt unter dem `#`-Titel),
+ * ohne Titel an den Anfang.
+ */
+export function gameBlockIndex(blocks: SummaryBlock[]): number {
+  const text = (b: SummaryBlock) => b.kind === 'heading' ? b.parts.map(p => p.text).join('').trim() : '';
+  const at = blocks.findIndex(b => b.kind === 'heading' && b.level === 2 && SUMMARY_HEADING.test(text(b)));
+  if (at >= 0) {
+    let end = at + 1;
+    while (end < blocks.length && !(blocks[end].kind === 'heading' && (blocks[end] as { level: number }).level <= 2)) end++;
+    return end;
+  }
+  if (blocks[0]?.kind === 'heading' && blocks[0].level === 1) return blocks[1]?.kind === 'paragraph' ? 2 : 1;
+  return 0;
+}
+
+/** Blöcke mit eingesetztem „Die Partie“ (an {@link gameBlockIndex}). */
+export function withGameBlock(blocks: SummaryBlock[]): SummaryBlock[] {
+  const i = gameBlockIndex(blocks);
+  return [...blocks.slice(0, i), { kind: 'game' }, ...blocks.slice(i)];
 }

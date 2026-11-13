@@ -3618,6 +3618,7 @@
       "showOnBoard": "Am Brett zeigen",
       "variation": "Variante",
       "backToGame": "Zurück zur Partie",
+      "theGame": "Die Partie",
       "writtenBy": "Geschrieben von {{model}} aus der Engine-Analyse.",
       "waitingForAnalysis": "Angefordert – wartet auf die Hintergrund-Analyse, die Zusammenfassung kommt, sobald sie durch ist:",
       "progressAnalysis": "Analyse läuft noch",

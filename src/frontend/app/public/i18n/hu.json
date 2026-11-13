@@ -4028,6 +4028,7 @@
       "showOnBoard": "Megmutatás a táblán",
       "variation": "Változat",
       "backToGame": "Vissza a játszmához",
+      "theGame": "A játszma",
       "writtenBy": "Írta: {{model}}, a motoros elemzés alapján.",
       "waitingForAnalysis": "Kérve – a háttérelemzésre vár, az összefoglaló utána következik:",
       "progressAnalysis": "az elemzés még fut",

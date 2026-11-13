@@ -3553,6 +3553,7 @@
       "showOnBoard": "Tonen op het bord",
       "variation": "Variant",
       "backToGame": "Terug naar de partij",
+      "theGame": "De partij",
       "writtenBy": "Geschreven door {{model}} op basis van de engine-analyse.",
       "waitingForAnalysis": "Aangevraagd – wacht op de achtergrondanalyse, de samenvatting volgt zodra die klaar is:",
       "progressAnalysis": "analyse loopt nog",
