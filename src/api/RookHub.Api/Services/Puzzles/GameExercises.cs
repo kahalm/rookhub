@@ -11,7 +11,8 @@ namespace RookHub.Api.Services.Puzzles;
 /// „Empfohlene Übungen“ am Ende der Partie-Zusammenfassung (0.960.0, Wunsch 2026-11-13). Aus den Daten der Partie, nicht von
 /// Claude: jedes gespielte oder verpasste Matt (beider Seiten, auch wenn der Gegner es ebenfalls übersah) ist eine Stelle; je
 /// Stelle bis zu <see cref="PerGroup"/> Lichess-Aufgaben mit demselben Mattbild (<see cref="MatePattern"/>) — erst gleiche strenge
-/// Signatur, dann gleiche Familie, und nur wenn es davon keine gibt, Aufgaben desselben Themas (<c>mateInN</c>). Keine Stelle →
+/// Signatur, dann gleiche Familie, und nur wenn es davon keine gibt, Aufgaben desselben Themas (<c>mateInN</c>). Seit 0.961.0 ebenso
+/// für taktische Fehler (<see cref="TacticMotifs"/>: Gabel, Fesselung, Spieß, Abzug …; streng = Thema + Figuren). Keine Stelle →
 /// keine Übungen; aufgefüllt wird nicht („erzwinge keine motive/aufgaben“).
 ///
 /// <para>Spielstärke: die der Seite, die das Motiv hatte (<see cref="EbookSuggestions.StrengthAsync"/>, wie die Literatur; ein Band
@@ -33,11 +34,21 @@ public sealed class GameExercises(AppDbContext db, EbookSuggestions strength)
 
     public sealed record Position(int Ply, string Fen, string GameMoveUci, string? CandidatesJson);
 
-    /// <summary>Eine Motivstelle der Partie. <see cref="Signature"/> fehlt, wenn die Engine-Linie nicht bis zum Matt reicht.</summary>
-    public sealed record Occurrence(int Ply, bool White, string Reason, int MateIn, MatePattern.Signature? Signature);
+    /// <summary>Eine Motivstelle der Partie. Matt: <see cref="Signature"/> (fehlt, wenn die Engine-Linie nicht bis zum Matt reicht);
+    /// Taktik (0.961.0): <see cref="Motif"/>. <see cref="Weight"/> ordnet die Stellen (verpasstes Matt vorn, Taktik nach Verlust).</summary>
+    public sealed record Occurrence(int Ply, bool White, string Reason, int MateIn, MatePattern.Signature? Signature,
+        TacticMotifs.Motif? Motif = null, double Weight = 0);
 
     public const string MissedMate = "missedMate";
     public const string PlayedMate = "playedMate";
+    /// <summary>Die Seite am Zug hatte eine Taktik (beste Linie gewinnt, Motiv erkannt) und spielte einen Fehler.</summary>
+    public const string MissedTactic = "missedTactic";
+    /// <summary>Nach einem Fehler hatte der GEGNER eine Taktik (Motiv in seiner besten Linie) — Stelle auf seiner Seite.</summary>
+    public const string AllowedTactic = "allowedTactic";
+    /// <summary>Ab diesem Vorteil (Bauerneinheiten × 100, Sicht der Seite am Zug) gilt die beste Linie als gewinnende Taktik.</summary>
+    public const int MinTacticCp = 200;
+    /// <summary>So viele Halbzüge der Engine-Linie sieht der Motiv-Erkenner an.</summary>
+    private const int TacticPlies = 6;
 
     /// <summary>
     /// Die Matt-Stellen der Partie (rein, öffentlich für Tests): <b>verpasst</b> = die Seite am Zug hatte laut Analyse Matt in höchstens
@@ -70,7 +81,7 @@ public sealed class GameExercises(AppDbContext db, EbookSuggestions strength)
             else if (p.Ply != last.Ply) continue;                    // unbewertet: nichts behaupten
             var pv = c[0].Pv.Count > 0 ? c[0].Pv : new List<string> { c[0].Uci };
             var end = MatePattern.Play(p.Fen, pv);
-            result.Add(new Occurrence(p.Ply, FenFields.WhiteToMove(p.Fen), MissedMate, n, end is null ? null : MatePattern.Of(end)));
+            result.Add(new Occurrence(p.Ply, FenFields.WhiteToMove(p.Fen), MissedMate, n, end is null ? null : MatePattern.Of(end), Weight: 1000));
         }
 
         if (playedMate)
@@ -80,14 +91,52 @@ public sealed class GameExercises(AppDbContext db, EbookSuggestions strength)
             var mateIn = MateOf(start) is int m and > 0 ? m : (last.Ply - start) / 2 + 1;
             result.Add(new Occurrence(start, FenFields.WhiteToMove(last.Fen), PlayedMate, mateIn, MatePattern.Of(final!)));
         }
+        result.AddRange(TacticOccurrences(ordered, cands));
         return result;
     }
 
-    /// <summary>Gleiches Bild mehrfach in der Partie → eine Gruppe (verpasste vor gespielten, dann nach Zug); höchstens <see cref="MaxGroups"/>.</summary>
+    /// <summary>
+    /// Taktische Stellen (0.961.0): je Fehler der Partie (<see cref="Games.GameMistakes.Find"/>, Fehler/Patzer/verpasste Chance — keine
+    /// Ungenauigkeit) die Stellung davor (die beste Linie der ziehenden Seite = verpasste Taktik) und die Stellung danach (die beste Linie
+    /// des Gegners = zugelassene Taktik). Zählt nur, wenn die Linie klar gewinnt (≥ <see cref="MinTacticCp"/>, kein Matt — das ist oben
+    /// erfasst) UND <see cref="TacticMotifs"/> ein Motiv erkennt; ein positioneller Fehler ohne Motiv gibt nichts.
+    /// </summary>
+    private static List<Occurrence> TacticOccurrences(List<Position> ordered, Dictionary<int, List<TacticHarvest.Cand>> cands)
+    {
+        var result = new List<Occurrence>();
+        var byPly = ordered.ToDictionary(p => p.Ply);
+        var entities = ordered.Select(p => new GameAnalysisPosition
+        {
+            Ply = p.Ply, Fen = p.Fen, GameMoveUci = p.GameMoveUci, GameMoveSan = "", CandidatesJson = p.CandidatesJson,
+        }).ToList();
+        // Halbzüge der Partie = letzter Zug + 1 (die Endstellung ohne Zug zählt nicht mit).
+        var plyCount = ordered.LastOrDefault(p => !string.IsNullOrEmpty(p.GameMoveUci)) is { } lastMove ? lastMove.Ply + 1 : 0;
+
+        TacticMotifs.Motif? TacticAt(int ply)
+        {
+            if (!byPly.TryGetValue(ply, out var pos) || !cands.TryGetValue(ply, out var c) || c.Count == 0) return null;
+            if (c[0].Mate is not null || (c[0].Cp ?? 0) < MinTacticCp) return null;
+            var pv = c[0].Pv.Count > 0 ? c[0].Pv.Take(TacticPlies).ToList() : new List<string> { c[0].Uci };
+            return TacticMotifs.Detect(pos.Fen, pv).FirstOrDefault();
+        }
+
+        foreach (var f in Games.GameMistakes.Find(entities, plyCount).Where(f => f.Class is "mistake" or "blunder" or "miss"))
+        {
+            var loss = f.WinBefore - f.WinAfter;
+            if (TacticAt(f.Ply) is { } missed)
+                result.Add(new Occurrence(f.Ply, f.White, MissedTactic, 0, null, missed, loss));
+            if (TacticAt(f.Ply + 1) is { } allowed)
+                result.Add(new Occurrence(f.Ply + 1, !f.White, AllowedTactic, 0, null, allowed, loss));
+        }
+        return result;
+    }
+
+    /// <summary>Gleiches Bild/Motiv mehrfach in der Partie → eine Gruppe; Reihenfolge nach Gewicht (verpasstes Matt, dann Taktik nach
+    /// Bewertungsverlust, gespieltes Matt zuletzt), dann nach Zug; höchstens <see cref="MaxGroups"/>.</summary>
     public static List<(Occurrence First, List<int> Also)> Group(IEnumerable<Occurrence> occurrences) =>
-        occurrences.OrderBy(o => o.Reason == MissedMate ? 0 : 1).ThenBy(o => o.Ply)
-            .GroupBy(o => o.Signature?.Strict ?? $"{o.Reason}:{o.MateIn}:{o.Ply}")
-            .Select(g => (g.First(), g.Skip(1).Select(x => x.Ply).OrderBy(x => x).ToList()))
+        occurrences.OrderByDescending(o => o.Weight).ThenBy(o => o.Ply)
+            .GroupBy(o => o.Signature?.Strict ?? o.Motif?.Strict ?? $"{o.Reason}:{o.MateIn}:{o.Ply}")
+            .Select(g => (g.First(), g.Skip(1).Select(x => x.Ply).Where(x => x != g.First().Ply).Distinct().OrderBy(x => x).ToList()))
             .Take(MaxGroups).ToList();
 
     /// <summary>Übungen einer Vereinspartie (Hauptanalyse, wie die Bewertungen der Partieseite). Rechte prüft der Aufrufer.</summary>
@@ -147,7 +196,7 @@ public sealed class GameExercises(AppDbContext db, EbookSuggestions strength)
             var seed = (int)(MatePattern.Hash($"{gameKey}:{o.Ply}") & 0x7fffffff);
             var picked = await PickAsync(o, target, used, seed, ct);
             if (picked.Count == 0) continue;
-            result.Add(new GameExerciseGroupDto(o.Ply, o.White, o.Reason, o.MateIn, also, picked));
+            result.Add(new GameExerciseGroupDto(o.Ply, o.White, o.Reason, o.Motif is null ? o.MateIn : null, also, picked, o.Motif?.Theme));
         }
         return new GameExercisesDto(result);
     }
@@ -171,9 +220,22 @@ public sealed class GameExercises(AppDbContext db, EbookSuggestions strength)
                     .Where(x => x.Family == family && x.Kind == PuzzleSignatureKind.Mate).Select(x => new Row { PuzzleId = x.PuzzleId, Rating = x.Rating }), target, used, seed, ct);
             }
         }
+        if (o.Motif is { } motif)
+        {
+            var kind = TacticMotifs.KindOf(motif.Theme);
+            var strictHash = motif.StrictHash;
+            await AddAsync(picked, "strict", db.PuzzleSignatures.AsNoTracking()
+                .Where(x => x.Strict == strictHash && x.Kind == kind).Select(x => new Row { PuzzleId = x.PuzzleId, Rating = x.Rating }), target, used, seed, ct);
+            if (picked.Count < PerGroup)
+            {
+                var familyHash = motif.FamilyHash;
+                await AddAsync(picked, "family", db.PuzzleSignatures.AsNoTracking()
+                    .Where(x => x.Family == familyHash && x.Kind == kind).Select(x => new Row { PuzzleId = x.PuzzleId, Rating = x.Rating }), target, used, seed, ct);
+            }
+        }
         if (picked.Count == 0)
         {
-            var name = $"mateIn{Math.Clamp(o.MateIn, 1, MaxMateIn)}";
+            var name = o.Motif?.Theme ?? $"mateIn{Math.Clamp(o.MateIn, 1, MaxMateIn)}";
             var tagId = await db.Tags.AsNoTracking().Where(t => t.Name == name).Select(t => (int?)t.Id).FirstOrDefaultAsync(ct);
             if (tagId is int tid)
                 await AddAsync(picked, "theme", db.PuzzleTags.AsNoTracking().Where(t => t.TagId == tid).Select(t => new Row { PuzzleId = t.PuzzleId, Rating = t.Rating }),

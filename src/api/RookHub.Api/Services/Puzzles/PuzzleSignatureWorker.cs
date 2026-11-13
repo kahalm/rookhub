@@ -5,8 +5,9 @@ using RookHub.Api.Models;
 namespace RookHub.Api.Services.Puzzles;
 
 /// <summary>
-/// Rechnet einmalig die Mattbilder der beliebten Matt-Aufgaben (<see cref="MatePattern"/>, 0.960.0) in
-/// <see cref="PuzzleSignature"/> — wiederaufnehmbar, klein portioniert, pausierbar über den Schalter „Hintergrundjobs“.
+/// Rechnet einmalig die Mattbilder der beliebten Matt-Aufgaben (<see cref="MatePattern"/>, 0.960.0) und danach die taktischen Motive der
+/// übrigen beliebten Aufgaben (<see cref="TacticMotifs"/>, 0.961.0, <see cref="RunTacticBatchAsync"/>) in <see cref="PuzzleSignature"/> —
+/// wiederaufnehmbar, klein portioniert, pausierbar über den Schalter „Hintergrundjobs“.
 ///
 /// <para><b>Fortschritt</b> steht in <see cref="SystemSetting"/> unter <see cref="CursorKey"/> als <c>v{Version}:{letzte PuzzleId}</c>;
 /// ein neuer <see cref="MatePattern.Version"/> beginnt wieder bei 0 und überschreibt. Je Schritt höchstens <see cref="BatchSize"/>
@@ -24,6 +25,10 @@ public class PuzzleSignatureWorker(IServiceScopeFactory scopeFactory, IConfigura
     : PeriodicWorker(scopeFactory, logger)
 {
     public const string CursorKey = "PuzzleSignatures.MateCursor";
+    /// <summary>Fortschritt der Motiv-Signaturen (0.961.0), <c>v{TacticMotifs.Version}:{letzte PuzzleId}</c>.</summary>
+    public const string TacticCursorKey = "PuzzleSignatures.TacticCursor";
+    /// <summary>Motive nur für oft gespielte Aufgaben (Lichess-Wertung erst dann belastbar) — dieselbe Schwelle wie die Auswahl.</summary>
+    public const int MinPlays = 200;
     public const int BatchSize = 1000;
     /// <summary>Nur beliebte Aufgaben (Lichess-Beliebtheit −100..100) — die Übungen nehmen ohnehin nur solche.</summary>
     public const int MinPopularity = 80;
@@ -43,17 +48,22 @@ public class PuzzleSignatureWorker(IServiceScopeFactory scopeFactory, IConfigura
     protected override async Task StepAsync(IServiceProvider services, CancellationToken ct)
     {
         if (_quiet.IsQuietNow()) return;
-        var n = await RunBatchAsync(services.GetRequiredService<AppDbContext>(), BatchSize, ct);
+        var db = services.GetRequiredService<AppDbContext>();
+        // Erst die Mattbilder, dann die Motive (0.961.0) — beide in derselben Portionsgröße, je Schritt höchstens eine volle Portion.
+        var n = await RunBatchAsync(db, BatchSize, ct);
+        if (n < BatchSize) n = await RunTacticBatchAsync(db, BatchSize, ct);
         var wasIdle = _idle;
         _idle = n < BatchSize;
         if (_idle && !wasIdle) Logger.LogInformation("Aufgaben-Signaturen: Bestand durchgerechnet, sehe alle {Minutes} min nach neuen Aufgaben", IdleInterval.TotalMinutes);
     }
 
     /// <summary>Stand des Fortschritts: letzte bearbeitete PuzzleId im aktuellen Regelstand (0 = noch nichts).</summary>
-    public static async Task<int> CursorAsync(AppDbContext db, CancellationToken ct = default)
+    public static Task<int> CursorAsync(AppDbContext db, CancellationToken ct = default) => CursorAsync(db, CursorKey, MatePattern.Version, ct);
+
+    private static async Task<int> CursorAsync(AppDbContext db, string key, short version, CancellationToken ct)
     {
-        var value = await db.SystemSettings.AsNoTracking().Where(s => s.Key == CursorKey).Select(s => s.Value).FirstOrDefaultAsync(ct);
-        var prefix = $"v{MatePattern.Version}:";
+        var value = await db.SystemSettings.AsNoTracking().Where(s => s.Key == key).Select(s => s.Value).FirstOrDefaultAsync(ct);
+        var prefix = $"v{version}:";
         return value is not null && value.StartsWith(prefix, StringComparison.Ordinal) && int.TryParse(value[prefix.Length..], out var id) ? id : 0;
     }
 
@@ -91,16 +101,48 @@ public class PuzzleSignatureWorker(IServiceScopeFactory scopeFactory, IConfigura
         // Alles in EINEM SaveChanges (eine Transaktion): Zeilen und Fortschritt kommen zusammen oder gar nicht.
         db.PuzzleSignatures.RemoveRange(await db.PuzzleSignatures.Where(s => s.Kind == PuzzleSignatureKind.Mate && ids.Contains(s.PuzzleId)).ToListAsync(ct));
         db.PuzzleSignatures.AddRange(rows);
-        await SaveCursorAsync(db, last, ct);
+        await SaveCursorAsync(db, CursorKey, MatePattern.Version, last, ct);
         db.ChangeTracker.Clear();
         return batch.Count;
     }
 
-    private static async Task SaveCursorAsync(AppDbContext db, int last, CancellationToken ct)
+    /// <summary>Fortschritt der Motiv-Signaturen (letzte PuzzleId, 0 = noch nichts).</summary>
+    public static Task<int> TacticCursorAsync(AppDbContext db, CancellationToken ct = default) =>
+        CursorAsync(db, TacticCursorKey, TacticMotifs.Version, ct);
+
+    /// <summary>
+    /// Eine Portion Motiv-Signaturen (0.961.0): beliebte, oft gespielte Aufgaben OHNE Matt (die haben ihr Mattbild) → je erkanntem
+    /// Motiv (<see cref="TacticMotifs"/>) eine Zeile. Prod (13.11.2026): ~2,4 Mio. Aufgaben → ~2 400 Schritte, mit Pause ≈ 3 h.
+    /// </summary>
+    public static async Task<int> RunTacticBatchAsync(AppDbContext db, int max, CancellationToken ct = default)
     {
-        var row = await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == CursorKey, ct);
-        if (row is null) db.SystemSettings.Add(row = new SystemSetting { Key = CursorKey });
-        row.Value = $"v{MatePattern.Version}:{last}";
+        var cursor = await TacticCursorAsync(db, ct);
+        var batch = await db.Puzzles.AsNoTracking()
+            .Where(p => p.Id > cursor && p.Popularity >= MinPopularity && p.NbPlays >= MinPlays && (p.Themes == null || !p.Themes.Contains("mate")))
+            .OrderBy(p => p.Id).Take(max)
+            .Select(p => new { p.Id, p.Fen, p.Moves, p.Rating }).ToListAsync(ct);
+        if (batch.Count == 0) return 0;
+        var rows = new List<PuzzleSignature>();
+        foreach (var p in batch)
+            foreach (var m in TacticMotifs.OfPuzzle(p.Fen, p.Moves))
+                rows.Add(new PuzzleSignature
+                {
+                    PuzzleId = p.Id, Kind = TacticMotifs.KindOf(m.Theme), Version = TacticMotifs.Version,
+                    Strict = m.StrictHash, Family = m.FamilyHash, Rating = p.Rating,
+                });
+        var ids = batch.Select(p => p.Id).ToList();
+        db.PuzzleSignatures.RemoveRange(await db.PuzzleSignatures.Where(s => s.Kind != PuzzleSignatureKind.Mate && ids.Contains(s.PuzzleId)).ToListAsync(ct));
+        db.PuzzleSignatures.AddRange(rows);
+        await SaveCursorAsync(db, TacticCursorKey, TacticMotifs.Version, ids[^1], ct);
+        db.ChangeTracker.Clear();
+        return batch.Count;
+    }
+
+    private static async Task SaveCursorAsync(AppDbContext db, string key, short version, int last, CancellationToken ct)
+    {
+        var row = await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == key, ct);
+        if (row is null) db.SystemSettings.Add(row = new SystemSetting { Key = key });
+        row.Value = $"v{version}:{last}";
         row.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
     }

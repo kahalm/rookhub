@@ -3569,17 +3569,21 @@
       "neverSuggestFailed": "To se nepodařilo uložit.",
       "exercises": {
         "title": "Doporučená cvičení",
-        "intro": "Úlohy se stejným matovým obrazcem jako pozice z této partie — vyřeš je přímo tady.",
+        "intro": "Úlohy se stejným motivem jako pozice z této partie — vyřeš je přímo tady.",
         "reason": {
           "missedMate": "propásnutý mat {{n}}. tahem",
-          "playedMate": "mat {{n}}. tahem na šachovnici"
+          "playedMate": "mat {{n}}. tahem na šachovnici",
+          "missedTactic": "propásnutá taktika: {{theme}}",
+          "allowedTactic": "soupeři dovolená taktika: {{theme}}"
         },
         "also": "Stejný obrazec také u {{moves}}",
         "more": "Další pozice ({{count}})",
         "match": {
           "strict": "Stejný matový obrazec",
           "family": "Podobný matový obrazec",
-          "theme": "Mat {{n}}. tahem"
+          "theme": "Mat {{n}}. tahem",
+          "strictTactic": "Stejný motiv, stejné figury",
+          "sameTheme": "Stejný motiv"
         },
         "rating": "Rating {{rating}}",
         "solve": "Vyřešit",

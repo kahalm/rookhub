@@ -3634,17 +3634,21 @@
       "neverSuggestFailed": "Das ließ sich nicht speichern.",
       "exercises": {
         "title": "Empfohlene Übungen",
-        "intro": "Aufgaben mit demselben Mattbild wie Stellungen aus dieser Partie — direkt hier lösbar.",
+        "intro": "Aufgaben mit demselben Bild wie Stellungen aus dieser Partie — direkt hier lösbar.",
         "reason": {
           "missedMate": "verpasstes Matt in {{n}}",
-          "playedMate": "Matt in {{n}} am Brett"
+          "playedMate": "Matt in {{n}} am Brett",
+          "missedTactic": "verpasste Taktik: {{theme}}",
+          "allowedTactic": "dem Gegner eine Taktik erlaubt: {{theme}}"
         },
         "also": "Gleiches Bild auch bei {{moves}}",
         "more": "Weitere Stellen ({{count}})",
         "match": {
           "strict": "Gleiches Mattbild",
           "family": "Ähnliches Mattbild",
-          "theme": "Matt in {{n}}"
+          "theme": "Matt in {{n}}",
+          "strictTactic": "Gleiches Motiv, gleiche Figuren",
+          "sameTheme": "Gleiches Motiv"
         },
         "rating": "Wertung {{rating}}",
         "solve": "Aufgabe lösen",

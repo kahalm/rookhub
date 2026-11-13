@@ -25,6 +25,8 @@ public class PuzzleSignatureSqlTests(PuzzleSignatureSqlFixture fixture) : IAsync
                 db.Puzzles.Add(new Puzzle { LichessId = $"sig{++i}", Fen = "6k1/p4p1p/5P1Q/8/8/8/8/K7 b - - 0 1", Moves = "a7a6 h6g7", Rating = r, Popularity = 95, NbPlays = 900, Themes = "mate mateIn1" });
             db.Puzzles.Add(new Puzzle { LichessId = "fam", Fen = "6k1/p4p1p/7Q/7N/8/8/8/K7 b - - 0 1", Moves = "a7a6 h6g7", Rating = 1520, Popularity = 95, NbPlays = 900, Themes = "mate mateIn1" });
             db.Puzzles.Add(new Puzzle { LichessId = "other", Fen = "6k1/p4p1p/8/8/8/8/8/K7 b - - 0 1", Moves = "a7a6", Rating = 1500, Popularity = 95, NbPlays = 900, Themes = "endgame" });
+            db.Puzzles.Add(new Puzzle { LichessId = "fork", Fen = "r3k3/p7/8/3N4/8/8/8/4K3 b - - 0 1", Moves = "a7a6 d5c7 e8d7 c7a8", Rating = 1500, Popularity = 95, NbPlays = 900, Themes = "fork short" });
+            db.Puzzles.Add(new Puzzle { LichessId = "nothemes", Fen = "r3k3/p7/8/3N4/8/8/8/4K3 b - - 0 1", Moves = "a7a6 d5c7 e8d7 c7a8", Rating = 1500, Popularity = 95, NbPlays = 900, Themes = null });
             await db.SaveChangesAsync();
             var analysis = new GameAnalysis { UserId = user.Id, Pgn = "", StartFen = "", Status = GameAnalysisStatus.Done };
             db.GameAnalyses.Add(analysis);
@@ -42,6 +44,10 @@ public class PuzzleSignatureSqlTests(PuzzleSignatureSqlFixture fixture) : IAsync
             Assert.Equal(0, await PuzzleSignatureWorker.RunBatchAsync(db, 2));
             Assert.True(await PuzzleSignatureWorker.DoneAsync(db));
             Assert.Equal(4, await db.PuzzleSignatures.CountAsync());
+            // Motive (0.961.0): Aufgaben ohne Matt, auch ohne Themen; die Matt-Aufgaben bleiben außen vor.
+            Assert.Equal(3, await PuzzleSignatureWorker.RunTacticBatchAsync(db, 10));
+            Assert.Equal(0, await PuzzleSignatureWorker.RunTacticBatchAsync(db, 10));
+            Assert.Equal(2, await db.PuzzleSignatures.CountAsync(x => x.Kind == PuzzleSignatureKind.Fork));
         }
         await using (var db = fixture.Schema.NewContext())
         {

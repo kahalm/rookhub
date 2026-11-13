@@ -3569,17 +3569,21 @@
       "neverSuggestFailed": "저장할 수 없습니다.",
       "exercises": {
         "title": "추천 연습 문제",
-        "intro": "이 대국의 국면과 같은 메이트 패턴의 퍼즐 — 여기서 바로 풀어 보세요.",
+        "intro": "이 대국의 국면과 같은 패턴의 퍼즐 — 여기서 바로 풀어 보세요.",
         "reason": {
           "missedMate": "놓친 {{n}}수 메이트",
-          "playedMate": "보드 위 {{n}}수 메이트"
+          "playedMate": "보드 위 {{n}}수 메이트",
+          "missedTactic": "놓친 전술: {{theme}}",
+          "allowedTactic": "상대에게 허용한 전술: {{theme}}"
         },
         "also": "같은 패턴: {{moves}}",
         "more": "더 많은 국면 ({{count}})",
         "match": {
           "strict": "같은 메이트 패턴",
           "family": "비슷한 메이트 패턴",
-          "theme": "{{n}}수 메이트"
+          "theme": "{{n}}수 메이트",
+          "strictTactic": "같은 모티프, 같은 기물",
+          "sameTheme": "같은 모티프"
         },
         "rating": "레이팅 {{rating}}",
         "solve": "풀기",

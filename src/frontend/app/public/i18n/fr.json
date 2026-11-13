@@ -3569,17 +3569,21 @@
       "neverSuggestFailed": "Impossible d'enregistrer cela.",
       "exercises": {
         "title": "Exercices recommandés",
-        "intro": "Problèmes avec le même motif de mat que des positions de cette partie — à résoudre ici même.",
+        "intro": "Problèmes avec le même motif que des positions de cette partie — à résoudre ici même.",
         "reason": {
           "missedMate": "mat en {{n}} manqué",
-          "playedMate": "mat en {{n}} sur l'échiquier"
+          "playedMate": "mat en {{n}} sur l'échiquier",
+          "missedTactic": "tactique manquée : {{theme}}",
+          "allowedTactic": "tactique laissée à l'adversaire : {{theme}}"
         },
         "also": "Même motif aussi en {{moves}}",
         "more": "Autres positions ({{count}})",
         "match": {
           "strict": "Même motif de mat",
           "family": "Motif de mat similaire",
-          "theme": "Mat en {{n}}"
+          "theme": "Mat en {{n}}",
+          "strictTactic": "Même motif, mêmes pièces",
+          "sameTheme": "Même motif"
         },
         "rating": "Classement {{rating}}",
         "solve": "Résoudre",

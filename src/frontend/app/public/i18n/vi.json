@@ -3569,17 +3569,21 @@
       "neverSuggestFailed": "Không thể lưu.",
       "exercises": {
         "title": "Bài tập đề xuất",
-        "intro": "Câu đố có cùng hình chiếu hết như các thế cờ trong ván này — giải ngay tại đây.",
+        "intro": "Câu đố có cùng mô-típ như các thế cờ trong ván này — giải ngay tại đây.",
         "reason": {
           "missedMate": "bỏ lỡ chiếu hết sau {{n}} nước",
-          "playedMate": "chiếu hết sau {{n}} nước trên bàn cờ"
+          "playedMate": "chiếu hết sau {{n}} nước trên bàn cờ",
+          "missedTactic": "bỏ lỡ chiến thuật: {{theme}}",
+          "allowedTactic": "để đối thủ có chiến thuật: {{theme}}"
         },
         "also": "Cùng hình cũng ở {{moves}}",
         "more": "Thêm thế cờ ({{count}})",
         "match": {
           "strict": "Cùng hình chiếu hết",
           "family": "Hình chiếu hết tương tự",
-          "theme": "Chiếu hết sau {{n}} nước"
+          "theme": "Chiếu hết sau {{n}} nước",
+          "strictTactic": "Cùng mô-típ, cùng quân",
+          "sameTheme": "Cùng mô-típ"
         },
         "rating": "Hệ số {{rating}}",
         "solve": "Giải",

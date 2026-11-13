@@ -159,7 +159,7 @@ aus den Daten der Partie, ohne Claude, also auch für alle schon fertigen Zusamm
 **Stellen** (`GameExercises.Occurrences`, beide Seiten): *verpasstes Matt* — die Seite am Zug hatte laut Analyse Matt in ≤ 5, nach ihrem
 Zug steht der Gegner nicht mehr matt bzw. die Partie endet ohne Matt (Bild aus der Engine-Linie); *gespieltes Matt* — die Partie endet
 matt (Bild aus der Schlussstellung, Stelle = Beginn der Mattfolge). Gleiches Bild mehrfach → eine Gruppe (`alsoPlies`), höchstens 8.
-Andere taktische Motive und Buchkapitel kommen in eigenen Schritten (siehe TODO.md).
+Seit 0.961.0 auch **taktische Fehler** (siehe unten); Buchkapitel kommen in einem eigenen Schritt (TODO.md).
 
 **Mattbild** (`Services/Puzzles/MatePattern.cs`, Regelstand `Version`): Schlussstellung relativ zum mattgesetzten König, farb- und
 spiegelunabhängig — Lage des Königs (Ecke/Grundreihe/Rand/offen), schachgebende Figur(en) mit Lage (Kontakt diagonal/gerade, Linie,
@@ -190,3 +190,28 @@ match: strict|family|theme }] }] }` — `fen` vor dem Zug des Gegners, `moves` =
 `Mon-Sun 00:40-01:40; Mon-Sun 04:15-05:00`, Europe/Vienna — Sicherung und Datenbank-Abzug); `PuzzleSignatures:Enabled=false` schaltet
 ab. Prod (13.11.): ~1,25 Mio. Aufgaben → ~1 250 Schritte ≈ 1,5–2 h. Danach sieht er alle 30 min nach neuen Aufgaben. Neuer
 `MatePattern.Version` → alles wird neu gerechnet.
+
+### Taktische Motive (0.961.0)
+
+Wunsch 2026-11-13: „auch andere Fehler taktischer Natur“, „positionelle Fehler ohne taktisches Motiv bekommen keine Übungen“.
+`Services/Puzzles/TacticMotifs.cs` — eigene Umsetzung nach den dokumentierten Lichess-Themen (lichess.org/training/themes); der
+Lichess-Tagger `lichess-puzzler/tagger/cook.py` steht unter **AGPL-3.0** und ist NICHT kopiert. Erkannt am ersten Zug der Lösung:
+`doubleCheck`, `fork` (Ziele: König, wertvoller oder ungedeckt; kein billigerer Angreifer auf der Gabelfigur; der nächste eigene Zug
+schlägt ein Ziel), `skewer` (König/Dame vorn, der nächste eigene Zug schlägt dahinter), `pin` (Leichtfigur oder mehr vor König/Dame,
+der nächste eigene Zug schlägt sie), `discoveredAttack` (die gezogene Figur stand zwischen eigener Langschrittlerin und Ziel; Abzugsschach
+sofort, sonst muss die Lösung das Ziel holen), `hangingPiece` (kurze Lösung schlägt ungedeckte Leichtfigur oder mehr), `promotion`.
+Nicht erkannt (unscharf): Ablenkung, Hinlenkung, Verstellung, Räumung, stiller Zug, Zugzwang, gefangene Figur; `capturingDefender` und
+`advancedPawn` waren angelegt, stimmten an 51 714 Prod-Aufgaben aber nur zu 23 % bzw. 55 % mit dem Lichess-Thema überein und sind raus.
+Übereinstimmung der übrigen mit dem Lichess-Thema (13.11.): Gabel 87 %, Abzug 93 %, Doppelschach 100 %, Umwandlung 99 %, Spieß 66 %,
+Fesselung 61 %, hängende Figur 61 %. **Streng** = Thema + ziehende Figur + Zielfiguren (`fork|N|KR` = Springergabel König + Turm),
+**Familie** = Thema.
+
+**Stellen**: je Fehler der Partie (`GameMistakes.Find`, nur Fehler/Patzer/verpasste Chance) die Stellung davor (*verpasste Taktik*:
+beste Linie der ziehenden Seite) und danach (*zugelassene Taktik*: beste Linie des Gegners, Stelle auf seiner Seite) — nur wenn die
+Linie klar gewinnt (≥ +2,0, kein Matt) UND ein Motiv erkannt wird. Reihenfolge: verpasstes Matt, dann Taktik nach Bewertungsverlust,
+gespieltes Matt zuletzt. Antwort wie oben, `reason` `missedTactic`/`allowedTactic`, `theme` (z. B. `fork`), `mateIn` = `null`; die
+Karten sagen „Gleiches Motiv, gleiche Figuren“ (streng) bzw. „Gleiches Motiv“; Thema-Rückfall = Lichess-Tag des Themas.
+
+**Signaturen der Aufgaben**: derselbe `PuzzleSignatureWorker` rechnet nach den Mattbildern die Motive aller beliebten (≥ 80), oft
+gespielten (≥ 200) Aufgaben OHNE Matt (`PuzzleSignatures`, `Kind` 2–9 je Thema, Fortschritt `SystemSettings.PuzzleSignatures.TacticCursor`).
+Prod: ~2,4 Mio. Aufgaben, gemessen ~20 µs je Aufgabe, ~27 % tragen ein Motiv → ~0,65 Mio. Zeilen; ~2 400 Schritte ≈ 3 h nach den Mattbildern.

@@ -3569,17 +3569,21 @@
       "neverSuggestFailed": "Bu kaydedilemedi.",
       "exercises": {
         "title": "Önerilen alıştırmalar",
-        "intro": "Bu oyundaki konumlarla aynı mat motifine sahip bulmacalar — hemen burada çöz.",
+        "intro": "Bu oyundaki konumlarla aynı motife sahip bulmacalar — hemen burada çöz.",
         "reason": {
           "missedMate": "kaçırılan {{n}} hamlede mat",
-          "playedMate": "tahtada {{n}} hamlede mat"
+          "playedMate": "tahtada {{n}} hamlede mat",
+          "missedTactic": "kaçırılan taktik: {{theme}}",
+          "allowedTactic": "rakibe izin verilen taktik: {{theme}}"
         },
         "also": "Aynı motif ayrıca: {{moves}}",
         "more": "Daha fazla konum ({{count}})",
         "match": {
           "strict": "Aynı mat motifi",
           "family": "Benzer mat motifi",
-          "theme": "{{n}} hamlede mat"
+          "theme": "{{n}} hamlede mat",
+          "strictTactic": "Aynı motif, aynı taşlar",
+          "sameTheme": "Aynı motif"
         },
         "rating": "Puan {{rating}}",
         "solve": "Çöz",

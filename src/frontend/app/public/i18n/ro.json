@@ -3569,17 +3569,21 @@
       "neverSuggestFailed": "Nu s-a putut salva asta.",
       "exercises": {
         "title": "Exerciții recomandate",
-        "intro": "Probleme cu același model de mat ca poziții din această partidă — rezolvă-le chiar aici.",
+        "intro": "Probleme cu același model ca poziții din această partidă — rezolvă-le chiar aici.",
         "reason": {
           "missedMate": "mat în {{n}} ratat",
-          "playedMate": "mat în {{n}} pe tablă"
+          "playedMate": "mat în {{n}} pe tablă",
+          "missedTactic": "tactică ratată: {{theme}}",
+          "allowedTactic": "tactică permisă adversarului: {{theme}}"
         },
         "also": "Același model și la {{moves}}",
         "more": "Mai multe poziții ({{count}})",
         "match": {
           "strict": "Același model de mat",
           "family": "Model de mat asemănător",
-          "theme": "Mat în {{n}}"
+          "theme": "Mat în {{n}}",
+          "strictTactic": "Același motiv, aceleași piese",
+          "sameTheme": "Același motiv"
         },
         "rating": "Rating {{rating}}",
         "solve": "Rezolvă",

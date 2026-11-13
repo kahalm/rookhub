@@ -163,6 +163,52 @@ public class GameExercisesTests : IDisposable
         Assert.Empty((await new GameExercises(_db, new EbookSuggestions(_db)).ForOwnGameAsync(1, 9))!.Groups);
     }
 
+    // Weiß hätte mit Sc7+ König und Turm gegabelt (+6), zieht aber Ke2 (Fehler, danach 0.00).
+    private static List<GameExercises.Position> MissedFork(string pv = "\"d5c7\",\"e8d7\",\"c7a8\"", int cp = 600) =>
+    [
+        P(0, "r3k3/8/8/3N4/8/8/8/4K3 w - - 0 1", "e1e2", $$"""[{"uci":"d5c7","cp":{{cp}},"pv":[{{pv}}]},{"uci":"e1e2","cp":0}]"""),
+        P(1, "r3k3/8/8/3N4/8/8/4K3/8 b - - 1 1", "a8a7", """[{"uci":"a8a7","cp":0,"pv":["a8a7"]}]"""),
+        P(2, "4k3/r7/8/3N4/8/8/4K3/8 w - - 2 2", "", """[{"uci":"d5c7","cp":0}]"""),
+    ];
+
+    [Fact]
+    public void Occurrences_MissedFork_IsTacticStelle()
+    {
+        var o = Assert.Single(GameExercises.Occurrences(MissedFork()));
+        Assert.Equal((0, true, GameExercises.MissedTactic), (o.Ply, o.White, o.Reason));
+        Assert.Equal("fork|N|KR", o.Motif!.Strict);
+    }
+
+    [Fact]
+    public void Occurrences_PositionalMistake_NoMotif_Nothing()
+    {
+        // Gleicher Bewertungsverlust, aber die beste Linie ist ein ruhiger Königszug → kein Motiv, keine Stelle.
+        Assert.Empty(GameExercises.Occurrences(MissedFork(pv: "\"e1d2\"")));
+        // Beste Linie gewinnt nicht klar (+1) → keine Taktik.
+        Assert.Empty(GameExercises.Occurrences(MissedFork(cp: 100)));
+    }
+
+    [Fact]
+    public async Task ForOwnGame_MissedFork_StrictForkPuzzles()
+    {
+        _db.SavedGames.Add(new SavedGame { Id = 11, UserId = 1, Pgn = "", WhiteElo = 1500, GameAnalysisId = 3 });
+        var n = 200;
+        foreach (var p in MissedFork())
+            _db.GameAnalysisPositions.Add(new GameAnalysisPosition { Id = ++n, GameAnalysisId = 3, Ply = p.Ply, Fen = p.Fen, GameMoveUci = p.GameMoveUci, GameMoveSan = "x", CandidatesJson = p.CandidatesJson });
+        foreach (var r in new[] { 1450, 1500, 1550 }) AddPuzzle("r3k3/p7/8/3N4/8/8/8/4K3 b - - 0 1", "a7a6 d5c7 e8d7 c7a8", r, "fork short");
+        AddPuzzle("4k3/8/8/8/3n4/8/7P/R3K3 w - - 0 1", "h2h3 d4c2 e1d2 c2a1", 1500, "fork short");   // Gabel K+T, aber Schwarz: gleiche Familie
+        AddPuzzle("8/4P3/8/8/8/k7/8/K7 b - - 0 1", "a3b3 e7e8q", 1500, "promotion");               // anderes Motiv
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        Assert.Equal(5, await PuzzleSignatureWorker.RunTacticBatchAsync(_db, 10));
+        Assert.Equal(5, await _db.PuzzleSignatures.CountAsync(x => x.Kind != PuzzleSignatureKind.Mate));
+        var dto = (await new GameExercises(_db, new EbookSuggestions(_db)).ForOwnGameAsync(1, 11))!;
+        var g = Assert.Single(dto.Groups);
+        Assert.Equal((GameExercises.MissedTactic, "fork", (int?)null), (g.Reason, g.Theme, g.MateIn));
+        Assert.Equal(4, g.Exercises.Count);
+        Assert.All(g.Exercises, e => Assert.Equal("strict", e.Match));   // Farbe egal: dieselbe strenge Signatur
+    }
+
     [Fact]
     public void BandMid_ParsesBand() => Assert.Equal(1750, GameExercises.BandMid("1700–1799"));
 }

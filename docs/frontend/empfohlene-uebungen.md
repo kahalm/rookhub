@@ -7,7 +7,8 @@ Backend, Auswahl und Mattbild: `docs/api/partie-zusammenfassung.md`, Abschnitt �
   Fehler → kein Abschnitt, kein Platzhalter.
 - `SummaryExercisesComponent` (`features/games/summary/summary-exercises.component.ts`): `h2` „Empfohlene Übungen“, Einleitungssatz,
   je Stelle eine `h3` mit der Zugnummer als Textknopf (springt wie ein Zug im Text aufs Brett bzw. öffnet am Handy das Brett-Blatt) und
-  dem Grund („verpasstes Matt in 4“); darunter Karten (`auto-fill`, ≥ 140 px) mit kleinem Brett — Stellung NACH dem Gegnerzug, aus Sicht
+  dem Grund („verpasstes Matt in 4“, seit 0.961.0 auch „verpasste Taktik: Gabel“ / „dem Gegner eine Taktik erlaubt: Spieß“ —
+  Themenname über `PuzzleThemePipe`); darunter Karten (`auto-fill`, ≥ 140 px) mit kleinem Brett — Stellung NACH dem Gegnerzug, aus Sicht
   des Lösers, letzter Zug markiert —, Art der Übereinstimmung und „Lichess · Wertung“. Drei Stellen offen, der Rest hinter „Weitere
   Stellen (N)“. Gelöst/nicht gelöst als Häkchen/Kreuz an der Karte (nur im Speicher der Seite).
 - Lösen: ab 900 px im Abschnitt über den Karten (`SummaryExerciseSolverComponent` mit `PuzzleBoardComponent` + gemeinsamem

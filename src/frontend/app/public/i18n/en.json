@@ -3634,17 +3634,21 @@
       "neverSuggestFailed": "Could not save that.",
       "exercises": {
         "title": "Recommended exercises",
-        "intro": "Puzzles with the same mating pattern as positions from this game — solve them right here.",
+        "intro": "Puzzles with the same pattern as positions from this game — solve them right here.",
         "reason": {
           "missedMate": "missed mate in {{n}}",
-          "playedMate": "mate in {{n}} on the board"
+          "playedMate": "mate in {{n}} on the board",
+          "missedTactic": "missed tactic: {{theme}}",
+          "allowedTactic": "allowed the opponent a tactic: {{theme}}"
         },
         "also": "Same pattern also at {{moves}}",
         "more": "More positions ({{count}})",
         "match": {
           "strict": "Same mating pattern",
           "family": "Similar mating pattern",
-          "theme": "Mate in {{n}}"
+          "theme": "Mate in {{n}}",
+          "strictTactic": "Same motif, same pieces",
+          "sameTheme": "Same motif"
         },
         "rating": "Rating {{rating}}",
         "solve": "Solve puzzle",

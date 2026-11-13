@@ -3569,17 +3569,21 @@
       "neverSuggestFailed": "Impossibile salvare.",
       "exercises": {
         "title": "Esercizi consigliati",
-        "intro": "Problemi con lo stesso schema di matto di posizioni di questa partita — da risolvere qui.",
+        "intro": "Problemi con lo stesso schema di posizioni di questa partita — da risolvere qui.",
         "reason": {
           "missedMate": "matto in {{n}} mancato",
-          "playedMate": "matto in {{n}} sulla scacchiera"
+          "playedMate": "matto in {{n}} sulla scacchiera",
+          "missedTactic": "tattica mancata: {{theme}}",
+          "allowedTactic": "tattica concessa all'avversario: {{theme}}"
         },
         "also": "Stesso schema anche a {{moves}}",
         "more": "Altre posizioni ({{count}})",
         "match": {
           "strict": "Stesso schema di matto",
           "family": "Schema di matto simile",
-          "theme": "Matto in {{n}}"
+          "theme": "Matto in {{n}}",
+          "strictTactic": "Stesso motivo, stessi pezzi",
+          "sameTheme": "Stesso motivo"
         },
         "rating": "Punteggio {{rating}}",
         "solve": "Risolvi",

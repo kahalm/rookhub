@@ -9,6 +9,7 @@ import { PreferencesService } from '../../../core/preferences.service';
 import { applyUci, tryLoadFen } from '../../../shared/chess/puzzle-move.util';
 import { SummaryExercise, SummaryExerciseGroup } from './club-game-summary.service';
 import { SummaryExerciseSolverComponent } from './summary-exercise-solver.component';
+import { PuzzleThemePipe } from '../../puzzles/puzzle-theme.pipe';
 
 /** So viele Stellen sind offen; der Rest liegt hinter „Weitere Stellen“. */
 export const OPEN_GROUPS = 3;
@@ -31,7 +32,8 @@ function cardOf(ex: SummaryExercise): ExerciseCard {
 
 /**
  * „Empfohlene Übungen“ am Ende der Zusammenfassung (0.960.0, Wunsch 2026-11-13): je Stelle der Partie (gespieltes oder verpasstes
- * Matt) die Lichess-Aufgaben mit demselben Mattbild, als Karten mit Brett. Ein Klick löst direkt auf der Seite — ab 900 px im
+ * Matt, seit 0.961.0 auch verpasste oder zugelassene Taktik wie Gabel, Fesselung, Spieß) die Lichess-Aufgaben mit demselben Bild bzw.
+ * Motiv, als Karten mit Brett. Ein Klick löst direkt auf der Seite — ab 900 px im
  * Abschnitt über den Karten, darunter als Blatt (wie das Brett der Zusammenfassung, DESIGN 5.6). Ohne Stellen zeigt die Seite den
  * Abschnitt gar nicht.
  */
@@ -39,7 +41,7 @@ function cardOf(ex: SummaryExercise): ExerciseCard {
   selector: 'app-summary-exercises',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChessBoardComponent, MatButtonModule, MatIconModule, TranslatePipe, SummaryExerciseSolverComponent],
+  imports: [ChessBoardComponent, MatButtonModule, MatIconModule, TranslatePipe, SummaryExerciseSolverComponent, PuzzleThemePipe],
   template: `
     <section class="exercises">
       <h2>{{ 'games.summary.exercises.title' | translate }}</h2>
@@ -48,7 +50,7 @@ function cardOf(ex: SummaryExercise): ExerciseCard {
         <div class="group">
           <h3>
             <button type="button" class="ply" (click)="showPly.emit(g.group.ply)">{{ moveLabel(g.group.ply) }}</button>
-            {{ ('games.summary.exercises.reason.' + g.group.reason) | translate: { n: g.group.mateIn ?? 1 } }}
+            {{ ('games.summary.exercises.reason.' + g.group.reason) | translate: { n: g.group.mateIn ?? 1, theme: (g.group.theme | puzzleTheme) } }}
           </h3>
           @if (g.group.alsoPlies.length) {
             <p class="also">{{ 'games.summary.exercises.also' | translate: { moves: alsoLabel(g.group.alsoPlies) } }}</p>
@@ -69,7 +71,7 @@ function cardOf(ex: SummaryExercise): ExerciseCard {
                                  [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
                 <span class="card-meta">
                   @if (results().get(c.ex.id); as r) { <mat-icon class="mark" [class.ok]="r === 'solved'">{{ r === 'solved' ? 'check_circle' : 'cancel' }}</mat-icon> }
-                  <span>{{ ('games.summary.exercises.match.' + c.ex.match) | translate: { n: g.group.mateIn ?? 1 } }}</span>
+                  <span>{{ ('games.summary.exercises.match.' + matchKey(c.ex.match, g.group)) | translate: { n: g.group.mateIn ?? 1 } }}</span>
                   <span class="src">Lichess · {{ c.ex.rating }}</span>
                 </span>
               </button>
@@ -124,6 +126,12 @@ export class SummaryExercisesComponent {
   readonly hidden = computed(() => this.all().length - this.visible().length);
 
   moveLabel(ply: number): string { return exerciseMoveLabel(ply); }
+
+  /** Art der Übereinstimmung: bei Mattbildern strict/family/theme, bei taktischen Stellen „gleiches Motiv, gleiche Figuren“ bzw. „gleiches Motiv“. */
+  matchKey(match: SummaryExercise['match'], group: SummaryExerciseGroup): string {
+    if (!group.theme) return match;
+    return match === 'strict' ? 'strictTactic' : 'sameTheme';
+  }
   alsoLabel(plies: number[]): string { return plies.map(exerciseMoveLabel).join(', '); }
 
   solve(group: number, index: number): void {

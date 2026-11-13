@@ -9,15 +9,13 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
-## [~] Empfohlene Übungen in der Zusammenfassung — Mattbilder gebaut in 0.960.0 (2026-11-13)
+## [~] Empfohlene Übungen in der Zusammenfassung — Mattbilder 0.960.0, taktische Motive 0.961.0 (2026-11-13)
 
 `docs/api/partie-zusammenfassung.md` → „Empfohlene Übungen“. Fertig: Mattbilder beider Seiten (gespielt/verpasst) → Lichess-Aufgaben
 gleicher Signatur/Familie, Thema-Rückfall nur dann; lösbar auf der Seite. Offen (Wunsch 13.11., in dieser Reihenfolge):
-- [ ] Motiv-Erkenner für taktische Fehler (fork mit Figur + Zielen, pin, skewer, discoveredAttack/doubleCheck, hangingPiece,
-      trappedPiece, backRankMate, promotion/advancedPawn, capturingDefender; unscharfe nur wenn sicher) — eigene Umsetzung nach den
-      dokumentierten Lichess-Themen (lichess-puzzler `tagger/cook.py` ist AGPL: keine Code-Kopie); Figuren-Signatur der Lösung für alle
-      Aufgaben im selben Lauf (`PuzzleSignatureKind` erweitern), Stellen aus `GameMistakes`/Engine-Linie, positionelle Fehler ohne Motiv
-      bekommen nichts.
+- [x] Motiv-Erkenner für taktische Fehler (0.961.0): fork, pin, skewer, discoveredAttack, doubleCheck, hangingPiece, promotion.
+- [ ] Weitere Motive nur mit sicherer Regel: trappedPiece, capturingDefender (erste Fassung 23 % Übereinstimmung, verworfen),
+      advancedPawn (55 %), Ablenkung/Hinlenkung; Taktik, die erst ab dem 2. Lösungszug beginnt (Partie 221: 9.e5! mit Lf3/Dxa8 — nicht erkannt).
 - [ ] Buchkapitel vor Lichess: Beispiele/Aufgaben aus dem Kapitel, das genau dieses Motiv behandelt (EbookDiagrams + geprüfte Lösung,
       sonst „Beispiel im Buch“ mit Sprung in den Leser), Zugriffsrechte der Bücher, anonym im Zweifel nur Lichess; Quelle an der Karte.
 - [ ] Strenge Mattbild-Signatur ist sehr fein (Partie 221: 0 strenge, 107 Familien-Treffer im Fenster ±250) — nach dem Prod-Lauf

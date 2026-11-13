@@ -3569,17 +3569,21 @@
       "neverSuggestFailed": "Kon dat niet opslaan.",
       "exercises": {
         "title": "Aanbevolen oefeningen",
-        "intro": "Opgaven met hetzelfde matpatroon als stellingen uit deze partij — hier direct op te lossen.",
+        "intro": "Opgaven met hetzelfde patroon als stellingen uit deze partij — hier direct op te lossen.",
         "reason": {
           "missedMate": "gemist mat in {{n}}",
-          "playedMate": "mat in {{n}} op het bord"
+          "playedMate": "mat in {{n}} op het bord",
+          "missedTactic": "gemiste combinatie: {{theme}}",
+          "allowedTactic": "tegenstander een combinatie gegund: {{theme}}"
         },
         "also": "Zelfde patroon ook bij {{moves}}",
         "more": "Meer stellingen ({{count}})",
         "match": {
           "strict": "Zelfde matpatroon",
           "family": "Vergelijkbaar matpatroon",
-          "theme": "Mat in {{n}}"
+          "theme": "Mat in {{n}}",
+          "strictTactic": "Zelfde motief, zelfde stukken",
+          "sameTheme": "Zelfde motief"
         },
         "rating": "Rating {{rating}}",
         "solve": "Oplossen",

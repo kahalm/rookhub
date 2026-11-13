@@ -80,6 +80,21 @@ describe('SummaryExercisesComponent', () => {
     expect(el.querySelectorAll('.card .mark.ok').length).toBe(1);
   });
 
+  it('taktische Stelle (0.961.0): Grund mit Thema, Karten „gleiches Motiv“', () => {
+    setup();
+    const f = TestBed.createComponent(SummaryExercisesComponent);
+    const tactic: SummaryExerciseGroup = { ply: 21, white: false, reason: 'missedTactic', mateIn: null, alsoPlies: [], theme: 'fork',
+      exercises: [{ ...ex(1), match: 'strict' }, { ...ex(2), match: 'family' }] };
+    f.componentRef.setInput('groups', [tactic]);
+    f.detectChanges();
+    const c = f.componentInstance;
+    expect(c.matchKey('strict', tactic)).toBe('strictTactic');
+    expect(c.matchKey('family', tactic)).toBe('sameTheme');
+    expect(c.matchKey('theme', tactic)).toBe('sameTheme');
+    expect(c.matchKey('family', group(10))).toBe('family');
+    expect((f.nativeElement as HTMLElement).querySelector('h3')?.textContent).toContain('11…');
+  });
+
   it('Handy: Klick öffnet das Blatt statt des Lösers im Abschnitt', () => {
     const { dialog } = setup({ narrow: true });
     const f = TestBed.createComponent(SummaryExercisesComponent);

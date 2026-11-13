@@ -4044,17 +4044,21 @@
       "neverSuggestFailed": "Nem sikerült menteni.",
       "exercises": {
         "title": "Ajánlott feladatok",
-        "intro": "Feladatok ugyanazzal a mattképpel, mint e játszma állásai — itt helyben megoldhatók.",
+        "intro": "Feladatok ugyanazzal a motívummal, mint e játszma állásai — itt helyben megoldhatók.",
         "reason": {
           "missedMate": "elszalasztott matt {{n}} lépésben",
-          "playedMate": "matt {{n}} lépésben a táblán"
+          "playedMate": "matt {{n}} lépésben a táblán",
+          "missedTactic": "elszalasztott taktika: {{theme}}",
+          "allowedTactic": "az ellenfélnek engedett taktika: {{theme}}"
         },
         "also": "Ugyanez a kép itt is: {{moves}}",
         "more": "További állások ({{count}})",
         "match": {
           "strict": "Azonos mattkép",
           "family": "Hasonló mattkép",
-          "theme": "Matt {{n}} lépésben"
+          "theme": "Matt {{n}} lépésben",
+          "strictTactic": "Azonos motívum, azonos figurák",
+          "sameTheme": "Azonos motívum"
         },
         "rating": "Értékszám {{rating}}",
         "solve": "Feladat megoldása",

@@ -5,10 +5,20 @@ public enum PuzzleSignatureKind : byte
 {
     /// <summary>Mattbild der Schlussstellung (<see cref="Services.Puzzles.MatePattern"/>).</summary>
     Mate = 1,
+    // Taktische Motive des ersten Lösungszugs (<see cref="Services.Puzzles.TacticMotifs"/>, 0.961.0) — je Thema eine Art, damit
+    // eine Aufgabe mehrere tragen kann (Schlüssel PuzzleId + Kind).
+    DoubleCheck = 2,
+    Fork = 3,
+    Skewer = 4,
+    Pin = 5,
+    DiscoveredAttack = 6,
+    HangingPiece = 8,
+    Promotion = 9,
 }
 
 /// <summary>
-/// Einmal berechneter „Fingerabdruck“ einer Lichess-Aufgabe für die Empfohlenen Übungen der Partie-Zusammenfassung (0.960.0).
+/// Einmal berechneter „Fingerabdruck“ einer Lichess-Aufgabe für die Empfohlenen Übungen der Partie-Zusammenfassung (0.960.0;
+/// taktische Motive seit 0.961.0: streng = Thema + ziehende Figur + Zielfiguren, Familie = Thema).
 /// Mattbild (<see cref="PuzzleSignatureKind.Mate"/>): die Schlussstellung relativ zum mattgesetzten König, spiegel- und
 /// farbunabhängig, in zwei Stufen — <see cref="Strict"/> mit dem Typ der deckenden Figuren, <see cref="Family"/> ohne
 /// („Bauer f4 oder Springer deckt die Dame“ = dieselbe Familie). Beide als 64-Bit-Hash der Signatur-Zeichenkette

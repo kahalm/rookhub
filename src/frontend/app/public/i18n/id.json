@@ -3569,17 +3569,21 @@
       "neverSuggestFailed": "Tidak dapat menyimpannya.",
       "exercises": {
         "title": "Latihan yang disarankan",
-        "intro": "Teka-teki dengan pola skakmat yang sama seperti posisi dari permainan ini — selesaikan di sini.",
+        "intro": "Teka-teki dengan pola yang sama seperti posisi dari permainan ini — selesaikan di sini.",
         "reason": {
           "missedMate": "skakmat dalam {{n}} terlewat",
-          "playedMate": "skakmat dalam {{n}} di papan"
+          "playedMate": "skakmat dalam {{n}} di papan",
+          "missedTactic": "taktik terlewat: {{theme}}",
+          "allowedTactic": "memberi lawan taktik: {{theme}}"
         },
         "also": "Pola yang sama juga di {{moves}}",
         "more": "Posisi lainnya ({{count}})",
         "match": {
           "strict": "Pola skakmat sama",
           "family": "Pola skakmat mirip",
-          "theme": "Skakmat dalam {{n}}"
+          "theme": "Skakmat dalam {{n}}",
+          "strictTactic": "Motif sama, bidak sama",
+          "sameTheme": "Motif sama"
         },
         "rating": "Rating {{rating}}",
         "solve": "Selesaikan",

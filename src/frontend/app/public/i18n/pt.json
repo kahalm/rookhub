@@ -3569,17 +3569,21 @@
       "neverSuggestFailed": "Não foi possível guardar isso.",
       "exercises": {
         "title": "Exercícios recomendados",
-        "intro": "Problemas com o mesmo padrão de mate de posições desta partida — resolva aqui mesmo.",
+        "intro": "Problemas com o mesmo padrão de posições desta partida — resolva aqui mesmo.",
         "reason": {
           "missedMate": "mate em {{n}} perdido",
-          "playedMate": "mate em {{n}} no tabuleiro"
+          "playedMate": "mate em {{n}} no tabuleiro",
+          "missedTactic": "tática perdida: {{theme}}",
+          "allowedTactic": "tática concedida ao adversário: {{theme}}"
         },
         "also": "Mesmo padrão também em {{moves}}",
         "more": "Mais posições ({{count}})",
         "match": {
           "strict": "Mesmo padrão de mate",
           "family": "Padrão de mate semelhante",
-          "theme": "Mate em {{n}}"
+          "theme": "Mate em {{n}}",
+          "strictTactic": "Mesmo motivo, mesmas peças",
+          "sameTheme": "Mesmo motivo"
         },
         "rating": "Rating {{rating}}",
         "solve": "Resolver",

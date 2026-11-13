@@ -44,7 +44,12 @@ export interface ClubGameSummaryReadiness {
 export interface SummaryExercise { id: number; fen: string; moves: string[]; rating: number; themes: string[]; match: 'strict' | 'family' | 'theme'; }
 
 /** Eine Stelle der Partie mit ihren Aufgaben; `ply` = Stellung VOR dem Halbzug, `reason` → `games.summary.exercises.reason.*`. */
-export interface SummaryExerciseGroup { ply: number; white: boolean; reason: 'missedMate' | 'playedMate'; mateIn: number | null; alsoPlies: number[]; exercises: SummaryExercise[]; }
+export interface SummaryExerciseGroup {
+  ply: number; white: boolean; reason: 'missedMate' | 'playedMate' | 'missedTactic' | 'allowedTactic'; mateIn: number | null;
+  alsoPlies: number[]; exercises: SummaryExercise[];
+  /** Taktische Stelle (0.961.0): Lichess-Thema wie `fork` (Anzeige über `puzzleTheme`). */
+  theme?: string | null;
+}
 
 /** Woher die Seite kommt — dieselben fünf Wege wie die Zusammenfassung selbst. */
 export type SummarySource =
