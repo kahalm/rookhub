@@ -3592,7 +3592,10 @@
         "shown": "Soluzione mostrata.",
         "showSolution": "Mostra soluzione",
         "retry": "Riprova",
-        "counter": "Problema {{i}} di {{n}}"
+        "counter": "Problema {{i}} di {{n}}",
+        "bookExample": "Esempio nel libro",
+        "bookPage": "p. {{n}}",
+        "bookPart": "Sezione {{n}}"
       }
     },
     "onlyMine": "Solo le mie partite",

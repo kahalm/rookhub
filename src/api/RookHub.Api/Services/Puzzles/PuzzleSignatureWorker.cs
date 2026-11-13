@@ -1,12 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Ebooks;
 
 namespace RookHub.Api.Services.Puzzles;
 
 /// <summary>
 /// Rechnet einmalig die Mattbilder der beliebten Matt-Aufgaben (<see cref="MatePattern"/>, 0.960.0) und danach die taktischen Motive der
-/// übrigen beliebten Aufgaben (<see cref="TacticMotifs"/>, 0.961.0, <see cref="RunTacticBatchAsync"/>) in <see cref="PuzzleSignature"/> —
+/// übrigen beliebten Aufgaben (<see cref="TacticMotifs"/>, 0.961.0, <see cref="RunTacticBatchAsync"/>) in <see cref="PuzzleSignature"/>, zuletzt
+/// dieselben Signaturen der Buchdiagramme mit Lösung (0.962.0, <see cref="BookExercises.RunBatchAsync"/>, <see cref="EbookDiagramSignature"/>;
+/// Fortschritt <see cref="BookExercises.CursorKey"/>, alle 7 Tage ein neuer Durchgang für Korrekturen) —
 /// wiederaufnehmbar, klein portioniert, pausierbar über den Schalter „Hintergrundjobs“.
 ///
 /// <para><b>Fortschritt</b> steht in <see cref="SystemSetting"/> unter <see cref="CursorKey"/> als <c>v{Version}:{letzte PuzzleId}</c>;
@@ -38,6 +41,7 @@ public class PuzzleSignatureWorker(IServiceScopeFactory scopeFactory, IConfigura
 
     private readonly QuietHours _quiet = new(config["PuzzleSignatures:QuietHours"] ?? DefaultQuietHours, config["PuzzleSignatures:TimeZone"]);
     private volatile bool _idle;
+    private readonly Dictionary<int, EbookChapterLookup> _chapters = [];
 
     protected override WorkerSchedule Schedule => WorkerSchedule.Every(_idle ? IdleInterval : Interval);
     protected override WorkerStart Start => WorkerStart.After(TimeSpan.FromMinutes(5));
@@ -52,6 +56,8 @@ public class PuzzleSignatureWorker(IServiceScopeFactory scopeFactory, IConfigura
         // Erst die Mattbilder, dann die Motive (0.961.0) — beide in derselben Portionsgröße, je Schritt höchstens eine volle Portion.
         var n = await RunBatchAsync(db, BatchSize, ct);
         if (n < BatchSize) n = await RunTacticBatchAsync(db, BatchSize, ct);
+        // Danach die Buchdiagramme (0.962.0) — Kapitel aus den Buchdateien, deren Verzeichnisse über die Schritte behalten.
+        if (n < BatchSize) n = await BookExercises.RunBatchAsync(db, services.GetService<EbookStorage>(), BatchSize, ct, _chapters);
         var wasIdle = _idle;
         _idle = n < BatchSize;
         if (_idle && !wasIdle) Logger.LogInformation("Aufgaben-Signaturen: Bestand durchgerechnet, sehe alle {Minutes} min nach neuen Aufgaben", IdleInterval.TotalMinutes);

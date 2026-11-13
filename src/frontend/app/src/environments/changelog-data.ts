@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.962.0", date: "2026-11-13", changes: [
+    { en: "Recommended exercises: book examples now come before Lichess puzzles. Where a diagram in one of your books shows the same mating pattern or tactical motif (strictly first, then the same family), the card shows it with its source – title, author and chapter (or page) – and a link that opens the reader at that diagram. Diagrams whose book solution Stockfish confirmed can be solved right on the page; diagrams with only an engine solution appear as “Example in the book” (at most two per position). Together at most six per position, nothing is padded.",
+      de: "Empfohlene Übungen: Buchbeispiele kommen jetzt vor den Lichess-Aufgaben. Zeigt ein Diagramm aus einem deiner Bücher dasselbe Mattbild oder Motiv (erst streng, dann die gleiche Familie), steht es mit Quelle auf der Karte – Titel, Autor und Kapitel (bzw. Seite) – samt Link, der den Leser an diesem Diagramm öffnet. Diagramme mit von Stockfish bestätigter Buchlösung sind direkt auf der Seite lösbar, solche mit reiner Engine-Lösung erscheinen als „Beispiel im Buch“ (höchstens zwei je Stelle). Zusammen höchstens sechs je Stelle, aufgefüllt wird nichts." },
+    { en: "Book access works exactly like the library: only books you may read are used, anyone without an account sees only books shared with everyone; gone or reported diagrams are skipped. The server works out the book signatures once in the background (same small, pausable portions as the puzzles, a fresh pass every seven days for corrections); until then the exercises stay as before.",
+      de: "Buchzugriff wie in der Bibliothek: es zählen nur Bücher, die du lesen darfst, ohne Anmeldung nur die für alle freigegebenen; gemeldete oder geänderte Diagramme fallen weg. Die Buch-Signaturen berechnet der Server einmalig im Hintergrund (gleiche kleine, pausierbare Portionen wie bei den Aufgaben, alle sieben Tage ein neuer Durchgang für Korrekturen); bis dahin bleiben die Übungen wie bisher." },
+  ] },
   { version: "0.961.1", date: "2026-11-13", changes: [
     { en: "Tests: two Discord-link tests no longer fail now and then when a second boundary passes between the release and the token expiry.",
       de: "Tests: zwei Discord-Verknüpfungstests schlagen nicht mehr gelegentlich fehl, wenn zwischen dem Freiwerden und dem Token-Ablauf eine Sekundengrenze liegt." },

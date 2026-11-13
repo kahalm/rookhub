@@ -3592,7 +3592,10 @@
         "shown": "已显示答案。",
         "showSolution": "显示答案",
         "retry": "再试一次",
-        "counter": "谜题 {{i}} / {{n}}"
+        "counter": "谜题 {{i}} / {{n}}",
+        "bookExample": "书中示例",
+        "bookPage": "第 {{n}} 页",
+        "bookPart": "第 {{n}} 节"
       }
     },
     "onlyMine": "仅我的对局",

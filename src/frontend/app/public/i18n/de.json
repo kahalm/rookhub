@@ -3657,7 +3657,10 @@
         "shown": "Lösung gezeigt.",
         "showSolution": "Lösung zeigen",
         "retry": "Nochmal",
-        "counter": "Aufgabe {{i}} von {{n}}"
+        "counter": "Aufgabe {{i}} von {{n}}",
+        "bookExample": "Beispiel im Buch",
+        "bookPage": "S. {{n}}",
+        "bookPart": "Abschnitt {{n}}"
       }
     },
     "onlyMine": "Nur meine Partien",

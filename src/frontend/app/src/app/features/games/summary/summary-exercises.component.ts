@@ -7,7 +7,8 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { ChessBoardComponent } from '../../../shared/pgn-viewer/chess-board.component';
 import { PreferencesService } from '../../../core/preferences.service';
 import { applyUci, tryLoadFen } from '../../../shared/chess/puzzle-move.util';
-import { SummaryExercise, SummaryExerciseGroup } from './club-game-summary.service';
+import { RouterLink } from '@angular/router';
+import { SummaryExercise, SummaryExerciseGroup, exerciseKey, exerciseReaderQuery, exerciseSolvable } from './club-game-summary.service';
 import { SummaryExerciseSolverComponent } from './summary-exercise-solver.component';
 import { PuzzleThemePipe } from '../../puzzles/puzzle-theme.pipe';
 
@@ -19,21 +20,31 @@ export function exerciseMoveLabel(ply: number): string {
   return `${Math.floor(ply / 2) + 1}${ply % 2 === 0 ? '.' : '…'}`;
 }
 
-/** Karte einer Aufgabe: Stellung NACH dem Zug des Gegners, Blick aus Sicht des Lösers. */
-interface ExerciseCard { ex: SummaryExercise; fen: string; lastMove?: [string, string]; flipped: boolean; }
-
-function cardOf(ex: SummaryExercise): ExerciseCard {
-  const chess = tryLoadFen(ex.fen);
-  const first = ex.moves[0];
-  if (!chess || !first) return { ex, fen: ex.fen, flipped: false };
-  try { applyUci(chess, first); } catch { return { ex, fen: ex.fen, flipped: false }; }
-  return { ex, fen: chess.fen(), lastMove: [first.slice(0, 2), first.slice(2, 4)], flipped: chess.turn() === 'b' };
+/** Karte einer Aufgabe: Stellung NACH dem Zug des Gegners (Buch: die Diagrammstellung), Blick aus Sicht des Lösers. `solveIndex` =
+ * Platz unter den lösbaren Aufgaben der Stelle (`null` = nur „Beispiel im Buch“, die Karte führt in den Leser). */
+interface ExerciseCard {
+  ex: SummaryExercise; key: string; fen: string; lastMove?: [string, string]; flipped: boolean; solveIndex: number | null;
+  query: Record<string, string | number>;
 }
+
+function cardOf(ex: SummaryExercise, solveIndex: number | null): ExerciseCard {
+  const base = { ex, key: exerciseKey(ex), solveIndex, query: exerciseReaderQuery(ex) };
+  const chess = tryLoadFen(ex.fen);
+  if (ex.source === 'book') return { ...base, fen: ex.fen, flipped: chess?.turn() === 'b' };
+  const first = ex.moves[0];
+  if (!chess || !first) return { ...base, fen: ex.fen, flipped: false };
+  try { applyUci(chess, first); } catch { return { ...base, fen: ex.fen, flipped: false }; }
+  return { ...base, fen: chess.fen(), lastMove: [first.slice(0, 2), first.slice(2, 4)], flipped: chess.turn() === 'b' };
+}
+
+/** Lösbare Aufgaben einer Stelle in Kartenreihenfolge (der Löser blättert nur durch diese). */
+function solvableOf(exercises: SummaryExercise[]): SummaryExercise[] { return exercises.filter(exerciseSolvable); }
 
 /**
  * „Empfohlene Übungen“ am Ende der Zusammenfassung (0.960.0, Wunsch 2026-11-13): je Stelle der Partie (gespieltes oder verpasstes
  * Matt, seit 0.961.0 auch verpasste oder zugelassene Taktik wie Gabel, Fesselung, Spieß) die Lichess-Aufgaben mit demselben Bild bzw.
- * Motiv, als Karten mit Brett. Ein Klick löst direkt auf der Seite — ab 900 px im
+ * Motiv, als Karten mit Brett — seit 0.962.0 zuerst Diagramme aus Büchern, die der Betrachter lesen darf (Quelle + Sprung in den Leser
+ * an der Karte; ohne bestätigte Buchlösung nur als „Beispiel im Buch“). Ein Klick löst direkt auf der Seite — ab 900 px im
  * Abschnitt über den Karten, darunter als Blatt (wie das Brett der Zusammenfassung, DESIGN 5.6). Ohne Stellen zeigt die Seite den
  * Abschnitt gar nicht.
  */
@@ -41,7 +52,7 @@ function cardOf(ex: SummaryExercise): ExerciseCard {
   selector: 'app-summary-exercises',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChessBoardComponent, MatButtonModule, MatIconModule, TranslatePipe, SummaryExerciseSolverComponent, PuzzleThemePipe],
+  imports: [ChessBoardComponent, MatButtonModule, MatIconModule, TranslatePipe, SummaryExerciseSolverComponent, PuzzleThemePipe, RouterLink],
   template: `
     <section class="exercises">
       <h2>{{ 'games.summary.exercises.title' | translate }}</h2>
@@ -57,24 +68,43 @@ function cardOf(ex: SummaryExercise): ExerciseCard {
           }
           @if (open()?.group === gi) {
             <div class="inline-solver">
-              <app-summary-exercise-solver [exercises]="g.group.exercises" [(index)]="openIndex" (result)="mark($event)" />
+              <app-summary-exercise-solver [exercises]="g.solvable" [(index)]="openIndex" (result)="mark($event)" />
               <button mat-button type="button" class="close-solver" (click)="open.set(null)">
                 <mat-icon>close</mat-icon> {{ 'common.close' | translate }}
               </button>
             </div>
           }
           <div class="cards">
-            @for (c of g.cards; track c.ex.id; let i = $index) {
-              <button type="button" class="card" [class.active]="open()?.group === gi && openIndex() === i" (click)="solve(gi, i)"
-                      [attr.aria-label]="('games.summary.exercises.solve' | translate) + ' ' + (i + 1)">
-                <app-chess-board [fen]="c.fen" [lastMove]="c.lastMove" [flipped]="c.flipped"
-                                 [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
-                <span class="card-meta">
-                  @if (results().get(c.ex.id); as r) { <mat-icon class="mark" [class.ok]="r === 'solved'">{{ r === 'solved' ? 'check_circle' : 'cancel' }}</mat-icon> }
-                  <span>{{ ('games.summary.exercises.match.' + matchKey(c.ex.match, g.group)) | translate: { n: g.group.mateIn ?? 1 } }}</span>
-                  <span class="src">Lichess · {{ c.ex.rating }}</span>
-                </span>
-              </button>
+            @for (c of g.cards; track c.key; let i = $index) {
+              <div class="card" [class.active]="c.solveIndex !== null && open()?.group === gi && openIndex() === c.solveIndex">
+                @if (c.solveIndex !== null) {
+                  <button type="button" class="card-hit" (click)="solve(gi, c.solveIndex)"
+                          [attr.aria-label]="('games.summary.exercises.solve' | translate) + ' ' + (i + 1)">
+                    <app-chess-board [fen]="c.fen" [lastMove]="c.lastMove" [flipped]="c.flipped"
+                                     [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
+                    <span class="card-meta">
+                      @if (results().get(c.key); as r) { <mat-icon class="mark" [class.ok]="r === 'solved'">{{ r === 'solved' ? 'check_circle' : 'cancel' }}</mat-icon> }
+                      <span>{{ ('games.summary.exercises.match.' + matchKey(c.ex.match, g.group)) | translate: { n: g.group.mateIn ?? 1 } }}</span>
+                      @if (!c.ex.book) { <span class="src">Lichess · {{ c.ex.rating }}</span> }
+                    </span>
+                  </button>
+                } @else {
+                  <a class="card-hit" [routerLink]="['/ebooks', c.ex.book!.ebookId]" [queryParams]="c.query">
+                    <app-chess-board [fen]="c.fen" [flipped]="c.flipped" [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
+                    <span class="card-meta">
+                      <span>{{ ('games.summary.exercises.match.' + matchKey(c.ex.match, g.group)) | translate: { n: g.group.mateIn ?? 1 } }}</span>
+                      <span class="src">{{ 'games.summary.exercises.bookExample' | translate }}</span>
+                    </span>
+                  </a>
+                }
+                @if (c.ex.book; as b) {
+                  <a class="book" [routerLink]="['/ebooks', b.ebookId]" [queryParams]="c.query">
+                    <mat-icon aria-hidden="true">menu_book</mat-icon>
+                    <span><em>{{ b.title }}</em>@if (b.author) { · {{ b.author }} }
+                      · @if (b.chapter) { {{ b.chapter }} } @else { {{ (b.pdfPage ? 'games.summary.exercises.bookPage' : 'games.summary.exercises.bookPart') | translate: { n: b.page } }} }</span>
+                  </a>
+                }
+              </div>
             }
           </div>
         </div>
@@ -94,12 +124,18 @@ function cardOf(ex: SummaryExercise): ExerciseCard {
     .ply { all: unset; cursor: pointer; font-weight: 700; color: var(--rh-accent); text-decoration: underline dotted; text-underline-offset: 2px; }
     .ply:focus-visible { outline: 2px solid var(--rh-accent); }
     .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-    .card { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 4px; padding: 6px;
+    .card { box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; padding: 6px;
       border: 1px solid var(--mat-sys-outline-variant); border-radius: 8px; min-width: 0; }
-    .card:hover, .card:focus-visible { border-color: var(--rh-accent); }
+    .card:hover, .card:focus-within { border-color: var(--rh-accent); }
     .card.active { border-color: var(--rh-accent); box-shadow: 0 0 0 1px var(--rh-accent); }
+    .card-hit { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 4px; min-width: 0; color: inherit; }
+    .card-hit:focus-visible { outline: 2px solid var(--rh-accent); outline-offset: 2px; }
     .card app-chess-board { pointer-events: none; }
     .card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; font-size: 0.8rem; }
+    .book { display: flex; align-items: flex-start; gap: 4px; font-size: 0.75rem; color: var(--mat-sys-on-surface-variant); text-decoration: none;
+      overflow-wrap: anywhere; }
+    .book:hover, .book:focus-visible { color: var(--rh-accent); text-decoration: underline; }
+    .book mat-icon { font-size: 16px; width: 16px; height: 16px; flex: none; }
     .src { color: var(--mat-sys-on-surface-variant); }
     .mark { font-size: 18px; width: 18px; height: 18px; color: var(--rh-error); }
     .mark.ok { color: var(--rh-success); }
@@ -119,9 +155,13 @@ export class SummaryExercisesComponent {
   readonly expanded = signal(false);
   readonly open = signal<{ group: number } | null>(null);
   readonly openIndex = signal(0);
-  readonly results = signal<ReadonlyMap<number, 'solved' | 'failed'>>(new Map());
+  /** Erster Ausgang je Aufgabe, Schlüssel {@link exerciseKey}. */
+  readonly results = signal<ReadonlyMap<string, 'solved' | 'failed'>>(new Map());
 
-  private readonly all = computed(() => this.groups().map(group => ({ group, cards: group.exercises.map(cardOf) })));
+  private readonly all = computed(() => this.groups().map(group => {
+    const solvable = solvableOf(group.exercises);
+    return { group, solvable, cards: group.exercises.map(ex => cardOf(ex, exerciseSolvable(ex) ? solvable.indexOf(ex) : null)) };
+  }));
   readonly visible = computed(() => this.expanded() ? this.all() : this.all().slice(0, OPEN_GROUPS));
   readonly hidden = computed(() => this.all().length - this.visible().length);
 
@@ -135,22 +175,22 @@ export class SummaryExercisesComponent {
   alsoLabel(plies: number[]): string { return plies.map(exerciseMoveLabel).join(', '); }
 
   solve(group: number, index: number): void {
-    const g = this.visible()[group]?.group;
-    if (!g) return;
+    const g = this.visible()[group];
+    if (!g || !g.solvable[index]) return;
     if (this.breakpoints.isMatched('(max-width: 899.98px)')) {
-      SummaryExerciseSheetComponent.open(this.dialog, { exercises: g.exercises, index, onResult: r => this.mark(r) });
+      SummaryExerciseSheetComponent.open(this.dialog, { exercises: g.solvable, index, onResult: r => this.mark(r) });
       return;
     }
     this.openIndex.set(index);
     this.open.set({ group });
   }
 
-  mark(r: { id: number; solved: boolean }): void {
-    this.results.update(m => new Map(m).set(r.id, r.solved ? 'solved' : 'failed'));
+  mark(r: { key: string; solved: boolean }): void {
+    this.results.update(m => new Map(m).set(r.key, r.solved ? 'solved' : 'failed'));
   }
 }
 
-export interface SummaryExerciseSheetData { exercises: SummaryExercise[]; index: number; onResult(r: { id: number; solved: boolean }): void; }
+export interface SummaryExerciseSheetData { exercises: SummaryExercise[]; index: number; onResult(r: { key: string; solved: boolean }): void; }
 
 const SWIPE_CLOSE_PX = 80;
 

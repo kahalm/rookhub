@@ -108,7 +108,7 @@ public class LeagueClubOverviewController(LeagueClubResolver clubs, LeagueClubOv
     [HasPermission(Permissions.LeagueView)]
     public async Task<IActionResult> SummaryExercises(int id, [FromServices] ClubGameSummaries summaries,
         [FromServices] RookHub.Api.Services.Puzzles.GameExercises exercises, CancellationToken ct) =>
-        await WithClubAsync(ct, async c => await summaries.GetAsync(c, id, ct) is null ? NotFound() : Ok(await exercises.ForClubGameAsync(id, ct)),
+        await WithClubAsync(ct, async c => await summaries.GetAsync(c, id, ct) is null ? NotFound() : Ok(await exercises.ForClubGameAsync(id, ct, await EbookViewerAsync())),
             await club.ClubOfGameAsync(id, ct));
 
     /// <summary>Zusammenfassung anfordern bzw. neu anfordern — nur Admins (Wunsch 2026-11-08: „auf Wunsch vom Admin");

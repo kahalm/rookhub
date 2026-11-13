@@ -159,7 +159,7 @@ aus den Daten der Partie, ohne Claude, also auch für alle schon fertigen Zusamm
 **Stellen** (`GameExercises.Occurrences`, beide Seiten): *verpasstes Matt* — die Seite am Zug hatte laut Analyse Matt in ≤ 5, nach ihrem
 Zug steht der Gegner nicht mehr matt bzw. die Partie endet ohne Matt (Bild aus der Engine-Linie); *gespieltes Matt* — die Partie endet
 matt (Bild aus der Schlussstellung, Stelle = Beginn der Mattfolge). Gleiches Bild mehrfach → eine Gruppe (`alsoPlies`), höchstens 8.
-Seit 0.961.0 auch **taktische Fehler** (siehe unten); Buchkapitel kommen in einem eigenen Schritt (TODO.md).
+Seit 0.961.0 auch **taktische Fehler**, seit 0.962.0 zuerst **Buchbeispiele** (beides unten).
 
 **Mattbild** (`Services/Puzzles/MatePattern.cs`, Regelstand `Version`): Schlussstellung relativ zum mattgesetzten König, farb- und
 spiegelunabhängig — Lage des Königs (Ecke/Grundreihe/Rand/offen), schachgebende Figur(en) mit Lage (Kontakt diagonal/gerade, Linie,
@@ -182,7 +182,8 @@ Stelle → `groups: []`, die Seite zeigt nichts.
 | `GET api/games/shared/{token}/summary/exercises` | anonym über den Teilen-Link |
 
 Antwort `{ groups: [{ ply, white, reason: missedMate|playedMate, mateIn, alsoPlies, exercises: [{ id, fen, moves, rating, themes,
-match: strict|family|theme }] }] }` — `fen` vor dem Zug des Gegners, `moves` = Gegnerzug + Lösung (Lichess-Form). Ohne Analyse leer.
+match: strict|family|theme, source: lichess|book, book }] }] }` — Lichess: `fen` vor dem Zug des Gegners, `moves` = Gegnerzug + Lösung
+(Lichess-Form), `book` = `null`; Buch (0.962.0) siehe „Buchbeispiele“. Ohne Analyse leer.
 
 **Mattbilder berechnen** (`PuzzleSignatureWorker`, Tabelle `PuzzleSignatures`): startet 5 min nach dem API-Start von selbst, je 3 s
 1 000 Matt-Aufgaben (Beliebtheit ≥ 80) in Id-Reihenfolge, Fortschritt `SystemSettings.PuzzleSignatures.MateCursor` (`v1:<PuzzleId>`,
@@ -215,3 +216,53 @@ Karten sagen „Gleiches Motiv, gleiche Figuren“ (streng) bzw. „Gleiches Mot
 **Signaturen der Aufgaben**: derselbe `PuzzleSignatureWorker` rechnet nach den Mattbildern die Motive aller beliebten (≥ 80), oft
 gespielten (≥ 200) Aufgaben OHNE Matt (`PuzzleSignatures`, `Kind` 2–9 je Thema, Fortschritt `SystemSettings.PuzzleSignatures.TacticCursor`).
 Prod: ~2,4 Mio. Aufgaben, gemessen ~20 µs je Aufgabe, ~27 % tragen ein Motiv → ~0,65 Mio. Zeilen; ~2 400 Schritte ≈ 3 h nach den Mattbildern.
+
+### Buchbeispiele (0.962.0)
+
+Wunsch 2026-11-13: „wenn du in büchern das motiv findest dann sind beispiele aus dem kapitel > allgemeine probleme“, „ja bau den buch-teil“
+(einfache Form), „erzwinge keine motive/aufgaben“. `Services/Puzzles/BookExercises.cs`.
+
+**Signaturen** (`SignaturesOf`): dieselben wie bei den Lichess-Aufgaben, aus Diagrammstellung (Löser am Zug) + Lösung (`SolutionUci`):
+endet die Linie matt → Mattbild (streng/Familie, `MateIn` = Züge des Lösers); sonst, nur wenn `EngineEval` ≥ +2,0 (wie die Taktikstellen
+der Partie), die Motive des ersten Zugs. Tabelle `EbookDiagramSignatures` (`docs/datenbank-schema.md`). Berechnet werden nur Diagramme
+mit **brauchbarer** Linie: bestätigte Buchlösung (`SolutionSource = book`, `SolutionCheck` `Confirmed` 1 oder `Replaced` 3 → **lösbar**)
+oder Engine-Lösung (`Engine` 4, auch `Confirmed` mit `SolutionSource = engine` → nur **Beispiel im Buch**). `Doubtful`, `Unchecked`,
+`NoPuzzle` und Diagramme ohne Lösung nie (ohne Linie gibt es kein Bild/Motiv). Dazu: lesbar (`FontFamily ≠ unread`), regelgerecht
+(`EbookSolutionChecker.IsLegal`); eine reine Engine-Lösung nur bei sicherer Bilderkennung (`Confidence` ≥ 0,9 oder Font-Diagramm) — eine
+bestätigte Buchlösung belegt die Stellung selbst. „Bestätigt“ heißt: Stockfish hält den ersten Buchzug für den besten, höchstens 120 cp
+schlechter oder noch ≥ +4 gewinnend (`docs/api/ebooks.md`, Stockfish-Prüfung).
+
+**Kapitel**: aus dem Inhaltsverzeichnis des Buchs wie „Als Kurs anlegen“ (`EbookChapterLookup`: PDF-Lesezeichen, EPUB-nav/ncx,
+Fließtext-EPUB), beim Rechnen gespeichert (`Chapter`); ohne Verzeichnis zeigt die Karte die Seite (PDF) bzw. den Abschnitt (EPUB).
+
+**Lauf**: im `PuzzleSignatureWorker` nach Mattbildern und Motiven, je Schritt 1 000 Diagramme mit Lösung in Id-Reihenfolge (gleiche
+Drossel, Ruhezeiten, Pause-Schalter), Fortschritt `SystemSettings.PuzzleSignatures.BookCursor` (`v{Matt}.{Motiv}:<DiagrammId>`); eine
+Portion ersetzt alle Zeilen ihres Id-Bereichs. Ist der Bestand durch und der Durchgang älter als 7 Tage
+(`PuzzleSignatures.BookPassStartedAt`), beginnt ein neuer — so ziehen korrigierte Stellungen und neu geprüfte Lösungen nach. Bis dahin
+erkennt die Auswahl veraltete Zeilen am `LineHash` und lässt sie weg. Prod (13.11., Simulation auf den Prod-Daten): 950 150 Diagramme mit
+Lösung → ~950 Schritte, Rechenzeit ~25 s gesamt, mit Pausen und Inhaltsverzeichnissen geschätzt 1–2 h; ergibt ~127 000 Zeilen aus
+~126 000 Diagrammen, davon ~12 100 lösbar (Mattbild 8 900, Motive 3 400) und ~114 000 nur Beispiel.
+
+**Auswahl je Stelle** (vor Lichess, zusammen höchstens 6, nichts aufgefüllt): gleiche strenge Signatur, dann gleiche Familie; nur Bücher,
+die der Betrachter in der Bibliothek sehen darf (`EbookAccess.Visible` als Unterabfrage — andere Bücher liefern weder Stellung noch Titel).
+Je Stufe bis 120 Zeilen ab einem je Partie und Stelle gesäten Mischwert (`Shuffle`), geprüft gegen das aktuelle Diagramm (noch da,
+`LineHash` gleich, Lösung brauchbar, nicht offen gemeldet: eine `EbookDiagramReports`-Meldung zählt, bis eine spätere
+`EbookDiagramCorrections`-Korrektur folgt). Bücher mit lösbarem Diagramm zuerst, dann nach Spielstärke (`TargetMinElo` höchstens 150 über
+bis 700 unter der Stärke der Seite = passend, unbekannt danach, sonst zuletzt), dann gesät gemischt; je Buch erst ein Diagramm, in einer
+zweiten Runde höchstens ein weiteres aus DEMSELBEN Kapitel (ohne Kapitel ±10 Seiten) — möglichst verschiedene Bücher, und was aus einem Buch
+zusammenbleibt, stammt aus derselben Stelle. Höchstens 2 Beispiele je Stelle, lösbare vor Beispielen. Danach Lichess wie oben (der
+Thema-Rückfall nur, wenn auch kein Buch traf).
+
+**Rechte je Weg**: angemeldet = das Konto (+ `ebooks.manage`/Admin = alle Bücher), auch über die Teilen-Links; ohne Anmeldung (Teilen-Links
+`/g/{token}`, `/cg/{token}`, Liga-Link) nur, was die Bibliothek ohne Anmeldung zeigt — die für „Alle“ freigegebenen Bücher und eigene
+anonyme Uploads (`X-Visitor-Id`). `BaseApiController.EbookViewerAsync`.
+
+**Antwort** je Buchkarte: `source: book`, `id` = Diagramm, `fen` = Diagrammstellung, `moves` = Buchlösung ab dem Löser (leer bei
+Beispielen), `rating` 0, `book: { ebookId, title, author, chapter, page, pdfPage, label, solvable }`. Der Leser-Sprung ist
+`/ebooks/{ebookId}?page=…&fmt=pdf&diagram=…` (PDF) bzw. `?diagram=…` (EPUB), wie „Im Buch“ aus dem Kurs.
+
+Prod-Partie SavedGame 221 (simuliert 13.11., Admin-Sicht): „15. verpasstes Matt in 4“ (Familie „Dame im Kontakt, offener König“) —
+streng 0, Familie 76 Diagramme in 58 Büchern; gewählt (lösbar) Willemze „The Chess Toolbox“ („Part V: Solutions to exercises“),
+Ramesh „Improve Your Chess Calculation“ („Chapter 3 The analytical process“), Geller „1500 Forced Mates“ S. 971 („Chapter 31. Test
+Yourself!“), Grodzensky „The Lubyanka Gambit“ S. 169, dazu zwei Beispiele aus Problembüchern (Ott u. a. „Kunstwerke auf 64 Feldern“ S. 75,
+Loyd „The Puzzle King“ S. 184); ohne Anmeldung nur zwei Beispiele aus den für alle freigegebenen Büchern.

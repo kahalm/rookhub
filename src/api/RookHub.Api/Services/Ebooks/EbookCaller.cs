@@ -22,3 +22,9 @@ public readonly record struct EbookCaller(int? UserId, string? AnonId)
 
     public bool IsAnonymous => UserId == null;
 }
+
+/// <summary>
+/// Wer Buchinhalte außerhalb der Bibliothek sieht (0.962.0, Buchbeispiele der Empfohlenen Übungen): <see cref="Caller"/> und ob er
+/// alle Bücher verwalten darf (<c>ebooks.manage</c>/Admin) — genau die Eingaben von <see cref="EbookAccess.Visible"/>.
+/// </summary>
+public readonly record struct EbookViewer(EbookCaller Caller, bool ManageAll);

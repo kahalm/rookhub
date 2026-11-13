@@ -19,9 +19,15 @@ namespace RookHub.Api.Services.Puzzles;
 /// zählt mit seiner Mitte), sonst die der anderen Seite, sonst <see cref="DefaultRating"/>. Aufgaben im Fenster ±<see cref="Window"/>,
 /// beliebt (<see cref="PuzzleSignatureWorker.MinPopularity"/>), oft gespielt (<see cref="MinPlays"/>), Tipps nicht als irreführend
 /// markiert. Die Auswahl ist je Partie und Stelle fest gesät, also bei jedem Aufruf dieselbe (solange sich der Bestand nicht ändert).</para>
+///
+/// <para><b>Bücher zuerst</b> (0.962.0): mit einem Betrachter (<see cref="EbookViewer"/>) kommen vor den Lichess-Aufgaben Diagramme aus
+/// seinen Büchern mit derselben Signatur (<see cref="BookExercises"/>); zusammen höchstens <see cref="PerGroup"/>. Ohne Betrachter
+/// (<c>null</c>) nur Lichess.</para>
 /// </summary>
 public sealed class GameExercises(AppDbContext db, EbookSuggestions strength)
 {
+    private readonly BookExercises _books = new(db);
+
     public const int PerGroup = 6;
     public const int MaxGroups = 8;
     /// <summary>Matts bis zu so vielen Zügen zählen als Motiv (Lichess-Themen gehen bis mateIn5).</summary>
@@ -140,44 +146,45 @@ public sealed class GameExercises(AppDbContext db, EbookSuggestions strength)
             .Take(MaxGroups).ToList();
 
     /// <summary>Übungen einer Vereinspartie (Hauptanalyse, wie die Bewertungen der Partieseite). Rechte prüft der Aufrufer.</summary>
-    public async Task<GameExercisesDto> ForClubGameAsync(int clubGameId, CancellationToken ct = default)
+    public async Task<GameExercisesDto> ForClubGameAsync(int clubGameId, CancellationToken ct = default, EbookViewer? viewer = null)
     {
         var analysisId = await db.GameAnalyses.AsNoTracking()
             .Where(a => a.LeagueClubGameId == clubGameId && a.Origin == GameAnalysisOrigin.Club && a.EngineId == null)
             .OrderByDescending(a => a.Id).Select(a => (int?)a.Id).FirstOrDefaultAsync(ct);
-        return await ForAnalysisAsync(analysisId, clubGameId.ToString(System.Globalization.CultureInfo.InvariantCulture), ct);
+        return await ForAnalysisAsync(analysisId, clubGameId.ToString(System.Globalization.CultureInfo.InvariantCulture), ct, viewer);
     }
 
     /// <summary>Übungen einer eigenen Partie (ihre Analyse). Rechte prüft der Aufrufer.</summary>
-    public async Task<GameExercisesDto> ForSavedGameAsync(int savedGameId, CancellationToken ct = default)
+    public async Task<GameExercisesDto> ForSavedGameAsync(int savedGameId, CancellationToken ct = default, EbookViewer? viewer = null)
     {
         var analysisId = await db.SavedGames.AsNoTracking().Where(g => g.Id == savedGameId).Select(g => g.GameAnalysisId).FirstOrDefaultAsync(ct);
-        return await ForAnalysisAsync(analysisId, $"o{savedGameId}", ct);
+        return await ForAnalysisAsync(analysisId, $"o{savedGameId}", ct, viewer);
     }
 
     /// <summary>Eigene Partie des Besitzers; <c>null</c> = unbekannt oder fremd (404 wie die Zusammenfassung).</summary>
-    public async Task<GameExercisesDto?> ForOwnGameAsync(int userId, int savedGameId, CancellationToken ct = default) =>
+    public async Task<GameExercisesDto?> ForOwnGameAsync(int userId, int savedGameId, CancellationToken ct = default, EbookViewer? viewer = null) =>
         await db.SavedGames.AsNoTracking().AnyAsync(g => g.Id == savedGameId && g.UserId == userId, ct)
-            ? await ForSavedGameAsync(savedGameId, ct) : null;
+            ? await ForSavedGameAsync(savedGameId, ct, viewer) : null;
 
     /// <summary>Eigene Partie über ihren Teilen-Link <c>/g/{token}</c>; <c>null</c> = unbekannter Link.</summary>
-    public async Task<GameExercisesDto?> ForSharedOwnGameAsync(string token, CancellationToken ct = default)
+    public async Task<GameExercisesDto?> ForSharedOwnGameAsync(string token, CancellationToken ct = default, EbookViewer? viewer = null)
     {
         if (string.IsNullOrWhiteSpace(token)) return null;
         var id = await db.SavedGames.AsNoTracking().Where(g => g.ShareToken == token).Select(g => (int?)g.Id).FirstOrDefaultAsync(ct);
-        return id is int i ? await ForSavedGameAsync(i, ct) : null;
+        return id is int i ? await ForSavedGameAsync(i, ct, viewer) : null;
     }
 
     /// <summary>Vereinspartie über ihren eigenen Link <c>/cg/{token}</c>; <c>null</c> = ungültig oder widerrufen.</summary>
-    public async Task<GameExercisesDto?> ForClubLinkAsync(string token, CancellationToken ct = default)
+    public async Task<GameExercisesDto?> ForClubLinkAsync(string token, CancellationToken ct = default, EbookViewer? viewer = null)
     {
         if (string.IsNullOrWhiteSpace(token)) return null;
         var id = await db.LeagueClubGames.AsNoTracking().Where(g => g.ShareToken == token).Select(g => (int?)g.Id).FirstOrDefaultAsync(ct);
-        return id is int i ? await ForClubGameAsync(i, ct) : null;
+        return id is int i ? await ForClubGameAsync(i, ct, viewer) : null;
     }
 
     /// <param name="gameKey">Kennung der Partie wie bei der Literatur (<c>237</c> bzw. <c>o143</c>) — Stärke und Saat.</param>
-    public async Task<GameExercisesDto> ForAnalysisAsync(int? analysisId, string gameKey, CancellationToken ct = default)
+    /// <param name="viewer">Wessen Bücher als Beispiele dienen dürfen; <c>null</c> = keine (nur Lichess).</param>
+    public async Task<GameExercisesDto> ForAnalysisAsync(int? analysisId, string gameKey, CancellationToken ct = default, EbookViewer? viewer = null)
     {
         var empty = new GameExercisesDto(new List<GameExerciseGroupDto>());
         if (analysisId is not int id) return empty;
@@ -189,12 +196,14 @@ public sealed class GameExercises(AppDbContext db, EbookSuggestions strength)
         var s = await strength.StrengthAsync(gameKey, ct);
         int? Of(PlayerStrength? p) => p?.Elo ?? BandMid(p?.Band);
         var used = new HashSet<int>();
+        var usedDiagrams = new HashSet<int>();
         var result = new List<GameExerciseGroupDto>();
         foreach (var (o, also) in groups)
         {
             var target = (o.White ? Of(s?.White) ?? Of(s?.Black) : Of(s?.Black) ?? Of(s?.White)) ?? DefaultRating;
             var seed = (int)(MatePattern.Hash($"{gameKey}:{o.Ply}") & 0x7fffffff);
-            var picked = await PickAsync(o, target, used, seed, ct);
+            var picked = viewer is { } v ? await _books.PickAsync(o, target, v, usedDiagrams, seed, ct) : [];
+            await PickAsync(picked, o, target, used, seed, ct);
             if (picked.Count == 0) continue;
             result.Add(new GameExerciseGroupDto(o.Ply, o.White, o.Reason, o.Motif is null ? o.MateIn : null, also, picked, o.Motif?.Theme));
         }
@@ -205,9 +214,10 @@ public sealed class GameExercises(AppDbContext db, EbookSuggestions strength)
     internal static int? BandMid(string? band) =>
         band is { Length: >= 4 } && int.TryParse(band[..4], out var low) ? low + 50 : null;
 
-    private async Task<List<GameExerciseDto>> PickAsync(Occurrence o, int target, HashSet<int> used, int seed, CancellationToken ct)
+    /// <summary>Lichess-Aufgaben hinter die schon gewählten Buchbeispiele in <paramref name="picked"/> (zusammen bis <see cref="PerGroup"/>);
+    /// der Thema-Rückfall nur, wenn weder Buch noch Signatur etwas liefern.</summary>
+    private async Task PickAsync(List<GameExerciseDto> picked, Occurrence o, int target, HashSet<int> used, int seed, CancellationToken ct)
     {
-        var picked = new List<GameExerciseDto>();
         if (o.Signature is { } sig)
         {
             var strict = sig.StrictHash;
@@ -241,7 +251,6 @@ public sealed class GameExercises(AppDbContext db, EbookSuggestions strength)
                 await AddAsync(picked, "theme", db.PuzzleTags.AsNoTracking().Where(t => t.TagId == tid).Select(t => new Row { PuzzleId = t.PuzzleId, Rating = t.Rating }),
                     target, used, seed, ct);
         }
-        return picked;
     }
 
     /// <summary>Mit Objekt-Initialisierer statt Konstruktor: nur so übersetzt EF die nachgestellten Bedingungen auf <c>Rating</c> (MariaDB-Test).</summary>

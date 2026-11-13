@@ -3592,7 +3592,10 @@
         "shown": "Çözüm gösterildi.",
         "showSolution": "Çözümü göster",
         "retry": "Tekrar",
-        "counter": "Bulmaca {{i}} / {{n}}"
+        "counter": "Bulmaca {{i}} / {{n}}",
+        "bookExample": "Kitaptaki örnek",
+        "bookPage": "s. {{n}}",
+        "bookPart": "Bölüm {{n}}"
       }
     },
     "onlyMine": "Yalnızca oyunlarım",

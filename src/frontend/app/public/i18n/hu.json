@@ -4067,7 +4067,10 @@
         "shown": "Megoldás megjelenítve.",
         "showSolution": "Megoldás mutatása",
         "retry": "Újra",
-        "counter": "{{i}}. feladat / {{n}}"
+        "counter": "{{i}}. feladat / {{n}}",
+        "bookExample": "Példa a könyvben",
+        "bookPage": "{{n}}. o.",
+        "bookPart": "{{n}}. rész"
       }
     },
     "onlyMine": "Csak a saját játszmáim",

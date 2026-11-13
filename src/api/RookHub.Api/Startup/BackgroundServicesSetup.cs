@@ -42,7 +42,7 @@ namespace RookHub.Api.Startup;
 /// ClubSecondEngineScheduler           intern: ClubSecondEngine:EngineName   Vereinspartien zusätzlich auf Lc0
 /// TacticHarvestScheduler              intern: TacticHarvest:Enabled         Taktik-Ernte aus fertigen Analysen
 /// MoveClassHarvestWorker              immer                                 Zug-Klassen vorrechnen (Version)
-/// PuzzleSignatureWorker               PuzzleSignatures:Enabled (Vorgabe an) Mattbilder der Lichess-Aufgaben (Übungen)
+/// PuzzleSignatureWorker               PuzzleSignatures:Enabled (Vorgabe an) Mattbilder/Motive der Lichess-Aufgaben + Buchdiagramme (Übungen)
 /// LineStudyWorker                     immer                                 Linien „ohne Engine" rechnen
 /// TrainingPrewarmScheduler            intern: Prep:TrainingPrewarm+LocalUrl Trainingslinien-Schätzung nachts vorrechnen
 /// LeagueOnlineSyncScheduler           intern: LeagueOnline:Enabled          Online-Partien der Ligaspieler

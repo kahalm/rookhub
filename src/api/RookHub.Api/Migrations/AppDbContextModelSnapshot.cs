@@ -2740,6 +2740,51 @@ namespace RookHub.Api.Migrations
                     b.ToTable("EbookDiagramReports");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.EbookDiagramSignature", b =>
+                {
+                    b.Property<int>("DiagramId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<string>("Chapter")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("Family")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("LineHash")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte>("MateIn")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<int>("Shuffle")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Solvable")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<long>("Strict")
+                        .HasColumnType("bigint");
+
+                    b.Property<short>("Version")
+                        .HasColumnType("smallint");
+
+                    b.HasKey("DiagramId", "Kind");
+
+                    b.HasIndex("Kind", "Family", "Shuffle");
+
+                    b.HasIndex("Kind", "Strict", "Shuffle");
+
+                    b.ToTable("EbookDiagramSignatures");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.EbookFile", b =>
                 {
                     b.Property<int>("Id")
@@ -10231,6 +10276,17 @@ namespace RookHub.Api.Migrations
                     b.Navigation("Ebook");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookDiagramSignature", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.EbookDiagram", "Diagram")
+                        .WithMany()
+                        .HasForeignKey("DiagramId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Diagram");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookFile", b =>

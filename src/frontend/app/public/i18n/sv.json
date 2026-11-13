@@ -3592,7 +3592,10 @@
         "shown": "Lösningen visas.",
         "showSolution": "Visa lösning",
         "retry": "Igen",
-        "counter": "Problem {{i}} av {{n}}"
+        "counter": "Problem {{i}} av {{n}}",
+        "bookExample": "Exempel i boken",
+        "bookPage": "s. {{n}}",
+        "bookPart": "Avsnitt {{n}}"
       }
     },
     "onlyMine": "Bara mina partier",

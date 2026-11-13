@@ -9,15 +9,19 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
-## [~] Empfohlene Übungen in der Zusammenfassung — Mattbilder 0.960.0, taktische Motive 0.961.0 (2026-11-13)
+## [~] Empfohlene Übungen in der Zusammenfassung — Mattbilder 0.960.0, taktische Motive 0.961.0, Buchbeispiele 0.962.0 (2026-11-13)
 
 `docs/api/partie-zusammenfassung.md` → „Empfohlene Übungen“. Fertig: Mattbilder beider Seiten (gespielt/verpasst) → Lichess-Aufgaben
 gleicher Signatur/Familie, Thema-Rückfall nur dann; lösbar auf der Seite. Offen (Wunsch 13.11., in dieser Reihenfolge):
 - [x] Motiv-Erkenner für taktische Fehler (0.961.0): fork, pin, skewer, discoveredAttack, doubleCheck, hangingPiece, promotion.
 - [ ] Weitere Motive nur mit sicherer Regel: trappedPiece, capturingDefender (erste Fassung 23 % Übereinstimmung, verworfen),
       advancedPawn (55 %), Ablenkung/Hinlenkung; Taktik, die erst ab dem 2. Lösungszug beginnt (Partie 221: 9.e5! mit Lf3/Dxa8 — nicht erkannt).
-- [ ] Buchkapitel vor Lichess: Beispiele/Aufgaben aus dem Kapitel, das genau dieses Motiv behandelt (EbookDiagrams + geprüfte Lösung,
-      sonst „Beispiel im Buch“ mit Sprung in den Leser), Zugriffsrechte der Bücher, anonym im Zweifel nur Lichess; Quelle an der Karte.
+- [x] Buchbeispiele vor Lichess (0.962.0): gleiche Signaturen aus Buchdiagrammen (`EbookDiagramSignatures`), lösbar nur mit bestätigter
+      Buchlösung, Engine-Lösung = „Beispiel im Buch“ (≤ 2), Rechte wie die Bibliothek, Kapitel aus dem Inhaltsverzeichnis, Quelle + Leser-Sprung.
+- [ ] Buchbeispiele: nach dem Prod-Lauf ansehen, ob Problemkompositionen (Loyd, „Kunstwerke auf 64 Feldern“ …) als Beispiele zu oft
+      vorn landen — ggf. Sammlungen/Tags „Problemschach“ zurückstufen. Diagramme ohne Lösung (~620 000) haben keine Linie und damit kein
+      Bild/Motiv; ein „Beispiel“ aus ihnen ginge nur über die Stellung allein (nicht gebaut). Kapitel, das das Motiv BEHANDELT (Kapitelname
+      ↔ Thema), ist nicht ausgewertet — gewählt wird nach Signatur, das Kapitel steht nur als Quelle dabei.
 - [ ] Strenge Mattbild-Signatur ist sehr fein (Partie 221: 0 strenge, 107 Familien-Treffer im Fenster ±250) — nach dem Prod-Lauf
       Treffer zählen und ggf. die Typen der beherrschenden Figuren aus der strengen Stufe nehmen (nur Deckung behalten).
 

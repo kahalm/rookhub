@@ -40,8 +40,33 @@ export interface ClubGameSummaryReadiness {
   analyzedPositions?: number;
 }
 
-/** Eine Lichess-Aufgabe der „Empfohlenen Übungen“ (0.960.0): `fen` VOR dem Zug des Gegners, `moves` = Gegnerzug, dann abwechselnd Löser/Gegner (UCI). */
-export interface SummaryExercise { id: number; fen: string; moves: string[]; rating: number; themes: string[]; match: 'strict' | 'family' | 'theme'; }
+/** Quelle eines Buchbeispiels (0.962.0): `page` = Seite im PDF (`pdfPage`) bzw. Kapitel im EPUB; `solvable` = Buchlösung von Stockfish bestätigt. */
+export interface SummaryExerciseBook {
+  ebookId: number; title: string; author: string | null; chapter: string | null; page: number; pdfPage: boolean; label: string | null; solvable: boolean;
+}
+
+/**
+ * Eine Aufgabe der „Empfohlenen Übungen“ (0.960.0). Lichess (`source` fehlt oder `lichess`): `fen` VOR dem Zug des Gegners, `moves` =
+ * Gegnerzug, dann abwechselnd Löser/Gegner (UCI). Buch (`source: 'book'`, 0.962.0): `id` = Diagramm, `fen` = Diagrammstellung mit dem
+ * Löser am Zug, `moves` = Buchlösung ab dem Löser — leer, wenn sie nicht bestätigt ist (dann nur „Beispiel im Buch“).
+ */
+export interface SummaryExercise {
+  id: number; fen: string; moves: string[]; rating: number; themes: string[]; match: 'strict' | 'family' | 'theme';
+  source?: 'lichess' | 'book'; book?: SummaryExerciseBook | null;
+}
+
+/** Eindeutiger Schlüssel einer Aufgabe (Lichess- und Diagramm-Ids können gleich sein). */
+export function exerciseKey(ex: SummaryExercise): string { return `${ex.source ?? 'lichess'}:${ex.id}`; }
+
+/** Lösbar auf der Seite: jede Lichess-Aufgabe, ein Buchdiagramm nur mit bestätigter Lösung. */
+export function exerciseSolvable(ex: SummaryExercise): boolean { return ex.source !== 'book' || (!!ex.book?.solvable && ex.moves.length > 0); }
+
+/** Sprung in den Leser an das Diagramm (wie „Im Buch“ aus dem Kurs: `?diagram=`, beim PDF mit Seite). */
+export function exerciseReaderQuery(ex: SummaryExercise): Record<string, string | number> {
+  const b = ex.book;
+  if (!b) return {};
+  return b.pdfPage ? { page: b.page, fmt: 'pdf', diagram: ex.id } : { diagram: ex.id };
+}
 
 /** Eine Stelle der Partie mit ihren Aufgaben; `ply` = Stellung VOR dem Halbzug, `reason` → `games.summary.exercises.reason.*`. */
 export interface SummaryExerciseGroup {

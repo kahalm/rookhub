@@ -3592,7 +3592,10 @@
         "shown": "Soluție afișată.",
         "showSolution": "Arată soluția",
         "retry": "Din nou",
-        "counter": "Problema {{i}} din {{n}}"
+        "counter": "Problema {{i}} din {{n}}",
+        "bookExample": "Exemplu în carte",
+        "bookPage": "p. {{n}}",
+        "bookPart": "Secțiunea {{n}}"
       }
     },
     "onlyMine": "Doar partidele mele",

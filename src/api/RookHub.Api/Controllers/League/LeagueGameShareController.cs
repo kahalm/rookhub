@@ -25,7 +25,7 @@ public class LeagueGameShareController(LeagueGameShares shares) : ControllerBase
 [Route("api/league/s-club-game/{token}")]
 [AllowAnonymous]
 [EnableRateLimiting("anonymous-tournament")]
-public class ClubGameLinkController(ClubGameLinks links) : ControllerBase
+public class ClubGameLinkController(ClubGameLinks links) : BaseApiController
 {
     [HttpGet]
     public async Task<IActionResult> Get(string token, CancellationToken ct) => await links.ReadAsync(token, ct) is { } g ? Ok(g) : NotFound();
@@ -42,5 +42,5 @@ public class ClubGameLinkController(ClubGameLinks links) : ControllerBase
     /// <summary>Empfohlene Übungen derselben Partie (0.960.0).</summary>
     [HttpGet("summary/exercises")]
     public async Task<IActionResult> SummaryExercises(string token, [FromServices] RookHub.Api.Services.Puzzles.GameExercises exercises, CancellationToken ct) =>
-        await exercises.ForClubLinkAsync(token, ct) is { } e ? Ok(e) : NotFound();
+        await exercises.ForClubLinkAsync(token, ct, await EbookViewerAsync()) is { } e ? Ok(e) : NotFound();
 }

@@ -17,3 +17,8 @@ Backend, Auswahl und Mattbild: `docs/api/partie-zusammenfassung.md`, Abschnitt �
   zählt jedes Matt; „Lösung zeigen“ spielt den Rest vor; „Weiter“ = nächste Aufgabe der Stelle.
 - Angemeldet wird der ERSTE Ausgang je Aufgabe über `PuzzleService.recordAttempt` verbucht (wie der normale Löser, also mit
   Puzzle-Wertung); anonym nur lösen.
+- **Buchbeispiele** (0.962.0, `source: 'book'`): Karte mit der Diagrammstellung (keine Zugmarke, Blick aus Sicht der Seite am Zug), darunter
+  die Quellzeile (`a.book`: Titel · Autor · Kapitel bzw. „S. N“/„Abschnitt N“, Link in den Leser über `exerciseReaderQuery`). Lösbar
+  (`exerciseSolvable`) → wie eine Lichess-Karte, der `LineSolver` startet ohne Vorspiel (`startPly: 0`) und verbucht nichts; sonst ist die
+  Karte selbst ein Link in den Leser mit „Beispiel im Buch“ und fehlt im Löser (der blättert nur durch die lösbaren Aufgaben der Stelle).
+  Ergebnisse je `exerciseKey` (`lichess:<id>` / `book:<id>` — Ids können gleich sein).

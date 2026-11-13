@@ -3592,7 +3592,10 @@
         "shown": "Oplossing getoond.",
         "showSolution": "Oplossing tonen",
         "retry": "Opnieuw",
-        "counter": "Opgave {{i}} van {{n}}"
+        "counter": "Opgave {{i}} van {{n}}",
+        "bookExample": "Voorbeeld in het boek",
+        "bookPage": "p. {{n}}",
+        "bookPart": "Deel {{n}}"
       }
     },
     "onlyMine": "Alleen mijn partijen",

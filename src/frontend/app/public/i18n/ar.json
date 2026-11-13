@@ -3592,7 +3592,10 @@
         "shown": "تم عرض الحل.",
         "showSolution": "عرض الحل",
         "retry": "أعد المحاولة",
-        "counter": "اللغز {{i}} من {{n}}"
+        "counter": "اللغز {{i}} من {{n}}",
+        "bookExample": "مثال في الكتاب",
+        "bookPage": "ص. {{n}}",
+        "bookPart": "القسم {{n}}"
       }
     },
     "onlyMine": "مبارياتي فقط",

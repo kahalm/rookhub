@@ -3592,7 +3592,10 @@
         "shown": "Solusi ditampilkan.",
         "showSolution": "Tampilkan solusi",
         "retry": "Coba lagi",
-        "counter": "Teka-teki {{i}} dari {{n}}"
+        "counter": "Teka-teki {{i}} dari {{n}}",
+        "bookExample": "Contoh di buku",
+        "bookPage": "hlm. {{n}}",
+        "bookPart": "Bagian {{n}}"
       }
     },
     "onlyMine": "Hanya permainan saya",

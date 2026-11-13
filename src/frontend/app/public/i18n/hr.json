@@ -3657,7 +3657,10 @@
         "shown": "Rješenje prikazano.",
         "showSolution": "Prikaži rješenje",
         "retry": "Ponovno",
-        "counter": "Zadatak {{i}} od {{n}}"
+        "counter": "Zadatak {{i}} od {{n}}",
+        "bookExample": "Primjer u knjizi",
+        "bookPage": "str. {{n}}",
+        "bookPart": "Odjeljak {{n}}"
       }
     },
     "onlyMine": "Samo moje partije",

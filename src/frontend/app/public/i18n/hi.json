@@ -3592,7 +3592,10 @@
         "shown": "हल दिखाया गया।",
         "showSolution": "हल दिखाएँ",
         "retry": "फिर से",
-        "counter": "पहेली {{i}} / {{n}}"
+        "counter": "पहेली {{i}} / {{n}}",
+        "bookExample": "पुस्तक में उदाहरण",
+        "bookPage": "पृ. {{n}}",
+        "bookPart": "खंड {{n}}"
       }
     },
     "onlyMine": "केवल मेरे खेल",

@@ -480,7 +480,7 @@ public class LeagueClubController : BaseApiController
 [Route("api/league/s/{token}/club")]
 [AllowAnonymous]
 [EnableRateLimiting("anonymous-tournament")]
-public class LeagueShareClubController : ControllerBase
+public class LeagueShareClubController : BaseApiController
 {
     private readonly LeagueService _league;
     private readonly LeagueClubService _club;
@@ -551,7 +551,7 @@ public class LeagueShareClubController : ControllerBase
     [HttpGet("games/{id:int}/summary/exercises")]
     public async Task<IActionResult> GameSummaryExercises(string token, int id, [FromServices] LeagueFixtureGames fixtures,
         [FromServices] RookHub.Api.Services.Puzzles.GameExercises exercises, CancellationToken ct) =>
-        await ClubOfLinkedGameAsync(token, id, fixtures, ct) is null ? NotFound() : Ok(await exercises.ForClubGameAsync(id, ct));
+        await ClubOfLinkedGameAsync(token, id, fixtures, ct) is null ? NotFound() : Ok(await exercises.ForClubGameAsync(id, ct, await EbookViewerAsync()));
 
     [HttpPost("games/preview")]
     [RequestSizeLimit(ClubUpload.MaxBodyBytes)]

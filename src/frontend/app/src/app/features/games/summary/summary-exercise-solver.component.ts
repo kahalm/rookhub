@@ -9,7 +9,7 @@ import { PuzzleService } from '../../puzzles/puzzle.service';
 import { PreferencesService } from '../../../core/preferences.service';
 import { AuthService } from '../../../core/auth.service';
 import { LineSolver } from '../../../shared/chess/line-solver';
-import { SummaryExercise } from './club-game-summary.service';
+import { SummaryExercise, exerciseKey } from './club-game-summary.service';
 
 /** Stand des Lösers: am Zug, Fehlzug (Brett nimmt ihn gleich zurück), gelöst, Lösung gezeigt. */
 export type ExerciseStatus = 'play' | 'wrong' | 'solved' | 'shown';
@@ -20,10 +20,10 @@ const UNDO_MS = 700;
 
 /**
  * Löser der „Empfohlenen Übungen“ (0.960.0) — klein und ohne Modi: Lichess-Aufgabe über den gemeinsamen {@link LineSolver}
- * (Vorspiel = Zug des Gegners), Brett {@link PuzzleBoardComponent}. Richtig → Gegner antwortet; falsch → der Zug steht kurz und
+ * (Vorspiel = Zug des Gegners; Buchdiagramm seit 0.962.0 ohne Vorspiel, der Löser zieht zuerst), Brett {@link PuzzleBoardComponent}. Richtig → Gegner antwortet; falsch → der Zug steht kurz und
  * wird zurückgenommen; „Lösung zeigen“ spielt den Rest vor; „Weiter“ geht zur nächsten Aufgabe der Stelle. Beim letzten Zug zählt
  * wie bei Lichess jedes Matt. Angemeldet wird der ERSTE Ausgang je Aufgabe wie im normalen Löser verbucht
- * (`POST /api/puzzles/{id}/attempt`), anonym nur gelöst.
+ * (`POST /api/puzzles/{id}/attempt`, nur Lichess-Aufgaben), anonym nur gelöst.
  */
 @Component({
   selector: 'app-summary-exercise-solver',
@@ -47,7 +47,7 @@ const UNDO_MS = 700;
         }
       </p>
       <p class="meta">{{ 'games.summary.exercises.counter' | translate: { i: index() + 1, n: exercises().length } }}
-        · {{ 'games.summary.exercises.rating' | translate: { rating: current()?.rating } }}</p>
+        @if (current()?.book; as b) { · <em>{{ b.title }}</em> } @else { · {{ 'games.summary.exercises.rating' | translate: { rating: current()?.rating } }} }</p>
       <div class="actions">
         @if (status() === 'play' || status() === 'wrong') {
           <button mat-stroked-button type="button" class="show" (click)="showSolution()">{{ 'games.summary.exercises.showSolution' | translate }}</button>
@@ -74,7 +74,7 @@ export class SummaryExerciseSolverComponent {
   readonly exercises = input.required<SummaryExercise[]>();
   readonly index = model(0);
   /** Erster Ausgang je Aufgabe (gelöst oder nicht) — für die Häkchen an den Karten. */
-  readonly result = output<{ id: number; solved: boolean }>();
+  readonly result = output<{ key: string; solved: boolean }>();
 
   readonly preferences = inject(PreferencesService);
   private readonly puzzles = inject(PuzzleService);
@@ -91,7 +91,7 @@ export class SummaryExerciseSolverComponent {
 
   private solver: LineSolver | null = null;
   private startedAt = 0;
-  private readonly reported = new Set<number>();
+  private readonly reported = new Set<string>();
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
@@ -105,7 +105,7 @@ export class SummaryExerciseSolverComponent {
   private setup(ex: SummaryExercise | null): void {
     this.clearTimer();
     this.current.set(ex);
-    this.solver = ex ? new LineSolver({ fen: ex.fen, line: ex.moves.map(uci => ({ uci })), startPly: 1 }) : null;
+    this.solver = ex ? new LineSolver({ fen: ex.fen, line: ex.moves.map(uci => ({ uci })), startPly: ex.source === 'book' ? 0 : 1 }) : null;
     this.status.set('play');
     this.startedAt = Date.now();
     this.sync();
@@ -202,10 +202,12 @@ export class SummaryExerciseSolverComponent {
 
   private report(solved: boolean): void {
     const ex = this.current();
-    if (!ex || this.reported.has(ex.id)) return;
-    this.reported.add(ex.id);
-    this.result.emit({ id: ex.id, solved });
-    if (!this.auth.isLoggedIn) return;
+    const key = ex ? exerciseKey(ex) : '';
+    if (!ex || this.reported.has(key)) return;
+    this.reported.add(key);
+    this.result.emit({ key, solved });
+    // Buchdiagramme sind keine Puzzles der Datenbank — nichts zu verbuchen.
+    if (!this.auth.isLoggedIn || ex.source === 'book') return;
     const seconds = Math.max(1, Math.round((Date.now() - this.startedAt) / 1000));
     // Wie der normale Löser verbuchen; ein Fehlschlag hier ist still (Hintergrund-Meldung, die Übung bleibt lösbar).
     this.puzzles.recordAttempt(ex.id, solved, seconds).subscribe({ error: () => undefined });

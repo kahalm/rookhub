@@ -4,6 +4,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
 import { SummaryExercisesComponent, SummaryExerciseSheetComponent, exerciseMoveLabel } from './summary-exercises.component';
 import { SummaryExerciseSolverComponent } from './summary-exercise-solver.component';
 import { SummaryExercise, SummaryExerciseGroup } from './club-game-summary.service';
@@ -15,6 +16,11 @@ import { PreferencesService } from '../../../core/preferences.service';
 const ex = (id: number): SummaryExercise =>
   ({ id, fen: '6k1/p4p1p/5P1Q/8/8/8/8/K7 b - - 0 1', moves: ['a7a6', 'h6g7'], rating: 1500 + id, themes: ['mateIn1'], match: 'strict' });
 const backRank: SummaryExercise = { id: 99, fen: '6k1/p4ppp/8/8/8/8/8/K2RR3 b - - 0 1', moves: ['a7a6', 'd1d8'], rating: 1400, themes: ['mateIn1'], match: 'family' };
+// Buchdiagramme (0.962.0): Weiß am Zug setzt mit Dg7# (Bauer f6 deckt) matt — lösbar mit bestätigter Buchlösung bzw. nur Beispiel.
+const bookEx = (id: number, solvable: boolean, extra: Partial<SummaryExercise['book']> = {}): SummaryExercise => ({
+  id, fen: '6k1/5p1p/5P1Q/8/8/8/8/K7 w - - 0 1', moves: solvable ? ['h6g7'] : [], rating: 0, themes: [], match: 'family', source: 'book',
+  book: { ebookId: 683, title: 'The Chess Toolbox', author: 'Thomas Willemze', chapter: null, page: 24, pdfPage: true, label: null, solvable, ...extra },
+});
 const group = (ply: number, n = 2): SummaryExerciseGroup =>
   ({ ply, white: true, reason: 'missedMate', mateIn: 1, alsoPlies: [], exercises: Array.from({ length: n }, (_, i) => ex(ply * 10 + i)) });
 
@@ -24,7 +30,7 @@ function setup(opts: { narrow?: boolean; loggedIn?: boolean } = {}) {
   TestBed.configureTestingModule({
     imports: [SummaryExercisesComponent],
     providers: [
-      provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+      provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }), provideRouter([]),
       { provide: PuzzleService, useValue: { recordAttempt: record } },
       { provide: AuthService, useValue: { isLoggedIn: !!opts.loggedIn } },
       { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
@@ -70,7 +76,7 @@ describe('SummaryExercisesComponent', () => {
     f.componentRef.setInput('groups', [group(10)]);
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
-    (el.querySelectorAll('.card')[1] as HTMLElement).click();
+    (el.querySelectorAll('.card-hit')[1] as HTMLElement).click();
     f.detectChanges();
     const solver = f.debugElement.query(d => d.componentInstance instanceof SummaryExerciseSolverComponent).componentInstance as SummaryExerciseSolverComponent;
     expect(solver.index()).toBe(1);
@@ -100,11 +106,48 @@ describe('SummaryExercisesComponent', () => {
     const f = TestBed.createComponent(SummaryExercisesComponent);
     f.componentRef.setInput('groups', [group(10)]);
     f.detectChanges();
-    ((f.nativeElement as HTMLElement).querySelector('.card') as HTMLElement).click();
+    ((f.nativeElement as HTMLElement).querySelector('.card-hit') as HTMLElement).click();
     f.detectChanges();
     expect(dialog.open).toHaveBeenCalledWith(SummaryExerciseSheetComponent, jasmine.objectContaining({ data: jasmine.objectContaining({ index: 0 }) }));
     expect((f.nativeElement as HTMLElement).querySelector('app-summary-exercise-solver')).toBeNull();
     history.back();
+  });
+
+  it('Buchbeispiele (0.962.0): Diagrammstellung ohne Gegnerzug, Quelle mit Kapitel bzw. Seite, Sprung in den Leser', () => {
+    setup();
+    const f = TestBed.createComponent(SummaryExercisesComponent);
+    const g: SummaryExerciseGroup = { ...group(10, 0), exercises: [bookEx(5, true, { chapter: 'Kapitel 3 Mattbilder' }), bookEx(6, false), ex(5)] };
+    f.componentRef.setInput('groups', [g]);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    const boards = f.debugElement.queryAll(d => d.name === 'app-chess-board').map(d => d.componentInstance);
+    expect(boards[0].fen).toBe('6k1/5p1p/5P1Q/8/8/8/8/K7 w - - 0 1');
+    expect(boards[0].lastMove).toBeUndefined();
+    const sources = Array.from(el.querySelectorAll('a.book')).map(a => a.textContent ?? '');
+    expect(sources.length).toBe(2);
+    expect(sources[0]).toContain('The Chess Toolbox');
+    expect(sources[0]).toContain('Kapitel 3 Mattbilder');
+    expect(el.querySelector('a.book')?.getAttribute('href')).toBe('/ebooks/683?page=24&fmt=pdf&diagram=5');
+    // Nur-Beispiel: die Karte selbst führt in den Leser, kein Löser.
+    const example = el.querySelectorAll('.card')[1];
+    expect(example.querySelector('a.card-hit')?.getAttribute('href')).toBe('/ebooks/683?page=24&fmt=pdf&diagram=6');
+    expect(example.querySelector('button.card-hit')).toBeNull();
+    // Die Lichess-Aufgabe ist im Löser die zweite (das Beispiel zählt nicht mit).
+    (el.querySelectorAll('.card')[2].querySelector('.card-hit') as HTMLElement).click();
+    f.detectChanges();
+    const solver = f.debugElement.query(d => d.componentInstance instanceof SummaryExerciseSolverComponent).componentInstance as SummaryExerciseSolverComponent;
+    expect(solver.exercises().length).toBe(2);
+    expect(solver.index()).toBe(1);
+  });
+
+  it('EPUB-Diagramm ohne Kapitel: Abschnitt statt Seite, Sprung nur mit Diagramm', () => {
+    setup();
+    const f = TestBed.createComponent(SummaryExercisesComponent);
+    f.componentRef.setInput('groups', [{ ...group(10, 0), exercises: [bookEx(7, true, { pdfPage: false, page: 13 })] }]);
+    f.detectChanges();
+    const a = (f.nativeElement as HTMLElement).querySelector('a.book');
+    expect(a?.getAttribute('href')).toBe('/ebooks/683?diagram=7');
+    expect(a?.textContent).toContain('games.summary.exercises.bookPart');
   });
 });
 
@@ -161,5 +204,14 @@ describe('SummaryExerciseSolverComponent', () => {
     expect(c.index()).toBe(1);
     expect(c.current()?.id).toBe(2);
     expect(c.status()).toBe('play');
+  });
+
+  it('Buchdiagramm (0.962.0): Löser zieht zuerst, gelöst wird nicht als Puzzle verbucht', () => {
+    const { c, record } = solver(true, [bookEx(5, true)]);
+    expect(c.fen()).toBe('6k1/5p1p/5P1Q/8/8/8/8/K7 w - - 0 1');
+    expect(c.orientation()).toBe('white');
+    c.onMove({ orig: 'h6', dest: 'g7' });
+    expect(c.status()).toBe('solved');
+    expect(record).not.toHaveBeenCalled();
   });
 });

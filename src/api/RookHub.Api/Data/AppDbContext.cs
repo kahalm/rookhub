@@ -46,6 +46,7 @@ public partial class AppDbContext : DbContext
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<PuzzleTag> PuzzleTags => Set<PuzzleTag>();
     public DbSet<PuzzleSignature> PuzzleSignatures => Set<PuzzleSignature>();
+    public DbSet<EbookDiagramSignature> EbookDiagramSignatures => Set<EbookDiagramSignature>();
     /// <summary>Als „besonders einfach" markierte Lichess-Puzzles der Kinderseite (Stufen-Leiter).</summary>
     public DbSet<KidsPuzzle> KidsPuzzles => Set<KidsPuzzle>();
     // LeagueHub (TMM-Aufstellungs-Prognosen)

@@ -3657,7 +3657,10 @@
         "shown": "Solution shown.",
         "showSolution": "Show solution",
         "retry": "Try again",
-        "counter": "Puzzle {{i}} of {{n}}"
+        "counter": "Puzzle {{i}} of {{n}}",
+        "bookExample": "Example in the book",
+        "bookPage": "p. {{n}}",
+        "bookPart": "Section {{n}}"
       }
     },
     "onlyMine": "Only my games",

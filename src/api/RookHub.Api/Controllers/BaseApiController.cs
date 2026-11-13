@@ -68,4 +68,15 @@ public abstract class BaseApiController : ControllerBase
                 && (await resolver.GetAsync(userId)).Has(permission);
         return User.HasClaim(PermissionAuthorizationHandler.PermissionClaimType, permission);
     }
+
+    /// <summary>Buchzugriff des Betrachters genau wie in der Bibliothek (<c>EbooksController</c>, 0.962.0 für die Buchbeispiele der
+    /// Empfohlenen Übungen): angemeldet = sein Konto (+ <c>ebooks.manage</c>), sonst Besucher mit <c>X-Visitor-Id</c> — der sieht nur
+    /// die für „Alle“ freigegebenen Bücher und seine eigenen anonymen Uploads.</summary>
+    protected async Task<Services.Ebooks.EbookViewer> EbookViewerAsync()
+    {
+        var signedIn = GetUserIdOrNull() is not null;
+        var caller = signedIn ? GetUserId() : Services.Ebooks.EbookCaller.Anonymous(Request?.Headers["X-Visitor-Id"].FirstOrDefault());
+        var resolver = HttpContext?.RequestServices?.GetService(typeof(Services.Accounts.PermissionResolver)) as Services.Accounts.PermissionResolver;
+        return new(caller, signedIn && await HasPermissionAsync(resolver, Models.Permissions.EbooksManage));
+    }
 }

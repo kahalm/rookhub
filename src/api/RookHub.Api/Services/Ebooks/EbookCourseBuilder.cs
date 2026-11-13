@@ -52,27 +52,11 @@ public class EbookCourseBuilder
     {
         var result = new Dictionary<int, string>();
         if (_storage?.Root == null || diagrams.Count == 0) return result;
-        var ebook = await _db.Ebooks.Include(b => b.Files).AsNoTracking().FirstOrDefaultAsync(b => b.Id == ebookId, ct);
-        if (ebook == null) return result;
-        IReadOnlyList<EbookChapterIndex.Entry> Load(string format, bool derived, Func<string, IReadOnlyList<EbookChapterIndex.Entry>> read)
-        {
-            var file = ebook.Files.FirstOrDefault(f => f.Format == format && f.Derived == derived);
-            var path = file == null ? null : _storage.ResolveFile(ebook, file);
-            return path != null && File.Exists(path) ? read(path) : [];
-        }
-        var pdf = diagrams.Any(d => d.W > 0) ? Load("pdf", false, EbookChapterIndex.FromPdf) : [];
-        var epub = diagrams.Any(d => d.W <= 0 || (pdf.Count == 0 && d.EpubChapter != null)) ? Load("epub", false, EbookChapterIndex.FromEpub) : [];
         // PDF ohne Lesezeichen: die Diagramme kennen ihr Kapitel im EPUB (EpubChapter) — im echten EPUB des Buchs
-        // (0.793.0) oder im Fließtext-EPUB (0.802.0), dessen Kapitel aus den Überschriften stammen.
-        var reflow = pdf.Count == 0 && diagrams.Any(d => d.W > 0 && d.EpubChapter != null)
-            ? (epub.Count > 0 ? epub : Load("epub", true, EbookChapterIndex.FromEpub)) : [];
+        // (0.793.0) oder im Fließtext-EPUB (0.802.0), dessen Kapitel aus den Überschriften stammen (EbookChapterLookup).
+        var lookup = await EbookChapterLookup.ForBookAsync(_db, _storage, ebookId, ct);
         foreach (var d in diagrams)
-        {
-            var chapter = d.W <= 0 ? EbookChapterIndex.Pick(epub, d.Page)
-                : pdf.Count > 0 ? EbookChapterIndex.Pick(pdf, d.Page)
-                : d.EpubChapter is int ec ? EbookChapterIndex.Pick(reflow, ec) : null;
-            if (chapter != null) result[d.Id] = chapter;
-        }
+            if (lookup.Of(d) is { } chapter) result[d.Id] = chapter;
         return result;
     }
 

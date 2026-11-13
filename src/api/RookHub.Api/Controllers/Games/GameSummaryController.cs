@@ -27,13 +27,13 @@ public class GameSummaryController(OwnGameSummaries summaries) : BaseApiControll
     /// <summary>Empfohlene Übungen zur Partie (0.960.0, <see cref="GameExercises"/>) → <c>{ groups }</c>; 404 unbekannt/fremd.</summary>
     [HttpGet("{id:int}/summary/exercises")]
     public async Task<IActionResult> Exercises(int id, [FromServices] GameExercises exercises, CancellationToken ct) =>
-        await exercises.ForOwnGameAsync(GetUserId(), id, ct) is { } dto ? Ok(dto) : NotFound();
+        await exercises.ForOwnGameAsync(GetUserId(), id, ct, await EbookViewerAsync()) is { } dto ? Ok(dto) : NotFound();
 
     /// <summary>Dasselbe über den Teilen-Link <c>/g/{token}</c>, ohne Anmeldung; 404 unbekannter Link.</summary>
     [HttpGet("shared/{token}/summary/exercises")]
     [AllowAnonymous]
     public async Task<IActionResult> SharedExercises(string token, [FromServices] GameExercises exercises, CancellationToken ct) =>
-        await exercises.ForSharedOwnGameAsync(token, ct) is { } dto ? Ok(dto) : NotFound();
+        await exercises.ForSharedOwnGameAsync(token, ct, await EbookViewerAsync()) is { } dto ? Ok(dto) : NotFound();
 
     public sealed record RequestBody(string? Lang);
 

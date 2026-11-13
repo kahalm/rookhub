@@ -109,6 +109,20 @@ internal sealed class PuzzleSignatureConfiguration : IEntityTypeConfiguration<Pu
     }
 }
 
+internal sealed class EbookDiagramSignatureConfiguration : IEntityTypeConfiguration<EbookDiagramSignature>
+{
+    public void Configure(EntityTypeBuilder<EbookDiagramSignature> e)
+    {
+        e.HasKey(s => new { s.DiagramId, s.Kind });
+        // „Buchdiagramme gleicher Signatur ab Mischwert x“ → reiner Index-Bereich, je Stufe einer.
+        e.HasIndex(s => new { s.Kind, s.Strict, s.Shuffle });
+        e.HasIndex(s => new { s.Kind, s.Family, s.Shuffle });
+        e.Property(s => s.Chapter).HasMaxLength(200);
+        // Neuerkennung löscht Diagramme → ihre Signaturen gehen mit.
+        e.HasOne(s => s.Diagram).WithMany().HasForeignKey(s => s.DiagramId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class KidsPuzzleConfiguration : IEntityTypeConfiguration<KidsPuzzle>
 {
     public void Configure(EntityTypeBuilder<KidsPuzzle> e)

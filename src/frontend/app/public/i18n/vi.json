@@ -3592,7 +3592,10 @@
         "shown": "Đã hiện lời giải.",
         "showSolution": "Hiện lời giải",
         "retry": "Thử lại",
-        "counter": "Câu đố {{i}} / {{n}}"
+        "counter": "Câu đố {{i}} / {{n}}",
+        "bookExample": "Ví dụ trong sách",
+        "bookPage": "tr. {{n}}",
+        "bookPart": "Phần {{n}}"
       }
     },
     "onlyMine": "Chỉ ván của tôi",

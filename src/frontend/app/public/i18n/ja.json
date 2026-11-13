@@ -3592,7 +3592,10 @@
         "shown": "解答を表示しました。",
         "showSolution": "解答を表示",
         "retry": "もう一度",
-        "counter": "問題 {{i}} / {{n}}"
+        "counter": "問題 {{i}} / {{n}}",
+        "bookExample": "本の例",
+        "bookPage": "{{n}}ページ",
+        "bookPart": "セクション{{n}}"
       }
     },
     "onlyMine": "自分の対局のみ",

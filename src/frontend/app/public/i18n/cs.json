@@ -3592,7 +3592,10 @@
         "shown": "Řešení zobrazeno.",
         "showSolution": "Ukázat řešení",
         "retry": "Znovu",
-        "counter": "Úloha {{i}} z {{n}}"
+        "counter": "Úloha {{i}} z {{n}}",
+        "bookExample": "Příklad v knize",
+        "bookPage": "s. {{n}}",
+        "bookPart": "Oddíl {{n}}"
       }
     },
     "onlyMine": "Jen moje partie",
