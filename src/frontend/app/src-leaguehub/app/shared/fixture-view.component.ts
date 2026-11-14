@@ -8,7 +8,7 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
 import { GameReplayComponent, ReplayMark } from '@rh/shared/player-card/game-replay.component';
 import { MatMenuModule } from '@angular/material/menu';
 import { RouterLink } from '@angular/router';
-import { HandoffService } from '@rh/core/handoff.service';
+import { HandoffService, wantsNewTab } from '@rh/core/handoff.service';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { BoardMovesComponent } from './board-moves.component';
 import { GameMarkers, LineupMatch, LineupsApiService, ReplayStart } from '../core/lineups';
@@ -86,7 +86,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                                       (pick)="openAt(p, $event)" />
                     }
                     @if (p.clubGameId && rookHub) {
-                      <button type="button" class="icon-btn" (click)="openInRookHub(p.clubGameId)"
+                      <button type="button" class="icon-btn" (click)="openInRookHub(p.clubGameId, $event)" (auxclick)="openInRookHub(p.clubGameId, $event)"
                               title="Analyse — RookHubs Partieseite mit Bewertungskurve, Fehlern und Zug-Klassen"
                               [attr.aria-label]="'Analyse Brett ' + p.board">
                         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2"
@@ -579,10 +579,14 @@ export class FixtureViewComponent {
 
   /** Die Vereinspartie auf RookHubs Partieseite (wie „Analyse" in der Vereinsliste), mit Einmal-Code angemeldet. */
   /** Angemeldet RookHubs `club-games/{id}` (Einmal-Code), über den Teilen-Link `s/{token}/club-games/{id}` ohne Anmeldung (0.838.3). */
-  openInRookHub(id: number): void {
+  openInRookHub(id: number, ev?: MouseEvent): void {
+    if (ev?.type === 'auxclick' && ev.button !== 1) return;        // rechte Maustaste: Kontextmenü, kein Sprung
     const token = this.shareToken();
     // `?ask=1` (0.855.1): drüben fragt die Partieseite „mit/ohne Engine" — über den Teilen-Link nicht (ohne Konto kein „ohne Engine").
-    void this.handoff.jumpToRookHub(token ? `s/${encodeURIComponent(token)}/club-games/${id}` : `club-games/${id}?ask=1`);
+    const path = token ? `s/${encodeURIComponent(token)}/club-games/${id}` : `club-games/${id}?ask=1`;
+    // Strg/Cmd/Umschalt + Klick und die mittlere Maustaste öffnen einen neuen Tab (0.969.1).
+    if (wantsNewTab(ev)) { ev?.preventDefault(); void this.handoff.jumpToRookHub(path, true); }
+    else void this.handoff.jumpToRookHub(path);
   }
 
   /** Die fertige Zusammenfassung der Vereinspartie auf RookHub: angemeldet `club-games/{id}/summary` (Einmal-Code), über den

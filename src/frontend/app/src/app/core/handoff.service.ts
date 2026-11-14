@@ -14,6 +14,15 @@ import { sanitizeReturnUrl } from './return-url.util';
 export const GUEST_START_URL = '/puzzles';
 
 /**
+ * Will dieser Klick einen neuen Tab? Strg/Cmd/Umschalt + Klick oder die mittlere Maustaste (`auxclick`) — so, wie es
+ * der Browser bei einem gewoehnlichen Link haelt. Die Spruenge hier sind Knoepfe (der Einmal-Code entsteht erst beim
+ * Klick), der Browser kann es ihnen also nicht selbst ansehen (0.969.1).
+ */
+export function wantsNewTab(ev?: MouseEvent | null): boolean {
+  return !!ev && (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button === 1);
+}
+
+/**
  * Der Sprung zwischen RookHub und der Turnierseite.
  *
  * <p>Beide liegen auf verschiedenen Origins und teilen den `localStorage` NICHT — wer hier
@@ -82,10 +91,11 @@ export class HandoffService {
   /** Der Rückweg: RookHub zu diesem LeagueHub, oder `null`. */
   get rookHubUrl(): string | null { return rookHubUrlForLeagueHub(); }
 
-  /** Springt von LeagueHub nach RookHub (Einmal-Code, drüben eingelöst — z. B. auf eine eben abgelegte Partie). */
-  async jumpToRookHub(path = ''): Promise<void> {
+  /** Springt von LeagueHub nach RookHub (Einmal-Code, drüben eingelöst — z. B. auf eine eben abgelegte Partie).
+   *  `newTab` (0.969.1): in einem neuen Tab statt in diesem — fuer Strg+Klick/Mittelklick, siehe {@link wantsNewTab}. */
+  async jumpToRookHub(path = '', newTab = false): Promise<void> {
     const base = this.rookHubUrl;
-    if (base) await this.jumpTo(base, path);
+    if (base) await this.jumpTo(base, path, newTab);
   }
 
   /** RookHub zu dieser Oberflaeche (dort liegt das Konto), oder `null` — auf RookHub selbst und ohne bekannte Adresse. */
@@ -98,29 +108,45 @@ export class HandoffService {
     if (base) await this.jumpTo(base, path);
   }
 
-  private async jumpTo(base: string, path: string): Promise<void> {
+  private async jumpTo(base: string, path: string, newTab = false): Promise<void> {
     const target = `${base}/${path}`.replace(/([^:]\/)\/+/g, '$1');
+    // Der neue Tab muss JETZT aufgehen, noch im Klick: nach dem Warten auf den Einmal-Code haelt der Browser
+    // `window.open` fuer ein ungebetenes Fenster und sperrt es. Er startet leer und bekommt die Adresse nachgereicht.
+    const tab = newTab ? this.openTab() : null;
+    await this.jumpWithCode(target, url => tab ? this.goInTab(tab, url) : this.go(url));
+  }
 
-    if (!this.auth.isLoggedIn) { this.go(target); return; }
+  private async jumpWithCode(target: string, go: (url: string) => void): Promise<void> {
+
+    if (!this.auth.isLoggedIn) { go(target); return; }
     // Waehrend einer Impersonation gar nicht erst fragen: eingeloest wird der Code drueben zu einer
     // GEWOEHNLICHEN Anmeldung des Zielkontos (30 Tage, ohne imp-Claim, samt geteiltem Cookie) — alle
     // Impersonations-Sperren waeren weg. Der Server lehnt ohnehin mit 403 ab (A1-001); drueben steht
     // dann die Anmeldemaske. Geprueft wird das Token-Merkmal, wie es auch der Server tut (seit F1-005
     // liest `isImpersonating` dasselbe, ohne zusaetzlich das Admin-Backup zu verlangen).
-    if (this.auth.currentUser?.impersonating) { this.go(target); return; }
+    if (this.auth.currentUser?.impersonating) { go(target); return; }
     try {
       const res = await firstValueFrom(this.http.post<{ code: string }>('/api/auth/handoff', {}));
       const sep = target.includes('?') ? '&' : '?';
-      this.go(`${target}${sep}${HandoffService.Param}=${encodeURIComponent(res.code)}`);
+      go(`${target}${sep}${HandoffService.Param}=${encodeURIComponent(res.code)}`);
     } catch {
       // Kein Code zu bekommen ist kein Grund, den Sprung zu verweigern — drueben steht dann
       // die Anmeldemaske, und das ist immer noch besser als ein toter Knopf.
-      this.go(target);
+      go(target);
     }
   }
 
   /** Die eigentliche Navigation — eine eigene Methode, damit die Specs den Seitenwechsel abfangen koennen. */
   private go(url: string): void { location.href = url; }
+
+  /** Ein leerer neuer Tab (`null`, wenn der Browser ihn verweigert — dann geht der Sprung in diesem Tab). */
+  private openTab(): Window | null {
+    const tab = window.open('about:blank', '_blank');
+    if (tab) tab.opener = null;               // die Zielseite soll diesen Tab nicht steuern koennen
+    return tab;
+  }
+
+  private goInTab(tab: Window, url: string): void { tab.location.href = url; }
 
   /**
    * Loest einen mitgebrachten Code ein (beim App-Start aufzurufen) und raeumt ihn aus der URL —

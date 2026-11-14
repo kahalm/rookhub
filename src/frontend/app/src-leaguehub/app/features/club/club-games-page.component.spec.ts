@@ -129,6 +129,23 @@ describe('ClubGamesPageComponent', () => {
     expect(jump).toHaveBeenCalledWith('club-games/7?ask=1');   // drüben „mit/ohne Engine“ (0.855.2)
   }));
 
+  it('Strg+Klick und Mittelklick öffnen die Partie in einem neuen Tab, die rechte Maustaste springt nicht (0.969.1)', fakeAsync(() => {
+    create();
+    flushMicrotasks();
+    const c = fixture.componentInstance as any;
+    const jump = spyOn(c.handoff, 'jumpToRookHub').and.resolveTo();
+    c.openInRookHub(G(7), new MouseEvent('click', { ctrlKey: true }));
+    expect(jump).toHaveBeenCalledWith('club-games/7?ask=1', true);
+    jump.calls.reset();
+    c.openInRookHub(G(7), new MouseEvent('auxclick', { button: 1 }));
+    expect(jump).toHaveBeenCalledWith('club-games/7?ask=1', true);
+    jump.calls.reset();
+    c.openInRookHub(G(7), new MouseEvent('auxclick', { button: 2 }));
+    expect(jump).not.toHaveBeenCalled();
+    c.openInRookHub(G(7), new MouseEvent('click'));
+    expect(jump).toHaveBeenCalledWith('club-games/7?ask=1');
+  }));
+
   it('Ergebnis, Zugfolge und Züge öffnen angemeldet die RookHub-Partieseite; ohne RookHub bleibt es Text (0.926.0)', fakeAsync(() => {
     create();
     flushMicrotasks();

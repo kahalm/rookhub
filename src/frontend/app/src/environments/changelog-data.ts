@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.969.1", date: "2026-11-14", changes: [
+    { en: "LeagueHub, club games: Ctrl+click (Cmd+click on the Mac), Shift+click or the middle mouse button on result, opening, moves or “Analysis” now opens the game in a new tab; a plain click still opens it in the same tab. The same holds for the analysis button of a board in a fixture and in the replay.",
+      de: "LeagueHub, Vereinspartien: Strg+Klick (am Mac Cmd+Klick), Umschalt+Klick oder die mittlere Maustaste auf Ergebnis, Zugfolge, Züge oder „Analyse“ öffnet die Partie jetzt in einem neuen Tab; ein einfacher Klick öffnet sie weiter im selben Tab. Dasselbe gilt für den Analyse-Knopf eines Bretts in einer Begegnung und im Nachspielen." },
+  ] },
   { version: "0.969.0", date: "2026-11-14", changes: [
     { en: "Replay mistakes on the game page: while the training runs, the page shows only the board and the trainer. Move list, game review, “In which repertoires?” and “Similar master games” are hidden and come back when you close the training. On a wide screen the trainer now stands to the right of the board instead of below it, where it used to slip out of view; on the phone it stays directly under the board, so there is far less to scroll.",
       de: "Fehler nachspielen auf der Partieseite: Solange das Training läuft, zeigt die Seite nur Brett und Trainer. Zugliste, Auswertung, „In welchen Repertoires?“ und „Ähnliche Meisterpartien“ sind ausgeblendet und stehen nach dem Beenden wieder da. Am breiten Bildschirm steht der Trainer jetzt rechts neben dem Brett statt darunter, wo er aus dem Bild rutschte; am Handy bleibt er direkt unter dem Brett, man muss viel weniger scrollen." },

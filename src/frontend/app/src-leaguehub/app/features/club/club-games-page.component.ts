@@ -11,7 +11,7 @@ import { pairingText } from './import-review';
 import { ClubContextService } from '../../core/club-context.service';
 import { loadErrorText, reasonText } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
-import { HandoffService } from '@rh/core/handoff.service';
+import { HandoffService, wantsNewTab } from '@rh/core/handoff.service';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
 import { downloadBlob } from '@rh/shared/download.util';
@@ -238,7 +238,7 @@ type Side = 'white' | 'black';
     </ng-template>
     <!-- 0.926.0: Ergebnis, Zugfolge, Züge und Analyse öffnen angemeldet die Partieseite in RookHub. -->
     <ng-template #openCell let-g let-text="text">
-      @if (canOpen() && text) { <button type="button" class="cell-open" (click)="openInRookHub(g)">{{ text }}</button> }
+      @if (canOpen() && text) { <button type="button" class="cell-open" (click)="openInRookHub(g, $event)" (auxclick)="openInRookHub(g, $event)">{{ text }}</button> }
       @else { {{ text }} }
     </ng-template>
     <!-- 0.852.0: Abzeichen „+n"/„!!n" (lh-game-badges) — in der Spalte „Analyse" bzw. in der Fußzeile der Handy-Karte;
@@ -258,7 +258,7 @@ type Side = 'white' | 'black';
     <!-- b1-l-zeilenmenue-material: Fläche/Rahmen/Schrift im LeagueHub-Stil (leaguehub.scss .lh-menu), „Löschen“ rot -->
     <mat-menu #moreMenu="matMenu" xPosition="before" class="lh-menu">
       <ng-template matMenuContent let-g="g">
-        @if (rookHub) { <button mat-menu-item type="button" (click)="openInRookHub(g)">Analyse</button> }
+        @if (rookHub) { <button mat-menu-item type="button" (click)="openInRookHub(g, $event)" (auxclick)="openInRookHub(g, $event)">Analyse</button> }
         @if (g.canDelete) {
           <button mat-menu-item type="button" (click)="edit(g)">Bearbeiten</button>
           <!-- 0.660.0: Züge nachbessern wie beim ersten Prüfen (mit dem aufbewahrten Formular) — gilt auch für alle Kopien -->
@@ -489,8 +489,12 @@ export class ClubGamesPageComponent implements OnInit {
    *  des Vereins. Sprung mit Einmal-Code, damit man drüben gleich angemeldet ist. Vorher: das Analysebrett mit dem PGN. */
   canOpen(): boolean { return !!this.rookHub && this.auth.isLoggedIn; }
 
-  openInRookHub(g: ClubGame): void {
-    void this.handoff.jumpToRookHub(`club-games/${g.id}?ask=1`);   // drüben „mit/ohne Engine" (0.855.1)
+  /** Strg/Cmd/Umschalt + Klick und die mittlere Maustaste öffnen einen neuen Tab (0.969.1, Wunsch 2026-11-14). */
+  openInRookHub(g: ClubGame, ev?: MouseEvent): void {
+    if (ev?.type === 'auxclick' && ev.button !== 1) return;        // rechte Maustaste: Kontextmenü, kein Sprung
+    const path = `club-games/${g.id}?ask=1`;                       // drüben „mit/ohne Engine" (0.855.1)
+    if (wantsNewTab(ev)) { ev?.preventDefault(); void this.handoff.jumpToRookHub(path, true); }
+    else void this.handoff.jumpToRookHub(path);
   }
 
   setResult(r: string): void {

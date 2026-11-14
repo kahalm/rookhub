@@ -309,6 +309,24 @@ describe('HandoffService', () => {
       http.verify();
     });
 
+    it('öffnet den Sprung nach RookHub auf Wunsch in einem neuen Tab — sofort, die Adresse folgt mit dem Code (0.969.1)', async () => {
+      auth.adoptSession(session);
+      spyOnProperty(svc, 'rookHubUrl', 'get').and.returnValue('https://rookhub.example');
+      const tab = { opener: {} as unknown, location: { href: '' } };
+      const open = spyOn(window, 'open').and.returnValue(tab as unknown as Window);
+
+      const done = svc.jumpToRookHub('club-games/7?ask=1', true);
+      expect(open).toHaveBeenCalledWith('about:blank', '_blank');      // noch im Klick, vor der Antwort
+      http.expectOne({ method: 'POST', url: '/api/auth/handoff' }).flush({ code: 'C1' });
+      await done;
+
+      expect(tab.location.href).toBe('https://rookhub.example/club-games/7?ask=1&h=C1');
+      expect(tab.opener).toBeNull();
+      expect(go).not.toHaveBeenCalled();
+      drainPreferences();
+      http.verify();
+    });
+
     it('fragt während einer Impersonation gar nicht erst nach einem Code', async () => {
       // Gemeldet im Codereview 2026-09-29 (F1-001): eingelöst wird der Code drüben zu einer
       // GEWÖHNLICHEN 30-Tage-Anmeldung des Zielkontos samt geteiltem Cookie — ohne imp-Claim, also
