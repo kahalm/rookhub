@@ -4,6 +4,7 @@ using RookHub.Api.Data;
 using RookHub.Api.DTOs.Ebooks;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Puzzles;
 using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Services.Ebooks;
@@ -697,6 +698,14 @@ public class EbookService
                     HasGame = d.GameId != null,
                 }).ToListAsync(ct)
             : [];
+        // Wer löst (0.975.0): DIE Regel sitzt in BookSolverLine, der Leser baut sie nicht nach. Je Antwort gerechnet (Linie
+        // nachspielen; gemessen ≈ 50 µs je Diagramm über alle 950 271 Prod-Diagramme mit Lösung, Buch mit 1 000 Diagrammen ≈ 50 ms), nicht gespeichert — so stimmt es auch direkt nach einer Korrektur.
+        foreach (var d in items)
+        {
+            var solve = BookSolverLine.ForReader(d.Fen, d.SolutionUci, d.EngineEval);
+            d.Solvable = solve.Solvable;
+            d.OpponentFirst = solve.OpponentFirst;
+        }
         if (items.Count > 0)
         {
             var reports = await _db.EbookDiagramReports.Where(r => r.EbookId == id)

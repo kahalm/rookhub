@@ -145,6 +145,12 @@ export interface EbookDiagram {
   solutionCheck?: 'unchecked' | 'confirmed' | 'doubtful' | 'replaced' | 'engine' | 'nopuzzle';
   /** Stockfish-Bewertung für die Seite am Zug (cp; Matt in n = ±(10000 − n)). */
   engineEval?: number | null;
+  /** Modus „Lösen“ wird angeboten (0.975.0, Server: `BookSolverLine.ForReader`): `false`, wenn die gespeicherte Linie nicht
+   *  nachspielbar ist oder der Löser die Verliererseite spielen müsste. Fehlt bei alten Antworten (= ja). */
+  solvable?: boolean;
+  /** Der erste Zug von `solutionUci` gehört dem Gegner (die Linie endet mit seinem Matt): der Leser spielt ihn vor, der
+   *  Löser hat die andere Farbe als die Seite am Zug. */
+  opponentFirst?: boolean;
   reportedByMe: boolean;
   /** Nur für Verwalter gefüllt. */
   reportCount: number;

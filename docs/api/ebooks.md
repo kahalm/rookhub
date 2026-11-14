@@ -660,6 +660,45 @@ im Kapitel-iframe, dessen Ereignisse den Host nicht erreichen). Raddrehung wird 
 davor) aus Sicht des Ziehenden. Angenommen, wenn höchstens 50 cp schlechter, Remis bleibt Remis (beide ±80 cp) oder Gewinn
 bleibt Gewinn (beide ≥ 300) — `EbookBoardComponent.sameResult`. Danach antwortet Stockfish statt der Buchlinie (auch beim
 Vorspielen im Training). Die Lösungsanzeige nennt eine Remisstellung (`engineEval` ±80) als „nur ein Weg“.
+
+**Lösen: wer löst** (0.975.0, Meldung 2026-11-14 — „Alekhine: Move by Move“, S. 154: Schwarz am Zug, Buchlinie 30…Ta8 31.Tb6
+Txa7 32.Tb8#, der Leser ließ Schwarz lösen). Der Löser spielt nie die Seite, die in der Linie mattgesetzt wird bzw. klar
+verliert. Die Regel sitzt an EINER Stelle, `Services/Puzzles/BookSolverLine.cs` (dieselbe Datei wie für den Kurs „Persönliche
+Taktiken“, `docs/api/kurse.md`); der Leser bekommt das Ergebnis je Diagramm in `GET /api/ebooks/{id}/diagrams` als
+`solvable` + `opponentFirst` (`EbookDiagramDto`, aus `BookSolverLine.ForReader(fen, solutionUci, engineEval)`) und baut
+nichts davon nach:
+
+| gespeicherte Linie | `solvable` | `opponentFirst` | Leser |
+|---|---|---|---|
+| keine | true | false | wie bisher: Lösen gegen „Stockfish jetzt“ |
+| nicht regelgerecht nachspielbar | false | false | kein Modus „Lösen“ |
+| endet matt, ungerade Halbzugzahl | true | false | Seite am Zug löst (wie bisher) |
+| endet matt, gerade Halbzugzahl | true | true | Gegnerzug wird vorgespielt, Löser hat die andere Farbe |
+| kein Matt, `EngineEval` ≤ −200 (Seite am Zug verliert klar) | false | false | kein Modus „Lösen“ |
+| kein Matt, sonst (vorn, ausgeglichen, unbewertet) | true | false | Seite am Zug löst (wie bisher) |
+
+Unterschied zur Kurs-Regel (`BookSolverLine.Of`): dort braucht eine Aufgabe ohne Matt `EngineEval` ≥ 200; der Leser zeigt
+jedes Diagramm und kennt „Remis bleibt Remis“ (0.780.3), deshalb fällt „Lösen“ nur weg, wenn der Löser sicher die
+Verliererseite hätte. Kein Umdrehen bei ≤ −200 ohne Matt: die Antwort des Gewinners stünde ungeprüft im Buch.
+- **Gerechnet je Antwort, nicht gespeichert** — keine Spalte, keine Migration, kein Bestandslauf; nach „Stellung
+  korrigieren“ stimmt der Wert sofort. Kosten gemessen 14.11. über alle 950 271 Prod-Diagramme mit Lösung: ≈ 50 µs je
+  Diagramm (auf belastetem Rechner), mittleres Buch (283 Diagramme) ≈ 15 ms, 1 000 Diagramme ≈ 50 ms, das größte Buch
+  (11 875) ≈ 0,6 s. Dafür prüft `TacticsBoard.IsLegal` nur den einen Zug statt aller legalen (vorher ≈ 260 µs; Ergebnis über
+  190 000 Prod-Linien identisch mit der alten Fassung).
+- **Leser** (`ebook-board.component`): bei `opponentFirst` führt „Lösen“ den ersten Zug der Linie nach 450 ms selbst aus
+  (`LEAD_DELAY_MS`, wie die Antwortzüge), das Brett steht aus Sicht des Lösers, die Statuszeile sagt erst „Der Gegner zieht
+  zuerst …“, dann „Du spielst Weiß/Schwarz und bist am Zug“. Im „Training“ zeigt das stehende Brett die Stellung NACH dem
+  Gegnerzug (das ist die Aufgabe), der Zug selbst ist der Pfeil. Zugliste, „Lösung zeigen“ und Erfolgsmeldung zählen ab der
+  Buchstellung (30… Ta8 31. Tb6 …). „Stockfish jetzt“ rechnet ab der Stellung nach dem Gegnerzug. Außerhalb von „Lösen“
+  steht das Brett wie im Buch; gegen Maia spielt man weiter die Seite am Zug. Bei `solvable: false` fehlt der Modus-Knopf
+  (kein grauer Knopf), das Diagramm steht auf „Ansehen“ mit einer Zeile Grund und der aufklappbaren Buchlinie (Glühbirne);
+  Ziehen, Kalkulieren, Maia, Engine, Analysebrett, Melden bleiben. War „Lösen“ gewählt, steht das nächste lösbare Diagramm
+  wieder auf „Lösen“. Alte Antworten ohne die Felder (zwischengespeichert) verhalten sich wie bisher.
+- **Prod 14.11.** (gerechnet mit `ForReader` über die 950 271 Diagramme mit Lösung, nur gelesen): 933 bekommen den Gegnerzug
+  vorgespielt; 34 814 (3,7 %) verlieren „Lösen“ — 24 877, weil die Seite am Zug klar verliert (17 008 bestätigte, 6 872
+  fragliche, 949 ersetzte Buchlösungen, 48 Engine-Linien), 9 937, weil die Linie nicht zur Stellung passt (6 932 davon
+  Engine-Linien der Prüfung, meist zu einer inzwischen anderen Stellung; 1 561 Buchlinien). Gespeicherte Lösungen bleiben
+  unverändert.
 Seit 0.879.0 gilt das nur noch, wenn die Lösung von Stockfish stammt oder die Prüfung den Buchzug als fraglich markiert
 hat (`solutionCheck` `doubtful`). Sonst sagt das Brett „auch gut, das Buch spielt aber etwas anderes“, nimmt den Zug
 ohne Fehler zurück und man sucht den Buchzug weiter (Nutzerwunsch 29.10.2026).

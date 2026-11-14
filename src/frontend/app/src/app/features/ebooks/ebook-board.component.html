@@ -80,7 +80,7 @@
 <div class="eb-board">
   @if (frozen() && !peek()) {
     <!-- Training (0.825.0): Buchstellung bleibt stehen, Züge nur im Kopf — dasselbe Viz-Brett wie Kurs-Training/Kalkulieren. -->
-    <app-puzzle-board class="eb-frozen" [fen]="diagram.fen" [actualFen]="boardFen()" [visualization]="1"
+    <app-puzzle-board class="eb-frozen" [fen]="frozenFen()" [actualFen]="boardFen()" [visualization]="1"
                       [orientation]="flipped() ? 'black' : 'white'" [turnColor]="flipped() ? 'black' : 'white'" [dests]="noDests"
                       [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet" [allowFullscreen]="false"
                       [vizOpponentArrow]="opponentArrow()" (moveMade)="onFrozenMove($event)" />
@@ -95,6 +95,18 @@
 }
 
 @switch (mode()) {
+  @case ('view') {
+    <!-- Kein „Lösen“ für dieses Diagramm (0.975.0: Linie unspielbar oder der Löser müsste die Verliererseite spielen) — der
+         Modus-Knopf fehlt (DESIGN 5.4: kein grauer Knopf), der Grund steht hier, die Buchlinie bleibt aufklappbar. -->
+    @if (!solvable && legal()) {
+      <div class="eb-solve eb-solve--idle eb-unsolvable" role="status">
+        <mat-icon>info</mat-icon>
+        <span class="eb-solve-text">{{ 'ebooks.board.notSolvable' | translate }}</span>
+        <ng-container [ngTemplateOutlet]="solutionToggle" />
+      </div>
+      @if (showSolution()) { <ng-container [ngTemplateOutlet]="solutionBody" [ngTemplateOutletContext]="{ line: storedSolutionText, stored: true }" /> }
+    }
+  }
   @case ('free') {
     <div class="eb-moves">
       <span class="eb-moves-text">{{ (movesText | san:'text') || ('ebooks.reader.playHint' | translate) }}</span>
@@ -128,7 +140,9 @@
       @switch (solveState()) {
         @case ('running') {
           <mat-icon>{{ checking() ? 'hourglass_top' : 'psychology' }}</mat-icon>
-          <span class="eb-solve-text">{{ (checking() ? 'ebooks.board.checking' : 'ebooks.reader.yourMove') | translate }}<span class="sr-only"> {{ 'ebooks.board.anyMoveHint' | translate }}</span></span>
+          <!-- „Gegner zuerst“ (0.975.0): erst „Gegner zieht“, dann mit der Farbe, die man spielt — sonst der gewohnte Satz. -->
+          <span class="eb-solve-text">{{ (checking() ? 'ebooks.board.checking' : leadPending ? 'ebooks.board.opponentMovesFirst'
+            : !diagram.opponentFirst ? 'ebooks.reader.yourMove' : userColor === 'w' ? 'ebooks.board.yourMoveWhite' : 'ebooks.board.yourMoveBlack') | translate }}<span class="sr-only"> {{ 'ebooks.board.anyMoveHint' | translate }}</span></span>
         }
         @case ('solved') {
           <mat-icon>check_circle</mat-icon><span class="eb-solve-text">{{ (mistake() ? 'ebooks.board.solvedWithMistake' : 'ebooks.reader.solved') | translate }}</span>
@@ -140,28 +154,14 @@
       }
       @if (frozen()) { <ng-container [ngTemplateOutlet]="peekToggle" /> }
       @if (solutionLine.length > 0) {
-        <!-- Lösung = Glühbirne; das Auge gehört der aktuellen Stellung (Nutzerwunsch 25.10.2026). -->
-        <button mat-icon-button type="button" class="eb-sol-toggle" (click)="showSolution.set(!showSolution())" [attr.aria-expanded]="showSolution()"
-                [class.eb-on]="showSolution()"
-                [appIconLabel]="(showSolution() ? 'ebooks.reader.hideSolution' : 'ebooks.reader.showSolution') | translate">
-          <mat-icon>lightbulb</mat-icon>
-        </button>
+        <ng-container [ngTemplateOutlet]="solutionToggle" />
       }
     </div>
     }
     @if (movesText) { <p class="eb-moves-text">{{ movesText | san:'text' }}</p> }
     @if (solutionLine.length > 0) {
       @if (showSolution()) {
-        <div class="eb-solution">
-          <p class="eb-solution-line">{{ solutionText }}</p>
-          @if (drawish) { <p class="eb-note">{{ 'ebooks.board.drawNote' | translate }}</p> }
-          @if (solveSource() === 'stored' && diagram.solutionText) { <p class="eb-solution-text">{{ diagram.solutionText }}</p> }
-          @if (solveSource() === 'stored' && diagram.solutionPage && diagram.solutionPage !== diagram.page && !diagram.imageRef) {
-            <button mat-button type="button" (click)="solutionPage.emit(diagram.solutionPage!)">
-              <mat-icon>menu_book</mat-icon>{{ 'ebooks.reader.toSolutionPage' | translate: { page: diagram.solutionPage } }}
-            </button>
-          }
-        </div>
+        <ng-container [ngTemplateOutlet]="solutionBody" [ngTemplateOutletContext]="{ line: solutionText, stored: solveSource() === 'stored' }" />
       }
     }
   }
@@ -270,4 +270,27 @@
           [appIconLabel]="(peek() ? 'ebooks.reader.hidePosition' : 'ebooks.reader.showPosition') | translate">
     <mat-icon>{{ peek() ? 'visibility_off' : 'visibility' }}</mat-icon>
   </button>
+</ng-template>
+
+<!-- Lösung = Glühbirne; das Auge gehört der aktuellen Stellung (Nutzerwunsch 25.10.2026). -->
+<ng-template #solutionToggle>
+  <button mat-icon-button type="button" class="eb-sol-toggle" (click)="showSolution.set(!showSolution())" [attr.aria-expanded]="showSolution()"
+          [class.eb-on]="showSolution()"
+          [appIconLabel]="(showSolution() ? 'ebooks.reader.hideSolution' : 'ebooks.reader.showSolution') | translate">
+    <mat-icon>lightbulb</mat-icon>
+  </button>
+</ng-template>
+
+<!-- Die Lösung zum Lesen: Linie, bei der gespeicherten zusätzlich Buchabsatz und Sprung zur Lösungsseite. -->
+<ng-template #solutionBody let-line="line" let-stored="stored">
+  <div class="eb-solution">
+    <p class="eb-solution-line">{{ line }}</p>
+    @if (drawish) { <p class="eb-note">{{ 'ebooks.board.drawNote' | translate }}</p> }
+    @if (stored && diagram.solutionText) { <p class="eb-solution-text">{{ diagram.solutionText }}</p> }
+    @if (stored && diagram.solutionPage && diagram.solutionPage !== diagram.page && !diagram.imageRef) {
+      <button mat-button type="button" (click)="solutionPage.emit(diagram.solutionPage!)">
+        <mat-icon>menu_book</mat-icon>{{ 'ebooks.reader.toSolutionPage' | translate: { page: diagram.solutionPage } }}
+      </button>
+    }
+  </div>
 </ng-template>

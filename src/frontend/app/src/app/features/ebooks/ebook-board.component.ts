@@ -63,7 +63,10 @@ export const ENGINE_SOLUTION_PLIES = 7;
  * - **Kalkulieren** — wie der Kalkulations-Modus der Kurse: Varianten werden als Baum notiert (je Diagramm auf diesem Gerät
  *   gemerkt), jede Linie lässt sich später im Analysebrett prüfen; die Engine-Leiste rechnet die gerade gewählte Stellung.
  * - **Lösen** — gegen die gespeicherte Lösung (Buch bzw. Engine-Linie der Prüfung) oder eine jetzt im Browser gerechnete
- *   Stockfish-Lösung; ein falscher Zug wird zurückgenommen, „Training“ merkt sich den Fehler.
+ *   Stockfish-Lösung; ein falscher Zug wird zurückgenommen, „Training“ merkt sich den Fehler. WER löst, sagt der Server je
+ *   Diagramm (0.975.0, `solvable`/`opponentFirst` aus `BookSolverLine.ForReader` — die Regel wird hier NICHT nachgebaut):
+ *   bei `opponentFirst` wird der erste Zug der Linie vorgespielt und der Löser hat die andere Farbe; bei `solvable: false`
+ *   gibt es den Modus für dieses Diagramm nicht (die Buchlinie lässt sich unter „Ansehen“ aufklappen).
  * - **Gegen Maia** — Sparring ab der Buchstellung; man spielt die Seite am Zug, Maia antwortet in der gewählten Stärke.
  * - **Partie** (0.831.0, Partiensammlungen) — die ganze Partie, aus der das Diagramm stammt, ab der Diagrammstellung zum
  *   Durchklicken; eigene Züge werden zur Nebenlinie (Zurück führt in die Partie). Nur mit hinterlegter Partie.
@@ -126,7 +129,7 @@ export class EbookBoardComponent implements OnChanges {
   get visibleModes(): EbookBoardMode[] {
     const game = this.diagram?.hasGame || this.defaultMode === 'game' || this.mode() === 'game';
     const tree = this.hasTree() || this.mode() === 'tree';
-    return this.modes.filter(m => (m !== 'game' || game) && (m !== 'tree' || tree));
+    return this.modes.filter(m => (m !== 'game' || game) && (m !== 'tree' || tree) && (m !== 'solve' || this.solvable));
   }
 
   /** Modus braucht eine regelgerechte Buchstellung — „Ansehen“ und „Baum“ (eigene Stellungen ab der Grundstellung) nicht. */
@@ -171,6 +174,10 @@ export class EbookBoardComponent implements OnChanges {
   /** Vom Buch (bzw. der gespeicherten Linie) abgewichen, aber gleichwertig — Antworten kommen jetzt von Stockfish. */
   readonly deviated = signal(false);
   private timer: ReturnType<typeof setTimeout> | null = null;
+  /** Pause, bevor der Gegnerzug einer „Gegner zuerst“-Aufgabe vorgespielt wird (wie die Antwortzüge in {@link advance}). */
+  static readonly LEAD_DELAY_MS = 450;
+  /** „Lösen“ war gewählt, das Diagramm bietet es aber nicht an → „Ansehen“; beim nächsten Diagramm wieder „Lösen“. */
+  private solveSkipped = false;
 
   /** Maia. */
   readonly maiaElo = signal<number>(MAIA_DEFAULT_ELO);
@@ -233,11 +240,21 @@ export class EbookBoardComponent implements OnChanges {
    *  Buchstellung eingefroren, gezogen wird auf dem Kurs-Brett im Visualisierungs-Modus gegen {@link boardFen}. */
   readonly frozen = computed(() => this.legal() && this.solveStyle() === 'training' && (this.mode() === 'solve' || this.mode() === 'calc'));
 
+  /** Was das eingefrorene Brett zeigt: die Buchstellung — bei „Gegner zuerst“ die Stellung nach dem vorgespielten Gegnerzug
+   *  (das ist die Aufgabe; der Zug selbst steht als Pfeil da). */
+  readonly frozenFen = computed(() => {
+    const d = this.start();
+    if (!d) return '';
+    const lead = this.mode() === 'solve' ? this.lead.length : 0;
+    return lead > 0 && this.played().length >= lead ? this.played()[lead - 1].fen : d.fen;
+  });
+
   /** Eingefrorenes Brett: der letzte Zug der Gegenseite als Pfeil (der eigene steht ja im Kopf). */
   readonly opponentArrow = computed<[Key, Key] | undefined>(() => {
     if (this.mode() !== 'solve') return undefined;
     const l = this.played();
-    if (l.length === 0 || l.length % 2 === 1) return undefined;
+    // Gegnerzüge stehen an ungerader Stelle, bei „Gegner zuerst“ an gerader.
+    if (l.length === 0 || (l.length - this.lead.length) % 2 === 1) return undefined;
     const u = l[l.length - 1].uci;
     return [u.slice(0, 2) as Key, u.slice(2, 4) as Key];
   });
@@ -282,15 +299,19 @@ export class EbookBoardComponent implements OnChanges {
     this.clearTimer();
     this.start.set(this.diagram);
     if (!prev) this.mode.set(this.defaultMode && this.modes.includes(this.defaultMode) ? this.defaultMode : 'solve');
+    else if (this.solveSkipped && this.mode() === 'view') this.mode.set('solve');
+    this.solveSkipped = false;
     this.played.set([]);
     this.engineLine.set(null);
     this.showSolution.set(false);
     this.peek.set(false);
     this.solveState.set('idle');
     this.maiaThinking.set(false);
-    this.flipped.set(!whiteToMove(this.diagram.fen));
     if (this.mode() === 'tree' && !this.hasTree()) this.mode.set('solve');
     if (!this.legal() && this.needsLegal(this.mode())) this.mode.set('view');
+    // Kein „Lösen“ für dieses Diagramm (Löserseite nicht bestimmbar / Linie unspielbar): ansehen, die Wahl aber behalten.
+    if (this.mode() === 'solve' && !this.solvable) { this.mode.set('view'); this.solveSkipped = true; }
+    this.flipped.set(this.userColor === 'b');
     if (!this.hasStoredSolution) this.solveSource.set('engine');
     if (this.mode() === 'calc') this.loadCalc();
     if (this.mode() === 'solve') this.startSolving();
@@ -303,11 +324,15 @@ export class EbookBoardComponent implements OnChanges {
 
   setMode(m: EbookBoardMode): void {
     if (this.needsLegal(m) && !this.legal()) return;
+    if (m === 'solve' && !this.solvable) return;
     this.clearTimer();
     this.played.set([]);
     this.solveState.set('idle');
     this.maiaThinking.set(false);
+    this.solveSkipped = false;
     this.mode.set(m);
+    // „Gegner zuerst“: beim Lösen aus Sicht des Lösers, sonst wie das Buch (Seite am Zug unten).
+    if (this.diagram?.opponentFirst) this.flipped.set(this.userColor === 'b');
     if (m === 'calc') this.loadCalc();
     if (m === 'solve') this.startSolving();
     if (m === 'maia') this.prepareMaia();
@@ -315,8 +340,24 @@ export class EbookBoardComponent implements OnChanges {
     if (m === 'tree') this.loadTree();
   }
 
-  /** Seite am Zug in der Buchstellung — die spielt man beim Lösen und gegen Maia. */
-  get userColor(): 'w' | 'b' { return sideToMove(this.diagram?.fen); }
+  /** „Lösen“ wird für dieses Diagramm angeboten (Server, `BookSolverLine.ForReader`; alte Antworten ohne Feld: ja). */
+  get solvable(): boolean { return this.diagram?.solvable !== false; }
+
+  /** Die vorzuspielenden Gegnerzüge: bei „Gegner zuerst“ der erste Zug der gespeicherten Linie, sonst keiner. */
+  private get lead(): string[] {
+    const line = this.storedLine;
+    return this.diagram?.opponentFirst && line.length >= 2 ? [line[0]] : [];
+  }
+
+  /** Die Farbe, die man spielt: gegen Maia die Seite am Zug der Buchstellung, beim Lösen der Löser — bei „Gegner zuerst“
+   *  also die ANDERE Seite (der Löser spielt nie die Seite, die in der Linie mattgesetzt wird). */
+  get userColor(): 'w' | 'b' {
+    const side = sideToMove(this.diagram?.fen);
+    return this.mode() === 'solve' && this.lead.length > 0 ? (side === 'w' ? 'b' : 'w') : side;
+  }
+
+  /** Lösen: der vorgespielte Gegnerzug steht noch aus. */
+  get leadPending(): boolean { return this.mode() === 'solve' && this.played().length < this.lead.length; }
 
   private isUserTurn(): boolean {
     return sideToMove(this.boardFen()) === this.userColor;
@@ -424,9 +465,11 @@ export class EbookBoardComponent implements OnChanges {
   get hasStoredSolution(): boolean { return this.storedLine.length > 0; }
   private get storedLine(): string[] { return (this.diagram?.solutionUci ?? '').split(' ').filter(x => x.length >= 4); }
 
-  /** Die Linie, gegen die gerade gelöst wird. */
+  /** Die Linie, gegen die gerade gelöst wird — ab der Buchstellung, also samt vorgespieltem Gegnerzug. */
   get solutionLine(): string[] {
-    return this.solveSource() === 'engine' ? this.engineLine() ?? [] : this.storedLine;
+    if (this.solveSource() !== 'engine') return this.storedLine;
+    const engine = this.engineLine() ?? [];
+    return engine.length > 0 ? [...this.lead, ...engine] : [];
   }
 
   setSolveSource(s: EbookSolveSource): void {
@@ -476,6 +519,18 @@ export class EbookBoardComponent implements OnChanges {
       return;
     }
     this.solveState.set(this.solutionLine.length > 0 ? 'running' : 'idle');
+    if (this.solveState() === 'running' && this.lead.length > 0) this.playLead();
+  }
+
+  /** „Gegner zuerst“ (wie eine Lichess-Aufgabe): nach kurzer Pause den Gegnerzug ausführen, dann ist der Löser am Zug. */
+  private playLead(): void {
+    const id = this.diagram.id;
+    const u = this.lead[0];
+    this.timer = setTimeout(() => {
+      if (this.diagram.id !== id || this.mode() !== 'solve' || this.played().length > 0) return;
+      if (!this.pushUci(u)) this.solveState.set('idle');   // sollte nicht vorkommen: der Server hat die Linie nachgespielt
+      this.cdr.markForCheck();
+    }, EbookBoardComponent.LEAD_DELAY_MS);
   }
 
   /** Stockfish-Lösung im Browser: bester Zug, Antwort, … bis {@link ENGINE_SOLUTION_PLIES} Halbzüge oder Partieende. */
@@ -485,6 +540,8 @@ export class EbookBoardComponent implements OnChanges {
     this.engineLineBusy.set(true);
     try {
       const chess = new Chess(this.diagram.fen);
+      // „Gegner zuerst“: Stockfish rechnet ab der Stellung NACH dem Gegnerzug — auch hier löst nicht die Verliererseite.
+      for (const u of this.lead) chess.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u.length > 4 ? u[4] : undefined });
       const line: string[] = [];
       for (let i = 0; i < ENGINE_SOLUTION_PLIES && !chess.isGameOver(); i++) {
         const r = await this.stockfish.getBestMove(chess.fen(), 16);
@@ -505,7 +562,7 @@ export class EbookBoardComponent implements OnChanges {
   private solveMove(m: UserBoardMove, uci: string): void {
     const line = this.solutionLine;
     const idx = this.played().length;
-    if (idx >= line.length || this.solveState() !== 'running' || this.checking()) return;
+    if (idx >= line.length || idx < this.lead.length || this.solveState() !== 'running' || this.checking()) return;
     const before = this.boardFen();
     const onBook = !this.deviated() && (uci === line[idx] || (line[idx].length === 4 && uci.startsWith(line[idx])));
     this.played.update(l => [...l, { san: m.san, fen: m.fen, uci }]);
@@ -858,11 +915,17 @@ export class EbookBoardComponent implements OnChanges {
       const sans: string[] = [];
       try {
         const c = new Chess(d.fen);
-        for (const u of this.engineLine() ?? []) sans.push(c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u.length > 4 ? u[4] : undefined }).san);
+        for (const u of this.solutionLine) sans.push(c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u.length > 4 ? u[4] : undefined }).san);
       } catch { /* Linie passt nicht mehr — was da ist, zeigen */ }
       return EbookBoardComponent.numbered(d.fen, sans);
     }
-    return EbookBoardComponent.numbered(d.fen, (d.solutionSan ?? '').split(' ').filter(Boolean));
+    return this.storedSolutionText;
+  }
+
+  /** Die gespeicherte Linie zum Lesen (auch ohne „Lösen“, unter „Ansehen“). */
+  get storedSolutionText(): string {
+    const d = this.diagram;
+    return d ? EbookBoardComponent.numbered(d.fen, (d.solutionSan ?? '').split(' ').filter(Boolean)) : '';
   }
 
   analysisParams(): Record<string, string> {

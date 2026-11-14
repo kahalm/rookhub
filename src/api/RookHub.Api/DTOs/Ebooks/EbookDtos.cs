@@ -302,6 +302,12 @@ public class EbookDiagramDto
     /// <summary><c>unchecked</c> / <c>confirmed</c> / <c>doubtful</c> / <c>replaced</c> / <c>engine</c> / <c>nopuzzle</c>.</summary>
     public string SolutionCheck { get; set; } = "unchecked";
     public int? EngineEval { get; set; }
+    /// <summary>Modus „Lösen“ wird angeboten (0.975.0, je Antwort gerechnet aus <c>BookSolverLine.ForReader</c>): falsch, wenn die
+    /// gespeicherte Linie nicht nachspielbar ist oder der Löser die Verliererseite spielen müsste. Ohne gespeicherte Linie wahr.</summary>
+    public bool Solvable { get; set; } = true;
+    /// <summary>Der erste Zug von <see cref="SolutionUci"/> gehört dem Gegner (die Linie endet mit seinem Matt gegen die Seite am
+    /// Zug): der Leser spielt ihn vor, der Löser hat die andere Farbe als die Seite am Zug.</summary>
+    public bool OpponentFirst { get; set; }
     /// <summary>Der Aufrufer hat dieses Diagramm als falsch gemeldet.</summary>
     public bool ReportedByMe { get; set; }
     /// <summary>Meldungen insgesamt — nur für Verwalter gefüllt, sonst 0.</summary>

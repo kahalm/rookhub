@@ -75,4 +75,43 @@ public class BookSolverLineTests
         Assert.NotNull(castle);
         Assert.False(castle.OpponentFirst);
     }
+
+    // ── Leser, Modus „Lösen“ (0.975.0): dieselbe Regel, je Diagramm in der Antwort ──────────────────────────────
+
+    [Fact]
+    public void ForReader_SideToMoveMates_SolvableSolverFirst() =>
+        Assert.Equal(new BookSolverLine.ReaderSolve(true, false), BookSolverLine.ForReader(ForcedMateFen, ForcedMateMoves, null));
+
+    [Fact]
+    public void ForReader_OpponentMates_SolvableWithTheOpponentMoveFirst()
+    {
+        // Genau der gemeldete Fall: Schwarz am Zug, Weiß setzt matt — der Leser spielt 30…Ta8 vor, der Löser hat Weiß.
+        Assert.Equal(new BookSolverLine.ReaderSolve(true, true), BookSolverLine.ForReader(AlekhineFen, AlekhineMoves, -9998));
+        Assert.Equal(new BookSolverLine.ReaderSolve(true, true), BookSolverLine.ForReader(AlekhineFen, AlekhineMoves, null));
+    }
+
+    [Theory]
+    [InlineData(600, true)]      // klar vorn
+    [InlineData(0, true)]        // ausgeglichen: der Leser kennt „Remis bleibt Remis“
+    [InlineData(-199, true)]
+    [InlineData(null, true)]     // noch nicht bewertet
+    [InlineData(-200, false)]    // Seite am Zug verliert, kein Matt in der Linie → Löserseite nicht bestimmbar
+    [InlineData(-9000, false)]
+    public void ForReader_NoMate_NotOfferedOnlyWhenTheSideToMoveClearlyLoses(int? eval, bool solvable) =>
+        Assert.Equal(new BookSolverLine.ReaderSolve(solvable, false), BookSolverLine.ForReader(ForkFen, ForkMoves, eval));
+
+    [Theory]
+    [InlineData(ForkFen, "d5d7")]                              // kein Springerzug
+    [InlineData(ForkFen, "a8a7")]                              // falsche Seite am Zug
+    [InlineData("kaputt", "h6g7")]
+    [InlineData("6k1/p4p1p/5P1Q/8/8/8/8/K7 b - - 0 1", "a7a6 h6g7 g8h8")]   // Zug nach dem Matt
+    public void ForReader_UnplayableLine_NotOffered(string fen, string moves) =>
+        Assert.Equal(new BookSolverLine.ReaderSolve(false, false), BookSolverLine.ForReader(fen, moves, 9999));
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void ForReader_NoStoredLine_StaysSolvable(string? moves) =>
+        // Ohne gespeicherte Linie löst man wie bisher gegen die im Browser gerechnete Stockfish-Linie.
+        Assert.Equal(new BookSolverLine.ReaderSolve(true, false), BookSolverLine.ForReader(ForkFen, moves, -900));
 }

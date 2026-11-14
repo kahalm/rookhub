@@ -23,6 +23,26 @@ public class TacticsBoardTests
     }
 
     [Fact]
+    public void IsLegal_OneMove_SameAnswerAsLegalMoves()
+    {
+        // Gefesselter Springer, Umwandlung nur mit Figur, en passant; danach jedes Feldpaar gegen LegalMoves.
+        var pinned = TacticsBoard.TryParse("4k3/8/2n5/1B6/8/8/8/4K3 b - - 0 1")!;
+        Assert.False(pinned.IsLegal(TacticsBoard.SquareIndex("c6")!.Value, TacticsBoard.SquareIndex("e5")!.Value, null));
+        Assert.True(pinned.IsLegal(TacticsBoard.SquareIndex("e8")!.Value, TacticsBoard.SquareIndex("f8")!.Value, null));
+        Assert.False(pinned.IsLegal(TacticsBoard.SquareIndex("b5")!.Value, TacticsBoard.SquareIndex("c6")!.Value, null));   // Weiß ist nicht am Zug
+        var promo = TacticsBoard.TryParse("7k/5P2/6K1/8/8/8/8/8 w - - 0 1")!;
+        Assert.True(promo.IsLegal(TacticsBoard.SquareIndex("f7")!.Value, TacticsBoard.SquareIndex("f8")!.Value, 'q'));
+        Assert.False(promo.IsLegal(TacticsBoard.SquareIndex("f7")!.Value, TacticsBoard.SquareIndex("f8")!.Value, null));
+        var ep = TacticsBoard.TryParse("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1")!;
+        Assert.True(ep.IsLegal(TacticsBoard.SquareIndex("e5")!.Value, TacticsBoard.SquareIndex("d6")!.Value, null));
+        foreach (var b in new[] { pinned, promo, ep })
+            for (var from = 0; from < 64; from++)
+                for (var to = 0; to < 64; to++)
+                    foreach (char? p in new char?[] { null, 'q', 'n' })
+                        Assert.Equal(b.LegalMoves().Any(m => m.From == from && m.To == to && m.Promotion == p), b.IsLegal(from, to, p));
+    }
+
+    [Fact]
     public void EnPassant_IsGenerated_AndRemovesThePawn()
     {
         var b = TacticsBoard.TryParse("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1")!;

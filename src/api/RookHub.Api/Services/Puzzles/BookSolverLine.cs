@@ -44,6 +44,35 @@ public sealed record BookSolverLine(IReadOnlyList<string> Moves, bool OpponentFi
         return engineEval is >= GameExercises.MinTacticCp ? new BookSolverLine(moves, false) : null;
     }
 
+    /// <summary>
+    /// Dieselbe Regel für den Modus „Lösen“ des E-Book-Lesers (0.975.0) — der Leser rechnet nichts davon selbst, er bekommt
+    /// das Ergebnis je Diagramm (<c>EbookDiagramDto.Solvable</c>/<c>OpponentFirst</c>). Unterschied zu <see cref="Of"/>: eine
+    /// Kurs-AUFGABE braucht eine sicher gewinnende Seite (≥ <see cref="GameExercises.MinTacticCp"/>), der Leser zeigt aber
+    /// jedes Diagramm des Buchs, und sein Löser kennt „jeder Zug, der das Ergebnis hält, zählt“ (Remis bleibt Remis). Dort
+    /// fällt „Lösen“ deshalb nur weg, wenn feststeht, dass der Löser die Verliererseite spielen würde:
+    /// <list type="bullet">
+    /// <item>keine gespeicherte Linie → lösbar wie bisher (gegen die im Browser gerechnete Stockfish-Linie);</item>
+    /// <item>Linie nicht regelgerecht nachspielbar → nicht lösbar;</item>
+    /// <item>Linie endet matt → lösbar, bei gerader Halbzugzahl mit dem Gegnerzug zuerst (wie <see cref="Of"/>);</item>
+    /// <item>kein Matt: die Seite am Zug steht klar auf Verlust (≤ −<see cref="GameExercises.MinTacticCp"/>) → nicht lösbar
+    /// (kein Umdrehen, Begründung oben); sonst — klar vorn, ausgeglichen, noch nicht bewertet — löst die Seite am Zug.</item>
+    /// </list>
+    /// </summary>
+    public static ReaderSolve ForReader(string? fen, string? solutionUci, int? engineEval)
+    {
+        var moves = (solutionUci ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (moves.Length == 0) return new ReaderSolve(true, false);
+        if (PlayLegal(fen, moves) is not { } end) return new ReaderSolve(false, false);
+        if (MatePattern.IsMate(end)) return new ReaderSolve(true, moves.Length % 2 == 0);
+        return new ReaderSolve(engineEval is not <= -GameExercises.MinTacticCp, false);
+    }
+
+    /// <summary>Ergebnis von <see cref="ForReader"/>.</summary>
+    /// <param name="Solvable">„Lösen“ wird angeboten.</param>
+    /// <param name="OpponentFirst">Der erste Zug der gespeicherten Linie gehört dem Gegner: der Leser spielt ihn vor, der Löser
+    /// hat die andere Farbe als die Seite am Zug.</param>
+    public readonly record struct ReaderSolve(bool Solvable, bool OpponentFirst);
+
     /// <summary>Linie regelgerecht nachspielen; <c>null</c>, sobald ein Zug nicht legal ist. Die Rochade kennt
     /// <see cref="TacticsBoard.LegalMoves"/> nicht (keine Rochaderechte im Brett) — sie wird nur ausgeführt, nicht geprüft.</summary>
     internal static TacticsBoard? PlayLegal(string? fen, IReadOnlyList<string> moves)
@@ -59,7 +88,7 @@ public sealed record BookSolverLine(IReadOnlyList<string> Moves, bool OpponentFi
             if (!castle)
             {
                 char? promo = uci.Length >= 5 ? char.ToLowerInvariant(uci[4]) : null;
-                if (!board.LegalMoves().Any(m => m.From == from && m.To == to && m.Promotion == promo)) return null;
+                if (!board.IsLegal(from, to, promo)) return null;
             }
             board = board.Apply(uci);
         }

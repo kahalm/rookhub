@@ -113,6 +113,8 @@ Partie ohne lösbare Aufgabe (dann entsteht auch kein Kurs).
   gewinnende Seite nicht sicher bestimmbar → keine Aufgabe (höchstens „Beispiel im Buch“). Nicht regelgerecht nachspielbare Linien
   (falsch gelesene Diagramme) fallen ebenfalls weg. Prod 14.11.: von 12 146 lösbaren Buchdiagrammen mit Signatur hatten 648 den
   Verlierer am Zug (jetzt mit Gegnerzug voran), 15 sind unspielbar, 0 unbestimmbar.
+  Derselbe Baustein versorgt seit 0.975.0 den Modus „Lösen“ des E-Book-Lesers (`BookSolverLine.ForReader`, Felder
+  `solvable`/`opponentFirst` je Diagramm — `docs/api/ebooks.md` → „Lösen: wer löst“).
 - **Bestand** (`PersonalTacticsLineRepair`, Hosted Service, einmalig beim Start, Marke `SystemSettings` →
   `PersonalTactics.SolverSideRepair`): wendet dieselbe Regel auf vorhandene Linien mit `Source = game-exercise` und `StartPly = -1` an —
   Gegner setzt matt → `StartPly = 0` (Tipps der Linie geleert); unspielbar/unbestimmbar → `Retired` + `IsInfoOnly` (`Retired` allein

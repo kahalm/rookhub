@@ -530,6 +530,35 @@ public class EbookServiceTests : IDisposable
         Assert.Empty(_kit.Db.EbookDiagrams);
     }
 
+    /// <summary>0.975.0: der Leser bekommt je Diagramm, ob und wie gelöst wird (<c>BookSolverLine.ForReader</c>).</summary>
+    [Fact]
+    public async Task Diagrams_CarryWhoSolves_FromTheOneRule()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var book = await _kit.BookAsync("Buch", owner.Id);
+        book.DiagramState = EbookDiagramState.Done;
+        const string fork = "r3k3/8/8/3N4/8/8/8/4K3 w - - 0 1";
+        _kit.Db.EbookDiagrams.AddRange(
+            // Seite am Zug setzt matt.
+            new EbookDiagram { EbookId = book.Id, Page = 1, Fen = "6k1/5p1p/5P1Q/8/8/8/8/K7 w - - 0 1", SolutionUci = "h6g7", SolutionSource = "book", SolutionCheck = EbookSolutionCheck.Confirmed },
+            // „Alekhine: Move by Move“, S. 154: Schwarz am Zug, Weiß setzt matt.
+            new EbookDiagram { EbookId = book.Id, Page = 2, Fen = "3r1k2/P4pbp/2R3p1/8/5P2/6P1/Pn3P1P/4R1K1 b - - 0 30", SolutionUci = "d8a8 c6b6 a8a7 b6b8", SolutionSource = "book", SolutionCheck = EbookSolutionCheck.Confirmed, EngineEval = -9998 },
+            // Seite am Zug verliert, die Linie endet nicht matt → nicht bestimmbar.
+            new EbookDiagram { EbookId = book.Id, Page = 3, Fen = fork, SolutionUci = "d5c7 e8d7 c7a8", SolutionSource = "book", SolutionCheck = EbookSolutionCheck.Confirmed, EngineEval = -450 },
+            // Linie nicht nachspielbar.
+            new EbookDiagram { EbookId = book.Id, Page = 4, Fen = fork, SolutionUci = "d5d7", SolutionSource = "book", EngineEval = 500 },
+            // Ausgeglichen bzw. ohne Linie: wie bisher.
+            new EbookDiagram { EbookId = book.Id, Page = 5, Fen = fork, SolutionUci = "d5c7 e8d7 c7a8", SolutionSource = "book", EngineEval = 20 },
+            new EbookDiagram { EbookId = book.Id, Page = 6, Fen = fork });
+        await _kit.Db.SaveChangesAsync();
+
+        var items = (await _kit.Service.GetDiagramsAsync(owner.Id, false, book.Id)).Items;
+
+        Assert.Equal([true, true, false, false, true, true], items.Select(d => d.Solvable));
+        Assert.Equal([false, true, false, false, false, false], items.Select(d => d.OpponentFirst));
+        Assert.Equal("d8a8 c6b6 a8a7 b6b8", items[1].SolutionUci);   // die gespeicherte Linie bleibt unverändert
+    }
+
     [Fact]
     public async Task ReportDiagram_ToggleCountsForManagers_AndListSurvivesRescan()
     {

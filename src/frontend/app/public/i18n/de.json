@@ -6024,6 +6024,10 @@
     "board": {
       "drawNote": "Remisstellung – das ist nur ein Weg; jeder Zug, der das Remis hält, ist richtig.",
       "checking": "Stockfish prüft deinen Zug …",
+      "opponentMovesFirst": "Der Gegner zieht zuerst …",
+      "yourMoveWhite": "Du spielst Weiß und bist am Zug — finde die Buchlösung.",
+      "yourMoveBlack": "Du spielst Schwarz und bist am Zug — finde die Buchlösung.",
+      "notSolvable": "Dieses Diagramm ist keine Aufgabe zum Lösen — die Buchlinie lässt sich hier nachlesen.",
       "alternativeOk": "Auch richtig – dein Zug hält das Ergebnis (Stockfish). Die Antworten kommen jetzt von Stockfish.",
       "alternativeFindBook": "Auch gut – dein Zug hält das Ergebnis (Stockfish). Das Buch spielt aber etwas anderes: such den Buchzug.",
       "anyMoveHint": "Jeder Zug, der das Ergebnis hält, zählt – nicht nur der aus dem Buch.",

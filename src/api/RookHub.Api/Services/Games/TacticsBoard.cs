@@ -215,6 +215,16 @@ public sealed class TacticsBoard
         return result;
     }
 
+    /// <summary>Ist genau dieser Zug der Seite am Zug legal (ohne Rochade)? Dasselbe Ergebnis wie
+    /// <c>LegalMoves().Any(…)</c>, prüft aber nur den einen Zug auf Selbstschach statt alle (0.975.0: der E-Book-Leser spielt
+    /// je Antwort die Linien aller Diagramme eines Buchs nach, <c>BookSolverLine.PlayLegal</c>).</summary>
+    public bool IsLegal(int from, int to, char? promotion)
+    {
+        foreach (var m in PseudoMoves())
+            if (m.From == from && m.To == to && m.Promotion == promotion) return !Apply(m).KingAttackedOf(WhiteToMove);
+        return false;
+    }
+
     private bool KingAttackedOf(bool white) => KingSquare(white) is var k and >= 0 && IsAttacked(k, !white);
 
     private IEnumerable<Move> PseudoMoves()

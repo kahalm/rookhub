@@ -6024,6 +6024,10 @@
     "board": {
       "drawNote": "Drawn position – this is only one way; every move that keeps the draw is fine.",
       "checking": "Stockfish is checking your move …",
+      "opponentMovesFirst": "The opponent moves first …",
+      "yourMoveWhite": "You play White and it is your move — find the book solution.",
+      "yourMoveBlack": "You play Black and it is your move — find the book solution.",
+      "notSolvable": "This diagram is not an exercise to solve — the book line can be read here.",
       "alternativeOk": "Also correct – your move keeps the result (Stockfish). The replies now come from Stockfish.",
       "alternativeFindBook": "Also good – your move keeps the result (Stockfish). But the book plays something else: find the book move.",
       "anyMoveHint": "Every move that keeps the result counts – not only the one from the book.",

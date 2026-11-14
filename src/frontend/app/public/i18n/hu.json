@@ -6024,6 +6024,10 @@
     "board": {
       "drawNote": "Döntetlen állás – ez csak egy lehetőség; minden lépés jó, amely tartja a döntetlent.",
       "checking": "A Stockfish ellenőrzi a lépésedet …",
+      "opponentMovesFirst": "Először az ellenfél lép …",
+      "yourMoveWhite": "Világossal játszol, és te lépsz — találd meg a könyv megoldását.",
+      "yourMoveBlack": "Sötéttel játszol, és te lépsz — találd meg a könyv megoldását.",
+      "notSolvable": "Ez a diagram nem megoldandó feladat — a könyv változata itt elolvasható.",
       "alternativeOk": "Ez is jó – a lépésed megtartja az eredményt (Stockfish). A válaszok most a Stockfishtől jönnek.",
       "alternativeFindBook": "Ez is jó – a lépésed megtartja az eredményt (Stockfish). A könyv azonban mást lép: keresd meg a könyv lépését.",
       "anyMoveHint": "Minden lépés számít, amely megtartja az eredményt – nem csak a könyvbeli.",

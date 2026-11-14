@@ -960,6 +960,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   stehen als zweite Zeile im Brett-Kopf; nur „Lösung fraglich“ bleibt eine sichtbare Warnzeile. Unter dem Brett EINE
   Statuszeile (Zustand, „Nochmal“, Lösung zeigen als Symbol; „jeder Zug, der das Ergebnis hält“ als Tooltip). Lösen startet
   in „Training“, die eigene Wahl ist auf dem Gerät gemerkt. Brett ab 900 px bis `100dvh − 220px` (vorher − 394 px).
+  **Wer löst (0.975.0):** gehört der erste Zug der Linie dem Gegner, führt „Lösen“ ihn nach 450 ms selbst aus, das Brett
+  steht aus Sicht des Lösers, und die Statuszeile nennt die Farbe („Du spielst Weiß und bist am Zug“; davor „Der Gegner
+  zieht zuerst …“). Ist ein Diagramm keine Aufgabe (Löser hätte die Verliererseite, Linie unspielbar), fehlt der
+  Modus-Knopf „Lösen“ ganz (5.4: kein grauer Knopf ohne Grund); unter „Ansehen“ steht dann EINE leise Zeile (`info`,
+  on-surface-variant) mit dem Grund und der Glühbirne für die Buchlinie.
   Engine-Linien wie auf der Partieseite (`app-live-engine-panel`).
   **Baum (0.881.0, Eröffnungsbücher):** Modus-Symbol `park`, nur bei Büchern mit Eröffnungsbaum. Unter dem Brett eine
   Schrittleiste (Grundstellung, ◀, ▶ = Hauptfortsetzung) mit „Als Repertoire speichern“ (`bookmark_add`, Textknopf rechts,
@@ -1327,6 +1332,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-14 | 0.975.0 · E-Book-Leser | Lösen (8, Brett-Leiste): Gegnerzug wird vorgespielt, Brett aus Löser-Sicht, Statuszeile nennt die Farbe; ohne bestimmbare Löserseite kein Modus-Knopf „Lösen“, unter „Ansehen“ eine leise Grundzeile mit Glühbirne für die Buchlinie (5.4) | Meldung 14.11.: Löser spielte die Seite, die mattgesetzt wird („Alekhine: Move by Move“, S. 154) | User über die betreuende Sitzung |
 | 2026-11-14 | 0.973.0 · Zusammenfassung | Übersicht „Empfohlene Übungen“ (Überschrift, Stellen, Karten, Buchangaben, Löser, Handy-Blatt) entfällt; „Taktiken trainieren“ bleibt als einzelner Aktionsblock am Textende: Trennlinie `--mat-sys-outline-variant` + 24 px Abstand statt Überschrift, ≤ 75ch (8, Partie-Zusammenfassung) | Wunsch 14.11.: „train am ende der summary gefällt mir, aber übersicht darüber kann weg“; ohne Übersicht klebte der Knopf sonst am letzten Absatz | User über die betreuende Sitzung |
 | 2026-11-14 | 0.972.0 · Zusammenfassung | „+“ (Stellung markieren) als sechster Knopf der Brettleiste am Seitenbrett und im Blatt, hinter dem Engine-Knopf (5.12); ≤ 480 px Nebenknöpfe 36 px wie Partieseite/Analysebrett | Wunsch 14.11.: „summary um den (+) knopf erweitern“; gemessen 320/390 px: Leiste = Brettbreite, kein Seiten-Scroll | Nutzerwunsch |
 | 2026-11-14 | 0.969.0 · Fehler nachspielen | Partieseite im Training (8.1): nur Brett + Trainer — Zugliste, Auswertung, Repertoires und Meisterpartien ausgeblendet; Trainer ab 1280 px als Spalte rechts neben dem Brett (≤ 680 px, brett-hoch, scrollt in sich), am Handy unter dem Brett; Leertaste = „Nochmal“, Tastenname im Tooltip | Am PC rutschte der Trainer unter dem Brett aus dem Bild, daneben standen drei Spalten, die im Training niemand braucht | Wunsch User 14.11. |

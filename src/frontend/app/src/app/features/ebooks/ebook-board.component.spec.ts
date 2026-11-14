@@ -10,6 +10,7 @@ import { MaiaEngineService } from '../analysis/maia/maia-engine.service';
 import { LiveEngineSession } from '../games/live-engine-session';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { By } from '@angular/platform-browser';
+import { Chess } from 'chess.js';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { EbookBoardComponent, EbookBoardMode, ebookResultLabel } from './ebook-board.component';
@@ -410,6 +411,194 @@ describe('EbookBoardComponent', () => {
     tick(500);
     expect(c.played().length).toBe(2);
   }));
+
+  describe('Wer löst (0.975.0, Server-Felder solvable/opponentFirst aus BookSolverLine.ForReader)', () => {
+    /** „Alekhine: Move by Move“, S. 154: Schwarz am Zug, die Buchlinie endet mit dem Matt von WEISS (30…Ta8 31.Tb6 Txa7 32.Tb8#). */
+    const A: EbookDiagram = {
+      id: 31, page: 154, x: 0, y: 0, w: 0.3, h: 0.3, fen: '3r1k2/P4pbp/2R3p1/8/5P2/6P1/Pn3P1P/4R1K1 b - - 0 30', label: null,
+      caption: null, sideKnown: true, reportedByMe: false, reportCount: 0,
+      solutionUci: 'd8a8 c6b6 a8a7 b6b8', solutionSan: 'Ra8 Rb6 Rxa7 Rb8#', solutionText: '30...Ra8 31.Rb6 Rxa7 32.Rb8#', solutionSource: 'book',
+      solutionCheck: 'confirmed', engineEval: -9998, solvable: true, opponentFirst: true,
+    };
+    /** Stellung nach einer UCI-Folge ab der Alekhine-Stellung und der letzte Zug als Brettzug. */
+    function after(...ucis: string[]): { fen: string; move: { from: string; to: string; san: string; fen: string } } {
+      const chess = new Chess(A.fen);
+      let san = '';
+      for (const u of ucis) san = chess.move({ from: u.slice(0, 2), to: u.slice(2, 4) }).san;
+      const last = ucis[ucis.length - 1];
+      return { fen: chess.fen(), move: { from: last.slice(0, 2), to: last.slice(2, 4), san, fen: chess.fen() } };
+    }
+    const statusText = (f: ComponentFixture<EbookBoardComponent>): string => {
+      f.detectChanges();
+      return (f.nativeElement as HTMLElement).querySelector('.eb-solve .eb-solve-text')!.firstChild!.textContent!.trim();
+    };
+
+    it('Gegner zuerst: der Gegnerzug wird vorgespielt, das Brett steht aus Sicht des Lösers, dann löst Weiß bis zum Matt', fakeAsync(() => {
+      try { localStorage.setItem(EbookBoardComponent.SOLVE_STYLE_KEY, 'easy'); } catch { /* egal */ }
+      const fixture = make(A);
+      const c = fixture.componentInstance;
+      expect(c.mode()).toBe('solve');
+      expect(c.solveState()).toBe('running');
+      expect(c.userColor).toBe('w');               // Schwarz ist am Zug, der Löser hat Weiß
+      expect(c.flipped()).toBeFalse();             // Weiß unten
+      expect(c.playable()).toBeFalse();            // erst zieht der Gegner
+      expect(c.played().length).toBe(0);
+      expect(statusText(fixture)).toBe('ebooks.board.opponentMovesFirst');
+      // Ein Zug vor dem Gegnerzug zählt nicht.
+      c.onBoardMove(after('d8a8', 'c6b6').move as never);
+      expect(c.played().length).toBe(0);
+
+      tick(EbookBoardComponent.LEAD_DELAY_MS);
+      expect(c.played().map(m => m.san)).toEqual(['Ra8']);
+      expect(c.boardFen()).toBe(after('d8a8').fen);
+      const board = fixture.debugElement.query(By.directive(ChessBoardComponent));
+      fixture.detectChanges();
+      expect((board.componentInstance as ChessBoardComponent).fen).toBe(after('d8a8').fen);   // der Zug steht auf dem Brett
+      expect((board.componentInstance as ChessBoardComponent).flipped).toBeFalse();
+      expect(c.playable()).toBeTrue();
+      expect(statusText(fixture)).toBe('ebooks.board.yourMoveWhite');   // der Leser sagt, welche Farbe man spielt
+      expect(c.movesText).toBe('30… Ra8');
+
+      c.onBoardMove(after('d8a8', 'c6b6').move as never);
+      expect(c.played().length).toBe(2);
+      expect(c.solveState()).toBe('running');
+      tick(500);
+      expect(c.played().map(m => m.san)).toEqual(['Ra8', 'Rb6', 'Rxa7']);
+      c.onBoardMove(after('d8a8', 'c6b6', 'a8a7', 'b6b8').move as never);
+      expect(c.solveState()).toBe('solved');
+      expect(c.mistake()).toBeFalse();
+      expect(c.movesText).toBe('30… Ra8 31. Rb6 Rxa7 32. Rb8#');        // Zugnummern verrutschen nicht
+      expect(c.solutionText).toBe('30… Ra8 31. Rb6 Rxa7 32. Rb8#');
+
+      // „Nochmal“: wieder von vorn, wieder mit dem Gegnerzug.
+      c.toggleAutoNext();
+      c.reset();
+      expect(c.played().length).toBe(0);
+      tick(EbookBoardComponent.LEAD_DELAY_MS);
+      expect(c.played().map(m => m.san)).toEqual(['Ra8']);
+      c.toggleAutoNext();
+      tick(EbookBoardComponent.AUTO_NEXT_DELAY_MS);
+    }));
+
+    it('Gegner zuerst: ein falscher Löserzug wird zurückgenommen, der Gegnerzug bleibt stehen; Training zählt den Fehler', fakeAsync(() => {
+      const fixture = make(A);
+      const c = fixture.componentInstance;
+      expect(c.solveStyle()).toBe('training');
+      tick(EbookBoardComponent.LEAD_DELAY_MS);
+      stockfish.getBestMove.and.callFake((fen: string) => Promise.resolve({ move: 'a1a2', eval: '0', score: { cp: fen === after('d8a8', 'c6b6').fen ? 9000 : 0 } } as never));
+      const wrong = after('d8a8', 'c6c7').move;
+      c.onBoardMove(wrong as never);
+      flushMicrotasks();
+      tick(700);
+      expect(c.played().map(m => m.san)).toEqual(['Ra8']);
+      expect(c.mistake()).toBeTrue();
+      expect(c.playable()).toBeTrue();
+    }));
+
+    it('Gegner zuerst im Training: das stehende Brett zeigt die Stellung nach dem Gegnerzug, der Zug selbst ist der Pfeil', fakeAsync(() => {
+      const fixture = make(A);
+      const c = fixture.componentInstance;
+      fixture.detectChanges();
+      const board = (): PuzzleBoardComponent => fixture.debugElement.query(By.directive(PuzzleBoardComponent)).componentInstance as PuzzleBoardComponent;
+      expect(board().fen).toBe(A.fen);
+      expect(board().orientation).toBe('white');
+      expect(c.opponentArrow()).toBeUndefined();
+      tick(EbookBoardComponent.LEAD_DELAY_MS);
+      fixture.detectChanges();
+      expect(board().fen).toBe(after('d8a8').fen);
+      expect(board().turnColor).toBe('white');
+      expect(c.opponentArrow()).toEqual(['d8' as never, 'a8' as never]);
+      c.onFrozenMove({ orig: 'c6' as never, dest: 'b6' as never });
+      expect(c.played().map(m => m.san)).toEqual(['Ra8', 'Rb6']);
+      expect(c.opponentArrow()).toBeUndefined();
+      tick(500);
+      fixture.detectChanges();
+      expect(board().fen).toBe(after('d8a8').fen);                     // bleibt stehen
+      expect(c.opponentArrow()).toEqual(['a8' as never, 'a7' as never]);
+    }));
+
+    it('Gegner zuerst gegen Stockfish: gerechnet wird ab der Stellung nach dem Gegnerzug, gelöst mit derselben Farbe', fakeAsync(() => {
+      const c = make(A).componentInstance;
+      const fens: string[] = [];
+      const answers = ['c6b6', 'a8a7', 'b6b8'];
+      let k = 0;
+      stockfish.getBestMove.and.callFake((fen: string) => { fens.push(fen); return Promise.resolve({ move: answers[k++] ?? '', eval: 0 } as never); });
+      c.setSolveSource('engine');
+      flushMicrotasks();
+      expect(fens[0]).toBe(after('d8a8').fen);
+      expect(c.solutionLine).toEqual(['d8a8', 'c6b6', 'a8a7', 'b6b8']);
+      expect(c.solutionText).toBe('30… Ra8 31. Rb6 Rxa7 32. Rb8#');
+      expect(c.userColor).toBe('w');
+      tick(EbookBoardComponent.LEAD_DELAY_MS);
+      expect(c.played().map(m => m.san)).toEqual(['Ra8']);
+      expect(c.playable()).toBeTrue();
+    }));
+
+    it('Gegner zuerst: außerhalb von „Lösen“ steht das Brett wie im Buch (Seite am Zug unten), Maia spielt man mit der Seite am Zug', fakeAsync(() => {
+      const c = make(A).componentInstance;
+      tick(EbookBoardComponent.LEAD_DELAY_MS);
+      c.setMode('free');
+      expect(c.flipped()).toBeTrue();
+      expect(c.played().length).toBe(0);
+      c.setMode('maia');
+      expect(c.userColor).toBe('b');
+      c.setMode('solve');
+      expect(c.flipped()).toBeFalse();
+      tick(EbookBoardComponent.LEAD_DELAY_MS);
+    }));
+
+    it('nicht lösbar: kein Modus „Lösen“, das Diagramm steht auf „Ansehen“ mit Grund und aufklappbarer Buchlinie; das nächste lösbare wird wieder gelöst', () => {
+      const fixture = make({ ...D, id: 41, solvable: false, engineEval: -600 });
+      const c = fixture.componentInstance;
+      const el: HTMLElement = fixture.nativeElement;
+      expect(c.mode()).toBe('view');
+      expect(c.visibleModes).not.toContain('solve');
+      expect(el.querySelectorAll('.eb-bar .eb-mode').length).toBe(4);                 // Knopf weg, nicht ausgegraut
+      expect(Array.from(el.querySelectorAll<HTMLButtonElement>('.eb-bar .eb-mode')).every(b => !b.disabled)).toBeTrue();
+      expect(el.querySelector('.eb-unsolvable .eb-solve-text')!.textContent).toContain('ebooks.board.notSolvable');
+      c.setMode('solve');
+      expect(c.mode()).toBe('view');
+      // Lösung zeigen bleibt.
+      el.querySelector<HTMLButtonElement>('.eb-unsolvable .eb-sol-toggle')!.click();
+      fixture.detectChanges();
+      expect(el.querySelector('.eb-solution .eb-solution-line')!.textContent).toBe('17… Rxh2+ 18. Kxh2 Rh8+');
+      expect(el.querySelector('.eb-solution .eb-solution-text')!.textContent).toContain('17...Rxh2+!');
+      expect(c.analysisParams()['fen']).toBe(D.fen);                                  // Analysebrett bleibt
+
+      // Blättern: ein lösbares Diagramm steht wieder im Lösen-Modus (die Wahl „Lösen“ blieb), ohne Hinweis.
+      fixture.componentRef.setInput('diagram', { ...D, id: 42, solvable: true });
+      fixture.detectChanges();
+      expect(c.mode()).toBe('solve');
+      expect(c.solveState()).toBe('running');
+      expect(el.querySelector('.eb-unsolvable')).toBeNull();
+      expect(el.querySelectorAll('.eb-bar .eb-mode').length).toBe(5);
+      // Wer auf einem nicht lösbaren Diagramm selbst einen Modus wählt, bleibt dabei.
+      fixture.componentRef.setInput('diagram', { ...D, id: 43, solvable: false });
+      fixture.detectChanges();
+      c.setMode('free');                                                              // Frei ziehen bleibt
+      expect(c.playable()).toBeTrue();
+      fixture.componentRef.setInput('diagram', { ...D, id: 44, solvable: true });
+      fixture.detectChanges();
+      expect(c.mode()).toBe('free');
+    });
+
+    it('normale Aufgabe unverändert: Seite am Zug löst sofort, kein vorgespielter Zug, gewohnter Satz — auch bei alten Antworten ohne die Felder', fakeAsync(() => {
+      for (const d of [D, { ...D, solvable: true, opponentFirst: false }]) {
+        TestBed.resetTestingModule();
+        const fixture = make(d);
+        const c = fixture.componentInstance;
+        expect(c.mode()).toBe('solve');
+        expect(c.userColor).toBe('b');
+        expect(c.flipped()).toBeTrue();
+        expect(c.leadPending).toBeFalse();
+        expect(c.playable()).toBeTrue();
+        expect(statusText(fixture)).toBe('ebooks.reader.yourMove');
+        tick(1000);
+        expect(c.played().length).toBe(0);
+        expect((fixture.nativeElement as HTMLElement).querySelector('.eb-unsolvable')).toBeNull();
+      }
+    }));
+  });
 
   it('Engine an: die Stellung geht EINMAL an die Engine — kein Effekt-Kreislauf über die Signale der Sitzung (0.801.0)', () => {
     // Echtes sync liest und schreibt baseIndex; der Ersatz tut dasselbe, rechnet aber nicht (kein Worker im Test).
