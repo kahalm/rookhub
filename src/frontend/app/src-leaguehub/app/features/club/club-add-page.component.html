@@ -43,6 +43,7 @@
             @if (store.resumedFrom(); as who) { <b>Du stellst die Liste von {{ who }} fertig.</b> }</p>
         }
         <lh-club-import-review [review]="rv" [client]="client" [pgn]="store.pgn()" [remembers]="!share" [draftId]="share ? null : (store.draft()?.id ?? null)"
+                               [toMyGames]="store.ownEntry() ? addToMine : null"
                                (imported)="store.done($event)" (cancel)="store.closeCurrent()" (savedChange)="store.onSaved($event)" />
       } @else {
         <!-- d2-l-hinzufuegen-anon-text: am Schalter nur Beschriftung + ein Satz; der Rest hinter (i) — der Knopf steht NEBEN dem

@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { serverTime } from '@rh/features/games/scoresheet-timing';
-import { ClubImportResult, ScoresheetScan, ScoresheetStatus } from './club.models';
+import { ClubImportResult, MineCopy, ScoresheetScan, ScoresheetStatus } from './club.models';
 
 // Reine Texte und Regeln der Vereins-Datenbank (ohne Angular-Komponenten) — die Seite ist deutsch.
 
@@ -40,7 +40,20 @@ export function importSummary(r: ClubImportResult, anon = 'Verein'): string {
   let s = parts.join(', ') + '.';
   if (r.remembered) s += ` ${n(r.remembered, 'Namens-Zuordnung', 'Namens-Zuordnungen')} gemerkt — das nächste Mal erkennt LeagueHub sie von selbst.`;
   if (r.truncated) s += ' Es wurden nur die ersten 500 Partien gelesen — den Rest bitte in einem zweiten Upload.';
+  if (r.mine) s += ' ' + mineCopyText(r.mine);
   return s;
+}
+
+/** Was aus der Kopie in „Meine Partien" wurde — ein Fehlschlag ist nur ein Hinweis, die Vereins-Datenbank hat die Partie. */
+export function mineCopyText(m: MineCopy): string {
+  const total = m.added + m.present + m.missing;
+  if (m.missing) {
+    return (total === 1 ? 'In deine Partien ließ sie sich nicht legen'
+      : `${m.missing} von ${total} ließen sich nicht in deine Partien legen`) + ' — in der Vereins-Datenbank ist alles gespeichert.';
+  }
+  if (!m.added) return total === 1 ? 'Sie war schon in deinen Partien.' : 'Sie waren schon in deinen Partien.';
+  return total === 1 ? 'Auch in deinen Partien gespeichert.'
+    : `${m.added} auch in deinen Partien gespeichert${m.present ? `, ${m.present} waren schon dort` : ''}.`;
 }
 
 /** Absage beim Hochladen eines Formular-Fotos (Gründe aus ScoresheetScanService.CreateAsync). */

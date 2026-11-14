@@ -91,7 +91,12 @@ export interface ClubImportResult {
   failed: ClubFailure[];
   /** Nur über einen Teilen-Link (0.656.0): Schlüssel für eine Zuordnung nach dem Anmelden. */
   claimKey?: string | null;
+  /** Nur in der Oberfläche (0.970.0): was aus der Kopie in „Meine Partien" wurde — fehlt, wenn keine versucht wurde. */
+  mine?: MineCopy;
 }
+
+/** Kopie der importierten Partien in „Meine Partien": neu abgelegt, schon dort, nicht abgelegt (Kontingent, Netz). */
+export interface MineCopy { added: number; present: number; missing: number }
 
 /** Ein Spieler zum Auswählen: aus den Meldelisten (`source: 'liga'`) oder dem Spielerverzeichnis der Megabase. */
 export interface RosterPerson {

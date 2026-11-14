@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, inject, signal, effect, untracked, viewChild,
 } from '@angular/core';
+import { autoMineApplies, readAutoMine, writeAutoMine } from '../../core/auto-my-games';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -39,12 +40,6 @@ const SILENT_FAILURES = 3;
  * unter `/verein/formular/:id`, ohne Konto über einen Teilen-Link unter `/s/:token/formular/:key`. Übernehmen oder
  * Verwerfen schließt die Einlesung — das Foto verschwindet.
  */
-/** Gemerkte Abwahl von „Automatisch zu meinen Partien hinzufügen" (je Gerät). */
-export const AUTO_MINE_KEY = 'lh-auto-my-games';
-function readAutoMine(): boolean {
-  try { return localStorage.getItem(AUTO_MINE_KEY) !== '0'; } catch { return true; }
-}
-
 @Component({
   selector: 'lh-club-scan-page',
   standalone: true,
@@ -135,7 +130,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly autoMine = signal(readAutoMine());
   setAutoMine(on: boolean): void {
     this.autoMine.set(on);
-    try { if (on) localStorage.removeItem(AUTO_MINE_KEY); else localStorage.setItem(AUTO_MINE_KEY, '0'); } catch { /* nur Bequemlichkeit */ }
+    writeAutoMine(on);
   }
   readonly rookHub = rookHubUrlForLeagueHub();
 
@@ -329,7 +324,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
       if (this.share) rememberAnonKey(this.share, this.scanRef, false);
       this.replacedOld.set(added?.replaced ?? 0);
       this.saved.set(true);
-      if (this.loggedIn && this.autoMine() && !this.exporter.myGameId()) void this.exporter.addToMyGames();
+      // Dieselbe Regel wie in der Übersicht der Partiedaten (`core/auto-my-games.ts`).
+      if (autoMineApplies({ account: this.loggedIn, autoMine: this.autoMine(), games: 1 }) && !this.exporter.myGameId()) void this.exporter.addToMyGames();
     } catch (err) {
       const e = err instanceof HttpErrorResponse ? err : null;
       this.saveError.set(e?.error?.reason === 'illegal' ? `Ein Zug ist nicht legal: ${e.error.message}`

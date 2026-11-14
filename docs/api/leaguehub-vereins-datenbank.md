@@ -621,6 +621,21 @@ Vereins-Datenbank (LeagueHub)" — Sprung per Einmal-Code (`HandoffService.jumpT
 `core/partner-site.ts`: rookhub ↔ leaguehub, rookhub-dev ↔ leaguehub-dev, sonst kein Menüpunkt) auf
 `/verein/neu?partie={id}`; LeagueHub holt das PGN über `GET /api/games/{id}` (dasselbe Konto) und öffnet gleich die Übersicht.
 
+**Auch in „Meine Partien“ — eine Regel für jeden Eingabeweg** (0.970.0, `core/auto-my-games.ts`): legt ein angemeldeter
+Nutzer eine Partie in die Vereins-Datenbank, landet sie nach dem Speichern auch in seinen „Meine Partien“ (`POST
+/api/games/import`, mit den Namen der Eingabe statt des Vereinsnamens; `SavedGameImport` verbindet sie über die Züge mit der
+Vereinspartie und nimmt deren Analyse mit, eine schon vorhandene wird über `ExternalId` erkannt). Die Regel
+`autoMineApplies` gilt auf der Formular-Prüfseite (`club-scan-page`, seit 0.672.7) UND in der Übersicht der Partiedaten
+(`club-import-review`: eingefügtes PGN, PGN-Datei, ChessBase, Lichess-Studie, vom Analysebrett übergebene Handeingabe):
+mit Konto, Häkchen „Automatisch zu meinen Partien hinzufügen“ nicht abgewählt (Gerätevorliebe `lh-auto-my-games`, Vorgabe
+an, dasselbe Häkchen auf beiden Seiten) und höchstens `AUTO_MINE_MAX_GAMES` = 5 Partien in der Liste — ein größerer Import
+bleibt ein reiner Vereins-Import (kein Häkchen, keine Kopie). Keine Kopie: über einen Teilen-Link (ohne Konto), für die
+Liste eines anderen, die ein Verwalter fertigstellt, und für eine Partie, die über ⋮ aus „Meine Partien“ kommt
+(`ClubDraftStore.ownEntry`; sie liegt dort schon). Die Kopie läuft NACH dem Speichern im Verein und kann es nicht scheitern
+lassen: Kontingent (`GamesPerUserCap`, `PgnCharsPerUserCap`) oder Netzfehler stehen nur als Hinweis in der Zusammenfassung
+(`ClubImportResult.mine`, `mineCopyText`). In der Kopie stehen die Namen aus dem PGN; ein in der Übersicht korrigierter Name
+ersetzt den des PGN (`withPlayers`). Vom Verein abgelehnte Partien der Liste gehen nicht mit. Bestand wird nicht nachgeholt.
+
 Oberfläche (LeagueHub): Reiter „Prognosen · Vereinspartien · Partien hinzufügen" (`/`, `/verein`, `/verein/neu`,
 `/verein/formular/:id`); ohne Konto `/s/:token/hochladen` und `/s/:token/formular/:key` — der Teilen-Link zeigt die
 Aufforderung dazu ganz oben. Die Formular-Korrektur benutzt DIESELBE Sitzung wie RookHubs Korrekturseite

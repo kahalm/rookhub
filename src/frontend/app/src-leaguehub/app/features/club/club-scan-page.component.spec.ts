@@ -9,7 +9,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubMatch, LeagueScanState } from '../../core/club.models';
-import { AUTO_MINE_KEY, ClubScanPageComponent } from './club-scan-page.component';
+import { AUTO_MINE_KEY } from '../../core/auto-my-games';
+import { ClubScanPageComponent } from './club-scan-page.component';
 
 const PLY = (w: number, written: string, san: string, uci: string, extra = {}) =>
   ({ w, written, san, uci, match: 'exact', uncertain: false, ...extra });

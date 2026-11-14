@@ -2,7 +2,7 @@ import { fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ClubClient } from '../../core/club-api.service';
 import { ClubDraft, ClubPreview } from '../../core/club.models';
-import { ClubDraftStore, ClubDraftStoreDeps, DRAFT_SAVE_FAILED, SAVE_DEBOUNCE_MS } from './club-draft-store';
+import { ClubDraftStore, ClubDraftStoreDeps, DRAFT_SAVE_FAILED, SAVE_DEBOUNCE_MS, savedGameLabel } from './club-draft-store';
 import { draftKeys } from './club-anon-keys';
 
 const M = { league: true, ambiguous: false, name: 'Hengl, Philip', fide: '222', club: false, candidates: [] };
@@ -179,6 +179,50 @@ describe('ClubDraftStore', () => {
     void t.loadSavedGame(34);
     flushMicrotasks();
     expect(t.importError()).toContain('Die Partie aus RookHub ließ sich nicht laden');
+  }));
+
+  it('ownEntry (Kopie in „Meine Partien“): eigene Liste ja — Teilen-Link, fremde Liste und Partie aus „Meine Partien“ nein', fakeAsync(() => {
+    const own = new ClubDraftStore(deps);
+    own.pgn.set('1. e4 *');
+    void own.startPreview();
+    flushMicrotasks();
+    expect(own.ownEntry()).toBeTrue();
+
+    const shared = new ClubDraftStore({ ...deps, share: 'TOK' });
+    expect(shared.ownEntry()).toBeFalse();
+
+    // Vom Analysebrett übergeben (gleiche Quelle „rookhub“, andere Beschriftung): die Handeingabe — Kopie ja.
+    api.draft.and.resolveTo({ ...DRAFT({ ref: '42', id: 42, source: 'rookhub', label: 'Analysebrett: A – B' }), pgn: '1. d4 *', state: null, imported: [] });
+    const board = new ClubDraftStore(deps);
+    void board.openDraft('42');
+    flushMicrotasks();
+    expect(board.review()).not.toBeNull();
+    expect(board.ownEntry()).toBeTrue();
+
+    // Aus „Meine Partien“ (⋮ → „In die Vereins-Datenbank“): liegt dort schon — frisch geladen und als fortgesetzter Entwurf.
+    (deps.savedGame as jasmine.Spy).and.resolveTo({ pgn: '1. c4 *' });
+    const saved = new ClubDraftStore(deps);
+    void saved.loadSavedGame(33);
+    flushMicrotasks();
+    expect(saved.review()).not.toBeNull();
+    expect(saved.ownEntry()).toBeFalse();
+    api.draft.and.resolveTo({ ...DRAFT({ ref: '43', id: 43, source: 'rookhub', label: savedGameLabel(33) }), pgn: '1. c4 *', state: null, imported: [] });
+    const resumed = new ClubDraftStore(deps);
+    void resumed.openDraft('43');
+    flushMicrotasks();
+    expect(resumed.ownEntry()).toBeFalse();
+
+    // Verwalter stellt die Liste eines anderen fertig: nicht seine Partien.
+    const other = DRAFT({ ref: '12', id: 12, owner: 'hans', mine: false });
+    (deps.allDrafts as jasmine.Spy).and.resolveTo([other]);
+    api.draft.and.resolveTo({ ...other, pgn: '1. e4 *', state: null, imported: [] });
+    const manager = new ClubDraftStore({ ...deps, isManager: true });
+    void manager.loadDrafts();
+    flushMicrotasks();
+    void manager.resume(other);
+    flushMicrotasks();
+    expect(manager.resumedFrom()).toBe('hans');
+    expect(manager.ownEntry()).toBeFalse();
   }));
 
   it('draftTitle/draftState', () => {

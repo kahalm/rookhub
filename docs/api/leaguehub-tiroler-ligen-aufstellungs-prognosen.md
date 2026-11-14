@@ -165,7 +165,8 @@ Rollenverwaltung an).
 - **Formular prüfen (0.673.1)**: ein ausgewählter Spieler belegt die Elo vor (`LeagueRosterPersonDto.Elo` = jüngste
   Meldeliste nach `Tnr`, `EloI ?? EloN`, nur Ligaspieler); das Elo-Feld ist ein Textfeld mit `inputmode="numeric"` (kein
   Zahlenfeld mit Pfeilen). Häkchen „Automatisch zu meinen Partien hinzufügen" (nur angemeldet, standardmäßig an, Abwahl im
-  localStorage `lh-auto-my-games` = `'0'`): nach dem Übernehmen ruft die Seite `addToMyGames` selbst.
+  localStorage `lh-auto-my-games` = `'0'`): nach dem Übernehmen ruft die Seite `addToMyGames` selbst. Seit 0.970.0 gilt
+  dieselbe Regel auch in der Übersicht der Partiedaten (`core/auto-my-games.ts`, siehe `leaguehub-vereins-datenbank.md`).
 - **Taktik-Ernte (0.657.0**, Wunsch 2026-10-04 „Taktiken aus den Partien automatisch ernten … plan und bau", Kapitel je
   Ligarunde): `Services/Tactics/` — `TacticHarvest` (rein: Lichess-Puzzler-Schwellen ohne AGPL-Code: Gewinnchance −1..1,
   Fehler des Gegners > 0,6, nicht schon > +3, Matt ≤ 15 oder ≥ +2, eindeutig > 0,7 bzw. bei Matt kein zweites Matt; Themen

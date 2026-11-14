@@ -2,9 +2,10 @@ import { provideTestClub } from '../../core/club-context.testing';
 import { ComponentFixture, TestBed, fakeAsync, flush, flushMicrotasks } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ClubClient } from '../../core/club-api.service';
-import { ClubPreview, SideMatch } from '../../core/club.models';
+import { ClubImportResult, ClubPreview, SideMatch } from '../../core/club.models';
 import { ClubImportReviewComponent } from './club-import-review.component';
 import { ImportReview } from './import-review';
+import { AUTO_MINE_KEY } from '../../core/auto-my-games';
 
 const M = (x: Partial<SideMatch> = {}): SideMatch =>
   ({ league: false, ambiguous: false, name: null, fide: null, club: false, candidates: [], ...x });
@@ -204,6 +205,121 @@ describe('ClubImportReviewComponent', () => {
     await fixture.componentInstance.run();
     expect(client.importPgn).toHaveBeenCalledTimes(1);
     expect(fixture.componentInstance.error()).toBe('Importieren hat nicht geklappt.');
+  });
+
+  describe('„Automatisch zu meinen Partien hinzufügen“ (0.970.0, dieselbe Regel wie die Formular-Prüfseite)', () => {
+    let toMine: jasmine.Spy;
+    afterEach(() => localStorage.removeItem(AUTO_MINE_KEY));
+
+    /** `n` Partien mit eigenem Text; `mine` = die Seite reicht die Ablage durch (eigene Liste eines Kontos). */
+    function createSmall(n: number, mine = true): HTMLElement {
+      const g = PREVIEW.games[0];
+      const games = Array.from({ length: n }, (_, i) => ({ ...g, index: i + 1, pgn: `[White "Binder M"]\n[Black "Hengl P"]\n\n1. e4 e5 {${i + 1}} *\n` }));
+      client = jasmine.createSpyObj<ClubClient>('ClubClient', ['importPgn', 'players', 'match']);
+      client.players.and.resolveTo([]);
+      toMine = jasmine.createSpy('toMyGames').and.callFake(async (pgn: string) => {
+        const k = pgn.split('[White ').length - 1;
+        return { imported: k, duplicates: 0, ids: Array.from({ length: k }, (_, i) => 100 + i) };
+      });
+      TestBed.configureTestingModule({ imports: [ClubImportReviewComponent], providers: [provideTestClub()] });
+      fixture = TestBed.createComponent(ClubImportReviewComponent);
+      fixture.componentRef.setInput('review', new ImportReview({ truncated: false, games }, true));
+      fixture.componentRef.setInput('client', client);
+      fixture.componentRef.setInput('pgn', 'GANZE DATEI');
+      if (mine) fixture.componentRef.setInput('toMyGames', toMine);
+      fixture.componentInstance.retryDelays = [0, 0];
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+    async function run(): Promise<ClubImportResult> {
+      let result: ClubImportResult | null = null;
+      fixture.componentInstance.imported.subscribe(r => result = r);
+      await fixture.componentInstance.run();
+      return result!;
+    }
+
+    it('eine Partie: nach dem Speichern auch in „Meine Partien“, mit den Namen der Liste statt „Testdorf“', async () => {
+      const el = createSmall(1);
+      expect(el.querySelector<HTMLInputElement>('.auto-mine input')!.checked).toBeTrue();
+      client.importPgn.and.resolveTo(ok(1));
+      const result = await run();
+      expect(client.importPgn).toHaveBeenCalledBefore(toMine);
+      expect(toMine).toHaveBeenCalledOnceWith('[White "Binder M"]\n[Black "Hengl P"]\n\n1. e4 e5 {1} *\n');
+      expect(result.mine).toEqual({ added: 1, present: 0, missing: 0 });
+    });
+
+    it('ein in der Übersicht korrigierter Name geht in die Kopie', async () => {
+      createSmall(1);
+      fixture.componentInstance.review.choosePerson(1, 'black', { name: 'Hengl, Philip', fide: '222', teams: [], club: false });
+      client.importPgn.and.resolveTo(ok(1));
+      await run();
+      expect(toMine.calls.argsFor(0)[0]).toContain('[White "Binder M"]\n[Black "Hengl, Philip"]');
+    });
+
+    it('bis fünf Partien gehen mit — ohne die vom Verein abgelehnten', async () => {
+      createSmall(5);
+      client.importPgn.and.resolveTo(ok(4, [{ index: 3 }]));
+      const result = await run();
+      const sent: string = toMine.calls.argsFor(0)[0];
+      expect(sent.split('[White ').length - 1).toBe(4);
+      expect(sent).not.toContain('{3}');
+      expect(result.mine).toEqual({ added: 4, present: 0, missing: 0 });
+    });
+
+    it('Massenimport (mehr als fünf): kein Häkchen, keine Kopie', async () => {
+      const el = createSmall(6);
+      expect(el.querySelector('.auto-mine')).toBeNull();
+      client.importPgn.and.resolveTo(ok(6));
+      const result = await run();
+      expect(toMine).not.toHaveBeenCalled();
+      expect(result.mine).toBeUndefined();
+    });
+
+    it('abgewählt: keine Kopie, und das Gerät merkt es sich', async () => {
+      const el = createSmall(1);
+      const box = el.querySelector<HTMLInputElement>('.auto-mine input')!;
+      box.checked = false;
+      box.dispatchEvent(new Event('change'));
+      expect(localStorage.getItem(AUTO_MINE_KEY)).toBe('0');
+      client.importPgn.and.resolveTo(ok(1));
+      const result = await run();
+      expect(toMine).not.toHaveBeenCalled();
+      expect(result.added).toBe(1);
+      expect(result.mine).toBeUndefined();
+    });
+
+    it('ohne Konto bzw. fremde Liste (keine Ablage durchgereicht): kein Häkchen, keine Kopie', async () => {
+      const el = createSmall(1, false);
+      expect(el.querySelector('.auto-mine')).toBeNull();
+      client.importPgn.and.resolveTo(ok(1));
+      const result = await run();
+      expect(toMine).not.toHaveBeenCalled();
+      expect(result.mine).toBeUndefined();
+    });
+
+    it('scheitert die Kopie (Kontingent, Netz), bleibt der Vereins-Import gültig — nur ein Hinweis', async () => {
+      createSmall(2);
+      client.importPgn.and.resolveTo(ok(2));
+      toMine.and.rejectWith(new HttpErrorResponse({ status: 500 }));
+      const result = await run();
+      expect(result.added).toBe(2);
+      expect(result.mine).toEqual({ added: 0, present: 0, missing: 2 });
+      expect(fixture.componentInstance.error()).toBeNull();
+    });
+
+    it('nimmt „Meine Partien“ nur einen Teil (Kontingent), steht der Rest als nicht abgelegt da', async () => {
+      createSmall(2);
+      client.importPgn.and.resolveTo(ok(2));
+      toMine.and.resolveTo({ imported: 1, duplicates: 0, ids: [100] });
+      expect((await run()).mine).toEqual({ added: 1, present: 0, missing: 1 });
+    });
+
+    it('war die Partie schon in „Meine Partien“, zählt sie als vorhanden', async () => {
+      createSmall(1);
+      client.importPgn.and.resolveTo(ok(1));
+      toMine.and.resolveTo({ imported: 0, duplicates: 1, ids: [77] });
+      expect((await run()).mine).toEqual({ added: 0, present: 1, missing: 0 });
+    });
   });
 
   it('getippter Name wird abgeglichen', fakeAsync(() => {

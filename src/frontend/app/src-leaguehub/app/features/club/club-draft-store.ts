@@ -25,6 +25,12 @@ export interface ClubDraftStoreDeps {
 /** Text der Warnung, wenn der Online-Entwurf nicht gespeichert werden konnte. */
 export const DRAFT_SAVE_FAILED = 'Deine letzten Korrekturen liegen noch nicht online — die Übersicht bleibt offen, die nächste Änderung versucht es wieder.';
 
+/** Beschriftung der Liste, die eine Partie aus „Meine Partien" ist (⋮ → „In die Vereins-Datenbank") — steht im Entwurf. */
+export const savedGameLabel = (id: number): string => `Partie ${id} aus RookHub`;
+/** Kommt die Liste aus „Meine Partien"? Dann liegt die Partie dort schon — vom Analysebrett (gleiche Quelle) nicht. */
+export const isSavedGameList = (source: string | null, label: string | null): boolean =>
+  source === 'rookhub' && /^Partie \d+ aus RookHub$/.test(label ?? '');
+
 /** Wie lange nach der letzten Änderung der Übersicht gespeichert wird (ms) — Tippen und Klicken sollen nicht je Zug senden. */
 export const SAVE_DEBOUNCE_MS = 1500;
 
@@ -63,6 +69,12 @@ export class ClubDraftStore {
   readonly resuming = signal(false);
   /** Stellt ein Verwalter die Liste eines anderen fertig: dessen Name (oder „einem Teilen-Link"). */
   readonly resumedFrom = signal<string | null>(null);
+  /** Die Liste ist eine Partie aus „Meine Partien" — dort liegt sie schon. */
+  private readonly fromMyGames = signal(false);
+  /** Die eigene, selbst hereingebrachte Liste eines Kontos: nur für sie gilt „Automatisch zu meinen Partien hinzufügen"
+   *  (`core/auto-my-games.ts`) — nicht über einen Teilen-Link, nicht für die Liste eines anderen, die ein Verwalter
+   *  fertigstellt, und nicht für eine Partie, die aus „Meine Partien" kommt. */
+  readonly ownEntry = computed(() => !this.share && !this.resumedFrom() && !this.fromMyGames());
   /** Woher der Text kam — steht in der Liste der offenen Entwürfe. */
   private source = 'text';
   private label: string | null = null;
@@ -149,6 +161,7 @@ export class ClubDraftStore {
       this.importedBefore = full.imported;
       this.draft.set({ ...d, pgn: full.pgn });
       this.resumedFrom.set(this.foreignOwner(d));
+      this.fromMyGames.set(isSavedGameList(d.source, d.label));
       const preview = await this.client.preview(full.pgn, this.share ? null : full.id);
       this.review.set(ImportReview.restore(preview, full.state, this.replaceClub()));
     } catch {
@@ -228,7 +241,7 @@ export class ClubDraftStore {
     this.importError.set(null);
     try {
       this.pgn.set((await this.deps.savedGame(id)).pgn);
-      this.loaded(this.pgn(), 'rookhub', `Partie ${id} aus RookHub`);
+      this.loaded(this.pgn(), 'rookhub', savedGameLabel(id));
     } catch {
       this.importError.set('Die Partie aus RookHub ließ sich nicht laden — bist du hier mit demselben Konto angemeldet?');
       return;
@@ -261,6 +274,7 @@ export class ClubDraftStore {
       // Sofort online ablegen (egal, woher der Text kam) — geht das nicht (Deckel, Netz), läuft es ohne Entwurf weiter.
       const pgn = this.pgn();
       const d = await this.ensureDraft(pgn);
+      this.fromMyGames.set(isSavedGameList(this.pgnSource(pgn), this.pgnLabel(pgn)));
       this.review.set(new ImportReview(await this.client.preview(pgn, this.share ? null : d?.id ?? null), this.replaceClub()));
       if (rest.length) void this.parkPortions(rest, source, parts.length);
     } catch (err) {

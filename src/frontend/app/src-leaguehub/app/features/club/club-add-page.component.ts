@@ -86,6 +86,9 @@ export class ClubAddPageComponent implements OnInit {
     kind: () => this.kind() === 'formular' ? 'formular' : 'pgn',
   });
 
+  /** Die Kopie in „Meine Partien" (dasselbe Konto) — die Übersicht ruft sie nur für die eigene Liste (`store.ownEntry`). */
+  readonly addToMine = (pgn: string) => this.clubApi.addToMyGames(pgn);
+
   constructor() {
     this.destroyRef.onDestroy(() => {
       this.sheets.dispose();

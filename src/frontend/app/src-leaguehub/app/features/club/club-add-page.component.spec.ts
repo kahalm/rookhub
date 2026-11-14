@@ -30,7 +30,7 @@ describe('ClubAddPageComponent', () => {
   let api: jasmine.SpyObj<ClubClient>;
   /** Rückfrage (ConfirmService) — Vorgabe „ja", je Test umstellbar. */
   let confirmAsk: jasmine.Spy;
-  let service: { client: jasmine.Spy; savedGame: jasmine.Spy; openScans: jasmine.Spy; allDrafts: jasmine.Spy };
+  let service: { client: jasmine.Spy; savedGame: jasmine.Spy; openScans: jasmine.Spy; allDrafts: jasmine.Spy; addToMyGames?: jasmine.Spy };
   let query: Record<string, string>;
   let params: Record<string, string>;
   let handoff: { rookHubUrl: string | null; jumpToRookHub: jasmine.Spy };
@@ -815,6 +815,104 @@ describe('ClubAddPageComponent', () => {
   }));
 
   // Charakterisierung vor der Zerlegung Z31: Entwurf eines anderen → Zuordnung → Speichern (Verwalter stellt fertig).
+  describe('„Automatisch zu meinen Partien hinzufügen“ in der Übersicht der Partiedaten (0.970.0)', () => {
+    const WITH_TEXT: ClubPreview = { truncated: false, games: [{ ...PREVIEW.games[0], pgn: '[White "Oberschmid"]\n[Black "Hengl"]\n\n1. e4 *\n' }] };
+    const IMPORTED = { added: 1, anonymized: 1, duplicates: 0, truncated: false, ids: [5], failed: [] };
+    afterEach(() => localStorage.removeItem('lh-auto-my-games'));
+
+    function importOne(el: HTMLElement): void {
+      api.importPgn.and.resolveTo({ ...IMPORTED });
+      (el.querySelector('lh-club-import-review .btn-pri') as HTMLButtonElement).click();
+      flushMicrotasks();
+      fixture.detectChanges();
+    }
+    function openPasted(): HTMLElement {
+      api.preview.and.resolveTo(WITH_TEXT);
+      const el = create();
+      flushMicrotasks();
+      fixture.componentInstance.store.pgn.set('[White "Oberschmid"]\n1. e4 *');
+      fixture.detectChanges();
+      (el.querySelector('.btn-pri') as HTMLButtonElement).click();
+      flushMicrotasks();
+      fixture.detectChanges();
+      return el;
+    }
+
+    it('eingefügte Partie, angemeldet: nach dem Import auch in „Meine Partien“ — mit dem Namen aus dem PGN, nicht „Testdorf“', fakeAsync(() => {
+      service.addToMyGames = jasmine.createSpy('addToMyGames').and.resolveTo({ imported: 1, duplicates: 0, ids: [229] });
+      const el = openPasted();
+      expect(el.querySelector<HTMLInputElement>('lh-club-import-review .auto-mine input')!.checked).toBeTrue();
+      importOne(el);
+      expect(service.addToMyGames).toHaveBeenCalledOnceWith('[White "Oberschmid"]\n[Black "Hengl"]\n\n1. e4 *\n');
+      expect(el.querySelector('.result')?.textContent).toContain('1 Partie übernommen (1 mit „Testdorf“). Auch in deinen Partien gespeichert.');
+      flush();
+    }));
+
+    it('vom Analysebrett übergeben (?entwurf=): die Handeingabe bekommt die Kopie ebenso', fakeAsync(() => {
+      service.addToMyGames = jasmine.createSpy('addToMyGames').and.resolveTo({ imported: 1, duplicates: 0, ids: [229] });
+      query = { entwurf: '42', club: '1' };
+      api.draft.and.resolveTo({ ref: '42', id: 42, source: 'rookhub', label: 'Analysebrett: A – B', gameCount: 1, importedCount: 0,
+        createdAt: '2026-11-13T18:00:00', updatedAt: '2026-11-13T18:00:00', viaShareLink: false, mine: true, pgn: '1. e4 *', state: null, imported: [] });
+      api.preview.and.resolveTo(WITH_TEXT);
+      const el = create();
+      flushMicrotasks();
+      fixture.detectChanges();
+      flushMicrotasks();
+      fixture.detectChanges();
+      importOne(el);
+      expect(service.addToMyGames).toHaveBeenCalledTimes(1);
+      flush();
+    }));
+
+    it('scheitert die Kopie, steht der Import trotzdem als übernommen da — mit Hinweis', fakeAsync(() => {
+      service.addToMyGames = jasmine.createSpy('addToMyGames').and.rejectWith(new HttpErrorResponse({ status: 500 }));
+      const el = openPasted();
+      importOne(el);
+      expect(el.querySelector('.result')?.textContent).toContain('1 Partie übernommen');
+      expect(el.querySelector('.result')?.textContent).toContain('In deine Partien ließ sie sich nicht legen');
+      expect(api.deleteDraft).toHaveBeenCalledWith('7');
+      flush();
+    }));
+
+    it('abgewählt auf diesem Gerät: keine Kopie', fakeAsync(() => {
+      localStorage.setItem('lh-auto-my-games', '0');
+      service.addToMyGames = jasmine.createSpy('addToMyGames');
+      const el = openPasted();
+      expect(el.querySelector<HTMLInputElement>('lh-club-import-review .auto-mine input')!.checked).toBeFalse();
+      importOne(el);
+      expect(service.addToMyGames).not.toHaveBeenCalled();
+      expect(el.querySelector('.result')?.textContent).toContain('1 Partie übernommen (1 mit „Testdorf“).');
+      flush();
+    }));
+
+    it('über einen Teilen-Link (ohne Konto): kein Häkchen, keine Kopie', fakeAsync(() => {
+      params = { token: 'abc' };
+      service.addToMyGames = jasmine.createSpy('addToMyGames');
+      const el = openPasted();
+      expect(el.querySelector('lh-club-import-review')).not.toBeNull();
+      expect(el.querySelector('.auto-mine')).toBeNull();
+      importOne(el);
+      expect(api.importPgn).toHaveBeenCalled();
+      expect(service.addToMyGames).not.toHaveBeenCalled();
+      flush();
+    }));
+
+    it('eine Partie aus „Meine Partien“ (?partie=33) liegt dort schon: kein Häkchen, keine zweite Kopie', fakeAsync(() => {
+      query = { partie: '33' };
+      service.addToMyGames = jasmine.createSpy('addToMyGames');
+      service.savedGame.and.resolveTo({ pgn: '[White "Oberschmid"]\n1. e4 *' });
+      api.preview.and.resolveTo(WITH_TEXT);
+      const el = create();
+      flushMicrotasks();
+      fixture.detectChanges();
+      expect(el.querySelector('lh-club-import-review')).not.toBeNull();
+      expect(el.querySelector('.auto-mine')).toBeNull();
+      importOne(el);
+      expect(service.addToMyGames).not.toHaveBeenCalled();
+      flush();
+    }));
+  });
+
   it('Verwalter stellt die Liste eines anderen fertig: Hinweis mit Namen, Zuordnung, Import über den Entwurf, Entwurf weg', fakeAsync(() => {
     const D = { ref: '12', id: 12, source: 'datei', label: 'liga.pgn', gameCount: 1, importedCount: 0,
       createdAt: '2026-09-28T17:00:00', updatedAt: '2026-09-28T17:30:00', owner: 'hans', viaShareLink: false, mine: false };

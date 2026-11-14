@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject, input, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ClubClient } from '../../core/club-api.service';
-import { ClubImportResult, ImportGameDecision, RosterPerson } from '../../core/club.models';
+import { ClubImportResult, ImportGameDecision, MineCopy, RosterPerson } from '../../core/club.models';
+import { AUTO_MINE_MAX_GAMES, autoMineApplies, readAutoMine, withPlayers, writeAutoMine } from '../../core/auto-my-games';
 import { reasonText } from '../../core/club-format';
 import { ClubContextService } from '../../core/club-context.service';
 import { de } from '../../core/league-format';
@@ -128,6 +129,12 @@ interface Editing { index: number; side: SideKey; text: string }
       </table>
     </div>
 
+    @if (mineOffered()) {
+      <!-- 0.970.0: dieselbe Vorliebe wie auf der Formular-Prüfseite — nur bei wenigen Partien, ein Massenimport bleibt im Verein. -->
+      <label class="auto-mine small"><input type="checkbox" [checked]="autoMine()" [disabled]="importing()"
+                                            (change)="setAutoMine($any($event.target).checked)" />
+        Automatisch zu meinen Partien hinzufügen</label>
+    }
     <div class="actions">
       <button type="button" class="btn-pri" [disabled]="importing() || !review.counts().take" (click)="run()">
         @if (importing()) { Importiere … @if (progress(); as pr) { {{ pr.done }} / {{ pr.total }} } }
@@ -146,6 +153,9 @@ export class ClubImportReviewComponent {
   @Input() remembers = true;
   /** Der Entwurf, zu dem die Liste gehört (0.595.0, angemeldet) — geht mit jeder Portion an den Server. */
   @Input() draftId: number | null = null;
+  /** In „Meine Partien" ablegen (`POST /api/games/import`) — nur für die eigene Liste eines Kontos gesetzt; `null` (Teilen-Link,
+   *  fremde Liste, Partie aus „Meine Partien") = es gibt keine Kopie und kein Häkchen. */
+  readonly toMyGames = input<((pgn: string) => Promise<{ imported: number; duplicates?: number; ids: number[] }>) | null>(null);
   @Output() imported = new EventEmitter<ClubImportResult>();
   /** Nach jeder gespeicherten Portion: die Nummern ALLER in diesem Lauf gespeicherten Partien — die Seite legt sie im
    *  Entwurf ab, damit ein Abbruch nichts doppelt anfängt. */
@@ -188,6 +198,39 @@ export class ClubImportReviewComponent {
     return this.savedCount() > 0 && this.saved.has(r.game.index);
   }
   private acc: ClubImportResult | null = null;
+
+  /** „Automatisch zu meinen Partien hinzufügen": an, solange auf diesem Gerät nicht abgewählt (wie die Formular-Prüfseite). */
+  readonly autoMine = signal(readAutoMine());
+  setAutoMine(on: boolean): void {
+    this.autoMine.set(on);
+    writeAutoMine(on);
+  }
+  /** Das Häkchen steht nur da, wo die Kopie überhaupt in Frage kommt: eigene Liste, höchstens {@link AUTO_MINE_MAX_GAMES} Partien. */
+  mineOffered(): boolean {
+    return autoMineApplies({ account: !!this.toMyGames(), autoMine: true, games: this.review.counts().take });
+  }
+
+  /**
+   * Die gerade gespeicherten Partien auch in „Meine Partien" legen — dieselbe Regel wie auf der Formular-Prüfseite
+   * (`core/auto-my-games.ts`). Mit den Namen der Liste (ein in der Übersicht korrigierter Name gilt), nie mit „Schwaz".
+   * Scheitert die Kopie (Kontingent, Netz), ist das nur ein Hinweis: die Vereins-Datenbank hat die Partien schon.
+   */
+  private async copyToMine(indices: number[], failed: { index: number }[]): Promise<MineCopy | undefined> {
+    const add = this.toMyGames();
+    if (!add || !autoMineApplies({ account: true, autoMine: this.autoMine(), games: indices.length })) return undefined;
+    const skip = new Set(failed.map(f => f.index));
+    const texts = this.review.games()
+      .filter(r => indices.includes(r.game.index) && !skip.has(r.game.index) && r.game.pgn)
+      .map(r => withPlayers(r.game.pgn!, r.white.changed ? r.white.name : null, r.black.changed ? r.black.name : null));
+    if (!texts.length) return undefined;
+    try {
+      const r = await add(texts.join('\n'));
+      const present = r.duplicates ?? Math.max(0, r.ids.length - r.imported);
+      return { added: r.imported, present, missing: Math.max(0, texts.length - r.imported - present) };
+    } catch {
+      return { added: 0, present: 0, missing: texts.length };
+    }
+  }
   /** Partien je Anfrage: jede Portion wird sofort gespeichert, und 500 Partien bleiben so bei 50 Anfragen — unter den
    *  Drosseln (60 je Minute über einen Teilen-Link). */
   static readonly Portion = 10;
@@ -309,6 +352,8 @@ export class ClubImportReviewComponent {
         this.savedChange.emit([...this.saved]);
         this.progress.set({ done: this.saved.size, total });
       }
+      const mine = await this.copyToMine([...this.saved], acc.failed);
+      if (mine) acc.mine = mine;
       this.acc = null;
       this.saved.clear();
       this.savedCount.set(0);

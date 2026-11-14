@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { importSummary, isTransientError, loadErrorText, normalizeResult, reasonText, scanAvailability, sheetPgn, sheetPgnFileName, shortDateTime, uploadErrorText, yearOf, presetYear, waitClock } from './club-format';
+import { importSummary, mineCopyText, isTransientError, loadErrorText, normalizeResult, reasonText, scanAvailability, sheetPgn, sheetPgnFileName, shortDateTime, uploadErrorText, yearOf, presetYear, waitClock } from './club-format';
 import { ScoresheetStatus } from './club.models';
 
 describe('club-format', () => {
@@ -8,6 +8,17 @@ describe('club-format', () => {
       .toBe('3 Partien übernommen (2 mit „Testdorf“), 1 schon da, 1 nicht übernommen.');
     expect(importSummary({ added: 1, anonymized: 0, duplicates: 0, truncated: true, ids: [1], failed: [] }))
       .toContain('1 Partie übernommen. Es wurden nur die ersten 500');
+  });
+
+  it('Zusammenfassung nennt die Kopie in „Meine Partien“ — ein Fehlschlag ist ein Hinweis, kein Fehler des Imports (0.970.0)', () => {
+    const base = { added: 1, anonymized: 0, duplicates: 0, truncated: false, ids: [1], failed: [] };
+    expect(importSummary(base)).toBe('1 Partie übernommen.');
+    expect(importSummary({ ...base, mine: { added: 1, present: 0, missing: 0 } })).toBe('1 Partie übernommen. Auch in deinen Partien gespeichert.');
+    expect(importSummary({ ...base, mine: { added: 0, present: 1, missing: 0 } })).toContain('Sie war schon in deinen Partien.');
+    expect(importSummary({ ...base, mine: { added: 0, present: 0, missing: 1 } }))
+      .toContain('In deine Partien ließ sie sich nicht legen — in der Vereins-Datenbank ist alles gespeichert.');
+    expect(mineCopyText({ added: 2, present: 1, missing: 0 })).toBe('2 auch in deinen Partien gespeichert, 1 waren schon dort.');
+    expect(mineCopyText({ added: 1, present: 0, missing: 2 })).toContain('2 von 3 ließen sich nicht in deine Partien legen');
   });
 
   it('jeder Grund des Servers hat einen Satz', () => {
