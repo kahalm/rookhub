@@ -29,6 +29,14 @@ und nur zusammen gültig (`MarkedPositionVariation.Clean`, sonst fallen beide we
 (`SharedGameComponent.markOrigin`) schickt sie, sobald man in der eigenen Nebenvariante der Live-Engine steht. Liste und
 Antwort tragen beide Felder mit.
 
+**Auf der Partie-Zusammenfassung** (0.972.0, Wunsch 2026-11-14: „summary um den (+) knopf erweitern“): derselbe Knopf steht
+in der Knopfzeile des Seitenbretts (`SummaryGameBoardComponent`, hinter dem Engine-Knopf) und im Blatt am Handy. Er markiert
+die Stellung, die das Brett zeigt — Partiestellung mit `ply`, eine Variante (Zug aus dem Text oder selbst gezogen) mit
+`variationFromPly` (Abzweig) + `variationUci` (ihre Züge bis zur Stellung), `context` `analysis`. Die Herkunft je Ansicht ist
+die der Partieseite (`ClubGameSummaryComponent.markSource`): `/club-games/:id/summary` und `/s/:token/club-games/:id/summary`
+→ `clubGameId`, `/games/:id/summary` → `savedGameId`, `/g/:token/summary` → `shareToken`, `/cg/:token/summary` → keine Partie
+(nur lesen). Kein neuer Endpunkt, keine neuen Rechte; ohne Anmeldung unter der anonymen Kennung wie überall.
+
 **Verwendet von LeagueHub** (0.848.0): `GET /api/league/club/games/{id}/marks` sammelt die Markierungen ALLER Nutzer an einer
 Vereinspartie — direkt (`LeagueClubGameId`) oder über eine Kopie in „Meine Partien“ (`SavedGames.LeagueClubGameId`) — und
 gibt nur Stellung, Ort und Anzahl heraus, nie wer markiert hat (`Services/League/ClubGameMarks.cs`, Doku

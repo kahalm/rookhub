@@ -6,7 +6,13 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { AuthService } from '../../../core/auth.service';
+import { MarkNotesDialogComponent } from '../../../shared/mark-position/mark-notes-dialog.component';
+import { positionKey } from '../../../shared/mark-position/marked-positions.service';
 import { PreferencesService } from '../../../core/preferences.service';
+import { SnackbarService } from '../../../core/snackbar.service';
 import { GamesService } from '../games.service';
 import { ClubGameSummaryComponent } from './club-game-summary.component';
 import { ClubGameSummaryService } from './club-game-summary.service';
@@ -30,6 +36,8 @@ function fakeEngine() {
 
 const PGN = '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *';
 const prefs = { boardTheme: 'brown', pieceSet: 'cburnett' };
+/** Der „+“-Knopf am Brett lädt die eigenen Markierungen — ohne Anmeldung, über die Test-HTTP-Schicht. */
+const MARK_HTTP = [provideHttpClient(), provideHttpClientTesting(), { provide: AuthService, useValue: { currentUser: null, isLoggedIn: false } }];
 
 describe('SummaryGameBoardComponent', () => {
   let fixture: ComponentFixture<SummaryGameBoardComponent>;
@@ -40,7 +48,7 @@ describe('SummaryGameBoardComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [SummaryGameBoardComponent],
-      providers: [provideTranslateService({ fallbackLang: 'en' }), { provide: PreferencesService, useValue: prefs }],
+      providers: [...MARK_HTTP, provideTranslateService({ fallbackLang: 'en' }), { provide: PreferencesService, useValue: prefs }],
     });
     fixture = TestBed.createComponent(SummaryGameBoardComponent);
     fixture.componentRef.setInput('pgn', PGN);
@@ -97,6 +105,7 @@ describe('SummaryGameBoardComponent', () => {
 
   const mv = (san: string, fen: string) => ({ san, uci: 'x', fen, from: 'a1', to: 'a2' });
   const FEN_A = 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3';
+  const FEN_B = 'rnbqkbnr/pppp1ppp/8/8/3pP3/8/PPP2PPP/RNBQKBNR w KQkq - 0 3';
 
   it('showLine: solange die Linie der Partie folgt, ist es ein Partiezug', () => {
     const line = ['e4', 'e5', 'Nf3'].map(s => mv(s, 'f'));
@@ -152,7 +161,7 @@ describe('SummaryGameBoardComponent', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [SummaryGameBoardComponent],
-      providers: [provideTranslateService({ fallbackLang: 'en' }), { provide: PreferencesService, useValue: prefs },
+      providers: [...MARK_HTTP, provideTranslateService({ fallbackLang: 'en' }), { provide: PreferencesService, useValue: prefs },
         { provide: SUMMARY_ENGINE_SESSION, useValue: () => fake as unknown as LiveEngineSession }],
     });
     fixture = TestBed.createComponent(SummaryGameBoardComponent);
@@ -182,7 +191,7 @@ describe('SummaryGameBoardComponent', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [SummaryGameBoardComponent],
-      providers: [provideTranslateService({ fallbackLang: 'en' }), { provide: PreferencesService, useValue: prefs },
+      providers: [...MARK_HTTP, provideTranslateService({ fallbackLang: 'en' }), { provide: PreferencesService, useValue: prefs },
         { provide: SUMMARY_ENGINE_SESSION, useValue: () => fake as unknown as LiveEngineSession }],
     });
     fixture = TestBed.createComponent(SummaryGameBoardComponent);
@@ -196,6 +205,133 @@ describe('SummaryGameBoardComponent', () => {
     expect(c.isFlipped()).toBeTrue();
     expect(c.engineOn()).toBeTrue();
     expect(el().classList).toContain('in-sheet');
+  });
+
+  /** „+“ am Seitenbrett (Wunsch 2026-11-14: „summary um den (+) knopf erweitern“). */
+  describe('„+“-Knopf', () => {
+    let http: HttpTestingController;
+    let dialog: { open: jasmine.Spy };
+    const mark = () => el().querySelector<HTMLButtonElement>('.nav app-mark-position-button button.mark')!;
+    const post = () => http.expectOne(r => r.method === 'POST' && r.url === '/api/positions/marked');
+
+    function boot(marked: string[] = [], source: object = { clubGameId: 7 }) {
+      dialog = { open: jasmine.createSpy('open') };
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [SummaryGameBoardComponent],
+        providers: [...MARK_HTTP, provideTranslateService({ fallbackLang: 'en' }), { provide: PreferencesService, useValue: prefs },
+          { provide: MatDialog, useValue: dialog }],
+      });
+      http = TestBed.inject(HttpTestingController);
+      fixture = TestBed.createComponent(SummaryGameBoardComponent);
+      fixture.componentRef.setInput('pgn', PGN);
+      fixture.componentRef.setInput('markSource', source);
+      c = fixture.componentInstance;
+      fixture.detectChanges();
+      http.expectOne('/api/positions/marked').flush(marked.map((fen, i) => ({ id: i + 1, fen, positionKey: positionKey(fen), context: 'analysis', createdAt: '' })));
+      fixture.detectChanges();
+    }
+
+    it('steht in der Knopfzeile hinter dem Engine-Knopf', () => {
+      boot();
+      const nav = Array.from(el().querySelector('.nav')!.children).map(n => n.className.split(' ').find(k => k.startsWith('nav-')));
+      expect(nav).toEqual(['nav-start', 'nav-back', 'nav-forward', 'nav-end', 'nav-engine', 'nav-mark']);
+      expect(mark().getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('markiert die Partiestellung auf dem Brett mit FEN, Halbzug und Partie; danach öffnet das Notizfenster', () => {
+      boot();
+      c.goTo(3);
+      fixture.detectChanges();
+      mark().click();
+      fixture.detectChanges();
+      const req = post();
+      expect(req.request.body).toEqual({ fen: c.positions().fens[3], clubGameId: 7, context: 'analysis', ply: 3 });
+      expect(req.request.body.fen).toContain('RNBQKB1R b');   // nach 2.Nf3, Schwarz am Zug
+      expect(mark().classList).toContain('on');
+      req.flush({});
+      expect(dialog.open).toHaveBeenCalledOnceWith(MarkNotesDialogComponent, jasmine.objectContaining({
+        data: { fen: c.positions().fens[3], origin: { clubGameId: 7, context: 'analysis', ply: 3 } } }));
+      // weiterblättern: andere Stellung, nicht markiert; zurück: wieder markiert
+      click('.nav-forward');
+      expect(mark().classList).not.toContain('on');
+      click('.nav-back');
+      expect(mark().classList).toContain('on');
+      http.verify();
+    });
+
+    it('schon markierte Stellung: Knopf grün, Klick öffnet nur das Fenster (kein zweites Speichern)', () => {
+      const fens = c.positions().fens;
+      boot([fens[2]]);
+      expect(mark().classList).not.toContain('on');
+      c.goTo(2);
+      fixture.detectChanges();
+      expect(mark().classList).toContain('on');
+      expect(mark().getAttribute('aria-pressed')).toBe('true');
+      mark().click();
+      http.expectNone(r => r.method === 'POST');
+      expect(dialog.open).toHaveBeenCalledTimes(1);
+      http.verify();
+    });
+
+    it('eigene Variante: markiert ihre Stellung mit Abzweig und Zügen statt Halbzug; an der Abzweigstelle wieder die Partiestellung', () => {
+      boot();
+      c.goTo(2);
+      c.onUserMove({ from: 'd2', to: 'd4', san: 'd4', fen: FEN_A });
+      c.onUserMove({ from: 'e5', to: 'd4', san: 'exd4', fen: FEN_B });
+      fixture.detectChanges();
+      mark().click();
+      const req = post();
+      expect(req.request.body).toEqual({ fen: FEN_B, clubGameId: 7, context: 'analysis', ply: null, variationFromPly: 2, variationUci: 'd2d4 e5d4' });
+      req.flush({});
+      // ein Zug zurück in der Variante: nur noch deren erster Zug
+      c.goToVariation(1);
+      fixture.detectChanges();
+      expect(c.markOrigin()).toEqual({ clubGameId: 7, context: 'analysis', ply: null, variationFromPly: 2, variationUci: 'd2d4' });
+      expect(mark().classList).not.toContain('on');
+      // Abzweigstelle (0 Variantenzüge) = Stellung der Partie nach Halbzug 2
+      c.goToVariation(0);
+      fixture.detectChanges();
+      expect(c.currentFen()).toBe(c.positions().fens[2]);
+      expect(c.markOrigin()).toEqual({ clubGameId: 7, context: 'analysis', ply: 2 });
+    });
+
+    it('Variante aus dem Text (showLine): Abzweig = letzter gemeinsamer Halbzug', () => {
+      boot([], { savedGameId: 5 });
+      const line = [
+        { san: 'e4', uci: 'e2e4', fen: c.positions().fens[1], from: 'e2', to: 'e4' },
+        { san: 'c5', uci: 'c7c5', fen: FEN_A, from: 'c7', to: 'c5' },
+        { san: 'Nf3', uci: 'g1f3', fen: FEN_B, from: 'g1', to: 'f3' },
+      ];
+      c.showLine(line, 3);
+      fixture.detectChanges();
+      mark().click();
+      const req = post();
+      expect(req.request.body).toEqual({ fen: FEN_B, savedGameId: 5, context: 'analysis', ply: null, variationFromPly: 1, variationUci: 'c7c5 g1f3' });
+      req.flush({});
+    });
+
+    it('OnPush ohne detectChanges: der Zustand „markiert“ rendert nach dem Klick von selbst', async () => {
+      boot();
+      fixture.autoDetectChanges();
+      mark().click();
+      await fixture.whenStable();
+      expect(mark().classList).toContain('on');
+      // Server lehnt ab → zurückgedreht, wieder ohne Anstoß von außen
+      spyOn(TestBed.inject(SnackbarService), 'warn');
+      post().flush({ reason: 'limit' }, { status: 400, statusText: 'Bad Request' });
+      await fixture.whenStable();
+      expect(mark().classList).not.toContain('on');
+      expect(dialog.open).not.toHaveBeenCalled();
+    });
+
+    it('ohne Partie-Herkunft (Link /cg/:token): nur Stellung und Halbzug', () => {
+      boot([], {});
+      mark().click();
+      const req = post();
+      expect(req.request.body).toEqual({ fen: c.positions().fens[0], context: 'analysis', ply: 0 });
+      req.flush({});
+    });
   });
 
   it('Blickrichtung ohne Sprung kommt vom Aufrufer', () => {
@@ -212,7 +348,7 @@ describe('ClubGameSummaryComponent mit Seitenbrett', () => {
     TestBed.configureTestingModule({
       imports: [ClubGameSummaryComponent],
       providers: [
-        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }), provideNoopAnimations(),
+        ...MARK_HTTP, provideRouter([]), provideTranslateService({ fallbackLang: 'en' }), provideNoopAnimations(),
         { provide: BreakpointObserver, useValue: { isMatched: () => mobile, observe: () => of({ matches: mobile, breakpoints: {} }) } },
         { provide: SUMMARY_ENGINE_SESSION, useValue: () => fakeEngine() as unknown as LiveEngineSession },
         { provide: ActivatedRoute, useValue: route },
@@ -302,6 +438,21 @@ describe('ClubGameSummaryComponent mit Seitenbrett', () => {
     expect((setup('1. e4 e5 2. Ke9', MD).nativeElement as HTMLElement).querySelector('.game-moves')).toBeNull();
   });
 
+  it('„+“ am Seitenbrett: über den LeagueHub-Teilen-Link mit der Vereinspartie als Herkunft, ohne Anmeldung', () => {
+    const fixture = setup(PGN, MD);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/positions/marked').flush([]);
+    const host = fixture.nativeElement as HTMLElement;
+    host.querySelectorAll<HTMLButtonElement>('button.gm')[1].click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.sideBoard()!.markSource()).toEqual({ clubGameId: 7 });
+    host.querySelector<HTMLButtonElement>('app-summary-game-board .nav-mark button.mark')!.click();
+    const req = http.expectOne(r => r.method === 'POST' && r.url === '/api/positions/marked');
+    expect(req.request.body).toEqual({ fen: fixture.componentInstance.sideBoard()!.positions().fens[2], clubGameId: 7, context: 'analysis', ply: 2 });
+    req.flush({});
+    TestBed.inject(MatDialog).closeAll();
+  });
+
   describe('am Handy (unter 900 px)', () => {
     afterEach(() => TestBed.inject(MatDialog).closeAll());
     /** Das Blatt hängt an der Anwendung, nicht am Fixture. */
@@ -348,6 +499,21 @@ describe('ClubGameSummaryComponent mit Seitenbrett', () => {
       fixture.detectChanges();
       expect(document.querySelector('app-summary-board-sheet')).not.toBeNull();
       expect(board.ply()).toBe(0);
+    });
+
+    it('„+“ im Blatt: gleiche Herkunft wie am Seitenbrett, markiert die Stellung des Blatts', () => {
+      spyOn(history, 'pushState');
+      const fixture = setup(PGN, MD, true);
+      const http = TestBed.inject(HttpTestingController);
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button.gm')[3].click();
+      fixture.detectChanges();
+      tick();
+      http.expectOne('/api/positions/marked').flush([]);
+      document.querySelector<HTMLButtonElement>('app-summary-board-sheet .nav-mark button.mark')!.click();
+      const req = http.expectOne(r => r.method === 'POST' && r.url === '/api/positions/marked');
+      expect(req.request.body).toEqual(jasmine.objectContaining({ clubGameId: 7, context: 'analysis', ply: 4 }));
+      expect(req.request.body.fen).toBe(fixture.componentInstance.sideBoard()!.positions().fens[4]);
+      req.flush({});
     });
 
     it('Wischen am Griff nach unten schließt das Blatt', () => {

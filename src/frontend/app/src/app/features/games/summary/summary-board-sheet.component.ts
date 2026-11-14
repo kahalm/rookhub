@@ -4,8 +4,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SummaryGameBoardComponent, SummaryJump } from './summary-game-board.component';
+import { MarkOrigin } from '../../../shared/mark-position/marked-positions.service';
 
-export interface SummaryBoardSheetData { pgn: string; flipped: boolean; jump: SummaryJump; }
+export interface SummaryBoardSheetData {
+  pgn: string; flipped: boolean; jump: SummaryJump;
+  /** Herkunft für den „+“-Knopf im Blatt — dieselbe wie am Seitenbrett. */
+  markSource?: Partial<MarkOrigin>;
+}
 
 /** Wischweg nach unten, ab dem das Blatt schließt (px). */
 const SWIPE_CLOSE_PX = 80;
@@ -32,7 +37,8 @@ const SWIPE_CLOSE_PX = 80;
       </button>
     </div>
     <div class="sheet-body">
-      <app-summary-game-board [pgn]="data.pgn" [flipped]="data.flipped" [jump]="data.jump" [inSheet]="true" [engineAtStart]="true" />
+      <app-summary-game-board [pgn]="data.pgn" [flipped]="data.flipped" [jump]="data.jump" [inSheet]="true" [engineAtStart]="true"
+                              [markSource]="data.markSource ?? {}" />
     </div>
   `,
   styles: [`

@@ -75,6 +75,51 @@ describe('ClubGameSummaryComponent — ungültiger Link', () => {
   });
 });
 
+/** Wunsch 2026-11-14 („summary um den (+) knopf erweitern“): das Seitenbrett bekommt je Ansicht dieselbe Herkunft wie die Partieseite. */
+describe('ClubGameSummaryComponent — Herkunft für den „+“-Knopf', () => {
+  function render(mode: string | undefined, params: Record<string, string>) {
+    const game = () => of({ pgn: '1. e4 e5 2. Nf3 Nc6', ownerSide: 'white' });
+    const text = () => of({ markdown: 'Text.' });
+    TestBed.configureTestingModule({
+      imports: [ClubGameSummaryComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params), data: mode ? { mode } : {} } } },
+        { provide: GamesService, useValue: { linkedClubGame: game, getShared: game, sharedClubGame: game, get: game, clubGame: game } },
+        { provide: ClubGameSummaryService, useValue: { getLinked: text, getSharedOwn: text, getShared: text, getOwn: text, get: text,
+          suggestions: () => of([]), exercises: () => of([]) } },
+        { provide: AuthService, useValue: { isLoggedIn: false, currentUser: null, currentUser$: of(null) } },
+        { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ClubGameSummaryComponent);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-summary-game-board .nav-mark button.mark')).not.toBeNull();
+    return fixture.componentInstance.sideBoard()!.markSource();
+  }
+
+  it('Vereinspartie /club-games/:id: ihre Id', () => {
+    expect(render(undefined, { id: '245' })).toEqual({ clubGameId: 245 });
+  });
+
+  it('LeagueHub-Teilen-Link /s/:token/club-games/:id: die Vereinspartie, wie auf der Partieseite', () => {
+    expect(render('club-share', { token: 'abc', id: '245' })).toEqual({ clubGameId: 245 });
+  });
+
+  it('eigene Partie /games/:id: ihre Id', () => {
+    expect(render('own', { id: '12' })).toEqual({ savedGameId: 12 });
+  });
+
+  it('Teilen-Link /g/:token: der Link', () => {
+    expect(render('own-share', { token: 'tok' })).toEqual({ shareToken: 'tok' });
+  });
+
+  it('Link einer Vereinspartie /cg/:token: keine Partie als Herkunft (nur lesen), der Knopf bleibt', () => {
+    expect(render('club-link', { token: 'tok' })).toEqual({});
+  });
+});
+
 /** Partie 243 (10.11.2026): Züge in der Literatur-Begründung klickbar, kein Leerzeichen zwischen „(“ und einem Zug-Knopf. */
 describe('ClubGameSummaryComponent — Zug-Knöpfe im Text', () => {
   const md = [

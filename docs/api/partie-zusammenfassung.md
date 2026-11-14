@@ -206,6 +206,11 @@ per X, Hintergrund, Esc, Wischen am Griff nach unten oder Zurück-Taste (eigener
 Seitenbrett bleiben unverändert. **Engine**: Knopf `memory` am Brett (Desktop und Blatt; im Blatt beim Öffnen an) —
 `LiveEngineSession` mit Stockfish im Browser, rechnet die Stellung auf dem Brett, drei Linien + Pfeil. Die Engine ist eine
 statische Datei der App, läuft also auch über die Teilen-Links ohne Anmeldung; externe Engines bietet die Seite nicht an.
+**„+“ — Stellung markieren** (0.972.0, Wunsch 2026-11-14): hinter dem Engine-Knopf steht `app-mark-position-button` (Desktop
+und Blatt), derselbe wie auf der Partieseite. Er markiert die Stellung auf dem Brett — Partiestellung mit Halbzug, Variante
+(aus dem Text oder selbst gezogen) mit Abzweig + Zügen — mit der Herkunft der jeweiligen Ansicht (`markSource`); grün =
+schon markiert, Klick öffnet Schlagworte + Kommentar. Diagramme mit eigener `fen` (Stellung aus einer Variante) kommen nicht
+aufs Seitenbrett und haben keinen eigenen Knopf. Details: `markierte-stellungen.md`.
 
 ## „Die Partie“ als ein Text (0.963.0)
 

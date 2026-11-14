@@ -24,6 +24,7 @@ import { ClubSummaryLinkComponent } from './club-summary-link.component';
 import { SummaryGameBoardComponent, SummaryJump } from './summary-game-board.component';
 import { SummaryBoardSheetComponent } from './summary-board-sheet.component';
 import { SanPipe } from '../../../shared/chess/san.pipe';
+import { MarkOrigin } from '../../../shared/mark-position/marked-positions.service';
 import { GameTextPart, mergeGameSection } from './summary-game-text.util';
 import { DiagramSpec, InlinePart, SummaryBlock, gameMovePairs, moveLabel, linkSummaryMoves, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock } from './summary-markdown.util';
 
@@ -197,7 +198,7 @@ interface ResolvedDiagram {
             @if (summary()?.model) { <p class="note model">{{ 'games.summary.writtenBy' | translate: { model: summary()!.model } }}</p> }
           }
         </mat-card>
-        @if (hasBoard()) { <app-summary-game-board [pgn]="g.pgn" [flipped]="g.ownerSide === 'black'" /> }
+        @if (hasBoard()) { <app-summary-game-board [pgn]="g.pgn" [flipped]="g.ownerSide === 'black'" [markSource]="markSource" /> }
         </div>
       }
     </div>
@@ -312,6 +313,12 @@ export class ClubGameSummaryComponent implements OnInit {
   gameShareToken: string | null = null;
   /** Link einer einzelnen Vereinspartie `/cg/:token` (2026-11-09): nur lesen. */
   clubLinkToken: string | null = null;
+  /**
+   * Herkunft für den „+“-Knopf am Seitenbrett — je Ansicht dieselbe wie auf der Partieseite (`SharedGameComponent.markSource`):
+   * Vereinspartie (auch über `/s/:token`) ihre Id, eigene Partie ihre Id, `/g/:token` der Teilen-Link; über `/cg/:token`
+   * keine Partie (der Link ist nur zum Lesen da) — markiert wird dort nur die Stellung.
+   */
+  markSource: Partial<MarkOrigin> = {};
   gameLink(): (string | number)[] {
     if (this.clubLinkToken !== null) return ['/cg', this.clubLinkToken];
     if (this.gameShareToken !== null) return ['/g', this.gameShareToken];
@@ -378,6 +385,9 @@ export class ClubGameSummaryComponent implements OnInit {
     if (this.route.snapshot.data?.['mode'] === 'club-share') this.shareToken = this.route.snapshot.paramMap.get('token') || '';
     if (this.route.snapshot.data?.['mode'] === 'club-link') this.clubLinkToken = this.route.snapshot.paramMap.get('token') || '';
     if (this.route.snapshot.data?.['mode'] === 'own-share') this.gameShareToken = this.route.snapshot.paramMap.get('token') || '';
+    this.markSource = this.clubLinkToken !== null ? {}
+      : this.gameShareToken !== null ? { shareToken: this.gameShareToken }
+      : this.own ? { savedGameId: this.gameId } : { clubGameId: this.gameId };
     this.load();
   }
 
@@ -491,7 +501,7 @@ export class ClubGameSummaryComponent implements OnInit {
   showOnBoard(jump: SummaryJump): void {
     const g = this.game();
     if (g && this.breakpoints.isMatched('(max-width: 899.98px)')) {
-      SummaryBoardSheetComponent.open(this.dialog, { pgn: g.pgn, flipped: g.ownerSide === 'black', jump });
+      SummaryBoardSheetComponent.open(this.dialog, { pgn: g.pgn, flipped: g.ownerSide === 'black', jump, markSource: this.markSource });
       return;
     }
     const board = this.sideBoard();

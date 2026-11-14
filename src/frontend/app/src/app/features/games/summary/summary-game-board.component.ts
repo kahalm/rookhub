@@ -11,6 +11,8 @@ import { PreferencesService } from '../../../core/preferences.service';
 import { SanPipe } from '../../../shared/chess/san.pipe';
 import { LIVE_LINES, LiveEngineSession, LiveMove } from '../live-engine-session';
 import { positionsOf } from './summary-markdown.util';
+import { MarkPositionButtonComponent } from '../../../shared/mark-position/mark-position-button.component';
+import { MarkOrigin } from '../../../shared/mark-position/marked-positions.service';
 
 /** Sprung, mit dem ein Brett startet (Blatt am Handy): Halbzug der Partie oder Zugfolge ab Partieanfang wie `showLine`. */
 export type SummaryJump = { ply: number; flipped?: boolean } | { line: LiveMove[]; at: number };
@@ -34,12 +36,16 @@ export const SUMMARY_ENGINE_SESSION = new InjectionToken<() => LiveEngineSession
  * Partie oder eigene Variante — mit Pfeil für den besten Zug; läuft ohne Anmeldung (die Engine ist eine statische Datei der
  * App). Am Handy steht dieselbe Komponente im Blatt über dem Text (`inSheet`, `SummaryBoardSheetComponent`), dort mit
  * Engine von Anfang an.
+ *
+ * „+“ (Wunsch 2026-11-14, „summary um den (+) knopf erweitern“): derselbe Knopf wie auf der Partieseite
+ * (`app-mark-position-button`) markiert die Stellung auf dem Brett — Partiestellung mit Halbzug, eine Variante (aus dem Text
+ * oder selbst gezogen) mit Abzweig und ihren Zügen. Welche Partie, sagt `markSource` (die Seite setzt es je Ansicht).
  */
 @Component({
   selector: 'app-summary-game-board',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChessBoardComponent, MoveListComponent, MatButtonModule, MatCardModule, MatIconModule, TranslatePipe, SanPipe],
+  imports: [ChessBoardComponent, MoveListComponent, MarkPositionButtonComponent, MatButtonModule, MatCardModule, MatIconModule, TranslatePipe, SanPipe],
   host: { '[class.in-sheet]': 'inSheet()' },
   template: `
     <mat-card class="side-card" [attr.aria-label]="'playerCard.replayGame' | translate">
@@ -60,6 +66,8 @@ export const SUMMARY_ENGINE_SESSION = new InjectionToken<() => LiveEngineSession
         <button mat-icon-button type="button" class="nav-engine" [class.on]="engineOn()" (click)="toggleEngine()"
                 [attr.aria-pressed]="engineOn()" [attr.aria-label]="'games.live.toggle' | translate"
                 [attr.title]="'games.live.toggle' | translate"><mat-icon>memory</mat-icon></button>
+        <!-- „+“ wie auf der Partieseite: markiert die Stellung auf dem Brett, auch die einer Variante. -->
+        <app-mark-position-button class="nav-mark" [fen]="currentFen()" [origin]="markOrigin()" />
       </div>
       @if (engine(); as s) {
         <div class="engine" aria-live="polite">
@@ -99,6 +107,14 @@ export const SUMMARY_ENGINE_SESSION = new InjectionToken<() => LiveEngineSession
     .board-box { width: min(100%, 480px, max(240px, calc(100vh - 160px))); margin: 0 auto; }
     .nav { display: flex; justify-content: center; gap: 4px; margin: 4px 0; max-width: 100%; }
     .nav-engine.on { color: var(--rh-accent); }
+    /* Mit dem „+“ sind es sechs Knöpfe: am Handy rücken die Nebenknöpfe auf 36 px zusammen (wie Partieseite und
+       Analysebrett, DESIGN 5.12), ◀ ▶ bleiben 48 px — die Leiste passt so bis 320 px Seitenbreite unter das Brett. */
+    @media (max-width: 480px) {
+      .nav ::ng-deep .mat-mdc-icon-button:not(.nav-back):not(.nav-forward) {
+        width: 36px; height: 36px; padding: 6px; --mat-icon-button-state-layer-size: 36px;
+      }
+      .nav ::ng-deep .mat-mdc-icon-button:not(.nav-back):not(.nav-forward) .mat-mdc-button-touch-target { width: 36px; height: 36px; }
+    }
     .engine { margin: 2px 0 6px; font-size: 0.875rem; min-width: 0; }
     .engine-head { display: flex; gap: 8px; color: var(--mat-sys-on-surface-variant); font-size: 0.8rem; }
     .engine-lines { list-style: none; margin: 2px 0 0; padding: 0; }
@@ -143,6 +159,8 @@ export class SummaryGameBoardComponent implements OnInit {
   readonly jump = input<SummaryJump | null>(null);
   /** Engine schon beim Start an (Blatt am Handy). */
   readonly engineAtStart = input(false);
+  /** Welche Partie der „+“-Knopf als Herkunft mitschickt (wie `markSource` der Partieseite); leer = nur die Stellung. */
+  readonly markSource = input<Partial<MarkOrigin>>({});
 
   readonly positions = computed(() => positionsOf(this.pgn()));
   readonly lastPly = computed(() => this.positions().sans.length);
@@ -181,6 +199,17 @@ export class SummaryGameBoardComponent implements OnInit {
       const [, turn, , , , full] = (i ? v.line[i - 1].fen : this.positions().fens[v.base]).split(' ');
       return { san: m.san, number: turn === 'w' ? `${full}.` : i === 0 ? `${full}…` : '' };
     });
+  });
+
+  /**
+   * Herkunft der Stellung auf dem Brett für den „+“-Knopf — dieselben Felder wie die Partieseite (`SharedGameComponent.markOrigin`):
+   * in der Partie der Halbzug, in einer Variante (ab dem ersten eigenen Zug) Abzweig + ihre Züge bis zur Stellung, ohne Halbzug.
+   */
+  readonly markOrigin = computed<MarkOrigin>(() => {
+    const v = this.variation();
+    return v && v.at > 0
+      ? { ...this.markSource(), context: 'analysis', ply: null, variationFromPly: v.base, variationUci: v.line.slice(0, v.at).map(m => m.uci).join(' ') }
+      : { ...this.markSource(), context: 'analysis', ply: this.ply() };
   });
 
   /** Laufende Engine-Sitzung; `null` = aus (dann rechnet nichts im Hintergrund). */
