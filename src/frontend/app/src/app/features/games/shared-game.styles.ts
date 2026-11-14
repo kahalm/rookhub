@@ -100,6 +100,13 @@ export const SHARED_GAME_STYLES = `
       border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
     }
     .side-section > .review-slot { padding: 12px 14px; }
+    /* „Fehler nachspielen“ läuft (0.969.0): Auswertung, Repertoires und Meisterpartien sind weg (die Zugliste steht dann gar
+       nicht im DOM). Die Spalte bleibt im DOM — der Rückblick liefert die Aufgaben und den Analysestand. Der Trainer steht
+       als eigene Spalte RECHTS neben dem Brett, sobald daneben Platz ist (ab 769 px), höchstens 680 px breit (Lesebreite). */
+    .body.training > .side-section { display: none; }
+    .train-section {
+      display: flex; flex-direction: column; gap: 8px; flex: 1 1 260px; min-width: 0; max-width: 680px; box-sizing: border-box;
+    }
     .side-section > .review-slot:empty, .side-section > .pr-slot:empty { display: none; }
     /* Breit genug für drei Spalten: ein FESTES Raster (Brett | Zugliste | Auswertung). Die Spaltenbreiten hängen
        nicht am Inhalt — vorher wuchs die Karte, sobald die Auswertung erschien, und lange Linien wurden rechts
@@ -114,6 +121,10 @@ export const SHARED_GAME_STYLES = `
         max-height: calc(var(--board-size) + 56px); overflow-y: auto; overflow-x: hidden;
         scrollbar-gutter: stable; padding-right: 2px;
       }
+      /* Training: zwei Spalten, zusammen so breit wie die drei davor — die Karte springt beim Start nicht. Der Trainer
+         ist höchstens so hoch wie das Brett und scrollt in sich (lange Erklärung), statt unter den Falz zu wachsen. */
+      .body.training { grid-template-columns: var(--board-size) calc(var(--moves-width) + var(--side-width) + 20px); }
+      .train-section { max-height: var(--board-size); overflow-y: auto; overflow-x: hidden; }
     }
     /* u1-rk-partie-brett: ab 2400 px vier Spalten — Brett bis 1 080 px (höchstens Fensterhöhe), Zugliste 280 px, die
        Auswertung zweispaltig (Kurve/Fehler | Repertoire/Meisterpartien, je 400–520 px). Breite: Brett + Zugliste +
@@ -131,6 +142,7 @@ export const SHARED_GAME_STYLES = `
         display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: min-content 1fr;
         align-content: start; align-items: start; gap: 12px 20px;
       }
+      .body.training { grid-template-columns: var(--board-size) calc(var(--moves-width) + 2 * var(--side-width) + 40px); }
       .side-section > .review-slot { grid-column: 1; grid-row: 1 / span 2; }
       .side-section > .pr-slot, .side-section > .similar-slot { grid-column: 2; }
       /* Noch keine Auswertung: Repertoire und Meisterpartien nebeneinander statt einer leeren linken Hälfte. */
@@ -203,6 +215,8 @@ export const SHARED_GAME_STYLES = `
          die Seite war am Handy 438 statt 390 px breit (v1-rk-analysis-card-overflow-mobile). */
       .body { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
       .side-section { order: 1; }   /* am Handy: Auswertung vor der Zugliste, wie bisher */
+      /* Trainer am Handy direkt unter dem Brett, volle Breite (flex-basis wäre in der Spalte eine HÖHE). */
+      .train-section { flex: 0 0 auto; max-width: none; }
       .moves-section { order: 2; }
       .board-section { width: 100%; max-width: 100%; align-items: center; }
       .board-wrap { width: 100%; }

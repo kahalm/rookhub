@@ -3861,6 +3861,7 @@
       "shown": "Jobb lett volna: {{san}}.",
       "cost": "{{san}} {{percent}} százalékpont nyerési esélybe került.",
       "retry": "Újra",
+      "retryKey": "Újra (szóköz billentyű)",
       "show": "Megoldás mutatása",
       "skip": "Kihagyás",
       "finish": "Befejezés",

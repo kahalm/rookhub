@@ -153,6 +153,21 @@ describe('SharedGameComponent Layout (UI-Sweep a1)', () => {
     expect(base).not.toMatch(/\.wide-only \{ ?display: none/);
   });
 
+  it('Fehler nachspielen (0.969.0): Auswertungsspalte versteckt, Trainer am PC als zweite Spalte, am Handy unter dem Brett', () => {
+    expect(base).toMatch(/\.body\.training > \.side-section \{ ?display: none; ?\}/);
+    expect(base).toMatch(/\.train-section \{[^}]*flex: 1 1 260px; min-width: 0; max-width: 680px/);
+    const pc = blockOf(css, '@media (min-width: 1280px)');
+    expect(pc).toContain('.body.training { grid-template-columns: var(--board-size) calc(var(--moves-width) + var(--side-width) + 20px); }');
+    expect(pc).toMatch(/\.train-section \{ ?max-height: var\(--board-size\); overflow-y: auto/);
+    // Nach der Drei-Spalten-Regel, damit sie gewinnt.
+    expect(pc.indexOf('.body.training {')).toBeGreaterThan(pc.indexOf('.body {'));
+    const wide = blockOf(css, '@media (min-width: 2400px)');
+    expect(wide).toContain('.body.training { grid-template-columns: var(--board-size) calc(var(--moves-width) + 2 * var(--side-width) + 40px); }');
+    expect(wide.indexOf('.body.training {')).toBeGreaterThan(wide.indexOf('.body {'));
+    const mobile = blockOf(css, '@media (max-width: 768px)');
+    expect(mobile).toMatch(/\.train-section \{ ?flex: 0 0 auto; max-width: none; ?\}/);
+  });
+
   it('a1-rk-recap-zeilenlaenge: „Kurz erzählt" bricht nach ~75 Zeichen um', () => {
     expect(cssOf(GameRecapComponent)).toMatch(/\.recap-text \{ ?flex: 1 1 auto; min-width: 0; max-width: 75ch/);
   });

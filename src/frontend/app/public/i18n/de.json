@@ -3451,6 +3451,7 @@
       "shown": "Besser war {{san}}.",
       "cost": "{{san}} kostete {{percent}} Prozentpunkte Gewinnchance.",
       "retry": "Nochmal",
+      "retryKey": "Nochmal (Leertaste)",
       "show": "Lösung zeigen",
       "skip": "Überspringen",
       "finish": "Abschließen",

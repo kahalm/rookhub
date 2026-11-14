@@ -24,7 +24,7 @@ describe('MistakesTrainerComponent', () => {
     tr.setTranslation('en', {
       puzzles: { hints: { show: 'Hint', next: 'Next hint', t1Quiet: 'Quiet move.', t2Piece: 'Move your {{piece}}.',
         t3Move: 'Play {{move}}.', pieces: { knight: 'knight' } } },
-      games: { mistakes: { analyze: 'Analyse', dismiss: "Don't show again", triedEval: 'After {{san}}: {{eval}} (best move: {{best}})' } },
+      games: { mistakes: { analyze: 'Analyse', retryKey: 'Try again (Space bar)', dismiss: "Don't show again", triedEval: 'After {{san}}: {{eval}} (best move: {{best}})' } },
     });
     tr.use('en');
     const fixture = TestBed.createComponent(MistakesTrainerComponent);
@@ -64,6 +64,55 @@ describe('MistakesTrainerComponent', () => {
     fixture.detectChanges();
     expect(el.querySelector('button.analyze')).not.toBeNull(); // auch nach einer richtigen Lösung
   });
+  // 0.969.0
+  describe('Leertaste = „Nochmal"', () => {
+    const space = (target: EventTarget = document.body, init: KeyboardEventInit = {}) => {
+      const e = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true, ...init });
+      target.dispatchEvent(e);
+      return e;
+    };
+    const wrongMove = (session: MistakesSession) => session.onMove({ from: 'b1', to: 'c3', san: 'Nc3', fen: 'nach Nc3' });
+
+    it('nach einem Fehlversuch: zurück zur Aufgabe, die Seite scrollt nicht; der Knopf nennt die Taste im Tooltip', () => {
+      const { fixture, session, el } = setup();
+      wrongMove(session); fixture.detectChanges();
+      expect(session.phase()).toBe('wrong');
+      expect(el.querySelector('button.retry')).not.toBeNull();
+      const e = space();
+      expect(e.defaultPrevented).toBeTrue();
+      expect(session.phase()).toBe('ask');
+      fixture.detectChanges();
+      expect(el.querySelector('button.retry')).toBeNull();
+    });
+
+    it('nur solange der Knopf dasteht: vor dem Zug und nach der Lösung bleibt die Leertaste frei', () => {
+      const { fixture, session } = setup();
+      const retry = spyOn(session, 'retry').and.callThrough();
+      expect(space().defaultPrevented).toBeFalse();            // Phase ask
+      session.showSolution(); fixture.detectChanges();
+      expect(space().defaultPrevented).toBeFalse();            // Phase shown — gehört „nächste Aufgabe" der Seite
+      expect(retry).not.toHaveBeenCalled();
+    });
+
+    it('nicht mit Fokus in Eingabefeld, Textarea, contenteditable, auf Knopf oder Link, nicht mit Strg und nicht als Tastenwiederholung', () => {
+      const { fixture, session, el } = setup();
+      wrongMove(session); fixture.detectChanges();
+      const retry = spyOn(session, 'retry').and.callThrough();
+      const host = document.createElement('div');
+      host.innerHTML = '<input><textarea></textarea><div contenteditable="true">x</div><a href="#">l</a><button><span class="in">b</span></button>';
+      document.body.appendChild(host);
+      for (const sel of ['input', 'textarea', '[contenteditable]', 'a', 'button', 'button .in']) {
+        expect(space(host.querySelector(sel)!).defaultPrevented).withContext(sel).toBeFalse();
+      }
+      expect(space(el.querySelector('button.retry')!).defaultPrevented).toBeFalse();   // der Knopf klickt sich selbst
+      expect(space(document.body, { ctrlKey: true }).defaultPrevented).toBeFalse();
+      expect(space(document.body, { repeat: true }).defaultPrevented).toBeFalse();
+      host.remove();
+      expect(retry).not.toHaveBeenCalled();
+      expect(session.phase()).toBe('wrong');
+    });
+  });
+
   // 0.748.0
   it('„Nicht mehr zeigen" nur mit Melder; der Klick meldet die Aufgabe', () => {
     expect(setup().el.querySelector('button.dismiss')).toBeNull();

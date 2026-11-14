@@ -93,8 +93,8 @@
           <!-- UI-Sweep 2026-11-10 (d10-rk-partiekopf-fuenf-sekundaerknoepfe): „Originalpartie öffnen“ und „Teilen-Link kopieren“
                stehen auf allen Breiten im ⋮ — fünf gleichrangige Kopfknöpfe ohne Hauptaktion (DESIGN 2 Grundsatz 1, 5.4). -->
           <!-- „Eigene Fehler nachspielen" (0.516.0) — erscheint erst, wenn die Analyse Aufgaben hergibt.
-               Seit 0.518.1 auf dem Brett DIESER Seite; solange das Training läuft, steht die Leiste unter
-               dem Brett und der Knopf entfällt. -->
+               Seit 0.518.1 auf dem Brett DIESER Seite; solange das Training läuft, steht die Leiste neben
+               (am Handy unter) dem Brett und der Knopf entfällt. -->
           @if (mistakeTotal() > 0 && !training()) {
             <!-- d3-rk-eigene-fehler-fremde-partie: „Eigene …“ nur für den Besitzer; sonst nennt der Knopf, wessen Fehler. -->
             @if (club || reviewStatus() === 'done') {
@@ -271,7 +271,10 @@
       <!-- „Kurz erzählt" bzw. der geteilte Roast über dem Brett (eigene Komponente, holt den Text selbst nach). -->
       <app-game-recap [text]="game.recap" [roast]="sharedRoast()" [own]="own" [gameId]="gameId"
                       [analysisDone]="reviewStatus() === 'done'" />
-      <div class="body">
+      <!-- Solange „Fehler nachspielen“ läuft (.training, 0.969.0): nur Brett + Trainer — Zugliste, Auswertung, Repertoires und
+           Meisterpartien sind weg, am breiten Bildschirm steht der Trainer RECHTS neben dem Brett (vorher rutschte er
+           darunter aus dem Bild), am Handy direkt darunter. -->
+      <div class="body" [class.training]="!!training()">
         <div class="board-section">
           <div class="board-wrap">
             @if (training(); as t) {
@@ -311,16 +314,7 @@
                                [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
             }
           </div>
-          @if (training(); as t) {
-            <app-mistakes-trainer class="trainer-slot" [session]="t" (closed)="endTraining()" [markSource]="markSource"
-                                  [comparisons]="comparisons()" [clubGameId]="clubComparisonGameId" [ownGameId]="ownComparisonGameId"
-                                  [title]="own ? '' : 'games.mistakes.titleSide'" [titleParams]="{ player: sidePlayer(t.side()) }"
-                                  [analyzing]="!!trainingAnalysis()" (analyze)="toggleTrainingAnalysis()"
-                                  (showLine)="showTrainingLine($event)" />
-            @if (trainingAnalysis(); as a) {
-              <app-live-engine-panel class="live-slot" [session]="a.session" [gameFen]="a.base" (closed)="stopTrainingAnalysis()" />
-            }
-          } @else {
+          @if (!training()) {
           <div class="nav">
             <!-- Am Handy (siehe @media): Zurück/Vor breit in der Mitte, Anfang/Ende mit Abstand an den Rand —
                  dicht nebeneinander traf man statt „einen Zug" oft „ganz an den Anfang/das Ende" (2026-09-24). -->
@@ -351,14 +345,32 @@
           }
           }
         </div>
-        <div class="moves-section">
-          @if (service.currentGame; as g) {
-            <app-move-list [moves]="g.moves" [currentMoveIndex]="service.currentMoveIndex" [comments]="g.comments" [marks]="moveMarks()" (moveClicked)="service.goToMove($event)" />
-          }
-        </div>
+        @if (training(); as t) {
+          <!-- Trainer (+ „Analysieren“-Leiste) als eigene Spalte neben dem Brett; schmal bricht sie unter das Brett. -->
+          <div class="train-section">
+            <app-mistakes-trainer class="trainer-slot" [session]="t" (closed)="endTraining()" [markSource]="markSource"
+                                  [comparisons]="comparisons()" [clubGameId]="clubComparisonGameId" [ownGameId]="ownComparisonGameId"
+                                  [title]="own ? '' : 'games.mistakes.titleSide'" [titleParams]="{ player: sidePlayer(t.side()) }"
+                                  [analyzing]="!!trainingAnalysis()" (analyze)="toggleTrainingAnalysis()"
+                                  (showLine)="showTrainingLine($event)" />
+            @if (trainingAnalysis(); as a) {
+              <app-live-engine-panel class="live-slot" [session]="a.session" [gameFen]="a.base" (closed)="stopTrainingAnalysis()" />
+            }
+          </div>
+        } @else {
+          <div class="moves-section">
+            @if (service.currentGame; as g) {
+              <app-move-list [moves]="g.moves" [currentMoveIndex]="service.currentMoveIndex" [comments]="g.comments" [marks]="moveMarks()" (moveClicked)="service.goToMove($event)" />
+            }
+          </div>
+        }
         <!-- Auswertung, Repertoire, ähnliche Partien: am breiten Bildschirm eine eigene dritte Spalte (0.714.0) — vorher
              standen sie unter dem Brett, die Brettspalte wurde lang und das Brett klein, rechts blieb ein Drittel leer.
              Schmaler: unter Brett und Zugliste; am Handy direkt unter dem Brett (vor der Zugliste, wie bisher). -->
+        <!-- Im Training bleibt die Spalte im DOM und wird per CSS versteckt (.body.training): der Rückblick liefert die
+             Aufgaben (mistakesChange, auch für den Selbststart per ?train=), den Analysestand und die Lc0-Aktionen des ⋮ —
+             neu aufgebaut lüde er nach dem Beenden alles noch einmal. Repertoires und Meisterpartien hängen an nichts
+             und fallen ganz weg (keine Abfrage je Aufgabenstellung). -->
         <div class="side-section">
           @if (service.currentGame; as g) {
             <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [withExplanations]="!club" [fens]="g.fens" [moves]="g.moves"
@@ -369,9 +381,11 @@
                              (mistakesChange)="mistakes.set($event)"
                              (storedChange)="reviewStored.set($event)" />
           }
-          <app-position-repertoires class="pr-slot" appearance="row" [fen]="service.currentFen" />
-          <!-- „Ähnliche Meisterpartien" (0.544.0): eingeklappt, lädt erst beim Aufklappen. -->
-          <app-similar-games class="similar-slot" [url]="similarUrl" />
+          @if (!training()) {
+            <app-position-repertoires class="pr-slot" appearance="row" [fen]="service.currentFen" />
+            <!-- „Ähnliche Meisterpartien" (0.544.0): eingeklappt, lädt erst beim Aufklappen. -->
+            <app-similar-games class="similar-slot" [url]="similarUrl" />
+          }
         </div>
       </div>
     </mat-card>

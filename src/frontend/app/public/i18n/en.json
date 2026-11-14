@@ -3451,6 +3451,7 @@
       "shown": "{{san}} was better.",
       "cost": "{{san}} lowered the winning chances by {{percent}} percentage points.",
       "retry": "Try again",
+      "retryKey": "Try again (Space bar)",
       "show": "Show solution",
       "skip": "Skip",
       "finish": "Finish",

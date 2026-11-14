@@ -1024,6 +1024,13 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - `index.html` theme-color `#3f51b5`.
 - Kursfortschritt im Löser dreigeteilt (`app-course-progress-split`, 2026-10-15): Leiste 6 px mit Abschnitten `--rh-success` (ohne Hilfe) / `--rh-hint` (mit Tipp/Neustart; bis 0.807 `--rh-warn`, hell fast rot) / `--rh-error` (aufgegeben), Rest = offen; darunter die drei Zahlen mit Symbol (✓ / Glühbirne / ✗) und „von N“, Bedeutung im Tooltip.
 
+- Partieseite im Training „Fehler nachspielen“ (0.969.0): solange es läuft, zeigt die Seite nur Brett + Trainer — Zugliste,
+  Auswertung, „In welchen Repertoires?“ und „Ähnliche Meisterpartien“ sind ausgeblendet (alle Breiten), nach dem Beenden
+  steht alles wieder da. Ab 1280 px steht der Trainer (darunter ggf. die „Analysieren“-Leiste) als zweite Spalte RECHTS
+  neben dem Brett, so breit wie Zugliste + Auswertung zusammen (die Karte springt nicht), der Kasten höchstens 680 px,
+  höchstens so hoch wie das Brett und in sich scrollend; 769–1279 px ebenfalls rechts, solange ≥ 260 px frei sind; am
+  Handy direkt unter dem Brett in voller Breite. Leertaste = „Nochmal“ nach einem Fehlversuch (nach der Lösung weiter
+  „nächste Aufgabe“); der Tastenname steht nur im Tooltip des Knopfs (5.11), nicht als Dauertext.
 - Zugvergleich am Fehler (0.908.0, Vereinspartien): im Trainer „Fehler nachspielen“ erst NACH dem Urteil (gefunden oder
   gezeigt) — vorher verriete er die Lösung. Unter der Kosten-Zeile, durch eine feine Linie abgesetzt: Kopf „Partiezug gegen
   besten Zug (Tiefe N)“ (0,8 rem, halbfett), zwei Zeilen Beschriftung · Zug (Mono) · ggf. Pille „bester Zug“ · Bewertung
@@ -1317,6 +1324,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-14 | 0.969.0 · Fehler nachspielen | Partieseite im Training (8.1): nur Brett + Trainer — Zugliste, Auswertung, Repertoires und Meisterpartien ausgeblendet; Trainer ab 1280 px als Spalte rechts neben dem Brett (≤ 680 px, brett-hoch, scrollt in sich), am Handy unter dem Brett; Leertaste = „Nochmal“, Tastenname im Tooltip | Am PC rutschte der Trainer unter dem Brett aus dem Bild, daneben standen drei Spalten, die im Training niemand braucht | Wunsch User 14.11. |
+| 2026-11-14 | 0.967.0 · Zusammenfassung | „Taktiken trainieren“ unter den Empfohlenen Übungen (5.12): Sekundärknopf `school` + leise Hinweiszeile, nur angemeldet mit Kurs-Zugang, springt in den Kurs-Löser auf das Kapitel der Partie | Wunsch 14.11.: Link „Taktiken trainieren“, Kurs „Persönliche Taktiken“ mit einem Kapitel je Partie | User über die betreuende Sitzung |
 | 2026-11-14 | 0.968.0 · Zusammenfassung | „Taktiken trainieren“ unter den Empfohlenen Übungen (5.12): Sekundärknopf `school` + leise Hinweiszeile, nur angemeldet mit Kurs-Zugang, springt in den Kurs-Löser auf das Kapitel der Partie | Wunsch 14.11.: Link „Taktiken trainieren“, Kurs „Persönliche Taktiken“ mit einem Kapitel je Partie | User über die betreuende Sitzung |
 | 2026-11-14 | 0.963.0 · Zusammenfassung | „Die Partie“ als verschmolzener Fließtext (5.12): Partiezüge fett im Text, Varianten in Klammern kleiner/kursiv/gedämpft, Zugzeichen grün/rot aus den Tokens, Zug am Brett mit Akzentfläche; der Abschnitt „Zusammenfassung“ entfällt in neuen Texten, die eingesetzte Zugliste bleibt nur für alte | Wunsch 14.11.: „ich mag nicht einfach die zugliste aufgelistet bekommen sondern es soll die partie mit dem ganzen ersten block gemerged werden“ (Mockup abgenommen) | User über die betreuende Sitzung |
 | 2026-11-13 | 0.960.0 · Zusammenfassung | Abschnitt „Empfohlene Übungen“ (5.12): Stellen der Partie mit Zugnummer + Grund, Aufgaben als Karten mit Brett, drei Stellen offen, Lösen im Abschnitt bzw. als Blatt; ohne Stellen kein Abschnitt | Wunsch 13.11.: „am ende eine kleine sammlung von empfohlenen übungen … direkt auf der seite lösbar“; „erzwinge keine motive/aufgaben“ | User über die betreuende Sitzung |

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, HostListener, Input, Output, inject, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -13,10 +13,11 @@ import { MarkOrigin } from '../../shared/mark-position/marked-positions.service'
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { ClubMistakeComparison, MistakeComparisonComponent } from './mistake-comparison.component';
 import { LiveMove } from './live-engine-session';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 /**
- * „Eigene Fehler nachspielen" — die Leiste UNTER dem Brett der Partie-Seite: Aufgabe, Rückmeldung,
- * Knöpfe. Gespielt wird auf dem Brett der Seite selbst (gleiche Größe, gleiches Thema); den Zustand hält
+ * „Eigene Fehler nachspielen" — die Leiste am Brett der Partie-Seite (seit 0.969.0 am breiten Bildschirm RECHTS
+ * daneben, am Handy darunter): Aufgabe, Rückmeldung, Knöpfe. Gespielt wird auf dem Brett der Seite selbst (gleiche Größe, gleiches Thema); den Zustand hält
  * {@link MistakesSession}, die Seite bindet ihr Brett daran. Bis 0.518.0 war der Trainer ein Dialog mit
  * eigenem, kleinem Brett — gewünscht 2026-09-24: „verwende das gleiche Brett wie die Analyse".
  */
@@ -110,7 +111,10 @@ import { LiveMove } from './live-engine-session';
 
       <div class="actions">
         @if (session.phase() === 'wrong') {
-          <button mat-stroked-button (click)="session.retry()"><mat-icon>refresh</mat-icon> {{ 'games.mistakes.retry' | translate }}</button>
+          <!-- Leertaste = „Nochmal“ (0.969.0); der Tastenname steht im Tooltip (DESIGN 5.11: kein Dauertext, am Handy nichts). -->
+          <button mat-stroked-button class="retry" (click)="session.retry()" [matTooltip]="'games.mistakes.retryKey' | translate">
+            <mat-icon>refresh</mat-icon> {{ 'games.mistakes.retry' | translate }}
+          </button>
         }
         <!-- Nach dem Urteil (daneben, gezeigt oder gefunden): frei weiterrechnen mit der Live-Engine, bis zur nächsten
              Aufgabe (seit 0.526.2, gewünscht 2026-09-24). -->
@@ -204,6 +208,22 @@ export class MistakesTrainerComponent {
   /** Eigene Partie der Vergleiche (0.923.0). */
   readonly ownGameId = input<number | null>(null);
   private readonly originCache = new Map<Mistake, MarkOrigin>();
+
+  /**
+   * Leertaste = „Nochmal" (0.969.0), genau solange der Knopf dasteht (Phase `wrong`). Nicht in Eingabefeldern, offenen
+   * Menüs/Dialogen (`isBoardHotkey`) und nicht, wenn der Fokus auf einem Knopf oder Link liegt — dort löst die Leertaste
+   * schon dessen eigenen Klick aus (doppelt) bzw. gehört ihm. Die Seite selbst belegt die Leertaste nur NACH der Lösung
+   * („nächste Aufgabe", Phasen `right`/`shown`) — die Phasen schließen sich aus.
+   */
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent): void {
+    if (event.key !== ' ' || event.repeat || event.shiftKey || this.session?.phase() !== 'wrong') return;
+    if (!isBoardHotkey(event)) return;
+    const target = event.target as Partial<Element> | null;
+    if (typeof target?.closest === 'function' && target.closest('button, a, summary, [role="button"], [role="link"], [tabindex]:not([tabindex="-1"])')) return;
+    event.preventDefault();
+    this.session.retry();
+  }
 
   /** Herkunft der Aufgabe für die Markierung — je Aufgabe einmal gebaut (stabiles Objekt fürs Signal-Input). */
   origin(m: Mistake): MarkOrigin {

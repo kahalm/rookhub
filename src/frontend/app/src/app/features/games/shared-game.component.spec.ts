@@ -1098,6 +1098,24 @@ describe('SharedGameComponent', () => {
     expect(document.querySelector('mat-dialog-container')).toBeNull();
     expect(el.querySelector('app-mistakes-trainer')).not.toBeNull();
     expect(el.querySelectorAll('app-chess-board').length).toBe(1);
+    // 0.969.0: im Training nur Brett + Trainer. Der Trainer steht in einer eigenen Spalte NEBEN der Brettspalte; Zugliste,
+    // Repertoires und Meisterpartien sind aus dem DOM, der Rückblick bleibt (liefert die Aufgaben) und ist per CSS versteckt.
+    expect(el.querySelector('.body')!.classList).toContain('training');
+    expect(el.querySelector('.board-section app-mistakes-trainer')).toBeNull();
+    expect(el.querySelector('.body > .train-section > app-mistakes-trainer')).not.toBeNull();
+    expect(el.querySelector('.moves-section')).toBeNull();
+    expect(el.querySelector('app-move-list')).toBeNull();
+    expect(el.querySelector('app-position-repertoires')).toBeNull();
+    expect(el.querySelector('app-similar-games')).toBeNull();
+    expect(el.querySelector('.side-section app-game-review')).not.toBeNull();
+    expect(getComputedStyle(el.querySelector('.side-section') as HTMLElement).display).toBe('none');
+    // Karma läuft 1 400 px breit: der Trainer steht rechts vom Brett, auf dessen Höhe.
+    const boardBox = (el.querySelector('.board-wrap') as HTMLElement).getBoundingClientRect();
+    const trainBox = (el.querySelector('.train-section') as HTMLElement).getBoundingClientRect();
+    if (window.innerWidth >= 1280) {
+      expect(trainBox.left).toBeGreaterThanOrEqual(boardBox.right);
+      expect(Math.abs(trainBox.top - boardBox.top)).toBeLessThan(4);
+    }
     expect(el.querySelectorAll('.board-tapnav').length).toBe(0);   // im Training gehört jeder Tipp dem Trainer-Brett
     expect(el.querySelector('button.mistakes')).toBeNull();
     expect(game.training()!.boardFen()).toBe(fenBefore);
@@ -1111,6 +1129,13 @@ describe('SharedGameComponent', () => {
     fixture.detectChanges();
     expect(el.querySelector('app-mistakes-trainer')).toBeNull();
     expect(el.querySelectorAll('.board-tapnav').length).toBe(1);
+    // … und nach dem Beenden steht alles wieder da.
+    expect(el.querySelector('.body')!.classList).not.toContain('training');
+    expect(el.querySelector('.train-section')).toBeNull();
+    expect(el.querySelector('.moves-section app-move-list')).not.toBeNull();
+    expect(el.querySelector('app-position-repertoires')).not.toBeNull();
+    expect(el.querySelector('app-similar-games')).not.toBeNull();
+    expect(getComputedStyle(el.querySelector('.side-section') as HTMLElement).display).not.toBe('none');
   });
 
   it('arrow keys do not page through the game while training', async () => {

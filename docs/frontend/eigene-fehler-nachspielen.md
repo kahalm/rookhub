@@ -3,6 +3,17 @@
 > Ausgelagert aus `src/frontend/CLAUDE.md` am 2026-10-11. Neue Doku zu diesem Bereich gehört HIERHER.
 
 
+- **Seit 0.969.0 — nur Brett + Trainer**: solange `training()` gesetzt ist, trägt `.body` die Klasse `training`. Der
+  Trainer (und die „Analysieren“-Leiste) steht nicht mehr in der Brettspalte, sondern in `.train-section` — ab 1280 px
+  die zweite Rasterspalte rechts neben dem Brett, am Handy direkt darunter. Die Zugliste (`.moves-section`),
+  `app-position-repertoires` und `app-similar-games` sind dann NICHT im DOM (`@if`); `app-game-review` BLEIBT im DOM und
+  wird per CSS versteckt (`.body.training > .side-section { display: none }`): er liefert die Aufgaben
+  (`mistakesChange`, auch für den Selbststart per `?train=`), den Analysestand (`statusChange`) und hängt per
+  `viewChild` an den Lc0-Aktionen des ⋮ — neu aufgebaut lüde er nach dem Beenden alles noch einmal.
+  **Leertaste = „Nochmal“** in der Phase `wrong`: `MistakesTrainerComponent.onKeyDown` (`window:keydown`, gilt damit auch
+  in der Sammlung über mehrere Partien) — nicht in Eingabefeldern/Menüs/Dialogen (`isBoardHotkey`), nicht mit Fokus auf
+  Knopf oder Link, nicht als Tastenwiederholung. Die Leertaste der Seite („nächste Aufgabe“, Phasen `right`/`shown`)
+  bleibt in `SharedGameComponent.onKeyDown`; die Phasen schließen sich aus.
 - **Seit 0.526.2**: der Fehlversuch nennt seine Bewertung (`MistakesSession.triedEval` — aus `Mistake.candidates` der
   Analyse, sonst `MistakeJudgeService.evaluate` im Browser; `undefined` = rechnet noch), und es gibt Tipps WIE BEIM
   PUZZLE (`classifyMoveFromFen` + `buildStagedHints`, Keys `puzzles.hints.*`: Zugart → Figur → Zug). Nach der dritten

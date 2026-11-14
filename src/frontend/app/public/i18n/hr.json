@@ -3451,6 +3451,7 @@
       "shown": "Bolje je bilo {{san}}.",
       "cost": "{{san}} je stajao {{percent}} postotnih bodova izgleda za pobjedu.",
       "retry": "Pokušaj ponovno",
+      "retryKey": "Pokušaj ponovno (razmaknica)",
       "show": "Prikaži rješenje",
       "skip": "Preskoči",
       "finish": "Završi",
