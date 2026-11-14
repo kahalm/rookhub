@@ -3660,7 +3660,10 @@
         "counter": "Zadatak {{i}} od {{n}}",
         "bookExample": "Primjer u knjizi",
         "bookPage": "str. {{n}}",
-        "bookPart": "Odjeljak {{n}}"
+        "bookPart": "Odjeljak {{n}}",
+        "train": "Vježbaj taktike",
+        "trainHint": "Dodaje zadatke ove partije kao poglavlje u tvoj tečaj „Osobne taktike“ i otvara ga.",
+        "trainFailed": "Tečaj se nije mogao otvoriti."
       }
     },
     "onlyMine": "Samo moje partije",

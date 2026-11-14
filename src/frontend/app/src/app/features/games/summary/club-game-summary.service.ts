@@ -81,6 +81,10 @@ export type SummarySource =
   | { kind: 'club'; id: number } | { kind: 'own'; id: number } | { kind: 'club-share'; token: string; id: number }
   | { kind: 'club-link'; token: string } | { kind: 'own-share'; token: string };
 
+/** Kapitel der Partie im Kurs „Persönliche Taktiken“ (`POST /api/courses/personal-tactics/from-game`); `chapterIndex` = Kapitel des
+ *  Kurs-Lösers, `null` nur, wenn das Kapitel keine abfragbare Linie mehr hat. */
+export interface PersonalTacticsChapter { bookId: number; chapterIndex: number | null; chapter: string | null; created: boolean; lines: number; }
+
 /** Ein Buch der „Empfohlenen Literatur“ (`GET /api/ebook-suggestions`). */
 export interface EbookSuggestionInfo { id: number; title: string; author: string | null; year: string | null; accessible: boolean; blocked: boolean; }
 
@@ -106,6 +110,15 @@ export class ClubGameSummaryService {
       : src.kind === 'club-link' ? `/api/league/s-club-game/${t(src.token)}/summary/exercises`
       : `/api/games/shared/${t(src.token)}/summary/exercises`;
     return this.http.get<{ groups: SummaryExerciseGroup[] }>(url).pipe(map(r => r.groups ?? []));
+  }
+
+  /**
+   * „Taktiken trainieren“ (Wunsch 2026-11-14): legt die Empfohlenen Übungen der Partie als Kapitel im Kurs „Persönliche Taktiken“
+   * des Kontos an bzw. öffnet das vorhandene — die Partie auf demselben Weg wie {@link exercises}. `lang` benennt nur den Kurs beim
+   * ersten Anlegen. Nur angemeldet (401 sonst).
+   */
+  trainTactics(src: SummarySource, lang: string): Observable<PersonalTacticsChapter> {
+    return this.http.post<PersonalTacticsChapter>('/api/courses/personal-tactics/from-game', { ...src, lang });
   }
 
   get(gameId: number): Observable<ClubGameSummary> {

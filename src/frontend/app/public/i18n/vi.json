@@ -3595,7 +3595,10 @@
         "counter": "Câu đố {{i}} / {{n}}",
         "bookExample": "Ví dụ trong sách",
         "bookPage": "tr. {{n}}",
-        "bookPart": "Phần {{n}}"
+        "bookPart": "Phần {{n}}",
+        "train": "Luyện chiến thuật",
+        "trainHint": "Thêm các bài tập của ván này thành một chương trong khóa học “Chiến thuật cá nhân” của bạn và mở nó.",
+        "trainFailed": "Không thể mở khóa học."
       }
     },
     "onlyMine": "Chỉ ván của tôi",

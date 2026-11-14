@@ -15,6 +15,7 @@ Der `mode`-Parameter bei `/next` akzeptiert `sequential` (Buchreihenfolge, `afte
 | GET | `/api/courses` | Auth | Sichtbare Bücher als Kurse inkl. Fortschritt des Users (Admin: alle) |
 | GET | `/api/courses/access` | Auth | `{ hasAccess }` — Basis für die Menü-Sichtbarkeit (Admin: true wenn Bücher existieren) |
 | POST | `/api/courses` | Auth | „Neuen Kurs erstellen“: legt einen persönlichen Kurs an (eigenes Buch, nur für den Besitzer sichtbar). Multipart mit `name` und OPTIONALEM `file` (.pgn, max. 10 MB) — **ohne Datei entsteht ein LEERER Kurs**, der danach über die Detailseite Kapitel für Kapitel gefüllt wird (`ImportVersion` steht sofort auf der aktuellen Pipeline-Version, damit ein handgepflegtes Buch nicht im „Aktualisieren“-Banner hängt); ohne Datei ist `name` Pflicht (400), weil es keinen Dateinamen zum Ableiten gibt. MIT Datei gilt die alte Regel: Puzzle-PGN im Chessable-Stil, sonst 400 und kein Buch. Linien mit mehr als 1000 Halbzügen zählen als ungültig (`PgnImportService.MaxMainlinePlies`, geprüft VOR dem Nachspielen — Codereview N3-003) |
+| POST | `/api/courses/personal-tactics/from-game` | Auth | „Taktiken trainieren“ (0.968.0): die Empfohlenen Übungen einer Partie als Kapitel im Kurs „Persönliche Taktiken“ des Kontos anlegen bzw. das vorhandene öffnen. Body `{ kind, id?, token?, lang? }` → `{ bookId, chapterIndex, chapter, created, lines }`; Regeln unten („Persönliche Taktiken“). Literal-Route |
 | GET | `/api/courses/{bookId}/chapters` | Auth | Kapitel des Buchs in Lesereihenfolge inkl. Fortschritt je Kapitel (`index`/`name`/`puzzleCount`/`solvedCount`/`progressPercent`); `name=null` = Sammel-„ohne Kapitel" |
 | GET | `/api/courses/{bookId}/next?mode=&after=&exclude=&chapterIndex=` | Auth | Nächstes ungelöstes Puzzle (siehe `mode` oben); mit `chapterIndex` auf das Kapitel beschränkt (Pool + Fortschritt). **Kalkulationsbücher → 404** |
 | POST | `/api/courses/{bookId}/results` | Auth | Lösungsversuch aufzeichnen (idempotent); validiert Puzzle↔Buch |
@@ -60,3 +61,48 @@ leer/Whitespace → „ohne Kapitel" = `null`), SQL-Gegenstück `ChapterOrder.Wh
 Kapitelliste/Solver-Index (`/chapters`, `chapterIndex`), Kapitel-Modus und -Statistik, Detailseite, Kapitel im
 `BookPuzzleDto`, Wochenpost aus Kapitel, PGN-Export und die Termin-Sperre der Kalk-Serie (`CalcVisibility.IsHidden`).
 „ Kapitel A " und „Kapitel A" sind überall EIN Kapitel; die gespeicherten Namen bleiben unverändert (keine Migration).
+
+## Persönliche Taktiken (0.968.0)
+
+Wunsch 2026-11-14: unter „Empfohlene Übungen“ einer Partie (`docs/api/partie-zusammenfassung.md`) der Knopf „Taktiken trainieren“ —
+die Aufgaben der Partie als Kapitel in einem persönlichen Kurs, gelöst im normalen Kurs-Löser (sequenziell, Fortschritt und Statistik
+wie jeder Kurs). `Services/Courses/PersonalTacticsCourse.cs`, `Controllers/Courses/PersonalTacticsController.cs`.
+
+`POST /api/courses/personal-tactics/from-game`, Body `{ kind, id?, token?, lang? }` — die Partie auf demselben Weg, auf dem die Seite
+ihre Übungen liest, mit derselben Zugriffsprüfung:
+
+| `kind` | Felder | Zugriff (sonst 404) |
+|---|---|---|
+| `club` | `id` | `league.view` (403) + Verein der Partie über `LeagueClubResolver` (`?club=` wie `GET /api/league/club/games/{id}`) |
+| `own` | `id` | Besitzer der Partie |
+| `club-share` | `token`, `id` | Liga-Teilen-Link, Partie an einem Brett SEINER Begegnung |
+| `club-link` | `token` | gültiger Link der Vereinspartie (`/cg/{token}`) |
+| `own-share` | `token` | gültiger Teilen-Link der Partie (`/g/{token}`) |
+
+Immer angemeldet (auch bei den Link-Wegen: der Kurs gehört dem Konto, das klickt). Antwort `{ bookId, chapterIndex, chapter, created,
+lines }` — `chapterIndex` ist der Solver-Index für `courses/:bookId/chapter/:index/sequential` (`null` nur, wenn das Kapitel keine
+abfragbare Linie mehr hat), `created = false` = das Kapitel gab es schon. 400 `{ message }` bei unbekanntem `kind` und bei einer
+Partie ohne lösbare Aufgabe (dann entsteht auch kein Kurs).
+
+- **Ein Kurs je Konto**: das Buch heißt intern `personal-tactics-u{userId}.pgn` (`Book.FileName`, eindeutiger Index) — erkannt am
+  Dateinamen, nie am Anzeigenamen; Umbenennen verdoppelt nichts. `OwnerUserId` = das Konto (nur für es sichtbar, wie jeder
+  persönliche Kurs — teilen, umbenennen, löschen wie dort), `Kind = Puzzle`, `Themes = tactics`, `Tags = personal,tactics`, kein
+  Pool-Flag. Name beim ersten Anlegen aus `lang`: `de…` → „Persönliche Taktiken“, sonst „Personal tactics“. Kein neues Schema.
+- **Ein Kapitel je Partie**: die Linien tragen `LineId = {Datei}:{club|own}{PartieId}:{nn}` (eindeutiger Index). Gibt es Linien mit
+  diesem Anfang, wird ihr Kapitel geöffnet (auch umbenannt) und NICHTS neu berechnet — das Kapitel hält fest, was beim ersten Klick
+  empfohlen war, der Fortschritt bleibt. Gleichzeitige Klicks: der zweite stößt am Index an (`DbIdempotency`) und liest das Kapitel
+  des ersten; dasselbe für das Buch. Löscht der Nutzer das Kapitel, legt der nächste Klick es neu an.
+- **Kapitelname**: „Weiß – Schwarz (Jahr)“ (wie die Titel der Taktik-Ernte) aus den GESPEICHERTEN Namen der Partie — bei
+  anonymisierten Vereinspartien also „Delmarko, Dietmar – Schwaz (2026)“, nie die internen Klarnamen und ohne Auflösung über die
+  Ligarunde. Schon vergeben (zweite Partie derselben Spieler im selben Jahr) → „… · 2“. Neue Kapitel stehen am Ende (`Round` zählt weiter).
+- **Linien** (Reihenfolge des Abschnitts, nur Lösbares): Lichess-Aufgabe → `Fen` vor dem Gegnerzug, `Moves` = Gegnerzug + Lösung,
+  `StartPly = 0` (klassische Form wie die Taktik-Ernte), `BookRating` = Lichess-Wertung, `Title` = „19. · Lichess {LichessId}“;
+  Buchdiagramm mit bestätigter Lösung → Diagrammstellung, `Moves` = Buchlösung, `StartPly = -1` (Löser am Zug), `Title` =
+  „19. · {Buchtitel}, S. n“. „Beispiel im Buch“ ohne Lösung fehlt. `Tags` = Thema der Stelle + Themen der Aufgabe, `Source =
+  game-exercise`, `SourceGame = club|own:{id}:{ply}` („Zur Partie“ im Löser) — nur, wenn der Nutzer die Partie auf ihrem eigenen Weg
+  sieht (nicht über einen Teilen-Link). Keine Tipp-Generierung, keine Kommentare.
+- **Auswahl**: beim Klick serverseitig neu aus `GameExercises` (je Partie und Stelle fest gesät, derselbe Betrachter wie beim Anzeigen)
+  — sie stimmt mit dem Abschnitt überein, solange sich der Aufgabenbestand zwischen Laden und Klick nicht ändert.
+- **Aufbereitung**: kein Quell-PGN; `ImportVersion` steht auf der aktuellen Pipeline-Version und wird bei jedem Aufruf nachgezogen
+  (wie beim Einfügen von Linien in handgepflegte Kurse). Ein „Aktualisieren“-Lauf fasst das Buch nie an (`StaleAction.Manual`); nach
+  einer Erhöhung von `ImportPipeline.CurrentVersion` trüge es bis zum nächsten Klick das (!) der Kursliste.

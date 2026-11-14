@@ -22,3 +22,8 @@ Backend, Auswahl und Mattbild: `docs/api/partie-zusammenfassung.md`, Abschnitt �
   (`exerciseSolvable`) → wie eine Lichess-Karte, der `LineSolver` startet ohne Vorspiel (`startPly: 0`) und verbucht nichts; sonst ist die
   Karte selbst ein Link in den Leser mit „Beispiel im Buch“ und fehlt im Löser (der blättert nur durch die lösbaren Aufgaben der Stelle).
   Ergebnisse je `exerciseKey` (`lichess:<id>` / `book:<id>` — Ids können gleich sein).
+- **„Taktiken trainieren“** (0.968.0): `mat-stroked-button` (`school`) mit leiser Hinweiszeile unter den Stellen, nur wenn die Seite ihn
+  freigibt (`canTrain`: angemeldet UND Menüpunkt „Kurse“ sichtbar — `MenuService.visible$`, sonst wiese `coursePlayGuard` ab) und es
+  mindestens eine lösbare Aufgabe gibt. Klick → `ClubGameSummaryService.trainTactics(source, lang)` (dieselben fünf Wege), danach
+  `/courses/{bookId}/chapter/{chapterIndex}/sequential`; `chapterIndex === null` → `/courses/{bookId}`; Fehler → Snackbar, Knopf wieder
+  frei. Ohne Anmeldung (Teilen-Links) kein Knopf, wie „Nicht mehr vorschlagen“ bei der Literatur. Server: `docs/api/kurse.md`.

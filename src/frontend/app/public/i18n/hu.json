@@ -4070,7 +4070,10 @@
         "counter": "{{i}}. feladat / {{n}}",
         "bookExample": "Példa a könyvben",
         "bookPage": "{{n}}. o.",
-        "bookPart": "{{n}}. rész"
+        "bookPart": "{{n}}. rész",
+        "train": "Taktikák gyakorlása",
+        "trainHint": "A játszma feladatait fejezetként hozzáadja a „Személyes taktikák” kurzusodhoz, és megnyitja.",
+        "trainFailed": "A kurzust nem sikerült megnyitni."
       }
     },
     "onlyMine": "Csak a saját játszmáim",

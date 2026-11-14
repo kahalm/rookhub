@@ -303,6 +303,10 @@ Antwort `{ groups: [{ ply, white, reason: missedMate|playedMate, mateIn, alsoPli
 match: strict|family|theme, source: lichess|book, book }] }] }` — Lichess: `fen` vor dem Zug des Gegners, `moves` = Gegnerzug + Lösung
 (Lichess-Form), `book` = `null`; Buch (0.962.0) siehe „Buchbeispiele“. Ohne Analyse leer.
 
+**„Taktiken trainieren“** (0.968.0): unter dem Abschnitt, nur angemeldet — legt die lösbaren Aufgaben der Partie als Kapitel im Kurs
+„Persönliche Taktiken“ an (einer je Konto, ein Kapitel je Partie) und öffnet es im Kurs-Löser: `POST /api/courses/personal-tactics/from-game`,
+`docs/api/kurse.md` → „Persönliche Taktiken“.
+
 **Mattbilder berechnen** (`PuzzleSignatureWorker`, Tabelle `PuzzleSignatures`): startet 5 min nach dem API-Start von selbst, je 3 s
 1 000 Matt-Aufgaben (Beliebtheit ≥ 80) in Id-Reihenfolge, Fortschritt `SystemSettings.PuzzleSignatures.MateCursor` (`v1:<PuzzleId>`,
 übersteht Neustarts); pausierbar über „Hintergrundjobs pausieren“; ruht in `PuzzleSignatures:QuietHours` (Vorgabe

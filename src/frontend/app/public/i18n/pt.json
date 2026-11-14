@@ -3595,7 +3595,10 @@
         "counter": "Problema {{i}} de {{n}}",
         "bookExample": "Exemplo no livro",
         "bookPage": "p. {{n}}",
-        "bookPart": "Secção {{n}}"
+        "bookPart": "Secção {{n}}",
+        "train": "Treinar táticas",
+        "trainHint": "Adiciona os exercícios desta partida como capítulo do teu curso «Táticas pessoais» e abre-o.",
+        "trainFailed": "Não foi possível abrir o curso."
       }
     },
     "onlyMine": "Só as minhas partidas",

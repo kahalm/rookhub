@@ -3595,7 +3595,10 @@
         "counter": "Úloha {{i}} z {{n}}",
         "bookExample": "Příklad v knize",
         "bookPage": "s. {{n}}",
-        "bookPart": "Oddíl {{n}}"
+        "bookPart": "Oddíl {{n}}",
+        "train": "Trénovat taktiky",
+        "trainHint": "Přidá úlohy této partie jako kapitolu do tvého kurzu „Osobní taktiky“ a otevře ji.",
+        "trainFailed": "Kurz se nepodařilo otevřít."
       }
     },
     "onlyMine": "Jen moje partie",

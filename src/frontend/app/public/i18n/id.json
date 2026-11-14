@@ -3595,7 +3595,10 @@
         "counter": "Teka-teki {{i}} dari {{n}}",
         "bookExample": "Contoh di buku",
         "bookPage": "hlm. {{n}}",
-        "bookPart": "Bagian {{n}}"
+        "bookPart": "Bagian {{n}}",
+        "train": "Latih taktik",
+        "trainHint": "Menambahkan soal dari partai ini sebagai bab di kursus “Taktik pribadi” Anda dan membukanya.",
+        "trainFailed": "Kursus tidak dapat dibuka."
       }
     },
     "onlyMine": "Hanya permainan saya",

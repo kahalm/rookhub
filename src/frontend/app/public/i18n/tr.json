@@ -3595,7 +3595,10 @@
         "counter": "Bulmaca {{i}} / {{n}}",
         "bookExample": "Kitaptaki örnek",
         "bookPage": "s. {{n}}",
-        "bookPart": "Bölüm {{n}}"
+        "bookPart": "Bölüm {{n}}",
+        "train": "Taktik çalış",
+        "trainHint": "Bu oyunun bulmacalarını “Kişisel taktikler” kursuna bir bölüm olarak ekler ve açar.",
+        "trainFailed": "Kurs açılamadı."
       }
     },
     "onlyMine": "Yalnızca oyunlarım",

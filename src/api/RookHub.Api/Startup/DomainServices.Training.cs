@@ -47,6 +47,8 @@ public static partial class DomainServicesSetup
         // RepertoireService darf CourseService nicht bekommen (CourseService kennt Repertoire-Code schon).
         services.AddScoped<CourseRepertoireConversionService>();
         services.AddScoped<CourseStatsService>();
+        // Kurs „Persönliche Taktiken“: Empfohlene Übungen einer Partie als Kapitel (ein Kurs je Konto).
+        services.AddScoped<PersonalTacticsCourse>();
         services.AddScoped<CalculationService>();
         services.AddScoped<CalcEditionService>();
         services.AddScoped<CalcSeriesAnnounceService>();

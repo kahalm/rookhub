@@ -114,6 +114,15 @@ function solvableOf(exercises: SummaryExercise[]): SummaryExercise[] { return ex
           {{ 'games.summary.exercises.more' | translate: { count: hidden() } }}
         </button>
       }
+      <!-- „Taktiken trainieren“ (Wunsch 2026-11-14): die Aufgaben dieser Partie als Kapitel im Kurs „Persönliche Taktiken“ — nur angemeldet. -->
+      @if (canTrain() && hasSolvable()) {
+        <div class="train">
+          <button mat-stroked-button type="button" class="train-btn" [disabled]="training()" (click)="train.emit()">
+            <mat-icon>school</mat-icon> {{ 'games.summary.exercises.train' | translate }}
+          </button>
+          <p class="train-hint">{{ 'games.summary.exercises.trainHint' | translate }}</p>
+        </div>
+      }
     </section>
   `,
   styles: [`
@@ -141,12 +150,20 @@ function solvableOf(exercises: SummaryExercise[]): SummaryExercise[] { return ex
     .mark.ok { color: var(--rh-success); }
     .inline-solver { margin: 8px 0 12px; padding: 12px; border: 1px solid var(--mat-sys-outline-variant); border-radius: 8px; }
     .close-solver { margin-top: 4px; }
+    .train { margin: 16px 0 4px; }
+    .train-hint { color: var(--mat-sys-on-surface-variant); font-size: 0.875rem; margin: 6px 0 0; }
   `],
 })
 export class SummaryExercisesComponent {
   readonly groups = input.required<SummaryExerciseGroup[]>();
   /** Klick auf die Zugnummer einer Stelle → die Seite zeigt die Stellung am Brett. */
   readonly showPly = output<number>();
+  /** „Taktiken trainieren“ anbieten: angemeldet und mit Zugang zu den Kursen (die Seite entscheidet). */
+  readonly canTrain = input(false);
+  /** Der Kurs wird gerade angelegt bzw. geöffnet — Knopf gesperrt. */
+  readonly training = input(false);
+  /** Klick auf „Taktiken trainieren“ — die Seite legt das Kapitel an und springt in den Kurs-Löser. */
+  readonly train = output<void>();
 
   readonly preferences = inject(PreferencesService);
   private readonly dialog = inject(MatDialog);
@@ -164,6 +181,8 @@ export class SummaryExercisesComponent {
   }));
   readonly visible = computed(() => this.expanded() ? this.all() : this.all().slice(0, OPEN_GROUPS));
   readonly hidden = computed(() => this.all().length - this.visible().length);
+  /** Ohne lösbare Aufgabe (nur „Beispiel im Buch“) gäbe es kein Kapitel — dann kein Knopf. */
+  readonly hasSolvable = computed(() => this.all().some(g => g.solvable.length > 0));
 
   moveLabel(ply: number): string { return exerciseMoveLabel(ply); }
 

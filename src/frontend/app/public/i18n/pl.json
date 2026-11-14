@@ -3595,7 +3595,10 @@
         "counter": "Zadanie {{i}} z {{n}}",
         "bookExample": "Przykład w książce",
         "bookPage": "s. {{n}}",
-        "bookPart": "Część {{n}}"
+        "bookPart": "Część {{n}}",
+        "train": "Trenuj taktyki",
+        "trainHint": "Dodaje zadania z tej partii jako rozdział do twojego kursu „Taktyki osobiste” i otwiera go.",
+        "trainFailed": "Nie udało się otworzyć kursu."
       }
     },
     "onlyMine": "Tylko moje partie",

@@ -3660,7 +3660,10 @@
         "counter": "Aufgabe {{i}} von {{n}}",
         "bookExample": "Beispiel im Buch",
         "bookPage": "S. {{n}}",
-        "bookPart": "Abschnitt {{n}}"
+        "bookPart": "Abschnitt {{n}}",
+        "train": "Taktiken trainieren",
+        "trainHint": "Legt die Aufgaben dieser Partie als Kapitel in deinem Kurs „Persönliche Taktiken“ an und öffnet es.",
+        "trainFailed": "Der Kurs ließ sich nicht öffnen."
       }
     },
     "onlyMine": "Nur meine Partien",

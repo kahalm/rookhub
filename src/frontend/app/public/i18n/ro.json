@@ -3595,7 +3595,10 @@
         "counter": "Problema {{i}} din {{n}}",
         "bookExample": "Exemplu în carte",
         "bookPage": "p. {{n}}",
-        "bookPart": "Secțiunea {{n}}"
+        "bookPart": "Secțiunea {{n}}",
+        "train": "Antrenează tactici",
+        "trainHint": "Adaugă exercițiile acestei partide ca un capitol în cursul tău „Tactici personale” și îl deschide.",
+        "trainFailed": "Cursul nu a putut fi deschis."
       }
     },
     "onlyMine": "Doar partidele mele",

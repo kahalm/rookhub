@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
@@ -9,6 +9,8 @@ import { ClubGameSummaryComponent } from './club-game-summary.component';
 import { ClubGameSummaryService } from './club-game-summary.service';
 import { GamesService } from '../games.service';
 import { AuthService } from '../../../core/auth.service';
+import { MenuService } from '../../../core/menu.service';
+import { SnackbarService } from '../../../core/snackbar.service';
 import { PreferencesService } from '../../../core/preferences.service';
 
 /**
@@ -191,6 +193,7 @@ describe('ClubGameSummaryComponent — Design-Runde d10', () => {
         { provide: GamesService, useValue: games },
         { provide: ClubGameSummaryService, useValue: { get: () => of(summary), getOwn: () => of(summary) } },
         { provide: AuthService, useValue: { isLoggedIn: true, isAdmin: false } },
+        { provide: MenuService, useValue: { visible$: of(new Set<string>()) } },   // angemeldet liest die Seite die Menü-Sichtbarkeit
         { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
       ],
     });
@@ -289,5 +292,90 @@ describe('ClubGameSummaryComponent — Empfohlene Übungen', () => {
   it('Teilen-Link der eigenen Partie fragt über denselben Weg', () => {
     const { calls } = render(() => of([]), { mode: 'own-share' }, { token: 'abc' });
     expect(calls).toEqual([{ kind: 'own-share', token: 'abc' }]);
+  });
+});
+
+/** „Taktiken trainieren“ (Wunsch 2026-11-14): unter den Empfohlenen Übungen, nur angemeldet; legt das Kapitel an und springt in den Kurs-Löser. */
+describe('ClubGameSummaryComponent — „Taktiken trainieren“', () => {
+  const group = { ply: 36, white: false, reason: 'allowedTactic', theme: 'fork', mateIn: null, alsoPlies: [], exercises: [
+    { id: 11, fen: 'r3k3/p7/8/3N4/8/8/8/4K3 b - - 0 1', moves: ['a7a6', 'd5c7', 'e8d7', 'c7a8'], rating: 1500, themes: ['fork'], match: 'strict' }] };
+
+  function render(opts: { loggedIn: boolean; menu?: string[]; train?: () => unknown; data?: Record<string, string>; params?: Record<string, string> }) {
+    const calls: unknown[] = [];
+    const warn = jasmine.createSpy('warn');
+    TestBed.configureTestingModule({
+      imports: [ClubGameSummaryComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(opts.params ?? { id: '247' }), data: opts.data ?? {} } } },
+        { provide: GamesService, useValue: { clubGame: () => of({ pgn: '1. e4 e5', ownerSide: 'white' }), linkedClubGame: () => of({ pgn: '1. e4 e5' }) } },
+        { provide: ClubGameSummaryService, useValue: {
+          get: () => of({ markdown: '# Titel\n\nText.' }), getLinked: () => of({ markdown: '# Titel' }),
+          exercises: () => of([group]),
+          trainTactics: (src: unknown, lang: string) => { calls.push([src, lang]); return (opts.train ?? (() => of({ bookId: 9, chapterIndex: 2, chapter: 'x', created: true, lines: 1 })))(); } } },
+        { provide: AuthService, useValue: { isLoggedIn: opts.loggedIn, currentUser$: of(null) } },
+        { provide: MenuService, useValue: { visible$: of(new Set(opts.menu ?? ['courses'])) } },
+        { provide: SnackbarService, useValue: { warn, info: () => undefined } },
+        { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
+      ],
+    });
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const fixture = TestBed.createComponent(ClubGameSummaryComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    return { fixture, el, calls, navigate, warn, button: () => el.querySelector('app-summary-exercises .train-btn') as HTMLButtonElement | null };
+  }
+
+  it('angemeldet: Knopf unter dem Abschnitt; Klick legt das Kapitel an und öffnet es sequenziell im Kurs-Löser', () => {
+    const { button, calls, navigate } = render({ loggedIn: true });
+    expect(button()).not.toBeNull();
+    button()!.click();
+    expect(calls).toEqual([[{ kind: 'club', id: 247 }, 'en']]);
+    expect(navigate).toHaveBeenCalledOnceWith(['/courses', 9, 'chapter', 2, 'sequential']);
+  });
+
+  it('ohne Anmeldung (auch über einen Teilen-Link): kein Knopf', () => {
+    expect(render({ loggedIn: false }).button()).toBeNull();
+    TestBed.resetTestingModule();
+    expect(render({ loggedIn: false, data: { mode: 'club-link' }, params: { token: 'abc' } }).button()).toBeNull();
+  });
+
+  it('angemeldet über den Link einer Vereinspartie: derselbe Weg wie die Übungen', () => {
+    const { button, calls } = render({ loggedIn: true, data: { mode: 'club-link' }, params: { token: 'abc' } });
+    button()!.click();
+    expect(calls).toEqual([[{ kind: 'club-link', token: 'abc' }, 'en']]);
+  });
+
+  it('angemeldet, aber ohne den Menüpunkt „Kurse“: kein Knopf (der Löser wiese ab)', () => {
+    expect(render({ loggedIn: true, menu: ['puzzles'] }).button()).toBeNull();
+  });
+
+  it('Kapitel ohne abfragbare Linie: auf die Kursseite', () => {
+    const { button, navigate } = render({ loggedIn: true, train: () => of({ bookId: 9, chapterIndex: null, chapter: null, created: false, lines: 1 }) });
+    button()!.click();
+    expect(navigate).toHaveBeenCalledOnceWith(['/courses', 9]);
+  });
+
+  it('Fehler: Hinweis, kein Sprung, Knopf wieder frei', () => {
+    const { fixture, button, navigate, warn } = render({ loggedIn: true, train: () => throwError(() => new HttpErrorResponse({ status: 400 })) });
+    button()!.click();
+    fixture.detectChanges();
+    expect(warn).toHaveBeenCalledOnceWith('games.summary.exercises.trainFailed');
+    expect(navigate).not.toHaveBeenCalled();
+    expect(button()!.disabled).toBeFalse();
+  });
+});
+
+describe('ClubGameSummaryService.trainTactics', () => {
+  it('schickt die Partie auf dem Weg der Seite und die Sprache', () => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    const http = TestBed.inject(HttpTestingController);
+    TestBed.inject(ClubGameSummaryService).trainTactics({ kind: 'club-share', token: 't', id: 5 }, 'de').subscribe();
+    const req = http.expectOne('/api/courses/personal-tactics/from-game');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ kind: 'club-share', token: 't', id: 5, lang: 'de' });
+    req.flush({ bookId: 1, chapterIndex: 0, chapter: 'x', created: true, lines: 3 });
+    http.verify();
   });
 });

@@ -3595,7 +3595,10 @@
         "counter": "Opgave {{i}} van {{n}}",
         "bookExample": "Voorbeeld in het boek",
         "bookPage": "p. {{n}}",
-        "bookPart": "Deel {{n}}"
+        "bookPart": "Deel {{n}}",
+        "train": "Tactieken trainen",
+        "trainHint": "Voegt de opgaven van deze partij als hoofdstuk toe aan je cursus ‘Persoonlijke tactieken’ en opent het.",
+        "trainFailed": "De cursus kon niet worden geopend."
       }
     },
     "onlyMine": "Alleen mijn partijen",

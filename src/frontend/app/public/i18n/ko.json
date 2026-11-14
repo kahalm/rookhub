@@ -3595,7 +3595,10 @@
         "counter": "퍼즐 {{i}} / {{n}}",
         "bookExample": "책 속 예제",
         "bookPage": "{{n}}쪽",
-        "bookPart": "{{n}}절"
+        "bookPart": "{{n}}절",
+        "train": "전술 훈련하기",
+        "trainHint": "이 대국의 문제를 내 코스 ‘개인 전술’에 챕터로 추가하고 엽니다.",
+        "trainFailed": "코스를 열 수 없습니다."
       }
     },
     "onlyMine": "내 대국만",

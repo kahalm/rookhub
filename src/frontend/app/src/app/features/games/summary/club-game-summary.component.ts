@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,6 +15,7 @@ import { LoadErrorComponent } from '../../../shared/load-error/load-error.compon
 import { PreferencesService } from '../../../core/preferences.service';
 import { GamesService, SharedGame } from '../games.service';
 import { AuthService } from '../../../core/auth.service';
+import { MenuService } from '../../../core/menu.service';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { MaximNoteComponent } from '../../../shared/maxims/maxim-note.component';
 import { ClubGameSummary, ClubGameSummaryService, EbookSuggestionInfo, SummaryExerciseGroup, SummarySource } from './club-game-summary.service';
@@ -188,7 +190,10 @@ interface ResolvedDiagram {
               }
             </article>
             <!-- Empfohlene Übungen (0.960.0): nach der Literatur, aus den Daten der Partie — ohne Stellen kein Abschnitt. -->
-            @if (exercises().length) { <app-summary-exercises [groups]="exercises()" (showPly)="showGamePly($event)" /> }
+            @if (exercises().length) {
+              <app-summary-exercises [groups]="exercises()" [canTrain]="canTrain()" [training]="training()"
+                                     (showPly)="showGamePly($event)" (train)="trainTactics()" />
+            }
             @if (summary()?.model) { <p class="note model">{{ 'games.summary.writtenBy' | translate: { model: summary()!.model } }}</p> }
           }
         </mat-card>
@@ -334,6 +339,12 @@ export class ClubGameSummaryComponent implements OnInit {
   readonly loggedIn = inject(AuthService).isLoggedIn;
   /** „Empfohlene Übungen“ (0.960.0): Stellen der Partie mit ihren Aufgaben; leer = kein Abschnitt (auch bei Fehlern). */
   readonly exercises = signal<SummaryExerciseGroup[]>([]);
+  /** Menü-Sichtbarkeit nur für Angemeldete (anonym gibt es „Taktiken trainieren“ nicht — und keinen Menü-Abruf dafür). */
+  private readonly menuKeys = this.loggedIn ? toSignal(inject(MenuService).visible$, { initialValue: new Set<string>() }) : null;
+  /** „Taktiken trainieren“ (Wunsch 2026-11-14): angemeldet UND mit dem Menüpunkt „Kurse“ — sonst wiese der Kurs-Löser ab. */
+  readonly canTrain = computed(() => !!this.menuKeys?.().has('courses'));
+  readonly training = signal(false);
+  private readonly router = inject(Router);
   /** Ohne Bücher und ohne deren Überschrift, wenn von der Literatur-Liste nichts übrig bleibt. */
   /** Züge im Text werden klickbar, sobald es das Seitenbrett gibt, das sie zeigen kann. */
   private readonly mergedSection = computed(() => this.hasBoard() ? mergeGameSection(this.blocks(), this.positions()) : { blocks: this.blocks(), merged: false });
@@ -426,6 +437,26 @@ export class ClubGameSummaryComponent implements OnInit {
     this.summaries.exercises(this.source()).subscribe({
       next: groups => this.exercises.set(groups.filter(g => g.exercises.length > 0)),
       error: () => this.exercises.set([]),
+    });
+  }
+
+  /**
+   * „Taktiken trainieren“: Kapitel dieser Partie im Kurs „Persönliche Taktiken“ anlegen bzw. öffnen und direkt in den
+   * Kurs-Löser springen (sequenziell, wie jeder Kurs). Ein Kapitel ohne abfragbare Linie führt auf die Kursseite.
+   */
+  trainTactics(): void {
+    if (this.training()) return;
+    this.training.set(true);
+    this.summaries.trainTactics(this.source(), this.translate.getCurrentLang() || 'en').subscribe({
+      next: c => {
+        this.training.set(false);
+        void this.router.navigate(c.chapterIndex === null
+          ? ['/courses', c.bookId] : ['/courses', c.bookId, 'chapter', c.chapterIndex, 'sequential']);
+      },
+      error: () => {
+        this.training.set(false);
+        this.snackbar.warn(this.translate.instant('games.summary.exercises.trainFailed'));
+      },
     });
   }
 

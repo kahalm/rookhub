@@ -215,3 +215,47 @@ describe('SummaryExerciseSolverComponent', () => {
     expect(record).not.toHaveBeenCalled();
   });
 });
+
+/** „Taktiken trainieren“ (Wunsch 2026-11-14): Knopf unter dem Abschnitt, nur wenn die Seite ihn freigibt und es etwas zu lösen gibt. */
+describe('SummaryExercisesComponent — „Taktiken trainieren“', () => {
+  function render(groups: SummaryExerciseGroup[], inputs: Record<string, unknown> = {}) {
+    setup();
+    const f = TestBed.createComponent(SummaryExercisesComponent);
+    f.componentRef.setInput('groups', groups);
+    for (const [k, v] of Object.entries(inputs)) f.componentRef.setInput(k, v);
+    f.detectChanges();
+    return { f, el: f.nativeElement as HTMLElement };
+  }
+
+  it('ohne Freigabe (nicht angemeldet): kein Knopf', () => {
+    const { el } = render([group(10)]);
+    expect(el.querySelector('.train-btn')).toBeNull();
+  });
+
+  it('freigegeben: Knopf mit Hinweiszeile unter den Stellen, Klick meldet „train“', () => {
+    const { f, el } = render([group(10), group(20)], { canTrain: true });
+    let clicks = 0;
+    f.componentInstance.train.subscribe(() => clicks++);
+    const btn = el.querySelector('.train-btn') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(btn.textContent).toContain('games.summary.exercises.train');
+    expect(btn.querySelector('mat-icon')?.textContent).toBe('school');
+    expect(el.querySelector('.train-hint')?.textContent).toContain('games.summary.exercises.trainHint');
+    // unter dem Abschnitt: hinter der letzten Stelle
+    const groups = el.querySelectorAll('.group');
+    expect(groups[groups.length - 1].compareDocumentPosition(btn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    btn.click();
+    expect(clicks).toBe(1);
+  });
+
+  it('während des Anlegens gesperrt', () => {
+    const { el } = render([group(10)], { canTrain: true, training: true });
+    expect((el.querySelector('.train-btn') as HTMLButtonElement).disabled).toBeTrue();
+  });
+
+  it('nur „Beispiel im Buch“ (nichts zu lösen): kein Knopf', () => {
+    const onlyExample: SummaryExerciseGroup = { ply: 10, white: true, reason: 'missedMate', mateIn: 1, alsoPlies: [], exercises: [bookEx(7, false)] };
+    const { el } = render([onlyExample], { canTrain: true });
+    expect(el.querySelector('.train-btn')).toBeNull();
+  });
+});

@@ -3660,7 +3660,10 @@
         "counter": "Puzzle {{i}} of {{n}}",
         "bookExample": "Example in the book",
         "bookPage": "p. {{n}}",
-        "bookPart": "Section {{n}}"
+        "bookPart": "Section {{n}}",
+        "train": "Train tactics",
+        "trainHint": "Adds this game’s puzzles as a chapter to your course “Personal tactics” and opens it.",
+        "trainFailed": "Could not open the course."
       }
     },
     "onlyMine": "Only my games",

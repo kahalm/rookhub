@@ -3595,7 +3595,10 @@
         "counter": "Problem {{i}} av {{n}}",
         "bookExample": "Exempel i boken",
         "bookPage": "s. {{n}}",
-        "bookPart": "Avsnitt {{n}}"
+        "bookPart": "Avsnitt {{n}}",
+        "train": "Träna taktik",
+        "trainHint": "Lägger till partiets uppgifter som ett kapitel i din kurs ”Personliga taktiker” och öppnar det.",
+        "trainFailed": "Kursen kunde inte öppnas."
       }
     },
     "onlyMine": "Bara mina partier",

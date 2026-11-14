@@ -3595,7 +3595,10 @@
         "counter": "谜题 {{i}} / {{n}}",
         "bookExample": "书中示例",
         "bookPage": "第 {{n}} 页",
-        "bookPart": "第 {{n}} 节"
+        "bookPart": "第 {{n}} 节",
+        "train": "训练战术",
+        "trainHint": "将本局的练习作为一章加入你的课程“个人战术”并打开。",
+        "trainFailed": "无法打开课程。"
       }
     },
     "onlyMine": "仅我的对局",
