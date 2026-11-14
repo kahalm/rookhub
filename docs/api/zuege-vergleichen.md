@@ -216,8 +216,8 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
     **4. Txe4 −3,06** (0,57) — Txe4 wäre nicht ausgewählt worden; mit `ucinewgame` wieder Rang 2. Tiefenaufträge bis
     Zieltiefe 4 bekommen deshalb eine eigene Sitzung (`rh-bg-{UserId}-fresh-{JobId}`); der folgende gewöhnliche Auftrag
     wechselt zurück und beginnt ebenfalls auf leerem Hash (zwei `ucinewgame` je flacher Sicht). Die Zahl der Linien
-    verändert die Tiefe-1-Werte ebenfalls (mit 51 statt 5 Linien war Txe4 in einer Messung Sechster) — die Schwellen gelten
-    für fünf Linien.
+    ändert auf leerem Hash nichts (gemessen mit 5, 40 und allen 51 legalen Zügen als Linien: jedes Mal Txe4 Rang 2, 0,40
+    zurück) — fünf Linien genügen für „unter den besten drei“.
   * **Ablauf**: `MoveComparisonService.StartExtraLinesAsync`, nur wo Fable schreibt (wie die Verteidigungen). Erster
     Durchgang: die flache Sicht zusammen mit den Verteidigungen → zurück auf `Replies`. Zweiter Durchgang, sobald die
     flache Sicht da ist: die tiefen Rechnungen der verlockenden Züge → noch einmal `Replies`, dann „wird erklärt“. Die
