@@ -22,5 +22,8 @@ Abschnitt, kein Blatt am Handy. Entfernt: `SummaryExercisesComponent`, `SummaryE
   Kurs-Zugang fragt die Seite die Aufgaben gar nicht ab und zeigt von ihnen nichts. Keine Aufgaben oder ein Fehler → kein Knopf, kein
   Platzhalter. Die Antwort trägt weiterhin die vollen Aufgaben (Stellungen, Züge, Buchquelle), gebraucht wird davon nur „gibt es eine
   lösbare“ — ein eigener schlanker Endpunkt wäre möglich, ist aber nicht gebaut.
+- Seit 0.976.0 findet der Server mehr Stellen (Mattdrohung `mateThreat`, Matt am Schluss `forcedMate`, Grundreihe, hängende Figur —
+  `docs/api/partie-zusammenfassung.md` → „Mehr Motive“). Die Seite braucht dafür nichts: `SummaryExerciseGroup.reason` kennt die
+  beiden neuen Werte nur als Typ, Texte je Grund gibt es seit 0.973.0 keine mehr.
 - Aufgaben einer Partie lösen: im Kurs „Persönliche Taktiken“ (Kurs-Löser). Das Verbuchen als Puzzle-Versuch
   (`PuzzleService.recordAttempt`) aus dem früheren Löser der Seite gibt es damit nicht mehr.

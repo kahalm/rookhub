@@ -288,7 +288,8 @@ aus den Daten der Partie, ohne Claude, also auch für alle schon fertigen Zusamm
 **Stellen** (`GameExercises.Occurrences`, beide Seiten): *verpasstes Matt* — die Seite am Zug hatte laut Analyse Matt in ≤ 5, nach ihrem
 Zug steht der Gegner nicht mehr matt bzw. die Partie endet ohne Matt (Bild aus der Engine-Linie); *gespieltes Matt* — die Partie endet
 matt (Bild aus der Schlussstellung, Stelle = Beginn der Mattfolge). Gleiches Bild mehrfach → eine Gruppe (`alsoPlies`), höchstens 8.
-Seit 0.961.0 auch **taktische Fehler**, seit 0.962.0 zuerst **Buchbeispiele** (beides unten).
+Seit 0.961.0 auch **taktische Fehler**, seit 0.962.0 zuerst **Buchbeispiele**, seit 0.976.0 **Mattdrohung**, **Matt am Schluss** und
+**Grundreihe** (alles unten).
 
 **Mattbild** (`Services/Puzzles/MatePattern.cs`, Regelstand `Version`): Schlussstellung relativ zum mattgesetzten König, farb- und
 spiegelunabhängig — Lage des Königs (Ecke/Grundreihe/Rand/offen), schachgebende Figur(en) mit Lage (Kontakt diagonal/gerade, Linie,
@@ -296,8 +297,10 @@ Springer, Bauer) und Deckung, die acht Nachbarfelder (Rand / eigener Stein / vom
 deckenden und beherrschenden Figuren und dem genauen Versatz, **Familie** = ohne Typen: „Dame g7 gedeckt vom Bauern f6“ und „… vom
 Springer h5“ sind dieselbe Familie.
 
-**Auswahl je Stelle** (bis 6): gleiche strenge Signatur, dann gleiche Familie; NUR wenn beides nichts liefert, Aufgaben des Themas
-`mateInN` (auch solange die Signaturen noch nicht berechnet sind). Rating-Fenster ±250 um die Stärke der Seite, die das Motiv hatte
+**Auswahl je Stelle** (bis 6 LÖSBARE): gleiche strenge Signatur, dann gleiche Familie; was dann noch fehlt, aus dem Thema — bei
+einem Matt erst das benannte Mattbild (`backRankMate`, `smotheredMate`), dann `mateInN`; bei einer Taktik das Lichess-Thema des Motivs
+(bis 0.975.x griff das Thema nur, wenn Signatur und Familie GAR nichts lieferten — eine Stelle konnte mit einer einzigen Aufgabe
+dastehen). Ein „Beispiel im Buch“ ohne bestätigte Lösung zählt seit 0.976.0 nicht zu den sechs. Rating-Fenster ±250 um die Stärke der Seite, die das Motiv hatte
 (`EbookSuggestions.StrengthAsync`, ein Band zählt mit seiner Mitte; sonst die andere Seite, sonst 1500), Beliebtheit ≥ 80, ≥ 200 mal
 gespielt, Tipps nicht als irreführend markiert. Je Partie und Stelle fest gesät — derselbe Aufruf liefert dieselben Aufgaben. Keine
 Stelle → `groups: []`, die Seite zeigt nichts.
@@ -310,7 +313,7 @@ Stelle → `groups: []`, die Seite zeigt nichts.
 | `GET api/games/{id}/summary/exercises` | Besitzer |
 | `GET api/games/shared/{token}/summary/exercises` | anonym über den Teilen-Link |
 
-Antwort `{ groups: [{ ply, white, reason: missedMate|playedMate, mateIn, alsoPlies, exercises: [{ id, fen, moves, rating, themes,
+Antwort `{ groups: [{ ply, white, reason: missedMate|playedMate|forcedMate|mateThreat|missedTactic|allowedTactic, mateIn, theme, alsoPlies, exercises: [{ id, fen, moves, rating, themes,
 match: strict|family|theme, source: lichess|book, book }] }] }` — Lichess: `fen` vor dem Zug des Gegners, `moves` = Gegnerzug + Lösung
 (Lichess-Form), `book` = `null`; Buch (0.962.0) siehe „Buchbeispiele“. Ohne Analyse leer.
 
@@ -342,13 +345,105 @@ Fesselung 61 %, hängende Figur 61 %. **Streng** = Thema + ziehende Figur + Ziel
 
 **Stellen**: je Fehler der Partie (`GameMistakes.Find`, nur Fehler/Patzer/verpasste Chance) die Stellung davor (*verpasste Taktik*:
 beste Linie der ziehenden Seite) und danach (*zugelassene Taktik*: beste Linie des Gegners, Stelle auf seiner Seite) — nur wenn die
-Linie klar gewinnt (≥ +2,0, kein Matt) UND ein Motiv erkannt wird. Reihenfolge: verpasstes Matt, dann Taktik nach Bewertungsverlust,
+Linie klar gewinnt (≥ +2,0 oder, seit 0.976.0, ≥ 2,0 vor dem zweitbesten Zug; kein Matt) UND ein Motiv erkannt wird (seit 0.976.0
+mit den Partie-Regeln `DetectInGame`, nächster Abschnitt). Reihenfolge: verpasstes Matt, dann Taktik nach Bewertungsverlust,
 gespieltes Matt zuletzt. Antwort wie oben, `reason` `missedTactic`/`allowedTactic`, `theme` (z. B. `fork`), `mateIn` = `null`; die
 Karten sagen „Gleiches Motiv, gleiche Figuren“ (streng) bzw. „Gleiches Motiv“; Thema-Rückfall = Lichess-Tag des Themas.
 
 **Signaturen der Aufgaben**: derselbe `PuzzleSignatureWorker` rechnet nach den Mattbildern die Motive aller beliebten (≥ 80), oft
 gespielten (≥ 200) Aufgaben OHNE Matt (`PuzzleSignatures`, `Kind` 2–9 je Thema, Fortschritt `SystemSettings.PuzzleSignatures.TacticCursor`).
 Prod: ~2,4 Mio. Aufgaben, gemessen ~20 µs je Aufgabe, ~27 % tragen ein Motiv → ~0,65 Mio. Zeilen; ~2 400 Schritte ≈ 3 h nach den Mattbildern.
+
+### Mehr Motive: Mattdrohung, Matt am Schluss, Grundreihe (0.976.0)
+
+Befund 2026-11-14 an Vereinspartie 251 („hat nur 5 Gabeln als Taktik — ist das auf einen Block limitiert?“ … „da könnt ich mir 5
+Gabeln, 5x Matt, 5 mal Grundlinie mindestens vorstellen“): eine einzige Gruppe. Limitiert war nichts — die Erkennung fand die
+anderen Motive nicht. Warum (aktuelle Hauptanalyse, Tiefe 30, fünf Linien):
+
+| Stelle | Beste Linie | Warum bis 0.975.x keine Stelle |
+|---|---|---|
+| 10.Lg5? (statt 10.dxc5) | +1,45, Bauerngewinn | unter +2,0, kein Motiv — bleibt so (kein taktisches Motiv) |
+| 16...d4? (statt 16...Sxe3) | +1,25 | unter +2,0, positionell — bleibt so |
+| 19...a6?? / 20...dxc3 (statt ...e4) | +2,9 / +3,6 | kein Motiv am ersten Zug; der Doppelangriff ...Lxc3 steht erst im 7. Halbzug hinter ruhigen Bauernzügen — bleibt so |
+| 23...Tf5? → 24.Sd6 | +1,5 | unter +2,0; die Gabel 25.Sf7+ steht nur in der Nebenlinie 24...Txg5 — bleibt so |
+| 28...Tc8?? → 29.Sd6 (29.Td1??) | +6,7 | **gefunden** (Gabel `fork|N|RR`) — die eine Gruppe |
+| 29...Se7?? bis 33.La5? | +5,0 … +6,5 | gewinnt klar, aber durch Druck (7. Reihe, Fesselung an einen Turm) — kein erkanntes Motiv, bleibt so |
+| 36...g5? → 37.Sd6 (37.Td8) | +6,5 | Gabel nicht „eingelöst“: der Turm verkauft sich (37...Txg4+ 38.Kxg4), geschlagen wird also kein Gabelziel; das Matt 37...Tg8 38.Sf7# steht nur im Antwort-Test des Vergleichs, den die Übungen nicht lasen |
+| 41.Td6?? (statt 41.Td8+ Lf8 42.Lb4) | −1,4 (zweitbester Zug −6,8) | unter +2,0 — die Taktik holt Material ZURÜCK; und „Grundreihe“ kannte der Erkenner nicht |
+| 41...Ta4? / 42.Txa6? (42.Td8+) | −3,8 (zweitbester −5,0) | unter +2,0, Abstand nur 1,2 — bleibt so (dasselbe Motiv zählt über den 41. und 45. Zug) |
+| 44...Sxc3?? → 45.Ta8+ Lf8 46.Lxc3+ (45.Lb6??) | −0,1 (zweitbester −7,4) | wie 41.Td6: unter +2,0, Grundreihe unbekannt |
+
+Die Schlüsselstellung „27...T3f6?? — drei Züge lang hängt die Qualität“ der Zusammenfassung gibt es in der neu eingelesenen Partie
+nicht mehr (dort steht 27...T3f7; der Text stammt von der Fassung davor).
+
+**Was dazukam** — jede Stelle bleibt ein Motiv DIESER Partie („erzwinge keine motive“ gilt weiter):
+
+- **Mattdrohung** (`reason: mateThreat`, `Services/Puzzles/MateThreats.cs`): an den beiden Stellungen jedes Fehlers (davor: der beste
+  Zug des Ziehenden; danach: der beste Zug des Gegners), wenn die beste Linie selbst kein Matt ist. (1) Der beste Zug **droht Matt in
+  einem Zug** — er schlägt nichts und gibt kein Schach, und dürfte die Seite noch einmal ziehen, setzte sie matt (ein Schlagzug zählt
+  nicht: „zurückschlagen, sonst Matt“ ist ein Abtausch). (2) Droht er nichts: **eine naheliegende Antwort läuft ins Matt in 1** — im
+  Schach jede legale Antwort außer der der Engine-Linie, sonst das Schlagen der gezogenen Figur und die Züge der Figuren, die sie
+  angreift und die das etwas angeht (wertvoller als sie oder ungedeckt): 37.Sd6 Tg8 38.Sf7#. Rein am Brett, ohne Engine — gilt also
+  auch für eigene Partien ohne Fehler-Vergleiche. (3) **Zusatzlinien der Fehler-Vergleiche** (`GameExercises.SideLinesOf`, Matt in
+  ≤ 5): gerechnete Zeilen `BestMoveTry` (verlockende Antwort auf den besten Zug, 0.974.0) und `Reply` (Antwort-Test; nur wenn die
+  Antwort nach dem besten Zug naheliegt wie in (2) — der Test spielt die Antworten auf den FEHLZUG, das kann nach dem besten Zug auch
+  „stellt die Dame ein“ sein) → Stelle = der Vergleich, Seite = wer dort am Zug war; `Defence` (andere Verteidigung in der
+  Widerlegung des Fehlzugs, 0.971.0) → Stelle = die Stellung nach dem Fehlzug, Seite des Widerlegenden. Gelesen werden nur Zeilen mit
+  Mattbewertung (`ResultJson LIKE '%"mate"%'`), und nur, wenn der Vergleich zur Stellung der Analyse passt. Je Stellung und Seite
+  höchstens EINE Mattdrohung (Brett vor Zusatzlinie, kürzestes Matt). Mattbild und Auswahl wie beim verpassten Matt; Reihenfolge wie
+  die Taktik desselben Fehlers, direkt davor.
+- **Matt am Schluss** (`reason: forcedMate`): die Partie endet ohne Matt, die Endstellung (Zeile ohne Zug, seit 0.689.0) steht aber
+  auf Matt in ≤ 5 — aufgegeben vor dem Matt. Bild aus der Engine-Linie der Endstellung, Stelle = Beginn der Mattfolge, Seite = wer
+  mattsetzt; eingeordnet wie das gespielte Matt (zuletzt). Bis 0.975.x fiel das durch: kein Matt gespielt, keines verpasst.
+- **Benanntes Mattbild** (`MatePattern.ThemeOf`, Feld `theme` der Gruppe): `smotheredMate` (ein Springer gibt allein Schach, jedes
+  Nachbarfeld des Königs trägt einen eigenen Stein) und `backRankMate` (König auf seiner Grundreihe, Turm/Dame geben auf dieser Reihe
+  Schach, die Felder direkt vor ihm tragen eigene Steine) — eigene Umsetzung nach den dokumentierten Themen-Definitionen. Gemessen
+  an 9 341 beliebten Prod-Matt-Aufgaben (14.11.): `smotheredMate` 142 von 142 wie Lichess (keine Abweichung); `backRankMate` findet
+  637 von 638 der Lichess-Aufgaben, dazu 423, die Lichess nicht so nennt — durchgesehen: Damenmatts auf der Grundreihe, bei denen
+  die Dame zugleich einen der Steine vor dem König angreift (Lichess etikettiert enger; nach der Definition sind es
+  Grundreihenmatts). Das Thema steuert nur das Auffüllen, die Signatur (`MatePattern.Version`) ist unverändert.
+- **Partie-Erkennung der Motive** (`TacticMotifs.DetectInGame`; die Signaturen der Aufgaben und Buchdiagramme bleiben, wie sie
+  sind — `TacticMotifs.Version` 1, kein Neurechnen):
+  - **Grundreihe** (`theme: backRankMate`, streng `backRank|R` bzw. `|Q`): Turm oder Dame gibt auf der Grundreihe des Königs
+    Schach, der König hat KEINEN Zug (es bleibt nur Dazwischenziehen oder Schlagen), und die Linie gewinnt in acht Halbzügen
+    mindestens 2 Bauerneinheiten. Lichess kennt die Grundreihe nur als Matt — die Aufgaben dazu kommen deshalb aus dem Thema
+    `backRankMate`; eigene Signatur-Zeilen gibt es nicht (`TacticMotifs.HasSignatures`).
+  - **Gabel mit Desperado**: eingelöst ist die Gabel auch, wenn eine gegabelte Figur sich verkauft und dort geschlagen wird.
+  - **Hängende Figur**: die Aufgaben-Regel („kurze Lösung“, ≤ 3 Halbzüge) traf Engine-Linien nie, die sind immer lang. In der
+    Partie zählt die Bilanz: ungedeckte Figur (ab Leichtfigur) geschlagen, nach der Antwort UND nach acht Halbzügen ≥ 2 im Plus;
+    ein Zurückschlagen (der Zug davor — in der Partie oder in der Linie — schlug auf demselben Feld) nur, wenn es mindestens 2
+    mehr holt, als dort verloren ging (Läufer schlägt gedeckten Bauern und geht verloren = hängende Figur; Figurentausch nicht).
+  - **Motiv nach forcierender Einleitung**: steht am ersten Zug keines und schlägt er oder gibt Schach, wird am zweiten, dann am
+    dritten eigenen Zug gesucht (Vereinspartie 245: 26.Txc8+ Kxc8 27.Tc1+ Kd8 28.Sf7+ Kd7 29.Sxh6 → `fork|N|KR`); die Bilanz der
+    Einleitung zählt mit (ein Opfer vorweg ist kein Gewinn). Dafür sieht die Partie-Erkennung **8 statt 6 Halbzüge** an
+    (`TacticMotifs.GamePlies`; der Beleg ist genau diese Linie — Gabel im 5., eingelöst im 7. Halbzug); Umwandlungen zählen
+    weiter nur in den ersten sechs.
+- **Schwelle**: +2,0 bleibt (`MinTacticCp`). Dazu zählt die beste Linie auch, wenn sie mindestens 2,0 besser ist als der
+  ZWEITBESTE Zug (`MinTacticGap`; läuft der in ein Matt, gilt der Abstand als erfüllt) — die Taktik, die Material zurückholt oder
+  die Partie rettet. Beleg: 251, 41.Td8+ (−1,4 statt −6,8) und 45.Ta8+ (−0,1 statt −7,4). Der Abstand ALLEIN macht keine Stelle:
+  in 31 Prod-Partien gab es 28 Fehlerstellen „unter +2,0, aber ≥ 2,0 vor dem zweitbesten Zug“ ohne Motiv (einzige Rückschläge,
+  einzige Verteidigungen) — sie bleiben ohne Übung. Die drei Motive unter +2,0 mit kleinerem Abstand (Fesselung −0,4/1,4;
+  Abzug +1,8/1,6; Bauerngabel 0,0/0,04) bleiben ebenfalls draußen.
+
+**Nicht umgesetzt, mit Grund**: Ablenkung, Hinlenkung, Beseitigung des Verteidigers (unscharf; `capturingDefender` traf am 13.11.
+nur 23 % des Lichess-Themas); gefangene Figur (`trappedPiece` — bräuchte wie die übrigen Motive erst eine Messung gegen das
+Lichess-Thema; in der Stichprobe ein Fall, Partie 224, 34.Lg5 fängt die Dame); Fesselung an einen Turm oder eine ungedeckte Figur
+(die Fesselungs-Regel verlangt König oder Dame dahinter und stimmte schon so nur zu 61 %); Matt aus weiteren Kandidatenlinien
+derselben Stellung (kam in der Stichprobe nicht vor: steht der beste Zug nicht auf Matt, tun es die anderen auch nicht); eigene
+Signaturen für die Grundreihe (hieße 2,4 Mio. Aufgaben neu rechnen — das Lichess-Thema liefert im Fenster genug).
+
+**Wirkung** (31 Vereinspartien 221–251 der Prod, Hauptanalyse, 14.11.; Aufgaben über den Lichess-Weg bei Zielstärke 1500, ohne
+Bücher): Gruppen 7 → 17, Partien mit mindestens einer Gruppe 7 → 10, Aufgaben 42 → 102. Neu: 3 Mattdrohungen (251 ersticktes Matt
+nach 29./37.Sd6 Tg8; 231 19.Sg5+ hxg5 20.Dh3#; 250 8...Dh4 droht Dxf2#), 3 × Matt am Schluss (231, 240, 248), 2 × hängende Figur
+(229 20.Dxg4, 250 9.Sxf5), 1 × Grundreihe (251), 1 × Gabel nach Einleitung (245); die Gabel der 251 steht jetzt an zwei Stellen
+(29. und 37. Zug). Alle zehn neuen Stellen am Brett nachgespielt (python-chess: Matt ist Matt, die hängende Figur ist ungedeckt,
+die Bilanz stimmt). 21 der 31 Partien bleiben ohne Übung: ihre Fehler sind positionell oder tragen keines der erkannten Motive.
+**251** liefert drei Gruppen — Grundreihe (45. Zug, auch 41.), Gabel `fork|N|RR` (37. Zug, auch 29.), Mattdrohung ersticktes Matt
+(29. Zug, auch 37.) —, im Regressionstest mit den echten Daten (`tests/…/Fixtures/GameExercises/club-game-251*.tsv`).
+
+**Noch nicht an echten Daten geprüft**: die Zeilen `Defence` und `BestMoveTry` — die Prod trug am 14.11. nur `Candidate` und
+`Reply` (0.971.0/0.974.0 noch nicht ausgerollt); abgesichert sind sie mit gestellten Zeilen (`GameExercisesTests`,
+`PuzzleSignatureSqlTests` gegen MariaDB).
 
 ### Buchbeispiele (0.962.0)
 
@@ -383,8 +478,9 @@ Je Stufe bis 120 Zeilen ab einem je Partie und Stelle gesäten Mischwert (`Shuff
 `EbookDiagramCorrections`-Korrektur folgt). Bücher mit lösbarem Diagramm zuerst, dann nach Spielstärke (`TargetMinElo` höchstens 150 über
 bis 700 unter der Stärke der Seite = passend, unbekannt danach, sonst zuletzt), dann gesät gemischt; je Buch erst ein Diagramm, in einer
 zweiten Runde höchstens ein weiteres aus DEMSELBEN Kapitel (ohne Kapitel ±10 Seiten) — möglichst verschiedene Bücher, und was aus einem Buch
-zusammenbleibt, stammt aus derselben Stelle. Höchstens 2 Beispiele je Stelle, lösbare vor Beispielen. Danach Lichess wie oben (der
-Thema-Rückfall nur, wenn auch kein Buch traf).
+zusammenbleibt, stammt aus derselben Stelle. Höchstens 2 Beispiele je Stelle, lösbare vor Beispielen. Danach Lichess wie oben, bis
+sechs LÖSBARE beisammen sind (seit 0.976.0 zählen die Beispiele dabei nicht mit — eine Stelle kann also sechs lösbare Aufgaben und
+dazu bis zu zwei Beispiele tragen; bis 0.975.x griff der Thema-Rückfall nur, wenn auch kein Buch traf).
 
 **Rechte je Weg**: angemeldet = das Konto (+ `ebooks.manage`/Admin = alle Bücher), auch über die Teilen-Links; ohne Anmeldung (Teilen-Links
 `/g/{token}`, `/cg/{token}`, Liga-Link) nur, was die Bibliothek ohne Anmeldung zeigt — die für „Alle“ freigegebenen Bücher und eigene

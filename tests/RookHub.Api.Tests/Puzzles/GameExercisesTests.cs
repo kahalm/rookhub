@@ -113,7 +113,7 @@ public class GameExercisesTests : IDisposable
     }
 
     [Fact]
-    public async Task ForOwnGame_StrictThenFamily_ThemeOnlyWithoutSignatureMatch_Stable()
+    public async Task ForOwnGame_StrictThenFamily_ThenThemeFillsUp_Stable()
     {
         await SeedGameAsync();
         var svc = new GameExercises(_db, new EbookSuggestions(_db));
@@ -122,7 +122,9 @@ public class GameExercisesTests : IDisposable
             g =>
             {
                 Assert.Equal((10, GameExercises.MissedMate, 1), (g.Ply, g.Reason, g.MateIn));
-                Assert.Equal(["strict", "strict", "strict", "family", "family"], g.Exercises.Select(e => e.Match).OrderByDescending(m => m).ToList());
+                // Drei mit gleichem Bild, zwei aus der Familie — die sechste füllt das Thema mateIn1 auf (0.976.0).
+                Assert.Equal(["theme", "strict", "strict", "strict", "family", "family"], g.Exercises.Select(e => e.Match).OrderByDescending(m => m).ToList());
+                Assert.Equal(["strict", "strict", "strict", "family", "family", "theme"], g.Exercises.Select(e => e.Match).ToList());
                 Assert.DoesNotContain(g.Exercises, e => e.Id == 4);   // unbeliebt
                 Assert.Equal(["a7a6", "h6g7"], g.Exercises[0].Moves);
             },
@@ -130,7 +132,7 @@ public class GameExercisesTests : IDisposable
             {
                 Assert.Equal(GameExercises.PlayedMate, g.Reason);
                 Assert.All(g.Exercises, e => Assert.Equal("theme", e.Match));
-                Assert.Equal(2, g.Exercises.Count);
+                Assert.Single(g.Exercises);                             // die andere Thema-Aufgabe steht schon in der ersten Gruppe
             });
         var again = (await svc.ForOwnGameAsync(1, 7))!;
         Assert.Equal(dto.Groups.SelectMany(g => g.Exercises).Select(e => e.Id), again.Groups.SelectMany(g => g.Exercises).Select(e => e.Id));
@@ -211,4 +213,190 @@ public class GameExercisesTests : IDisposable
 
     [Fact]
     public void BandMid_ParsesBand() => Assert.Equal(1750, GameExercises.BandMid("1700–1799"));
+
+    // ---- 0.976.0: mehr Motive (Mattdrohung, Matt am Schluss, Grundreihe, Abstand zum zweitbesten Zug) ----
+
+    /// <summary>Die echte Hauptanalyse der Vereinspartie 251 (Prod, Stand 14.11.2026): Halbzug, FEN, Zug, Tiefe, Kandidaten.</summary>
+    private static List<GameExercises.Position> Game251() =>
+        File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "GameExercises", "club-game-251.tsv"))
+            .Select(l => l.Split('\t')).Select(p => P(int.Parse(p[0]), p[1], p[2], p[4] == "" ? null : p[4])).ToList();
+
+    /// <summary>Die Zeilen ihrer Fehler-Vergleiche mit Mattbewertung: Halbzug, Stellung des Vergleichs, Art, Stellung der Zeile,
+    /// bester Zug, Antwort, Ergebnis.</summary>
+    private static List<GameExercises.ComparisonRow> Game251Comparisons() =>
+        File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "GameExercises", "club-game-251-comparisons.tsv"))
+            .Select(l => l.Split('\t'))
+            .Select(p => new GameExercises.ComparisonRow(int.Parse(p[0]), p[1], (MoveComparisonLineKind)int.Parse(p[2]), p[3], p[6], p[4], p[5] == "" ? null : p[5])).ToList();
+
+    [Fact]
+    public void Game251_Fork_MateThreat_BackRank()
+    {
+        // Befund 14.11.2026: nur EINE Gruppe (Gabel). Erwartet: Gabel, Matt(drohung), Grundreihe.
+        var positions = Game251();
+        var groups = GameExercises.Group(GameExercises.Occurrences(positions, GameExercises.SideLinesOf(Game251Comparisons(), positions)));
+        Assert.Collection(groups,
+            g =>
+            {
+                // 45.Ta8+ Lf8 46.Lxc3+ (statt 45.Lb6??) — und schon 41.Td8+ Lf8 42.Lb4: Grundreihe, Bewertung −0,1 bzw. −1,4.
+                Assert.Equal((88, true, GameExercises.MissedTactic, TacticMotifs.BackRank), (g.First.Ply, g.First.White, g.First.Reason, g.First.Theme));
+                Assert.Equal("backRank|R", g.First.Motif!.Strict);
+                Assert.Equal([80], g.Also);
+            },
+            g =>
+            {
+                // 37.Sd6 (statt 37.Td8) gabelt die Türme; einer verkauft sich auf g4. Dieselbe Gabel schon im 29. Zug.
+                Assert.Equal((72, true, GameExercises.MissedTactic, "fork|N|RR"), (g.First.Ply, g.First.White, g.First.Reason, g.First.Motif!.Strict));
+                Assert.Equal([56], g.Also);
+            },
+            g =>
+            {
+                // „Auf 37...Tg8 folgt 38.Sf7#“ — ersticktes Matt als Drohung; im 29. Zug dasselbe Bild (29.Sd6 Tg8 30.Sxf7#).
+                Assert.Equal((GameExercises.MateThreat, true, 1, MatePattern.SmotheredMate), (g.First.Reason, g.First.White, g.First.MateIn, g.First.Theme));
+                Assert.Equal(new[] { 56, 72 }, new[] { g.First.Ply }.Concat(g.Also).OrderBy(x => x));
+                Assert.StartsWith("M1|corner|N", g.First.Signature!.Strict);
+                Assert.Equal(["smotheredMate", "mateIn1"], GameExercises.ThemeTags(g.First));
+            });
+        // Ohne die Zeilen der Vergleiche dasselbe (das Matt in 1 findet das Brett selbst).
+        Assert.Equal(3, GameExercises.Group(GameExercises.Occurrences(positions)).Count);
+    }
+
+    [Fact]
+    public void SideLinesOf_ReadsMateLines_OfRepliesTriesAndDefences()
+    {
+        var positions = Game251();
+        var line = Assert.Single(GameExercises.SideLinesOf(Game251Comparisons(), positions));
+        Assert.Equal((72, true, 1), (line.Ply, line.White, line.MateIn));
+        Assert.Equal(["d6f7"], line.Pv);
+
+        const string at72 = "4r2k/6bp/p7/Bp2p1p1/2r1N1Pn/2P3K1/P3RP2/3R4 w - - 0 37";
+        const string afterRg8 = "6rk/6bp/p2N4/Bp2p1p1/2r3Pn/2P3K1/P3RP2/3R4 w - - 2 38";
+        const string mate1 = """{"depth":30,"pvs":[{"moves":["d6f7"],"mate":1}]}""";
+        GameExercises.ComparisonRow Row(MoveComparisonLineKind kind, string fen = afterRg8, string json = mate1, string? reply = "e8g8", int ply = 72, string cfen = at72) =>
+            new(ply, cfen, kind, fen, json, "e4d6", reply);
+        // Verlockende Antwort (0.974.0) zählt wie der Antwort-Test.
+        Assert.Single(GameExercises.SideLinesOf([Row(MoveComparisonLineKind.BestMoveTry)], positions));
+        // Antwort-Test mit einer Antwort, die nach dem besten Zug niemand erwägt → nichts.
+        Assert.Empty(GameExercises.SideLinesOf([Row(MoveComparisonLineKind.Reply, reply: "h7h6")], positions));
+        // Kandidatenlinie, Matt zu weit weg, der Gegner setzt matt (Weiß-Sicht −1), Vergleich einer anderen Stellung → nichts.
+        Assert.Empty(GameExercises.SideLinesOf([Row(MoveComparisonLineKind.Candidate)], positions));
+        Assert.Empty(GameExercises.SideLinesOf([Row(MoveComparisonLineKind.BestMoveTry, json: """{"pvs":[{"moves":["d6f7"],"mate":6}]}""")], positions));
+        Assert.Empty(GameExercises.SideLinesOf([Row(MoveComparisonLineKind.BestMoveTry, json: """{"pvs":[{"moves":["d6f7"],"mate":-1}]}""")], positions));
+        Assert.Empty(GameExercises.SideLinesOf([Row(MoveComparisonLineKind.BestMoveTry, ply: 70)], positions));
+        // Andere Verteidigung in der Widerlegung des Fehlzugs: dort ist der WIDERLEGENDE am Zug (hier Schwarz, Weiß-Sicht −1 =
+        // Schwarz setzt matt) — die Stelle ist die Stellung nach dem Fehlzug (Halbzug 73), seine Seite.
+        var defence = Assert.Single(GameExercises.SideLinesOf(
+            [Row(MoveComparisonLineKind.Defence, fen: "3r2k1/8/8/8/8/8/5PPP/6K1 b - - 0 1", json: """{"pvs":[{"moves":["d8d1"],"mate":-1}]}""")], positions));
+        Assert.Equal((73, false, 1), (defence.Ply, defence.White, defence.MateIn));
+        // Dieselbe Zeile mit Weiß am Zug passt nicht zur Art → nichts.
+        Assert.Empty(GameExercises.SideLinesOf([Row(MoveComparisonLineKind.Defence)], positions));
+    }
+
+    [Fact]
+    public void Occurrences_SideLineMate_IsMateThreat_OnePerPositionAndSide()
+    {
+        // Schwarz verpasst die Gabel nicht, aber eine Zusatzlinie des Vergleichs endet für Weiß matt (Td8#, Grundreihe).
+        var positions = MissedFork();
+        var lines = new List<GameExercises.SideLine>
+        {
+            new(0, true, "6k1/5ppp/8/8/8/8/8/3R2K1 w - - 0 1", ["d1d8"], 1),
+            new(0, true, "6k1/5ppp/8/8/8/8/8/3RR1K1 w - - 0 1", ["e1e8", "g8h7x"], 2),   // länger und nicht nachspielbar bis zum Matt
+            new(9, true, "6k1/5ppp/8/8/8/8/8/3R2K1 w - - 0 1", ["d1d8"], 1),             // Stelle gibt es nicht
+        };
+        var occ = GameExercises.Occurrences(positions, lines);
+        var threat = Assert.Single(occ, o => o.Reason == GameExercises.MateThreat);
+        Assert.Equal((0, true, 1, MatePattern.BackRankMate), (threat.Ply, threat.White, threat.MateIn, threat.Theme));
+        Assert.Equal(["backRankMate", "mateIn1"], GameExercises.ThemeTags(threat));
+        // Die Mattdrohung steht vor der Taktik desselben Fehlers.
+        var groups = GameExercises.Group(occ);
+        Assert.Equal([GameExercises.MateThreat, GameExercises.MissedTactic], groups.Select(g => g.First.Reason));
+    }
+
+    [Fact]
+    public void Occurrences_GameEndsWithForcedMateOnBoard_IsForcedMate()
+    {
+        // Vereinspartie 240: 30.De6+ und Schwarz gibt auf (Kh8 31.Dxf6+ Kg8 32.Dg7#). Kein gespieltes, kein verpasstes Matt.
+        var occ = GameExercises.Occurrences(
+        [
+            P(58, "r1r3k1/1pqR3p/pN3pp1/8/P1P2b2/1P2Q3/6PP/2R4K w - - 4 30", "e3e6", """[{"uci":"e3e6","mate":3,"pv":["e3e6","g8h8","e6f6","h8g8","f6g7"]}]"""),
+            P(59, "r1r3k1/1pqR3p/pN2Qpp1/8/P1P2b2/1P6/6PP/2R4K b - - 5 30", "", """[{"uci":"g8h8","mate":-2,"pv":["g8h8","e6f6","h8g8","f6g7"]}]"""),
+        ]);
+        var o = Assert.Single(occ);
+        Assert.Equal((58, true, GameExercises.ForcedMate, 3), (o.Ply, o.White, o.Reason, o.MateIn));
+        Assert.StartsWith("M1|back|Q", o.Signature!.Strict);
+        // Vereinspartie 248: Schwarz zieht 37...Sd3 und gibt auf — Weiß am Zug hat Dxg7#.
+        var end = GameExercises.Occurrences(
+        [
+            P(73, "7k/1p4p1/6Q1/3p1N2/1n2q3/6PK/PP5P/8 b - - 4 37", "b4d3", """[{"uci":"e4f5","cp":-1509,"pv":["e4f5","g6f5"]}]"""),
+            P(74, "7k/1p4p1/6Q1/3p1N2/4q3/3n2PK/PP5P/8 w - - 5 38", "", """[{"uci":"g6g7","mate":1,"pv":["g6g7"]}]"""),
+        ]);
+        var last = Assert.Single(end, x => x.Reason == GameExercises.ForcedMate);
+        Assert.Equal((74, true, 1), (last.Ply, last.White, last.MateIn));
+        // Matt in 9 am Schluss ist kein Motiv.
+        Assert.Empty(GameExercises.Occurrences(
+        [
+            P(58, "r1r3k1/1pqR3p/pN3pp1/8/P1P2b2/1P2Q3/6PP/2R4K w - - 4 30", "e3e6", """[{"uci":"e3e6","mate":9}]"""),
+            P(59, "r1r3k1/1pqR3p/pN2Qpp1/8/P1P2b2/1P6/6PP/2R4K b - - 5 30", "", """[{"uci":"g8h8","mate":-8}]"""),
+        ]));
+    }
+
+    [Fact]
+    public void Occurrences_TacticBelowTwoPawns_CountsWhenFarAheadOfSecondMove()
+    {
+        // Die Gabel bringt nur +1,0, der zweitbeste Zug steht aber bei −3,0 (Abstand 4,0) → Stelle.
+        string Cands(int best, int second) =>
+            $$"""[{"uci":"d5c7","cp":{{best}},"pv":["d5c7","e8d7","c7a8"]},{"uci":"e1e2","cp":{{second}}}]""";
+        List<GameExercises.Position> Game(int best, int second) =>
+        [
+            P(0, "r3k3/8/8/3N4/8/8/8/4K3 w - - 0 1", "e1e2", Cands(best, second)),
+            P(1, "r3k3/8/8/3N4/8/8/4K3/8 b - - 1 1", "a8a7", $$"""[{"uci":"a8a7","cp":{{-second}},"pv":["a8a7"]}]"""),
+            P(2, "4k3/r7/8/3N4/8/8/4K3/8 w - - 2 2", "", $$"""[{"uci":"d5c7","cp":{{second}}}]"""),
+        ];
+        Assert.Equal("fork|N|KR", Assert.Single(GameExercises.Occurrences(Game(100, -300))).Motif!.Strict);
+        Assert.Equal(200, GameExercises.MinTacticGap);
+        // Abstand nur 1,9 → keine Taktik (wie bisher unter +2,0).
+        Assert.Empty(GameExercises.Occurrences(Game(100, -90)));
+    }
+
+    [Fact]
+    public async Task ForClubGame_251_ThreeGroups_FilledFromThemes_AndComparisonLinesRead()
+    {
+        // Die echte Analyse samt Vergleichszeile in der Datenbank; Aufgaben nur über die Lichess-Themen (keine Signaturen gerechnet).
+        _db.GameAnalyses.Add(new GameAnalysis { Id = 5, UserId = 1, Pgn = "", Origin = GameAnalysisOrigin.Club, LeagueClubGameId = 251, Status = GameAnalysisStatus.Done });
+        var n = 1000;
+        foreach (var p in Game251())
+            _db.GameAnalysisPositions.Add(new GameAnalysisPosition { Id = ++n, GameAnalysisId = 5, Ply = p.Ply, Fen = p.Fen, GameMoveUci = p.GameMoveUci, GameMoveSan = "x", CandidatesJson = p.CandidatesJson });
+        var row = Game251Comparisons()[0];
+        _db.MoveComparisons.Add(new MoveComparison { Id = 9, UserId = 1, Fen = row.ComparisonFen, GameAnalysisId = 5, Ply = row.Ply, BestUci = row.BestUci });
+        _db.MoveComparisonLines.Add(new MoveComparisonLine
+        {
+            Id = 1, MoveComparisonId = 9, Kind = row.Kind, CandidateUci = "d1d8", ReplyUci = row.ReplyUci, Fen = row.Fen, State = MoveComparisonLineState.Done, ResultJson = row.ResultJson,
+        });
+        var tagId = 0;
+        foreach (var (name, fen, moves) in new[]
+                 {
+                     ("backRankMate", "6k1/p4ppp/8/8/8/8/8/K2R4 b - - 0 1", "a7a6 d1d8"),
+                     ("smotheredMate", "6rk/p5pp/8/6N1/8/8/8/K7 b - - 0 1", "a7a6 g5f7"),
+                     ("fork", "r3k3/p7/8/3N4/8/8/8/4K3 b - - 0 1", "a7a6 d5c7 e8d7 c7a8"),
+                 })
+        {
+            _db.Tags.Add(new Tag { Id = ++tagId, Name = name });
+            foreach (var r in new[] { 1400, 1450, 1500, 1550, 1600, 1650, 1700 })
+                _db.PuzzleTags.Add(new PuzzleTag { PuzzleId = AddPuzzle(fen, moves, r, name).Id, TagId = tagId, Rating = r });
+        }
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var dto = await new GameExercises(_db, new EbookSuggestions(_db)).ForClubGameAsync(251);
+        Assert.Equal(
+            [(GameExercises.MissedTactic, "backRankMate"), (GameExercises.MissedTactic, "fork"), (GameExercises.MateThreat, "smotheredMate")],
+            dto.Groups.Select(g => (g.Reason, g.Theme!)));
+        Assert.All(dto.Groups, g =>
+        {
+            Assert.Equal(GameExercises.PerGroup, g.Exercises.Count);
+            Assert.All(g.Exercises, e => { Assert.Equal("theme", e.Match); Assert.Contains(g.Theme!, e.Themes); });
+        });
+        Assert.Equal((int?)1, dto.Groups[2].MateIn);
+        Assert.Null(dto.Groups[0].MateIn);
+        Assert.Equal(18, dto.Groups.SelectMany(g => g.Exercises).Select(e => e.Id).Distinct().Count());
+    }
 }

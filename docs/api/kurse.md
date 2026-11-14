@@ -122,7 +122,10 @@ Partie ohne lösbare Aufgabe (dann entsteht auch kein Kurs).
   alle Lernstände bleiben. Keine Migration, weil die Regel Schachlogik braucht (Linie nachspielen, Matt erkennen). Die Bewertung
   einer Linie ohne Matt wird am Buchdiagramm mit derselben Stellung und Linie nachgeschlagen.
 - **Auswahl**: beim Klick serverseitig neu aus `GameExercises` (je Partie und Stelle fest gesät, derselbe Betrachter wie beim Anzeigen)
-  — sie stimmt mit dem Abschnitt überein, solange sich der Aufgabenbestand zwischen Laden und Klick nicht ändert.
+  — sie stimmt mit dem Abschnitt überein, solange sich der Aufgabenbestand zwischen Laden und Klick nicht ändert. Seit 0.976.0 findet
+  die Auswahl mehr Stellen (Mattdrohung, Matt am Schluss, Grundreihe, hängende Figur) und füllt jede auf sechs lösbare Aufgaben auf;
+  ein schon angelegtes Kapitel bleibt, wie es ist — die neue Auswahl greift nur beim ersten Klick einer Partie. Das Thema der Stelle
+  steht vorn in den `Tags` der Linie (`fork`, `backRankMate`, `smotheredMate`, `hangingPiece`, sonst `mateInN`).
 - **Aufbereitung**: kein Quell-PGN; `ImportVersion` steht auf der aktuellen Pipeline-Version und wird bei jedem Aufruf nachgezogen
   (wie beim Einfügen von Linien in handgepflegte Kurse). Ein „Aktualisieren“-Lauf fasst das Buch nie an (`StaleAction.Manual`); nach
   einer Erhöhung von `ImportPipeline.CurrentVersion` trüge es bis zum nächsten Klick das (!) der Kursliste.

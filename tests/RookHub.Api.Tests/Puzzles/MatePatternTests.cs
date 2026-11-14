@@ -76,6 +76,26 @@ public class MatePatternTests
         Assert.Null(MatePattern.Of(TacticsBoard.TryParse("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")!));
     }
 
+    private static string? Theme(string fen) => MatePattern.ThemeOf(TacticsBoard.TryParse(fen)!);
+
+    [Fact]
+    public void ThemeOf_BackRankAndSmothered_ByDefinition()
+    {
+        // Grundreihenmatt: König auf der Grundreihe hinter den eigenen Bauern, Turm auf der Reihe — für beide Farben.
+        Assert.Equal(MatePattern.BackRankMate, Theme("3R2k1/5ppp/8/8/8/8/8/6K1 b - - 0 1"));
+        Assert.Equal(MatePattern.BackRankMate, Theme("6k1/8/8/8/8/8/5PPP/3r2K1 w - - 0 1"));
+        Assert.Equal(MatePattern.BackRankMate, Theme("3R3k/6pp/8/8/8/8/8/6K1 b - - 0 1"));              // Ecke
+        // Luftloch h6, das Feld h7 hält die Dame: Matt, aber nicht „von eigenen Steinen eingesperrt“.
+        Assert.Null(Theme("3R2k1/5pp1/7p/8/8/8/2Q5/6K1 b - - 0 1"));
+        // Ersticktes Matt (Vereinspartie 251, 37.Sd6 Tg8 38.Sf7#).
+        Assert.Equal(MatePattern.SmotheredMate, Theme("6rk/5Nbp/p7/Bp2p1p1/2r3Pn/2P3K1/P3RP2/3R4 b - - 3 38"));
+        // Springermatt, bei dem ein Nachbarfeld nur beherrscht ist → kein ersticktes Matt.
+        Assert.Null(Theme("7k/5N1p/6R1/8/8/8/8/6K1 b - - 0 1"));
+        // Kein Matt bzw. Matt ohne Namen.
+        Assert.Null(Theme("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+        Assert.Null(Theme(QueenPawn));
+    }
+
     [Fact]
     public void OfPuzzle_PlaysAllMoves()
     {

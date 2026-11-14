@@ -6,8 +6,12 @@ public sealed record GameExercisesDto(List<GameExerciseGroupDto> Groups);
 /// <summary>
 /// Eine Stelle der Partie mit ihren Aufgaben. <c>Ply</c> = Stellung VOR dem Halbzug (0-basiert, wie die Analyse); <c>White</c> = die
 /// Seite, die das Motiv hatte. <c>Reason</c> ist der letzte Teil des i18n-Schlüssels <c>games.summary.exercises.reason.*</c>
-/// (<c>missedMate</c>, <c>playedMate</c>, seit 0.961.0 <c>missedTactic</c>, <c>allowedTactic</c>), <c>MateIn</c> bzw. <c>Theme</c>
-/// (Lichess-Thema wie <c>fork</c>) seine Parameter. <c>AlsoPlies</c>: weitere Stellen mit demselben Bild.
+/// (<c>missedMate</c>, <c>playedMate</c>, seit 0.961.0 <c>missedTactic</c>, <c>allowedTactic</c>, seit 0.976.0 <c>mateThreat</c> —
+/// Matt nur als Drohung hinter dem besten Zug oder in einer Zusatzlinie des Fehler-Vergleichs — und <c>forcedMate</c> — die Partie
+/// endet ohne Matt, aber mit erzwungenem Matt auf dem Brett; Texte dazu gibt es seit 0.973.0 keine mehr, die Seite zeigt die Stellen
+/// nicht), <c>MateIn</c> (bei jedem Matt) bzw. <c>Theme</c> seine Parameter: das Lichess-Thema des Motivs (<c>fork</c>,
+/// <c>hangingPiece</c>, <c>backRankMate</c> für die Grundreihe …) oder, bei einem Matt mit benanntem Bild, <c>backRankMate</c> /
+/// <c>smotheredMate</c> (sonst <c>null</c>). <c>AlsoPlies</c>: weitere Stellen mit demselben Bild.
 /// </summary>
 public sealed record GameExerciseGroupDto(int Ply, bool White, string Reason, int? MateIn, List<int> AlsoPlies, List<GameExerciseDto> Exercises,
     string? Theme = null);
@@ -16,7 +20,7 @@ public sealed record GameExerciseGroupDto(int Ply, bool White, string Reason, in
 /// abwechselnd Löser/Gegner (UCI). <c>Source = book</c> (0.962.0): <c>Id</c> = Diagramm, <c>Fen</c> = Diagrammstellung,
 /// <c>Moves</c> = Buchlinie ab der Diagrammstellung (leer, wenn <see cref="GameExerciseBookDto.Solvable"/> falsch ist — dann nur „Beispiel im
 /// Buch“), <c>Rating</c> 0. Wer löst, sagt <see cref="GameExerciseBookDto.OpponentFirst"/> (0.973.1): falsch = der Löser ist in der
-/// Diagrammstellung am Zug; wahr = wie Lichess, <c>Moves[0]</c> ist der Gegnerzug (der Löser spielt nie die Seite, die mattgesetzt wird). <c>Match</c>: <c>strict</c> (gleiches Mattbild), <c>family</c> (gleiche Familie), <c>theme</c> (nur gleiches Thema).</summary>
+/// Diagrammstellung am Zug; wahr = wie Lichess, <c>Moves[0]</c> ist der Gegnerzug (der Löser spielt nie die Seite, die mattgesetzt wird). <c>Match</c>: <c>strict</c> (gleiches Mattbild), <c>family</c> (gleiche Familie), <c>theme</c> (nur gleiches Thema — seit 0.976.0 füllt es jede Stelle auf sechs lösbare Aufgaben auf).</summary>
 public sealed record GameExerciseDto(int Id, string Fen, List<string> Moves, int Rating, List<string> Themes, string Match,
     string Source = "lichess", GameExerciseBookDto? Book = null);
 

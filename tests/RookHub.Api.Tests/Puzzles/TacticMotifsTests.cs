@@ -85,10 +85,89 @@ public class TacticMotifsTests
         Assert.Equal(Models.PuzzleSignatureKind.Fork, TacticMotifs.KindOf("fork"));
     }
 
+    // ---- Partie-Erkennung (0.976.0): Engine-Linien echter Vereinspartien ----
+
+    private static List<TacticMotifs.Motif> G(string fen, params string[] line) => TacticMotifs.DetectInGame(fen, line);
+
+    [Fact]
+    public void Game_ForkCashedByDesperado_OnlyInGameMode()
+    {
+        // Vereinspartie 251, 37.Sd6: gabelt Tc4 und Te8; der eine Turm verkauft sich (37...Txg4+ 38.Kxg4), der andere zieht weg.
+        const string fen = "4r2k/6bp/p7/Bp2p1p1/2r1N1Pn/2P3K1/P3RP2/3R4 w - - 0 37";
+        string[] line = ["e4d6", "c4g4", "g3g4", "e8f8", "d6e4", "f8f4", "g4h3", "h7h6"];
+        Assert.Equal("fork|N|RR", Assert.Single(G(fen, line)).Strict);
+        Assert.Null(Of("fork", fen, line));                                   // Aufgaben-Regel unverändert: dort muss ein ZIEL geschlagen werden
+        Assert.Empty(G(fen, "e4d6", "c4a4", "g3h4"));                         // der Turm zieht nur weg, geschlagen wird etwas anderes
+    }
+
+    [Fact]
+    public void Game_ForkAfterForcingIntroduction()
+    {
+        // Vereinspartie 245: 26.Txc8+ Kxc8 27.Tc1+ Kd8 28.Sf7+ (Gabel König + Turm) Kd7 29.Sxh6.
+        const string fen = "1kb3r1/pp2n3/1q2pb1r/1P1pN1p1/3P2P1/P1RBQ3/4NPK1/R7 w - - 3 26";
+        Assert.Equal("fork|N|KR", Assert.Single(G(fen, "c3c8", "b8c8", "a1c1", "c8d8", "e5f7", "d8d7", "f7h6", "g8f8")).Strict);
+        Assert.Empty(D(fen, "c3c8", "b8c8", "a1c1", "c8d8", "e5f7", "d8d7", "f7h6", "g8f8"));   // Aufgaben: nur der erste Zug
+        // Ohne forcierende Einleitung (ruhiger erster Zug) wird nicht weitergesucht.
+        Assert.Empty(G("r3k3/8/8/3N4/8/8/8/4K3 w - - 0 1", "e1e2", "a8a7", "d5c7", "e8d7", "c7a8"));
+    }
+
+    [Fact]
+    public void Game_BackRank_CheckOnHomeRank_KingWithoutMove_WinsMaterial()
+    {
+        // Vereinspartie 251, 45.Ta8+ Lf8 46.Lxc3+ Kg8 47.Txa4 bxa4: der Läufer muss dazwischen, der Springer c3 fällt mit Schach.
+        const string fen = "7k/R5bp/8/Bp4p1/r3p1P1/2n5/P4PK1/8 w - - 0 45";
+        string[] line = ["a7a8", "g7f8", "a5c3", "h8g8", "a8a4", "b5a4", "c3d2", "h7h6"];
+        var m = Assert.Single(G(fen, line));
+        Assert.Equal((TacticMotifs.BackRank, "backRank|R"), (m.Theme, m.Strict));
+        Assert.Equal("backRankMate", TacticMotifs.BackRank);                  // Name des Lichess-Themas (Tag der Aufgaben)
+        Assert.False(TacticMotifs.HasSignatures(m.Theme));
+        Assert.Empty(D(fen, line));                                           // keine Aufgaben-Signatur
+        // Mit Luftloch (Bauer h6 statt h7) weicht der König aus → keine Grundreihe.
+        Assert.DoesNotContain(G("7k/R5b1/7p/Bp4p1/r3p1P1/2n5/P4PK1/8 w - - 0 45", line), x => x.Theme == TacticMotifs.BackRank);
+        // Schach auf der Grundreihe ohne Materialgewinn → nichts.
+        Assert.Empty(G(fen, "a7a8", "g7f8", "a8a7", "f8g7"));
+    }
+
+    [Fact]
+    public void Game_HangingPiece_ByMaterialBalance_NotByLineLength()
+    {
+        // Vereinspartie 250, 8...Lf5?? 9.Sxf5: der Läufer steht ungedeckt ein, die Engine-Linie ist acht Halbzüge lang.
+        const string fen = "r2qk2r/ppp2ppp/2nb4/5b2/2BNn3/2P5/PP3PPP/RNBQK2R w KQkq - 1 9";
+        string[] line = ["d4f5", "d8f6", "d1f3", "f6e5", "c1e3", "e8a8", "f5d6", "e4d6"];
+        Assert.Equal("hangingPiece|N|B", Assert.Single(G(fen, line)).Strict);
+        Assert.Empty(D(fen, line));                                           // Aufgaben-Regel: nur kurze Lösungen
+        var f5 = RookHub.Api.Services.Games.TacticsBoard.SquareIndex("f5")!.Value;
+        // Zurückschlagen nach einem gleichwertigen Tausch auf f5 ist keine hängende Figur — nach „Läufer schlägt Bauer“ schon.
+        Assert.Empty(TacticMotifs.DetectInGame(fen, line, (f5, 3)));
+        Assert.Single(TacticMotifs.DetectInGame(fen, line, (f5, 1)));
+    }
+
+    [Fact]
+    public void Game_RecaptureInsideTheLine_IsNoHangingPiece()
+    {
+        // Vereinspartie 251, 44...Lxc3 45.Lxc3+ Sxc3: der Springer schlägt nur zurück (Bilanz +1), keine hängende Figur.
+        Assert.Empty(G("7k/R5bp/8/Bp4p1/r3p1P1/2P5/P3nPK1/8 b - - 3 44", "g7c3", "a5c3", "e2c3", "a7c7", "a4a3", "c7c8", "h8g7", "c8c5"));
+    }
+
+    [Fact]
+    public void NetGain_CountsCapturesPromotionAndEnPassant()
+    {
+        var b = RookHub.Api.Services.Games.TacticsBoard.TryParse("7k/R5bp/8/Bp4p1/r3p1P1/2n5/P4PK1/8 w - - 0 45")!;
+        string[] line = ["a7a8", "g7f8", "a5c3", "h8g8", "a8a4", "b5a4"];
+        Assert.Equal(0, TacticMotifs.NetGain(b, line, 2));
+        Assert.Equal(3, TacticMotifs.NetGain(b, line, 3));    // Lxc3
+        Assert.Equal(8, TacticMotifs.NetGain(b, line, 5));    // + Txa4
+        Assert.Equal(3, TacticMotifs.NetGain(b, line, 6));    // − bxa4
+        Assert.Equal(8, TacticMotifs.NetGain(RookHub.Api.Services.Games.TacticsBoard.TryParse("8/4P3/8/8/8/k7/8/K7 w - - 0 1")!, ["e7e8q"], 8));
+        Assert.Equal(1, TacticMotifs.NetGain(RookHub.Api.Services.Games.TacticsBoard.TryParse("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1")!, ["e5d6"], 8));
+    }
+
     [Fact]
     public void Broken_Input_Empty()
     {
         Assert.Empty(D("kaputt", "e2e4"));
         Assert.Empty(D("4k3/8/8/8/8/8/8/4K3 w - - 0 1", "e2e4"));   // leeres Feld
+        Assert.Empty(G("kaputt", "e2e4"));
+        Assert.Empty(G("4k3/8/8/8/8/8/8/4K3 w - - 0 1", "e2", "x"));
     }
 }

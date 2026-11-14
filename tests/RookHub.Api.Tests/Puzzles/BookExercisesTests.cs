@@ -225,7 +225,9 @@ public class BookExercisesTests : IDisposable
         await SeedGameAsync();
         var dto = (await Service().ForOwnGameAsync(1, 7, default, User1))!;
         var g = dto.Groups.First(x => x.Ply == 10);
-        Assert.Equal(GameExercises.PerGroup, g.Exercises.Count);
+        // Sechs LÖSBARE (0.976.0): das „Beispiel im Buch“ zählt nicht mit, Lichess füllt bis sechs auf.
+        Assert.Equal(GameExercises.PerGroup, g.Exercises.Count(e => e.Book is null || e.Book.Solvable));
+        Assert.Equal(GameExercises.PerGroup + 1, g.Exercises.Count);
         var books = g.Exercises.TakeWhile(e => e.Source == "book").ToList();
         Assert.Equal([101, 102, 401, 103], books.Select(e => e.Id));          // streng vor Familie, lösbar vor Beispiel
         Assert.All(g.Exercises.Skip(books.Count), e => Assert.Equal("lichess", e.Source));

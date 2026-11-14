@@ -61,7 +61,7 @@ export function exerciseSolvable(ex: SummaryExercise): boolean { return ex.sourc
 
 /** Eine Stelle der Partie mit ihren Aufgaben; `ply` = Stellung VOR dem Halbzug. */
 export interface SummaryExerciseGroup {
-  ply: number; white: boolean; reason: 'missedMate' | 'playedMate' | 'missedTactic' | 'allowedTactic'; mateIn: number | null;
+  ply: number; white: boolean; reason: 'missedMate' | 'playedMate' | 'forcedMate' | 'mateThreat' | 'missedTactic' | 'allowedTactic'; mateIn: number | null;
   alsoPlies: number[]; exercises: SummaryExercise[];
   /** Taktische Stelle (0.961.0): Lichess-Thema wie `fork`. */
   theme?: string | null;

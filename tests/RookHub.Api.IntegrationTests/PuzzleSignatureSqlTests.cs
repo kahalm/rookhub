@@ -117,6 +117,64 @@ public class PuzzleSignatureSqlTests(PuzzleSignatureSqlFixture fixture) : IAsync
             Assert.Contains(foreign.Groups.SelectMany(g => g.Exercises), e => e.Book?.Title == "Fremd");
         }
     }
+
+    /// <summary>Mattdrohung aus den Zusatzlinien der Fehler-Vergleiche (0.976.0): die Abfrage über <c>MoveComparisonLines</c> →
+    /// <c>MoveComparisons</c> mit <c>ResultJson LIKE '%"mate"%'</c> und das Auffüllen aus zwei Themen (<c>backRankMate</c>, dann
+    /// <c>mateIn1</c>) — gegen MariaDB.</summary>
+    [MySqlFact]
+    public async Task MateThreatFromComparisonLine_FilledFromThemes_RunsOnMariaDb()
+    {
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var user = new AppUser { Username = "mt", Email = "mt@test.invalid", PasswordHash = "x" };
+            db.AppUsers.Add(user);
+            var backRank = new Tag { Name = "backRankMate" };
+            var mateIn1 = new Tag { Name = "mateIn1" };
+            db.Tags.AddRange(backRank, mateIn1);
+            await db.SaveChangesAsync();
+            var i = 0;
+            foreach (var (tag, ratings) in new[] { (backRank, new[] { 1500, 1550 }), (mateIn1, new[] { 1450, 1520, 1580, 1600, 1620 }) })
+                foreach (var r in ratings)
+                {
+                    var p = new Puzzle { LichessId = $"mt{++i}", Fen = "6k1/p4ppp/8/8/8/8/8/K2R4 b - - 0 1", Moves = "a7a6 d1d8", Rating = r, Popularity = 95, NbPlays = 900, Themes = $"mate {tag.Name}" };
+                    db.Puzzles.Add(p);
+                    await db.SaveChangesAsync();
+                    db.PuzzleTags.Add(new PuzzleTag { PuzzleId = p.Id, TagId = tag.Id, Rating = r });
+                }
+            var analysis = new GameAnalysis { UserId = user.Id, Pgn = "", StartFen = "", Status = GameAnalysisStatus.Done };
+            db.GameAnalyses.Add(analysis);
+            await db.SaveChangesAsync();
+            // Ruhige Stellung ohne eigenes Motiv; der Vergleich an Halbzug 20 trägt eine verlockende Antwort, die ins Grundreihenmatt läuft.
+            const string at20 = "6k1/p4ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1";
+            db.GameAnalysisPositions.AddRange(
+                new GameAnalysisPosition { GameAnalysisId = analysis.Id, Ply = 20, Fen = at20, GameMoveUci = "h2h3", GameMoveSan = "h3", CandidatesJson = """[{"uci":"h2h3","cp":20,"pv":["h2h3"]}]""" },
+                new GameAnalysisPosition { GameAnalysisId = analysis.Id, Ply = 21, Fen = "6k1/p4ppp/8/8/8/7P/5PP1/3R2K1 b - - 0 1", GameMoveUci = "h7h6", GameMoveSan = "h6", CandidatesJson = """[{"uci":"h7h6","cp":-20,"pv":["h7h6"]}]""" });
+            var comparison = new MoveComparison { UserId = user.Id, Fen = at20, GameAnalysisId = analysis.Id, Ply = 20, BestUci = "g2g3" };
+            comparison.Lines.Add(new MoveComparisonLine
+            {
+                Kind = MoveComparisonLineKind.BestMoveTry, CandidateUci = "g2g3", ReplyUci = "a7a6", Fen = "6k1/5ppp/p7/8/8/6P1/5P1P/3R2K1 w - - 0 2",
+                State = MoveComparisonLineState.Done, ResultJson = """{"depth":30,"pvs":[{"moves":["d1d8"],"mate":1}]}""",
+            });
+            comparison.Lines.Add(new MoveComparisonLine
+            {
+                Kind = MoveComparisonLineKind.Candidate, CandidateUci = "g2g3", Fen = "6k1/p4ppp/8/8/8/6P1/5P1P/3R2K1 b - - 0 1",
+                State = MoveComparisonLineState.Done, ResultJson = """{"depth":30,"pvs":[{"moves":["h7h6"],"cp":20}]}""",
+            });
+            db.MoveComparisons.Add(comparison);
+            db.SavedGames.Add(new SavedGame { UserId = user.Id, Pgn = "", Source = "pgn", WhiteElo = 1550, GameAnalysisId = analysis.Id, ShareToken = "threattok" });
+            await db.SaveChangesAsync();
+        }
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var dto = await new GameExercises(db, new EbookSuggestions(db)).ForSharedOwnGameAsync("threattok");
+            var g = Assert.Single(dto!.Groups);
+            Assert.Equal((20, true, GameExercises.MateThreat, (int?)1, "backRankMate"), (g.Ply, g.White, g.Reason, g.MateIn, g.Theme));
+            // Erst das benannte Mattbild (2 Aufgaben), dann mateIn1 bis sechs.
+            Assert.Equal(GameExercises.PerGroup, g.Exercises.Count);
+            Assert.All(g.Exercises, e => Assert.Equal("theme", e.Match));
+            Assert.Equal(2, g.Exercises.Count(e => e.Themes.Contains("backRankMate")));
+        }
+    }
 }
 
 public sealed class PuzzleSignatureSqlFixture() : MariaDbClassFixture("pzsig", withApp: false);

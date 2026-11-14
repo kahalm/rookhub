@@ -70,6 +70,38 @@ public static class MatePattern
         catch (Exception) { return null; }
     }
 
+    /// <summary>Lichess-Thema <c>backRankMate</c>: „Matt auf der Grundreihe, der König ist dort von eigenen Steinen eingesperrt“.</summary>
+    public const string BackRankMate = "backRankMate";
+    /// <summary>Lichess-Thema <c>smotheredMate</c>: „Springermatt, der König ist von eigenen Steinen umstellt“.</summary>
+    public const string SmotheredMate = "smotheredMate";
+
+    /// <summary>
+    /// Benanntes Mattbild (0.976.0) als Lichess-Thema, wenn die Seite am Zug matt ist — nach den dokumentierten Themen-Definitionen
+    /// (lichess.org/training/themes), eigene Umsetzung: <see cref="SmotheredMate"/> = ein Springer gibt allein Schach und jedes
+    /// Nachbarfeld des Königs trägt einen eigenen Stein (oder liegt außerhalb des Bretts); <see cref="BackRankMate"/> = der König steht
+    /// auf seiner Grundreihe, Turm oder Dame geben auf dieser Reihe Schach, und die Felder direkt vor ihm tragen eigene Steine.
+    /// Sonst <c>null</c> (dann trägt nur das Mattbild und <c>mateInN</c>). Ändert die Signatur nicht. Wirft nie.
+    /// </summary>
+    public static string? ThemeOf(TacticsBoard board)
+    {
+        try
+        {
+            if (!IsMate(board)) return null;
+            var g = Normalize(board);
+            var k = Array.IndexOf(g, 'k');
+            if (k < 0) return null;
+            int kf = k % 8, kr = k / 8;
+            var checkers = Attackers(g, k, white: true);
+            // Eigener Stein auf dem Feld? Außerhalb des Bretts zählt wie besetzt.
+            bool Blocked(int f, int r) => f is < 0 or > 7 || r is < 0 or > 7 || (g[r * 8 + f] != '\0' && char.IsLower(g[r * 8 + f]));
+            if (checkers.Count == 1 && g[checkers[0]] == 'N' && Around.All(d => Blocked(kf + d.Dx, kr + d.Dy))) return SmotheredMate;
+            if (kr == 7 && checkers.Any(c => c / 8 == 7 && g[c] is 'R' or 'Q') && new[] { -1, 0, 1 }.All(dx => Blocked(kf + dx, 6)))
+                return BackRankMate;
+            return null;
+        }
+        catch (Exception) { return null; }
+    }
+
     private static string Min(string x, string y) => string.CompareOrdinal(x, y) <= 0 ? x : y;
 
     /// <summary>64-Bit FNV-1a der UTF-8-Bytes — stabil über Läufe und Rechner (anders als <c>string.GetHashCode</c>).</summary>

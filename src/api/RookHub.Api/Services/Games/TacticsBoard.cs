@@ -206,6 +206,10 @@ public sealed class TacticsBoard
         return null;
     }
 
+    /// <summary>Dieselbe Stellung, die ANDERE Seite am Zug („Nullzug“, kein en passant) — für die Frage „was droht?“
+    /// (<see cref="Puzzles.MateThreats"/>, 0.976.0). Nur sinnvoll, wenn die Seite am Zug nicht im Schach steht.</summary>
+    public TacticsBoard Pass() => new((char[])_squares.Clone(), !WhiteToMove, null);
+
     /// <summary>Alle legalen Züge der Seite am Zug, ohne Rochade (siehe Klassenbeschreibung). Umwandlungen einzeln je Figur.</summary>
     public List<Move> LegalMoves()
     {
