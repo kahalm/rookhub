@@ -221,6 +221,16 @@
                     </button>
                   }
                 }
+              } @else if (canShareClub) {
+                <!-- Vereinspartie: derselbe Eintrag über ihren eigenen Teilen-Link (`/cg/:token?train=`), bei Bedarf wird er erst angelegt. -->
+                @for (side of trainSides; track side) {
+                  @if (mistakeCount(side) > 0) {
+                    <button mat-menu-item [class]="'share-training club-share-training ' + side" (click)="shareClubTraining(side)">
+                      <mat-icon>school</mat-icon>
+                      <span>{{ ('games.shareTraining.' + side) | translate: { count: mistakeCount(side) } }}</span>
+                    </button>
+                  }
+                }
               }
               <button mat-menu-item (click)="copyPgn()">
                 <mat-icon>content_copy</mat-icon><span>{{ 'games.pgnCopy' | translate }}</span>

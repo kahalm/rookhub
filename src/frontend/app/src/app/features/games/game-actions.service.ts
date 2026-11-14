@@ -88,6 +88,11 @@ export class GameActionsService {
     return shareToken ? `${this.games.shareUrl(shareToken)}?train=${side}` : null;
   }
 
+  /** Dasselbe für die Vereinspartie: ihr Link `/cg/:token` mit `?train=`. */
+  clubTrainingShareUrl(token: string, side: 'white' | 'black'): string {
+    return `${this.games.clubGameShareUrl(token)}?train=${side}`;
+  }
+
   copyTrainingLink(url: string | null): void {
     if (!url) return;
     navigator.clipboard?.writeText(url).then(

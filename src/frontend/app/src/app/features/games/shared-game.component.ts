@@ -573,6 +573,19 @@ export class SharedGameComponent implements OnInit, DoCheck {
     });
   }
 
+  /** „Fehler-Training teilen" der Vereinspartie: ihr Teilen-Link mit `?train=` — legt ihn wie {@link shareClub} beim ersten
+   *  Mal an. Derselbe Token wie der Teilen-Link: der Widerruf macht auch diese Links ungültig. */
+  shareClubTraining(side: 'white' | 'black'): void {
+    const id = this.clubComparisonGameId;
+    const existing = this.clubGameLink();
+    if (id == null) return;
+    if (existing) { this.actions.copyTrainingLink(this.actions.clubTrainingShareUrl(existing, side)); return; }
+    this.games.createClubGameShare(id).subscribe({
+      next: r => { this.clubGameLink.set(r.token); this.actions.copyTrainingLink(this.actions.clubTrainingShareUrl(r.token, side)); },
+      error: () => this.snackbar.warn(this.translate.instant('games.loadError')),
+    });
+  }
+
   /** Link der Vereinspartie widerrufen (Rückfrage wie bei der eigenen Partie). */
   revokeClubShare(): void {
     if (this.clubComparisonGameId != null) this.actions.revokeClubGameLink(this.clubComparisonGameId).subscribe(() => this.clubGameLink.set(null));

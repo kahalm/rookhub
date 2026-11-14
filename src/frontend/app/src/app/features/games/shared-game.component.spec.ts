@@ -1189,20 +1189,98 @@ describe('SharedGameComponent Layout', () => {
 });
 
 describe('SharedGameComponent — Teilen-Link der Vereinspartie (2026-11-09)', () => {
-  async function setup(mode: 'club' | 'club-link', loggedIn: boolean, perms: string[] = []) {
+  async function setup(mode: 'club' | 'club-link', loggedIn: boolean, perms: string[] = [], query: Record<string, string> = {}) {
     const params = mode === 'club' ? { id: '241' } : { token: 'tok' };
     await TestBed.configureTestingModule({
       imports: [SharedGameComponent],
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: { isLoggedIn: loggedIn, has: (p: string) => perms.includes(p) } },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params), data: { mode }, queryParamMap: convertToParamMap({}) } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params), data: { mode }, queryParamMap: convertToParamMap(query) } } },
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(SharedGameComponent);
     return { fixture, c: fixture.componentInstance, http: TestBed.inject(HttpTestingController) };
   }
   const dto = { white: 'Testdorf', black: 'b', result: '1-0', pgn: '1. e4 e5 1-0', whiteElo: null, blackElo: null, year: 2026, event: null };
+  const longPgn = '[White "a"]\n[Black "b"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 1-0';
+  const blackMistake = (fenBefore: string) => ({
+    ply: 5, white: false, cls: 'blunder', fenBefore, playedSan: 'Nf6', playedUci: 'g8f6',
+    bestUci: 'g7g6', bestSan: 'g6', acceptUci: ['g7g6'], acceptSan: ['g6'],
+    evalBefore: { cp: 30 }, evalAfter: { cp: 900 }, lostPercent: 40,
+  }) as never;
+  const clipboard = () => {
+    const written: string[] = [];
+    spyOnProperty(navigator, 'clipboard', 'get').and.returnValue({ writeText: (t: string) => { written.push(t); return Promise.resolve(); } } as never);
+    return written;
+  };
+
+  // Wunsch 2026-11-14: „Fehler-Training teilen — Weiß/Schwarz“ fehlte auf /club-games/:id.
+  it('offers “share mistakes training” per side with mistakes on the club page and copies the club link with ?train=', async () => {
+    const { fixture, c, http } = await setup('club', true, ['league.view']);
+    fixture.detectChanges();
+    http.expectOne('/api/league/club/games/241/share').flush({ token: 'cgtok' });
+    http.expectOne('/api/league/club/games/241').flush({ ...dto, id: 241, pgn: longPgn });
+    fixture.detectChanges();
+    c.mistakes.set({ white: [], black: [blackMistake(c.service.currentGame!.fens[5])] });
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('.game-menu') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    http.match('/api/engine/external').forEach(r => r.flush({ engines: [] }));
+    const menu = TestBed.inject(OverlayContainer).getContainerElement();
+    expect(menu.querySelector('button.club-share-training.white')).toBeNull();          // Weiß hat keine Fehler
+    const item = menu.querySelector('button.club-share-training.black') as HTMLButtonElement;
+    expect(item).toBeTruthy();
+    const written = clipboard();
+    item.click();
+    http.expectNone(r => r.method === 'POST' && r.url === '/api/league/club/games/241/share');   // Link gibt es schon
+    expect(written[0]).toMatch(/\/cg\/cgtok\?train=black$/);
+    fixture.destroy();
+  });
+
+  it('creates the club link first when there is none yet, then copies the training link (revoke appears)', async () => {
+    const { fixture, c, http } = await setup('club', true, ['league.view']);
+    fixture.detectChanges();
+    http.expectOne('/api/league/club/games/241/share').flush({ token: null });
+    http.expectOne('/api/league/club/games/241').flush({ ...dto, id: 241 });
+    const written = clipboard();
+    c.shareClubTraining('white');
+    expect(written.length).toBe(0);
+    http.expectOne(r => r.method === 'POST' && r.url === '/api/league/club/games/241/share').flush({ token: 'neu' });
+    expect(written[0]).toMatch(/\/cg\/neu\?train=white$/);
+    expect(c.clubGameLink()).toBe('neu');
+    fixture.destroy();
+  });
+
+  it('offers no training entry without the right to share the club game', async () => {
+    const { fixture, c, http } = await setup('club', true, []);
+    fixture.detectChanges();
+    http.expectOne('/api/league/club/games/241').flush({ ...dto, id: 241, pgn: longPgn });
+    fixture.detectChanges();
+    c.mistakes.set({ white: [], black: [blackMistake(c.service.currentGame!.fens[5])] });
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('.game-menu') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    http.match('/api/engine/external').forEach(r => r.flush({ engines: [] }));
+    expect(TestBed.inject(OverlayContainer).getContainerElement().querySelector('button.share-training')).toBeNull();
+    fixture.destroy();
+  });
+
+  it('/cg/:token?train=black starts the mistakes training for Black without sign-in', async () => {
+    const { fixture, c, http } = await setup('club-link', false, [], { train: 'black' });
+    fixture.detectChanges();
+    http.expectOne('/api/league/s-club-game/tok/comparisons').flush([]);
+    http.expectOne('/api/league/s-club-game/tok').flush({ ...dto, pgn: longPgn });
+    fixture.detectChanges();
+    expect(c.mistakeSide()).toBe('black');
+    expect(c.training()).toBeNull();
+    c.mistakes.set({ white: [], black: [blackMistake(c.service.currentGame!.fens[5])] });
+    fixture.detectChanges();
+    expect(c.training()).not.toBeNull();
+    expect(c.training()!.side()).toBe('black');
+    c.endTraining();
+    fixture.destroy();
+  });
 
   it('shows the share button only with league.view on the signed-in club page', async () => {
     const { fixture, c, http } = await setup('club', true, ['league.view']);

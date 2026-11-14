@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.964.0", date: "2026-11-14", changes: [
+    { en: "Club games: the ⋮ menu of a club game now also offers “Share mistakes training — White/Black”, as on your own games – for everyone who may share the game and for each side that has mistakes. The copied link is the game’s share link with the chosen colour; whoever opens it lands directly in “Replay mistakes” for that side, without signing in. If the game has no share link yet, it is created on the first click. “Revoke share link” also invalidates these training links.",
+      de: "Vereinspartien: Im ⋮-Menü einer Vereinspartie gibt es jetzt auch „Fehler-Training teilen — Weiß/Schwarz“, wie bei eigenen Partien – für alle, die die Partie teilen dürfen, und je Seite, die Fehler hat. Kopiert wird der Teilen-Link der Partie mit der gewählten Farbe; wer ihn öffnet, landet ohne Anmeldung direkt bei „Fehler nachspielen“ dieser Seite. Hat die Partie noch keinen Teilen-Link, wird er beim ersten Klick angelegt. „Teilen-Link widerrufen“ macht auch diese Trainingslinks ungültig." },
+  ] },
   { version: "0.963.1", date: "2026-11-14", changes: [
     { en: "E-ink mode: the moves in the merged game text of a summary take their black and white from the colour tokens instead of fixed values. Nothing changes on screen; the build check for fixed colours passes again.",
       de: "E-Ink-Modus: Die Züge im verschmolzenen Partietext einer Zusammenfassung nehmen Schwarz und Weiß aus den Farb-Tokens statt aus festen Werten. Am Bild ändert sich nichts; die Build-Prüfung auf feste Farben läuft wieder durch." },
