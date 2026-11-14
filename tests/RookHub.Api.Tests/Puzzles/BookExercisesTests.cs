@@ -65,6 +65,62 @@ public class BookExercisesTests : IDisposable
         Assert.Equal(usable, BookExercises.IsUsable(check, source));
     }
 
+    // 0.973.1: Schwarz am Zug, die Buchlinie ist die Partiefortsetzung bis zum Matt durch WEISS (a6, dann Dg7#).
+    private const string QueenPawnBlackToMove = "6k1/p4p1p/5P1Q/8/8/8/8/K7 b - - 0 1";
+
+    [Fact]
+    public async Task LoserToMoveInTheDiagram_ExerciseStartsWithTheOpponentMove_UndeterminableSideIsOnlyAnExample()
+    {
+        await SeedGameAsync();
+        AddBook(5, 10);
+        AddDiagram(5, QueenPawnBlackToMove, id: 501, solution: "a7a6 h6g7");      // der Gegner der Seite am Zug setzt matt
+        AddDiagram(5, QueenPawn, id: 502, solution: "h6h5").EngineEval = null;    // bestätigt, aber kein Matt und keine Bewertung
+        await _db.SaveChangesAsync();
+        // Zeile für 502 von Hand (ohne Matt und ohne klare Bewertung rechnet der Lauf keine) — die Auswahl prüft selbst.
+        var strict = (await _db.EbookDiagramSignatures.AsNoTracking().FirstAsync(x => x.DiagramId == 101)).Strict;
+        var family = (await _db.EbookDiagramSignatures.AsNoTracking().FirstAsync(x => x.DiagramId == 101)).Family;
+        foreach (var (id, fen, line) in new[] { (501, QueenPawnBlackToMove, "a7a6 h6g7"), (502, QueenPawn, "h6h5") })
+            _db.EbookDiagramSignatures.Add(new EbookDiagramSignature
+            {
+                DiagramId = id, Kind = PuzzleSignatureKind.Mate, Version = MatePattern.Version, Strict = strict, Family = family, EbookId = 5,
+                Solvable = true, LineHash = BookExercises.LineHash(fen, line), Shuffle = BookExercises.ShuffleOf(id), MateIn = 1,
+            });
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var seen = new Dictionary<int, RookHub.Api.DTOs.Puzzles.GameExerciseDto>();
+        // Je Stelle höchstens sechs, fest gesät: beide Diagramme über die Kandidatenliste direkt prüfen.
+        var o = GameExercises.Group(GameExercises.Occurrences(await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == 1)
+            .Select(p => new GameExercises.Position(p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson)).ToListAsync())).First(g => g.First.Ply == 10).First;
+        var used = Enumerable.Range(100, 400).ToHashSet();                         // alle anderen Diagramme schon gezeigt
+        foreach (var e in await new BookExercises(_db).PickAsync(o, 1500, User1, used, seed: 0)) seen[e.Id] = e;
+
+        var turned = seen[501];
+        Assert.True(turned.Book!.Solvable);
+        Assert.True(turned.Book.OpponentFirst);                                    // Löser = Weiß, erst zieht Schwarz
+        Assert.Equal(QueenPawnBlackToMove, turned.Fen);
+        Assert.Equal(["a7a6", "h6g7"], turned.Moves);
+        var unsure = seen[502];
+        Assert.False(unsure.Book!.Solvable);                                       // gewinnende Seite nicht bestimmbar → nur Beispiel
+        Assert.False(unsure.Book.OpponentFirst);
+        Assert.Empty(unsure.Moves);
+    }
+
+    [Fact]
+    public async Task RunBatch_SolvableColumn_FollowsTheSolverRule()
+    {
+        AddBook(1, null);
+        AddDiagram(1, QueenPawn);                                                 // 1 Seite am Zug setzt matt
+        AddDiagram(1, QueenPawnBlackToMove, solution: "a7a6 h6g7");               // 2 Gegner setzt matt → lösbar (Gegnerzug zuerst)
+        AddDiagram(1, QueenPawnBlackToMove, solution: "a7a6 h6g7 g8h8");          // 3 Zug nach dem Matt: nicht regelgerecht
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        while (await BookExercises.RunBatchAsync(_db, null, 10) > 0) { }
+        var rows = await _db.EbookDiagramSignatures.AsNoTracking().OrderBy(s => s.DiagramId).ToListAsync();
+        Assert.Equal([(1, true), (2, true)], rows.Where(r => r.DiagramId < 3).Select(r => (r.DiagramId, r.Solvable)));
+        Assert.DoesNotContain(rows, r => r.DiagramId == 3 && r.Solvable);
+    }
+
     private int _diagram;
     private EbookDiagram AddDiagram(int ebookId, string fen, EbookSolutionCheck check = EbookSolutionCheck.Confirmed, string? source = "book",
         int page = 10, float? confidence = null, string? font = null, int? id = null, string solution = "h6g7")
@@ -247,7 +303,7 @@ public class BookExercisesTests : IDisposable
     public void Choose_DistinctBooksFirst_SecondFromSameChapter_ExamplesCapped()
     {
         BookExercises.Candidate C(int id, int book, string? chapter, bool solvable = true, int page = 10, int? elo = null) =>
-            new(id, book, id, chapter, page, true, null, QueenPawn, "h6g7", solvable, $"B{book}", null, elo);
+            new(id, book, id, chapter, page, true, null, QueenPawn, "h6g7", solvable ? new BookSolverLine(["h6g7"], false) : null, $"B{book}", null, elo);
         var picked = BookExercises.Choose(
         [
             C(1, 1, "Kap. 1"), C(2, 1, "Kap. 2"), C(3, 1, "Kap. 1"),

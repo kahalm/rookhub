@@ -98,10 +98,27 @@ Partie ohne lösbare Aufgabe (dann entsteht auch kein Kurs).
   Ligarunde. Schon vergeben (zweite Partie derselben Spieler im selben Jahr) → „… · 2“. Neue Kapitel stehen am Ende (`Round` zählt weiter).
 - **Linien** (Reihenfolge des Abschnitts, nur Lösbares): Lichess-Aufgabe → `Fen` vor dem Gegnerzug, `Moves` = Gegnerzug + Lösung,
   `StartPly = 0` (klassische Form wie die Taktik-Ernte), `BookRating` = Lichess-Wertung, `Title` = „19. · Lichess {LichessId}“;
-  Buchdiagramm mit bestätigter Lösung → Diagrammstellung, `Moves` = Buchlösung, `StartPly = -1` (Löser am Zug), `Title` =
-  „19. · {Buchtitel}, S. n“. „Beispiel im Buch“ ohne Lösung fehlt. `Tags` = Thema der Stelle + Themen der Aufgabe, `Source =
+  Buchdiagramm mit bestätigter Lösung → Diagrammstellung, `Moves` = Buchlinie, `Title` = „19. · {Buchtitel}, S. n“; wer löst,
+  bestimmt `BookSolverLine` (0.973.1, siehe unten): `StartPly = -1` (Löser in der Diagrammstellung am Zug) oder `StartPly = 0`
+  (erster Zug = Gegnerzug). „Beispiel im Buch“ ohne Lösung oder ohne bestimmbare Löserseite fehlt. `Tags` = Thema der Stelle + Themen der Aufgabe, `Source =
   game-exercise`, `SourceGame = club|own:{id}:{ply}` („Zur Partie“ im Löser) — nur, wenn der Nutzer die Partie auf ihrem eigenen Weg
   sieht (nicht über einen Teilen-Link). Keine Tipp-Generierung, keine Kommentare.
+- **Der Löser spielt nie die Seite, die verliert** (0.973.1, Meldung 2026-11-14: „Alekhine: Move by Move“, S. 154 — Schwarz am Zug,
+  Buchlinie 30…Ta8 31.Tb6 Txa7 32.Tb8#, der Löser sollte Schwarz spielen). Stockfish bestätigt nur den ERSTEN Zug der Buchlinie, und
+  auch der beste Zug einer verlorenen Stellung ist „bestätigt“. Die Regel sitzt an einer Stelle, `Services/Puzzles/BookSolverLine.cs`
+  (über `BookExercises.SolverLineOf` für alle Verbraucher der Buchdiagramm-Aufgaben): Linie endet **matt** → es gewinnt, wer den letzten
+  Zug macht; ungerade Halbzugzahl = Seite am Zug löst (`StartPly = -1`), gerade = der erste Zug gehört dem Verlierer → klassische Form
+  (`StartPly = 0`, `Fen` = Diagramm = Stellung vor dem Gegnerzug, `Moves` unverändert). Linie endet **nicht matt** → die Seite am Zug
+  löst nur, wenn die Engine sie klar vorn sieht (`EngineEval` ≥ 200, dieselbe Schwelle wie die Motiv-Signatur); sonst ist die
+  gewinnende Seite nicht sicher bestimmbar → keine Aufgabe (höchstens „Beispiel im Buch“). Nicht regelgerecht nachspielbare Linien
+  (falsch gelesene Diagramme) fallen ebenfalls weg. Prod 14.11.: von 12 146 lösbaren Buchdiagrammen mit Signatur hatten 648 den
+  Verlierer am Zug (jetzt mit Gegnerzug voran), 15 sind unspielbar, 0 unbestimmbar.
+- **Bestand** (`PersonalTacticsLineRepair`, Hosted Service, einmalig beim Start, Marke `SystemSettings` →
+  `PersonalTactics.SolverSideRepair`): wendet dieselbe Regel auf vorhandene Linien mit `Source = game-exercise` und `StartPly = -1` an —
+  Gegner setzt matt → `StartPly = 0` (Tipps der Linie geleert); unspielbar/unbestimmbar → `Retired` + `IsInfoOnly` (`Retired` allein
+  nähme die Linie nur aus den Zufallstöpfen, erst `IsInfoOnly` aus Abfrage und Fortschritt); nichts wird gelöscht, andere Linien und
+  alle Lernstände bleiben. Keine Migration, weil die Regel Schachlogik braucht (Linie nachspielen, Matt erkennen). Die Bewertung
+  einer Linie ohne Matt wird am Buchdiagramm mit derselben Stellung und Linie nachgeschlagen.
 - **Auswahl**: beim Klick serverseitig neu aus `GameExercises` (je Partie und Stelle fest gesät, derselbe Betrachter wie beim Anzeigen)
   — sie stimmt mit dem Abschnitt überein, solange sich der Aufgabenbestand zwischen Laden und Klick nicht ändert.
 - **Aufbereitung**: kein Quell-PGN; `ImportVersion` steht auf der aktuellen Pipeline-Version und wird bei jedem Aufruf nachgezogen

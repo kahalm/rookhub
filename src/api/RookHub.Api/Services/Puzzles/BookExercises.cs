@@ -12,7 +12,9 @@ namespace RookHub.Api.Services.Puzzles;
 /// (<see cref="MatePattern"/>, <see cref="TacticMotifs"/>), gerechnet aus Diagrammstellung + Lösung (<see cref="SignaturesOf"/>,
 /// Tabelle <see cref="EbookDiagramSignature"/>, Lauf <see cref="RunBatchAsync"/> im <see cref="PuzzleSignatureWorker"/>).
 ///
-/// <para><b>Lösbar</b> nur mit Buchlösung, die Stockfish bestätigt hat (<see cref="IsSolvable"/>); eine reine Engine-Lösung gibt
+/// <para><b>Lösbar</b> nur mit Buchlösung, die Stockfish bestätigt hat (<see cref="IsSolvable"/>) UND deren gewinnende Seite
+/// feststeht (<see cref="BookSolverLine"/>, 0.973.1: der Löser spielt nie die Seite, die in der Linie mattgesetzt wird — macht
+/// der Gegner der Seite am Zug den Mattzug, beginnt die Aufgabe mit dem Gegnerzug); eine reine Engine-Lösung gibt
 /// höchstens ein „Beispiel im Buch“ (Brett + Sprung in den Leser, höchstens <see cref="MaxExamples"/> je Stelle). Diagramme ohne
 /// Lösung haben keine Linie, also kein Bild/Motiv, und kommen nicht vor.</para>
 ///
@@ -56,6 +58,11 @@ public sealed class BookExercises(AppDbContext db)
     /// bzw. Font-Diagramm ohne Sicherheitswert).</summary>
     public static bool Trusted(EbookSolutionCheck check, string? source, float? confidence) =>
         IsSolvable(check, source) || confidence is null or >= MinConfidence;
+
+    /// <summary>Die lösbare Aufgabe eines Diagramms: bestätigte Buchlösung (<see cref="IsSolvable"/>) und bestimmbare Löserseite
+    /// (<see cref="BookSolverLine.Of"/>); <c>null</c> = höchstens „Beispiel im Buch“.</summary>
+    public static BookSolverLine? SolverLineOf(string fen, string? solutionUci, int? engineEval, EbookSolutionCheck check, string? source) =>
+        IsSolvable(check, source) ? BookSolverLine.Of(fen, solutionUci, engineEval) : null;
 
     public static long LineHash(string fen, string? solutionUci) => MatePattern.Hash($"{fen}|{solutionUci}");
     public static int ShuffleOf(int diagramId) => (int)(MatePattern.Hash($"d{diagramId}") & 0x7fffffff);
@@ -137,7 +144,7 @@ public sealed class BookExercises(AppDbContext db)
                 rows.Add(new EbookDiagramSignature
                 {
                     DiagramId = d.Id, Kind = r.Kind, Version = r.Version, Strict = r.Strict, Family = r.Family, EbookId = d.EbookId,
-                    Solvable = IsSolvable(d.SolutionCheck, d.SolutionSource), LineHash = LineHash(d.Fen, d.SolutionUci),
+                    Solvable = SolverLineOf(d.Fen, d.SolutionUci, d.EngineEval, d.SolutionCheck, d.SolutionSource) is not null, LineHash = LineHash(d.Fen, d.SolutionUci),
                     Shuffle = ShuffleOf(d.Id), MateIn = r.MateIn, Chapter = chapter,
                 });
         }
@@ -161,8 +168,12 @@ public sealed class BookExercises(AppDbContext db)
     }
 
     /// <summary>Kandidat aus der Signaturtabelle, geprüft gegen das aktuelle Diagramm.</summary>
+    /// <param name="Line">Die lösbare Aufgabe (<see cref="SolverLineOf"/>); <c>null</c> = nur „Beispiel im Buch“.</param>
     internal sealed record Candidate(int DiagramId, int EbookId, int Shuffle, string? Chapter, int Page, bool PdfPage, string? Label, string Fen,
-        string SolutionUci, bool Solvable, string Title, string? Author, int? TargetMinElo);
+        string SolutionUci, BookSolverLine? Line, string Title, string? Author, int? TargetMinElo)
+    {
+        public bool Solvable => Line is not null;
+    }
 
     private sealed class SigRow
     {
@@ -220,10 +231,10 @@ public sealed class BookExercises(AppDbContext db)
                 used.Add(c.DiagramId);
                 if (!c.Solvable) examples++;
                 result.Add(new GameExerciseDto(c.DiagramId, c.Fen,
-                    c.Solvable ? c.SolutionUci.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList() : [], 0, [],
+                    c.Line is { } line ? line.Moves.ToList() : [], 0, [],
                     strict ? "strict" : "family", "book",
                     new GameExerciseBookDto(c.EbookId, c.Title, string.IsNullOrWhiteSpace(c.Author) ? null : c.Author, c.Chapter, c.Page, c.PdfPage,
-                        string.IsNullOrWhiteSpace(c.Label) ? null : c.Label, c.Solvable)));
+                        string.IsNullOrWhiteSpace(c.Label) ? null : c.Label, c.Solvable, c.Line?.OpponentFirst ?? false)));
             }
         }
         // Lösbare vor Beispielen (die Reihenfolge innerhalb bleibt: streng vor Familie).
@@ -235,7 +246,7 @@ public sealed class BookExercises(AppDbContext db)
     {
         var ids = rows.Select(r => r.DiagramId).ToList();
         var diagrams = await db.EbookDiagrams.AsNoTracking().Where(d => ids.Contains(d.Id))
-            .Select(d => new { d.Id, d.EbookId, d.Fen, d.SolutionUci, d.SolutionCheck, d.SolutionSource, d.Page, d.W, d.Label, d.FontFamily, d.Confidence })
+            .Select(d => new { d.Id, d.EbookId, d.Fen, d.SolutionUci, d.SolutionCheck, d.SolutionSource, d.Page, d.W, d.Label, d.FontFamily, d.Confidence, d.EngineEval })
             .ToDictionaryAsync(d => d.Id, ct);
         var reports = (await db.EbookDiagramReports.AsNoTracking().Where(r => ids.Contains(r.DiagramId)).Select(r => new { r.DiagramId, r.CreatedAt }).ToListAsync(ct))
             .GroupBy(r => r.DiagramId).ToDictionary(g => g.Key, g => g.Max(r => r.CreatedAt));
@@ -254,7 +265,7 @@ public sealed class BookExercises(AppDbContext db)
             if (reports.TryGetValue(d.Id, out var reported) && !(fixedAt.TryGetValue(d.Id, out var fixedOn) && fixedOn > reported)) continue;
             if (!EbookSolutionChecker.IsLegal(d.Fen)) continue;
             list.Add(new Candidate(d.Id, d.EbookId, r.Shuffle, r.Chapter, d.Page, d.W > 0, d.Label, d.Fen, d.SolutionUci!,
-                IsSolvable(d.SolutionCheck, d.SolutionSource), b.Title, b.Author, b.TargetMinElo));
+                SolverLineOf(d.Fen, d.SolutionUci, d.EngineEval, d.SolutionCheck, d.SolutionSource), b.Title, b.Author, b.TargetMinElo));
         }
         return list;
     }

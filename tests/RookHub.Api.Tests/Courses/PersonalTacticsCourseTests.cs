@@ -117,6 +117,45 @@ public class PersonalTacticsCourseTests : IDisposable
         Assert.Equal(lines.Count, lines.Select(l => l.LineId).Distinct().Count());
     }
 
+    /// <summary>0.973.1 (Meldung 2026-11-14, Prod-Linie 160276): das Buchdiagramm zeigt die Seite am Zug, die in der Buchlinie
+    /// mattgesetzt wird — der Löser bekommt die Gewinnerseite (klassische Form), nie die verlierende.</summary>
+    [Fact]
+    public async Task Open_BookDiagrams_SolverNeverPlaysTheSideThatGetsMated_UndeterminableDiagramsAreLeftOut()
+    {
+        await SeedAsync();
+        _db.Groups.Add(new Group { Id = 10, Name = "Everyone", IsEveryone = true });
+        _db.Ebooks.Add(new Ebook { Id = 1, Title = "Alekhine: Move by Move", Author = "A", GroupAccess = [new EbookGroupAccess { EbookId = 1, GroupId = 10 }] });
+        EbookDiagram Diagram(int id, int page, string fen, string solution, int? eval) => new()
+        {
+            Id = id, EbookId = 1, Page = page, W = 0.3, H = 0.3, Fen = fen, SolutionUci = solution, SolutionSource = "book",
+            SolutionCheck = EbookSolutionCheck.Confirmed, EngineEval = eval,
+        };
+        _db.EbookDiagrams.AddRange(
+            Diagram(1, 31, "6k1/5p1p/5P1Q/8/8/8/8/K7 w - - 0 1", "h6g7", 9999),                  // Weiß am Zug setzt matt
+            Diagram(2, 154, "6k1/p4p1p/5P1Q/8/8/8/8/K7 b - - 0 1", "a7a6 h6g7", -9999),           // Schwarz am Zug, WEISS setzt matt
+            Diagram(3, 40, "r3k3/8/8/3N4/8/8/8/4K3 w - - 0 1", "d5c7 e8d7 c7a8", 600),            // Gabel, Weiß gewinnt
+            Diagram(4, 41, "r3k3/8/8/3N4/8/8/8/3K4 w - - 0 1", "d5c7 e8d7 c7a8", 600));           // Gabel — Bewertung fällt gleich weg
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        while (await BookExercises.RunBatchAsync(_db, null, 10) > 0) { }
+        (await _db.EbookDiagrams.FirstAsync(d => d.Id == 4)).EngineEval = 80;                      // neu geprüft: nicht mehr klar gewinnend
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var mate = await OpenOwnAsync(7);
+        var lines = await _db.BookPuzzles.AsNoTracking().Where(p => p.BookId == mate.BookId && p.Chapter == mate.Chapter).ToListAsync();
+        var first = Assert.Single(lines, l => l.Title!.EndsWith("Alekhine: Move by Move, S. 31"));
+        Assert.Equal((-1, "6k1/5p1p/5P1Q/8/8/8/8/K7 w - - 0 1", "h6g7"), (first.StartPly, first.Fen, first.Moves));   // Löser am Zug
+        var turned = Assert.Single(lines, l => l.Title!.EndsWith("Alekhine: Move by Move, S. 154"));
+        // Klassische Form: Stellung vor dem Gegnerzug, Gegnerzug + Lösung — der Kurs-Löser spielt a6 vor und fragt Dg7#.
+        Assert.Equal((0, "6k1/p4p1p/5P1Q/8/8/8/8/K7 b - - 0 1", "a7a6 h6g7"), (turned.StartPly, turned.Fen, turned.Moves));
+
+        var fork = await OpenOwnAsync(11);
+        var forkLines = await _db.BookPuzzles.AsNoTracking().Where(p => p.BookId == fork.BookId && p.Chapter == fork.Chapter).ToListAsync();
+        var book = Assert.Single(forkLines, l => l.Title!.Contains("Alekhine"));                   // Diagramm 4 fehlt
+        Assert.Equal((-1, "r3k3/8/8/3N4/8/8/8/4K3 w - - 0 1", "S. 40"), (book.StartPly, book.Fen, book.Title![^5..]));
+    }
+
     [Fact]
     public async Task Open_SameGameAgain_OpensTheExistingChapter_EvenAfterRenaming_ProgressStays()
     {

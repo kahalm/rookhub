@@ -26,8 +26,11 @@ namespace RookHub.Api.Services.Courses;
 /// Kapitel der ersten.</para>
 ///
 /// <para><b>Linien</b>: Lichess-Aufgabe → <c>Fen</c> vor dem Gegnerzug, <c>Moves</c> = Gegnerzug + Lösung, <c>StartPly = 0</c>
-/// (klassische Form, dieselbe wie die Taktik-Ernte); lösbares Buchdiagramm → Diagrammstellung mit dem Löser am Zug,
-/// <c>StartPly = -1</c>. „Beispiel im Buch“ ohne bestätigte Lösung hat nichts zu lösen und fehlt. Reihenfolge wie im Abschnitt.
+/// (klassische Form, dieselbe wie die Taktik-Ernte); lösbares Buchdiagramm → Diagrammstellung und Buchlinie, die Löserseite
+/// bestimmt <see cref="BookSolverLine"/> (0.973.1): gewinnt die Seite am Zug, <c>StartPly = -1</c> (Löser am Zug); macht ihr
+/// Gegner den Mattzug, <c>StartPly = 0</c> (erster Zug = Gegnerzug) — der Löser spielt nie die Seite, die mattgesetzt wird.
+/// „Beispiel im Buch“ ohne bestätigte Lösung oder ohne bestimmbare Löserseite hat nichts zu lösen und fehlt. Den Bestand von vor
+/// 0.973.1 berichtigt <see cref="PersonalTacticsLineRepair"/> beim Start. Reihenfolge wie im Abschnitt.
 /// Themen stehen in <c>Tags</c>, die Herkunft im <c>Title</c> („19. · Lichess AbCdE“), <c>Source</c> = <see cref="LineSource"/>,
 /// und <c>SourceGame</c> führt aus dem Löser zurück zur Partie (nur, wenn der Nutzer sie auf ihrem eigenen Weg sehen darf —
 /// nicht über einen Teilen-Link).</para>
@@ -173,10 +176,10 @@ public sealed class PersonalTacticsCourse(AppDbContext db, GameExercises exercis
                 var tags = Tags(theme, e.Themes);
                 if (e.Book is { } b)
                 {
-                    // Nur mit bestätigter Buchlösung; die Stellung ist das Diagramm, der Löser am Zug.
-                    if (!b.Solvable || e.Moves.Count == 0) continue;
+                    // Nur mit bestätigter Buchlösung und bestimmter Löserseite (BookSolverLine); die Stellung ist das Diagramm.
+                    if (!b.Solvable || e.Moves.Count < (b.OpponentFirst ? 2 : 1)) continue;
                     var where = b.PdfPage ? $", S. {b.Page.ToString(CultureInfo.InvariantCulture)}" : "";
-                    result.Add(new Line(g.Ply, e.Fen, string.Join(' ', e.Moves), -1, $"{move} · {b.Title}{where}", tags, null));
+                    result.Add(new Line(g.Ply, e.Fen, string.Join(' ', e.Moves), b.OpponentFirst ? 0 : -1, $"{move} · {b.Title}{where}", tags, null));
                 }
                 else
                 {

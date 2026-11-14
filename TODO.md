@@ -6,6 +6,16 @@ _Legende: `[ ]` offen · `[~]` Hauptteil erledigt, Rest bewusst geparkt (Begrün
 `[x]` erledigt, bleibt als Beleg stehen. Erledigte Einzelfunde ohne weiteren Wert stehen unten
 im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
+## [ ] E-Book-Leser, Modus „Lösen“: Löser spielt bei manchen Diagrammen die Seite, die mattgesetzt wird (2026-11-14, gefunden bei 0.973.1)
+
+Derselbe Fehler wie im Kurs „Persönliche Taktiken“ (dort behoben, `Services/Puzzles/BookSolverLine.cs`, `docs/api/kurse.md` → „Der
+Löser spielt nie die Seite, die verliert“), aber im Frontend: `features/ebooks/ebook-board.component.ts` (`storedLine`,
+`startSolving`) spielt `diagram.solutionUci` immer mit der Seite am Zug als Löser. Prod 14.11. (gerechnet mit `BookSolverLine.PlayLegal`
+über alle 950 271 Diagramme mit Lösung): 933 Diagramme, deren Linie regelgerecht mit einem Matt durch den GEGNER der Seite am Zug
+endet (612 bestätigt, 36 ersetzt, 281 fraglich, 4 sonstige; alle Buchlösungen, Engine-Lösungen sind praktisch nicht betroffen).
+- [ ] Der Diagramm-Antwort des Lesers ein Feld mitgeben (`solverOpponentFirst` aus `BookSolverLine.Of`), und der Leser spielt bei
+      `true` den ersten Zug vor und dreht das Brett — nicht die Regel im Client nachbauen. E-Ink-Spec mittesten.
+
 ## [~] Fehler-Erklärungen: taktischer Grund statt Engine-Linie — 0.971.0 (2026-11-14)
 
 `docs/api/zuege-vergleichen.md` → „Der taktische Grund statt der nacherzählten Engine-Linie“. Fertig: andere Verteidigungen in der

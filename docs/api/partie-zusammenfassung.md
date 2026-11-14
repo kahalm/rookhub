@@ -390,8 +390,10 @@ Thema-Rückfall nur, wenn auch kein Buch traf).
 `/g/{token}`, `/cg/{token}`, Liga-Link) nur, was die Bibliothek ohne Anmeldung zeigt — die für „Alle“ freigegebenen Bücher und eigene
 anonyme Uploads (`X-Visitor-Id`). `BaseApiController.EbookViewerAsync`.
 
-**Antwort** je Buchkarte: `source: book`, `id` = Diagramm, `fen` = Diagrammstellung, `moves` = Buchlösung ab dem Löser (leer bei
-Beispielen), `rating` 0, `book: { ebookId, title, author, chapter, page, pdfPage, label, solvable }`. Der Leser-Sprung ist
+**Antwort** je Buchkarte: `source: book`, `id` = Diagramm, `fen` = Diagrammstellung, `moves` = Buchlinie ab der Diagrammstellung (leer bei
+Beispielen), `rating` 0, `book: { ebookId, title, author, chapter, page, pdfPage, label, solvable, opponentFirst }`. Seit 0.973.1 heißt
+`solvable`: Buchlösung bestätigt UND Löserseite bestimmbar (`BookSolverLine`, `docs/api/kurse.md` → „Der Löser spielt nie die Seite, die
+verliert“); `opponentFirst: true` = `moves[0]` ist der Gegnerzug (wie bei Lichess), sonst ist der Löser in der Diagrammstellung am Zug. Der Leser-Sprung ist
 `/ebooks/{ebookId}?page=…&fmt=pdf&diagram=…` (PDF) bzw. `?diagram=…` (EPUB), wie „Im Buch“ aus dem Kurs.
 
 Prod-Partie SavedGame 221 (simuliert 13.11., Admin-Sicht): „15. verpasstes Matt in 4“ (Familie „Dame im Kontakt, offener König“) —
