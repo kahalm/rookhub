@@ -67,9 +67,24 @@ internal static class AnalysisJobEngineResolver
         return engine;
     }
 
+    /// <summary>
+    /// Bis zu dieser Zieltiefe rechnet ein Tiefenauftrag in einer EIGENEN Sitzung, also auf leerem Hash (0.974.0): der
+    /// Provider schickt <c>ucinewgame</c> nur, wenn sich <c>sessionId</c> ändert, und alle Hintergrund-Aufträge eines
+    /// Kontos teilen sich sonst eine Sitzung (die Hashtabelle soll warm bleiben). Eine flache Suche fragt aber „was sieht
+    /// man auf den ersten Blick?“ (<see cref="MoveComparisonBestMoveTries"/>) — auf dem Hash der tiefen Rechnung derselben
+    /// Partie sähe sie deren Ergebnis. Gemessen (Stockfish, Vereinspartie 251 nach 20...e4, Tiefe 1, 5 Linien): leer
+    /// 21.Txe4 Rang 2, 0,40 hinter dem Ersten; nach einer Tiefe-20-Suche derselben Stellung Rang 4, 0,57. Der nächste
+    /// gewöhnliche Auftrag wechselt die Sitzung zurück und beginnt damit ebenfalls auf leerem Hash.
+    /// </summary>
+    internal const int FreshSessionMaxDepth = 4;
+
+    /// <summary>Sitzung des Auftrags beim Provider: je Konto eine — außer für flache Tiefenaufträge (<see cref="FreshSessionMaxDepth"/>).</summary>
+    internal static string SessionOf(AnalysisJob job) => job.TargetNodes is null && job.TargetDepth <= FreshSessionMaxDepth
+        ? $"rh-bg-{job.UserId}-fresh-{job.Id}" : $"rh-bg-{job.UserId}";
+
     /// <summary>Die Arbeit für den Broker: genau EIN Limit (Tiefe oder Knoten), Linien auf das Protokoll begrenzt.</summary>
     internal static EngineWork WorkOf(AnalysisJob job, EngineRef engine) => new(
-        SessionId: $"rh-bg-{job.UserId}", Threads: Math.Max(1, engine.MaxThreads),
+        SessionId: SessionOf(job), Threads: Math.Max(1, engine.MaxThreads),
         Hash: Math.Clamp(engine.MaxHash, 16, 32768),
         // Das Protokoll erlaubt 1..5; ein größerer Wert würde vom Broker abgewiesen und der Auftrag
         // liefe endlos in die Wiederholung. Zweiter Riegel neben AnalysisJobService.MaxMultiPv.

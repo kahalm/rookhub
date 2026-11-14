@@ -312,11 +312,38 @@ public class MoveComparisonDefencesTests : IDisposable
         {
             ["ClubMistakeComparisons:ExplainWithAnthropic"] = "true",
             ["ClubMistakeComparisons:DefenceLines"] = defenceLines?.ToString(),
+            // Die verlockenden Antworten auf den besten Zug (0.974.0) prüft MoveComparisonBestMoveTriesTests — auch im
+            // Zusammenspiel mit den Verteidigungen; hier bleiben sie aus, damit die Zahlen dieser Klasse für sich stehen.
+            ["ClubMistakeComparisons:BestMoveTries"] = "0",
         }).Build(), NullLogger<ClubFableExplanations>.Instance, () => _now);
 
-    private MoveComparisonService Service(ClubFableExplanations? fable) => new(_db, _jobs, _local, new MoveComparisonExplainJobs(),
-        new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
-        NullLogger<MoveComparisonService>.Instance, fable);
+    /// <summary>Die Lauf-Marken aller Dienste dieses Tests (<see cref="BackgroundRunsEndedAsync"/>).</summary>
+    private readonly List<MoveComparisonExplainJobs> _running = [];
+
+    private MoveComparisonService Service(ClubFableExplanations? fable)
+    {
+        var running = new MoveComparisonExplainJobs();
+        _running.Add(running);
+        return new(_db, _jobs, _local, running,
+            new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<MoveComparisonService>.Instance, fable);
+    }
+
+    /// <summary>
+    /// Wartet, bis kein Hintergrundlauf der Begründung mehr markiert ist. Erreicht ein Vergleich in <c>PumpOneAsync</c> „wird
+    /// erklärt“, stößt die Pumpe die Begründung per <c>Task.Run</c> an und hält bis zu dessen Ende die Marke in
+    /// <see cref="MoveComparisonExplainJobs"/> — hier scheitert der Lauf sofort (der Test-Scope kennt keinen Dienst), aber
+    /// erst, wenn der Threadpool ihn drannimmt. Solange gilt der Vergleich als „läuft“: <c>ReexplainAsync</c> lehnt ab,
+    /// die Pumpe plant keine Zusatzlinien. In der vollen Suite (alle Kerne belegt) kam der Lauf manchmal später dran als der
+    /// nächste Schritt des Tests (CI 2026-11-14: <c>Reexplain_FableLiefertNichts…</c> rot auf <c>Assert.True(ReexplainAsync)</c>).
+    /// In der Anwendung liegt zwischen Pumpe und Admin-Aufruf der ganze Lauf — der Test stellt dieselbe Reihenfolge her.
+    /// </summary>
+    private async Task BackgroundRunsEndedAsync(int id)
+    {
+        var until = DateTime.UtcNow.AddSeconds(30);
+        while (_running.Any(r => r.IsRunning(id)) && DateTime.UtcNow < until) await Task.Delay(5);
+        Assert.DoesNotContain(_running, r => r.IsRunning(id));
+    }
 
     /// <summary>Vereinspartie samt fertiger Hauptanalyse; <paramref name="round"/> = Datum der Ligarunde (Stichtag 06.11.).</summary>
     private void SeedGame(DateOnly round)
@@ -349,6 +376,7 @@ public class MoveComparisonDefencesTests : IDisposable
         await FinishJobAsync(After(Best), BestJson);
         await FinishJobAsync(After(Weak), WeakJson);
         await svc.PumpOneAsync(dto.Id);
+        await BackgroundRunsEndedAsync(dto.Id);   // ohne Zusatzlinien ist der Vergleich hier schon „wird erklärt“
         return dto.Id;
     }
 

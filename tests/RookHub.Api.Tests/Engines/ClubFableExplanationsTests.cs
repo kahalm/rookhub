@@ -84,6 +84,9 @@ public class ClubFableExplanationsTests : IDisposable
         {
             ["ClubMistakeComparisons:ExplainWithAnthropic"] = enabled ? "true" : "false",
             ["ClubMistakeComparisons:AnthropicDailyCap"] = cap.ToString(),
+            // Hier geht es um den Fable-Weg selbst; die flache Sicht nach dem besten Zug (0.974.0, ein Auftrag je
+            // Vergleich) hat ihre eigene Klasse (MoveComparisonBestMoveTriesTests).
+            ["ClubMistakeComparisons:BestMoveTries"] = "0",
         }).Build(), NullLogger<ClubFableExplanations>.Instance, () => _now);
 
     private MoveComparisonService Service(ClubFableExplanations? fable) => new(_db, _jobs, _local, new MoveComparisonExplainJobs(),

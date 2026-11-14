@@ -16,6 +16,20 @@ endet (612 bestätigt, 36 ersetzt, 281 fraglich, 4 sonstige; alle Buchlösungen,
 - [ ] Der Diagramm-Antwort des Lesers ein Feld mitgeben (`solverOpponentFirst` aus `BookSolverLine.Of`), und der Leser spielt bei
       `true` den ersten Zug vor und dreht das Brett — nicht die Regel im Client nachbauen. E-Ink-Spec mittesten.
 
+## [~] Fehler-Erklärungen: warum die naheliegende Antwort auf den besten Zug nicht geht — 0.974.0 (2026-11-14)
+
+`docs/api/zuege-vergleichen.md` → „Warum die naheliegende Antwort auf den BESTEN Zug nicht geht“. Fertig: flache Sicht (Tiefe 1,
+leerer Hash) wählt die verlockenden Antworten, tiefe Rechnung nur für sie, Block im Fable-Prompt nur für die klar widerlegten,
+zwei neue Fakten (Abzugsangriff, verlorene Figur), Absatz 2 des Auftrags. Offen:
+- [ ] Am echten Modell ansehen (beim Bau kein Fable-Aufruf): nach dem Deploy den Vergleich zu Vereinspartie 251, 20...dxc3
+      neu erklären lassen — steht „21.Txe4 scheitert an 21...dxc3 22.bxc3 Dxa3“ vor der Lf1-Linie, reichen 200 Wörter?
+- [ ] Schwellen an echten Daten nachsehen (`BestMoveTryTop` 3, `BestMoveTryWithinPawns` 0,5, `BestMoveTryLossPawns` 1,0): wie oft
+      rechnet die Engine tief, wie oft bleibt ein Block übrig? Log „Zusatzlinien eingereiht“ + Zeilen `Kind` 3/4 je Vergleich.
+- [ ] Die flache Sicht hängt an Stockfish (Tiefe 1 = statische Bewertung nach Ruhesuche). Rechnet eine andere Engine als
+      Hintergrund-Engine (Lc0), sind Rang und Abstand nicht vergleichbar — dann die Schwellen prüfen oder abschalten.
+- [ ] Die beiden neuen Fakten (`DiscoveredAttacks`, `HangingCaptures`) stehen nur im neuen Block; in der Hauptlinie und bei den
+      anderen Verteidigungen wären sie ebenso sinnvoll (dort bisher nur Gabel, Feld, Materialbilanz).
+
 ## [~] Fehler-Erklärungen: taktischer Grund statt Engine-Linie — 0.971.0 (2026-11-14)
 
 `docs/api/zuege-vergleichen.md` → „Der taktische Grund statt der nacherzählten Engine-Linie“. Fertig: andere Verteidigungen in der

@@ -238,6 +238,63 @@ public class ExplanationFactsTests
 
     // ── Brettgeometrie ───────────────────────────────────────────────────────────────────────────────────────────────
 
+    // ── Abzugsangriff und verlorene Figur (0.974.0, Vereinspartie 251: 20...e4 21.Txe4 dxc3 22.bxc3 Dxa3) ──
+
+    /// <summary>Nach 20...e4 (Weiß am Zug) bzw. nach 21.Txe4 (Schwarz am Zug).</summary>
+    private const string Game251AfterE4 = "r4r1k/1p4bp/p1nq2p1/5nB1/2Bpp3/N1P3P1/PP3P1P/R2QR1K1 w - - 0 21";
+    private const string Game251AfterRxe4 = "r4r1k/1p4bp/p1nq2p1/5nB1/2BpR3/N1P3P1/PP3P1P/R2Q2K1 b - - 0 21";
+
+    [Fact]
+    public void DiscoveredAttacks_PawnLeavesTheFile_QueenBehindItAttacksTheQueen()
+    {
+        Assert.Equal(
+            ["dxc3 opens the d-file for the queen on d6, which now attacks the queen on d1 (a discovered attack)"],
+            ExplanationFacts.DiscoveredAttacks(Game251AfterRxe4, ["dxc3", "bxc3", "Qxa3", "Rb1"]));
+    }
+
+    [Fact]
+    public void DiscoveredAttacks_FileRankDiagonal_OnlyPiecesNotPawnsOrKing_OnlyTheSideThatStartsTheLine()
+    {
+        Assert.Equal(["Bb5 opens the e-file for the rook on e1, which now attacks the rook on e8 (a discovered attack)"],
+            ExplanationFacts.DiscoveredAttacks("4r1k1/8/8/8/8/8/4B3/4R1K1 w - - 0 1", ["Bb5"]));
+        Assert.Equal(["Nb5 opens the 4th rank for the rook on a4, which now attacks the rook on h4 (a discovered attack)"],
+            ExplanationFacts.DiscoveredAttacks("8/8/8/8/R2N3r/8/8/K6k w - - 0 1", ["Nb5"]));
+        Assert.Equal(["Nf5 opens the diagonal for the bishop on b2, which now attacks the queen on g7 (a discovered attack)"],
+            ExplanationFacts.DiscoveredAttacks("7k/6q1/8/8/3N4/8/1B6/K7 w - - 0 1", ["Nf5"]));
+        // Ein Abzugsschach ist nicht hier zu Hause (CheckForks/LineEvents), ein aufgedeckter Bauer kein Grund.
+        Assert.Empty(ExplanationFacts.DiscoveredAttacks("4k3/8/8/8/8/8/4B3/4R1K1 w - - 0 1", ["Bb5+"]));
+        Assert.Empty(ExplanationFacts.DiscoveredAttacks("6k1/4p3/8/8/8/8/4B3/4R1K1 w - - 0 1", ["Bb5"]));
+        // Der Zug des GEGNERS in der Linie (Halbzug 2) deckt hier den Turm e8 auf e1 auf — das ist nicht der Grund des Lesers.
+        Assert.Empty(ExplanationFacts.DiscoveredAttacks("4r1k1/8/8/8/8/8/4b3/4R1K1 w - - 0 1", ["Kh1", "Bb5"]));
+        // Die gezogene Figur selbst zählt nicht (das meldet FirstMoveAttacks).
+        Assert.Empty(ExplanationFacts.DiscoveredAttacks("4r1k1/8/8/8/8/8/8/R5K1 w - - 0 1", ["Re1"]));
+    }
+
+    [Fact]
+    public void HangingCaptures_Fall251_DerSpringerA3Faellt_weilDerBauerB2WeggelenktIst()
+    {
+        Assert.Equal(
+            ["Qxa3 takes the knight on a3 and the queen on a3 cannot be recaptured "
+             + "(at the start of this line the knight was defended only by the pawn on b2, which is no longer there)"],
+            ExplanationFacts.HangingCaptures(Game251AfterE4, ["dxc3", "bxc3", "Qxa3", "Rb1"], leads: ["Rxe4"]));
+    }
+
+    [Fact]
+    public void HangingCaptures_NurWasNichtZurueckgeschlagenWerdenKann_keinTausch_keineBauern()
+    {
+        // Ganz ungedeckt von Anfang an.
+        Assert.Equal(["Rxd5 takes the knight on d5 and the rook on d5 cannot be recaptured (the knight was not defended at the start of this line)"],
+            ExplanationFacts.HangingCaptures("4k3/8/8/3n4/8/8/8/3RK3 w - - 0 1", ["Rxd5"]));
+        // Gedeckt: der Turm d8 schlägt zurück — kein Figurengewinn.
+        Assert.Empty(ExplanationFacts.HangingCaptures("3rk3/8/8/3n4/8/8/8/3RK3 w - - 0 1", ["Rxd5", "Rxd5"]));
+        // Zurückschlagen ist ein Tausch: der Zug vor der Linie hat auf demselben Feld geschlagen.
+        Assert.Empty(ExplanationFacts.HangingCaptures("3rk3/8/8/3n4/8/8/8/3RK3 w - - 0 1", ["Rxd5"], leads: ["Rxd5"]));
+        // Ein Bauer ist keine Figur.
+        Assert.Empty(ExplanationFacts.HangingCaptures("4k3/8/8/3p4/8/8/8/3RK3 w - - 0 1", ["Rxd5"]));
+        // Nur die Seite, die die Linie beginnt.
+        Assert.Empty(ExplanationFacts.HangingCaptures("4k3/8/8/3n4/8/8/8/3RK3 b - - 0 1", ["Ke7", "Rxd5"]));
+    }
+
     [Fact]
     public void BoardGeometry_AttackedFrom_SlidersStopAtTheFirstPiece_Inclusive()
     {

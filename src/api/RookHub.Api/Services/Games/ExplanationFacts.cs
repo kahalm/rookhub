@@ -241,6 +241,118 @@ public static class ExplanationFacts
         return result;
     }
 
+    /// <summary>
+    /// Abzugsangriff in einer Linie (0.974.0, Befund an Vereinspartie 251: nach 20...e4 21.Txe4 öffnet 21...dxc3 die d-Linie,
+    /// die Dame d6 greift die Dame d1 an — in keinem Fakt stand es): ein Zug der Seite, die die Linie beginnt, nach dem
+    /// eine ANDERE eigene Langschrittfigur (Dame, Turm, Läufer) eine gegnerische Figur (ohne Bauern und König) bestreicht,
+    /// die sie davor nicht bestrich — „dxc3 opens the d-file for the queen on d6, which now attacks the queen on d1 (a
+    /// discovered attack)“. Reine Brettgeometrie (<see cref="BoardGeometry"/>): ob die Figur gedeckt ist, steht nicht da.
+    /// Ein Abzugsschach meldet <see cref="CheckForks"/> bzw. <see cref="LineEvents"/>. Nur die ersten
+    /// <paramref name="maxPlies"/> Halbzüge.
+    /// </summary>
+    public static List<string> DiscoveredAttacks(string fen, IReadOnlyList<string> sans, int maxPlies = 4)
+    {
+        var result = new List<string>();
+        try
+        {
+            var board = ChessBoard.LoadFromFen(fen);
+            for (var i = 0; i < sans.Count && i < maxPlies; i++)
+            {
+                var san = sans[i];
+                var move = Array.Find(board.Moves(generateSan: true), m => m.San == san);
+                if (move is null) break;
+                var before = i % 2 == 0 ? BoardGeometry.FromFen(board.ToFen()) : null;
+                board.Move(move);
+                if (before is null || BoardGeometry.FromFen(board.ToFen()) is not { } after) continue;
+                var white = move.Piece.Color == PieceColor.White;
+                var to = move.NewPosition.ToString();
+                foreach (var (piece, square) in after.Pieces(white))
+                {
+                    // Nur Figuren, die stehen geblieben sind (nicht die gezogene, nicht der Rochade-Turm).
+                    if (square == to || char.ToLowerInvariant(piece) is not ('q' or 'r' or 'b') || before.PieceAt(square) != piece) continue;
+                    var seen = before.AttackedFrom(square);
+                    foreach (var t in after.AttackedFrom(square).Where(s => !seen.Contains(s)))
+                    {
+                        var target = after.PieceAt(t);
+                        if (target == '\0' || char.IsUpper(target) == white || char.ToLowerInvariant(target) is 'p' or 'k') continue;
+                        result.Add($"{san} opens the {LineName(square, t)} for the {PieceName(char.ToLowerInvariant(piece))} on {square}, "
+                                   + $"which now attacks the {PieceName(char.ToLowerInvariant(target))} on {t} (a discovered attack)");
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Linie nicht nachzuspielen — was bis hierher gefunden ist, stimmt.
+        }
+        return result;
+    }
+
+    private static string LineName(string a, string b)
+        => a[0] == b[0] ? $"{a[0]}-file" : a[1] == b[1] ? $"{a[1]}{(a[1] switch { '1' => "st", '2' => "nd", '3' => "rd", _ => "th" })} rank" : "diagonal";
+
+    /// <summary>
+    /// Eine Figur, die in einer Linie einfach verloren geht (0.974.0, Vereinspartie 251: 20...e4 21.Txe4 dxc3 22.bxc3 Dxa3 —
+    /// „gewinnt den Springer“ stand nur als Summe in der Materialbilanz): ein Zug der Seite, die die Linie beginnt, schlägt
+    /// eine Figur (ohne Bauern), und der Gegner kann auf dem Feld nicht zurückschlagen (kein legaler Schlagzug dorthin) —
+    /// „Qxa3 takes the knight on a3 and the queen on a3 cannot be recaptured“. Stand die Figur schon zu Beginn der Linie
+    /// dort, steht dabei, wer sie da deckte, wenn diese Deckung inzwischen weg ist („… was defended only by the pawn on b2,
+    /// which is no longer there“) oder dass sie gar nicht gedeckt war — Brettgeometrie, Fesselungen bleiben außen vor.
+    /// KEIN Fakt ist ein Zurückschlagen (der vorige Halbzug hat auf demselben Feld geschlagen): das ist ein Tausch, den
+    /// die Materialbilanz zeigt. Nur die ersten <paramref name="maxPlies"/> Halbzüge.
+    /// </summary>
+    /// <param name="leads">Züge, die VOR der Linie ab <paramref name="fen"/> gespielt werden (der Weg bis zum Beginn der
+    /// Linie) — sie liefern keinen Fakt, sagen aber, ob der erste Zug der Linie nur zurückschlägt.</param>
+    public static List<string> HangingCaptures(string fen, IReadOnlyList<string> sans, IReadOnlyList<string>? leads = null, int maxPlies = 6)
+    {
+        var result = new List<string>();
+        try
+        {
+            var board = ChessBoard.LoadFromFen(fen);
+            string? takenOn = null;   // Feld, auf dem der vorige Halbzug geschlagen hat
+            foreach (var lead in leads ?? [])
+            {
+                var m = Array.Find(board.Moves(generateSan: true), x => x.San == lead);
+                if (m is null) return result;
+                takenOn = m.CapturedPiece is not null ? m.NewPosition.ToString() : null;
+                board.Move(m);
+            }
+            var start = BoardGeometry.FromFen(board.ToFen());
+            for (var i = 0; i < sans.Count && i < maxPlies; i++)
+            {
+                var san = sans[i];
+                var move = Array.Find(board.Moves(generateSan: true), m => m.San == san);
+                if (move is null) break;
+                var square = move.NewPosition.ToString();
+                var captured = move.CapturedPiece is { } c && move.Parameter is not MoveEnPassant ? char.ToLowerInvariant(c.Type.AsChar) : '\0';
+                var exchange = takenOn == square;
+                takenOn = move.CapturedPiece is not null ? square : null;
+                var white = move.Piece.Color == PieceColor.White;
+                board.Move(move);
+                if (i % 2 != 0 || exchange || captured is '\0' or 'p' or 'k') continue;
+                if (board.Moves().Any(m => m.CapturedPiece is not null && m.NewPosition.ToString() == square)) continue;
+                if (BoardGeometry.FromFen(board.ToFen()) is not { } now) continue;
+                var name = PieceName(captured);
+                var fact = $"{san} takes the {name} on {square} and the {PieceName(char.ToLowerInvariant(now.PieceAt(square)))} on {square} cannot be recaptured";
+                if (start is not null && start.PieceAt(square) is var stood && char.ToLowerInvariant(stood) == captured && char.IsUpper(stood) != white)
+                {
+                    var covered = start.Attackers(square, !white);
+                    if (covered.Count == 0) fact += $" (the {name} was not defended at the start of this line)";
+                    else if (covered.All(p => now.PieceAt(p.Square) != p.Piece))
+                        fact += $" (at the start of this line the {name} was defended only by "
+                                + JoinAnd(covered.Select(p => $"the {PieceName(char.ToLowerInvariant(p.Piece))} on {p.Square}").ToList())
+                                + $", which {(covered.Count == 1 ? "is" : "are")} no longer there)";
+                }
+                result.Add(fact);
+            }
+        }
+        catch
+        {
+            // Linie nicht nachzuspielen — was bis hierher gefunden ist, stimmt.
+        }
+        return result;
+    }
+
     internal static string JoinAnd(IReadOnlyList<string> items) => items.Count switch
     {
         0 => "",

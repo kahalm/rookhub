@@ -148,7 +148,7 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
     Entscheidungen kommen abwechselnd dran, bis `ClubMistakeComparisons:DefenceLines` (Vorgabe 4, 0–8, 0 = aus) erreicht ist.
     Zeile: `CandidateUci` = Fehlzug, `ReplyUci` = die andere Verteidigung, `Ordinal` = ihr Halbzug in der Linie (1/3), `Fen` =
     Stellung danach; der Weg dorthin ist der Anfang der Antwort-Linie und muss beim Lesen wieder auf `Fen` führen.
-  * **Wann und für wen**: `MoveComparisonService.StartDefencesAsync`, einmal je Vergleich beim Eintritt in „wird erklärt“
+  * **Wann und für wen**: `MoveComparisonService.StartExtraLinesAsync` (bis 0.973 `StartDefencesAsync`), einmal je Vergleich beim Eintritt in „wird erklärt“
     (jeder Weg dorthin führt durch `PumpOneAsync`, auch der direkt aus der Analyse) — NUR wo Fable schreibt
     (`ClubFableExplanations.AppliesAsync`: Vereinspartie ab dem Stichtag bzw. eigene Partie mit angeforderter
     Zusammenfassung; auf Dev mit `ExplainWithAnthropic=false` also nie). Gibt es Zeilen, geht der Vergleich zurück auf
@@ -188,6 +188,70 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
     zählt der Vergleich für die Zusammenfassung als offen.
   * **Vergleichsseite**: die Zusatzzeilen stehen nicht im DTO (`MoveComparisonView` nimmt nur Kandidaten und Antwort-Tests),
     zählen aber in `pending`/`total` mit; der Status springt für sie von „explaining“ kurz zurück auf „replies“.
+* **Warum die naheliegende Antwort auf den BESTEN Zug nicht geht** (0.974.0, Befund 2026-11-14 an Vereinspartie 251, Fehler
+  20...dxc3 statt 20...e4, Stellung `r4r1k/1p4bp/p1nq2p1/4pnB1/2Bp4/N1P3P1/PP3P1P/R2QR1K1 b`: „die eigentliche Begründung,
+  warum e4 geht, ist, dass Txe4 nicht geht“). Der Spiegelfall zu den anderen Verteidigungen: der Text erzählte 21.Lf1 nach,
+  weil 21.Txe4 in keiner Linie stand — die Kandidatenlinie des besten Zugs trägt nur die beste Antwort der Engine, die
+  Antwort-Tests nur die Antworten auf den Fehlzug.
+  * **Nicht jeder Schlag** (Nutzer: „vermutlich viel zu häufig offensichtlich. Gibt es eine Möglichkeit zu sehen, dass der
+    Schlagzug irgendwie menschlich ist, aber taktisch nicht geht? Stockfish Tiefe 1/2/3?“) — zwei Sichten
+    (`Services/Engines/MoveComparisonBestMoveTries.cs`):
+    1. **Verlockend = flache Sicht** (`MoveComparisonLineKind.BestMoveGlance` = 3): EIN Auftrag auf die Stellung nach dem
+       besten Zug mit Tiefe `:BestMoveTryShallowDepth` (1) und fünf Linien (mehr lässt das Protokoll nicht zu,
+       `EngineProtocol.MaxMultiPv`; für „unter den besten drei“ reicht es). Verlockend ist JEDER Zug — nicht nur ein
+       Schlag —, der dort unter den besten `:BestMoveTryTop` (3) liegt UND höchstens `:BestMoveTryWithinPawns` (0,5)
+       hinter dem Ersten. Die beste Antwort der tiefen Rechnung zählt nicht (sie ist schon die Kandidatenlinie).
+    2. **Taktisch falsch = tiefe Sicht** (`MoveComparisonLineKind.BestMoveTry` = 4): nur die verlockenden Züge, höchstens
+       `:BestMoveTries` (2, 0–4, **0 = aus**), je ein Auftrag mit EINER Linie in der Tiefe des Vergleichs. In den Prompt
+       kommt ein Zug nur, wenn er dort für den Gegner mindestens `:BestMoveTryLossPawns` (1,0) schlechter ist als seine
+       beste Antwort; sonst fällt er **still weg** (kein „geht ebenfalls“ — das wäre genau das Rauschen).
+    Alle Schlüssel unter `ClubMistakeComparisons:`. Ohne eigene Rechnung: ein Zug, der schon fertiger Antwort-Test ist
+    (seine Zahlen werden von dort gelesen), und einer, den eine weitere Linie des besten Kandidaten tief schon als „nicht
+    widerlegt“ zeigt.
+  * **Leerer Hash ist Pflicht** (`AnalysisJobEngineResolver.FreshSessionMaxDepth` = 4): alle Hintergrund-Aufträge eines
+    Kontos teilen sich die Sitzung `rh-bg-{UserId}`, der Provider schickt `ucinewgame` nur bei einer NEUEN `sessionId` — eine
+    Tiefe-1-Suche auf dem warmen Hash der tiefen Rechnung derselben Partie sieht deren Ergebnis. Gemessen mit dem Stockfish
+    des Engine-Providers an der Stellung nach 20...e4 (Tiefe 1, 5 Linien): leer 1. Lf4 −1,94, **2. Txe4 −2,34** (0,40
+    zurück), 3. Lf1 −2,49; nach einer Tiefe-20-Suche derselben Stellung ohne `ucinewgame` 1. Lf4 −2,49, 2. Lf1, 3. Lb3,
+    **4. Txe4 −3,06** (0,57) — Txe4 wäre nicht ausgewählt worden; mit `ucinewgame` wieder Rang 2. Tiefenaufträge bis
+    Zieltiefe 4 bekommen deshalb eine eigene Sitzung (`rh-bg-{UserId}-fresh-{JobId}`); der folgende gewöhnliche Auftrag
+    wechselt zurück und beginnt ebenfalls auf leerem Hash (zwei `ucinewgame` je flacher Sicht). Die Zahl der Linien
+    verändert die Tiefe-1-Werte ebenfalls (mit 51 statt 5 Linien war Txe4 in einer Messung Sechster) — die Schwellen gelten
+    für fünf Linien.
+  * **Ablauf**: `MoveComparisonService.StartExtraLinesAsync`, nur wo Fable schreibt (wie die Verteidigungen). Erster
+    Durchgang: die flache Sicht zusammen mit den Verteidigungen → zurück auf `Replies`. Zweiter Durchgang, sobald die
+    flache Sicht da ist: die tiefen Rechnungen der verlockenden Züge → noch einmal `Replies`, dann „wird erklärt“. Die
+    teure Rechnung läuft so nur für die null bis zwei Züge, die die flache Sicht bestehen. **Gescheitert = erledigt**:
+    ohne flache Sicht keine verlockenden Antworten, eine gescheiterte tiefe Zeile fehlt im Prompt; die Zusammenfassung
+    (`ClubGameSummaries.ReadinessAsync`) wartet nur, solange etwas offen ist. Re-Explain (`POST
+    /api/admin/move-comparisons/{id}/re-explain`) holt beides für den Bestand nach und gibt einer gescheiterten flachen
+    Sicht einen neuen Anlauf.
+  * **Mehrarbeit** (Schätzung aus Prod-Daten vom 14.11., nicht live gemessen): die Regel, mit python-chess und dem
+    Stockfish des Engine-Providers nachgebaut (Tiefe 1, 5 Linien, leerer Hash) und über die Stellung nach dem besten Zug der
+    473 bisher von Fable erklärten Vergleiche gelegt, ergibt 0 tiefe Rechnungen bei 91 (19 %), 1 bei 131 (28 %), 2 bei 251
+    (53 %) — im Mittel **1,34 je Fehler**, mehr als die anderen Verteidigungen (0,93). Ein Auftrag dieser Art (eine Linie,
+    Tiefe 30) dauerte im Bestand im Mittel 95 s (Median 44 s) → grob 2 min mehr Engine-Zeit je Fehler, dazu der
+    Tiefe-1-Auftrag (Millisekunden Rechenzeit, aber ein Platz in der Warteschlange, ein zweiter Durchgang und zweimal
+    `ucinewgame`). Wie oft ein Block übrig bleibt, ist nur grob geschätzt (Ersatzrechnung mit Tiefe 14 statt 30): bei 119
+    von 473 (25 %), zusammen 146 Züge, davon 33 Schläge — die meisten widerlegten verlockenden Züge sind also KEINE Schläge.
+    Stellschrauben, wenn das zu viel Engine-Zeit ist: `:BestMoveTries` 1, `:BestMoveTryTop` 2, `:BestMoveTryWithinPawns` kleiner.
+  * **Fakten** (Block „Obvious replies to the better move … and why they fail“, nur im Prompt für Fable, hinter „The
+    opponent's best answer to … itself“): je Zug, was er schlägt, sein Platz in der flachen Sicht („looks good at first
+    sight: the shallow search (depth 1) ranks it 2nd of 51 legal moves, 0.40 pawns behind its first choice“), die
+    Bewertung gegen die nach der besten Antwort, „this reply fails“, die Erwiderung des Lesers mit Engine-Linie und
+    „Concretely“. Dafür zwei neue geprüfte Fakten in `ExplanationFacts`: `DiscoveredAttacks` (Abzugsangriff: nach dem Zug
+    bestreicht eine ANDERE eigene Langschrittfigur eine gegnerische Figur, die sie davor nicht bestrich — „dxc3 opens the
+    d-file for the queen on d6, which now attacks the queen on d1 (a discovered attack)“; ohne Bauern/König als Ziel, nur
+    Geometrie) und `HangingCaptures` (eine Figur wird geschlagen und kann auf dem Feld nicht zurückgeschlagen werden —
+    „Qxa3 takes the knight on a3 and the queen on a3 cannot be recaptured (at the start of this line the knight was
+    defended only by the pawn on b2, which is no longer there)“; kein Fakt beim bloßen Zurückschlagen, keine Bauern). Dazu
+    wie bisher `CheckForks`, `FirstMoveAttacks` und die Materialbilanz ab der Stellung VOR dem besten Zug. Beide neuen
+    Fakten stehen NUR in diesem Block (die Blöcke von 0.971.0 sind unverändert). Die Züge zählen zu `AllowedMoves`; ein
+    verlockender, aber tief nicht widerlegter Zug bleibt verboten.
+  * **Auftrag** (`ClubFableExplanations.SystemPrompt`, Absatz 2): zuerst in einem Satz, warum die naheliegende Antwort
+    nicht geht (widerlegender Zug mit Zugnummer + Faktum, Beispiel „21.Txe4 scheitert an 21...dxc3 22.bxc3 Dxa3 mit
+    Figurengewinn“), DANN die ruhige Hauptlinie. Wortgrenze unverändert 200.
+  * **Bestand bleibt**; Vergleich neu erklären wie oben (Re-Explain).
 * **Besitz und Sichtbarkeit**: Besitzer ist der Besitzer der Analyse (Haus-Engine-Konto). Alle Nutzerwege (`/api/move-comparisons`
   Liste/Lesen/Löschen, `MaxOpenPerUser`, `MaxKeptPerUser`) filtern `GameAnalysisId == null` — die Zeilen zählen nirgends mit.
   Lesen darf, wer die Vereinspartie sieht: `GET /api/league/club/games/{id}/comparisons` (alle, nach Halbzug: `{ ply,

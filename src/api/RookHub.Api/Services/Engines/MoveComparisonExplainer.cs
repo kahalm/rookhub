@@ -22,7 +22,7 @@ internal sealed class MoveComparisonExplainer(IClaudeJsonClient llm, ClubFableEx
     {
         var id = c.Id;
         var system = SystemPrompt(c.Language);
-        var pairs = WeakerCandidates(c).Select(w => (Line: w, Facts: PairFactsOf(c, w))).Where(p => p.Facts is not null).ToList();
+        var pairs = WeakerCandidates(c).Select(w => (Line: w, Facts: PairFactsOf(c, w, fable?.Tries))).Where(p => p.Facts is not null).ToList();
         // Vereinspartie ab dem Stichtag: erst Fable (eigener Kontext — der Abfrage-Kontext läuft nicht parallel), Rückfall lokal.
         var useFable = fable != null && await fable.AppliesAsync(db, c, ct);
         var fableTexts = new string?[pairs.Count];

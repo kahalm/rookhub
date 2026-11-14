@@ -41,6 +41,16 @@ public enum MoveComparisonLineKind
     /// der der Linie — gerechnet wird die Stellung danach (eine Linie = wie der Gegner diese Verteidigung widerlegt).
     /// Auswahl und Fakten: <see cref="Services.Engines.MoveComparisonDefences"/>.</summary>
     Defence = 2,
+    /// <summary>Die FLACHE SICHT auf die Stellung nach dem BESTEN Kandidaten (0.974.0, Vereinspartien mit
+    /// Fable-Begründung): eine Suche mit Tiefe 1 und fünf Linien auf leerem Hash — welche Antworten des Gegners sehen auf
+    /// den ersten Blick gut aus? Kein <see cref="MoveComparisonLine.ReplyUci"/>. Regeln:
+    /// <see cref="Services.Engines.MoveComparisonBestMoveTries"/>.</summary>
+    BestMoveGlance = 3,
+    /// <summary>Eine VERLOCKENDE Antwort des Gegners auf den BESTEN Kandidaten (0.974.0): nach der flachen Sicht
+    /// (<see cref="BestMoveGlance"/>) unter den besten, aber nicht die beste Antwort der tiefen Rechnung — gerechnet wird
+    /// die Stellung danach in der Tiefe des Vergleichs (eine Linie = wie der Leser diese Antwort widerlegt). Erklärt wird
+    /// sie nur, wenn sie dort klar schlechter ist als die beste Antwort.</summary>
+    BestMoveTry = 4,
 }
 
 public enum MoveComparisonLineState
@@ -129,19 +139,21 @@ public class MoveComparisonLine
     public MoveComparisonLineKind Kind { get; set; }
 
     /// <summary>Candidate: der Kandidatenzug. Reply: der SCHWÄCHERE Kandidat, zu dessen besten Antworten die Zeile gehört.
-    /// Defence: der SCHWÄCHERE Kandidat, in dessen Widerlegung die andere Verteidigung liegt.</summary>
+    /// Defence: der SCHWÄCHERE Kandidat, in dessen Widerlegung die andere Verteidigung liegt. BestMoveGlance und
+    /// BestMoveTry: der BESTE Kandidat, dessen Folgestellung flach angesehen wird bzw. auf den die verlockende Antwort folgt.</summary>
     [Required, MaxLength(10)]
     public string CandidateUci { get; set; } = string.Empty;
 
     /// <summary>Reply: die Antwort des Gegners, gespielt nach dem BESTEN Kandidaten. Defence: der andere Zug des
-    /// Verteidigers (statt des Zuges der Widerlegungslinie an der Stelle <see cref="Ordinal"/>).</summary>
+    /// Verteidigers (statt des Zuges der Widerlegungslinie an der Stelle <see cref="Ordinal"/>). BestMoveTry: die
+    /// verlockende Antwort des Gegners, gespielt nach dem BESTEN Kandidaten.</summary>
     [MaxLength(10)]
     public string? ReplyUci { get; set; }
 
     /// <summary>Candidate: Reihenfolge der Auswahl. Reply: Rang der Antwort nach dem schwächeren Zug (0 = beste). Defence:
     /// der Halbzug in der besten Antwort-Linie auf den schwächeren Zug (0 = die Antwort des Gegners), an dem
     /// <see cref="ReplyUci"/> den Zug der Linie ersetzt — 1 = die erste, 3 = die zweite Entscheidung des Verteidigers; mehrere
-    /// Zeilen dürfen denselben Wert tragen.</summary>
+    /// Zeilen dürfen denselben Wert tragen. BestMoveTry: Rang der Antwort in der flachen Sicht (0 = dort der Erste).</summary>
     public int Ordinal { get; set; }
 
     /// <summary>Die gerechnete Stellung — leer bei <see cref="MoveComparisonLineState.Illegal"/>.</summary>

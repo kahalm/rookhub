@@ -33,6 +33,12 @@ namespace RookHub.Api.Services.Engines;
 /// (<see cref="MoveComparisonDefences"/>, höchstens <c>:DefenceLines</c> = <see cref="DefenceLines"/> je Vergleich, 0 = aus);
 /// der Nutzer-Prompt trägt sie samt Figurenliste und Gabel-Fakten (<see cref="MoveComparisonPrompts.UserPrompt"/> mit
 /// <c>detailed</c>), und der Auftrag verlangt Motiv, Grund und je Verteidigung einen Halbsatz.</item>
+/// <item><b>Warum die naheliegende Antwort auf den besten Zug nicht geht</b> (0.974.0, Befund an Vereinspartie 251, 20...e4:
+/// „die eigentliche Begründung, warum e4 geht, ist, dass Txe4 nicht geht“): im selben Schritt sieht die Engine die Stellung
+/// nach dem besten Zug flach an (Tiefe 1, leerer Hash) und rechnet die Antworten des Gegners, die dort gut aussehen, tief
+/// nach (<see cref="MoveComparisonBestMoveTries"/>, Schwellen <see cref="Tries"/>: höchstens <c>:BestMoveTries</c> = 2 je
+/// Vergleich, 0 = aus); nur die tief klar widerlegten stehen im Nutzer-Prompt als Block „Obvious replies to the better
+/// move“, und Absatz 2 des Auftrags beantwortet sie zuerst.</item>
 /// </list>
 /// Singleton: hält Client und Tageszähler, die Datenbank kommt vom Aufrufer.
 /// </summary>
@@ -59,6 +65,10 @@ public sealed class ClubFableExplanations
     /// <summary>Höchstzahl der Zusatzlinien „andere Verteidigung“ je Vergleich (<c>ClubMistakeComparisons:DefenceLines</c>,
     /// Vorgabe <see cref="MoveComparisonDefences.DefaultMax"/>, 0 = keine).</summary>
     public int DefenceLines { get; }
+    /// <summary>Schwellen der verlockenden Antworten auf den besten Zug (<c>ClubMistakeComparisons:BestMoveTries</c> = Deckel
+    /// der tiefen Rechnungen je Vergleich, Vorgabe 2, 0 = aus; <c>:BestMoveTryShallowDepth</c> 1, <c>:BestMoveTryTop</c> 3,
+    /// <c>:BestMoveTryWithinPawns</c> 0,5, <c>:BestMoveTryLossPawns</c> 1,0).</summary>
+    internal MoveComparisonBestMoveTries.Settings Tries { get; }
 
     public ClubFableExplanations(IClaudeJsonClient? client, IConfiguration? config, ILogger<ClubFableExplanations> logger,
         Func<DateTime>? utcNow = null)
@@ -72,6 +82,7 @@ public sealed class ClubFableExplanations
         MaxTokens = Math.Clamp(config?.GetValue<int?>("ClubMistakeComparisons:AnthropicMaxTokens") ?? DefaultMaxTokens, 500, 32_000);
         Model = ModelOf(config);
         DefenceLines = Math.Clamp(config?.GetValue<int?>("ClubMistakeComparisons:DefenceLines") ?? MoveComparisonDefences.DefaultMax, 0, 8);
+        Tries = MoveComparisonBestMoveTries.Settings.From(config);
     }
 
     /// <summary>Der Anthropic-Client nach Konfiguration (Schlüssel <c>:AnthropicApiKey</c>, sonst <c>Anthropic:ApiKey</c>).</summary>
@@ -182,14 +193,18 @@ public sealed class ClubFableExplanations
 
     /// <summary>Der Auftrag (Muster: die Erklärungen zu Partie 236 vom 08.11.; seit 0.971.0 der taktische Grund zuerst —
     /// Befund an Vereinspartie 245, 25...Lc8: der Text zählte die Engine-Linie herunter, nannte die Gabel auf d7 in den
-    /// Nebenwegen nicht und behauptete eine Stellung, die nicht auf dem Brett stand).</summary>
+    /// Nebenwegen nicht und behauptete eine Stellung, die nicht auf dem Brett stand; seit 0.974.0 beantwortet Absatz 2
+    /// zuerst, warum die naheliegende Antwort auf den besten Zug nicht geht — Befund an Vereinspartie 251, 20...e4: der Text
+    /// erzählte 21.Lf1 nach, die Frage am Brett ist 21.Txe4).</summary>
     internal const string SystemPrompt =
         """
         Du bist ein erfahrener Schachtrainer und erklärst Klubspielern (Elo 1500–2000) einen Fehler aus ihrer eigenen Ligapartie.
         Die Engine hat den gespielten Zug (den schwächeren) mit dem besten Zug verglichen; du bekommst die Stellung (FEN und
         Figurenliste), beide Züge, die Bewertungen, die besten Antworten des Gegners mit Engine-Linien, geprüfte Fakten
-        („Concretely“), Tests, wie dieselben Antworten gegen den besten Zug ausgehen, und — wo die Widerlegung erzwungen ist —
-        die anderen Verteidigungen in der Widerlegung („Other defences in the refutation line“) mit Engine-Linie und Fakten.
+        („Concretely“), Tests, wie dieselben Antworten gegen den besten Zug ausgehen, — wo die Widerlegung erzwungen ist —
+        die anderen Verteidigungen in der Widerlegung („Other defences in the refutation line“) und — wo es sie gibt — die
+        Antworten auf den besten Zug, die auf den ersten Blick gut aussehen und in der Rechnung scheitern („Obvious replies to
+        the better move“), jeweils mit Engine-Linie und Fakten.
 
         Schreibe auf Deutsch, in zwei kurzen Absätzen und höchstens einem Merksatz, zusammen höchstens 200 Wörter:
         1. Der taktische Grund, nicht die Nacherzählung der Engine-Linie. Nenne zuerst das Motiv beim Namen (z. B.
@@ -202,9 +217,13 @@ public sealed class ClubFableExplanations
            „alle Züge verlieren“ nur, wenn die Fakten die Zahl der legalen Züge nennen („exactly … legal moves“);
            Verteidigungen, die nicht gerechnet sind, erwähnst du nicht. Von der Hauptlinie nur so viel, wie zum Verständnis
            nötig ist (meist zwei bis vier Halbzüge) — nie die ganze Engine-Linie herunterzählen.
-        2. Was der beste Zug stattdessen erreicht — wieder der Grund (welches Feld, welche Figur er deckt oder welche Drohung
-           er nimmt, soweit belegt), mit einer kurzen Linie aus den Daten, und warum die Widerlegung dort nicht (so)
-           funktioniert.
+        2. Was der beste Zug stattdessen erreicht. Beantworte ZUERST die Frage, die der Leser am Brett hat: Steht unter
+           „Obvious replies to the better move“ eine Antwort des Gegners — ein Zug, der auf den ersten Blick gut aussieht
+           (oft das Schlagen der gerade gezogenen Figur) und erst in der Rechnung scheitert —, sag zu jeder in einem
+           Satz, warum sie nicht geht: der widerlegende Zug mit Zugnummer und das Faktum dazu (z. B. „21.Txe4 scheitert
+           an 21...dxc3 22.bxc3 Dxa3 mit Figurengewinn“). DANN erst die ruhige Hauptlinie: der Grund (welches Feld,
+           welche Figur der beste Zug deckt oder welche Drohung er nimmt, soweit belegt), mit einer kurzen Linie aus den
+           Daten, und warum die Widerlegung dort nicht (so) funktioniert.
         3. Passt einer der Merksätze aus der Liste im Auftrag wirklich zu diesem Fehler, eine letzte Zeile
            „Merksatz: <Kennung>“ mit seiner Kennung (z. B. „Merksatz: raum-und-tausch“). Passt keiner genau, lass die Zeile
            weg. Erfinde nie einen eigenen Merksatz und schreibe den Wortlaut nicht selbst — er wird nach der Kennung eingesetzt.

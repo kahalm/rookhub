@@ -38,18 +38,23 @@ internal static class MoveComparisonPrompts
         string Fen, bool MoverWhite, int Depth,
         string BestSan, string BestFen, string? BestEval, IReadOnlyList<Pv> BestReplies,
         string WeakSan, string WeakFen, string? WeakEval, IReadOnlyList<Pv> WeakReplies,
-        IReadOnlyList<ReplyTest> Tests, IReadOnlyList<MoveComparisonDefences.Decision>? Defences = null)
+        IReadOnlyList<ReplyTest> Tests, IReadOnlyList<MoveComparisonDefences.Decision>? Defences = null,
+        IReadOnlyList<MoveComparisonBestMoveTries.Try>? Tries = null)
     {
-        /// <summary>Jeder Zug, den der Text nennen darf: beide Kandidaten, alle gegebenen Linien, die Antwort-Tests und — seit
-        /// 0.971.0 — die anderen Verteidigungen in der Widerlegung samt ihrer Linien.</summary>
+        /// <summary>Jeder Zug, den der Text nennen darf: beide Kandidaten, alle gegebenen Linien, die Antwort-Tests, — seit
+        /// 0.971.0 — die anderen Verteidigungen in der Widerlegung samt ihrer Linien und — seit 0.974.0 — die
+        /// verlockenden, tief widerlegten Antworten auf den besten Zug samt ihrer Linien.</summary>
         public IEnumerable<string> AllowedMoves() => new[] { BestSan, WeakSan }
             .Concat(BestReplies.SelectMany(p => p.Line)).Concat(WeakReplies.SelectMany(p => p.Line))
             .Concat(Tests.Select(t => t.ReplySan)).Concat(Tests.SelectMany(t => t.Answer))
             .Concat((Defences ?? []).SelectMany(d => d.Prefix.Append(d.MainSan)
-                .Concat(d.Defences.SelectMany(x => x.Line.Prepend(x.San)))));
+                .Concat(d.Defences.SelectMany(x => x.Line.Prepend(x.San)))))
+            .Concat((Tries ?? []).SelectMany(t => t.Line.Prepend(t.San)));
     }
 
-    internal static PairFacts? PairFactsOf(MoveComparison c, MoveComparisonLine weak)
+    /// <param name="tries">Schwellen für die verlockenden Antworten auf den besten Zug
+    /// (<see cref="MoveComparisonBestMoveTries"/>); <c>null</c> = die Vorgaben.</param>
+    internal static PairFacts? PairFactsOf(MoveComparison c, MoveComparisonLine weak, MoveComparisonBestMoveTries.Settings? tries = null)
     {
         var best = c.Lines.FirstOrDefault(l => l.Kind == MoveComparisonLineKind.Candidate && l.CandidateUci == c.BestUci);
         if (best is null) return null;
@@ -73,7 +78,8 @@ internal static class MoveComparisonPrompts
         return new PairFacts(c.Fen, moverWhite, c.Depth,
             bestSan, best.Fen, EvalOf(best.Fen, best.ResultJson) is { } be ? MoverText(be, moverWhite) : null, Pvs(best.Fen, best.ResultJson),
             weakSan, weak.Fen, EvalOf(weak.Fen, weak.ResultJson) is { } we ? MoverText(we, moverWhite) : null, weakReplies,
-            tests, MoveComparisonDefences.Of(c, weak));
+            tests, MoveComparisonDefences.Of(c, weak),
+            MoveComparisonBestMoveTries.Of(c, weak, tries ?? MoveComparisonBestMoveTries.Settings.Default));
     }
 
     internal static string SystemPrompt(string lang) =>
@@ -102,8 +108,9 @@ internal static class MoveComparisonPrompts
         """;
 
     /// <param name="detailed">Der ausführliche Faktenblock für Fable (0.971.0): Figurenliste, Gabel-Fakten
-    /// (<see cref="ExplanationFacts.CheckForks"/>) und die anderen Verteidigungen in der Widerlegung
-    /// (<see cref="MoveComparisonDefences"/>). Das lokale Modell bekommt ihn NICHT — sein Auftrag (90 Wörter, höchstens zwei
+    /// (<see cref="ExplanationFacts.CheckForks"/>), die anderen Verteidigungen in der Widerlegung
+    /// (<see cref="MoveComparisonDefences"/>) und — seit 0.974.0 — die verlockenden, tief widerlegten Antworten auf den
+    /// besten Zug (<see cref="MoveComparisonBestMoveTries"/>). Das lokale Modell bekommt ihn NICHT — sein Auftrag (90 Wörter, höchstens zwei
     /// Züge je Linie) ist dafür nicht gebaut, und sein Prompt bleibt Zeichen für Zeichen wie bisher.</param>
     internal static string UserPrompt(PairFacts f, bool detailed = false)
     {
@@ -161,6 +168,7 @@ internal static class MoveComparisonPrompts
             var p = f.BestReplies[0];
             lines.Add($"The opponent's best answer to {best} itself: {Numbered(f.BestFen, [p.San])} ({p.MoverEval(f.MoverWhite)}): {Numbered(f.BestFen, p.Line)}");
         }
+        if (detailed && f.Tries is { Count: > 0 } tries) lines.AddRange(TryBlock(f, tries, best));
         lines.Add($"Reader: plays {you} — \"you\" is the reader, {(f.MoverWhite ? "Black" : "White")} is \"your opponent\".");
         return string.Join('\n', lines);
     }
@@ -198,6 +206,41 @@ internal static class MoveComparisonPrompts
                         .Concat(ExplanationFacts.LineEvents(f.Fen, x.Line, gainerWhite: !f.MoverWhite, lead: f.WeakSan, leads: [.. d.Prefix, x.San])));
                 if (facts.Count > 0) lines.Add($"  Concretely, after {alt}: {string.Join("; ", facts)}.");
             }
+        }
+        return lines;
+    }
+
+    /// <summary>
+    /// Der Block „Obvious replies to the better move“ (0.974.0): die Züge des Gegners, die auf den ersten Blick gut
+    /// aussehen (flache Sicht) und in der tiefen Rechnung klar scheitern — die Frage, die der Leser am Brett zuerst hat
+    /// (Auswahl: <see cref="MoveComparisonBestMoveTries"/>). Je Antwort ihr Platz in der flachen Sicht, die Bewertung gegen
+    /// die nach der besten Antwort, die Erwiderung des Lesers mit Engine-Linie und geprüfte Fakten: Gabel, Abzugsangriff
+    /// (<see cref="ExplanationFacts.DiscoveredAttacks"/>), verlorene Figur (<see cref="ExplanationFacts.HangingCaptures"/>),
+    /// Materialbilanz ab der Stellung VOR dem besten Zug.
+    /// </summary>
+    private static List<string> TryBlock(PairFacts f, IReadOnlyList<MoveComparisonBestMoveTries.Try> tries, string best)
+    {
+        var main = f.BestReplies.Count > 0 ? Numbered(f.BestFen, [f.BestReplies[0].San]) : null;
+        var lines = new List<string>
+        {
+            $"Obvious replies to the better move {best} and why they fail — moves that look good at first sight but lose when "
+            + $"calculated to depth {f.Depth}, the first thing the reader asks at the board; evaluation from the reader's view, "
+            + "the reader's reply with the engine line, checked facts:",
+        };
+        foreach (var t in tries)
+        {
+            var reply = Numbered(f.BestFen, [t.San]);
+            var sight = $"{(t.Takes is null ? "" : t.Takes + "; ")}looks good at first sight: {t.FirstSight}";
+            var against = main is null ? "" : $", against {f.BestEval ?? "?"} after the opponent's best answer {main}";
+            var engine = t.Line.Count > 0 ? $" The reader's reply, with the engine line: {Numbered(t.FenAfter, t.Line)}." : "";
+            lines.Add($"- {reply} ({sight}): evaluation from the reader's view {t.Eval}{Level(t.Eval)}{against} — this reply fails.{engine}");
+            if (t.Line.Count == 0) continue;
+            var facts = WithForks(ExplanationFacts.CheckForks(t.FenAfter, t.Line),
+                ExplanationFacts.DiscoveredAttacks(t.FenAfter, t.Line)
+                    .Concat(ExplanationFacts.FirstMoveAttacks(t.FenAfter, t.Line))
+                    .Concat(ExplanationFacts.HangingCaptures(f.BestFen, t.Line, leads: [t.San]))
+                    .Concat(ExplanationFacts.LineEvents(f.Fen, t.Line, gainerWhite: f.MoverWhite, lead: f.BestSan, leads: [t.San])));
+            if (facts.Count > 0) lines.Add($"  Concretely, after {best} {reply}: {string.Join("; ", facts)}.");
         }
         return lines;
     }

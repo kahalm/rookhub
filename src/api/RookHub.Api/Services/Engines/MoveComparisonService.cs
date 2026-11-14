@@ -192,7 +192,7 @@ public sealed class MoveComparisonService
     /// als Stapel-Hintergrundarbeit wie die Analyse der Vereinspartien selbst (<see cref="AnalysisJob.Background"/> +
     /// <see cref="AnalysisJob.Batch"/>): nach allem, worauf jemand wartet, und in den Sperrzeiten der Haus-Engine nicht. Wartet
     /// eine Zusammenfassung der Partie darauf, nur Hintergrund, kein Stapel (<see cref="ClubMistakeComparisons.SummaryWantedAsync"/>).</summary>
-    private async Task<int> CreateJobAsync(MoveComparison c, string fen, int multiPv, CancellationToken ct)
+    private async Task<int> CreateJobAsync(MoveComparison c, string fen, int multiPv, CancellationToken ct, int? depth = null)
     {
         var club = c.GameAnalysisId != null;
         var wanted = club && await ClubMistakeComparisons.SummaryWantedAsync(_db, c.GameAnalysisId!.Value, ct);
@@ -203,7 +203,7 @@ public sealed class MoveComparisonService
             : null;
         var job = await _jobs.CreateAsync(c.UserId, new CreateAnalysisJobRequest
         {
-            Fen = fen, TargetDepth = c.Depth, MultiPv = multiPv, Title = JobTitle,
+            Fen = fen, TargetDepth = depth ?? c.Depth, MultiPv = multiPv, Title = JobTitle,
         }, ct, remember: false, engineOwnerUserId: c.EngineOwnerUserId ?? c.UserId, background: club, batch: batch,
             priority: priority);
         return job.Id;
@@ -325,7 +325,8 @@ public sealed class MoveComparisonService
             await StartRepliesAsync(c, ct);
             changed = true;
         }
-        // Antwort-Tests UND andere Verteidigungen (0.971.0): offen hält auf, gescheitert nicht.
+        // Antwort-Tests UND Zusatzlinien (andere Verteidigungen 0.971.0; flache Sicht und verlockende Antworten auf den
+        // besten Zug 0.974.0): offen hält auf, gescheitert nicht.
         if (c.Status == MoveComparisonStatus.Replies
             && c.Lines.Where(l => l.Kind != MoveComparisonLineKind.Candidate).All(l => l.State != MoveComparisonLineState.Pending))
         {
@@ -337,7 +338,7 @@ public sealed class MoveComparisonService
             c.Status = MoveComparisonStatus.Done;
             changed = true;
         }
-        if (c.Status == MoveComparisonStatus.Explaining && await StartDefencesAsync(c, ct)) changed = true;
+        if (c.Status == MoveComparisonStatus.Explaining && await StartExtraLinesAsync(c, ct)) changed = true;
         if (changed)
         {
             c.UpdatedAt = DateTime.UtcNow;
@@ -398,49 +399,79 @@ public sealed class MoveComparisonService
     }
 
     /// <summary>
-    /// Vor der Begründung durch Fable: die anderen Verteidigungen in der Widerlegung einreihen (0.971.0,
-    /// <see cref="MoveComparisonDefences"/>) — einmal je Vergleich, nur wo Fable schreibt (Vereinspartie ab dem Stichtag bzw.
-    /// eigene Partie mit angeforderter Zusammenfassung; sonst wäre die Engine-Zeit verschenkt). Gibt es etwas zu rechnen,
-    /// geht der Vergleich zurück auf <see cref="MoveComparisonStatus.Replies"/> und kommt nach den Aufträgen von selbst wieder
-    /// hier an. Jeder Weg in die Begründung führt durch <see cref="PumpOneAsync"/>, auch der direkt aus der Analyse
-    /// (<see cref="MoveComparisonFromAnalysis"/>) und der neu angestoßene (<see cref="ReexplainAsync"/>). Ein Auftrag, der
-    /// sich nicht einreihen lässt, macht nur seine Zeile <c>Failed</c> — der Text entsteht dann ohne diese Verteidigung.
-    /// → ob Zeilen dazukamen.
+    /// Vor der Begründung durch Fable die Zusatzlinien einreihen — nur wo Fable schreibt (Vereinspartie ab dem Stichtag bzw.
+    /// eigene Partie mit angeforderter Zusammenfassung; sonst wäre die Engine-Zeit verschenkt), jede Art einmal je Vergleich:
+    /// <list type="bullet">
+    /// <item>die anderen Verteidigungen in der Widerlegung (0.971.0, <see cref="MoveComparisonDefences"/>);</item>
+    /// <item>die flache Sicht auf die Stellung nach dem besten Zug (0.974.0, <see cref="MoveComparisonBestMoveTries.PlanGlance"/>:
+    /// Tiefe 1, fünf Linien, leerer Hash) — im selben Durchgang wie die Verteidigungen;</item>
+    /// <item>sobald die flache Sicht da ist, in einem ZWEITEN Durchgang die tiefe Rechnung der Antworten, die dort gut
+    /// aussehen (<see cref="MoveComparisonBestMoveTries.Plan"/>) — die teure Rechnung läuft so nur für die null bis zwei
+    /// Züge, die die flache Sicht bestehen.</item>
+    /// </list>
+    /// Gibt es etwas zu rechnen, geht der Vergleich zurück auf <see cref="MoveComparisonStatus.Replies"/> und kommt nach den
+    /// Aufträgen von selbst wieder hier an. Jeder Weg in die Begründung führt durch <see cref="PumpOneAsync"/>, auch der
+    /// direkt aus der Analyse (<see cref="MoveComparisonFromAnalysis"/>) und der neu angestoßene (<see cref="ReexplainAsync"/>
+    /// — ein Vergleich, der seine Verteidigungen schon hat, bekommt dort nur das Fehlende nach). Ein Auftrag, der sich nicht
+    /// einreihen lässt, macht nur seine Zeile <c>Failed</c> — der Text entsteht dann ohne diese Linie (ohne flache Sicht ohne
+    /// verlockende Antworten). → ob Zeilen dazukamen.
     /// </summary>
-    private async Task<bool> StartDefencesAsync(MoveComparison c, CancellationToken ct)
+    private async Task<bool> StartExtraLinesAsync(MoveComparison c, CancellationToken ct)
     {
-        if (_fable is not { DefenceLines: > 0 } || c.GameAnalysisId is null || _running.IsRunning(c.Id)
-            || c.Lines.Any(l => l.Kind == MoveComparisonLineKind.Defence) || !await _fable.AppliesAsync(_db, c, ct)) return false;
-        var lines = MoveComparisonDefences.Plan(c, _fable.DefenceLines);
+        if (_fable is null || c.GameAnalysisId is null || _running.IsRunning(c.Id)) return false;
+        var glance = c.Lines.FirstOrDefault(l => l.Kind == MoveComparisonLineKind.BestMoveGlance);
+        var defences = _fable.DefenceLines > 0 && !c.Lines.Any(l => l.Kind == MoveComparisonLineKind.Defence);
+        var shallow = _fable.Tries.Max > 0 && glance is null;
+        var tries = _fable.Tries.Max > 0 && glance is { State: MoveComparisonLineState.Done }
+            && !c.Lines.Any(l => l.Kind == MoveComparisonLineKind.BestMoveTry);
+        if ((!defences && !shallow && !tries) || !await _fable.AppliesAsync(_db, c, ct)) return false;
+        var lines = new List<MoveComparisonLine>();
+        if (defences) lines.AddRange(MoveComparisonDefences.Plan(c, _fable.DefenceLines));
+        if (shallow && MoveComparisonBestMoveTries.PlanGlance(c) is { } look) lines.Add(look);
+        if (tries) lines.AddRange(MoveComparisonBestMoveTries.Plan(c, _fable.Tries));
         if (lines.Count == 0) return false;
         foreach (var line in lines) c.Lines.Add(line);
         foreach (var line in lines.Where(l => l.State == MoveComparisonLineState.Pending))
         {
-            try { line.AnalysisJobId = await CreateJobAsync(c, line.Fen, 1, ct); }
+            var flat = line.Kind == MoveComparisonLineKind.BestMoveGlance;
+            try
+            {
+                line.AnalysisJobId = await CreateJobAsync(c, line.Fen, flat ? MoveComparisonBestMoveTries.GlanceLines : 1, ct,
+                    flat ? _fable.Tries.ShallowDepth : null);
+            }
             catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
             {
-                _logger.LogWarning("Zugvergleich {Id}: Verteidigung {Move} nicht eingereiht: {Message}", c.Id, line.ReplyUci, ex.Message);
+                _logger.LogWarning("Zugvergleich {Id}: Zusatzlinie {Kind} {Move} nicht eingereiht: {Message}", c.Id, line.Kind, line.ReplyUci, ex.Message);
                 line.State = MoveComparisonLineState.Failed;
             }
         }
         if (lines.Any(l => l.State == MoveComparisonLineState.Pending)) c.Status = MoveComparisonStatus.Replies;
-        _logger.LogInformation("Zugvergleich {Id}: {Count} andere Verteidigungen in der Widerlegung eingereiht ({Moves})", c.Id,
-            lines.Count, string.Join(' ', lines.Select(l => l.ReplyUci)));
+        string Moves(MoveComparisonLineKind kind) => string.Join(' ', lines.Where(l => l.Kind == kind).Select(l => l.ReplyUci));
+        _logger.LogInformation("Zugvergleich {Id}: Zusatzlinien eingereiht — andere Verteidigungen [{Defences}], flache Sicht nach dem besten Zug {Glance}, verlockende Antworten [{Tries}]",
+            c.Id, Moves(MoveComparisonLineKind.Defence), lines.Any(l => l.Kind == MoveComparisonLineKind.BestMoveGlance) ? "ja" : "nein",
+            Moves(MoveComparisonLineKind.BestMoveTry));
         return true;
     }
 
     /// <summary>
     /// Einen FERTIGEN Vergleich einer Partie-Analyse neu erklären lassen (0.971.0, Admin auf Zuruf — der Bestand wird nie von
     /// selbst neu erklärt, jeder Lauf kostet Fable-Aufrufe): zurück auf <see cref="MoveComparisonStatus.Explaining"/>, die Pumpe
-    /// rechnet beim nächsten Takt fehlende andere Verteidigungen nach (<see cref="StartDefencesAsync"/>) und stößt die
+    /// rechnet beim nächsten Takt fehlende Zusatzlinien nach (<see cref="StartExtraLinesAsync"/>) und stößt die
     /// Begründung an. Die alte Begründung bleibt stehen, bis eine neue da ist (und bleibt, wenn keine brauchbare kommt).
     /// → <c>null</c> = gibt es nicht / kein Vergleich einer Partie, <c>false</c> = nicht fertig (läuft noch), <c>true</c> = angestoßen.
     /// </summary>
     public async Task<bool?> ReexplainAsync(int id, CancellationToken ct = default)
     {
-        var c = await _db.MoveComparisons.FirstOrDefaultAsync(x => x.Id == id && x.GameAnalysisId != null, ct);
+        var c = await _db.MoveComparisons.Include(x => x.Lines).FirstOrDefaultAsync(x => x.Id == id && x.GameAnalysisId != null, ct);
         if (c is null) return null;
         if (c.Status != MoveComparisonStatus.Done || _running.IsRunning(id)) return false;
+        // Eine gescheiterte flache Sicht (Auftrag verschwunden, keine Engine) bekommt hier einen neuen Anlauf — ohne sie
+        // gäbe es für diesen Vergleich nie verlockende Antworten auf den besten Zug.
+        foreach (var failed in c.Lines.Where(l => l.Kind == MoveComparisonLineKind.BestMoveGlance && l.State == MoveComparisonLineState.Failed).ToList())
+        {
+            c.Lines.Remove(failed);
+            _db.Remove(failed);
+        }
         c.Status = MoveComparisonStatus.Explaining;
         c.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
