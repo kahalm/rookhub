@@ -25,11 +25,15 @@ internal sealed class ClubGameWriter
     private readonly GameAnalysisService? _analyses;
     private readonly LeaguePairingFinder _pairings;
     private readonly ClubGameReader _reader;
+    /// <summary>Zusammenfassung automatisch anfordern — nach dem Anlegen (<see cref="SaveAsync"/>) und nach dem nachträglichen
+    /// Zuordnen einer Ligapaarung; die Regeln stehen dort.</summary>
+    private readonly ClubGameAutoSummary _autoSummary;
 
     public ClubGameWriter(AppDbContext db, ILogger log, Func<DateTime> now, GameAnalysisService? analyses,
-        LeaguePairingFinder pairings, ClubGameReader reader)
+        LeaguePairingFinder pairings, ClubGameReader reader, Microsoft.Extensions.Configuration.IConfiguration? config = null)
     {
         _db = db; _log = log; _now = now; _analyses = analyses; _pairings = pairings; _reader = reader;
+        _autoSummary = new ClubGameAutoSummary(db, log, now, config);
     }
 
     private IQueryable<LeagueClubGame> Games(LeagueClub club) => ClubGameReader.GamesOf(_db, club);
@@ -45,7 +49,9 @@ internal sealed class ClubGameWriter
     /// <c>clubGameId</c> und den Nachtrag von Partien, die vor 0.832.0 eingelesen wurden. → ob es die Partie gibt, und die gesetzte Paarung.
     /// </summary>
     /// <param name="clubId">Nur eine Partie dieses Vereins (sonst <c>Found = false</c>).</param>
-    public async Task<(bool Found, int? Id)> AssignPairingIfUnlinkedAsync(int clubGameId, CancellationToken ct = default, int? clubId = null)
+    /// <param name="userId">Wer zuordnet — Anforderer einer dadurch automatisch angeforderten Zusammenfassung.</param>
+    public async Task<(bool Found, int? Id)> AssignPairingIfUnlinkedAsync(int clubGameId, CancellationToken ct = default, int? clubId = null,
+        int? userId = null)
     {
         var g = await _db.LeagueClubGames.FirstOrDefaultAsync(x => x.Id == clubGameId && (clubId == null || x.ClubId == clubId), ct);
         if (g is null) return (false, null);
@@ -59,6 +65,7 @@ internal sealed class ClubGameWriter
         await RebalanceAsync(club, new[] { g }, ct);
         _log.LogInformation("Vereins-Datenbank: Partie {Id} nachträglich zugeordnet — Brettpaarung {Pairing}{Provisional}", g.Id,
             g.LeagueGameId, g.LeaguePairingProvisional ? " (vorläufig)" : "");
+        await _autoSummary.RequestAsync(new[] { g }, userId, ct);
         return (true, g.LeagueGameId);
     }
 
@@ -130,13 +137,18 @@ internal sealed class ClubGameWriter
     /// <param name="uploaderUserId">Mit Konto hochgeladen: dieses Konto bekommt die Glocke, sobald die Analyse der Partie
     /// tief durch ist (0.904.0, <see cref="GameAnalysisWatchers"/>) — auch bei „Schwaz"-Partien, die den Hochladenden
     /// sonst nicht speichern (die Zeile ist intern und geht mit der Glocke).</param>
-    internal async Task SaveAsync(List<LeagueClubGame> games, CancellationToken ct, int? uploaderUserId = null)
+    /// <param name="dateOf">Der volle Partietag aus dem Upload (die Zeile trägt nur das Jahr) — für die Altersgrenze der
+    /// automatischen Zusammenfassung (<see cref="ClubGameAutoSummary"/>).</param>
+    internal async Task SaveAsync(List<LeagueClubGame> games, CancellationToken ct, int? uploaderUserId = null,
+        Func<LeagueClubGame, DateOnly?>? dateOf = null)
     {
         if (games.Count == 0) return;
         _db.LeagueClubGames.AddRange(games);
         await _db.SaveChangesAsync(ct);
         if (uploaderUserId is int uid) await WatchAsync(uid, games.Select(g => g.Id), ct);
         await RefreshCardsAsync(games.SelectMany(g => new[] { g.WhiteFide, g.BlackFide }), ct);
+        // Neue Ligapartie der laufenden Saison: Zusammenfassung gleich anfordern (die Paarung steht seit ApplyPairingsAsync).
+        await _autoSummary.RequestAsync(games, uploaderUserId, ct, dateOf);
     }
 
     /// <summary>Glocke „Analyse fertig" vormerken — Beiwerk: ein Fehler dabei lässt den Upload nicht scheitern.</summary>
@@ -257,6 +269,7 @@ internal sealed class ClubGameWriter
         if (req.White != null) (g.WhiteRealName, g.WhiteRealFide) = (built.WhiteRealName, built.WhiteRealFide);
         if (req.Black != null) (g.BlackRealName, g.BlackRealFide) = (built.BlackRealName, built.BlackRealFide);
         // Brettpaarung (0.678.0): fehlt = unverändert
+        var linkedBefore = g.LeagueGameId;
         if (req.LeagueGameId is { } pairing)
         {
             var year = g.Year;
@@ -275,6 +288,8 @@ internal sealed class ClubGameWriter
         if (_analyses != null) await _analyses.SyncClubGameAsync(g, ct);
         await RefreshCardsAsync(before.Concat(new[] { g.WhiteFide, g.BlackFide }), ct);
         await RememberAsync(remember, ct);
+        // Nachträglich einer Ligapaarung zugeordnet (oder umgehängt): wie eine neue Ligapartie.
+        if (g.LeagueGameId is { } linkedNow && linkedNow != linkedBefore) await _autoSummary.RequestAsync(new[] { g }, userId, ct);
         _log.LogInformation("Vereins-Datenbank: Partie {Id} korrigiert", g.Id);
         return (g, null);
     }

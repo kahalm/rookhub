@@ -77,12 +77,13 @@ public sealed class LeagueClubService
     /// <remarks>Die Teile (Zerlegung Z14) baut die Fassade selbst aus ihren Abhängigkeiten — eine Paarungssuche für alle,
     /// derselbe Logger (Kategorie bleibt <c>LeagueClubService</c>).</remarks>
     public LeagueClubService(AppDbContext db, ILogger<LeagueClubService> log, Func<DateTime>? now = null,
-        GameAnalysisService? analyses = null, LeagueShareUploadQuota? shareQuota = null, IMemoryCache? cache = null)
+        GameAnalysisService? analyses = null, LeagueShareUploadQuota? shareQuota = null, IMemoryCache? cache = null,
+        Microsoft.Extensions.Configuration.IConfiguration? config = null)
     {
         var clock = now ?? (() => DateTime.UtcNow);
         var pairings = new LeaguePairingFinder(db) { Today = () => DateOnly.FromDateTime(clock()) };
         _reader = new ClubGameReader(db, log, cache, pairings);
-        _writer = new ClubGameWriter(db, log, clock, analyses, pairings, _reader);
+        _writer = new ClubGameWriter(db, log, clock, analyses, pairings, _reader, config);
         _pgn = new ClubPgnReader(db, log, clock, shareQuota ?? new LeagueShareUploadQuota(), pairings, _reader, _writer);
     }
 
@@ -192,8 +193,9 @@ public sealed class LeagueClubService
     // ── Schreiben (ClubGameWriter) ──────────────────────────────────
 
     /// <inheritdoc cref="ClubGameWriter.AssignPairingIfUnlinkedAsync"/>
-    public Task<(bool Found, int? Id)> AssignPairingIfUnlinkedAsync(int clubGameId, CancellationToken ct = default, int? clubId = null) =>
-        _writer.AssignPairingIfUnlinkedAsync(clubGameId, ct, clubId);
+    public Task<(bool Found, int? Id)> AssignPairingIfUnlinkedAsync(int clubGameId, CancellationToken ct = default, int? clubId = null,
+        int? userId = null) =>
+        _writer.AssignPairingIfUnlinkedAsync(clubGameId, ct, clubId, userId);
 
     /// <inheritdoc cref="ClubGameWriter.ConfirmPairingAsync"/>
     public Task<(bool? Changed, string? Reason)> ConfirmPairingAsync(LeagueClub club, int userId, bool canManage, int id, CancellationToken ct = default) =>

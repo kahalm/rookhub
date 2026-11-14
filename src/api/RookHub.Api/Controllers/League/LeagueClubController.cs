@@ -365,7 +365,7 @@ public class LeagueClubController : BaseApiController
     [HttpPost("games/{id:int}/pairing/auto")]
     [HasPermission(Permissions.LeagueManage)]
     public Task<IActionResult> AutoPairing(int id, CancellationToken ct) => WithClubAsync(ct, async club =>
-        await _club.AssignPairingIfUnlinkedAsync(id, ct, club.Id) is var r && r.Found ? Ok(new { leagueGameId = r.Id }) : NotFound());
+        await _club.AssignPairingIfUnlinkedAsync(id, ct, club.Id, GetUserId()) is var r && r.Found ? Ok(new { leagueGameId = r.Id }) : NotFound());
 
     [HttpGet("scans")]
     [HasPermission(Permissions.LeagueContribute)]

@@ -297,6 +297,7 @@ internal sealed class ClubGameSummaryConfiguration : IEntityTypeConfiguration<Cl
     {
         e.HasIndex(s => s.ClubGameId).IsUnique();
         e.HasIndex(s => s.Status);
+        e.HasIndex(s => s.AutoRequestedAt);   // Tagesdeckel der automatischen Anforderungen (ClubGameAutoSummary)
         e.Property(s => s.Markdown).HasColumnType("LONGTEXT");
         e.Property(s => s.MovesHash).HasMaxLength(64);
         e.Property(s => s.Model).HasMaxLength(60);

@@ -1451,6 +1451,9 @@ namespace RookHub.Api.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("AutoRequestedAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<int>("ClubGameId")
                         .HasColumnType("int");
 
@@ -1485,6 +1488,8 @@ namespace RookHub.Api.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AutoRequestedAt");
 
                     b.HasIndex("ClubGameId")
                         .IsUnique();

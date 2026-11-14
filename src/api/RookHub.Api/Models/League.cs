@@ -648,6 +648,10 @@ public class ClubGameSummary
     public string? Model { get; set; }
     public int? RequestedByUserId { get; set; }
     public DateTime RequestedAt { get; set; }
+    /// <summary>Wann die Zusammenfassung AUTOMATISCH angefordert wurde (neue Ligapartie der laufenden Saison,
+    /// <c>Services/League/ClubGameAutoSummary.cs</c>); <c>null</c> = nur von Hand. Bleibt bei einem späteren Neu-Anfordern
+    /// stehen — daran zählt der Tagesdeckel <c>ClubGameSummaries:Auto:DailyLimit</c>.</summary>
+    public DateTime? AutoRequestedAt { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? DoneAt { get; set; }
     public string? Error { get; set; }

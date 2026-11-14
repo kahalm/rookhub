@@ -71,6 +71,52 @@ Zusammenfassung wird samt eingereihter Aufträge umgestellt. Der Nachtrag läuft
 
 Archivierte Vereinspartien (durch ein neueres Formular ersetzt, `ArchivedAt`) haben bewusst keine Analyse mehr.
 
+## Automatisch für neue Ligapartien der laufenden Saison (0.966.0)
+
+Wunsch 2026-11-14: „neue aktuelle Ligapartien automatisch Summary erzeugen“. Wird eine Vereinspartie **neu angelegt** und ist
+sie eine Ligapartie der laufenden Saison, legt der Server die Anforderung selbst an — dieselbe Zeile wie nach dem Klick eines
+Admins (Status `requested`), danach läuft alles wie unter „Ablauf“ (Analyse wird vorgezogen, der Watcher schreibt). Gleiches,
+wenn eine vorhandene Partie erst **nachträglich** einer Ligapaarung der laufenden Saison zugeordnet wird. Regeln an EINER
+Stelle: `Services/League/ClubGameAutoSummary.cs`, gerufen nur aus `ClubGameWriter`:
+
+- `SaveAsync` — darüber läuft jedes Anlegen: PGN-/ChessBase-Import (`POST api/league/club/games/import`; ChessBase wird vorher nur nach PGN gewandelt), Partie aus einem
+  Partieformular bzw. von Hand (`POST api/league/club/games`), beides auch über den Teilen-Link. Ersetzt ein neueres Formular
+  eine Partie, ist die neue Fassung eine neue Partie (bekommt eine Anforderung); die archivierte behält ihre Zeile.
+- `AssignPairingIfUnlinkedAsync` (`POST …/games/{id}/pairing/auto`, manual-scan des Watchers mit `clubGameId`) und
+  `UpdateAsync` mit `leagueGameId` (Paarung von Hand gewählt oder umgehängt).
+
+**Bedingungen** (alle):
+
+1. **Ligapartie der laufenden Saison**: die Partie trägt eine Ligapaarung (`LeagueGameId` bzw. Schlüssel Tnr/Runde/Begegnung/
+   Brett, aufgelöst über `LeagueGameLinks.ResolveAsync` — eine vorläufige Zuordnung zur laufenden Runde zählt, eine tote Id
+   nicht), und die Liga dieser Paarung (`LeagueTournaments.Tnr`) gehört zur jüngsten Saison ihrer Region
+   (`LeagueOnlineRegions.CurrentSeasonTnrsAsync`: je Region — Tirol/Österreich, Bayern — die größte `Season`).
+2. Nicht archiviert (`ArchivedAt`) und noch **keine** Zeile in `ClubGameSummaries` (egal welcher Status).
+3. **Partiedatum** höchstens `MaxAgeDays` Tage zurück: der volle Tag aus dem Upload (PGN-Kopf `Date`, Datum des Formulars),
+   sonst der Rundentermin der Paarung (`LeagueRounds.Date`), sonst heute. Die gespeicherte Partie trägt nur das Jahr.
+4. **Tagesdeckel**: heute (UTC) weniger als `DailyLimit` automatische Anforderungen, über alle Vereine — gezählt an
+   `ClubGameSummaries.AutoRequestedAt` (Migration `ClubGameSummaryAutoRequestedAt`; bleibt bei späterem Neu-Anfordern stehen,
+   von Hand angeforderte Zeilen haben `null` und zählen nicht). Kein Sperren: zwei gleichzeitige Uploads können den Deckel um
+   wenige überschreiten.
+
+Über Altersgrenze oder Deckel wird still nichts angefordert (Log-Zeile auf Information, „Zusammenfassung: Vereinspartie … nicht
+automatisch angefordert“); die Partie wird normal angelegt, ein Admin kann von Hand anfordern. Ein Fehler beim automatischen
+Anfordern (Warnung im Log) lässt das Anlegen nie scheitern. **Kein Nachholen**: der Bestand wird nie durchgesehen — weder beim
+Start noch nach „Daten aktualisieren“ (`LeagueGameLinks.HealAsync`, das Bestätigen vorläufiger Zuordnungen fordern nichts an).
+
+Anforderer (`RequestedByUserId`): wer die Partie anlegt bzw. zuordnet; über den Teilen-Link ohne Konto `null`. Oberfläche
+unverändert: Sanduhr und Zähler der Kopfzeile sehen wie bisher nur Admins (`canRequest`), alle anderen sehen erst den Link zur
+fertigen Zusammenfassung.
+
+| Einstellung | Vorgabe | Bedeutung |
+|---|---|---|
+| `ClubGameSummaries:Auto:Enabled` | `true` | automatisches Anfordern ein/aus |
+| `ClubGameSummaries:Auto:MaxAgeDays` | `30` | so alt darf das Partiedatum höchstens sein |
+| `ClubGameSummaries:Auto:DailyLimit` | `20` | automatische Anforderungen je UTC-Tag insgesamt (ein Lauf kostet etwa 3,50 $) |
+
+Übrige Einstellungen der Zusammenfassungen: `OwnGameSummaries:DailyPerUser` (unten), `ClubMistakeComparisons:Enabled` (oben).
+Tests: `ClubGameAutoSummaryTests`.
+
 ## Eigene Partien (0.923.0)
 
 Der Besitzer fordert auf `/games/:id` an (`POST /api/games/{id}/summary`, `{ lang }`), gelesen wird auf

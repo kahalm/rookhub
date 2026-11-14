@@ -85,7 +85,7 @@ public class AdminLeagueUploadController(LeagueBatchUploadService batches) : Bas
         if (scan == null) return BadRequest(new { reason });
         // 0.832.0: hängt die Einlesung an eine Vereinspartie OHNE Ligapaarung, gleich zuordnen (genauer Treffer, sonst vorläufig
         // zur laufenden Runde)
-        if (req.ClubGameId is { } cg) await club.AssignPairingIfUnlinkedAsync(cg, ct);
+        if (req.ClubGameId is { } cg) await club.AssignPairingIfUnlinkedAsync(cg, ct, userId: GetUserId());
         return Ok(scan);
     }
 

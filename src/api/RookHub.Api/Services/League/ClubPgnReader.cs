@@ -200,7 +200,8 @@ internal sealed class ClubPgnReader
         await _writer.ApplyPairingsAsync(club, built.Where(x => x.Game != null && kept.Contains(x.Game))
             .Select(x => (x.Game!, choices.GetValueOrDefault(x.Index), FullDateOf(x.P!.H("Date")), (IReadOnlyList<string>)x.P!.Sans!))
             .ToList(), ct);
-        await _writer.SaveAsync(pending, ct, userId);
+        var dates = built.Where(x => x.Game != null && kept.Contains(x.Game)).ToDictionary(x => x.Game!, x => FullDateOf(x.P!.H("Date")));
+        await _writer.SaveAsync(pending, ct, userId, g => dates.GetValueOrDefault(g));
         await _writer.RebalanceAsync(club, pending, ct);
         if (shareHash != null && result.Failed.Count(f => f.Reason == ShareLimitReason) is > 0 and var refused)
             _log.LogWarning("Vereins-Datenbank: Teilen-Link {Link} am Deckel — {Refused} Partien nicht übernommen",
@@ -282,7 +283,7 @@ internal sealed class ClubPgnReader
         if (lease != null) lease.Kept = 1;
         ClubGameWriter.Stamp(game, userId, now, shareHash, claimHash);
         await _writer.ApplyPairingsAsync(club, new[] { (game, req.LeagueGameId, FullDateOf(req.Date), (IReadOnlyList<string>)sans) }, ct);
-        await _writer.SaveAsync(new List<LeagueClubGame> { game }, ct, userId);
+        await _writer.SaveAsync(new List<LeagueClubGame> { game }, ct, userId, _ => FullDateOf(req.Date));
         await _writer.RebalanceAsync(club, new[] { game }, ct);
         game.Replaced = await _writer.ArchiveOlderVersionsAsync(game, sans, now, ct);
         _log.LogInformation("Vereins-Datenbank {Club}: eine Partie aus einem Partieformular ({Anon}{Via})",
