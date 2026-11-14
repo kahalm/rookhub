@@ -3573,34 +3573,6 @@
       "neverSuggestDone": "Už vám to nebude navrhováno.",
       "neverSuggestFailed": "To se nepodařilo uložit.",
       "exercises": {
-        "title": "Doporučená cvičení",
-        "intro": "Úlohy se stejným motivem jako pozice z této partie — vyřeš je přímo tady.",
-        "reason": {
-          "missedMate": "propásnutý mat {{n}}. tahem",
-          "playedMate": "mat {{n}}. tahem na šachovnici",
-          "missedTactic": "propásnutá taktika: {{theme}}",
-          "allowedTactic": "soupeři dovolená taktika: {{theme}}"
-        },
-        "also": "Stejný obrazec také u {{moves}}",
-        "more": "Další pozice ({{count}})",
-        "match": {
-          "strict": "Stejný matový obrazec",
-          "family": "Podobný matový obrazec",
-          "theme": "Mat {{n}}. tahem",
-          "strictTactic": "Stejný motiv, stejné figury",
-          "sameTheme": "Stejný motiv"
-        },
-        "rating": "Rating {{rating}}",
-        "solve": "Vyřešit",
-        "solved": "Vyřešeno!",
-        "wrong": "To není správný tah — zkus to znovu.",
-        "shown": "Řešení zobrazeno.",
-        "showSolution": "Ukázat řešení",
-        "retry": "Znovu",
-        "counter": "Úloha {{i}} z {{n}}",
-        "bookExample": "Příklad v knize",
-        "bookPage": "s. {{n}}",
-        "bookPart": "Oddíl {{n}}",
         "train": "Trénovat taktiky",
         "trainHint": "Přidá úlohy této partie jako kapitolu do tvého kurzu „Osobní taktiky“ a otevře ji.",
         "trainFailed": "Kurz se nepodařilo otevřít."

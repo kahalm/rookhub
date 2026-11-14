@@ -3573,34 +3573,6 @@
       "neverSuggestDone": "Nu îți va mai fi sugerat.",
       "neverSuggestFailed": "Nu s-a putut salva asta.",
       "exercises": {
-        "title": "Exerciții recomandate",
-        "intro": "Probleme cu același model ca poziții din această partidă — rezolvă-le chiar aici.",
-        "reason": {
-          "missedMate": "mat în {{n}} ratat",
-          "playedMate": "mat în {{n}} pe tablă",
-          "missedTactic": "tactică ratată: {{theme}}",
-          "allowedTactic": "tactică permisă adversarului: {{theme}}"
-        },
-        "also": "Același model și la {{moves}}",
-        "more": "Mai multe poziții ({{count}})",
-        "match": {
-          "strict": "Același model de mat",
-          "family": "Model de mat asemănător",
-          "theme": "Mat în {{n}}",
-          "strictTactic": "Același motiv, aceleași piese",
-          "sameTheme": "Același motiv"
-        },
-        "rating": "Rating {{rating}}",
-        "solve": "Rezolvă",
-        "solved": "Rezolvat!",
-        "wrong": "Nu e mutarea corectă — mai încearcă.",
-        "shown": "Soluție afișată.",
-        "showSolution": "Arată soluția",
-        "retry": "Din nou",
-        "counter": "Problema {{i}} din {{n}}",
-        "bookExample": "Exemplu în carte",
-        "bookPage": "p. {{n}}",
-        "bookPart": "Secțiunea {{n}}",
         "train": "Antrenează tactici",
         "trainHint": "Adaugă exercițiile acestei partide ca un capitol în cursul tău „Tactici personale” și îl deschide.",
         "trainFailed": "Cursul nu a putut fi deschis."

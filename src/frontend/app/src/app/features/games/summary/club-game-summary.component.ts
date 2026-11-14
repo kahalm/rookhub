@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -9,7 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Observable, forkJoin } from 'rxjs';
+import { Observable, Subscription, forkJoin } from 'rxjs';
 import { ChessBoardComponent, BoardArrow } from '../../../shared/pgn-viewer/chess-board.component';
 import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
 import { PreferencesService } from '../../../core/preferences.service';
@@ -18,8 +18,7 @@ import { AuthService } from '../../../core/auth.service';
 import { MenuService } from '../../../core/menu.service';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { MaximNoteComponent } from '../../../shared/maxims/maxim-note.component';
-import { ClubGameSummary, ClubGameSummaryService, EbookSuggestionInfo, SummaryExerciseGroup, SummarySource } from './club-game-summary.service';
-import { SummaryExercisesComponent } from './summary-exercises.component';
+import { ClubGameSummary, ClubGameSummaryService, EbookSuggestionInfo, SummarySource, exerciseSolvable } from './club-game-summary.service';
 import { ClubSummaryLinkComponent } from './club-summary-link.component';
 import { SummaryGameBoardComponent, SummaryJump } from './summary-game-board.component';
 import { SummaryBoardSheetComponent } from './summary-board-sheet.component';
@@ -48,8 +47,7 @@ interface ResolvedDiagram {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, TranslatePipe,
-    ChessBoardComponent, LoadErrorComponent, ClubSummaryLinkComponent, SummaryGameBoardComponent, MaximNoteComponent, SanPipe,
-    SummaryExercisesComponent],
+    ChessBoardComponent, LoadErrorComponent, ClubSummaryLinkComponent, SummaryGameBoardComponent, MaximNoteComponent, SanPipe],
   template: `
     <div class="summary-page" [class.with-board]="hasBoard()">
       @if (loading()) {
@@ -190,10 +188,16 @@ interface ResolvedDiagram {
                 }
               }
             </article>
-            <!-- Empfohlene Übungen (0.960.0): nach der Literatur, aus den Daten der Partie — ohne Stellen kein Abschnitt. -->
-            @if (exercises().length) {
-              <app-summary-exercises [groups]="exercises()" [canTrain]="canTrain()" [training]="training()"
-                                     (showPly)="showGamePly($event)" (train)="trainTactics()" />
+            <!-- „Taktiken trainieren“ (Wunsch 2026-11-14): die Aufgaben dieser Partie als Kapitel im Kurs „Persönliche Taktiken“ — nur
+                 angemeldet mit Zugang zu den Kursen und nur, wenn die Partie lösbare Aufgaben hat. Die Übersicht der Aufgaben
+                 darüber ist seit 0.973.0 weg (Wunsch 2026-11-14), der Knopf steht für sich hinter dem Text. -->
+            @if (canTrain() && trainable()) {
+              <div class="train">
+                <button mat-stroked-button type="button" class="train-btn" [disabled]="training()" (click)="trainTactics()">
+                  <mat-icon>school</mat-icon> {{ 'games.summary.exercises.train' | translate }}
+                </button>
+                <p class="train-hint">{{ 'games.summary.exercises.trainHint' | translate }}</p>
+              </div>
             }
             @if (summary()?.model) { <p class="note model">{{ 'games.summary.writtenBy' | translate: { model: summary()!.model } }}</p> }
           }
@@ -293,6 +297,9 @@ interface ResolvedDiagram {
     .gt-mv.gt-on, .gt-mv.gt-on.gt-good, .gt-mv.gt-on.gt-bad { background: var(--rh-accent); color: var(--mat-sys-on-primary); }
     .gt-var { color: var(--mat-sys-on-surface-variant); font-size: 0.9em; font-style: italic; }
     .gt-result { font-weight: 700; white-space: nowrap; margin-left: 0.3em; }
+    /* Einzelner Aktionsblock hinter dem Text: Trennlinie + Abstand statt Überschrift (DESIGN 8, Partie-Zusammenfassung). */
+    .train { max-width: 75ch; margin: 24px 0 8px; padding-top: 16px; border-top: 1px solid var(--mat-sys-outline-variant); }
+    .train-hint { color: var(--mat-sys-on-surface-variant); font-size: 0.875rem; margin: 6px 0 0; }
     .to-board { background: none; border: 0; padding: 0; font: inherit; color: var(--rh-accent); text-decoration: underline; cursor: pointer; }
   `],
 })
@@ -344,13 +351,21 @@ export class ClubGameSummaryComponent implements OnInit {
   /** In dieser Sitzung gesperrt — die Zeile bleibt mit „Rückgängig“ stehen. */
   readonly justBlocked = signal<ReadonlySet<number>>(new Set());
   readonly loggedIn = inject(AuthService).isLoggedIn;
-  /** „Empfohlene Übungen“ (0.960.0): Stellen der Partie mit ihren Aufgaben; leer = kein Abschnitt (auch bei Fehlern). */
-  readonly exercises = signal<SummaryExerciseGroup[]>([]);
+  /** Die Partie hat mindestens eine lösbare Aufgabe (sonst gäbe es kein Kapitel) — `false` auch bei Fehlern und solange nichts geladen ist. */
+  readonly trainable = signal(false);
   /** Menü-Sichtbarkeit nur für Angemeldete (anonym gibt es „Taktiken trainieren“ nicht — und keinen Menü-Abruf dafür). */
   private readonly menuKeys = this.loggedIn ? toSignal(inject(MenuService).visible$, { initialValue: new Set<string>() }) : null;
   /** „Taktiken trainieren“ (Wunsch 2026-11-14): angemeldet UND mit dem Menüpunkt „Kurse“ — sonst wiese der Kurs-Löser ab. */
   readonly canTrain = computed(() => !!this.menuKeys?.().has('courses'));
   readonly training = signal(false);
+  /**
+   * Die Aufgaben der Partie braucht nur noch der Knopf (seit 0.973.0 zeigt die Seite sie nicht mehr): gefragt wird erst, wenn es
+   * einen fertigen Text gibt UND der Betrachter trainieren darf — ohne Anmeldung (Teilen-Links) also gar nicht.
+   */
+  private readonly trainableLoader = effect(() => {
+    const ready = this.canTrain() && !!this.summary()?.markdown;
+    untracked(() => this.loadTrainable(ready));
+  });
   private readonly router = inject(Router);
   /** Ohne Bücher und ohne deren Überschrift, wenn von der Literatur-Liste nichts übrig bleibt. */
   /** Züge im Text werden klickbar, sobald es das Seitenbrett gibt, das sie zeigen kann. */
@@ -409,7 +424,7 @@ export class ClubGameSummaryComponent implements OnInit {
       ? forkJoin([this.games.get(this.gameId), this.summaries.getOwn(this.gameId)])
       : forkJoin([this.games.clubGame(this.gameId), this.summaries.get(this.gameId)]);
     load.subscribe({
-      next: ([g, s]) => { this.game.set(g); this.summary.set(s); this.loading.set(false); this.loadBooks(); this.loadExercises(); },
+      next: ([g, s]) => { this.game.set(g); this.summary.set(s); this.loading.set(false); this.loadBooks(); },
       error: (e: { status?: number } | null) => {
         // UI-Sweep 2026-11-10 (d10-rk-zusammenfassung-ladefehler-sackgasse): wie die Partieseite — 403 bei einer Vereinspartie
         // = gesperrt, sonst 4xx = gibt es nicht; nur Netz/5xx (und 408/429) behalten „Wiederholen“.
@@ -432,7 +447,7 @@ export class ClubGameSummaryComponent implements OnInit {
     });
   }
 
-  /** Woher die Seite liest — dieselben fünf Wege für die Übungen. */
+  /** Woher die Seite liest — dieselben fünf Wege für die Aufgaben der Partie. */
   private source(): SummarySource {
     if (this.clubLinkToken !== null) return { kind: 'club-link', token: this.clubLinkToken };
     if (this.gameShareToken !== null) return { kind: 'own-share', token: this.gameShareToken };
@@ -440,15 +455,17 @@ export class ClubGameSummaryComponent implements OnInit {
     return this.own ? { kind: 'own', id: this.gameId } : { kind: 'club', id: this.gameId };
   }
 
-  /** Nur zu einem fertigen Text; ein Fehler lässt den Abschnitt still weg (Zusatz, kein Kern der Seite). */
-  private loadExercises(): void {
-    this.exercises.set([]);
-    if (!this.summary()?.markdown) return;
-    this.summaries.exercises(this.source()).subscribe({
-      next: groups => this.exercises.set(groups.filter(g => g.exercises.length > 0)),
-      error: () => this.exercises.set([]),
+  /** Ein Fehler lässt den Knopf still weg (Zusatz, kein Kern der Seite). */
+  private loadTrainable(ready: boolean): void {
+    this.trainableSub?.unsubscribe();
+    this.trainable.set(false);
+    if (!ready) return;
+    this.trainableSub = this.summaries.exercises(this.source()).subscribe({
+      next: groups => this.trainable.set(groups.some(g => g.exercises.some(exerciseSolvable))),
+      error: () => this.trainable.set(false),
     });
   }
+  private trainableSub?: Subscription;
 
   /**
    * „Taktiken trainieren“: Kapitel dieser Partie im Kurs „Persönliche Taktiken“ anlegen bzw. öffnen und direkt in den

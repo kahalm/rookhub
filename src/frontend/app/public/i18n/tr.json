@@ -3573,34 +3573,6 @@
       "neverSuggestDone": "Size bir daha önerilmeyecek.",
       "neverSuggestFailed": "Bu kaydedilemedi.",
       "exercises": {
-        "title": "Önerilen alıştırmalar",
-        "intro": "Bu oyundaki konumlarla aynı motife sahip bulmacalar — hemen burada çöz.",
-        "reason": {
-          "missedMate": "kaçırılan {{n}} hamlede mat",
-          "playedMate": "tahtada {{n}} hamlede mat",
-          "missedTactic": "kaçırılan taktik: {{theme}}",
-          "allowedTactic": "rakibe izin verilen taktik: {{theme}}"
-        },
-        "also": "Aynı motif ayrıca: {{moves}}",
-        "more": "Daha fazla konum ({{count}})",
-        "match": {
-          "strict": "Aynı mat motifi",
-          "family": "Benzer mat motifi",
-          "theme": "{{n}} hamlede mat",
-          "strictTactic": "Aynı motif, aynı taşlar",
-          "sameTheme": "Aynı motif"
-        },
-        "rating": "Puan {{rating}}",
-        "solve": "Çöz",
-        "solved": "Çözüldü!",
-        "wrong": "Doğru hamle değil — tekrar dene.",
-        "shown": "Çözüm gösterildi.",
-        "showSolution": "Çözümü göster",
-        "retry": "Tekrar",
-        "counter": "Bulmaca {{i}} / {{n}}",
-        "bookExample": "Kitaptaki örnek",
-        "bookPage": "s. {{n}}",
-        "bookPart": "Bölüm {{n}}",
         "train": "Taktik çalış",
         "trainHint": "Bu oyunun bulmacalarını “Kişisel taktikler” kursuna bir bölüm olarak ekler ve açar.",
         "trainFailed": "Kurs açılamadı."

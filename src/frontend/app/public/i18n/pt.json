@@ -3573,34 +3573,6 @@
       "neverSuggestDone": "Não lhe será sugerido de novo.",
       "neverSuggestFailed": "Não foi possível guardar isso.",
       "exercises": {
-        "title": "Exercícios recomendados",
-        "intro": "Problemas com o mesmo padrão de posições desta partida — resolva aqui mesmo.",
-        "reason": {
-          "missedMate": "mate em {{n}} perdido",
-          "playedMate": "mate em {{n}} no tabuleiro",
-          "missedTactic": "tática perdida: {{theme}}",
-          "allowedTactic": "tática concedida ao adversário: {{theme}}"
-        },
-        "also": "Mesmo padrão também em {{moves}}",
-        "more": "Mais posições ({{count}})",
-        "match": {
-          "strict": "Mesmo padrão de mate",
-          "family": "Padrão de mate semelhante",
-          "theme": "Mate em {{n}}",
-          "strictTactic": "Mesmo motivo, mesmas peças",
-          "sameTheme": "Mesmo motivo"
-        },
-        "rating": "Rating {{rating}}",
-        "solve": "Resolver",
-        "solved": "Resolvido!",
-        "wrong": "Não é o lance certo — tente de novo.",
-        "shown": "Solução mostrada.",
-        "showSolution": "Mostrar solução",
-        "retry": "Tentar de novo",
-        "counter": "Problema {{i}} de {{n}}",
-        "bookExample": "Exemplo no livro",
-        "bookPage": "p. {{n}}",
-        "bookPart": "Secção {{n}}",
         "train": "Treinar táticas",
         "trainHint": "Adiciona os exercícios desta partida como capítulo do teu curso «Táticas pessoais» e abre-o.",
         "trainFailed": "Não foi possível abrir o curso."

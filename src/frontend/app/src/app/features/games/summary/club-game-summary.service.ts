@@ -46,7 +46,8 @@ export interface SummaryExerciseBook {
 }
 
 /**
- * Eine Aufgabe der „Empfohlenen Übungen“ (0.960.0). Lichess (`source` fehlt oder `lichess`): `fen` VOR dem Zug des Gegners, `moves` =
+ * Eine Aufgabe zu einer Stelle der Partie (0.960.0; die Seite zeigt sie seit 0.973.0 nicht mehr, sie entscheidet nur über „Taktiken
+ * trainieren“). Lichess (`source` fehlt oder `lichess`): `fen` VOR dem Zug des Gegners, `moves` =
  * Gegnerzug, dann abwechselnd Löser/Gegner (UCI). Buch (`source: 'book'`, 0.962.0): `id` = Diagramm, `fen` = Diagrammstellung mit dem
  * Löser am Zug, `moves` = Buchlösung ab dem Löser — leer, wenn sie nicht bestätigt ist (dann nur „Beispiel im Buch“).
  */
@@ -55,24 +56,14 @@ export interface SummaryExercise {
   source?: 'lichess' | 'book'; book?: SummaryExerciseBook | null;
 }
 
-/** Eindeutiger Schlüssel einer Aufgabe (Lichess- und Diagramm-Ids können gleich sein). */
-export function exerciseKey(ex: SummaryExercise): string { return `${ex.source ?? 'lichess'}:${ex.id}`; }
-
-/** Lösbar auf der Seite: jede Lichess-Aufgabe, ein Buchdiagramm nur mit bestätigter Lösung. */
+/** Lösbar (kommt ins Kapitel von „Taktiken trainieren“): jede Lichess-Aufgabe, ein Buchdiagramm nur mit bestätigter Lösung. */
 export function exerciseSolvable(ex: SummaryExercise): boolean { return ex.source !== 'book' || (!!ex.book?.solvable && ex.moves.length > 0); }
 
-/** Sprung in den Leser an das Diagramm (wie „Im Buch“ aus dem Kurs: `?diagram=`, beim PDF mit Seite). */
-export function exerciseReaderQuery(ex: SummaryExercise): Record<string, string | number> {
-  const b = ex.book;
-  if (!b) return {};
-  return b.pdfPage ? { page: b.page, fmt: 'pdf', diagram: ex.id } : { diagram: ex.id };
-}
-
-/** Eine Stelle der Partie mit ihren Aufgaben; `ply` = Stellung VOR dem Halbzug, `reason` → `games.summary.exercises.reason.*`. */
+/** Eine Stelle der Partie mit ihren Aufgaben; `ply` = Stellung VOR dem Halbzug. */
 export interface SummaryExerciseGroup {
   ply: number; white: boolean; reason: 'missedMate' | 'playedMate' | 'missedTactic' | 'allowedTactic'; mateIn: number | null;
   alsoPlies: number[]; exercises: SummaryExercise[];
-  /** Taktische Stelle (0.961.0): Lichess-Thema wie `fork` (Anzeige über `puzzleTheme`). */
+  /** Taktische Stelle (0.961.0): Lichess-Thema wie `fork`. */
   theme?: string | null;
 }
 
@@ -101,7 +92,7 @@ export class ClubGameSummaryService {
     return blocked ? this.http.put<void>(url, {}) : this.http.delete<void>(url);
   }
 
-  /** Empfohlene Übungen (0.960.0, `GET …/summary/exercises`): Lichess-Aufgaben zu den Mattbildern der Partie. */
+  /** Aufgaben zu den Stellen der Partie (0.960.0, `GET …/summary/exercises`) — seit 0.973.0 nur noch für „Taktiken trainieren“. */
   exercises(src: SummarySource): Observable<SummaryExerciseGroup[]> {
     const t = (x: string) => encodeURIComponent(x);
     const url = src.kind === 'club' ? `/api/league/club/games/${src.id}/summary/exercises`

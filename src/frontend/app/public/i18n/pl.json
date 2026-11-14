@@ -3573,34 +3573,6 @@
       "neverSuggestDone": "Nie będzie ci to już proponowane.",
       "neverSuggestFailed": "Nie udało się tego zapisać.",
       "exercises": {
-        "title": "Polecane ćwiczenia",
-        "intro": "Zadania z tym samym motywem co pozycje z tej partii — rozwiąż je tutaj.",
-        "reason": {
-          "missedMate": "przeoczony mat w {{n}}",
-          "playedMate": "mat w {{n}} na szachownicy",
-          "missedTactic": "przeoczona taktyka: {{theme}}",
-          "allowedTactic": "pozwolono rywalowi na taktykę: {{theme}}"
-        },
-        "also": "Ten sam obraz także przy {{moves}}",
-        "more": "Więcej pozycji ({{count}})",
-        "match": {
-          "strict": "Ten sam obraz mata",
-          "family": "Podobny obraz mata",
-          "theme": "Mat w {{n}}",
-          "strictTactic": "Ten sam motyw, te same figury",
-          "sameTheme": "Ten sam motyw"
-        },
-        "rating": "Ranking {{rating}}",
-        "solve": "Rozwiąż",
-        "solved": "Rozwiązane!",
-        "wrong": "To nie ten ruch — spróbuj ponownie.",
-        "shown": "Pokazano rozwiązanie.",
-        "showSolution": "Pokaż rozwiązanie",
-        "retry": "Jeszcze raz",
-        "counter": "Zadanie {{i}} z {{n}}",
-        "bookExample": "Przykład w książce",
-        "bookPage": "s. {{n}}",
-        "bookPart": "Część {{n}}",
         "train": "Trenuj taktyki",
         "trainHint": "Dodaje zadania z tej partii jako rozdział do twojego kursu „Taktyki osobiste” i otwiera go.",
         "trainFailed": "Nie udało się otworzyć kursu."

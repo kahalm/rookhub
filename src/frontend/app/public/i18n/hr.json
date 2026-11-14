@@ -3639,34 +3639,6 @@
       "neverSuggestDone": "Više ti se neće predlagati.",
       "neverSuggestFailed": "Spremanje nije uspjelo.",
       "exercises": {
-        "title": "Preporučene vježbe",
-        "intro": "Zadaci s istim motivom kao pozicije iz ove partije — riješi ih ovdje.",
-        "reason": {
-          "missedMate": "propušten mat u {{n}}",
-          "playedMate": "mat u {{n}} na ploči",
-          "missedTactic": "propuštena taktika: {{theme}}",
-          "allowedTactic": "protivniku dopuštena taktika: {{theme}}"
-        },
-        "also": "Ista slika i kod {{moves}}",
-        "more": "Više pozicija ({{count}})",
-        "match": {
-          "strict": "Ista matna slika",
-          "family": "Slična matna slika",
-          "theme": "Mat u {{n}}",
-          "strictTactic": "Isti motiv, iste figure",
-          "sameTheme": "Isti motiv"
-        },
-        "rating": "Rejting {{rating}}",
-        "solve": "Riješi zadatak",
-        "solved": "Riješeno!",
-        "wrong": "To nije pravi potez — pokušaj ponovno.",
-        "shown": "Rješenje prikazano.",
-        "showSolution": "Prikaži rješenje",
-        "retry": "Ponovno",
-        "counter": "Zadatak {{i}} od {{n}}",
-        "bookExample": "Primjer u knjizi",
-        "bookPage": "str. {{n}}",
-        "bookPart": "Odjeljak {{n}}",
         "train": "Vježbaj taktike",
         "trainHint": "Dodaje zadatke ove partije kao poglavlje u tvoj tečaj „Osobne taktike“ i otvara ga.",
         "trainFailed": "Tečaj se nije mogao otvoriti."

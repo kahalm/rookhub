@@ -3639,34 +3639,6 @@
       "neverSuggestDone": "Wird dir nicht mehr vorgeschlagen.",
       "neverSuggestFailed": "Das ließ sich nicht speichern.",
       "exercises": {
-        "title": "Empfohlene Übungen",
-        "intro": "Aufgaben mit demselben Bild wie Stellungen aus dieser Partie — direkt hier lösbar.",
-        "reason": {
-          "missedMate": "verpasstes Matt in {{n}}",
-          "playedMate": "Matt in {{n}} am Brett",
-          "missedTactic": "verpasste Taktik: {{theme}}",
-          "allowedTactic": "dem Gegner eine Taktik erlaubt: {{theme}}"
-        },
-        "also": "Gleiches Bild auch bei {{moves}}",
-        "more": "Weitere Stellen ({{count}})",
-        "match": {
-          "strict": "Gleiches Mattbild",
-          "family": "Ähnliches Mattbild",
-          "theme": "Matt in {{n}}",
-          "strictTactic": "Gleiches Motiv, gleiche Figuren",
-          "sameTheme": "Gleiches Motiv"
-        },
-        "rating": "Wertung {{rating}}",
-        "solve": "Aufgabe lösen",
-        "solved": "Gelöst!",
-        "wrong": "Nicht der richtige Zug — versuch es noch einmal.",
-        "shown": "Lösung gezeigt.",
-        "showSolution": "Lösung zeigen",
-        "retry": "Nochmal",
-        "counter": "Aufgabe {{i}} von {{n}}",
-        "bookExample": "Beispiel im Buch",
-        "bookPage": "S. {{n}}",
-        "bookPart": "Abschnitt {{n}}",
         "train": "Taktiken trainieren",
         "trainHint": "Legt die Aufgaben dieser Partie als Kapitel in deinem Kurs „Persönliche Taktiken“ an und öffnet es.",
         "trainFailed": "Der Kurs ließ sich nicht öffnen."

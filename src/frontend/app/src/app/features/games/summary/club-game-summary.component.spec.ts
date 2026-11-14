@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { ClubGameSummaryComponent } from './club-game-summary.component';
 import { ClubGameSummaryService } from './club-game-summary.service';
 import { GamesService } from '../games.service';
@@ -287,24 +287,40 @@ describe('ClubGameSummaryComponent — Design-Runde d10', () => {
   });
 });
 
-/** Empfohlene Übungen (0.960.0): Abschnitt nur mit Stellen; ohne (Partie ohne Mattbild) oder bei Fehler gar keiner. */
-describe('ClubGameSummaryComponent — Empfohlene Übungen', () => {
+/**
+ * Übersicht „Empfohlene Übungen“ entfällt (0.973.0, Wunsch 2026-11-14: „train am ende der summary gefällt mir, aber übersicht darüber
+ * kann weg“): auf keiner Fassung der Seite mehr Überschrift, Stellen, Karten, Buchangaben oder Löser — auch wenn die Partie Aufgaben hat.
+ */
+describe('ClubGameSummaryComponent — keine Übersicht der Aufgaben mehr', () => {
   const group = { ply: 28, white: true, reason: 'missedMate', mateIn: 4, alsoPlies: [], exercises: [
-    { id: 11, fen: '6k1/p4p1p/5P2/6Q1/8/8/8/K7 b - - 0 1', moves: ['a7a6', 'g5g7'], rating: 1500, themes: ['mateIn1'], match: 'strict' }] };
+    { id: 11, fen: '6k1/p4p1p/5P2/6Q1/8/8/8/K7 b - - 0 1', moves: ['a7a6', 'g5g7'], rating: 1500, themes: ['mateIn1'], match: 'strict' },
+    { id: 5, fen: '6k1/5p1p/5P1Q/8/8/8/8/K7 w - - 0 1', moves: ['h6g7'], rating: 0, themes: [], match: 'family', source: 'book',
+      book: { ebookId: 683, title: 'The Chess Toolbox', author: 'Thomas Willemze', chapter: null, page: 24, pdfPage: true, label: null, solvable: true } }] };
+  const md = '# Titel\n\nText.';
+  const WAYS: { name: string; data: Record<string, string>; params: Record<string, string>; src: unknown }[] = [
+    { name: 'Vereinspartie', data: {}, params: { id: '5' }, src: { kind: 'club', id: 5 } },
+    { name: 'eigene Partie', data: { mode: 'own' }, params: { id: '5' }, src: { kind: 'own', id: 5 } },
+    { name: 'Liga-Teilen-Link', data: { mode: 'club-share' }, params: { token: 'abc', id: '5' }, src: { kind: 'club-share', token: 'abc', id: 5 } },
+    { name: 'Link der Vereinspartie', data: { mode: 'club-link' }, params: { token: 'abc' }, src: { kind: 'club-link', token: 'abc' } },
+    { name: 'Teilen-Link der eigenen Partie', data: { mode: 'own-share' }, params: { token: 'abc' }, src: { kind: 'own-share', token: 'abc' } },
+  ];
 
-  function render(exercises: () => unknown, data: Record<string, string> = {}, params: Record<string, string> = { id: '5' }) {
+  function render(way: typeof WAYS[number], loggedIn: boolean) {
     const calls: unknown[] = [];
+    const game = () => of({ white: 'Weiss, Erfunden', black: 'Schwarz, Erfunden', pgn: '1. e4 e5', ownerSide: 'white' });
+    const summary = () => of({ markdown: md });
     TestBed.configureTestingModule({
       imports: [ClubGameSummaryComponent],
       providers: [
         provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
         provideHttpClient(), provideHttpClientTesting(),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params), data } } },
-        { provide: GamesService, useValue: { clubGame: () => of({ pgn: '1. e4 e5', ownerSide: 'white' }), getShared: () => of({ pgn: '1. e4 e5' }) } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(way.params), data: way.data } } },
+        { provide: GamesService, useValue: { clubGame: game, get: game, sharedClubGame: game, linkedClubGame: game, getShared: game } },
         { provide: ClubGameSummaryService, useValue: {
-          get: () => of({ markdown: '# Titel\n\nText.' }), getSharedOwn: () => of({ markdown: '# Titel' }),
-          exercises: (src: unknown) => { calls.push(src); return exercises(); } } },
-        { provide: AuthService, useValue: { isLoggedIn: false, currentUser$: of(null) } },
+          get: summary, getOwn: summary, getShared: summary, getLinked: summary, getSharedOwn: summary,
+          exercises: (src: unknown) => { calls.push(src); return of([group]); } } },
+        { provide: AuthService, useValue: { isLoggedIn: loggedIn, currentUser$: of(null) } },
+        { provide: MenuService, useValue: { visible$: of(new Set(['courses'])) } },
         { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
       ],
     });
@@ -313,41 +329,52 @@ describe('ClubGameSummaryComponent — Empfohlene Übungen', () => {
     return { el: fixture.nativeElement as HTMLElement, calls };
   }
 
-  it('mit Stellen: Abschnitt nach dem Text, Karten mit Brett', () => {
-    const { el, calls } = render(() => of([group]));
-    expect(calls).toEqual([{ kind: 'club', id: 5 }]);
-    const sec = el.querySelector('app-summary-exercises')!;
-    expect(sec).not.toBeNull();
-    expect(sec.querySelectorAll('.card app-chess-board').length).toBe(1);
-    expect(sec.querySelector('h3')?.textContent).toContain('15.');
-  });
+  function expectNoOverview(el: HTMLElement): void {
+    expect(el.querySelector('.summary-text')).not.toBeNull();   // die Seite steht, es fehlt nur die Übersicht
+    for (const sel of ['app-summary-exercises', 'app-summary-exercise-solver', '.exercises', '.group', '.cards', '.card', 'a.book', 'button.more', 'button.ply', '.inline-solver']) {
+      expect(el.querySelector(sel)).withContext(sel).toBeNull();
+    }
+    // Brett gibt es nur noch als Seitenbrett, keine Aufgaben-Bretter im Text.
+    expect(el.querySelectorAll('.summary-card app-chess-board').length).toBe(0);
+    const text = el.textContent ?? '';
+    for (const key of ['exercises.title', 'exercises.intro', 'exercises.reason', 'exercises.match', 'exercises.bookExample', 'The Chess Toolbox']) {
+      expect(text).withContext(key).not.toContain(key);
+    }
+  }
 
-  it('Partie ohne Mattbild (keine Stellen): kein Abschnitt, kein Platzhalter', () => {
-    const { el } = render(() => of([]));
-    expect(el.querySelector('app-summary-exercises')).toBeNull();
-    expect(el.textContent).not.toContain('games.summary.exercises');
-  });
+  for (const way of WAYS) {
+    it(`${way.name}, nicht angemeldet: keine Übersicht, kein Knopf — und die Aufgaben werden gar nicht mehr abgerufen`, () => {
+      const { el, calls } = render(way, false);
+      expectNoOverview(el);
+      expect(el.querySelector('.train')).toBeNull();
+      expect(el.textContent).not.toContain('games.summary.exercises');
+      expect(calls).toEqual([]);
+    });
 
-  it('Fehler beim Laden: still kein Abschnitt', () => {
-    const { el } = render(() => throwError(() => new HttpErrorResponse({ status: 500 })));
-    expect(el.querySelector('app-summary-exercises')).toBeNull();
-    expect(el.querySelector('app-load-error')).toBeNull();
-  });
-
-  it('Teilen-Link der eigenen Partie fragt über denselben Weg', () => {
-    const { calls } = render(() => of([]), { mode: 'own-share' }, { token: 'abc' });
-    expect(calls).toEqual([{ kind: 'own-share', token: 'abc' }]);
-  });
+    it(`${way.name}, angemeldet mit Kursen: keine Übersicht, nur der Knopf (Abruf auf dem Weg der Seite)`, () => {
+      const { el, calls } = render(way, true);
+      expectNoOverview(el);
+      expect(el.querySelectorAll('.train .train-btn').length).toBe(1);
+      expect(calls).toEqual([way.src]);
+    });
+  }
 });
 
-/** „Taktiken trainieren“ (Wunsch 2026-11-14): unter den Empfohlenen Übungen, nur angemeldet; legt das Kapitel an und springt in den Kurs-Löser. */
+/** „Taktiken trainieren“ (Wunsch 2026-11-14): für sich am Ende des Texts, nur angemeldet; legt das Kapitel an und springt in den Kurs-Löser. */
 describe('ClubGameSummaryComponent — „Taktiken trainieren“', () => {
   const group = { ply: 36, white: false, reason: 'allowedTactic', theme: 'fork', mateIn: null, alsoPlies: [], exercises: [
     { id: 11, fen: 'r3k3/p7/8/3N4/8/8/8/4K3 b - - 0 1', moves: ['a7a6', 'd5c7', 'e8d7', 'c7a8'], rating: 1500, themes: ['fork'], match: 'strict' }] };
+  // Nur „Beispiel im Buch“: Buchdiagramm ohne bestätigte Lösung — daraus entstünde kein Kapitel.
+  const onlyExample = { ply: 10, white: true, reason: 'missedMate', mateIn: 1, alsoPlies: [], exercises: [
+    { id: 7, fen: '6k1/5p1p/5P1Q/8/8/8/8/K7 w - - 0 1', moves: [], rating: 0, themes: [], match: 'family', source: 'book',
+      book: { ebookId: 683, title: 'The Chess Toolbox', author: null, chapter: null, page: 24, pdfPage: true, label: null, solvable: false } }] };
 
-  function render(opts: { loggedIn: boolean; menu?: string[]; train?: () => unknown; data?: Record<string, string>; params?: Record<string, string> }) {
+  function render(opts: { loggedIn: boolean; menu?: string[]; train?: () => unknown; exercises?: () => unknown; markdown?: string | null;
+    data?: Record<string, string>; params?: Record<string, string> }) {
     const calls: unknown[] = [];
+    const exerciseCalls: unknown[] = [];
     const warn = jasmine.createSpy('warn');
+    const markdown = opts.markdown === undefined ? '# Titel\n\nText.\n\n## Literatur\n\nLetzter Absatz.' : opts.markdown;
     TestBed.configureTestingModule({
       imports: [ClubGameSummaryComponent],
       providers: [
@@ -356,10 +383,10 @@ describe('ClubGameSummaryComponent — „Taktiken trainieren“', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(opts.params ?? { id: '247' }), data: opts.data ?? {} } } },
         { provide: GamesService, useValue: { clubGame: () => of({ pgn: '1. e4 e5', ownerSide: 'white' }), linkedClubGame: () => of({ pgn: '1. e4 e5' }) } },
         { provide: ClubGameSummaryService, useValue: {
-          get: () => of({ markdown: '# Titel\n\nText.' }), getLinked: () => of({ markdown: '# Titel' }),
-          exercises: () => of([group]),
+          get: () => of({ markdown, model: 'claude' }), getLinked: () => of({ markdown }),
+          exercises: (src: unknown) => { exerciseCalls.push(src); return (opts.exercises ?? (() => of([group])))(); },
           trainTactics: (src: unknown, lang: string) => { calls.push([src, lang]); return (opts.train ?? (() => of({ bookId: 9, chapterIndex: 2, chapter: 'x', created: true, lines: 1 })))(); } } },
-        { provide: AuthService, useValue: { isLoggedIn: opts.loggedIn, currentUser$: of(null) } },
+        { provide: AuthService, useValue: { isLoggedIn: opts.loggedIn, isAdmin: false, currentUser$: of(null) } },
         { provide: MenuService, useValue: { visible$: of(new Set(opts.menu ?? ['courses'])) } },
         { provide: SnackbarService, useValue: { warn, info: () => undefined } },
         { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
@@ -367,33 +394,96 @@ describe('ClubGameSummaryComponent — „Taktiken trainieren“', () => {
     });
     const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     const fixture = TestBed.createComponent(ClubGameSummaryComponent);
+    document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    return { fixture, el, calls, navigate, warn, button: () => el.querySelector('app-summary-exercises .train-btn') as HTMLButtonElement | null };
+    return { fixture, el, calls, exerciseCalls, navigate, warn, button: () => el.querySelector('.summary-card .train .train-btn') as HTMLButtonElement | null };
   }
+  afterEach(() => document.querySelectorAll('app-club-game-summary, [ng-version]').forEach(n => n.remove()));
 
-  it('angemeldet: Knopf unter dem Abschnitt; Klick legt das Kapitel an und öffnet es sequenziell im Kurs-Löser', () => {
-    const { button, calls, navigate } = render({ loggedIn: true });
+  it('angemeldet: Knopf mit Hinweiszeile; Klick legt das Kapitel an und öffnet es sequenziell im Kurs-Löser', () => {
+    const { el, button, calls, navigate } = render({ loggedIn: true });
     expect(button()).not.toBeNull();
+    expect(button()!.textContent).toContain('games.summary.exercises.train');
+    expect(button()!.querySelector('mat-icon')?.textContent).toBe('school');
+    expect(button()!.classList).toContain('mat-mdc-outlined-button');
+    expect(el.querySelector('.train .train-hint')?.textContent).toContain('games.summary.exercises.trainHint');
     button()!.click();
     expect(calls).toEqual([[{ kind: 'club', id: 247 }, 'en']]);
     expect(navigate).toHaveBeenCalledOnceWith(['/courses', 9, 'chapter', 2, 'sequential']);
   });
 
-  it('ohne Anmeldung (auch über einen Teilen-Link): kein Knopf', () => {
-    expect(render({ loggedIn: false }).button()).toBeNull();
-    TestBed.resetTestingModule();
-    expect(render({ loggedIn: false, data: { mode: 'club-link' }, params: { token: 'abc' } }).button()).toBeNull();
+  it('steht für sich am Ende: hinter dem Text, vor dem Modellvermerk, mit Trennlinie und Abstand nach oben, ohne eigene Überschrift', () => {
+    const { el } = render({ loggedIn: true });
+    const train = el.querySelector('.train') as HTMLElement;
+    const article = el.querySelector('.summary-text')!;
+    expect(article.compareDocumentPosition(train) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(article.contains(train)).toBeFalse();
+    expect(train.compareDocumentPosition(el.querySelector('.note.model')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(train.querySelector('h1, h2, h3')).toBeNull();
+    const cs = getComputedStyle(train);
+    expect(parseFloat(cs.borderTopWidth)).toBeGreaterThanOrEqual(1);
+    expect(cs.borderTopStyle).toBe('solid');
+    expect(parseFloat(cs.marginTop)).toBeGreaterThanOrEqual(16);
+    expect(parseFloat(cs.paddingTop)).toBeGreaterThanOrEqual(12);
   });
 
-  it('angemeldet über den Link einer Vereinspartie: derselbe Weg wie die Übungen', () => {
-    const { button, calls } = render({ loggedIn: true, data: { mode: 'club-link' }, params: { token: 'abc' } });
+  it('während des Anlegens gesperrt (zweiter Klick legt nichts doppelt an)', () => {
+    const pending = new Subject<unknown>();
+    const { fixture, button, calls } = render({ loggedIn: true, train: () => pending });
+    button()!.click();
+    fixture.detectChanges();
+    expect(button()!.disabled).toBeTrue();
+    fixture.componentInstance.trainTactics();
+    expect(calls.length).toBe(1);
+  });
+
+  it('ohne Anmeldung (auch über einen Teilen-Link): kein Knopf, nichts von den Aufgaben, kein Abruf', () => {
+    const a = render({ loggedIn: false });
+    expect(a.button()).toBeNull();
+    expect(a.el.querySelector('.train')).toBeNull();
+    expect(a.exerciseCalls).toEqual([]);
+    TestBed.resetTestingModule();
+    const b = render({ loggedIn: false, data: { mode: 'club-link' }, params: { token: 'abc' } });
+    expect(b.el.querySelector('.train')).toBeNull();
+    expect(b.exerciseCalls).toEqual([]);
+  });
+
+  it('angemeldet über den Link einer Vereinspartie: derselbe Weg wie der Abruf der Aufgaben', () => {
+    const { button, calls, exerciseCalls } = render({ loggedIn: true, data: { mode: 'club-link' }, params: { token: 'abc' } });
+    expect(exerciseCalls).toEqual([{ kind: 'club-link', token: 'abc' }]);
     button()!.click();
     expect(calls).toEqual([[{ kind: 'club-link', token: 'abc' }, 'en']]);
   });
 
-  it('angemeldet, aber ohne den Menüpunkt „Kurse“: kein Knopf (der Löser wiese ab)', () => {
-    expect(render({ loggedIn: true, menu: ['puzzles'] }).button()).toBeNull();
+  it('angemeldet, aber ohne den Menüpunkt „Kurse“: kein Knopf (der Löser wiese ab), kein Abruf', () => {
+    const { button, exerciseCalls } = render({ loggedIn: true, menu: ['puzzles'] });
+    expect(button()).toBeNull();
+    expect(exerciseCalls).toEqual([]);
+  });
+
+  it('Partie ohne Aufgaben: kein Knopf, kein Platzhalter', () => {
+    const { el } = render({ loggedIn: true, exercises: () => of([]) });
+    expect(el.querySelector('.train')).toBeNull();
+    expect(el.textContent).not.toContain('games.summary.exercises');
+  });
+
+  it('nur „Beispiel im Buch“ (nichts zu lösen): kein Knopf', () => {
+    expect(render({ loggedIn: true, exercises: () => of([onlyExample]) }).button()).toBeNull();
+    TestBed.resetTestingModule();
+    expect(render({ loggedIn: true, exercises: () => of([onlyExample, group]) }).button()).not.toBeNull();
+  });
+
+  it('Fehler beim Abruf der Aufgaben: still kein Knopf, kein Ladefehler', () => {
+    const { el } = render({ loggedIn: true, exercises: () => throwError(() => new HttpErrorResponse({ status: 500 })) });
+    expect(el.querySelector('.train')).toBeNull();
+    expect(el.querySelector('app-load-error')).toBeNull();
+  });
+
+  it('ohne fertigen Text: kein Abruf, kein Knopf', () => {
+    const { el, exerciseCalls } = render({ loggedIn: true, markdown: null });
+    expect(exerciseCalls).toEqual([]);
+    expect(el.querySelector('.train')).toBeNull();
   });
 
   it('Kapitel ohne abfragbare Linie: auf die Kursseite', () => {

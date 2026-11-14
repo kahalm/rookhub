@@ -3573,34 +3573,6 @@
       "neverSuggestDone": "Sẽ không gợi ý cho bạn nữa.",
       "neverSuggestFailed": "Không thể lưu.",
       "exercises": {
-        "title": "Bài tập đề xuất",
-        "intro": "Câu đố có cùng mô-típ như các thế cờ trong ván này — giải ngay tại đây.",
-        "reason": {
-          "missedMate": "bỏ lỡ chiếu hết sau {{n}} nước",
-          "playedMate": "chiếu hết sau {{n}} nước trên bàn cờ",
-          "missedTactic": "bỏ lỡ chiến thuật: {{theme}}",
-          "allowedTactic": "để đối thủ có chiến thuật: {{theme}}"
-        },
-        "also": "Cùng hình cũng ở {{moves}}",
-        "more": "Thêm thế cờ ({{count}})",
-        "match": {
-          "strict": "Cùng hình chiếu hết",
-          "family": "Hình chiếu hết tương tự",
-          "theme": "Chiếu hết sau {{n}} nước",
-          "strictTactic": "Cùng mô-típ, cùng quân",
-          "sameTheme": "Cùng mô-típ"
-        },
-        "rating": "Hệ số {{rating}}",
-        "solve": "Giải",
-        "solved": "Đã giải!",
-        "wrong": "Không đúng nước — thử lại.",
-        "shown": "Đã hiện lời giải.",
-        "showSolution": "Hiện lời giải",
-        "retry": "Thử lại",
-        "counter": "Câu đố {{i}} / {{n}}",
-        "bookExample": "Ví dụ trong sách",
-        "bookPage": "tr. {{n}}",
-        "bookPart": "Phần {{n}}",
         "train": "Luyện chiến thuật",
         "trainHint": "Thêm các bài tập của ván này thành một chương trong khóa học “Chiến thuật cá nhân” của bạn và mở nó.",
         "trainFailed": "Không thể mở khóa học."

@@ -64,7 +64,8 @@ Kapitelliste/Solver-Index (`/chapters`, `chapterIndex`), Kapitel-Modus und -Stat
 
 ## Persönliche Taktiken (0.968.0)
 
-Wunsch 2026-11-14: unter „Empfohlene Übungen“ einer Partie (`docs/api/partie-zusammenfassung.md`) der Knopf „Taktiken trainieren“ —
+Wunsch 2026-11-14: am Ende der Zusammenfassung einer Partie (`docs/api/partie-zusammenfassung.md`; bis 0.972.x unter der Übersicht
+„Empfohlene Übungen“, die seit 0.973.0 entfallen ist) der Knopf „Taktiken trainieren“ —
 die Aufgaben der Partie als Kapitel in einem persönlichen Kurs, gelöst im normalen Kurs-Löser (sequenziell, Fortschritt und Statistik
 wie jeder Kurs). `Services/Courses/PersonalTacticsCourse.cs`, `Controllers/Courses/PersonalTacticsController.cs`.
 

@@ -3573,34 +3573,6 @@
       "neverSuggestDone": "Non ti verrà più suggerito.",
       "neverSuggestFailed": "Impossibile salvare.",
       "exercises": {
-        "title": "Esercizi consigliati",
-        "intro": "Problemi con lo stesso schema di posizioni di questa partita — da risolvere qui.",
-        "reason": {
-          "missedMate": "matto in {{n}} mancato",
-          "playedMate": "matto in {{n}} sulla scacchiera",
-          "missedTactic": "tattica mancata: {{theme}}",
-          "allowedTactic": "tattica concessa all'avversario: {{theme}}"
-        },
-        "also": "Stesso schema anche a {{moves}}",
-        "more": "Altre posizioni ({{count}})",
-        "match": {
-          "strict": "Stesso schema di matto",
-          "family": "Schema di matto simile",
-          "theme": "Matto in {{n}}",
-          "strictTactic": "Stesso motivo, stessi pezzi",
-          "sameTheme": "Stesso motivo"
-        },
-        "rating": "Punteggio {{rating}}",
-        "solve": "Risolvi",
-        "solved": "Risolto!",
-        "wrong": "Non è la mossa giusta — riprova.",
-        "shown": "Soluzione mostrata.",
-        "showSolution": "Mostra soluzione",
-        "retry": "Riprova",
-        "counter": "Problema {{i}} di {{n}}",
-        "bookExample": "Esempio nel libro",
-        "bookPage": "p. {{n}}",
-        "bookPart": "Sezione {{n}}",
         "train": "Allena le tattiche",
         "trainHint": "Aggiunge gli esercizi di questa partita come capitolo del tuo corso «Tattiche personali» e lo apre.",
         "trainFailed": "Impossibile aprire il corso."

@@ -274,6 +274,12 @@ Anonymisierte Partie: PGN neu gebaut (nur Hauptvariante, ohne Event und Elo der 
 
 ## Empfohlene Übungen (0.960.0)
 
+> **Seit 0.973.0 zeigt die Seite die Übungen nicht mehr** (Wunsch 2026-11-14: „train am ende der summary gefällt mir, aber übersicht
+> darüber kann weg“): Überschrift, Stellen, Karten, Buchangaben und der Löser auf der Seite sind entfernt; geblieben ist der Knopf
+> „Taktiken trainieren“ am Ende des Texts (`docs/frontend/empfohlene-uebungen.md`). Die Endpunkte unten sind unverändert — das Frontend
+> ruft `…/summary/exercises` nur noch ab, um zu entscheiden, ob der Knopf erscheint (angemeldet mit Kurs-Zugang; anonym gar nicht), und
+> `PersonalTacticsCourse` baut aus derselben Auswahl das Kapitel. Was unten „die Seite zeigt“ beschreibt, ist der Stand bis 0.972.x.
+
 Wunsch 2026-11-13: „am ende eine kleine sammlung von empfohlenen übungen … z. B. M2/M3 mit so motiven (Df7 Kf6 und bauer auf f4, aber
 kann dann natürlich auch ein springer sein der das deckt)“; „direkt auf der seite lösbar“; „erzwinge keine motive/aufgaben — wenn es bei
 einer partie nichts gibt ists auch vollkommen in ordnung“. Die Seite setzt den Abschnitt selbst hinter den Text (nach der Literatur) —
@@ -308,7 +314,7 @@ Antwort `{ groups: [{ ply, white, reason: missedMate|playedMate, mateIn, alsoPli
 match: strict|family|theme, source: lichess|book, book }] }] }` — Lichess: `fen` vor dem Zug des Gegners, `moves` = Gegnerzug + Lösung
 (Lichess-Form), `book` = `null`; Buch (0.962.0) siehe „Buchbeispiele“. Ohne Analyse leer.
 
-**„Taktiken trainieren“** (0.968.0): unter dem Abschnitt, nur angemeldet — legt die lösbaren Aufgaben der Partie als Kapitel im Kurs
+**„Taktiken trainieren“** (0.968.0; seit 0.973.0 für sich am Ende des Texts): nur angemeldet — legt die lösbaren Aufgaben der Partie als Kapitel im Kurs
 „Persönliche Taktiken“ an (einer je Konto, ein Kapitel je Partie) und öffnet es im Kurs-Löser: `POST /api/courses/personal-tactics/from-game`,
 `docs/api/kurse.md` → „Persönliche Taktiken“.
 

@@ -3573,34 +3573,6 @@
       "neverSuggestDone": "Föreslås inte för dig igen.",
       "neverSuggestFailed": "Kunde inte spara det.",
       "exercises": {
-        "title": "Rekommenderade övningar",
-        "intro": "Problem med samma mönster som ställningar ur detta parti — lös dem direkt här.",
-        "reason": {
-          "missedMate": "missad matt i {{n}}",
-          "playedMate": "matt i {{n}} på brädet",
-          "missedTactic": "missad taktik: {{theme}}",
-          "allowedTactic": "lät motståndaren få en taktik: {{theme}}"
-        },
-        "also": "Samma bild även vid {{moves}}",
-        "more": "Fler ställningar ({{count}})",
-        "match": {
-          "strict": "Samma mattbild",
-          "family": "Liknande mattbild",
-          "theme": "Matt i {{n}}",
-          "strictTactic": "Samma motiv, samma pjäser",
-          "sameTheme": "Samma motiv"
-        },
-        "rating": "Rating {{rating}}",
-        "solve": "Lös",
-        "solved": "Löst!",
-        "wrong": "Inte rätt drag — försök igen.",
-        "shown": "Lösningen visas.",
-        "showSolution": "Visa lösning",
-        "retry": "Igen",
-        "counter": "Problem {{i}} av {{n}}",
-        "bookExample": "Exempel i boken",
-        "bookPage": "s. {{n}}",
-        "bookPart": "Avsnitt {{n}}",
         "train": "Träna taktik",
         "trainHint": "Lägger till partiets uppgifter som ett kapitel i din kurs ”Personliga taktiker” och öppnar det.",
         "trainFailed": "Kursen kunde inte öppnas."

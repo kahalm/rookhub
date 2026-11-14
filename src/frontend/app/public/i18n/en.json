@@ -3639,34 +3639,6 @@
       "neverSuggestDone": "Won’t be suggested to you again.",
       "neverSuggestFailed": "Could not save that.",
       "exercises": {
-        "title": "Recommended exercises",
-        "intro": "Puzzles with the same pattern as positions from this game — solve them right here.",
-        "reason": {
-          "missedMate": "missed mate in {{n}}",
-          "playedMate": "mate in {{n}} on the board",
-          "missedTactic": "missed tactic: {{theme}}",
-          "allowedTactic": "allowed the opponent a tactic: {{theme}}"
-        },
-        "also": "Same pattern also at {{moves}}",
-        "more": "More positions ({{count}})",
-        "match": {
-          "strict": "Same mating pattern",
-          "family": "Similar mating pattern",
-          "theme": "Mate in {{n}}",
-          "strictTactic": "Same motif, same pieces",
-          "sameTheme": "Same motif"
-        },
-        "rating": "Rating {{rating}}",
-        "solve": "Solve puzzle",
-        "solved": "Solved!",
-        "wrong": "Not the right move — try again.",
-        "shown": "Solution shown.",
-        "showSolution": "Show solution",
-        "retry": "Try again",
-        "counter": "Puzzle {{i}} of {{n}}",
-        "bookExample": "Example in the book",
-        "bookPage": "p. {{n}}",
-        "bookPart": "Section {{n}}",
         "train": "Train tactics",
         "trainHint": "Adds this game’s puzzles as a chapter to your course “Personal tactics” and opens it.",
         "trainFailed": "Could not open the course."

@@ -3573,34 +3573,6 @@
       "neverSuggestDone": "今後は提案されません。",
       "neverSuggestFailed": "保存できませんでした。",
       "exercises": {
-        "title": "おすすめの練習問題",
-        "intro": "この対局の局面と同じパターンの問題 — ここで直接解けます。",
-        "reason": {
-          "missedMate": "見逃したメイト（{{n}}手）",
-          "playedMate": "盤上のメイト（{{n}}手）",
-          "missedTactic": "見逃した戦術: {{theme}}",
-          "allowedTactic": "相手に許した戦術: {{theme}}"
-        },
-        "also": "同じパターン: {{moves}}",
-        "more": "ほかの局面（{{count}}）",
-        "match": {
-          "strict": "同じメイトパターン",
-          "family": "似たメイトパターン",
-          "theme": "{{n}}手メイト",
-          "strictTactic": "同じ手筋・同じ駒",
-          "sameTheme": "同じ手筋"
-        },
-        "rating": "レーティング {{rating}}",
-        "solve": "解く",
-        "solved": "正解！",
-        "wrong": "正しい手ではありません — もう一度。",
-        "shown": "解答を表示しました。",
-        "showSolution": "解答を表示",
-        "retry": "もう一度",
-        "counter": "問題 {{i}} / {{n}}",
-        "bookExample": "本の例",
-        "bookPage": "{{n}}ページ",
-        "bookPart": "セクション{{n}}",
         "train": "タクティクスを練習",
         "trainHint": "この対局の問題を、あなたのコース「個人タクティクス」に章として追加して開きます。",
         "trainFailed": "コースを開けませんでした。"

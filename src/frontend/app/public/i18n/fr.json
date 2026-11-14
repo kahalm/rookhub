@@ -3573,34 +3573,6 @@
       "neverSuggestDone": "Ne vous sera plus proposé.",
       "neverSuggestFailed": "Impossible d'enregistrer cela.",
       "exercises": {
-        "title": "Exercices recommandés",
-        "intro": "Problèmes avec le même motif que des positions de cette partie — à résoudre ici même.",
-        "reason": {
-          "missedMate": "mat en {{n}} manqué",
-          "playedMate": "mat en {{n}} sur l'échiquier",
-          "missedTactic": "tactique manquée : {{theme}}",
-          "allowedTactic": "tactique laissée à l'adversaire : {{theme}}"
-        },
-        "also": "Même motif aussi en {{moves}}",
-        "more": "Autres positions ({{count}})",
-        "match": {
-          "strict": "Même motif de mat",
-          "family": "Motif de mat similaire",
-          "theme": "Mat en {{n}}",
-          "strictTactic": "Même motif, mêmes pièces",
-          "sameTheme": "Même motif"
-        },
-        "rating": "Classement {{rating}}",
-        "solve": "Résoudre",
-        "solved": "Résolu !",
-        "wrong": "Ce n'est pas le bon coup — réessaie.",
-        "shown": "Solution affichée.",
-        "showSolution": "Afficher la solution",
-        "retry": "Réessayer",
-        "counter": "Problème {{i}} sur {{n}}",
-        "bookExample": "Exemple dans le livre",
-        "bookPage": "p. {{n}}",
-        "bookPart": "Section {{n}}",
         "train": "S’entraîner aux tactiques",
         "trainHint": "Ajoute les exercices de cette partie comme chapitre de ton cours « Tactiques personnelles » et l’ouvre.",
         "trainFailed": "Impossible d’ouvrir le cours."

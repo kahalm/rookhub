@@ -3573,34 +3573,6 @@
       "neverSuggestDone": "不会再向你建议。",
       "neverSuggestFailed": "无法保存。",
       "exercises": {
-        "title": "推荐练习",
-        "intro": "与本局中局面相同图形的谜题——直接在这里解。",
-        "reason": {
-          "missedMate": "错过的{{n}}步杀",
-          "playedMate": "棋盘上的{{n}}步杀",
-          "missedTactic": "错过的战术：{{theme}}",
-          "allowedTactic": "让对手有了战术：{{theme}}"
-        },
-        "also": "同样的图形还出现在 {{moves}}",
-        "more": "更多局面（{{count}}）",
-        "match": {
-          "strict": "相同的将杀图形",
-          "family": "相似的将杀图形",
-          "theme": "{{n}}步杀",
-          "strictTactic": "相同战术、相同棋子",
-          "sameTheme": "相同战术"
-        },
-        "rating": "等级分 {{rating}}",
-        "solve": "解题",
-        "solved": "解对了！",
-        "wrong": "不是正确的着法——再试一次。",
-        "shown": "已显示答案。",
-        "showSolution": "显示答案",
-        "retry": "再试一次",
-        "counter": "谜题 {{i}} / {{n}}",
-        "bookExample": "书中示例",
-        "bookPage": "第 {{n}} 页",
-        "bookPart": "第 {{n}} 节",
         "train": "训练战术",
         "trainHint": "将本局的练习作为一章加入你的课程“个人战术”并打开。",
         "trainFailed": "无法打开课程。"
