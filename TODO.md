@@ -6,6 +6,22 @@ _Legende: `[ ]` offen · `[~]` Hauptteil erledigt, Rest bewusst geparkt (Begrün
 `[x]` erledigt, bleibt als Beleg stehen. Erledigte Einzelfunde ohne weiteren Wert stehen unten
 im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
+## [~] Fehler-Erklärungen: taktischer Grund statt Engine-Linie — 0.971.0 (2026-11-14)
+
+`docs/api/zuege-vergleichen.md` → „Der taktische Grund statt der nacherzählten Engine-Linie“. Fertig: andere Verteidigungen in der
+Widerlegung als Zusatzlinien (`MoveComparisonDefences`), Gabel-/Feld-Fakten, Figurenliste, neuer Fable-Auftrag, Admin-Weg
+`POST /api/admin/move-comparisons/{id}/re-explain`. Offen:
+- [ ] Textqualität am echten Modell ansehen — beim Bau gab es keinen Fable-Aufruf. Nach dem Deploy Vergleich 2569 (Vereinspartie 245,
+      25...Lc8) neu erklären lassen und lesen: Motiv genannt, 26...Txc8 und 27...Kb8 je mit 27./28.Sd7+ widerlegt, keine falsche
+      Stellungsbehauptung, Länge unter 200 Wörtern.
+- [ ] Stellungsbehauptungen im Text („ungedeckt“, „steht vor dem König“) prüft nichts maschinell; verhindern sollen sie nur
+      Figurenliste, Fakten und Auftrag. Kommt es wieder vor: eine zweite, billige Prüfrunde (Modell bekommt Text + Figurenliste,
+      antwortet nur „stimmt/stimmt nicht“) erwägen.
+- [ ] Die Zusatzlinien stehen nicht auf der Vergleichsseite (`MoveComparisonView` lässt sie weg) — dort wären sie als
+      „Was, wenn …?“-Zeilen unter der Widerlegung sinnvoll.
+- [ ] Das lokale Modell bekommt den Block nicht (sein Auftrag: 90 Wörter, höchstens zwei Züge je Linie). Erst mit eigenem Auftrag
+      und Probelauf freigeben; bis dahin rechnet die Engine die Zusatzlinien nur, wo Fable schreibt.
+
 
 
 

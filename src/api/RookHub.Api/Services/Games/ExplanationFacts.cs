@@ -112,7 +112,10 @@ public static class ExplanationFacts
     /// eingeht — der Fehler selbst, wenn die Antwort-Linie ausgewertet wird. Ohne ihn zählte ein Zurückschlagen als Gewinn:
     /// Prod-Partie 35, 21…Tc4 22.Txc4 dxc4 — ab der Stellung NACH Txc4 gerechnet stand „Black ends up ahead by 5 (Black
     /// took a rook)", und das Modell schrieb „du gewinnst sofort einen Turm" (0.585.1).</param>
-    public static List<string> LineEvents(string fen, IReadOnlyList<string> sans, bool? gainerWhite = null, string? lead = null)
+    /// <param name="leads">Wie <paramref name="lead"/>, aber mehrere Züge (nach diesem) — der Weg bis zu einer anderen
+    /// Verteidigung in der Widerlegung: Fehlzug, Widerlegung bis dorthin, die andere Verteidigung (0.971.0).</param>
+    public static List<string> LineEvents(string fen, IReadOnlyList<string> sans, bool? gainerWhite = null, string? lead = null,
+        IReadOnlyList<string>? leads = null)
     {
         var events = new List<string>();
         if (sans.Count == 0) return events;
@@ -120,8 +123,10 @@ public static class ExplanationFacts
         try
         {
             var board = ChessBoard.LoadFromFen(fen);
-            IReadOnlyList<string> moves = lead is null ? sans : [lead, .. sans];
-            var offset = lead is null ? 0 : 1;
+            List<string> before = lead is null ? [] : [lead];
+            if (leads is not null) before.AddRange(leads);
+            IReadOnlyList<string> moves = before.Count == 0 ? sans : [.. before, .. sans];
+            var offset = before.Count;
             for (var j = 0; j < moves.Count; j++)
             {
                 var san = moves[j];
@@ -188,9 +193,64 @@ public static class ExplanationFacts
         return result;
     }
 
+    /// <summary>
+    /// Schach mit Doppelangriff in einer Linie (0.971.0, Befund an Vereinspartie 245: nach 25...Lc8 26.Txc8+ Txc8 gabelt
+    /// 27.Sd7+ König, Dame und Läufer — <see cref="FirstMoveAttacks"/> bleibt bei einem Schachgebot leer, und das Modell
+    /// erzählte nur die Hauptlinie nach): jeder Zug der Seite, die die Linie beginnt, der Schach gibt, dessen gezogene Figur
+    /// zugleich mindestens eine weitere Figur (ohne Bauern) angreift und die NICHT geschlagen werden kann (kein legaler
+    /// Schlagzug auf ihr Feld) — „Nd7+ gives check and the knight on d7 also attacks the queen on b6 and the bishop on f6
+    /// (a fork); the knight on d7 cannot be captured“. Gibt nicht die gezogene Figur selbst Schach, steht „a discovered
+    /// check“ da. Nur die ersten <paramref name="maxPlies"/> Halbzüge — der Schwanz einer Engine-Linie ist kein Grund.
+    /// </summary>
+    public static List<string> CheckForks(string fen, IReadOnlyList<string> sans, int maxPlies = 6)
+    {
+        var result = new List<string>();
+        try
+        {
+            var board = ChessBoard.LoadFromFen(fen);
+            for (var i = 0; i < sans.Count && i < maxPlies; i++)
+            {
+                var san = sans[i];
+                var move = Array.Find(board.Moves(generateSan: true), m => m.San == san);
+                if (move is null) break;
+                board.Move(move);
+                if (i % 2 != 0 || !move.IsCheck || move.IsMate) continue;
+                var square = move.NewPosition.ToString();
+                if (BoardGeometry.FromFen(board.ToFen()) is not { } geo) continue;
+                var piece = geo.PieceAt(square);
+                if (piece == '\0') continue;
+                var white = char.IsUpper(piece);
+                var attacked = geo.AttackedFrom(square);
+                var targets = attacked.Select(s => (Square: s, Piece: geo.PieceAt(s)))
+                    .Where(t => t.Piece != '\0' && char.IsUpper(t.Piece) != white && char.ToLowerInvariant(t.Piece) is not ('p' or 'k'))
+                    .OrderByDescending(t => Value(char.ToLowerInvariant(t.Piece))).ThenBy(t => t.Square, StringComparer.Ordinal)
+                    .ToList();
+                if (targets.Count == 0) continue;
+                if (board.Moves().Any(m => m.CapturedPiece is not null && m.NewPosition.ToString() == square)) continue;
+                var name = PieceName(char.ToLowerInvariant(piece));
+                var direct = attacked.Any(s => geo.PieceAt(s) == (white ? 'k' : 'K'));
+                result.Add($"{san} gives check and the {name} on {square} also attacks "
+                           + JoinAnd(targets.Select(t => $"the {PieceName(char.ToLowerInvariant(t.Piece))} on {t.Square}").ToList())
+                           + $" ({(direct ? "a fork" : "a discovered check")}); the {name} on {square} cannot be captured");
+            }
+        }
+        catch
+        {
+            // Linie nicht nachzuspielen — was bis hierher gefunden ist, stimmt.
+        }
+        return result;
+    }
+
+    internal static string JoinAnd(IReadOnlyList<string> items) => items.Count switch
+    {
+        0 => "",
+        1 => items[0],
+        _ => string.Join(", ", items.Take(items.Count - 1)) + " and " + items[^1],
+    };
+
     private static int Value(char type) => type switch { 'p' => 1, 'n' => 3, 'b' => 3, 'r' => 5, 'q' => 9, _ => 0 };
 
-    private static string PieceName(char type) => type switch
+    internal static string PieceName(char type) => type switch
     {
         'p' => "pawn", 'n' => "knight", 'b' => "bishop", 'r' => "rook", 'q' => "queen", 'k' => "king", _ => "piece",
     };

@@ -6399,8 +6399,8 @@ namespace RookHub.Api.Migrations
                         .HasColumnType("varchar(10)");
 
                     b.Property<string>("Explanation")
-                        .HasMaxLength(1500)
-                        .HasColumnType("varchar(1500)");
+                        .HasMaxLength(3000)
+                        .HasColumnType("varchar(3000)");
 
                     b.Property<string>("Fen")
                         .IsRequired()

@@ -38,11 +38,15 @@ internal static class MoveComparisonPrompts
         string Fen, bool MoverWhite, int Depth,
         string BestSan, string BestFen, string? BestEval, IReadOnlyList<Pv> BestReplies,
         string WeakSan, string WeakFen, string? WeakEval, IReadOnlyList<Pv> WeakReplies,
-        IReadOnlyList<ReplyTest> Tests)
+        IReadOnlyList<ReplyTest> Tests, IReadOnlyList<MoveComparisonDefences.Decision>? Defences = null)
     {
+        /// <summary>Jeder Zug, den der Text nennen darf: beide Kandidaten, alle gegebenen Linien, die Antwort-Tests und — seit
+        /// 0.971.0 — die anderen Verteidigungen in der Widerlegung samt ihrer Linien.</summary>
         public IEnumerable<string> AllowedMoves() => new[] { BestSan, WeakSan }
             .Concat(BestReplies.SelectMany(p => p.Line)).Concat(WeakReplies.SelectMany(p => p.Line))
-            .Concat(Tests.Select(t => t.ReplySan)).Concat(Tests.SelectMany(t => t.Answer));
+            .Concat(Tests.Select(t => t.ReplySan)).Concat(Tests.SelectMany(t => t.Answer))
+            .Concat((Defences ?? []).SelectMany(d => d.Prefix.Append(d.MainSan)
+                .Concat(d.Defences.SelectMany(x => x.Line.Prepend(x.San)))));
     }
 
     internal static PairFacts? PairFactsOf(MoveComparison c, MoveComparisonLine weak)
@@ -69,7 +73,7 @@ internal static class MoveComparisonPrompts
         return new PairFacts(c.Fen, moverWhite, c.Depth,
             bestSan, best.Fen, EvalOf(best.Fen, best.ResultJson) is { } be ? MoverText(be, moverWhite) : null, Pvs(best.Fen, best.ResultJson),
             weakSan, weak.Fen, EvalOf(weak.Fen, weak.ResultJson) is { } we ? MoverText(we, moverWhite) : null, weakReplies,
-            tests);
+            tests, MoveComparisonDefences.Of(c, weak));
     }
 
     internal static string SystemPrompt(string lang) =>
@@ -97,19 +101,24 @@ internal static class MoveComparisonPrompts
         colour the reader plays. No centipawns, no percentages. Return the JSON object {"{"}"explanation": "..."{"}"}.
         """;
 
-    internal static string UserPrompt(PairFacts f)
+    /// <param name="detailed">Der ausführliche Faktenblock für Fable (0.971.0): Figurenliste, Gabel-Fakten
+    /// (<see cref="ExplanationFacts.CheckForks"/>) und die anderen Verteidigungen in der Widerlegung
+    /// (<see cref="MoveComparisonDefences"/>). Das lokale Modell bekommt ihn NICHT — sein Auftrag (90 Wörter, höchstens zwei
+    /// Züge je Linie) ist dafür nicht gebaut, und sein Prompt bleibt Zeichen für Zeichen wie bisher.</param>
+    internal static string UserPrompt(PairFacts f, bool detailed = false)
     {
         var you = f.MoverWhite ? "White" : "Black";
         var number = MoveNumber(f.Fen) + (f.MoverWhite ? "." : "...");
         var best = number + f.BestSan;
         var weak = number + f.WeakSan;
-        var lines = new List<string>
-        {
-            $"Position (FEN): {f.Fen}",
+        var lines = new List<string> { $"Position (FEN): {f.Fen}" };
+        if (detailed && PieceList(f.Fen) is { } pieces) lines.Add($"Pieces in this position, before the move — {pieces}");
+        lines.AddRange(
+        [
             $"The reader plays {you} and is to move. The engine compared the reader's candidate moves at depth {f.Depth}.",
             $"Better move: {best} — evaluation from the reader's view afterwards: {f.BestEval ?? "?"}{Level(f.BestEval)}.",
             $"Weaker move: {weak} — evaluation from the reader's view afterwards: {f.WeakEval ?? "?"}{Level(f.WeakEval)}.",
-        };
+        ]);
         if (ExplanationFacts.Parse(f.BestEval) is { Mate: null } b && ExplanationFacts.Parse(f.WeakEval) is { Mate: null } w
             && b.Level == w.Level && b.Pawns - w.Pawns < 0.3)
             lines.Add($"The two moves are almost equal (difference {(b.Pawns - w.Pawns).ToString("0.0", CultureInfo.InvariantCulture)} pawns).");
@@ -120,10 +129,12 @@ internal static class MoveComparisonPrompts
             foreach (var p in f.WeakReplies)
                 lines.Add($"- {Numbered(f.WeakFen, [p.San])} ({p.MoverEval(f.MoverWhite)}): {Numbered(f.WeakFen, p.Line)}");
             var top = f.WeakReplies[0].Line;
-            var facts = ExplanationFacts.FirstMoveAttacks(f.WeakFen, top)
-                .Concat(ExplanationFacts.LineEvents(f.Fen, top, gainerWhite: !f.MoverWhite, lead: f.WeakSan)).ToList();
+            var facts = WithForks(detailed ? ExplanationFacts.CheckForks(f.WeakFen, top) : [],
+                ExplanationFacts.FirstMoveAttacks(f.WeakFen, top)
+                    .Concat(ExplanationFacts.LineEvents(f.Fen, top, gainerWhite: !f.MoverWhite, lead: f.WeakSan)));
             if (facts.Count > 0)
                 lines.Add($"Concretely, after {weak} and the opponent's best answer line: {string.Join("; ", facts)}.");
+            if (detailed && f.Defences is { Count: > 0 } decisions) lines.AddRange(DefenceBlock(f, decisions, you, weak));
         }
 
         if (f.Tests.Count > 0)
@@ -152,6 +163,72 @@ internal static class MoveComparisonPrompts
         }
         lines.Add($"Reader: plays {you} — \"you\" is the reader, {(f.MoverWhite ? "Black" : "White")} is \"your opponent\".");
         return string.Join('\n', lines);
+    }
+
+    /// <summary>
+    /// Der Block „Other defences in the refutation line“ (0.971.0): je Entscheidung des Verteidigers, was er dort an Zügen
+    /// hat, und je gerechneter anderer Verteidigung Bewertung, Engine-Linie und geprüfte Fakten (Gabel, Feld, Materialbilanz
+    /// ab der Stellung VOR dem Fehlzug). Ist eine Verteidigung etwa so gut wie die Hauptlinie, steht das dabei — dann
+    /// scheitert sie nicht.
+    /// </summary>
+    private static List<string> DefenceBlock(PairFacts f, IReadOnlyList<MoveComparisonDefences.Decision> decisions, string you, string weak)
+    {
+        var lines = new List<string>
+        {
+            $"Other defences in the refutation line (the opponent's best answer line after {weak}) and why they fail — each "
+            + $"calculated by the engine at depth {f.Depth}; evaluation from the reader's view, engine line, checked facts:",
+        };
+        foreach (var d in decisions)
+        {
+            var main = Numbered(d.FenBefore, [d.MainSan]);
+            var after = Numbered(f.WeakFen, d.Prefix);
+            var has = d.InCheck ? $"{you} is in check and has" : $"{you} has";
+            lines.Add(d.Complete
+                ? $"After {after} {has} exactly {d.LegalMoves} legal moves: {d.MainSan} (the main line above), {string.Join(", ", d.Defences.Select(x => x.San))}."
+                : $"After {after} {has} {d.LegalMoves} legal moves; besides {main} (the main line above) only the following were calculated — do not discuss the others.");
+            foreach (var x in d.Defences)
+            {
+                var alt = Numbered(d.FenBefore, [x.San]);
+                var holds = HoldsAsWell(x.Eval, f.WeakEval) ? " — about as good as the main line, so this defence does NOT fail" : "";
+                var engine = x.Line.Count > 0 ? $" Engine line: {Numbered(x.FenAfter, x.Line)}." : "";
+                lines.Add($"- {alt} instead of {main}: evaluation from the reader's view {x.Eval}{Level(x.Eval)}{holds}.{engine}");
+                if (x.Line.Count == 0) continue;
+                var facts = WithForks(ExplanationFacts.CheckForks(x.FenAfter, x.Line),
+                    x.SquareFacts.Concat(ExplanationFacts.FirstMoveAttacks(x.FenAfter, x.Line))
+                        .Concat(ExplanationFacts.LineEvents(f.Fen, x.Line, gainerWhite: !f.MoverWhite, lead: f.WeakSan, leads: [.. d.Prefix, x.San])));
+                if (facts.Count > 0) lines.Add($"  Concretely, after {alt}: {string.Join("; ", facts)}.");
+            }
+        }
+        return lines;
+    }
+
+    /// <summary>Gabel-Fakten voran; „X gives check“ fällt weg, wenn die Gabel desselben Zuges das Schach schon nennt.</summary>
+    private static List<string> WithForks(List<string> forks, IEnumerable<string> others)
+        => forks.Concat(others.Where(o => !(o.EndsWith(" gives check", StringComparison.Ordinal) && forks.Any(k => k.StartsWith(o + " and ", StringComparison.Ordinal))))).ToList();
+
+    /// <summary>Hält die andere Verteidigung etwa so gut wie die Hauptlinie (höchstens 0,3 Bauern schlechter)? Dann ist sie
+    /// keine gescheiterte Verteidigung — die Engine-Linie des Kandidaten war an der Stelle nur eine von mehreren.</summary>
+    private static bool HoldsAsWell(string? altEval, string? mainEval)
+    {
+        static double Score(ExplanationFacts.Eval e) => e.Mate is int m ? (m >= 0 ? 1000 - m : -1000 - m) : e.Pawns;
+        return ExplanationFacts.Parse(altEval) is { } a && ExplanationFacts.Parse(mainEval) is { } main && Score(a) >= Score(main) - 0.3;
+    }
+
+    /// <summary>Die Figuren der Stellung in Worten („White: king g2, queen e3, rooks a1 c3, …“) — Modelle lesen eine FEN
+    /// unzuverlässig (Befund Vereinspartie 245: „der Läufer steht in der c-Linie vor dem König“, der König stand auf b8).
+    /// Bewusst keine SAN-ähnlichen Kürzel wie „Kb8“: die läse die Zugprüfung im Text als Zug.</summary>
+    internal static string? PieceList(string fen)
+    {
+        if (BoardGeometry.FromFen(fen) is not { } geo) return null;
+        string Side(bool white)
+        {
+            var all = geo.Pieces(white);
+            return string.Join(", ", "kqrbnp"
+                .Select(t => (Type: t, Squares: all.Where(p => char.ToLowerInvariant(p.Piece) == t).Select(p => p.Square).OrderBy(q => q, StringComparer.Ordinal).ToList()))
+                .Where(g => g.Squares.Count > 0)
+                .Select(g => $"{ExplanationFacts.PieceName(g.Type)}{(g.Squares.Count > 1 ? "s" : "")} {string.Join(' ', g.Squares)}"));
+        }
+        return $"White: {Side(true)}. Black: {Side(false)}.";
     }
 
     private static string Level(string? moverEval)

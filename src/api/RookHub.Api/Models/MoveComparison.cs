@@ -36,6 +36,11 @@ public enum MoveComparisonLineKind
     Candidate = 0,
     /// <summary>Eine der besten Antworten auf einen SCHWÄCHEREN Kandidaten, gespielt nach dem BESTEN.</summary>
     Reply = 1,
+    /// <summary>Eine ANDERE Verteidigung in der Widerlegung des schwächeren Kandidaten (0.971.0, Vereinspartien mit
+    /// Fable-Begründung): an einer der ersten Entscheidungen des Verteidigers in der besten Antwort-Linie ein anderer Zug als
+    /// der der Linie — gerechnet wird die Stellung danach (eine Linie = wie der Gegner diese Verteidigung widerlegt).
+    /// Auswahl und Fakten: <see cref="Services.Engines.MoveComparisonDefences"/>.</summary>
+    Defence = 2,
 }
 
 public enum MoveComparisonLineState
@@ -123,15 +128,20 @@ public class MoveComparisonLine
 
     public MoveComparisonLineKind Kind { get; set; }
 
-    /// <summary>Candidate: der Kandidatenzug. Reply: der SCHWÄCHERE Kandidat, zu dessen besten Antworten die Zeile gehört.</summary>
+    /// <summary>Candidate: der Kandidatenzug. Reply: der SCHWÄCHERE Kandidat, zu dessen besten Antworten die Zeile gehört.
+    /// Defence: der SCHWÄCHERE Kandidat, in dessen Widerlegung die andere Verteidigung liegt.</summary>
     [Required, MaxLength(10)]
     public string CandidateUci { get; set; } = string.Empty;
 
-    /// <summary>Reply: die Antwort des Gegners, gespielt nach dem BESTEN Kandidaten.</summary>
+    /// <summary>Reply: die Antwort des Gegners, gespielt nach dem BESTEN Kandidaten. Defence: der andere Zug des
+    /// Verteidigers (statt des Zuges der Widerlegungslinie an der Stelle <see cref="Ordinal"/>).</summary>
     [MaxLength(10)]
     public string? ReplyUci { get; set; }
 
-    /// <summary>Candidate: Reihenfolge der Auswahl. Reply: Rang der Antwort nach dem schwächeren Zug (0 = beste).</summary>
+    /// <summary>Candidate: Reihenfolge der Auswahl. Reply: Rang der Antwort nach dem schwächeren Zug (0 = beste). Defence:
+    /// der Halbzug in der besten Antwort-Linie auf den schwächeren Zug (0 = die Antwort des Gegners), an dem
+    /// <see cref="ReplyUci"/> den Zug der Linie ersetzt — 1 = die erste, 3 = die zweite Entscheidung des Verteidigers; mehrere
+    /// Zeilen dürfen denselben Wert tragen.</summary>
     public int Ordinal { get; set; }
 
     /// <summary>Die gerechnete Stellung — leer bei <see cref="MoveComparisonLineState.Illegal"/>.</summary>
@@ -150,7 +160,8 @@ public class MoveComparisonLine
     public int ReachedDepth { get; set; }
 
     /// <summary>Candidate (nicht der beste): warum der beste Zug besser ist als dieser — englische SAN, die
-    /// Figurenbuchstaben der Sprache setzt erst das Lesen.</summary>
-    [MaxLength(1500)]
+    /// Figurenbuchstaben der Sprache setzt erst das Lesen. 3000 Zeichen seit 0.971.0 (vorher 1500): die Fable-Begründung darf
+    /// mit den anderen Verteidigungen 200 Wörter haben, dazu kommt der eingesetzte Merksatz.</summary>
+    [MaxLength(3000)]
     public string? Explanation { get; set; }
 }

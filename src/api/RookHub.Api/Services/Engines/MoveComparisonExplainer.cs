@@ -32,15 +32,22 @@ internal sealed class MoveComparisonExplainer(IClaudeJsonClient llm, ClubFableEx
         var texts = await Task.WhenAll(pairs.Select(async (p, i) =>
         {
             if (fableTexts[i] is { } done) return done;
+            // Neu angefordert (MoveComparisonService.ReexplainAsync) und Fable liefert nichts: die alte Begründung bleibt —
+            // sie durch einen Text des lokalen Modells zu ersetzen, wäre ein Rückschritt.
+            if (useFable && p.Line.Explanation != null) return null;
             if (!LocalAvailable) return null;
             await gate.WaitAsync(ct);
             try { return await ExplainPairAsync(p.Facts!, system, ct); }
             finally { gate.Release(); }
         }));
-        for (var i = 0; i < pairs.Count; i++) pairs[i].Line.Explanation = texts[i];
+        // Eine vorhandene Begründung geht nur gegen eine neue weg (beim ersten Lauf steht ohnehin keine da).
+        for (var i = 0; i < pairs.Count; i++) pairs[i].Line.Explanation = texts[i] ?? pairs[i].Line.Explanation;
         c.Status = MoveComparisonStatus.Done;
-        var model = fableTexts.Any(t => t != null) ? fable!.Model : llm.TranslationModel;
-        c.Model = model is { Length: > 80 } m ? m[..80] : model;
+        if (c.Model is null || texts.Any(t => t != null))
+        {
+            var model = fableTexts.Any(t => t != null) ? fable!.Model : llm.TranslationModel;
+            c.Model = model is { Length: > 80 } m ? m[..80] : model;
+        }
         c.UpdatedAt = DateTime.UtcNow;
         c.FinishedAt = c.UpdatedAt;
         await db.SaveChangesAsync(ct);

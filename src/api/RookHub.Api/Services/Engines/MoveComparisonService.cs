@@ -325,8 +325,9 @@ public sealed class MoveComparisonService
             await StartRepliesAsync(c, ct);
             changed = true;
         }
+        // Antwort-Tests UND andere Verteidigungen (0.971.0): offen hält auf, gescheitert nicht.
         if (c.Status == MoveComparisonStatus.Replies
-            && c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Reply).All(l => l.State != MoveComparisonLineState.Pending))
+            && c.Lines.Where(l => l.Kind != MoveComparisonLineKind.Candidate).All(l => l.State != MoveComparisonLineState.Pending))
         {
             c.Status = CanExplain(c) && WeakerCandidates(c).Any() ? MoveComparisonStatus.Explaining : MoveComparisonStatus.Done;
             changed = true;
@@ -336,6 +337,7 @@ public sealed class MoveComparisonService
             c.Status = MoveComparisonStatus.Done;
             changed = true;
         }
+        if (c.Status == MoveComparisonStatus.Explaining && await StartDefencesAsync(c, ct)) changed = true;
         if (changed)
         {
             c.UpdatedAt = DateTime.UtcNow;
@@ -393,6 +395,57 @@ public sealed class MoveComparisonService
                 line.State = MoveComparisonLineState.Failed;
             }
         }
+    }
+
+    /// <summary>
+    /// Vor der Begründung durch Fable: die anderen Verteidigungen in der Widerlegung einreihen (0.971.0,
+    /// <see cref="MoveComparisonDefences"/>) — einmal je Vergleich, nur wo Fable schreibt (Vereinspartie ab dem Stichtag bzw.
+    /// eigene Partie mit angeforderter Zusammenfassung; sonst wäre die Engine-Zeit verschenkt). Gibt es etwas zu rechnen,
+    /// geht der Vergleich zurück auf <see cref="MoveComparisonStatus.Replies"/> und kommt nach den Aufträgen von selbst wieder
+    /// hier an. Jeder Weg in die Begründung führt durch <see cref="PumpOneAsync"/>, auch der direkt aus der Analyse
+    /// (<see cref="MoveComparisonFromAnalysis"/>) und der neu angestoßene (<see cref="ReexplainAsync"/>). Ein Auftrag, der
+    /// sich nicht einreihen lässt, macht nur seine Zeile <c>Failed</c> — der Text entsteht dann ohne diese Verteidigung.
+    /// → ob Zeilen dazukamen.
+    /// </summary>
+    private async Task<bool> StartDefencesAsync(MoveComparison c, CancellationToken ct)
+    {
+        if (_fable is not { DefenceLines: > 0 } || c.GameAnalysisId is null || _running.IsRunning(c.Id)
+            || c.Lines.Any(l => l.Kind == MoveComparisonLineKind.Defence) || !await _fable.AppliesAsync(_db, c, ct)) return false;
+        var lines = MoveComparisonDefences.Plan(c, _fable.DefenceLines);
+        if (lines.Count == 0) return false;
+        foreach (var line in lines) c.Lines.Add(line);
+        foreach (var line in lines.Where(l => l.State == MoveComparisonLineState.Pending))
+        {
+            try { line.AnalysisJobId = await CreateJobAsync(c, line.Fen, 1, ct); }
+            catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+            {
+                _logger.LogWarning("Zugvergleich {Id}: Verteidigung {Move} nicht eingereiht: {Message}", c.Id, line.ReplyUci, ex.Message);
+                line.State = MoveComparisonLineState.Failed;
+            }
+        }
+        if (lines.Any(l => l.State == MoveComparisonLineState.Pending)) c.Status = MoveComparisonStatus.Replies;
+        _logger.LogInformation("Zugvergleich {Id}: {Count} andere Verteidigungen in der Widerlegung eingereiht ({Moves})", c.Id,
+            lines.Count, string.Join(' ', lines.Select(l => l.ReplyUci)));
+        return true;
+    }
+
+    /// <summary>
+    /// Einen FERTIGEN Vergleich einer Partie-Analyse neu erklären lassen (0.971.0, Admin auf Zuruf — der Bestand wird nie von
+    /// selbst neu erklärt, jeder Lauf kostet Fable-Aufrufe): zurück auf <see cref="MoveComparisonStatus.Explaining"/>, die Pumpe
+    /// rechnet beim nächsten Takt fehlende andere Verteidigungen nach (<see cref="StartDefencesAsync"/>) und stößt die
+    /// Begründung an. Die alte Begründung bleibt stehen, bis eine neue da ist (und bleibt, wenn keine brauchbare kommt).
+    /// → <c>null</c> = gibt es nicht / kein Vergleich einer Partie, <c>false</c> = nicht fertig (läuft noch), <c>true</c> = angestoßen.
+    /// </summary>
+    public async Task<bool?> ReexplainAsync(int id, CancellationToken ct = default)
+    {
+        var c = await _db.MoveComparisons.FirstOrDefaultAsync(x => x.Id == id && x.GameAnalysisId != null, ct);
+        if (c is null) return null;
+        if (c.Status != MoveComparisonStatus.Done || _running.IsRunning(id)) return false;
+        c.Status = MoveComparisonStatus.Explaining;
+        c.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        _logger.LogInformation("Zugvergleich {Id}: Begruendung neu angefordert", id);
+        return true;
     }
 
     // ── Begründungen ───────────────────────────────────────────────────────────────────────────────

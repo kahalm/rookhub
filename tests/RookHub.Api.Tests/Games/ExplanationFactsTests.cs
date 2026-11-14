@@ -185,4 +185,86 @@ public class ExplanationFactsTests
         Assert.Empty(ExplanationFacts.FirstMoveAttacks(AfterE4D5, ["Nf6"]));
         Assert.Empty(ExplanationFacts.FirstMoveAttacks("kein fen", ["e4"]));
     }
+
+    // ── Schach mit Doppelangriff (0.971.0, Vereinspartie 245: 25...Lc8 26.Txc8+ Txc8 27.Sd7+) ──────────────────────────
+
+    /// <summary>Nach 25...Lc8 26.Txc8+ Txc8 — Weiß am Zug.</summary>
+    private const string Game245AfterRxc8 = "1kr5/pp2n3/1q2pb1r/1P1pN1p1/3P2P1/P2BQ3/4NPK1/R7 w - - 0 27";
+
+    [Fact]
+    public void CheckForks_KnightForkWithCheck_IsNamed_WithEveryAttackedPiece()
+    {
+        // 27.Sd7+ gabelt König b8, Dame b6 und Läufer f6; d7 deckt Schwarz nicht. 28.Sxb6+ gibt auch Schach und greift den
+        // Turm c8 an, kann aber geschlagen werden (axb6) — kein Fakt.
+        Assert.Equal(["Nd7+ gives check and the knight on d7 also attacks the queen on b6 and the bishop on f6 (a fork); "
+                      + "the knight on d7 cannot be captured"],
+            ExplanationFacts.CheckForks(Game245AfterRxc8, ["Nd7+", "Ka8", "Nxb6+", "axb6"]));
+    }
+
+    [Fact]
+    public void CheckForks_OnlyWhenThePieceCannotBeCaptured_AndOnlyTheSideThatStartsTheLine()
+    {
+        Assert.Equal(["Nc7+ gives check and the knight on c7 also attacks the rook on a8 (a fork); the knight on c7 cannot be captured"],
+            ExplanationFacts.CheckForks("r3k3/8/8/1N6/8/8/8/4K3 w - - 0 1", ["Nc7+", "Kd7", "Nxa8"]));
+        // Mit der Dame auf d8 wird der Springer einfach geschlagen.
+        Assert.Empty(ExplanationFacts.CheckForks("r2qk3/8/8/1N6/8/8/8/4K3 w - - 0 1", ["Nc7+", "Qxc7"]));
+        // Ein Schach ohne zweites Ziel ist keine Gabel; Bauern zählen nicht als Ziel.
+        Assert.Empty(ExplanationFacts.CheckForks("4k3/p7/8/1N6/8/8/8/4K3 w - - 0 1", ["Nc7+", "Kd7"]));
+        // Die Gabel des VERTEIDIGERS (zweiter Halbzug der Linie) ist kein Grund für den Fehler.
+        Assert.Empty(ExplanationFacts.CheckForks("4k3/8/8/8/1n6/8/8/R3K3 w - - 0 1", ["Ra3", "Nc2+", "Kd2"]));
+        // Dieselbe Gabel als erster Zug der Linie zählt — außer sie liegt hinter der Grenze.
+        Assert.Single(ExplanationFacts.CheckForks("4k3/8/8/8/1n6/8/8/R3K3 b - - 0 1", ["Nc2+", "Kd2", "Nxa1"]));
+        Assert.Empty(ExplanationFacts.CheckForks("4k3/8/8/8/1n6/8/8/R3K3 b - - 0 1", ["Nc2+", "Kd2", "Nxa1"], maxPlies: 0));
+        Assert.Empty(ExplanationFacts.CheckForks("kein fen", ["Nc7+"]));
+        Assert.Empty(ExplanationFacts.CheckForks(Game245AfterRxc8, ["Zz9"]));
+    }
+
+    [Fact]
+    public void CheckForks_DiscoveredCheck_IsCalledThat()
+    {
+        // Der Springer zieht aus der e-Linie (Abzugsschach des Turms) und greift dabei den Turm b7 an.
+        Assert.Equal(["Nc5+ gives check and the knight on c5 also attacks the rook on b7 (a discovered check); the knight on c5 cannot be captured"],
+            ExplanationFacts.CheckForks("4k3/1r6/8/8/4N3/8/8/4RK2 w - - 0 1", ["Nc5+", "Kd8"]));
+    }
+
+    [Fact]
+    public void LineEvents_SeveralLeads_CountMaterialFromBeforeTheMistake()
+    {
+        // 25...Lc8 26.Txc8+ Txc8 | 27.Sd7+ Ka8 28.Sxb6+ axb6: Weiß nahm Läufer und Dame, Schwarz Turm und Springer.
+        var events = ExplanationFacts.LineEvents("1k4r1/pp1bn3/1q2pb1r/1P1pN1p1/3P2P1/P1RBQ3/4NPK1/R7 b - - 2 25",
+            ["Nd7+", "Ka8", "Nxb6+", "axb6"], gainerWhite: true, lead: "Bc8", leads: ["Rxc8+", "Rxc8"]);
+        Assert.Equal(["Nd7+ gives check", "White ends up ahead in material by 4 (White took bishop, queen, Black took rook, knight)"], events);
+    }
+
+    // ── Brettgeometrie ───────────────────────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void BoardGeometry_AttackedFrom_SlidersStopAtTheFirstPiece_Inclusive()
+    {
+        var geo = BoardGeometry.FromFen("1kb3r1/pp2n3/1q2pb1r/1P1pN1p1/3P2P1/P1RBQ3/4NPK1/R7 w - - 3 26")!;
+        Assert.Equal('R', geo.PieceAt("c3"));
+        Assert.Equal('\0', geo.PieceAt("c4"));
+        Assert.Equal('\0', geo.PieceAt("z9"));
+        // Turm c3: die c-Linie hinauf bis zum Läufer c8 (einschließlich), hinunter bis c1, seitlich bis b3 und zum eigenen Läufer d3.
+        Assert.Equal(["a3", "b3", "c1", "c2", "c4", "c5", "c6", "c7", "c8", "d3"], geo.AttackedFrom("c3").Order(StringComparer.Ordinal));
+        // Springer e5 — auch die Felder mit eigenen Figuren (gedeckt).
+        Assert.Equal(["c4", "c6", "d3", "d7", "f3", "f7", "g4", "g6"], geo.AttackedFrom("e5").Order(StringComparer.Ordinal));
+        // Bauern schlagen schräg nach vorn: Weiß hinauf, Schwarz hinunter.
+        Assert.Equal(["a6", "c6"], geo.AttackedFrom("b5").Order(StringComparer.Ordinal));
+        Assert.Equal(["c4", "e4"], geo.AttackedFrom("d5").Order(StringComparer.Ordinal));
+        Assert.Empty(geo.AttackedFrom("c4"));
+    }
+
+    [Fact]
+    public void BoardGeometry_Attackers_WhoCoversASquare()
+    {
+        // Nach 25...Lc8 deckt nur der Läufer c8 das Feld d7; c8 selbst decken König, Turm und Springer.
+        var geo = BoardGeometry.FromFen("1kb3r1/pp2n3/1q2pb1r/1P1pN1p1/3P2P1/P1RBQ3/4NPK1/R7 w - - 3 26")!;
+        Assert.Equal([('b', "c8")], geo.Attackers("d7", white: false));
+        Assert.Equal([('n', "e7"), ('k', "b8"), ('r', "g8")], geo.Attackers("c8", white: false));
+        Assert.Equal([('N', "e5")], geo.Attackers("d7", white: true));
+        Assert.Null(BoardGeometry.FromFen("kein fen"));
+        Assert.Null(BoardGeometry.FromFen("8/8/8/8/8/8/8/9 w - - 0 1"));
+        Assert.Null(BoardGeometry.FromFen(null));
+    }
 }

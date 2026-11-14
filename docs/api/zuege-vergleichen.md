@@ -118,7 +118,7 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
   gespielt wurde, schreibt `claude-fable-5-1` (`:AnthropicModel`) die Begründung statt des lokalen Modells; ältere bleiben lokal.
   **Spieldatum** (`GameDateAsync`): die Partie trägt nur das Jahr, deshalb das Datum der zugeordneten Ligarunde
   (`LeagueClubGame.LeagueTnr/LeagueRound` → `LeagueRounds.Date`), sonst `LeagueClubGame.CreatedAt` (auf Prod fast immer leer),
-  sonst `CreatedAt` der Hauptanalyse (≈ Hochladen). **Prompt**: Deutsch, Klubspieler 1500–2000, zwei Absätze + „Merksatz: …“,
+  sonst `CreatedAt` der Hauptanalyse (≈ Hochladen). **Prompt** (Stand 0.911.0; seit 0.971.0 gilt „Der taktische Grund“ weiter unten): Deutsch, Klubspieler 1500–2000, zwei Absätze + „Merksatz: …“,
   höchstens 170 Wörter — was der Fehlzug übersieht/zulässt mit der konkreten Widerlegungslinie (3–6 Halbzüge), was der beste
   Zug erreicht, nichts erfinden, kleine Unterschiede (< 0,5) ehrlich als klein, deutsche Figurenbuchstaben; als Fakten derselbe
   `UserPrompt` wie beim lokalen Modell (FEN, beide Züge, Bewertungen, Kandidatenlinien, gefilterte Antwort-Tests). Der Text wird
@@ -134,6 +134,60 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
   das lokale Modell schreibt. Verbrauch je Aufruf im Log („Anthropic club-mistake-fable (…): n Eingabe-, m Ausgabe-Tokens“),
   Schlüssel und Antwort nie. Kosten: Fable $10/$50 je Mio. Tokens; je Begründung grob 2 000–3 000 Eingabe- und 1 000–3 000
   Ausgabe-Tokens (mit Denken) ≈ 0,07–0,18 $, Deckel 200/Tag ≈ höchstens ~60 $/Tag (6000 Ausgabe-Tokens je Aufruf).
+* **Der taktische Grund statt der nacherzählten Engine-Linie** (0.971.0, Befund 2026-11-14 an Vereinspartie 245, Vergleich
+  2569, 25...Lc8: „der Grund, warum Lc8 nicht funktioniert, ist ein taktischer. Wenn Txc8 Txc8 gehen würde, wäre alles gut,
+  aber dann geht die Springergabel Sd7 — ebenso Txc8 Kxc8 Tc1 Kb8, gleiches Problem. Du ratterst nur die Computerlinie
+  runter.“). Ursache: der Text darf nur Züge aus den gegebenen Linien nennen (`MentionsOnly`, bleibt so) — die Nebenwege des
+  Verteidigers standen in keiner Linie. Dazu zwei falsche Stellungsbehauptungen („Läufer vor dem König in der c-Linie“,
+  „ungedeckt“).
+  * **Andere Verteidigungen als Zeilen** (`Services/Engines/MoveComparisonDefences.cs`, `MoveComparisonLineKind.Defence` = 2,
+    KEINE Schemaänderung dafür): in der besten Antwort-Linie auf den Fehlzug an den ersten zwei Zügen des Verteidigers
+    (Halbzug 1 und 3 der Linie) die naheliegenden anderen Züge — **im Schach alle anderen legalen Züge, sonst nur die, die die
+    gerade gezogene Figur des Gegners schlagen** (Opfer annehmen, anders zurückschlagen). Rangfolge je Entscheidung: Schlagen
+    der gezogenen Figur, Königszüge, Rest; darin die billigere Figur zuerst; Unterverwandlungen zählen nicht. Die beiden
+    Entscheidungen kommen abwechselnd dran, bis `ClubMistakeComparisons:DefenceLines` (Vorgabe 4, 0–8, 0 = aus) erreicht ist.
+    Zeile: `CandidateUci` = Fehlzug, `ReplyUci` = die andere Verteidigung, `Ordinal` = ihr Halbzug in der Linie (1/3), `Fen` =
+    Stellung danach; der Weg dorthin ist der Anfang der Antwort-Linie und muss beim Lesen wieder auf `Fen` führen.
+  * **Wann und für wen**: `MoveComparisonService.StartDefencesAsync`, einmal je Vergleich beim Eintritt in „wird erklärt“
+    (jeder Weg dorthin führt durch `PumpOneAsync`, auch der direkt aus der Analyse) — NUR wo Fable schreibt
+    (`ClubFableExplanations.AppliesAsync`: Vereinspartie ab dem Stichtag bzw. eigene Partie mit angeforderter
+    Zusammenfassung; auf Dev mit `ExplainWithAnthropic=false` also nie). Gibt es Zeilen, geht der Vergleich zurück auf
+    `Replies`, je Zeile ein Auftrag mit EINER Linie in der Tiefe des Vergleichs (Hintergrund/Stapel bzw. Vorrang wie die
+    Antwort-Tests), danach wieder „wird erklärt“. **Gescheitert = erledigt**: ein Auftrag, der sich nicht einreihen lässt oder
+    verschwindet, macht nur seine Zeile `Failed`; der Text entsteht ohne diese Verteidigung, die Zusammenfassung
+    (`ClubGameSummaries.ReadinessAsync` zählt `Done`/`Failed` des VERGLEICHS) hängt nie daran.
+  * **Mehrarbeit** (Schätzung aus Prod-Daten vom 14.11., nicht live gemessen): die Regel, in Python nachgebaut und über die
+    439 bisher von Fable erklärten Vergleiche gelegt, ergibt bei 49 % mindestens eine Zusatzlinie, im Mittel 0,93 je Fehler
+    (0: 224, 1: 110, 2: 50, 3: 21, 4: 34); ein Antwort-Test (dieselbe Art Auftrag: eine Linie, Tiefe 30) dauerte im Bestand
+    im Mittel 95 s (Median 44 s, 90 % unter 222 s) → grob 1,5 min mehr Engine-Zeit je Fehler, höchstens vier solche Aufträge.
+  * **Fakten** (nur im Prompt für Fable, `MoveComparisonPrompts.UserPrompt(f, detailed: true)`; das lokale Modell bekommt den
+    Block NICHT, sein Prompt ist Zeichen für Zeichen der alte): Figurenliste in Worten („White: king g2, queen e3, …“ — keine
+    Kürzel wie „Kb8“, die läse die Zugprüfung als Zug); Block „Other defences in the refutation line … and why they fail“ je
+    Entscheidung mit der Zahl der legalen Züge („exactly 3 legal moves: …“, wenn ALLE gerechnet sind, sonst „only the
+    following were calculated — do not discuss the others“), je Verteidigung Bewertung, Engine-Linie mit Zugnummern und
+    „Concretely“: `ExplanationFacts.CheckForks` (Schach + Angriff auf weitere Figuren durch eine Figur, die nicht geschlagen
+    werden kann: „Nd7+ gives check and the knight on d7 also attacks the queen on b6 and the bishop on f6 (a fork); the knight
+    on d7 cannot be captured“ — `FirstMoveAttacks` bleibt bei einem Schach leer), das Feld des widerlegenden Zuges („d7 is
+    the square the bishop left with 25...Bc8“, „after 25...Bc8 the square d7 was covered only by the bishop on c8, which is
+    no longer there“ — Brettgeometrie `Services/Games/BoardGeometry.cs`, ohne Fesselungen) und die Materialbilanz ab der
+    Stellung VOR dem Fehlzug (`LineEvents` mit `leads`). Ist eine Verteidigung höchstens 0,3 Bauern schlechter als die
+    Hauptlinie, steht „about as good as the main line, so this defence does NOT fail“ dabei. `CheckForks` steht auch an der
+    Hauptlinie. Die Züge der Verteidigungen zählen zu `AllowedMoves`; nicht gerechnete bleiben verboten.
+  * **Auftrag** (`ClubFableExplanations.SystemPrompt`): Absatz 1 = Motiv beim Namen, was der gespielte Zug aufgibt oder
+    freigibt, Einstieg der Widerlegung, zu JEDER gegebenen Verteidigung ein Halbsatz, woran sie scheitert; Hauptlinie nur so
+    weit wie nötig. Stellungsaussagen (Feld, gedeckt/ungedeckt, Linie) müssen aus Figurenliste oder Fakt folgen. 200 statt 170
+    Wörter; `MoveComparisonLines.Explanation` deshalb 3000 statt 1500 Zeichen (Migration `MoveComparisonExplanationLength` —
+    `MaxTextLength` 3000 stand schon über der Spalte), geprüft nach dem Einsetzen des Merksatzes. **Nicht maschinell
+    geprüft** wird, ob eine Stellungsbehauptung im Text stimmt — das stützen nur Figurenliste, Fakten und Auftrag.
+  * **Bestand bleibt**, nichts wird von selbst neu erklärt. EINEN fertigen Vergleich neu erklären (Admin):
+    `POST /api/admin/move-comparisons/{id}/re-explain` (`AdminMoveComparisonsController`, `MoveComparisonService.ReexplainAsync`)
+    → 202 `{ id, status: "explaining" }`, 404 unbekannt/kein Vergleich einer Partie-Analyse, 409 `not-done` solange er
+    rechnet oder erklärt wird. Die Pumpe rechnet beim nächsten Takt die fehlenden Verteidigungen nach und stößt die
+    Begründung an (ein Fable-Aufruf, zählt zum Tagesdeckel); die alte Begründung bleibt, bis die neue da ist, und bleibt
+    auch, wenn Fable nichts Brauchbares liefert (das lokale Modell ersetzt eine vorhandene Begründung dann nicht). Währenddessen
+    zählt der Vergleich für die Zusammenfassung als offen.
+  * **Vergleichsseite**: die Zusatzzeilen stehen nicht im DTO (`MoveComparisonView` nimmt nur Kandidaten und Antwort-Tests),
+    zählen aber in `pending`/`total` mit; der Status springt für sie von „explaining“ kurz zurück auf „replies“.
 * **Besitz und Sichtbarkeit**: Besitzer ist der Besitzer der Analyse (Haus-Engine-Konto). Alle Nutzerwege (`/api/move-comparisons`
   Liste/Lesen/Löschen, `MaxOpenPerUser`, `MaxKeptPerUser`) filtern `GameAnalysisId == null` — die Zeilen zählen nirgends mit.
   Lesen darf, wer die Vereinspartie sieht: `GET /api/league/club/games/{id}/comparisons` (alle, nach Halbzug: `{ ply,
