@@ -254,9 +254,9 @@ html.eink .board-hint-tip mat-icon { color: var(--rh-hint) !important; }
 // Zug-Knöpfe im Fließtext: gut/schlecht trägt das Zugzeichen (!, ??), nicht der Farbton — im Modus Textfarbe. Der Zug am
 // Brett bekommt einen Rahmen statt der Akzentfläche; Varianten bleiben kursiv, aber in lesbarem Sekundärtext.
 html.eink .summary-text .gt-mv.gt-good,
-html.eink .summary-text .gt-mv.gt-bad { color: #000 !important; }
+html.eink .summary-text .gt-mv.gt-bad { color: var(--mat-sys-on-surface) !important; }
 html.eink .summary-text .gt-mv.gt-on {
-  background: #fff !important;
-  color: #000 !important;
-  outline: var(--eink-line) solid #000 !important;
+  background: var(--mat-sys-surface) !important;
+  color: var(--mat-sys-on-surface) !important;
+  outline: var(--eink-line) solid var(--mat-sys-on-surface) !important;
 }

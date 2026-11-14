@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.963.1", date: "2026-11-14", changes: [
+    { en: "E-ink mode: the moves in the merged game text of a summary take their black and white from the colour tokens instead of fixed values. Nothing changes on screen; the build check for fixed colours passes again.",
+      de: "E-Ink-Modus: Die Züge im verschmolzenen Partietext einer Zusammenfassung nehmen Schwarz und Weiß aus den Farb-Tokens statt aus festen Werten. Am Bild ändert sich nichts; die Build-Prüfung auf feste Farben läuft wieder durch." },
+  ] },
   { version: "0.963.0", date: "2026-11-14", changes: [
     { en: "Game summary: “The game” becomes one continuous text. New summaries tell the whole game in prose – starting with the opening, every move in order, interrupted again and again by explanation and by side lines in brackets. Every move is clickable: game moves (bold) jump on the board next to the text, side lines (smaller, italic) play out from the right position; on the phone the board opens as a sheet with the engine, as before. Moves marked !! or ! are green, mistakes red. The separate “Summary” section is gone in new texts – its content lives in the merged text.",
       de: "Partie-Zusammenfassung: „Die Partie“ wird ein durchgehender Text. Neue Zusammenfassungen erzählen die ganze Partie als Fließtext – beginnend mit der Eröffnung, alle Züge der Reihe nach, immer wieder unterbrochen von Erklärung und von Untervarianten in Klammern. Jeder Zug ist anklickbar: Partiezüge (fett) springen aufs Brett neben dem Text, Varianten (kleiner, kursiv) laufen von der passenden Stellung aus; am Handy öffnet sich wie bisher das Brett als Blatt mit Engine. Züge mit !! oder ! sind grün, Fehler rot. Der eigene Abschnitt „Zusammenfassung“ entfällt in neuen Texten – sein Inhalt steckt im verschmolzenen Text." },
