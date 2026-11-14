@@ -22,6 +22,7 @@ import { ClubSummaryLinkComponent } from './club-summary-link.component';
 import { SummaryGameBoardComponent, SummaryJump } from './summary-game-board.component';
 import { SummaryBoardSheetComponent } from './summary-board-sheet.component';
 import { SanPipe } from '../../../shared/chess/san.pipe';
+import { GameTextPart, mergeGameSection } from './summary-game-text.util';
 import { DiagramSpec, InlinePart, SummaryBlock, gameMovePairs, moveLabel, linkSummaryMoves, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock } from './summary-markdown.util';
 
 /** Ein fertig aufgelöstes Diagramm: Stellung, letzter Zug, Pfeile, Blickrichtung. */
@@ -122,6 +123,10 @@ interface ResolvedDiagram {
                       <p class="game-line">@for (pair of gameMoves(); track $index) {<span class="gm-pair"><span class="gm-no">{{ pair.number }}</span>@for (m of pair.moves; track m.ply) {<button type="button" class="gm" [class.gm-on]="m.ply === boardPly()" [attr.aria-current]="m.ply === boardPly() ? 'step' : null" (click)="showGamePly(m.ply)">{{ m.san | san }}</button>}</span>}@if (g.result && g.result !== '*') {<span class="gm-result">{{ g.result }}</span>}</p>
                     </section>
                   }
+                  @case ('gameText') {
+                    <!-- Verschmolzener Abschnitt „Die Partie“ (Wunsch 2026-11-14): Partiezüge fett im Text, Varianten in Klammern kleiner und gedämpft. -->
+                    <p class="game-text">@for (seg of b.segments; track $index) {@if (seg.variation) {<span class="gt-var"><ng-container *ngTemplateOutlet="gameParts; context: { $implicit: seg.parts }" /></span>} @else {<ng-container *ngTemplateOutlet="gameParts; context: { $implicit: seg.parts }" />}}</p>
+                  }
                   @case ('maxim') { <app-maxim-note class="maxim" [text]="b.value" /> }
                   @case ('book') {
                     @if (books().get(b.id); as info) {
@@ -202,6 +207,19 @@ interface ResolvedDiagram {
         @else { <ng-container>{{ p.text }}</ng-container> }
       }
     </ng-template>
+
+    <ng-template #gameParts let-parts>
+      @for (p of parts; track $index) {
+        @if (p.move) { <button type="button" class="gt-mv" [class.gt-game]="p.move.ply !== undefined" [class.gt-good]="p.mark === 'good'" [class.gt-bad]="p.mark === 'bad'"
+                               [class.gt-on]="p.move.ply !== undefined && p.move.ply === boardPly()" [attr.aria-current]="p.move.ply !== undefined && p.move.ply === boardPly() ? 'step' : null"
+                               (click)="showGameTextMove(p)">{{ p.text }}{{ p.glyph }}</button> }
+        @else if (p.result) { @if (resultText(); as r) { <span class="gt-result">{{ r }}</span> } }
+        @else if (p.bold) { <strong>{{ p.text }}</strong> }
+        @else if (p.italic) { <em>{{ p.text }}</em> }
+        @else if (p.code) { <code>{{ p.text }}</code> }
+        @else { <ng-container>{{ p.text }}</ng-container> }
+      }
+    </ng-template>
   `,
   styles: [`
     .summary-page { max-width: 860px; margin: 0 auto; padding: 16px; }
@@ -257,6 +275,18 @@ interface ResolvedDiagram {
     .gm:hover, .gm:focus-visible { background: color-mix(in srgb, currentColor 12%, transparent); outline: none; }
     .gm.gm-on { background: color-mix(in srgb, var(--rh-accent) 18%, transparent); font-weight: 700; text-decoration: none; }
     .gm-result { font-weight: 700; white-space: nowrap; }
+    /* Verschmolzener Text: Partiezüge fett in Textfarbe, Varianten (Klammern) kleiner, kursiv, gedämpft; Zugzeichen färben den Zug. */
+    .game-text { line-height: 1.75; }
+    .gt-mv { all: unset; cursor: pointer; font-weight: 500; font-style: normal; font-variant-numeric: tabular-nums; white-space: nowrap;
+      padding: 0 2px; margin: 0 -1px; border-radius: 4px; }
+    .gt-mv.gt-game { font-weight: 700; }
+    .gt-mv:hover, .gt-mv:focus-visible { background: color-mix(in srgb, var(--rh-accent) 16%, transparent); }
+    .gt-mv:focus-visible { outline: 2px solid var(--rh-accent); outline-offset: 1px; }
+    .gt-mv.gt-good { color: var(--rh-success); }
+    .gt-mv.gt-bad { color: var(--rh-error); }
+    .gt-mv.gt-on, .gt-mv.gt-on.gt-good, .gt-mv.gt-on.gt-bad { background: var(--rh-accent); color: var(--mat-sys-on-primary); }
+    .gt-var { color: var(--mat-sys-on-surface-variant); font-size: 0.9em; font-style: italic; }
+    .gt-result { font-weight: 700; white-space: nowrap; margin-left: 0.3em; }
     .to-board { background: none; border: 0; padding: 0; font: inherit; color: var(--rh-accent); text-decoration: underline; cursor: pointer; }
   `],
 })
@@ -306,11 +336,20 @@ export class ClubGameSummaryComponent implements OnInit {
   readonly exercises = signal<SummaryExerciseGroup[]>([]);
   /** Ohne Bücher und ohne deren Überschrift, wenn von der Literatur-Liste nichts übrig bleibt. */
   /** Züge im Text werden klickbar, sobald es das Seitenbrett gibt, das sie zeigen kann. */
-  private readonly linkedBlocks = computed<SummaryBlock[]>(() => this.hasBoard() ? linkSummaryMoves(this.blocks(), this.positions()) : this.blocks());
-  /** Mit Brett (= es gibt Züge) setzt die Seite „Die Partie“ selbst ein — aus dem PGN, für jede bestehende Zusammenfassung. */
+  private readonly mergedSection = computed(() => this.hasBoard() ? mergeGameSection(this.blocks(), this.positions()) : { blocks: this.blocks(), merged: false });
+  private readonly linkedBlocks = computed<SummaryBlock[]>(() => this.hasBoard() ? linkSummaryMoves(this.mergedSection().blocks, this.positions()) : this.blocks());
+  /**
+   * Mit Brett (= es gibt Züge) steht „Die Partie“ immer da: erzählt der Text sie selbst (Abschnitt „## Die Partie“ mit den
+   * Partiezügen, Wunsch 2026-11-14), bleibt es bei ihm; sonst (alte Zusammenfassungen) setzt die Seite die Zugliste aus dem PGN ein.
+   */
   readonly visibleBlocks = computed<SummaryBlock[]>(() => {
     const shown = visibleSummaryBlocks(this.linkedBlocks(), b => this.books().has(b.id));
-    return this.hasBoard() ? withGameBlock(shown) : shown;
+    return this.hasBoard() && !this.mergedSection().merged ? withGameBlock(shown) : shown;
+  });
+  /** Ergebnis hinter dem letzten Partiezug des verschmolzenen Texts („½–½“ statt „1/2-1/2“). */
+  readonly resultText = computed(() => {
+    const r = this.game()?.result;
+    return !r || r === '*' ? '' : r === '1/2-1/2' ? '½–½' : r.replace('-', '–');
   });
   readonly gameMoves = computed(() => gameMovePairs(this.positions()));
   private readonly positions = computed(() => positionsOf(this.game()?.pgn ?? ''));
@@ -401,6 +440,12 @@ export class ClubGameSummaryComponent implements OnInit {
   /** Klick auf einen Zug im Text: Partiezug oder Variante aufs Seitenbrett. */
   showMove(p: InlinePart): void {
     if (p.line && p.at) this.showOnBoard({ line: p.line, at: p.at });
+  }
+
+  /** Klick auf einen Zug im verschmolzenen Text: Partiezug als Halbzug (hebt ihn hervor), Variante als Zugfolge. */
+  showGameTextMove(p: GameTextPart): void {
+    if (!p.move) return;
+    if (p.move.ply !== undefined) this.showOnBoard({ ply: p.move.ply }); else this.showOnBoard({ line: p.move.line, at: p.move.at });
   }
 
   /** Klick auf einen Zug in „Die Partie“. */

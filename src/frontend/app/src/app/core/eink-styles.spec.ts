@@ -264,6 +264,20 @@ describe('_eink.scss (E-Ink-Modus)', () => {
     expect(getComputedStyle(el.querySelector('svg')!).outlineWidth).toBe('2px');
   });
 
+  it('Zusammenfassung, verschmolzener Text: Zug mit Zugzeichen in Textfarbe, Zug am Brett mit Rahmen statt Akzentfläche', () => {
+    const host = mount('<article class="summary-text"><p><button class="gt-mv gt-game gt-good" style="color: rgb(27, 94, 32)">Sc3!!</button>'
+      + '<button class="gt-mv gt-game gt-bad" style="color: rgb(186, 26, 26)">Se2??</button>'
+      + '<button class="gt-mv gt-game gt-on" style="background: rgb(0, 92, 187); color: #fff">Dg4</button></p></article>');
+    setEinkActive(true);
+    const [good, bad, on] = Array.from(host.querySelectorAll('button')).map(b => getComputedStyle(b));
+    expect(good.color).toBe('rgb(0, 0, 0)');
+    expect(bad.color).toBe('rgb(0, 0, 0)');
+    expect(on.backgroundColor).toBe('rgb(255, 255, 255)');
+    expect(on.color).toBe('rgb(0, 0, 0)');
+    expect(on.outlineStyle).toBe('solid');
+    expect(on.outlineWidth).toBe('2px');
+  });
+
   @Component({ standalone: true, imports: [MatProgressSpinnerModule], template: '<mat-spinner diameter="40" />' })
   class SpinnerHost {}
 

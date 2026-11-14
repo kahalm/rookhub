@@ -113,6 +113,71 @@ describe('ClubGameSummaryComponent — Zug-Knöpfe im Text', () => {
   });
 });
 
+/** Wunsch 2026-11-14: „Die Partie“ als ein Text — Partiezüge im Fließtext, Varianten in Klammern; alte Texte behalten die Zugliste. */
+describe('ClubGameSummaryComponent — verschmolzener Abschnitt „Die Partie“', () => {
+  const merged = [
+    '# A – B', '', 'Kopf.', '', '## Die Partie', '',
+    'Die Partie begann spanisch: 1.e4 e5 2.Sf3 Sc6 3.Lb5 a6! (statt 3...Sf6 4.0-0 mit der Berliner Mauer, 0,0) und Schluss (0,0).', '',
+    '## Was man mitnehmen kann', '', '- Nach 2.Sf3 entwickeln.',
+  ].join('\n');
+  const old = ['# A – B', '', 'Kopf.', '', '## Zusammenfassung', '', 'Nach 1.e4 e5 stand es gleich.', '', '## Fazit', '', 'x'].join('\n');
+
+  function render(md: string) {
+    TestBed.configureTestingModule({
+      imports: [ClubGameSummaryComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '244' }), data: {} } } },
+        { provide: GamesService, useValue: { clubGame: () => of({ pgn: '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 1/2-1/2', ownerSide: 'white', result: '1/2-1/2' }) } },
+        { provide: ClubGameSummaryService, useValue: { get: () => of({ markdown: md }), suggestions: () => of([]), exercises: () => of([]) } },
+        { provide: AuthService, useValue: { isLoggedIn: false, currentUser$: of(null) } },
+        { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ClubGameSummaryComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('verschmolzen: ein Fließtext, Partiezüge fett, Variante in eigener Klammer-Spanne, keine eingesetzte Zugliste', () => {
+    const el = render(merged).nativeElement as HTMLElement;
+    expect(el.querySelector('.game-moves')).toBeNull();
+    expect(Array.from(el.querySelectorAll('h2')).map(h => h.textContent)).toEqual(['Die Partie', 'Was man mitnehmen kann']);
+    const p = el.querySelector('p.game-text')!;
+    expect(p.textContent).toBe('Die Partie begann spanisch: 1.e4 e5 2.Sf3 Sc6 3.Lb5 a6!½–½ (statt 3...Sf6 4.0-0 mit der Berliner Mauer, 0,0) und Schluss (0,0).');
+    expect(Array.from(p.querySelectorAll('button.gt-mv.gt-game')).map(b => b.textContent)).toEqual(['1.e4', 'e5', '2.Sf3', 'Sc6', '3.Lb5', 'a6!']);
+    const variation = p.querySelector('.gt-var')!;
+    expect(variation.textContent).toBe('(statt 3...Sf6 4.0-0 mit der Berliner Mauer, 0,0)');
+    expect(Array.from(variation.querySelectorAll('button.gt-mv')).map(b => b.className.includes('gt-game'))).toEqual([false, false]);
+    expect(p.querySelectorAll('.gt-var').length).toBe(1);
+    expect(p.querySelector('button.gt-good')!.textContent).toBe('a6!');
+    expect(p.querySelector('.gt-result')!.textContent).toBe('½–½');
+    // übrige Abschnitte wie bisher: Zug-Knopf im Listenpunkt
+    expect(el.querySelector('li button.mv')!.textContent).toBe('2.Sf3');
+  });
+
+  it('Klick: Partiezug springt als Halbzug (und wird hervorgehoben), Variantenzug als Zugfolge', () => {
+    const fixture = render(merged);
+    const el = fixture.nativeElement as HTMLElement;
+    const calls: unknown[] = [];
+    spyOn(fixture.componentInstance, 'showOnBoard').and.callFake(j => { calls.push(j); });
+    (el.querySelectorAll('button.gt-mv.gt-game')[2] as HTMLButtonElement).click();
+    (el.querySelector('.gt-var button.gt-mv') as HTMLButtonElement).click();
+    expect(calls[0]).toEqual({ ply: 3 });
+    const v = calls[1] as { line: { san: string }[]; at: number };
+    expect(v.at).toBe(6);
+    expect(v.line.map(m => m.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'Nf6', 'O-O']);
+  });
+
+  it('alte Zusammenfassung ohne den Abschnitt: Zugliste wie bisher hinter „Zusammenfassung“, kein verschmolzener Text', () => {
+    const el = render(old).nativeElement as HTMLElement;
+    expect(el.querySelector('p.game-text')).toBeNull();
+    expect(el.querySelectorAll('.game-moves button.gm').length).toBe(6);
+    expect(Array.from(el.querySelectorAll('h2')).map(h => h.textContent)).toEqual(['Zusammenfassung', 'games.summary.theGame', 'Fazit']);
+  });
+});
+
 /** UI-Sweep 2026-11-10 (d10): Sperrkarte bei 403, Kartenpolster und Leerzustand mit Anfordern als Hauptknopf. */
 describe('ClubGameSummaryComponent — Design-Runde d10', () => {
   const err = (status: number) => throwError(() => new HttpErrorResponse({ status }));

@@ -119,6 +119,8 @@ Züge im Text (Überschriften, Absätze, Listen, Zitate, Tabellen, Bildunterschr
 
 ## „Die Partie“ und Brett am Handy (0.959.0)
 
+> Seit 0.963.0 gilt die eingesetzte Zugliste nur noch für Zusammenfassungen ohne verschmolzenen Abschnitt (siehe unten).
+
 Wunsch 2026-11-13: „ich hätt gern dass die zusammenfassung auch die ganze partie abbildet … zum durchklicken“. Die Seite
 setzt den Block **„Die Partie“** (`games.summary.theGame`) selbst ein — aus dem PGN der Partie, nicht aus dem Markdown;
 er gilt damit für jede bestehende Zusammenfassung. Platz (`gameBlockIndex` in `summary-markdown.util.ts`): hinter den
@@ -136,6 +138,54 @@ per X, Hintergrund, Esc, Wischen am Griff nach unten oder Zurück-Taste (eigener
 Seitenbrett bleiben unverändert. **Engine**: Knopf `memory` am Brett (Desktop und Blatt; im Blatt beim Öffnen an) —
 `LiveEngineSession` mit Stockfish im Browser, rechnet die Stellung auf dem Brett, drei Linien + Pfeil. Die Engine ist eine
 statische Datei der App, läuft also auch über die Teilen-Links ohne Anmeldung; externe Engines bietet die Seite nicht an.
+
+## „Die Partie“ als ein Text (0.963.0)
+
+Wunsch 2026-11-14: „ich mag nicht einfach die zugliste aufgelistet bekommen sondern es soll die partie mit dem ganzen ersten
+block gemerged werden – sprich sowas wie die Partie begann als Französisch: e4 e6 … und dann alle züge immer wieder
+unterbrochen von text und untervarianten“ (Mockup `~/claude/formulare-bot/mockups/partie-244-verschmolzen.html`).
+
+**Format** (kein neues Markdown-Element, keine Migration): der Watcher schreibt statt `## Zusammenfassung` den Abschnitt
+`## Die Partie` als gewöhnliche Absätze. Darin stehen ALLE Partiezüge der Reihe nach mit Zugnummer im Fließtext, dazwischen
+Erklärung; Untervarianten in runden Klammern; Zugzeichen (`!!`, `!`, `?`, `??`, `?!`) direkt am Partiezug:
+
+```
+## Die Partie
+
+Dann stellte 18.Dd4 die Dame dem Turm d8 gegenüber, dazwischen steht nur der Springer d5. (Besser 18.Sbd4 La4 19.Da5 Ld7
+20.0-0 b6 21.Da6 mit etwa gleicher Stellung, −0,2) Schwarz wich dem Tausch aus und griff zugleich g2 an: 18...Dg6 19.0-0
+Sc3!! Der Abzug öffnet die d-Linie und die Diagonale c6–f3 zugleich.
+```
+
+**Seite** (`summary-game-text.util.ts`, `mergeGameSection`): findet den Abschnitt (`## Die Partie`, auch „Partieverlauf“,
+„The game“) und liest seine Absätze gegen das PGN — auf die Schreibweise verlässt sie sich nicht:
+
+- Eine Zugfolge beginnt an einer Zugnummer (`12.Sd3`, `12...b6`, `12…b6`) und läuft, solange legale Züge folgen
+  (`readSequence` aus `explanation-lines.ts`, deutsche und englische Figurenbuchstaben).
+- Außerhalb von Klammern setzt sie an der Partiestellung dieser Zugnummer an; in einer Klammer zuerst an einer Stellung, die
+  dieselbe Klammer schon erreicht hat (Fortsetzung/Abzweig der Variante), sonst an der Partiestellung. Mit der schließenden
+  Klammer endet der Zusammenhang.
+- **Partiezug** ist, was von dort Zug für Zug der Partie folgt (trägt seinen Halbzug `ply`); alles andere ist
+  **Variantenzug** (trägt die Zugfolge ab Partieanfang). Was nirgends legal ist (Tippfehler), bleibt Text.
+- Block `gameText` mit Läufen `{ variation, parts }`: eine Klammer MIT Zügen ist ein Varianten-Lauf (kleiner, kursiv,
+  gedämpft), eine ohne („(−3,9)“) bleibt Text. Zugzeichen werden vom Zug getrennt und färben ihn (`!`/`!!` Erfolg, `?`/`??`/`?!`
+  Fehler, `!?` ohne Farbe). Das Ergebnis setzt die Seite hinter den letzten Partiezug.
+- Klick: Partiezug → `showOnBoard({ ply })` (am Seitenbrett hervorgehoben), Variantenzug → `showOnBoard({ line, at })`;
+  ab 900 px Seitenbrett, darunter das Blatt mit Engine — wie bisher. Gerendert über das Template, nie `innerHTML`.
+- **Alte Zusammenfassungen**: ohne den Abschnitt — oder wenn er weniger als die Hälfte der Partiezüge enthält — bleibt alles
+  wie bisher, die Seite setzt die Zugliste (Abschnitt oben) ein. Mit verschmolzenem Abschnitt entfällt die Zugliste.
+
+**Watcher** (`~/claude/formulare-bot`): `lib/game_text.py` prüft vor dem Abliefern streng (`check-summary`): genau ein
+Abschnitt `## Die Partie`, kein `## Zusammenfassung`; außerhalb von Klammern nur Partiezüge, jeder genau einmal, lückenlos
+und in Reihenfolge; in Klammern nur legale Züge, ohne Zugzeichen; Zugzeichen am Partiezug genau wie die Zug-Klasse der
+Partieseite (`classes.txt`: B `!!`, G `!`, M `?`, P `??` Pflicht, I `?!` erlaubt), sonst keins; kein Ergebnis im Text; keine
+Zeile, die als nummerierte Liste gelesen würde (`1. Sf3`). Hinweis (kein Fehler) ab 20 Halbzügen am Stück ohne Text.
+`digest.md` zeigt dafür jetzt alle Zugzeichen am Zug. Tests: `python3 -m unittest discover -s tests` dort.
+
+**Reihenfolge beim Ausrollen**: Die alte Seite (vor 0.963.0) zeigt einen neuen Text zwar lesbar (Züge als `.mv`-Knöpfe), setzt
+aber zusätzlich die Zugliste ein — deshalb liegen die neuen Bot-Dateien als `*.neu` bzw. `*_merged.py` daneben und werden erst
+nach dem Prod-Deploy mit `~/claude/formulare-bot/aktiviere-verschmolzen.sh` eingeschaltet (tauscht `instructions-summary.md`,
+`bin/check-summary`, `bin/fetch-game` per `mv`, Sicherung als `.bak-<Datum>`; `watch.sh` bleibt unberührt).
 
 ## Teilen-Link einer Vereinspartie (`/cg/{token}`, 2026-11-09)
 

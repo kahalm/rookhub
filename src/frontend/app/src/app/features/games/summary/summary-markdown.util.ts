@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js';
 import { KnownPosition, explanationParts } from '../explanation-lines';
 import type { LiveMove } from '../live-engine-session';
+import type { GameTextSegment } from './summary-game-text.util';
 
 /**
  * Partie-Zusammenfassung (0.913.0): der Markdown-Text, den Claude für eine Vereinspartie schreibt, in Blöcke zerlegen —
@@ -37,8 +38,11 @@ export type SummaryBlock =
   /** ```book-Block der „Empfohlenen Literatur“: Buch und warum es passt; `whyParts` = die Begründung mit klickbaren Zügen. */
   | { kind: 'book'; id: number; why: string; whyParts?: InlinePart[] }
   /** „Die Partie“ (Wunsch 2026-11-13): die ganze Zugfolge zum Durchklicken — kommt nie aus dem Markdown, die Seite setzt
-   *  sie aus dem PGN ein ({@link withGameBlock}). */
-  | { kind: 'game' };
+   *  sie aus dem PGN ein ({@link withGameBlock}), wenn der Text die Partie nicht selbst erzählt. */
+  | { kind: 'game' }
+  /** Ein Absatz des verschmolzenen Abschnitts „## Die Partie“ (Wunsch 2026-11-14): Text, Partiezüge und Varianten in
+   *  Klammern — entsteht in `mergeGameSection` (summary-game-text.util.ts), nie direkt aus dem Markdown. */
+  | { kind: 'gameText'; segments: GameTextSegment[] };
 
 /** `**fett**`, `*kursiv*` / `_kursiv_`, `` `Code` `` — nicht verschachtelt, unvollständige Zeichen bleiben Text. */
 export function parseInline(text: string): InlinePart[] {

@@ -69,10 +69,11 @@ function moveOf(fen: string, word: string): LiveMove | null {
   }
 }
 
-interface Parsed { moves: { text: string; gap: string; move: LiveMove }[]; end: number; }
+export interface ParsedSequence { moves: { text: string; gap: string; move: LiveMove }[]; end: number; }
+type Parsed = ParsedSequence;
 
 /** Ab `pos` (direkt an einer Zugnummer) so viele Züge wie legal lesen, beginnend in `fen`. */
-function readSequence(text: string, pos: number, fen: string): Parsed {
+export function readSequence(text: string, pos: number, fen: string): Parsed {
   const moves: Parsed['moves'] = [];
   let i = pos;
   let cur = fen;
