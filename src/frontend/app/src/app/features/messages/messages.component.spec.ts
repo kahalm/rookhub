@@ -194,3 +194,31 @@ describe('MessagesComponent Template (b1-rk-messages-senden-gesperrt)', () => {
     expect(el.querySelector('.empty-draft')).toBeNull();
   });
 });
+
+describe('MessagesComponent Template (Links im Nachrichtentext)', () => {
+  it('eine Webadresse in der Nachricht ist ein Link in neuem Tab, der übrige Text bleibt Text', async () => {
+    const body = 'Stapel 5 ist eingelesen:\n• Uebold – Manz 1-0 — https://leaguehub.oberschmid.homes/verein/formular/120\n<b>kein HTML</b>';
+    const svc = makeService({ getThread: jasmine.createSpy('getThread').and.returnValue(of([msg(1, true, true, body)])) });
+    await TestBed.configureTestingModule({
+      imports: [MessagesComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: MessageService, useValue: svc },
+        { provide: SnackbarService, useValue: snackbar },
+        { provide: AuthService, useValue: { isAdmin: false } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(MessagesComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const bodyEl = (fixture.nativeElement as HTMLElement).querySelector('.bubble .body') as HTMLElement;
+    const links = bodyEl.querySelectorAll('a');
+    expect(links.length).toBe(1);
+    expect(links[0].getAttribute('href')).toBe('https://leaguehub.oberschmid.homes/verein/formular/120');
+    expect(links[0].getAttribute('target')).toBe('_blank');
+    expect(links[0].getAttribute('rel')).toBe('noopener noreferrer');
+    expect(bodyEl.textContent).toBe(body);
+    expect(bodyEl.querySelector('b')).toBeNull();
+  });
+});

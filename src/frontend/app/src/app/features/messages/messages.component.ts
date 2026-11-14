@@ -13,13 +13,14 @@ import { MessageService, ChatMessage } from '../../core/message.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
+import { LinkPartsPipe } from '../../shared/link-text/link-parts.pipe';
 
 /** Nachrichten-Thread des Users mit dem Admin-Team: Verlauf lesen + antworten. */
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-messages',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatIconModule, MatButtonModule, MatFormFieldModule, MatInputModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent],
+  imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatIconModule, MatButtonModule, MatFormFieldModule, MatInputModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, LinkPartsPipe],
   template: `
     <div class="msg-container">
       <h1>{{ 'messages.title' | translate }}</h1>
@@ -52,7 +53,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
                 <div class="bubble-row" [class.mine]="!m.fromAdmin">
                   <div class="bubble" [class.admin]="m.fromAdmin">
                     <div class="sender">{{ (m.fromAdmin ? 'messages.adminTeam' : 'messages.you') | translate }}</div>
-                    <div class="body">{{ m.body }}</div>
+                    <div class="body">@for (p of m.body | linkParts; track $index) {@if (p.href) {<a [href]="p.href" target="_blank" rel="noopener noreferrer">{{ p.text }}</a>} @else {<span>{{ p.text }}</span>}}</div>
                     <div class="meta">{{ m.createdAt | date:'short' }}</div>
                   </div>
                 </div>
@@ -91,6 +92,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
     .bubble.admin { background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent); }
     .sender { font-size: 0.72rem; font-weight: 600; opacity: 0.7; margin-bottom: 2px; }
     .body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.35; }
+    .body a { color: var(--mat-sys-primary); text-decoration: underline; }
     .meta { font-size: 0.72rem; opacity: 0.55; margin-top: 4px; text-align: right; }
     .admin-hint { margin-bottom: 16px; }
     .admin-hint p { margin: 0 0 12px; }

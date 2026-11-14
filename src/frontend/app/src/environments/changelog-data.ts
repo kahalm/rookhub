@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.965.0", date: "2026-11-14", changes: [
+    { en: "Messages: web addresses in a message are now links. In your message thread and in the admin conversations a link such as the one to a newly read score sheet opens in a new tab with one click; before, the address had to be copied by hand.",
+      de: "Nachrichten: Webadressen in einer Nachricht sind jetzt Links. Im eigenen Nachrichtenverlauf und in den Admin-Konversationen öffnet sich etwa der Link zu einem frisch eingelesenen Partieformular mit einem Klick in einem neuen Tab; bisher musste man die Adresse von Hand kopieren." },
+  ] },
   { version: "0.964.0", date: "2026-11-14", changes: [
     { en: "Club games: the ⋮ menu of a club game now also offers “Share mistakes training — White/Black”, as on your own games – for everyone who may share the game and for each side that has mistakes. The copied link is the game’s share link with the chosen colour; whoever opens it lands directly in “Replay mistakes” for that side, without signing in. If the game has no share link yet, it is created on the first click. “Revoke share link” also invalidates these training links.",
       de: "Vereinspartien: Im ⋮-Menü einer Vereinspartie gibt es jetzt auch „Fehler-Training teilen — Weiß/Schwarz“, wie bei eigenen Partien – für alle, die die Partie teilen dürfen, und je Seite, die Fehler hat. Kopiert wird der Teilen-Link der Partie mit der gewählten Farbe; wer ihn öffnet, landet ohne Anmeldung direkt bei „Fehler nachspielen“ dieser Seite. Hat die Partie noch keinen Teilen-Link, wird er beim ersten Klick angelegt. „Teilen-Link widerrufen“ macht auch diese Trainingslinks ungültig." },

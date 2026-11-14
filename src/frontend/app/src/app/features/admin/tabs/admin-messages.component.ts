@@ -18,6 +18,7 @@ import { LoadErrorComponent } from '../../../shared/load-error/load-error.compon
 import { LatestRequest } from '../../../shared/latest-request.util';
 import { AdminService, AdminUser } from '../../../core/admin.service';
 import { MessageService, AdminThreadSummary, ChatMessage } from '../../../core/message.service';
+import { LinkPartsPipe } from '../../../shared/link-text/link-parts.pipe';
 
 /**
  * Admin-Tab „Nachrichten" (Admin↔User-Direktnachrichten): Thread-Liste, Konversationsansicht,
@@ -31,7 +32,7 @@ import { MessageService, AdminThreadSummary, ChatMessage } from '../../../core/m
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
-    MatMenuModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent,
+    MatMenuModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, LinkPartsPipe,
   ],
   templateUrl: './admin-messages.component.html',
   styleUrl: './admin-messages.component.scss',

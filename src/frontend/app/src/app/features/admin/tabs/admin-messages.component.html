@@ -94,7 +94,7 @@
               <div class="bubble-row" [class.mine]="m.fromAdmin">
                 <div class="bubble" [class.admin]="m.fromAdmin">
                   <div class="sender">{{ m.fromAdmin ? ('messages.adminTeam' | translate) : selectedThreadName }}</div>
-                  <div class="body">{{ m.body }}</div>
+                  <div class="body">@for (p of m.body | linkParts; track $index) {@if (p.href) {<a [href]="p.href" target="_blank" rel="noopener noreferrer">{{ p.text }}</a>} @else {<span>{{ p.text }}</span>}}</div>
                   <div class="meta">{{ m.createdAt | date:'short' }}</div>
                 </div>
               </div>
