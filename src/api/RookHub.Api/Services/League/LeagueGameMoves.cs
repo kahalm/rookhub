@@ -43,9 +43,11 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
 
     /// <summary>Die vorhandene Partie eines Bretts (ohne PGN): <c>source</c> <c>club</c> (Vereinspartie, <c>clubGameId</c>) oder
     /// <c>profile</c> (Spielerkarte), Halbzüge, Ergebnis und Namen wie im PGN, die ersten <see cref="FirstPlies"/> Halbzüge
-    /// (englische SAN), <c>canEdit</c> = darf die Vereinspartie bearbeiten (Verwalter oder Hochladender).</summary>
+    /// (englische SAN), <c>canEdit</c> = darf die Vereinspartie bearbeiten (Verwalter oder Hochladender), <c>hasSummary</c> = die
+    /// Vereinspartie hat eine fertige Zusammenfassung (<see cref="LeagueFixtureGames.Pairing"/>; über einen Teilen-Link nur an
+    /// der Begegnung des Links).</summary>
     public sealed record LineupGame(string Source, int? ClubGameId, int Plies, string Result, string? White, string? Black,
-        List<string> FirstMoves, bool CanEdit);
+        List<string> FirstMoves, bool CanEdit, bool HasSummary = false);
 
     public sealed record LineupMatch(int? MatchNo, string Home, string Away, double? HomePts, double? AwayPts, bool Own,
         List<LineupBoard> Boards);
@@ -66,8 +68,10 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
     /// <param name="revealOwn">In einer vorläufigen Aufstellung steht für die eigene Seite der echte Spieler statt „Schwaz"
     /// (0.739.0, angemeldete Mitglieder; seit 0.846.3 auch über den Teilen-Link, Wunsch 2026-10-26 — <c>false</c> nur noch, wo
     /// ein Aufrufer die anonymisierte Fassung ausdrücklich will).</param>
+    /// <param name="summariesOnlyForTeam">Teilen-Link: <c>hasSummary</c> nur an den Begegnungen dieser Mannschaft — der Link liest
+    /// nur die Zusammenfassungen SEINER Begegnung, das Kennzeichen darf nicht weiter reichen als der Text. <c>null</c> = alle.</param>
     public async Task<Lineups?> LineupsAsync(LeagueClub club, int tnr, int round, int userId, bool canContribute, bool canManage,
-        bool revealOwn = true, CancellationToken ct = default)
+        bool revealOwn = true, CancellationToken ct = default, string? summariesOnlyForTeam = null)
     {
         var matches = await db.LeagueMatches.AsNoTracking().Where(m => m.Tnr == tnr && m.Round == round)
             .OrderBy(m => m.MatchNo).ThenBy(m => m.Id).ToListAsync(ct);
@@ -116,6 +120,8 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
             {
                 var entry = byKey.GetValueOrDefault((g.MatchNo, g.Board));
                 var game = gameByKey.GetValueOrDefault((g.MatchNo, g.Board));
+                if (game is { HasSummary: true } && summariesOnlyForTeam is { } st && g.HomeTeam != st && g.AwayTeam != st)
+                    game = game with { HasSummary = false };
                 // 0.739.0: Brett noch ohne Spieler, aber mit zugeordneter Partie → vorläufig aus ihr
                 if (found.GetValueOrDefault(g.Id) is { Provisional: true, HomeWhite: { } hw } pv)
                     return new LineupBoard(g.Board, hw ? pv.White : pv.Black, null, hw ? pv.WhiteElo : pv.BlackElo,
@@ -147,7 +153,7 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
         var sans = PgnParser.ExtractMainlineSans(moveText ?? "");
         var result = headers.GetValueOrDefault("Result") is { Length: > 0 } r && r != "*" ? r : p.Result.Replace(" ", "");
         return new LineupGame(p.Source!, p.ClubGameId, sans.Count, result, headers.GetValueOrDefault("White") ?? p.White,
-            headers.GetValueOrDefault("Black") ?? p.Black, sans.Take(FirstPlies).ToList(), p.CanEdit);
+            headers.GetValueOrDefault("Black") ?? p.Black, sans.Take(FirstPlies).ToList(), p.CanEdit, p.HasSummary);
     }
 
     /// <summary>Beide Bretter besetzt und nicht kampflos — sonst gibt es keine Partie, deren Züge man eintragen könnte.</summary>

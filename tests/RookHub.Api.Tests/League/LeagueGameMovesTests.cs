@@ -459,6 +459,51 @@ public class LeagueGameMovesTests : IDisposable
         Assert.False(other.Matches[0].Boards[0].CanDeleteMoves);   // fremder Eintrag
     }
 
+    // 0.967.0, Wunsch 2026-11-14: „Zusammenfassung“ neben der Partie — das Kennzeichen kommt mit den Aufstellungen mit (keine
+    // Anfrage je Brett). Über den Teilen-Link nur an der Begegnung des Links: nur deren Zusammenfassungen liest er auch.
+    [Fact]
+    public async Task Lineups_HasSummary_FertigMitText_UeberDenLinkNurAnSeinerBegegnung()
+    {
+        await SeedAsync();
+        var own = await LinkedClubGameAsync();
+        var lg2 = await _db.LeagueGames.SingleAsync(g => g.MatchNo == 2 && g.Board == 1);
+        var foreignMatch = new LeagueClubGame { ClubId = TestClubs.HomeId, Year = 2026, White = "Fink, Franz", Black = "Gruber, Gerd", Result = "0-1",
+            Plies = 22, Pgn = GamePgn, MovesHash = "h2", UploadedByUserId = HomeMember, LeagueGameId = lg2.Id };
+        LeagueGameLinks.Set(foreignMatch, lg2);
+        _db.LeagueClubGames.Add(foreignMatch);
+        _db.LeagueShares.Add(new LeagueShare { Token = "LINK1", ClubId = TestClubs.HomeId, Tnr = Tnr, Round = Round, Team = "Testdorf",
+            Expires = new DateOnly(2099, 1, 1), CreatedAt = Now });
+        await _db.SaveChangesAsync();
+
+        var before = await LineupsAs(HomeMember, Permissions.LeagueView);
+        Assert.False(before.Matches[0].Boards[0].Game!.HasSummary);
+
+        _db.ClubGameSummaries.AddRange(
+            new ClubGameSummary { ClubGameId = own.Id, Status = ClubGameSummaryStatus.Done, Markdown = "# Text", RequestedAt = Now },
+            new ClubGameSummary { ClubGameId = foreignMatch.Id, Status = ClubGameSummaryStatus.Done, Markdown = "# Text", RequestedAt = Now });
+        await _db.SaveChangesAsync();
+
+        var member = await LineupsAs(HomeMember, Permissions.LeagueView);
+        Assert.True(member.Matches[0].Boards[0].Game!.HasSummary);
+        Assert.True(member.Matches[1].Boards[0].Game!.HasSummary);   // angemeldet: jede Partie des eigenen Vereins
+        // ein anderer Verein sieht die Partie gar nicht, also auch kein Kennzeichen
+        var foreign = await LineupsAs(OtherMember, Permissions.LeagueView);
+        Assert.All(foreign.Matches.SelectMany(m => m.Boards), b => Assert.Null(b.Game));
+
+        var share = new LeagueShareController(new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance));
+        var viaLink = (LeagueGameMoves.Lineups)((OkObjectResult)await share.Lineups("LINK1", Service(), default)).Value!;
+        Assert.True(viaLink.Matches[0].Boards[0].Game!.HasSummary);
+        Assert.Equal((foreignMatch.Id, false), (viaLink.Matches[1].Boards[0].Game!.ClubGameId!.Value, viaLink.Matches[1].Boards[0].Game!.HasSummary));
+        var pairing = ((List<LeagueFixtureGames.Pairing>)((OkObjectResult)await share.FixtureGames("LINK1", new LeagueFixtureGames(_db), default)).Value!)
+            .Single(p => p.Board == 1);
+        Assert.Equal(((int?)own.Id, true), (pairing.ClubGameId, pairing.HasSummary));
+
+        // noch einmal angefordert: bis der neue Text da ist, kein Eintrag
+        (await _db.ClubGameSummaries.SingleAsync(x => x.ClubGameId == own.Id)).Status = ClubGameSummaryStatus.Requested;
+        await _db.SaveChangesAsync();
+        Assert.False((await LineupsAs(HomeMember, Permissions.LeagueView)).Matches[0].Boards[0].Game!.HasSummary);
+    }
+
     [Fact]
     public async Task Lineups_ClubGame_OtherClubDoesNotSeeIt_ArchivedNeverCounts()
     {

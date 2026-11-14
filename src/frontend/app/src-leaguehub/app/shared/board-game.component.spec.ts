@@ -68,6 +68,29 @@ describe('BoardGameComponent', () => {
     expect(el.querySelector('.bg-fix')?.getAttribute('href')).toBe('/verein/partie/168/korrigieren');
   });
 
+  // 0.967.0, Wunsch 2026-11-14: „Zusammenfassung" nur, wenn die Vereinspartie eine fertige hat (hasSummary aus den Aufstellungen)
+  it('„Zusammenfassung" nur mit hasSummary, hinter „Analyse"; Ziel RookHubs Seite, über den Link nur an der geteilten Begegnung', () => {
+    const handoff = TestBed.inject(HandoffService) as jasmine.SpyObj<HandoffService>;
+    expect(render({ ...GAME, hasSummary: false }, 'https://rookhub.example').querySelector('.bg-summary')).toBeNull();
+    expect(render({ ...GAME, hasSummary: true }, null).querySelector('.bg-summary')).withContext('ohne RookHub-Adresse').toBeNull();
+    expect(render({ ...GAME, source: 'profile', clubGameId: null, hasSummary: true }, 'https://rookhub.example').querySelector('.bg-summary')).toBeNull();
+
+    const el = render({ ...GAME, hasSummary: true }, 'https://rookhub.example');
+    const acts = Array.from(el.querySelectorAll('.bg-actions > *')) as HTMLElement[];
+    expect(acts.map(a => a.textContent?.trim())).toEqual(['Nachspielen', 'Analyse', 'Zusammenfassung', 'Bearbeiten', 'Korrigieren']);
+    expect(acts.every(a => a.classList.contains('btn-link'))).toBeTrue();
+    (el.querySelector('.bg-summary') as HTMLButtonElement).click();
+    expect(handoff.jumpToRookHub).toHaveBeenCalledWith('club-games/168/summary');
+
+    fixture.componentRef.setInput('shareToken', 'TOK');
+    fixture.detectChanges();
+    expect(el.querySelector('.bg-summary')).withContext('Teilen-Link, andere Begegnung').toBeNull();
+    fixture.componentRef.setInput('shared', true);
+    fixture.detectChanges();
+    (el.querySelector('.bg-summary') as HTMLButtonElement).click();
+    expect(handoff.jumpToRookHub).toHaveBeenCalledWith('s/TOK/club-games/168/summary');
+  });
+
   it('ohne Bearbeitungsrecht und ohne RookHub nur „Nachspielen"', () => {
     const el = render({ ...GAME, canEdit: false }, null);
     const acts = Array.from(el.querySelectorAll('.bg-actions > *'));

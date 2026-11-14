@@ -43,6 +43,28 @@ Seit 09.11. gibt es die FERTIGE Zusammenfassung auch über den Teilen-Link (`Lea
 `shareToken`-Modus): lesend, ohne Anfordern; Warte-Stand, Modell und Fehlertext bleiben den Vereinsmitgliedern vorbehalten.
 Wer den Link hat, liest also den Text der Zusammenfassung.
 
+## „Zusammenfassung“ neben den Ligapartien in LeagueHub (0.967.0)
+
+Wunsch 2026-11-14: „zeig im ⋮ … neben den Partien einen Eintrag für Summary — der soll nur sichtbar sein, wenn eine vorhanden ist“.
+
+- **Feld `hasSummary`** je Brettpaarung in `GET /api/league/{tnr}/round/{round}/games?team=` und `GET /api/league/s/{token}/games`
+  (`LeagueFixtureGames.Pairing`), dazu am `game` jedes Bretts der Aufstellungen (`…/round/{round}/lineups`,
+  `/api/league/s/{token}/lineups`, Vereinsübersicht `club/overview`; `LeagueGameMoves.LineupGame`). `true` nur, wenn die
+  Vereinspartie des Bretts eine Zeile mit Status **fertig** UND nicht leerem Text hat — nicht bei angefordert, in Arbeit oder
+  gescheitert, auch wenn ein alter Text noch lesbar wäre (wie die Partienliste: eine offene Neuanforderung schlägt den alten
+  Text). Archivierte Partien hängen an keinem Brett. EINE zusätzliche Abfrage je Aufruf (`WithSummariesAsync`, über den
+  eindeutigen Index `ClubGameId`), keine je Brett.
+- **Wer es bekommt** — kein neues Recht: das Kennzeichen reicht genau so weit wie der Text. Angemeldet (`league.view`) kommen
+  nur Vereinspartien des EIGENEN Vereins als `clubGameId` in die Paarungen; genau die liest `GET …/club/games/{id}/summary`.
+  Über den Teilen-Link liest `…/s/{token}/club/games/{id}/summary` nur die Partien der Begegnung des Links — `/s/{token}/games`
+  zeigt ohnehin nur diese, und die Aufstellungen der ganzen Runde setzen `hasSummary` über den Link nur an der Begegnung des
+  Links (`summariesOnlyForTeam`), an den anderen Begegnungen des Vereins bleibt es `false`.
+- **Oberfläche** (LeagueHub): ⋮-Menü der Brettpaarung in `shared/fixture-view.component.ts` (Ligaseite und Teilen-Seite),
+  Eintrag „Zusammenfassung“ hinter „Nachspielen“; in `shared/board-game.component.ts` („Alle Aufstellungen der Runde“,
+  Vereinsübersicht) als Link hinter „Analyse“. Ziel wie „Analyse“: RookHub per `HandoffService.jumpToRookHub` —
+  angemeldet `club-games/{id}/summary` (Einmal-Code), über den Teilen-Link `s/{token}/club-games/{id}/summary` ohne Anmeldung.
+  Ohne bekannte RookHub-Adresse (localhost) fehlt der Eintrag wie „Analyse“. Die Texte sind wie überall in LeagueHub fest deutsch.
+
 ## Markdown-Format
 
 Teilmenge, gerendert über das Template (nie `innerHTML`, `summary-markdown.util.ts`): `#`/`##`/`###`, Absätze, Listen

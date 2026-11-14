@@ -28,9 +28,13 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
     /// noch nicht hat.</param>
     /// <param name="HomeWhite">Hatte die Heimmannschaft an diesem Brett Weiß? Seit 0.912.0 an jeder Paarung (vorher nur vorläufig) —
     /// die Seite stellt Heim links, Gast rechts wie die Vereinsübersicht.</param>
+    /// <param name="HasSummary">Die Vereinspartie hat eine FERTIGE Zusammenfassung mit Text (<see cref="ClubGameSummaryStatus.Done"/>;
+    /// nicht angefordert/in Arbeit/gescheitert) — das ⋮-Menü der Paarung zeigt dann „Zusammenfassung“. Kein neues Recht: wer die
+    /// Paarung mit <c>ClubGameId</c> bekommt, darf den Text auch lesen (angemeldet <c>league.view</c> + Verein der Partie, über den
+    /// Teilen-Link die Partien SEINER Begegnung, <see cref="FixtureHasClubGameAsync"/>).</param>
     public sealed record Pairing(int Board, string? White, int? WhiteElo, string? Black, int? BlackElo, string Result,
         bool Forfeit, string? Pgn, string? Source, int? ClubGameId, bool CanEdit = false, bool Provisional = false,
-        bool? HomeWhite = null, string? WhiteFide = null, string? BlackFide = null);
+        bool? HomeWhite = null, string? WhiteFide = null, string? BlackFide = null, bool HasSummary = false);
 
     /// <param name="userId">Der Angemeldete (über einen Teilen-Link <c>null</c>) — entscheidet mit <paramref name="canManage"/>,
     /// ob er eine Vereinspartie bearbeiten darf (0.675.0, dieselbe Regel wie die Vereinsliste: Verwalter oder Hochladender).</param>
@@ -134,6 +138,21 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
             result[g.Id] = new Pairing(g.Board, w.Name, w.Elo, b.Name, b.Elo, WhiteBlackResult(g.Result, homeWhite), forfeit, pgn, source, null,
                 HomeWhite: homeWhite);
         }
+        return await WithSummariesAsync(result, ct);
+    }
+
+    /// <summary>Setzt <see cref="Pairing.HasSummary"/> für alle Vereinspartien des Ergebnisses in EINER Abfrage (kein Nachfragen
+    /// je Brett). Archivierte Partien stehen gar nicht im Ergebnis (globaler Filter des Pools).</summary>
+    private async Task<Dictionary<int, Pairing>> WithSummariesAsync(Dictionary<int, Pairing> result, CancellationToken ct)
+    {
+        var ids = result.Values.Where(p => p.ClubGameId is not null).Select(p => p.ClubGameId!.Value).Distinct().ToList();
+        if (ids.Count == 0) return result;
+        var done = (await db.ClubGameSummaries.AsNoTracking()
+            .Where(s => ids.Contains(s.ClubGameId) && s.Status == ClubGameSummaryStatus.Done && s.Markdown != null && s.Markdown != "")
+            .Select(s => s.ClubGameId).ToListAsync(ct)).ToHashSet();
+        if (done.Count == 0) return result;
+        foreach (var (key, p) in result.ToList())
+            if (p.ClubGameId is { } id && done.Contains(id)) result[key] = p with { HasSummary = true };
         return result;
     }
 

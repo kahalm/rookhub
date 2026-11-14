@@ -198,7 +198,7 @@ Rollenverwaltung an).
 - **Paarungen gespielter Runden** (0.673.0, Wunsch 2026-10-05: „bei vergangenen Runden oben unter dem Ergebnis auch die Paarungen
   direkt anzeigen, inkl. Link zu Partien"): `GET /api/league/{tnr}/round/{round}/games?team=` (league.view) bzw.
   `GET /api/league/s/{token}/games` (Begegnung des Links) → je Brett `{ board, white, whiteElo, black, blackElo, result, forfeit,
-  pgn, source (club|profile), clubGameId }` aus `LeagueGames` (`Services/League/LeagueFixtureGames.cs`). Partie zuerst aus der
+  pgn, source (club|profile), clubGameId, hasSummary (0.967.0: ⋮ „Zusammenfassung“, → `docs/api/partie-zusammenfassung.md`) }` aus `LeagueGames` (`Services/League/LeagueFixtureGames.cs`). Partie zuerst aus der
   Vereins-Datenbank (Jahr der Runde, Farben passen, BEIDE Seiten über FIDE-ID — bei „Schwaz" die intern hinterlegte — oder
   Nachnamen, Ergebnis widerspricht nicht; „Schwaz" ohne hinterlegte FIDE-ID wird nie geraten, nur fest zugeordnet — 0.905.0,
   vorher passte „Schwaz" auf jeden eigenen Spieler und Vereinspartie 38 (Kufstein Open) stand bei Streiter – Neuschmied;

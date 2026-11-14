@@ -35,7 +35,8 @@ Möglichkeit, die ersten paar Züge einzugeben."
   lebende Zuordnung (eine geratene Partie höchstens EINEM Brett) → Spielerkarten ±3 Tage. Vereinspartien nur des Vereins der Anfrage,
   archivierte nie. EIN Aufruf für die ganze Runde: Rundentermin, Vereinspartien des Vereins (Jahr ODER zugeordnet), Auflösung (≤ 2
   Abfragen) und Spielerkarten NUR der Bretter ohne Vereinspartie. Je Brett `game: { source (club|profile), clubGameId, plies, result,
-  white, black, firstMoves (die ersten 10 Halbzüge, englische SAN), canEdit }` — OHNE PGN (das holt „Nachspielen": Vereinspartie
+  white, black, firstMoves (die ersten 10 Halbzüge, englische SAN), canEdit, hasSummary (0.967.0: fertige Zusammenfassung, →
+  `docs/api/partie-zusammenfassung.md`) }` — OHNE PGN (das holt „Nachspielen": Vereinspartie
   `GET …/club/games/{id}` samt Bewertungen, Spielerkarte `GET …/round/{r}/games?team=<Heim>`). Mit Partie ist `canEditMoves = false`;
   ein alter Handeintrag kommt weiter als `moves` und `canDeleteMoves` (löschen darf, wer ihn auch ändern dürfte). Oberfläche:
   `shared/board-game.component.ts` („Partie vorhanden · 81 Halbzüge · 1.e4 c5 2.Sf3 …", Nachspielen, Analyse per Einmal-Code, mit

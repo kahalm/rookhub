@@ -133,4 +133,41 @@ public class LeagueFixtureGamesTests : IDisposable
         var p = (await new LeagueFixtureGames(_db).ForFixtureAsync(TestClubs.Home, 1, 2, "Testdorf", default)).Single(x => x.Board == 5);
         Assert.Equal(("Ranner, Stefan", "Haselsberger, Armin", "1 - 0"), (p.White, p.Black, p.Result));
     }
+
+    // 0.967.0, Wunsch 2026-11-14: „Zusammenfassung“ im ⋮-Menü der Paarung nur, wenn eine FERTIGE mit Text da ist — nicht bei
+    // angefordert (auch nicht mit altem Text), in Arbeit, gescheitert oder leerem Text; eine archivierte Partie hängt an keinem Brett.
+    [Theory]
+    [InlineData(null, null, false)]
+    [InlineData(ClubGameSummaryStatus.Done, "# Text", true)]
+    [InlineData(ClubGameSummaryStatus.Done, "", false)]
+    [InlineData(ClubGameSummaryStatus.Done, null, false)]
+    [InlineData(ClubGameSummaryStatus.Requested, null, false)]
+    [InlineData(ClubGameSummaryStatus.Requested, "# alter Text", false)]
+    [InlineData(ClubGameSummaryStatus.Running, "# alter Text", false)]
+    [InlineData(ClubGameSummaryStatus.Failed, "# alter Text", false)]
+    public async Task ForFixture_HasSummary_NurFertigMitText(ClubGameSummaryStatus? status, string? markdown, bool expected)
+    {
+        if (status is { } st)
+            _db.ClubGameSummaries.Add(new ClubGameSummary { ClubGameId = 10, Status = st, Markdown = markdown, RequestedAt = DateTime.UtcNow });
+        // die Zusammenfassung einer ANDEREN Partie (falsches Jahr, hängt an keinem Brett) färbt nicht ab
+        _db.ClubGameSummaries.Add(new ClubGameSummary { ClubGameId = 11, Status = ClubGameSummaryStatus.Done, Markdown = "# fremd", RequestedAt = DateTime.UtcNow });
+        _db.SaveChanges();
+
+        var svc = new LeagueFixtureGames(_db);
+        var member = await svc.ForFixtureAsync(TestClubs.Home, 1, 2, "Testdorf", default, userId: 8);
+        var link = await svc.ForFixtureAsync(TestClubs.Home, 1, 2, "Testdorf", default);   // Teilen-Link: dieselbe Begegnung, derselbe Text
+        Assert.Equal(expected, member[0].HasSummary);
+        Assert.Equal(expected, link[0].HasSummary);
+        Assert.All(member.Skip(1), p => Assert.False(p.HasSummary));   // Spielerkarten-Partie, ohne Partie, kampflos
+    }
+
+    [Fact]
+    public async Task ForFixture_HasSummary_ArchiviertePartie_KeinKennzeichen()
+    {
+        _db.ClubGameSummaries.Add(new ClubGameSummary { ClubGameId = 10, Status = ClubGameSummaryStatus.Done, Markdown = "# Text", RequestedAt = DateTime.UtcNow });
+        _db.LeagueClubGames.Single(c => c.Id == 10).ArchivedAt = DateTime.UtcNow;
+        _db.SaveChanges();
+        var p = (await new LeagueFixtureGames(_db).ForFixtureAsync(TestClubs.Home, 1, 2, "Testdorf", default, userId: 8))[0];
+        Assert.Equal(((int?)null, false), (p.ClubGameId, p.HasSummary));
+    }
 }

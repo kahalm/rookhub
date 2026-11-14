@@ -638,7 +638,8 @@ public class LeagueShareController : ControllerBase
     [HttpGet("{token}/lineups")]
     public async Task<IActionResult> Lineups(string token, [FromServices] LeagueGameMoves moves, CancellationToken ct) =>
         await _league.ShareFixtureAsync(token, ct) is { } s && await _league.ShareContextAsync(token, ct) is { } link
-            && await moves.LineupsAsync(link.Club, s.Tnr, s.Round, userId: 0, canContribute: false, canManage: false, revealOwn: true, ct) is { } l
+            && await moves.LineupsAsync(link.Club, s.Tnr, s.Round, userId: 0, canContribute: false, canManage: false, revealOwn: true, ct,
+                summariesOnlyForTeam: s.Team) is { } l
             ? Ok(l) : NotFound();
 
     /// <summary>Dieselbe Treffer-Statistik über den Teilen-Link (0.650.0) — nur Zahlen und Liga-Namen der Quelle seines Vereins.</summary>

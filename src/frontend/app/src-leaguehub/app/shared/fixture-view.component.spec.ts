@@ -526,6 +526,48 @@ describe('FixtureViewComponent', () => {
     expect(el.querySelector('.share-out')).toBeNull();
   });
 
+  // 0.967.0, Wunsch 2026-11-14: „neben den Partien einen Eintrag für Summary — nur sichtbar, wenn eine vorhanden ist"
+  describe('⋮ „Zusammenfassung"', () => {
+    const game = { board: 1, white: 'Hess, Max', whiteElo: 2040, black: 'Binder, Moriz', blackElo: 2100, result: '½ - ½', forfeit: false,
+      pgn: '1. e4 e5 1/2-1/2', source: 'club' as const, clubGameId: 10 };
+
+    async function menuItems(pairing: object, opts: { token?: string; rookHub?: string | null } = {}): Promise<string[]> {
+      document.querySelectorAll('.cdk-overlay-container').forEach(o => o.replaceChildren());
+      api.fixtureGames.and.resolveTo([pairing as never]);
+      fixture = TestBed.createComponent(FixtureViewComponent);
+      // RookHub-Adresse VOR dem ersten Rendern (OnPush: ein nacktes Feld markiert die Ansicht nicht)
+      (fixture.componentInstance as { rookHub: string | null }).rookHub = opts.rookHub === undefined ? 'https://rookhub.example' : opts.rookHub;
+      fixture.componentRef.setInput('leagueTnr', 42);
+      const el = render({ ...OPEN, status: 'played' }, { token: opts.token ?? null });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      (el.querySelector('.pg .more-btn') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      return Array.from(document.querySelectorAll('.mat-mdc-menu-item')).map(i => i.textContent?.trim() ?? '');
+    }
+
+    it('nur mit fertiger Zusammenfassung; angemeldet führt er auf RookHubs club-games/{id}/summary', async () => {
+      expect(await menuItems(game)).withContext('ohne Kennzeichen').toEqual(['Nachspielen']);
+      expect(await menuItems({ ...game, hasSummary: false })).withContext('hasSummary false').toEqual(['Nachspielen']);
+      expect(await menuItems({ ...game, hasSummary: true })).toEqual(['Nachspielen', 'Zusammenfassung']);
+      (document.querySelector('.game-summary') as HTMLButtonElement).click();
+      const handoff = TestBed.inject(HandoffService) as jasmine.SpyObj<HandoffService>;
+      expect(handoff.jumpToRookHub).toHaveBeenCalledOnceWith('club-games/10/summary');
+    });
+
+    it('über den Teilen-Link: derselbe Eintrag, Ziel s/{token}/club-games/{id}/summary (ohne Anmeldung)', async () => {
+      expect(await menuItems({ ...game, hasSummary: true }, { token: 'TOK' })).toEqual(['Nachspielen', 'Zusammenfassung']);
+      (document.querySelector('.game-summary') as HTMLButtonElement).click();
+      const handoff = TestBed.inject(HandoffService) as jasmine.SpyObj<HandoffService>;
+      expect(handoff.jumpToRookHub).toHaveBeenCalledOnceWith('s/TOK/club-games/10/summary');
+    });
+
+    it('nicht ohne Vereinspartie und nicht ohne bekannte RookHub-Adresse', async () => {
+      expect(await menuItems({ ...game, source: 'profile', clubGameId: null, hasSummary: true })).toEqual(['Nachspielen']);
+      expect(await menuItems({ ...game, hasSummary: true }, { rookHub: null })).toEqual(['Nachspielen']);
+    });
+  });
+
   it('„Partie teilen" nur angemeldet mit Liga-Leserecht und nie auf einem Teilen-Link', async () => {
     const pairing = { board: 1, white: 'A', whiteElo: null, black: 'B', blackElo: null, result: '1 - 0', forfeit: false, pgn: '1.e4 *', source: 'profile' as const, clubGameId: null };
     api.fixtureGames.and.resolveTo([pairing]);

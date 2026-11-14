@@ -52,6 +52,8 @@ export interface LineupGame {
   firstMoves: string[];
   /** Darf die Vereinspartie bearbeiten/korrigieren (Verwalter oder Hochladender). */
   canEdit: boolean;
+  /** 0.967.0: die Vereinspartie hat eine FERTIGE Zusammenfassung — über einen Teilen-Link nur an der Begegnung des Links. */
+  hasSummary?: boolean;
 }
 
 export interface LineupMatch {

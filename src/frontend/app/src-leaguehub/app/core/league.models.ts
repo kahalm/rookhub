@@ -55,6 +55,8 @@ export interface FixturePairing {
   provisional?: boolean;
   /** Hatte die Heimmannschaft an diesem Brett Weiß? (seit 0.912.0 an jeder Paarung; fehlt = wie Weiß) */
   homeWhite?: boolean | null;
+  /** 0.967.0: die Vereinspartie hat eine FERTIGE Zusammenfassung (Text da) — das ⋮-Menü zeigt „Zusammenfassung“. */
+  hasSummary?: boolean;
 }
 
 /** Eine einzelne geteilte Ligapartie. `board`/`home`/`away` fehlen bei einer anonymisierten Vereinspartie. */

@@ -15,7 +15,8 @@ import { AuthService } from '@rh/core/auth.service';
  * Züge eingeben lassen, sondern die Partie ausweisen"): „Partie vorhanden · 81 Halbzüge · 1.e4 c5 2.Sf3 …" mit „Nachspielen"
  * (klappt `lh-game-replay` auf; das PGN kommt erst dann — Vereinspartie über `club/games/{id}` samt Bewertungen, Spielerkarte
  * über `…/round/{r}/games?team=` wie in `lh-fixture`), an einer Vereinspartie „Analyse" (RookHub per Einmal-Code) und mit
- * `canEdit` „Bearbeiten"/„Korrigieren" wie in `lh-fixture`. Alle vier als `.btn-link` (0.727.2: gleiche Farbe und Grundlinie).
+ * `canEdit` „Bearbeiten"/„Korrigieren" wie in `lh-fixture`. Seit 0.967.0 „Zusammenfassung" hinter „Analyse", nur mit `hasSummary`
+ * (fertiger Text; RookHubs Seite, über den Teilen-Link `s/{token}/club-games/{id}/summary`). Alle vier als `.btn-link` (0.727.2: gleiche Farbe und Grundlinie).
  * Über einen Teilen-Link (0.838.0, `shareToken`): „Nachspielen" nur an der geteilten Begegnung (`shared`, PGN über
  * `/s/{token}/games`), keine Analyse, kein Bearbeiten — ohne Anmeldung gibt es dafür keine Wege.
  * Seit 0.848.0 (Vereinsübersicht, Wunsch 2026-10-26): `markCount` zeigt einen Marker „◆ n interessante Stellungen", und beim
@@ -42,6 +43,10 @@ import { AuthService } from '@rh/core/auth.service';
           @if (rookHub) {
             <button type="button" class="btn-link bg-analysis" (click)="analyse(g.clubGameId)"
                     title="Analyse — RookHubs Partieseite mit Bewertungskurve, Fehlern und Zug-Klassen">Analyse</button>
+            @if (g.hasSummary) {
+              <button type="button" class="btn-link bg-summary" (click)="summary(g.clubGameId)"
+                      title="Zusammenfassung — die Partie als Text mit Diagrammen (RookHub)">Zusammenfassung</button>
+            }
           }
           @if (g.canEdit && !shareToken()) {
             <a class="btn-link bg-edit" [routerLink]="['/verein']" [queryParams]="{ bearbeiten: g.clubGameId }">Bearbeiten</a>
@@ -178,5 +183,11 @@ export class BoardGameComponent {
     const token = this.shareToken();
     // `?ask=1` (0.855.1): drüben fragt die Partieseite „mit/ohne Engine" — über den Teilen-Link nicht (ohne Konto kein „ohne Engine").
     void this.handoff.jumpToRookHub(token ? `s/${encodeURIComponent(token)}/club-games/${id}` : `club-games/${id}?ask=1`);
+  }
+
+  /** Die fertige Zusammenfassung auf RookHub (0.967.0) — derselbe Weg wie „Analyse", Seite `…/summary`. */
+  summary(id: number): void {
+    const token = this.shareToken();
+    void this.handoff.jumpToRookHub(token ? `s/${encodeURIComponent(token)}/club-games/${id}/summary` : `club-games/${id}/summary`);
   }
 }

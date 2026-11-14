@@ -135,6 +135,11 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
             <ng-template matMenuContent let-p="p">
               <button mat-menu-item type="button" (click)="toggleBoard(p)">
                 {{ openBoard() === p.board ? 'Nachspielen schließen' : 'Nachspielen' }}</button>
+              <!-- 0.967.0, Wunsch 2026-11-14: nur wenn die Vereinspartie eine fertige Zusammenfassung hat (hasSummary kommt mit den
+                   Paarungen mit) — RookHubs Seite, angemeldet per Einmal-Code, über den Teilen-Link ohne Anmeldung -->
+              @if (p.hasSummary && p.clubGameId && rookHub) {
+                <button mat-menu-item type="button" class="game-summary" (click)="openSummary(p.clubGameId)">Zusammenfassung</button>
+              }
               @if (p.clubGameId && !shareToken() && p.canEdit) {
                 <a mat-menu-item [routerLink]="['/verein']" [queryParams]="{ bearbeiten: p.clubGameId }">Bearbeiten (Namen, Ergebnis)</a>
                 <a mat-menu-item [routerLink]="['/verein/partie', p.clubGameId, 'korrigieren']">Korrigieren (Züge)</a>
@@ -578,6 +583,13 @@ export class FixtureViewComponent {
     const token = this.shareToken();
     // `?ask=1` (0.855.1): drüben fragt die Partieseite „mit/ohne Engine" — über den Teilen-Link nicht (ohne Konto kein „ohne Engine").
     void this.handoff.jumpToRookHub(token ? `s/${encodeURIComponent(token)}/club-games/${id}` : `club-games/${id}?ask=1`);
+  }
+
+  /** Die fertige Zusammenfassung der Vereinspartie auf RookHub: angemeldet `club-games/{id}/summary` (Einmal-Code), über den
+   *  Teilen-Link `s/{token}/club-games/{id}/summary` ohne Anmeldung (0.967.0). */
+  openSummary(id: number): void {
+    const token = this.shareToken();
+    void this.handoff.jumpToRookHub(token ? `s/${encodeURIComponent(token)}/club-games/${id}/summary` : `club-games/${id}/summary`);
   }
 
   /** Eine Brettpaarung als Heim (links) – Gast (rechts) mit Farbe und Ergebnis aus Sicht Heim (0.912.0). */
