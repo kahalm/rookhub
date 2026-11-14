@@ -3,7 +3,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { MistakesTrainerComponent } from './mistakes-trainer.component';
-import { MistakesSession } from './mistakes-session';
+import { MistakesSession, UnlistedMoveJudge } from './mistakes-session';
 import { Mistake } from './mistakes.util';
 
 describe('MistakesTrainerComponent', () => {
@@ -15,7 +15,7 @@ describe('MistakesTrainerComponent', () => {
     candidates: [{ uci: 'g1f3', score: { cp: 30 } }, { uci: 'b1c3', score: { cp: -45 } }],
   };
 
-  function setup(t: Mistake = task, dismisser?: (m: Mistake) => void) {
+  function setup(t: Mistake = task, dismisser?: (m: Mistake) => void, judge?: UnlistedMoveJudge) {
     TestBed.configureTestingModule({
       imports: [MistakesTrainerComponent],
       providers: [provideNoopAnimations(), provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
@@ -24,11 +24,16 @@ describe('MistakesTrainerComponent', () => {
     tr.setTranslation('en', {
       puzzles: { hints: { show: 'Hint', next: 'Next hint', t1Quiet: 'Quiet move.', t2Piece: 'Move your {{piece}}.',
         t3Move: 'Play {{move}}.', pieces: { knight: 'knight' } } },
-      games: { mistakes: { analyze: 'Analyse', retryKey: 'Try again (Space bar)', dismiss: "Don't show again", triedEval: 'After {{san}}: {{eval}} (best move: {{best}})' } },
+      games: { mistakes: { analyze: 'Analyse', retryKey: 'Try again (Space bar)', dismiss: "Don't show again", triedEval: 'After {{san}}: {{eval}} (best move: {{best}})',
+        triedBound: '{{san}} is not among the {{n}} best moves of the analysis: the weakest of those stands at {{worst}}, the best at {{best}}.',
+        triedBoundOne: '{{san}} is not the move of the analysis; its best move stands at {{best}}.',
+        triedBrowser: 'Quick check by the browser engine: after {{san}} {{eval}}, after the best move {{best}}.',
+        evalViewWhite: 'White view: for White, higher is better.', evalViewBlack: 'White view: for Black, lower is better.',
+        evalViewMate: '#3 = White mates in 3.' } },
     });
     tr.use('en');
     const fixture = TestBed.createComponent(MistakesTrainerComponent);
-    const session = new MistakesSession({ white: [t], black: [] }, 'white', undefined, undefined, dismisser);
+    const session = new MistakesSession({ white: [t], black: [] }, 'white', judge, dismisser);
     fixture.componentInstance.session = session;
     fixture.detectChanges();
     return { fixture, session, el: fixture.nativeElement as HTMLElement };
@@ -57,6 +62,7 @@ describe('MistakesTrainerComponent', () => {
     session.onMove({ from: 'b1', to: 'c3', san: 'Nc3', fen: 'nach Nc3' });
     fixture.detectChanges();
     expect(el.querySelector('.tried-eval')!.textContent).toContain('After Nc3: -0.45 (best move: +0.30)');
+    expect(el.querySelector('.tried-eval .eval-view')!.textContent!.trim()).toBe('White view: for White, higher is better.');
     (el.querySelector('button.analyze') as HTMLButtonElement).click();
     expect(analyzed).toBe(1);
 
@@ -64,6 +70,67 @@ describe('MistakesTrainerComponent', () => {
     fixture.detectChanges();
     expect(el.querySelector('button.analyze')).not.toBeNull(); // auch nach einer richtigen Lösung
   });
+
+  // 0.972.1 — gemeldet an Vereinspartie 246: „a5 is not it. After a5: +0.72 (best move: +0.77)" bei Schwarz am Zug.
+  describe('Fehlversuch außerhalb der Kandidaten: nie zwei Rechnungen nebeneinander', () => {
+    const NACH_E4_NC6_NF3 = 'r1bqkbnr/pppppppp/2n5/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2';
+    const partie246: Mistake = {
+      ...task, ply: 19, white: false, fenBefore: NACH_E4_NC6_NF3, playedSan: 'b4', playedUci: 'b7b5',
+      bestUci: 'a8b8', bestSan: 'Rb8', acceptUci: ['a8b8'], acceptSan: ['Rb8'], checkUnlisted: false,
+      evalBefore: { cp: 77 }, evalAfter: { cp: 150 },
+      candidates: [
+        { uci: 'a8b8', score: { cp: 77 } }, { uci: 'f7f6', score: { cp: 88 } }, { uci: 'h7h5', score: { cp: 96 } },
+        { uci: 'e7e6', score: { cp: 101 } }, { uci: 'd7d6', score: { cp: 103 } },
+      ],
+    };
+    function setupBlack(t: Mistake, judge?: UnlistedMoveJudge) {
+      const s = setup(t, undefined, judge);
+      const session = new MistakesSession({ white: [], black: [t] }, 'black', judge);
+      s.fixture.componentInstance.session = session;
+      s.fixture.detectChanges();
+      return { ...s, session };
+    }
+    const line = (el: HTMLElement) => el.querySelector('.tried-eval')!.textContent!.replace(/\s+/g, ' ').trim();
+
+    it('sicher schlechter: Schranke aus der Analyse statt einer Browser-Zahl, mit Lese-Hinweis für Schwarz', () => {
+      const judge = jasmine.createSpy('judge');
+      const { fixture, session, el } = setupBlack(partie246, judge);
+      session.onMove({ from: 'a7', to: 'a5', san: 'a5', fen: 'nach a5' });
+      fixture.detectChanges();
+      expect(judge).not.toHaveBeenCalled();
+      expect(line(el)).toBe('a5 is not among the 5 best moves of the analysis: the weakest of those stands at +1.03, '
+        + 'the best at +0.77. White view: for Black, lower is better.');
+      expect(line(el)).not.toContain('After a5');
+    });
+
+    it('nur EIN Kandidat: kein „unter den 1 besten"', () => {
+      const { fixture, session, el } = setupBlack({ ...partie246, candidates: [{ uci: 'a8b8', score: { cp: 77 } }] });
+      session.onMove({ from: 'a7', to: 'a5', san: 'a5', fen: 'nach a5' });
+      fixture.detectChanges();
+      expect(line(el)).toContain('a5 is not the move of the analysis; its best move stands at +0.77.');
+    });
+
+    it('von der Browser-Engine verworfen: zwei Browser-Werte, als solche benannt — nicht der Server-Wert +0.77', async () => {
+      const judge: UnlistedMoveJudge = () => Promise.resolve({ equivalent: false, best: { cp: 62 }, tried: { cp: 95 } });
+      const { fixture, session, el } = setupBlack({ ...partie246, checkUnlisted: true }, judge);
+      session.onMove({ from: 'a7', to: 'a5', san: 'a5', fen: 'nach a5' });
+      await fixture.whenStable(); fixture.detectChanges();
+      expect(line(el)).toBe('Quick check by the browser engine: after a5 +0.95, after the best move +0.62. '
+        + 'White view: for Black, lower is better.');
+      expect(line(el)).not.toContain('+0.77');
+    });
+
+    it('Matt-Bewertung in der Zeile: der Hinweis erklärt auch „#"', () => {
+      const { fixture, session, el } = setupBlack({ ...partie246, candidates: [
+        { uci: 'a8b8', score: { cp: 77 } }, { uci: 'f7f6', score: { mate: 3 } },
+      ] });
+      session.onMove({ from: 'a7', to: 'a5', san: 'a5', fen: 'nach a5' });
+      fixture.detectChanges();
+      expect(line(el)).toContain('the weakest of those stands at #3, the best at +0.77.');
+      expect(line(el)).toContain('#3 = White mates in 3.');
+    });
+  });
+
   // 0.969.0
   describe('Leertaste = „Nochmal"', () => {
     const space = (target: EventTarget = document.body, init: KeyboardEventInit = {}) => {

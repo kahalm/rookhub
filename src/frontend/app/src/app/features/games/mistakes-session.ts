@@ -2,18 +2,30 @@ import { computed, signal } from '@angular/core';
 import { UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { fenAfterUci } from '../../shared/pgn-viewer/board-moves.util';
 import { sameMove } from '../../shared/chess/line-solver';
-import { Mistake, MistakesBySide } from './mistakes.util';
+import { Mistake, MistakesBySide, analysisBest, unlistedBound } from './mistakes.util';
 import { EvalScore } from './game-review.util';
+import { UnlistedVerdict } from './mistake-judge.service';
 
 /** ask = du bist dran · checking = die Browser-Engine rechnet nach · wrong = daneben · right = selbst gefunden ·
  *  shown = Lösung gezeigt · done = durch. */
 export type MistakesPhase = 'ask' | 'checking' | 'right' | 'wrong' | 'shown' | 'done';
 
-/** Urteil über einen nicht gelisteten Zug: `true` gleichwertig, `false` schlechter, `null` nicht prüfbar. */
-export type UnlistedMoveJudge = (m: Mistake, fenAfter: string) => Promise<boolean | null>;
+/** Urteil über einen nicht gelisteten Zug (Browser-Engine), samt den beiden Bewertungen dieser Prüfung. */
+export type UnlistedMoveJudge = (m: Mistake, fenAfter: string) => Promise<UnlistedVerdict>;
 
-/** Bewertung einer Stellung (Weiß-Sicht) durch die Browser-Engine — für den Fehlversuch, den die Analyse nicht führt. */
-export type PositionEvaluator = (fen: string) => Promise<EvalScore | null>;
+/**
+ * Was die Zeile unter „… is not it" über den Fehlversuch sagt (alle Bewertungen Weiß-Sicht). Je Fall stammen ALLE
+ * Zahlen aus EINER Rechnung — nie eine flache Browser-Zahl neben einer der tiefen Server-Analyse (0.972.1; vorher
+ * las sich „After a5: +0.72 (best move: +0.77)" bei Schwarz am Zug, als wäre der abgelehnte Zug der bessere):
+ * - `listed`: der Zug steht unter den Kandidaten der Analyse — sein Wert und der des Bestzugs aus derselben Suche.
+ * - `bound`: nicht gelistet und sicher schlechter — belegt ist nur die Schranke: höchstens so gut wie der schwächste
+ *   der `count` Kandidaten.
+ * - `browser`: nicht gelistet, von der Browser-Engine geprüft und verworfen — die zwei Werte dieser Prüfung.
+ */
+export type TriedRating =
+  | { kind: 'listed'; tried: EvalScore; best: EvalScore }
+  | { kind: 'bound'; count: number; worst: EvalScore; best: EvalScore }
+  | { kind: 'browser'; tried: EvalScore; best: EvalScore };
 
 /** „Diesen Fehler nicht mehr zeigen" (0.748.0): die Seite merkt es sich auf dem Server. */
 export type MistakeDismisser = (m: Mistake) => void;
@@ -48,11 +60,10 @@ export class MistakesSession {
   /** Die Browser-Engine konnte einen nicht gelisteten Zug nicht prüfen (Fehler, Zeitlimit). */
   readonly checkFailed = signal(false);
   /**
-   * Bewertung nach dem Fehlversuch (Weiß-Sicht, seit 0.526.2 — gewünscht: „Bxf6 is not it" soll sagen, was der Zug
-   * kostet). Aus den Kandidaten der Analyse, sonst von der Browser-Engine; `undefined` = wird noch gerechnet,
-   * `null` = nicht zu haben.
+   * Einordnung des Fehlversuchs (seit 0.526.2 — gewünscht: „Bxf6 is not it" soll sagen, was der Zug kostet);
+   * `null` = nichts Belegtes zu sagen. Siehe {@link TriedRating}.
    */
-  readonly triedEval = signal<EvalScore | null | undefined>(null);
+  readonly triedRating = signal<TriedRating | null>(null);
   readonly solved = signal(0);
   /** Aufgedeckte Tipp-Stufen der aktuellen Aufgabe (0–3, wie beim Puzzle: Zugart → Figur → Zug; seit 0.526.2). */
   readonly hintLevel = signal(0);
@@ -93,7 +104,7 @@ export class MistakesSession {
   private epoch = 0;
 
   constructor(readonly bySide: MistakesBySide, side: 'white' | 'black', private readonly judge?: UnlistedMoveJudge,
-              private readonly evaluate?: PositionEvaluator, private readonly dismisser?: MistakeDismisser) {
+              private readonly dismisser?: MistakeDismisser) {
     this.bothSides = bySide.white.length > 0 && bySide.black.length > 0;
     this.canDismiss = !!dismisser;
     this.side.set(side);
@@ -113,15 +124,15 @@ export class MistakesSession {
       this.tried.set(e.san);
       this.phase.set('checking');
       const token = ++this.epoch;
-      this.judge(m, e.fen).then(ok => {
+      this.judge(m, e.fen).then(v => {
         if (token !== this.epoch) return;
-        if (ok) { this.found(e.san, false, true); return; }
-        this.checkFailed.set(ok === null);
-        this.missed(e.san);
+        if (v.equivalent) { this.found(e.san, false, true); return; }
+        this.checkFailed.set(v.equivalent === null);
+        this.missed(e.san, v);
       }, () => {
         if (token !== this.epoch) return;
         this.checkFailed.set(true);
-        this.missed(e.san);
+        this.missed(e.san, { equivalent: null });
       });
     } else {
       this.missed(e.san);
@@ -142,27 +153,31 @@ export class MistakesSession {
     this.phase.set('right');
   }
 
-  private missed(san: string): void {
+  /** `checked` = das Urteil der Browser-Engine, wenn sie gefragt wurde. */
+  private missed(san: string, checked?: UnlistedVerdict): void {
     this.missedHere = true;
     this.tried.set(san);
     this.phase.set('wrong');
-    this.rateTried();
+    this.triedRating.set(this.rateTried(checked));
   }
 
-  /** Bewertung des Fehlversuchs: aus den Kandidaten der Analyse (tiefer gerechnet), sonst die Browser-Engine. */
-  private rateTried(): void {
+  /**
+   * Einordnung des Fehlversuchs, je Fall aus EINER Rechnung: gelistet → Server-Werte; von der Browser-Engine geprüft →
+   * deren zwei Werte (die Prüfung hat sie ohnehin gerechnet); sonst die Schranke aus der Analyse. Gerechnet wird hier
+   * nichts — eine eigene flache Bewertung neben dem Server-Wert des Bestzugs war der Widerspruch von 0.526.2.
+   */
+  private rateTried(checked?: UnlistedVerdict): TriedRating | null {
     const m = this.current();
     const move = this.lastMove();
-    if (!m || !move) { this.triedEval.set(null); return; }
+    if (!m || !move) return null;
     const listed = (m.candidates ?? []).find(c => sameMove(move[0] + move[1], c.uci));
-    if (listed) { this.triedEval.set(listed.score); return; }
-    if (!this.evaluate) { this.triedEval.set(null); return; }
-    this.triedEval.set(undefined);
-    const token = this.epoch;
-    this.evaluate(this.boardFen()).then(
-      score => { if (token === this.epoch) this.triedEval.set(score); },
-      () => { if (token === this.epoch) this.triedEval.set(null); },
-    );
+    if (listed) return { kind: 'listed', tried: listed.score, best: analysisBest(m) };
+    if (checked) {
+      return checked.equivalent === false && checked.tried && checked.best
+        ? { kind: 'browser', tried: checked.tried, best: checked.best } : null;
+    }
+    const bound = unlistedBound(m);
+    return bound ? { kind: 'bound', ...bound } : null;
   }
 
   /** Zurück auf die Ausgangsstellung — das Brett übernimmt den Nutzerzug selbst, es MUSS neu gebunden werden. */
@@ -171,7 +186,7 @@ export class MistakesSession {
     if (!m) return;
     this.epoch++;
     this.checkFailed.set(false);
-    this.triedEval.set(null);
+    this.triedRating.set(null);
     this.boardFen.set(m.fenBefore);
     this.lastMove.set(undefined);
     this.phase.set('ask');
@@ -227,7 +242,7 @@ export class MistakesSession {
     this.missedHere = false;
     this.foundByEngine.set(false);
     this.checkFailed.set(false);
-    this.triedEval.set(null);
+    this.triedRating.set(null);
     this.hintLevel.set(0);
     this.tried.set('');
     this.foundSan.set('');

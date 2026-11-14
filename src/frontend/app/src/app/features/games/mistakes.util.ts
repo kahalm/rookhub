@@ -138,6 +138,26 @@ export function isEquivalentAfter(
   return b != null && u != null && b - u <= EQUIVALENT_LIMIT;
 }
 
+/**
+ * Was die Analyse über einen Zug AUSSERHALB ihrer Kandidaten belegt: er ist höchstens so gut wie der schwächste
+ * gelistete. `count` = Zahl der Kandidaten, `worst` = der für den Ziehenden schwächste, `best` = der Bestzug
+ * (alle Weiß-Sicht, dieselbe Suche). `null` ohne Kandidatenliste.
+ */
+export function unlistedBound(m: Pick<Mistake, 'candidates' | 'bestUci' | 'white' | 'evalBefore'>):
+    { count: number; worst: EvalScore; best: EvalScore } | null {
+  const candidates = m.candidates ?? [];
+  if (!candidates.length) return null;
+  const mover = (s: EvalScore): number => { const w = winPercent(s); return w == null ? NaN : m.white ? w : 100 - w; };
+  let worst = candidates[candidates.length - 1];
+  for (const c of candidates) if (mover(c.score) < mover(worst.score)) worst = c;
+  return { count: candidates.length, worst: worst.score, best: analysisBest(m) };
+}
+
+/** Bewertung des Bestzugs aus DERSELBEN Suche wie die Kandidaten; ohne Liste die Bewertung vor dem Fehler. */
+export function analysisBest(m: Pick<Mistake, 'candidates' | 'bestUci' | 'evalBefore'>): EvalScore {
+  return (m.candidates ?? []).find(c => c.uci === m.bestUci)?.score ?? m.evalBefore;
+}
+
 /** SAN eines UCI-Zugs in einer Stellung; `null`, wenn er dort nicht geht (oder die FEN unlesbar ist). */
 export function sanOfUci(fen: string, uci: string): string | null {
   if (!fen || !uci || uci.length < 4) return null;

@@ -90,7 +90,7 @@ export class GameTrainingController {
     // Nicht gelistete Züge prüft die Browser-Engine nach (nur wo die Analyse das offen lässt).
     const gameId = this.host.gameId();
     this.training.set(new MistakesSession(this.trainable(), this.mistakeSide(),
-      (m, fen) => this.judge.judge(m, fen), fen => this.judge.evaluate(fen),
+      (m, fen) => this.judge.judge(m, fen),
       this.host.own() && gameId ? m => this.dismissMistake(m) : undefined));
   }
 

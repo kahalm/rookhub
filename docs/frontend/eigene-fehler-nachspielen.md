@@ -14,8 +14,24 @@
   in der Sammlung über mehrere Partien) — nicht in Eingabefeldern/Menüs/Dialogen (`isBoardHotkey`), nicht mit Fokus auf
   Knopf oder Link, nicht als Tastenwiederholung. Die Leertaste der Seite („nächste Aufgabe“, Phasen `right`/`shown`)
   bleibt in `SharedGameComponent.onKeyDown`; die Phasen schließen sich aus.
-- **Seit 0.526.2**: der Fehlversuch nennt seine Bewertung (`MistakesSession.triedEval` — aus `Mistake.candidates` der
-  Analyse, sonst `MistakeJudgeService.evaluate` im Browser; `undefined` = rechnet noch), und es gibt Tipps WIE BEIM
+- **Seit 0.972.1 — Zeile nach dem Fehlversuch: je Fall Zahlen aus EINER Rechnung** (`MistakesSession.triedRating`,
+  Typ `TriedRating`; gemeldet an Vereinspartie 246: „a5 is not it. After a5: +0.72 (best move: +0.77)“ bei Schwarz am
+  Zug — +0.72 kam aus dem Browser in Tiefe 16, +0.77 vom Server in Tiefe 30, und es las sich, als wäre der abgelehnte
+  Zug der bessere). Drei Fälle, gerechnet wird für die Anzeige nichts mehr eigens:
+  - `listed` — der Zug steht unter den Kandidaten der Analyse: sein Wert und der des Bestzugs aus derselben Suche
+    (`analysisBest`; Text `games.mistakes.triedEval`).
+  - `bound` — nicht gelistet und sicher schlechter (`checkUnlisted` false): KEINE Browser-Zahl, sondern die belegte
+    Schranke (`unlistedBound` in `mistakes.util.ts`): „gehört nicht zu den n besten Zügen der Analyse: der schwächste
+    davon steht bei …, der beste bei …“ (`triedBound`; bei nur einem Kandidaten `triedBoundOne`). Ohne Kandidatenliste
+    (älterer Server) steht keine Zeile da.
+  - `browser` — nicht gelistet, von der Browser-Engine geprüft und verworfen: die ZWEI Werte dieser Prüfung
+    (`MistakeJudgeService.judge` gibt seither `UnlistedVerdict` = Urteil + `best`/`tried` zurück), im Text als
+    Browser-Engine benannt (`triedBrowser`). Konnte sie nicht prüfen, bleibt es beim Vermerk `checkFailed`.
+  **Sicht**: die Zahlen bleiben in Weiß-Sicht wie Kopfzeile und Kurve der Partieseite; jede der drei Zeilen endet mit
+  dem Lese-Hinweis für die Seite am Zug (`evalViewWhite`/`evalViewBlack`: „+ = Weiß steht besser; für Schwarz ist der
+  niedrigere Wert der bessere“), bei einer Matt-Bewertung zusätzlich `evalViewMate` („#3“/„#-3“).
+  `MistakeJudgeService.evaluate`, der `PositionEvaluator` der Session und `triedEvalPending` sind entfallen.
+- **Seit 0.526.2**: der Fehlversuch nennt seine Bewertung (seit 0.972.1 siehe oben), und es gibt Tipps WIE BEIM
   PUZZLE (`classifyMoveFromFen` + `buildStagedHints`, Keys `puzzles.hints.*`: Zugart → Figur → Zug). Nach der dritten
   Stufe zählt die Aufgabe nicht mehr als selbst gefunden (wie „Lösung zeigen").
 

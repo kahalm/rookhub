@@ -1,5 +1,6 @@
 import { Mistake, MistakesBySide } from './mistakes.util';
 import { MistakesSession, UnlistedMoveJudge } from './mistakes-session';
+import { UnlistedVerdict } from './mistake-judge.service';
 
 describe('MistakesSession', () => {
   const NACH_E4_E5 = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2';
@@ -181,10 +182,10 @@ describe('MistakesSession', () => {
   describe('nicht gelistete Zuege', () => {
     /** Ein Urteil, das der Test von aussen aufloest — so laesst sich der Zwischenstand „rechnet" pruefen. */
     function judgeLater() {
-      let resolve!: (v: boolean | null) => void;
+      let resolve!: (v: UnlistedVerdict) => void;
       const calls: string[] = [];
       const judge: UnlistedMoveJudge = (_m, fen) => { calls.push(fen); return new Promise(r => { resolve = r; }); };
-      return { judge, calls, answer: (v: boolean | null) => resolve(v) };
+      return { judge, calls, answer: (v: boolean | null, scores: Partial<UnlistedVerdict> = {}) => resolve({ equivalent: v, ...scores }) };
     }
     const offen = { white: [fehler({ checkUnlisted: true })], black: [] };
 
@@ -245,30 +246,75 @@ describe('MistakesSession', () => {
     });
   });
 
-  // Seit 0.526.2: „Bxf6 is not it" nennt die Bewertung des Fehlversuchs.
-  describe('Bewertung des Fehlversuchs', () => {
-    it('aus den Kandidaten der Analyse, wenn der Zug dort steht', () => {
+  // Seit 0.526.2: „Bxf6 is not it" nennt die Bewertung des Fehlversuchs. Seit 0.972.1 je Fall aus EINER Rechnung:
+  // vorher stand eine flache Browser-Zahl neben dem Server-Wert des Bestzugs („After a5: +0.72 (best move: +0.77)").
+  describe('Einordnung des Fehlversuchs', () => {
+    /** Die Werte von Vereinspartie 246, Halbzug 19 (Schwarz am Zug, Tiefe 30) auf einer nachgestellten Stellung:
+     *  fünf Kandidaten +77 … +103, der schwächste schon nicht mehr gleichwertig → `checkUnlisted` false. */
+    const NACH_E4_NC6_NF3 = 'r1bqkbnr/pppppppp/2n5/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2';
+    const partie246 = (over: Partial<Mistake> = {}) => fehler({
+      ply: 19, white: false, fenBefore: NACH_E4_NC6_NF3, playedSan: 'b4', playedUci: 'b7b5',
+      bestUci: 'a8b8', bestSan: 'Rb8', acceptUci: ['a8b8'], acceptSan: ['Rb8'], checkUnlisted: false,
+      evalBefore: { cp: 77 }, evalAfter: { cp: 150 },
+      candidates: [
+        { uci: 'a8b8', score: { cp: 77 } }, { uci: 'f7f6', score: { cp: 88 } }, { uci: 'h7h5', score: { cp: 96 } },
+        { uci: 'e7e6', score: { cp: 101 } }, { uci: 'd7d6', score: { cp: 103 } },
+      ], ...over,
+    });
+
+    it('gelistet: Wert des Zugs und des Bestzugs aus derselben Suche der Analyse', () => {
       const c = setup({ white: [fehler({ candidates: [
         { uci: 'g1f3', score: { cp: 30 } }, { uci: 'b1c3', score: { cp: -40 } },
       ] })], black: [] });
       c.onMove({ from: 'b1', to: 'c3', san: 'Nc3', fen: 'nach Nc3' });
       expect(c.phase()).toBe('wrong');
-      expect(c.triedEval()).toEqual({ cp: -40 });
+      expect(c.triedRating()).toEqual({ kind: 'listed', tried: { cp: -40 }, best: { cp: 30 } });
     });
 
-    it('sonst von der Browser-Engine — bis sie antwortet `undefined`, eine späte Antwort nach „Nochmal" zählt nicht', async () => {
-      let resolve!: (v: { cp: number }) => void;
-      const evaluate = jasmine.createSpy('evaluate').and.returnValue(new Promise(r => { resolve = r; }));
-      const c = new MistakesSession({ white: [fehler({ candidates: [] })], black: [] }, 'white', undefined, evaluate);
+    it('Partie 246: nicht gelistet und sicher schlechter → Schranke aus der Analyse, die Browser-Engine wird nicht gefragt', () => {
+      const judge = jasmine.createSpy('judge');
+      const c = new MistakesSession({ white: [], black: [partie246()] }, 'black', judge);
+      c.onMove({ from: 'a7', to: 'a5', san: 'a5', fen: 'nach a5' });
+      expect(c.phase()).toBe('wrong');
+      expect(judge).not.toHaveBeenCalled();
+      expect(c.triedRating()).toEqual({ kind: 'bound', count: 5, worst: { cp: 103 }, best: { cp: 77 } });
+    });
+
+    it('der schwächste Kandidat ist der für den ZIEHENDEN schwächste, auch wenn die Liste anders sortiert ist', () => {
+      const c = setup({ white: [fehler({ candidates: [
+        { uci: 'b1c3', score: { cp: -80 } }, { uci: 'g1f3', score: { cp: 30 } }, { uci: 'd2d4', score: { cp: -10 } },
+      ] })], black: [] });
+      c.onMove({ from: 'a2', to: 'a3', san: 'a3', fen: 'x' });
+      expect(c.triedRating()).toEqual({ kind: 'bound', count: 3, worst: { cp: -80 }, best: { cp: 30 } });
+    });
+
+    it('ohne Kandidatenliste (älterer Server) gibt es nichts Belegtes zu sagen', () => {
+      const c = setup({ white: [fehler({ candidates: [] })], black: [] });
       c.onMove({ from: 'b1', to: 'c3', san: 'Nc3', fen: 'nach Nc3' });
-      expect(evaluate).toHaveBeenCalledWith('nach Nc3');
-      expect(c.triedEval()).toBeUndefined();
-      resolve({ cp: -55 });
+      expect(c.triedRating()).toBeNull();
+    });
+
+    it('von der Browser-Engine geprüft und verworfen: beide Werte DIESER Prüfung, nicht der Server-Wert des Bestzugs', async () => {
+      const judge = jasmine.createSpy('judge').and.resolveTo({ equivalent: false, best: { cp: 62 }, tried: { cp: 95 } });
+      const m = partie246({ checkUnlisted: true });
+      const c = new MistakesSession({ white: [], black: [m] }, 'black', judge);
+      c.onMove({ from: 'a7', to: 'a5', san: 'a5', fen: 'nach a5' });
       await Promise.resolve(); await Promise.resolve();
-      expect(c.triedEval()).toEqual({ cp: -55 });
+      expect(judge).toHaveBeenCalledOnceWith(m, 'nach a5');
+      expect(c.phase()).toBe('wrong');
+      expect(c.triedRating()).toEqual({ kind: 'browser', tried: { cp: 95 }, best: { cp: 62 } });
 
       c.retry();
-      expect(c.triedEval()).toBeNull();
+      expect(c.triedRating()).toBeNull();
+    });
+
+    it('konnte die Browser-Engine nicht prüfen, steht keine Zahl da (nur der Vermerk)', async () => {
+      const judge = jasmine.createSpy('judge').and.resolveTo({ equivalent: null });
+      const c = new MistakesSession({ white: [], black: [partie246({ checkUnlisted: true })] }, 'black', judge);
+      c.onMove({ from: 'a7', to: 'a5', san: 'a5', fen: 'nach a5' });
+      await Promise.resolve(); await Promise.resolve();
+      expect(c.checkFailed()).toBeTrue();
+      expect(c.triedRating()).toBeNull();
     });
   });
 
@@ -288,7 +334,7 @@ describe('MistakesSession', () => {
   // 0.748.0: „Nicht mehr zeigen" — der Seite melden, aus der Liste nehmen, die nächste Aufgabe rückt nach.
   it('„nicht mehr zeigen": meldet die Aufgabe, nimmt sie aus der Liste, auch bei „Von vorn"', () => {
     const gemeldet: Mistake[] = [];
-    const c = new MistakesSession(zwei, 'white', undefined, undefined, m => gemeldet.push(m));
+    const c = new MistakesSession(zwei, 'white', undefined, m => gemeldet.push(m));
     expect(c.canDismiss).toBeTrue();
 
     c.dismiss();
@@ -305,7 +351,7 @@ describe('MistakesSession', () => {
   });
 
   it('„nicht mehr zeigen" nach dem Finden zählt nicht mehr als gefunden; ohne Melder gibt es den Knopf nicht', () => {
-    const c = new MistakesSession(zwei, 'white', undefined, undefined, () => {});
+    const c = new MistakesSession(zwei, 'white', undefined, () => {});
     c.onMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: 'danach' });
     expect(c.solved()).toBe(1);
 
@@ -317,7 +363,7 @@ describe('MistakesSession', () => {
   });
 
   it('letzte Aufgabe ausgeblendet → fertig', () => {
-    const c = new MistakesSession({ white: [fehler()], black: [] }, 'white', undefined, undefined, () => {});
+    const c = new MistakesSession({ white: [fehler()], black: [] }, 'white', undefined, () => {});
     c.dismiss();
     expect(c.phase()).toBe('done');
     expect(c.list().length).toBe(0);

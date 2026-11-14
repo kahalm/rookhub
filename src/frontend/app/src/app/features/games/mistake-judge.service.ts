@@ -6,6 +6,17 @@ import { EvalScore } from './game-review.util';
 import { Mistake, isEquivalentAfter } from './mistakes.util';
 
 /**
+ * Urteil über einen nicht gelisteten Zug: `equivalent` — `true` gleichwertig, `false` schlechter, `null` nicht zu
+ * prüfen (Engine-Fehler, unlesbare Stellung). `best`/`tried` sind die beiden Bewertungen DIESER Prüfung (Weiß-Sicht,
+ * dieselbe Tiefe) — die Anzeige nennt genau sie, nie eine davon neben einer Zahl der tieferen Server-Analyse.
+ */
+export interface UnlistedVerdict {
+  equivalent: boolean | null;
+  best?: EvalScore;
+  tried?: EvalScore;
+}
+
+/**
  * Prüft im Fehler-Trainer einen Zug, den die Partie-Analyse NICHT unter ihren Kandidaten führt, mit der
  * Browser-Engine (Stockfish WASM, dieselbe wie im Puzzle-Solver). Gefragt wird nur, wenn schon der
  * schwächste Kandidat gleichwertig war (`Mistake.checkUnlisted`) — sonst ist jeder andere Zug sicher
@@ -22,24 +33,21 @@ export class MistakeJudgeService {
 
   private readonly stockfish = inject(StockfishService);
 
-  /** `true` gleichwertig · `false` schlechter · `null` nicht zu prüfen (Engine-Fehler, unlesbare Stellung). */
-  async judge(m: Mistake, fenAfterUser: string): Promise<boolean | null> {
+  /** Urteil samt den beiden Bewertungen, auf denen es beruht (siehe {@link UnlistedVerdict}). */
+  async judge(m: Mistake, fenAfterUser: string): Promise<UnlistedVerdict> {
     const fenAfterBest = fenAfterUci(m.fenBefore, m.bestUci);
-    if (!fenAfterBest || !fenAfterUser) return null;
+    if (!fenAfterBest || !fenAfterUser) return { equivalent: null };
     try {
       const best = await this.scoreOf(fenAfterBest);
       const user = await this.scoreOf(fenAfterUser);
-      if (!best || !user) return null;
-      return isEquivalentAfter({ score: best, fen: fenAfterBest }, { score: user, fen: fenAfterUser }, m.white);
+      if (!best || !user) return { equivalent: null };
+      return {
+        equivalent: isEquivalentAfter({ score: best, fen: fenAfterBest }, { score: user, fen: fenAfterUser }, m.white),
+        best, tried: user,
+      };
     } catch {
-      return null;
+      return { equivalent: null };
     }
-  }
-
-  /** Bewertung einer Stellung (Weiß-Sicht) — für den Fehlversuch, den die Analyse nicht unter ihren Kandidaten führt
-   *  (seit 0.526.2). `null` bei Engine-Fehler oder unlesbarer Stellung. */
-  async evaluate(fen: string): Promise<EvalScore | null> {
-    try { return await this.scoreOf(fen); } catch { return null; }
   }
 
   /** Bewertung einer Stellung in Weiß-Sicht. Ist die Partie dort vorbei, gibt es keinen Zug zu suchen —

@@ -29,7 +29,8 @@ describe('MistakeJudgeService', () => {
 
     const ok = await judge.judge(mistake, 'rnbqkbnr/pppp1ppp/8/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 2');
 
-    expect(ok).toBeTrue();
+    // Urteil UND die beiden Werte, auf denen es beruht — die Anzeige nennt genau diese (0.972.1).
+    expect(ok).toEqual({ equivalent: true, best: { cp: 30, mate: null }, tried: { cp: 25, mate: null } });
     expect(calls.length).toBe(2);
     expect(calls.every(c => c.depth === MistakeJudgeService.DEPTH)).toBeTrue();
   });
@@ -40,13 +41,14 @@ describe('MistakeJudgeService', () => {
       'rnbqkbnr/pppp1ppp/8/4p3/4P3/P7': { cp: -40 },
     });
 
-    expect(await judge.judge(mistake, 'rnbqkbnr/pppp1ppp/8/4p3/4P3/P7/1PPP1PPP/RNBQKBNR b KQkq - 0 2')).toBeFalse();
+    expect(await judge.judge(mistake, 'rnbqkbnr/pppp1ppp/8/4p3/4P3/P7/1PPP1PPP/RNBQKBNR b KQkq - 0 2'))
+      .toEqual({ equivalent: false, best: { cp: 30, mate: null }, tried: { cp: -40, mate: null } });
   });
 
   it('ohne Bewertung der Engine: nicht pruefbar statt geraten', async () => {
     const { judge } = setup({ 'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2': { cp: 30 } });
 
-    expect(await judge.judge(mistake, 'rnbqkbnr/pppp1ppp/8/4p3/4P3/P7/1PPP1PPP/RNBQKBNR b KQkq - 0 2')).toBeNull();
+    expect(await judge.judge(mistake, 'rnbqkbnr/pppp1ppp/8/4p3/4P3/P7/1PPP1PPP/RNBQKBNR b KQkq - 0 2')).toEqual({ equivalent: null });
   });
 
   it('nach einem Matt fragt es die Engine gar nicht — sie haette keinen Zug', async () => {
@@ -55,7 +57,7 @@ describe('MistakeJudgeService', () => {
 
     const ok = await judge.judge(vorMatt, 'rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3');
 
-    expect(ok).toBeTrue();
+    expect(ok.equivalent).toBeTrue();
     expect(calls.length).toBe(0);
   });
 });

@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { GameEvalPly, GameEvals, GameReview, ReviewedMove, reviewGame } from './game-review.util';
-import { EQUIVALENT_LIMIT, PlayedMove, acceptedMoves, collectMistakes, isEquivalentAfter, mistakesOf, sanOfUci, sideWithMoreMistakes, trainingSide, unlistedMayBeEquivalent } from './mistakes.util';
+import { EQUIVALENT_LIMIT, PlayedMove, acceptedMoves, collectMistakes, isEquivalentAfter, mistakesOf, sanOfUci, sideWithMoreMistakes, trainingSide, unlistedBound, unlistedMayBeEquivalent } from './mistakes.util';
 
 /** Kurze Partie nachspielen: liefert die FENs (Stellung VOR jedem Halbzug, plus die letzte) und die Zuege. */
 function play(sans: string[]): { fens: string[]; moves: PlayedMove[] } {
@@ -240,6 +240,20 @@ describe('mistakes.util', () => {
       expect(isEquivalentAfter({ score: { cp: -500 }, fen: matt }, { score: { mate: 0 }, fen: matt }, false)).toBeTrue();
     });
   });
+  // 0.972.1 — was die Analyse über einen nicht gelisteten Zug belegt (Zeile nach dem Fehlversuch).
+  describe('unlistedBound', () => {
+    const cand = (uci: string, cp: number) => ({ uci, score: { cp } });
+    it('Schwarz am Zug: der schwächste ist der mit dem HÖCHSTEN Weiß-Wert; der beste kommt aus derselben Liste', () => {
+      expect(unlistedBound({ white: false, bestUci: 'a8b8', evalBefore: { cp: 70 },
+        candidates: [cand('a8b8', 77), cand('f7f6', 88), cand('d7d6', 103), cand('h7h5', 96)] }))
+        .toEqual({ count: 4, worst: { cp: 103 }, best: { cp: 77 } });
+    });
+    it('ohne Kandidaten: nichts belegt', () => {
+      expect(unlistedBound({ white: true, bestUci: 'g1f3', evalBefore: { cp: 30 }, candidates: [] })).toBeNull();
+      expect(unlistedBound({ white: true, bestUci: 'g1f3', evalBefore: { cp: 30 } })).toBeNull();
+    });
+  });
+
   // 0.908.0 — Spiegel am Server: `GameMistakeSelection` wählt die Fehler für die Zugvergleiche der Vereinspartien. DIESELBE
   // Partie mit denselben LITERALEN Werten prüft `GameMistakeSelectionTests.Select_SmallGame_SameAsClient` — wer die Auswahl
   // hier oder dort ändert, zieht die andere Seite im selben Commit nach.

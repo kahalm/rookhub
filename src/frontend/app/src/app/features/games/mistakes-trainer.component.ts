@@ -7,7 +7,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { buildStagedHints, classifyMoveFromFen } from '../puzzles/puzzle-hints.util';
 import { EvalScore, MOVE_CLASS_COLORS, MoveClass, formatEval } from './game-review.util';
 import { Mistake } from './mistakes.util';
-import { MistakesSession } from './mistakes-session';
+import { MistakesSession, TriedRating } from './mistakes-session';
 import { MarkPositionButtonComponent } from '../../shared/mark-position/mark-position-button.component';
 import { MarkOrigin } from '../../shared/mark-position/marked-positions.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
@@ -91,11 +91,13 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
         <p class="cost">{{ 'games.mistakes.checkFailed' | translate }}</p>
       }
       @if (session.phase() === 'wrong') {
-        @let te = session.triedEval();
-        @if (te === undefined) {
-          <p class="cost tried-eval">{{ 'games.mistakes.triedEvalPending' | translate: { san: session.tried() } }}</p>
-        } @else if (te) {
-          <p class="cost tried-eval">{{ 'games.mistakes.triedEval' | translate: { san: session.tried(), eval: fmtScore(te), best: fmtScore(m.evalBefore) } }}</p>
+        <!-- Je Fall Zahlen aus EINER Rechnung (0.972.1) und dahinter, aus wessen Sicht sie zu lesen sind. -->
+        @if (session.triedRating(); as r) {
+          @let line = triedLine(r);
+          <p class="cost tried-eval">{{ line.key | translate: line.params }}
+            <span class="eval-view">{{ (m.white ? 'games.mistakes.evalViewWhite' : 'games.mistakes.evalViewBlack') | translate }}
+              @if (hasMate(r)) { {{ 'games.mistakes.evalViewMate' | translate }} }</span>
+          </p>
         }
       }
       @if (session.phase() === 'right' || session.phase() === 'shown') {
@@ -170,6 +172,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
     .prompt.right { color: var(--rh-success); font-weight: 500; }
     .prompt.wrong { color: var(--rh-error); }
     .cost { margin: 2px 0 0; font-size: 0.85rem; color: color-mix(in srgb, currentColor 70%, transparent); }
+    .eval-view { display: block; }
     .empty-state, .summary { margin: 8px 0; }
     .actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
     .spacer { flex: 1 1 auto; }
@@ -239,7 +242,28 @@ export class MistakesTrainerComponent {
 
   color(c: MoveClass): string { return MOVE_CLASS_COLORS[c]; }
   fmt(m: Mistake): string { return `${formatEval(m.evalBefore)} → ${formatEval(m.evalAfter)}`; }
-  fmtScore(score: EvalScore): string { return formatEval(score); }
+
+  /**
+   * Die Zeile zum Fehlversuch — Schlüssel und Platzhalter je Fall (siehe {@link TriedRating}). Die Zahlen bleiben in
+   * Weiß-Sicht wie überall auf der Partieseite (Kopfzeile, Kurve); die Vorlage hängt den Lese-Hinweis an.
+   */
+  triedLine(r: TriedRating): { key: string; params: Record<string, unknown> } {
+    const san = this.session.tried();
+    const best = formatEval(r.best);
+    switch (r.kind) {
+      case 'listed': return { key: 'games.mistakes.triedEval', params: { san, eval: formatEval(r.tried), best } };
+      case 'browser': return { key: 'games.mistakes.triedBrowser', params: { san, eval: formatEval(r.tried), best } };
+      case 'bound': return r.count > 1
+        ? { key: 'games.mistakes.triedBound', params: { san, n: r.count, worst: formatEval(r.worst), best } }
+        : { key: 'games.mistakes.triedBoundOne', params: { san, best } };
+    }
+  }
+
+  /** Steht in der Zeile eine Matt-Bewertung („#3", „#-3")? Dann erklärt der Hinweis auch deren Vorzeichen. */
+  hasMate(r: TriedRating): boolean {
+    const scores: EvalScore[] = r.kind === 'bound' ? [r.worst, r.best] : [r.tried, r.best];
+    return scores.some(s => s.mate != null);
+  }
 
   /** Tipps zur Aufgabe, dieselben wie beim Puzzle: zum Bestzug der Analyse aus der Stellung VOR dem Fehler. */
   hints(m: Mistake): string[] {

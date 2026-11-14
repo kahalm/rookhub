@@ -225,7 +225,7 @@ export class MistakesCollectionComponent implements OnInit {
       this.sessionGames.set(results.filter(x => x.r.list.length > 0).length);
       // Alle Aufgaben stehen auf der „weißen" Liste; das Brett dreht sich je Aufgabe nach dem Ziehenden (MistakesSession.flipped).
       this.training.set(new MistakesSession({ white: all, black: [] }, 'white',
-        (m, fen) => this.judge.judge(m, fen), fen => this.judge.evaluate(fen), m => this.dismiss(m)));
+        (m, fen) => this.judge.judge(m, fen), m => this.dismiss(m)));
     });
   }
 

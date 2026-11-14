@@ -391,7 +391,7 @@ describe('SharedGameComponent', () => {
     page.onTrainingMove({ from: 'd2', to: 'd4', san: 'd4', fen: 'rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1' });
     fixture.detectChanges();
     expect(t.phase()).toBe('wrong');
-    expect(t.triedEval()).toEqual({ cp: 10 });
+    expect(t.triedRating()).toEqual({ kind: 'listed', tried: { cp: 10 }, best: { cp: 30 } });
 
     const AFTER_D4 = 'rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1';
     page.toggleTrainingAnalysis();

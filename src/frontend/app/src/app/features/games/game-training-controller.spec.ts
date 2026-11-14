@@ -30,7 +30,7 @@ describe('GameTrainingController', () => {
       gameId: () => gameId,
     };
     return TestBed.runInInjectionContext(() =>
-      new GameTrainingController(host, games, jasmine.createSpyObj<MistakeJudgeService>('judge', ['judge', 'evaluate'])));
+      new GameTrainingController(host, games, jasmine.createSpyObj<MistakeJudgeService>('judge', ['judge'])));
   }
 
   beforeEach(() => {
