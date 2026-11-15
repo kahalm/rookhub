@@ -469,6 +469,15 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
     return { _why: 'keine Vereinspartie an einer Ligapaarung des eigenen Teams' };
   });
 
+  // Anonymer Link der Zusammenfassung einer eigenen Partie (`/ga/{token}/summary`): bevorzugt die analysierte Partie (nur
+  // sie kann einen Text haben), sonst die Seed-Partie — dann zeigt die Seite den Leersatz. Ein bestehender Link bleibt.
+  await step(['gameAnonToken'], async () => {
+    const id = p.analyzedGameId ?? p.gameId;
+    if (!id) return { _why: 'keine eigene Partie' };
+    const s = await a.post(`/api/games/${id}/summary/anon-share`, {});
+    return { gameAnonToken: s?.token };
+  });
+
   // Eigener Teilen-Link EINER Vereinspartie (0.939.0, `/cg/{token}` + `/cg/{token}/summary`) — ohne ihn sah der Sweep nur
   // „Link ungültig“. Angelegt über `POST /api/league/club/games/{id}/share` (ein schon bestehender Link bleibt); bevorzugt eine
   // Partie mit fertiger Zusammenfassung unter den ersten sechs, sonst die erste. Der Link vom letzten Lauf gilt bis zum Widerruf.

@@ -3290,7 +3290,7 @@
     "openInAnalysis": "In Analyse öffnen",
     "share": "Teilen-Link kopieren",
     "revokeShare": "Teilen-Link widerrufen",
-    "revokeShareConfirm": "Teilen-Link dieser Partie widerrufen? Der bisherige Link (auch Roast- und Trainings-Links) funktioniert danach nicht mehr; „Teilen-Link kopieren“ gibt einen neuen heraus.",
+    "revokeShareConfirm": "Teilen-Link dieser Partie widerrufen? Der bisherige Link (auch Roast- und Trainings-Links sowie der anonyme Link der Zusammenfassung) funktioniert danach nicht mehr; „Teilen-Link kopieren“ gibt einen neuen heraus.",
     "revokeShareDone": "Teilen-Link widerrufen.",
     "revokeShareError": "Widerrufen fehlgeschlagen.",
     "shareCopied": "Teilen-Link in die Zwischenablage kopiert",
@@ -3656,7 +3656,12 @@
         "train": "Taktiken trainieren",
         "trainHint": "Legt die Aufgaben dieser Partie als Kapitel in deinem Kurs „Persönliche Taktiken“ an und öffnet es.",
         "trainFailed": "Der Kurs ließ sich nicht öffnen."
-      }
+      },
+      "shareLink": "Link teilen",
+      "shareAnon": "Anonym teilen",
+      "anonCopied": "Anonymer Link kopiert – der Empfänger sieht keine Spielernamen.",
+      "anonNoText": "Anonymer Link erstellt – aber der Text nennt einen Namen, der sich nicht sicher entfernen lässt. Der Link zeigt deshalb nur die Partie ohne Namen, keine Zusammenfassung.",
+      "shareFailed": "Der Link konnte nicht erstellt werden."
     },
     "onlyMine": "Nur meine Partien",
     "onlyMineEmpty": "Hier ist keine eigene Partie – ohne Häkchen bei „Nur meine Partien“ siehst du alle.",

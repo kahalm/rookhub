@@ -3290,7 +3290,7 @@
     "openInAnalysis": "Otvori u analizi",
     "share": "Kopiraj poveznicu za dijeljenje",
     "revokeShare": "Opozovi poveznicu za dijeljenje",
-    "revokeShareConfirm": "Opozvati poveznicu za dijeljenje ove partije? Dosadašnja poveznica (i poveznice za roast i trening) više neće raditi; „Kopiraj poveznicu za dijeljenje” daje novu.",
+    "revokeShareConfirm": "Opozvati poveznicu za dijeljenje ove partije? Dosadašnja poveznica (i poveznice za roast i trening te anonimna poveznica sažetka) više neće raditi; „Kopiraj poveznicu za dijeljenje” daje novu.",
     "revokeShareDone": "Poveznica za dijeljenje opozvana.",
     "revokeShareError": "Opoziv nije uspio.",
     "shareCopied": "Poveznica za dijeljenje kopirana u međuspremnik",
@@ -3656,7 +3656,12 @@
         "train": "Vježbaj taktike",
         "trainHint": "Dodaje zadatke ove partije kao poglavlje u tvoj tečaj „Osobne taktike“ i otvara ga.",
         "trainFailed": "Tečaj se nije mogao otvoriti."
-      }
+      },
+      "shareLink": "Podijeli poveznicu",
+      "shareAnon": "Podijeli anonimno",
+      "anonCopied": "Anonimna poveznica kopirana – primatelj ne vidi imena igrača.",
+      "anonNoText": "Anonimna poveznica je izrađena – ali tekst spominje ime koje se ne može sigurno ukloniti. Poveznica zato prikazuje samo partiju bez imena, bez sažetka.",
+      "shareFailed": "Poveznicu nije bilo moguće izraditi."
     },
     "onlyMine": "Samo moje partije",
     "onlyMineEmpty": "Ovdje nema tvojih partija – makni kvačicu „Samo moje partije“ za sve.",

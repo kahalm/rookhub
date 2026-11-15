@@ -3700,7 +3700,7 @@
     "openInAnalysis": "Megnyitás az elemzésben",
     "share": "Megosztási link másolása",
     "revokeShare": "Megosztási link visszavonása",
-    "revokeShareConfirm": "Visszavonod a játszma megosztási linkjét? Az eddigi link (a roast- és edzéslinkekkel együtt) nem működik tovább; a „Megosztási link másolása” újat ad.",
+    "revokeShareConfirm": "Visszavonod a játszma megosztási linkjét? Az eddigi link (a roast- és edzéslinkekkel, valamint az összefoglaló névtelen linkjével együtt) nem működik tovább; a „Megosztási link másolása” újat ad.",
     "revokeShareDone": "Megosztási link visszavonva.",
     "revokeShareError": "A visszavonás nem sikerült.",
     "shareCopied": "A megosztási link a vágólapra másolva",
@@ -4066,7 +4066,12 @@
         "train": "Taktikák gyakorlása",
         "trainHint": "A játszma feladatait fejezetként hozzáadja a „Személyes taktikák” kurzusodhoz, és megnyitja.",
         "trainFailed": "A kurzust nem sikerült megnyitni."
-      }
+      },
+      "shareLink": "Link megosztása",
+      "shareAnon": "Megosztás névtelenül",
+      "anonCopied": "Névtelen link másolva – a címzett nem látja a játékosok nevét.",
+      "anonNoText": "A névtelen link elkészült – de a szöveg olyan nevet említ, amelyet nem lehet biztonságosan eltávolítani. A link ezért csak a játszmát mutatja nevek nélkül, összefoglaló nélkül.",
+      "shareFailed": "A linket nem sikerült létrehozni."
     },
     "onlyMine": "Csak a saját játszmáim",
     "onlyMineEmpty": "Itt nincs saját játszmád – a „Csak a saját játszmáim“ jelölését kivéve mindet látod.",

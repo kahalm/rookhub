@@ -76,6 +76,21 @@ export class GameActionsService {
   /** Link der Vereinspartie (`/cg/:token`) in die Zwischenablage. */
   copyClubGameLink(token: string): void { this.copyLink(this.games.clubGameShareUrl(token)); }
 
+  /**
+   * Einen Link teilen: am Handy (Zeigegerät grob UND Teilen-Blatt vorhanden) über das Teilen-Blatt des Geräts, sonst in die
+   * Zwischenablage mit Rückmeldung `copiedKey`. Bricht der Nutzer das Blatt ab, geschieht nichts; scheitert es anders,
+   * wird kopiert. `note` (optional) ist ein Hinweis, der in JEDEM Fall gezeigt wird (z. B. „der Link zeigt keinen Text“).
+   */
+  shareLink(url: string, copiedKey = 'games.shareCopied', note?: string): void {
+    const copy = () => void (navigator.clipboard?.writeText(url) ?? Promise.reject(new Error('no clipboard'))).then(
+      () => note ? this.snackbar.warn(note) : this.snackbar.copy(this.translate.instant(copiedKey)),
+      () => this.snackbar.warn(url),
+    );
+    if (typeof navigator.share !== 'function' || !window.matchMedia?.('(pointer: coarse)').matches) { copy(); return; }
+    if (note) this.snackbar.warn(note);
+    navigator.share({ url }).catch((e: unknown) => { if ((e as { name?: string } | null)?.name !== 'AbortError') copy(); });
+  }
+
   private copyLink(url: string): void {
     navigator.clipboard?.writeText(url).then(
       () => this.snackbar.copy(this.translate.instant('games.shareCopied')),

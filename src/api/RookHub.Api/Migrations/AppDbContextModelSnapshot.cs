@@ -7552,6 +7552,10 @@ namespace RookHub.Api.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AnonShareToken")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
                     b.Property<string>("Black")
                         .HasMaxLength(120)
                         .HasColumnType("varchar(120)");
@@ -7638,6 +7642,9 @@ namespace RookHub.Api.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AnonShareToken")
+                        .IsUnique();
 
                     b.HasIndex("LeagueClubGameId");
 

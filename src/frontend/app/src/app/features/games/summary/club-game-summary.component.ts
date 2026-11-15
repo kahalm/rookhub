@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Injector, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver } from '@angular/cdk/layout';
@@ -14,6 +15,8 @@ import { ChessBoardComponent, BoardArrow } from '../../../shared/pgn-viewer/ches
 import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
 import { PreferencesService } from '../../../core/preferences.service';
 import { GamesService, SharedGame } from '../games.service';
+import { GameActionsService } from '../game-actions.service';
+import { IconLabelDirective } from '../../../shared/icon-label/icon-label.directive';
 import { AuthService } from '../../../core/auth.service';
 import { MenuService } from '../../../core/menu.service';
 import { SnackbarService } from '../../../core/snackbar.service';
@@ -46,7 +49,8 @@ interface ResolvedDiagram {
   selector: 'app-club-game-summary',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, TranslatePipe,
+  providers: [GameActionsService],
+  imports: [DatePipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatMenuModule, MatProgressSpinnerModule, TranslatePipe, IconLabelDirective,
     ChessBoardComponent, LoadErrorComponent, ClubSummaryLinkComponent, SummaryGameBoardComponent, MaximNoteComponent, SanPipe],
   template: `
     <div class="summary-page" [class.with-board]="hasBoard()">
@@ -76,22 +80,51 @@ interface ResolvedDiagram {
         <div class="summary-layout">
         <mat-card class="summary-card">
           <div class="head">
-            <a mat-icon-button [routerLink]="gameLink()" class="back" [attr.aria-label]="'common.back' | translate">
-              <mat-icon>arrow_back</mat-icon>
-            </a>
+            <!-- Anonymer Link (/ga/:token/summary): keine Partieseite dahinter — kein Zurück-Pfeil, kein „Zur Partie“, und die
+                 Namen kennt die Seite gar nicht (der Server schickt keine): im Kopf stehen „Weiß – Schwarz“. -->
+            @if (anonToken === null) {
+              <a mat-icon-button [routerLink]="gameLink()" class="back" [attr.aria-label]="'common.back' | translate">
+                <mat-icon>arrow_back</mat-icon>
+              </a>
+            }
             <div class="head-main">
-              <span class="players"><strong>{{ g.white || '?' }}</strong> – <strong>{{ g.black || '?' }}</strong>
+              <span class="players"><strong>{{ anonToken !== null ? ('games.review.white' | translate) : (g.white || '?') }}</strong> – <strong>{{ anonToken !== null ? ('games.review.black' | translate) : (g.black || '?') }}</strong>
                 @if (g.result && g.result !== '*') { <span class="result">{{ g.result }}</span> }</span>
               <span class="meta">{{ 'games.summary.title' | translate }}
                 @if (summary()?.doneAt) { · {{ summary()!.doneAt | date:'mediumDate' }} }</span>
             </div>
             <div class="head-actions">
-              <a mat-stroked-button [routerLink]="gameLink()" class="to-game">
-                <mat-icon>sports_esports</mat-icon> {{ 'games.summary.toGame' | translate }}
-              </a>
+              @if (anonToken === null) {
+                <a mat-stroked-button [routerLink]="gameLink()" class="to-game" [class.in-menu]="canShare() || canShareClub()">
+                  <mat-icon>sports_esports</mat-icon> {{ 'games.summary.toGame' | translate }}
+                </a>
+              }
               <!-- UI-Sweep 2026-11-10 (d10-rk-zusammenfassung-anfordern-textknopf): ohne Text steht „Anfordern“ als Hauptknopf im Leerzustand. -->
-              @if (summary()?.markdown && shareToken === null && gameShareToken === null && clubLinkToken === null) { <app-club-summary-link [gameId]="gameId" [allowAgain]="true" [kind]="own ? 'own' : 'club'" /> }
+              @if (summary()?.markdown && !readOnly) { <app-club-summary-link [gameId]="gameId" [allowAgain]="true" [kind]="own ? 'own' : 'club'" /> }
             </div>
+            <!-- ⋮ (Wunsch 2026-11-15, DESIGN 5.5): Teilen der Zusammenfassung — nur angemeldet auf der eigenen Seite bzw. der
+                 Vereinspartie, und nur, wenn der geteilte Link auch einen Text zeigt. Reihenfolge Navigieren → Teilen → Widerrufen. -->
+            @if (canShare() || canShareClub()) {
+              <button mat-icon-button class="summary-menu" [matMenuTriggerFor]="summaryMenu" [appIconLabel]="'common.moreActions' | translate">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #summaryMenu="matMenu">
+                <a mat-menu-item class="menu-to-game" [routerLink]="gameLink()">
+                  <mat-icon>sports_esports</mat-icon><span>{{ 'games.summary.toGame' | translate }}</span>
+                </a>
+                <button mat-menu-item class="share-item" [disabled]="sharing()" (click)="own ? share() : shareClub()">
+                  <mat-icon>share</mat-icon><span>{{ 'games.summary.shareLink' | translate }}</span>
+                </button>
+                @if (canShare()) {
+                  <button mat-menu-item class="share-anon-item" [disabled]="sharing()" (click)="shareAnon()">
+                    <mat-icon>visibility_off</mat-icon><span>{{ 'games.summary.shareAnon' | translate }}</span>
+                  </button>
+                  <button mat-menu-item class="revoke-share" (click)="revokeShare()">
+                    <mat-icon>link_off</mat-icon><span>{{ 'games.revokeShare' | translate }}</span>
+                  </button>
+                }
+              </mat-menu>
+            }
           </div>
           @if (summary()?.stale) {
             <p class="note stale"><mat-icon>info</mat-icon> {{ 'games.summary.stale' | translate }}</p>
@@ -101,7 +134,7 @@ interface ResolvedDiagram {
             <div class="empty-state empty">
               <mat-icon>article</mat-icon>
               <p>{{ 'games.summary.none' | translate }}</p>
-              @if (shareToken === null && gameShareToken === null && clubLinkToken === null) {
+              @if (!readOnly) {
                 <app-club-summary-link [gameId]="gameId" [kind]="own ? 'own' : 'club'" [prominent]="true" />
               }
             </div>
@@ -176,7 +209,7 @@ interface ResolvedDiagram {
                           @if (d.label) { <strong>{{ d.label }}</strong> }
                           @if (d.caption) { <ng-container *ngTemplateOutlet="inline; context: { $implicit: d.caption }" /> }
                           @if (b.spec.ply !== undefined) {
-                            <a [routerLink]="gameLink()" [queryParams]="{ ply: b.spec.ply }" class="to-ply">{{ 'games.summary.showInGame' | translate }}</a>
+                            @if (anonToken === null) { <a [routerLink]="gameLink()" [queryParams]="{ ply: b.spec.ply }" class="to-ply">{{ 'games.summary.showInGame' | translate }}</a> }
                             @if (hasBoard()) {
                               <button type="button" class="to-board" (click)="showOnBoard({ ply: b.spec.ply, flipped: d.flipped })">{{ 'games.summary.showOnBoard' | translate }}</button>
                             }
@@ -291,6 +324,15 @@ interface ResolvedDiagram {
     .mv.mv-b { font-weight: 700; }
     .mv.mv-i { font-style: italic; }
     .to-ply { margin-left: auto; }
+    /* Das ⋮ steht nie allein in einer Zeile (DESIGN 5.5): ab 600 px am Ende der Kopfzeile hinter den Knöpfen; darunter oben
+       rechts neben den Namen, die Knöpfe bekommen die Zeile darunter (bei 320 px rutschte es sonst unter „Neu schreiben“). */
+    .summary-menu { flex: 0 0 auto; margin-right: -8px; }
+    @media (max-width: 599.98px) {
+      .head-main { flex: 1 1 0; }
+      .head-actions { order: 1; flex: 1 1 100%; }
+    }
+    /* Am Handy steht „Zur Partie“ nur im ⋮ (und als Zurück-Pfeil), sobald es das Menü gibt — sonst bricht die Knopfzeile um. */
+    @media (max-width: 599.98px) { .to-game.in-menu { display: none; } }
     .game-line { line-height: 1.9; overflow-wrap: normal; }
     .gm-pair { display: inline-block; white-space: nowrap; margin-right: 0.6em; }
     .gm-no { color: var(--mat-sys-on-surface-variant); margin-right: 0.15em; }
@@ -336,6 +378,12 @@ export class ClubGameSummaryComponent implements OnInit {
   gameShareToken: string | null = null;
   /** Link einer einzelnen Vereinspartie `/cg/:token` (2026-11-09): nur lesen. */
   clubLinkToken: string | null = null;
+  /** `/ga/:token/summary` (Wunsch 2026-11-15): eigene Partie über ihren ANONYMEN Link — der Server liefert weder Namen noch Kopfdaten. */
+  anonToken: string | null = null;
+  /** Über einen der vier Links geöffnet: nur lesen, nichts anfordern, nichts teilen. */
+  get readOnly(): boolean {
+    return this.shareToken !== null || this.gameShareToken !== null || this.clubLinkToken !== null || this.anonToken !== null;
+  }
   /**
    * Herkunft für den „+“-Knopf am Seitenbrett — je Ansicht dieselbe wie auf der Partieseite (`SharedGameComponent.markSource`):
    * Vereinspartie (auch über `/s/:token`) ihre Id, eigene Partie ihre Id, `/g/:token` der Teilen-Link; über `/cg/:token`
@@ -345,6 +393,7 @@ export class ClubGameSummaryComponent implements OnInit {
   gameLink(): (string | number)[] {
     if (this.clubLinkToken !== null) return ['/cg', this.clubLinkToken];
     if (this.gameShareToken !== null) return ['/g', this.gameShareToken];
+    if (this.anonToken !== null) return ['/'];   // hinter dem anonymen Link gibt es keine Partieseite (die Links dorthin sind ausgeblendet)
     return this.shareToken !== null ? ['/s', this.shareToken, 'club-games', this.gameId] : [this.own ? '/games' : '/club-games', this.gameId];
   }
   readonly loading = signal(true);
@@ -356,8 +405,7 @@ export class ClubGameSummaryComponent implements OnInit {
   /** Text für {@link notFound}: über einen Teilen-Link „geteilte Partie gibt es nicht“, sonst „Partie gibt es nicht“. */
   notFoundKey(): string {
     if (this.locked()) return 'games.clubNoAccess';
-    return this.shareToken !== null || this.gameShareToken !== null || this.clubLinkToken !== null
-      ? 'games.shared.notFound' : 'games.notFound';
+    return this.readOnly ? 'games.shared.notFound' : 'games.notFound';
   }
   readonly game = signal<SharedGame | null>(null);
   readonly summary = signal<ClubGameSummary | null>(null);
@@ -379,7 +427,8 @@ export class ClubGameSummaryComponent implements OnInit {
    * einen fertigen Text gibt UND der Betrachter trainieren darf — ohne Anmeldung (Teilen-Links) also gar nicht.
    */
   private readonly trainableLoader = effect(() => {
-    const ready = this.canTrain() && !!this.summary()?.markdown;
+    // Über den anonymen Link gibt es „Taktiken trainieren“ nicht (das Kapitel hinge am Konto des Lesers an einer fremden Partie).
+    const ready = this.canTrain() && !!this.summary()?.markdown && this.anonToken === null;
     untracked(() => this.loadTrainable(ready));
   });
   private readonly router = inject(Router);
@@ -416,7 +465,9 @@ export class ClubGameSummaryComponent implements OnInit {
     if (this.route.snapshot.data?.['mode'] === 'club-share') this.shareToken = this.route.snapshot.paramMap.get('token') || '';
     if (this.route.snapshot.data?.['mode'] === 'club-link') this.clubLinkToken = this.route.snapshot.paramMap.get('token') || '';
     if (this.route.snapshot.data?.['mode'] === 'own-share') this.gameShareToken = this.route.snapshot.paramMap.get('token') || '';
-    this.markSource = this.clubLinkToken !== null ? {}
+    if (this.route.snapshot.data?.['mode'] === 'own-anon') this.anonToken = this.route.snapshot.paramMap.get('token') || '';
+    // Anonymer Link wie /cg/: markiert wird nur die Stellung, ohne Verweis auf die Partie.
+    this.markSource = this.clubLinkToken !== null || this.anonToken !== null ? {}
       : this.gameShareToken !== null ? { shareToken: this.gameShareToken }
       : this.own ? { savedGameId: this.gameId } : { clubGameId: this.gameId };
     this.load();
@@ -430,7 +481,10 @@ export class ClubGameSummaryComponent implements OnInit {
     const token = this.shareToken;
     const ownToken = this.gameShareToken;
     const link = this.clubLinkToken;
-    const load: Observable<[SharedGame, ClubGameSummary]> = link !== null
+    const anon = this.anonToken;
+    const load: Observable<[SharedGame, ClubGameSummary]> = anon !== null
+      ? forkJoin([this.games.getAnonShared(anon), this.summaries.getAnonOwn(anon)])
+      : link !== null
       ? forkJoin([this.games.linkedClubGame(link), this.summaries.getLinked(link)])
       : ownToken !== null
       ? forkJoin([this.games.getShared(ownToken), this.summaries.getSharedOwn(ownToken)])
@@ -440,18 +494,75 @@ export class ClubGameSummaryComponent implements OnInit {
       ? forkJoin([this.games.get(this.gameId), this.summaries.getOwn(this.gameId)])
       : forkJoin([this.games.clubGame(this.gameId), this.summaries.get(this.gameId)]);
     load.subscribe({
-      next: ([g, s]) => { this.game.set(g); this.summary.set(s); this.loading.set(false); this.loadBooks(); },
+      next: ([g, s]) => {
+        this.game.set(g); this.summary.set(s); this.loading.set(false); this.loadBooks();
+        if (this.own) this.ownShareToken.set((g as { shareToken?: string | null }).shareToken ?? null);
+      },
       error: (e: { status?: number } | null) => {
         // UI-Sweep 2026-11-10 (d10-rk-zusammenfassung-ladefehler-sackgasse): wie die Partieseite — 403 bei einer Vereinspartie
         // = gesperrt, sonst 4xx = gibt es nicht; nur Netz/5xx (und 408/429) behalten „Wiederholen“.
         const status = e?.status ?? 0;
-        const locked = status === 403 && !this.own && this.gameShareToken === null;
+        const locked = status === 403 && !this.own && this.gameShareToken === null && this.anonToken === null;
         const gone = status >= 400 && status < 500 && status !== 408 && status !== 429;
         this.locked.set(locked);
         (gone ? this.notFound : this.failed).set(true);
         this.loading.set(false);
       },
     });
+  }
+
+  private readonly injector = inject(Injector);
+  /** Die Aktionen der Partie (Teilen, Widerrufen mit Rückfrage) — erst beim ersten Klick geholt: die Lese-Seite braucht sie nicht. */
+  private get actions(): GameActionsService { return this.injector.get(GameActionsService); }
+  private readonly auth = inject(AuthService);
+  /** Teilen-Token der eigenen Partie (kommt mit `GET /api/games/{id}`); nach „Widerrufen“ das neue. */
+  private readonly ownShareToken = signal<string | null>(null);
+  /** Läuft gerade ein Teilen-Aufruf (Token anlegen)? Sperrt die Einträge gegen Doppelklick. */
+  readonly sharing = signal(false);
+  /**
+   * Eigene Partie teilen (Wunsch 2026-11-15): nur mit einem EIGENEN fertigen Text — über `/g/{token}/summary` bzw. den anonymen
+   * Link gibt es keinen Rückfall auf den Text der verbundenen Vereinspartie (`source: 'club'`), der Link zeigte dann nichts.
+   */
+  readonly canShare = computed(() => this.own && !!this.ownShareToken() && !!this.summary()?.markdown && this.summary()?.source !== 'club');
+  /** Vereinspartie teilen: angemeldet mit `league.view` (das Recht, das `POST …/club/games/{id}/share` verlangt) und fertigem Text. */
+  readonly canShareClub = computed(() => !this.own && !this.readOnly && !!this.summary()?.markdown && this.loggedIn && this.auth.has('league.view'));
+
+  /** „Link teilen“ der eigenen Partie: `/g/{token}/summary` — das Token hat jede gespeicherte Partie schon. */
+  share(): void {
+    const token = this.ownShareToken();
+    if (token) this.actions.shareLink(this.games.summaryShareUrl(token));
+  }
+
+  /**
+   * „Anonym teilen“: der Server legt das eigene Token des anonymen Links bei Bedarf an; geteilt wird `/ga/{token}/summary`.
+   * Zeigt der Link keinen Text (ein Name ließ sich nicht sicher entfernen), sagt die Rückmeldung das dazu.
+   */
+  shareAnon(): void {
+    if (this.sharing()) return;
+    this.sharing.set(true);
+    this.games.createAnonShare(this.gameId).subscribe({
+      next: r => {
+        this.sharing.set(false);
+        this.actions.shareLink(this.games.anonSummaryShareUrl(r.token), 'games.summary.anonCopied',
+          r.summaryAvailable ? undefined : this.translate.instant('games.summary.anonNoText'));
+      },
+      error: () => { this.sharing.set(false); this.snackbar.warn(this.translate.instant('games.summary.shareFailed')); },
+    });
+  }
+
+  /** „Link teilen“ der Vereinspartie: ihr eigener Link `/cg/{token}/summary`, beim ersten Mal angelegt (ein vorhandener bleibt). */
+  shareClub(): void {
+    if (this.sharing()) return;
+    this.sharing.set(true);
+    this.games.createClubGameShare(this.gameId).subscribe({
+      next: r => { this.sharing.set(false); this.actions.shareLink(this.games.clubSummaryShareUrl(r.token)); },
+      error: () => { this.sharing.set(false); this.snackbar.warn(this.translate.instant('games.summary.shareFailed')); },
+    });
+  }
+
+  /** „Teilen-Link widerrufen“ (mit Rückfrage): der normale UND der anonyme Link sind danach tot; das neue Token gilt ab sofort. */
+  revokeShare(): void {
+    this.actions.revokeShareLink(this.gameId).subscribe(token => this.ownShareToken.set(token));
   }
 
   private loadBooks(): void {

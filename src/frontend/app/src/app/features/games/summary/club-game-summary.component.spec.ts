@@ -237,7 +237,7 @@ describe('ClubGameSummaryComponent — Design-Runde d10', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params), data: { mode } } } },
         { provide: GamesService, useValue: games },
         { provide: ClubGameSummaryService, useValue: { get: () => of(summary), getOwn: () => of(summary) } },
-        { provide: AuthService, useValue: { isLoggedIn: true, isAdmin: false } },
+        { provide: AuthService, useValue: { isLoggedIn: true, isAdmin: false, has: () => false } },
         { provide: MenuService, useValue: { visible$: of(new Set<string>()) } },   // angemeldet liest die Seite die Menü-Sichtbarkeit
         { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
       ],
@@ -319,7 +319,7 @@ describe('ClubGameSummaryComponent — keine Übersicht der Aufgaben mehr', () =
         { provide: ClubGameSummaryService, useValue: {
           get: summary, getOwn: summary, getShared: summary, getLinked: summary, getSharedOwn: summary,
           exercises: (src: unknown) => { calls.push(src); return of([group]); } } },
-        { provide: AuthService, useValue: { isLoggedIn: loggedIn, currentUser$: of(null) } },
+        { provide: AuthService, useValue: { isLoggedIn: loggedIn, currentUser$: of(null), has: () => false } },
         { provide: MenuService, useValue: { visible$: of(new Set(['courses'])) } },
         { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
       ],
@@ -386,7 +386,7 @@ describe('ClubGameSummaryComponent — „Taktiken trainieren“', () => {
           get: () => of({ markdown, model: 'claude' }), getLinked: () => of({ markdown }),
           exercises: (src: unknown) => { exerciseCalls.push(src); return (opts.exercises ?? (() => of([group])))(); },
           trainTactics: (src: unknown, lang: string) => { calls.push([src, lang]); return (opts.train ?? (() => of({ bookId: 9, chapterIndex: 2, chapter: 'x', created: true, lines: 1 })))(); } } },
-        { provide: AuthService, useValue: { isLoggedIn: opts.loggedIn, isAdmin: false, currentUser$: of(null) } },
+        { provide: AuthService, useValue: { isLoggedIn: opts.loggedIn, isAdmin: false, currentUser$: of(null), has: () => false } },
         { provide: MenuService, useValue: { visible$: of(new Set(opts.menu ?? ['courses'])) } },
         { provide: SnackbarService, useValue: { warn, info: () => undefined } },
         { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
@@ -570,5 +570,179 @@ describe('ClubGameSummaryComponent — Links auf Meisterpartien', () => {
       const el = render(mode, params);
       expect(el.querySelector('.summary-text a.lnk')?.getAttribute('href')).withContext(mode).toBe('/explorer/game/masters/Ab3dE6gh?ply=14');
     }
+  });
+});
+
+/**
+ * ⋮-Menü der Zusammenfassung (Wunsch 2026-11-15: „da fehlt mir ein teilen link (der auch anonym teilt)“): eigene Partie →
+ * „Link teilen“ (`/g/{token}/summary`), „Anonym teilen“ (`/ga/{token}/summary`, Token vom Server) und „Widerrufen“;
+ * Vereinspartie → „Link teilen“ (`/cg/{token}/summary`); über einen Link geöffnet gibt es kein Menü.
+ */
+describe('ClubGameSummaryComponent — Teilen-Menü', () => {
+  let snack: jasmine.SpyObj<SnackbarService>;
+  let written: string[];
+  let http: HttpTestingController;
+
+  function render(mode: string | undefined, params: Record<string, string>, opts: { summary?: object; perms?: string[]; loggedIn?: boolean } = {}) {
+    snack = jasmine.createSpyObj<SnackbarService>('SnackbarService', ['copy', 'warn', 'success', 'info']);
+    written = [];
+    const game = { source: 'pgn', white: 'Kobold, Jonathan', black: 'Monz, Dieter', result: '1-0', pgn: '1. e4 e5 1-0', createdAt: '', shareToken: 'tok' };
+    const summary = { status: 'done', markdown: '# Titel\n\nText', doneAt: null, stale: false, model: null, ...opts.summary };
+    const summaries = jasmine.createSpyObj<ClubGameSummaryService>('ClubGameSummaryService',
+      ['get', 'getOwn', 'getShared', 'getSharedOwn', 'getLinked', 'getAnonOwn', 'suggestions', 'exercises']);
+    for (const m of ['get', 'getOwn', 'getShared', 'getSharedOwn', 'getLinked', 'getAnonOwn'] as const) (summaries[m] as jasmine.Spy).and.returnValue(of(summary));
+    TestBed.configureTestingModule({
+      imports: [ClubGameSummaryComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params), data: mode ? { mode } : {} } } },
+        { provide: ClubGameSummaryService, useValue: summaries },
+        { provide: AuthService, useValue: { isLoggedIn: opts.loggedIn ?? true, has: (p: string) => (opts.perms ?? []).includes(p) } },
+        { provide: MenuService, useValue: { visible$: of(new Set<string>()) } },
+        { provide: SnackbarService, useValue: snack },
+        { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
+      ],
+    });
+    spyOn(navigator.clipboard, 'writeText').and.callFake((t: string) => { written.push(t); return Promise.resolve(); });
+    // Kein Teilen-Blatt im Test: grobes Zeigegerät ausschalten, damit kopiert wird.
+    spyOn(window, 'matchMedia').and.returnValue({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined, addListener: () => undefined, removeListener: () => undefined } as unknown as MediaQueryList);
+    const fixture = TestBed.createComponent(ClubGameSummaryComponent);
+    fixture.detectChanges();
+    http = TestBed.inject(HttpTestingController);
+    const url = mode === 'own' ? '/api/games/5' : mode === 'own-anon' ? '/api/games/anon/anon1' : mode === 'own-share' ? '/api/games/shared/tok' : '/api/league/club/games/5';
+    http.expectOne(url).flush(mode === 'own-anon' ? { pgn: '1. e4 e5 1-0', result: '1-0', ownerSide: 'black' }
+      : mode ? game : { id: 5, white: 'A', black: 'B', result: '1-0', pgn: '1. e4 e5 1-0', canDelete: false });
+    fixture.detectChanges();
+    return { fixture, el: fixture.nativeElement as HTMLElement };
+  }
+
+  function openMenu(fixture: { detectChanges(): void }, el: HTMLElement): HTMLElement[] {
+    (el.querySelector('button.summary-menu') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    return Array.from(document.querySelectorAll<HTMLElement>('.mat-mdc-menu-panel [mat-menu-item]'));
+  }
+  const labels = (items: HTMLElement[]) => items.map(i => i.querySelector('span')?.textContent?.trim());
+
+  // Das Seitenbrett fragt nebenher die markierten Stellungen ab — gehört nicht zum Teilen.
+  const marked = () => http.match(r => r.url.startsWith('/api/positions/marked'));
+  afterEach(() => { marked(); http.verify(); document.querySelectorAll('.cdk-overlay-container').forEach(c => (c.innerHTML = '')); });
+
+  it('eigene Partie: Menü mit „Zur Partie“, „Link teilen“, „Anonym teilen“, „Widerrufen“ in dieser Reihenfolge', () => {
+    const { fixture, el } = render('own', { id: '5' });
+    expect(el.querySelector('button.summary-menu')?.getAttribute('aria-label')).toBe('common.moreActions');
+    expect(labels(openMenu(fixture, el))).toEqual(['games.summary.toGame', 'games.summary.shareLink', 'games.summary.shareAnon', 'games.revokeShare']);
+    // Der Kopfknopf „Zur Partie“ bleibt (am Handy blendet ihn CSS aus, weil der Eintrag im Menü steht).
+    expect(el.querySelector('a.to-game.in-menu')).not.toBeNull();
+  });
+
+  it('„Link teilen“ kopiert /g/{token}/summary — ohne Serveraufruf, das Token hat die Partie schon', async () => {
+    const { fixture, el } = render('own', { id: '5' });
+    openMenu(fixture, el).find(i => i.classList.contains('share-item'))!.click();
+    await Promise.resolve();
+    expect(written).toEqual([`${window.location.origin}/g/tok/summary`]);
+    expect(snack.copy).toHaveBeenCalledWith('games.shareCopied');
+  });
+
+  it('„Anonym teilen“ holt das Token vom Server und kopiert /ga/{token}/summary', async () => {
+    const { fixture, el } = render('own', { id: '5' });
+    openMenu(fixture, el).find(i => i.classList.contains('share-anon-item'))!.click();
+    const req = http.expectOne('/api/games/5/summary/anon-share');
+    expect(req.request.method).toBe('POST');
+    req.flush({ token: 'anon1', summaryAvailable: true });
+    await Promise.resolve();
+    expect(written).toEqual([`${window.location.origin}/ga/anon1/summary`]);
+    expect(snack.copy).toHaveBeenCalledWith('games.summary.anonCopied');
+    expect(snack.warn).not.toHaveBeenCalled();
+  });
+
+  it('„Anonym teilen“: zeigt der Link keinen Text, sagt die Rückmeldung das; ein Serverfehler wird gemeldet', async () => {
+    const { fixture, el } = render('own', { id: '5' });
+    openMenu(fixture, el).find(i => i.classList.contains('share-anon-item'))!.click();
+    http.expectOne('/api/games/5/summary/anon-share').flush({ token: 'anon1', summaryAvailable: false });
+    await Promise.resolve();
+    expect(written).toEqual([`${window.location.origin}/ga/anon1/summary`]);
+    expect(snack.warn).toHaveBeenCalledWith('games.summary.anonNoText');
+    fixture.componentInstance.shareAnon();
+    http.expectOne('/api/games/5/summary/anon-share').flush('', { status: 500, statusText: 'x' });
+    expect(snack.warn).toHaveBeenCalledWith('games.summary.shareFailed');
+    expect(fixture.componentInstance.sharing()).toBeFalse();
+  });
+
+  it('am Handy (grobes Zeigegerät + Teilen-Blatt) geht der Link ins Teilen-Blatt statt in die Zwischenablage', () => {
+    const { fixture } = render('own', { id: '5' });
+    (window.matchMedia as jasmine.Spy).and.returnValue({ matches: true } as MediaQueryList);
+    const shared: ShareData[] = [];
+    const nav = navigator as unknown as { share?: (d: ShareData) => Promise<void> };
+    const before = nav.share;
+    nav.share = (d: ShareData) => { shared.push(d); return Promise.resolve(); };
+    try { fixture.componentInstance.share(); } finally { if (before) nav.share = before; else delete nav.share; }
+    expect(shared).toEqual([{ url: `${window.location.origin}/g/tok/summary` }]);
+    expect(written).toEqual([]);
+  });
+
+  it('ohne Text gibt es kein Menü — der Link zeigte nichts', () => {
+    expect(render('own', { id: '5' }, { summary: { markdown: null, status: 'none' } }).el.querySelector('button.summary-menu')).toBeNull();
+  });
+
+  it('nur der Text der verbundenen Vereinspartie (source club): kein Menü — die Links der eigenen Partie zeigen ihn nicht', () => {
+    expect(render('own', { id: '5' }, { summary: { source: 'club', clubGameId: 9 } }).el.querySelector('button.summary-menu')).toBeNull();
+  });
+
+  it('Vereinspartie mit league.view: „Link teilen“ legt den Link an und kopiert /cg/{token}/summary; kein „Anonym teilen“', async () => {
+    const { fixture, el } = render(undefined, { id: '5' }, { perms: ['league.view'] });
+    const items = openMenu(fixture, el);
+    expect(labels(items)).toEqual(['games.summary.toGame', 'games.summary.shareLink']);
+    items[1].click();
+    const req = http.expectOne('/api/league/club/games/5/share');
+    expect(req.request.method).toBe('POST');
+    req.flush({ token: 'cgtok' });
+    await Promise.resolve();
+    expect(written).toEqual([`${window.location.origin}/cg/cgtok/summary`]);
+  });
+
+  it('Vereinspartie ohne league.view: kein Menü', () => {
+    expect(render(undefined, { id: '5' }).el.querySelector('button.summary-menu')).toBeNull();
+  });
+
+  it('über den Teilen-Link geöffnet: kein Menü', () => {
+    expect(render('own-share', { token: 'tok' }, { loggedIn: false }).el.querySelector('button.summary-menu')).toBeNull();
+  });
+
+  it('anonymer Link /ga/:token/summary: „Weiß – Schwarz“ statt Namen, kein Weg zur Partie, kein Menü, nichts anzufordern', () => {
+    const { el } = render('own-anon', { token: 'anon1' }, { loggedIn: false });
+    expect(Array.from(el.querySelectorAll('.players strong')).map(x => x.textContent)).toEqual(['games.review.white', 'games.review.black']);
+    expect(el.textContent).not.toContain('Kobold');
+    expect(el.querySelector('a.back')).toBeNull();
+    expect(el.querySelector('a.to-game')).toBeNull();
+    expect(el.querySelector('button.summary-menu')).toBeNull();
+    expect(el.querySelector('app-club-summary-link')).toBeNull();
+    expect(el.querySelector('.summary-text h1')?.textContent).toContain('Titel');
+  });
+
+  it('anonymer Link: Diagramme ohne „In der Partie zeigen“; markiert wird nur die Stellung', () => {
+    const { fixture, el } = render('own-anon', { token: 'anon1' }, { loggedIn: false, summary: { markdown: '# T\n\n```diagram\nply: 1\n```' } });
+    expect(el.querySelector('figure.diagram')).not.toBeNull();
+    expect(el.querySelector('a.to-ply')).toBeNull();
+    expect(fixture.componentInstance.markSource).toEqual({});
+  });
+
+  it('anonymer Link, 404 → „geteilte Partie gibt es nicht“', () => {
+    snack = jasmine.createSpyObj<SnackbarService>('SnackbarService', ['warn']);
+    TestBed.configureTestingModule({
+      imports: [ClubGameSummaryComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ token: 'weg' }), data: { mode: 'own-anon' } } } },
+        { provide: AuthService, useValue: { isLoggedIn: false } },
+        { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ClubGameSummaryComponent);
+    fixture.detectChanges();
+    http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/games/anon/weg').flush('', { status: 404, statusText: 'Not Found' });
+    http.match('/api/games/anon/weg/summary');
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.empty-state.not-found p')?.textContent).toContain('games.shared.notFound');
   });
 });

@@ -38,6 +38,11 @@ public class SavedGame
     /// <summary>Eindeutiges URL-sicheres Token für den öffentlichen Teilen-Link (<c>/g/{token}</c>).</summary>
     public string ShareToken { get; set; } = string.Empty;
 
+    /// <summary>Token des ANONYMEN Links der Zusammenfassung (<c>/ga/{token}/summary</c>, <see cref="Services.Games.AnonGameShares"/>):
+    /// der Empfänger sieht Züge, Ergebnis und Text ohne Spielernamen. <c>null</c> = nie anonym geteilt; „Teilen-Link widerrufen"
+    /// löscht es mit.</summary>
+    public string? AnonShareToken { get; set; }
+
     /// <summary>
     /// Zahl der Halbzüge, aus dem PGN vorberechnet. <c>null</c> = noch nie gezählt (Zeilen von vor
     /// der Einführung des Feldes) — die werden beim nächsten Auflisten nachgetragen.

@@ -70,12 +70,14 @@ internal sealed class SavedGameConfiguration : IEntityTypeConfiguration<SavedGam
         e.Property(g => g.SourceUrl).HasMaxLength(1000);
         e.Property(g => g.ReviewLanguage).HasMaxLength(8);
         e.Property(g => g.ShareToken).HasMaxLength(32);
+        e.Property(g => g.AnonShareToken).HasMaxLength(32);
         e.Property(g => g.TimeControl).HasMaxLength(32);
         e.Property(g => g.OwnerSide).HasMaxLength(5);
         e.Property(g => g.Classifier1).HasMaxLength(80);
         e.Property(g => g.Classifier2).HasMaxLength(80);
         e.Property(g => g.Tags).HasMaxLength(Services.Games.GameTags.MaxStoredLength);
         e.HasIndex(g => g.ShareToken).IsUnique();
+        e.HasIndex(g => g.AnonShareToken).IsUnique();   // NULL (nie anonym geteilt) beliebig oft
         // Auflistung je User (neueste zuerst).
         e.HasIndex(g => new { g.UserId, g.CreatedAt });
         // Dedup hart auf DB-Ebene erzwingen (statt nur check-then-insert): dieselbe externe Partie kann

@@ -3290,7 +3290,7 @@
     "openInAnalysis": "Open in analysis",
     "share": "Copy share link",
     "revokeShare": "Revoke share link",
-    "revokeShareConfirm": "Revoke this game's share link? The current link (including roast and training links) stops working; “Copy share link” gives out a new one.",
+    "revokeShareConfirm": "Revoke this game's share link? The current link (including roast and training links and the anonymous summary link) stops working; “Copy share link” gives out a new one.",
     "revokeShareDone": "Share link revoked.",
     "revokeShareError": "Revoking failed.",
     "shareCopied": "Share link copied to clipboard",
@@ -3656,7 +3656,12 @@
         "train": "Train tactics",
         "trainHint": "Adds this game’s puzzles as a chapter to your course “Personal tactics” and opens it.",
         "trainFailed": "Could not open the course."
-      }
+      },
+      "shareLink": "Share link",
+      "shareAnon": "Share anonymously",
+      "anonCopied": "Anonymous link copied – the recipient sees no player names.",
+      "anonNoText": "Anonymous link created – but the text mentions a name that cannot be removed safely. The link therefore shows only the game without names, no summary.",
+      "shareFailed": "The link could not be created."
     },
     "onlyMine": "Only my games",
     "onlyMineEmpty": "None of your own games here – untick “Only my games” to see all.",

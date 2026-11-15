@@ -434,4 +434,25 @@ export class GamesService {
   shareUrl(shareToken: string): string {
     return `${window.location.origin}/g/${shareToken}`;
   }
+
+  /**
+   * „Anonym teilen“ der Zusammenfassung (`POST /api/games/{id}/summary/anon-share`): legt das Token bei Bedarf an.
+   * `summaryAvailable` = der anonyme Link zeigt einen Text (sonst gibt es keinen, oder er nennt einen Namen).
+   */
+  createAnonShare(id: number): Observable<{ token: string; summaryAvailable: boolean }> {
+    return this.http.post<{ token: string; summaryAvailable: boolean }>(`/api/games/${id}/summary/anon-share`, {});
+  }
+
+  /** Die Partie hinter dem anonymen Link `/ga/:token/summary`: nur Züge, Ergebnis, Blickrichtung — der Server schickt keine Namen. */
+  getAnonShared(token: string): Observable<SharedGame> {
+    return this.http.get<{ pgn: string; result?: string | null; ownerSide?: 'white' | 'black' | null }>(`/api/games/anon/${encodeURIComponent(token)}`)
+      .pipe(map(g => ({ source: '', pgn: g.pgn, result: g.result ?? null, ownerSide: g.ownerSide ?? null, createdAt: '' })));
+  }
+
+  /** Öffentliche Adresse der Zusammenfassung einer eigenen Partie über ihren Teilen-Link. */
+  summaryShareUrl(shareToken: string): string { return `${this.shareUrl(shareToken)}/summary`; }
+  /** Dasselbe über den Link einer Vereinspartie (`/cg/:token`). */
+  clubSummaryShareUrl(token: string): string { return `${this.clubGameShareUrl(token)}/summary`; }
+  /** Anonymer Link der Zusammenfassung — eigener Weg `/ga/`, an dem keine Partieseite hängt. */
+  anonSummaryShareUrl(token: string): string { return `${window.location.origin}/ga/${token}/summary`; }
 }

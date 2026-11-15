@@ -53,7 +53,7 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
         _ => "failed",
     };
 
-    private static string MovesHashOf(string pgn) =>
+    internal static string MovesHashOf(string pgn) =>
         LeagueClubService.HashOf(PgnParser.ExtractMainlineSans(PgnParser.SplitGames(pgn).FirstOrDefault().MoveText ?? string.Empty));
 
     private async Task<int?> QuotaLeftAsync(int userId, bool isAdmin, CancellationToken ct)

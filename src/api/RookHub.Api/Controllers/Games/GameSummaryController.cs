@@ -24,6 +24,25 @@ public class GameSummaryController(OwnGameSummaries summaries) : BaseApiControll
     public async Task<IActionResult> GetShared(string token, CancellationToken ct) =>
         await summaries.GetSharedAsync(token, ct) is { } dto ? Ok(dto) : NotFound();
 
+    /// <summary>„Anonym teilen" der Zusammenfassung (<see cref="AnonGameShares"/>): legt das Token bei Bedarf an →
+    /// <c>{ token, summaryAvailable }</c>; 404 unbekannt/fremd. Widerruf über <c>DELETE api/games/{id}/share</c> (beide Links).</summary>
+    [HttpPost("{id:int}/summary/anon-share")]
+    public async Task<IActionResult> AnonShare(int id, [FromServices] AnonGameShares anon, CancellationToken ct) =>
+        await anon.CreateAsync(GetUserId(), id, ct) is { } dto ? Ok(dto) : NotFound();
+
+    /// <summary>Anonymer Link <c>/ga/{token}/summary</c>, ohne Anmeldung: die Partie ohne Kopfdaten → <c>{ pgn, result, ownerSide }</c>;
+    /// 404 unbekannter oder widerrufener Link. Globaler Rate-Limiter je IP wie die <c>shared/{token}</c>-Endpunkte.</summary>
+    [HttpGet("anon/{token}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetAnon(string token, [FromServices] AnonGameShares anon, CancellationToken ct) =>
+        await anon.ReadAsync(token, ct) is { } dto ? Ok(dto) : NotFound();
+
+    /// <summary>Text hinter dem anonymen Link, ohne Spielernamen → <c>{ status: done|none, markdown, doneAt, stale, model }</c>; 404 unbekannter Link.</summary>
+    [HttpGet("anon/{token}/summary")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetAnonSummary(string token, [FromServices] AnonGameShares anon, CancellationToken ct) =>
+        await anon.SummaryAsync(token, ct) is { } dto ? Ok(dto) : NotFound();
+
     /// <summary>Empfohlene Übungen zur Partie (0.960.0, <see cref="GameExercises"/>) → <c>{ groups }</c>; 404 unbekannt/fremd.</summary>
     [HttpGet("{id:int}/summary/exercises")]
     public async Task<IActionResult> Exercises(int id, [FromServices] GameExercises exercises, CancellationToken ct) =>

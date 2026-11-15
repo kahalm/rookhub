@@ -117,6 +117,9 @@ export const routes: Routes = [
   { path: 'explorer/game/masters/:id', loadComponent: () => import('./features/explorer/master-game.component').then(m => m.MasterGameComponent) },
   { path: 'g/:token/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'own-share' } },
   { path: 'g/:token', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent) },
+  // Anonymer Link der Zusammenfassung einer eigenen Partie (Wunsch 2026-11-15): ohne Anmeldung, ohne Spielernamen (der Server
+  // schickt keine) und bewusst OHNE Partieseite dahinter — an /g/:token hängen Seiten und Vorschaubilder mit Namen.
+  { path: 'ga/:token/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'own-anon' } },
   // Vereinspartie über einen LeagueHub-Teilen-Link (0.838.3): ohne Anmeldung, nur Partien der geteilten Begegnung — der Server
   // entscheidet; kein Guard, sonst landete der Gast vor der Anmeldemaske.
   { path: 's/:token/club-games/:id/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'club-share' } },

@@ -155,6 +155,9 @@ public class EndpointAuthInventoryTests
         // wie die Kurve hinter dem Teilen-Link. Erzeugen bleibt angemeldet (POST nur an der eigenen Partie).
         "GET /api/games/shared/{token}/summary",                     // GameSummaryController.GetShared (nur der fertige Text, 0.934.0)
         "GET /api/games/shared/{token}/summary/exercises",           // GameSummaryController.SharedExercises (Lichess-Aufgaben, 0.960.0)
+        // Anonymer Link der Zusammenfassung (0.984.0, /ga/{token}/summary): Partie ohne Kopfdaten und Text ohne Namen (AnonGameShares).
+        "GET /api/games/anon/{token}",                               // GameSummaryController.GetAnon
+        "GET /api/games/anon/{token}/summary",                       // GameSummaryController.GetAnonSummary
         "GET /api/games/shared/{token}/explanations",                // GameExplanationController.GetShared
         "GET /api/games/shared/{token}/similar",                     // SimilarGamesController.Shared (Kopfdaten des Rohbestands, ohne Züge)
         "GET /api/reconstructions/shared/{token}",                   // GameReconstructionController.Shared (Teilen-Link /r/{token})

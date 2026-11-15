@@ -183,6 +183,53 @@ Verbundene Vereinspartie (0.954.0): `GET /api/games/{id}/summary` liefert, solan
 
 Teilen-Link (0.934.0): `/g/:token/summary` liest `GET /api/games/shared/{token}/summary` (ohne Anmeldung, globaler IP-Limiter) → `{ status: done|none, markdown, doneAt, stale, model }`, 404 bei unbekanntem Link. Ohne Text `none`, auch wenn eine Anforderung offen oder gescheitert ist; ein früherer Text bleibt sichtbar. Nichts zu Kontingent, Anforderung, Fehler, und **kein** Rückfall auf den Text einer verbundenen Vereinspartie (der gehört nicht zu diesem Link). Wer den Link hat, liest damit den Text — auch den an den Besitzer gerichteten Schluss.
 
+**Teilen aus der Zusammenfassung + anonymer Link (0.984.0, Wunsch 2026-11-15: „da fehlt mir ein teilen link (der auch anonym teilt)“).**
+Die Seite hat im Kopf ein ⋮ (nur angemeldet auf `/games/:id/summary` bzw. `/club-games/:id/summary`, nur mit fertigem Text):
+
+| Eintrag | Wo | Was |
+|---|---|---|
+| Zur Partie | beide | wie der Kopfknopf (der am Handy entfällt, sobald es das ⋮ gibt) |
+| Link teilen | eigene Partie | `/g/{token}/summary` — das Token hat jede gespeicherte Partie, kein Serveraufruf |
+| Link teilen | Vereinspartie, Recht `league.view` | `/cg/{token}/summary`, `POST api/league/club/games/{id}/share` (ein bestehender Link bleibt) |
+| Anonym teilen | eigene Partie | `/ga/{token}/summary`, `POST api/games/{id}/summary/anon-share` → `{ token, summaryAvailable }` |
+| Teilen-Link widerrufen | eigene Partie | `DELETE api/games/{id}/share` — der normale UND der anonyme Link sind danach tot |
+
+Am Handy (grobes Zeigegerät und `navigator.share` vorhanden) öffnet sich das Teilen-Blatt, sonst geht der Link in die Zwischenablage
+(`GameActionsService.shareLink`). Ohne EIGENEN Text (keiner, oder nur der der verbundenen Vereinspartie, `source: club`) gibt es die
+Einträge nicht — die Links der eigenen Partie zeigen den Vereinstext nicht. Für Vereinspartien gibt es kein „Anonym teilen“: dort wird
+schon beim Hochladen anonymisiert („Schwaz“), siehe „Teilen-Link einer Vereinspartie“.
+
+**Anonymer Link** (`Services/Games/AnonGameShares.cs`): eigenes Token `SavedGames.AnonShareToken` (Migration
+`SavedGameAnonShareToken`, erst auf Zuruf angelegt, eindeutig auch gegenüber `ShareToken`), eigener Weg `/ga/` — bewusst NICHT eine
+Marke am normalen Link: an `/g/{token}` hängen Partieseite, Bewertungen, Erklärungen, Roasts und die Link-Vorschau, alle mit Namen.
+Hinter `/ga/` gibt es nur zwei Lesewege (ohne Anmeldung, globaler IP-Limiter), keine Partieseite und keine eigene Link-Vorschau
+(die OG-Weiche greift nicht; ein Crawler sieht die allgemeine Seite):
+
+| Weg | Antwort |
+|---|---|
+| `GET api/games/anon/{token}` | `{ pgn, result, ownerSide }` — das PGN neu gebaut: nur `Result` (und `SetUp`/`FEN` bei abweichender Ausgangsstellung) + Hauptvariante; keine Namen, Elo, Daten, Orte, Quelle, Kommentare, Varianten, kein „Kurz erzählt“ |
+| `GET api/games/anon/{token}/summary` | `{ status: done\|none, markdown, doneAt, stale, model }` — Text über `SafeSummary` |
+
+`SafeSummary` — der Text nennt die Spieler in der Überschrift („# Nachname, Vorname – Nachname, Vorname (1-0)“), im Fließtext heißen
+die Seiten „Weiß“/„Schwarz“ (Bestand 15.11.: 45 von 45 Texten, alle kommen sauber durch):
+
+1. In den **Überschriften** werden die Namen der Seiten (Spalten `White`/`Black`, PGN-Kopf, Klarnamen einer verbundenen
+   Vereinspartie) durch „Weiß“/„Schwarz“ ersetzt (englisch „White“/„Black“; Sprache = `ReviewLanguage`, sonst nach dem Text) — samt
+   Titeln („Dr.“, „GM“), Genitiv und kurzen Namensteilen, die an einem langen hängen („De Vreugt“, „Chen, Yan Xi“).
+2. „Runde N“/„Brett N“ fällt überall weg (wie beim Link der Vereinspartie).
+3. Steht danach noch irgendwo — Fließtext, Bildunterschrift, Buchbegründung — ein Namensteil als ganzes Wort (ab drei Zeichen; bei
+   Namen aus nur kürzeren Teilen ab zwei), gibt es **keinen Text** (`none`). Geprüft werden beide Seiten, der Besitzer (Kontoname,
+   Vor-/Nachname, Anzeigename, chess.com-/Lichess-/Discord-Name), die verbundene Vereinspartie und `WhiteTeam`/`BlackTeam`. Im
+   Fließtext wird bewusst nicht ersetzt: ein Spieler „Bauer“ machte aus jedem Bauern einen „Weiß“ — lieber kein Text als ein
+   Klarname oder ein verdrehter Satz (dieselbe Vorsicht wie `ClubGameLinks.SafeSummary`). `summaryAvailable: false` sagt das dem
+   Teilenden sofort (Hinweis statt „kopiert“); der Link zeigt dann die Partie ohne Namen und den Leersatz.
+
+Was der Empfänger trotzdem sieht: die Züge, das Ergebnis, aus wessen Sicht das Brett steht (`ownerSide`), Elo-Zahlen und
+Eröffnung, soweit der Text sie nennt, die Namen der Meisterpartien in den Beispiel-Links, das Modell. Wer die Partie kennt, erkennt
+sie an den Zügen. Die Seite (`mode: 'own-anon'`): Kopf „Weiß – Schwarz“, kein Zurück-Pfeil, kein „Zur Partie“, kein „In der Partie
+zeigen“, kein „Taktiken trainieren“, „+“ markiert nur die Stellung. Tests: `AnonGameSharesTests`, `club-game-summary.component.spec.ts`
+(„Teilen-Menü“).
+
 - Kontingent: `OwnGameSummaries:DailyPerUser` (Vorgabe 2) je Konto und UTC-Tag, Admins frei. Eine noch offene Anforderung
   kostet nichts; verbraucht → 429 `code: summary_quota`. Die Zählung steht in `OwnGameSummaryRequests` und überlebt das
   Löschen der Partie. Gebucht wird VOR der Analyse und danach nachgezählt (`BookAsync`, R4-004: über dem Deckel → zurück,

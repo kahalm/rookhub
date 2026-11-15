@@ -132,6 +132,12 @@ export class ClubGameSummaryService {
       .pipe(map(s => ({ ...s, requestedAt: null, error: null })));
   }
 
+  /** Eigene Partie über den ANONYMEN Link `/ga/{token}/summary`: der fertige Text ohne Spielernamen (der Server ersetzt bzw. sperrt). */
+  getAnonOwn(token: string): Observable<ClubGameSummary> {
+    return this.http.get<Pick<ClubGameSummary, 'status' | 'markdown' | 'doneAt' | 'stale' | 'model'>>(`/api/games/anon/${encodeURIComponent(token)}/summary`)
+      .pipe(map(s => ({ ...s, requestedAt: null, error: null })));
+  }
+
   /** Eigene Partie (0.923.0, `GET /api/games/{id}/summary`). */
   getOwn(savedGameId: number): Observable<ClubGameSummary> {
     return this.http.get<ClubGameSummary>(`/api/games/${savedGameId}/summary`);

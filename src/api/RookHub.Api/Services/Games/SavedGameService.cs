@@ -176,7 +176,8 @@ public class SavedGameService
     {
         var g = await _db.SavedGames.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
         if (g == null) return null;
-        g.ShareToken = await ShareTokens.NewUniqueAsync(t => _db.SavedGames.AnyAsync(x => x.ShareToken == t, ct));
+        g.ShareToken = await ShareTokens.NewUniqueAsync(t => _db.SavedGames.AnyAsync(x => x.ShareToken == t || x.AnonShareToken == t, ct));
+        g.AnonShareToken = null;   // der anonyme Link der Zusammenfassung (AnonGameShares) ist damit ebenfalls tot
         await _db.SaveChangesAsync(ct);
         return g.ShareToken;
     }

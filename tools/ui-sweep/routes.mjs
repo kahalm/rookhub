@@ -162,6 +162,11 @@ export const ROUTES = [
   r('rookhub', '/s/{leagueShareGameToken}/club-games/{shareClubGameId}', 'any', { main: GAME_BOARD }),
   r('rookhub', '/g/{gameShareToken}', 'any', { main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
   r('rookhub', '/g/{gameShareToken}/summary', 'any', { main: SUMMARY }),
+  // Anonymer Link der Zusammenfassung einer eigenen Partie (`/ga/{token}/summary`, ohne Spielernamen): den Token legt der Seed
+  // an (`gameAnonToken`, `POST /api/games/{id}/summary/anon-share`); die Ungültig-Zeile prüft die Fehlerseite.
+  r('rookhub', '/ga/{gameAnonToken}/summary', 'any', { main: SUMMARY }),
+  r('rookhub', '/ga/ungueltig/summary', 'any', { label: 'ga-summary-invalid', main: SUMMARY_INVALID, expectedFailures: [
+    /^GET \/api\/games\/anon\/ungueltig(\/summary)? → 404$/, /^GET \/api\/games\/anon\/ungueltig(\/summary)? — net::ERR_ABORTED$/] }),
   // 0.939.0/0.925.0: Vereinspartie über eigenen Link (/cg/…) und Zusammenfassung über den Liga-Teilen-Link. Den /cg/-Token
   // legt der Seed an (`clubGameLinkToken`, als claude-dev); die Ungültig-Zeilen prüfen die Fehlerseite (wie /partie/ungueltig).
   r('rookhub', '/s/{leagueShareGameToken}/club-games/{shareClubGameId}/summary', 'any', { main: SUMMARY }),
@@ -352,7 +357,7 @@ export const AREAS = [
   ['repertoire', r => r.app === 'rookhub' && /^\/(repertoires|remembered|l\/)/.test(r.url)],
   ['puzzles', r => r.app === 'rookhub' && /^\/(puzzles|favorites|stats|leaderboards|visitors)/.test(r.url)],
   ['wochenpost', r => r.app === 'rookhub' && /^\/weekly/.test(r.url)],
-  ['partien', r => r.app === 'rookhub' && /^\/(games|g\/|club-games|cg\/|s\/|explorer\/)/.test(r.url)],
+  ['partien', r => r.app === 'rookhub' && /^\/(games|g\/|ga\/|club-games|cg\/|s\/|explorer\/)/.test(r.url)],
   ['analyse', r => r.app === 'rookhub' && /^\/analysis/.test(r.url)],
   ['punktepartie', r => r.app === 'rookhub' && /^\/guess/.test(r.url)],
   ['vorbereitung', r => r.app === 'rookhub' && /^\/prep/.test(r.url)],
