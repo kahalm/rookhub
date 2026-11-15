@@ -184,6 +184,13 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
               <mat-icon>open_in_new</mat-icon> {{ 'nav.tournaments' | translate }}
             </button>
           }
+          <!-- LeagueHub (0.983.0): nur mit dem Recht league.view — dieselbe Bedingung, mit der LeagueHub selbst seine
+               Seiten freigibt —, und nur, wo sich die Adresse bilden laesst (wie der Turnier-Sprung). -->
+          @if (showLeagueHub) {
+            <button mat-menu-item class="nav-leaguehub" (click)="toLeagueHub()">
+              <mat-icon>open_in_new</mat-icon> {{ 'nav.leagueHub' | translate }}
+            </button>
+          }
           @if (can('leaderboards')) { <button mat-menu-item routerLink="/leaderboards">{{ 'nav.leaderboards' | translate }}</button> }
           @if (can('visitors')) { <button mat-menu-item routerLink="/visitors">{{ 'nav.visitors' | translate }}</button> }
           <a mat-menu-item [href]="discordUrl" target="_blank" rel="noopener noreferrer">
@@ -442,6 +449,15 @@ export class NavbarComponent implements OnInit {
   // Ziel ist der KALENDER, nicht die Liste der schon geholten Turniere — dasselbe Startziel,
   // das die Turnierseite auch beim direkten Aufruf waehlt (siehe deren app.routes).
   toTurnier(): void { void this.handoff.jump('tournaments/calendar'); }
+
+  /**
+   * „LeagueHub“ im Menue (0.983.0): wer LeagueHub betreten darf — Recht `league.view`, Admins erfuellen jedes Recht
+   * (`AuthService.has`, Live-Stand aus `/api/auth/permissions`) — und nur auf einem Host, zu dem es ein LeagueHub gibt
+   * (`leagueHubUrl`; auf localhost/IP `null`, dann kein Eintrag statt einer geratenen Adresse).
+   */
+  get showLeagueHub(): boolean { return !!this.handoff.leagueHubUrl && this.auth.has('league.view'); }
+  /** Sprung mit Anmelde-Uebergabe (Einmal-Code) auf LeagueHubs Startseite, die Prognosen. */
+  toLeagueHub(): void { void this.handoff.jumpToLeagueHub(); }
 
   /** Impressum im ☰-Menue (neben dem Datenschutz) — nur, wo LEGAL_SITE eins vorsieht (UX-017). */
   readonly imprint = inject(LEGAL_SITE).imprint;

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.983.0", date: "2026-11-15", changes: [
+    { en: "Anyone with access to LeagueHub now gets there straight from RookHub: a new entry “LeagueHub” in the menu (☰ → Community, next to “Tournaments”) and a tile “LeagueHub” on the dashboard (“Lineup forecasts and your club’s games.”, one button “Open LeagueHub”). Both take your login along, so you arrive signed in. Entry and tile appear only for accounts that may open LeagueHub (the club groups and admins) — everyone else sees neither. The tile is shown without “Customize” and can be moved or hidden like any other.",
+      de: "Wer Zugriff auf LeagueHub hat, kommt jetzt direkt aus RookHub dorthin: ein neuer Eintrag „LeagueHub“ im Menü (☰ → Community, neben „Turniere“) und eine Kachel „LeagueHub“ auf dem Dashboard („Aufstellungs-Prognosen und die Partien deines Vereins.“, ein Knopf „LeagueHub öffnen“). Beide nehmen die Anmeldung mit, man kommt angemeldet an. Eintrag und Kachel erscheinen nur für Konten, die LeagueHub öffnen dürfen (die Vereinsgruppen und Admins) — alle anderen sehen keins von beiden. Die Kachel steht ohne „Anpassen“ da und lässt sich wie jede andere verschieben oder ausblenden." },
+  ] },
   { version: "0.982.1", date: "2026-11-15", changes: [
     { en: "The page “Visitor origins” (☰ → Community) is now called “RookHub worldwide” — in the menu, as the page title, in the help, in the admins’ menu settings and where the privacy policy names the map, in all 25 languages. Address and content of the page are unchanged.",
       de: "Die Seite „Besucher-Herkunft“ (☰ → Community) heißt jetzt „RookHub weltweit“ — im Menü, als Seitentitel, in der Hilfe, in der Menü-Verwaltung der Admins und dort, wo die Datenschutzerklärung die Karte nennt, in allen 25 Sprachen. Adresse und Inhalt der Seite bleiben gleich." },

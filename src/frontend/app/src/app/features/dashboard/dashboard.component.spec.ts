@@ -14,13 +14,14 @@ import { FavoritesService } from '../../core/favorites.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { WoodpeckerPlan, WoodpeckerService } from '../woodpecker/woodpecker.service';
+import { HandoffService } from '../../core/handoff.service';
 
 const MENU = new Set<string>([
   'puzzles', 'friends', 'tournaments', 'repertoires', 'training-goals',
   'courses', 'leaderboards', 'games', 'weekly', 'stats', 'analysis',
 ]);
 
-function setup(opts: { isAdmin?: boolean; perms?: string[]; friends?: unknown[]; courses?: unknown[]; arrived?: Subject<void> } = {}) {
+function setup(opts: { isAdmin?: boolean; perms?: string[]; friends?: unknown[]; courses?: unknown[]; arrived?: Subject<void>; leagueHub?: string | null; template?: boolean } = {}) {
   const arrived = opts.arrived ?? new Subject<void>();
   const dashboardService = {
     getRepertoires: () => of([]),
@@ -40,13 +41,66 @@ function setup(opts: { isAdmin?: boolean; perms?: string[]; friends?: unknown[];
       { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
       { provide: InAppNotificationService, useValue: { arrived$: arrived.asObservable() } },
       { provide: FavoritesService, useValue: { count: () => of(0) } },
+      // Nur wo ein Test die LeagueHub-Adresse vorgibt: sonst der echte Dienst (im Testlauf localhost → keine Adresse).
+      ...(opts.leagueHub === undefined ? [] : [{ provide: HandoffService, useValue: {
+        leagueHubUrl: opts.leagueHub, jumpToLeagueHub: jasmine.createSpy('jumpToLeagueHub').and.resolveTo(),
+      } }]),
     ],
   });
-  TestBed.overrideComponent(DashboardComponent, { set: { template: '' } });
+  if (!opts.template) TestBed.overrideComponent(DashboardComponent, { set: { template: '' } });
   const fixture = TestBed.createComponent(DashboardComponent);
   fixture.detectChanges(); // ngOnInit
   return { component: fixture.componentInstance, fixture };
 }
+
+// 0.983.0: Kachel „LeagueHub“ — nur mit Zugriff auf LeagueHub (league.view, Admins erfüllen jedes Recht).
+describe('DashboardComponent LeagueHub-Kachel', () => {
+  const URL = 'https://leaguehub.oberschmid.homes';
+  beforeEach(() => localStorage.removeItem('rookhub_dashboard_layout_v2'));
+
+  it('ist mit dem Recht league.view ohne „Anpassen" sichtbar und steht hinter dem Trainings-Kern', () => {
+    const { component } = setup({ perms: ['league.view'], leagueHub: URL });
+    const ids = component.visibleTiles.map(t => t.id);
+    expect(ids).toContain('leagueHub');
+    expect(ids.indexOf('leagueHub')).toBeGreaterThan(ids.indexOf('trainingGoals'));
+  });
+
+  it('ist für Admins sichtbar (Admin erfüllt jedes Recht)', () => {
+    const { component } = setup({ isAdmin: true, leagueHub: URL });
+    expect(component.visibleTiles.map(t => t.id)).toContain('leagueHub');
+  });
+
+  it('fehlt ohne das Recht — auch im Anpassen-Modus', () => {
+    const { component } = setup({ perms: ['league.contribute', 'prep.view'], leagueHub: URL });
+    expect(component.visibleTiles.map(t => t.id)).not.toContain('leagueHub');
+    component.editing = true;
+    expect(component.visibleTiles.map(t => t.id)).not.toContain('leagueHub');
+  });
+
+  it('fehlt, wo sich die LeagueHub-Adresse nicht bilden lässt (localhost/IP)', () => {
+    const { component } = setup({ perms: ['league.view'], leagueHub: null });
+    expect(component.tiles.map(t => t.id)).not.toContain('leagueHub');
+  });
+
+  it('erscheint auch bei einem schon gespeicherten Layout (neue Kachel hinten angehängt, nicht ausgeblendet)', () => {
+    localStorage.setItem('rookhub_dashboard_layout_v2', JSON.stringify({ order: ['weekly', 'puzzles'], hidden: ['courses'] }));
+    const { component } = setup({ perms: ['league.view'], leagueHub: URL });
+    expect(component.visibleTiles.map(t => t.id)).toContain('leagueHub');
+  });
+
+  it('zeigt Titel, einen Satz und genau einen Knopf, der mit Anmelde-Übergabe nach LeagueHub springt', () => {
+    const { fixture } = setup({ perms: ['league.view'], leagueHub: URL, template: true });
+    const cards = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.dashboard-grid > mat-card'));
+    const card = cards.find(c => c.querySelector('mat-card-title')!.textContent!.includes('nav.leagueHub'))!;
+    expect(card).toBeTruthy();
+    expect(card.querySelector('mat-card-subtitle')!.textContent).toContain('dashboard.leagueHub.subtitle');
+    const buttons = card.querySelectorAll<HTMLElement>('mat-card-actions button');
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].textContent).toContain('dashboard.leagueHub.open');
+    buttons[0].click();
+    expect(TestBed.inject(HandoffService).jumpToLeagueHub).toHaveBeenCalledWith();
+  });
+});
 
 describe('DashboardComponent friend-count reactivity', () => {
   beforeEach(() => localStorage.removeItem('rookhub_dashboard_layout_v2'));

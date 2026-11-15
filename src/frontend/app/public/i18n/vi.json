@@ -355,7 +355,8 @@
     "ebooks": "Sách điện tử",
     "woodpecker": "Woodpecker",
     "maxims": "Kinh nghiệm thực hành",
-    "visitors": "RookHub trên thế giới"
+    "visitors": "RookHub trên thế giới",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Nhật ký thay đổi",
@@ -595,6 +596,10 @@
       "title": "Trò chơi tính điểm",
       "subtitle": "Chơi từng nước một ván cờ danh thủ để ghi điểm.",
       "open": "Chơi"
+    },
+    "leagueHub": {
+      "subtitle": "Dự đoán đội hình và các ván cờ của câu lạc bộ bạn.",
+      "open": "Mở LeagueHub"
     }
   },
   "positionInReps": {

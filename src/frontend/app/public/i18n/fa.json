@@ -355,7 +355,8 @@
     "ebooks": "کتاب‌های الکترونیکی",
     "woodpecker": "Woodpecker",
     "maxims": "قواعد سرانگشتی",
-    "visitors": "RookHub در جهان"
+    "visitors": "RookHub در جهان",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "تغییرات",
@@ -595,6 +596,10 @@
       "title": "بازی امتیازی",
       "subtitle": "یک بازی استادانه را حرکت به حرکت برای امتیاز بازی کنید.",
       "open": "بازی"
+    },
+    "leagueHub": {
+      "subtitle": "پیش‌بینی ترکیب تیم‌ها و بازی‌های باشگاه شما.",
+      "open": "باز کردن LeagueHub"
     }
   },
   "positionInReps": {

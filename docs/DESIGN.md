@@ -929,6 +929,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   sonst leerer 40-px-Platz — die Knöpfe springen nicht), Turnier als gedämpfte dritte Zeile unter den Namen, einzeilig mit
   „…“ und vollem Namen im Tooltip.
 - Dashboard: neue Kacheln nicht in `DEFAULT_VISIBLE`; angepinnte Kurse in eigener breiter Zeile (r2-rk-dash-stretch).
+  **LeagueHub-Kachel** (0.983.0): dritte Ausnahme in `DEFAULT_VISIBLE` (am Ende) — es gibt sie nur für Konten mit
+  `league.view` und nur, wo sich die LeagueHub-Adresse bilden lässt; Symbol `shield`, Titel „LeagueHub“, ein Satz, genau
+  ein Knopf „LeagueHub öffnen“ mit `open_in_new` (verlässt RookHub, Sprung mit Anmelde-Übergabe). Im Menü steht
+  „LeagueHub“ unter „Community“ direkt nach „Turniere“, ebenfalls mit `open_in_new`. Kacheln, die auf eine andere
+  Oberfläche führen, tragen dieses Symbol im Knopf; Kacheln mit Router-Ziel bleiben ohne.
   Ausnahme sind Kacheln, die nur mit eigenen Daten erscheinen (angepinnte Kurse, Woodpecker): sie stehen in
   `DEFAULT_VISIBLE`, sind ohne Daten aber unsichtbar und zeigen sich nur im Anpassen-Modus (dort mit einem Leer-Satz),
   damit man sie vorab einordnen kann. **Woodpecker-Kachel** (0.955.0, `features/dashboard/woodpecker-tile.component.ts`):
@@ -1352,6 +1357,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-15 | 0.983.0 · Dashboard/Menü | LeagueHub-Kachel (8.1) als dritte Ausnahme in `DEFAULT_VISIBLE`, nur mit `league.view`; Knopf und Menüeintrag „LeagueHub“ (Community, nach „Turniere“) mit `open_in_new` | Wer Zugriff hat, soll LeagueHub ohne „Anpassen“ und ohne Adresse zu kennen erreichen; das Symbol kündigt den Wechsel der Oberfläche an | Nutzerwunsch 15.11. |
 | 2026-11-15 | 0.980.0 · Zusammenfassung | Links im Text (Beispielpartien aus dem Explorer): Akzentfarbe, durchgezogen unterstrichen (Züge bleiben gepunktet), fett/kursiv nur um den ganzen Link; Meisterpartie im selben Tab, lichess.org in neuem Tab. Seite „Meisterpartie“ (`/explorer/game/masters/:id`): eine Spalte ≤ 720 px, Kopfkarte (Spieler mit Elo, Ergebnis, darunter „Meisterpartie · Turnier · Ort · Jahr“ in on-surface-variant) und darunter das Brett der Zusammenfassung unverändert; unbekannte Partie = Leerzustand `link_off` mit Weg zur Startseite, Explorer weg = Ladefehler mit Wiederholen (8, Partie-Zusammenfassung) | Wunsch 15.11.: Beispielpartien „am besten mit einem Link“; lokale Meisterpartien gibt es auf lichess.org nicht | User über die betreuende Sitzung |
 | 2026-11-14 | 0.975.0 · E-Book-Leser | Lösen (8, Brett-Leiste): Gegnerzug wird vorgespielt, Brett aus Löser-Sicht, Statuszeile nennt die Farbe; ohne bestimmbare Löserseite kein Modus-Knopf „Lösen“, unter „Ansehen“ eine leise Grundzeile mit Glühbirne für die Buchlinie (5.4) | Meldung 14.11.: Löser spielte die Seite, die mattgesetzt wird („Alekhine: Move by Move“, S. 154) | User über die betreuende Sitzung |
 | 2026-11-14 | 0.973.0 · Zusammenfassung | Übersicht „Empfohlene Übungen“ (Überschrift, Stellen, Karten, Buchangaben, Löser, Handy-Blatt) entfällt; „Taktiken trainieren“ bleibt als einzelner Aktionsblock am Textende: Trennlinie `--mat-sys-outline-variant` + 24 px Abstand statt Überschrift, ≤ 75ch (8, Partie-Zusammenfassung) | Wunsch 14.11.: „train am ende der summary gefällt mir, aber übersicht darüber kann weg“; ohne Übersicht klebte der Knopf sonst am letzten Absatz | User über die betreuende Sitzung |

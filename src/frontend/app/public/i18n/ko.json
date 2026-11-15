@@ -355,7 +355,8 @@
     "ebooks": "전자책",
     "woodpecker": "Woodpecker",
     "maxims": "경험 법칙",
-    "visitors": "전 세계의 RookHub"
+    "visitors": "전 세계의 RookHub",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "변경 이력",
@@ -595,6 +596,10 @@
       "title": "포인트 게임",
       "subtitle": "마스터 게임을 한 수씩 두며 점수를 얻으세요.",
       "open": "플레이"
+    },
+    "leagueHub": {
+      "subtitle": "라인업 예측과 내 클럽의 대국.",
+      "open": "LeagueHub 열기"
     }
   },
   "positionInReps": {

@@ -361,7 +361,8 @@
     "ebooks": "E-books",
     "woodpecker": "Woodpecker",
     "maxims": "Rules of thumb",
-    "visitors": "RookHub worldwide"
+    "visitors": "RookHub worldwide",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -608,6 +609,10 @@
       "title": "Point game",
       "subtitle": "Play a master game move by move for points.",
       "open": "Play"
+    },
+    "leagueHub": {
+      "subtitle": "Lineup forecasts and your club's games.",
+      "open": "Open LeagueHub"
     }
   },
   "positionInReps": {

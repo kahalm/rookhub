@@ -361,7 +361,8 @@
     "ebooks": "E-knjige",
     "woodpecker": "Woodpecker",
     "maxims": "Pravila",
-    "visitors": "RookHub diljem svijeta"
+    "visitors": "RookHub diljem svijeta",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -608,6 +609,10 @@
       "title": "Bodovna partija",
       "subtitle": "Odigraj majstorsku partiju potez za potezom na bodove.",
       "open": "Igraj"
+    },
+    "leagueHub": {
+      "subtitle": "Prognoze postava i partije tvog kluba.",
+      "open": "Otvori LeagueHub"
     }
   },
   "positionInReps": {

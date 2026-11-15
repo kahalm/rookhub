@@ -355,7 +355,8 @@
     "ebooks": "E-kitaplar",
     "woodpecker": "Woodpecker",
     "maxims": "Pratik kurallar",
-    "visitors": "Dünyada RookHub"
+    "visitors": "Dünyada RookHub",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Değişiklikler",
@@ -595,6 +596,10 @@
       "title": "Puan oyunu",
       "subtitle": "Bir usta oyununu hamle hamle puan için oynayın.",
       "open": "Oyna"
+    },
+    "leagueHub": {
+      "subtitle": "Kadro tahminleri ve kulübünün oyunları.",
+      "open": "LeagueHub'ı aç"
     }
   },
   "positionInReps": {

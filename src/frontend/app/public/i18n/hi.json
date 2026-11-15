@@ -355,7 +355,8 @@
     "ebooks": "ई-बुक",
     "woodpecker": "Woodpecker",
     "maxims": "अंगूठे के नियम",
-    "visitors": "दुनिया भर में RookHub"
+    "visitors": "दुनिया भर में RookHub",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "चेंजलॉग",
@@ -595,6 +596,10 @@
       "title": "अंक खेल",
       "subtitle": "अंकों के लिए मास्टर खेल चाल-दर-चाल खेलें।",
       "open": "खेलें"
+    },
+    "leagueHub": {
+      "subtitle": "टीम संयोजन के पूर्वानुमान और आपके क्लब की बाज़ियाँ।",
+      "open": "LeagueHub खोलें"
     }
   },
   "positionInReps": {

@@ -355,7 +355,8 @@
     "ebooks": "E-books",
     "woodpecker": "Woodpecker",
     "maxims": "Reguli practice",
-    "visitors": "RookHub în lume"
+    "visitors": "RookHub în lume",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Jurnal de modificări",
@@ -595,6 +596,10 @@
       "title": "Joc pe puncte",
       "subtitle": "Joacă o partidă de maestru mutare cu mutare pentru puncte.",
       "open": "Joacă"
+    },
+    "leagueHub": {
+      "subtitle": "Prognoze de formații și partidele clubului tău.",
+      "open": "Deschide LeagueHub"
     }
   },
   "positionInReps": {

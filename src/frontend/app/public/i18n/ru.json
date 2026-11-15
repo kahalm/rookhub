@@ -355,7 +355,8 @@
     "ebooks": "Электронные книги",
     "woodpecker": "Woodpecker",
     "maxims": "Практические правила",
-    "visitors": "RookHub в мире"
+    "visitors": "RookHub в мире",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Список изменений",
@@ -595,6 +596,10 @@
       "title": "Игра на очки",
       "subtitle": "Разыгрывайте партию мастера ход за ходом на очки.",
       "open": "Играть"
+    },
+    "leagueHub": {
+      "subtitle": "Прогнозы составов и партии твоего клуба.",
+      "open": "Открыть LeagueHub"
     }
   },
   "positionInReps": {

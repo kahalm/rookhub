@@ -355,7 +355,8 @@
     "ebooks": "電子書籍",
     "woodpecker": "Woodpecker",
     "maxims": "経験則",
-    "visitors": "世界のRookHub"
+    "visitors": "世界のRookHub",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "変更履歴",
@@ -595,6 +596,10 @@
       "title": "ポイントゲーム",
       "subtitle": "名局を1手ずつ指してポイントを獲得。",
       "open": "プレイ"
+    },
+    "leagueHub": {
+      "subtitle": "オーダー予想とクラブの対局。",
+      "open": "LeagueHub を開く"
     }
   },
   "positionInReps": {

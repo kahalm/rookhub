@@ -144,7 +144,8 @@
     "ebooks": "E-könyvek",
     "woodpecker": "Woodpecker",
     "maxims": "Szabályok",
-    "visitors": "RookHub világszerte"
+    "visitors": "RookHub világszerte",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Változásnapló",
@@ -391,6 +392,10 @@
       "title": "Pontjátszma",
       "subtitle": "Játssz végig egy mesterjátszmát lépésenként, pontokért.",
       "open": "Játék"
+    },
+    "leagueHub": {
+      "subtitle": "Összeállítás-előrejelzések és a klubod játszmái.",
+      "open": "LeagueHub megnyitása"
     }
   },
   "pgnViewer": {

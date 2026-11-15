@@ -361,7 +361,8 @@
     "ebooks": "E-Books",
     "woodpecker": "Woodpecker",
     "maxims": "Merksätze",
-    "visitors": "RookHub weltweit"
+    "visitors": "RookHub weltweit",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -608,6 +609,10 @@
       "title": "Punktepartie",
       "subtitle": "Eine Meisterpartie Zug für Zug auf Punkte spielen.",
       "open": "Spielen"
+    },
+    "leagueHub": {
+      "subtitle": "Aufstellungs-Prognosen und die Partien deines Vereins.",
+      "open": "LeagueHub öffnen"
     }
   },
   "positionInReps": {

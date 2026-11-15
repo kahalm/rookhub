@@ -133,7 +133,7 @@ describe('NavbarComponent', () => {
 
 describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
   let themeMock: { preference: string; isDark: boolean; toggle: () => void; setPreference: jasmine.Spy };
-  function render(opts: { loggedIn?: boolean; keys?: string[]; perms?: string[]; eink?: boolean; theme?: string } = {}) {
+  function render(opts: { loggedIn?: boolean; keys?: string[]; perms?: string[]; eink?: boolean; theme?: string; leagueHub?: string | null } = {}) {
     themeMock = { preference: opts.theme ?? 'system', isDark: false, toggle: () => {}, setPreference: jasmine.createSpy('setPreference') };
     TestBed.configureTestingModule({
       imports: [NavbarComponent],
@@ -153,6 +153,11 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
         { provide: LocaleService, useValue: { languages: [], current: 'en', use: () => {} } },
         { provide: ThemeService, useValue: themeMock },
         { provide: EinkService, useValue: { enabled: signal(!!opts.eink) } },
+        // Nur wo ein Test die LeagueHub-Adresse vorgibt: sonst der echte Dienst (im Testlauf localhost → keine Adresse).
+        ...(opts.leagueHub === undefined ? [] : [{ provide: HandoffService, useValue: {
+          partnerUrl: null, leagueHubUrl: opts.leagueHub, jump: () => Promise.resolve(),
+          jumpToLeagueHub: jasmine.createSpy('jumpToLeagueHub').and.resolveTo(),
+        } }]),
         provideRouter([]),
       ],
     });
@@ -160,6 +165,40 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     fixture.detectChanges();
     return fixture;
   }
+
+  /** Öffnet ☰ und darin „Community“ und liefert den LeagueHub-Eintrag (oder null). */
+  function leagueHubItem(fixture: ReturnType<typeof render>): HTMLElement | null {
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('mat-toolbar .msg-mail')!.click();
+    fixture.detectChanges();
+    const community = Array.from(document.querySelectorAll<HTMLElement>('.nav-main-menu [mat-menu-item]'))
+      .find(b => b.textContent!.includes('nav.groupCommunity'))!;
+    community.click();
+    fixture.detectChanges();
+    return document.querySelector<HTMLElement>('.nav-submenu .nav-leaguehub');
+  }
+
+  // 0.983.0: Eintrag „LeagueHub“ — dieselbe Bedingung wie LeagueHubs eigene Seiten (league.view), nur mit Adresse.
+  it('„LeagueHub" steht mit dem Recht league.view im Menü „Community" und springt mit Anmelde-Übergabe', () => {
+    const fixture = render({ loggedIn: true, keys: ['puzzles'], perms: ['league.view'], leagueHub: 'https://leaguehub.oberschmid.homes' });
+    expect(fixture.componentInstance.showLeagueHub).toBeTrue();
+    const item = leagueHubItem(fixture);
+    expect(item).not.toBeNull();
+    expect(item!.textContent).toContain('nav.leagueHub');
+    item!.click();
+    expect(TestBed.inject(HandoffService).jumpToLeagueHub).toHaveBeenCalledWith();
+  });
+
+  it('„LeagueHub" fehlt ohne das Recht league.view — auch mit anderen Liga-Rechten', () => {
+    const fixture = render({ loggedIn: true, keys: ['puzzles'], perms: ['prep.view', 'league.contribute'], leagueHub: 'https://leaguehub.oberschmid.homes' });
+    expect(fixture.componentInstance.showLeagueHub).toBeFalse();
+    expect(leagueHubItem(fixture)).toBeNull();
+  });
+
+  it('„LeagueHub" fehlt, wo sich die Adresse nicht bilden lässt (localhost/IP) — wie der Turnier-Sprung', () => {
+    const fixture = render({ loggedIn: true, keys: ['puzzles'], perms: ['league.view'], leagueHub: null });
+    expect(fixture.componentInstance.showLeagueHub).toBeFalse();
+    expect(leagueHubItem(fixture)).toBeNull();
+  });
 
   it('eingeloggt zeigt die Leiste genau 3 Icon-Buttons (Vollbild, Glocke, Menü)', () => {
     const fixture = render({ loggedIn: true, keys: ['dashboard', 'puzzles', 'analysis'] });

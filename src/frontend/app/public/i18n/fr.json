@@ -355,7 +355,8 @@
     "ebooks": "E-books",
     "woodpecker": "Woodpecker",
     "maxims": "Règles empiriques",
-    "visitors": "RookHub dans le monde"
+    "visitors": "RookHub dans le monde",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Journal des modifications",
@@ -595,6 +596,10 @@
       "title": "Jeu de points",
       "subtitle": "Jouez une partie de maître coup par coup pour des points.",
       "open": "Jouer"
+    },
+    "leagueHub": {
+      "subtitle": "Prévisions de compositions et parties de ton club.",
+      "open": "Ouvrir LeagueHub"
     }
   },
   "positionInReps": {

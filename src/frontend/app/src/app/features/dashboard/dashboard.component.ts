@@ -28,13 +28,14 @@ import { ActivityTimerTileComponent } from '../training-goals/activity-timer-til
 import { formatPct } from '../../shared/format/pct';
 import { activeWoodpeckerPlan, WoodpeckerPlan, WoodpeckerService } from '../woodpecker/woodpecker.service';
 import { WoodpeckerTileComponent } from './woodpecker-tile.component';
+import { HandoffService } from '../../core/handoff.service';
 
 /** Zwischenstand samt Woodpecker-Plan: der Typ bleibt hier, weil `core/` nichts aus `features/` importiert (F8-013);
  *  der Cache speichert das Objekt als JSON, Felder kommen unverändert zurück. Fehlt das Feld (älterer Snapshot) = unbekannt. */
 type DashboardSnapshotWithWoodpecker = DashboardSnapshot & { woodpeckerPlan?: WoodpeckerPlan | null };
 
-/** Ein Schnellzugriff-Button auf einer Kachel. */
-interface TileButton { labelKey: string; link: string; }
+/** Ein Schnellzugriff-Button auf einer Kachel: Router-Ziel (`link`) ODER ein Sprung auf eine andere Oberfläche (`action`). */
+interface TileButton { labelKey: string; link?: string; action?: () => void; }
 
 /**
  * Untertitel einer Kachel: ein Schlüssel, oder mehrere Angaben (`parts`), die das Template mit „ · “ als `::before`
@@ -70,9 +71,13 @@ interface TileDef {
  *
  *  Zweite bewusste Ausnahme (0.955.0): Woodpecker. Die Kachel folgt dem Muster der angepinnten Kurse — sie erscheint
  *  nur, wenn der Nutzer ein LAUFENDES Training hat (sonst nur im Anpassen-Modus), drängt sich also niemandem auf, der
- *  das Training nicht selbst angelegt hat; wer es angelegt hat, soll es ohne „Anpassen“ auf der Startseite sehen. */
+ *  das Training nicht selbst angelegt hat; wer es angelegt hat, soll es ohne „Anpassen“ auf der Startseite sehen.
+ *
+ *  Dritte bewusste Ausnahme (0.983.0): LeagueHub. Die Kachel gibt es nur für Konten mit dem Recht `league.view`
+ *  (Nutzerwunsch: wer Zugriff hat, sieht sie ohne „Anpassen“); allen anderen bleibt sie ganz verborgen. Sie steht am
+ *  Ende, hinter dem Trainings-Kern. */
 const DEFAULT_VISIBLE = [
-  'puzzles', 'guess', 'weekly', 'pinnedCourses', 'woodpecker', 'courses', 'trainingGoals',
+  'puzzles', 'guess', 'weekly', 'pinnedCourses', 'woodpecker', 'courses', 'trainingGoals', 'leagueHub',
 ];
 /** Kanonische Reihenfolge ALLER bekannten Kacheln: Standard-sichtbare zuerst, Rest dahinter
  *  (der Rest ist im Standard ausgeblendet, im Bearbeitungsmodus aber zuschaltbar). */
@@ -203,8 +208,16 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
               </mat-card-content>
             } @else {
               <mat-card-actions>
-                @for (b of tile.buttons; track b.link) {
-                  <button mat-button [routerLink]="b.link">{{ b.labelKey | translate }}</button>
+                @for (b of tile.buttons; track b.labelKey) {
+                  @if (b.action; as act) {
+                    <!-- Sprung auf eine andere Oberfläche (LeagueHub): Knopf statt Link, der Einmal-Code entsteht erst
+                         beim Klick; das Symbol sagt, dass man RookHub verlässt (wie im Menü). -->
+                    <button mat-button class="tile-jump" (click)="act()">
+                      <mat-icon>open_in_new</mat-icon>{{ b.labelKey | translate }}
+                    </button>
+                  } @else {
+                    <button mat-button [routerLink]="b.link">{{ b.labelKey | translate }}</button>
+                  }
                 }
               </mat-card-actions>
             }
@@ -340,6 +353,7 @@ export class DashboardComponent implements OnInit {
   private confirm = inject(ConfirmService);
   private snackbar = inject(SnackbarService);
   private woodpecker = inject(WoodpeckerService);
+  private handoff = inject(HandoffService);
 
   repertoireCount = 0;
   courseCount = 0;
@@ -489,6 +503,15 @@ export class DashboardComponent implements OnInit {
       eligible: () => true, // /messages ist für jeden eingeloggten Nutzer erreichbar
       subtitle: () => ({ key: 'dashboard.messages.subtitle' }),
       buttons: [{ labelKey: 'dashboard.messages.open', link: '/messages' }],
+    },
+    leagueHub: {
+      // Nur mit Zugriff auf LeagueHub: Recht `league.view` (Admins erfüllen jedes Recht; `has` liest den Live-Stand als
+      // Signal, ein Entzug wirkt ohne neues Anmelden) — dieselbe Bedingung, mit der LeagueHub seine Seiten freigibt —
+      // und nur, wo sich die Adresse bilden lässt (auf localhost/IP `null`, dann keine Kachel wie kein Menüeintrag).
+      id: 'leagueHub', icon: 'shield', titleKey: 'nav.leagueHub',
+      eligible: () => !!this.handoff.leagueHubUrl && this.auth.has('league.view'),
+      subtitle: () => ({ key: 'dashboard.leagueHub.subtitle' }),
+      buttons: [{ labelKey: 'dashboard.leagueHub.open', action: () => void this.handoff.jumpToLeagueHub() }],
     },
     chessableQueue: {
       id: 'chessableQueue', icon: 'cloud_download', titleKey: 'dashboard.chessableQueue.title',

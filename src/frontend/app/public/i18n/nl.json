@@ -355,7 +355,8 @@
     "ebooks": "E-books",
     "woodpecker": "Woodpecker",
     "maxims": "Vuistregels",
-    "visitors": "RookHub wereldwijd"
+    "visitors": "RookHub wereldwijd",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -595,6 +596,10 @@
       "title": "Puntenspel",
       "subtitle": "Speel een meesterpartij zet voor zet voor punten.",
       "open": "Spelen"
+    },
+    "leagueHub": {
+      "subtitle": "Opstellingsvoorspellingen en de partijen van je club.",
+      "open": "LeagueHub openen"
     }
   },
   "positionInReps": {

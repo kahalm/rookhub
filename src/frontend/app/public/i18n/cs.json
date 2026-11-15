@@ -355,7 +355,8 @@
     "ebooks": "E-knihy",
     "woodpecker": "Woodpecker",
     "maxims": "Praktická pravidla",
-    "visitors": "RookHub ve světě"
+    "visitors": "RookHub ve světě",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Seznam změn",
@@ -595,6 +596,10 @@
       "title": "Hra na body",
       "subtitle": "Hrajte mistrovskou partii tah za tahem o body.",
       "open": "Hrát"
+    },
+    "leagueHub": {
+      "subtitle": "Předpovědi sestav a partie tvého klubu.",
+      "open": "Otevřít LeagueHub"
     }
   },
   "positionInReps": {

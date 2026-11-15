@@ -355,7 +355,8 @@
     "ebooks": "Ηλεκτρονικά βιβλία",
     "woodpecker": "Woodpecker",
     "maxims": "Πρακτικοί κανόνες",
-    "visitors": "RookHub σε όλο τον κόσμο"
+    "visitors": "RookHub σε όλο τον κόσμο",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Αλλαγές",
@@ -595,6 +596,10 @@
       "title": "Παιχνίδι πόντων",
       "subtitle": "Παίξτε μια παρτίδα μάστερ κίνηση προς κίνηση για πόντους.",
       "open": "Παίξτε"
+    },
+    "leagueHub": {
+      "subtitle": "Προβλέψεις συνθέσεων και οι παρτίδες του συλλόγου σου.",
+      "open": "Άνοιγμα LeagueHub"
     }
   },
   "positionInReps": {

@@ -355,7 +355,8 @@
     "ebooks": "电子书",
     "woodpecker": "Woodpecker",
     "maxims": "经验法则",
-    "visitors": "RookHub 遍布全球"
+    "visitors": "RookHub 遍布全球",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "更新日志",
@@ -595,6 +596,10 @@
       "title": "猜着法得分",
       "subtitle": "逐步走一盘大师对局来得分。",
       "open": "开始"
+    },
+    "leagueHub": {
+      "subtitle": "阵容预测和你所在俱乐部的对局。",
+      "open": "打开 LeagueHub"
     }
   },
   "positionInReps": {

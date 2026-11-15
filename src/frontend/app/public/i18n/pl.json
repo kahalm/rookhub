@@ -355,7 +355,8 @@
     "ebooks": "E-booki",
     "woodpecker": "Woodpecker",
     "maxims": "Zasady praktyczne",
-    "visitors": "RookHub na świecie"
+    "visitors": "RookHub na świecie",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Lista zmian",
@@ -595,6 +596,10 @@
       "title": "Gra na punkty",
       "subtitle": "Graj partię mistrzowską ruch po ruchu za punkty.",
       "open": "Graj"
+    },
+    "leagueHub": {
+      "subtitle": "Prognozy składów i partie twojego klubu.",
+      "open": "Otwórz LeagueHub"
     }
   },
   "positionInReps": {

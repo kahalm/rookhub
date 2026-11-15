@@ -355,7 +355,8 @@
     "ebooks": "Електронні книги",
     "woodpecker": "Woodpecker",
     "maxims": "Практичні правила",
-    "visitors": "RookHub у світі"
+    "visitors": "RookHub у світі",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Список змін",
@@ -595,6 +596,10 @@
       "title": "Гра на бали",
       "subtitle": "Зіграйте майстерську партію хід за ходом на бали.",
       "open": "Грати"
+    },
+    "leagueHub": {
+      "subtitle": "Прогнози складів і партії твого клубу.",
+      "open": "Відкрити LeagueHub"
     }
   },
   "positionInReps": {

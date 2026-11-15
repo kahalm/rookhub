@@ -355,7 +355,8 @@
     "ebooks": "E-böcker",
     "woodpecker": "Woodpecker",
     "maxims": "Tumregler",
-    "visitors": "RookHub i världen"
+    "visitors": "RookHub i världen",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Ändringslogg",
@@ -595,6 +596,10 @@
       "title": "Poängspel",
       "subtitle": "Spela ett mästarparti drag för drag för poäng.",
       "open": "Spela"
+    },
+    "leagueHub": {
+      "subtitle": "Laguppställningsprognoser och din klubbs partier.",
+      "open": "Öppna LeagueHub"
     }
   },
   "positionInReps": {

@@ -355,7 +355,8 @@
     "ebooks": "E-book",
     "woodpecker": "Woodpecker",
     "maxims": "Kaidah praktis",
-    "visitors": "RookHub di seluruh dunia"
+    "visitors": "RookHub di seluruh dunia",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "Catatan Perubahan",
@@ -595,6 +596,10 @@
       "title": "Permainan poin",
       "subtitle": "Mainkan partai master langkah demi langkah untuk mendapat poin.",
       "open": "Main"
+    },
+    "leagueHub": {
+      "subtitle": "Prakiraan susunan pemain dan partai klubmu.",
+      "open": "Buka LeagueHub"
     }
   },
   "positionInReps": {

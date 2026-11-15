@@ -355,7 +355,8 @@
     "ebooks": "الكتب الإلكترونية",
     "woodpecker": "Woodpecker",
     "maxims": "قواعد عامة",
-    "visitors": "RookHub حول العالم"
+    "visitors": "RookHub حول العالم",
+    "leagueHub": "LeagueHub"
   },
   "app": {
     "changelogTitle": "سجل التغييرات",
@@ -595,6 +596,10 @@
       "title": "لعبة النقاط",
       "subtitle": "العب مباراة أستاذ نقلةً بنقلة لتجمع النقاط.",
       "open": "العب"
+    },
+    "leagueHub": {
+      "subtitle": "توقعات التشكيلات ومباريات ناديك.",
+      "open": "فتح LeagueHub"
     }
   },
   "positionInReps": {
