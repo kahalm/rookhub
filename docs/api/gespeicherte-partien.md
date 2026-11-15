@@ -122,7 +122,9 @@ kanonische Schreibweise, „…“-Platzhalter der alten DOM-Auslese fallen weg.
 (Ungenauigkeit/Fehler/grober Fehler/verpasste Chance, die schwersten `MaxPerGame` = 15) schreibt das Sprachmodell auf
 EIGENER Hardware ein, zwei Sätze — NUR mit `IClaudeJsonClient.IsLocal` (Spark), über Claude liefe es auf Kosten. Regeln:
 * **Fakten statt Rechnen:** `GameMistakes.Find` (Server-SPIEGEL von `classify`/`CLASS_LIMITS`/Miss-Regel in
-  `game-review.util.ts`, literale Grenzwerte in `GameMoveExplanationTests` ↔ `game-review.util.spec.ts`) liefert je Fehler
+  `game-review.util.ts`, literale Grenzwerte in `GameMoveExplanationTests`/`GameMistakesTests` ↔ `game-review.util.spec.ts`;
+  seit 2026-11-15 ohne Züge aus ohnehin verlorener Stellung — vor dem Zug ≤ −4,00 für den Ziehenden,
+  `GameMistakes.LostAnywayPawns`, siehe `docs/frontend/partie-rueckblick.md`) liefert je Fehler
   Stellung, gespielten Zug, Bestzug + Engine-Linie (SAN, Rochade König-schlägt-Turm aufgelöst), Widerlegung (Linie der
   NÄCHSTEN Stellung) und Bewertung vorher/nachher. Das Modell soll erklären, nicht rechnen.
 * **Der GRUND, nicht die Bewertung** (0.572.0, `Services/Games/ExplanationFacts.cs`, gemeldet 2026-09-28 an Prod-Partie 34): mit
@@ -244,6 +246,7 @@ Partie). `OgImageService.TrainCard`: Brett links (gedreht bei Schwarz), rechts �
 „Die Fehler von …" über der Kurve, die Fehler der Seite als rote Punkte (`OgMetaService.TrainMarks`: ≥ 10 Prozentpunkte
 Gewinnchance aus Sicht des Ziehenden, Lichess-Formel). **Seit 0.821.0 (Wunsch 2026-10-21)** zählt `TrainMarks` wie das
 Training selbst (`collectMistakes`): mehr als 5 Punkte (`TrainedLossAbove`, also auch Ungenauigkeiten), nicht der Bestzug,
+nicht aus ohnehin verlorener Stellung (vor dem Zug ≤ −4,00, `GameMistakes.LostAnyway`, 2026-11-15),
 fehlende nächste Stellung → Bewertung des gespielten Kandidaten — vorher „4 Fehler" in der Vorschau bei 6 im Training. Und
 die Karte ist ENGLISCH (og:title „Improve your chess — replay your mistakes", Beschreibung „n mistakes by … — find the better
 moves now.", Bild „Improve your chess" / „Replay your mistakes" / „Mistakes by …"); die Bild-Adresse trägt `l=en`, damit
@@ -325,7 +328,9 @@ flachere), aber mit eigenem Ursprung
   Regelstand vermerkt, R4-007). **Regeln ändern = `GameMoveClasses.Version` hochzählen und den Client im selben Commit
   mitziehen** — der Erntelauf rechnet dann den Bestand neu. Regelstände: 1 = 0.853.0; 2 = 2026-11-09 (User-Entscheidung,
   Vereinspartie 241: löst der Zug eine Gabel auf — vorher hingen ≥ 2 eigene Figuren, danach weniger —, ist die schon vorher
-  hängende Figur kein Opfer: 9.Ld3 nein, 7…Sxe4 ja; eine allein hängende, bewusst stehen gelassene bleibt Opfer, 228: 24.O-O „!!“). Parität beim Port an 300 Prod-Analysen Zeichen für Zeichen geprüft
+  hängende Figur kein Opfer: 9.Ld3 nein, 7…Sxe4 ja; eine allein hängende, bewusst stehen gelassene bleibt Opfer, 228: 24.O-O „!!“);
+  3 = 2026-11-15 (Wunsch an Partie 234: stand der Ziehende vor dem Zug bei −4,00 oder schlechter, ist der Zug kein Fehler
+  mehr, sondern „good“ — `GameMistakes.LostAnywayPawns` ↔ `LOST_ANYWAY_PAWNS`). Parität beim Port an 300 Prod-Analysen Zeichen für Zeichen geprüft
   (111 „!!“, 917 „!“, 76 Miss; C# ~12 ms je Partie, der Client ~90 ms); fest abgesichert durch `GameMoveClassesTests`
   (Vereinspartie 228 als Fixture, chess.com-Markierungen literal), `MoveTacticsTests` ↔ `move-tactics.util.spec.ts`,
   `TacticsBoardTests`. Erster Abnehmer: LeagueHubs „!!“-Marker (`club/games/reviews`).

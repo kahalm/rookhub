@@ -19,6 +19,17 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
   - `classify`: chess.com-Bänder („How are moves classified?") in Prozentpunkten — best (Engine-Zug oder
     kein Verlust), ≤ 2 excellent, ≤ 5 good, ≤ 10 inaccuracy, ≤ 20 mistake, sonst blunder; Grenze gehört zur
     BESSEREN Klasse. Prozentpunkte statt 0,02 usw., weil Gleitkomma die Grenzwerte sonst verschiebt.
+  - `classifyMove` + `lostAnyway` (`LOST_ANYWAY_PAWNS` = −4, Wunsch 2026-11-15 an Partie 234: „Mistake 13 of 13,
+    Inaccuracy −6.58 → −11.64 — ab −4 keine Fehler mehr“): die Grundklasse EINES Partiezugs. Stand der Ziehende VOR dem
+    Zug bei −4,00 oder schlechter (aus seiner Sicht; „wird matt gesetzt“ zählt als schlechter), wird aus
+    inaccuracy/mistake/blunder ein `good` — damit auch kein Miss, kein Eintrag in „Eigene Fehler nachspielen“, kein
+    Fehler-Punkt in der Kurve, keine Erklärung. Die Grenze gilt für die Bewertung DAVOR und zählt selbst mit (−4,00 → kein
+    Fehler, −3,99 → Fehler), verglichen ganzzahlig in Centipawns (≤ −400). Nur die Verliererseite: +6 → +1 bleibt ein
+    Fehler. Die Genauigkeit rechnet unverändert mit dem vollen Verlust. Auch die Miss-Regel des GEGNERS fragt nach dieser
+    bereinigten Klasse. Server-Spiegel: `GameMistakes.LostAnyway`/`LostAnywayPawns` (eine Stelle für `GameMistakes.Find`
+    und `GameMoveClasses.Compute`), Regelstand 3; dieselbe Grenze in `OgMetaService.TrainMarks` (Fehlerzahl der
+    Trainingslink-Karte) und über `classifyMove` im Linienvergleich „Ohne Engine“ (`compareLines`). Literale Tests:
+    `game-review.util.spec.ts` („ohnehin verloren“) ↔ `GameMistakesTests`.
   - `reviewGame(evals, fens, ucis?)`: die Seite am Zug kommt aus der FEN, nie aus der Parität. Bewertbar ist
     ein Zug nur mit gerechneter Stellung davor; „danach" = nächste Stellung (tiefer), sonst der gespielte
     Kandidat. `ucis` (je Halbzug `von+nach+Umwandlung`) schaltet die Sonderklassen ein; ohne sie bleibt es

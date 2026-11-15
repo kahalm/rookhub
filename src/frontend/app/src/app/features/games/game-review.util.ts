@@ -154,6 +154,37 @@ export const ACCURACY_UNCERTAINTY_BONUS = 1;
  */
 export const CLASS_LIMITS = { excellent: 2, good: 5, inaccuracy: 10, mistake: 20 } as const;
 
+/**
+ * „Ohnehin verloren": steht der Ziehende VOR seinem Zug bei dieser Bewertung (in Bauern, aus seiner Sicht) oder
+ * schlechter — oder wird er matt gesetzt —, gilt der Zug nicht mehr als Ungenauigkeit, Fehler oder grober Fehler (und
+ * damit auch nicht als Miss): die Partie ist da schon verloren, weitere „Fehler" sind Lärm. Er wird als „good" geführt.
+ * Anlass: Vereinspartie 234, „Mistake 13 of 13, Inaccuracy −6.58 → −11.64" (Wunsch 2026-11-15: „ab −4 keine Fehler
+ * mehr"). Die Grenze gilt für die Bewertung DAVOR und zählt selbst schon mit (−4,00 → kein Fehler, −3,99 → Fehler);
+ * nur für die Verliererseite — wer bei +6 steht und auf +1 fällt, hat weiter einen Fehler gemacht. Die Genauigkeit
+ * rechnet unverändert mit dem vollen Verlust. Spiegel: `GameMistakes.LostAnywayPawns` am Server.
+ */
+export const LOST_ANYWAY_PAWNS = -4;
+
+/** Stand der Ziehende vor dem Zug ohnehin auf Verlust? `before` in Weiß-Sicht; ganzzahlig in Centipawns verglichen
+ *  (≤ −400), nicht als Kommazahl in Bauern — dieselbe Gleitkomma-Falle wie bei `CLASS_LIMITS`. */
+export function lostAnyway(before: EvalScore | null | undefined, moverWhite: boolean): boolean {
+  if (!before) return false;
+  // Matt gegen den Ziehenden (auch `mate 0` = er IST matt) ist schlechter als jede Bauernzahl.
+  if (before.mate != null) return before.mate === 0 || (moverWhite ? before.mate < 0 : before.mate > 0);
+  if (before.cp == null) return false;
+  return (moverWhite ? before.cp : 0 - before.cp) <= LOST_ANYWAY_PAWNS * 100;
+}
+
+/**
+ * Die Grundklasse EINES Zuges, wie sie Rückblick, Zähler und Fehler-Training führen: die Bänder aus `classify`, und in
+ * ohnehin verlorener Stellung (`lostAnyway`) statt einer Fehlerklasse „good". DIE eine Stelle für diese Regel im Client.
+ */
+export function classifyMove(winBefore: number, winAfter: number, playedIsBest: boolean,
+  before: EvalScore | null | undefined, moverWhite: boolean): MoveClass {
+  const cls = classify(winBefore, winAfter, playedIsBest);
+  return (cls === 'inaccuracy' || cls === 'mistake' || cls === 'blunder') && lostAnyway(before, moverWhite) ? 'good' : cls;
+}
+
 /** Wer ist in dieser FEN am Zug? Ohne lesbares zweites Feld: Weiß (wie der Server) — der gemeinsame Helfer (N11-006). */
 export { whiteToMove };
 
@@ -208,8 +239,9 @@ export function moveAccuracy(winBefore: number, winAfter: number): number {
   return Math.min(100, Math.max(0, raw));
 }
 
-/** Zug-Klasse aus Sicht des Ziehenden. Der Engine-Bestzug ist immer „best", auch wenn die tiefere
- *  Rechnung der nächsten Stellung danach etwas verliert — er WAR der beste Zug, den sie kannte. */
+/** Zug-Klasse aus Sicht des Ziehenden, allein aus dem Verlust (die Bänder). Der Engine-Bestzug ist immer „best", auch
+ *  wenn die tiefere Rechnung der nächsten Stellung danach etwas verliert — er WAR der beste Zug, den sie kannte.
+ *  Die Klasse eines Partiezugs kommt aus `classifyMove` (mit der Regel „ohnehin verloren"). */
 export function classify(winBefore: number, winAfter: number, playedIsBest: boolean): MoveClass {
   const loss = winBefore - winAfter;
   if (playedIsBest || loss <= 0) return 'best';
@@ -361,7 +393,7 @@ export function reviewGame(evals: GameEvals | null | undefined, fens: string[], 
     const mb = white ? wb : 100 - wb;
     const ma = white ? wa : 100 - wa;
     const best = !!row.bestUci && row.bestUci.toLowerCase() === (row.playedUci ?? '').toLowerCase();
-    const cls = classify(mb, ma, best);
+    const cls = classifyMove(mb, ma, best, before, white);
     base.push(cls);
     const move: ReviewedMove = {
       ply: i, white, cls, base: cls, accuracy: moveAccuracy(mb, ma),
@@ -420,6 +452,8 @@ interface SpecialInput {
  * 1. **Miss** ersetzt Inaccuracy/Mistake/Blunder, wenn der Gegner davor einen Fehler oder groben Fehler
  *    gemacht hat, der Bestzug ≥ 70 % gebracht hätte und nach dem gespielten 40..60 % bleiben: nicht der
  *    Verlust ist die Nachricht, sondern die verpasste Strafe. Unter 40 % bleibt es der Fehler, der es ist.
+ *    „Fehler" heißt hier überall die Klasse NACH der Regel „ohnehin verloren" (`classifyMove`): ein Zug aus einer
+ *    Stellung ab −4 ist weder selbst ein Miss noch ein Fehler des Gegners, den man hätte bestrafen können.
  * 2. **Brilliant** ersetzt Best/Excellent (chess.com: „best or nearly best"), wenn dabei eine Figur
  *    GEOPFERT wird (`sacrificedPiece`), die Stellung nicht ohnehin gewonnen war (Zweitbester < +7 und kein
  *    Matt), sie danach nicht schlecht steht (≥ −1) und der Zug weder eine Umwandlung noch eine Antwort auf

@@ -105,6 +105,30 @@ public class OgTests
     }
 
     [Fact]
+    public void TrainMarks_ohnehinVerloren_abMinusVierZaehltNicht_wieDasTraining()
+    {
+        GameEvalsDto Game(int before, int after) => new()
+        {
+            Status = "done", Total = 2, Plies = new()
+            {
+                new() { Ply = 0, Cp = before, BestUci = "d2d4", PlayedUci = "e2e4" },
+                new() { Ply = 1, Cp = after, BestUci = "e7e5", PlayedUci = "c7c5" },
+            }, Final = new() { Cp = after },
+        };
+        Assert.Equal(new[] { 1 }, OgMetaService.TrainMarks(Game(-399, -1100), white: true));
+        Assert.Empty(OgMetaService.TrainMarks(Game(-400, -1100), white: true));
+        Assert.Empty(OgMetaService.TrainMarks(Game(-658, -1164), white: true));   // Vereinspartie 234 (Wunsch 2026-11-15)
+        // Schwarz: Weiß-Sicht +6,58 → +11,64 ist für Schwarz −6,58 → −11,64.
+        var black = new GameEvalsDto { Status = "done", Total = 2, Plies = new()
+        {
+            new() { Ply = 0, Cp = 658 }, new() { Ply = 1, Cp = 658, BestUci = "e7e5", PlayedUci = "c7c5" },
+        }, Final = new() { Cp = 1164 } };
+        Assert.Empty(OgMetaService.TrainMarks(black, white: false));
+        black.Plies[1].Cp = 399; black.Final!.Cp = 1100;
+        Assert.Equal(new[] { 2 }, OgMetaService.TrainMarks(black, white: false));
+    }
+
+    [Fact]
     public void TrainMarks_FehlerDerSeite_GroberFehler()
     {
         // Stellungen (Weiß-Sicht): 20, 30, 40, −300, Ende +400

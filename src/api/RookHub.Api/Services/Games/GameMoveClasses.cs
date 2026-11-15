@@ -22,8 +22,10 @@ public static class GameMoveClasses
 {
     /// <summary>Stand der Regeln. 1 = 0.853.0 (König schlägt im Abtausch zuletzt, Good-Brillant nur mit gezogener Figur,
     /// Great = einziger guter Zug in Gewinnchance). 2 = 2026-11-09 (Vereinspartie 241: eine Figur, die schon VOR dem Zug auf
-    /// ihrem Feld hing, ist kein Opfer dieses Zuges — 9.Ld3 nein, 7…Sxe4 ja; <see cref="MoveTactics.SacrificedPiece"/>).</summary>
-    public const int Version = 2;
+    /// ihrem Feld hing, ist kein Opfer dieses Zuges — 9.Ld3 nein, 7…Sxe4 ja; <see cref="MoveTactics.SacrificedPiece"/>).
+    /// 3 = 2026-11-15 (Vereinspartie 234: stand der Ziehende vor dem Zug schon bei −4 oder schlechter, ist der Zug kein
+    /// Fehler mehr, sondern „good" — <see cref="GameMistakes.LostAnywayPawns"/>).</summary>
+    public const int Version = 3;
 
     /// <summary>Zeichen je Klasse in <see cref="GameAnalysis.MoveClasses"/>; <c>-</c> = nicht bewertbar.</summary>
     public static readonly IReadOnlyDictionary<string, char> Codes = new Dictionary<string, char>
@@ -118,7 +120,7 @@ public static class GameMoveClasses
             var mb = white ? wb : 100 - wb;
             var ma = white ? wa : 100 - wa;
             var best = !string.IsNullOrEmpty(row.BestUci) && string.Equals(row.BestUci, row.PlayedUci, StringComparison.OrdinalIgnoreCase);
-            var cls = GameMistakes.Classify(mb, ma, best);
+            var cls = GameMistakes.Classify(mb, ma, best, before.Cp, before.Mate, white);
             var label = cls;
             var uci = i < ucis.Count ? ucis[i] : null;
             if (!string.IsNullOrEmpty(uci))

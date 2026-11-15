@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { AnalysisNode } from './analysis-tree';
-import { EvalScore, MoveClass, classify, formatEval, winPercent } from '../games/game-review.util';
+import { EvalScore, MoveClass, classifyMove, formatEval, winPercent } from '../games/game-review.util';
 import { whiteToMove } from '../../shared/chess/fen-side';
 
 /**
@@ -60,7 +60,7 @@ export interface LineComparison {
 
 /**
  * Der Vergleich über die EIGENEN Züge (alles im Baum außer der gespielten Partie): je Zug die Klasse wie im Rückblick
- * (Verlust an Gewinnchance aus Sicht des Ziehenden, `classify`), und wo er nicht der beste war, der bessere Zug.
+ * (Verlust an Gewinnchance aus Sicht des Ziehenden, `classifyMove` — in ohnehin verlorener Stellung kein Fehler), und wo er nicht der beste war, der bessere Zug.
  * `verdicts` enthält nur die Züge ab Ungenauigkeit — in der Reihenfolge des Baums.
  */
 export function compareLines(root: AnalysisNode, evalOf: ReadonlyMap<AnalysisNode, NodeEval>, gameUcis: readonly string[]): LineComparison {
@@ -78,7 +78,7 @@ export function compareLines(root: AnalysisNode, evalOf: ReadonlyMap<AnalysisNod
     const mb = moverWhite ? wb : 100 - wb;
     const ma = moverWhite ? wa : 100 - wa;
     const isBest = !!before.bestUci && before.bestUci.toLowerCase() === node.uci.toLowerCase();
-    const cls = classify(mb, ma, isBest);
+    const cls = classifyMove(mb, ma, isBest, before, moverWhite);
     result.rated++;
     if (cls === 'best') result.best++;
     if (cls !== 'inaccuracy' && cls !== 'mistake' && cls !== 'blunder') continue;

@@ -242,12 +242,9 @@ public class GameExercisesTests : IDisposable
                 Assert.Equal("backRank|R", g.First.Motif!.Strict);
                 Assert.Equal([80], g.Also);
             },
-            g =>
-            {
-                // 37.Sd6 (statt 37.Td8) gabelt die Türme; einer verkauft sich auf g4. Dieselbe Gabel schon im 29. Zug.
-                Assert.Equal((72, true, GameExercises.MissedTactic, "fork|N|RR"), (g.First.Ply, g.First.White, g.First.Reason, g.First.Motif!.Strict));
-                Assert.Equal([56], g.Also);
-            },
+            // Reihenfolge seit 2026-11-15: die Mattdrohung steht VOR der Gabel desselben Fehlers 37.Td8 (Verlust 41,6 + Bonus).
+            // Vorher hing sie am Fehler 36…g5 davor (−4,01 → Verlust 10,2) — der ist in ohnehin verlorener Stellung keiner mehr
+            // (GameMistakes.LostAnywayPawns).
             g =>
             {
                 // „Auf 37...Tg8 folgt 38.Sf7#“ — ersticktes Matt als Drohung; im 29. Zug dasselbe Bild (29.Sd6 Tg8 30.Sxf7#).
@@ -255,6 +252,12 @@ public class GameExercisesTests : IDisposable
                 Assert.Equal(new[] { 56, 72 }, new[] { g.First.Ply }.Concat(g.Also).OrderBy(x => x));
                 Assert.StartsWith("M1|corner|N", g.First.Signature!.Strict);
                 Assert.Equal(["smotheredMate", "mateIn1"], GameExercises.ThemeTags(g.First));
+            },
+            g =>
+            {
+                // 37.Sd6 (statt 37.Td8) gabelt die Türme; einer verkauft sich auf g4. Dieselbe Gabel schon im 29. Zug.
+                Assert.Equal((72, true, GameExercises.MissedTactic, "fork|N|RR"), (g.First.Ply, g.First.White, g.First.Reason, g.First.Motif!.Strict));
+                Assert.Equal([56], g.Also);
             });
         // Ohne die Zeilen der Vergleiche dasselbe (das Matt in 1 findet das Brett selbst).
         Assert.Equal(3, GameExercises.Group(GameExercises.Occurrences(positions)).Count);
@@ -388,14 +391,14 @@ public class GameExercisesTests : IDisposable
 
         var dto = await new GameExercises(_db, new EbookSuggestions(_db)).ForClubGameAsync(251);
         Assert.Equal(
-            [(GameExercises.MissedTactic, "backRankMate"), (GameExercises.MissedTactic, "fork"), (GameExercises.MateThreat, "smotheredMate")],
+            [(GameExercises.MissedTactic, "backRankMate"), (GameExercises.MateThreat, "smotheredMate"), (GameExercises.MissedTactic, "fork")],
             dto.Groups.Select(g => (g.Reason, g.Theme!)));
         Assert.All(dto.Groups, g =>
         {
             Assert.Equal(GameExercises.PerGroup, g.Exercises.Count);
             Assert.All(g.Exercises, e => { Assert.Equal("theme", e.Match); Assert.Contains(g.Theme!, e.Themes); });
         });
-        Assert.Equal((int?)1, dto.Groups[2].MateIn);
+        Assert.Equal((int?)1, dto.Groups[1].MateIn);   // Mattdrohung vor der Gabel (seit 2026-11-15, siehe oben)
         Assert.Null(dto.Groups[0].MateIn);
         Assert.Equal(18, dto.Groups.SelectMany(g => g.Exercises).Select(e => e.Id).Distinct().Count());
     }

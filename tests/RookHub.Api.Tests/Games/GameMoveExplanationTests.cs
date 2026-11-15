@@ -366,7 +366,8 @@ public class GameMoveExplanationTests : IDisposable
     {
         var (userId, gameId, analysisId) = await SeedAsync(ownerSide: "black");
         var before = await _db.GameAnalysisPositions.SingleAsync(p => p.GameAnalysisId == analysisId && p.Ply == 5);
-        before.CandidatesJson = """[{"uci":"g7g6","cp":-500},{"uci":"g8f6","mate":-1}]""";   // Schwarz steht schon −5
+        before.CandidatesJson = """[{"uci":"g7g6","cp":-300},{"uci":"g8f6","mate":-1}]""";   // Schwarz steht schon −3 (bis 0.976.0: −5; ab −4
+        // ist der Zug seit 2026-11-15 gar kein Fehler mehr — GameMistakes.LostAnywayPawns, siehe GameMistakesTests)
         await _db.SaveChangesAsync();
         var flaw = Assert.Single(GameMistakes.Find(await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == analysisId).ToListAsync(), Moves.Length));
         Assert.Equal(5, flaw.Ply);   // ein Fehler bleibt es …

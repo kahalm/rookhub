@@ -29,7 +29,7 @@ Partie-Analyse läuft im Hintergrund und bleibt dabei verdeckt; EIN Baum je Part
    (Client und Server bilden den Stellungsschlüssel nicht zeichengleich, die flache Reihenfolge schon; die Sitzung hält die Knoten
    des zuletzt gespeicherten Baums fest). Bewertungen stehen an jedem Zug der Zugliste, die Live-Engine läuft wieder für weitere
    Züge, und die Karte zeigt den **Vergleich** (`compareLines`, `line-study.util.ts`): je EIGENEM Zug (alles außer den
-   Partiezügen) die Klasse wie im Rückblick (`classify` über die Gewinnchance), Zahl der Bestzüge, und für jede Ungenauigkeit,
+   Partiezügen) die Klasse wie im Rückblick (`classifyMove` über die Gewinnchance, ab −4,00 vor dem Zug kein Fehler mehr), Zahl der Bestzüge, und für jede Ungenauigkeit,
    jeden Fehler und groben Fehler der bessere Zug — Klick springt hin. Solange noch gerechnet wird, fragt die Sitzung alle 15 s.
 
 ## Endpunkte (auth)

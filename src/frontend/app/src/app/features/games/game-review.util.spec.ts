@@ -1,5 +1,5 @@
 import {
-  GameEvalPly, GameEvals, MOVE_CLASSES, ReviewedMove, classify, nextOfClass, formatEval, graphHeight, moveAccuracy, reviewGame, sideAccuracy,
+  GameEvalPly, GameEvals, LOST_ANYWAY_PAWNS, MOVE_CLASSES, ReviewedMove, classify, classifyMove, lostAnyway, nextOfClass, formatEval, graphHeight, moveAccuracy, reviewGame, sideAccuracy,
   volatilityWeights, whiteToMove, windowSizeFor, winPercent,
 } from './game-review.util';
 import { sacrificedPiece } from './move-tactics.util';
@@ -100,6 +100,104 @@ describe('game-review.util', () => {
 
     it('ein Zug, der gewinnt, ist best', () => {
       expect(classify(40, 55, false)).toBe('best');
+    });
+  });
+
+  // Wunsch 2026-11-15 (Vereinspartie 234, „Mistake 13 of 13, Inaccuracy −6.58 → −11.64"): ab −4 vor dem Zug keine
+  // Fehler mehr. Dieselben Zahlen prüft der Server (`GameMistakesTests`, `GameMoveClassesTests`).
+  describe('ohnehin verloren: ab −4,00 vor dem Zug kein Fehler mehr', () => {
+    // 1.e4 c5 2.Sf3 d6
+    const FENS = [
+      'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1',
+      'rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2',
+      'rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2',
+      'rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3',
+    ];
+    const UCIS = ['e2e4', 'c7c5', 'g1f3', 'd7d6'];
+    type S = { cp?: number; mate?: number };
+    /** Weiß-Sicht je Stellung 0..4; Halbzug `bad` ist NICHT der Bestzug, alle anderen sind es. */
+    const lostGame = (scores: [S, S, S, S, S], bad: number[]): GameEvals => ({
+      status: 'done', analyzed: 4, total: 4, targetDepth: 20,
+      plies: [0, 1, 2, 3].map(i => ({
+        ply: i, depth: 20, ...scores[i], bestUci: bad.includes(i) ? 'a2a3' : UCIS[i], playedUci: UCIS[i],
+      })),
+      final: scores[4],
+    });
+
+    it('die Grenze: −4 Bauern, ganzzahlig in Centipawns, aus Sicht des Ziehenden', () => {
+      expect(LOST_ANYWAY_PAWNS).toBe(-4);
+      expect(lostAnyway({ cp: -400 }, true)).toBeTrue();
+      expect(lostAnyway({ cp: -399 }, true)).toBeFalse();
+      expect(lostAnyway({ cp: 400 }, false)).toBeTrue();     // Weiß-Sicht +4,00 = Schwarz bei −4,00
+      expect(lostAnyway({ cp: 399 }, false)).toBeFalse();
+      expect(lostAnyway({ cp: 658 }, true)).toBeFalse();     // die Gewinnerseite nie
+      expect(lostAnyway({ cp: -658 }, false)).toBeFalse();
+      expect(lostAnyway(null, true)).toBeFalse();
+      expect(lostAnyway({}, true)).toBeFalse();
+    });
+
+    it('Matt gegen den Ziehenden zählt als schlechter als −4', () => {
+      expect(lostAnyway({ mate: -3 }, true)).toBeTrue();
+      expect(lostAnyway({ mate: 3 }, false)).toBeTrue();
+      expect(lostAnyway({ mate: 3 }, true)).toBeFalse();
+      expect(lostAnyway({ mate: -3 }, false)).toBeFalse();
+      expect(lostAnyway({ mate: 0 }, true)).toBeTrue();
+    });
+
+    it('classifyMove: Fehlerklassen werden „good", alles andere bleibt', () => {
+      expect(classifyMove(8.145, 2.455, false, { cp: -658 }, true)).toBe('good');
+      expect(classifyMove(18.707, 2.455, false, { cp: -399 }, true)).toBe('mistake');
+      expect(classifyMove(18.651, 2.455, false, { cp: -400 }, true)).toBe('good');
+      expect(classifyMove(18.651, 17.651, false, { cp: -400 }, true)).toBe('excellent');
+      expect(classifyMove(18.651, 2.455, true, { cp: -400 }, true)).toBe('best');
+      expect(classifyMove(90.108, 59.103, false, { cp: 600 }, true)).toBe('blunder');
+    });
+
+    it('Partie 234: Schwarz −6,58 → −11,64 (Verlust 5,69 Punkte, bisher Ungenauigkeit) ist kein Fehler mehr', () => {
+      const r = reviewGame(lostGame([{ cp: 658 }, { cp: 658 }, { cp: 658 }, { cp: 658 }, { cp: 1164 }], [3]), FENS, UCIS);
+      expect(r.moves.map(m => m?.cls)).toEqual(['best', 'best', 'best', 'good']);
+      expect(r.moves[3]!.base).toBe('good');
+      expect(r.moves[3]!.winBefore).toBeCloseTo(8.1450, 3);
+      expect(r.moves[3]!.winAfter).toBeCloseTo(2.4553, 3);
+      expect(r.moves[3]!.accuracy).toBeCloseTo(78.3620, 3);   // die Genauigkeit rechnet weiter mit dem vollen Verlust
+      expect(r.black.counts.inaccuracy).toBe(0);
+      expect(r.black.counts.good).toBe(1);
+    });
+
+    it('Weiß am Zug genauso (Vorzeichen!): −6,58 → −11,64', () => {
+      const r = reviewGame(lostGame([{ cp: -658 }, { cp: -658 }, { cp: -658 }, { cp: -1164 }, { cp: -1164 }], [2]), FENS, UCIS);
+      expect(r.moves.map(m => m?.cls)).toEqual(['best', 'best', 'good', 'best']);
+    });
+
+    it('−3,99 → −11 bleibt ein Fehler (Verlust 16,25), genau −4,00 → −11 nicht (Verlust 16,20)', () => {
+      const at = (cp: number) =>
+        reviewGame(lostGame([{ cp }, { cp }, { cp }, { cp }, { cp: 1100 }], [3]), FENS, UCIS).moves[3]!;
+      expect(at(399).cls).toBe('mistake');
+      expect(at(399).accuracy).toBeCloseTo(48.6759, 3);
+      expect(at(400).cls).toBe('good');
+      expect(at(400).accuracy).toBeCloseTo(48.7998, 3);
+    });
+
+    it('Matt gegen den Ziehenden davor: kein Fehler', () => {
+      const r = reviewGame(lostGame([{ mate: -4 }, { mate: -4 }, { mate: -3 }, { mate: -2 }, { mate: -2 }], [2]), FENS, UCIS);
+      expect(r.moves[2]!.base).toBe('best');     // Gewinnchance 0 → 0: ohnehin kein Verlust
+      expect(lostAnyway(r.moves[2]!.evalBefore, true)).toBeTrue();
+    });
+
+    it('die Gewinnerseite bleibt, wie sie war: +6,00 → +1,00 ist ein grober Fehler (Verlust 31,01)', () => {
+      const r = reviewGame(lostGame([{ cp: 600 }, { cp: 600 }, { cp: 600 }, { cp: 100 }, { cp: 100 }], [2]), FENS, UCIS);
+      expect(r.moves.map(m => m?.cls)).toEqual(['best', 'best', 'blunder', 'best']);
+      expect(r.moves[2]!.accuracy).toBeCloseTo(24.5791, 3);
+    });
+
+    it('Miss fragt nach der bereinigten Klasse des Gegners: sein Zug aus −4,00 war kein Fehler, also kein Miss', () => {
+      // Schwarz 1…c5 von −4,00 auf −10,00 (kein Fehler mehr), Weiß 2.Sf3 von +10,00 auf +0,40 (97,54 → 53,68 %).
+      const lost = reviewGame(lostGame([{ cp: 400 }, { cp: 400 }, { cp: 1000 }, { cp: 40 }, { cp: 40 }], [1, 2]), FENS, UCIS);
+      expect(lost.moves.map(m => m?.cls)).toEqual(['best', 'good', 'blunder', 'best']);
+      // Dasselbe ab −3,99: Schwarz macht einen Fehler, Weiß verpasst die Strafe.
+      const open = reviewGame(lostGame([{ cp: 399 }, { cp: 399 }, { cp: 1000 }, { cp: 40 }, { cp: 40 }], [1, 2]), FENS, UCIS);
+      expect(open.moves.map(m => m?.cls)).toEqual(['best', 'mistake', 'miss', 'best']);
     });
   });
 

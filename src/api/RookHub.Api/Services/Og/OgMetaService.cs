@@ -360,7 +360,7 @@ public partial class OgMetaService
     /// Die Fehler einer Seite als Kurven-Index der Stellung NACH dem Zug — dieselben, die das Fehler-Training der Seite
     /// zeigt (<c>collectMistakes</c>, Fix 2026-10-21: die Vorschau sagte „4 Fehler", das Training hatte 6, weil hier nur
     /// Fehler ab 10 Punkten zählten): mehr als <see cref="TrainedLossAbove"/> Prozentpunkte Gewinnchance verloren, nicht der
-    /// Bestzug der Engine. „Danach" ist die nächste Stellung, sonst die Bewertung des gespielten Kandidaten (wie
+    /// Bestzug der Engine, und der Ziehende stand davor nicht ohnehin auf Verlust (<c>GameMistakes.LostAnyway</c>). „Danach" ist die nächste Stellung, sonst die Bewertung des gespielten Kandidaten (wie
     /// <c>reviewGame</c>). Weiß zieht die geraden Halbzüge (Partie ab der Grundstellung); ohne Bewertung zählt der Zug nicht.
     /// </summary>
     internal static List<int> TrainMarks(GameEvalsDto? evals, bool white)
@@ -377,6 +377,8 @@ public partial class OgMetaService
         {
             if (!byPly.TryGetValue(k, out var row) || Win(k) is not double before) continue;
             if (!string.IsNullOrEmpty(row.BestUci) && string.Equals(row.BestUci, row.PlayedUci, StringComparison.OrdinalIgnoreCase)) continue;
+            // Ohnehin verloren (ab −4 vor dem Zug, 2026-11-15): das Training zeigt den Zug nicht mehr, die Karte zählt ihn nicht.
+            if (Services.Games.GameMistakes.LostAnyway(row.Cp, row.Mate, white)) continue;
             if ((Win(k + 1) ?? WinPercent(row.PlayedCp, row.PlayedMate)) is not double after) continue;
             var drop = white ? before - after : after - before;
             if (drop > TrainedLossAbove) marks.Add(k + 1);

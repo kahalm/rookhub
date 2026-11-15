@@ -44,6 +44,20 @@ describe('line-study.util (ohne Engine, 0.855.0)', () => {
     expect(c.verdicts[0].evalText).toBe('-3.00');
   });
 
+  it('compareLines: ab −4,00 vor dem Zug ist ein eigener Zug kein Fehler mehr (wie im Rückblick, 2026-11-15)', () => {
+    const run = (cp: number) => {
+      const { root, e4, e5, nf3, qh5 } = tree();
+      const evals = new Map<AnalysisNode, NodeEval>([
+        [root, { cp, bestUci: 'e2e4' }], [e4, { cp }], [e5, { cp, bestUci: 'g1f3' }], [nf3, { cp }], [qh5, { cp: -1100 }],
+      ]);
+      return compareLines(root, evals, ['e2e4', 'e7e5', 'g1f3']);
+    };
+    expect(run(-399).verdicts.map(v => v.cls)).toEqual(['mistake']);
+    expect(run(-399).mistakes).toBe(1);
+    expect(run(-400).verdicts).toEqual([]);
+    expect(run(-400).rated).toBe(1);
+  });
+
   it('sanOf: illegaler Zug → null', () => {
     expect(sanOf(START, 'e2e4')).toBe('e4');
     expect(sanOf(START, 'e2e5')).toBeNull();

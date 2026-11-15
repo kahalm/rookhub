@@ -64,6 +64,8 @@ Beenden steht man dort.
 - **Die Auswahl ist rein und getestet** (`features/games/mistakes.util.ts`): `collectMistakes` nimmt
   die Ungenauigkeiten, Fehler und groben Fehler BEIDER Seiten in Partie-Reihenfolge, je mit
   Ausgangsstellung, gespieltem Zug und dem Bestzug der Engine (`GameEvalPly.bestUci`) als SAN.
+  Züge aus ohnehin verlorener Stellung (vor dem Zug −4,00 oder schlechter für den Ziehenden) sind seit 2026-11-15 keine
+  Fehler mehr und kommen nicht vor — die Regel steckt in der Klasse selbst (`classifyMove`, `docs/frontend/partie-rueckblick.md`).
 - **Entschieden wird über die GRUNDklasse** (`ReviewedMove.base`, neu in 0.516.0), nicht über `cls`:
   ein als **Miss** ausgewiesener Zug ist ein Fehler, dem zusätzlich eine Gelegenheit entgangen ist —
   Lichess kennt dieses Etikett gar nicht, und ohne die Unterscheidung fiele genau der Zug aus dem

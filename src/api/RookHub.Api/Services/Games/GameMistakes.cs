@@ -7,10 +7,10 @@ namespace RookHub.Api.Services.Games;
 /// Die FEHLER einer analysierten Partie — Ungenauigkeit, Fehler, grober Fehler, verpasste Chance — samt der Fakten,
 /// aus denen ein Sprachmodell sie erklären darf (<see cref="GameMoveExplanationService"/>).
 ///
-/// <para><b>SPIEGEL von <c>features/games/game-review.util.ts</c></b> (<c>classify</c>, <c>CLASS_LIMITS</c>, die
+/// <para><b>SPIEGEL von <c>features/games/game-review.util.ts</c></b> (<c>classify</c>, <c>CLASS_LIMITS</c>, <c>classifyMove</c> mit <c>LOST_ANYWAY_PAWNS</c>, die
 /// Miss-Regel in <c>specialClass</c>, die Zugauswahl in <c>reviewGame</c>) — genau wie <see cref="GameAccuracy"/>. Die
 /// Seite zeigt die Klasse, der Server erklärt sie; laufen beide auseinander, erklärt der Text einen Zug, den die Seite
-/// „gut" nennt. Beide Seiten haben Tests mit LITERALEN Grenzwerten (<c>GameMistakesTests</c> ↔
+/// „gut" nennt. Beide Seiten haben Tests mit LITERALEN Grenzwerten (<c>GameMistakesTests</c>, <c>GameMoveExplanationTests</c> ↔
 /// <c>game-review.util.spec.ts</c>). Brilliant/Great/Buch spiegelt der Server nicht: sie sind keine Fehler.</para>
 /// </summary>
 public static class GameMistakes
@@ -21,7 +21,8 @@ public static class GameMistakes
     /// <summary>Miss (verpasste Chance) wie <c>MISS_BEST_WIN</c>/<c>MISS_AFTER_WIN</c>/<c>MISS_MIN_AFTER_WIN</c>.</summary>
     public const double MissBestWin = 70, MissAfterWin = 60, MissMinAfterWin = 40;
 
-    /// <summary>Zug-Klasse aus Sicht des Ziehenden (Spiegel von <c>classify</c>); die Grenze gehört zur BESSEREN Klasse.</summary>
+    /// <summary>Zug-Klasse aus Sicht des Ziehenden allein aus dem Verlust (Spiegel von <c>classify</c>); die Grenze gehört zur
+    /// BESSEREN Klasse. Für einen Partiezug die Überladung mit der Bewertung davor nehmen (Regel „ohnehin verloren").</summary>
     public static string Classify(double winBefore, double winAfter, bool playedIsBest)
     {
         var loss = winBefore - winAfter;
@@ -31,6 +32,36 @@ public static class GameMistakes
         if (loss <= InaccuracyLimit) return "inaccuracy";
         if (loss <= MistakeLimit) return "mistake";
         return "blunder";
+    }
+
+    /// <summary>
+    /// „Ohnehin verloren" — Spiegel von <c>LOST_ANYWAY_PAWNS</c> im Client: steht der Ziehende VOR seinem Zug bei dieser
+    /// Bewertung (in Bauern, aus seiner Sicht) oder schlechter — oder wird er matt gesetzt —, gilt der Zug nicht mehr als
+    /// Ungenauigkeit, Fehler oder grober Fehler (und damit auch nicht als Miss); er wird als „good" geführt. Anlass:
+    /// Vereinspartie 234, „Mistake 13 of 13, Inaccuracy −6.58 → −11.64" (Wunsch 2026-11-15: „ab −4 keine Fehler mehr").
+    /// Die Grenze gilt für die Bewertung DAVOR und zählt selbst schon mit (−4,00 → kein Fehler, −3,99 → Fehler); nur für
+    /// die Verliererseite. Die Genauigkeit (<see cref="GameAccuracy"/>) rechnet unverändert mit dem vollen Verlust.
+    /// </summary>
+    public const int LostAnywayPawns = -4;
+
+    /// <summary>Stand der Ziehende vor dem Zug ohnehin auf Verlust? Bewertung in Weiß-Sicht; ganzzahlig in Centipawns
+    /// verglichen (≤ −400). Matt gegen den Ziehenden (auch <c>mate 0</c>) ist schlechter als jede Bauernzahl.</summary>
+    public static bool LostAnyway(int? cpBefore, int? mateBefore, bool moverWhite)
+    {
+        if (mateBefore is int m) return m == 0 || (moverWhite ? m < 0 : m > 0);
+        return cpBefore is int cp && (moverWhite ? cp : -cp) <= LostAnywayPawns * 100;
+    }
+
+    /// <summary>
+    /// Die Grundklasse EINES Partiezugs (Spiegel von <c>classifyMove</c>): die Bänder aus
+    /// <see cref="Classify(double,double,bool)"/>, und in ohnehin verlorener Stellung (<see cref="LostAnyway"/>) statt einer
+    /// Fehlerklasse „good". DIE eine Stelle für diese Regel am Server — <see cref="Find"/> und
+    /// <see cref="GameMoveClasses.Compute"/> rufen beide hier.
+    /// </summary>
+    public static string Classify(double winBefore, double winAfter, bool playedIsBest, int? cpBefore, int? mateBefore, bool moverWhite)
+    {
+        var cls = Classify(winBefore, winAfter, playedIsBest);
+        return IsError(cls) && LostAnyway(cpBefore, mateBefore, moverWhite) ? "good" : cls;
     }
 
     private static bool IsError(string cls) => cls is "inaccuracy" or "mistake" or "blunder";
@@ -94,7 +125,7 @@ public static class GameMistakes
                     var ma = white ? wa : 100 - wa;
                     var best = !string.IsNullOrEmpty(row.BestUci)
                         && string.Equals(row.BestUci, row.PlayedUci, StringComparison.OrdinalIgnoreCase);
-                    baseClass = Classify(mb, ma, best);
+                    baseClass = Classify(mb, ma, best, before.Cp, before.Mate, white);
                     if (IsError(baseClass))
                     {
                         // Miss: der Gegner hat davor gepatzt, die Chance war da (≥ 70 %), und sie ist nach dem Zug weg —
