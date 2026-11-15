@@ -185,6 +185,7 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
             </button>
           }
           @if (can('leaderboards')) { <button mat-menu-item routerLink="/leaderboards">{{ 'nav.leaderboards' | translate }}</button> }
+          @if (can('visitors')) { <button mat-menu-item routerLink="/visitors">{{ 'nav.visitors' | translate }}</button> }
           <a mat-menu-item [href]="discordUrl" target="_blank" rel="noopener noreferrer">
             <mat-icon svgIcon="discord"></mat-icon>
             <span>{{ 'nav.discord' | translate }}</span>

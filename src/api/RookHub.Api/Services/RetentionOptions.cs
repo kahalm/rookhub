@@ -25,6 +25,9 @@ public sealed record RetentionOptions
     /// (Teilen-Link) werden danach geleert.</summary>
     public int ScoresheetOpenAnonymousDays { get; init; } = 14;
 
+    /// <summary><c>Retention:VisitorDays</c> — Tageszeilen der Besucher-Herkunft (<c>VisitorDays</c>) verfallen danach.</summary>
+    public int VisitorDays { get; init; } = 400;
+
     /// <summary>Werte aus der Konfiguration (Vorgabe bei fehlend/≤ 0/unlesbar).</summary>
     public static RetentionOptions From(IConfiguration? config)
     {
@@ -38,6 +41,7 @@ public sealed record RetentionOptions
             MessagesDays = Read(nameof(MessagesDays), d.MessagesDays),
             ScoresheetFailedDays = Read(nameof(ScoresheetFailedDays), d.ScoresheetFailedDays),
             ScoresheetOpenAnonymousDays = Read(nameof(ScoresheetOpenAnonymousDays), d.ScoresheetOpenAnonymousDays),
+            VisitorDays = Read(nameof(VisitorDays), d.VisitorDays),
         };
     }
 }

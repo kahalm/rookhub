@@ -230,3 +230,13 @@ internal sealed class AuthHandoffTokenConfiguration : IEntityTypeConfiguration<A
          .OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+/// <summary>Besucher-Herkunft: je Tag, Besucher-Pseudonym und Oberfläche höchstens eine Zeile (Upsert des Sammlers);
+/// der Index beginnt mit dem Tag — Zeitraum-Abfragen und das Aufräumen laufen darüber.</summary>
+internal sealed class VisitorDayConfiguration : IEntityTypeConfiguration<VisitorDay>
+{
+    public void Configure(EntityTypeBuilder<VisitorDay> e)
+    {
+        e.HasIndex(v => new { v.Day, v.VisitorHash, v.Surface }).IsUnique();
+    }
+}

@@ -354,7 +354,8 @@
     "prep": "Příprava na soupeře",
     "ebooks": "E-knihy",
     "woodpecker": "Woodpecker",
-    "maxims": "Praktická pravidla"
+    "maxims": "Praktická pravidla",
+    "visitors": "Původ návštěvníků"
   },
   "app": {
     "changelogTitle": "Seznam změn",
@@ -1090,6 +1091,10 @@
         "botDm": {
           "data": "Přímé zprávy s botem na Discordu",
           "period": "30 dní"
+        },
+        "visitorCountry": {
+          "data": "Denní počitadlo původu návštěvníků (pseudonymní identifikátor, země, požadavky)",
+          "period": "400 dní"
         }
       },
       "rightsTitle": "Vaše práva",
@@ -1097,7 +1102,9 @@
       "contactTitle": "Kontakt",
       "contact": "Pro dotazy ohledně ochrany osobních údajů nás kontaktujte na",
       "back": "Zpět na přihlášení",
-      "introTurnier": "Turnajový web RookHub zobrazuje veřejná turnajová data z chess-results.com a turnaje, které si uložíte. Používá stejný účet jako RookHub."
+      "introTurnier": "Turnajový web RookHub zobrazuje veřejná turnajová data z chess-results.com a turnaje, které si uložíte. Používá stejný účet jako RookHub.",
+      "dataVisitorCountry": "Původ návštěvníků: pro mapu „Původ návštěvníků“ určujeme z IP adresy zemi, lokálně na našem serveru pomocí seznamu zemí DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Za každý den ukládáme jen počitadlo s pseudonymním identifikátorem, zemí a počtem požadavků; IP adresa se neukládá. Přihlášené účty z toho vidí jen to, kolik uživatelů přišlo ze které země.",
+      "kidVisitorCountry": "Počítáme, ze kterých zemí návštěvníci přicházejí. Tvoji internetovou adresu přitom neukládáme."
     },
     "impressum": {
       "title": "Impressum",
@@ -2763,7 +2770,8 @@
         "scoresheet": "Přečíst zápis partie (fotka)",
         "ebooks": "Knihovna e-knih",
         "woodpecker": "Trénink Woodpecker",
-        "maxims": "Praktická pravidla (šachové zásady)"
+        "maxims": "Praktická pravidla (šachové zásady)",
+        "visitors": "Původ návštěvníků"
       }
     },
     "messages": {
@@ -4209,6 +4217,12 @@
           "Krátký, pečlivě vybraný seznam klasických šachových zásad – „A knight on the rim is dim“, „Loose pieces drop off“ a podobně. Každé pravidlo je podloženo pasážemi ze šachových knih v knihovně; znění je všude stejné.",
           "Otevřete pravidlo a uvidíte, kdy platí a které knihy jej vysvětlují, s krátkou citací. Máte-li ke knize přístup, odkaz ji otevře přímo na stránce (PDF) nebo knihu (EPUB).",
           "Vysvětlení vašich chyb končí nejvýše jedním z těchto pravidel; (i) vedle něj ukáže pasáže z knih."
+        ]
+      },
+      "visitors": {
+        "t": "Původ návštěvníků",
+        "p": [
+          "V ☰ → Komunita → Původ návštěvníků ukazuje mapa světa, ze kterých zemí se RookHub používá. Klepnutím na zemi nebo výběrem kontinentu výřez přiblížíte; počítají se jen země, nikdy jednotlivé osoby."
         ]
       }
     }
@@ -6529,5 +6543,63 @@
     "noAccess": "není ve vaší knihovně",
     "all": "Všechna praktická pravidla",
     "count": "Pravidla: {{count}}"
+  },
+  "visitors": {
+    "title": "Původ návštěvníků",
+    "intro": "Ze kterých zemí se RookHub používá. Počítají se jen země, nikdy jednotlivé osoby.",
+    "viewLabel": "Výřez mapy",
+    "continent": {
+      "world": "Svět",
+      "eu": "Evropa",
+      "na": "Severní Amerika",
+      "sa": "Jižní Amerika",
+      "af": "Afrika",
+      "as": "Asie",
+      "oc": "Oceánie"
+    },
+    "backToWorld": "Zpět na svět",
+    "kpi": {
+      "users": "Unikátní uživatelé",
+      "countries": "Země",
+      "hits": "Požadavky"
+    },
+    "mapLabel": "Mapa světa: unikátní uživatelé podle zemí",
+    "mapLabelContinent": "Mapa ({{continent}}): unikátní uživatelé podle zemí",
+    "mapHintWorld": "Klepnutím na zemi přiblížíte její kontinent.",
+    "mapHintContinent": "Klepnutím na zemi zobrazíte její počet.",
+    "mapFailed": "Mapu se nepodařilo načíst.",
+    "scaleFew": "málo",
+    "scaleMany": "hodně",
+    "countryValue": "{{country}}: {{count}}",
+    "table": {
+      "title": "Uživatelé podle zemí",
+      "rank": "Pořadí",
+      "country": "Země",
+      "users": "Uživatelé",
+      "more": "Další země: {{count}}",
+      "moreOne": "Další 1 země",
+      "showAll": "Zobrazit všechny země",
+      "showTop": "Zobrazit jen prvních 10"
+    },
+    "unknown": "Neznámá země",
+    "emptyNew": "Zatím žádná data. Počítání právě začalo, první země se brzy objeví.",
+    "emptyFiltered": "Pro tento výběr zatím nejsou žádná data. Počítá se od {{date}}.",
+    "emptyContinent": "Z tohoto kontinentu zatím nikdo nepřišel.",
+    "since": "Počítáno od {{date}}",
+    "privacyNote": "Země se určuje z IP adresy; samotná adresa se neukládá.",
+    "filter": {
+      "surfaceLabel": "Web",
+      "allSurfaces": "Všechny weby",
+      "periodLabel": "Období",
+      "days": "{{count}} dní",
+      "allTime": "Celé období"
+    },
+    "surface": {
+      "rookhub": "RookHub",
+      "leaguehub": "LeagueHub",
+      "kidhub": "KidHub",
+      "clubhub": "ClubHub",
+      "turnier": "Turnajový web"
+    }
   }
 }

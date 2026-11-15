@@ -360,7 +360,8 @@
     "prep": "Gegner vorbereiten",
     "ebooks": "E-Books",
     "woodpecker": "Woodpecker",
-    "maxims": "Merksätze"
+    "maxims": "Merksätze",
+    "visitors": "Besucher-Herkunft"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -936,7 +937,7 @@
     "privacy": {
       "title": "Datenschutzerklärung",
       "link": "Datenschutzerklärung",
-      "updated": "Stand: 9. November 2026",
+      "updated": "Stand: 15. November 2026",
       "tocTitle": "Inhalt",
       "intro": "RookHub ist eine Schach-Trainingsplattform (Puzzles, Endlosmodus, Kurse, Repertoires). Diese Erklärung informiert über die Verarbeitung personenbezogener Daten gemäß DSGVO.",
       "introLeagueHub": "LeagueHub (Teil von RookHub) erstellt Aufstellungs-Prognosen für Mannschaftskämpfe und führt die Partiedatenbank teilnehmender Vereine. Das Konto ist dasselbe wie bei RookHub. Diese Erklärung informiert über die Verarbeitung personenbezogener Daten gemäß DSGVO.",
@@ -1108,6 +1109,10 @@
         "botDm": {
           "data": "Direktnachrichten mit dem Discord-Bot",
           "period": "30 Tage"
+        },
+        "visitorCountry": {
+          "data": "Tageszähler der Besucher-Herkunft (pseudonyme Kennung, Land, Aufrufe)",
+          "period": "400 Tage"
         }
       },
       "rightsTitle": "Deine Rechte",
@@ -1115,7 +1120,9 @@
       "contactTitle": "Kontakt",
       "contact": "Bei Fragen zum Datenschutz erreichst du uns unter",
       "back": "Zurück zur Anmeldung",
-      "introTurnier": "Die Turnierseite von RookHub zeigt öffentliche Turnierdaten aus chess-results.com und deine gemerkten Turniere. Sie nutzt dasselbe Konto wie RookHub."
+      "introTurnier": "Die Turnierseite von RookHub zeigt öffentliche Turnierdaten aus chess-results.com und deine gemerkten Turniere. Sie nutzt dasselbe Konto wie RookHub.",
+      "dataVisitorCountry": "Besucher-Herkunft: Für die Karte „Besucher-Herkunft“ bestimmen wir aus der IP-Adresse das Land, lokal auf unserem Server mit der Länderliste von DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Gespeichert wird je Tag nur ein Zähler mit einer pseudonymen Kennung, dem Land und der Zahl der Aufrufe; die IP-Adresse wird nicht gespeichert. Angemeldete Konten sehen daraus nur, wie viele Benutzer aus welchem Land kamen.",
+      "kidVisitorCountry": "Wir zählen, aus welchen Ländern die Besucher kommen. Deine Internet-Adresse speichern wir dabei nicht."
     },
     "impressum": {
       "title": "Impressum",
@@ -2792,7 +2799,8 @@
         "scoresheet": "Partieformular einlesen (Foto)",
         "ebooks": "E-Book-Bibliothek",
         "woodpecker": "Woodpecker-Training",
-        "maxims": "Merksätze"
+        "maxims": "Merksätze",
+        "visitors": "Besucher-Herkunft"
       }
     },
     "messages": {
@@ -4282,6 +4290,12 @@
           "Eine kurze, kuratierte Liste klassischer Schach-Merksätze – „Springer am Rand bringt Kummer und Schand“, „Ungedeckte Figuren fallen“ und so weiter. Jeder Satz ist mit Stellen aus Schachbüchern der Bibliothek belegt; der Wortlaut ist überall derselbe.",
           "Klappe einen Merksatz auf: Du siehst, wann er passt und welche Bücher ihn erklären, mit kurzem Zitat. Hast du Zugriff auf das Buch, öffnet der Link es direkt auf der Seite (PDF) bzw. das Buch (EPUB).",
           "Die Erklärungen deiner Fehler enden mit höchstens einem dieser Merksätze; das (i) daneben zeigt die Buchstellen."
+        ]
+      },
+      "visitors": {
+        "t": "Besucher-Herkunft",
+        "p": [
+          "Unter ☰ → Community → Besucher-Herkunft zeigt eine Weltkarte, aus welchen Ländern RookHub genutzt wird. Ein Tipp auf ein Land oder die Wahl eines Erdteils vergrößert den Ausschnitt; gezählt werden nur Länder, nie einzelne Personen."
         ]
       }
     }
@@ -6788,5 +6802,63 @@
     "noAccess": "nicht in deiner Bibliothek",
     "all": "Alle Merksätze",
     "count": "{{count}} Merksätze"
+  },
+  "visitors": {
+    "title": "Besucher-Herkunft",
+    "intro": "Aus welchen Ländern RookHub genutzt wird. Gezählt werden nur Länder, nie einzelne Personen.",
+    "viewLabel": "Kartenausschnitt",
+    "continent": {
+      "world": "Welt",
+      "eu": "Europa",
+      "na": "Nordamerika",
+      "sa": "Südamerika",
+      "af": "Afrika",
+      "as": "Asien",
+      "oc": "Ozeanien"
+    },
+    "backToWorld": "Zurück zur Welt",
+    "kpi": {
+      "users": "Eindeutige Benutzer",
+      "countries": "Länder",
+      "hits": "Aufrufe"
+    },
+    "mapLabel": "Weltkarte: eindeutige Benutzer je Land",
+    "mapLabelContinent": "Karte {{continent}}: eindeutige Benutzer je Land",
+    "mapHintWorld": "Tippe auf ein Land, um seinen Erdteil zu vergrößern.",
+    "mapHintContinent": "Tippe auf ein Land, um seine Zahl zu sehen.",
+    "mapFailed": "Die Karte konnte nicht geladen werden.",
+    "scaleFew": "wenige",
+    "scaleMany": "viele",
+    "countryValue": "{{country}}: {{count}}",
+    "table": {
+      "title": "Benutzer je Land",
+      "rank": "Rang",
+      "country": "Land",
+      "users": "Benutzer",
+      "more": "{{count}} weitere Länder",
+      "moreOne": "1 weiteres Land",
+      "showAll": "Alle Länder zeigen",
+      "showTop": "Nur die ersten 10 zeigen"
+    },
+    "unknown": "Unbekanntes Land",
+    "emptyNew": "Noch keine Daten. Die Zählung hat gerade erst begonnen, die ersten Länder erscheinen bald.",
+    "emptyFiltered": "Für diese Auswahl gibt es noch keine Daten. Die Zählung läuft seit {{date}}.",
+    "emptyContinent": "Aus diesem Erdteil war noch niemand da.",
+    "since": "Gezählt seit {{date}}",
+    "privacyNote": "Das Land wird aus der IP-Adresse bestimmt; die Adresse selbst wird nicht gespeichert.",
+    "filter": {
+      "surfaceLabel": "Seite",
+      "allSurfaces": "Alle Seiten",
+      "periodLabel": "Zeitraum",
+      "days": "{{count}} Tage",
+      "allTime": "Gesamt"
+    },
+    "surface": {
+      "rookhub": "RookHub",
+      "leaguehub": "LeagueHub",
+      "kidhub": "KidHub",
+      "clubhub": "ClubHub",
+      "turnier": "Turnierseite"
+    }
   }
 }

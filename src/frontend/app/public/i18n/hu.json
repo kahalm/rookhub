@@ -143,7 +143,8 @@
     "prep": "Felkészülés ellenfélre",
     "ebooks": "E-könyvek",
     "woodpecker": "Woodpecker",
-    "maxims": "Szabályok"
+    "maxims": "Szabályok",
+    "visitors": "Látogatók származása"
   },
   "app": {
     "changelogTitle": "Változásnapló",
@@ -640,7 +641,7 @@
     "privacy": {
       "title": "Adatvédelmi nyilatkozat",
       "link": "Adatvédelmi nyilatkozat",
-      "updated": "Utoljára frissítve: 2026. november 9.",
+      "updated": "Utoljára frissítve: 2026. november 15.",
       "tocTitle": "Tartalom",
       "intro": "A RookHub egy sakk-edzőplatform (feladványok, végtelen mód, tanfolyamok, repertoárok). Ez a nyilatkozat elmagyarázza, hogyan kezeljük a személyes adatokat a GDPR alapján.",
       "introLeagueHub": "A LeagueHub (a RookHub része) összeállítás-előrejelzéseket készít csapatmérkőzésekhez, és vezeti a résztvevő klubok játszmaadatbázisát. A fiók ugyanaz, mint a RookHubon. Ez a nyilatkozat a személyes adatok GDPR szerinti kezeléséről tájékoztat.",
@@ -812,6 +813,10 @@
         "botDm": {
           "data": "Közvetlen üzenetek a Discord-bottal",
           "period": "30 nap"
+        },
+        "visitorCountry": {
+          "data": "A látogatók származásának napi számlálója (álnevesített azonosító, ország, lekérések)",
+          "period": "400 nap"
         }
       },
       "rightsTitle": "Jogaid",
@@ -819,7 +824,9 @@
       "contactTitle": "Kapcsolat",
       "contact": "Adatvédelmi kérdésekkel keress minket:",
       "back": "Vissza a bejelentkezéshez",
-      "introTurnier": "A RookHub versenyoldala a chess-results.com nyilvános versenyadatait és az általad megjelölt versenyeket mutatja. Ugyanazt a fiókot használja, mint a RookHub."
+      "introTurnier": "A RookHub versenyoldala a chess-results.com nyilvános versenyadatait és az általad megjelölt versenyeket mutatja. Ugyanazt a fiókot használja, mint a RookHub.",
+      "dataVisitorCountry": "Látogatók származása: a „Látogatók származása” térképhez az IP-címből meghatározzuk az országot, helyben, a saját szerverünkön, a DB-IP országlistájával (IP Geolocation by DB-IP, CC BY 4.0). Naponta csak egy számlálót tárolunk álnevesített azonosítóval, az országgal és a lekérések számával; az IP-címet nem tároljuk. A bejelentkezett fiókok ebből csak azt látják, hány felhasználó érkezett melyik országból.",
+      "kidVisitorCountry": "Megszámoljuk, mely országokból jönnek a látogatók. Az internetcímedet ehhez nem tároljuk."
     },
     "impressum": {
       "title": "Impresszum",
@@ -2341,7 +2348,8 @@
         "scoresheet": "Játszmalap beolvasása (fénykép)",
         "ebooks": "E-könyvtár",
         "woodpecker": "Woodpecker-edzés",
-        "maxims": "Szabályok (sakkmaximák)"
+        "maxims": "Szabályok (sakkmaximák)",
+        "visitors": "Látogatók származása"
       }
     },
     "messages": {
@@ -5132,6 +5140,12 @@
           "Nyiss ki egy szabályt: látod, mikor érvényes, és mely könyvek magyarázzák, rövid idézettel. Ha hozzáférsz a könyvhöz, a link az oldalon (PDF) vagy a könyvet (EPUB) nyitja meg.",
           "A hibáid magyarázata legfeljebb egy ilyen szabállyal zárul; a mellette lévő (i) mutatja a könyvrészleteket."
         ]
+      },
+      "visitors": {
+        "t": "Látogatók származása",
+        "p": [
+          "A ☰ → Közösség → Látogatók származása alatt világtérkép mutatja, mely országokból használják a RookHubot. Egy országra koppintva vagy kontinenst választva a részlet nagyobb lesz; csak országokat számolunk, egyes személyeket soha."
+        ]
       }
     },
     "title": "Súgó és útmutató",
@@ -6788,5 +6802,63 @@
     "noAccess": "nincs a könyvtáradban",
     "all": "Minden szabály",
     "count": "{{count}} szabály"
+  },
+  "visitors": {
+    "title": "Látogatók származása",
+    "intro": "Mely országokból használják a RookHubot. Csak országokat számolunk, egyes személyeket soha.",
+    "viewLabel": "Térképrészlet",
+    "continent": {
+      "world": "Világ",
+      "eu": "Európa",
+      "na": "Észak-Amerika",
+      "sa": "Dél-Amerika",
+      "af": "Afrika",
+      "as": "Ázsia",
+      "oc": "Óceánia"
+    },
+    "backToWorld": "Vissza a világtérképre",
+    "kpi": {
+      "users": "Egyedi felhasználók",
+      "countries": "Országok",
+      "hits": "Lekérések"
+    },
+    "mapLabel": "Világtérkép: egyedi felhasználók országonként",
+    "mapLabelContinent": "Térkép ({{continent}}): egyedi felhasználók országonként",
+    "mapHintWorld": "Koppints egy országra a kontinense nagyításához.",
+    "mapHintContinent": "Koppints egy országra a számáért.",
+    "mapFailed": "A térképet nem sikerült betölteni.",
+    "scaleFew": "kevés",
+    "scaleMany": "sok",
+    "countryValue": "{{country}}: {{count}}",
+    "table": {
+      "title": "Felhasználók országonként",
+      "rank": "Helyezés",
+      "country": "Ország",
+      "users": "Felhasználók",
+      "more": "További {{count}} ország",
+      "moreOne": "További 1 ország",
+      "showAll": "Minden ország mutatása",
+      "showTop": "Csak az első 10 mutatása"
+    },
+    "unknown": "Ismeretlen ország",
+    "emptyNew": "Még nincs adat. A számlálás csak most indult, az első országok hamarosan megjelennek.",
+    "emptyFiltered": "Ehhez a választáshoz még nincs adat. A számlálás {{date}} óta fut.",
+    "emptyContinent": "Erről a kontinensről még senki sem járt itt.",
+    "since": "Számlálás kezdete: {{date}}",
+    "privacyNote": "Az országot az IP-címből határozzuk meg; magát a címet nem tároljuk.",
+    "filter": {
+      "surfaceLabel": "Oldal",
+      "allSurfaces": "Minden oldal",
+      "periodLabel": "Időszak",
+      "days": "{{count}} nap",
+      "allTime": "Összes"
+    },
+    "surface": {
+      "rookhub": "RookHub",
+      "leaguehub": "LeagueHub",
+      "kidhub": "KidHub",
+      "clubhub": "ClubHub",
+      "turnier": "Versenyoldal"
+    }
   }
 }

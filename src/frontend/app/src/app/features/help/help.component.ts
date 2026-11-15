@@ -46,6 +46,7 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
   'woodpecker': 'woodpecker',
   'catalog': 'courses',
   'leaderboards': 'leaderboards',
+  'visitors': 'visitors',
   'stats': 'stats',
   'chessable': 'chessable',
   'install': 'offline',
@@ -320,6 +321,7 @@ export class HelpComponent implements AfterViewInit, OnDestroy {
     { id: 'friends', icon: '\u{1F91D}' },
     { id: 'tournaments', icon: '\u{1F3C6}' },
     { id: 'leaderboards', icon: '\u{1F947}' },
+    { id: 'visitors', icon: '\u{1F30D}' },
     { id: 'discord', icon: '\u{1F4AC}' },
     // Konto
     { id: 'profile', icon: '\u{1F464}' },

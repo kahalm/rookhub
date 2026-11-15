@@ -300,6 +300,9 @@ describe('i18n Sprachdateien', () => {
     const TRANSLATED_FROM_EN: Readonly<Record<string, string>> = {
       // 2026-11-09: alle 21 Teilsprachen komplett vom aktuellen en-Stand uebersetzt (i18n-Welle), deshalb jeder
       // Rechtstext-Schluessel mit dem heutigen Fingerabdruck; legal.privacy.updated tragen die Teilsprachen NICHT.
+      // 2026-11-15 (Besucher-Herkunft): vier neue Rechtstext-Schluessel, in allen 21 Teilsprachen vom heutigen en-Stand uebersetzt.
+      'legal.privacy.dataVisitorCountry': 'cc177e6c', 'legal.privacy.kidVisitorCountry': 'dcc419d3',
+      'legal.privacy.periods.visitorCountry.data': 'e7946ec8', 'legal.privacy.periods.visitorCountry.period': '371f0e5e',
       'legal.privacy.title': '2526541f', 'legal.privacy.link': '37cb16ff',
       'legal.privacy.tocTitle': '871f67c3', 'legal.privacy.intro': '11947df0',
       'legal.privacy.introLeagueHub': '224174cf', 'legal.privacy.introClubHub': 'd18ff770',

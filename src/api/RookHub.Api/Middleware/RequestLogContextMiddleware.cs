@@ -68,7 +68,13 @@ public sealed class RequestLogContextMiddleware
             scopes.Add(LogContext.PushProperty("UserAgent", ua.Length > 512 ? ua[..512] : ua));
         scopes.Add(LogContext.PushProperty(
             "DeviceType", RookHub.Api.Logging.DeviceClassifier.Classify(ua)));
-        try { await _next(context); }
+        try
+        {
+            await _next(context);
+            // Besucher-Herkunft (Weltkarte nach Ländern): beantwortete Anfrage im Speicher zählen — kein DB-Zugriff hier,
+            // die IP dient nur zum Nachschlagen des Landes und wird nicht gespeichert (VisitorOriginRecorder).
+            context.RequestServices?.GetService<RookHub.Api.Services.Accounts.VisitorOriginRecorder>()?.Record(context, visitorId);
+        }
         finally { for (var i = scopes.Count - 1; i >= 0; i--) scopes[i].Dispose(); }
     }
 }

@@ -81,6 +81,16 @@
       }
     },
     {
+      "name": "geo",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "resources": {
+        "files": [
+          "/assets/geo/*.json"
+        ]
+      }
+    },
+    {
       "name": "maia",
       "installMode": "lazy",
       "updateMode": "lazy",

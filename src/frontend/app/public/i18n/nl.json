@@ -354,7 +354,8 @@
     "prep": "Voorbereiden op een tegenstander",
     "ebooks": "E-books",
     "woodpecker": "Woodpecker",
-    "maxims": "Vuistregels"
+    "maxims": "Vuistregels",
+    "visitors": "Herkomst van bezoekers"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -1090,6 +1091,10 @@
         "botDm": {
           "data": "Privéberichten met de Discord-bot",
           "period": "30 dagen"
+        },
+        "visitorCountry": {
+          "data": "Dagteller van de herkomst van bezoekers (pseudoniem kenmerk, land, aanvragen)",
+          "period": "400 dagen"
         }
       },
       "rightsTitle": "Uw rechten",
@@ -1097,7 +1102,9 @@
       "contactTitle": "Contact",
       "contact": "Voor privacyvragen kunt u ons bereiken via",
       "back": "Terug naar inloggen",
-      "introTurnier": "De toernooisite van RookHub toont openbare toernooigegevens van chess-results.com en de toernooien die u markeert. Hij gebruikt hetzelfde account als RookHub."
+      "introTurnier": "De toernooisite van RookHub toont openbare toernooigegevens van chess-results.com en de toernooien die u markeert. Hij gebruikt hetzelfde account als RookHub.",
+      "dataVisitorCountry": "Herkomst van bezoekers: voor de kaart ‘Herkomst van bezoekers’ bepalen we het land uit het IP-adres, lokaal op onze server met de landenlijst van DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Per dag slaan we alleen een teller op met een pseudoniem kenmerk, het land en het aantal aanvragen; het IP-adres wordt niet opgeslagen. Ingelogde accounts zien alleen hoeveel gebruikers uit welk land kwamen.",
+      "kidVisitorCountry": "We tellen uit welke landen bezoekers komen. Je internetadres wordt daarvoor niet opgeslagen."
     },
     "impressum": {
       "title": "Impressum",
@@ -2763,7 +2770,8 @@
         "scoresheet": "Notatieformulier lezen (foto)",
         "ebooks": "E-bookbibliotheek",
         "woodpecker": "Woodpecker-training",
-        "maxims": "Vuistregels (schaakmaximes)"
+        "maxims": "Vuistregels (schaakmaximes)",
+        "visitors": "Herkomst van bezoekers"
       }
     },
     "messages": {
@@ -4209,6 +4217,12 @@
           "Een korte, samengestelde lijst klassieke schaakmaximes – “A knight on the rim is dim”, “Loose pieces drop off” enzovoort. Elke regel wordt onderbouwd met passages uit schaakboeken in de bibliotheek; de formulering is overal dezelfde.",
           "Open een regel om te zien wanneer hij geldt en welke boeken hem uitleggen, met een kort citaat. Heb je toegang tot een boek, dan opent de link het direct op de pagina (PDF) of het boek (EPUB).",
           "De uitleg van je fouten eindigt met hooguit één van deze regels; de (i) ernaast toont de boekpassages."
+        ]
+      },
+      "visitors": {
+        "t": "Herkomst van bezoekers",
+        "p": [
+          "Onder ☰ → Community → Herkomst van bezoekers toont een wereldkaart vanuit welke landen RookHub wordt gebruikt. Tik op een land of kies een werelddeel om in te zoomen; er worden alleen landen geteld, nooit afzonderlijke personen."
         ]
       }
     }
@@ -6529,5 +6543,63 @@
     "noAccess": "niet in je bibliotheek",
     "all": "Alle vuistregels",
     "count": "{{count}} regels"
+  },
+  "visitors": {
+    "title": "Herkomst van bezoekers",
+    "intro": "Vanuit welke landen RookHub wordt gebruikt. Er worden alleen landen geteld, nooit afzonderlijke personen.",
+    "viewLabel": "Kaartuitsnede",
+    "continent": {
+      "world": "Wereld",
+      "eu": "Europa",
+      "na": "Noord-Amerika",
+      "sa": "Zuid-Amerika",
+      "af": "Afrika",
+      "as": "Azië",
+      "oc": "Oceanië"
+    },
+    "backToWorld": "Terug naar de wereld",
+    "kpi": {
+      "users": "Unieke gebruikers",
+      "countries": "Landen",
+      "hits": "Aanvragen"
+    },
+    "mapLabel": "Wereldkaart: unieke gebruikers per land",
+    "mapLabelContinent": "Kaart ({{continent}}): unieke gebruikers per land",
+    "mapHintWorld": "Tik op een land om op zijn werelddeel in te zoomen.",
+    "mapHintContinent": "Tik op een land om het aantal te zien.",
+    "mapFailed": "De kaart kon niet worden geladen.",
+    "scaleFew": "weinig",
+    "scaleMany": "veel",
+    "countryValue": "{{country}}: {{count}}",
+    "table": {
+      "title": "Gebruikers per land",
+      "rank": "Plaats",
+      "country": "Land",
+      "users": "Gebruikers",
+      "more": "Nog {{count}} landen",
+      "moreOne": "Nog 1 land",
+      "showAll": "Alle landen tonen",
+      "showTop": "Alleen de eerste 10 tonen"
+    },
+    "unknown": "Onbekend land",
+    "emptyNew": "Nog geen gegevens. Het tellen is net begonnen, de eerste landen verschijnen binnenkort.",
+    "emptyFiltered": "Nog geen gegevens voor deze selectie. Er wordt geteld sinds {{date}}.",
+    "emptyContinent": "Uit dit werelddeel is nog niemand geweest.",
+    "since": "Geteld sinds {{date}}",
+    "privacyNote": "Het land wordt afgeleid uit het IP-adres; het adres zelf wordt niet opgeslagen.",
+    "filter": {
+      "surfaceLabel": "Site",
+      "allSurfaces": "Alle sites",
+      "periodLabel": "Periode",
+      "days": "{{count}} dagen",
+      "allTime": "Alles"
+    },
+    "surface": {
+      "rookhub": "RookHub",
+      "leaguehub": "LeagueHub",
+      "kidhub": "KidHub",
+      "clubhub": "ClubHub",
+      "turnier": "Toernooisite"
+    }
   }
 }

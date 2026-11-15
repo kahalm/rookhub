@@ -75,6 +75,7 @@ namespace RookHub.Api.Startup;
 /// PersonalTacticsLineRepair           immer (einmalig)                      Löserseite der Buchdiagramm-Linien im Bestand (0.973.1)
 /// KidsPuzzleSeeder                    immer (einmalig)                      Kinder-Leiter aufbauen
 /// PlayTimeSyncService                 immer                                 Spielzeit Lichess/chess.com
+/// VisitorOriginFlushWorker            intern: VisitorStats:Enabled          Besucher-Herkunft je Minute wegschreiben
 /// </code>
 /// </summary>
 public static class BackgroundServicesSetup
@@ -201,6 +202,7 @@ public static class BackgroundServicesSetup
         services.AddHostedService<KidsPuzzleSeeder>();
         // Externe Spielzeit (Lichess/chess.com) → Kategorie „Spielen" im Trainingsziele-Tracker.
         services.AddHostedService<PlayTimeSyncService>();
+        services.AddHostedService<RookHub.Api.Services.Accounts.VisitorOriginFlushWorker>();
         return services;
     }
 }

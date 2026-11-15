@@ -12,6 +12,10 @@ public static partial class DomainServicesSetup
         services.AddSingleton<BackgroundPause>();
         // Land der Besucher-IP fuer die Startsprache von KidHub — lokale DB-IP-Liste, laedt bei Bedarf.
         services.AddSingleton<IpCountryService>();
+        // Besucher-Herkunft (Weltkarte nach Ländern): Sammler im Speicher + Auswertung; weggeschrieben wird je Minute
+        // vom VisitorOriginFlushWorker (docs/api/besucher-herkunft.md).
+        services.AddSingleton<RookHub.Api.Services.Accounts.VisitorOriginRecorder>();
+        services.AddScoped<RookHub.Api.Services.Accounts.VisitorOriginService>();
         services.AddSingleton<IClaudeJsonClient>(sp => TextJsonClients.Create(configuration,
             sp.GetRequiredService<ILoggerFactory>(), sp.GetRequiredService<IHttpClientFactory>().CreateClient("text-llm")));
         // Sperrzeiten der Spark (0.546.0): TextLlm:QuietHours / TextLlm:TimeZone.

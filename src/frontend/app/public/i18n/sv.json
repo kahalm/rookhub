@@ -354,7 +354,8 @@
     "prep": "Förbered dig mot en motståndare",
     "ebooks": "E-böcker",
     "woodpecker": "Woodpecker",
-    "maxims": "Tumregler"
+    "maxims": "Tumregler",
+    "visitors": "Besökarnas ursprung"
   },
   "app": {
     "changelogTitle": "Ändringslogg",
@@ -1090,6 +1091,10 @@
         "botDm": {
           "data": "Direktmeddelanden med Discord-boten",
           "period": "30 dagar"
+        },
+        "visitorCountry": {
+          "data": "Dagsräknare för besökarnas ursprung (pseudonym identifierare, land, anrop)",
+          "period": "400 dagar"
         }
       },
       "rightsTitle": "Dina rättigheter",
@@ -1097,7 +1102,9 @@
       "contactTitle": "Kontakt",
       "contact": "För integritetsfrågor, kontakta oss på",
       "back": "Tillbaka till inloggning",
-      "introTurnier": "RookHubs turneringssajt visar offentliga turneringsdata från chess-results.com och de turneringar du bokmärker. Den använder samma konto som RookHub."
+      "introTurnier": "RookHubs turneringssajt visar offentliga turneringsdata från chess-results.com och de turneringar du bokmärker. Den använder samma konto som RookHub.",
+      "dataVisitorCountry": "Besökarnas ursprung: för kartan ”Besökarnas ursprung” bestämmer vi landet utifrån IP-adressen, lokalt på vår server med DB-IP:s landslista (IP Geolocation by DB-IP, CC BY 4.0). Per dag sparar vi bara en räknare med en pseudonym identifierare, landet och antalet anrop; IP-adressen sparas inte. Inloggade konton ser bara hur många användare som kom från vilket land.",
+      "kidVisitorCountry": "Vi räknar vilka länder besökarna kommer från. Din internetadress sparas inte för det."
     },
     "impressum": {
       "title": "Impressum",
@@ -2763,7 +2770,8 @@
         "scoresheet": "Läs ett protokoll (foto)",
         "ebooks": "E-boksbibliotek",
         "woodpecker": "Woodpecker-träning",
-        "maxims": "Tumregler (schackmaximer)"
+        "maxims": "Tumregler (schackmaximer)",
+        "visitors": "Besökarnas ursprung"
       }
     },
     "messages": {
@@ -4209,6 +4217,12 @@
           "En kort, kurerad lista över klassiska schackmaximer – ”A knight on the rim is dim”, ”Loose pieces drop off” och så vidare. Varje regel stöds av avsnitt ur schackböcker i biblioteket; formuleringen är densamma överallt.",
           "Öppna en regel för att se när den gäller och vilka böcker som förklarar den, med ett kort citat. Om du har tillgång till en bok öppnar länken den direkt på sidan (PDF) eller boken (EPUB).",
           "Förklaringarna av dina misstag slutar med högst en av dessa regler; (i) bredvid visar bokavsnitten."
+        ]
+      },
+      "visitors": {
+        "t": "Besökarnas ursprung",
+        "p": [
+          "Under ☰ → Community → Besökarnas ursprung visar en världskarta vilka länder RookHub används från. Tryck på ett land eller välj en världsdel för att zooma in; endast länder räknas, aldrig enskilda personer."
         ]
       }
     }
@@ -6529,5 +6543,63 @@
     "noAccess": "inte i ditt bibliotek",
     "all": "Alla tumregler",
     "count": "{{count}} regler"
+  },
+  "visitors": {
+    "title": "Besökarnas ursprung",
+    "intro": "Vilka länder RookHub används från. Endast länder räknas, aldrig enskilda personer.",
+    "viewLabel": "Kartutsnitt",
+    "continent": {
+      "world": "Världen",
+      "eu": "Europa",
+      "na": "Nordamerika",
+      "sa": "Sydamerika",
+      "af": "Afrika",
+      "as": "Asien",
+      "oc": "Oceanien"
+    },
+    "backToWorld": "Tillbaka till världen",
+    "kpi": {
+      "users": "Unika användare",
+      "countries": "Länder",
+      "hits": "Anrop"
+    },
+    "mapLabel": "Världskarta: unika användare per land",
+    "mapLabelContinent": "Karta ({{continent}}): unika användare per land",
+    "mapHintWorld": "Tryck på ett land för att zooma in på dess världsdel.",
+    "mapHintContinent": "Tryck på ett land för att se dess antal.",
+    "mapFailed": "Kartan kunde inte laddas.",
+    "scaleFew": "få",
+    "scaleMany": "många",
+    "countryValue": "{{country}}: {{count}}",
+    "table": {
+      "title": "Användare per land",
+      "rank": "Plats",
+      "country": "Land",
+      "users": "Användare",
+      "more": "{{count}} länder till",
+      "moreOne": "1 land till",
+      "showAll": "Visa alla länder",
+      "showTop": "Visa bara de 10 första"
+    },
+    "unknown": "Okänt land",
+    "emptyNew": "Inga data ännu. Räkningen har precis börjat, de första länderna visas snart.",
+    "emptyFiltered": "Inga data för det här urvalet ännu. Räkningen har pågått sedan {{date}}.",
+    "emptyContinent": "Ingen från den här världsdelen har varit här ännu.",
+    "since": "Räknat sedan {{date}}",
+    "privacyNote": "Landet härleds från IP-adressen; själva adressen sparas inte.",
+    "filter": {
+      "surfaceLabel": "Webbplats",
+      "allSurfaces": "Alla webbplatser",
+      "periodLabel": "Period",
+      "days": "{{count}} dagar",
+      "allTime": "Hela tiden"
+    },
+    "surface": {
+      "rookhub": "RookHub",
+      "leaguehub": "LeagueHub",
+      "kidhub": "KidHub",
+      "clubhub": "ClubHub",
+      "turnier": "Turneringssidan"
+    }
   }
 }

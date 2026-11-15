@@ -146,6 +146,22 @@ public class IpCountryService
         return table?.Lookup(ip);
     }
 
+    /// <summary>
+    /// Wie <see cref="CountryOfAsync"/>, aber ohne zu warten — für den Anfrage-Weg der Besucher-Herkunft
+    /// (<see cref="Accounts.VisitorOriginRecorder"/>): ist die Liste nicht da oder alt, stößt der Aufruf die
+    /// Aktualisierung im Hintergrund an und antwortet mit dem, was da ist (sonst <c>null</c>).
+    /// </summary>
+    public string? TryCountryOf(IPAddress? ip)
+    {
+        if (!_enabled || ip is null || !IsPublic(ip)) return null;
+        var now = _utcNow();
+        var table = _table;
+        var stale = table is null || now - _loadedAt >= MaxAge;
+        if (stale && !(_failedAt is DateTime failed && now - failed < RetryAfterFailure))
+            lock (_refreshLock) _refresh ??= Task.Run(() => RefreshAsync(now));
+        return table?.Lookup(ip);
+    }
+
     /// <summary>Nur öffentliche Adressen haben ein Land — LAN, Loopback, CGNAT und Link-Local nicht.</summary>
     internal static bool IsPublic(IPAddress ip)
     {

@@ -226,6 +226,7 @@ public partial class AppDbContext : DbContext
     public DbSet<CalcEdition> CalcEditions => Set<CalcEdition>();
     public DbSet<CalcSeriesMember> CalcSeriesMembers => Set<CalcSeriesMember>();
     public DbSet<CalcEditionView> CalcEditionViews => Set<CalcEditionView>();
+    public DbSet<VisitorDay> VisitorDays => Set<VisitorDay>();
 
     /// <summary>Jede Zeitspalte liest sich als UTC zurück (siehe <see cref="UtcDateTimeConverter"/>) — sonst ginge
     /// jeder gelesene Wert ohne „Z" über die Leitung und der Browser nähme ihn als Ortszeit.</summary>

@@ -24,6 +24,8 @@ je DELETE), ohne große Spalten zu laden.
 | IP-Vermerk der Einlesungen ohne Konto (`ScoresheetScans.AnonIpHash`, HMAC) | 2 Tage | beim nächsten anonymen Upload | fest |
 | E-Book-Uploads ohne Konto (Datei, Titelbild, Lesestände) | 30 Tage | `EbookAnonymousCleanupWorker` (stündlich) | `Ebooks:AnonymousRetentionDays` (30) |
 
+| Besucher-Herkunft (`VisitorDays`: Tag, Pseudonym, Oberfläche, Land, Aufrufe — mit und ohne Konto, ohne IP) | 400 Tage | Aufräumlauf (`VisitorOriginRetention`) | `Retention:VisitorDays` (400) |
+
 ## Daten mit Konto
 
 | Datenart | Frist | Job | Config-Schlüssel (Vorgabe) |

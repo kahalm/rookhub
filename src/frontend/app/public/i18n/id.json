@@ -354,7 +354,8 @@
     "prep": "Persiapan melawan lawan",
     "ebooks": "E-book",
     "woodpecker": "Woodpecker",
-    "maxims": "Kaidah praktis"
+    "maxims": "Kaidah praktis",
+    "visitors": "Asal pengunjung"
   },
   "app": {
     "changelogTitle": "Catatan Perubahan",
@@ -1090,6 +1091,10 @@
         "botDm": {
           "data": "Pesan langsung dengan bot Discord",
           "period": "30 hari"
+        },
+        "visitorCountry": {
+          "data": "Penghitung harian asal pengunjung (pengenal pseudonim, negara, permintaan)",
+          "period": "400 hari"
         }
       },
       "rightsTitle": "Hak Anda",
@@ -1097,7 +1102,9 @@
       "contactTitle": "Kontak",
       "contact": "Untuk pertanyaan privasi, hubungi kami di",
       "back": "Kembali ke halaman masuk",
-      "introTurnier": "Situs turnamen RookHub menampilkan data turnamen publik dari chess-results.com dan turnamen yang Anda tandai. Situs ini memakai akun yang sama dengan RookHub."
+      "introTurnier": "Situs turnamen RookHub menampilkan data turnamen publik dari chess-results.com dan turnamen yang Anda tandai. Situs ini memakai akun yang sama dengan RookHub.",
+      "dataVisitorCountry": "Asal pengunjung: untuk peta “Asal pengunjung” kami menentukan negara dari alamat IP, secara lokal di server kami dengan daftar negara DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Per hari kami hanya menyimpan penghitung dengan pengenal pseudonim, negara, dan jumlah permintaan; alamat IP tidak disimpan. Akun yang masuk hanya melihat berapa banyak pengguna yang datang dari negara mana.",
+      "kidVisitorCountry": "Kami menghitung dari negara mana pengunjung datang. Alamat internetmu tidak disimpan untuk itu."
     },
     "impressum": {
       "title": "Impresum",
@@ -2763,7 +2770,8 @@
         "scoresheet": "Baca lembar skor (foto)",
         "ebooks": "Perpustakaan e-book",
         "woodpecker": "Latihan Woodpecker",
-        "maxims": "Kaidah praktis (pepatah catur)"
+        "maxims": "Kaidah praktis (pepatah catur)",
+        "visitors": "Asal pengunjung"
       }
     },
     "messages": {
@@ -4209,6 +4217,12 @@
           "Daftar singkat pepatah catur klasik yang dikurasi – “A knight on the rim is dim”, “Loose pieces drop off”, dan seterusnya. Setiap kaidah didukung kutipan dari buku catur di perpustakaan; susunan katanya sama di mana pun.",
           "Buka sebuah kaidah untuk melihat kapan berlaku dan buku mana yang menjelaskannya, dengan kutipan singkat. Jika Anda punya akses ke buku tersebut, tautan membukanya langsung di halaman itu (PDF) atau bukunya (EPUB).",
           "Penjelasan kesalahan Anda diakhiri dengan paling banyak satu kaidah ini; (i) di sebelahnya menampilkan kutipan bukunya."
+        ]
+      },
+      "visitors": {
+        "t": "Asal pengunjung",
+        "p": [
+          "Di ☰ → Komunitas → Asal pengunjung, peta dunia menunjukkan dari negara mana saja RookHub digunakan. Ketuk sebuah negara atau pilih benua untuk memperbesar; hanya negara yang dihitung, tidak pernah orang per orang."
         ]
       }
     }
@@ -6529,5 +6543,63 @@
     "noAccess": "tidak ada di perpustakaan Anda",
     "all": "Semua kaidah praktis",
     "count": "{{count}} kaidah"
+  },
+  "visitors": {
+    "title": "Asal pengunjung",
+    "intro": "Dari negara mana saja RookHub digunakan. Hanya negara yang dihitung, tidak pernah orang per orang.",
+    "viewLabel": "Bagian peta",
+    "continent": {
+      "world": "Dunia",
+      "eu": "Eropa",
+      "na": "Amerika Utara",
+      "sa": "Amerika Selatan",
+      "af": "Afrika",
+      "as": "Asia",
+      "oc": "Oseania"
+    },
+    "backToWorld": "Kembali ke dunia",
+    "kpi": {
+      "users": "Pengguna unik",
+      "countries": "Negara",
+      "hits": "Permintaan"
+    },
+    "mapLabel": "Peta dunia: pengguna unik per negara",
+    "mapLabelContinent": "Peta ({{continent}}): pengguna unik per negara",
+    "mapHintWorld": "Ketuk sebuah negara untuk memperbesar benuanya.",
+    "mapHintContinent": "Ketuk sebuah negara untuk melihat angkanya.",
+    "mapFailed": "Peta tidak dapat dimuat.",
+    "scaleFew": "sedikit",
+    "scaleMany": "banyak",
+    "countryValue": "{{country}}: {{count}}",
+    "table": {
+      "title": "Pengguna per negara",
+      "rank": "Peringkat",
+      "country": "Negara",
+      "users": "Pengguna",
+      "more": "{{count}} negara lainnya",
+      "moreOne": "1 negara lainnya",
+      "showAll": "Tampilkan semua negara",
+      "showTop": "Tampilkan 10 teratas saja"
+    },
+    "unknown": "Negara tidak diketahui",
+    "emptyNew": "Belum ada data. Penghitungan baru saja dimulai, negara pertama akan segera muncul.",
+    "emptyFiltered": "Belum ada data untuk pilihan ini. Penghitungan berjalan sejak {{date}}.",
+    "emptyContinent": "Belum ada yang datang dari benua ini.",
+    "since": "Dihitung sejak {{date}}",
+    "privacyNote": "Negara ditentukan dari alamat IP; alamat itu sendiri tidak disimpan.",
+    "filter": {
+      "surfaceLabel": "Situs",
+      "allSurfaces": "Semua situs",
+      "periodLabel": "Periode",
+      "days": "{{count}} hari",
+      "allTime": "Sepanjang waktu"
+    },
+    "surface": {
+      "rookhub": "RookHub",
+      "leaguehub": "LeagueHub",
+      "kidhub": "KidHub",
+      "clubhub": "ClubHub",
+      "turnier": "Situs turnamen"
+    }
   }
 }

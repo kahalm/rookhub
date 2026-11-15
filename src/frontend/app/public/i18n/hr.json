@@ -360,7 +360,8 @@
     "prep": "Priprema za protivnika",
     "ebooks": "E-knjige",
     "woodpecker": "Woodpecker",
-    "maxims": "Pravila"
+    "maxims": "Pravila",
+    "visitors": "Podrijetlo posjetitelja"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -936,7 +937,7 @@
     "privacy": {
       "title": "Pravila o privatnosti",
       "link": "Pravila o privatnosti",
-      "updated": "Zadnja izmjena: 9. studenoga 2026.",
+      "updated": "Zadnja izmjena: 15. studenoga 2026.",
       "tocTitle": "Sadržaj",
       "intro": "RookHub je platforma za šahovsku obuku (zagonetke, beskonačni način, tečajevi, repertoari). Ova pravila objašnjavaju kako se osobni podaci obrađuju prema GDPR-u.",
       "introLeagueHub": "LeagueHub (dio RookHuba) izrađuje prognoze postava za ekipne mečeve i vodi bazu partija klubova sudionika. Račun je isti kao na RookHubu. Ova izjava objašnjava obradu osobnih podataka prema GDPR-u.",
@@ -1108,6 +1109,10 @@
         "botDm": {
           "data": "Izravne poruke s Discord botom",
           "period": "30 dana"
+        },
+        "visitorCountry": {
+          "data": "Dnevni brojač podrijetla posjetitelja (pseudonimna oznaka, zemlja, pozivi)",
+          "period": "400 dana"
         }
       },
       "rightsTitle": "Tvoja prava",
@@ -1115,7 +1120,9 @@
       "contactTitle": "Kontakt",
       "contact": "Za pitanja o privatnosti javi nam se na",
       "back": "Natrag na prijavu",
-      "introTurnier": "Turnirska stranica RookHuba prikazuje javne podatke o turnirima s chess-results.com i turnire koje si spremio. Koristi isti račun kao RookHub."
+      "introTurnier": "Turnirska stranica RookHuba prikazuje javne podatke o turnirima s chess-results.com i turnire koje si spremio. Koristi isti račun kao RookHub.",
+      "dataVisitorCountry": "Podrijetlo posjetitelja: za kartu „Podrijetlo posjetitelja“ iz IP adrese određujemo zemlju, lokalno na našem poslužitelju pomoću popisa zemalja DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Po danu spremamo samo brojač s pseudonimnom oznakom, zemljom i brojem poziva; IP adresa se ne sprema. Prijavljeni računi iz toga vide samo koliko je korisnika došlo iz koje zemlje.",
+      "kidVisitorCountry": "Brojimo iz kojih zemalja dolaze posjetitelji. Tvoju internetsku adresu pritom ne spremamo."
     },
     "impressum": {
       "title": "Impresum",
@@ -2792,7 +2799,8 @@
         "scoresheet": "Učitaj zapisnik partije (fotografija)",
         "ebooks": "Knjižnica e-knjiga",
         "woodpecker": "Woodpecker trening",
-        "maxims": "Pravila (šahovske maksime)"
+        "maxims": "Pravila (šahovske maksime)",
+        "visitors": "Podrijetlo posjetitelja"
       }
     },
     "messages": {
@@ -4282,6 +4290,12 @@
           "Kratak, odabran popis klasičnih šahovskih maksima. Svako pravilo potkrijepljeno je odlomcima iz šahovskih knjiga u knjižnici; formulacija je svugdje ista.",
           "Otvori pravilo da vidiš kada vrijedi i koje ga knjige objašnjavaju, s kratkim citatom. Ako imaš pristup knjizi, poveznica je otvara na stranici (PDF) ili otvara knjigu (EPUB).",
           "Objašnjenja tvojih pogrešaka završavaju najviše jednim od ovih pravila; (i) pokraj njega prikazuje odlomke iz knjiga."
+        ]
+      },
+      "visitors": {
+        "t": "Podrijetlo posjetitelja",
+        "p": [
+          "Pod ☰ → Zajednica → Podrijetlo posjetitelja karta svijeta pokazuje iz kojih se zemalja koristi RookHub. Dodir na zemlju ili odabir kontinenta uvećava isječak; broje se samo zemlje, nikada pojedine osobe."
         ]
       }
     }
@@ -6788,5 +6802,63 @@
     "noAccess": "nije u tvojoj knjižnici",
     "all": "Sva pravila",
     "count": "{{count}} pravila"
+  },
+  "visitors": {
+    "title": "Podrijetlo posjetitelja",
+    "intro": "Iz kojih se zemalja koristi RookHub. Broje se samo zemlje, nikada pojedine osobe.",
+    "viewLabel": "Isječak karte",
+    "continent": {
+      "world": "Svijet",
+      "eu": "Europa",
+      "na": "Sjeverna Amerika",
+      "sa": "Južna Amerika",
+      "af": "Afrika",
+      "as": "Azija",
+      "oc": "Oceanija"
+    },
+    "backToWorld": "Natrag na svijet",
+    "kpi": {
+      "users": "Jedinstveni korisnici",
+      "countries": "Zemlje",
+      "hits": "Pozivi"
+    },
+    "mapLabel": "Karta svijeta: jedinstveni korisnici po zemlji",
+    "mapLabelContinent": "Karta ({{continent}}): jedinstveni korisnici po zemlji",
+    "mapHintWorld": "Dodirni zemlju za uvećanje njezina kontinenta.",
+    "mapHintContinent": "Dodirni zemlju da vidiš njezin broj.",
+    "mapFailed": "Kartu nije bilo moguće učitati.",
+    "scaleFew": "malo",
+    "scaleMany": "mnogo",
+    "countryValue": "{{country}}: {{count}}",
+    "table": {
+      "title": "Korisnici po zemlji",
+      "rank": "Mjesto",
+      "country": "Zemlja",
+      "users": "Korisnici",
+      "more": "Još {{count}} zemalja",
+      "moreOne": "Još 1 zemlja",
+      "showAll": "Prikaži sve zemlje",
+      "showTop": "Prikaži samo prvih 10"
+    },
+    "unknown": "Nepoznata zemlja",
+    "emptyNew": "Još nema podataka. Brojanje je tek počelo, prve zemlje uskoro će se pojaviti.",
+    "emptyFiltered": "Za ovaj odabir još nema podataka. Brojanje traje od {{date}}.",
+    "emptyContinent": "S ovog kontinenta još nitko nije došao.",
+    "since": "Broji se od {{date}}",
+    "privacyNote": "Zemlja se određuje iz IP adrese; sama adresa se ne sprema.",
+    "filter": {
+      "surfaceLabel": "Stranica",
+      "allSurfaces": "Sve stranice",
+      "periodLabel": "Razdoblje",
+      "days": "{{count}} dana",
+      "allTime": "Ukupno"
+    },
+    "surface": {
+      "rookhub": "RookHub",
+      "leaguehub": "LeagueHub",
+      "kidhub": "KidHub",
+      "clubhub": "ClubHub",
+      "turnier": "Turnirska stranica"
+    }
   }
 }

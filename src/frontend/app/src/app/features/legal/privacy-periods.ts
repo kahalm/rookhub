@@ -15,7 +15,7 @@ export const PRIVACY_PERIODS: readonly PrivacyPeriodGroup[] = [
     rows: ['account', 'notifications', 'messages', 'scoresheetFailed', 'scoresheetSaved', 'scoresheetArchive', 'sharedLogin', 'linkCodes'] },
   { title: 'legal.privacy.periodsGroupAnon',
     rows: ['endless', 'attempts', 'extension', 'leagueDrafts', 'scoresheetAnon', 'ipHash', 'ebooks'] },
-  { title: 'legal.privacy.periodsGroupOther', rows: ['logs', 'backups', 'botDm'] },
+  { title: 'legal.privacy.periodsGroupOther', rows: ['logs', 'visitorCountry', 'backups', 'botDm'] },
 ];
 
 /** i18n-Schlüssel einer Zelle. */

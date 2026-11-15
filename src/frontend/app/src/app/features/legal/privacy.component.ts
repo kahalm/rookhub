@@ -50,6 +50,7 @@ import { PRIVACY_PERIODS, privacyPeriodKey } from './privacy-periods';
               <li>{{ 'legal.privacy.kidAccount' | translate }}</li>
               <li>{{ 'legal.privacy.kidParents' | translate }}</li>
               <li>{{ 'legal.privacy.kidNoTracking' | translate }}</li>
+              <li>{{ 'legal.privacy.kidVisitorCountry' | translate }}</li>
               <!-- Codereview R-2 a (2026-10-25): Sichtbarkeit, Protokolle und Fristen auch in der Kinder-Fassung. -->
               <li>{{ 'legal.privacy.kidVisibility' | translate }}</li>
               <li>{{ 'legal.privacy.kidLogs' | translate }}</li>
@@ -135,6 +136,7 @@ import { PRIVACY_PERIODS, privacyPeriodKey } from './privacy-periods';
             <li>{{ 'legal.privacy.dataUsage' | translate }}</li>
             <li>{{ 'legal.privacy.dataTechnical' | translate }}</li>
             <li>{{ 'legal.privacy.dataIpCountry' | translate }}</li>
+            <li>{{ 'legal.privacy.dataVisitorCountry' | translate }}</li>
             <li>{{ 'legal.privacy.dataScoresheet' | translate }}</li>
           </ul>
 

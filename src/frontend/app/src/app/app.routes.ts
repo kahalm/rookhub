@@ -90,6 +90,7 @@ export const routes: Routes = [
   { path: 'reconstruct/:id', loadComponent: () => import('./features/reconstruct/reconstruct-detail.component').then(m => m.ReconstructDetailComponent), canActivate: [authGuard, menuGuard('reconstruct')] },
   { path: 'remembered', loadComponent: () => import('./features/remembered/remembered-lines.component').then(m => m.RememberedLinesComponent), canActivate: [authGuard, menuGuard('remembered')] },
   { path: 'stats', loadComponent: () => import('./features/stats/stats.component').then(m => m.StatsComponent), canActivate: [authGuard, menuGuard('stats')] },
+  { path: 'visitors', loadComponent: () => import('./features/visitors/visitor-origins.component').then(m => m.VisitorOriginsComponent), canActivate: [authGuard, menuGuard('visitors')] },
   { path: 'leaderboards', loadComponent: () => import('./features/leaderboards/leaderboards.component').then(m => m.LeaderboardsComponent), canActivate: [authGuard, menuGuard('leaderboards')] },
   { path: 'training-goals', loadComponent: () => import('./features/training-goals/training-goals.component').then(m => m.TrainingGoalsComponent), canActivate: [authGuard, menuGuard('training-goals')] },
   { path: 'notifications', loadComponent: () => import('./features/notifications/notifications.component').then(m => m.NotificationsComponent), canActivate: [authGuard] },

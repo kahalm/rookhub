@@ -40,6 +40,8 @@ public static class MenuRegistry
         new MenuItemDef("woodpecker", MenuVisibilityLevel.Registered),
         new MenuItemDef("catalog", MenuVisibilityLevel.Registered),
         new MenuItemDef("leaderboards", MenuVisibilityLevel.Registered),
+        // Besucher-Herkunft (Weltkarte nach Ländern): für Angemeldete, nur Länderzahlen; Filter sieht allein der Admin.
+        new MenuItemDef("visitors", MenuVisibilityLevel.Registered),
         new MenuItemDef("stats", MenuVisibilityLevel.Registered),
         new MenuItemDef("chessable", MenuVisibilityLevel.Registered),
         new MenuItemDef("install", MenuVisibilityLevel.All),

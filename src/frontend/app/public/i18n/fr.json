@@ -354,7 +354,8 @@
     "prep": "Préparer un adversaire",
     "ebooks": "E-books",
     "woodpecker": "Woodpecker",
-    "maxims": "Règles empiriques"
+    "maxims": "Règles empiriques",
+    "visitors": "Origine des visiteurs"
   },
   "app": {
     "changelogTitle": "Journal des modifications",
@@ -1090,6 +1091,10 @@
         "botDm": {
           "data": "Messages privés avec le bot Discord",
           "period": "30 jours"
+        },
+        "visitorCountry": {
+          "data": "Compteur quotidien de l’origine des visiteurs (identifiant pseudonyme, pays, requêtes)",
+          "period": "400 jours"
         }
       },
       "rightsTitle": "Vos droits",
@@ -1097,7 +1102,9 @@
       "contactTitle": "Contact",
       "contact": "Pour toute question relative à la confidentialité, contactez-nous à",
       "back": "Retour à la connexion",
-      "introTurnier": "Le site des tournois de RookHub affiche des données de tournois publiques de chess-results.com et les tournois que vous marquez. Il utilise le même compte que RookHub."
+      "introTurnier": "Le site des tournois de RookHub affiche des données de tournois publiques de chess-results.com et les tournois que vous marquez. Il utilise le même compte que RookHub.",
+      "dataVisitorCountry": "Origine des visiteurs : pour la carte « Origine des visiteurs », nous déterminons le pays à partir de l’adresse IP, localement sur notre serveur avec la liste de pays de DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Nous n’enregistrons par jour qu’un compteur avec un identifiant pseudonyme, le pays et le nombre de requêtes ; l’adresse IP n’est pas enregistrée. Les comptes connectés voient seulement combien d’utilisateurs sont venus de quel pays.",
+      "kidVisitorCountry": "Nous comptons de quels pays viennent les visiteurs. Ton adresse internet n’est pas enregistrée pour cela."
     },
     "impressum": {
       "title": "Mentions légales",
@@ -2763,7 +2770,8 @@
         "scoresheet": "Lire une feuille de partie (photo)",
         "ebooks": "Bibliothèque d'e-books",
         "woodpecker": "Entraînement Woodpecker",
-        "maxims": "Règles empiriques (maximes d'échecs)"
+        "maxims": "Règles empiriques (maximes d'échecs)",
+        "visitors": "Origine des visiteurs"
       }
     },
     "messages": {
@@ -4209,6 +4217,12 @@
           "Une courte liste sélectionnée de maximes d'échecs classiques – « A knight on the rim is dim », « Loose pieces drop off » et ainsi de suite. Chaque règle s'appuie sur des passages de livres d'échecs de la bibliothèque ; la formulation reste la même partout.",
           "Ouvrez une règle pour voir quand elle s'applique et quels livres l'expliquent, avec une courte citation. Si vous avez accès à un livre, le lien l'ouvre directement à la page (PDF) ou au livre (EPUB).",
           "Les explications de vos erreurs se terminent par au plus une de ces règles ; le (i) à côté affiche les passages de livres."
+        ]
+      },
+      "visitors": {
+        "t": "Origine des visiteurs",
+        "p": [
+          "Sous ☰ → Communauté → Origine des visiteurs, une carte du monde montre depuis quels pays RookHub est utilisé. Touchez un pays ou choisissez un continent pour agrandir la zone ; seuls les pays sont comptés, jamais des personnes."
         ]
       }
     }
@@ -6529,5 +6543,63 @@
     "noAccess": "pas dans votre bibliothèque",
     "all": "Toutes les règles empiriques",
     "count": "{{count}} règles"
+  },
+  "visitors": {
+    "title": "Origine des visiteurs",
+    "intro": "Les pays depuis lesquels RookHub est utilisé. Seuls les pays sont comptés, jamais des personnes.",
+    "viewLabel": "Zone de la carte",
+    "continent": {
+      "world": "Monde",
+      "eu": "Europe",
+      "na": "Amérique du Nord",
+      "sa": "Amérique du Sud",
+      "af": "Afrique",
+      "as": "Asie",
+      "oc": "Océanie"
+    },
+    "backToWorld": "Retour au monde",
+    "kpi": {
+      "users": "Utilisateurs uniques",
+      "countries": "Pays",
+      "hits": "Requêtes"
+    },
+    "mapLabel": "Carte du monde : utilisateurs uniques par pays",
+    "mapLabelContinent": "Carte ({{continent}}) : utilisateurs uniques par pays",
+    "mapHintWorld": "Touchez un pays pour agrandir son continent.",
+    "mapHintContinent": "Touchez un pays pour voir son nombre.",
+    "mapFailed": "La carte n’a pas pu être chargée.",
+    "scaleFew": "peu",
+    "scaleMany": "beaucoup",
+    "countryValue": "{{country}} : {{count}}",
+    "table": {
+      "title": "Utilisateurs par pays",
+      "rank": "Rang",
+      "country": "Pays",
+      "users": "Utilisateurs",
+      "more": "{{count}} autres pays",
+      "moreOne": "1 autre pays",
+      "showAll": "Afficher tous les pays",
+      "showTop": "Afficher seulement les 10 premiers"
+    },
+    "unknown": "Pays inconnu",
+    "emptyNew": "Pas encore de données. Le comptage vient de commencer, les premiers pays apparaîtront bientôt.",
+    "emptyFiltered": "Pas encore de données pour cette sélection. Le comptage est en cours depuis le {{date}}.",
+    "emptyContinent": "Personne n’est encore venu de ce continent.",
+    "since": "Compté depuis le {{date}}",
+    "privacyNote": "Le pays est déduit de l’adresse IP ; l’adresse elle-même n’est pas enregistrée.",
+    "filter": {
+      "surfaceLabel": "Site",
+      "allSurfaces": "Tous les sites",
+      "periodLabel": "Période",
+      "days": "{{count}} jours",
+      "allTime": "Depuis le début"
+    },
+    "surface": {
+      "rookhub": "RookHub",
+      "leaguehub": "LeagueHub",
+      "kidhub": "KidHub",
+      "clubhub": "ClubHub",
+      "turnier": "Site des tournois"
+    }
   }
 }

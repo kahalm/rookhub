@@ -354,7 +354,8 @@
     "prep": "对手备战",
     "ebooks": "电子书",
     "woodpecker": "Woodpecker",
-    "maxims": "经验法则"
+    "maxims": "经验法则",
+    "visitors": "访客来源"
   },
   "app": {
     "changelogTitle": "更新日志",
@@ -1090,6 +1091,10 @@
         "botDm": {
           "data": "与 Discord 机器人的私信",
           "period": "30 天"
+        },
+        "visitorCountry": {
+          "data": "访客来源的每日计数器（假名化标识、国家、请求数）",
+          "period": "400 天"
         }
       },
       "rightsTitle": "你的权利",
@@ -1097,7 +1102,9 @@
       "contactTitle": "联系方式",
       "contact": "如有隐私相关问题，请联系我们：",
       "back": "返回登录",
-      "introTurnier": "RookHub 的比赛网站显示来自 chess-results.com 的公开比赛数据以及你加了书签的比赛。它使用与 RookHub 相同的账户。"
+      "introTurnier": "RookHub 的比赛网站显示来自 chess-results.com 的公开比赛数据以及你加了书签的比赛。它使用与 RookHub 相同的账户。",
+      "dataVisitorCountry": "访客来源：为了“访客来源”地图，我们根据 IP 地址确定国家，在我们自己的服务器上使用 DB-IP 的国家列表本地完成（IP Geolocation by DB-IP，CC BY 4.0）。每天只保存一个计数器，包含假名化标识、国家和请求数；不保存 IP 地址。已登录的账户只能看到有多少用户来自哪个国家。",
+      "kidVisitorCountry": "我们会统计访客来自哪些国家。为此不会保存你的互联网地址。"
     },
     "impressum": {
       "title": "版权声明",
@@ -2763,7 +2770,8 @@
         "scoresheet": "读取记谱单（照片）",
         "ebooks": "电子书库",
         "woodpecker": "Woodpecker 训练",
-        "maxims": "经验法则（国际象棋格言）"
+        "maxims": "经验法则（国际象棋格言）",
+        "visitors": "访客来源"
       }
     },
     "messages": {
@@ -4209,6 +4217,12 @@
           "一份简短精选的经典国际象棋格言——“A knight on the rim is dim”“Loose pieces drop off”等等。每条法则都有书库中国际象棋书的段落支持；措辞在各处保持一致。",
           "打开一条法则，可查看它何时适用、哪些书对它有解释，并附有简短引文。如果你有某本书的访问权限，链接会直接打开到该页（PDF）或该书（EPUB）。",
           "对你错误的解释最后最多附上一条此类法则；旁边的 (i) 会显示书中段落。"
+        ]
+      },
+      "visitors": {
+        "t": "访客来源",
+        "p": [
+          "在 ☰ → 社区 → 访客来源 中，世界地图显示 RookHub 在哪些国家被使用。点按某个国家或选择一个大洲即可放大；只统计国家，从不统计个人。"
         ]
       }
     }
@@ -6529,5 +6543,63 @@
     "noAccess": "不在你的书库中",
     "all": "所有经验法则",
     "count": "{{count}} 条法则"
+  },
+  "visitors": {
+    "title": "访客来源",
+    "intro": "显示 RookHub 在哪些国家被使用。只统计国家，从不统计个人。",
+    "viewLabel": "地图范围",
+    "continent": {
+      "world": "世界",
+      "eu": "欧洲",
+      "na": "北美洲",
+      "sa": "南美洲",
+      "af": "非洲",
+      "as": "亚洲",
+      "oc": "大洋洲"
+    },
+    "backToWorld": "返回世界",
+    "kpi": {
+      "users": "独立用户",
+      "countries": "国家",
+      "hits": "请求数"
+    },
+    "mapLabel": "世界地图：各国独立用户",
+    "mapLabelContinent": "地图（{{continent}}）：各国独立用户",
+    "mapHintWorld": "点按某个国家可放大其所在大洲。",
+    "mapHintContinent": "点按某个国家可查看其数字。",
+    "mapFailed": "无法加载地图。",
+    "scaleFew": "少",
+    "scaleMany": "多",
+    "countryValue": "{{country}}：{{count}}",
+    "table": {
+      "title": "各国用户",
+      "rank": "排名",
+      "country": "国家",
+      "users": "用户",
+      "more": "另有 {{count}} 个国家",
+      "moreOne": "另有 1 个国家",
+      "showAll": "显示所有国家",
+      "showTop": "仅显示前 10 个"
+    },
+    "unknown": "未知国家",
+    "emptyNew": "暂无数据。统计刚刚开始，首批国家很快就会出现。",
+    "emptyFiltered": "该筛选条件下暂无数据。统计自 {{date}} 起进行。",
+    "emptyContinent": "还没有来自这个大洲的访客。",
+    "since": "自 {{date}} 起统计",
+    "privacyNote": "国家由 IP 地址推断；地址本身不会被保存。",
+    "filter": {
+      "surfaceLabel": "站点",
+      "allSurfaces": "所有站点",
+      "periodLabel": "时间范围",
+      "days": "{{count}} 天",
+      "allTime": "全部时间"
+    },
+    "surface": {
+      "rookhub": "RookHub",
+      "leaguehub": "LeagueHub",
+      "kidhub": "KidHub",
+      "clubhub": "ClubHub",
+      "turnier": "赛事站点"
+    }
   }
 }

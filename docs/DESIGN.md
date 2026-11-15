@@ -906,6 +906,20 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Material 22 (M3, Azure), dunkel als Vorgabe, `ThemeService` (3.1). Navbar (`shell/navbar.component.ts`, Messung in `shared/navbar/nav-edge.ts`): ≤ 768 px
   Hamburger; abgemeldet ≤ 480 px nur „Anmelden“ und ☰ (0.740.0). Fußzeile (`shared/app-footer/`) bleibt auf
   kurzen Seiten unten; Links ≥ 44 px.
+- Besucher-Herkunft `/visitors` (0.982.0): Seitenkopf + ein Satz; Kennzahlen als Zahlenreihe (`dl`, Zahl 1.75rem
+  halbfett `tabular-nums`, Beschriftung darunter 0.85rem/60 %) — die Hauptzahl heißt „Eindeutige Benutzer“, ohne
+  Zeitraum-Zusatz. **Flächenkarte in fünf Stufen** aus dem Akzent: `color-mix(--mat-sys-primary 30/46/62/80/100 %,
+  --mat-sys-surface)`, „kein Wert“ = 12 % `--mat-sys-on-surface`; Stufe logarithmisch gegen den größten Wert des
+  Ausschnitts (`visitorStep`). Farbe ist nie alleiniger Träger: die Zahl steht in der Rangliste (echte `<table>` mit
+  Balken unter dem Namen), am Mauszeiger und nach Antippen in der Zeile unter der Karte (`aria-live`); Skala
+  „wenige … viele“ unter der Karte. Karte `role="img"` mit `aria-label` — sie ist Zeiger-Ergänzung, die Bedienung per
+  Tastatur läuft über die Chips und die Tabelle. Kontinent-Wahl und Admin-Filter als `mat-chip-listbox` (einfach,
+  `required`), Zustand in der URL (`?continent=`, Admin `?days=&surface=`); in der Kontinent-Ansicht zusätzlich ein
+  Knopf „Zurück zur Welt“ vor den Chips, Länder anderer Kontinente blass (5 %). Karte neben Rangliste per
+  **Containerabfrage** ab 860 px Seitenbreite (4.3), darunter untereinander; Kartenhöhe ≤ min(70vh, 560 px). Die
+  Filterleiste sieht nur der Admin (der Server verwirft die Parameter anderer Konten). Leer: eine Leerkarte mit einem
+  Satz (5.10). E-Ink: dieselben Stufen als Helligkeitstreppe Weiß → 22 → 36 → 58 → 80 % → Schwarz aus den
+  Flächen-Tokens, Ländergrenzen als Linien, Auswahl gestrichelt umrandet, Balken dunkel auf umrandeter Bahn.
 - Partienliste `/games` (0.949.0): Laschen „Alle | Online | Am Brett“ als `mat-tab-nav-bar` mit `mat-tab-link` (die
   Lasche ist ein Filter derselben Liste, kein eigener Inhalt — deshalb Links mit `?kind=`, nicht `mat-tab-group`), Zahl
   des ganzen Kontos in Klammern hinter dem Namen, zwischen Erklärsatz und Suchfeld; nur sichtbar, wenn das Konto
@@ -1533,3 +1547,4 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-11-09 | 0.923.0 | RookHub, eigene Partie: „Zusammenfassung anfordern“ im Kopf wie bei Vereinspartien, dieselbe Seite `/games/:id/summary`; Tageskontingent verbraucht → Textvermerk statt Knopf | Ein Knopf, der nur scheitert, sagt nicht warum | Wunsch 09.11. |
 | 2026-11-09 | 0.928.0 | RookHub, Partie-Zusammenfassung: Seitenbrett neben dem Text (5.12), Seite mit Brett `--page-max-width` statt 860 px; unter 900 px Brett UNTER dem Text | Partie neben dem Text durchklicken; Text bleibt über der Falz (4.6) | Wunsch 09.11. |
 | 2026-11-09 | 0.932.0 | RookHub, Partie-Zusammenfassung: Züge im Text wie `.mv` (Akzentfarbe, gepunktet unterstrichen), Fett/Kursiv bleiben; Partiezug springt aufs Seitenbrett, eine Variante erscheint dort samt ←/→; eigene Züge auf dem Seitenbrett ergeben eine Variante (Leiste „Variante“ mit Zügen und „Zurück zur Partie“, ← am Anfang führt ebenfalls zurück). Nichts wird gespeichert; unter 900 px rollt das Brett ins Bild | Varianten aus dem Text direkt nachspielen und eigene Ideen probieren | Wunsch 09.11. |
+| 2026-11-15 | 0.982.0 | RookHub, neue Seite Besucher-Herkunft `/visitors` (8.1): Flächenkarte in fünf Akzent-Stufen mit Skala, Kennzahlenreihe, Rangliste als Tabelle mit Balken, Kontinent-Wahl und Admin-Filter als Chips mit URL-Zustand, zweispaltig per Containerabfrage, E-Ink-Helligkeitstreppe | Erste Karte dieser Art — Stufen, Tastaturweg und „Farbe nie allein“ festgelegt | Wunsch User 15.11. (Vorlage „Vorschlag A“) |

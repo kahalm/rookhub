@@ -354,7 +354,8 @@
     "prep": "対戦相手の準備",
     "ebooks": "電子書籍",
     "woodpecker": "Woodpecker",
-    "maxims": "経験則"
+    "maxims": "経験則",
+    "visitors": "訪問者の地域"
   },
   "app": {
     "changelogTitle": "変更履歴",
@@ -1090,6 +1091,10 @@
         "botDm": {
           "data": "Discordボットとのダイレクトメッセージ",
           "period": "30日"
+        },
+        "visitorCountry": {
+          "data": "訪問者の地域の日次カウンター（仮名化した識別子、国、リクエスト数）",
+          "period": "400日"
         }
       },
       "rightsTitle": "お客様の権利",
@@ -1097,7 +1102,9 @@
       "contactTitle": "お問い合わせ",
       "contact": "プライバシーに関するご質問は、以下までお問い合わせください",
       "back": "ログインに戻る",
-      "introTurnier": "RookHubのトーナメントサイトは、chess-results.comの公開トーナメントデータと、あなたがブックマークしたトーナメントを表示します。RookHubと同じアカウントを使います。"
+      "introTurnier": "RookHubのトーナメントサイトは、chess-results.comの公開トーナメントデータと、あなたがブックマークしたトーナメントを表示します。RookHubと同じアカウントを使います。",
+      "dataVisitorCountry": "訪問者の地域：地図「訪問者の地域」のために、IPアドレスから国を判定します。判定は当サーバー上で、DB-IPの国別リスト（IP Geolocation by DB-IP、CC BY 4.0）を使って行います。保存するのは、仮名化した識別子・国・リクエスト数からなる1日ごとのカウンターだけで、IPアドレスは保存しません。ログイン中のアカウントに表示されるのは、どの国から何人のユーザーが来たかだけです。",
+      "kidVisitorCountry": "訪問者がどの国から来ているかを数えています。そのためにあなたのインターネットアドレスを保存することはありません。"
     },
     "impressum": {
       "title": "インプリント",
@@ -2763,7 +2770,8 @@
         "scoresheet": "スコアシートを読み取る（写真）",
         "ebooks": "電子書籍ライブラリ",
         "woodpecker": "Woodpecker トレーニング",
-        "maxims": "経験則（チェスの格言）"
+        "maxims": "経験則（チェスの格言）",
+        "visitors": "訪問者の地域"
       }
     },
     "messages": {
@@ -4209,6 +4217,12 @@
           "古典的なチェスの格言を厳選した短いリストです（「A knight on the rim is dim」「Loose pieces drop off」など）。どの格言もライブラリのチェス本の記述に裏付けられており、文言はどこでも同じです。",
           "格言を開くと、いつ当てはまるか、どの本が説明しているかが短い引用付きで表示されます。その本にアクセスできる場合、リンクはそのページ（PDF）または本（EPUB）を直接開きます。",
           "あなたのミスの解説の最後には、こうした格言が最大 1 つ付きます。横の (i) で本の該当箇所が表示されます。"
+        ]
+      },
+      "visitors": {
+        "t": "訪問者の地域",
+        "p": [
+          "☰ → コミュニティ → 訪問者の地域 では、RookHubがどの国から使われているかを世界地図で確認できます。国をタップするか大陸を選ぶと拡大します。数えるのは国だけで、個人は数えません。"
         ]
       }
     }
@@ -6529,5 +6543,63 @@
     "noAccess": "ライブラリにありません",
     "all": "すべての格言",
     "count": "{{count}} 個の格言"
+  },
+  "visitors": {
+    "title": "訪問者の地域",
+    "intro": "RookHubがどの国から使われているかを示します。数えるのは国だけで、個人は数えません。",
+    "viewLabel": "地図の範囲",
+    "continent": {
+      "world": "世界",
+      "eu": "ヨーロッパ",
+      "na": "北アメリカ",
+      "sa": "南アメリカ",
+      "af": "アフリカ",
+      "as": "アジア",
+      "oc": "オセアニア"
+    },
+    "backToWorld": "世界に戻る",
+    "kpi": {
+      "users": "ユニークユーザー",
+      "countries": "国",
+      "hits": "リクエスト数"
+    },
+    "mapLabel": "世界地図：国ごとのユニークユーザー",
+    "mapLabelContinent": "地図（{{continent}}）：国ごとのユニークユーザー",
+    "mapHintWorld": "国をタップすると、その大陸を拡大します。",
+    "mapHintContinent": "国をタップすると数が表示されます。",
+    "mapFailed": "地図を読み込めませんでした。",
+    "scaleFew": "少ない",
+    "scaleMany": "多い",
+    "countryValue": "{{country}}：{{count}}",
+    "table": {
+      "title": "国ごとのユーザー",
+      "rank": "順位",
+      "country": "国",
+      "users": "ユーザー",
+      "more": "ほか{{count}}か国",
+      "moreOne": "ほか1か国",
+      "showAll": "すべての国を表示",
+      "showTop": "上位10か国のみ表示"
+    },
+    "unknown": "不明な国",
+    "emptyNew": "まだデータがありません。集計は始まったばかりで、まもなく最初の国が表示されます。",
+    "emptyFiltered": "この条件のデータはまだありません。集計は{{date}}から行っています。",
+    "emptyContinent": "この大陸からの訪問はまだありません。",
+    "since": "{{date}}から集計",
+    "privacyNote": "国はIPアドレスから判定します。アドレス自体は保存しません。",
+    "filter": {
+      "surfaceLabel": "サイト",
+      "allSurfaces": "すべてのサイト",
+      "periodLabel": "期間",
+      "days": "{{count}}日",
+      "allTime": "全期間"
+    },
+    "surface": {
+      "rookhub": "RookHub",
+      "leaguehub": "LeagueHub",
+      "kidhub": "KidHub",
+      "clubhub": "ClubHub",
+      "turnier": "大会サイト"
+    }
   }
 }

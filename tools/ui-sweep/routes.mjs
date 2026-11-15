@@ -193,6 +193,9 @@ export const ROUTES = [
   r('rookhub', '/w/ungueltig', 'any', { label: 'w-invalid', main: ['mat-card.wsv-empty', '.wsv-center', 'mat-card'], expectedFailures: [/^GET \/api\/worksheets\/[\w/-]*ungueltig → 404$/] }),
   r('rookhub', '/remembered', 'user', { main: ['.remembered-page mat-card.item', '.remembered-page mat-card.empty-state', '.remembered-page .center'] }),
   r('rookhub', '/stats', 'user', { main: ['.stats-container .cards mat-card.stat', '.stats-container app-load-error', '.stats-container app-loading-spinner'] }),
+  // Besucher-Herkunft: normale Konten ohne Filterleiste, Admins mit — beide Rollen laufen über auth 'user'.
+  r('rookhub', '/visitors', 'user', { main: ['.vo-page .vo-map svg', '.vo-page .vo-empty', '.vo-page app-load-error', '.vo-page app-loading-spinner'] }),
+  r('rookhub', '/visitors?continent=eu', 'user', { label: 'visitors-europa', main: ['.vo-page .vo-map svg', '.vo-page .vo-empty', '.vo-page app-load-error', '.vo-page app-loading-spinner'] }),
   r('rookhub', '/leaderboards', 'user', { main: ['.lb-page .lb-row', '.lb-page .lb-card .empty-state', '.lb-page .lb-error', '.lb-page app-loading-spinner'] }),
   r('rookhub', '/training-goals', 'user', { main: ['.tg-container .tg-tabs .tab-body mat-card', '.tg-container app-load-error', '.tg-container app-loading-spinner'] }),
   // Die übrigen Reiter über `?tab=` (Verlauf, Protokoll, Chessable) — je eine eigene Ansicht, sonst nie fotografiert.
@@ -347,7 +350,7 @@ export const AREAS = [
   ['woodpecker', r => r.app === 'rookhub' && /^\/woodpecker/.test(r.url)],
   ['kurse', r => r.app === 'rookhub' && (/^\/(courses|catalog|puzzles\/book|chessable)/.test(r.url) || /slug/.test(r.label ?? ''))],
   ['repertoire', r => r.app === 'rookhub' && /^\/(repertoires|remembered|l\/)/.test(r.url)],
-  ['puzzles', r => r.app === 'rookhub' && /^\/(puzzles|favorites|stats|leaderboards)/.test(r.url)],
+  ['puzzles', r => r.app === 'rookhub' && /^\/(puzzles|favorites|stats|leaderboards|visitors)/.test(r.url)],
   ['wochenpost', r => r.app === 'rookhub' && /^\/weekly/.test(r.url)],
   ['partien', r => r.app === 'rookhub' && /^\/(games|g\/|club-games|cg\/|s\/|explorer\/)/.test(r.url)],
   ['analyse', r => r.app === 'rookhub' && /^\/analysis/.test(r.url)],

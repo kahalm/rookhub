@@ -9084,6 +9084,43 @@ namespace RookHub.Api.Migrations
                     b.ToTable("UserViewStates");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.VisitorDay", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("varchar(2)");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Hits")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Surface")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)");
+
+                    b.Property<string>("VisitorHash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Day", "VisitorHash", "Surface")
+                        .IsUnique();
+
+                    b.ToTable("VisitorDays");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.WeeklyPost", b =>
                 {
                     b.Property<int>("Id")

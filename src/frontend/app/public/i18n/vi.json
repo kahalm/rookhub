@@ -354,7 +354,8 @@
     "prep": "Chuẩn bị cho đối thủ",
     "ebooks": "Sách điện tử",
     "woodpecker": "Woodpecker",
-    "maxims": "Kinh nghiệm thực hành"
+    "maxims": "Kinh nghiệm thực hành",
+    "visitors": "Nguồn gốc khách truy cập"
   },
   "app": {
     "changelogTitle": "Nhật ký thay đổi",
@@ -1090,6 +1091,10 @@
         "botDm": {
           "data": "Tin nhắn riêng với bot Discord",
           "period": "30 ngày"
+        },
+        "visitorCountry": {
+          "data": "Bộ đếm hằng ngày về nguồn gốc khách truy cập (mã định danh ẩn danh hóa, quốc gia, lượt truy vấn)",
+          "period": "400 ngày"
         }
       },
       "rightsTitle": "Quyền của bạn",
@@ -1097,7 +1102,9 @@
       "contactTitle": "Liên hệ",
       "contact": "Để giải đáp thắc mắc về quyền riêng tư, hãy liên hệ với chúng tôi tại",
       "back": "Quay lại đăng nhập",
-      "introTurnier": "Trang giải đấu của RookHub hiển thị dữ liệu giải đấu công khai từ chess-results.com và các giải bạn đánh dấu. Trang dùng cùng tài khoản với RookHub."
+      "introTurnier": "Trang giải đấu của RookHub hiển thị dữ liệu giải đấu công khai từ chess-results.com và các giải bạn đánh dấu. Trang dùng cùng tài khoản với RookHub.",
+      "dataVisitorCountry": "Nguồn gốc khách truy cập: với bản đồ “Nguồn gốc khách truy cập”, chúng tôi xác định quốc gia từ địa chỉ IP, ngay trên máy chủ của mình bằng danh sách quốc gia của DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Mỗi ngày chỉ lưu một bộ đếm gồm mã định danh ẩn danh hóa, quốc gia và số lượt truy vấn; địa chỉ IP không được lưu. Tài khoản đã đăng nhập chỉ thấy có bao nhiêu người dùng đến từ quốc gia nào.",
+      "kidVisitorCountry": "Chúng tôi đếm khách truy cập đến từ những quốc gia nào. Địa chỉ internet của bạn không được lưu cho việc này."
     },
     "impressum": {
       "title": "Thông tin pháp lý",
@@ -2763,7 +2770,8 @@
         "scoresheet": "Đọc biên bản (ảnh)",
         "ebooks": "Thư viện sách điện tử",
         "woodpecker": "Luyện tập Woodpecker",
-        "maxims": "Kinh nghiệm thực hành (châm ngôn cờ vua)"
+        "maxims": "Kinh nghiệm thực hành (châm ngôn cờ vua)",
+        "visitors": "Nguồn gốc khách truy cập"
       }
     },
     "messages": {
@@ -4209,6 +4217,12 @@
           "Một danh sách ngắn, chọn lọc các châm ngôn cờ vua kinh điển – “A knight on the rim is dim”, “Loose pieces drop off” v.v. Mỗi quy tắc đều có trích đoạn từ sách cờ trong thư viện làm căn cứ; câu chữ giữ nguyên ở mọi nơi.",
           "Mở một quy tắc để xem khi nào nó áp dụng và sách nào giải thích nó, kèm trích dẫn ngắn. Nếu bạn có quyền truy cập sách, liên kết sẽ mở ngay tại trang đó (PDF) hoặc cuốn sách (EPUB).",
           "Phần giải thích lỗi của bạn kết thúc bằng tối đa một quy tắc như vậy; biểu tượng (i) bên cạnh hiện các trích đoạn sách."
+        ]
+      },
+      "visitors": {
+        "t": "Nguồn gốc khách truy cập",
+        "p": [
+          "Trong ☰ → Cộng đồng → Nguồn gốc khách truy cập, bản đồ thế giới cho thấy RookHub được dùng từ những quốc gia nào. Chạm vào một quốc gia hoặc chọn một châu lục để phóng to; chỉ đếm quốc gia, không bao giờ đếm từng người."
         ]
       }
     }
@@ -6529,5 +6543,63 @@
     "noAccess": "không có trong thư viện của bạn",
     "all": "Tất cả kinh nghiệm thực hành",
     "count": "{{count}} quy tắc"
+  },
+  "visitors": {
+    "title": "Nguồn gốc khách truy cập",
+    "intro": "RookHub được dùng từ những quốc gia nào. Chỉ đếm quốc gia, không bao giờ đếm từng người.",
+    "viewLabel": "Vùng bản đồ",
+    "continent": {
+      "world": "Thế giới",
+      "eu": "Châu Âu",
+      "na": "Bắc Mỹ",
+      "sa": "Nam Mỹ",
+      "af": "Châu Phi",
+      "as": "Châu Á",
+      "oc": "Châu Đại Dương"
+    },
+    "backToWorld": "Quay lại thế giới",
+    "kpi": {
+      "users": "Người dùng duy nhất",
+      "countries": "Quốc gia",
+      "hits": "Lượt truy vấn"
+    },
+    "mapLabel": "Bản đồ thế giới: người dùng duy nhất theo quốc gia",
+    "mapLabelContinent": "Bản đồ ({{continent}}): người dùng duy nhất theo quốc gia",
+    "mapHintWorld": "Chạm vào một quốc gia để phóng to châu lục của nó.",
+    "mapHintContinent": "Chạm vào một quốc gia để xem con số.",
+    "mapFailed": "Không tải được bản đồ.",
+    "scaleFew": "ít",
+    "scaleMany": "nhiều",
+    "countryValue": "{{country}}: {{count}}",
+    "table": {
+      "title": "Người dùng theo quốc gia",
+      "rank": "Hạng",
+      "country": "Quốc gia",
+      "users": "Người dùng",
+      "more": "Thêm {{count}} quốc gia",
+      "moreOne": "Thêm 1 quốc gia",
+      "showAll": "Hiện tất cả quốc gia",
+      "showTop": "Chỉ hiện 10 quốc gia đầu"
+    },
+    "unknown": "Quốc gia không xác định",
+    "emptyNew": "Chưa có dữ liệu. Việc đếm vừa mới bắt đầu, các quốc gia đầu tiên sẽ sớm xuất hiện.",
+    "emptyFiltered": "Chưa có dữ liệu cho lựa chọn này. Việc đếm chạy từ {{date}}.",
+    "emptyContinent": "Chưa có ai đến từ châu lục này.",
+    "since": "Đếm từ {{date}}",
+    "privacyNote": "Quốc gia được suy ra từ địa chỉ IP; bản thân địa chỉ không được lưu.",
+    "filter": {
+      "surfaceLabel": "Trang",
+      "allSurfaces": "Tất cả các trang",
+      "periodLabel": "Khoảng thời gian",
+      "days": "{{count}} ngày",
+      "allTime": "Toàn bộ"
+    },
+    "surface": {
+      "rookhub": "RookHub",
+      "leaguehub": "LeagueHub",
+      "kidhub": "KidHub",
+      "clubhub": "ClubHub",
+      "turnier": "Trang giải đấu"
+    }
   }
 }

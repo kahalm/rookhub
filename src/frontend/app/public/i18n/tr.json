@@ -354,7 +354,8 @@
     "prep": "Rakibe hazırlan",
     "ebooks": "E-kitaplar",
     "woodpecker": "Woodpecker",
-    "maxims": "Pratik kurallar"
+    "maxims": "Pratik kurallar",
+    "visitors": "Ziyaretçi kökeni"
   },
   "app": {
     "changelogTitle": "Değişiklikler",
@@ -1090,6 +1091,10 @@
         "botDm": {
           "data": "Discord botuyla doğrudan mesajlar",
           "period": "30 gün"
+        },
+        "visitorCountry": {
+          "data": "Ziyaretçi kökeninin günlük sayacı (takma adlı tanımlayıcı, ülke, istekler)",
+          "period": "400 gün"
         }
       },
       "rightsTitle": "Haklarınız",
@@ -1097,7 +1102,9 @@
       "contactTitle": "İletişim",
       "contact": "Gizlilik soruları için bize ulaşın:",
       "back": "Girişe dön",
-      "introTurnier": "RookHub'ın turnuva sitesi, chess-results.com'dan herkese açık turnuva verilerini ve yer imine eklediğiniz turnuvaları gösterir. RookHub ile aynı hesabı kullanır."
+      "introTurnier": "RookHub'ın turnuva sitesi, chess-results.com'dan herkese açık turnuva verilerini ve yer imine eklediğiniz turnuvaları gösterir. RookHub ile aynı hesabı kullanır.",
+      "dataVisitorCountry": "Ziyaretçi kökeni: “Ziyaretçi kökeni” haritası için ülkeyi IP adresinden, kendi sunucumuzda yerel olarak DB-IP ülke listesiyle belirliyoruz (IP Geolocation by DB-IP, CC BY 4.0). Gün başına yalnızca takma adlı bir tanımlayıcı, ülke ve istek sayısını içeren bir sayaç saklanır; IP adresi saklanmaz. Oturum açmış hesaplar yalnızca hangi ülkeden kaç kullanıcının geldiğini görür.",
+      "kidVisitorCountry": "Ziyaretçilerin hangi ülkelerden geldiğini sayıyoruz. İnternet adresin bunun için saklanmaz."
     },
     "impressum": {
       "title": "Künye",
@@ -2763,7 +2770,8 @@
         "scoresheet": "Skor kâğıdı oku (fotoğraf)",
         "ebooks": "E-kitap kütüphanesi",
         "woodpecker": "Woodpecker antrenmanı",
-        "maxims": "Pratik kurallar (satranç özdeyişleri)"
+        "maxims": "Pratik kurallar (satranç özdeyişleri)",
+        "visitors": "Ziyaretçi kökeni"
       }
     },
     "messages": {
@@ -4209,6 +4217,12 @@
           "Klasik satranç özdeyişlerinden oluşan kısa, seçilmiş bir liste – “A knight on the rim is dim”, “Loose pieces drop off” vb. Her kural kütüphanedeki satranç kitaplarından pasajlarla desteklenir; ifade her yerde aynı kalır.",
           "Ne zaman geçerli olduğunu ve hangi kitapların açıkladığını kısa bir alıntıyla görmek için bir kuralı açın. Bir kitaba erişiminiz varsa bağlantı onu doğrudan ilgili sayfada (PDF) veya kitapta (EPUB) açar.",
           "Hatalarınızın açıklamaları en fazla bu kurallardan biriyle biter; yanındaki (i) kitap pasajlarını gösterir."
+        ]
+      },
+      "visitors": {
+        "t": "Ziyaretçi kökeni",
+        "p": [
+          "☰ → Topluluk → Ziyaretçi kökeni altında bir dünya haritası RookHub’ın hangi ülkelerden kullanıldığını gösterir. Yakınlaştırmak için bir ülkeye dokunun veya bir kıta seçin; yalnızca ülkeler sayılır, asla tek tek kişiler değil."
         ]
       }
     }
@@ -6529,5 +6543,63 @@
     "noAccess": "kütüphanenizde değil",
     "all": "Tüm pratik kurallar",
     "count": "{{count}} kural"
+  },
+  "visitors": {
+    "title": "Ziyaretçi kökeni",
+    "intro": "RookHub’ın hangi ülkelerden kullanıldığı. Yalnızca ülkeler sayılır, asla tek tek kişiler değil.",
+    "viewLabel": "Harita bölümü",
+    "continent": {
+      "world": "Dünya",
+      "eu": "Avrupa",
+      "na": "Kuzey Amerika",
+      "sa": "Güney Amerika",
+      "af": "Afrika",
+      "as": "Asya",
+      "oc": "Okyanusya"
+    },
+    "backToWorld": "Dünyaya dön",
+    "kpi": {
+      "users": "Tekil kullanıcılar",
+      "countries": "Ülkeler",
+      "hits": "İstekler"
+    },
+    "mapLabel": "Dünya haritası: ülkeye göre tekil kullanıcılar",
+    "mapLabelContinent": "Harita ({{continent}}): ülkeye göre tekil kullanıcılar",
+    "mapHintWorld": "Kıtasını yakınlaştırmak için bir ülkeye dokunun.",
+    "mapHintContinent": "Sayısını görmek için bir ülkeye dokunun.",
+    "mapFailed": "Harita yüklenemedi.",
+    "scaleFew": "az",
+    "scaleMany": "çok",
+    "countryValue": "{{country}}: {{count}}",
+    "table": {
+      "title": "Ülkeye göre kullanıcılar",
+      "rank": "Sıra",
+      "country": "Ülke",
+      "users": "Kullanıcılar",
+      "more": "{{count}} ülke daha",
+      "moreOne": "1 ülke daha",
+      "showAll": "Tüm ülkeleri göster",
+      "showTop": "Yalnızca ilk 10’u göster"
+    },
+    "unknown": "Bilinmeyen ülke",
+    "emptyNew": "Henüz veri yok. Sayım yeni başladı, ilk ülkeler yakında görünecek.",
+    "emptyFiltered": "Bu seçim için henüz veri yok. Sayım {{date}} tarihinden beri sürüyor.",
+    "emptyContinent": "Bu kıtadan henüz kimse gelmedi.",
+    "since": "{{date}} tarihinden beri sayılıyor",
+    "privacyNote": "Ülke IP adresinden belirlenir; adresin kendisi saklanmaz.",
+    "filter": {
+      "surfaceLabel": "Site",
+      "allSurfaces": "Tüm siteler",
+      "periodLabel": "Dönem",
+      "days": "{{count}} gün",
+      "allTime": "Tüm zamanlar"
+    },
+    "surface": {
+      "rookhub": "RookHub",
+      "leaguehub": "LeagueHub",
+      "kidhub": "KidHub",
+      "clubhub": "ClubHub",
+      "turnier": "Turnuva sitesi"
+    }
   }
 }

@@ -126,13 +126,14 @@ public class JwtTokensTests : IDisposable
     }
 
     /// <summary>Wachhund: der Signierschluessel wird nur in JwtTokens gelesen. Die beiden anderen Treffer haben einen
-    /// anderen Zweck: ScoresheetScanService nimmt den Wert als Geheimnis fuer IP-Hashes, SecretConfigCheck nennt nur
+    /// anderen Zweck: ScoresheetScanService nimmt den Wert als Geheimnis fuer IP-Hashes, VisitorOriginRecorder leitet daraus
+    /// den Schluessel der Besucher-Pseudonyme ab (wenn kein VisitorStats:Salt gesetzt ist), SecretConfigCheck nennt nur
     /// den Namen der Umgebungsvariablen.</summary>
     [Fact]
     public void JwtKey_NurInJwtTokensGelesen()
     {
         Assert.Equal(
-            ["Services/Accounts/JwtTokens.cs", "Services/Scoresheet/ScoresheetScanService.cs", "Services/SecretConfigCheck.cs"],
+            ["Services/Accounts/JwtTokens.cs", "Services/Accounts/VisitorOriginRecorder.cs", "Services/Scoresheet/ScoresheetScanService.cs", "Services/SecretConfigCheck.cs"],
             DateienMit(new Regex(@"\[""Jwt:Key""\]")));
     }
 }

@@ -30,7 +30,8 @@ namespace RookHub.Api.Services.Puzzles;
 ///
 /// <para>Und gelesene Admin-/Direktnachrichten nach <c>Retention:MessagesDays</c> (<see cref="Social.AdminMessageRetention"/>),
 /// Formular-Fotos (<see cref="Scoresheet.ScoresheetPhotoRetention"/>: gescheiterte nach 30, offene ohne Konto nach 14 Tagen,
-/// Archiv nach Ablauf), erledigte Passwort-Reset- und Übergabe-Codes nach 7 Tagen (<see cref="Accounts.OneTimeCodeRetention"/>).</para>
+/// Archiv nach Ablauf), erledigte Passwort-Reset- und Übergabe-Codes nach 7 Tagen (<see cref="Accounts.OneTimeCodeRetention"/>),
+/// Tageszeilen der Besucher-Herkunft nach <c>Retention:VisitorDays</c> (<see cref="Accounts.VisitorOriginRetention"/>).</para>
 ///
 /// Läuft täglich (PeriodicWorker, erster Lauf kurz nach dem Start, nicht pausierbar: Aufbewahrungsfristen); jede Senke hat
 /// ihren eigenen Versuch — ein Fehler der einen lässt die andere nicht aus und beendet den Dienst nicht (nur Logzeile).
@@ -128,6 +129,14 @@ public class AnonymousDataRetentionService : PeriodicWorker
             var pruned = await Accounts.OneTimeCodeRetention.PruneAsync(sp.GetRequiredService<AppDbContext>(), now, ct: ct);
             if (pruned > 0)
                 _logger.LogInformation("Einmalcode-Retention: {Count} erledigte Reset-/Übergabe-Codes gelöscht", pruned);
+            return pruned;
+        }, ct);
+        removed += await TryAsync("Besucher-Herkunft-Retention fehlgeschlagen", async sp =>
+        {
+            var pruned = await Accounts.VisitorOriginRetention.PruneAsync(sp.GetRequiredService<AppDbContext>(), now,
+                RetentionOptions.From(sp.GetService<IConfiguration>()), ct: ct);
+            if (pruned > 0)
+                _logger.LogInformation("Besucher-Herkunft-Retention: {Count} Tageszeilen gelöscht", pruned);
             return pruned;
         }, ct);
         return removed;

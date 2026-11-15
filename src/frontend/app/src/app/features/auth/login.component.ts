@@ -27,7 +27,7 @@ const AREA_KEYS: Readonly<Record<string, string>> = {
   dashboard: 'nav.dashboard', friends: 'nav.friends', repertoires: 'nav.repertoires', puzzles: 'nav.puzzles',
   favorites: 'nav.favorites', worksheets: 'nav.worksheets', weekly: 'nav.weekly', analysis: 'nav.analysis',
   games: 'nav.games', reconstruct: 'nav.reconstruct', remembered: 'nav.remembered', stats: 'nav.stats',
-  leaderboards: 'nav.leaderboards', 'training-goals': 'nav.trainingGoals', catalog: 'nav.catalog',
+  leaderboards: 'nav.leaderboards', visitors: 'nav.visitors', 'training-goals': 'nav.trainingGoals', catalog: 'nav.catalog',
   chessable: 'nav.chessable', profile: 'nav.profile', admin: 'nav.admin', courses: 'nav.courses',
   tournaments: 'nav.tournaments',
 };

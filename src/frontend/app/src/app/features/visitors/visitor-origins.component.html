@@ -1,0 +1,172 @@
+<div class="vo-page">
+  <div class="header">
+    <h1>{{ 'visitors.title' | translate }}</h1>
+  </div>
+  <p class="intro">{{ 'visitors.intro' | translate }}</p>
+
+  @if (admin()) {
+    <!-- Nur Admins: Oberfläche und Zeitraum. Der Server verwirft diese Parameter für jedes andere Konto. -->
+    <div class="vo-filters">
+      <mat-chip-listbox class="vo-chips" required [value]="surface() ?? ''" (change)="setSurface($event.value)"
+                        [attr.aria-label]="'visitors.filter.surfaceLabel' | translate">
+        <mat-chip-option value="">{{ 'visitors.filter.allSurfaces' | translate }}</mat-chip-option>
+        @for (s of surfaces; track s) {
+          <mat-chip-option [value]="s">{{ 'visitors.surface.' + s | translate }}</mat-chip-option>
+        }
+      </mat-chip-listbox>
+      <mat-chip-listbox class="vo-chips" required [value]="days() ?? 0" (change)="setDays($event.value || null)"
+                        [attr.aria-label]="'visitors.filter.periodLabel' | translate">
+        @for (d of dayOptions; track d) {
+          <mat-chip-option [value]="d">{{ 'visitors.filter.days' | translate: { count: d } }}</mat-chip-option>
+        }
+        <mat-chip-option [value]="0">{{ 'visitors.filter.allTime' | translate }}</mat-chip-option>
+      </mat-chip-listbox>
+    </div>
+  }
+
+  @if (loading() && !data()) {
+    <app-loading-spinner />
+  } @else if (failed()) {
+    <app-load-error [error]="error()" (retry)="reload()" />
+  } @else if (empty()) {
+    <mat-card class="vo-empty">
+      <mat-card-content class="empty-state">
+        <mat-icon>public</mat-icon>
+        @if (sinceText(); as since) {
+          <p>{{ 'visitors.emptyFiltered' | translate: { date: since } }}</p>
+        } @else {
+          <p>{{ 'visitors.emptyNew' | translate }}</p>
+        }
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <!-- Kontinent-Wahl: reine Ansicht (Ausschnitt + Zahlen des Kontinents), für alle Konten. -->
+    <div class="vo-viewbar">
+      @if (view() !== 'world') {
+        <button mat-stroked-button type="button" class="vo-back" (click)="goView('world')">
+          <mat-icon>arrow_back</mat-icon> {{ 'visitors.backToWorld' | translate }}
+        </button>
+      }
+      <mat-chip-listbox class="vo-chips vo-views" required [value]="view()" (change)="goView($event.value)"
+                        [attr.aria-label]="'visitors.viewLabel' | translate">
+        @for (v of views; track v) {
+          <mat-chip-option [value]="v">{{ 'visitors.continent.' + v | translate }}</mat-chip-option>
+        }
+      </mat-chip-listbox>
+    </div>
+
+    <dl class="vo-kpis">
+      <div class="vo-kpi vo-kpi-users">
+        <dd>{{ format(users()) }}</dd>
+        <dt>{{ 'visitors.kpi.users' | translate }}</dt>
+      </div>
+      <div class="vo-kpi vo-kpi-countries">
+        <dd>{{ format(countryCount()) }}</dd>
+        <dt>{{ 'visitors.kpi.countries' | translate }}</dt>
+      </div>
+      @if (admin() && view() === 'world' && data()?.hits !== null) {
+        <div class="vo-kpi vo-kpi-hits">
+          <dd>{{ format(data()?.hits) }}</dd>
+          <dt>{{ 'visitors.kpi.hits' | translate }}</dt>
+        </div>
+      }
+    </dl>
+
+    <div class="vo-split">
+      <section class="vo-map-col">
+        @if (map()) {
+          <div class="vo-map" [style.aspect-ratio]="aspect()">
+            <svg [attr.viewBox]="viewBox()" preserveAspectRatio="xMidYMid meet" role="img"
+                 [attr.aria-label]="(view() === 'world' ? 'visitors.mapLabel' : 'visitors.mapLabelContinent') | translate: { continent: ('visitors.continent.' + view() | translate) }"
+                 (click)="onMapClick($event)" (mousemove)="onMapMove($event)" (mouseleave)="tip.set(null)">
+              @for (s of shapes(); track s.id) {
+                <path [attr.d]="s.d" [attr.data-id]="s.id" [class]="'vo-c vo-s' + s.step"
+                      [class.vo-dim]="s.dim" [class.vo-sel]="selected() === s.id" />
+              }
+            </svg>
+            @if (tip(); as t) {
+              <div class="vo-tip" aria-hidden="true" [style.left.%]="t.x" [style.top.%]="t.y"
+                   [class.vo-tip-left]="t.x > 60">{{ t.text }}</div>
+            }
+          </div>
+          <div class="vo-under">
+            <p class="vo-status" aria-live="polite">
+              @if (selectedText(); as line) {
+                <strong>{{ line }}</strong>
+              } @else {
+                {{ (view() === 'world' ? 'visitors.mapHintWorld' : 'visitors.mapHintContinent') | translate }}
+              }
+            </p>
+            <div class="vo-scale" aria-hidden="true">
+              <span>{{ 'visitors.scaleFew' | translate }}</span>
+              @for (step of steps; track step) { <i [class]="'vo-s' + step"></i> }
+              <span>{{ 'visitors.scaleMany' | translate }}</span>
+            </div>
+          </div>
+        } @else if (mapFailed()) {
+          <app-load-error messageKey="visitors.mapFailed" (retry)="reload()" />
+        } @else {
+          <app-loading-spinner />
+        }
+      </section>
+
+      <section class="vo-rank-col">
+        <h2 id="vo-rank-title">{{ 'visitors.table.title' | translate }}</h2>
+        @if (rows().length === 0) {
+          <p class="vo-none">{{ 'visitors.emptyContinent' | translate }}</p>
+        } @else {
+          <table class="vo-table" aria-labelledby="vo-rank-title">
+            <thead>
+              <tr>
+                <th scope="col" class="vo-num vo-rank"><span class="vo-sr">{{ 'visitors.table.rank' | translate }}</span></th>
+                <th scope="col">{{ 'visitors.table.country' | translate }}</th>
+                <th scope="col" class="vo-num">{{ 'visitors.table.users' | translate }}</th>
+                @if (admin()) { <th scope="col" class="vo-num">{{ 'visitors.kpi.hits' | translate }}</th> }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.country) {
+                <tr [class.vo-row-sel]="selected() === row.country">
+                  <td class="vo-num vo-rank">{{ row.rank }}</td>
+                  <th scope="row">
+                    <span class="vo-name">{{ row.name }}</span>
+                    <span class="vo-bar" aria-hidden="true"><i [style.width.%]="row.bar"></i></span>
+                  </th>
+                  <td class="vo-num">{{ format(row.users) }}</td>
+                  @if (admin()) { <td class="vo-num">{{ format(row.hits) }}</td> }
+                </tr>
+              }
+              @if (rest(); as more) {
+                <tr class="vo-rest">
+                  <td></td>
+                  <th scope="row">{{ (more.count === 1 ? 'visitors.table.moreOne' : 'visitors.table.more') | translate: { count: more.count } }}</th>
+                  <td class="vo-num">{{ format(more.users) }}</td>
+                  @if (admin()) { <td class="vo-num">{{ format(more.hits) }}</td> }
+                </tr>
+              }
+              @if (view() === 'world' && (data()?.unknownUsers ?? 0) > 0) {
+                <tr class="vo-rest">
+                  <td></td>
+                  <th scope="row">{{ 'visitors.unknown' | translate }}</th>
+                  <td class="vo-num">{{ format(data()?.unknownUsers) }}</td>
+                  @if (admin()) { <td></td> }
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (rest()) {
+            <button mat-button type="button" class="vo-more" (click)="showAll.set(true)">{{ 'visitors.table.showAll' | translate }}</button>
+          } @else if (canCollapse()) {
+            <button mat-button type="button" class="vo-more" (click)="showAll.set(false)">{{ 'visitors.table.showTop' | translate }}</button>
+          }
+        }
+      </section>
+    </div>
+  }
+
+  <p class="vo-foot rh-dots">
+    <span>{{ 'visitors.privacyNote' | translate }}</span>
+    @if (admin() && sinceText(); as since) { <span>{{ 'visitors.since' | translate: { date: since } }}</span> }
+    <span><a href="https://db-ip.com" target="_blank" rel="noopener noreferrer">IP Geolocation by DB-IP</a></span>
+  </p>
+</div>
