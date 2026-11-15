@@ -361,7 +361,7 @@
     "ebooks": "E-knjige",
     "woodpecker": "Woodpecker",
     "maxims": "Pravila",
-    "visitors": "Podrijetlo posjetitelja"
+    "visitors": "RookHub diljem svijeta"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -1121,7 +1121,7 @@
       "contact": "Za pitanja o privatnosti javi nam se na",
       "back": "Natrag na prijavu",
       "introTurnier": "Turnirska stranica RookHuba prikazuje javne podatke o turnirima s chess-results.com i turnire koje si spremio. Koristi isti račun kao RookHub.",
-      "dataVisitorCountry": "Podrijetlo posjetitelja: za kartu „Podrijetlo posjetitelja“ iz IP adrese određujemo zemlju, lokalno na našem poslužitelju pomoću popisa zemalja DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Po danu spremamo samo brojač s pseudonimnom oznakom, zemljom i brojem poziva; IP adresa se ne sprema. Prijavljeni računi iz toga vide samo koliko je korisnika došlo iz koje zemlje.",
+      "dataVisitorCountry": "Podrijetlo posjetitelja: za kartu „RookHub diljem svijeta“ iz IP adrese određujemo zemlju, lokalno na našem poslužitelju pomoću popisa zemalja DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Po danu spremamo samo brojač s pseudonimnom oznakom, zemljom i brojem poziva; IP adresa se ne sprema. Prijavljeni računi iz toga vide samo koliko je korisnika došlo iz koje zemlje.",
       "kidVisitorCountry": "Brojimo iz kojih zemalja dolaze posjetitelji. Tvoju internetsku adresu pritom ne spremamo."
     },
     "impressum": {
@@ -2800,7 +2800,7 @@
         "ebooks": "Knjižnica e-knjiga",
         "woodpecker": "Woodpecker trening",
         "maxims": "Pravila (šahovske maksime)",
-        "visitors": "Podrijetlo posjetitelja"
+        "visitors": "RookHub diljem svijeta"
       }
     },
     "messages": {
@@ -4293,9 +4293,9 @@
         ]
       },
       "visitors": {
-        "t": "Podrijetlo posjetitelja",
+        "t": "RookHub diljem svijeta",
         "p": [
-          "Pod ☰ → Zajednica → Podrijetlo posjetitelja karta svijeta pokazuje iz kojih se zemalja koristi RookHub. Dodir na zemlju ili odabir kontinenta uvećava isječak; broje se samo zemlje, nikada pojedine osobe."
+          "Pod ☰ → Zajednica → RookHub diljem svijeta karta svijeta pokazuje iz kojih se zemalja koristi RookHub. Dodir na zemlju ili odabir kontinenta uvećava isječak; broje se samo zemlje, nikada pojedine osobe."
         ]
       }
     }
@@ -6804,7 +6804,7 @@
     "count": "{{count}} pravila"
   },
   "visitors": {
-    "title": "Podrijetlo posjetitelja",
+    "title": "RookHub diljem svijeta",
     "intro": "Iz kojih se zemalja koristi RookHub. Broje se samo zemlje, nikada pojedine osobe.",
     "viewLabel": "Isječak karte",
     "continent": {

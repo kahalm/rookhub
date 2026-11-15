@@ -144,7 +144,7 @@
     "ebooks": "E-könyvek",
     "woodpecker": "Woodpecker",
     "maxims": "Szabályok",
-    "visitors": "Látogatók származása"
+    "visitors": "RookHub világszerte"
   },
   "app": {
     "changelogTitle": "Változásnapló",
@@ -825,7 +825,7 @@
       "contact": "Adatvédelmi kérdésekkel keress minket:",
       "back": "Vissza a bejelentkezéshez",
       "introTurnier": "A RookHub versenyoldala a chess-results.com nyilvános versenyadatait és az általad megjelölt versenyeket mutatja. Ugyanazt a fiókot használja, mint a RookHub.",
-      "dataVisitorCountry": "Látogatók származása: a „Látogatók származása” térképhez az IP-címből meghatározzuk az országot, helyben, a saját szerverünkön, a DB-IP országlistájával (IP Geolocation by DB-IP, CC BY 4.0). Naponta csak egy számlálót tárolunk álnevesített azonosítóval, az országgal és a lekérések számával; az IP-címet nem tároljuk. A bejelentkezett fiókok ebből csak azt látják, hány felhasználó érkezett melyik országból.",
+      "dataVisitorCountry": "Látogatók származása: a „RookHub világszerte” térképhez az IP-címből meghatározzuk az országot, helyben, a saját szerverünkön, a DB-IP országlistájával (IP Geolocation by DB-IP, CC BY 4.0). Naponta csak egy számlálót tárolunk álnevesített azonosítóval, az országgal és a lekérések számával; az IP-címet nem tároljuk. A bejelentkezett fiókok ebből csak azt látják, hány felhasználó érkezett melyik országból.",
       "kidVisitorCountry": "Megszámoljuk, mely országokból jönnek a látogatók. Az internetcímedet ehhez nem tároljuk."
     },
     "impressum": {
@@ -2349,7 +2349,7 @@
         "ebooks": "E-könyvtár",
         "woodpecker": "Woodpecker-edzés",
         "maxims": "Szabályok (sakkmaximák)",
-        "visitors": "Látogatók származása"
+        "visitors": "RookHub világszerte"
       }
     },
     "messages": {
@@ -5142,9 +5142,9 @@
         ]
       },
       "visitors": {
-        "t": "Látogatók származása",
+        "t": "RookHub világszerte",
         "p": [
-          "A ☰ → Közösség → Látogatók származása alatt világtérkép mutatja, mely országokból használják a RookHubot. Egy országra koppintva vagy kontinenst választva a részlet nagyobb lesz; csak országokat számolunk, egyes személyeket soha."
+          "A ☰ → Közösség → RookHub világszerte alatt világtérkép mutatja, mely országokból használják a RookHubot. Egy országra koppintva vagy kontinenst választva a részlet nagyobb lesz; csak országokat számolunk, egyes személyeket soha."
         ]
       }
     },
@@ -6804,7 +6804,7 @@
     "count": "{{count}} szabály"
   },
   "visitors": {
-    "title": "Látogatók származása",
+    "title": "RookHub világszerte",
     "intro": "Mely országokból használják a RookHubot. Csak országokat számolunk, egyes személyeket soha.",
     "viewLabel": "Térképrészlet",
     "continent": {

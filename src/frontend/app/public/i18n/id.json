@@ -355,7 +355,7 @@
     "ebooks": "E-book",
     "woodpecker": "Woodpecker",
     "maxims": "Kaidah praktis",
-    "visitors": "Asal pengunjung"
+    "visitors": "RookHub di seluruh dunia"
   },
   "app": {
     "changelogTitle": "Catatan Perubahan",
@@ -1103,7 +1103,7 @@
       "contact": "Untuk pertanyaan privasi, hubungi kami di",
       "back": "Kembali ke halaman masuk",
       "introTurnier": "Situs turnamen RookHub menampilkan data turnamen publik dari chess-results.com dan turnamen yang Anda tandai. Situs ini memakai akun yang sama dengan RookHub.",
-      "dataVisitorCountry": "Asal pengunjung: untuk peta “Asal pengunjung” kami menentukan negara dari alamat IP, secara lokal di server kami dengan daftar negara DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Per hari kami hanya menyimpan penghitung dengan pengenal pseudonim, negara, dan jumlah permintaan; alamat IP tidak disimpan. Akun yang masuk hanya melihat berapa banyak pengguna yang datang dari negara mana.",
+      "dataVisitorCountry": "Asal pengunjung: untuk peta “RookHub di seluruh dunia” kami menentukan negara dari alamat IP, secara lokal di server kami dengan daftar negara DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Per hari kami hanya menyimpan penghitung dengan pengenal pseudonim, negara, dan jumlah permintaan; alamat IP tidak disimpan. Akun yang masuk hanya melihat berapa banyak pengguna yang datang dari negara mana.",
       "kidVisitorCountry": "Kami menghitung dari negara mana pengunjung datang. Alamat internetmu tidak disimpan untuk itu."
     },
     "impressum": {
@@ -2771,7 +2771,7 @@
         "ebooks": "Perpustakaan e-book",
         "woodpecker": "Latihan Woodpecker",
         "maxims": "Kaidah praktis (pepatah catur)",
-        "visitors": "Asal pengunjung"
+        "visitors": "RookHub di seluruh dunia"
       }
     },
     "messages": {
@@ -4220,9 +4220,9 @@
         ]
       },
       "visitors": {
-        "t": "Asal pengunjung",
+        "t": "RookHub di seluruh dunia",
         "p": [
-          "Di ☰ → Komunitas → Asal pengunjung, peta dunia menunjukkan dari negara mana saja RookHub digunakan. Ketuk sebuah negara atau pilih benua untuk memperbesar; hanya negara yang dihitung, tidak pernah orang per orang."
+          "Di ☰ → Komunitas → RookHub di seluruh dunia, peta dunia menunjukkan dari negara mana saja RookHub digunakan. Ketuk sebuah negara atau pilih benua untuk memperbesar; hanya negara yang dihitung, tidak pernah orang per orang."
         ]
       }
     }
@@ -6545,7 +6545,7 @@
     "count": "{{count}} kaidah"
   },
   "visitors": {
-    "title": "Asal pengunjung",
+    "title": "RookHub di seluruh dunia",
     "intro": "Dari negara mana saja RookHub digunakan. Hanya negara yang dihitung, tidak pernah orang per orang.",
     "viewLabel": "Bagian peta",
     "continent": {

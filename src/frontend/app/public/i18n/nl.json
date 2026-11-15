@@ -355,7 +355,7 @@
     "ebooks": "E-books",
     "woodpecker": "Woodpecker",
     "maxims": "Vuistregels",
-    "visitors": "Herkomst van bezoekers"
+    "visitors": "RookHub wereldwijd"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -1103,7 +1103,7 @@
       "contact": "Voor privacyvragen kunt u ons bereiken via",
       "back": "Terug naar inloggen",
       "introTurnier": "De toernooisite van RookHub toont openbare toernooigegevens van chess-results.com en de toernooien die u markeert. Hij gebruikt hetzelfde account als RookHub.",
-      "dataVisitorCountry": "Herkomst van bezoekers: voor de kaart ‘Herkomst van bezoekers’ bepalen we het land uit het IP-adres, lokaal op onze server met de landenlijst van DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Per dag slaan we alleen een teller op met een pseudoniem kenmerk, het land en het aantal aanvragen; het IP-adres wordt niet opgeslagen. Ingelogde accounts zien alleen hoeveel gebruikers uit welk land kwamen.",
+      "dataVisitorCountry": "Herkomst van bezoekers: voor de kaart ‘RookHub wereldwijd’ bepalen we het land uit het IP-adres, lokaal op onze server met de landenlijst van DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Per dag slaan we alleen een teller op met een pseudoniem kenmerk, het land en het aantal aanvragen; het IP-adres wordt niet opgeslagen. Ingelogde accounts zien alleen hoeveel gebruikers uit welk land kwamen.",
       "kidVisitorCountry": "We tellen uit welke landen bezoekers komen. Je internetadres wordt daarvoor niet opgeslagen."
     },
     "impressum": {
@@ -2771,7 +2771,7 @@
         "ebooks": "E-bookbibliotheek",
         "woodpecker": "Woodpecker-training",
         "maxims": "Vuistregels (schaakmaximes)",
-        "visitors": "Herkomst van bezoekers"
+        "visitors": "RookHub wereldwijd"
       }
     },
     "messages": {
@@ -4220,9 +4220,9 @@
         ]
       },
       "visitors": {
-        "t": "Herkomst van bezoekers",
+        "t": "RookHub wereldwijd",
         "p": [
-          "Onder ☰ → Community → Herkomst van bezoekers toont een wereldkaart vanuit welke landen RookHub wordt gebruikt. Tik op een land of kies een werelddeel om in te zoomen; er worden alleen landen geteld, nooit afzonderlijke personen."
+          "Onder ☰ → Community → RookHub wereldwijd toont een wereldkaart vanuit welke landen RookHub wordt gebruikt. Tik op een land of kies een werelddeel om in te zoomen; er worden alleen landen geteld, nooit afzonderlijke personen."
         ]
       }
     }
@@ -6545,7 +6545,7 @@
     "count": "{{count}} regels"
   },
   "visitors": {
-    "title": "Herkomst van bezoekers",
+    "title": "RookHub wereldwijd",
     "intro": "Vanuit welke landen RookHub wordt gebruikt. Er worden alleen landen geteld, nooit afzonderlijke personen.",
     "viewLabel": "Kaartuitsnede",
     "continent": {

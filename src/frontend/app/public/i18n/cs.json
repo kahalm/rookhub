@@ -355,7 +355,7 @@
     "ebooks": "E-knihy",
     "woodpecker": "Woodpecker",
     "maxims": "Praktická pravidla",
-    "visitors": "Původ návštěvníků"
+    "visitors": "RookHub ve světě"
   },
   "app": {
     "changelogTitle": "Seznam změn",
@@ -1103,7 +1103,7 @@
       "contact": "Pro dotazy ohledně ochrany osobních údajů nás kontaktujte na",
       "back": "Zpět na přihlášení",
       "introTurnier": "Turnajový web RookHub zobrazuje veřejná turnajová data z chess-results.com a turnaje, které si uložíte. Používá stejný účet jako RookHub.",
-      "dataVisitorCountry": "Původ návštěvníků: pro mapu „Původ návštěvníků“ určujeme z IP adresy zemi, lokálně na našem serveru pomocí seznamu zemí DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Za každý den ukládáme jen počitadlo s pseudonymním identifikátorem, zemí a počtem požadavků; IP adresa se neukládá. Přihlášené účty z toho vidí jen to, kolik uživatelů přišlo ze které země.",
+      "dataVisitorCountry": "Původ návštěvníků: pro mapu „RookHub ve světě“ určujeme z IP adresy zemi, lokálně na našem serveru pomocí seznamu zemí DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Za každý den ukládáme jen počitadlo s pseudonymním identifikátorem, zemí a počtem požadavků; IP adresa se neukládá. Přihlášené účty z toho vidí jen to, kolik uživatelů přišlo ze které země.",
       "kidVisitorCountry": "Počítáme, ze kterých zemí návštěvníci přicházejí. Tvoji internetovou adresu přitom neukládáme."
     },
     "impressum": {
@@ -2771,7 +2771,7 @@
         "ebooks": "Knihovna e-knih",
         "woodpecker": "Trénink Woodpecker",
         "maxims": "Praktická pravidla (šachové zásady)",
-        "visitors": "Původ návštěvníků"
+        "visitors": "RookHub ve světě"
       }
     },
     "messages": {
@@ -4220,9 +4220,9 @@
         ]
       },
       "visitors": {
-        "t": "Původ návštěvníků",
+        "t": "RookHub ve světě",
         "p": [
-          "V ☰ → Komunita → Původ návštěvníků ukazuje mapa světa, ze kterých zemí se RookHub používá. Klepnutím na zemi nebo výběrem kontinentu výřez přiblížíte; počítají se jen země, nikdy jednotlivé osoby."
+          "V ☰ → Komunita → RookHub ve světě ukazuje mapa světa, ze kterých zemí se RookHub používá. Klepnutím na zemi nebo výběrem kontinentu výřez přiblížíte; počítají se jen země, nikdy jednotlivé osoby."
         ]
       }
     }
@@ -6545,7 +6545,7 @@
     "count": "Pravidla: {{count}}"
   },
   "visitors": {
-    "title": "Původ návštěvníků",
+    "title": "RookHub ve světě",
     "intro": "Ze kterých zemí se RookHub používá. Počítají se jen země, nikdy jednotlivé osoby.",
     "viewLabel": "Výřez mapy",
     "continent": {

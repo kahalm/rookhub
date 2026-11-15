@@ -361,7 +361,7 @@
     "ebooks": "E-books",
     "woodpecker": "Woodpecker",
     "maxims": "Rules of thumb",
-    "visitors": "Visitor origins"
+    "visitors": "RookHub worldwide"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -1121,7 +1121,7 @@
       "contact": "For privacy questions, reach us at",
       "back": "Back to login",
       "introTurnier": "The tournament site of RookHub shows public tournament data from chess-results.com and the tournaments you bookmark. It uses the same account as RookHub.",
-      "dataVisitorCountry": "Visitor origins: for the map “Visitor origins” we determine the country from the IP address, locally on our server with the country list of DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Per day we store only a counter with a pseudonymous identifier, the country and the number of page requests; the IP address is not stored. Signed-in accounts only see how many users came from which country.",
+      "dataVisitorCountry": "Visitor origins: for the map “RookHub worldwide” we determine the country from the IP address, locally on our server with the country list of DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Per day we store only a counter with a pseudonymous identifier, the country and the number of page requests; the IP address is not stored. Signed-in accounts only see how many users came from which country.",
       "kidVisitorCountry": "We count which countries visitors come from. Your internet address is not stored for this."
     },
     "impressum": {
@@ -2800,7 +2800,7 @@
         "ebooks": "E-book library",
         "woodpecker": "Woodpecker training",
         "maxims": "Rules of thumb (chess maxims)",
-        "visitors": "Visitor origins"
+        "visitors": "RookHub worldwide"
       }
     },
     "messages": {
@@ -4293,9 +4293,9 @@
         ]
       },
       "visitors": {
-        "t": "Visitor origins",
+        "t": "RookHub worldwide",
         "p": [
-          "Under ☰ → Community → Visitor origins a world map shows which countries RookHub is used from. Tap a country or pick a continent to zoom in; only countries are counted, never individual people."
+          "Under ☰ → Community → RookHub worldwide a world map shows which countries RookHub is used from. Tap a country or pick a continent to zoom in; only countries are counted, never individual people."
         ]
       }
     }
@@ -6804,7 +6804,7 @@
     "count": "{{count}} rules"
   },
   "visitors": {
-    "title": "Visitor origins",
+    "title": "RookHub worldwide",
     "intro": "The countries RookHub is used from. Only countries are counted, never individual people.",
     "viewLabel": "Map section",
     "continent": {

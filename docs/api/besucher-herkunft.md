@@ -1,6 +1,6 @@
-# Besucher-Herkunft — Weltkarte nach Ländern (0.982.0)
+# „RookHub weltweit“ (Besucher-Herkunft) — Weltkarte nach Ländern (0.982.0)
 
-Seite `/visitors` (☰ → Community → „Besucher-Herkunft“, Menüschlüssel `visitors`, Vorgabe „Angemeldete“): Weltkarte mit
+Seite `/visitors` (☰ → Community → „RookHub weltweit“ — bis 0.982.0 „Besucher-Herkunft“; Menüschlüssel `visitors`, Vorgabe „Angemeldete“): Weltkarte mit
 **eindeutigen Benutzern je Land** in fünf Stufen, daneben die Rangliste. Gezählt wird über alle fünf Oberflächen
 (RookHub, LeagueHub, KidHub, ClubHub, Turnierseite).
 

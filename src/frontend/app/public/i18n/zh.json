@@ -355,7 +355,7 @@
     "ebooks": "电子书",
     "woodpecker": "Woodpecker",
     "maxims": "经验法则",
-    "visitors": "访客来源"
+    "visitors": "RookHub 遍布全球"
   },
   "app": {
     "changelogTitle": "更新日志",
@@ -1103,7 +1103,7 @@
       "contact": "如有隐私相关问题，请联系我们：",
       "back": "返回登录",
       "introTurnier": "RookHub 的比赛网站显示来自 chess-results.com 的公开比赛数据以及你加了书签的比赛。它使用与 RookHub 相同的账户。",
-      "dataVisitorCountry": "访客来源：为了“访客来源”地图，我们根据 IP 地址确定国家，在我们自己的服务器上使用 DB-IP 的国家列表本地完成（IP Geolocation by DB-IP，CC BY 4.0）。每天只保存一个计数器，包含假名化标识、国家和请求数；不保存 IP 地址。已登录的账户只能看到有多少用户来自哪个国家。",
+      "dataVisitorCountry": "访客来源：为了“RookHub 遍布全球”地图，我们根据 IP 地址确定国家，在我们自己的服务器上使用 DB-IP 的国家列表本地完成（IP Geolocation by DB-IP，CC BY 4.0）。每天只保存一个计数器，包含假名化标识、国家和请求数；不保存 IP 地址。已登录的账户只能看到有多少用户来自哪个国家。",
       "kidVisitorCountry": "我们会统计访客来自哪些国家。为此不会保存你的互联网地址。"
     },
     "impressum": {
@@ -2771,7 +2771,7 @@
         "ebooks": "电子书库",
         "woodpecker": "Woodpecker 训练",
         "maxims": "经验法则（国际象棋格言）",
-        "visitors": "访客来源"
+        "visitors": "RookHub 遍布全球"
       }
     },
     "messages": {
@@ -4220,9 +4220,9 @@
         ]
       },
       "visitors": {
-        "t": "访客来源",
+        "t": "RookHub 遍布全球",
         "p": [
-          "在 ☰ → 社区 → 访客来源 中，世界地图显示 RookHub 在哪些国家被使用。点按某个国家或选择一个大洲即可放大；只统计国家，从不统计个人。"
+          "在 ☰ → 社区 → RookHub 遍布全球 中，世界地图显示 RookHub 在哪些国家被使用。点按某个国家或选择一个大洲即可放大；只统计国家，从不统计个人。"
         ]
       }
     }
@@ -6545,7 +6545,7 @@
     "count": "{{count}} 条法则"
   },
   "visitors": {
-    "title": "访客来源",
+    "title": "RookHub 遍布全球",
     "intro": "显示 RookHub 在哪些国家被使用。只统计国家，从不统计个人。",
     "viewLabel": "地图范围",
     "continent": {

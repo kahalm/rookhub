@@ -355,7 +355,7 @@
     "ebooks": "Sách điện tử",
     "woodpecker": "Woodpecker",
     "maxims": "Kinh nghiệm thực hành",
-    "visitors": "Nguồn gốc khách truy cập"
+    "visitors": "RookHub trên thế giới"
   },
   "app": {
     "changelogTitle": "Nhật ký thay đổi",
@@ -1103,7 +1103,7 @@
       "contact": "Để giải đáp thắc mắc về quyền riêng tư, hãy liên hệ với chúng tôi tại",
       "back": "Quay lại đăng nhập",
       "introTurnier": "Trang giải đấu của RookHub hiển thị dữ liệu giải đấu công khai từ chess-results.com và các giải bạn đánh dấu. Trang dùng cùng tài khoản với RookHub.",
-      "dataVisitorCountry": "Nguồn gốc khách truy cập: với bản đồ “Nguồn gốc khách truy cập”, chúng tôi xác định quốc gia từ địa chỉ IP, ngay trên máy chủ của mình bằng danh sách quốc gia của DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Mỗi ngày chỉ lưu một bộ đếm gồm mã định danh ẩn danh hóa, quốc gia và số lượt truy vấn; địa chỉ IP không được lưu. Tài khoản đã đăng nhập chỉ thấy có bao nhiêu người dùng đến từ quốc gia nào.",
+      "dataVisitorCountry": "Nguồn gốc khách truy cập: với bản đồ “RookHub trên thế giới”, chúng tôi xác định quốc gia từ địa chỉ IP, ngay trên máy chủ của mình bằng danh sách quốc gia của DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Mỗi ngày chỉ lưu một bộ đếm gồm mã định danh ẩn danh hóa, quốc gia và số lượt truy vấn; địa chỉ IP không được lưu. Tài khoản đã đăng nhập chỉ thấy có bao nhiêu người dùng đến từ quốc gia nào.",
       "kidVisitorCountry": "Chúng tôi đếm khách truy cập đến từ những quốc gia nào. Địa chỉ internet của bạn không được lưu cho việc này."
     },
     "impressum": {
@@ -2771,7 +2771,7 @@
         "ebooks": "Thư viện sách điện tử",
         "woodpecker": "Luyện tập Woodpecker",
         "maxims": "Kinh nghiệm thực hành (châm ngôn cờ vua)",
-        "visitors": "Nguồn gốc khách truy cập"
+        "visitors": "RookHub trên thế giới"
       }
     },
     "messages": {
@@ -4220,9 +4220,9 @@
         ]
       },
       "visitors": {
-        "t": "Nguồn gốc khách truy cập",
+        "t": "RookHub trên thế giới",
         "p": [
-          "Trong ☰ → Cộng đồng → Nguồn gốc khách truy cập, bản đồ thế giới cho thấy RookHub được dùng từ những quốc gia nào. Chạm vào một quốc gia hoặc chọn một châu lục để phóng to; chỉ đếm quốc gia, không bao giờ đếm từng người."
+          "Trong ☰ → Cộng đồng → RookHub trên thế giới, bản đồ thế giới cho thấy RookHub được dùng từ những quốc gia nào. Chạm vào một quốc gia hoặc chọn một châu lục để phóng to; chỉ đếm quốc gia, không bao giờ đếm từng người."
         ]
       }
     }
@@ -6545,7 +6545,7 @@
     "count": "{{count}} quy tắc"
   },
   "visitors": {
-    "title": "Nguồn gốc khách truy cập",
+    "title": "RookHub trên thế giới",
     "intro": "RookHub được dùng từ những quốc gia nào. Chỉ đếm quốc gia, không bao giờ đếm từng người.",
     "viewLabel": "Vùng bản đồ",
     "continent": {

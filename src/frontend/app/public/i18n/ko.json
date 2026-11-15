@@ -355,7 +355,7 @@
     "ebooks": "전자책",
     "woodpecker": "Woodpecker",
     "maxims": "경험 법칙",
-    "visitors": "방문자 지역"
+    "visitors": "전 세계의 RookHub"
   },
   "app": {
     "changelogTitle": "변경 이력",
@@ -1103,7 +1103,7 @@
       "contact": "개인정보 관련 문의는 아래로 연락하세요",
       "back": "로그인으로 돌아가기",
       "introTurnier": "RookHub의 대회 사이트는 chess-results.com의 공개 대회 데이터와 내가 북마크한 대회를 보여 줍니다. RookHub와 같은 계정을 사용합니다.",
-      "dataVisitorCountry": "방문자 지역: ‘방문자 지역’ 지도를 위해 IP 주소로 국가를 판별합니다. 판별은 당사 서버에서 DB-IP 국가 목록(IP Geolocation by DB-IP, CC BY 4.0)으로 이루어집니다. 하루 단위로 가명 식별자, 국가, 요청 수로 이루어진 카운터만 저장하며 IP 주소는 저장하지 않습니다. 로그인한 계정은 어느 나라에서 사용자가 몇 명 왔는지만 볼 수 있습니다.",
+      "dataVisitorCountry": "방문자 지역: ‘전 세계의 RookHub’ 지도를 위해 IP 주소로 국가를 판별합니다. 판별은 당사 서버에서 DB-IP 국가 목록(IP Geolocation by DB-IP, CC BY 4.0)으로 이루어집니다. 하루 단위로 가명 식별자, 국가, 요청 수로 이루어진 카운터만 저장하며 IP 주소는 저장하지 않습니다. 로그인한 계정은 어느 나라에서 사용자가 몇 명 왔는지만 볼 수 있습니다.",
       "kidVisitorCountry": "방문자가 어느 나라에서 오는지 셉니다. 이를 위해 인터넷 주소를 저장하지 않습니다."
     },
     "impressum": {
@@ -2771,7 +2771,7 @@
         "ebooks": "전자책 라이브러리",
         "woodpecker": "Woodpecker 훈련",
         "maxims": "경험 법칙(체스 격언)",
-        "visitors": "방문자 지역"
+        "visitors": "전 세계의 RookHub"
       }
     },
     "messages": {
@@ -4220,9 +4220,9 @@
         ]
       },
       "visitors": {
-        "t": "방문자 지역",
+        "t": "전 세계의 RookHub",
         "p": [
-          "☰ → 커뮤니티 → 방문자 지역에서 RookHub가 어느 나라에서 사용되는지 세계 지도로 볼 수 있습니다. 나라를 누르거나 대륙을 선택하면 확대됩니다. 나라만 세며 개인은 세지 않습니다."
+          "☰ → 커뮤니티 → 전 세계의 RookHub에서 RookHub가 어느 나라에서 사용되는지 세계 지도로 볼 수 있습니다. 나라를 누르거나 대륙을 선택하면 확대됩니다. 나라만 세며 개인은 세지 않습니다."
         ]
       }
     }
@@ -6545,7 +6545,7 @@
     "count": "격언 {{count}}개"
   },
   "visitors": {
-    "title": "방문자 지역",
+    "title": "전 세계의 RookHub",
     "intro": "RookHub가 어느 나라에서 사용되는지 보여 줍니다. 나라만 세며 개인은 세지 않습니다.",
     "viewLabel": "지도 범위",
     "continent": {

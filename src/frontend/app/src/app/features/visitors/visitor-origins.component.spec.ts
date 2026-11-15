@@ -44,7 +44,7 @@ function origins(over: Partial<VisitorOrigins> = {}): VisitorOrigins {
 /** Viele Länder (für „N weitere Länder“): ISO-Kürzel, die `Intl.DisplayNames` kennt. */
 const MANY = ['AT', 'DE', 'CH', 'IT', 'FR', 'ES', 'PL', 'HU', 'HR', 'SI', 'NL', 'BE', 'SE'];
 
-describe('VisitorOriginsComponent (/visitors, Besucher-Herkunft)', () => {
+describe('VisitorOriginsComponent (/visitors, „RookHub weltweit“)', () => {
   let http: HttpTestingController;
   let harness: RouterTestingHarness;
   let el: HTMLElement;

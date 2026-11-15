@@ -355,7 +355,7 @@
     "ebooks": "E-books",
     "woodpecker": "Woodpecker",
     "maxims": "Règles empiriques",
-    "visitors": "Origine des visiteurs"
+    "visitors": "RookHub dans le monde"
   },
   "app": {
     "changelogTitle": "Journal des modifications",
@@ -1103,7 +1103,7 @@
       "contact": "Pour toute question relative à la confidentialité, contactez-nous à",
       "back": "Retour à la connexion",
       "introTurnier": "Le site des tournois de RookHub affiche des données de tournois publiques de chess-results.com et les tournois que vous marquez. Il utilise le même compte que RookHub.",
-      "dataVisitorCountry": "Origine des visiteurs : pour la carte « Origine des visiteurs », nous déterminons le pays à partir de l’adresse IP, localement sur notre serveur avec la liste de pays de DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Nous n’enregistrons par jour qu’un compteur avec un identifiant pseudonyme, le pays et le nombre de requêtes ; l’adresse IP n’est pas enregistrée. Les comptes connectés voient seulement combien d’utilisateurs sont venus de quel pays.",
+      "dataVisitorCountry": "Origine des visiteurs : pour la carte « RookHub dans le monde », nous déterminons le pays à partir de l’adresse IP, localement sur notre serveur avec la liste de pays de DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Nous n’enregistrons par jour qu’un compteur avec un identifiant pseudonyme, le pays et le nombre de requêtes ; l’adresse IP n’est pas enregistrée. Les comptes connectés voient seulement combien d’utilisateurs sont venus de quel pays.",
       "kidVisitorCountry": "Nous comptons de quels pays viennent les visiteurs. Ton adresse internet n’est pas enregistrée pour cela."
     },
     "impressum": {
@@ -2771,7 +2771,7 @@
         "ebooks": "Bibliothèque d'e-books",
         "woodpecker": "Entraînement Woodpecker",
         "maxims": "Règles empiriques (maximes d'échecs)",
-        "visitors": "Origine des visiteurs"
+        "visitors": "RookHub dans le monde"
       }
     },
     "messages": {
@@ -4220,9 +4220,9 @@
         ]
       },
       "visitors": {
-        "t": "Origine des visiteurs",
+        "t": "RookHub dans le monde",
         "p": [
-          "Sous ☰ → Communauté → Origine des visiteurs, une carte du monde montre depuis quels pays RookHub est utilisé. Touchez un pays ou choisissez un continent pour agrandir la zone ; seuls les pays sont comptés, jamais des personnes."
+          "Sous ☰ → Communauté → RookHub dans le monde, une carte du monde montre depuis quels pays RookHub est utilisé. Touchez un pays ou choisissez un continent pour agrandir la zone ; seuls les pays sont comptés, jamais des personnes."
         ]
       }
     }
@@ -6545,7 +6545,7 @@
     "count": "{{count}} règles"
   },
   "visitors": {
-    "title": "Origine des visiteurs",
+    "title": "RookHub dans le monde",
     "intro": "Les pays depuis lesquels RookHub est utilisé. Seuls les pays sont comptés, jamais des personnes.",
     "viewLabel": "Zone de la carte",
     "continent": {

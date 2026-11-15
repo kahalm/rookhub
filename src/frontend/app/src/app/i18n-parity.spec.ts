@@ -170,6 +170,27 @@ describe('i18n Sprachdateien', () => {
   });
 
   /**
+   * Die Seite `/visitors` heißt für Nutzer „RookHub weltweit“ (vorher „Besucher-Herkunft“): Menü, Seitentitel,
+   * Menü-Verwaltung und Hilfe-Überschrift tragen je Sprache denselben Namen, „RookHub“ bleibt als Eigenname stehen,
+   * und Hilfe- und Datenschutztext nennen die Seite unter diesem Namen.
+   */
+  it('„RookHub weltweit“ (/visitors) heißt überall gleich (alle Sprachen)', async () => {
+    for (const lang of SUPPORTED_LANGS) {
+      const all = lang === 'en' ? en : await load(lang);
+      const names = ['nav.visitors', 'visitors.title', 'admin.menu.items.visitors', 'help.s.visitors.t'].map(k => all[k]);
+      expect(new Set(names).size).withContext(`${lang}: ${names.join(' | ')}`).toBe(1);
+      expect(names[0]).withContext(lang).toContain('RookHub');
+      expect(all['help.s.visitors.p.0']).withContext(lang).toContain(names[0]);
+    }
+    const de = await load('de');
+    expect(de['nav.visitors']).toBe('RookHub weltweit');
+    expect(en['nav.visitors']).toBe('RookHub worldwide');
+    expect(de['legal.privacy.dataVisitorCountry']).toContain('„RookHub weltweit“');
+    expect(en['legal.privacy.dataVisitorCountry']).toContain('“RookHub worldwide”');
+    expect(JSON.stringify([de['help.s.visitors.p.0'], en['help.s.visitors.p.0']])).not.toMatch(/Besucher-Herkunft|Visitor origins/);
+  });
+
+  /**
    * d3-rk-mistakes-filter-beschriftung-saison / d3-rk-edit-seite-liga-beschriftung: die Sammlung filtert nach den
    * Einordnungen „Plattform / Liga“ und „Modus / Jahrgang“ — Titel und Erklärsatz sprachen von „Liga/Saison“, und
    * „Seite / Liga“ las man neben „Meine Seite“ als Farbe.
@@ -301,7 +322,9 @@ describe('i18n Sprachdateien', () => {
       // 2026-11-09: alle 21 Teilsprachen komplett vom aktuellen en-Stand uebersetzt (i18n-Welle), deshalb jeder
       // Rechtstext-Schluessel mit dem heutigen Fingerabdruck; legal.privacy.updated tragen die Teilsprachen NICHT.
       // 2026-11-15 (Besucher-Herkunft): vier neue Rechtstext-Schluessel, in allen 21 Teilsprachen vom heutigen en-Stand uebersetzt.
-      'legal.privacy.dataVisitorCountry': 'cc177e6c', 'legal.privacy.kidVisitorCountry': 'dcc419d3',
+      // 2026-11-15 (0.982.1): die Karte heisst „RookHub worldwide“ statt „Visitor origins“ — nur der Seitenname im Satz,
+      // in denselben Commit in allen Teilsprachen nachgezogen (hi nennt den Namen dort nicht), daher neuer Fingerabdruck.
+      'legal.privacy.dataVisitorCountry': 'e782aab2', 'legal.privacy.kidVisitorCountry': 'dcc419d3',
       'legal.privacy.periods.visitorCountry.data': 'e7946ec8', 'legal.privacy.periods.visitorCountry.period': '371f0e5e',
       'legal.privacy.title': '2526541f', 'legal.privacy.link': '37cb16ff',
       'legal.privacy.tocTitle': '871f67c3', 'legal.privacy.intro': '11947df0',

@@ -906,7 +906,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Material 22 (M3, Azure), dunkel als Vorgabe, `ThemeService` (3.1). Navbar (`shell/navbar.component.ts`, Messung in `shared/navbar/nav-edge.ts`): ≤ 768 px
   Hamburger; abgemeldet ≤ 480 px nur „Anmelden“ und ☰ (0.740.0). Fußzeile (`shared/app-footer/`) bleibt auf
   kurzen Seiten unten; Links ≥ 44 px.
-- Besucher-Herkunft `/visitors` (0.982.0): Seitenkopf + ein Satz; Kennzahlen als Zahlenreihe (`dl`, Zahl 1.75rem
+- „RookHub weltweit“ `/visitors` (0.982.0, anfangs „Besucher-Herkunft“): Seitenkopf + ein Satz; Kennzahlen als Zahlenreihe (`dl`, Zahl 1.75rem
   halbfett `tabular-nums`, Beschriftung darunter 0.85rem/60 %) — die Hauptzahl heißt „Eindeutige Benutzer“, ohne
   Zeitraum-Zusatz. **Flächenkarte in fünf Stufen** aus dem Akzent: `color-mix(--mat-sys-primary 30/46/62/80/100 %,
   --mat-sys-surface)`, „kein Wert“ = 12 % `--mat-sys-on-surface`; Stufe logarithmisch gegen den größten Wert des

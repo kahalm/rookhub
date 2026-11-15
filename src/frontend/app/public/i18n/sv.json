@@ -355,7 +355,7 @@
     "ebooks": "E-böcker",
     "woodpecker": "Woodpecker",
     "maxims": "Tumregler",
-    "visitors": "Besökarnas ursprung"
+    "visitors": "RookHub i världen"
   },
   "app": {
     "changelogTitle": "Ändringslogg",
@@ -1103,7 +1103,7 @@
       "contact": "För integritetsfrågor, kontakta oss på",
       "back": "Tillbaka till inloggning",
       "introTurnier": "RookHubs turneringssajt visar offentliga turneringsdata från chess-results.com och de turneringar du bokmärker. Den använder samma konto som RookHub.",
-      "dataVisitorCountry": "Besökarnas ursprung: för kartan ”Besökarnas ursprung” bestämmer vi landet utifrån IP-adressen, lokalt på vår server med DB-IP:s landslista (IP Geolocation by DB-IP, CC BY 4.0). Per dag sparar vi bara en räknare med en pseudonym identifierare, landet och antalet anrop; IP-adressen sparas inte. Inloggade konton ser bara hur många användare som kom från vilket land.",
+      "dataVisitorCountry": "Besökarnas ursprung: för kartan ”RookHub i världen” bestämmer vi landet utifrån IP-adressen, lokalt på vår server med DB-IP:s landslista (IP Geolocation by DB-IP, CC BY 4.0). Per dag sparar vi bara en räknare med en pseudonym identifierare, landet och antalet anrop; IP-adressen sparas inte. Inloggade konton ser bara hur många användare som kom från vilket land.",
       "kidVisitorCountry": "Vi räknar vilka länder besökarna kommer från. Din internetadress sparas inte för det."
     },
     "impressum": {
@@ -2771,7 +2771,7 @@
         "ebooks": "E-boksbibliotek",
         "woodpecker": "Woodpecker-träning",
         "maxims": "Tumregler (schackmaximer)",
-        "visitors": "Besökarnas ursprung"
+        "visitors": "RookHub i världen"
       }
     },
     "messages": {
@@ -4220,9 +4220,9 @@
         ]
       },
       "visitors": {
-        "t": "Besökarnas ursprung",
+        "t": "RookHub i världen",
         "p": [
-          "Under ☰ → Community → Besökarnas ursprung visar en världskarta vilka länder RookHub används från. Tryck på ett land eller välj en världsdel för att zooma in; endast länder räknas, aldrig enskilda personer."
+          "Under ☰ → Community → RookHub i världen visar en världskarta vilka länder RookHub används från. Tryck på ett land eller välj en världsdel för att zooma in; endast länder räknas, aldrig enskilda personer."
         ]
       }
     }
@@ -6545,7 +6545,7 @@
     "count": "{{count}} regler"
   },
   "visitors": {
-    "title": "Besökarnas ursprung",
+    "title": "RookHub i världen",
     "intro": "Vilka länder RookHub används från. Endast länder räknas, aldrig enskilda personer.",
     "viewLabel": "Kartutsnitt",
     "continent": {

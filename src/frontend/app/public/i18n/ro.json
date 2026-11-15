@@ -355,7 +355,7 @@
     "ebooks": "E-books",
     "woodpecker": "Woodpecker",
     "maxims": "Reguli practice",
-    "visitors": "Originea vizitatorilor"
+    "visitors": "RookHub în lume"
   },
   "app": {
     "changelogTitle": "Jurnal de modificări",
@@ -1103,7 +1103,7 @@
       "contact": "Pentru întrebări legate de confidențialitate, ne poți contacta la",
       "back": "Înapoi la conectare",
       "introTurnier": "Site-ul de turnee RookHub arată date publice despre turnee de pe chess-results.com și turneele pe care le marchezi. Folosește același cont ca RookHub.",
-      "dataVisitorCountry": "Originea vizitatorilor: pentru harta „Originea vizitatorilor” determinăm țara din adresa IP, local pe serverul nostru, cu lista de țări DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Pe zi stocăm doar un contor cu un identificator pseudonim, țara și numărul de accesări; adresa IP nu este stocată. Conturile autentificate văd doar câți utilizatori au venit din ce țară.",
+      "dataVisitorCountry": "Originea vizitatorilor: pentru harta „RookHub în lume” determinăm țara din adresa IP, local pe serverul nostru, cu lista de țări DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Pe zi stocăm doar un contor cu un identificator pseudonim, țara și numărul de accesări; adresa IP nu este stocată. Conturile autentificate văd doar câți utilizatori au venit din ce țară.",
       "kidVisitorCountry": "Numărăm din ce țări vin vizitatorii. Adresa ta de internet nu este stocată pentru asta."
     },
     "impressum": {
@@ -2771,7 +2771,7 @@
         "ebooks": "Biblioteca de e-books",
         "woodpecker": "Antrenament Woodpecker",
         "maxims": "Reguli practice (maxime de șah)",
-        "visitors": "Originea vizitatorilor"
+        "visitors": "RookHub în lume"
       }
     },
     "messages": {
@@ -4220,9 +4220,9 @@
         ]
       },
       "visitors": {
-        "t": "Originea vizitatorilor",
+        "t": "RookHub în lume",
         "p": [
-          "La ☰ → Comunitate → Originea vizitatorilor, o hartă a lumii arată din ce țări este folosit RookHub. Atinge o țară sau alege un continent pentru a mări secțiunea; se numără doar țări, niciodată persoane individuale."
+          "La ☰ → Comunitate → RookHub în lume, o hartă a lumii arată din ce țări este folosit RookHub. Atinge o țară sau alege un continent pentru a mări secțiunea; se numără doar țări, niciodată persoane individuale."
         ]
       }
     }
@@ -6545,7 +6545,7 @@
     "count": "{{count}} reguli"
   },
   "visitors": {
-    "title": "Originea vizitatorilor",
+    "title": "RookHub în lume",
     "intro": "Din ce țări este folosit RookHub. Se numără doar țări, niciodată persoane individuale.",
     "viewLabel": "Secțiune de hartă",
     "continent": {
