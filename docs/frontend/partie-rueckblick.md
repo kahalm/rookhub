@@ -37,8 +37,14 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
     aus einer UNGENAUIGKEIT `good` (`classifyMove(…, masterBacked)`), der Zug trägt das Etikett `book`
     (`ReviewedMove.masterBook`, Erklärung `games.review.masterBookHint` „Eröffnungstheorie“ statt „in deinem Repertoire“)
     und fällt aus Fehlerzählern, „Eigene Fehler nachspielen“ und den Erklärungen. Fehler und grobe Fehler bleiben
-    (Theorie entschuldigt keinen Einsteller — so hält es auch der Zusammenfassungs-Bot), ein Theoriezug, der ohnehin kein
-    Fehler ist, behält seine Klasse. Das Repertoire-Buch des Betrachters (`bookPlies`) liegt wie bisher obendrauf.
+    (Theorie entschuldigt keinen Einsteller — so hält es auch der Zusammenfassungs-Bot). **Seit 0.979.0** (Wunsch
+    2026-11-15: „manche Züge als Buchzüge markiert und manche als beste Züge — das ist komisch“) trägt JEDER Halbzug aus
+    `masterBookPlies` das Etikett `book`, egal ob die Engine ihn best, excellent oder good findet oder er „!!“/„!“ wäre —
+    wie beim Repertoire-Buch; ab dem ersten Zug ohne Meister-Vorgänger gelten die normalen Klassen. Ausnahme: `mistake`
+    und `blunder` (und „Miss“ darüber) bleiben sichtbar. `base` bleibt die Klasse der Engine — Genauigkeit, Miss-Regel
+    (`prevBase`) und Fehler-Training ändern sich nicht, nur Etikett und Zähler (mehr „Buch“, weniger Bester/Gut in der
+    Eröffnung). Server-Kette: Zeichen `K`, Regelstand 5. Das Repertoire-Buch des Betrachters (`bookPlies`) liegt wie bisher
+    obendrauf (auch über Fehlern und nach dem Ende der Theorie).
     Literale Tests: `game-review.util.spec.ts` („Meister-Buchzüge“) ↔ `GameMasterBookTests`.
   - `reviewGame(evals, fens, ucis?)`: die Seite am Zug kommt aus der FEN, nie aus der Parität. Bewertbar ist
     ein Zug nur mit gerechneter Stellung davor; „danach" = nächste Stellung (tiefer), sonst der gespielte

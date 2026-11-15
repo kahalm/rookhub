@@ -7,7 +7,8 @@ namespace RookHub.Api.Services.Games;
 /// Die Zug-Klassen einer analysierten Partie, VORGERECHNET am Server (0.854.0, Wunsch 2026-10-27: „die Bewertungen in einem
 /// eigenen Lauf ernten, damit große Listen nicht alles live rechnen — mit Versionsnummer, damit nach Änderungen neu
 /// gerechnet wird"). Der SPIEGEL von <c>reviewGame</c> + <c>specialClass</c> in <c>features/games/game-review.util.ts</c>,
-/// ohne „Book" (das hängt am Repertoire des Betrachters und kommt im Client obendrauf).
+/// ohne das „Book" aus dem Repertoire des Betrachters (das kommt im Client obendrauf); das „Book" der Meistertheorie
+/// (<see cref="GameMasterBook"/>) steht seit Regelstand 5 in der Kette (<c>K</c>).
 ///
 /// <para>Abgelegt an der Analyse als eine Zeichenkette, ein Zeichen je Halbzug (<see cref="GameAnalysis.MoveClasses"/>,
 /// Codes in <see cref="Codes"/>), zusammen mit <see cref="Version"/> (<see cref="GameAnalysis.MoveClassesVersion"/>).
@@ -26,14 +27,20 @@ public static class GameMoveClasses
     /// 3 = 2026-11-15 (Vereinspartie 234: stand der Ziehende vor dem Zug schon bei −4 oder schlechter, ist der Zug kein
     /// Fehler mehr, sondern „good" — <see cref="GameMistakes.LostAnywayPawns"/>). 4 = 2026-11-15 (Partie 234, 3.Ld3: eine
     /// Ungenauigkeit an einem Meister-Buchzug ist kein Fehler — „good" in der Kette, „Book" im Client;
-    /// <see cref="GameMasterBook"/>, <see cref="GameAnalysis.MasterBookPlies"/>).</summary>
-    public const int Version = 4;
+    /// <see cref="GameMasterBook"/>, <see cref="GameAnalysis.MasterBookPlies"/>). 5 = 2026-11-15 („manche Züge als Buchzüge
+    /// markiert und manche als beste Züge — das ist komisch"): JEDER Meister-Buchzug, der kein Fehler oder grober Fehler ist,
+    /// heißt „book" (<c>K</c>) — auch best/excellent/good und die Sonderklassen „!!"/„!"; die Grundklasse für die
+    /// Folgeregeln (Miss, Great) bleibt die der Engine.</summary>
+    public const int Version = 5;
 
     /// <summary>Zeichen je Klasse in <see cref="GameAnalysis.MoveClasses"/>; <c>-</c> = nicht bewertbar.</summary>
     public static readonly IReadOnlyDictionary<string, char> Codes = new Dictionary<string, char>
     {
         ["brilliant"] = 'B', ["great"] = 'G', ["best"] = 'S', ["excellent"] = 'E', ["good"] = 'O',
         ["inaccuracy"] = 'I', ["mistake"] = 'M', ["miss"] = 'X', ["blunder"] = 'P',
+        // Meister-Buchzug (Regelstand 5). Leser der Kette: „!!"-Marker (PliesOf 'B'), Fehlerauswahl (I/M/P/X), der
+        // Zusammenfassungs-Bot (liest die Spalte direkt, kennt nur B/G/I/M/P — ein K ist dort „ohne Zeichen").
+        ["book"] = 'K',
     };
     public const char None = '-';
 
@@ -87,7 +94,8 @@ public static class GameMoveClasses
     /// Die Klassen-Kette. <paramref name="fens"/>: Stellung vor jedem Halbzug, dazu möglichst die nach dem letzten (sonst
     /// entfallen dort die Sonderklassen); <paramref name="ucis"/> je Halbzug. Bewertungen in Weiß-Sicht wie <c>GET …/evals</c>.
     /// </summary>
-    /// <param name="masterBook">Meister-Buchzüge (Halbzüge, <see cref="GameMasterBook"/>): dort wird aus einer Ungenauigkeit „good".</param>
+    /// <param name="masterBook">Meister-Buchzüge (Halbzüge, <see cref="GameMasterBook"/>): dort heißt jeder Zug „book", außer er
+    /// ist ein Fehler oder grober Fehler (auch „Miss" darüber bleibt); die Grundklasse einer Ungenauigkeit ist dort „good".</param>
     public static string Compute(IReadOnlyList<GameEvalPlyDto> plies, GameEvalScoreDto? final, IReadOnlyList<string> fens,
         IReadOnlyList<string> ucis, int plyCount, IReadOnlySet<int>? masterBook = null)
     {
@@ -131,6 +139,8 @@ public static class GameMoveClasses
                 label = Special(cls, prevBase, white, mb, ma, row, before, a, fens[i],
                     i + 1 < fens.Count ? fens[i + 1] : null, uci);
             }
+            // Meistertheorie: das Etikett „book" über allem außer Fehler/grobem Fehler — Spiegel von reviewGame im Client.
+            if (masterBook?.Contains(i) == true && cls is not ("mistake" or "blunder")) label = "book";
             codes[i] = Codes[label];
             prevBase = cls;
         }

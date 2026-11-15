@@ -234,7 +234,8 @@ describe('game-review.util', () => {
 
     it('3.Ld3 mit Meister-Rückhalt: „book" statt Ungenauigkeit, Grundklasse „good", Genauigkeit unverändert', () => {
       const r = reviewGame(french(BD3, [0, 1, 2, 3, 4]), FENS, UCIS);
-      expect(r.moves.map(m => m?.cls)).toEqual(['best', 'best', 'best', 'best', 'book', 'best']);
+      // Seit 0.979.0 heißen auch die Bestzüge davor „book"; 3…dxe4 (Halbzug 5) liegt außerhalb der Theorie.
+      expect(r.moves.map(m => m?.cls)).toEqual(['book', 'book', 'book', 'book', 'book', 'best']);
       expect(r.moves[4]!.base).toBe('good');
       expect(r.moves[4]!.masterBook).toBeTrue();
       // Steht der Zug AUCH im Repertoire des Betrachters, gilt dessen Erklärung („in deinem Repertoire").
@@ -243,7 +244,7 @@ describe('game-review.util', () => {
       expect(r.moves[4]!.winAfter).toBeCloseTo(49.1716, 3);
       expect(r.moves[4]!.accuracy).toBeCloseTo(70.4985, 3);   // die Genauigkeit rechnet weiter mit dem vollen Verlust
       expect(r.white.counts.inaccuracy).toBe(0);
-      expect(r.white.counts.book).toBe(1);
+      expect(r.white.counts.book).toBe(3);
     });
 
     it('derselbe Zug ohne Rückhalt (nicht geprüft, leer oder Theorie vorher verlassen): Ungenauigkeit wie bisher', () => {
@@ -254,10 +255,47 @@ describe('game-review.util', () => {
       }
     });
 
-    it('ein Theoriezug, der ohnehin kein Fehler ist, behält seine Klasse (kein „book" für den Bestzug)', () => {
+    // Wunsch 2026-11-15: „manche Züge als Buchzüge markiert und manche als beste Züge — das ist komisch". Solange die Partie
+    // in der Meistertheorie ist, heißt jeder Zug „book"; ab dem ersten Zug ohne Rückhalt gelten die normalen Klassen.
+    it('ein Theoriezug, den die Engine „best" findet, heißt „book"; Grundklasse bleibt; der erste Zug danach normal', () => {
       const r = reviewGame(french(BD3, [0, 1, 2, 3, 4]), FENS, UCIS);
-      expect(r.moves[0]!.cls).toBe('best');
-      expect(r.white.counts.best).toBe(2);
+      expect(r.moves[0]!.cls).toBe('book');
+      expect(r.moves[0]!.base).toBe('best');
+      expect(r.moves[0]!.masterBook).toBeTrue();
+      expect(r.moves[0]!.accuracy).toBe(100);
+      expect(r.moves[5]!.cls).toBe('best');            // 3…dxe4: erster Zug außerhalb der Theorie
+      expect(r.moves[5]!.masterBook).toBeUndefined();
+      expect(r.white.counts).toEqual(jasmine.objectContaining({ book: 3, best: 0, good: 0, inaccuracy: 0 }));
+      expect(r.black.counts).toEqual(jasmine.objectContaining({ book: 2, best: 1 }));
+    });
+
+    it('ein Theoriezug mit kleinem Verlust („excellent"/„good") heißt ebenfalls „book"', () => {
+      // 3.Ld3: +0,79 → +0,65 (Verlust ~1,3 Punkte, „excellent") bzw. → +0,35 (~4 Punkte, „good").
+      const excellent = reviewGame(french([79, 79, 79, 79, 79, 65, 65], [0, 1, 2, 3, 4]), FENS, UCIS).moves[4]!;
+      expect([excellent.cls, excellent.base]).toEqual(['book', 'excellent']);
+      const good = reviewGame(french([79, 79, 79, 79, 79, 35, 35], [0, 1, 2, 3, 4]), FENS, UCIS).moves[4]!;
+      expect([good.cls, good.base]).toEqual(['book', 'good']);
+    });
+
+    it('ohne Meister-Buchzüge (nicht geprüft oder leer) bleibt jede Klasse, wie sie war', () => {
+      for (const plies of [undefined, []]) {
+        const r = reviewGame(french(BD3, plies), FENS, UCIS);
+        expect(r.moves.map(m => m?.cls)).toEqual(['best', 'best', 'best', 'best', 'inaccuracy', 'best']);
+        expect(r.white.counts.book).toBe(0);
+      }
+    });
+
+    it('das Repertoire-Buch des Betrachters gilt weiter obendrauf — auch nach dem Ende der Theorie und über einem Fehler', () => {
+      const r = reviewGame({ ...french([79, 79, 79, 79, 79, -60, -60], [0, 1]), bookPlies: [4, 5] }, FENS, UCIS);
+      expect(r.moves.map(m => m?.cls)).toEqual(['book', 'book', 'best', 'best', 'book', 'book']);
+      expect(r.moves.map(m => m?.masterBook)).toEqual([true, true, undefined, undefined, undefined, undefined]);
+      expect(r.moves[4]!.base).toBe('mistake');
+    });
+
+    it('ein grober Fehler an einem Theoriezug bleibt ein grober Fehler: +0,79 → −4,00', () => {
+      const r = reviewGame(french([79, 79, 79, 79, 79, -400, -400], [0, 1, 2, 3, 4]), FENS, UCIS);
+      expect([r.moves[4]!.cls, r.moves[4]!.base]).toEqual(['blunder', 'blunder']);
+      expect(r.moves[3]!.cls).toBe('book');
     });
 
     it('ein Fehler an einem Theoriezug bleibt ein Fehler: +0,79 → −0,60 (Verlust 12,72)', () => {

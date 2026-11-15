@@ -159,9 +159,15 @@ public class GameMasterBookTests
     {
         IReadOnlySet<int> book = GameMasterBook.Parse("0,1,2,3,4,5");
         Assert.Equal("SSSSIS", GameMoveClasses.FromPositions(Positions(), 6));                 // ohne Rückhalt wie bisher
-        Assert.Equal("SSSSOS", GameMoveClasses.FromPositions(Positions(), 6, book));           // „good" in der Kette, „Book" im Client
-        Assert.Equal("SSSSIS", GameMoveClasses.FromPositions(Positions(), 6, GameMasterBook.Parse("0,1,2,3")));   // Theorie vorher verlassen
-        Assert.Equal("SSSSMS", GameMoveClasses.FromPositions(Positions(afterBd3: -60), 6, book));   // ein Fehler bleibt
+        // Regelstand 5 (Wunsch 2026-11-15): in der Meistertheorie heißt JEDER Zug „book" (K) — auch die Bestzüge davor und danach.
+        Assert.Equal("KKKKKK", GameMoveClasses.FromPositions(Positions(), 6, book));
+        Assert.Equal("KKKKIS", GameMoveClasses.FromPositions(Positions(), 6, GameMasterBook.Parse("0,1,2,3")));   // Theorie vorher verlassen: ab dort normale Klassen
+        Assert.Equal("KKKKMK", GameMoveClasses.FromPositions(Positions(afterBd3: -60), 6, book));   // ein Fehler bleibt sichtbar
+        Assert.Equal("KKKKPK", GameMoveClasses.FromPositions(Positions(afterBd3: -400), 6, book));  // ein grober Fehler auch
+        Assert.Equal("SSSSIS", GameMoveClasses.FromPositions(Positions(), 6, GameMasterBook.Parse(null)));   // nicht geprüft: wie bisher
+        Assert.Equal("SSSSIS", GameMoveClasses.FromPositions(Positions(), 6, GameMasterBook.Parse("")));     // geprüft, keine Theorie
+        Assert.Equal('K', GameMoveClasses.Codes["book"]);
+        Assert.Equal(5, GameMoveClasses.Version);
 
         var flaw = Assert.Single(GameMistakes.Find(Positions(), 6));
         Assert.Equal((4, "inaccuracy", "+0.79", "-0.09"), (flaw.Ply, flaw.Class, flaw.EvalBefore, flaw.EvalAfter));
@@ -200,7 +206,7 @@ public class GameMasterBookTests
 
         var done = await db.GameAnalyses.AsNoTracking().ToDictionaryAsync(a => a.Id);
         Assert.Equal("0,1,2,3,4,5", done[990201].MasterBookPlies);
-        Assert.Equal("SSSSOS", done[990201].MoveClasses);
+        Assert.Equal("KKKKKK", done[990201].MoveClasses);
         Assert.Null(done[990202].MasterBookPlies);   // unfertig: nicht anfassen
 
         var head = await GameEvalsStore.Heads(db.GameAnalyses.Where(a => a.Id == 990201)).SingleAsync();
@@ -228,7 +234,7 @@ public class GameMasterBookTests
 
         source.Down = false;
         Assert.Equal(5, await MoveClassHarvestWorker.HarvestBooksAsync(db, book, 10));
-        Assert.All(await db.GameAnalyses.AsNoTracking().ToListAsync(), a => Assert.Equal("SSSSOS", a.MoveClasses));
+        Assert.All(await db.GameAnalyses.AsNoTracking().ToListAsync(), a => Assert.Equal("KKKKKK", a.MoveClasses));
     }
 
     [Fact]

@@ -79,7 +79,8 @@ export interface GameEvals {
   /**
    * „Meister-Buchzüge" (seit 0.978.0): Halbzüge (0-basiert) der Eröffnung, die in der Meisterpraxis etabliert sind — der
    * Server rechnet sie einmal je Analyse aus dem Explorer (`GameMasterBook`) und legt sie ab, für JEDEN Betrachter gleich
-   * (auch anonym). Eine Ungenauigkeit an so einem Zug ist kein Fehler, sondern „Book". Fehlt/leer, solange nicht geprüft.
+   * (auch anonym). Jeder dieser Züge heißt im Rückblick „Book" (seit 0.979.0; eine Ungenauigkeit dort ist kein Fehler),
+   * nur Fehler und grobe Fehler bleiben sichtbar. Fehlt/leer, solange nicht geprüft.
    */
   masterBookPlies?: number[] | null;
   /** Zweiter Durchgang (Vertiefung, seit 0.523.0) läuft: die Analyse ist `done` und nutzbar, wird aber genauer. */
@@ -187,7 +188,7 @@ export function lostAnyway(before: EvalScore | null | undefined, moverWhite: boo
  *
  * `masterBacked` (0.978.0, Partie 234: 1.e4 e6 2.d4 d5 3.Ld3 stand als Ungenauigkeit da — „ist Ld3 kein Theoriezug?"): der
  * Zug ist ein Meister-Buchzug (`GameEvals.masterBookPlies`). Dann ist eine UNGENAUIGKEIT kein Fehler mehr („good"; im
- * Rückblick trägt sie das Etikett „book"). Fehler und grobe Fehler bleiben — Theorie entschuldigt keinen Einsteller; so hält
+ * Rückblick trägt sie — wie seit 0.979.0 jeder Meister-Buchzug ohne Fehler — das Etikett „book"). Fehler und grobe Fehler bleiben — Theorie entschuldigt keinen Einsteller; so hält
  * es auch der Zusammenfassungs-Bot. Spiegel: `GameMistakes.Classify(…, masterBacked)`.
  */
 export function classifyMove(winBefore: number, winAfter: number, playedIsBest: boolean,
@@ -410,8 +411,10 @@ export function reviewGame(evals: GameEvals | null | undefined, fens: string[], 
     const ma = white ? wa : 100 - wa;
     const best = !!row.bestUci && row.bestUci.toLowerCase() === (row.playedUci ?? '').toLowerCase();
     const cls = classifyMove(mb, ma, best, before, white, masterBook.has(i));
-    // Hat der Meister-Rückhalt eine Ungenauigkeit entschuldigt? Dann steht der Zug als „book" da (wie ein Repertoirezug).
-    const masterExcused = masterBook.has(i) && cls === 'good' && classifyMove(mb, ma, best, before, white) === 'inaccuracy';
+    // Solange die Partie in der Meistertheorie ist, heißt JEDER Zug „book" (0.979.0, Wunsch 2026-11-15: „manche Züge als
+    // Buchzüge markiert und manche als beste Züge — das ist komisch") — egal ob die Engine ihn best, excellent, good oder
+    // (ohne Rückhalt) ungenau fände. Nur ein echter Fehler oder grober Fehler bleibt sichtbar, samt „Miss" darüber.
+    const inMasterBook = masterBook.has(i) && cls !== 'mistake' && cls !== 'blunder';
     base.push(cls);
     const move: ReviewedMove = {
       ply: i, white, cls, base: cls, accuracy: moveAccuracy(mb, ma),
@@ -426,8 +429,9 @@ export function reviewGame(evals: GameEvals | null | undefined, fens: string[], 
     }
     // Ein Buchzug ist vorbereitet, nicht gefunden: das Etikett „Book" schlägt jede andere Klasse (wie bei
     // chess.com). Grundklasse und Genauigkeit bleiben — ein schwacher Repertoirezug kostet weiter Genauigkeit.
-    // Dasselbe Etikett bekommt die Ungenauigkeit an einem Meister-Buchzug — für jeden Betrachter, auch ohne Repertoire.
-    if (book.has(i) || masterExcused) {
+    // Dasselbe Etikett bekommt jeder Meister-Buchzug, der kein Fehler ist — für jeden Betrachter, auch ohne Repertoire.
+    // Die Grundklasse (`base`, auch als `prevBase` des nächsten Zugs für Miss/Great) bleibt die der Engine.
+    if (book.has(i) || inMasterBook) {
       move.cls = 'book';
       if (!book.has(i)) move.masterBook = true;
       delete move.sacrifice;

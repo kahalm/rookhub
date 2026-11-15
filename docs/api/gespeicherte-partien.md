@@ -335,7 +335,8 @@ flachere), aber mit eigenem Ursprung
   `shared/eta.util.ts`.
 * **Zug-Klassen am Server** (0.854.0, Wunsch 2026-10-27: „die Bewertungen in einem eigenen Lauf ernten, damit große Listen
   nicht alles live rechnen — mit Versionsnummer“): `GameAnalysis.MoveClasses` = ein Zeichen je Halbzug (B !!, G !, S best,
-  E excellent, O good, I ?!, M ?, X miss, P ??, `-` nicht bewertbar; ohne „Book“, das hängt am Betrachter) plus
+  E excellent, O good, I ?!, M ?, X miss, P ??, K Meister-Buchzug (seit Regelstand 5), `-` nicht bewertbar; ohne das „Book“
+  aus dem Repertoire, das hängt am Betrachter) plus
   `MoveClassesVersion`. `Services/Games/GameMoveClasses.cs` ist der SPIEGEL von `reviewGame`/`specialClass`,
   `MoveTactics.cs` der von `move-tactics.util.ts`, beide über das kleine Brett `TacticsBoard.cs` (Gera.Chess hat keine
   Angreifer-Abfrage). Gerechnet beim Fertigwerden und nach der Vertiefung (`GameAnalysisPump`, neben der Genauigkeit) und
@@ -347,7 +348,12 @@ flachere), aber mit eigenem Ursprung
   hängende Figur kein Opfer: 9.Ld3 nein, 7…Sxe4 ja; eine allein hängende, bewusst stehen gelassene bleibt Opfer, 228: 24.O-O „!!“);
   3 = 2026-11-15 (Wunsch an Partie 234: stand der Ziehende vor dem Zug bei −4,00 oder schlechter, ist der Zug kein Fehler
   mehr, sondern „good“ — `GameMistakes.LostAnywayPawns` ↔ `LOST_ANYWAY_PAWNS`); 4 = 2026-11-15 (Meister-Buchzüge: eine
-  Ungenauigkeit an einem Theoriezug ist „good“, siehe unten). Parität beim Port an 300 Prod-Analysen Zeichen für Zeichen geprüft
+  Ungenauigkeit an einem Theoriezug ist „good“, siehe unten); 5 = 2026-11-15 (0.979.0, „manche Züge als Buchzüge markiert und
+  manche als beste Züge — das ist komisch“: JEDER Meister-Buchzug, der kein Fehler oder grober Fehler ist, steht als `K` in der
+  Kette — auch best/excellent/good, „!!“ und „!“; ein Fehler/grober Fehler und ein „Miss“ darüber bleiben. Die Grundklasse für
+  Miss/Great des nächsten Zugs bleibt die der Engine. Leser der Kette: „!!“-Marker in LeagueHub (`PliesOf(…, 'B')` — ein „!!“ in
+  der Theorie erscheint dort also nicht mehr, wie auf der Partieseite), die Fehlerauswahl (I/M/P/X, unberührt) und der
+  Zusammenfassungs-Bot, der die Spalte direkt liest und nur B/G/I/M/P kennt: ein `K` ist dort „ohne Zugzeichen“). Parität beim Port an 300 Prod-Analysen Zeichen für Zeichen geprüft
   (111 „!!“, 917 „!“, 76 Miss; C# ~12 ms je Partie, der Client ~90 ms); fest abgesichert durch `GameMoveClassesTests`
   (Vereinspartie 228 als Fixture, chess.com-Markierungen literal), `MoveTacticsTests` ↔ `move-tactics.util.spec.ts`,
   `TacticsBoardTests`. Erster Abnehmer: LeagueHubs „!!“-Marker (`club/games/reviews`).
