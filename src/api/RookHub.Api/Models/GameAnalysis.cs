@@ -238,6 +238,14 @@ public class GameAnalysis
     /// Stand wird vom Erntelauf neu gerechnet.</summary>
     public int? MoveClassesVersion { get; set; }
 
+    /// <summary>
+    /// „Meister-Buchzüge" (0.978.0, <see cref="Services.Games.GameMasterBook"/>): die Halbzüge (0-basiert, aufsteigend, durch
+    /// Komma getrennt) der Eröffnung, die in der Meisterpraxis etabliert sind — an ihnen ist eine Ungenauigkeit kein Fehler.
+    /// Leer = geprüft, keiner (oder Partie nicht ab der Grundstellung); <c>null</c> = noch nicht geprüft (Explorer nicht
+    /// erreichbar/eingerichtet) — der Erntelauf versucht es wieder. Hängt nur an den Zügen, nicht an den Bewertungen.
+    /// </summary>
+    public string? MasterBookPlies { get; set; }
+
     /// <summary>Wann die Zugvergleiche „Fehlzug gegen besten Zug" für die Fehler dieser Analyse angelegt wurden (0.908.0, nur
     /// Hauptanalysen von Vereinspartien, <see cref="Services.Engines.ClubMistakeComparisons"/>); <c>null</c> = noch nicht —
     /// dann holt der Nachtrag sie nach. Korrigierte Züge setzen es zurück.</summary>

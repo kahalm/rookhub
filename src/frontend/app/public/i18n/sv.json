@@ -3362,6 +3362,7 @@
       "masterBy": "kommenterat av {{name}}",
       "explaining": "Skriver förklaringar …",
       "bookHint": "I din repertoar (markerad för utökning och förberedelse)",
+      "masterBookHint": "Öppningsteori (spelat i mästarpartier)",
       "lines": "Datorlinjer",
       "arrow": "Pil för bästa drag",
       "badges": "Dragsymboler (bräde och draglista)",

@@ -3362,6 +3362,7 @@
       "masterBy": "comentado por {{name}}",
       "explaining": "Escribiendo explicaciones …",
       "bookHint": "En tu repertorio (marcado para ampliación y preparación)",
+      "masterBookHint": "Teoría de aperturas (se juega en partidas de maestros)",
       "lines": "Líneas del ordenador",
       "arrow": "Flecha de la mejor jugada",
       "badges": "Símbolos de jugada (tablero y lista de jugadas)",

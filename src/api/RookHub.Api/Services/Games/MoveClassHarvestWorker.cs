@@ -24,8 +24,71 @@ public class MoveClassHarvestWorker(IServiceScopeFactory scopeFactory, ILogger<M
 
     protected override async Task StepAsync(IServiceProvider services, CancellationToken ct)
     {
-        var n = await HarvestAsync(services.GetRequiredService<AppDbContext>(), BatchSize, ct, Logger);
+        var db = services.GetRequiredService<AppDbContext>();
+        // Erst die Meister-Buchzüge (die Klassen hängen daran), dann die Klassen. Ohne erreichbaren Explorer bleibt der erste
+        // Schritt leer und die Klassen entstehen wie ohne Buch — sie werden nachgezogen, sobald die Buchzüge da sind.
+        var books = await HarvestBooksAsync(db, services.GetService<GameMasterBook>(), BookBatchSize, ct, Logger);
+        if (books > 0) Logger.LogInformation("Meister-Buchzüge ernten: {Count} Analysen geprüft", books);
+        var n = await HarvestAsync(db, BatchSize, ct, Logger);
         if (n > 0) Logger.LogInformation("Zug-Klassen ernten: {Count} Analysen gerechnet (Regelstand {Version})", n, GameMoveClasses.Version);
+    }
+
+    /// <summary>So viele Analysen je Schritt bekommen ihre Meister-Buchzüge — bewusst wenige: je Analyse bis zu 60 Abfragen an
+    /// den lokalen Explorer (meist aus dessen Speicher). Der Bestand ist damit nach und nach durch, nicht auf einen Schlag.</summary>
+    public const int BookBatchSize = 25;
+
+    /// <summary>
+    /// Meister-Buchzüge nachtragen (0.978.0): fertige Analysen ohne <see cref="GameAnalysis.MasterBookPlies"/>, die jüngsten
+    /// zuerst. Legt das Ergebnis ab und rechnet die Klassen dieser Analyse gleich neu. Kommt für eine Analyse nichts zurück
+    /// (Explorer nicht eingerichtet/erreichbar, Zeit um), bleibt sie offen; nach <see cref="BookMaxMisses"/> solchen in Folge
+    /// HÖRT der Schritt AUF — der nächste Takt versucht es wieder, statt jede Minute alle durchzuprobieren. Nicht schon nach
+    /// der ersten: eine einzelne Analyse, auf die der Explorer nie antwortet, stünde sonst jede Minute vorn (jüngste zuerst)
+    /// und hielte alle älteren auf (dieselbe Falle wie R4-007 bei den Klassen). Gibt die Zahl der geprüften Analysen zurück.
+    /// </summary>
+    public const int BookMaxMisses = 3;
+
+    public static async Task<int> HarvestBooksAsync(AppDbContext db, GameMasterBook? book, int max, CancellationToken ct = default,
+        ILogger? logger = null)
+    {
+        if (book is null) return 0;
+        var ids = await db.GameAnalyses.AsNoTracking()
+            .Where(a => a.Status == GameAnalysisStatus.Done && a.MasterBookPlies == null)
+            .OrderByDescending(a => a.Id).Select(a => a.Id).Take(max).ToListAsync(ct);
+        var done = 0;
+        var misses = 0;
+        foreach (var id in ids)
+        {
+            try
+            {
+                var analysis = await db.GameAnalyses.Include(a => a.Positions).FirstOrDefaultAsync(a => a.Id == id, ct);
+                if (analysis is null) continue;
+                if (await book.ComputeAsync(analysis.Positions, analysis.PlyCount, ct) is not { } plies)
+                {
+                    if (++misses >= BookMaxMisses) break;
+                    continue;
+                }
+                misses = 0;
+                analysis.MasterBookPlies = plies;
+                // Nur mit Buchzügen ändert sich etwas an den Klassen; eine werfende Analyse überlässt das dem Klassen-Schritt.
+                if (plies.Length > 0)
+                {
+                    try { GameMoveClasses.Store(analysis); }
+                    catch (Exception ex) { logger?.LogWarning(ex, "Meister-Buchzüge ernten: Klassen der Analyse {AnalysisId} nicht gerechnet", id); }
+                }
+                await db.SaveChangesAsync(ct);
+                done++;
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                logger?.LogWarning(ex, "Meister-Buchzüge ernten: Analyse {AnalysisId} ausgelassen, nächster Takt versucht sie erneut", id);
+                break;
+            }
+            finally
+            {
+                db.ChangeTracker.Clear();
+            }
+        }
+        return done;
     }
 
     /// <summary>Höchstens <paramref name="max"/> Analysen nachrechnen; gibt die Zahl der gerechneten zurück (öffentlich für

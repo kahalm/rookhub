@@ -48,9 +48,13 @@ public sealed class GameMoveExplanationService
     // tagsüber bereit. Die automatischen Erklärungen nach der Analyse stellt der Scheduler (GameReviewTexts) zurück.
     // Gedeckelt ist er trotzdem (A6-005): je Konto höchstens GameExplanationJobs.MaxRunningPerUser Aufträge zugleich, und
     // der Text-Client lässt nur eine feste Zahl Anfragen gleichzeitig an die Spark (OpenAiJsonClient.DefaultMaxConcurrent).
+    private readonly GameMasterBook? _masterBook;
+
     public GameMoveExplanationService(AppDbContext db, IClaudeJsonClient llm, GameExplanationJobs jobs,
-        IServiceScopeFactory scopes, ILogger<GameMoveExplanationService> logger, IHostApplicationLifetime? lifetime = null)
+        IServiceScopeFactory scopes, ILogger<GameMoveExplanationService> logger, IHostApplicationLifetime? lifetime = null,
+        GameMasterBook? masterBook = null)
     {
+        _masterBook = masterBook;
         _db = db;
         _llm = llm;
         _jobs = jobs;
@@ -180,7 +184,11 @@ public sealed class GameMoveExplanationService
         }
         var done = existing.Where(e => e.Viewpoint == viewpoint && e.Revision == CurrentRevision).Select(e => e.Ply).ToHashSet();
         // Wer schon vorher auf Verlust stand und es weiter tut, bekommt keine Erklärung (−4 → −6 ändert nichts, 0.572.0).
-        var todo = GameMistakes.Worst(GameMistakes.Find(positions, analysis.PlyCount).Where(f => !ExplanationFacts.AlreadyLost(f)), MaxPerGame)
+        // Meister-Buchzüge (0.978.0): eine Ungenauigkeit an einem Theoriezug wird nicht erklärt. Die Erklärungen starten gleich
+        // nach dem Fertigwerden — hat der Erntelauf die Buchzüge noch nicht abgelegt, hier selbst nachsehen (nichts ablegen).
+        var stored = analysis.MasterBookPlies
+            ?? (_masterBook is null ? null : await _masterBook.ComputeAsync(positions, analysis.PlyCount, ct));
+        var todo = GameMistakes.Worst(GameMistakes.Find(positions, analysis.PlyCount, GameMasterBook.Parse(stored)).Where(f => !ExplanationFacts.AlreadyLost(f)), MaxPerGame)
             .Where(f => !done.Contains(f.Ply)).ToList();
         if (todo.Count == 0) return 0;
 

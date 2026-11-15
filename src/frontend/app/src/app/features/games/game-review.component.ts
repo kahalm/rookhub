@@ -936,7 +936,7 @@ export class GameReviewComponent {
         : this.translate.instant('games.review.greatOnly');
     }
     if (m.cls === 'miss') return this.translate.instant('games.review.missHint');
-    if (m.cls === 'book') return this.translate.instant('games.review.bookHint');
+    if (m.cls === 'book') return this.translate.instant(m.masterBook ? 'games.review.masterBookHint' : 'games.review.bookHint');
     return '';
   }
   fmt(score: EvalScore): string { return formatEval(score); }

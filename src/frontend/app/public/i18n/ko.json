@@ -3362,6 +3362,7 @@
       "masterBy": "{{name}} 주석",
       "explaining": "설명 작성 중 …",
       "bookHint": "레퍼토리에 있음(확장 및 준비용으로 표시됨)",
+      "masterBookHint": "오프닝 이론(마스터 대국에서 둔 수)",
       "lines": "컴퓨터 라인",
       "arrow": "최선 수 화살표",
       "badges": "수 기호(보드 및 수 목록)",

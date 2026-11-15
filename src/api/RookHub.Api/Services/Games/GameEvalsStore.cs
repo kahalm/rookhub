@@ -18,11 +18,11 @@ public static class GameEvalsStore
 {
     /// <summary>Kopf einer Analyse ohne Stellungen — genug, um die Bewertungen zu lesen.</summary>
     public sealed record Head(int Id, GameAnalysisStatus Status, int PlyCount, int TargetDepth,
-        int? RefineDepth, DateTime? RefinedAt);
+        int? RefineDepth, DateTime? RefinedAt, string? MasterBookPlies = null);
 
     /// <summary>Projektion auf <see cref="Head"/> (übersetzt sich nach SQL, lädt weder PGN noch Stellungen).</summary>
     public static IQueryable<Head> Heads(IQueryable<GameAnalysis> analyses) =>
-        analyses.Select(a => new Head(a.Id, a.Status, a.PlyCount, a.TargetDepth, a.RefineDepth, a.RefinedAt));
+        analyses.Select(a => new Head(a.Id, a.Status, a.PlyCount, a.TargetDepth, a.RefineDepth, a.RefinedAt, a.MasterBookPlies));
 
     /// <summary>
     /// Die Bewertungen einer Analyse, alles in WEISS-Sicht. <paramref name="bookPlies"/> bekommt die Stellungen NACH
@@ -72,6 +72,7 @@ public static class GameEvalsStore
             Plies = plies,
             Final = GameEvals.FinalOfPlies(plies, analysis.PlyCount),
             BookPlies = book,
+            MasterBookPlies = GameMasterBook.Parse(analysis.MasterBookPlies).OrderBy(p => p).ToList(),
             Refining = analysis.Status == GameAnalysisStatus.Done && analysis.RefineDepth != null && analysis.RefinedAt == null,
             Refined = analysis.RefineDepth != null ? rows.Count(r => r.Refined) : 0,
             EtaMinutes = running

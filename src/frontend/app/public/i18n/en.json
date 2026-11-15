@@ -3424,6 +3424,7 @@
       "masterBy": "annotated by {{name}}",
       "explaining": "Writing explanations …",
       "bookHint": "In your repertoire (marked for extension and preparation)",
+      "masterBookHint": "Opening theory (established in master games)",
       "lines": "Computer lines",
       "arrow": "Best-move arrow",
       "badges": "Move symbols (board and move list)",

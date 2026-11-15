@@ -381,6 +381,8 @@ public partial class OgMetaService
             if (Services.Games.GameMistakes.LostAnyway(row.Cp, row.Mate, white)) continue;
             if ((Win(k + 1) ?? WinPercent(row.PlayedCp, row.PlayedMate)) is not double after) continue;
             var drop = white ? before - after : after - before;
+            // Meister-Buchzug (0.978.0): eine Ungenauigkeit (bis 10 Punkte) ist dort kein Fehler — wie im Training.
+            if (drop <= Services.Games.GameMistakes.InaccuracyLimit && evals.MasterBookPlies.Contains(k)) continue;
             if (drop > TrainedLossAbove) marks.Add(k + 1);
         }
         return marks;

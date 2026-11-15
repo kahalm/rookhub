@@ -304,6 +304,22 @@ flachere), aber mit eigenem Ursprung
   `RepertoireAnalyzeService.BookPliesAsync` (dasselbe gecachte Positions-Set wie die Extension-Abweichungsanalyse).
   Anonym leer — ein Teilen-Link darf nicht verraten, was der Teilende vorbereitet hat. Der Client zeigt die Klasse
   „book" (schlägt jede andere, Grundklasse + Genauigkeit bleiben), der Fehler-Trainer überspringt Buchzüge.
+* **Meister-Buchzüge** (0.978.0, Wunsch 2026-11-15, Partie 234: 3.Ld3 in der Französischen als „Ungenauigkeit“):
+  `GameAnalysis.MasterBookPlies` (Halbzüge durch Komma; leer = geprüft, keiner; `null` = noch nicht geprüft) →
+  `GameEvalsDto.MasterBookPlies`, für alle Betrachter (auch Teilen-Links), ohne Explorer-Abfrage beim Seitenaufruf.
+  `Services/Games/GameMasterBook.cs` fragt den LOKALEN Explorer (`RepertoireExplorerService.BatchStatsAsync`, also mit
+  dessen Arbeits- und Dauerspeicher; nie online) mit den Schwellen und der Abbruchregel des Zusammenfassungs-Bots
+  (`formulare-bot/lib/opening_book.py`): Theorie = ≥ 2 Meisterpartien mit dem Zug, oder 1 Meisterpartie und ≥ 5 bei
+  Lichess ab 2200 (Blitz/Schnell/Klassisch; nur gefragt, wenn die Meister nicht reichen); Schluss beim ersten Zug ohne
+  Vorgänger (keine Meisterpartie und < 5 bei Lichess), spätestens nach Halbzug 30; nur Partien ab der Grundstellung.
+  Anders als der Bot ab dem ERSTEN Zug. Wirkung: nur die UNGENAUIGKEIT fällt weg (`GameMistakes.Classify(…,
+  masterBacked)` → „good“ in der Klassen-Kette, „Book“ im Client; `GameMistakes.Find`, `GameMistakeSelection`,
+  Erklärungen, Zusammenfassung/Roast und `OgMetaService.TrainMarks` folgen), Fehler und grobe Fehler bleiben.
+  Gerechnet vom Erntelauf `MoveClassHarvestWorker.HarvestBooksAsync` (je Minute höchstens 25 fertige Analysen ohne
+  Buchzüge, jüngste zuerst, danach die Klassen dieser Analyse neu). Explorer nicht eingerichtet/erreichbar oder Zeit um
+  (8 s je Datenbank) → nichts ablegen, nach drei solchen Analysen in Folge hört der Schritt auf und der nächste Takt versucht es wieder; die Klassen stehen
+  bis dahin wie ohne Buch. Die Fehler-Erklärungen sehen selbst nach, falls die Buchzüge beim Start noch fehlen.
+  Tests: `GameMasterBookTests` (Explorer als Tabelle) ↔ `game-review.util.spec.ts`.
 * **Computer-Linien** (0.521.0): `GameEvalCandidateDto.Pv` = die Variante der Engine je Kandidat (UCI ROH vom
   Broker, Rochade ggf. König-schlägt-Turm — der Client spielt sie nach, `normalizeCastlingUci`), abgelegt in
   `CandidatesJson` als `"pv":[…]` (`BrokerCandidates.MaxPvPlies` 16), gelesen mit `BrokerCandidates.PvsFromJson`.
@@ -330,7 +346,8 @@ flachere), aber mit eigenem Ursprung
   Vereinspartie 241: löst der Zug eine Gabel auf — vorher hingen ≥ 2 eigene Figuren, danach weniger —, ist die schon vorher
   hängende Figur kein Opfer: 9.Ld3 nein, 7…Sxe4 ja; eine allein hängende, bewusst stehen gelassene bleibt Opfer, 228: 24.O-O „!!“);
   3 = 2026-11-15 (Wunsch an Partie 234: stand der Ziehende vor dem Zug bei −4,00 oder schlechter, ist der Zug kein Fehler
-  mehr, sondern „good“ — `GameMistakes.LostAnywayPawns` ↔ `LOST_ANYWAY_PAWNS`). Parität beim Port an 300 Prod-Analysen Zeichen für Zeichen geprüft
+  mehr, sondern „good“ — `GameMistakes.LostAnywayPawns` ↔ `LOST_ANYWAY_PAWNS`); 4 = 2026-11-15 (Meister-Buchzüge: eine
+  Ungenauigkeit an einem Theoriezug ist „good“, siehe unten). Parität beim Port an 300 Prod-Analysen Zeichen für Zeichen geprüft
   (111 „!!“, 917 „!“, 76 Miss; C# ~12 ms je Partie, der Client ~90 ms); fest abgesichert durch `GameMoveClassesTests`
   (Vereinspartie 228 als Fixture, chess.com-Markierungen literal), `MoveTacticsTests` ↔ `move-tactics.util.spec.ts`,
   `TacticsBoardTests`. Erster Abnehmer: LeagueHubs „!!“-Marker (`club/games/reviews`).

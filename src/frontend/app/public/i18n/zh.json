@@ -3362,6 +3362,7 @@
       "masterBy": "由 {{name}} 注释",
       "explaining": "正在撰写解释…",
       "bookHint": "在你的开局库中（标记为扩展和准备）",
+      "masterBookHint": "开局理论（大师对局中下过）",
       "lines": "电脑变化线",
       "arrow": "最佳着法箭头",
       "badges": "着法符号（棋盘和着法列表）",

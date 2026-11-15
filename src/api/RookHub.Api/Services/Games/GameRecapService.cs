@@ -119,7 +119,7 @@ public sealed class GameRecapService
 
         var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == analysis.Id && p.GameMoveUci != "")
             .OrderBy(p => p.Ply).ToListAsync(ct);
-        var flaws = GameMistakes.Find(positions, analysis.PlyCount);
+        var flaws = GameMistakes.Find(positions, analysis.PlyCount, GameMasterBook.Parse(analysis.MasterBookPlies));
         var facts = Facts(detail, analysis, positions, flaws);
         var allowed = positions.Select(p => p.GameMoveSan)
             .Concat(flaws.SelectMany(f => f.BestLine.Concat(f.Refutation))).ToList();

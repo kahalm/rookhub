@@ -41,7 +41,7 @@ namespace RookHub.Api.Startup;
 /// ClubCopyLinkScheduler               immer                                 Kopien der Vereinspartien verknüpfen
 /// ClubSecondEngineScheduler           intern: ClubSecondEngine:EngineName   Vereinspartien zusätzlich auf Lc0
 /// TacticHarvestScheduler              intern: TacticHarvest:Enabled         Taktik-Ernte aus fertigen Analysen
-/// MoveClassHarvestWorker              immer                                 Zug-Klassen vorrechnen (Version)
+/// MoveClassHarvestWorker              immer                                 Zug-Klassen vorrechnen (Version) + Meister-Buchzüge
 /// PuzzleSignatureWorker               PuzzleSignatures:Enabled (Vorgabe an) Mattbilder/Motive der Lichess-Aufgaben + Buchdiagramme (Übungen)
 /// LineStudyWorker                     immer                                 Linien „ohne Engine" rechnen
 /// TrainingPrewarmScheduler            intern: Prep:TrainingPrewarm+LocalUrl Trainingslinien-Schätzung nachts vorrechnen

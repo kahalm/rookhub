@@ -30,6 +30,16 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
     und `GameMoveClasses.Compute`), Regelstand 3; dieselbe Grenze in `OgMetaService.TrainMarks` (Fehlerzahl der
     Trainingslink-Karte) und über `classifyMove` im Linienvergleich „Ohne Engine“ (`compareLines`). Literale Tests:
     `game-review.util.spec.ts` („ohnehin verloren“) ↔ `GameMistakesTests`.
+  - **Meister-Buchzüge** (0.978.0, Wunsch 2026-11-15 an Partie 234: 1.e4 e6 2.d4 d5 3.Ld3 stand als „Fehler 1 von 14,
+    Ungenauigkeit +0.79 → −0.09“ da — „ist Ld3 kein Theoriezug?“): `GameEvals.masterBookPlies` = die Halbzüge der
+    Eröffnung, die in der Meisterpraxis etabliert sind — vom Server einmal je Analyse gerechnet und abgelegt
+    (`GameMasterBook`, `docs/api/gespeicherte-partien.md`), für JEDEN Betrachter gleich, auch anonym. An so einem Zug wird
+    aus einer UNGENAUIGKEIT `good` (`classifyMove(…, masterBacked)`), der Zug trägt das Etikett `book`
+    (`ReviewedMove.masterBook`, Erklärung `games.review.masterBookHint` „Eröffnungstheorie“ statt „in deinem Repertoire“)
+    und fällt aus Fehlerzählern, „Eigene Fehler nachspielen“ und den Erklärungen. Fehler und grobe Fehler bleiben
+    (Theorie entschuldigt keinen Einsteller — so hält es auch der Zusammenfassungs-Bot), ein Theoriezug, der ohnehin kein
+    Fehler ist, behält seine Klasse. Das Repertoire-Buch des Betrachters (`bookPlies`) liegt wie bisher obendrauf.
+    Literale Tests: `game-review.util.spec.ts` („Meister-Buchzüge“) ↔ `GameMasterBookTests`.
   - `reviewGame(evals, fens, ucis?)`: die Seite am Zug kommt aus der FEN, nie aus der Parität. Bewertbar ist
     ein Zug nur mit gerechneter Stellung davor; „danach" = nächste Stellung (tiefer), sonst der gespielte
     Kandidat. `ucis` (je Halbzug `von+nach+Umwandlung`) schaltet die Sonderklassen ein; ohne sie bleibt es

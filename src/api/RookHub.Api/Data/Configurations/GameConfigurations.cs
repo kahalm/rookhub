@@ -359,6 +359,8 @@ internal sealed class GameAnalysisConfiguration : IEntityTypeConfiguration<GameA
         // Zug-Klassen vorgerechnet (0.854.0): der Erntelauf sucht fertige Analysen ohne oder mit altem Regelstand.
         e.Property(g => g.MoveClasses).HasColumnType("TEXT");
         e.HasIndex(g => new { g.Status, g.MoveClassesVersion });
+        // Meister-Buchzüge (0.978.0): höchstens 30 Halbzüge „0,1,…,29" = 79 Zeichen.
+        e.Property(g => g.MasterBookPlies).HasMaxLength(120);
     }
 }
 

@@ -3565,6 +3565,10 @@ namespace RookHub.Api.Migrations
                     b.Property<int?>("LibraryGameId")
                         .HasColumnType("int");
 
+                    b.Property<string>("MasterBookPlies")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
                     b.Property<DateTime?>("MistakeComparisonsAt")
                         .HasColumnType("datetime(6)");
 

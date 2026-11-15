@@ -281,6 +281,10 @@ public class GameEvalsDto
     /// Repertoire des AUFRUFERS stehen, vor der Abweichung — siehe <see cref="Services.RepertoireAnalyzeService.BookPliesAsync"/>.
     /// Leer ohne Anmeldung.</summary>
     public List<int> BookPlies { get; set; } = new();
+    /// <summary>„Meister-Buchzüge" (0.978.0): Halbzüge (0-basiert) der Eröffnung, die in der Meisterpraxis etabliert sind
+    /// (<see cref="Services.Games.GameMasterBook"/>, an der Analyse abgelegt) — für JEDEN Betrachter gleich, auch anonym.
+    /// Eine Ungenauigkeit an so einem Zug ist kein Fehler; der Client zeigt sie als „Book". Leer, solange nicht geprüft.</summary>
+    public List<int> MasterBookPlies { get; set; } = new();
     /// <summary>Der zweite Durchgang (Vertiefung, seit 0.523.0) laeuft noch: die Analyse ist <c>done</c> und nutzbar,
     /// wird aber Stellung fuer Stellung genauer — der Client fragt dann gemaechlich nach.</summary>
     public bool Refining { get; set; }

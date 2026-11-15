@@ -85,7 +85,7 @@ public sealed class ClubMistakeComparisons
         var added = 0;
         var fromAnalysis = 0;
         var mixed = 0;
-        foreach (var m in GameMistakeSelection.FromPositions(analysis.Positions, analysis.PlyCount))
+        foreach (var m in GameMistakeSelection.FromPositions(analysis.Positions, analysis.PlyCount, GameMasterBook.Parse(analysis.MasterBookPlies)))
         {
             if (known.Contains(m.Ply)) continue;
             var c = new MoveComparison

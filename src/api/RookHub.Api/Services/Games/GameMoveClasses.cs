@@ -24,8 +24,10 @@ public static class GameMoveClasses
     /// Great = einziger guter Zug in Gewinnchance). 2 = 2026-11-09 (Vereinspartie 241: eine Figur, die schon VOR dem Zug auf
     /// ihrem Feld hing, ist kein Opfer dieses Zuges — 9.Ld3 nein, 7…Sxe4 ja; <see cref="MoveTactics.SacrificedPiece"/>).
     /// 3 = 2026-11-15 (Vereinspartie 234: stand der Ziehende vor dem Zug schon bei −4 oder schlechter, ist der Zug kein
-    /// Fehler mehr, sondern „good" — <see cref="GameMistakes.LostAnywayPawns"/>).</summary>
-    public const int Version = 3;
+    /// Fehler mehr, sondern „good" — <see cref="GameMistakes.LostAnywayPawns"/>). 4 = 2026-11-15 (Partie 234, 3.Ld3: eine
+    /// Ungenauigkeit an einem Meister-Buchzug ist kein Fehler — „good" in der Kette, „Book" im Client;
+    /// <see cref="GameMasterBook"/>, <see cref="GameAnalysis.MasterBookPlies"/>).</summary>
+    public const int Version = 4;
 
     /// <summary>Zeichen je Klasse in <see cref="GameAnalysis.MoveClasses"/>; <c>-</c> = nicht bewertbar.</summary>
     public static readonly IReadOnlyDictionary<string, char> Codes = new Dictionary<string, char>
@@ -55,12 +57,12 @@ public static class GameMoveClasses
     /// Wirft nie: eine Stellung, die das Brett nicht lesen kann, ist einfach ohne Sonderklasse.</summary>
     public static void Store(GameAnalysis analysis)
     {
-        analysis.MoveClasses = FromPositions(analysis.Positions, analysis.PlyCount);
+        analysis.MoveClasses = FromPositions(analysis.Positions, analysis.PlyCount, GameMasterBook.Parse(analysis.MasterBookPlies));
         analysis.MoveClassesVersion = Version;
     }
 
     /// <summary>Aus den Positionszeilen einer Analyse (wie <see cref="GameAccuracy.FromPositions"/>).</summary>
-    public static string FromPositions(IEnumerable<GameAnalysisPosition> positions, int plyCount)
+    public static string FromPositions(IEnumerable<GameAnalysisPosition> positions, int plyCount, IReadOnlySet<int>? masterBook = null)
     {
         var ordered = positions.OrderBy(p => p.Ply).ToList();
         var plies = ordered
@@ -78,15 +80,16 @@ public static class GameMoveClasses
                 ?? TacticsBoard.TryParse(fens[^1])?.Apply(ucis[^1])?.ToFen();
             if (end is not null) fens.Add(end);
         }
-        return Compute(plies, final, fens, ucis, plyCount);
+        return Compute(plies, final, fens, ucis, plyCount, masterBook);
     }
 
     /// <summary>
     /// Die Klassen-Kette. <paramref name="fens"/>: Stellung vor jedem Halbzug, dazu möglichst die nach dem letzten (sonst
     /// entfallen dort die Sonderklassen); <paramref name="ucis"/> je Halbzug. Bewertungen in Weiß-Sicht wie <c>GET …/evals</c>.
     /// </summary>
+    /// <param name="masterBook">Meister-Buchzüge (Halbzüge, <see cref="GameMasterBook"/>): dort wird aus einer Ungenauigkeit „good".</param>
     public static string Compute(IReadOnlyList<GameEvalPlyDto> plies, GameEvalScoreDto? final, IReadOnlyList<string> fens,
-        IReadOnlyList<string> ucis, int plyCount)
+        IReadOnlyList<string> ucis, int plyCount, IReadOnlySet<int>? masterBook = null)
     {
         var n = Math.Max(0, Math.Min(plyCount, fens.Count));
         var rows = new Dictionary<int, GameEvalPlyDto>();
@@ -120,7 +123,7 @@ public static class GameMoveClasses
             var mb = white ? wb : 100 - wb;
             var ma = white ? wa : 100 - wa;
             var best = !string.IsNullOrEmpty(row.BestUci) && string.Equals(row.BestUci, row.PlayedUci, StringComparison.OrdinalIgnoreCase);
-            var cls = GameMistakes.Classify(mb, ma, best, before.Cp, before.Mate, white);
+            var cls = GameMistakes.Classify(mb, ma, best, before.Cp, before.Mate, white, masterBook?.Contains(i) == true);
             var label = cls;
             var uci = i < ucis.Count ? ucis[i] : null;
             if (!string.IsNullOrEmpty(uci))

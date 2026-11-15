@@ -28,7 +28,7 @@ public static class GameMistakeSelection
     private static readonly HashSet<char> Trained = ['I', 'M', 'P', 'X'];
 
     /// <summary>Aus den Positionszeilen einer Analyse (wie <see cref="GameMoveClasses.FromPositions"/>).</summary>
-    public static List<Selected> FromPositions(IEnumerable<GameAnalysisPosition> positions, int plyCount)
+    public static List<Selected> FromPositions(IEnumerable<GameAnalysisPosition> positions, int plyCount, IReadOnlySet<int>? masterBook = null)
     {
         var ordered = positions.OrderBy(p => p.Ply).ToList();
         var plies = ordered
@@ -45,7 +45,7 @@ public static class GameMistakeSelection
                 ?? TacticsBoard.TryParse(fens[^1])?.Apply(ucis[^1])?.ToFen();
             if (end is not null) fens.Add(end);
         }
-        return Select(plies, final, fens, ucis, plyCount);
+        return Select(plies, final, fens, ucis, plyCount, masterBook);
     }
 
     /// <summary>
@@ -53,9 +53,9 @@ public static class GameMistakeSelection
     /// <paramref name="fens"/> = Stellung vor jedem Halbzug (dazu möglichst die nach dem letzten), <paramref name="ucis"/> je Halbzug.
     /// </summary>
     public static List<Selected> Select(IReadOnlyList<GameEvalPlyDto> plies, GameEvalScoreDto? final, IReadOnlyList<string> fens,
-        IReadOnlyList<string> ucis, int plyCount)
+        IReadOnlyList<string> ucis, int plyCount, IReadOnlySet<int>? masterBook = null)
     {
-        var classes = GameMoveClasses.Compute(plies, final, fens, ucis, plyCount);
+        var classes = GameMoveClasses.Compute(plies, final, fens, ucis, plyCount, masterBook);
         var rows = new Dictionary<int, GameEvalPlyDto>();
         foreach (var p in plies) rows[p.Ply] = p;
         var result = new List<Selected>();

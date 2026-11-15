@@ -58,9 +58,14 @@ public static class GameMistakes
     /// Fehlerklasse „good". DIE eine Stelle für diese Regel am Server — <see cref="Find"/> und
     /// <see cref="GameMoveClasses.Compute"/> rufen beide hier.
     /// </summary>
-    public static string Classify(double winBefore, double winAfter, bool playedIsBest, int? cpBefore, int? mateBefore, bool moverWhite)
+    /// <param name="masterBacked">Der Zug ist ein Meister-Buchzug (<see cref="GameMasterBook"/>, 0.978.0): dann ist eine
+    /// UNGENAUIGKEIT kein Fehler mehr (auch „good"; die Seite zeigt ihn als „Book"). Fehler und grobe Fehler bleiben — wie
+    /// beim Zusammenfassungs-Bot, der an Theoriezügen nur das „?!" streicht.</param>
+    public static string Classify(double winBefore, double winAfter, bool playedIsBest, int? cpBefore, int? mateBefore, bool moverWhite,
+        bool masterBacked = false)
     {
         var cls = Classify(winBefore, winAfter, playedIsBest);
+        if (cls == "inaccuracy" && masterBacked) return "good";
         return IsError(cls) && LostAnyway(cpBefore, mateBefore, moverWhite) ? "good" : cls;
     }
 
@@ -92,7 +97,9 @@ public static class GameMistakes
     /// Alle Fehler der Partie in Halbzug-Reihenfolge. Bewertbar ist ein Zug nur mit gerechneter Stellung davor UND einer
     /// Bewertung danach (nächste Stellung, sonst der gespielte Kandidat) — dieselbe Regel wie im Client.
     /// </summary>
-    public static List<Flaw> Find(IEnumerable<GameAnalysisPosition> positions, int plyCount)
+    /// <param name="masterBook">Meister-Buchzüge der Analyse (<see cref="GameMasterBook.Parse"/> von
+    /// <see cref="GameAnalysis.MasterBookPlies"/>); ohne sie zählt jede Ungenauigkeit.</param>
+    public static List<Flaw> Find(IEnumerable<GameAnalysisPosition> positions, int plyCount, IReadOnlySet<int>? masterBook = null)
     {
         var ordered = positions.OrderBy(p => p.Ply).ToList();
         var n = Math.Max(0, Math.Min(plyCount, ordered.Count));
@@ -125,7 +132,7 @@ public static class GameMistakes
                     var ma = white ? wa : 100 - wa;
                     var best = !string.IsNullOrEmpty(row.BestUci)
                         && string.Equals(row.BestUci, row.PlayedUci, StringComparison.OrdinalIgnoreCase);
-                    baseClass = Classify(mb, ma, best, before.Cp, before.Mate, white);
+                    baseClass = Classify(mb, ma, best, before.Cp, before.Mate, white, masterBook?.Contains(i) == true);
                     if (IsError(baseClass))
                     {
                         // Miss: der Gegner hat davor gepatzt, die Chance war da (≥ 70 %), und sie ist nach dem Zug weg —

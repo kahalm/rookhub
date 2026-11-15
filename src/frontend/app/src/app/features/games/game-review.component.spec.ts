@@ -330,6 +330,23 @@ describe('GameReviewComponent', () => {
     expect(el.querySelector('app-eval-graph')).toBeNull();
   });
 
+  it('Meister-Buchzug: eine Ungenauigkeit an einem Theoriezug heißt „Buch" mit eigener Erklärung, für jeden Betrachter', () => {
+    const { fixture, http, el } = setup();
+    TestBed.inject(TranslateService).setTranslation('en', { games: { review: { bookHint: 'In your repertoire', masterBookHint: 'Opening theory' } } });
+    TestBed.inject(TranslateService).use('en');
+    // 1.e4 als Nicht-Bestzug mit 8 Punkten Verlust (+0,79 → −0,09): ohne Rückhalt eine Ungenauigkeit.
+    const e = evals('done');
+    const plies = e.plies.map((p, i) => i === 0 ? { ...p, cp: 79, bestUci: 'd2d4' } : i === 1 ? { ...p, cp: -9 } : p);
+    flushEvals(http, { ...e, plies, masterBookPlies: [0] });
+    fixture.componentRef.setInput('currentIndex', 0);
+    fixture.detectChanges();
+
+    expect(el.querySelector('.current')!.className).toContain('book');
+    expect(el.querySelector('.current .why')!.textContent).toContain('Opening theory');
+    expect(el.querySelector('.row-white .count.book')!.textContent!.trim()).toBe('1');
+    expect(el.querySelector('.row-white .count.inaccuracy')!.textContent!.trim()).toBe('0');
+  });
+
   it('Buchzüge (vom Server, aus dem eigenen Repertoire): Etikett „Buch" mit Erklärung, eigene Spalte, kein Punkt in der Kurve', () => {
     const { fixture, http, el } = setup();
     TestBed.inject(TranslateService).setTranslation('en', { games: { review: { bookHint: 'In your repertoire' } } });

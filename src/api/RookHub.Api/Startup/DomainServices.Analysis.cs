@@ -94,6 +94,9 @@ public static partial class DomainServicesSetup
         services.AddScoped<GameReconstructionService>();
         // „Warum war das ein Fehler?" (0.534.0): Erklärungen über das Modell auf eigener Hardware.
         services.AddSingleton<GameExplanationJobs>();
+        // Meister-Buchzüge der Partie-Durchsicht (0.978.0): aus dem lokalen Explorer, abgelegt an der Analyse.
+        services.AddScoped<IMasterBookSource, ExplorerMasterBookSource>();
+        services.AddScoped<GameMasterBook>();
         services.AddScoped<GameMoveExplanationService>();
         services.AddSingleton<GameRoastRolls>();   // Wurf-Zähler je Nutzer über alle Anfragen (G2-001)
         services.AddScoped<GameRoastService>();

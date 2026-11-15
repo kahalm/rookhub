@@ -24,3 +24,5 @@ Zug ist hinterlegt) und ein grüner Pfeil für den besten Zug. Keine Engine im B
 aus `GameEvals.bookPlies` — Züge aus den für die Erweiterung markierten Repertoires DES BETRACHTERS (Server rechnet,
 anonym leer). Das Etikett schlägt jede andere Klasse; `base` und Genauigkeit bleiben (ein schwacher Repertoirezug kostet
 weiter Genauigkeit), in der Kurve kein Punkt, im Fehler-Trainer keine Aufgabe. Erklärung am Abzeichen: `games.review.bookHint`.
+Seit 0.978.0 trägt dasselbe Etikett die Ungenauigkeit an einem **Meister-Buchzug** (`GameEvals.masterBookPlies`, für jeden
+Betrachter; Erklärung `games.review.masterBookHint`) — siehe `docs/frontend/partie-rueckblick.md`.

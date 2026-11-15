@@ -201,6 +201,72 @@ describe('game-review.util', () => {
     });
   });
 
+  // Wunsch 2026-11-15 (Partie 234: 1.e4 e6 2.d4 d5 3.Ld3, „Fehler 1 von 14, Ungenauigkeit +0.79 → −0.09 — ist Ld3 kein
+  // Theoriezug?"). Dieselben Zahlen prüft der Server (`GameMasterBookTests`).
+  describe('Meister-Buchzüge: eine Ungenauigkeit an einem Theoriezug ist kein Fehler', () => {
+    // 1.e4 e6 2.d4 d5 3.Ld3 dxe4
+    const FENS = [
+      'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1',
+      'rnbqkbnr/pppp1ppp/4p3/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',
+      'rnbqkbnr/pppp1ppp/4p3/8/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 2',
+      'rnbqkbnr/ppp2ppp/4p3/3p4/3PP3/8/PPP2PPP/RNBQKBNR w KQkq - 0 3',
+      'rnbqkbnr/ppp2ppp/4p3/3p4/3PP3/3B4/PPP2PPP/RNBQK1NR b KQkq - 1 3',
+      'rnbqkbnr/ppp2ppp/4p3/8/3Pp3/3B4/PPP2PPP/RNBQK1NR w KQkq - 0 4',
+    ];
+    const UCIS = ['e2e4', 'e7e6', 'd2d4', 'd7d5', 'f1d3', 'd5e4'];
+    /** Weiß-Sicht je Stellung 0..6; nur 3.Ld3 (Halbzug 4) ist nicht der Bestzug (b1c3). */
+    const french = (cps: number[], masterBookPlies?: number[]): GameEvals => ({
+      status: 'done', analyzed: 6, total: 6, targetDepth: 20, masterBookPlies,
+      plies: UCIS.map((u, i) => ({ ply: i, depth: 20, cp: cps[i], bestUci: i === 4 ? 'b1c3' : u, playedUci: u })),
+      final: { cp: cps[6] },
+    });
+    // 3.Ld3: +0,79 → −0,09 = 57,21 → 49,17 % (Verlust 8,04 Punkte, Ungenauigkeit).
+    const BD3 = [79, 79, 79, 79, 79, -9, -9];
+
+    it('classifyMove: nur die Ungenauigkeit fällt weg, Fehler und grobe Fehler bleiben', () => {
+      expect(classifyMove(57.21, 49.17, false, { cp: 79 }, true, true)).toBe('good');
+      expect(classifyMove(57.21, 49.17, false, { cp: 79 }, true, false)).toBe('inaccuracy');
+      expect(classifyMove(57.21, 45, false, { cp: 79 }, true, true)).toBe('mistake');
+      expect(classifyMove(57.21, 30, false, { cp: 79 }, true, true)).toBe('blunder');
+      expect(classifyMove(57.21, 56, false, { cp: 79 }, true, true)).toBe('excellent');
+    });
+
+    it('3.Ld3 mit Meister-Rückhalt: „book" statt Ungenauigkeit, Grundklasse „good", Genauigkeit unverändert', () => {
+      const r = reviewGame(french(BD3, [0, 1, 2, 3, 4]), FENS, UCIS);
+      expect(r.moves.map(m => m?.cls)).toEqual(['best', 'best', 'best', 'best', 'book', 'best']);
+      expect(r.moves[4]!.base).toBe('good');
+      expect(r.moves[4]!.masterBook).toBeTrue();
+      // Steht der Zug AUCH im Repertoire des Betrachters, gilt dessen Erklärung („in deinem Repertoire").
+      expect(reviewGame({ ...french(BD3, [0, 1, 2, 3, 4]), bookPlies: [4] }, FENS, UCIS).moves[4]!.masterBook).toBeUndefined();
+      expect(r.moves[4]!.winBefore).toBeCloseTo(57.2213, 3);
+      expect(r.moves[4]!.winAfter).toBeCloseTo(49.1716, 3);
+      expect(r.moves[4]!.accuracy).toBeCloseTo(70.4985, 3);   // die Genauigkeit rechnet weiter mit dem vollen Verlust
+      expect(r.white.counts.inaccuracy).toBe(0);
+      expect(r.white.counts.book).toBe(1);
+    });
+
+    it('derselbe Zug ohne Rückhalt (nicht geprüft, leer oder Theorie vorher verlassen): Ungenauigkeit wie bisher', () => {
+      for (const plies of [undefined, [], [0, 1, 2, 3]]) {
+        const r = reviewGame(french(BD3, plies), FENS, UCIS);
+        expect(r.moves[4]!.cls).toBe('inaccuracy');
+        expect(r.moves[4]!.base).toBe('inaccuracy');
+      }
+    });
+
+    it('ein Theoriezug, der ohnehin kein Fehler ist, behält seine Klasse (kein „book" für den Bestzug)', () => {
+      const r = reviewGame(french(BD3, [0, 1, 2, 3, 4]), FENS, UCIS);
+      expect(r.moves[0]!.cls).toBe('best');
+      expect(r.white.counts.best).toBe(2);
+    });
+
+    it('ein Fehler an einem Theoriezug bleibt ein Fehler: +0,79 → −0,60 (Verlust 12,72)', () => {
+      const r = reviewGame(french([79, 79, 79, 79, 79, -60, -60], [0, 1, 2, 3, 4]), FENS, UCIS);
+      expect(r.moves[4]!.cls).toBe('mistake');
+      expect(r.moves[4]!.base).toBe('mistake');
+    });
+  });
+
   describe('Volatilität und Seiten-Genauigkeit (Lichess)', () => {
     it('Fensterbreite = Halbzüge / 10, ganzzahlig, 2..8', () => {
       expect(windowSizeFor(5)).toBe(2);
