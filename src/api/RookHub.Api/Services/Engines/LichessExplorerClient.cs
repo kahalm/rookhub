@@ -214,8 +214,12 @@ public class LichessExplorerClient
 
     /// <summary>Partien, die diese Stellung erreicht haben (für den Explorer auf dem Analysebrett).</summary>
     public Task<(ExplorerFetchStatus Status, List<ExplorerGame>? Games)> FetchGamesAsync(
-        string fen, ExplorerQuery query, string token, CancellationToken ct) =>
-        GetAsync(BuildGamesUrl(fen, query), fen, ParseGames, token, ct);
+        string fen, ExplorerQuery query, string token, CancellationToken ct, int top = MaxGames) =>
+        GetAsync(BuildGamesUrl(fen, query, top), fen, doc => ParseGames(doc, GamesLimit(query, top)), token, ct);
+
+    /// <summary>Wie viele Partien eine Antwort höchstens trägt: nur die Meisterdatenbank kennt mehr als die Handvoll.</summary>
+    internal static int GamesLimit(ExplorerQuery query, int top) =>
+        query.Database == ExplorerQuery.Masters ? Math.Clamp(top, 1, MaxMasterGames) : MaxGames;
 
     /// <summary>EIN Abruf durch die Leitung — Drossel, Token und Fehlerbilder für alle Abfragen gleich.</summary>
     private async Task<(ExplorerFetchStatus Status, T? Value)> GetAsync<T>(
@@ -273,18 +277,26 @@ public class LichessExplorerClient
 
     /// <summary>Höchstens so viele Partien je Stellung — „eine Handvoll" für die Anzeige.</summary>
     public const int MaxGames = 5;
+    /// <summary>Obergrenze, wenn ein Aufrufer mehr Meisterpartien verlangt (<c>topGames</c> des Explorers endet bei 15) —
+    /// für das Nachzählen der Meister-Buchzüge (<see cref="RookHub.Api.Services.Games.GameMasterBook"/>) und
+    /// <c>GET /api/explorer/games?top=</c>.</summary>
+    public const int MaxMasterGames = 15;
 
     /// <summary>Partien einer Stellung: Meister = die bestbewerteten, Lichess = die bestbewerteten und
     /// die jüngsten (bei mittleren Elo-Stufen führt der Explorer gar keine „top"-Partien).</summary>
-    internal static string BuildGamesUrl(string fen, ExplorerQuery query) => query.Database == ExplorerQuery.Masters
-        ? $"masters?fen={Uri.EscapeDataString(fen)}&moves=0&topGames={MaxGames}"
+    /// <param name="top">Nur Meister: so viele der bestbewerteten Partien (1..<see cref="MaxMasterGames"/>); Lichess bleibt bei
+    /// der Handvoll.</param>
+    internal static string BuildGamesUrl(string fen, ExplorerQuery query, int top = MaxGames) => query.Database == ExplorerQuery.Masters
+        ? $"masters?fen={Uri.EscapeDataString(fen)}&moves=0&topGames={Math.Clamp(top, 1, MaxMasterGames)}"
         : $"lichess?variant=standard&fen={Uri.EscapeDataString(fen)}"
           + $"&ratings={string.Join(',', query.Ratings)}&speeds={string.Join(',', query.Speeds)}"
           + $"&moves=0&topGames=3&recentGames={MaxGames}";
 
     /// <summary>Die Partien einer Explorer-Antwort: erst die bestbewerteten, dann die jüngsten, ohne
     /// Doppelte, höchstens <see cref="MaxGames"/>.</summary>
-    internal static List<ExplorerGame>? ParseGames(JsonDocument doc)
+    internal static List<ExplorerGame>? ParseGames(JsonDocument doc) => ParseGames(doc, MaxGames);
+
+    internal static List<ExplorerGame>? ParseGames(JsonDocument doc, int max)
     {
         var root = doc.RootElement;
         if (root.ValueKind != JsonValueKind.Object) return null;
@@ -303,7 +315,7 @@ public class LichessExplorerClient
                     g.TryGetProperty("month", out var m) && m.ValueKind == JsonValueKind.String ? m.GetString() : null,
                     g.TryGetProperty("year", out var y) && y.TryGetInt32(out var yv) ? yv : null,
                     g.TryGetProperty("speed", out var sp) && sp.ValueKind == JsonValueKind.String ? sp.GetString() : null));
-                if (games.Count >= MaxGames) return games;
+                if (games.Count >= max) return games;
             }
         }
         return games;
@@ -406,8 +418,9 @@ public class LocalExplorerClient
     public Task<ExplorerPositionStats?> FetchAsync(string fen, ExplorerQuery query, CancellationToken ct) =>
         GetAsync(LichessExplorerClient.BuildUrl(fen, query), fen, LichessExplorerClient.Parse, ct);
 
-    public Task<List<ExplorerGame>?> FetchGamesAsync(string fen, ExplorerQuery query, CancellationToken ct) =>
-        GetAsync(LichessExplorerClient.BuildGamesUrl(fen, query), fen, LichessExplorerClient.ParseGames, ct);
+    public Task<List<ExplorerGame>?> FetchGamesAsync(string fen, ExplorerQuery query, CancellationToken ct, int top = LichessExplorerClient.MaxGames) =>
+        GetAsync(LichessExplorerClient.BuildGamesUrl(fen, query, top), fen,
+            doc => LichessExplorerClient.ParseGames(doc, LichessExplorerClient.GamesLimit(query, top)), ct);
 
     /// <summary>Kennung einer Partie im Explorer: acht Zeichen aus Ziffern und Buchstaben (wie bei Lichess).</summary>
     public static bool IsGameId(string? id) => id is { Length: 8 } && id.All(char.IsAsciiLetterOrDigit);

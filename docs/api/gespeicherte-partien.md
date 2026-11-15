@@ -312,11 +312,26 @@ flachere), aber mit eigenem Ursprung
   (`formulare-bot/lib/opening_book.py`): Theorie = ≥ 2 Meisterpartien mit dem Zug, oder 1 Meisterpartie und ≥ 5 bei
   Lichess ab 2200 (Blitz/Schnell/Klassisch; nur gefragt, wenn die Meister nicht reichen); Schluss beim ersten Zug ohne
   Vorgänger (keine Meisterpartie und < 5 bei Lichess), spätestens nach Halbzug 30; nur Partien ab der Grundstellung.
-  Anders als der Bot ab dem ERSTEN Zug. Wirkung: nur die UNGENAUIGKEIT fällt weg (`GameMistakes.Classify(…,
-  masterBacked)` → „good“ in der Klassen-Kette, „Book“ im Client; `GameMistakes.Find`, `GameMistakeSelection`,
-  Erklärungen, Zusammenfassung/Roast und `OgMetaService.TrainMarks` folgen), Fehler und grobe Fehler bleiben.
+  Anders als der Bot ab dem ERSTEN Zug. **„Meisterpartie“ = beide Spieler ab Elo 2200** (Regelstand 2, 0.981.0,
+  Entscheidung 2026-11-15 „ja nur partien ab 2200 zählen“, der Bot zählt schon so): die lokale Meisterdatenbank (Lumbra)
+  nimmt Partien nach dem Elo-SCHNITT ab 2200 auf, ein Spieler darf darunter liegen. Die Zugstatistik kennt keinen
+  Elo-Filter; für Züge mit weniger als 30 Partien (`RecountBelow`) zählt `GameMasterBook` deshalb über die Partienliste der
+  Stellung NACH dem Zug nach (`IMasterBookSource.MasterGamesAsync` → `LocalExplorerClient.FetchGamesAsync(…, top: 15)`,
+  die 15 bestbewerteten; fehlender Elo-Wert = darunter) und nimmt `min(Statistik, gezählt)`. Ab 30 Partien wird nicht
+  nachgezählt. Gibt es mehr Partien als sichtbar (16–29), ist die Zahl eine Untergrenze — Irrtum nur in die vorsichtige
+  Richtung (kein Buchzug); anders als der Bot, der in diesem Fall nichts mehr aussagt, gilt hier „keine Meisterpartie“,
+  sonst bliebe die Analyse für immer ungeprüft. Fällt das Nachzählen aus → keine Aussage, später erneut. Anlass: Analyse
+  28449 (1.e4 e6 2.d4 d5 3.Ld3 …), 7…Le7 hat 2 Partien, keine mit beiden ab 2200 — Buch jetzt bis 7.0-0 (Halbzüge 0–12)
+  statt bis 8…Tb8 (0–15), wie in der Zusammenfassung. Wirkung: jeder Buchzug ohne Fehler heißt „Book“ (Zeichen `K` der
+  Klassen-Kette, 0.979.0), eine Ungenauigkeit dort ist kein Fehler (`GameMistakes.Classify(…, masterBacked)`;
+  `GameMistakes.Find`, `GameMistakeSelection`, Erklärungen, Zusammenfassung/Roast und `OgMetaService.TrainMarks` folgen),
+  Fehler und grobe Fehler bleiben.
   Gerechnet vom Erntelauf `MoveClassHarvestWorker.HarvestBooksAsync` (je Minute höchstens 25 fertige Analysen ohne
-  Buchzüge, jüngste zuerst, danach die Klassen dieser Analyse neu). Explorer nicht eingerichtet/erreichbar oder Zeit um
+  Buchzüge ODER mit älterem Regelstand `GameAnalysis.MasterBookVersion` < `GameMasterBook.Version`, jüngste zuerst; ändern
+  sich die Buchzüge, danach die Klassen dieser Analyse neu). Ein neuer Regelstand setzt nichts zurück: die abgelegten
+  Buchzüge gelten, bis die Analyse neu bestimmt ist (Spalte `MasterBookVersion`, Migration
+  `GameAnalysisMasterBookVersion`; `null` = Stand 1). Zusätzliche Explorer-Last: höchstens eine Partienlisten-Abfrage je
+  Zug unter 30 Partien, meist 3–6 je Partie am Ende der Theorie — Takt und Batchgröße bleiben. Explorer nicht eingerichtet/erreichbar oder Zeit um
   (8 s je Datenbank) → nichts ablegen, nach drei solchen Analysen in Folge hört der Schritt auf und der nächste Takt versucht es wieder; die Klassen stehen
   bis dahin wie ohne Buch. Die Fehler-Erklärungen sehen selbst nach, falls die Buchzüge beim Start noch fehlen.
   Tests: `GameMasterBookTests` (Explorer als Tabelle) ↔ `game-review.util.spec.ts`.

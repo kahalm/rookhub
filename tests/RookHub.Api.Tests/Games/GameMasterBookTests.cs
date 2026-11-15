@@ -52,6 +52,28 @@ public class GameMasterBookTests
         public bool Down;
         public int Calls;
         public List<(string Db, int Count)> Asked = [];
+        /// <summary>Partienliste der Stellung NACH Halbzug n (Elo Weiß, Elo Schwarz; <c>null</c> = fehlt) — fürs Nachzählen.</summary>
+        public readonly Dictionary<int, (int? White, int? Black)[]> GamesAfter = new();
+        public bool GamesDown;
+        public List<int> Recounted = [];
+
+        public Task<IReadOnlyList<ExplorerGame>?> MasterGamesAsync(string fen, CancellationToken ct)
+        {
+            // Die Stellung nach Halbzug n ist die vor Halbzug n + 1; nach dem letzten Zug kennt die Tabelle keine FEN mehr.
+            var after = Array.IndexOf(Fens, fen);
+            var ply = after < 0 ? Fens.Length - 1 : after - 1;
+            Recounted.Add(ply);
+            if (GamesDown || !GamesAfter.TryGetValue(ply, out var rows)) return Task.FromResult<IReadOnlyList<ExplorerGame>?>(null);
+            return Task.FromResult<IReadOnlyList<ExplorerGame>?>(rows
+                .Select((r, i) => new ExplorerGame($"game{ply}{i:000}", "W", r.White, "B", r.Black, null, null, null, null)).ToList());
+        }
+
+        /// <summary>Partien nach Halbzug <paramref name="ply"/>: je Partie „Elo Weiß/Elo Schwarz“, 0 = Wert fehlt.</summary>
+        public FakeSource Games(int ply, params (int White, int Black)[] ratings)
+        {
+            GamesAfter[ply] = ratings.Select(r => ((int?)(r.White == 0 ? null : r.White), (int?)(r.Black == 0 ? null : r.Black))).ToArray();
+            return this;
+        }
 
         public Task<IReadOnlyDictionary<string, ExplorerPositionStats>> StatsAsync(IReadOnlyList<(string Key, string Fen)> positions,
             ExplorerQuery query, TimeSpan budget, CancellationToken ct)
@@ -127,10 +149,96 @@ public class GameMasterBookTests
         var common = new FakeSource().Masters(1_000_000, 200_000, 195_000, 190_844, 0, 900).LichessAt(4, 300, 1000).LichessAt(5, 800, 900);
         Assert.Equal("0,1,2,3", await new GameMasterBook(common).ComputeAsync(Positions(), 6));
         // Eine Meisterpartie + 5 bei Lichess → Theorie; eine + 4 → „selten", kein Buch, aber 3…dxe4 danach wieder.
-        var one = new FakeSource().Masters(1_000_000, 200_000, 195_000, 190_844, 1, 900).LichessAt(4, 5, 1000);
+        var one = new FakeSource().Masters(1_000_000, 200_000, 195_000, 190_844, 1, 900).LichessAt(4, 5, 1000).Games(4, (2551, 2381));
         Assert.Equal("0,1,2,3,4,5", await new GameMasterBook(one).ComputeAsync(Positions(), 6));
-        var rare = new FakeSource().Masters(1_000_000, 200_000, 195_000, 190_844, 1, 900).LichessAt(4, 4, 1000);
+        var rare = new FakeSource().Masters(1_000_000, 200_000, 195_000, 190_844, 1, 900).LichessAt(4, 4, 1000).Games(4, (2551, 2381));
         Assert.Equal("0,1,2,3,5", await new GameMasterBook(rare).ComputeAsync(Positions(), 6));
+    }
+
+    // Regelstand 2 (0.981.0, Entscheidung 2026-11-15: „ja nur partien ab 2200 zählen“): Meisterpartie = BEIDE Spieler ab 2200.
+    // Anlass Analyse 28449: 7…Le7 hat 2 Partien in der Meisterdatenbank (Elo-SCHNITT ab 2200), keine mit beiden ab 2200.
+    [Fact]
+    public async Task Compute_zweiPartienAberKeineMitBeidenAb2200_istKeinBuchzug_undDieMeisterpraxisIstVerlassen()
+    {
+        // 3.Ld3: zwei Partien, in beiden liegt ein Spieler unter 2200 (2123/2348 wie Dwilewicz – Koziorowicz). Lichess: selten.
+        var source = new FakeSource().Masters(1_000_000, 200_000, 195_000, 190_844, 2, 900)
+            .Games(4, (2123, 2348), (2400, 2199)).LichessAt(4, 411, 2193).LichessAt(5, 52, 492);
+        Assert.Equal("0,1,2,3", await new GameMasterBook(source).ComputeAsync(Positions(), 6));
+        Assert.Equal([4], source.Recounted);   // nur der eine Zug unter 30 Partien; danach kennt die Meisterdatenbank nichts mehr
+        // Dieselben zwei Partien mit beiden ab 2200: Buchzug wie bisher (und 3…dxe4 mit 900 Partien ohne Nachzählen).
+        var both = new FakeSource().Masters(1_000_000, 200_000, 195_000, 190_844, 2, 900).Games(4, (2200, 2348), (2400, 2200));
+        Assert.Equal("0,1,2,3,4,5", await new GameMasterBook(both).ComputeAsync(Positions(), 6));
+    }
+
+    [Fact]
+    public async Task Compute_fehlenderEloWertZaehltNicht_undEineMeisterpartieBrauchtFuenfBeiLichess()
+    {
+        // Zwei Partien, in einer fehlt ein Elo-Wert → EINE Meisterpartie; mit 5 Lichess-Partien Theorie, mit 4 nicht.
+        var five = new FakeSource().Masters(1_000_000, 200_000, 195_000, 190_844, 2, 900).Games(4, (2551, 2381), (2600, 0)).LichessAt(4, 5, 1000);
+        Assert.Equal("0,1,2,3,4,5", await new GameMasterBook(five).ComputeAsync(Positions(), 6));
+        var four = new FakeSource().Masters(1_000_000, 200_000, 195_000, 190_844, 2, 900).Games(4, (2551, 2381), (0, 2600)).LichessAt(4, 4, 1000);
+        Assert.Equal("0,1,2,3,5", await new GameMasterBook(four).ComputeAsync(Positions(), 6));
+        Assert.True(GameMasterBook.BothMasters(new ExplorerGame("a", "W", 2200, "B", 2200, null, null, null, null)));
+        Assert.False(GameMasterBook.BothMasters(new ExplorerGame("a", "W", 2199, "B", 2800, null, null, null, null)));
+        Assert.False(GameMasterBook.BothMasters(new ExplorerGame("a", "W", null, "B", 2800, null, null, null, null)));
+    }
+
+    [Fact]
+    public async Task Compute_abDreissigPartien_wirdNichtNachgezaehlt_darunterSchon()
+    {
+        var thirty = new FakeSource().Masters(1_000_000, 200_000, 195_000, 190_844, 30, 30);
+        Assert.Equal("0,1,2,3,4,5", await new GameMasterBook(thirty).ComputeAsync(Positions(), 6));
+        Assert.Empty(thirty.Recounted);
+        // 29 Partien, sichtbar die 15 bestbewerteten, davon zwei mit beiden ab 2200 → Untergrenze 2, reicht.
+        var some = Enumerable.Range(0, 13).Select(_ => (2300, 2150)).Concat([(2400, 2300), (2250, 2210)]).ToArray();
+        var below = new FakeSource().Masters(1_000_000, 200_000, 195_000, 190_844, 29, 29).Games(4, some).Games(5, some);
+        Assert.Equal("0,1,2,3,4,5", await new GameMasterBook(below).ComputeAsync(Positions(), 6));
+        Assert.Equal([4, 5], below.Recounted);
+        // 29 Partien, keine der 15 sichtbaren mit zwei Meistern: vorsichtig — keine Meisterpartie, kein Buchzug (nicht „offen“).
+        var none = new FakeSource().Masters(1_000_000, 200_000, 195_000, 190_844, 29, 29)
+            .Games(4, Enumerable.Repeat((2300, 2150), 15).ToArray()).LichessAt(4, 3, 5000);
+        Assert.Equal("0,1,2,3", await new GameMasterBook(none).ComputeAsync(Positions(), 6));
+    }
+
+    [Fact]
+    public async Task Compute_NachzaehlenFaelltAus_istNull_nieGeprueftOhneBuch()
+    {
+        var source = new FakeSource { GamesDown = true }.Masters(1_000_000, 200_000, 195_000, 190_844, 2, 900).Games(4, (2551, 2381), (2500, 2400));
+        Assert.Null(await new GameMasterBook(source).ComputeAsync(Positions(), 6));
+        // Liste gar nicht vorhanden (Explorer antwortet für diese Stellung nicht): ebenfalls offen.
+        Assert.Null(await new GameMasterBook(new FakeSource().Masters(1_000_000, 200_000, 195_000, 190_844, 2, 900)).ComputeAsync(Positions(), 6));
+        source.GamesDown = false;
+        Assert.Equal("0,1,2,3,4,5", await new GameMasterBook(source).ComputeAsync(Positions(), 6));
+    }
+
+    [Fact]
+    public async Task HarvestBooks_alterRegelstand_wirdNeuBestimmt_KlassenFolgen_bisDahinGeltenDieAltenZuege()
+    {
+        await using var db = Db();
+        // Stand 1 (alle Partien der Datenbank): 0–5 Buch, Klassen KKKKKK. Nach Stand 2 hat 3.Ld3 keine Partie zweier Meister.
+        db.GameAnalyses.AddRange(
+            new GameAnalysis { Id = 990301, UserId = 1, Pgn = "", StartFen = "", Status = GameAnalysisStatus.Done, PlyCount = 6,
+                MasterBookPlies = "0,1,2,3,4,5", MasterBookVersion = null, MoveClasses = "KKKKKK", MoveClassesVersion = GameMoveClasses.Version, Positions = Positions() },
+            new GameAnalysis { Id = 990302, UserId = 1, Pgn = "", StartFen = "", Status = GameAnalysisStatus.Done, PlyCount = 6,
+                MasterBookPlies = "0,1,2,3", MasterBookVersion = GameMasterBook.Version, MoveClasses = "bleibt", MoveClassesVersion = GameMoveClasses.Version, Positions = Positions() });
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        var source = new FakeSource { GamesDown = true }.Masters(1_000_000, 200_000, 195_000, 190_844, 2, 900)
+            .Games(4, (2123, 2348), (2400, 2199)).LichessAt(4, 411, 2193).LichessAt(5, 52, 492);
+        var book = new GameMasterBook(source);
+
+        // Nachzählen fällt aus: nichts wird angefasst, die alten Buchzüge gelten weiter.
+        Assert.Equal(0, await MoveClassHarvestWorker.HarvestBooksAsync(db, book, 10));
+        var kept = await db.GameAnalyses.AsNoTracking().SingleAsync(a => a.Id == 990301);
+        Assert.Equal(("0,1,2,3,4,5", (int?)null, "KKKKKK"), (kept.MasterBookPlies, kept.MasterBookVersion, kept.MoveClasses));
+
+        source.GamesDown = false;
+        Assert.Equal(1, await MoveClassHarvestWorker.HarvestBooksAsync(db, book, 10));   // nur die mit altem Stand
+        var rows = await db.GameAnalyses.AsNoTracking().ToDictionaryAsync(a => a.Id);
+        Assert.Equal(("0,1,2,3", (int?)GameMasterBook.Version, "KKKKIS"), (rows[990301].MasterBookPlies, rows[990301].MasterBookVersion, rows[990301].MoveClasses));
+        Assert.Equal("bleibt", rows[990302].MoveClasses);
+        Assert.Equal(0, await MoveClassHarvestWorker.HarvestBooksAsync(db, book, 10));
+        Assert.Equal(2, GameMasterBook.Version);
     }
 
     [Fact]

@@ -45,15 +45,17 @@ public class ExplorerController : BaseApiController
         return Ok(await _explorer.PositionAsync(GetUserId(), fen, source, query, ct));
     }
 
-    /// <summary>Eine Handvoll Partien, die die Stellung erreicht haben (Parameter wie oben).</summary>
+    /// <summary>Eine Handvoll Partien, die die Stellung erreicht haben (Parameter wie oben). <c>top</c> (0.981.0, nur
+    /// <c>database=masters</c>): statt der fünf bis zu 15 der bestbewerteten Partien — ohne den Parameter bleibt die Antwort,
+    /// wie sie war.</summary>
     [HttpGet("games")]
     public async Task<ActionResult<ExplorerGamesResultDto>> Games(
         [FromQuery] string? fen, [FromQuery] string? source, [FromQuery] string? database,
-        [FromQuery] string? ratings, [FromQuery] string? speeds, CancellationToken ct)
+        [FromQuery] string? ratings, [FromQuery] string? speeds, CancellationToken ct, [FromQuery] int? top = null)
     {
         var query = ExplorerQuery.Create(database, ParseInts(ratings), Split(speeds));
         if (_quota is not null && await _quota.RejectAsync(HttpContext, GetUserId(), source, ct)) return new EmptyResult();
-        return Ok(await _explorer.GamesAsync(GetUserId(), fen, source, query, ct));
+        return Ok(await _explorer.GamesAsync(GetUserId(), fen, source, query, ct, top));
     }
 
     /// <summary>Die häufigsten Zugfolgen von der Grundstellung zu <paramref name="fen"/> — NUR aus dem lokalen Explorer

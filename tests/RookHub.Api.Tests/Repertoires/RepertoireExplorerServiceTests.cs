@@ -669,6 +669,24 @@ public class RepertoireExplorerServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Games_Top_OnlyMasters_UpToFifteen_DefaultStaysAtFive()
+    {
+        var userId = await UserAsync(token: null);
+        _localHandler.Respond(StartKey, GamesJson);
+        var masters = ExplorerQuery.Create("masters", null, null);
+
+        await Service().GamesAsync(userId, StartFen, "local", masters, CancellationToken.None);
+        await Service().GamesAsync(userId, StartFen, "local", masters, CancellationToken.None, top: 15);
+        await Service().GamesAsync(userId, StartFen, "local", masters, CancellationToken.None, top: 99);   // gedeckelt, aus dem Speicher
+        await Service().GamesAsync(userId, StartFen, "local", Blitz, CancellationToken.None, top: 15);     // Lichess: bleibt die Handvoll
+
+        Assert.Equal(3, _localHandler.Urls.Count);
+        Assert.Contains("topGames=5", _localHandler.Urls[0]);
+        Assert.Contains("topGames=15", _localHandler.Urls[1]);
+        Assert.Contains("recentGames=5", _localHandler.Urls[2]);
+    }
+
+    [Fact]
     public async Task Games_LocalLichess_KeepTheLink_TheyAreRealLichessGames()
     {
         var userId = await UserAsync(token: null);

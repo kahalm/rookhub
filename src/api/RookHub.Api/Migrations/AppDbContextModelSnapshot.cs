@@ -3569,6 +3569,9 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("varchar(120)");
 
+                    b.Property<int?>("MasterBookVersion")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("MistakeComparisonsAt")
                         .HasColumnType("datetime(6)");
 

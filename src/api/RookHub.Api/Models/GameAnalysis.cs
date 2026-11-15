@@ -246,6 +246,11 @@ public class GameAnalysis
     /// </summary>
     public string? MasterBookPlies { get; set; }
 
+    /// <summary>Regelstand, mit dem <see cref="MasterBookPlies"/> bestimmt wurde (<see cref="Services.Games.GameMasterBook.Version"/>,
+    /// 0.981.0); <c>null</c> = vor der Einführung (gilt als Stand 1) oder noch nicht geprüft. Ein älterer Stand lässt den
+    /// Erntelauf die Buchzüge neu bestimmen — bis dahin gelten die abgelegten weiter.</summary>
+    public int? MasterBookVersion { get; set; }
+
     /// <summary>Wann die Zugvergleiche „Fehlzug gegen besten Zug" für die Fehler dieser Analyse angelegt wurden (0.908.0, nur
     /// Hauptanalysen von Vereinspartien, <see cref="Services.Engines.ClubMistakeComparisons"/>); <c>null</c> = noch nicht —
     /// dann holt der Nachtrag sie nach. Korrigierte Züge setzen es zurück.</summary>

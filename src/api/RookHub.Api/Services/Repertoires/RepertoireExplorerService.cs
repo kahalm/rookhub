@@ -263,20 +263,23 @@ public class RepertoireExplorerService
     /// (Zugumstellungen eingeschlossen). Nur im Arbeitsspeicher (eine Stunde), nicht in der Datenbank:
     /// man sieht sie sich gezielt an, und die Liste der jüngsten Partien veraltet ohnehin.
     /// </summary>
+    /// <param name="top">Nur Meisterdatenbank: so viele der bestbewerteten Partien statt der Handvoll (höchstens
+    /// <see cref="LichessExplorerClient.MaxMasterGames"/>, 0.981.0) — wer Partien nach Elo nachzählt, braucht mehr als fünf.</param>
     public async Task<ExplorerGamesResultDto> GamesAsync(
-        int userId, string? fen, string? source, ExplorerQuery query, CancellationToken ct)
+        int userId, string? fen, string? source, ExplorerQuery query, CancellationToken ct, int? top = null)
     {
+        var limit = LichessExplorerClient.GamesLimit(query, top ?? LichessExplorerClient.MaxGames);
         fen = (fen ?? "").Trim();
         if (fen.Length > 100 || !FenPattern.IsMatch(fen)) throw new DomainValidationException("Keine gültige FEN.");
         var useLocal = UseLocal(source);
         var dto = new ExplorerGamesResultDto();
-        var memoryKey = $"explorer:games:{(useLocal ? "local" : "online")}:{query.CachePrefix}{RepertoireReach.Key(fen)}";
+        var memoryKey = $"explorer:games:{(useLocal ? "local" : "online")}:{limit}:{query.CachePrefix}{RepertoireReach.Key(fen)}";
 
         if (!_memory.TryGetValue<List<ExplorerGame>>(memoryKey, out var games) || games is null)
         {
             if (useLocal)
             {
-                games = await _local.FetchGamesAsync(fen, query, ct);
+                games = await _local.FetchGamesAsync(fen, query, ct, limit);
                 if (games is null) { dto.Status = "failed"; return dto; }
             }
             else
@@ -284,7 +287,7 @@ public class RepertoireExplorerService
                 if (_gate.BlockedFor is { } blocked) return RateLimited(dto, blocked);
                 var token = await ResolveTokenAsync(userId, ct);
                 if (token is null) { dto.Status = "tokenMissing"; return dto; }
-                var (status, fetched) = await _client.FetchGamesAsync(fen, query, token, ct);
+                var (status, fetched) = await _client.FetchGamesAsync(fen, query, token, ct, limit);
                 switch (status)
                 {
                     case ExplorerFetchStatus.Ok: games = fetched!; break;

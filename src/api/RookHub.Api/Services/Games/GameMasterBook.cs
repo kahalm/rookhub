@@ -11,12 +11,20 @@ public interface IMasterBookSource
 {
     Task<IReadOnlyDictionary<string, ExplorerPositionStats>> StatsAsync(IReadOnlyList<(string Key, string Fen)> positions,
         ExplorerQuery query, TimeSpan budget, CancellationToken ct);
+
+    /// <summary>Die bestbewerteten Meisterpartien, die <paramref name="fen"/> erreicht haben (bis zu
+    /// <see cref="LichessExplorerClient.MaxMasterGames"/>, mit den Elo-Werten beider Spieler) — zum Nachzählen, wie viele
+    /// davon ZWEI Meister spielten. <c>null</c> = nicht angekommen.</summary>
+    Task<IReadOnlyList<ExplorerGame>?> MasterGamesAsync(string fen, CancellationToken ct);
 }
 
 /// <summary>Die Quelle im Betrieb: <see cref="RepertoireExplorerService.BatchStatsAsync"/> — nur der lokale Explorer, mit dessen
 /// Arbeits- und Dauerspeicher (die Eröffnungsstellungen sind fast immer schon da). Ohne lokalen Explorer kommt nichts.</summary>
-public sealed class ExplorerMasterBookSource(RepertoireExplorerService explorer) : IMasterBookSource
+public sealed class ExplorerMasterBookSource(RepertoireExplorerService explorer, LocalExplorerClient local) : IMasterBookSource
 {
+    public async Task<IReadOnlyList<ExplorerGame>?> MasterGamesAsync(string fen, CancellationToken ct)
+        => local.IsConfigured ? await local.FetchGamesAsync(fen, GameMasterBook.Masters, ct, LichessExplorerClient.MaxMasterGames) : null;
+
     public async Task<IReadOnlyDictionary<string, ExplorerPositionStats>> StatsAsync(IReadOnlyList<(string Key, string Fen)> positions,
         ExplorerQuery query, TimeSpan budget, CancellationToken ct)
         => (await explorer.BatchStatsAsync(positions, query, ct, budget, parallelism: GameMasterBook.Parallelism)).Stats;
@@ -35,6 +43,21 @@ public sealed class ExplorerMasterBookSource(RepertoireExplorerService explorer)
 /// Schluss beim ersten Zug „ohne Vorgänger" (keine Meisterpartie und weniger als 5 bei Lichess), spätestens nach
 /// <see cref="MaxPly"/> Halbzügen (Zug 15). Abweichung vom Bot: es gilt ab dem ERSTEN Zug (dort erst ab Zug 5 — 3.Ld3!).</para>
 ///
+/// <para><b>„Meisterpartie“ = BEIDE Spieler ab <see cref="MinMasterElo"/></b> (Regelstand 2, 0.981.0, Entscheidung des Nutzers
+/// 2026-11-15: „ja nur partien ab 2200 zählen“; der Bot ist schon so). Die lokale Meisterdatenbank (Lumbra) nimmt Partien
+/// nach dem Elo-SCHNITT ab 2200 auf — ein Spieler darf darunter liegen, und das kommt oft vor. Die Zugstatistik lässt sich
+/// nicht nach Elo filtern; für Züge mit weniger als <see cref="RecountBelow"/> Partien wird deshalb über die Partienliste der
+/// Stellung NACH dem Zug nachgezählt (die bis zu 15 bestbewerteten, fehlender Elo-Wert = darunter). Ab 30 Partien wird nicht
+/// nachgezählt (Annahme wie im Bot: genügend dabei). Gibt es mehr Partien als sichtbar, ist die Zählung eine Untergrenze —
+/// ein Irrtum geht nur in die vorsichtige Richtung (kein Buchzug). Anlass: Analyse 28449, 7…Le7 — 2 Partien in der
+/// Datenbank, keine mit beiden ab 2200; die Zusammenfassung sah die Meisterpraxis dort verlassen, die Partieseite führte
+/// 7…Le7 und 8.Sd2 als Buch. Fällt das Nachzählen aus, gibt es keine Aussage (<c>null</c>, später erneut).</para>
+///
+/// <para>Abweichung vom Bot an EINER Stelle: sieht er nur einen Teil der Partien (er holt fünf) und ist keine mit zwei
+/// Meistern dabei, sagt er nichts mehr; hier zählt das als „keine Meisterpartie“ — sonst bliebe die Analyse für immer
+/// „noch nicht geprüft“ und stünde bei jedem Erntetakt wieder vorn. Mit 15 statt 5 sichtbaren Partien ist der Fall selten
+/// (16–29 Partien, keine der 15 bestbewerteten mit zwei Meistern), und die Richtung ist dieselbe: kein Buchzug.</para>
+///
 /// <para>Gerechnet am Server, einmal je Analyse, abgelegt in <see cref="GameAnalysis.MasterBookPlies"/> — für alle Betrachter
 /// (auch anonym über Teilen-Links), ohne dass ein Seitenaufruf den Explorer fragt. Ist der Explorer nicht erreichbar oder
 /// reicht die Zeit nicht, bleibt die Spalte <c>null</c> („noch nicht geprüft") und <see cref="MoveClassHarvestWorker"/>
@@ -48,6 +71,14 @@ public class GameMasterBook(IMasterBookSource source)
     public const int MastersMin = 2;
     /// <summary>Mit genau einer Meisterpartie braucht es so viele Lichess-Partien (ab 2200); so viele allein machen ihn „selten".</summary>
     public const int LichessMin = 5;
+    /// <summary>Regelstand der Zählung, abgelegt in <see cref="GameAnalysis.MasterBookVersion"/>: 1 = 0.978.0 (alle Partien der
+    /// Meisterdatenbank), 2 = 0.981.0 (nur Partien mit beiden Spielern ab <see cref="MinMasterElo"/>). Hochzählen lässt den
+    /// Erntelauf den Bestand neu bestimmen; bis dahin gelten die alten Buchzüge weiter.</summary>
+    public const int Version = 2;
+    /// <summary>Ab dieser Elo-Zahl BEIDER Spieler zählt eine Partie als Meisterpartie — wie <c>MIN_EXAMPLE_ELO</c> im Bot.</summary>
+    public const int MinMasterElo = 2200;
+    /// <summary>Unter so vielen Partien mit dem Zug wird nachgezählt — wie <c>RECOUNT_BELOW</c> im Bot.</summary>
+    public const int RecountBelow = 30;
     /// <summary>So viele Explorer-Abfragen gleichzeitig je Partie — klein, der Erntelauf soll den Explorer nicht belegen.</summary>
     public const int Parallelism = 4;
     /// <summary>Zeit für die Abfragen EINER Partie (je Datenbank).</summary>
@@ -107,46 +138,51 @@ public class GameMasterBook(IMasterBookSource source)
             var left = budget ?? DefaultBudget;
 
             var masters = await source.StatsAsync(asked, Masters, left, ct);
-            // Lichess nur, wo die Meisterpraxis den Zug nicht schon als Theorie ausweist (spart die halben Abfragen). Hat die
+            // Meisterpartien je Halbzug: mit dem Partiezug (pm, nur solche mit zwei Meistern) und in der Stellung (tm). Hat die
             // Partie die Meisterdatenbank verlassen, zählt deren Antwort für die Folgestellungen nicht mehr.
-            var needLichess = new List<(string Key, string Fen)>();
-            for (int i = 0, alive = 1; i < n; i++)
+            var all = positions.Where(p => p.Ply >= 0).GroupBy(p => p.Ply).ToDictionary(g => g.Key, g => g.First());
+            var pm = new long[n];
+            var tm = new long[n];
+            var started = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0, alive = 1; i < n && alive == 1; i++)
             {
-                long pm = 0, tm = 0;
-                if (alive == 1)
+                if (!masters.TryGetValue(asked[i].Key, out var m)) return null;   // nicht angekommen → später erneut
+                tm[i] = m.Total;
+                pm[i] = Played(m, moves[i]);
+                if (pm[i] > 0 && pm[i] < RecountBelow)
                 {
-                    if (!masters.TryGetValue(asked[i].Key, out var m)) return null;   // nicht angekommen → später erneut
-                    (pm, tm) = (Played(m, moves[i]), m.Total);
+                    if (started.Elapsed > left) return null;   // Zeit um → später erneut
+                    // Stellung NACH dem Zug: die Partien dort sind die Partien mit diesem Zug (Zugumstellungen eingeschlossen).
+                    var after = all.TryGetValue(i + 1, out var next) && !string.IsNullOrEmpty(next.Fen)
+                        ? next.Fen
+                        : TacticsBoard.TryParse(moves[i].Fen)?.Apply(moves[i].GameMoveUci)?.ToFen();
+                    if (after is null) pm[i] = 0;   // nicht nachzählbar (Stellung unlesbar): vorsichtig, kein Rückhalt
+                    else
+                    {
+                        if (await source.MasterGamesAsync(after, ct) is not { } games) return null;   // Nachzählen fiel aus
+                        pm[i] = Math.Min(pm[i], games.Count(BothMasters));
+                    }
                 }
-                if (pm < MastersMin) needLichess.Add(asked[i]);
-                if (tm == 0 || pm == 0) alive = 0;
+                if (tm[i] == 0 || pm[i] == 0) alive = 0;
             }
+            // Lichess nur, wo die Meisterpraxis den Zug nicht schon als Theorie ausweist (spart die halben Abfragen).
+            var needLichess = Enumerable.Range(0, n).Where(i => pm[i] < MastersMin).Select(i => asked[i]).ToList();
             var lichess = needLichess.Count > 0
                 ? await source.StatsAsync(needLichess, Lichess, left, ct)
                 : new Dictionary<string, ExplorerPositionStats>();
 
             var book = new List<int>();
-            var mastersAlive = true;
             for (var i = 0; i < n; i++)
             {
-                long pm = 0, tm = 0;
-                if (mastersAlive)
-                {
-                    if (!masters.TryGetValue(asked[i].Key, out var m)) return null;
-                    tm = m.Total;
-                    pm = Played(m, moves[i]);
-                }
                 long pl = 0, tl = 0;
-                if (pm < MastersMin)
+                if (pm[i] < MastersMin)
                 {
                     if (!lichess.TryGetValue(asked[i].Key, out var l)) return null;
                     tl = l.Total;
                     pl = Played(l, moves[i]);
                 }
-                var backing = Classify(pm, pl, tl);
+                var backing = Classify(pm[i], pl, tl);
                 if (backing == Backing.Theory) book.Add(i);
-                // Die Folgestellung kennt die Meisterdatenbank nicht mehr.
-                if (tm == 0 || pm == 0) mastersAlive = false;
                 if (backing == Backing.None) break;   // ohne Vorgänger: die Theorie ist verlassen
             }
             return Format(book);
@@ -156,6 +192,9 @@ public class GameMasterBook(IMasterBookSource source)
             return null;
         }
     }
+
+    /// <summary>Beide Spieler ab <see cref="MinMasterElo"/>; ein fehlender Elo-Wert gilt als darunter — wie <c>is_master</c> im Bot.</summary>
+    public static bool BothMasters(ExplorerGame game) => game.WhiteRating >= MinMasterElo && game.BlackRating >= MinMasterElo;
 
     /// <summary>Wie oft der Partiezug in der Stellung gespielt wurde. Verglichen als UCI; die Rochade schreibt der Explorer
     /// teils als König-schlägt-Turm (<c>e1h1</c>), deshalb ersatzweise über die SAN ohne Schach-/Mattzeichen.</summary>

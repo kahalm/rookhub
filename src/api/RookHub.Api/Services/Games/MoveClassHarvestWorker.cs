@@ -38,8 +38,9 @@ public class MoveClassHarvestWorker(IServiceScopeFactory scopeFactory, ILogger<M
     public const int BookBatchSize = 25;
 
     /// <summary>
-    /// Meister-Buchzüge nachtragen (0.978.0): fertige Analysen ohne <see cref="GameAnalysis.MasterBookPlies"/>, die jüngsten
-    /// zuerst. Legt das Ergebnis ab und rechnet die Klassen dieser Analyse gleich neu. Kommt für eine Analyse nichts zurück
+    /// Meister-Buchzüge nachtragen (0.978.0): fertige Analysen ohne <see cref="GameAnalysis.MasterBookPlies"/> oder mit
+    /// älterem Regelstand (<see cref="GameAnalysis.MasterBookVersion"/> &lt; <see cref="GameMasterBook.Version"/>, 0.981.0), die
+    /// jüngsten zuerst. Legt das Ergebnis ab und rechnet die Klassen dieser Analyse gleich neu. Kommt für eine Analyse nichts zurück
     /// (Explorer nicht eingerichtet/erreichbar, Zeit um), bleibt sie offen; nach <see cref="BookMaxMisses"/> solchen in Folge
     /// HÖRT der Schritt AUF — der nächste Takt versucht es wieder, statt jede Minute alle durchzuprobieren. Nicht schon nach
     /// der ersten: eine einzelne Analyse, auf die der Explorer nie antwortet, stünde sonst jede Minute vorn (jüngste zuerst)
@@ -52,7 +53,8 @@ public class MoveClassHarvestWorker(IServiceScopeFactory scopeFactory, ILogger<M
     {
         if (book is null) return 0;
         var ids = await db.GameAnalyses.AsNoTracking()
-            .Where(a => a.Status == GameAnalysisStatus.Done && a.MasterBookPlies == null)
+            .Where(a => a.Status == GameAnalysisStatus.Done
+                && (a.MasterBookPlies == null || a.MasterBookVersion == null || a.MasterBookVersion < GameMasterBook.Version))
             .OrderByDescending(a => a.Id).Select(a => a.Id).Take(max).ToListAsync(ct);
         var done = 0;
         var misses = 0;
@@ -68,9 +70,12 @@ public class MoveClassHarvestWorker(IServiceScopeFactory scopeFactory, ILogger<M
                     continue;
                 }
                 misses = 0;
+                var before = analysis.MasterBookPlies ?? "";
                 analysis.MasterBookPlies = plies;
-                // Nur mit Buchzügen ändert sich etwas an den Klassen; eine werfende Analyse überlässt das dem Klassen-Schritt.
-                if (plies.Length > 0)
+                analysis.MasterBookVersion = GameMasterBook.Version;
+                // Nur wenn sich die Buchzüge ändern, ändert sich etwas an den Klassen (auch: nach einem neuen Regelstand sind es
+                // weniger oder keine mehr); eine werfende Analyse überlässt das dem Klassen-Schritt.
+                if (plies != before)
                 {
                     try { GameMoveClasses.Store(analysis); }
                     catch (Exception ex) { logger?.LogWarning(ex, "Meister-Buchzüge ernten: Klassen der Analyse {AnalysisId} nicht gerechnet", id); }
