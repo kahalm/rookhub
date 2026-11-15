@@ -185,6 +185,37 @@ Wunsch 2026-11-09: „die empfehlungen sollen getrennt für weiß & schwarz sein
 
 Züge im Text (Überschriften, Absätze, Listen, Zitate, Tabellen, Bildunterschriften) werden über `linkSummaryMoves` klickbar, sobald es das Seitenbrett gibt. Nummer + Seite treffen zuerst die zuletzt genannte Stellung, wenn sie neben der Partie liegt (Kontext einer Variante), dann den tatsächlichen Partiezug, dann zuletzt genannte Stellungen des Absatzes, dann die Partiestellung als Abzweig (`explanationParts(text, root, game, shared)`); liegt die angesetzte Stellung bis zu 6 Halbzüge vor der Folge, füllt der zuletzt genannte Zug gleicher Nummer und Seite die Lücke, sonst der Partiezug (wie im Zugvergleich, `docs/frontend/eigene-fehler-nachspielen.md`). Illegales bleibt Text. Eine Folge, die die Partie verlässt, wird auf dem Brett zur Variante ab dem Abzweig. Eigene Züge auf dem Brett ergeben ebenfalls eine Variante. Varianten liegen nur im Speicher der Seite, ohne Schreibzugriff, und verschwinden beim Blättern in der Partie, beim Neuladen oder Verlassen.
 
+### Rechenaufwand der Verlinkung (0.978.1)
+
+Die Verlinkung läuft in zwei `computed` der Seite (`mergedSection`, `linkedBlocks`), also vor der ersten Anzeige des Texts.
+Gemeldet 2026-11-15: die Seite „braucht beim ersten Start sehr lang“ — die API antwortete in 5–20 ms, danach blockierte EIN
+Longtask die Seite rund eine Sekunde (Handy: ein Vielfaches). Ursache war nicht die Zahl der Proben, sondern ihr Preis:
+`moveOf` (`explanation-lines.ts`) fragte je Wort `parseKeyboardMove`, und das rief `chess.moves({ verbose: true })` — chess.js
+baut dabei für JEDEN legalen Zug ein volles Zug-Objekt (SAN, zwei FENs, Schach-/Matt-Probe, je eine weitere Zuggenerierung),
+rund 1,2 ms je Stellung statt 0,1 ms für die bloße SAN-Liste. Dazu kam je erkanntem Zug ein zweites `new Chess` + `move`, und
+`readSequence` prüft jeden Zug zweimal (Vorschau, dann der Zug selbst).
+
+Seitdem:
+
+- `shared/chess/legal-moves.ts` merkt je FEN die SAN-Liste (`chess.moves()` ohne `verbose`) und rechnet von/nach/Stellung
+  danach nur für den Zug aus, der gebraucht wird (`legalMove`), ebenfalls gemerkt. Gedeckelt auf 2 000 Stellungen.
+  `parseKeyboardMove` (auch Tastatur-Eingabe am Aufgabenbrett) liest daraus; die volle Liste entsteht nur noch für
+  Koordinaten-Eingaben („g1f3“).
+- `explanation-lines.ts` merkt die Antwort je (Stellung, Wort) und je (Stellung, SAN); davon hat auch der Zugvergleich
+  („Warum war das ein Fehler?“, `mistake-comparison`) etwas.
+- Am Ergebnis ändert sich nichts: `summary-linking.spec.ts` vergleicht eine echte Zusammenfassung (36 Züge, 360 klickbare
+  Züge, Namen ersetzt) Block für Block mit der Verlinkung der Fassung davor (`summary-linking.fixture.ts`) und deckelt die
+  Aufrufe von chess.js.
+
+Gemessen an dieser Partie (Rechner des Stacks unter Last, Chromium ohne Kopf, leerer Cache): Zuggenerierungen von chess.js
+für die Verlinkung 24 774 → 865, `moves()` 696 → 196; Verlinkung im Profil ~900 ms → ~60 ms; Blockade zwischen Antwort und
+Text 850–900 ms → 170–185 ms, mit vierfach gedrosselter CPU ~7,2 s → 0,8–2,0 s. Der Rest ist der Aufbau der Seite selbst
+(Bretter der Diagramme, 360 Zug-Knöpfe), nicht mehr die Verlinkung.
+
+Bewusst NICHT gebaut: den Text zuerst ohne Züge zeigen und sie danach in Portionen klickbar machen. Ein Zug-Knopf ist anders
+gesetzt als Fließtext (Schriftstärke; im Abschnitt „Die Partie“ zusätzlich Zeilenhöhe, fette Partiezüge, kleinere Varianten,
+Ort des Blocks) — die Zeilen brächen beim Nachziehen neu um. Wird das doch einmal nötig, zuerst dort gleiche Maße herstellen.
+
 ## „Die Partie“ und Brett am Handy (0.959.0)
 
 > Seit 0.963.0 gilt die eingesetzte Zugliste nur noch für Zusammenfassungen ohne verschmolzenen Abschnitt (siehe unten).

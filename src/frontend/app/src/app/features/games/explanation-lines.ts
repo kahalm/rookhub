@@ -1,4 +1,5 @@
 import { Chess } from 'chess.js';
+import { LegalMove, legalMove, legalMoveByCoords } from '../../shared/chess/legal-moves';
 import { parseKeyboardMove } from '../../shared/chess/keyboard-move.util';
 import { LiveMove } from './live-engine-session';
 
@@ -32,13 +33,45 @@ const MAX_BRIDGE = 6;
 
 /** Ein SAN-Zug (englisch, aus chess.js) in `fen` — `null` = nicht legal. */
 function sanMove(fen: string, san: string): LiveMove | null {
+  // Schneller Weg: die SAN steht wörtlich in der (gemerkten) Liste der legalen Züge — so bei allem, was chess.js selbst
+  // geschrieben hat (Partie, Engine-Linien, zuvor erkannte Züge).
+  const hit = legalMove(fen, san);
+  if (hit) return liveMove(hit);
+  // Sonst wie bisher der nachsichtige SAN-Leser von chess.js („Nge2“ trotz eindeutigem „Ne2“, fehlendes „+“ …) — auch
+  // dessen Antwort wird gemerkt, meist ist es ein „dort nicht legal“ beim Auffüllen von Zwischenzügen.
+  const key = fen + '|' + san;
+  const memo = looseSanMemo.get(key);
+  if (memo !== undefined) return memo;
+  let move: LiveMove | null;
   try {
     const chess = new Chess(fen);
     const m = chess.move(san);
-    return { san: m.san, uci: m.from + m.to + (m.promotion ?? ''), fen: chess.fen(), from: m.from, to: m.to };
+    move = { san: m.san, uci: m.from + m.to + (m.promotion ?? ''), fen: chess.fen(), from: m.from, to: m.to };
   } catch {
-    return null;
+    move = null;
   }
+  if (looseSanMemo.size >= MOVE_MEMO_MAX) looseSanMemo.clear();
+  looseSanMemo.set(key, move);
+  return move;
+}
+
+function liveMove(m: LegalMove): LiveMove {
+  return { san: m.san, uci: m.from + m.to + (m.promotion ?? ''), fen: m.after, from: m.from, to: m.to };
+}
+
+/**
+ * Gemerkte Antworten von {@link moveOf} je (Stellung, Wort): der Zerleger fragt dasselbe Wort in derselben Stellung
+ * mehrfach (Vorschau auf den nächsten Zug, dann der Zug selbst; „Die Partie“ und der übrige Text laufen über dieselben
+ * Partiestellungen). Gedeckelt — voll heißt leeren.
+ */
+const MOVE_MEMO_MAX = 5000;
+const moveMemo = new Map<string, LiveMove | null>();
+const looseSanMemo = new Map<string, LiveMove | null>();
+
+/** Nur für Tests: gemerkte Zug-Antworten vergessen. */
+export function clearMoveMemo(): void {
+  moveMemo.clear();
+  looseSanMemo.clear();
 }
 
 /** Zugfolge in SAN ab `fen` als `LiveMove`s — bricht am ersten nicht legalen Zug ab. */
@@ -58,15 +91,15 @@ export function sanLine(fen: string, sans: readonly string[]): LiveMove[] {
 function moveOf(fen: string, word: string): LiveMove | null {
   const raw = word.replace(/[.!?]+$/, '');
   if (!/^(?:[KQRBNDTLS]?[a-h]?[1-8]?[x:]?[a-h][1-8](?:=?[QRBNDTLS])?|O-O(?:-O)?|0-0(?:-0)?)[+#]?$/.test(raw)) return null;
+  const key = fen + '|' + raw;
+  const memo = moveMemo.get(key);
+  if (memo !== undefined) return memo;
   const k = parseKeyboardMove(fen, raw.replace(/0/g, 'O'), 'de');
-  if (!k || k.needsPromotion) return null;
-  try {
-    const chess = new Chess(fen);
-    const m = chess.move({ from: k.orig, to: k.dest, promotion: k.promotion });
-    return { san: m.san, uci: m.from + m.to + (m.promotion ?? ''), fen: chess.fen(), from: m.from, to: m.to };
-  } catch {
-    return null;
-  }
+  const m = k && !k.needsPromotion ? legalMoveByCoords(fen, k.orig, k.dest, k.promotion) : null;
+  const move = m ? liveMove(m) : null;
+  if (moveMemo.size >= MOVE_MEMO_MAX) moveMemo.clear();
+  moveMemo.set(key, move);
+  return move;
 }
 
 export interface ParsedSequence { moves: { text: string; gap: string; move: LiveMove }[]; end: number; }

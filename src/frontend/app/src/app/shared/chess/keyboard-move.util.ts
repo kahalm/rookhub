@@ -1,5 +1,5 @@
-import { Chess, Move } from 'chess.js';
 import { Key } from 'chessground/types';
+import { LegalMove, legalMove, legalMoves, legalSans } from './legal-moves';
 
 /**
  * Zug-Eingabe per Tastatur (Codereview F2-004): ein getippter Zug — SAN („Nf3", „Sf3", „exd5", „e8=D", „O-O")
@@ -77,7 +77,7 @@ function promotionOf(letter: string, letters: Readonly<Record<string, string>>):
   return en && en !== 'K' ? (en.toLowerCase() as 'q' | 'r' | 'b' | 'n') : null;
 }
 
-function pick(cands: Move[], promotion: 'q' | 'r' | 'b' | 'n' | undefined): KeyboardMove | null {
+function pick(cands: LegalMove[], promotion: 'q' | 'r' | 'b' | 'n' | undefined): KeyboardMove | null {
   if (!cands.length) return null;
   const first = cands[0];
   if (first.promotion) {
@@ -114,12 +114,13 @@ function toEnglishSanKey(text: string, letters: Readonly<Record<string, string>>
 }
 
 export function parseKeyboardMove(fen: string, text: string, lang?: string | null): KeyboardMove | null {
-  let chess: Chess;
-  try { chess = new Chess(fen); } catch { return null; }   // unlesbare/illegale Stellung (Info-Diagramm)
+  // Legale Züge je Stellung kommen aus dem Zwischenspeicher (legal-moves.ts): die SAN-Liste reicht für getippte SAN,
+  // von/nach rechnet er nur für den Treffer aus. Die volle Liste braucht allein die Koordinaten-Eingabe.
+  const sans = legalSans(fen);
+  if (!sans) return null;   // unlesbare/illegale Stellung (Info-Diagramm)
   const raw = (text ?? '').trim().replace(/[+#!?]+$/, '').trim();
   if (!raw) return null;
   const letters = pieceLettersFor(lang);
-  const legal = chess.moves({ verbose: true });
 
   // Koordinaten, wahlweise mit Figurenbuchstaben davor („Ng1-f3") — der muss dann zur ziehenden Figur passen.
   const coord = /^([A-Z])?([a-h][1-8])\s*[-x:]?\s*([a-h][1-8])\s*=?\s*([A-Za-z])?$/.exec(raw);
@@ -127,7 +128,7 @@ export function parseKeyboardMove(fen: string, text: string, lang?: string | nul
     const [, piece, from, to, promoLetter] = coord;
     const promotion = promoLetter ? promotionOf(promoLetter, letters) : undefined;
     if (promotion === null) return null;
-    let cands = legal.filter(m => m.from === from && m.to === to);
+    let cands = legalMoves(fen)!.filter(m => m.from === from && m.to === to);
     if (piece) {
       const en = letters[piece];
       if (!en) return null;
@@ -138,16 +139,16 @@ export function parseKeyboardMove(fen: string, text: string, lang?: string | nul
 
   const key = toEnglishSanKey(raw, letters);
   if (!key) return null;
-  const exact = legal.filter(m => sanKey(m.san) === key);
+  const exact = sans.filter(san => sanKey(san) === key);
   if (exact.length === 1) {
-    const m = exact[0];
+    const m = legalMove(fen, exact[0])!;
     return m.promotion
       ? { orig: m.from as Key, dest: m.to as Key, promotion: m.promotion as KeyboardMove['promotion'], needsPromotion: false }
       : { orig: m.from as Key, dest: m.to as Key, needsPromotion: false };
   }
   if (exact.length > 1) return null;
   // Umwandlung ohne Figur („e8", „dxe8"): alle passenden Züge sind derselbe Bauernzug mit verschiedenen Figuren.
-  const promos = legal.filter(m => m.promotion && sanKey(m.san).replace(/[QRBN]$/, '') === key);
+  const promos = sans.filter(san => san.includes('=') && sanKey(san).replace(/[QRBN]$/, '') === key).map(san => legalMove(fen, san)!);
   if (promos.length && promos.every(m => m.from === promos[0].from && m.to === promos[0].to)) {
     return { orig: promos[0].from as Key, dest: promos[0].to as Key, needsPromotion: true };
   }
