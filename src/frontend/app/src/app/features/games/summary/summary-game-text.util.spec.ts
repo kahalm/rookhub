@@ -105,6 +105,24 @@ describe('summary-game-text.util (verschmolzener Abschnitt „Die Partie“, Wun
     // jede Klammer mit Zügen ist ein Varianten-Lauf, „(−3,9)“ und „(0,0)“ nicht
     expect(texts(blocks).flatMap(b => b.segments).filter(s => s.variation).length).toBe(13);
   });
+
+  // 0.980.0: Beispielpartie als Link mitten im verschmolzenen Text — auch in einer Klammer.
+  it('ein Link bleibt ganz: keine Züge aus dem Linktext, Klammern darin schneiden keinen Lauf, die Partie läuft danach weiter', () => {
+    const text = 'Spanisch: 1.e4 e5 2.Sf3 Sc6 3.Lb5 (so auch [Meier – Huber 3.Lb5 (2019)](/explorer/game/masters/Ab3dE6gh), dort 3...Sf6 4.0-0) '
+      + 'und weiter 3...a6 4.La4 Sf6 5.0-0 Le7 wie [A – B (2020)](https://lichess.org/Hf9GLZwj).';
+    const { blocks, merged } = merge(`## Die Partie\n\n${text}`);
+    expect(merged).toBeTrue();
+    const [p] = texts(blocks);
+    const links = p.segments.flatMap(s => s.parts.filter(x => x.link).map(x => ({ text: x.text, link: x.link, variation: s.variation })));
+    expect(links).toEqual([
+      { text: 'Meier – Huber 3.Lb5 (2019)', link: { masterGame: 'Ab3dE6gh' }, variation: true },
+      { text: 'A – B (2020)', link: { href: 'https://lichess.org/Hf9GLZwj' }, variation: false },
+    ]);
+    expect(p.segments.map(s => s.variation)).toEqual([false, true, false]);
+    expect(moves(blocks).map(m => m.text + (m.glyph ?? ''))).toEqual(
+      ['1.e4', 'e5', '2.Sf3', 'Sc6', '3.Lb5', '3...Sf6', '4.0-0', '3...a6', '4.La4', 'Sf6', '5.0-0', 'Le7']);
+    expect(moves(blocks).map(m => m.move!.ply)).toEqual([1, 2, 3, 4, 5, undefined, undefined, 6, 7, 8, 9, 10]);
+  });
 });
 
 const G244_PGN = "1. Nf3 d5 2. d4 Nf6 3. Bf4 e6 4. c3 Bd6 5. e3 c5 6. Nbd2 Qc7 7. Bxd6 Qxd6 8. dxc5 Qxc5 9. Nb3 Qc7 10. Rc1 O-O 11. c4 Qe7 12. cxd5 Nxd5 13. a3 Rd8 14. Qc2 Nc6 15. Bb5 Bd7 16. Qc5 Qf6 17. Bxc6 Bxc6 18. Qd4 Qg6 19. O-O Nc3 20. Qxc3 Bxf3 21. g3 h5 22. Nd4 Bd5 23. Ne2 Qg4 24. Nf4 Bc6 25. e4 Bb5 26. f3 Qg5 27. Rfd1 h4 28. Nh3 Rxd1+ 29. Rxd1 Qe7 30. g4 b6 31. Kg2 Ba6 32. Qd4 Rc8 33. Rd2 Qc7 34. Nf2 e5 35. Qa4 Qc4 36. Qxc4 Bxc4 37. g5 Be6 38. Nd3 Rd8 39. Kf2 Bc4 40. Ke3 f6 41. g6 Bb5 42. Ne1 Rxd2 43. Kxd2 Be8 44. Ng2 h3 45. Nh4 Kf8 46. Kc3 Ke7 47. Kc4 Kd6 48. b4 a6 49. Nf5+ Kd7 50. Nh4 Kc6 51. Nf5 a5 52. b5+ Kc7 53. Nh4 Kd6 54. a4 Bd7 55. Nf5+ Bxf5 56. exf5 Ke7 57. Kc3 Kd7 58. Kd3 Kc7 59. Kc3 Kd6 60. Kc4 Kc7 1/2-1/2";

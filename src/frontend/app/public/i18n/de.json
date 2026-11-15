@@ -3646,7 +3646,11 @@
       }
     },
     "onlyMine": "Nur meine Partien",
-    "onlyMineEmpty": "Hier ist keine eigene Partie – ohne Häkchen bei „Nur meine Partien“ siehst du alle."
+    "onlyMineEmpty": "Hier ist keine eigene Partie – ohne Häkchen bei „Nur meine Partien“ siehst du alle.",
+    "masterGame": {
+      "title": "Meisterpartie",
+      "notFound": "Diese Meisterpartie gibt es im Explorer nicht."
+    }
   },
   "analysis": {
     "title": "Analyse",

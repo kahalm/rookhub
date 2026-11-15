@@ -38,6 +38,7 @@
 | `/admin` | AdminComponent (Tabs je Recht, Deep-Link `?tab=<key>`, Keys in `features/admin/admin-tabs.ts`) | `adminAreaGuard` (je Recht, F5-005 — siehe unten) |
 | `/` | redirect -> `/dashboard`, Gäste -> `GUEST_START_URL` (nach einer Anmelde-Übernahme löst `HandoffService.leaveGuestStart` den Start neu auf, UX-025) | - |
 | `**` | `shared/not-found/NotFoundComponent` (guard-frei, auch in LeagueHub; Codereview UX-026) | - |
+| `/explorer/game/masters/:id` | MasterGameComponent (`features/explorer/`, 0.980.0) | nein — Meisterpartie des lokalen Explorers zum Nachspielen, Linkziel der Beispielpartien in der Partie-Zusammenfassung; `?ply=` öffnet die Stellung nach so vielen Halbzügen |
 
 ## Admin-Bereich: `adminAreaGuard` (F5-005)
 

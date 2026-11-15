@@ -25,7 +25,7 @@ import { SummaryBoardSheetComponent } from './summary-board-sheet.component';
 import { SanPipe } from '../../../shared/chess/san.pipe';
 import { MarkOrigin } from '../../../shared/mark-position/marked-positions.service';
 import { GameTextPart, mergeGameSection } from './summary-game-text.util';
-import { DiagramSpec, InlinePart, SummaryBlock, gameMovePairs, moveLabel, linkSummaryMoves, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock } from './summary-markdown.util';
+import { DiagramSpec, InlinePart, MASTER_GAME_PATH, SummaryBlock, gameMovePairs, moveLabel, linkSummaryMoves, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock } from './summary-markdown.util';
 
 /** Ein fertig aufgelöstes Diagramm: Stellung, letzter Zug, Pfeile, Blickrichtung. */
 interface ResolvedDiagram {
@@ -210,7 +210,8 @@ interface ResolvedDiagram {
     <!-- Text ohne Leerraum drumherum: Leerzeichen um die Interpolation im Template machten „( 45.Ta1“ und „61.Kxg5 .“ (Partie 243). -->
     <ng-template #inline let-parts>
       @for (p of parts; track $index) {
-        @if (p.line) { <button type="button" class="mv" [class.mv-b]="p.bold" [class.mv-i]="p.italic" (click)="showMove(p)">{{ p.text }}</button> }
+        @if (p.link) { <ng-container *ngTemplateOutlet="textLink; context: { $implicit: p }" /> }
+        @else if (p.line) { <button type="button" class="mv" [class.mv-b]="p.bold" [class.mv-i]="p.italic" (click)="showMove(p)">{{ p.text }}</button> }
         @else if (p.bold) { <strong>{{ p.text }}</strong> }
         @else if (p.italic) { <em>{{ p.text }}</em> }
         @else if (p.code) { <code>{{ p.text }}</code> }
@@ -223,12 +224,20 @@ interface ResolvedDiagram {
         @if (p.move) { <button type="button" class="gt-mv" [class.gt-game]="p.move.ply !== undefined" [class.gt-good]="p.mark === 'good'" [class.gt-bad]="p.mark === 'bad'"
                                [class.gt-on]="p.move.ply !== undefined && p.move.ply === boardPly()" [attr.aria-current]="p.move.ply !== undefined && p.move.ply === boardPly() ? 'step' : null"
                                (click)="showGameTextMove(p)">{{ p.text }}{{ p.glyph }}</button> }
+        @else if (p.link) { <ng-container *ngTemplateOutlet="textLink; context: { $implicit: p }" /> }
         @else if (p.result) { @if (resultText(); as r) { <span class="gt-result">{{ r }}</span> } }
         @else if (p.bold) { <strong>{{ p.text }}</strong> }
         @else if (p.italic) { <em>{{ p.text }}</em> }
         @else if (p.code) { <code>{{ p.text }}</code> }
         @else { <ng-container>{{ p.text }}</ng-container> }
       }
+    </ng-template>
+
+    <!-- Link im Text (0.980.0): nur Ziele der Erlaubt-Liste kommen als link an (summaryLink) — die Meisterpartie über den Router
+         (absoluter Pfad, ohne Angaben zur verlinkenden Partie), lichess.org in neuem Tab ohne Referrer. -->
+    <ng-template #textLink let-p>
+      @if (p.link.masterGame) { <a class="lnk lnk-master" [class.lnk-b]="p.bold" [class.lnk-i]="p.italic" [routerLink]="[masterGamePath, p.link.masterGame]" [queryParams]="p.link.ply === undefined ? null : { ply: p.link.ply }">{{ p.text }}</a> }
+      @else { <a class="lnk lnk-ext" [class.lnk-b]="p.bold" [class.lnk-i]="p.italic" [href]="p.link.href" target="_blank" rel="noopener noreferrer">{{ p.text }}</a> }
     </ng-template>
   `,
   styles: [`
@@ -274,6 +283,11 @@ interface ResolvedDiagram {
     .mv { all: unset; cursor: pointer; font-weight: 500; color: var(--rh-accent, inherit); border-radius: 3px;
       text-decoration: underline dotted; text-underline-offset: 2px; }
     .mv:hover, .mv:focus-visible { background: color-mix(in srgb, currentColor 12%, transparent); outline: none; }
+    /* Link auf eine Meisterpartie: wie jeder Link im Fließtext (Akzentfarbe, unterstrichen) — durchgezogen, damit er sich von
+       den gepunktet unterstrichenen Zügen unterscheidet. */
+    .lnk { color: var(--rh-accent); text-decoration: underline; text-underline-offset: 2px; font-style: normal; }
+    .lnk.lnk-b { font-weight: 700; }
+    .lnk.lnk-i { font-style: italic; }
     .mv.mv-b { font-weight: 700; }
     .mv.mv-i { font-style: italic; }
     .to-ply { margin-left: auto; }
@@ -310,6 +324,8 @@ export class ClubGameSummaryComponent implements OnInit {
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   readonly preferences = inject(PreferencesService);
+  /** Ziel der Links auf Meisterpartien (ohne Kennung) — absolut, damit sie von jedem der fünf Wege auf diese Seite aus stimmen. */
+  readonly masterGamePath = MASTER_GAME_PATH.replace(/\/$/, '');
 
   gameId = 0;
   /** `/games/:id/summary` (0.923.0): eigene Partie statt Vereinspartie. */

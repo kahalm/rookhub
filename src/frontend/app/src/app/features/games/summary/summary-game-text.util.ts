@@ -1,6 +1,6 @@
 import { readSequence } from '../explanation-lines';
 import type { LiveMove } from '../live-engine-session';
-import { SummaryBlock, InlinePart, gamePositions, positionsOf } from './summary-markdown.util';
+import { SummaryBlock, SummaryLink, InlinePart, gamePositions, positionsOf } from './summary-markdown.util';
 
 /**
  * „Die Partie“ als EIN Text (Wunsch 2026-11-14: „die Partie begann als Französisch: e4 e6 … und dann alle Züge immer wieder
@@ -26,6 +26,8 @@ export interface GameTextPart {
   glyph?: string;
   mark?: 'good' | 'bad';
   result?: boolean;
+  /** Link auf eine Meisterpartie (0.980.0), wie `InlinePart.link`; `text` ist der Linktext, darin werden keine Züge gelesen. */
+  link?: SummaryLink;
 }
 
 /** Ein Lauf des Absatzes: gewöhnlicher Text mit Partiezügen oder eine Klammer mit Variantenzügen. */
@@ -73,7 +75,7 @@ class GameTextReader {
   paragraph(parts: InlinePart[]): GameTextSegment[] {
     this.depth = 0;
     this.known = [];
-    const flat: GameTextPart[] = parts.flatMap(p => p.code ? [p] : this.read(p));
+    const flat: GameTextPart[] = parts.flatMap(p => p.code || p.link ? [p] : this.read(p));
     return segments(flat);
   }
 
@@ -134,7 +136,7 @@ function segments(flat: GameTextPart[]): GameTextSegment[] {
   };
   const start = (variation: boolean) => { close(); cur = { variation, parts: [] }; };
   for (const p of flat) {
-    if (p.move || p.code) { cur.parts.push(p); continue; }
+    if (p.move || p.code || p.link) { cur.parts.push(p); continue; }
     let from = 0;
     for (let i = 0; i < p.text.length; i++) {
       const ch = p.text[i];

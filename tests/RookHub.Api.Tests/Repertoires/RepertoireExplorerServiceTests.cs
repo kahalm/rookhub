@@ -647,8 +647,25 @@ public class RepertoireExplorerServiceTests : IDisposable
 
         Assert.Equal("ok", r.Status);
         Assert.All(r.Games, g => Assert.Null(g.Url));
+        // … dafür das Linkziel der Ansicht „Meisterpartie“ (0.980.0) — nur bei einer Kennung, die der Endpunkt annimmt.
+        Assert.All(r.Games, g => Assert.Equal(LocalExplorerClient.IsGameId(g.Id) ? "/explorer/game/masters/" + g.Id : null, g.Path));
         Assert.Contains("masters?", Assert.Single(_localHandler.Urls));
         Assert.Contains("topGames=5", _localHandler.Urls[0]);
+    }
+
+    [Fact]
+    public async Task Games_LocalMasters_CarryThePathOfTheMasterGameView()
+    {
+        var userId = await UserAsync(token: null);
+        _localHandler.Respond(StartKey, """
+            {"white":1,"draws":0,"black":0,"moves":[],"topGames":[
+              {"uci":"e2e4","id":"Hf9GLZwj","winner":"white","white":{"name":"Caruana, Fabiano","rating":2818},"black":{"name":"Carlsen, Magnus","rating":2882},"year":2019,"month":"2019-08"}]}
+            """);
+
+        var r = await Service().GamesAsync(userId, StartFen, "local", ExplorerQuery.Create("masters", null, null), CancellationToken.None);
+
+        var g = Assert.Single(r.Games);
+        Assert.Equal(("Hf9GLZwj", (string?)null, "/explorer/game/masters/Hf9GLZwj"), (g.Id, g.Url, g.Path));
     }
 
     [Fact]
@@ -660,6 +677,7 @@ public class RepertoireExplorerServiceTests : IDisposable
         var r = await Service().GamesAsync(userId, StartFen, "local", Blitz, CancellationToken.None);
 
         Assert.Equal("https://lichess.org/r1", r.Games.Single(g => g.Id == "r1").Url);
+        Assert.All(r.Games, g => Assert.Null(g.Path));
     }
 
     [Fact]

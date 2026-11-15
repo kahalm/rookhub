@@ -4056,7 +4056,11 @@
       }
     },
     "onlyMine": "Csak a saját játszmáim",
-    "onlyMineEmpty": "Itt nincs saját játszmád – a „Csak a saját játszmáim“ jelölését kivéve mindet látod."
+    "onlyMineEmpty": "Itt nincs saját játszmád – a „Csak a saját játszmáim“ jelölését kivéve mindet látod.",
+    "masterGame": {
+      "title": "Mesterjátszma",
+      "notFound": "Ez a mesterjátszma nincs meg az explorerben."
+    }
   },
   "analysisJobs": {
     "loadFailed": "A megbízásokat nem sikerült betölteni.",

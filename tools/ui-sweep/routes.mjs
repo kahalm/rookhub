@@ -46,6 +46,7 @@ export function isExpectedFailure(route, line) {
 // Wiederkehrende Hauptsachen.
 const PUZZLE_BOARD = ['.board-section app-puzzle-board', '.puzzle-page app-puzzle-board', '.revenge-done-card'];
 // Partie-Ansicht (/games/:id, /club-games/:id, /g/:token, /r/:token): Brett, sonst „nicht gefunden"-Karte bzw. Ladekreis.
+const MASTER_GAME = ['.master-game-page .head-card', '.master-game-page .empty-state', '.master-game-page .load-card', '.master-game-page .center'];
 const GAME_BOARD = ['.shared-page .board-wrap app-chess-board', '.shared-page mat-card.empty-state', '.shared-page .center'];
 // Anmeldung/Registrierung/Kennwort und Rechtstexte sind in allen fünf Oberflächen dieselben Komponenten
 // (src/app/features/auth, …/legal, in den anderen Apps über @rh/*).
@@ -165,6 +166,11 @@ export const ROUTES = [
   // legt der Seed an (`clubGameLinkToken`, als claude-dev); die Ungültig-Zeilen prüfen die Fehlerseite (wie /partie/ungueltig).
   r('rookhub', '/s/{leagueShareGameToken}/club-games/{shareClubGameId}/summary', 'any', { main: SUMMARY }),
   r('rookhub', '/cg/{clubGameLinkToken}', 'any', { main: GAME_BOARD }),
+  // 0.980.0: Meisterpartie aus dem lokalen Explorer (Linkziel der Beispielpartien in der Zusammenfassung), ohne Anmeldung.
+  // Feste Kennung aus dem Lumbra-Bestand (Caruana – Carlsen, Sinquefield Cup 2019); „XXXXXXXX“ gibt es nicht.
+  r('rookhub', '/explorer/game/masters/Hf9GLZwj', 'any', { label: 'master-game', main: MASTER_GAME }),
+  r('rookhub', '/explorer/game/masters/XXXXXXXX', 'any', { label: 'master-game-invalid', main: MASTER_GAME,
+    expectedFailures: [/^GET \/api\/explorer\/master-games\/XXXXXXXX → 404$/] }),
   r('rookhub', '/cg/{clubGameLinkToken}/summary', 'any', { main: SUMMARY }),
   r('rookhub', '/cg/ungueltig', 'any', { label: 'cg-invalid', main: GAME_BOARD, expectedFailures: [/^GET \/api\/league\/s-club-game\/ungueltig(\/\w+)? → 404$/] }),
   // Die Zusammenfassung holt Partie und Text gemeinsam (forkJoin, club-game-summary.component.ts): kommt die erste 404, bricht
@@ -343,7 +349,7 @@ export const AREAS = [
   ['repertoire', r => r.app === 'rookhub' && /^\/(repertoires|remembered|l\/)/.test(r.url)],
   ['puzzles', r => r.app === 'rookhub' && /^\/(puzzles|favorites|stats|leaderboards)/.test(r.url)],
   ['wochenpost', r => r.app === 'rookhub' && /^\/weekly/.test(r.url)],
-  ['partien', r => r.app === 'rookhub' && /^\/(games|g\/|club-games|cg\/|s\/)/.test(r.url)],
+  ['partien', r => r.app === 'rookhub' && /^\/(games|g\/|club-games|cg\/|s\/|explorer\/)/.test(r.url)],
   ['analyse', r => r.app === 'rookhub' && /^\/analysis/.test(r.url)],
   ['punktepartie', r => r.app === 'rookhub' && /^\/guess/.test(r.url)],
   ['vorbereitung', r => r.app === 'rookhub' && /^\/prep/.test(r.url)],

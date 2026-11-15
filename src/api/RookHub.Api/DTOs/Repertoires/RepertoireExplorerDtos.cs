@@ -153,6 +153,18 @@ public class ExplorerGameDto
     /// <summary>Link auf lichess.org — fehlt bei den lokalen Meisterpartien (Lumbra-Datenbank, dort
     /// gibt es die Partie unter dieser Kennung nicht).</summary>
     public string? Url { get; set; }
+    /// <summary>Seiteninterner Pfad der Ansicht „Meisterpartie“ (<c>/explorer/game/masters/&lt;id&gt;</c>, 0.980.0) — nur bei
+    /// den lokalen Meisterpartien gesetzt, also genau dort, wo <see cref="Url"/> fehlt. Die Partie selbst liefert
+    /// <c>GET /api/explorer/master-games/{id}</c>.</summary>
+    public string? Path { get; set; }
+}
+
+/// <summary>Antwort von <c>GET /api/explorer/master-games/{id}</c>: eine Meisterpartie des lokalen Explorers zum Nachspielen.</summary>
+public class ExplorerMasterGameDto
+{
+    public string Id { get; set; } = string.Empty;
+    /// <summary>PGN mit Kopfzeilen (Event, Site, Date, Round, White, Black, Result, Elo), ohne Kommentare.</summary>
+    public string Pgn { get; set; } = string.Empty;
 }
 
 /// <summary>Antwort von <c>GET /api/explorer/paths</c>: die häufigsten Zugfolgen von der Grundstellung zu einer Stellung

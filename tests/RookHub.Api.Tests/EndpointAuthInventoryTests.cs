@@ -23,6 +23,7 @@ public class EndpointAuthInventoryTests
     /// </summary>
     private static readonly string[] ExpectedAnonymous =
     [
+        "GET /api/explorer/master-games/{id}",                      // ExplorerMasterGameController.Get (Meisterpartie des lokalen Explorers, 0.980.0)
         "GET /api/ebook-suggestions",                                // EbookSuggestionsController.Info (nur Bücher der Merksatz-Belege)
         "GET /api/maxims",                                           // ChessMaximsController.List (kuratierte Merksätze, 0.917.0)
         "GET /api/book-puzzles/books",                               // BookPuzzleController.GetBooks

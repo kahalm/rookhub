@@ -409,6 +409,55 @@ public class LocalExplorerClient
     public Task<List<ExplorerGame>?> FetchGamesAsync(string fen, ExplorerQuery query, CancellationToken ct) =>
         GetAsync(LichessExplorerClient.BuildGamesUrl(fen, query), fen, LichessExplorerClient.ParseGames, ct);
 
+    /// <summary>Kennung einer Partie im Explorer: acht Zeichen aus Ziffern und Buchstaben (wie bei Lichess).</summary>
+    public static bool IsGameId(string? id) => id is { Length: 8 } && id.All(char.IsAsciiLetterOrDigit);
+
+    /// <summary>Pfad der Ansicht „Meisterpartie“ im Frontend (<c>/explorer/game/masters/&lt;id&gt;</c>) — EINE Stelle für das
+    /// Linkziel, das <c>GET /api/explorer/games</c> mitliefert und das die Partie-Zusammenfassung als Link annimmt
+    /// (Spiegel: <c>MASTER_GAME_PATH</c> in <c>summary-markdown.util.ts</c>).</summary>
+    public static string MasterGamePath(string id) => "/explorer/game/masters/" + id;
+
+    /// <summary>Ergebnis von <see cref="FetchMasterPgnAsync"/>: <c>Pgn</c> gesetzt = gefunden; sonst <c>Reachable</c> =
+    /// der Explorer hat geantwortet und kennt die Partie nicht.</summary>
+    public readonly record struct MasterPgnResult(bool Reachable, string? Pgn);
+
+    /// <summary>
+    /// Eine Meisterpartie des lokalen Bestands als PGN (<c>GET masters/pgn/{id}</c> des lila-openingexplorer). Die Kennung
+    /// muss <see cref="IsGameId"/> erfüllen — sie geht in den Pfad der Anfrage. Teilt sich den Deckel
+    /// <see cref="MaxConcurrent"/> mit den Stellungsabfragen.
+    /// </summary>
+    public async Task<MasterPgnResult> FetchMasterPgnAsync(string id, CancellationToken ct)
+    {
+        if (!IsGameId(id)) return new MasterPgnResult(true, null);
+        if (!IsConfigured) return new MasterPgnResult(false, null);
+        if (!await Slots.WaitAsync(MaxQueueWait, ct))
+        {
+            _logger.LogWarning("Lokaler Explorer ausgelastet ({Max} Abfragen laufen) — Partie {Id} übersprungen", MaxConcurrent, id);
+            return new MasterPgnResult(false, null);
+        }
+        try
+        {
+            using var response = await _http.GetAsync("masters/pgn/" + id, ct);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return new MasterPgnResult(true, null);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Lokaler Explorer: HTTP {Status} für Partie {Id}", (int)response.StatusCode, id);
+                return new MasterPgnResult(false, null);
+            }
+            var pgn = (await response.Content.ReadAsStringAsync(ct)).Trim();
+            return new MasterPgnResult(true, pgn.Length > 0 ? pgn : null);
+        }
+        catch (Exception ex) when (ex is HttpRequestException || (ex is TaskCanceledException && !ct.IsCancellationRequested))
+        {
+            _logger.LogWarning(ex, "Lokaler Explorer nicht erreichbar für Partie {Id}", id);
+            return new MasterPgnResult(false, null);
+        }
+        finally
+        {
+            Slots.Release();
+        }
+    }
+
     private async Task<T?> GetAsync<T>(string url, string fen, Func<JsonDocument, T?> parse, CancellationToken ct) where T : class
     {
         if (!await Slots.WaitAsync(MaxQueueWait, ct))

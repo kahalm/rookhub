@@ -304,6 +304,8 @@ public class RepertoireExplorerService
             Id = g.Id, White = g.White, WhiteRating = g.WhiteRating, Black = g.Black, BlackRating = g.BlackRating,
             Winner = g.Winner, Date = g.Month ?? g.Year?.ToString(), Speed = g.Speed,
             Url = linkable ? "https://lichess.org/" + Uri.EscapeDataString(g.Id) : null,
+            // Dafür gibt es sie in RookHub selbst (0.980.0): Ansicht „Meisterpartie“, ohne Anmeldung.
+            Path = !linkable && LocalExplorerClient.IsGameId(g.Id) ? LocalExplorerClient.MasterGamePath(g.Id) : null,
         }).ToList();
         return dto;
     }

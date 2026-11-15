@@ -14,6 +14,45 @@ export interface InlinePart {
   text: string; bold?: boolean; italic?: boolean; code?: boolean;
   /** Klickbarer Zug: die Zugfolge ab Partieanfang und wie weit sie bis einschließlich dieses Zugs reicht. */
   line?: LiveMove[]; at?: number;
+  /** Link (0.980.0): `text` ist der Linktext. In einem Linktext werden keine Züge klickbar gemacht. */
+  link?: SummaryLink;
+}
+
+/**
+ * Ein Link im Text — nur die Ziele der Erlaubt-Liste ({@link summaryLink}):
+ * die Ansicht „Meisterpartie“ dieser Seite (`masterGame` = Kennung im Explorer, `ply` = Halbzug, an dem sie aufgeht) oder
+ * eine Partie auf lichess.org (`href`, öffnet in neuem Tab).
+ */
+export interface SummaryLink { masterGame?: string; ply?: number; href?: string; }
+
+/** Pfad der Ansicht „Meisterpartie“ — Spiegel von `LocalExplorerClient.MasterGamePath` (das Feld `path` von `/api/explorer/games`). */
+export const MASTER_GAME_PATH = '/explorer/game/masters/';
+
+const MASTER_GAME_LINK = /^\/explorer\/game\/masters\/([A-Za-z0-9]{8})(?:\?ply=(\d{1,3}))?$/;
+const LICHESS_GAME_LINK = /^https:\/\/lichess\.org\/[A-Za-z0-9]{8}(?:\/(?:white|black))?(?:#\d{1,3})?$/;
+
+/**
+ * Erlaubt-Liste der Linkziele (Wunsch 2026-11-15: Beispielpartien aus dem Explorer „am besten mit einem Link“). Der Text
+ * kommt von Claude bzw. aus fremden Namen — deshalb NUR diese zwei festen Muster, alles andere (andere Adressen,
+ * `javascript:`, relative Pfade, Zusätze hinter dem Muster) ist kein Link und bleibt wörtlich stehen:
+ *
+ * - `/explorer/game/masters/<8 Zeichen a–z, A–Z, 0–9>` mit optionalem `?ply=<Halbzug>` — seitenintern, über den Router;
+ * - `https://lichess.org/<8 Zeichen>` mit optionalem `/white`, `/black` und `#<Halbzug>`.
+ */
+export function summaryLink(target: string): SummaryLink | null {
+  const m = MASTER_GAME_LINK.exec(target);
+  if (m) return m[2] === undefined ? { masterGame: m[1] } : { masterGame: m[1], ply: Number(m[2]) };
+  return LICHESS_GAME_LINK.test(target) ? { href: target } : null;
+}
+
+/** `[Text](Ziel)` als Ganzes: Text ohne `]` und Zeilenumbruch, Ziel ohne Leerraum und Klammern. */
+const WHOLE_LINK = /^\[([^\]\n]+)\]\(([^()\s]+)\)$/;
+
+/** Ein Stück mit Stil: ist es als Ganzes ein erlaubter Link, wird es einer (`**[Text](Ziel)**`), sonst bleibt es Text. */
+function styled(text: string, style: Pick<InlinePart, 'bold' | 'italic'>): InlinePart {
+  const m = WHOLE_LINK.exec(text);
+  const link = m ? summaryLink(m[2]) : null;
+  return link ? { text: m![1], ...style, link } : { text, ...style };
 }
 
 /** Ein Diagramm: Stellung nach `ply` Halbzügen der Partie (0 = Anfang) oder eine freie `fen`. */
@@ -44,20 +83,34 @@ export type SummaryBlock =
    *  Klammern — entsteht in `mergeGameSection` (summary-game-text.util.ts), nie direkt aus dem Markdown. */
   | { kind: 'gameText'; segments: GameTextSegment[] };
 
-/** `**fett**`, `*kursiv*` / `_kursiv_`, `` `Code` `` — nicht verschachtelt, unvollständige Zeichen bleiben Text. */
+/**
+ * `**fett**`, `*kursiv*` / `_kursiv_`, `` `Code` ``, `[Text](Ziel)` — nicht verschachtelt, unvollständige Zeichen bleiben Text.
+ * Ein Link wird nur mit einem Ziel der Erlaubt-Liste ({@link summaryLink}) zum Link; sonst bleibt `[Text](Ziel)` wörtlich
+ * stehen. Fett oder kursiv um den ganzen Link herum geht (`**[Text](Ziel)**`), Stil IM Linktext nicht.
+ */
 export function parseInline(text: string): InlinePart[] {
   const parts: InlinePart[] = [];
-  const re = /\*\*(.+?)\*\*|`([^`]+)`|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)/g;
+  const push = (p: InlinePart) => {
+    // Nicht erlaubter Link = gewöhnlicher Text: mit dem Nachbarn davor verschmelzen, damit Sätze nicht zerfallen.
+    const prev = parts[parts.length - 1];
+    if (prev && !p.bold && !p.italic && !p.code && !p.link && !prev.bold && !prev.italic && !prev.code && !prev.link) prev.text += p.text;
+    else parts.push(p);
+  };
+  const re = /\*\*(.+?)\*\*|`([^`]+)`|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)|\[([^\]\n]+)\]\(([^()\s]+)\)/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
-    if (m.index > last) parts.push({ text: text.slice(last, m.index) });
-    if (m[1] !== undefined) parts.push({ text: m[1], bold: true });
-    else if (m[2] !== undefined) parts.push({ text: m[2], code: true });
-    else parts.push({ text: m[3] ?? m[4], italic: true });
+    if (m.index > last) push({ text: text.slice(last, m.index) });
+    if (m[1] !== undefined) push(styled(m[1], { bold: true }));
+    else if (m[2] !== undefined) push({ text: m[2], code: true });
+    else if (m[5] !== undefined) {
+      const link = summaryLink(m[6]);
+      push(link ? { text: m[5], link } : { text: m[0] });
+    }
+    else push(styled(m[3] ?? m[4], { italic: true }));
     last = m.index + m[0].length;
   }
-  if (last < text.length) parts.push({ text: text.slice(last) });
+  if (last < text.length) push({ text: text.slice(last) });
   return parts;
 }
 
@@ -207,7 +260,7 @@ export function linkSummaryMoves(blocks: SummaryBlock[], positions: Positions): 
   const link = (parts: InlinePart[]): InlinePart[] => {
     const known: KnownPosition[] = [];   // je Absatz: „Nach 12.Sd3 kann Schwarz 12...b6“ bezieht sich aufeinander
     return parts.flatMap(p => {
-      if (p.code) return [p];
+      if (p.code || p.link) return [p];   // ein Linktext bleibt ganz — „Kosakowski – Nie (2025)“ ist keine Zugfolge
       const { text: _, ...style } = p;
       return explanationParts(p.text, game[0].fen, game, known).map(x => ({ ...style, ...x }));
     });

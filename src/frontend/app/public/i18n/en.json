@@ -3646,7 +3646,11 @@
       }
     },
     "onlyMine": "Only my games",
-    "onlyMineEmpty": "None of your own games here – untick “Only my games” to see all."
+    "onlyMineEmpty": "None of your own games here – untick “Only my games” to see all.",
+    "masterGame": {
+      "title": "Master game",
+      "notFound": "This master game does not exist in the explorer."
+    }
   },
   "analysis": {
     "title": "Analysis",

@@ -68,7 +68,8 @@ Wunsch 2026-11-14: „zeig im ⋮ … neben den Partien einen Eintrag für Summa
 ## Markdown-Format
 
 Teilmenge, gerendert über das Template (nie `innerHTML`, `summary-markdown.util.ts`): `#`/`##`/`###`, Absätze, Listen
-(`-`, `1.`), Zitat `>`, `---`, einfache `|`-Tabellen, `**fett**`, `*kursiv*`, `` `Code` ``. Diagramme:
+(`-`, `1.`), Zitat `>`, `---`, einfache `|`-Tabellen, `**fett**`, `*kursiv*`, `` `Code` ``, Links `[Text](Ziel)` nur mit
+einem Ziel der Erlaubt-Liste (siehe „Links auf Meisterpartien“ unten). Diagramme:
 
 ````
 ```diagram
@@ -81,6 +82,40 @@ orientation: black optional; sonst aus Sicht des eigenen Vereins (ownSide)
 ````
 
 Ein Diagramm mit `ply` außerhalb der Partie wird nicht gezeigt; unter ihm steht „In der Partie zeigen“ (`?ply=`).
+
+### Links auf Meisterpartien (0.980.0)
+
+Wunsch 2026-11-15: der Text nennt dort, wo die Partie die Meisterpartien verlässt, 1–2 Beispielpartien aus dem Explorer
+(„Kosakowski – Nie (2025)“) — „am besten mit einem Link“. `parseInline` liest `[Text](Ziel)`; zum Link wird es NUR, wenn das
+Ziel als Ganzes eines dieser zwei Muster ist (`summaryLink`, `summary-markdown.util.ts`):
+
+| Ziel | Muster | Verhalten |
+|---|---|---|
+| Meisterpartie des lokalen Explorers | `/explorer/game/masters/<id>` mit optionalem `?ply=<Halbzug>`; `<id>` = genau 8 Zeichen `A–Z a–z 0–9`, `<Halbzug>` 1–3 Ziffern | seitenintern über den Router, selber Tab |
+| Partie auf Lichess | `https://lichess.org/<id>` mit optionalem `/white` bzw. `/black` und `#<Halbzug>` | neuer Tab, `rel="noopener noreferrer"` |
+
+Beispiel (echte Partie, Stellung nach 1.e4 c5 2.Sf3 Sc6 3.c3 g6 4.Lc4 Lg7 5.O-O e6 6.Te1 Sge7 7.d4 cxd4 = 14 Halbzüge):
+`[Kosakowski – Nie (2025)](/explorer/game/masters/6kBV5lDP?ply=14)`. Der Pfad ohne `?ply=` steht fertig im Feld `path` von
+`GET /api/explorer/games` (nur bei lokalen Meisterpartien gesetzt, dort ist `url` leer; `docs/api/repertoires.md`); bei
+Online-Partien steht das Lichess-Ziel wie bisher in `url`. Wer den Text schreibt, nimmt also `path`, sonst `url`, und hängt
+bei `path` nach Wunsch `?ply=` an.
+
+Alles andere bleibt wörtlich als Text stehen (`[Text](Ziel)`): andere Adressen, `http://`, `javascript:`, andere Pfade der
+Seite, Zusätze hinter dem Muster (weitere Parameter, `#…`, Titel in Anführungszeichen). Der Linktext ist reiner Text: kein
+Stil darin (fett/kursiv um den GANZEN Link geht: `**[Text](Ziel)**`), kein `]`, und Züge im Linktext werden nicht klickbar
+gemacht — umgekehrt läuft das Klickbar-Machen der Züge links und rechts des Links unverändert weiter, auch im Abschnitt
+„Die Partie“ und in dessen Klammern. Das Linkziel trägt nur die Kennung der Meisterpartie, nichts über die Partie, von der
+man kommt; es ist von allen fünf Wegen auf die Seite aus dasselbe (absoluter Pfad).
+
+Das Ziel selbst: Seite „Meisterpartie“ (`features/explorer/master-game.component.ts`, Route `explorer/game/masters/:id` ohne
+Guard) — Kopf aus den Kopfzeilen des PGN (Spieler, Elo, Ergebnis, Turnier · Ort · Jahr), darunter das Seitenbrett der
+Zusammenfassung (`SummaryGameBoardComponent`: Blättern, Zugliste, Engine, „+“, eigene Züge als Variante). Daten:
+`GET /api/explorer/master-games/{id}` → `{ id, pgn }`, ohne Anmeldung, je Adresse gedrosselt (`anonymous-tournament`),
+Kennung nicht 8 Zeichen aus Ziffern/Buchstaben → 400, unbekannt → 404 (beides zeigt „gibt es nicht“), Explorer nicht
+eingerichtet/erreichbar → 503 (Ladefehler mit „Wiederholen“). Die Partie kommt aus `masters/pgn/{id}` des lokalen Explorers
+(`LocalExplorerClient.FetchMasterPgnAsync`) und bleibt einen Tag im Arbeitsspeicher. Tests: `summary-markdown.util.spec.ts`
+(„Links“), `summary-game-text.util.spec.ts`, `club-game-summary.component.spec.ts` („Links auf Meisterpartien“),
+`master-game.component.spec.ts` ↔ `ExplorerMasterGameTests`, `RepertoireExplorerServiceTests`.
 
 ## Vereinspartien, auf die jemand wartet (0.922.0)
 

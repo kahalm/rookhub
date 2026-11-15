@@ -1,4 +1,4 @@
-import { InlinePart, gameBlockIndex, gameMovePairs, linkSummaryMoves, moveLabel, parseInline, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock } from './summary-markdown.util';
+import { InlinePart, SummaryBlock, summaryLink, gameBlockIndex, gameMovePairs, linkSummaryMoves, moveLabel, parseInline, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock } from './summary-markdown.util';
 
 describe('summary-markdown.util (Partie-Zusammenfassung, 0.913.0)', () => {
   it('zerlegt Überschriften, Absätze, Listen, Zitat, Trennlinie und Tabelle', () => {
@@ -44,6 +44,52 @@ describe('summary-markdown.util (Partie-Zusammenfassung, 0.913.0)', () => {
       { text: 'a ' }, { text: 'b', bold: true }, { text: ' ' }, { text: 'c', italic: true }, { text: ' ' },
       { text: 'd', italic: true }, { text: ' ' }, { text: 'e', code: true }]);
     expect(parseInline('9...Sf8 und 10.Se5')).toEqual([{ text: '9...Sf8 und 10.Se5' }]);
+  });
+
+  // Wunsch 2026-11-15: Beispielpartien aus dem Explorer „am besten mit einem Link“ (0.980.0).
+  describe('Links: nur die Erlaubt-Liste', () => {
+    it('Meisterpartie dieser Seite, mit und ohne Halbzug; lichess.org mit Seite und Halbzug', () => {
+      expect(parseInline('Vorbild: [Kosakowski – Nie (2025)](/explorer/game/masters/Ab3dE6gh) spielte so.')).toEqual([
+        { text: 'Vorbild: ' }, { text: 'Kosakowski – Nie (2025)', link: { masterGame: 'Ab3dE6gh' } }, { text: ' spielte so.' }]);
+      expect(summaryLink('/explorer/game/masters/Ab3dE6gh?ply=14')).toEqual({ masterGame: 'Ab3dE6gh', ply: 14 });
+      expect(summaryLink('https://lichess.org/Hf9GLZwj')).toEqual({ href: 'https://lichess.org/Hf9GLZwj' });
+      expect(summaryLink('https://lichess.org/Hf9GLZwj/black#27')).toEqual({ href: 'https://lichess.org/Hf9GLZwj/black#27' });
+    });
+
+    it('alles andere ist kein Link und bleibt wörtlich im Satz stehen', () => {
+      for (const target of [
+        'javascript:alert(1)', 'JAVASCRIPT:alert(1)', 'data:text/html,x', 'https://evil.example/x', 'http://lichess.org/Hf9GLZwj',
+        'https://lichess.org.evil.example/Hf9GLZwj', 'https://lichess.org/@/jemand', 'https://lichess.org/Hf9GLZwj?x=1',
+        '//lichess.org/Hf9GLZwj', '/admin', '/explorer/game/masters/kurz', '/explorer/game/masters/Ab3dE6gh/../../admin',
+        '/explorer/game/masters/Ab3dE6gh?ply=1&next=/admin', '/explorer/game/masters/Ab3dE6gh#x', 'explorer/game/masters/Ab3dE6gh',
+        '/explorer/game/lichess/Ab3dE6gh', '/g/token',
+      ]) {
+        expect(summaryLink(target)).withContext(target).toBeNull();
+        expect(parseInline(`vor [Text](${target}) nach`)).withContext(target).toEqual([{ text: `vor [Text](${target}) nach` }]);
+      }
+      // Ziel mit Leerraum oder Klammer: gar nicht erst als Link gelesen.
+      expect(parseInline('[a](/explorer/game/masters/Ab3dE6gh "Titel")')).toEqual([{ text: '[a](/explorer/game/masters/Ab3dE6gh "Titel")' }]);
+    });
+
+    it('fett oder kursiv um den ganzen Link; Sonderzeichen und HTML im Linktext bleiben Text', () => {
+      expect(parseInline('**[A – B](/explorer/game/masters/Ab3dE6gh)**')).toEqual([{ text: 'A – B', bold: true, link: { masterGame: 'Ab3dE6gh' } }]);
+      expect(parseInline('*[A – B](https://lichess.org/Hf9GLZwj)*')).toEqual([{ text: 'A – B', italic: true, link: { href: 'https://lichess.org/Hf9GLZwj' } }]);
+      expect(parseInline('**[A](https://evil.example)**')).toEqual([{ text: '[A](https://evil.example)', bold: true }]);
+      expect(parseInline('[<b>O\'Neil & "Söhne"</b> 1.e4*](/explorer/game/masters/Ab3dE6gh)')).toEqual([
+        { text: '<b>O\'Neil & "Söhne"</b> 1.e4*', link: { masterGame: 'Ab3dE6gh' } }]);
+      expect(parseInline('[offen](/explorer/game/masters/Ab3dE6gh')).toEqual([{ text: '[offen](/explorer/game/masters/Ab3dE6gh' }]);
+    });
+
+    it('Züge neben einem Link werden klickbar, der Linktext selbst wird nicht zerlegt', () => {
+      const positions = positionsOf('1. e4 e5 2. Nf3 Nc6');
+      const [block] = linkSummaryMoves(parseSummary('Nach 1.e4 e5 wie in [Meier – Huber 2.Nf3 (2019)](/explorer/game/masters/Ab3dE6gh) folgte 2.Sf3.'), positions);
+      const parts = (block as SummaryBlock & { kind: 'paragraph' }).parts;
+      expect(parts.map(p => p.link ? `<${p.text}>` : p.line ? `[${p.text}]` : p.text)).toEqual(
+        ['Nach ', '[1.e4]', ' ', '[e5]', ' wie in ', '<Meier – Huber 2.Nf3 (2019)>', ' folgte ', '[2.Sf3]', '.']);
+      expect(parts[5].line).toBeUndefined();
+      // Der Zusammenhang des Absatzes läuft über den Link hinweg: 2.Sf3 ist der Partiezug nach 1.e4 e5.
+      expect(parts[7].at).toBe(3);
+    });
   });
 
   it('HTML im Text bleibt Text (wird nie als HTML gerendert)', () => {

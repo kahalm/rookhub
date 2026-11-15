@@ -3646,7 +3646,11 @@
       }
     },
     "onlyMine": "Samo moje partije",
-    "onlyMineEmpty": "Ovdje nema tvojih partija – makni kvačicu „Samo moje partije“ za sve."
+    "onlyMineEmpty": "Ovdje nema tvojih partija – makni kvačicu „Samo moje partije“ za sve.",
+    "masterGame": {
+      "title": "Majstorska partija",
+      "notFound": "Ove majstorske partije nema u exploreru."
+    }
   },
   "analysis": {
     "title": "Analiza",

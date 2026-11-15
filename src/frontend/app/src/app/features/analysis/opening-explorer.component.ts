@@ -173,6 +173,9 @@ function readOpen(): boolean {
                                         <span class="res">{{ gameResult(g) }}</span>
                                         @if (g.url) {
                                           <a [href]="g.url" target="_blank" rel="noopener">{{ players(g) }}</a>
+                                        } @else if (g.path) {
+                                          <!-- Lokale Meisterpartie (0.980.0): Ansicht „Meisterpartie“ dieser Seite, in neuem Tab wie der Lichess-Link. -->
+                                          <a [routerLink]="g.path" target="_blank" class="master-game">{{ players(g) }}</a>
                                         } @else {
                                           <span>{{ players(g) }}</span>
                                         }

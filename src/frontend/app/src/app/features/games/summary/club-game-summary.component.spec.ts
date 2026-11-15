@@ -514,3 +514,61 @@ describe('ClubGameSummaryService.trainTactics', () => {
     http.verify();
   });
 });
+
+/** Wunsch 2026-11-15: Beispielpartien aus dem Explorer als Link (0.980.0) — nur Ziele der Erlaubt-Liste werden Links. */
+describe('ClubGameSummaryComponent — Links auf Meisterpartien', () => {
+  const md = [
+    'Vorbild [Kosakowski – Nie (2025)](/explorer/game/masters/Ab3dE6gh?ply=14) nach 1.e4, online [A – B](https://lichess.org/Hf9GLZwj),',
+    'aber [böse](javascript:alert(1)) und [fremd](https://evil.example/x) bleiben Text.', '',
+    '## Die Partie', '', 'Es begann 1.e4 e5 2.Sf3 Sc6 (wie **[Meier – Huber (2019)](/explorer/game/masters/Zz9yX8wv)**) und endete.',
+  ].join('\n');
+
+  function render(mode: string, params: Record<string, string>) {
+    const game = () => of({ pgn: '1. e4 e5 2. Nf3 Nc6', ownerSide: 'white', white: 'W', black: 'B' });
+    const text = () => of({ markdown: md });
+    TestBed.configureTestingModule({
+      imports: [ClubGameSummaryComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params), data: { mode } } } },
+        { provide: GamesService, useValue: { linkedClubGame: game, getShared: game, sharedClubGame: game, get: game, clubGame: game } },
+        { provide: ClubGameSummaryService, useValue: { getLinked: text, getSharedOwn: text, getShared: text, getOwn: text, get: text,
+          suggestions: () => of([]), exercises: () => of([]) } },
+        { provide: AuthService, useValue: { isLoggedIn: false, currentUser: null, currentUser$: of(null) } },
+        { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ClubGameSummaryComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('Meisterpartie über den Router (absolut, mit Halbzug), lichess.org in neuem Tab ohne Referrer; Unerlaubtes bleibt Text', () => {
+    const el = render('club-link', { token: 'geheimesToken' });
+    const links = Array.from(el.querySelectorAll<HTMLAnchorElement>('.summary-text a.lnk'));
+    expect(links.map(a => [a.textContent, a.getAttribute('href'), a.getAttribute('target'), a.getAttribute('rel')])).toEqual([
+      ['Kosakowski – Nie (2025)', '/explorer/game/masters/Ab3dE6gh?ply=14', null, null],
+      ['A – B', 'https://lichess.org/Hf9GLZwj', '_blank', 'noopener noreferrer'],
+      ['Meier – Huber (2019)', '/explorer/game/masters/Zz9yX8wv', null, null],
+    ]);
+    expect(links[2].classList.contains('lnk-b')).toBeTrue();
+    const p = el.querySelector('.summary-text p')!.textContent!;
+    expect(p).toContain('[böse](javascript:alert(1))');
+    expect(p).toContain('[fremd](https://evil.example/x)');
+    // Das Linkziel verrät nichts über die Partie, von der man kommt.
+    expect(links.some(a => (a.getAttribute('href') ?? '').includes('geheimesToken'))).toBeFalse();
+    // Züge daneben bleiben klickbar, im verschmolzenen Abschnitt ebenso.
+    expect(Array.from(el.querySelectorAll('.summary-text p:not(.game-text) button.mv')).map(b => b.textContent)).toEqual(['1.e4']);
+    expect(Array.from(el.querySelectorAll('.game-text button.gt-mv')).map(b => b.textContent)).toEqual(['1.e4', 'e5', '2.Sf3', 'Sc6']);
+    expect(el.querySelector('.game-text a.lnk')).not.toBeNull();
+  });
+
+  it('dieselben Ziele von jedem Weg auf die Seite aus', () => {
+    for (const [mode, params] of [['own', { id: '5' }], ['own-share', { token: 't' }], ['club-share', { token: 't', id: '5' }]] as const) {
+      TestBed.resetTestingModule();
+      const el = render(mode, params);
+      expect(el.querySelector('.summary-text a.lnk')?.getAttribute('href')).withContext(mode).toBe('/explorer/game/masters/Ab3dE6gh?ply=14');
+    }
+  });
+});

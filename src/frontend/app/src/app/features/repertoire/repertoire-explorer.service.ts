@@ -151,6 +151,8 @@ export interface ExplorerGame {
   speed: string | null;
   /** Link auf lichess.org — fehlt bei den lokalen Meisterpartien. */
   url: string | null;
+  /** Seiteninterner Pfad der Ansicht „Meisterpartie“ (`/explorer/game/masters/<id>`, 0.980.0) — nur bei lokalen Meisterpartien. */
+  path?: string | null;
 }
 
 export interface ExplorerGames {
