@@ -4236,7 +4236,8 @@
         "t": "Trainingslessen",
         "p": [
           "Als trainingslessen voor je account zijn ingeschakeld, toont “Trainingslessen” in het ☰-menu (Training) de video’s van je lessen: datum, duur, een korte samenvatting en de besproken partijen. “Bekijken” opent de video naast het bord; de lijst met stellingen volgt de video.",
-          "Je kunt zoeken op woord of FEN, of een stelling opzetten; op het analysebord biedt het ⋮-menu “Besproken in de les?”. “Naspelen” vraagt de zetten uit de les op het bord en speelt daarna alleen de bijbehorende uitleg; de “Vragenset” verzamelt de vragen van alle lessen."
+          "Je kunt zoeken op woord of FEN, of een stelling opzetten; op het analysebord biedt het ⋮-menu “Besproken in de les?”. “Naspelen” vraagt de zetten uit de les op het bord en speelt daarna alleen de bijbehorende uitleg; de “Vragenset” verzamelt de vragen van alle lessen.",
+          "Het ‘Notitieboek’ verzamelt de uitspraken van de trainer uit alle lessen per onderwerp — met ‘Dat zegt hij steeds weer’, openingsadvies vergeleken met je repertoire en een fragment om te beluisteren."
         ]
       }
     }
@@ -6718,6 +6719,42 @@
       "start": "Beginstelling",
       "inVideo": "▶ in de video vanaf {{time}}",
       "sideLine": "Zijvariant uit de les"
+    },
+    "notebook": {
+      "open": "Notitieboek",
+      "title": "Notitieboek van de trainer",
+      "intro": "Alles wat je trainer in de lessen zei — per onderwerp, met een fragment om te beluisteren.",
+      "empty": "Nog geen notities uit trainingslessen.",
+      "none": "Geen notities voor deze selectie.",
+      "themes": "Dat zegt hij steeds weer",
+      "themeLessons": "in {{count}} lessen",
+      "themeShow": "Alle {{count}} tonen",
+      "openings": "Openingsadvies",
+      "inRepertoire": "In je repertoire ‘{{name}}’:",
+      "repertoireEnd": "In je repertoire ‘{{name}}’ eindigt de lijn hier.",
+      "notInRepertoire": "Komt niet voor in je repertoire.",
+      "repertoireTruncated": "Niet alle repertoirelijnen konden worden gecontroleerd.",
+      "openRepertoire": "Openen in repertoire",
+      "moreOpenings": "Alle {{count}} tonen",
+      "allNotes": "Alle notities",
+      "searchLabel": "Zoeken in de notities",
+      "searchActive": "Resultaten voor ‘{{q}}’: {{count}}",
+      "kindLabel": "Soort partij",
+      "kindAll": "Alle soorten",
+      "gameLabel": "Partij",
+      "gameAll": "Alle partijen",
+      "listen": "▶ beluisteren",
+      "quote": "Letterlijk citaat",
+      "cat": {
+        "schwaeche": "Zwaktes",
+        "eroeffnung": "Opening",
+        "plan": "Plannen",
+        "rechnen": "Rekenen",
+        "endspiel": "Eindspel",
+        "zeit": "Tijd",
+        "psychologie": "Psychologie",
+        "allgemein": "Algemeen"
+      }
     }
   }
 }

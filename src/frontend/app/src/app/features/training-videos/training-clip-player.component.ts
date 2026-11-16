@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, effect, inject, input, signal, untracked, viewChild,
+  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, effect, inject, input, signal, untracked, viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -55,6 +55,9 @@ export class TrainingClipPlayerComponent {
   readonly lessonId = input.required<number>();
   readonly start = input.required<number>();
   readonly end = input.required<number>();
+  /** Gleich nach dem Anzeigen abspielen (Notizbuch: „▶ anhören“ hat den Player eben erst aufgeklappt — der Klick gilt
+   *  als Nutzergeste, sonst blockt der Browser das Abspielen). */
+  readonly autoplay = input(false);
 
   readonly audioOnly = signal(this.eink.enabled());
   readonly playing = signal(false);
@@ -88,6 +91,7 @@ export class TrainingClipPlayerComponent {
       });
     });
     inject(DestroyRef).onDestroy(() => this.video()?.nativeElement.pause());
+    afterNextRender(() => { if (this.autoplay() && !this.playing()) this.toggle(); });
   }
 
   toggle(): void {

@@ -125,13 +125,13 @@ public class TrainingVideoService
             .Select(s => new { s.Id, s.LessonId, s.Lesson!.Date, s.StartSec, s.Fen, s.Move, s.Comment, s.Quote, s.GameKey })
             .ToListAsync(ct);
         var noteRows = await notes.OrderByDescending(n => n.Lesson!.Date).ThenBy(n => n.Position).Take(MaxHits + 1)
-            .Select(n => new { n.LessonId, n.Lesson!.Date, n.StartSec, n.Text, n.Category, n.GameKey })
+            .Select(n => new { n.Id, n.LessonId, n.Lesson!.Date, n.StartSec, n.Text, n.Category, n.GameKey })
             .ToListAsync(ct);
         var labels = await GameLabelsAsync(segRows.Select(r => r.LessonId).Concat(noteRows.Select(r => r.LessonId)).Distinct().ToList(), ct);
         var hits = segRows.Take(MaxHits).Select(r => new TrainingSearchHitDto("segment", r.LessonId, Iso(r.Date), r.Id, r.StartSec, r.Fen,
                 r.Move, PickText(r.Comment, r.Quote, words), Label(labels, r.LessonId, r.GameKey), null, null))
             .Concat(noteRows.Take(MaxHits).Select(r => new TrainingSearchHitDto("note", r.LessonId, Iso(r.Date), null, r.StartSec, null,
-                null, r.Text, Label(labels, r.LessonId, r.GameKey), r.Category, null)))
+                null, r.Text, Label(labels, r.LessonId, r.GameKey), r.Category, null, r.Id)))
             .ToList();
         return new TrainingSearchResultDto(hits, segRows.Count > MaxHits || noteRows.Count > MaxHits);
     }
@@ -421,7 +421,8 @@ public class TrainingVideoService
 
     // ---------------------------------------------------------------- Helfer
 
-    private bool HasVideo(string? file) => VideoPath(file) != null;
+    /// <summary>Liegt das Video der Stunde im Video-Ordner? (auch für das Notizbuch)</summary>
+    internal bool HasVideo(string? file) => VideoPath(file) != null;
 
     private string? VideoPath(string? file)
     {

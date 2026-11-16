@@ -4236,7 +4236,8 @@
         "t": "Lezioni con l’istruttore",
         "p": [
           "Se il tuo account ha le lezioni attivate, «Lezioni con l’istruttore» nel menu ☰ (Allenamento) elenca i video delle tue lezioni: data, durata, breve riassunto e partite discusse. «Guarda» apre il video accanto alla scacchiera; l’elenco delle posizioni segue il video.",
-          "Puoi cercare per parola o FEN, oppure impostare una posizione; nella scacchiera di analisi il menu ⋮ offre «Visto a lezione?». «Rigioca» ti chiede le mosse della lezione sulla scacchiera e poi riproduce solo la spiegazione relativa; la «Serie di domande» raccoglie le domande di tutte le lezioni."
+          "Puoi cercare per parola o FEN, oppure impostare una posizione; nella scacchiera di analisi il menu ⋮ offre «Visto a lezione?». «Rigioca» ti chiede le mosse della lezione sulla scacchiera e poi riproduce solo la spiegazione relativa; la «Serie di domande» raccoglie le domande di tutte le lezioni.",
+          "Il «Quaderno» raccoglie per tema le osservazioni dell’allenatore di tutte le lezioni — con «Lo ripete spesso», consigli d’apertura confrontati con il tuo repertorio e un estratto da ascoltare."
         ]
       }
     }
@@ -6718,6 +6719,42 @@
       "start": "Posizione iniziale",
       "inVideo": "▶ nel video da {{time}}",
       "sideLine": "Variante della lezione"
+    },
+    "notebook": {
+      "open": "Quaderno",
+      "title": "Quaderno dell’allenatore",
+      "intro": "Tutto ciò che il tuo allenatore ha detto nelle lezioni — per tema, con un estratto da ascoltare.",
+      "empty": "Ancora nessuna nota dalle lezioni.",
+      "none": "Nessuna nota per questa selezione.",
+      "themes": "Lo ripete spesso",
+      "themeLessons": "in {{count}} lezioni",
+      "themeShow": "Mostra tutte ({{count}})",
+      "openings": "Consigli d’apertura",
+      "inRepertoire": "Nel tuo repertorio «{{name}}»:",
+      "repertoireEnd": "Nel tuo repertorio «{{name}}» la linea finisce qui.",
+      "notInRepertoire": "Non è nel tuo repertorio.",
+      "repertoireTruncated": "Non è stato possibile controllare tutte le linee del repertorio.",
+      "openRepertoire": "Apri nel repertorio",
+      "moreOpenings": "Mostra tutte ({{count}})",
+      "allNotes": "Tutte le note",
+      "searchLabel": "Cerca nelle note",
+      "searchActive": "Risultati per «{{q}}»: {{count}}",
+      "kindLabel": "Tipo di partita",
+      "kindAll": "Tutti i tipi",
+      "gameLabel": "Partita",
+      "gameAll": "Tutte le partite",
+      "listen": "▶ ascolta",
+      "quote": "Citazione originale",
+      "cat": {
+        "schwaeche": "Debolezze",
+        "eroeffnung": "Apertura",
+        "plan": "Piani",
+        "rechnen": "Calcolo",
+        "endspiel": "Finali",
+        "zeit": "Tempo",
+        "psychologie": "Psicologia",
+        "allgemein": "Generale"
+      }
     }
   }
 }

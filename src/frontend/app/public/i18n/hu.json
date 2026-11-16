@@ -5163,7 +5163,8 @@
         "t": "Edzői órák",
         "p": [
           "Ha a fiókodban engedélyezve vannak az edzői órák, a ☰ menü (Edzés) „Edzői órák” pontja felsorolja az edződdel tartott órák videóit: dátum, hossz, rövid összefoglaló és a megbeszélt játszmák. A „Megnézés” a tábla mellett nyitja meg a videót — a megbeszélt állások listája követi a videót, egy állásra kattintva oda ugrik.",
-          "Kereshetsz szóra vagy FEN-re, vagy felállíthatsz egy állást a táblán; az elemzőtáblán a ⋮ menüben ott a „Szóba került az edzésen?”. Az „Újrajátszás” a táblán kérdezi ki az óra lépéseit (tippel és megoldással), utána csak a hozzá tartozó magyarázatot játssza le; a „Kérdéssor” az összes óra kérdéseit gyűjti. A saját játszmáidnál a lépések mellett ott vannak az edző megjegyzései."
+          "Kereshetsz szóra vagy FEN-re, vagy felállíthatsz egy állást a táblán; az elemzőtáblán a ⋮ menüben ott a „Szóba került az edzésen?”. Az „Újrajátszás” a táblán kérdezi ki az óra lépéseit (tippel és megoldással), utána csak a hozzá tartozó magyarázatot játssza le; a „Kérdéssor” az összes óra kérdéseit gyűjti. A saját játszmáidnál a lépések mellett ott vannak az edző megjegyzései.",
+          "A „Jegyzetfüzet” témák szerint gyűjti az edző megjegyzéseit minden óráról — „Újra és újra elmondja” résszel, a repertoároddal összevetett megnyitási tanácsokkal és meghallgatható részlettel."
         ]
       }
     },
@@ -6982,6 +6983,42 @@
       "start": "Kiinduló állás",
       "inVideo": "▶ a videóban {{time}}-tól",
       "sideLine": "Mellékváltozat az óráról"
+    },
+    "notebook": {
+      "open": "Jegyzetfüzet",
+      "title": "Edzői jegyzetfüzet",
+      "intro": "Minden, amit az edződ az órákon mondott — témák szerint, meghallgatható részlettel.",
+      "empty": "Még nincsenek jegyzetek az edzői órákról.",
+      "none": "Ehhez a szűréshez nincs jegyzet.",
+      "themes": "Újra és újra elmondja",
+      "themeLessons": "{{count}} órán",
+      "themeShow": "Mind a(z) {{count}} mutatása",
+      "openings": "Megnyitási tanácsok",
+      "inRepertoire": "A(z) „{{name}}” repertoárodban:",
+      "repertoireEnd": "A(z) „{{name}}” repertoárodban itt ér véget a változat.",
+      "notInRepertoire": "Nincs benne a repertoárodban.",
+      "repertoireTruncated": "Nem minden repertoárváltozatot sikerült ellenőrizni.",
+      "openRepertoire": "Megnyitás a repertoárban",
+      "moreOpenings": "Mind a(z) {{count}} mutatása",
+      "allNotes": "Összes jegyzet",
+      "searchLabel": "Keresés a jegyzetekben",
+      "searchActive": "Találatok erre: „{{q}}”: {{count}}",
+      "kindLabel": "Játszma típusa",
+      "kindAll": "Minden típus",
+      "gameLabel": "Játszma",
+      "gameAll": "Minden játszma",
+      "listen": "▶ meghallgatás",
+      "quote": "Eredeti idézet",
+      "cat": {
+        "schwaeche": "Gyengeségek",
+        "eroeffnung": "Megnyitás",
+        "plan": "Tervek",
+        "rechnen": "Számolás",
+        "endspiel": "Végjáték",
+        "zeit": "Idő",
+        "psychologie": "Pszichológia",
+        "allgemein": "Általános"
+      }
     }
   }
 }

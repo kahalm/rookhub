@@ -103,6 +103,7 @@ export const routes: Routes = [
   // Trainerstunden (privat je Konto, docs/frontend/trainerstunden.md): literale Wege vor :id.
   { path: 'training-videos', loadComponent: () => import('./features/training-videos/training-videos-list.component').then(m => m.TrainingVideosListComponent), canActivate: [authGuard, menuGuard('training-videos')] },
   { path: 'training-videos/questions', loadComponent: () => import('./features/training-videos/training-drill.component').then(m => m.TrainingDrillComponent), canActivate: [authGuard, menuGuard('training-videos')], data: { source: 'questions' } },
+  { path: 'training-videos/notebook', loadComponent: () => import('./features/training-videos/training-notebook.component').then(m => m.TrainingNotebookComponent), canActivate: [authGuard, menuGuard('training-videos')] },
   { path: 'training-videos/:id/drill', loadComponent: () => import('./features/training-videos/training-drill.component').then(m => m.TrainingDrillComponent), canActivate: [authGuard, menuGuard('training-videos')] },
   { path: 'training-videos/:id', loadComponent: () => import('./features/training-videos/training-lesson.component').then(m => m.TrainingLessonComponent), canActivate: [authGuard, menuGuard('training-videos')] },
   { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent), canActivate: [authGuard, menuGuard('courses')] },

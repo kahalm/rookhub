@@ -110,6 +110,8 @@ export interface TrainingSearchHit {
   category: string | null;
   /** Nur Stellungssuche: stimmt auch das Zugrecht? */
   sameSide: boolean | null;
+  /** Nur Notizen: die Notiz (für den Filter im Notizbuch). */
+  noteId?: number | null;
 }
 
 export interface TrainingSearchResult { hits: TrainingSearchHit[]; truncated: boolean; }
@@ -142,6 +144,62 @@ export interface TrainingDrillItemDto {
   /** Die RookHub-Partie zur Frage, falls zugeordnet. */
   rookhubGameId: number | null;
   segment: TrainingSegment;
+}
+
+/** Kategorien der Trainer-Notizen, in der Reihenfolge der Reiter des Notizbuchs (Server: `TrainingVideoImporter`). */
+export const TRAINING_NOTE_CATEGORIES = ['schwaeche', 'eroeffnung', 'plan', 'rechnen', 'endspiel', 'zeit', 'psychologie', 'allgemein'] as const;
+export type TrainingNoteCategory = typeof TRAINING_NOTE_CATEGORIES[number];
+
+export interface TrainingNotebookNote {
+  id: number;
+  lessonId: number;
+  date: string;
+  /** Sekunde im Video, zu der die Aussage fällt. */
+  startSec: number | null;
+  category: TrainingNoteCategory | string;
+  text: string;
+  /** Rohzitat aus dem Transkript. */
+  quote: string | null;
+  gameKey: string | null;
+  gameWhite: string | null;
+  gameBlack: string | null;
+  gameKind: TrainingGameKind | string | null;
+  rookhubGameId: number | null;
+  hasVideo: boolean;
+  lessonDurationSec: number | null;
+}
+
+/** „Sagt er immer wieder“: `lessons` Stunden, `noteId` = stellvertretende Notiz, `noteIds` neueste zuerst. */
+export interface TrainingNotebookTheme { lessons: number; noteId: number; category: string; noteIds: number[]; }
+
+export interface TrainingNotebookRepertoireHit {
+  repertoireId: number;
+  repertoireName: string;
+  chapter: string;
+  lineName: string;
+  gameIndex: number;
+  ply: number;
+  /** Züge des Repertoires aus dieser Stellung (SAN, Hauptzug zuerst; leer = Linie endet hier). */
+  moves: string[];
+  sameSide: boolean;
+}
+
+export interface TrainingNotebookOpening {
+  noteId: number;
+  /** Stellung des nächstgelegenen Segments derselben Partie (null = keine). */
+  fen: string | null;
+  segmentId: number | null;
+  segmentMove: string | null;
+  repertoire: TrainingNotebookRepertoireHit[];
+}
+
+export interface TrainingNotebook {
+  notes: TrainingNotebookNote[];
+  themes: TrainingNotebookTheme[];
+  openings: TrainingNotebookOpening[];
+  /** Das Konto hat eigene Repertoire-Linien (sonst kein Abgleich). */
+  hasRepertoire: boolean;
+  repertoireTruncated: boolean;
 }
 
 /** So lange muss der Video-Ausweis mindestens noch gelten (eine Stunde Video samt Spulen); er gilt 12 h. */
@@ -179,6 +237,10 @@ export class TrainingVideosService {
 
   gameComments(gameId: number): Observable<TrainingGameComments> {
     return this.http.get<TrainingGameComments>(`${this.base}/games/${gameId}/comments`);
+  }
+
+  notebook(): Observable<TrainingNotebook> {
+    return this.http.get<TrainingNotebook>(`${this.base}/notebook`);
   }
 
   questions(onlyWrong = false): Observable<TrainingDrillItemDto[]> {

@@ -4236,7 +4236,8 @@
         "t": "Ore cu antrenorul",
         "p": [
           "Dacă orele sunt activate pentru contul tău, „Ore cu antrenorul” din meniul ☰ (Antrenament) arată videoclipurile orelor tale: dată, durată, un scurt rezumat și partidele discutate. „Vezi” deschide videoclipul lângă tablă; lista pozițiilor urmează videoclipul.",
-          "Poți căuta după cuvânt sau FEN ori poți așeza o poziție; pe tabla de analiză meniul ⋮ oferă „Discutat la oră?”. „Rejoacă” îți cere mutările de la oră pe tablă și apoi redă doar explicația potrivită; „Setul de întrebări” adună întrebările tuturor orelor."
+          "Poți căuta după cuvânt sau FEN ori poți așeza o poziție; pe tabla de analiză meniul ⋮ oferă „Discutat la oră?”. „Rejoacă” îți cere mutările de la oră pe tablă și apoi redă doar explicația potrivită; „Setul de întrebări” adună întrebările tuturor orelor.",
+          "„Caietul” adună pe teme observațiile antrenorului din toate lecțiile — cu „Repetă mereu”, sfaturi de deschidere comparate cu repertoriul tău și un fragment de ascultat."
         ]
       }
     }
@@ -6718,6 +6719,42 @@
       "start": "Poziția inițială",
       "inVideo": "▶ în video de la {{time}}",
       "sideLine": "Variantă de la oră"
+    },
+    "notebook": {
+      "open": "Caiet",
+      "title": "Caietul antrenorului",
+      "intro": "Tot ce a spus antrenorul la lecții — pe teme, cu un fragment de ascultat.",
+      "empty": "Încă nu există notițe din lecții.",
+      "none": "Nicio notiță pentru această selecție.",
+      "themes": "Repetă mereu",
+      "themeLessons": "în {{count}} lecții",
+      "themeShow": "Arată toate ({{count}})",
+      "openings": "Sfaturi de deschidere",
+      "inRepertoire": "În repertoriul tău „{{name}}”:",
+      "repertoireEnd": "În repertoriul tău „{{name}}” varianta se termină aici.",
+      "notInRepertoire": "Nu este în repertoriul tău.",
+      "repertoireTruncated": "Nu toate variantele repertoriului au putut fi verificate.",
+      "openRepertoire": "Deschide în repertoriu",
+      "moreOpenings": "Arată toate ({{count}})",
+      "allNotes": "Toate notițele",
+      "searchLabel": "Caută în notițe",
+      "searchActive": "Rezultate pentru „{{q}}”: {{count}}",
+      "kindLabel": "Tipul partidei",
+      "kindAll": "Toate tipurile",
+      "gameLabel": "Partidă",
+      "gameAll": "Toate partidele",
+      "listen": "▶ ascultă",
+      "quote": "Citat original",
+      "cat": {
+        "schwaeche": "Slăbiciuni",
+        "eroeffnung": "Deschidere",
+        "plan": "Planuri",
+        "rechnen": "Calcul",
+        "endspiel": "Finaluri",
+        "zeit": "Timp",
+        "psychologie": "Psihologie",
+        "allgemein": "General"
+      }
     }
   }
 }

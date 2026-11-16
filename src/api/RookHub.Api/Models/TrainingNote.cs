@@ -1,6 +1,6 @@
 namespace RookHub.Api.Models;
 
-/// <summary>Eine Notiz aus der Trainingsstunde (Schwäche, Eröffnung, Plan …) — Grundlage des späteren Trainer-Notizbuchs.</summary>
+/// <summary>Eine Notiz aus der Trainingsstunde (Schwäche, Eröffnung, Plan …) — Grundlage des Trainer-Notizbuchs (<c>TrainingNotebookService</c>).</summary>
 public class TrainingNote
 {
     public int Id { get; set; }
@@ -12,7 +12,7 @@ public class TrainingNote
     public int? StartSec { get; set; }
     public string? GameKey { get; set; }
 
-    /// <summary><c>schwaeche</c> | <c>eroeffnung</c> | <c>plan</c> | <c>rechnen</c> | <c>zeit</c> | <c>psychologie</c> | <c>allgemein</c>.</summary>
+    /// <summary><c>schwaeche</c> | <c>eroeffnung</c> | <c>plan</c> | <c>rechnen</c> | <c>zeit</c> | <c>psychologie</c> | <c>endspiel</c> | <c>allgemein</c>.</summary>
     public string Category { get; set; } = "allgemein";
 
     public string Text { get; set; } = string.Empty;

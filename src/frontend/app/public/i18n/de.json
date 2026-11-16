@@ -4314,7 +4314,8 @@
         "t": "Trainerstunden",
         "p": [
           "Ist für dein Konto die Trainerstunde freigeschaltet, listet „Trainerstunden“ im ☰-Menü (Training) die Videos deiner Stunden beim Trainer: Datum, Dauer, eine kurze Zusammenfassung und die besprochenen Partien. „Ansehen“ öffnet das Video neben dem Brett — die Liste der besprochenen Stellungen folgt dem Video, ein Klick auf eine Stellung springt dorthin.",
-          "Suchen kannst du nach Wort oder FEN oder eine Stellung auf dem Brett aufbauen; im Analysebrett bietet das ⋮-Menü „Im Training besprochen?“. „Nachspielen“ fragt die Züge aus der Stunde auf dem Brett ab (mit Hinweis und Lösung) und spielt danach nur die passende Erklärung; der „Fragen-Satz“ sammelt die Fragen aller Stunden. An deinen eigenen Partien stehen die Kommentare des Trainers neben den Zügen."
+          "Suchen kannst du nach Wort oder FEN oder eine Stellung auf dem Brett aufbauen; im Analysebrett bietet das ⋮-Menü „Im Training besprochen?“. „Nachspielen“ fragt die Züge aus der Stunde auf dem Brett ab (mit Hinweis und Lösung) und spielt danach nur die passende Erklärung; der „Fragen-Satz“ sammelt die Fragen aller Stunden. An deinen eigenen Partien stehen die Kommentare des Trainers neben den Zügen.",
+          "„Notizbuch“ sammelt die Aussagen des Trainers aus allen Stunden nach Thema — mit „Sagt er immer wieder“, Eröffnungsempfehlungen samt Abgleich mit deinem Repertoire und einem Ausschnitt zum Anhören."
         ]
       }
     }
@@ -6982,6 +6983,42 @@
       "start": "Anfangsstellung",
       "inVideo": "▶ im Video ab {{time}}",
       "sideLine": "Nebenvariante aus der Stunde"
+    },
+    "notebook": {
+      "open": "Notizbuch",
+      "title": "Trainer-Notizbuch",
+      "intro": "Alles, was dein Trainer in den Stunden gesagt hat — nach Thema sortiert, mit Ausschnitt zum Anhören.",
+      "empty": "Noch keine Notizen aus Trainerstunden.",
+      "none": "Keine Notizen für diese Auswahl.",
+      "themes": "Sagt er immer wieder",
+      "themeLessons": "in {{count}} Stunden",
+      "themeShow": "Alle {{count}} zeigen",
+      "openings": "Eröffnungsempfehlungen",
+      "inRepertoire": "Im Repertoire „{{name}}“:",
+      "repertoireEnd": "Im Repertoire „{{name}}“ endet die Linie hier.",
+      "notInRepertoire": "Kommt in deinem Repertoire nicht vor.",
+      "repertoireTruncated": "Nicht alle Repertoire-Linien konnten geprüft werden.",
+      "openRepertoire": "Im Repertoire öffnen",
+      "moreOpenings": "Alle {{count}} zeigen",
+      "allNotes": "Alle Notizen",
+      "searchLabel": "In den Notizen suchen",
+      "searchActive": "Treffer für „{{q}}“: {{count}}",
+      "kindLabel": "Art der Partie",
+      "kindAll": "Alle Arten",
+      "gameLabel": "Partie",
+      "gameAll": "Alle Partien",
+      "listen": "▶ anhören",
+      "quote": "Rohzitat",
+      "cat": {
+        "schwaeche": "Schwächen",
+        "eroeffnung": "Eröffnung",
+        "plan": "Pläne",
+        "rechnen": "Rechnen",
+        "endspiel": "Endspiel",
+        "zeit": "Zeit",
+        "psychologie": "Psychologie",
+        "allgemein": "Allgemein"
+      }
     }
   }
 }

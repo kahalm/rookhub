@@ -34,9 +34,10 @@ public record TrainingLessonDto(int Id, string Date, string? Summary, int? Durat
     Dictionary<string, string> AnalysisPgns);
 
 /// <summary>Treffer der Stellungs- oder Volltextsuche. <c>Kind</c>: <c>segment</c> oder <c>note</c>;
-/// <c>SameSide</c> = auch das Zugrecht stimmt (nur Stellungssuche).</summary>
+/// <c>SameSide</c> = auch das Zugrecht stimmt (nur Stellungssuche); <c>NoteId</c> = die Notiz (nur <c>note</c>, damit das
+/// Notizbuch die Suche wiederverwenden kann).</summary>
 public record TrainingSearchHitDto(string Kind, int LessonId, string Date, int? SegmentId, int? StartSec, string? Fen,
-    string? Move, string? Text, string? GameLabel, string? Category, bool? SameSide);
+    string? Move, string? Text, string? GameLabel, string? Category, bool? SameSide, int? NoteId = null);
 
 public record TrainingSearchResultDto(List<TrainingSearchHitDto> Hits, bool Truncated);
 
@@ -57,3 +58,28 @@ public record TrainingImportReportDto(string? Date, bool DryRun, bool Ok, bool R
     int Segments, int Questions, int Notes, int InvalidFens, bool VideoFound, List<string> Warnings, List<string> Errors);
 
 public record TrainingFolderImportDto(bool DryRun, string Owner, List<TrainingImportReportDto> Files);
+
+/// <summary>Eine Notiz im Trainer-Notizbuch (stundenübergreifend). <c>GameKind</c>: <c>own</c> | <c>lesson</c> |
+/// <c>exercise</c> der Partie, auf die die Notiz verweist (null = keine Partie).</summary>
+public record TrainingNotebookNoteDto(int Id, int LessonId, string Date, int? StartSec, string Category, string Text,
+    string? Quote, string? GameKey, string? GameWhite, string? GameBlack, string? GameKind, int? RookhubGameId,
+    bool HasVideo, int? LessonDurationSec);
+
+/// <summary>„Sagt er immer wieder“: Notizen mit sehr ähnlichem Inhalt aus mindestens zwei Stunden. <c>Lessons</c> =
+/// Anzahl verschiedener Stunden, <c>NoteId</c> = die stellvertretende Notiz, <c>NoteIds</c> = alle (neueste zuerst).</summary>
+public record TrainingNotebookThemeDto(int Lessons, int NoteId, string Category, List<int> NoteIds);
+
+/// <summary>Treffer im EIGENEN Repertoire zu einer Eröffnungsstellung: die erste Linie (für „im Repertoire öffnen“) und
+/// alle Züge, die das Repertoire dort spielt (Hauptzug zuerst). <c>SameSide</c> = auch das Zugrecht stimmt.</summary>
+public record TrainingNotebookRepertoireDto(int RepertoireId, string RepertoireName, string Chapter, string LineName,
+    int GameIndex, int Ply, List<string> Moves, bool SameSide);
+
+/// <summary>Eine Eröffnungsempfehlung: die Notiz (Kategorie <c>eroeffnung</c>) mit der Stellung des nächstgelegenen
+/// Segments derselben Partie (<c>Fen</c> null = keine Stellung) und den Treffern im eigenen Repertoire.</summary>
+public record TrainingNotebookOpeningDto(int NoteId, string? Fen, int? SegmentId, string? SegmentMove,
+    List<TrainingNotebookRepertoireDto> Repertoire);
+
+/// <summary>Das Trainer-Notizbuch. <c>HasRepertoire</c> = das Konto hat eigene Repertoire-Linien (sonst gibt es keinen
+/// Abgleich); <c>RepertoireTruncated</c> = der Abgleich lief ins Zeitbudget.</summary>
+public record TrainingNotebookDto(List<TrainingNotebookNoteDto> Notes, List<TrainingNotebookThemeDto> Themes,
+    List<TrainingNotebookOpeningDto> Openings, bool HasRepertoire, bool RepertoireTruncated);

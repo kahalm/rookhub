@@ -19,7 +19,7 @@ public class TrainingVideoImporter
 {
     private static readonly HashSet<string> Kinds = new(StringComparer.Ordinal) { "own", "lesson", "exercise" };
     private static readonly HashSet<string> Categories = new(StringComparer.Ordinal)
-        { "schwaeche", "eroeffnung", "plan", "rechnen", "zeit", "psychologie", "allgemein" };
+        { "schwaeche", "eroeffnung", "plan", "rechnen", "zeit", "psychologie", "endspiel", "allgemein" };
     private static readonly HashSet<string> Confidences = new(StringComparer.Ordinal) { "high", "low", "none" };
 
     private readonly AppDbContext _db;

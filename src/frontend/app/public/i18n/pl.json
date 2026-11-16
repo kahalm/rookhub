@@ -4236,7 +4236,8 @@
         "t": "Lekcje z trenerem",
         "p": [
           "Jeśli twoje konto ma włączone lekcje, „Lekcje z trenerem” w menu ☰ (Trening) pokazują nagrania twoich lekcji: datę, czas trwania, krótkie podsumowanie i omawiane partie. „Obejrzyj” otwiera nagranie obok szachownicy; lista pozycji podąża za nagraniem.",
-          "Możesz szukać po słowie lub FEN albo ustawić pozycję; na szachownicy analizy menu ⋮ oferuje „Omawiane na lekcji?”. „Rozegraj ponownie” pyta o ruchy z lekcji na szachownicy, a potem odtwarza tylko pasujące wyjaśnienie; „Zestaw pytań” zbiera pytania ze wszystkich lekcji."
+          "Możesz szukać po słowie lub FEN albo ustawić pozycję; na szachownicy analizy menu ⋮ oferuje „Omawiane na lekcji?”. „Rozegraj ponownie” pyta o ruchy z lekcji na szachownicy, a potem odtwarza tylko pasujące wyjaśnienie; „Zestaw pytań” zbiera pytania ze wszystkich lekcji.",
+          "„Notatnik” zbiera wypowiedzi trenera ze wszystkich lekcji według tematów — z „Powtarza to ciągle”, radami debiutowymi porównanymi z twoim repertuarem i fragmentem do odsłuchania."
         ]
       }
     }
@@ -6718,6 +6719,42 @@
       "start": "Pozycja początkowa",
       "inVideo": "▶ w nagraniu od {{time}}",
       "sideLine": "Wariant poboczny z lekcji"
+    },
+    "notebook": {
+      "open": "Notatnik",
+      "title": "Notatnik trenera",
+      "intro": "Wszystko, co trener powiedział na lekcjach — według tematów, z fragmentem do odsłuchania.",
+      "empty": "Brak jeszcze notatek z lekcji.",
+      "none": "Brak notatek dla tego wyboru.",
+      "themes": "Powtarza to ciągle",
+      "themeLessons": "na {{count}} lekcjach",
+      "themeShow": "Pokaż wszystkie ({{count}})",
+      "openings": "Rady debiutowe",
+      "inRepertoire": "W twoim repertuarze „{{name}}”:",
+      "repertoireEnd": "W twoim repertuarze „{{name}}” wariant kończy się tutaj.",
+      "notInRepertoire": "Nie ma w twoim repertuarze.",
+      "repertoireTruncated": "Nie udało się sprawdzić wszystkich wariantów repertuaru.",
+      "openRepertoire": "Otwórz w repertuarze",
+      "moreOpenings": "Pokaż wszystkie ({{count}})",
+      "allNotes": "Wszystkie notatki",
+      "searchLabel": "Szukaj w notatkach",
+      "searchActive": "Wyniki dla „{{q}}”: {{count}}",
+      "kindLabel": "Rodzaj partii",
+      "kindAll": "Wszystkie rodzaje",
+      "gameLabel": "Partia",
+      "gameAll": "Wszystkie partie",
+      "listen": "▶ posłuchaj",
+      "quote": "Dosłowny cytat",
+      "cat": {
+        "schwaeche": "Słabości",
+        "eroeffnung": "Debiut",
+        "plan": "Plany",
+        "rechnen": "Liczenie",
+        "endspiel": "Końcówki",
+        "zeit": "Czas",
+        "psychologie": "Psychologia",
+        "allgemein": "Ogólne"
+      }
     }
   }
 }

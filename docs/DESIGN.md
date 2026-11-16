@@ -939,6 +939,18 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   (120 px); Links „▶ im Video ab 0:12:10“ (nur mit Video) und „Nachspielen“. Darüber eine leise Sprungzeile
   „Trainerkommentare zu 1.e4 4…Ld7 …“ (Textknöpfe, Zug am Brett fett + durchgezogen unterstrichen, `pointer: coarse`
   44 px). Ohne Kommentar zur Partie: gar nichts (kein Leersatz).
+  **Trainer-Notizbuch** (`/training-videos/notebook`, 0.987.0; Kopf mit Zurück-Pfeil, Link „Notizbuch“ umrandet im
+  Kopf der Liste vor „Fragen-Satz“): drei Abschnitte mit `h2` — „Sagt er immer wieder“ (umrandete Zeilen: „in 4
+  Stunden“ fett + Kategorie als `.chip`, stellvertretender Satz halbfett, Textknopf „Alle n zeigen“ klappt die Stellen
+  darunter auf), „Eröffnungsempfehlungen“ (Zeile mit Mini-Brett 160 px, zur Seite am Zug gedreht, daneben Notiz und
+  Repertoire-Satz mit 📖-Symbol „Im Repertoire „X“: **Sd2, Sc3**“ bzw. leise „Kommt in deinem Repertoire nicht vor.“ —
+  ohne eigenes Repertoire keine Zeile; Textknöpfe „Im Repertoire öffnen“ / „Im Analysebrett öffnen“; erst 6, dann „Alle
+  n zeigen“ umrandet) und „Alle Notizen“: Suchfeld + „Suchen“ umrandet + zwei Auswahlfelder (Art, Partie) in einer
+  umbrechenden Zeile, Kategorien als `mat-chip-listbox` mit „(Anzahl)“ als Reiter (nie leere Reiter), darunter je Stunde
+  ein `h3` (Datum, Link zur Stunde) und die Notizen als Zeilen mit Trennlinie: Satz, `.rh-dots`-Meta (Partie als Link +
+  Art-`.chip`), Textknöpfe „▶ anhören“ (≥ 44 px, wird zu „Schließen“) und „Rohzitat“ — beide klappen nur unter IHRER
+  Notiz auf (Ausschnitt-Player wie im Nachspielen, startet sofort; Zitat als `<blockquote>` mit 3-px-Kante, `<q>` setzt
+  die Anführungszeichen der Sprache). Keine Primäraktion auf der Seite (reines Nachschlagen).
 - „RookHub weltweit“ `/visitors` (0.982.0, anfangs „Besucher-Herkunft“): Seitenkopf + ein Satz; Kennzahlen als Zahlenreihe (`dl`, Zahl 1.75rem
   halbfett `tabular-nums`, Beschriftung darunter 0.85rem/60 %) — die Hauptzahl heißt „Eindeutige Benutzer“, ohne
   Zeitraum-Zusatz. **Flächenkarte in fünf Stufen** aus dem Akzent: `color-mix(--mat-sys-primary 30/46/62/80/100 %,
@@ -1390,6 +1402,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-16 | 0.987.0 · Trainer-Notizbuch | Unterseite `/training-videos/notebook`: Themen „Sagt er immer wieder“ mit Häufigkeit, Eröffnungsempfehlungen mit Mini-Brett + Repertoire-Satz, alle Notizen als Kategorie-Reiter (Chip-Liste mit Anzahl) je Stunde, Aufklapper „▶ anhören“/„Rohzitat“ je Notiz (8.1) | Trainer-Aussagen stundenübergreifend nachschlagen statt Stunde für Stunde | Auftrag der betreuenden Sitzung 16.11. |
 | 2026-11-16 | 0.986.0 · Trainerstunden | Neue Seiten `/training-videos` (Liste + Suche), Stunde (Video + Brett + Segmentliste, Liste folgt dem Video), Nachspielen (Zug finden, Hinweis/Auflösen/Überspringen, Ausschnitt-Player „Erklärung hören“ mit „nur Ton“, im E-Ink-Modus vorgewählt) und die Karte „Trainerkommentar“ an der eigenen Partie, getrennt von der Engine-Erklärung (8.1) | Erste Video-Seite der App; Trainer- und Engine-Aussagen dürfen nicht verwechselt werden; E-Ink zeigt bewegtes Bild nur verschmiert | Auftrag der betreuenden Sitzung 16.11. |
 | 2026-11-15 | 0.983.0 · Dashboard/Menü | LeagueHub-Kachel (8.1) als dritte Ausnahme in `DEFAULT_VISIBLE`, nur mit `league.view`; Knopf und Menüeintrag „LeagueHub“ (Community, nach „Turniere“) mit `open_in_new` | Wer Zugriff hat, soll LeagueHub ohne „Anpassen“ und ohne Adresse zu kennen erreichen; das Symbol kündigt den Wechsel der Oberfläche an | Nutzerwunsch 15.11. |
 | 2026-11-15 | 0.984.0 · Zusammenfassung | ⋮ im Kopf der Zusammenfassung (8.1): „Zur Partie“, „Link teilen“, „Anonym teilen“, „Teilen-Link widerrufen“; unter 600 px ⋮ oben rechts neben den Namen und „Zur Partie“ nur im ⋮; anonymer Link zeigt „Weiß – Schwarz“ ohne Wege zur Partie | Teilen der Zusammenfassung fehlte auf der eigenen Seite; anonym = ohne Spielernamen, serverseitig | Wunsch User 15.11. |

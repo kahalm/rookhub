@@ -4314,7 +4314,8 @@
         "t": "Satovi s trenerom",
         "p": [
           "Ako su za tvoj račun uključeni satovi s trenerom, „Satovi s trenerom“ u izborniku ☰ (Trening) prikazuju videozapise tvojih satova: datum, trajanje, kratak sažetak i obrađene partije. „Pogledaj“ otvara video uz ploču — popis obrađenih pozicija prati video, a klik na poziciju skače onamo.",
-          "Pretraživati možeš po riječi ili FEN-u ili postaviti poziciju na ploči; na ploči za analizu izbornik ⋮ nudi „Obrađeno na treningu?“. „Odigraj ponovno“ traži od tebe poteze sa sata na ploči (sa savjetom i rješenjem), a zatim reproducira samo pripadajuće objašnjenje; „Skup pitanja“ skuplja pitanja svih satova. Uz tvoje vlastite partije stoje komentari trenera."
+          "Pretraživati možeš po riječi ili FEN-u ili postaviti poziciju na ploči; na ploči za analizu izbornik ⋮ nudi „Obrađeno na treningu?“. „Odigraj ponovno“ traži od tebe poteze sa sata na ploči (sa savjetom i rješenjem), a zatim reproducira samo pripadajuće objašnjenje; „Skup pitanja“ skuplja pitanja svih satova. Uz tvoje vlastite partije stoje komentari trenera.",
+          "„Bilježnica“ skuplja trenerove izjave sa svih satova po temama — s „Stalno ponavlja“, savjetima za otvaranje usporedno s tvojim repertoarom i isječkom za slušanje."
         ]
       }
     }
@@ -6982,6 +6983,42 @@
       "start": "Početna pozicija",
       "inVideo": "▶ u videu od {{time}}",
       "sideLine": "Sporedna varijanta sa sata"
+    },
+    "notebook": {
+      "open": "Bilježnica",
+      "title": "Trenerova bilježnica",
+      "intro": "Sve što je trener rekao na satovima — po temama, s isječkom za slušanje.",
+      "empty": "Još nema bilješki sa satova s trenerom.",
+      "none": "Nema bilješki za ovaj odabir.",
+      "themes": "Stalno ponavlja",
+      "themeLessons": "na {{count}} satova",
+      "themeShow": "Prikaži svih {{count}}",
+      "openings": "Savjeti za otvaranje",
+      "inRepertoire": "U tvom repertoaru „{{name}}“:",
+      "repertoireEnd": "U tvom repertoaru „{{name}}“ linija ovdje završava.",
+      "notInRepertoire": "Nije u tvom repertoaru.",
+      "repertoireTruncated": "Nisu se mogle provjeriti sve linije repertoara.",
+      "openRepertoire": "Otvori u repertoaru",
+      "moreOpenings": "Prikaži svih {{count}}",
+      "allNotes": "Sve bilješke",
+      "searchLabel": "Pretraži bilješke",
+      "searchActive": "Rezultati za „{{q}}“: {{count}}",
+      "kindLabel": "Vrsta partije",
+      "kindAll": "Sve vrste",
+      "gameLabel": "Partija",
+      "gameAll": "Sve partije",
+      "listen": "▶ poslušaj",
+      "quote": "Izvorni citat",
+      "cat": {
+        "schwaeche": "Slabosti",
+        "eroeffnung": "Otvaranje",
+        "plan": "Planovi",
+        "rechnen": "Računanje",
+        "endspiel": "Završnica",
+        "zeit": "Vrijeme",
+        "psychologie": "Psihologija",
+        "allgemein": "Općenito"
+      }
     }
   }
 }

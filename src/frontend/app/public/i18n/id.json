@@ -4236,7 +4236,8 @@
         "t": "Sesi pelatih",
         "p": [
           "Jika sesi diaktifkan untuk akunmu, “Sesi pelatih” di menu ☰ (Latihan) menampilkan video sesimu: tanggal, durasi, ringkasan singkat, dan partai yang dibahas. “Tonton” membuka video di samping papan; daftar posisi mengikuti video.",
-          "Kamu bisa mencari dengan kata atau FEN, atau menyusun posisi; di papan analisis menu ⋮ menawarkan “Dibahas di sesi?”. “Main ulang” menanyakan langkah dari sesi di papan lalu hanya memutar penjelasan yang sesuai; “Set pertanyaan” mengumpulkan pertanyaan semua sesi."
+          "Kamu bisa mencari dengan kata atau FEN, atau menyusun posisi; di papan analisis menu ⋮ menawarkan “Dibahas di sesi?”. “Main ulang” menanyakan langkah dari sesi di papan lalu hanya memutar penjelasan yang sesuai; “Set pertanyaan” mengumpulkan pertanyaan semua sesi.",
+          "“Buku catatan” mengumpulkan ucapan pelatih dari semua pelajaran per topik — dengan “Ia selalu mengulanginya”, saran pembukaan yang dicocokkan dengan repertoarmu, dan potongan untuk didengarkan."
         ]
       }
     }
@@ -6718,6 +6719,42 @@
       "start": "Posisi awal",
       "inVideo": "▶ di video mulai {{time}}",
       "sideLine": "Variasi sampingan dari sesi"
+    },
+    "notebook": {
+      "open": "Buku catatan",
+      "title": "Buku catatan pelatih",
+      "intro": "Semua yang dikatakan pelatihmu di pelajaran — per topik, dengan potongan untuk didengarkan.",
+      "empty": "Belum ada catatan dari pelajaran.",
+      "none": "Tidak ada catatan untuk pilihan ini.",
+      "themes": "Ia selalu mengulanginya",
+      "themeLessons": "di {{count}} pelajaran",
+      "themeShow": "Tampilkan semua ({{count}})",
+      "openings": "Saran pembukaan",
+      "inRepertoire": "Di repertoarmu “{{name}}”:",
+      "repertoireEnd": "Di repertoarmu “{{name}}” variasinya berakhir di sini.",
+      "notInRepertoire": "Tidak ada di repertoarmu.",
+      "repertoireTruncated": "Tidak semua variasi repertoar dapat diperiksa.",
+      "openRepertoire": "Buka di repertoar",
+      "moreOpenings": "Tampilkan semua ({{count}})",
+      "allNotes": "Semua catatan",
+      "searchLabel": "Cari di catatan",
+      "searchActive": "Hasil untuk “{{q}}”: {{count}}",
+      "kindLabel": "Jenis partai",
+      "kindAll": "Semua jenis",
+      "gameLabel": "Partai",
+      "gameAll": "Semua partai",
+      "listen": "▶ dengarkan",
+      "quote": "Kutipan asli",
+      "cat": {
+        "schwaeche": "Kelemahan",
+        "eroeffnung": "Pembukaan",
+        "plan": "Rencana",
+        "rechnen": "Perhitungan",
+        "endspiel": "Akhir permainan",
+        "zeit": "Waktu",
+        "psychologie": "Psikologi",
+        "allgemein": "Umum"
+      }
     }
   }
 }

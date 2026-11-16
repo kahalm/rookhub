@@ -4236,7 +4236,8 @@
         "t": "Tränarlektioner",
         "p": [
           "Om tränarlektioner är aktiverade för ditt konto visar ”Tränarlektioner” i ☰-menyn (Träning) videorna från dina lektioner: datum, längd, en kort sammanfattning och de genomgångna partierna. ”Titta” öppnar videon bredvid brädet; listan med ställningar följer videon.",
-          "Du kan söka på ord eller FEN eller ställa upp en ställning; på analysbrädet erbjuder ⋮-menyn ”Genomgånget på lektionen?”. ”Spela om” frågar efter dragen från lektionen på brädet och spelar sedan bara den tillhörande förklaringen; ”Frågeuppsättning” samlar frågorna från alla lektioner."
+          "Du kan söka på ord eller FEN eller ställa upp en ställning; på analysbrädet erbjuder ⋮-menyn ”Genomgånget på lektionen?”. ”Spela om” frågar efter dragen från lektionen på brädet och spelar sedan bara den tillhörande förklaringen; ”Frågeuppsättning” samlar frågorna från alla lektioner.",
+          "”Anteckningsbok” samlar tränarens kommentarer från alla lektioner efter ämne — med ”Det säger han om och om igen”, öppningsråd jämförda med din repertoar och ett klipp att lyssna på."
         ]
       }
     }
@@ -6718,6 +6719,42 @@
       "start": "Utgångsställning",
       "inVideo": "▶ i videon från {{time}}",
       "sideLine": "Sidovariant från lektionen"
+    },
+    "notebook": {
+      "open": "Anteckningsbok",
+      "title": "Tränarens anteckningsbok",
+      "intro": "Allt din tränare sa på lektionerna — efter ämne, med ett klipp att lyssna på.",
+      "empty": "Inga anteckningar från lektioner än.",
+      "none": "Inga anteckningar för detta urval.",
+      "themes": "Det säger han om och om igen",
+      "themeLessons": "på {{count}} lektioner",
+      "themeShow": "Visa alla {{count}}",
+      "openings": "Öppningsråd",
+      "inRepertoire": "I din repertoar ”{{name}}”:",
+      "repertoireEnd": "I din repertoar ”{{name}}” slutar varianten här.",
+      "notInRepertoire": "Finns inte i din repertoar.",
+      "repertoireTruncated": "Alla repertoarvarianter kunde inte kontrolleras.",
+      "openRepertoire": "Öppna i repertoaren",
+      "moreOpenings": "Visa alla {{count}}",
+      "allNotes": "Alla anteckningar",
+      "searchLabel": "Sök i anteckningarna",
+      "searchActive": "Träffar för ”{{q}}”: {{count}}",
+      "kindLabel": "Partityp",
+      "kindAll": "Alla typer",
+      "gameLabel": "Parti",
+      "gameAll": "Alla partier",
+      "listen": "▶ lyssna",
+      "quote": "Ordagrant citat",
+      "cat": {
+        "schwaeche": "Svagheter",
+        "eroeffnung": "Öppning",
+        "plan": "Planer",
+        "rechnen": "Beräkning",
+        "endspiel": "Slutspel",
+        "zeit": "Tid",
+        "psychologie": "Psykologi",
+        "allgemein": "Allmänt"
+      }
     }
   }
 }

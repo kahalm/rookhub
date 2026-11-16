@@ -4236,7 +4236,8 @@
         "t": "Antrenör dersleri",
         "p": [
           "Hesabında dersler etkinse ☰ menüsündeki (Antrenman) “Antrenör dersleri” derslerinin videolarını gösterir: tarih, süre, kısa özet ve konuşulan oyunlar. “İzle” videoyu tahtanın yanında açar; konum listesi videoyu takip eder.",
-          "Kelimeyle veya FEN ile arayabilir ya da bir konum kurabilirsin; analiz tahtasında ⋮ menüsü “Derste konuşuldu mu?” sunar. “Yeniden oyna” dersteki hamleleri tahtada sorar, ardından yalnızca ilgili açıklamayı oynatır; “Soru seti” tüm derslerin sorularını toplar."
+          "Kelimeyle veya FEN ile arayabilir ya da bir konum kurabilirsin; analiz tahtasında ⋮ menüsü “Derste konuşuldu mu?” sunar. “Yeniden oyna” dersteki hamleleri tahtada sorar, ardından yalnızca ilgili açıklamayı oynatır; “Soru seti” tüm derslerin sorularını toplar.",
+          "“Defter”, antrenörün tüm derslerdeki sözlerini konuya göre toplar — “Bunu hep söylüyor” bölümü, repertuvarınla karşılaştırılan açılış önerileri ve dinlenecek bir kesitle."
         ]
       }
     }
@@ -6718,6 +6719,42 @@
       "start": "Başlangıç konumu",
       "inVideo": "▶ videoda {{time}} itibarıyla",
       "sideLine": "Dersten yan varyant"
+    },
+    "notebook": {
+      "open": "Defter",
+      "title": "Antrenörün defteri",
+      "intro": "Antrenörünün derslerde söylediği her şey — konuya göre, dinlenecek bir kesitle.",
+      "empty": "Henüz derslerden not yok.",
+      "none": "Bu seçim için not yok.",
+      "themes": "Bunu hep söylüyor",
+      "themeLessons": "{{count}} derste",
+      "themeShow": "Tümünü göster ({{count}})",
+      "openings": "Açılış önerileri",
+      "inRepertoire": "“{{name}}” repertuvarında:",
+      "repertoireEnd": "“{{name}}” repertuvarında varyant burada bitiyor.",
+      "notInRepertoire": "Repertuvarında yok.",
+      "repertoireTruncated": "Repertuvar varyantlarının hepsi kontrol edilemedi.",
+      "openRepertoire": "Repertuvarda aç",
+      "moreOpenings": "Tümünü göster ({{count}})",
+      "allNotes": "Tüm notlar",
+      "searchLabel": "Notlarda ara",
+      "searchActive": "“{{q}}” için sonuçlar: {{count}}",
+      "kindLabel": "Oyun türü",
+      "kindAll": "Tüm türler",
+      "gameLabel": "Oyun",
+      "gameAll": "Tüm oyunlar",
+      "listen": "▶ dinle",
+      "quote": "Ham alıntı",
+      "cat": {
+        "schwaeche": "Zayıflıklar",
+        "eroeffnung": "Açılış",
+        "plan": "Planlar",
+        "rechnen": "Hesaplama",
+        "endspiel": "Oyun sonu",
+        "zeit": "Zaman",
+        "psychologie": "Psikoloji",
+        "allgemein": "Genel"
+      }
     }
   }
 }

@@ -4236,7 +4236,8 @@
         "t": "Séances avec l’entraîneur",
         "p": [
           "Si les séances sont activées pour ton compte, « Séances avec l’entraîneur » dans le menu ☰ (Entraînement) liste les vidéos de tes séances : date, durée, court résumé et parties discutées. « Regarder » ouvre la vidéo à côté de l’échiquier ; la liste des positions suit la vidéo.",
-          "Tu peux chercher par mot ou FEN, ou placer une position ; dans l’échiquier d’analyse, le menu ⋮ propose « Vu en séance ? ». « Rejouer » te demande les coups de la séance sur l’échiquier puis ne joue que l’explication correspondante ; la « Série de questions » regroupe les questions de toutes les séances."
+          "Tu peux chercher par mot ou FEN, ou placer une position ; dans l’échiquier d’analyse, le menu ⋮ propose « Vu en séance ? ». « Rejouer » te demande les coups de la séance sur l’échiquier puis ne joue que l’explication correspondante ; la « Série de questions » regroupe les questions de toutes les séances.",
+          "Le « Carnet » regroupe par thème les remarques de l’entraîneur de toutes les séances — avec « Il le répète souvent », des conseils d’ouverture comparés à ton répertoire et un extrait à écouter."
         ]
       }
     }
@@ -6718,6 +6719,42 @@
       "start": "Position de départ",
       "inVideo": "▶ dans la vidéo à {{time}}",
       "sideLine": "Variante de la séance"
+    },
+    "notebook": {
+      "open": "Carnet",
+      "title": "Carnet de l’entraîneur",
+      "intro": "Tout ce que ton entraîneur a dit pendant les séances — classé par thème, avec un extrait à écouter.",
+      "empty": "Pas encore de notes de séances.",
+      "none": "Aucune note pour cette sélection.",
+      "themes": "Il le répète souvent",
+      "themeLessons": "dans {{count}} séances",
+      "themeShow": "Tout afficher ({{count}})",
+      "openings": "Conseils d’ouverture",
+      "inRepertoire": "Dans ton répertoire « {{name}} » :",
+      "repertoireEnd": "Dans ton répertoire « {{name}} », la ligne s’arrête ici.",
+      "notInRepertoire": "Absent de ton répertoire.",
+      "repertoireTruncated": "Toutes les lignes du répertoire n’ont pas pu être vérifiées.",
+      "openRepertoire": "Ouvrir dans le répertoire",
+      "moreOpenings": "Tout afficher ({{count}})",
+      "allNotes": "Toutes les notes",
+      "searchLabel": "Chercher dans les notes",
+      "searchActive": "Résultats pour « {{q}} » : {{count}}",
+      "kindLabel": "Type de partie",
+      "kindAll": "Tous les types",
+      "gameLabel": "Partie",
+      "gameAll": "Toutes les parties",
+      "listen": "▶ écouter",
+      "quote": "Citation brute",
+      "cat": {
+        "schwaeche": "Faiblesses",
+        "eroeffnung": "Ouverture",
+        "plan": "Plans",
+        "rechnen": "Calcul",
+        "endspiel": "Finales",
+        "zeit": "Temps",
+        "psychologie": "Psychologie",
+        "allgemein": "Général"
+      }
     }
   }
 }

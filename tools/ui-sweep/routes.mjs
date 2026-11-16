@@ -212,6 +212,7 @@ export const ROUTES = [
   r('rookhub', '/woodpecker', 'user', { main: ['.plans .plan', '.page .empty-state', '.page app-load-error'] }),
   // Trainerstunden (0.986.0): Menüpunkt standardmäßig nur für Admins, Stunden nur per Admin-Import.
   r('rookhub', '/training-videos', 'user', { roles: ['admin'], main: ['.lessons .lesson', '.page .empty-state', '.page app-load-error'] }),
+  r('rookhub', '/training-videos/notebook', 'user', { roles: ['admin'], main: ['.page .block', '.page .empty-state', '.page app-load-error'] }),
   r('rookhub', '/training-videos/questions', 'user', { roles: ['admin'], main: ['app-chess-board', '.page .empty-state', '.page app-load-error'] }),
   r('rookhub', '/training-videos/{trainingLessonId}', 'user', { roles: ['admin'], main: ['.segments', '.page app-load-error'] }),
   r('rookhub', '/training-videos/{trainingLessonId}/drill', 'user', { roles: ['admin'], main: ['app-chess-board', '.page .empty-state', '.page app-load-error'] }),

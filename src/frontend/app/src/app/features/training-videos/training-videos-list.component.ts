@@ -69,6 +69,9 @@ interface SearchState {
       <div class="header">
         <h1>{{ 'trainingVideos.title' | translate }}</h1>
         <div class="header-actions">
+          <a mat-stroked-button routerLink="/training-videos/notebook" class="tv-notebook">
+            <mat-icon>menu_book</mat-icon>{{ 'trainingVideos.notebook.open' | translate }}
+          </a>
           <a mat-stroked-button routerLink="/training-videos/questions" class="tv-questions">
             <mat-icon>quiz</mat-icon>{{ 'trainingVideos.questionSet' | translate }}
           </a>

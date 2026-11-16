@@ -129,3 +129,8 @@ chessable line".
 gruppierte Abfrage, `RepertoireService.FillLastTrainedAsync`), `null` = nie trainiert. Die Liste zeigt ganz oben
 „Letzte Woche": Repertoires mit Aktivität (max(lastTrainedAt, createdAt)) in den letzten 7 Tagen, jüngste zuerst, höchstens 8
 (`recentRepertoires` in `repertoire-list.component.ts`); die Karten stehen zusätzlich in ihrem eigentlichen Bereich.
+
+**Mehrere Stellungen auf einmal** (`RepertoireBoardContinuations`, 0.987.0, kein eigener Endpunkt): das Trainer-Notizbuch
+fragt für alle Eröffnungsstellungen in EINEM Lauf über die eigenen Linien (geteilte zählen nicht), ob das Figurenfeld
+vorkommt und welche Züge das Repertoire dort spielt (Hauptzug + abzweigende Varianten), Zeitbudget 4 s — Details in
+`docs/api/trainingsvideos.md`, „Trainer-Notizbuch“.

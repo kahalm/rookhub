@@ -22,12 +22,15 @@ public class TrainingVideosController : BaseApiController
 {
     private readonly TrainingVideoService _service;
     private readonly TrainingVideoAccessTokens _tokens;
+    private readonly TrainingNotebookService _notebook;
     private readonly AppDbContext _db;
 
-    public TrainingVideosController(TrainingVideoService service, TrainingVideoAccessTokens tokens, AppDbContext db)
+    public TrainingVideosController(TrainingVideoService service, TrainingVideoAccessTokens tokens, TrainingNotebookService notebook,
+        AppDbContext db)
     {
         _service = service;
         _tokens = tokens;
+        _notebook = notebook;
         _db = db;
     }
 
@@ -58,6 +61,11 @@ public class TrainingVideosController : BaseApiController
     [HttpGet("games/{gameId:int}/comments")]
     public async Task<ActionResult<TrainingGameCommentsDto>> GameComments(int gameId, CancellationToken ct)
         => Ok(await _service.GameCommentsAsync(GetUserId(), IsAdmin, gameId, ct));
+
+    /// <summary>Trainer-Notizbuch: alle Notizen, wiederkehrende Themen, Eröffnungsempfehlungen mit Repertoire-Abgleich.</summary>
+    [HttpGet("notebook")]
+    public async Task<ActionResult<TrainingNotebookDto>> Notebook(CancellationToken ct)
+        => Ok(await _notebook.GetAsync(GetUserId(), IsAdmin, ct));
 
     /// <summary>Stundenübergreifender Fragen-Satz (alle Segmente mit Frage); <c>?onlyWrong=true</c> = nur zuletzt falsche.</summary>
     [HttpGet("questions")]

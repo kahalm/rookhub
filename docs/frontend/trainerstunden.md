@@ -8,6 +8,7 @@ Privat je Konto, Menüpunkt `training-videos` (Vorgabe Admin-Stufe, `MenuRegistr
 | Weg | Komponente | Zweck |
 |---|---|---|
 | `/training-videos` | `TrainingVideosListComponent` | Stundenliste + Suche; `?fen=` startet die Stellungssuche |
+| `/training-videos/notebook` | `TrainingNotebookComponent` | Trainer-Notizbuch (0.987.0): Themen, Eröffnungsempfehlungen, alle Notizen |
 | `/training-videos/questions` | `TrainingDrillComponent` (`data.source = 'questions'`) | Fragen-Satz über alle Stunden |
 | `/training-videos/:id/drill` | `TrainingDrillComponent` | Nachspielen einer Stunde, `?seg=` = Startstellung |
 | `/training-videos/:id` | `TrainingLessonComponent` | Video + Brett + Segmentliste, `?t=` (Sekunde) und `?seg=` springen |
@@ -38,9 +39,21 @@ Privat je Konto, Menüpunkt `training-videos` (Vorgabe Admin-Stufe, `MenuRegistr
   steht 0,7 s und springt zurück (die Meldung bleibt als Text). Stand je Aufgabe per `PUT …/progress`; Fehler → Snackbar.
   Die gespielte Liste ist ein Schnappschuss (beim Speichern verschiebt sich nichts unter dem Index); „Nur Falsche
   wiederholen“ filtert nach dem Ausgang dieses Durchgangs, sonst nach dem gespeicherten Stand.
+- `training-notebook.component.ts` + `training-notebook.util.ts` (Spec daneben) — Trainer-Notizbuch, Link „Notizbuch“ im
+  Kopf der Liste. Oben „Sagt er immer wieder“ (Themen vom Server, stellvertretende Notiz + „in n Stunden“, aufklappbar
+  zu allen Stellen), dann „Eröffnungsempfehlungen“ (Mini-Brett 160 px, zur Seite am Zug gedreht; Repertoire-Zeile „Im
+  Repertoire „X“: Sd2, Sc3“ bzw. „kommt nicht vor“, ohne eigenes Repertoire gar keine Zeile; „Im Repertoire öffnen“ über
+  `LineKeyResolver` wie „In welchen Repertoires?“, „Im Analysebrett öffnen“ = `/analysis?fen=`; erst 6, Rest auf Zuruf),
+  dann „Alle Notizen“: Suchfeld (vorhandene Volltextsuche `search/text`, gefiltert auf die `noteId` der Notiz-Treffer),
+  Auswahl Art (eigene/Lehrpartie/Übung) und Partie (stundenübergreifend: dieselbe RookHub-Partie bzw. dieselben Namen),
+  Kategorien als `mat-chip-listbox` mit Anzahl (feste Reihenfolge, nur belegte; ein Filter, der den gewählten Reiter
+  leert, springt auf den ersten), darin je Stunde (Datum als Link zur Stunde). Jede Notiz: Text, Partie-Link (eigene
+  RookHub-Partie, sonst Stundenseite `?t=`), „▶ anhören“ klappt den Ausschnitt-Player auf (`autoplay`, 5 s vor bis
+  60 s nach der Notiz, nie über das Stundenende; nur einer offen) und „Rohzitat“ (eigener Aufklapper).
 - `training-clip-player.component.ts` — „Erklärung hören“: EIN `<video preload="none">`, Quelle erst beim ersten Abspielen,
   spult auf den Anfang, hält bei `currentTime ≥ Ende` an; „nur Ton“ blendet das Bild aus (Vorgabe = `EinkService.enabled()`).
-  Neue Stellung → hält an.
+  Neue Stellung → hält an. `autoplay` (Notizbuch) startet gleich nach dem Anzeigen — der Klick auf „▶ anhören“ gilt
+  noch als Nutzergeste.
 
 ## Einbindung außerhalb
 

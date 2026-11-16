@@ -4236,7 +4236,8 @@
         "t": "Buổi học với huấn luyện viên",
         "p": [
           "Nếu tài khoản của bạn bật buổi học, mục “Buổi học với huấn luyện viên” trong menu ☰ (Luyện tập) liệt kê video các buổi học: ngày, thời lượng, tóm tắt ngắn và các ván đã bàn. “Xem” mở video cạnh bàn cờ; danh sách thế cờ chạy theo video.",
-          "Bạn có thể tìm theo từ hoặc FEN, hoặc xếp một thế cờ; trên bàn phân tích, menu ⋮ có “Đã bàn trong buổi học?”. “Chơi lại” hỏi bạn các nước trong buổi học trên bàn cờ rồi chỉ phát phần giải thích tương ứng; “Bộ câu hỏi” gom câu hỏi của mọi buổi học."
+          "Bạn có thể tìm theo từ hoặc FEN, hoặc xếp một thế cờ; trên bàn phân tích, menu ⋮ có “Đã bàn trong buổi học?”. “Chơi lại” hỏi bạn các nước trong buổi học trên bàn cờ rồi chỉ phát phần giải thích tương ứng; “Bộ câu hỏi” gom câu hỏi của mọi buổi học.",
+          "“Sổ tay” gom lời huấn luyện viên từ mọi buổi học theo chủ đề — có “Thầy nhắc đi nhắc lại”, lời khuyên khai cuộc đối chiếu với kho khai cuộc của bạn và đoạn để nghe."
         ]
       }
     }
@@ -6718,6 +6719,42 @@
       "start": "Thế cờ ban đầu",
       "inVideo": "▶ trong video từ {{time}}",
       "sideLine": "Nhánh phụ từ buổi học"
+    },
+    "notebook": {
+      "open": "Sổ tay",
+      "title": "Sổ tay của huấn luyện viên",
+      "intro": "Mọi điều huấn luyện viên nói trong các buổi học — theo chủ đề, kèm đoạn để nghe.",
+      "empty": "Chưa có ghi chú nào từ các buổi học.",
+      "none": "Không có ghi chú cho lựa chọn này.",
+      "themes": "Thầy nhắc đi nhắc lại",
+      "themeLessons": "trong {{count}} buổi",
+      "themeShow": "Hiện tất cả ({{count}})",
+      "openings": "Lời khuyên khai cuộc",
+      "inRepertoire": "Trong kho khai cuộc “{{name}}”:",
+      "repertoireEnd": "Trong kho khai cuộc “{{name}}”, biến kết thúc ở đây.",
+      "notInRepertoire": "Không có trong kho khai cuộc của bạn.",
+      "repertoireTruncated": "Không kiểm tra được hết các biến trong kho khai cuộc.",
+      "openRepertoire": "Mở trong kho khai cuộc",
+      "moreOpenings": "Hiện tất cả ({{count}})",
+      "allNotes": "Tất cả ghi chú",
+      "searchLabel": "Tìm trong ghi chú",
+      "searchActive": "Kết quả cho “{{q}}”: {{count}}",
+      "kindLabel": "Loại ván",
+      "kindAll": "Mọi loại",
+      "gameLabel": "Ván cờ",
+      "gameAll": "Mọi ván",
+      "listen": "▶ nghe",
+      "quote": "Trích nguyên văn",
+      "cat": {
+        "schwaeche": "Điểm yếu",
+        "eroeffnung": "Khai cuộc",
+        "plan": "Kế hoạch",
+        "rechnen": "Tính toán",
+        "endspiel": "Tàn cuộc",
+        "zeit": "Thời gian",
+        "psychologie": "Tâm lý",
+        "allgemein": "Chung"
+      }
     }
   }
 }

@@ -4314,7 +4314,8 @@
         "t": "Coaching sessions",
         "p": [
           "If your account has coaching sessions enabled, “Coaching sessions” in the ☰ menu (Training) lists the videos of your sessions with your coach: date, length, a short summary and the games discussed. “Watch” opens the video next to the board — the list of discussed positions follows the video, and a click on a position jumps there.",
-          "Search by word or FEN, or set up a position on the board; from the analysis board the ⋮ menu offers “Discussed in a session?”. “Replay” asks you for the moves from the session on the board (with hint and solution) and afterwards plays just the matching explanation; the “Question set” collects the questions of all sessions. On your own games the coach’s comments appear next to the moves."
+          "Search by word or FEN, or set up a position on the board; from the analysis board the ⋮ menu offers “Discussed in a session?”. “Replay” asks you for the moves from the session on the board (with hint and solution) and afterwards plays just the matching explanation; the “Question set” collects the questions of all sessions. On your own games the coach’s comments appear next to the moves.",
+          "“Notebook” collects your coach’s remarks from all lessons by topic — with “He keeps saying”, opening advice checked against your repertoire, and a clip to listen to."
         ]
       }
     }
@@ -6982,6 +6983,42 @@
       "start": "Starting position",
       "inVideo": "▶ in the video from {{time}}",
       "sideLine": "Side line from the session"
+    },
+    "notebook": {
+      "open": "Notebook",
+      "title": "Coach’s notebook",
+      "intro": "Everything your coach said in the lessons — sorted by topic, with a clip to listen to.",
+      "empty": "No notes from coaching lessons yet.",
+      "none": "No notes for this selection.",
+      "themes": "He keeps saying",
+      "themeLessons": "in {{count}} lessons",
+      "themeShow": "Show all {{count}}",
+      "openings": "Opening advice",
+      "inRepertoire": "In your repertoire “{{name}}”:",
+      "repertoireEnd": "In your repertoire “{{name}}” the line ends here.",
+      "notInRepertoire": "Not in your repertoire.",
+      "repertoireTruncated": "Not all repertoire lines could be checked.",
+      "openRepertoire": "Open in repertoire",
+      "moreOpenings": "Show all {{count}}",
+      "allNotes": "All notes",
+      "searchLabel": "Search the notes",
+      "searchActive": "Results for “{{q}}”: {{count}}",
+      "kindLabel": "Game type",
+      "kindAll": "All types",
+      "gameLabel": "Game",
+      "gameAll": "All games",
+      "listen": "▶ Listen",
+      "quote": "Raw quote",
+      "cat": {
+        "schwaeche": "Weaknesses",
+        "eroeffnung": "Openings",
+        "plan": "Plans",
+        "rechnen": "Calculation",
+        "endspiel": "Endgames",
+        "zeit": "Time",
+        "psychologie": "Psychology",
+        "allgemein": "General"
+      }
     }
   }
 }

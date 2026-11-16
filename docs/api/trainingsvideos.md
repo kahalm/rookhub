@@ -22,8 +22,9 @@ Schema 1 (bzw. 2 = Schema 1 + optionale Felder), Zeiten als `h:mm:ss`-Zeichenket
 - `segments[]`: `t`/`tEnd`, `gameId`, `fen` (ungültig → Segment ohne Stellung, gezählt), `move` (SAN), `moveKind`
   played|analysis (Schema 2), `comment` (geglättet), `quote` (Rohtranskript), `quoteFrom`/`quoteTo` (Schema 2),
   `variations`, `tags[]`, `question` {prompt, answer, answerLine, answerT, explanation}.
-- `notes[]`: `t`, `gameId`, `category` schwaeche|eroeffnung|plan|rechnen|zeit|psychologie|allgemein (unbekannt →
-  allgemein), `text`, `quote`.
+- `notes[]`: `t`, `gameId`, `category` schwaeche|eroeffnung|plan|rechnen|zeit|psychologie|endspiel|allgemein (unbekannt →
+  allgemein; `endspiel` erst ab 0.987.0 — vorher importierte Endspiel-Notizen stehen als `allgemein` da, bis die Stunde
+  neu importiert wird), `text`, `quote`.
 
 ## Tabellen
 
@@ -65,7 +66,8 @@ Prod-Import nur auf Zuruf des Users, vorher Probelauf.
 | GET | `/api/training-videos` | Stundenliste (neueste zuerst; `ownerName` nur für Admins bei fremden Stunden) |
 | GET | `/api/training-videos/{id}` | Stunde: Partien, `pgns`, `analysisPgns`, Segmente mit Frage und eigenem Stand |
 | GET | `/api/training-videos/search/position?fen=` | „Im Training besprochen?“ — volle FEN oder nur Figurenfeld, ≤ 100 Treffer |
-| GET | `/api/training-videos/search/text?q=` | Volltext über Segmente und Notizen, ≤ 100 je Art |
+| GET | `/api/training-videos/search/text?q=` | Volltext über Segmente und Notizen, ≤ 100 je Art (Notiz-Treffer mit `noteId`) |
+| GET | `/api/training-videos/notebook` | Trainer-Notizbuch: alle Notizen, wiederkehrende Themen, Eröffnungsempfehlungen (0.987.0, siehe unten) |
 | GET | `/api/training-videos/games/{gameId}/comments` | Trainerkommentare an einer RookHub-Partie, je Stellung |
 | GET | `/api/training-videos/questions?onlyWrong=` | stundenübergreifender Fragen-Satz (je Eintrag `rookhubGameId`, falls zugeordnet) |
 | PUT | `/api/training-videos/{id}/segments/{segmentId}/progress` | `{ status: solved\|wrong\|skipped, attempts }` |
@@ -84,6 +86,27 @@ gespielte Partiezug (`moveKind: played`). `TaskFen` ist immer die Stellung VOR d
 Zeigt die FEN der Aufbereitung schon die Stellung danach, rechnet der Server über die Partie (RookHub-Partie des Kontos,
 sonst PGN der Stunde) zurück; eine Frage wird zuerst aus ihrer eigenen Stellung gelesen. Ist der Zug nirgends legal: beide
 `null` (nur ansehen).
+
+## Trainer-Notizbuch (0.987.0, `TrainingNotebookService`)
+
+`GET notebook` → `{ notes[], themes[], openings[], hasRepertoire, repertoireTruncated }`, sichtbar wie alles hier (eigene
+Stunden, Admin alle). Die Merksätze (`docs/api/merksaetze.md`, kuratierte Liste) bleiben unberührt — Notizen werden
+NICHT dorthin übernommen.
+
+- **`notes`**: jede Notiz mit Stunde/Datum, `startSec`, Kategorie, Text, Rohzitat, Partie (`gameWhite`/`gameBlack`,
+  `gameKind`, `rookhubGameId`), `hasVideo`, `lessonDurationSec` (Ausschnitt-Ende); neueste Stunde zuerst, darin nach Zeit.
+- **`themes`** („sagt er immer wieder“, `TrainingNoteThemes`, kein LLM): Stichwörter = Buchstabenfolgen ab 4 Zeichen
+  (Züge fallen so heraus), ohne deutsche Füllwörter, Endungen grob gestutzt; Gewicht IDF über alle sichtbaren Notizen;
+  Ähnlichkeit = Gewicht der gemeinsamen Stichwörter / Gewicht der kleineren Menge (≥ 2 gemeinsame); Gruppen per
+  Average-Linkage ab 0,35 (Single-Linkage verkettete Themen über Brückennotizen). Ein Thema braucht ≥ 2 Stunden,
+  `noteId` = Notiz mit der größten Ähnlichkeit zu den übrigen; höchstens 20, nach Stundenzahl. 394 Notizen ≈ 0,1 s.
+- **`openings`**: jede Notiz der Kategorie `eroeffnung` mit der Stellung des nächstgelegenen Segments DERSELBEN Partie
+  (Segment, dessen Spanne die Notizzeit enthält, sonst kleinster Abstand des Beginns; ohne Partie keine Stellung) und dem
+  Abgleich mit dem EIGENEN Repertoire des anfragenden Kontos (`RepertoireBoardContinuations`, geteilte Repertoires
+  zählen nicht): verglichen wird nur das Figurenfeld (die Aufbereitung rät Zugrecht/Rochade), je Repertoire ein Treffer
+  mit der ersten Linie (Kapitel/Name/`gameIndex`/`ply` für „im Repertoire öffnen“) und allen Zügen dort (Hauptzug +
+  abzweigende Varianten), `sameSide` = auch das Zugrecht stimmt; höchstens 3 je Stellung. Ein Lauf über alle Linien,
+  Zeitbudget 4 s (`repertoireTruncated`); `hasRepertoire` = das Konto hat eigene Linien.
 
 ## Video und Konfiguration
 

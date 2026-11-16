@@ -4236,7 +4236,8 @@
         "t": "Lekce s trenérem",
         "p": [
           "Pokud má tvůj účet lekce zapnuté, „Lekce s trenérem“ v nabídce ☰ (Trénink) ukazují videa tvých lekcí: datum, délku, krátké shrnutí a probírané partie. „Přehrát“ otevře video vedle šachovnice; seznam pozic sleduje video.",
-          "Hledat můžeš podle slova nebo FEN, případně postavit pozici; na analytické šachovnici nabízí nabídka ⋮ „Probíráno na lekci?“. „Zahrát znovu“ se ptá na tahy z lekce na šachovnici a pak přehraje jen příslušné vysvětlení; „Sada otázek“ sbírá otázky ze všech lekcí."
+          "Hledat můžeš podle slova nebo FEN, případně postavit pozici; na analytické šachovnici nabízí nabídka ⋮ „Probíráno na lekci?“. „Zahrát znovu“ se ptá na tahy z lekce na šachovnici a pak přehraje jen příslušné vysvětlení; „Sada otázek“ sbírá otázky ze všech lekcí.",
+          "„Zápisník“ shromažďuje trenérovy výroky ze všech lekcí podle témat — s „Říká to pořád dokola“, radami k zahájení porovnanými s tvým repertoárem a úryvkem k poslechu."
         ]
       }
     }
@@ -6718,6 +6719,42 @@
       "start": "Výchozí pozice",
       "inVideo": "▶ ve videu od {{time}}",
       "sideLine": "Vedlejší varianta z lekce"
+    },
+    "notebook": {
+      "open": "Zápisník",
+      "title": "Trenérův zápisník",
+      "intro": "Vše, co trenér řekl na lekcích — podle témat, s úryvkem k poslechu.",
+      "empty": "Zatím žádné poznámky z lekcí.",
+      "none": "Pro tento výběr nejsou žádné poznámky.",
+      "themes": "Říká to pořád dokola",
+      "themeLessons": "na {{count}} lekcích",
+      "themeShow": "Zobrazit všech {{count}}",
+      "openings": "Rady k zahájení",
+      "inRepertoire": "Ve tvém repertoáru „{{name}}“:",
+      "repertoireEnd": "Ve tvém repertoáru „{{name}}“ zde varianta končí.",
+      "notInRepertoire": "Ve tvém repertoáru není.",
+      "repertoireTruncated": "Nepodařilo se zkontrolovat všechny varianty repertoáru.",
+      "openRepertoire": "Otevřít v repertoáru",
+      "moreOpenings": "Zobrazit všech {{count}}",
+      "allNotes": "Všechny poznámky",
+      "searchLabel": "Hledat v poznámkách",
+      "searchActive": "Výsledky pro „{{q}}“: {{count}}",
+      "kindLabel": "Druh partie",
+      "kindAll": "Všechny druhy",
+      "gameLabel": "Partie",
+      "gameAll": "Všechny partie",
+      "listen": "▶ poslechnout",
+      "quote": "Doslovná citace",
+      "cat": {
+        "schwaeche": "Slabiny",
+        "eroeffnung": "Zahájení",
+        "plan": "Plány",
+        "rechnen": "Počítání",
+        "endspiel": "Koncovky",
+        "zeit": "Čas",
+        "psychologie": "Psychologie",
+        "allgemein": "Obecné"
+      }
     }
   }
 }

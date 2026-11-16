@@ -4236,7 +4236,8 @@
         "t": "Aulas com o treinador",
         "p": [
           "Se a tua conta tiver as aulas ativadas, «Aulas com o treinador» no menu ☰ (Treino) mostra os vídeos das tuas aulas: data, duração, um breve resumo e as partidas discutidas. «Ver» abre o vídeo ao lado do tabuleiro; a lista de posições acompanha o vídeo.",
-          "Podes pesquisar por palavra ou FEN, ou montar uma posição; no tabuleiro de análise o menu ⋮ oferece «Visto na aula?». «Repetir» pede-te os lances da aula no tabuleiro e depois reproduz só a explicação correspondente; o «Conjunto de perguntas» junta as perguntas de todas as aulas."
+          "Podes pesquisar por palavra ou FEN, ou montar uma posição; no tabuleiro de análise o menu ⋮ oferece «Visto na aula?». «Repetir» pede-te os lances da aula no tabuleiro e depois reproduz só a explicação correspondente; o «Conjunto de perguntas» junta as perguntas de todas as aulas.",
+          "O «Caderno» reúne por tema as observações do treinador de todas as aulas — com «Ele repete sempre», conselhos de abertura comparados com o teu repertório e um trecho para ouvir."
         ]
       }
     }
@@ -6718,6 +6719,42 @@
       "start": "Posição inicial",
       "inVideo": "▶ no vídeo a partir de {{time}}",
       "sideLine": "Variante da aula"
+    },
+    "notebook": {
+      "open": "Caderno",
+      "title": "Caderno do treinador",
+      "intro": "Tudo o que o teu treinador disse nas aulas — por tema, com um trecho para ouvir.",
+      "empty": "Ainda não há notas das aulas.",
+      "none": "Nenhuma nota para esta seleção.",
+      "themes": "Ele repete sempre",
+      "themeLessons": "em {{count}} aulas",
+      "themeShow": "Mostrar todas ({{count}})",
+      "openings": "Conselhos de abertura",
+      "inRepertoire": "No teu repertório «{{name}}»:",
+      "repertoireEnd": "No teu repertório «{{name}}» a linha termina aqui.",
+      "notInRepertoire": "Não está no teu repertório.",
+      "repertoireTruncated": "Não foi possível verificar todas as linhas do repertório.",
+      "openRepertoire": "Abrir no repertório",
+      "moreOpenings": "Mostrar todas ({{count}})",
+      "allNotes": "Todas as notas",
+      "searchLabel": "Pesquisar nas notas",
+      "searchActive": "Resultados para «{{q}}»: {{count}}",
+      "kindLabel": "Tipo de partida",
+      "kindAll": "Todos os tipos",
+      "gameLabel": "Partida",
+      "gameAll": "Todas as partidas",
+      "listen": "▶ ouvir",
+      "quote": "Citação original",
+      "cat": {
+        "schwaeche": "Fraquezas",
+        "eroeffnung": "Abertura",
+        "plan": "Planos",
+        "rechnen": "Cálculo",
+        "endspiel": "Finais",
+        "zeit": "Tempo",
+        "psychologie": "Psicologia",
+        "allgemein": "Geral"
+      }
     }
   }
 }
