@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import {
-  VISITOR_DAYS, VISITOR_SURFACES, VISITOR_VIEWS, VisitorOriginsService, WorldMap, visitorStep,
+  VISITOR_DAYS, VISITOR_SURFACES, VISITOR_VIEWS, VISITOR_VPN, VisitorOriginsService, WorldMap, visitorStep,
 } from './visitor-origins.service';
 
 describe('VisitorOriginsService (Besucher-Herkunft)', () => {
@@ -20,6 +20,10 @@ describe('VisitorOriginsService (Besucher-Herkunft)', () => {
     expect([...VISITOR_SURFACES]).toEqual(['rookhub', 'leaguehub', 'kidhub', 'clubhub', 'turnier']);
     expect([...VISITOR_DAYS]).toEqual([7, 30, 90, 365]);
     expect([...VISITOR_VIEWS]).toEqual(['world', 'eu', 'na', 'sa', 'af', 'as', 'oc']);
+  });
+
+  it('VPN-Code ist wörtlich der des Servers (VisitorNetworkClassifier.VpnCountry)', () => {
+    expect(VISITOR_VPN).toBe('XV');
   });
 
   it('get: ohne Auswahl keine Parameter, mit Auswahl days + surface', () => {

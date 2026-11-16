@@ -6587,6 +6587,7 @@
       "showTop": "仅显示前 10 个"
     },
     "unknown": "未知国家",
+    "vpn": "VPN",
     "emptyNew": "暂无数据。统计刚刚开始，首批国家很快就会出现。",
     "emptyFiltered": "该筛选条件下暂无数据。统计自 {{date}} 起进行。",
     "emptyContinent": "还没有来自这个大洲的访客。",

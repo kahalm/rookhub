@@ -6587,6 +6587,7 @@
       "showTop": "Yalnızca ilk 10’u göster"
     },
     "unknown": "Bilinmeyen ülke",
+    "vpn": "VPN",
     "emptyNew": "Henüz veri yok. Sayım yeni başladı, ilk ülkeler yakında görünecek.",
     "emptyFiltered": "Bu seçim için henüz veri yok. Sayım {{date}} tarihinden beri sürüyor.",
     "emptyContinent": "Bu kıtadan henüz kimse gelmedi.",

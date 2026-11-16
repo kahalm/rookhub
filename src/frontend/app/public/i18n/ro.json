@@ -6587,6 +6587,7 @@
       "showTop": "Arată doar primele 10"
     },
     "unknown": "Țară necunoscută",
+    "vpn": "VPN",
     "emptyNew": "Încă nu există date. Numărarea abia a început, primele țări vor apărea în curând.",
     "emptyFiltered": "Încă nu există date pentru această selecție. Numărarea rulează din {{date}}.",
     "emptyContinent": "De pe acest continent nu a venit încă nimeni.",

@@ -6587,6 +6587,7 @@
       "showTop": "Mostra solo i primi 10"
     },
     "unknown": "Paese sconosciuto",
+    "vpn": "VPN",
     "emptyNew": "Ancora nessun dato. Il conteggio è appena iniziato, i primi paesi compariranno presto.",
     "emptyFiltered": "Ancora nessun dato per questa selezione. Il conteggio è attivo dal {{date}}.",
     "emptyContinent": "Da questo continente non è ancora venuto nessuno.",

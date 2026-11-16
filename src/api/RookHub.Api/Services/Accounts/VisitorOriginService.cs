@@ -32,7 +32,8 @@ public class VisitorOriginService
         var merged = deltas
             .GroupBy(d => (d.Day, d.VisitorHash, d.Surface))
             .Select(g => new VisitorDayDelta(g.Key.Day, g.Key.VisitorHash, g.Key.Surface,
-                g.Select(x => x.Country).FirstOrDefault(c => c.Length > 0) ?? string.Empty, g.Sum(x => x.Hits)))
+                g.Any(x => x.Country == VisitorNetworkClassifier.VpnCountry) ? VisitorNetworkClassifier.VpnCountry
+                    : g.Select(x => x.Country).FirstOrDefault(c => c.Length > 0) ?? string.Empty, g.Sum(x => x.Hits)))
             .ToList();
 
         foreach (var dayGroup in merged.GroupBy(d => d.Day))
@@ -48,7 +49,8 @@ public class VisitorOriginService
                     if (existing.TryGetValue((d.VisitorHash, d.Surface), out var row))
                     {
                         row.Hits += d.Hits;
-                        if (row.Country.Length == 0) row.Country = d.Country;
+                        // Fehlendes Land nachtragen; „VPN“ steht wie im Sammler über einem Land.
+                        if (row.Country.Length == 0 || d.Country == VisitorNetworkClassifier.VpnCountry) row.Country = d.Country;
                     }
                     else
                     {
@@ -106,7 +108,8 @@ public class VisitorOriginService
             Days: days,
             Surface: surface,
             UniqueUsers: uniqueUsers,
-            Countries: known.Count,
+            // „VPN“ (XV) steht in der Liste, ist aber kein Land.
+            Countries: known.Count(c => c.Country != VisitorNetworkClassifier.VpnCountry),
             UnknownUsers: rows.Where(r => r.Country.Length == 0).Sum(r => r.Users),
             Hits: withHits ? rows.Sum(r => r.Hits) : null,
             Since: withHits ? since : null,

@@ -6851,6 +6851,7 @@
       "showTop": "Csak az első 10 mutatása"
     },
     "unknown": "Ismeretlen ország",
+    "vpn": "VPN",
     "emptyNew": "Még nincs adat. A számlálás csak most indult, az első országok hamarosan megjelennek.",
     "emptyFiltered": "Ehhez a választáshoz még nincs adat. A számlálás {{date}} óta fut.",
     "emptyContinent": "Erről a kontinensről még senki sem járt itt.",

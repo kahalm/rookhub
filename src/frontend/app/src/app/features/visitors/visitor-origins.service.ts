@@ -30,6 +30,12 @@ export type VisitorView = typeof VISITOR_VIEWS[number];
 
 /** Oberflächen, wie der Server sie zählt — Spiegel von `VisitorOriginRecorder.Surfaces` (Literaltest auf beiden Seiten). */
 export const VISITOR_SURFACES = ['rookhub', 'leaguehub', 'kidhub', 'clubhub', 'turnier'] as const;
+/**
+ * „Land“ der Besucher über ein bekanntes VPN-/Rechenzentrumsnetz — Spiegel von `VisitorNetworkClassifier.VpnCountry`
+ * (Literaltest auf beiden Seiten). Steht in der Rangliste als „VPN“, färbt auf der Karte nichts ein und zählt nicht
+ * als Land.
+ */
+export const VISITOR_VPN = 'XV';
 /** Wählbare Zeiträume in Tagen — Spiegel von `VisitorOriginService.AllowedDays`. */
 export const VISITOR_DAYS = [7, 30, 90, 365] as const;
 

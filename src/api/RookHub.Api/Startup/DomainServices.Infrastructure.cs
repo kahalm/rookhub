@@ -12,6 +12,10 @@ public static partial class DomainServicesSetup
         services.AddSingleton<BackgroundPause>();
         // Land der Besucher-IP fuer die Startsprache von KidHub — lokale DB-IP-Liste, laedt bei Bedarf.
         services.AddSingleton<IpCountryService>();
+        // Netzbetreiber der Besucher-IP (DB-IP „IP to ASN Lite“, lädt bei Bedarf) + Einteilung Google/VPN für die
+        // Besucher-Herkunft (Assets/visitor-networks.json).
+        services.AddSingleton<IpAsnService>();
+        services.AddSingleton<RookHub.Api.Services.Accounts.VisitorNetworkClassifier>();
         // Besucher-Herkunft (Weltkarte nach Ländern): Sammler im Speicher + Auswertung; weggeschrieben wird je Minute
         // vom VisitorOriginFlushWorker (docs/api/besucher-herkunft.md).
         services.AddSingleton<RookHub.Api.Services.Accounts.VisitorOriginRecorder>();

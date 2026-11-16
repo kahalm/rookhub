@@ -116,6 +116,25 @@ describe('VisitorOriginsComponent (/visitors, „RookHub weltweit“)', () => {
     expect(el.textContent).not.toContain('visitors.since');
   });
 
+
+  it('„VPN“ (XV): steht als „VPN“ in der Rangliste, zählt nicht als Land, färbt nichts und verschiebt die Farbskala nicht', async () => {
+    await open('/visitors', origins({
+      uniqueUsers: 50, unknownUsers: 0,
+      byCountry: [
+        { country: 'XV', users: 30, hits: null },
+        { country: 'AT', users: 12, hits: null },
+        { country: 'DE', users: 5, hits: null },
+      ],
+    }));
+    expect(rowNames()).toEqual(['visitors.vpn', 'Austria', 'Germany']);
+    expect(kpi('countries')).toBe('2');
+    expect(el.querySelector('svg path[data-id="XV"]')).toBeNull();
+    expect(path('AT').classList).toContain('vo-s5');      // Maximum der Karte ist AT, nicht die 30 VPN-Benutzer
+    harness.detectChanges();
+    await harness.navigateByUrl('/visitors?continent=eu', VisitorOriginsComponent);
+    harness.detectChanges();
+    expect(rowNames()).toEqual(['Austria', 'Germany']);  // VPN gehört zu keinem Erdteil
+  });
   it('normales Konto: fragt den Server ohne Parameter — auch wenn die URL days/surface trägt, bleibt die Leiste weg', async () => {
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),

@@ -6851,6 +6851,7 @@
       "showTop": "Prikaži samo prvih 10"
     },
     "unknown": "Nepoznata zemlja",
+    "vpn": "VPN",
     "emptyNew": "Još nema podataka. Brojanje je tek počelo, prve zemlje uskoro će se pojaviti.",
     "emptyFiltered": "Za ovaj odabir još nema podataka. Brojanje traje od {{date}}.",
     "emptyContinent": "S ovog kontinenta još nitko nije došao.",

@@ -6587,6 +6587,7 @@
       "showTop": "Visa bara de 10 första"
     },
     "unknown": "Okänt land",
+    "vpn": "VPN",
     "emptyNew": "Inga data ännu. Räkningen har precis börjat, de första länderna visas snart.",
     "emptyFiltered": "Inga data för det här urvalet ännu. Räkningen har pågått sedan {{date}}.",
     "emptyContinent": "Ingen från den här världsdelen har varit här ännu.",

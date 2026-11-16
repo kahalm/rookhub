@@ -6587,6 +6587,7 @@
       "showTop": "Chỉ hiện 10 quốc gia đầu"
     },
     "unknown": "Quốc gia không xác định",
+    "vpn": "VPN",
     "emptyNew": "Chưa có dữ liệu. Việc đếm vừa mới bắt đầu, các quốc gia đầu tiên sẽ sớm xuất hiện.",
     "emptyFiltered": "Chưa có dữ liệu cho lựa chọn này. Việc đếm chạy từ {{date}}.",
     "emptyContinent": "Chưa có ai đến từ châu lục này.",

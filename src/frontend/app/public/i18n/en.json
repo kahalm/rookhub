@@ -6851,6 +6851,7 @@
       "showTop": "Show the top 10 only"
     },
     "unknown": "Unknown country",
+    "vpn": "VPN",
     "emptyNew": "No data yet. Counting has only just started, the first countries will appear soon.",
     "emptyFiltered": "No data for this selection yet. Counting has been running since {{date}}.",
     "emptyContinent": "Nobody from this continent has visited yet.",

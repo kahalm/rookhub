@@ -6587,6 +6587,7 @@
       "showTop": "Zobrazit jen prvních 10"
     },
     "unknown": "Neznámá země",
+    "vpn": "VPN",
     "emptyNew": "Zatím žádná data. Počítání právě začalo, první země se brzy objeví.",
     "emptyFiltered": "Pro tento výběr zatím nejsou žádná data. Počítá se od {{date}}.",
     "emptyContinent": "Z tohoto kontinentu zatím nikdo nepřišel.",

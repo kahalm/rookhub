@@ -6587,6 +6587,7 @@
       "showTop": "Alleen de eerste 10 tonen"
     },
     "unknown": "Onbekend land",
+    "vpn": "VPN",
     "emptyNew": "Nog geen gegevens. Het tellen is net begonnen, de eerste landen verschijnen binnenkort.",
     "emptyFiltered": "Nog geen gegevens voor deze selectie. Er wordt geteld sinds {{date}}.",
     "emptyContinent": "Uit dit werelddeel is nog niemand geweest.",

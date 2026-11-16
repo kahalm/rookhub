@@ -13,7 +13,7 @@ Tabelle `VisitorDays` — **eine Zeile je Tag (UTC), Besucher und Oberfläche**:
 | `Day` | Kalendertag (UTC), keine Uhrzeit |
 | `VisitorHash` | Pseudonym: HMAC-SHA256 der Besucher-Kennung (`u:<Benutzername>` bzw. `a:<Hash der anonymen Sitzungs-Id>`, `VisitorIdResolver`) mit einem Schlüssel des Servers, 32 Hex-Zeichen. Über die Tage gleich — sonst ließe sich „eindeutig im Zeitraum“ nicht zählen |
 | `Surface` | `rookhub` \| `leaguehub` \| `kidhub` \| `clubhub` \| `turnier` — aus dem Host der Anfrage (`VisitorOriginRecorder.SurfaceOf`; das Frontend-nginx jeder Oberfläche reicht `Host` durch) |
-| `Country` | ISO-3166-Land (zwei Buchstaben) aus der IP-Adresse, leer = unbekannt |
+| `Country` | ISO-3166-Land (zwei Buchstaben) aus der IP-Adresse, leer = unbekannt, **`XV` = über ein bekanntes VPN-/Rechenzentrumsnetz** (seit 0.985.0, siehe „Google und VPN“) |
 | `Hits` | gezählte Aufrufe an diesem Tag |
 
 Eindeutiger Index `(Day, VisitorHash, Surface)`. **Nicht gespeichert:** IP-Adresse, Benutzername, Nutzernummer,
@@ -33,14 +33,47 @@ Frist: `Retention:VisitorDays` (Vorgabe **400 Tage**), gelöscht im täglichen A
 - **Nicht gezählt:** Anfragen ohne Besucher-Kennung; System-/Maschinen-Anfragen (`SystemCallClassifier`: Health,
   Heartbeats, Menü-/Zähler-Polls, Engine-Provider, Client-Log); erkennbare Bots und Anfragen ohne User-Agent
   (`DeviceClassifier`); private/interne Adressen (10.x, 172.16/12, 192.168.x, Loopback, CGNAT, Link-Local —
-  `IpCountryService.IsPublic`; sie erscheinen gar nicht, auch nicht als „intern“); alles außerhalb `/api`; Antworten
-  mit Status ≥ 400.
+  `IpCountryService.IsPublic`; sie erscheinen gar nicht, auch nicht als „intern“); **Google-Server** (siehe unten);
+  alles außerhalb `/api`; Antworten mit Status ≥ 400.
 - **Deckel** (die anonyme Kennung ist ein frei wählbarer Header): je Adresse höchstens 50 neue Besucher am Tag
   (Zähler nur im Speicher), insgesamt höchstens 50 000 am Tag.
 - Das Land wird ohne zu warten nachgeschlagen (`IpCountryService.TryCountryOf`): ist die DB-IP-Liste noch nicht
   geladen, zählt der Besucher zunächst mit leerem Land, und ein späterer Aufruf desselben Tages trägt es nach.
 - Die Besucher-Kennung ohne Konto setzt der `visitorInterceptor` (RookHub, KidHub, Turnierseite). LeagueHub und
   ClubHub senden keine — dort zählen nur angemeldete Konten.
+
+## Google und VPN (`Services/Accounts/VisitorNetworkClassifier.cs`, 0.985.0)
+
+Anlass: LeagueHub zeigte im November 2026 Besucher aus BR/US/GB/IT, die in Wahrheit Österreicher waren.
+
+- **Google-Abrufe zählen nicht.** Wer einen LeagueHub-Link teilt, bekommt wenige Sekunden später einen zweiten Abruf
+  von Google-Servern (Linkvorschau/Vorabladen, z. B. 66.249.83.x, 66.102.x, 142.250.32/33.x, 74.125.212.x,
+  192.178.15.x) mit einem gewöhnlichen Browser-User-Agent („Chrome/138 Android“) — `DeviceClassifier` hält das für
+  einen Menschen. Erkannt wird an der Adresse: Googles veröffentlichte Liste aller eigenen Bereiche (`goog.json`,
+  enthält auch Google Cloud) und die Google-AS-Nummern (15169, 396982, 36040 …). Google Fiber (AS16591) ist ein
+  echter Anschluss und steht bewusst NICHT darin.
+- **VPN-Austritte zählen als `XV`** statt als Land des Servers: bekannte VPN-/Hosting-Netzbetreiber (PacketHub =
+  NordVPN-Infrastruktur, Datacamp/CDN77, Hydra Communications, M247, Clouvider, 31173 Services, Cyberzone/Surfshark,
+  HostRoyale, GSL Networks, Leaseweb, xTom, Zenlayer …) und einzelne feste Netze (187.15.156/24, 187.15.158/24,
+  187.13.132/24, 194.88.96/21, 185.61.156/22). `XV` liegt im ISO-Bereich für Benutzercodes und gehört zu keinem
+  Land; `varchar(2)` bleibt. Steht für denselben Besucher am selben Tag schon ein Land, gewinnt `XV` (im Sammler und
+  beim Wegschreiben) — die Netzbetreiberliste kann nach dem ersten Aufruf geladen worden sein.
+- **Liste:** `src/api/RookHub.Api/Assets/visitor-networks.json` (eingebettet; `googleAsns`, `vpnAsns`, `vpnNetworks`
+  mit Namen als Nachweis von Hand gepflegt, `googleNetworks` erzeugt `tools/visitor-networks/update_google.py` aus
+  `https://www.gstatic.com/ipranges/goog.json`). Neue VPN-Netzbetreiber dort eintragen, Tests laufen lassen
+  (`VisitorNetworkClassifierTests` prüft u. a., dass sich die festen Netze nicht überlappen), Version + Changelog.
+- **AS-Nummer** aus der freien DB-IP-Liste „IP to ASN Lite“ (`IpAsnService`, CC BY 4.0, ≈ 7 MB), geladen wie die
+  Länderliste: beim ersten Bedarf, Datei im Temp-Ordner (`IpAsn:CachePath`), 35 Tage gültig, danach holt der Dienst
+  die Liste des neuen Monats selbst (`IpAsn:SourceUrlTemplate`, `IpAsn:Enabled`). Gemeinsamer Unterbau beider
+  Listen: `Services/DbIpLiteList.cs`. **Kein Abruf je Anfrage**; die festen Netze greifen auch, solange die
+  ASN-Liste noch nicht geladen ist.
+- Einteilung: feste Netze zuerst, dann die AS-Nummer (`VisitorNetworkClassifier.Classify`).
+- In der Auswertung steht `XV` in `byCountry`, zählt aber nicht bei `countries`. Die Oberfläche zeigt ihn als „VPN“
+  (`visitors.vpn`, Konstante `VISITOR_VPN`, Literaltest auf beiden Seiten), färbt auf der Karte nichts ein, nimmt
+  ihn nicht in die Farbskala und ordnet ihn keinem Erdteil zu.
+- **Nachtrag vor dem Start der Live-Zählung** (15.11.2026, 16:58:41 UTC): die Zeilen mit `VisitorHash` in
+  GROSSBUCHSTABEN stammen aus den NPM-Protokollen (`~/claude/besucher-herkunft/backfill.py`, außerhalb des Repos);
+  Fassung 2 wendet dieselbe Google-/VPN-Liste und dieselbe DB-IP-Länderliste an wie live.
 
 Konfiguration: `VisitorStats:Enabled` (Vorgabe an; aus = nichts wird gezählt, der Schreibdienst endet),
 `VisitorStats:Salt` (optional; fehlt es, wird der Schlüssel aus `Jwt:Key` abgeleitet — ein Wechsel von Salz oder
@@ -74,4 +107,5 @@ JWT-Schlüssel lässt alle Besucher als neue erscheinen), `Retention:VisitorDays
 - Admin-Filter in der URL: `?days=30&surface=leaguehub`.
 - Ländernamen über `Intl.DisplayNames` in der Oberflächensprache, Zahlen über `Intl.NumberFormat`.
 
-Tests: `tests/RookHub.Api.Tests/Accounts/VisitorOriginTests.cs`, `features/visitors/*.spec.ts`.
+Tests: `tests/RookHub.Api.Tests/Accounts/VisitorOriginTests.cs`, `…/Accounts/VisitorNetworkClassifierTests.cs`,
+`tests/RookHub.Api.Tests/Kids/IpCountryServiceTests.cs`, `features/visitors/*.spec.ts`.

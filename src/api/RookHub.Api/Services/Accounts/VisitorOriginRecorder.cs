@@ -17,7 +17,9 @@ public sealed record VisitorDayDelta(DateOnly Day, string VisitorHash, string Su
 /// <para><b>Nicht gezählt</b> werden: Anfragen ohne Besucher-Kennung, System-/Maschinen-Anfragen
 /// (<see cref="SystemCallClassifier"/>: Health, Heartbeats, Zähler-Polls, Engine-Provider), erkennbare Bots und
 /// Anfragen ohne User-Agent (<see cref="DeviceClassifier"/>), private/interne Adressen
-/// (<see cref="IpCountryService.IsPublic"/>), alles außerhalb von <c>/api</c> und abgelehnte Anfragen (Status ≥ 400).</para>
+/// (<see cref="IpCountryService.IsPublic"/>), Google-Server (Linkvorschau/Vorabladen, <see cref="VisitorNetworkClassifier"/>),
+/// alles außerhalb von <c>/api</c> und abgelehnte Anfragen (Status ≥ 400). Bekannte VPN-Netze zählen mit dem Land
+/// <see cref="VisitorNetworkClassifier.VpnCountry"/> („VPN“) statt dem Land des Servers.</para>
 ///
 /// <para><b>Deckel.</b> Die anonyme Kennung ist ein frei wählbares Feld der Anfrage. Darum legt eine Adresse je Tag
 /// höchstens <see cref="MaxNewVisitorsPerIpPerDay"/> neue Besucher an (Zähler nur im Speicher, täglich geleert), und
@@ -32,6 +34,7 @@ public sealed class VisitorOriginRecorder
     public static readonly IReadOnlyList<string> Surfaces = ["rookhub", "leaguehub", "kidhub", "clubhub", "turnier"];
 
     private readonly Func<IPAddress, string?> _countryOf;
+    private readonly Func<IPAddress, VisitorNetwork> _networkOf;
     private readonly Func<DateTime> _utcNow;
     private readonly byte[] _key;
     private readonly bool _enabled;
@@ -49,12 +52,14 @@ public sealed class VisitorOriginRecorder
         public int Hits;
     }
 
-    public VisitorOriginRecorder(IpCountryService ipCountry, IConfiguration config)
-        : this(config, ipCountry.TryCountryOf, () => DateTime.UtcNow) { }
+    public VisitorOriginRecorder(IpCountryService ipCountry, VisitorNetworkClassifier networks, IConfiguration config)
+        : this(config, ipCountry.TryCountryOf, () => DateTime.UtcNow, networks.Classify) { }
 
-    internal VisitorOriginRecorder(IConfiguration config, Func<IPAddress, string?> countryOf, Func<DateTime> utcNow)
+    internal VisitorOriginRecorder(IConfiguration config, Func<IPAddress, string?> countryOf, Func<DateTime> utcNow,
+        Func<IPAddress, VisitorNetwork>? networkOf = null)
     {
         _countryOf = countryOf;
+        _networkOf = networkOf ?? (_ => VisitorNetwork.Normal);
         _utcNow = utcNow;
         _enabled = config.GetValue("VisitorStats:Enabled", true);
         // Eigenes Salz, sonst aus dem JWT-Schlüssel abgeleitet (der ist auf jedem Server gesetzt und geheim) — so braucht
@@ -108,6 +113,8 @@ public sealed class VisitorOriginRecorder
         if (DeviceClassifier.Classify(userAgent) is DeviceClassifier.Bot or DeviceClassifier.Unknown) return false;
         if (ip.IsIPv4MappedToIPv6) ip = ip.MapToIPv4();
         if (!IpCountryService.IsPublic(ip)) return false;
+        var network = _networkOf(ip);
+        if (network == VisitorNetwork.Google) return false;
 
         var day = DateOnly.FromDateTime(_utcNow());
         var hash = Pseudonym(visitorId);
@@ -130,8 +137,10 @@ public sealed class VisitorOriginRecorder
             if (!_pending.TryGetValue((day, hash, surface), out var counter))
                 _pending[(day, hash, surface)] = counter = new Counter();
             counter.Hits++;
-            // Das Land nur nachschlagen, solange es fehlt (Liste evtl. noch nicht geladen).
-            if (counter.Country.Length == 0) counter.Country = _countryOf(ip) ?? string.Empty;
+            // VPN steht über dem Land (die Netzbetreiberliste kann nach dem ersten Aufruf des Tages geladen sein); sonst das
+            // Land nur nachschlagen, solange es fehlt (Liste evtl. noch nicht geladen).
+            if (network == VisitorNetwork.Vpn) counter.Country = VisitorNetworkClassifier.VpnCountry;
+            else if (counter.Country.Length == 0) counter.Country = _countryOf(ip) ?? string.Empty;
         }
         return true;
     }

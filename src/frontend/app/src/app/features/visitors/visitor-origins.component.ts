@@ -11,7 +11,7 @@ import { LatestRequest } from '../../shared/latest-request.util';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import {
-  MapCountry, VISITOR_DAYS, VISITOR_STEPS, VISITOR_SURFACES, VISITOR_VIEWS, VisitorCountry, VisitorOrigins,
+  MapCountry, VISITOR_DAYS, VISITOR_STEPS, VISITOR_SURFACES, VISITOR_VIEWS, VISITOR_VPN, VisitorCountry, VisitorOrigins,
   VisitorOriginsService, VisitorView, WorldMap, visitorStep,
 } from './visitor-origins.service';
 
@@ -126,8 +126,11 @@ export class VisitorOriginsComponent {
   readonly users = computed(() => this.view() === 'world'
     ? this.data()?.uniqueUsers ?? 0
     : this.countries().reduce((sum, c) => sum + c.users, 0));
-  readonly countryCount = computed(() => this.countries().length);
+  /** „VPN“ ist kein Land: zählt nicht bei „Länder“ und nicht für die Farbskala der Karte. */
+  readonly countryCount = computed(() => this.countries().filter(c => c.country !== VISITOR_VPN).length);
   private readonly maxUsers = computed(() => this.countries().reduce((max, c) => Math.max(max, c.users), 0));
+  private readonly maxMapUsers = computed(() => this.countries()
+    .reduce((max, c) => c.country === VISITOR_VPN ? max : Math.max(max, c.users), 0));
 
   /** Noch gar nichts gezählt (für diese Auswahl). */
   readonly empty = computed(() => (this.data()?.uniqueUsers ?? 0) === 0);
@@ -136,7 +139,7 @@ export class VisitorOriginsComponent {
     const map = this.map();
     if (!map) return [];
     const view = this.view();
-    const max = this.maxUsers();
+    const max = this.maxMapUsers();
     const users = new Map((this.data()?.byCountry ?? []).map(c => [c.country, c.users]));
     return map.countries.map((c: MapCountry) => {
       const dim = view !== 'world' && c.c !== view;
@@ -224,8 +227,9 @@ export class VisitorOriginsComponent {
     return this.numberFormat().format(n ?? 0);
   }
 
-  /** Ländername in der Oberflächensprache (`Intl.DisplayNames`), sonst das ISO-Kürzel. */
+  /** Ländername in der Oberflächensprache (`Intl.DisplayNames`), sonst das ISO-Kürzel; `XV` heißt „VPN“. */
   countryName(code: string): string {
+    if (code === VISITOR_VPN) return this.translate.instant('visitors.vpn');
     return safe(() => this.regionNames()?.of(code)) ?? code;
   }
 

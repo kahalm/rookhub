@@ -6587,6 +6587,7 @@
       "showTop": "Tampilkan 10 teratas saja"
     },
     "unknown": "Negara tidak diketahui",
+    "vpn": "VPN",
     "emptyNew": "Belum ada data. Penghitungan baru saja dimulai, negara pertama akan segera muncul.",
     "emptyFiltered": "Belum ada data untuk pilihan ini. Penghitungan berjalan sejak {{date}}.",
     "emptyContinent": "Belum ada yang datang dari benua ini.",

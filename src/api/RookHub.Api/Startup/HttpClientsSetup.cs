@@ -60,6 +60,7 @@ public static class HttpClientsSetup
     private static void AddModelAndSiteClients(IServiceCollection services)
     {
         services.AddHttpClient(nameof(IpCountryService));
+        services.AddHttpClient(nameof(IpAsnService));
         // Tipps + Übersetzung: eigene Hardware (TextLlm:BaseUrl, OpenAI-kompatibel — DGX Spark) vor Claude
         // (Anthropic:TextApiKey); ohne beides aus. Eigener langer Timeout: das Modell streamt minutenlang.
         services.AddHttpClient("text-llm", c => c.Timeout = TimeSpan.FromMinutes(30));

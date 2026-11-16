@@ -19,8 +19,8 @@ public class ArchitectureGuardTests
     /// kommt hierher — dann mit Eintrag in diese Liste.</summary>
     private static readonly HashSet<string> GemeinsameBausteine =
     [
-        "AnthropicJsonClient.cs", "ApiErrorResponses.cs", "BackgroundPause.cs", "BackgroundTaskQueue.cs", "ClaudeJsonClient.cs", "DbIdempotency.cs", "ExternalProcess.cs", "FenFields.cs",
-        "FenListParser.cs", "Figurines.cs", "GithubActionsService.cs", "HeartbeatService.cs", "IpBucket.cs", "IpCountryService.cs",
+        "AnthropicJsonClient.cs", "ApiErrorResponses.cs", "BackgroundPause.cs", "BackgroundTaskQueue.cs", "ClaudeJsonClient.cs", "DbIdempotency.cs", "DbIpLiteList.cs", "ExternalProcess.cs", "FenFields.cs",
+        "FenListParser.cs", "Figurines.cs", "GithubActionsService.cs", "HeartbeatService.cs", "IpAsnService.cs", "IpBucket.cs", "IpCountryService.cs",
         "LimitedReadStream.cs", "LogThrottle.cs", "OpenAiJsonClient.cs", "Paging.cs", "PeriodicWorker.cs",
         "PermissiveSan.cs", "PgnMoveTree.cs", "PgnParser.cs", "PgnTokens.cs", "PgnWriter.cs", "PieceLetters.cs",
         "QuietHours.cs", "RateLimitPartitions.cs", "RequestBodies.cs", "RetentionDelete.cs", "RetentionOptions.cs", "RateLimitRejectionHandler.cs", "RateLimitScale.cs",

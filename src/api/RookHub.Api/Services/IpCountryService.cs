@@ -1,5 +1,3 @@
-using System.Buffers.Binary;
-using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
 
@@ -12,136 +10,63 @@ namespace RookHub.Api.Services;
 /// </summary>
 public sealed class IpCountryTable
 {
-    private readonly uint[] _v4Start;
-    private readonly uint[] _v4End;
-    private readonly string[] _v4Country;
-    private readonly UInt128[] _v6Start;
-    private readonly UInt128[] _v6End;
-    private readonly string[] _v6Country;
+    private readonly IpRangeTable<string> _ranges;
 
-    private IpCountryTable(List<(uint S, uint E, string C)> v4, List<(UInt128 S, UInt128 E, string C)> v6)
-    {
-        v4.Sort((a, b) => a.S.CompareTo(b.S));
-        v6.Sort((a, b) => a.S.CompareTo(b.S));
-        _v4Start = v4.Select(x => x.S).ToArray();
-        _v4End = v4.Select(x => x.E).ToArray();
-        _v4Country = v4.Select(x => x.C).ToArray();
-        _v6Start = v6.Select(x => x.S).ToArray();
-        _v6End = v6.Select(x => x.E).ToArray();
-        _v6Country = v6.Select(x => x.C).ToArray();
-    }
+    private IpCountryTable(IpRangeTable<string> ranges) => _ranges = ranges;
 
-    public int Count => _v4Start.Length + _v6Start.Length;
+    public int Count => _ranges.Count;
 
     /// <summary>Liest die CSV. Unlesbare Zeilen fallen weg, statt den ganzen Bestand zu verwerfen.</summary>
     public static IpCountryTable Parse(TextReader reader)
     {
-        var v4 = new List<(uint, uint, string)>();
-        var v6 = new List<(UInt128, UInt128, string)>();
         var countries = new Dictionary<string, string>(StringComparer.Ordinal);
-        string? line;
-        while ((line = reader.ReadLine()) is not null)
+        return new IpCountryTable(IpRangeTable<string>.Parse(reader, (string field, out string shared) =>
         {
-            var parts = line.Split(',');
-            if (parts.Length < 3) continue;
-            if (!IPAddress.TryParse(parts[0], out var start) || !IPAddress.TryParse(parts[1], out var end)) continue;
-            var code = parts[2].Trim().ToUpperInvariant();
-            if (code.Length != 2) continue;
+            var code = field.Trim().ToUpperInvariant();
+            shared = code;
+            if (code.Length != 2) return false;
             // Zwei Buchstaben je Zeile, ~700 000 Zeilen: dieselbe Instanz je Land statt 700 000 Strings.
-            if (!countries.TryGetValue(code, out var shared)) countries[code] = shared = code;
-
-            if (start.AddressFamily == AddressFamily.InterNetwork && end.AddressFamily == AddressFamily.InterNetwork)
-                v4.Add((ToUInt32(start), ToUInt32(end), shared));
-            else if (start.AddressFamily == AddressFamily.InterNetworkV6 && end.AddressFamily == AddressFamily.InterNetworkV6)
-                v6.Add((ToUInt128(start), ToUInt128(end), shared));
-        }
-        return new IpCountryTable(v4, v6);
+            if (!countries.TryGetValue(code, out var known)) countries[code] = known = code;
+            shared = known;
+            return true;
+        }));
     }
 
     /// <summary>Land der Adresse oder <c>null</c> (unbekannt, reserviert = <c>ZZ</c>).</summary>
     public string? Lookup(IPAddress ip)
     {
-        if (ip.IsIPv4MappedToIPv6) ip = ip.MapToIPv4();
-        string? code = ip.AddressFamily switch
-        {
-            AddressFamily.InterNetwork => Find(_v4Start, _v4End, _v4Country, ToUInt32(ip)),
-            AddressFamily.InterNetworkV6 => Find(_v6Start, _v6End, _v6Country, ToUInt128(ip)),
-            _ => null,
-        };
+        var code = _ranges.TryLookup(ip, out var c) ? c : null;
         return code is null or "ZZ" ? null : code;
     }
-
-    private static string? Find<T>(T[] starts, T[] ends, string[] countries, T value) where T : IComparable<T>
-    {
-        // Letzter Bereich, der bei oder vor der Adresse beginnt — liegt sie vor seinem Ende, ist er es.
-        int lo = 0, hi = starts.Length - 1, hit = -1;
-        while (lo <= hi)
-        {
-            var mid = lo + (hi - lo) / 2;
-            if (starts[mid].CompareTo(value) <= 0) { hit = mid; lo = mid + 1; }
-            else hi = mid - 1;
-        }
-        return hit >= 0 && ends[hit].CompareTo(value) >= 0 ? countries[hit] : null;
-    }
-
-    private static uint ToUInt32(IPAddress ip) => BinaryPrimitives.ReadUInt32BigEndian(ip.GetAddressBytes());
-    private static UInt128 ToUInt128(IPAddress ip) => BinaryPrimitives.ReadUInt128BigEndian(ip.GetAddressBytes());
 }
 
 /// <summary>
 /// Land einer Besucher-IP — für die Startsprache von KidHub, wenn die Browsersprache keine der
-/// Kindersprachen ist. Alles bleibt auf dem eigenen Server: die Länderliste wird hier heruntergeladen
-/// (einmal im Monat, <c>IpCountry:SourceUrlTemplate</c>) und lokal abgefragt; keine Besucher-IP geht an einen
-/// fremden Dienst, und keine wird gespeichert.
-///
-/// <para>Geladen wird erst beim ersten Bedarf, nicht beim Start — die Integrationstests starten die API,
-/// und jeder Lauf zöge sonst 4,5 MB. Die Datei liegt im Temp-Ordner des Containers
-/// (<c>IpCountry:CachePath</c>) und gilt 35 Tage. Scheitert der Download, gibt es eine Stunde lang keine
-/// Auskunft (<c>null</c> → KidHub nimmt Deutsch), dann den nächsten Versuch. <c>IpCountry:Enabled=false</c>
-/// schaltet alles ab.</para>
+/// Kindersprachen ist, und für die Besucher-Herkunft. Alles bleibt auf dem eigenen Server: die Länderliste wird hier
+/// heruntergeladen (einmal im Monat, <c>IpCountry:SourceUrlTemplate</c>) und lokal abgefragt; keine Besucher-IP geht
+/// an einen fremden Dienst, und keine wird gespeichert. Laden, Zwischenspeichern und Fehlerbehandlung:
+/// <see cref="DbIpLiteList{TTable}"/> (Schlüssel unter <c>IpCountry:*</c>).
 /// </summary>
-public class IpCountryService
+public class IpCountryService : DbIpLiteList<IpCountryTable>
 {
     internal const string DefaultSourceUrlTemplate = "https://download.db-ip.com/free/dbip-country-lite-{0:yyyy-MM}.csv.gz";
-    internal static readonly TimeSpan MaxAge = TimeSpan.FromDays(35);
-    internal static readonly TimeSpan RetryAfterFailure = TimeSpan.FromHours(1);
-
-    private readonly IHttpClientFactory _httpFactory;
-    private readonly ILogger<IpCountryService> _logger;
-    private readonly bool _enabled;
-    private readonly string _sourceUrlTemplate;
-    private readonly string _cachePath;
-    private readonly Func<DateTime> _utcNow;
-    private readonly TimeSpan _downloadTimeout;
-    private readonly TimeSpan _callerWait;
-    private readonly object _refreshLock = new();
-
-    private volatile IpCountryTable? _table;
-    private DateTime _loadedAt;
-    private DateTime? _failedAt;
-    /// <summary>Die laufende Aktualisierung (höchstens eine) — läuft unabhängig vom Aufrufer zu Ende.</summary>
-    private Task? _refresh;
 
     public IpCountryService(IHttpClientFactory httpFactory, IConfiguration config, ILogger<IpCountryService> logger)
         : this(httpFactory, config, logger, () => DateTime.UtcNow) { }
 
     internal IpCountryService(IHttpClientFactory httpFactory, IConfiguration config, ILogger<IpCountryService> logger,
         Func<DateTime> utcNow)
-    {
-        _httpFactory = httpFactory;
-        _logger = logger;
-        _utcNow = utcNow;
-        _enabled = config.GetValue("IpCountry:Enabled", true);
-        _sourceUrlTemplate = config["IpCountry:SourceUrlTemplate"] ?? DefaultSourceUrlTemplate;
-        _cachePath = config["IpCountry:CachePath"] ?? Path.Combine(Path.GetTempPath(), "dbip-country-lite.csv.gz");
-        _downloadTimeout = TimeSpan.FromSeconds(Math.Clamp(config.GetValue("IpCountry:DownloadTimeoutSeconds", 60.0), 0.01, 600));
-        _callerWait = TimeSpan.FromSeconds(Math.Clamp(config.GetValue("IpCountry:CallerWaitSeconds", 2.0), 0, 30));
-    }
+        : base(httpFactory, config, logger, utcNow, new DbIpLiteListOptions(
+            Section: "IpCountry", ClientName: nameof(IpCountryService), DefaultSourceUrlTemplate: DefaultSourceUrlTemplate,
+            DefaultCacheFile: "dbip-country-lite.csv.gz", Label: "IP-Länderliste")) { }
+
+    protected override IpCountryTable Parse(TextReader reader) => IpCountryTable.Parse(reader);
+    protected override int CountOf(IpCountryTable table) => table.Count;
 
     /// <summary>ISO-Land der Adresse, oder <c>null</c> (private/lokale Adresse, unbekannt, Liste nicht da).</summary>
     public async Task<string?> CountryOfAsync(IPAddress? ip, CancellationToken ct = default)
     {
-        if (!_enabled || ip is null || !IsPublic(ip)) return null;
+        if (!Enabled || ip is null || !IsPublic(ip)) return null;
         var table = await EnsureTableAsync(ct);
         return table?.Lookup(ip);
     }
@@ -153,13 +78,8 @@ public class IpCountryService
     /// </summary>
     public string? TryCountryOf(IPAddress? ip)
     {
-        if (!_enabled || ip is null || !IsPublic(ip)) return null;
-        var now = _utcNow();
-        var table = _table;
-        var stale = table is null || now - _loadedAt >= MaxAge;
-        if (stale && !(_failedAt is DateTime failed && now - failed < RetryAfterFailure))
-            lock (_refreshLock) _refresh ??= Task.Run(() => RefreshAsync(now));
-        return table?.Lookup(ip);
+        if (!Enabled || ip is null || !IsPublic(ip)) return null;
+        return CurrentTable()?.Lookup(ip);
     }
 
     /// <summary>Nur öffentliche Adressen haben ein Land — LAN, Loopback, CGNAT und Link-Local nicht.</summary>
@@ -179,101 +99,5 @@ public class IpCountryService
         if (ip.AddressFamily == AddressFamily.InterNetworkV6)
             return !(ip.IsIPv6LinkLocal || ip.IsIPv6SiteLocal || ip.IsIPv6UniqueLocal || ip.Equals(IPAddress.IPv6None));
         return false;
-    }
-
-    /// <summary>
-    /// Die Liste, wenn sie da ist. Fehlt sie oder ist sie alt, startet EINE Aktualisierung im Hintergrund — mit eigenem
-    /// Zeitlimit (<c>IpCountry:DownloadTimeoutSeconds</c>, 60 s), nicht mit dem Token des Aufrufers (N6-006: KidHub bricht
-    /// nach 4 s ab, der Download fing so jedes Mal von vorn an). Der Aufrufer wartet höchstens
-    /// <c>IpCountry:CallerWaitSeconds</c> (2 s) und antwortet sonst ohne Land; sein Abbruch beendet nur sein Warten.
-    /// </summary>
-    private async Task<IpCountryTable?> EnsureTableAsync(CancellationToken ct)
-    {
-        var now = _utcNow();
-        if (_table is not null && now - _loadedAt < MaxAge) return _table;
-        if (_failedAt is DateTime failed && now - failed < RetryAfterFailure) return _table;
-
-        Task refresh;
-        lock (_refreshLock) refresh = _refresh ??= Task.Run(() => RefreshAsync(now));
-        try { await refresh.WaitAsync(_callerWait, ct); }
-        catch (TimeoutException) { /* läuft im Hintergrund weiter — diesmal ohne Land */ }
-        return _table;
-    }
-
-    private async Task RefreshAsync(DateTime now)
-    {
-        try
-        {
-            var fresh = File.Exists(_cachePath) && now - File.GetLastWriteTimeUtc(_cachePath) < MaxAge;
-            var table = fresh ? Load(_cachePath) : await DownloadAsync(now);
-            if (table is null)
-            {
-                _failedAt = now;
-                // Eine alte Datei ist besser als keine — Länder wechseln ihre Adressen selten.
-                if (_table is null && File.Exists(_cachePath)) _table = Load(_cachePath);
-                return;
-            }
-
-            _table = table;
-            _loadedAt = now;
-            _failedAt = null;
-            _logger.LogInformation("IP-Länderliste geladen: {Count} Bereiche.", table.Count);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "IP-Länderliste nicht verfügbar.");
-            _failedAt = now;
-        }
-        finally
-        {
-            lock (_refreshLock) _refresh = null;
-        }
-    }
-
-    /// <summary>Diesen Monat, sonst den vorigen (am Monatsersten steht die neue Datei eventuell noch nicht da). Die Datei
-    /// wird erst übernommen, wenn sie sich als gz-Liste mit mindestens einem Bereich lesen lässt — sonst galt eine
-    /// Fehlerseite mit 200 als „frisch“ und blockierte 35 Tage lang jeden neuen Download (N6-006). Das eigene
-    /// Zeitlimit zählt als Fehlschlag.</summary>
-    private async Task<IpCountryTable?> DownloadAsync(DateTime now)
-    {
-        var http = _httpFactory.CreateClient(nameof(IpCountryService));
-        http.Timeout = Timeout.InfiniteTimeSpan;   // es gilt das eigene Zeitlimit unten
-        using var limit = new CancellationTokenSource(_downloadTimeout);
-        foreach (var month in new[] { now, now.AddMonths(-1) })
-        {
-            var url = string.Format(System.Globalization.CultureInfo.InvariantCulture, _sourceUrlTemplate, month);
-            var temp = _cachePath + ".part";
-            try
-            {
-                using var response = await http.GetAsync(url, limit.Token);
-                if (!response.IsSuccessStatusCode) continue;
-                await using (var file = File.Create(temp))
-                    await response.Content.CopyToAsync(file, limit.Token);
-                var table = Load(temp);
-                if (table.Count == 0) throw new InvalidDataException("Länderliste ohne einen einzigen Bereich.");
-                File.Move(temp, _cachePath, overwrite: true);
-                return table;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "IP-Länderliste: Download von {Url} fehlgeschlagen.", url);
-                TryDelete(temp);
-            }
-        }
-        return null;
-    }
-
-    private static void TryDelete(string path)
-    {
-        try { if (File.Exists(path)) File.Delete(path); }
-        catch (IOException) { /* nächster Versuch überschreibt sie */ }
-    }
-
-    private static IpCountryTable Load(string path)
-    {
-        using var file = File.OpenRead(path);
-        using var gzip = new GZipStream(file, CompressionMode.Decompress);
-        using var reader = new StreamReader(gzip);
-        return IpCountryTable.Parse(reader);
     }
 }

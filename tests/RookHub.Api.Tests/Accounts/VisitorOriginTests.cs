@@ -87,6 +87,67 @@ public class VisitorOriginTests : IDisposable
         Assert.Empty(r.Drain());
     }
 
+    // ── Google und VPN (VisitorNetworkClassifier) ──────────────────────────────────────────────────
+
+    private static readonly IPAddress GooglePreview = IPAddress.Parse("66.249.83.17");
+    private static readonly IPAddress NordVpn = IPAddress.Parse("187.15.158.9");
+    private const string AndroidChrome = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36";
+
+    private VisitorOriginRecorder NetworkRecorder(Func<IPAddress, VisitorNetwork>? networkOf = null) =>
+        new(Config(("Jwt:Key", "test-key-test-key-test-key-test-key")),
+            ip => ip.Equals(Vienna) ? "AT" : ip.Equals(NordVpn) ? "BR" : ip.Equals(GooglePreview) ? "US" : null, () => _now,
+            networkOf ?? new VisitorNetworkClassifier(VisitorNetworkList.Embedded.Value, _ => null).Classify);
+
+    [Fact]
+    public void Record_GoogleServers_AreNotCounted_EvenWithABrowserUserAgent()
+    {
+        var r = NetworkRecorder();
+        Assert.True(r.Record("u:anna", Vienna, "/api/league/share/abc", AndroidChrome, "leaguehub.example.org"));
+        // Wenige Sekunden später lädt Google den geteilten Link nach (Linkvorschau/Vorabladen).
+        Assert.False(r.Record("u:anna", GooglePreview, "/api/league/share/abc", AndroidChrome, "leaguehub.example.org"));
+        Assert.False(r.Record("a:0123456789abcdef", GooglePreview, "/api/league/share/abc", AndroidChrome, "leaguehub.example.org"));
+
+        var only = Assert.Single(r.Drain());
+        Assert.Equal(("leaguehub", "AT", 1), (only.Surface, only.Country, only.Hits));
+    }
+
+    [Fact]
+    public void Record_VpnExit_CountsAsXv_NotAsTheServerCountry()
+    {
+        var r = NetworkRecorder();
+        Assert.True(r.Record("u:berta", NordVpn, "/api/league/clubs", Browser, "leaguehub.example.org"));
+        var only = Assert.Single(r.Drain());
+        Assert.Equal(VisitorNetworkClassifier.VpnCountry, only.Country);
+        Assert.Equal("XV", only.Country);
+    }
+
+    [Fact]
+    public void Record_VpnOverridesACountryCountedEarlierTheSameDay()
+    {
+        // Zuerst ohne Netzbetreiberliste (zählt als BR), dann ist sie geladen — der Tag des Besuchers wird „VPN“.
+        var known = false;
+        var r = NetworkRecorder(_ => known ? VisitorNetwork.Vpn : VisitorNetwork.Normal);
+        r.Record("u:berta", NordVpn, "/api/league/clubs", Browser, "leaguehub.example.org");
+        known = true;
+        r.Record("u:berta", NordVpn, "/api/league/clubs", Browser, "leaguehub.example.org");
+        var only = Assert.Single(r.Drain());
+        Assert.Equal(("XV", 2), (only.Country, only.Hits));
+    }
+
+    [Fact]
+    public async Task Flush_VpnOverridesAStoredCountry()
+    {
+        var service = new VisitorOriginService(_db);
+        await service.FlushAsync([new VisitorDayDelta(Day(15), "cccc", "leaguehub", "BR", 1)]);
+        await service.FlushAsync([
+            new VisitorDayDelta(Day(15), "cccc", "leaguehub", "XV", 1),
+            new VisitorDayDelta(Day(15), "dddd", "leaguehub", "BR", 1),
+            new VisitorDayDelta(Day(15), "dddd", "leaguehub", "XV", 1),
+        ]);
+        var rows = await _db.VisitorDays.OrderBy(v => v.VisitorHash).ToListAsync();
+        Assert.Equal(new[] { ("cccc", "XV", 2), ("dddd", "XV", 2) }, rows.Select(v => (v.VisitorHash, v.Country, v.Hits)));
+    }
+
     [Fact]
     public void Record_Disabled_CountsNothing()
     {
@@ -234,6 +295,21 @@ public class VisitorOriginTests : IDisposable
         Assert.Null(dto.Since);                    // nichts Zeitbezogenes für normale Konten
         Assert.Equal(new[] { ("AT", 2), ("CH", 1), ("DE", 1), ("US", 1) }, dto.ByCountry.Select(c => (c.Country, c.Users)));
         Assert.All(dto.ByCountry, c => Assert.Null(c.Hits));
+    }
+
+    [Fact]
+    public async Task Get_Vpn_IsListedButNotCountedAsCountry()
+    {
+        await SeedAsync();
+        Row(15, "fritz", "XV", hits: 2, surface: "leaguehub");
+        Row(15, "gina", "XV", hits: 1, surface: "leaguehub");
+        Row(15, "hans", "XV", hits: 1, surface: "leaguehub");
+        await _db.SaveChangesAsync();
+        var dto = await new VisitorOriginService(_db).GetAsync(null, null, withHits: false, Day(15));
+
+        Assert.Equal(8, dto.UniqueUsers);
+        Assert.Equal(4, dto.Countries);            // XV ist kein Land
+        Assert.Equal(("XV", 3), (dto.ByCountry[0].Country, dto.ByCountry[0].Users));
     }
 
     [Fact]

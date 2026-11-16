@@ -6851,6 +6851,7 @@
       "showTop": "Nur die ersten 10 zeigen"
     },
     "unknown": "Unbekanntes Land",
+    "vpn": "VPN",
     "emptyNew": "Noch keine Daten. Die Zählung hat gerade erst begonnen, die ersten Länder erscheinen bald.",
     "emptyFiltered": "Für diese Auswahl gibt es noch keine Daten. Die Zählung läuft seit {{date}}.",
     "emptyContinent": "Aus diesem Erdteil war noch niemand da.",
