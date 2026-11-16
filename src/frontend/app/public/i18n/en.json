@@ -362,7 +362,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Rules of thumb",
     "visitors": "RookHub worldwide",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Coaching sessions"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2805,7 +2806,8 @@
         "ebooks": "E-book library",
         "woodpecker": "Woodpecker training",
         "maxims": "Rules of thumb (chess maxims)",
-        "visitors": "RookHub worldwide"
+        "visitors": "RookHub worldwide",
+        "training-videos": "Coaching sessions"
       }
     },
     "messages": {
@@ -4306,6 +4308,13 @@
         "t": "RookHub worldwide",
         "p": [
           "Under ☰ → Community → RookHub worldwide a world map shows which countries RookHub is used from. Tap a country or pick a continent to zoom in; only countries are counted, never individual people."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Coaching sessions",
+        "p": [
+          "If your account has coaching sessions enabled, “Coaching sessions” in the ☰ menu (Training) lists the videos of your sessions with your coach: date, length, a short summary and the games discussed. “Watch” opens the video next to the board — the list of discussed positions follows the video, and a click on a position jumps there.",
+          "Search by word or FEN, or set up a position on the board; from the analysis board the ⋮ menu offers “Discussed in a session?”. “Replay” asks you for the moves from the session on the board (with hint and solution) and afterwards plays just the matching explanation; the “Question set” collects the questions of all sessions. On your own games the coach’s comments appear next to the moves."
         ]
       }
     }
@@ -6870,6 +6879,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Tournament site"
+    }
+  },
+  "trainingVideos": {
+    "title": "Coaching sessions",
+    "intro": "Videos of your coaching sessions with the positions discussed — watch, search and replay them.",
+    "empty": "No coaching sessions yet.",
+    "questionSet": "Question set",
+    "watch": "Watch",
+    "replay": "Replay",
+    "positions": "{{count}} positions",
+    "positionsOne": "1 position",
+    "duration": "Length {{time}}",
+    "noVideoShort": "no video",
+    "owner": "Account: {{name}}",
+    "unknownPlayer": "Unknown",
+    "flip": "Flip board",
+    "toList": "To the overview",
+    "trainerComment": "Coach’s comment",
+    "quote": "“{{text}}”",
+    "menuDiscussed": "Discussed in a session?",
+    "kind": {
+      "own": "own game",
+      "lesson": "model game",
+      "exercise": "exercise"
+    },
+    "tags": {
+      "question": "question",
+      "key": "key moment",
+      "mistake": "mistake",
+      "plan": "plan",
+      "opening": "opening",
+      "endgame": "endgame",
+      "tactic": "tactics"
+    },
+    "moveKind": {
+      "analysis": "side line"
+    },
+    "search": {
+      "title": "Search the sessions",
+      "label": "Word or FEN",
+      "setup": "Set up board",
+      "setupTitle": "Set up a position",
+      "tooShort": "At least three letters.",
+      "none": "No matches.",
+      "truncated": "There are more matches — showing the first {{count}}.",
+      "position": "Searched position",
+      "otherSide": "other side to move",
+      "note": "note",
+      "drillFromHere": "Replay from here",
+      "failed": "The search failed."
+    },
+    "lesson": {
+      "title": "Session of {{date}}",
+      "notFound": "This coaching session does not exist.",
+      "noVideo": "There is no video for this session — the positions still work.",
+      "videoFailed": "The video could not be loaded.",
+      "segments": "Positions discussed",
+      "games": "Games",
+      "openGame": "Open game",
+      "openAnalysis": "Open analysis",
+      "openBoard": "Open in analysis board",
+      "noPosition": "no position"
+    },
+    "drill": {
+      "onlyWrong": "Repeat wrong ones only",
+      "noWrong": "No positions answered wrongly.",
+      "empty": "There are no positions to replay here.",
+      "progress": "Position {{n}} / {{total}}",
+      "lessonOf": "Session of {{date}}",
+      "findMove": "Which move was played in the session?",
+      "hint": "Hint",
+      "hintText": "Hint: the piece on {{square}} moves.",
+      "reveal": "Show solution",
+      "skip": "Skip",
+      "wrong": "{{move}} is not the move from the session ({{n}}/{{max}}) — try again.",
+      "wrongFinal": "Three wrong tries — the move was {{move}}.",
+      "solved": "Correct: {{move}}",
+      "solvedAfter": "Correct: {{move}} · wrong tries: {{count}}",
+      "revealed": "Solution: {{move}}",
+      "skipped": "Skipped — the move was {{move}}.",
+      "variations": "Variations",
+      "explanation": "Explanation",
+      "answerLine": "Line",
+      "listen": "Listen to the explanation",
+      "stop": "Stop",
+      "audioOnly": "audio only",
+      "clipFailed": "The clip could not be played.",
+      "saveFailed": "Result not saved.",
+      "done": "Done!",
+      "countSolved": "{{count}} correct",
+      "countWrong": "{{count}} wrong",
+      "countSkipped": "{{count}} skipped",
+      "repeatWrong": "Repeat wrong ones",
+      "restart": "Start over",
+      "toLesson": "To the session",
+      "toGame": "To the game"
+    },
+    "comments": {
+      "title": "Coach’s comment · {{date}}",
+      "movesLine": "Coach’s comments on",
+      "start": "Starting position",
+      "inVideo": "▶ in the video from {{time}}",
+      "sideLine": "Side line from the session"
     }
   }
 }

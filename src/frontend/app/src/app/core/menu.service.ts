@@ -22,7 +22,8 @@ export class MenuService {
 
   constructor(private http: HttpClient, private auth: AuthService) {
     // Bei jedem Auth-Wechsel (inkl. Start: currentUser$ ist BehaviorSubject) neu laden.
-    this.auth.currentUser$.pipe(switchMap(() => this.fetch())).subscribe(set => this.visibleSubject.next(set));
+    // `?.`: Specs mit einem schlanken AuthService-Ersatz (ohne Strom) bauen den Dienst trotzdem.
+    this.auth.currentUser$?.pipe(switchMap(() => this.fetch())).subscribe(set => this.visibleSubject.next(set));
   }
 
   private fetch(): Observable<Set<string>> {

@@ -38,6 +38,8 @@ public static class MenuRegistry
         new MenuItemDef("weekly", MenuVisibilityLevel.Registered),
         new MenuItemDef("courses", MenuVisibilityLevel.Registered),
         new MenuItemDef("woodpecker", MenuVisibilityLevel.Registered),
+        // Trainerstunden (Trainingsvideos): privat je Konto — Vorgabe nur Admins; die API zeigt ohnehin nur eigene Stunden.
+        new MenuItemDef("training-videos", MenuVisibilityLevel.Admin),
         new MenuItemDef("catalog", MenuVisibilityLevel.Registered),
         new MenuItemDef("leaderboards", MenuVisibilityLevel.Registered),
         // Besucher-Herkunft (Weltkarte nach Ländern): für Angemeldete, nur Länderzahlen; Filter sieht allein der Admin.

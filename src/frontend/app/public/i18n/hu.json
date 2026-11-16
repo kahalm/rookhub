@@ -145,7 +145,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Szabályok",
     "visitors": "RookHub világszerte",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Edzői órák"
   },
   "app": {
     "changelogTitle": "Változásnapló",
@@ -2354,7 +2355,8 @@
         "ebooks": "E-könyvtár",
         "woodpecker": "Woodpecker-edzés",
         "maxims": "Szabályok (sakkmaximák)",
-        "visitors": "RookHub világszerte"
+        "visitors": "RookHub világszerte",
+        "training-videos": "Edzői órák"
       }
     },
     "messages": {
@@ -5156,6 +5158,13 @@
         "p": [
           "A ☰ → Közösség → RookHub világszerte alatt világtérkép mutatja, mely országokból használják a RookHubot. Egy országra koppintva vagy kontinenst választva a részlet nagyobb lesz; csak országokat számolunk, egyes személyeket soha."
         ]
+      },
+      "trainingVideos": {
+        "t": "Edzői órák",
+        "p": [
+          "Ha a fiókodban engedélyezve vannak az edzői órák, a ☰ menü (Edzés) „Edzői órák” pontja felsorolja az edződdel tartott órák videóit: dátum, hossz, rövid összefoglaló és a megbeszélt játszmák. A „Megnézés” a tábla mellett nyitja meg a videót — a megbeszélt állások listája követi a videót, egy állásra kattintva oda ugrik.",
+          "Kereshetsz szóra vagy FEN-re, vagy felállíthatsz egy állást a táblán; az elemzőtáblán a ⋮ menüben ott a „Szóba került az edzésen?”. Az „Újrajátszás” a táblán kérdezi ki az óra lépéseit (tippel és megoldással), utána csak a hozzá tartozó magyarázatot játssza le; a „Kérdéssor” az összes óra kérdéseit gyűjti. A saját játszmáidnál a lépések mellett ott vannak az edző megjegyzései."
+        ]
       }
     },
     "title": "Súgó és útmutató",
@@ -6870,6 +6879,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Versenyoldal"
+    }
+  },
+  "trainingVideos": {
+    "title": "Edzői órák",
+    "intro": "Az edzői óráid videói a megbeszélt állásokkal — nézd meg, keress bennük és játszd újra őket.",
+    "empty": "Még nincsenek edzői órák.",
+    "questionSet": "Kérdéssor",
+    "watch": "Megnézés",
+    "replay": "Újrajátszás",
+    "positions": "{{count}} állás",
+    "positionsOne": "1 állás",
+    "duration": "Hossz: {{time}}",
+    "noVideoShort": "nincs videó",
+    "owner": "Fiók: {{name}}",
+    "unknownPlayer": "Ismeretlen",
+    "flip": "Tábla forgatása",
+    "toList": "Vissza az áttekintéshez",
+    "trainerComment": "Edzői megjegyzés",
+    "quote": "„{{text}}”",
+    "menuDiscussed": "Szóba került az edzésen?",
+    "kind": {
+      "own": "saját játszma",
+      "lesson": "mintajátszma",
+      "exercise": "gyakorlat"
+    },
+    "tags": {
+      "question": "kérdés",
+      "key": "kulcspillanat",
+      "mistake": "hiba",
+      "plan": "terv",
+      "opening": "megnyitás",
+      "endgame": "végjáték",
+      "tactic": "taktika"
+    },
+    "moveKind": {
+      "analysis": "mellékváltozat"
+    },
+    "search": {
+      "title": "Keresés az órákban",
+      "label": "Szó vagy FEN",
+      "setup": "Tábla felállítása",
+      "setupTitle": "Állás felállítása",
+      "tooShort": "Legalább három betű.",
+      "none": "Nincs találat.",
+      "truncated": "Több találat van — az első {{count}} látható.",
+      "position": "Keresett állás",
+      "otherSide": "a másik fél lép",
+      "note": "jegyzet",
+      "drillFromHere": "Újrajátszás innen",
+      "failed": "A keresés nem sikerült."
+    },
+    "lesson": {
+      "title": "Edzői óra: {{date}}",
+      "notFound": "Ez az edzői óra nem létezik.",
+      "noVideo": "Ehhez az órához nincs videó — az állások így is működnek.",
+      "videoFailed": "A videót nem sikerült betölteni.",
+      "segments": "Megbeszélt állások",
+      "games": "Játszmák",
+      "openGame": "Játszma megnyitása",
+      "openAnalysis": "Elemzés megnyitása",
+      "openBoard": "Megnyitás az elemzőtáblán",
+      "noPosition": "nincs állás"
+    },
+    "drill": {
+      "onlyWrong": "Csak a hibásak ismétlése",
+      "noWrong": "Nincs hibásan megoldott állás.",
+      "empty": "Itt nincs újrajátszható állás.",
+      "progress": "{{n}}. / {{total}} állás",
+      "lessonOf": "Óra: {{date}}",
+      "findMove": "Melyik lépés hangzott el az órán?",
+      "hint": "Tipp",
+      "hintText": "Tipp: a(z) {{square}} mezőn álló bábu lép.",
+      "reveal": "Megoldás mutatása",
+      "skip": "Kihagyás",
+      "wrong": "{{move}} nem az óra lépése ({{n}}/{{max}}) — próbáld újra.",
+      "wrongFinal": "Három hibás próbálkozás — a lépés: {{move}}.",
+      "solved": "Helyes: {{move}}",
+      "solvedAfter": "Helyes: {{move}} · hibás próbálkozások: {{count}}",
+      "revealed": "Megoldás: {{move}}",
+      "skipped": "Kihagyva — a lépés: {{move}}.",
+      "variations": "Változatok",
+      "explanation": "Magyarázat",
+      "answerLine": "Megoldás menete",
+      "listen": "Magyarázat meghallgatása",
+      "stop": "Leállítás",
+      "audioOnly": "csak hang",
+      "clipFailed": "A részletet nem sikerült lejátszani.",
+      "saveFailed": "Az eredmény nincs elmentve.",
+      "done": "Kész!",
+      "countSolved": "{{count}} helyes",
+      "countWrong": "{{count}} hibás",
+      "countSkipped": "{{count}} kihagyva",
+      "repeatWrong": "Hibásak ismétlése",
+      "restart": "Elölről",
+      "toLesson": "Vissza az órához",
+      "toGame": "A játszmához"
+    },
+    "comments": {
+      "title": "Edzői megjegyzés · {{date}}",
+      "movesLine": "Edzői megjegyzések ezekhez:",
+      "start": "Kiinduló állás",
+      "inVideo": "▶ a videóban {{time}}-tól",
+      "sideLine": "Mellékváltozat az óráról"
     }
   }
 }

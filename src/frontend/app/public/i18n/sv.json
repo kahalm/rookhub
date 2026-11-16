@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Tumregler",
     "visitors": "RookHub i världen",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Tränarlektioner"
   },
   "app": {
     "changelogTitle": "Ändringslogg",
@@ -2776,7 +2777,8 @@
         "ebooks": "E-boksbibliotek",
         "woodpecker": "Woodpecker-träning",
         "maxims": "Tumregler (schackmaximer)",
-        "visitors": "RookHub i världen"
+        "visitors": "RookHub i världen",
+        "training-videos": "Tränarlektioner"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "RookHub i världen",
         "p": [
           "Under ☰ → Community → RookHub i världen visar en världskarta vilka länder RookHub används från. Tryck på ett land eller välj en världsdel för att zooma in; endast länder räknas, aldrig enskilda personer."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Tränarlektioner",
+        "p": [
+          "Om tränarlektioner är aktiverade för ditt konto visar ”Tränarlektioner” i ☰-menyn (Träning) videorna från dina lektioner: datum, längd, en kort sammanfattning och de genomgångna partierna. ”Titta” öppnar videon bredvid brädet; listan med ställningar följer videon.",
+          "Du kan söka på ord eller FEN eller ställa upp en ställning; på analysbrädet erbjuder ⋮-menyn ”Genomgånget på lektionen?”. ”Spela om” frågar efter dragen från lektionen på brädet och spelar sedan bara den tillhörande förklaringen; ”Frågeuppsättning” samlar frågorna från alla lektioner."
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Turneringssidan"
+    }
+  },
+  "trainingVideos": {
+    "title": "Tränarlektioner",
+    "intro": "Videor från dina lektioner med tränaren och de genomgångna ställningarna — titta, sök och spela om.",
+    "empty": "Inga tränarlektioner än.",
+    "questionSet": "Frågeuppsättning",
+    "watch": "Titta",
+    "replay": "Spela om",
+    "positions": "{{count}} ställningar",
+    "positionsOne": "1 ställning",
+    "duration": "Längd {{time}}",
+    "noVideoShort": "ingen video",
+    "owner": "Konto: {{name}}",
+    "unknownPlayer": "Okänd",
+    "flip": "Vänd brädet",
+    "toList": "Till översikten",
+    "trainerComment": "Tränarens kommentar",
+    "quote": "”{{text}}”",
+    "menuDiscussed": "Genomgånget på lektionen?",
+    "kind": {
+      "own": "eget parti",
+      "lesson": "mönsterparti",
+      "exercise": "övning"
+    },
+    "tags": {
+      "question": "fråga",
+      "key": "nyckelögonblick",
+      "mistake": "misstag",
+      "plan": "plan",
+      "opening": "öppning",
+      "endgame": "slutspel",
+      "tactic": "taktik"
+    },
+    "moveKind": {
+      "analysis": "sidovariant"
+    },
+    "search": {
+      "title": "Sök i lektionerna",
+      "label": "Ord eller FEN",
+      "setup": "Ställ upp brädet",
+      "setupTitle": "Ställ upp en ställning",
+      "tooShort": "Minst tre bokstäver.",
+      "none": "Inga träffar.",
+      "truncated": "Det finns fler träffar — de första {{count}} visas.",
+      "position": "Sökt ställning",
+      "otherSide": "andra sidan vid draget",
+      "note": "anteckning",
+      "drillFromHere": "Spela om härifrån",
+      "failed": "Sökningen misslyckades."
+    },
+    "lesson": {
+      "title": "Lektion {{date}}",
+      "notFound": "Den här lektionen finns inte.",
+      "noVideo": "Den här lektionen har ingen video — ställningarna fungerar ändå.",
+      "videoFailed": "Videon kunde inte laddas.",
+      "segments": "Genomgångna ställningar",
+      "games": "Partier",
+      "openGame": "Öppna partiet",
+      "openAnalysis": "Öppna analysen",
+      "openBoard": "Öppna på analysbrädet",
+      "noPosition": "ingen ställning"
+    },
+    "drill": {
+      "onlyWrong": "Upprepa bara fel",
+      "noWrong": "Inga felaktigt lösta ställningar.",
+      "empty": "Här finns inga ställningar att spela om.",
+      "progress": "Ställning {{n}} / {{total}}",
+      "lessonOf": "Lektion {{date}}",
+      "findMove": "Vilket drag spelades på lektionen?",
+      "hint": "Ledtråd",
+      "hintText": "Ledtråd: pjäsen på {{square}} drar.",
+      "reveal": "Visa lösningen",
+      "skip": "Hoppa över",
+      "wrong": "{{move}} är inte draget från lektionen ({{n}}/{{max}}) — försök igen.",
+      "wrongFinal": "Tre felaktiga försök — draget var {{move}}.",
+      "solved": "Rätt: {{move}}",
+      "solvedAfter": "Rätt: {{move}} · felaktiga försök: {{count}}",
+      "revealed": "Lösning: {{move}}",
+      "skipped": "Överhoppad — draget var {{move}}.",
+      "variations": "Varianter",
+      "explanation": "Förklaring",
+      "answerLine": "Linje",
+      "listen": "Lyssna på förklaringen",
+      "stop": "Stoppa",
+      "audioOnly": "bara ljud",
+      "clipFailed": "Klippet kunde inte spelas upp.",
+      "saveFailed": "Resultatet sparades inte.",
+      "done": "Klart!",
+      "countSolved": "{{count}} rätt",
+      "countWrong": "{{count}} fel",
+      "countSkipped": "{{count}} överhoppade",
+      "repeatWrong": "Upprepa fel",
+      "restart": "Börja om",
+      "toLesson": "Till lektionen",
+      "toGame": "Till partiet"
+    },
+    "comments": {
+      "title": "Tränarens kommentar · {{date}}",
+      "movesLine": "Tränarkommentarer till",
+      "start": "Utgångsställning",
+      "inVideo": "▶ i videon från {{time}}",
+      "sideLine": "Sidovariant från lektionen"
     }
   }
 }

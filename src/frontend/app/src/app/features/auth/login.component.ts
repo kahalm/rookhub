@@ -29,7 +29,7 @@ const AREA_KEYS: Readonly<Record<string, string>> = {
   games: 'nav.games', reconstruct: 'nav.reconstruct', remembered: 'nav.remembered', stats: 'nav.stats',
   leaderboards: 'nav.leaderboards', visitors: 'nav.visitors', 'training-goals': 'nav.trainingGoals', catalog: 'nav.catalog',
   chessable: 'nav.chessable', profile: 'nav.profile', admin: 'nav.admin', courses: 'nav.courses',
-  tournaments: 'nav.tournaments',
+  tournaments: 'nav.tournaments', 'training-videos': 'nav.trainingVideos',
 };
 
 /** i18n-Schlüssel des Bereichs, in den die Anmeldung zurückführt — `null`, wenn es keinen Menünamen dafür gibt. */

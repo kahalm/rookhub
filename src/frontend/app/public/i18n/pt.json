@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Regras práticas",
     "visitors": "RookHub no mundo",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Aulas com o treinador"
   },
   "app": {
     "changelogTitle": "Registo de alterações",
@@ -2776,7 +2777,8 @@
         "ebooks": "Biblioteca de e-books",
         "woodpecker": "Treino Woodpecker",
         "maxims": "Regras práticas (máximas de xadrez)",
-        "visitors": "RookHub no mundo"
+        "visitors": "RookHub no mundo",
+        "training-videos": "Aulas com o treinador"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "RookHub no mundo",
         "p": [
           "Em ☰ → Comunidade → RookHub no mundo, um mapa do mundo mostra de que países o RookHub é utilizado. Toque num país ou escolha um continente para ampliar a secção; só se contam países, nunca pessoas individuais."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Aulas com o treinador",
+        "p": [
+          "Se a tua conta tiver as aulas ativadas, «Aulas com o treinador» no menu ☰ (Treino) mostra os vídeos das tuas aulas: data, duração, um breve resumo e as partidas discutidas. «Ver» abre o vídeo ao lado do tabuleiro; a lista de posições acompanha o vídeo.",
+          "Podes pesquisar por palavra ou FEN, ou montar uma posição; no tabuleiro de análise o menu ⋮ oferece «Visto na aula?». «Repetir» pede-te os lances da aula no tabuleiro e depois reproduz só a explicação correspondente; o «Conjunto de perguntas» junta as perguntas de todas as aulas."
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Site de torneios"
+    }
+  },
+  "trainingVideos": {
+    "title": "Aulas com o treinador",
+    "intro": "Vídeos das tuas aulas com o treinador e as posições discutidas — vê, pesquisa e repete.",
+    "empty": "Ainda não há aulas.",
+    "questionSet": "Conjunto de perguntas",
+    "watch": "Ver",
+    "replay": "Repetir",
+    "positions": "{{count}} posições",
+    "positionsOne": "1 posição",
+    "duration": "Duração {{time}}",
+    "noVideoShort": "sem vídeo",
+    "owner": "Conta: {{name}}",
+    "unknownPlayer": "Desconhecido",
+    "flip": "Virar tabuleiro",
+    "toList": "Para a visão geral",
+    "trainerComment": "Comentário do treinador",
+    "quote": "“{{text}}”",
+    "menuDiscussed": "Visto na aula?",
+    "kind": {
+      "own": "partida própria",
+      "lesson": "partida modelo",
+      "exercise": "exercício"
+    },
+    "tags": {
+      "question": "pergunta",
+      "key": "momento-chave",
+      "mistake": "erro",
+      "plan": "plano",
+      "opening": "abertura",
+      "endgame": "final",
+      "tactic": "tática"
+    },
+    "moveKind": {
+      "analysis": "variante"
+    },
+    "search": {
+      "title": "Pesquisar nas aulas",
+      "label": "Palavra ou FEN",
+      "setup": "Montar tabuleiro",
+      "setupTitle": "Montar uma posição",
+      "tooShort": "Pelo menos três letras.",
+      "none": "Sem resultados.",
+      "truncated": "Há mais resultados — mostram-se os primeiros {{count}}.",
+      "position": "Posição pesquisada",
+      "otherSide": "joga o outro lado",
+      "note": "nota",
+      "drillFromHere": "Repetir a partir daqui",
+      "failed": "A pesquisa falhou."
+    },
+    "lesson": {
+      "title": "Aula de {{date}}",
+      "notFound": "Esta aula não existe.",
+      "noVideo": "Esta aula não tem vídeo — as posições funcionam na mesma.",
+      "videoFailed": "Não foi possível carregar o vídeo.",
+      "segments": "Posições discutidas",
+      "games": "Partidas",
+      "openGame": "Abrir partida",
+      "openAnalysis": "Abrir análise",
+      "openBoard": "Abrir no tabuleiro de análise",
+      "noPosition": "sem posição"
+    },
+    "drill": {
+      "onlyWrong": "Repetir só as erradas",
+      "noWrong": "Nenhuma posição errada.",
+      "empty": "Aqui não há posições para repetir.",
+      "progress": "Posição {{n}} / {{total}}",
+      "lessonOf": "Aula de {{date}}",
+      "findMove": "Que lance foi jogado na aula?",
+      "hint": "Dica",
+      "hintText": "Dica: move-se a peça em {{square}}.",
+      "reveal": "Mostrar solução",
+      "skip": "Saltar",
+      "wrong": "{{move}} não é o lance da aula ({{n}}/{{max}}) — tenta outra vez.",
+      "wrongFinal": "Três tentativas erradas — o lance era {{move}}.",
+      "solved": "Certo: {{move}}",
+      "solvedAfter": "Certo: {{move}} · tentativas erradas: {{count}}",
+      "revealed": "Solução: {{move}}",
+      "skipped": "Saltado — o lance era {{move}}.",
+      "variations": "Variantes",
+      "explanation": "Explicação",
+      "answerLine": "Linha",
+      "listen": "Ouvir a explicação",
+      "stop": "Parar",
+      "audioOnly": "só áudio",
+      "clipFailed": "Não foi possível reproduzir o excerto.",
+      "saveFailed": "Resultado não guardado.",
+      "done": "Feito!",
+      "countSolved": "{{count}} certas",
+      "countWrong": "{{count}} erradas",
+      "countSkipped": "{{count}} saltadas",
+      "repeatWrong": "Repetir as erradas",
+      "restart": "Recomeçar",
+      "toLesson": "Para a aula",
+      "toGame": "Ir para a partida"
+    },
+    "comments": {
+      "title": "Comentário do treinador · {{date}}",
+      "movesLine": "Comentários do treinador sobre",
+      "start": "Posição inicial",
+      "inVideo": "▶ no vídeo a partir de {{time}}",
+      "sideLine": "Variante da aula"
     }
   }
 }

@@ -217,6 +217,12 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     expect(c.anyLibrary).toBeFalse();     // nichts aus Analyse & Sammlung freigegeben
   });
 
+  it('„Trainerstunden" allein öffnet das Untermenü Training', () => {
+    const c = render({ loggedIn: true, keys: ['training-videos'] }).componentInstance;
+    expect(c.can('training-videos')).toBeTrue();
+    expect(c.anyTraining).toBeTrue();
+  });
+
   // F5-005: der Admin-Eintrag folgt derselben Regel wie adminAreaGuard (canOpenAdmin) — Recht genügt, Flag nicht nötig.
   it('Admin-Eintrag nur, wenn der Admin-Bereich sich öffnen würde (je Recht, ohne Admin-Flag)', () => {
     expect(render({ loggedIn: true, keys: ['puzzles'], perms: ['messages.admin'] }).componentInstance.showAdmin).toBeTrue();

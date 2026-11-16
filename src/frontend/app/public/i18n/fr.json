@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Règles empiriques",
     "visitors": "RookHub dans le monde",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Séances avec l’entraîneur"
   },
   "app": {
     "changelogTitle": "Journal des modifications",
@@ -2776,7 +2777,8 @@
         "ebooks": "Bibliothèque d'e-books",
         "woodpecker": "Entraînement Woodpecker",
         "maxims": "Règles empiriques (maximes d'échecs)",
-        "visitors": "RookHub dans le monde"
+        "visitors": "RookHub dans le monde",
+        "training-videos": "Séances avec l’entraîneur"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "RookHub dans le monde",
         "p": [
           "Sous ☰ → Communauté → RookHub dans le monde, une carte du monde montre depuis quels pays RookHub est utilisé. Touchez un pays ou choisissez un continent pour agrandir la zone ; seuls les pays sont comptés, jamais des personnes."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Séances avec l’entraîneur",
+        "p": [
+          "Si les séances sont activées pour ton compte, « Séances avec l’entraîneur » dans le menu ☰ (Entraînement) liste les vidéos de tes séances : date, durée, court résumé et parties discutées. « Regarder » ouvre la vidéo à côté de l’échiquier ; la liste des positions suit la vidéo.",
+          "Tu peux chercher par mot ou FEN, ou placer une position ; dans l’échiquier d’analyse, le menu ⋮ propose « Vu en séance ? ». « Rejouer » te demande les coups de la séance sur l’échiquier puis ne joue que l’explication correspondante ; la « Série de questions » regroupe les questions de toutes les séances."
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Site des tournois"
+    }
+  },
+  "trainingVideos": {
+    "title": "Séances avec l’entraîneur",
+    "intro": "Les vidéos de tes séances avec l’entraîneur et les positions discutées : regarde-les, cherche et rejoue-les.",
+    "empty": "Pas encore de séance.",
+    "questionSet": "Série de questions",
+    "watch": "Regarder",
+    "replay": "Rejouer",
+    "positions": "{{count}} positions",
+    "positionsOne": "1 position",
+    "duration": "Durée {{time}}",
+    "noVideoShort": "sans vidéo",
+    "owner": "Compte : {{name}}",
+    "unknownPlayer": "Inconnu",
+    "flip": "Retourner l’échiquier",
+    "toList": "Vers l’aperçu",
+    "trainerComment": "Commentaire de l’entraîneur",
+    "quote": "« {{text}} »",
+    "menuDiscussed": "Vu en séance ?",
+    "kind": {
+      "own": "partie personnelle",
+      "lesson": "partie modèle",
+      "exercise": "exercice"
+    },
+    "tags": {
+      "question": "question",
+      "key": "moment clé",
+      "mistake": "erreur",
+      "plan": "plan",
+      "opening": "ouverture",
+      "endgame": "finale",
+      "tactic": "tactique"
+    },
+    "moveKind": {
+      "analysis": "variante"
+    },
+    "search": {
+      "title": "Chercher dans les séances",
+      "label": "Mot ou FEN",
+      "setup": "Placer les pièces",
+      "setupTitle": "Placer une position",
+      "tooShort": "Au moins trois lettres.",
+      "none": "Aucun résultat.",
+      "truncated": "Il y a plus de résultats — les {{count}} premiers sont affichés.",
+      "position": "Position recherchée",
+      "otherSide": "l’autre camp au trait",
+      "note": "note",
+      "drillFromHere": "Rejouer à partir d’ici",
+      "failed": "La recherche a échoué."
+    },
+    "lesson": {
+      "title": "Séance du {{date}}",
+      "notFound": "Cette séance n’existe pas.",
+      "noVideo": "Pas de vidéo pour cette séance — les positions fonctionnent quand même.",
+      "videoFailed": "La vidéo n’a pas pu être chargée.",
+      "segments": "Positions discutées",
+      "games": "Parties",
+      "openGame": "Ouvrir la partie",
+      "openAnalysis": "Ouvrir l’analyse",
+      "openBoard": "Ouvrir dans l’échiquier d’analyse",
+      "noPosition": "sans position"
+    },
+    "drill": {
+      "onlyWrong": "Ne répéter que les ratées",
+      "noWrong": "Aucune position ratée.",
+      "empty": "Aucune position à rejouer ici.",
+      "progress": "Position {{n}} / {{total}}",
+      "lessonOf": "Séance du {{date}}",
+      "findMove": "Quel coup a été joué en séance ?",
+      "hint": "Indice",
+      "hintText": "Indice : la pièce en {{square}} bouge.",
+      "reveal": "Voir la solution",
+      "skip": "Passer",
+      "wrong": "{{move}} n’est pas le coup de la séance ({{n}}/{{max}}) — réessaie.",
+      "wrongFinal": "Trois essais ratés — le coup était {{move}}.",
+      "solved": "Correct : {{move}}",
+      "solvedAfter": "Correct : {{move}} · essais ratés : {{count}}",
+      "revealed": "Solution : {{move}}",
+      "skipped": "Passé — le coup était {{move}}.",
+      "variations": "Variantes",
+      "explanation": "Explication",
+      "answerLine": "Ligne",
+      "listen": "Écouter l’explication",
+      "stop": "Arrêter",
+      "audioOnly": "son seul",
+      "clipFailed": "L’extrait n’a pas pu être lu.",
+      "saveFailed": "Résultat non enregistré.",
+      "done": "Terminé !",
+      "countSolved": "{{count}} justes",
+      "countWrong": "{{count}} ratées",
+      "countSkipped": "{{count}} passées",
+      "repeatWrong": "Répéter les ratées",
+      "restart": "Recommencer",
+      "toLesson": "Vers la séance",
+      "toGame": "Vers la partie"
+    },
+    "comments": {
+      "title": "Commentaire de l’entraîneur · {{date}}",
+      "movesLine": "Commentaires de l’entraîneur sur",
+      "start": "Position de départ",
+      "inVideo": "▶ dans la vidéo à {{time}}",
+      "sideLine": "Variante de la séance"
     }
   }
 }

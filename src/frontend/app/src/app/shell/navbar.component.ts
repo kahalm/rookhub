@@ -155,6 +155,7 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
             <button mat-menu-item routerLink="/courses">{{ 'nav.courses' | translate }}</button>
           }
           @if (can('woodpecker')) { <button mat-menu-item routerLink="/woodpecker">{{ 'nav.woodpecker' | translate }}</button> }
+          @if (can('training-videos')) { <button mat-menu-item routerLink="/training-videos">{{ 'nav.trainingVideos' | translate }}</button> }
           @if (can('weekly')) { <button mat-menu-item routerLink="/weekly">{{ 'nav.weekly' | translate }}</button> }
           @if (can('training-goals')) { <button mat-menu-item routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
           @if (can('repertoires')) { <button mat-menu-item routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button> }
@@ -483,7 +484,7 @@ export class NavbarComponent implements OnInit {
   get anyTraining(): boolean {
     return this.can('puzzles') || this.can('weekly') || this.can('training-goals')
       || this.can('repertoires') || this.can('guess') || this.can('favorites')
-      || this.can('worksheets') || this.can('woodpecker') || (this.showCourses && this.can('courses'));
+      || this.can('worksheets') || this.can('woodpecker') || this.can('training-videos') || (this.showCourses && this.can('courses'));
   }
   get anyLibrary(): boolean {
     return this.can('analysis') || this.can('games') || this.can('scoresheet') || this.can('reconstruct') || this.can('remembered')

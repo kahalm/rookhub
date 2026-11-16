@@ -16,6 +16,7 @@ import { ExternalEngineService } from './external-engine.service';
 import { AnalysisHistoryService } from './analysis-history.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AuthService } from '../../core/auth.service';
+import { MenuService } from '../../core/menu.service';
 import { MaiaEngineService } from './maia/maia-engine.service';
 import { GamesService } from '../games/games.service';
 import { AnalyzeGameService } from '../games/analyze-game.service';
@@ -58,6 +59,7 @@ describe('AnalysisComponent Karte „Sparring gegen Maia" (0.760.0)', () => {
         { provide: ExternalEngineService, useValue: { listEngines: () => new Subject(), analyse: () => {} } },
         { provide: AnalysisHistoryService, useValue: { save: () => of({}), get: () => of({}), list: () => of([]) } },
         { provide: MatDialog, useValue: { open: () => {} } },
+        { provide: MenuService, useValue: { isVisible: () => false } },
         { provide: MaiaEngineService, useValue: maia },
         { provide: GamesService, useValue: { importPgn: () => of({ ids: [] }), analyzeUrl: (id: number) => `/api/games/${id}/analyze` } },
         { provide: AnalyzeGameService, useValue: { status: () => of(null), submit: () => of(false) } },

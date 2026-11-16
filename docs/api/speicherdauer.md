@@ -43,6 +43,7 @@ je DELETE), ohne große Spalten zu laden.
 | Übergabe-Codes zwischen den Oberflächen (`AuthHandoffTokens`, gültig 60 s) | 7 Tage nach Verbrauch bzw. Ablauf (außerdem beim nächsten Sprung desselben Kontos) | Aufräumlauf | fest (`OneTimeCodeRetention.MaxAgeAfterEnd`) |
 | Chessable-Trainingszeit der Extension (`ChessableActivities`) | bis zur Kontolöschung (Tracker- und Kurs-Verlauf); Zuwachs je Tag gedeckelt: 24 h Zeit, 1 500 Häppchen | beim Schreiben (R4-019) | fest (`TrainingCaps`) |
 | Durchsatz je Engine (`EngineThroughputBuckets`, Zähler je 10 min, kein Personenbezug außer der Engine-Kennung) | 8 Tage | `EngineBrokerMaintenanceService` (stündlich, `EngineThroughputRecorder.FlushAsync`) | fest (`EngineThroughputBucket.RetentionDays`) |
+| Trainerstunden (`TrainingLessons` samt Partien, Segmenten mit Trainerkommentar und Rohtranskript, Fragen, Notizen) und der Übungsstand (`TrainingSegmentProgress`) | bis zur Kontolöschung (`TrainingDataEraser.TrainingLessonsAsync`); ein Re-Import desselben Datums ersetzt die Inhalte, der Übungsstand bleibt | — | — |
 | Konto selbst | bis zur Löschung durch den Nutzer (Kontolöschung räumt alles Zugehörige) | — | — |
 
 ## Außerhalb der Datenbank
@@ -50,6 +51,7 @@ je DELETE), ohne große Spalten zu laden.
 | Datenart | Frist | Wo | Einstellung |
 |---|---|---|---|
 | Logs (IP, Nutzername, User-Agent) in Elasticsearch: `rookhub`, `crawler`, `piratechess` | 90 Tage nach Rollover (+ ≤ 7 Tage) | ILM-Policy `rookhub-logs-retention` — **Prod: erst nach Betreiber-Schritt aktiv** ([log-retention.md](../log-retention.md)) | `ILM_DAYS` in `scripts/es/ilm-apply.sh` |
+| Videos und JSON-Dateien der Trainerstunden | nicht von RookHub verwaltet: nur lesend eingehängt, bleiben auch nach Kontolöschung liegen (`TrainingVideos:VideoRoot`/`DataRoot`) | Host-Ordner `/srv/media/claude-sessions/schachvideos/` | — |
 | Datenbank-Sicherungen | 14 Tage (Standard) | `scripts/backup-db.sh` ([backup.md](../backup.md)) | `RETENTION_DAYS` |
 
 Verwandt: [hintergrundjobs-pause.md](hintergrundjobs-pause.md) (welche Dienste der Admin-Schalter anhält — die Fristen nicht),

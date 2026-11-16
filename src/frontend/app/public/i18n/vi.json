@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Kinh nghiệm thực hành",
     "visitors": "RookHub trên thế giới",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Buổi học với huấn luyện viên"
   },
   "app": {
     "changelogTitle": "Nhật ký thay đổi",
@@ -2776,7 +2777,8 @@
         "ebooks": "Thư viện sách điện tử",
         "woodpecker": "Luyện tập Woodpecker",
         "maxims": "Kinh nghiệm thực hành (châm ngôn cờ vua)",
-        "visitors": "RookHub trên thế giới"
+        "visitors": "RookHub trên thế giới",
+        "training-videos": "Buổi học với huấn luyện viên"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "RookHub trên thế giới",
         "p": [
           "Trong ☰ → Cộng đồng → RookHub trên thế giới, bản đồ thế giới cho thấy RookHub được dùng từ những quốc gia nào. Chạm vào một quốc gia hoặc chọn một châu lục để phóng to; chỉ đếm quốc gia, không bao giờ đếm từng người."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Buổi học với huấn luyện viên",
+        "p": [
+          "Nếu tài khoản của bạn bật buổi học, mục “Buổi học với huấn luyện viên” trong menu ☰ (Luyện tập) liệt kê video các buổi học: ngày, thời lượng, tóm tắt ngắn và các ván đã bàn. “Xem” mở video cạnh bàn cờ; danh sách thế cờ chạy theo video.",
+          "Bạn có thể tìm theo từ hoặc FEN, hoặc xếp một thế cờ; trên bàn phân tích, menu ⋮ có “Đã bàn trong buổi học?”. “Chơi lại” hỏi bạn các nước trong buổi học trên bàn cờ rồi chỉ phát phần giải thích tương ứng; “Bộ câu hỏi” gom câu hỏi của mọi buổi học."
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Trang giải đấu"
+    }
+  },
+  "trainingVideos": {
+    "title": "Buổi học với huấn luyện viên",
+    "intro": "Video các buổi học với huấn luyện viên và những thế cờ đã bàn — xem, tìm và chơi lại.",
+    "empty": "Chưa có buổi học nào.",
+    "questionSet": "Bộ câu hỏi",
+    "watch": "Xem",
+    "replay": "Chơi lại",
+    "positions": "{{count}} thế cờ",
+    "positionsOne": "1 thế cờ",
+    "duration": "Thời lượng {{time}}",
+    "noVideoShort": "không có video",
+    "owner": "Tài khoản: {{name}}",
+    "unknownPlayer": "Không rõ",
+    "flip": "Lật bàn cờ",
+    "toList": "Về tổng quan",
+    "trainerComment": "Nhận xét của HLV",
+    "quote": "“{{text}}”",
+    "menuDiscussed": "Đã bàn trong buổi học?",
+    "kind": {
+      "own": "ván của bạn",
+      "lesson": "ván mẫu",
+      "exercise": "bài tập"
+    },
+    "tags": {
+      "question": "câu hỏi",
+      "key": "thời điểm then chốt",
+      "mistake": "sai lầm",
+      "plan": "kế hoạch",
+      "opening": "khai cuộc",
+      "endgame": "tàn cuộc",
+      "tactic": "chiến thuật"
+    },
+    "moveKind": {
+      "analysis": "nhánh phụ"
+    },
+    "search": {
+      "title": "Tìm trong các buổi học",
+      "label": "Từ hoặc FEN",
+      "setup": "Xếp bàn cờ",
+      "setupTitle": "Xếp một thế cờ",
+      "tooShort": "Ít nhất ba chữ cái.",
+      "none": "Không có kết quả.",
+      "truncated": "Còn nhiều kết quả — hiển thị {{count}} kết quả đầu.",
+      "position": "Thế cờ cần tìm",
+      "otherSide": "bên kia đi",
+      "note": "ghi chú",
+      "drillFromHere": "Chơi lại từ đây",
+      "failed": "Tìm kiếm thất bại."
+    },
+    "lesson": {
+      "title": "Buổi học ngày {{date}}",
+      "notFound": "Buổi học này không tồn tại.",
+      "noVideo": "Buổi học này không có video — các thế cờ vẫn dùng được.",
+      "videoFailed": "Không tải được video.",
+      "segments": "Các thế cờ đã bàn",
+      "games": "Ván cờ",
+      "openGame": "Mở ván cờ",
+      "openAnalysis": "Mở phân tích",
+      "openBoard": "Mở trên bàn phân tích",
+      "noPosition": "không có thế cờ"
+    },
+    "drill": {
+      "onlyWrong": "Chỉ lặp lại câu sai",
+      "noWrong": "Không có thế cờ nào sai.",
+      "empty": "Không có thế cờ nào để chơi lại.",
+      "progress": "Thế cờ {{n}} / {{total}}",
+      "lessonOf": "Buổi {{date}}",
+      "findMove": "Nước nào đã được đi trong buổi học?",
+      "hint": "Gợi ý",
+      "hintText": "Gợi ý: quân ở {{square}} đi.",
+      "reveal": "Hiện lời giải",
+      "skip": "Bỏ qua",
+      "wrong": "{{move}} không phải nước trong buổi học ({{n}}/{{max}}) — thử lại nhé.",
+      "wrongFinal": "Ba lần sai — nước đi là {{move}}.",
+      "solved": "Đúng: {{move}}",
+      "solvedAfter": "Đúng: {{move}} · số lần sai: {{count}}",
+      "revealed": "Lời giải: {{move}}",
+      "skipped": "Đã bỏ qua — nước đi là {{move}}.",
+      "variations": "Biến",
+      "explanation": "Giải thích",
+      "answerLine": "Đường đi",
+      "listen": "Nghe giải thích",
+      "stop": "Dừng",
+      "audioOnly": "chỉ âm thanh",
+      "clipFailed": "Không phát được đoạn trích.",
+      "saveFailed": "Chưa lưu kết quả.",
+      "done": "Xong!",
+      "countSolved": "{{count}} đúng",
+      "countWrong": "{{count}} sai",
+      "countSkipped": "{{count}} bỏ qua",
+      "repeatWrong": "Lặp lại câu sai",
+      "restart": "Bắt đầu lại",
+      "toLesson": "Về buổi học",
+      "toGame": "Đến ván cờ"
+    },
+    "comments": {
+      "title": "Nhận xét của HLV · {{date}}",
+      "movesLine": "Nhận xét của HLV về",
+      "start": "Thế cờ ban đầu",
+      "inVideo": "▶ trong video từ {{time}}",
+      "sideLine": "Nhánh phụ từ buổi học"
     }
   }
 }

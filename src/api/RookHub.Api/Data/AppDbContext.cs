@@ -227,6 +227,12 @@ public partial class AppDbContext : DbContext
     public DbSet<CalcSeriesMember> CalcSeriesMembers => Set<CalcSeriesMember>();
     public DbSet<CalcEditionView> CalcEditionViews => Set<CalcEditionView>();
     public DbSet<VisitorDay> VisitorDays => Set<VisitorDay>();
+    public DbSet<TrainingLesson> TrainingLessons => Set<TrainingLesson>();
+    public DbSet<TrainingLessonGame> TrainingLessonGames => Set<TrainingLessonGame>();
+    public DbSet<TrainingSegment> TrainingSegments => Set<TrainingSegment>();
+    public DbSet<TrainingQuestion> TrainingQuestions => Set<TrainingQuestion>();
+    public DbSet<TrainingNote> TrainingNotes => Set<TrainingNote>();
+    public DbSet<TrainingSegmentProgress> TrainingSegmentProgress => Set<TrainingSegmentProgress>();
 
     /// <summary>Jede Zeitspalte liest sich als UTC zurück (siehe <see cref="UtcDateTimeConverter"/>) — sonst ginge
     /// jeder gelesene Wert ohne „Z" über die Leitung und der Browser nähme ihn als Ortszeit.</summary>

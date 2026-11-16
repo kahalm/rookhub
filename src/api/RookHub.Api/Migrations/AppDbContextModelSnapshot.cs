@@ -8827,6 +8827,312 @@ namespace RookHub.Api.Migrations
                     b.ToTable("TrackedPlayers");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.TrainingLesson", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("DurationSec")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ImportedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Schema")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("VideoFile")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("TrainingLessons");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.TrainingLessonGame", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AnalysisPgn")
+                        .HasColumnType("mediumtext");
+
+                    b.Property<string>("Black")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<string>("Eco")
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)");
+
+                    b.Property<string>("Event")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<int?>("FromSec")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<int>("LessonId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MatchConfidence")
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)");
+
+                    b.Property<string>("Pgn")
+                        .HasColumnType("mediumtext");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Result")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<int?>("RookhubGameId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ToSec")
+                        .HasColumnType("int");
+
+                    b.Property<string>("White")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<int?>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonId");
+
+                    b.HasIndex("RookhubGameId");
+
+                    b.ToTable("TrainingLessonGames");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.TrainingNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("GameKey")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<int>("LessonId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Quote")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SearchText")
+                        .HasColumnType("mediumtext");
+
+                    b.Property<int?>("StartSec")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonId", "Position");
+
+                    b.ToTable("TrainingNotes");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.TrainingQuestion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Answer")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<string>("AnswerLine")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("AnswerSec")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Explanation")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Prompt")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SegmentId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SegmentId")
+                        .IsUnique();
+
+                    b.ToTable("TrainingQuestions");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.TrainingSegment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BoardFen")
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<string>("Comment")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("EndSec")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Fen")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("GameKey")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<int>("LessonId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Move")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<string>("MoveKind")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Quote")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("QuoteEndSec")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("QuoteStartSec")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SearchText")
+                        .HasColumnType("mediumtext");
+
+                    b.Property<int>("StartSec")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tags")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("Variations")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BoardFen");
+
+                    b.HasIndex("LessonId", "Position");
+
+                    b.ToTable("TrainingSegments");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.TrainingSegmentProgress", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LessonId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Plays")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SegmentKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonId");
+
+                    b.HasIndex("UserId", "LessonId", "SegmentKey")
+                        .IsUnique();
+
+                    b.ToTable("TrainingSegmentProgress");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.UserApiToken", b =>
                 {
                     b.Property<int>("Id")
@@ -11503,6 +11809,80 @@ namespace RookHub.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.TrainingLesson", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.TrainingLessonGame", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.TrainingLesson", "Lesson")
+                        .WithMany("Games")
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lesson");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.TrainingNote", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.TrainingLesson", "Lesson")
+                        .WithMany("Notes")
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lesson");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.TrainingQuestion", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.TrainingSegment", "Segment")
+                        .WithOne("Question")
+                        .HasForeignKey("RookHub.Api.Models.TrainingQuestion", "SegmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Segment");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.TrainingSegment", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.TrainingLesson", "Lesson")
+                        .WithMany("Segments")
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lesson");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.TrainingSegmentProgress", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.TrainingLesson", "Lesson")
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lesson");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.UserApiToken", b =>
                 {
                     b.HasOne("RookHub.Api.Models.AppUser", "User")
@@ -11879,6 +12259,20 @@ namespace RookHub.Api.Migrations
                     b.Navigation("Sources");
 
                     b.Navigation("Venues");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.TrainingLesson", b =>
+                {
+                    b.Navigation("Games");
+
+                    b.Navigation("Notes");
+
+                    b.Navigation("Segments");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.TrainingSegment", b =>
+                {
+                    b.Navigation("Question");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.WoodpeckerPlan", b =>

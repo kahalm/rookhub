@@ -13,3 +13,7 @@ Teilen-Blatt des Geräts, sonst die Zwischenablage. Die Engine-Frage (`GET /api/
 Lichess) stellt das Menü erst beim ersten ÖFFNEN — das Analysebrett kennt die Antwort und reicht sie über `engines`
 herein. Auf der Partieseite ist die Stellung die auf dem Brett (`positionFen()`: Ende der Live-Nebenvariante, sonst
 der Partiezug).
+
+**„Im Training besprochen?“** (0.986.0): nur sichtbar, wenn der Menüpunkt `training-videos` für das Konto frei ist
+(Vorgabe: Admins); führt zu `/training-videos?fen=<FEN>` — die Seite „Trainerstunden“ startet damit die Stellungssuche
+über die Trainerkommentare (nur das Figurenfeld zählt, `docs/api/trainingsvideos.md`).

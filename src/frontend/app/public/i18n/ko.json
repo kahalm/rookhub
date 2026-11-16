@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "경험 법칙",
     "visitors": "전 세계의 RookHub",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "코치 수업"
   },
   "app": {
     "changelogTitle": "변경 이력",
@@ -2776,7 +2777,8 @@
         "ebooks": "전자책 라이브러리",
         "woodpecker": "Woodpecker 훈련",
         "maxims": "경험 법칙(체스 격언)",
-        "visitors": "전 세계의 RookHub"
+        "visitors": "전 세계의 RookHub",
+        "training-videos": "코치 수업"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "전 세계의 RookHub",
         "p": [
           "☰ → 커뮤니티 → 전 세계의 RookHub에서 RookHub가 어느 나라에서 사용되는지 세계 지도로 볼 수 있습니다. 나라를 누르거나 대륙을 선택하면 확대됩니다. 나라만 세며 개인은 세지 않습니다."
+        ]
+      },
+      "trainingVideos": {
+        "t": "코치 수업",
+        "p": [
+          "계정에서 수업이 활성화되어 있으면 ☰ 메뉴(훈련)의 “코치 수업”에 수업 영상이 표시됩니다: 날짜, 길이, 짧은 요약, 다룬 대국. “보기”는 보드 옆에 영상을 열고, 포지션 목록이 영상을 따라갑니다.",
+          "단어나 FEN으로 검색하거나 포지션을 배치할 수 있습니다. 분석 보드의 ⋮ 메뉴에는 “수업에서 다뤘나요?”가 있습니다. “다시 두기”는 보드에서 수업의 수를 묻고 해당 설명만 재생합니다. “문제 세트”는 모든 수업의 질문을 모읍니다."
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "대회 사이트"
+    }
+  },
+  "trainingVideos": {
+    "title": "코치 수업",
+    "intro": "코치와 함께한 수업 영상과 다룬 포지션 — 보고, 찾고, 다시 두어 보세요.",
+    "empty": "아직 수업이 없습니다.",
+    "questionSet": "문제 세트",
+    "watch": "보기",
+    "replay": "다시 두기",
+    "positions": "포지션 {{count}}개",
+    "positionsOne": "포지션 1개",
+    "duration": "길이 {{time}}",
+    "noVideoShort": "영상 없음",
+    "owner": "계정: {{name}}",
+    "unknownPlayer": "알 수 없음",
+    "flip": "보드 뒤집기",
+    "toList": "개요로",
+    "trainerComment": "코치 코멘트",
+    "quote": "“{{text}}”",
+    "menuDiscussed": "수업에서 다뤘나요?",
+    "kind": {
+      "own": "내 대국",
+      "lesson": "모범 대국",
+      "exercise": "연습"
+    },
+    "tags": {
+      "question": "질문",
+      "key": "핵심 순간",
+      "mistake": "실수",
+      "plan": "계획",
+      "opening": "오프닝",
+      "endgame": "엔드게임",
+      "tactic": "전술"
+    },
+    "moveKind": {
+      "analysis": "곁가지"
+    },
+    "search": {
+      "title": "수업에서 검색",
+      "label": "단어 또는 FEN",
+      "setup": "보드 배치",
+      "setupTitle": "포지션 배치",
+      "tooShort": "세 글자 이상.",
+      "none": "결과 없음.",
+      "truncated": "결과가 더 있습니다 — 처음 {{count}}개만 표시합니다.",
+      "position": "찾는 포지션",
+      "otherSide": "상대 차례",
+      "note": "메모",
+      "drillFromHere": "여기서부터 다시 두기",
+      "failed": "검색에 실패했습니다."
+    },
+    "lesson": {
+      "title": "{{date}} 수업",
+      "notFound": "이 수업은 없습니다.",
+      "noVideo": "이 수업에는 영상이 없습니다 — 포지션은 그대로 쓸 수 있습니다.",
+      "videoFailed": "영상을 불러오지 못했습니다.",
+      "segments": "다룬 포지션",
+      "games": "대국",
+      "openGame": "대국 열기",
+      "openAnalysis": "분석 열기",
+      "openBoard": "분석 보드에서 열기",
+      "noPosition": "포지션 없음"
+    },
+    "drill": {
+      "onlyWrong": "틀린 것만 반복",
+      "noWrong": "틀린 포지션이 없습니다.",
+      "empty": "여기에는 다시 둘 포지션이 없습니다.",
+      "progress": "포지션 {{n}} / {{total}}",
+      "lessonOf": "수업 {{date}}",
+      "findMove": "수업에서 둔 수는?",
+      "hint": "힌트",
+      "hintText": "힌트: {{square}}의 기물이 움직입니다.",
+      "reveal": "정답 보기",
+      "skip": "건너뛰기",
+      "wrong": "{{move}}는 수업의 수가 아닙니다 ({{n}}/{{max}}) — 다시 해 보세요.",
+      "wrongFinal": "세 번 틀렸습니다 — 정답은 {{move}}.",
+      "solved": "정답: {{move}}",
+      "solvedAfter": "정답: {{move}} · 틀린 횟수: {{count}}",
+      "revealed": "정답: {{move}}",
+      "skipped": "건너뜀 — 정답은 {{move}}.",
+      "variations": "변화",
+      "explanation": "설명",
+      "answerLine": "수순",
+      "listen": "설명 듣기",
+      "stop": "정지",
+      "audioOnly": "소리만",
+      "clipFailed": "구간을 재생하지 못했습니다.",
+      "saveFailed": "결과가 저장되지 않았습니다.",
+      "done": "완료!",
+      "countSolved": "정답 {{count}}",
+      "countWrong": "오답 {{count}}",
+      "countSkipped": "건너뜀 {{count}}",
+      "repeatWrong": "틀린 것 반복",
+      "restart": "처음부터",
+      "toLesson": "수업으로",
+      "toGame": "대국으로"
+    },
+    "comments": {
+      "title": "코치 코멘트 · {{date}}",
+      "movesLine": "코치 코멘트가 있는 수:",
+      "start": "시작 포지션",
+      "inVideo": "▶ 영상 {{time}}부터",
+      "sideLine": "수업의 곁가지"
     }
   }
 }

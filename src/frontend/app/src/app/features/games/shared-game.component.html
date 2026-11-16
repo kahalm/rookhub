@@ -382,6 +382,11 @@
                              (storedChange)="reviewStored.set($event)" />
           }
           @if (!training()) {
+            @if (own && gameId && trainingVideos() && service.currentGame; as g) {
+              <!-- Trainerstunden: Kommentare des Trainers zur Stellung — eigene Karte, getrennt von der Engine-Erklärung. -->
+              <app-trainer-comments class="tc-slot" [gameId]="gameId" [fenIndex]="service.currentMoveIndex + 1" [fens]="g.fens"
+                                    [sans]="gameSans(g.moves)" (goTo)="service.goToMove($event)" />
+            }
             <app-position-repertoires class="pr-slot" appearance="row" [fen]="service.currentFen" />
             <!-- „Ähnliche Meisterpartien" (0.544.0): eingeklappt, lädt erst beim Aufklappen. -->
             <app-similar-games class="similar-slot" [url]="similarUrl" />

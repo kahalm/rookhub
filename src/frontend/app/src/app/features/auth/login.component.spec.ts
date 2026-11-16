@@ -272,6 +272,7 @@ describe('LoginComponent — Hinweis mit Ziel und Einleitung (UX-027)', () => {
     expect(loginAreaKey('/friends/7/revenge')).toBe('nav.friends');
     expect(loginAreaKey('/worksheets/3/print?x=1')).toBe('nav.worksheets');
     expect(loginAreaKey('/training-goals')).toBe('nav.trainingGoals');
+    expect(loginAreaKey('/training-videos/12?t=5')).toBe('nav.trainingVideos');
     expect(loginAreaKey('/tournaments/calendar')).toBe('nav.tournaments');
     expect(loginAreaKey('/verein/neu')).toBeNull();
     expect(loginAreaKey('/')).toBeNull();

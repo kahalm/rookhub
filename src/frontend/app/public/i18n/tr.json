@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Pratik kurallar",
     "visitors": "Dünyada RookHub",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Antrenör dersleri"
   },
   "app": {
     "changelogTitle": "Değişiklikler",
@@ -2776,7 +2777,8 @@
         "ebooks": "E-kitap kütüphanesi",
         "woodpecker": "Woodpecker antrenmanı",
         "maxims": "Pratik kurallar (satranç özdeyişleri)",
-        "visitors": "Dünyada RookHub"
+        "visitors": "Dünyada RookHub",
+        "training-videos": "Antrenör dersleri"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "Dünyada RookHub",
         "p": [
           "☰ → Topluluk → Dünyada RookHub altında bir dünya haritası RookHub’ın hangi ülkelerden kullanıldığını gösterir. Yakınlaştırmak için bir ülkeye dokunun veya bir kıta seçin; yalnızca ülkeler sayılır, asla tek tek kişiler değil."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Antrenör dersleri",
+        "p": [
+          "Hesabında dersler etkinse ☰ menüsündeki (Antrenman) “Antrenör dersleri” derslerinin videolarını gösterir: tarih, süre, kısa özet ve konuşulan oyunlar. “İzle” videoyu tahtanın yanında açar; konum listesi videoyu takip eder.",
+          "Kelimeyle veya FEN ile arayabilir ya da bir konum kurabilirsin; analiz tahtasında ⋮ menüsü “Derste konuşuldu mu?” sunar. “Yeniden oyna” dersteki hamleleri tahtada sorar, ardından yalnızca ilgili açıklamayı oynatır; “Soru seti” tüm derslerin sorularını toplar."
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Turnuva sitesi"
+    }
+  },
+  "trainingVideos": {
+    "title": "Antrenör dersleri",
+    "intro": "Antrenörünle derslerinin videoları ve konuşulan konumlar — izle, ara ve yeniden oyna.",
+    "empty": "Henüz ders yok.",
+    "questionSet": "Soru seti",
+    "watch": "İzle",
+    "replay": "Yeniden oyna",
+    "positions": "{{count}} konum",
+    "positionsOne": "1 konum",
+    "duration": "Süre {{time}}",
+    "noVideoShort": "video yok",
+    "owner": "Hesap: {{name}}",
+    "unknownPlayer": "Bilinmiyor",
+    "flip": "Tahtayı çevir",
+    "toList": "Genel bakışa",
+    "trainerComment": "Antrenör yorumu",
+    "quote": "“{{text}}”",
+    "menuDiscussed": "Derste konuşuldu mu?",
+    "kind": {
+      "own": "kendi oyunun",
+      "lesson": "örnek oyun",
+      "exercise": "alıştırma"
+    },
+    "tags": {
+      "question": "soru",
+      "key": "kilit an",
+      "mistake": "hata",
+      "plan": "plan",
+      "opening": "açılış",
+      "endgame": "oyunsonu",
+      "tactic": "taktik"
+    },
+    "moveKind": {
+      "analysis": "yan varyant"
+    },
+    "search": {
+      "title": "Derslerde ara",
+      "label": "Kelime veya FEN",
+      "setup": "Tahtayı kur",
+      "setupTitle": "Konum kur",
+      "tooShort": "En az üç harf.",
+      "none": "Sonuç yok.",
+      "truncated": "Daha fazla sonuç var — ilk {{count}} gösteriliyor.",
+      "position": "Aranan konum",
+      "otherSide": "diğer taraf hamlede",
+      "note": "not",
+      "drillFromHere": "Buradan yeniden oyna",
+      "failed": "Arama başarısız oldu."
+    },
+    "lesson": {
+      "title": "{{date}} tarihli ders",
+      "notFound": "Bu ders yok.",
+      "noVideo": "Bu dersin videosu yok — konumlar yine de çalışır.",
+      "videoFailed": "Video yüklenemedi.",
+      "segments": "Konuşulan konumlar",
+      "games": "Oyunlar",
+      "openGame": "Oyunu aç",
+      "openAnalysis": "Analizi aç",
+      "openBoard": "Analiz tahtasında aç",
+      "noPosition": "konum yok"
+    },
+    "drill": {
+      "onlyWrong": "Yalnızca yanlışları tekrarla",
+      "noWrong": "Yanlış çözülen konum yok.",
+      "empty": "Burada yeniden oynanacak konum yok.",
+      "progress": "Konum {{n}} / {{total}}",
+      "lessonOf": "{{date}} dersi",
+      "findMove": "Derste hangi hamle oynandı?",
+      "hint": "İpucu",
+      "hintText": "İpucu: {{square}} karesindeki taş oynuyor.",
+      "reveal": "Çözümü göster",
+      "skip": "Atla",
+      "wrong": "{{move}} dersteki hamle değil ({{n}}/{{max}}) — yeniden dene.",
+      "wrongFinal": "Üç yanlış deneme — hamle {{move}} idi.",
+      "solved": "Doğru: {{move}}",
+      "solvedAfter": "Doğru: {{move}} · yanlış denemeler: {{count}}",
+      "revealed": "Çözüm: {{move}}",
+      "skipped": "Atlandı — hamle {{move}} idi.",
+      "variations": "Varyantlar",
+      "explanation": "Açıklama",
+      "answerLine": "Hat",
+      "listen": "Açıklamayı dinle",
+      "stop": "Durdur",
+      "audioOnly": "yalnızca ses",
+      "clipFailed": "Bölüm oynatılamadı.",
+      "saveFailed": "Sonuç kaydedilmedi.",
+      "done": "Bitti!",
+      "countSolved": "{{count}} doğru",
+      "countWrong": "{{count}} yanlış",
+      "countSkipped": "{{count}} atlandı",
+      "repeatWrong": "Yanlışları tekrarla",
+      "restart": "Baştan başla",
+      "toLesson": "Derse",
+      "toGame": "Oyuna git"
+    },
+    "comments": {
+      "title": "Antrenör yorumu · {{date}}",
+      "movesLine": "Antrenör yorumları:",
+      "start": "Başlangıç konumu",
+      "inVideo": "▶ videoda {{time}} itibarıyla",
+      "sideLine": "Dersten yan varyant"
     }
   }
 }

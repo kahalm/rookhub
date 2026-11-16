@@ -116,6 +116,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
 - Kurse (auth, gruppen-/admin-gated) → `docs/api/kurse.md`
 - Kurs-Detailseite + Inhaltspflege (auth) → `docs/api/kurs-detailseite-inhaltspflege.md`
 - Woodpecker-Training über Kurse (auth, 0.773.0) — feste Zyklen wie im Buch → `docs/api/woodpecker.md`
+- Trainerstunden / Trainingsvideos (privat je Konto, Admin-Import, 0.986.0) — Video, Trainerkommentare an eigenen Partien, Stellungs-/Volltextsuche, Nachspielen → `docs/api/trainingsvideos.md`
 - Aufgabenblätter (auth) — Stellungen sammeln, ordnen, drucken → `docs/api/aufgabenblaetter.md`
 - E-Book-Bibliothek (auth, 0.764.0) — Bücher lesen (PDF im Browser), hochladen, je Buch für Gruppen freigeben → `docs/api/ebooks.md`
 - Kalkulations-Modus (auth) — Stellungen ohne Lösung → `docs/api/kalkulations-modus.md`

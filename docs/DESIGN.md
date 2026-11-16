@@ -913,6 +913,32 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Material 22 (M3, Azure), dunkel als Vorgabe, `ThemeService` (3.1). Navbar (`shell/navbar.component.ts`, Messung in `shared/navbar/nav-edge.ts`): ≤ 768 px
   Hamburger; abgemeldet ≤ 480 px nur „Anmelden“ und ☰ (0.740.0). Fußzeile (`shared/app-footer/`) bleibt auf
   kurzen Seiten unten; Links ≥ 44 px.
+- **Trainerstunden** `/training-videos` (0.986.0, privat, Menüpunkt Admin-Stufe; Doku `docs/frontend/trainerstunden.md`):
+  Liste als gleich hohe Karten (5.2) — Datum `mediumDate` als Titel, Meta `.rh-dots` (Dauer h:mm:ss `tabular-nums`,
+  „18 Stellungen“, „ohne Video“), Zusammenfassung über `appClampMore` auf 3 Zeilen, Partien „Weiß – Schwarz“ + Art als
+  `.chip`; genau eine Primäraktion „Ansehen“, daneben „Nachspielen“ umrandet. Suche über der Liste: EIN Feld „Wort oder
+  FEN“ (FEN wird erkannt) + „Suchen“ + „Brett aufbauen“ (Stellungs-Editor im Dialog, Muster E-Book); gesuchte Stellung
+  als Mini-Brett 160 px + Zugrecht, nie als rohe FEN (5.12). Treffer als umrandete Zeilen: Datum · ▶ Zeit · Partie,
+  Ausschnitt, Textknöpfe „Ansehen“ / „Nachspielen ab hier“ (≥ 44 px); „anderes Zugrecht“ als Zustands-Chip.
+  **Video + Segmentliste** (Stundenseite): natives `<video controls preload="metadata">` (volle Breite, ≤ 70vh), darunter
+  das Brett (≤ 420 px) mit der Stellung des gewählten bzw. gerade laufenden Segments, darunter Zug/Kommentar/Zitat;
+  die Segmentliste als Knöpfe (Zeit, Zug über `| san`, Schlagwörter als `.chip`, Kommentar), gewählt = 2-px-Akzentrahmen
+  + Fläche + `aria-current` (E-Ink: Innenrahmen + fett, nie nur Farbe). Ab 900 px zwei Spalten (Video/Brett | Liste),
+  die Liste scrollt dort in ihrem Kasten und folgt dem Video nur in sich (nie die Seite, 5.3); darunter einspaltig.
+  Ohne Video ein Satz statt des Players. **Nachspielen**: Kopf mit Zurück-Pfeil, Titel, Schalter „Nur Falsche
+  wiederholen“; „Stellung 4 / 18“ und Partie-Kopf beim Partiewechsel; Brett (≤ 480 px, zur Seite am Zug gedreht) |
+  Seitenspalte ab 900 px. Aufgabe: Satz (Frage bzw. „Welcher Zug …?“), Meldung als umrandete Zeile mit Text (richtig
+  `--rh-success`, falsch `--rh-error`, Bedeutung im Text), „Hinweis“ (Kreis um die Figur + Satz mit Feld), „Auflösen“
+  (Pfeil, zählt falsch), „Überspringen“ als Textknopf; danach „Weiter“ als einzige Primäraktion. **Ausschnitt-Player
+  „Erklärung hören“**: ein umrandeter Knopf (Text wechselt zu „Anhalten“, `aria-pressed`), Zeitspanne daneben,
+  Schalter „nur Ton“ (Bild aus, Ton läuft; Vorgabe AN im E-Ink-Modus), kompaktes Video ≤ 360 px nur bei „nur Ton“ aus;
+  hält am Ende des Ausschnitts selbst an. Endbild: ✓/✗-Zähler als Text, „Falsche wiederholen“ primär.
+  **Trainerkommentar an der Partie** (`/games/:id`, nur eigene Partie): eigene Karte in der Seitenspalte VOR den
+  Repertoires, sichtbar getrennt von der Engine-Erklärung („Warum war das ein Fehler?“, 💬) — Rahmen `--mat-sys-outline`,
+  4-px-Kante + 6-%-Fläche `--rh-info`, Überschrift „🎓 Trainerkommentar · Datum“; Nebenvariante mit eigenem Mini-Brett
+  (120 px); Links „▶ im Video ab 0:12:10“ (nur mit Video) und „Nachspielen“. Darüber eine leise Sprungzeile
+  „Trainerkommentare zu 1.e4 4…Ld7 …“ (Textknöpfe, Zug am Brett fett + durchgezogen unterstrichen, `pointer: coarse`
+  44 px). Ohne Kommentar zur Partie: gar nichts (kein Leersatz).
 - „RookHub weltweit“ `/visitors` (0.982.0, anfangs „Besucher-Herkunft“): Seitenkopf + ein Satz; Kennzahlen als Zahlenreihe (`dl`, Zahl 1.75rem
   halbfett `tabular-nums`, Beschriftung darunter 0.85rem/60 %) — die Hauptzahl heißt „Eindeutige Benutzer“, ohne
   Zeitraum-Zusatz. **Flächenkarte in fünf Stufen** aus dem Akzent: `color-mix(--mat-sys-primary 30/46/62/80/100 %,
@@ -1364,6 +1390,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-16 | 0.986.0 · Trainerstunden | Neue Seiten `/training-videos` (Liste + Suche), Stunde (Video + Brett + Segmentliste, Liste folgt dem Video), Nachspielen (Zug finden, Hinweis/Auflösen/Überspringen, Ausschnitt-Player „Erklärung hören“ mit „nur Ton“, im E-Ink-Modus vorgewählt) und die Karte „Trainerkommentar“ an der eigenen Partie, getrennt von der Engine-Erklärung (8.1) | Erste Video-Seite der App; Trainer- und Engine-Aussagen dürfen nicht verwechselt werden; E-Ink zeigt bewegtes Bild nur verschmiert | Auftrag der betreuenden Sitzung 16.11. |
 | 2026-11-15 | 0.983.0 · Dashboard/Menü | LeagueHub-Kachel (8.1) als dritte Ausnahme in `DEFAULT_VISIBLE`, nur mit `league.view`; Knopf und Menüeintrag „LeagueHub“ (Community, nach „Turniere“) mit `open_in_new` | Wer Zugriff hat, soll LeagueHub ohne „Anpassen“ und ohne Adresse zu kennen erreichen; das Symbol kündigt den Wechsel der Oberfläche an | Nutzerwunsch 15.11. |
 | 2026-11-15 | 0.984.0 · Zusammenfassung | ⋮ im Kopf der Zusammenfassung (8.1): „Zur Partie“, „Link teilen“, „Anonym teilen“, „Teilen-Link widerrufen“; unter 600 px ⋮ oben rechts neben den Namen und „Zur Partie“ nur im ⋮; anonymer Link zeigt „Weiß – Schwarz“ ohne Wege zur Partie | Teilen der Zusammenfassung fehlte auf der eigenen Seite; anonym = ohne Spielernamen, serverseitig | Wunsch User 15.11. |
 | 2026-11-15 | 0.980.0 · Zusammenfassung | Links im Text (Beispielpartien aus dem Explorer): Akzentfarbe, durchgezogen unterstrichen (Züge bleiben gepunktet), fett/kursiv nur um den ganzen Link; Meisterpartie im selben Tab, lichess.org in neuem Tab. Seite „Meisterpartie“ (`/explorer/game/masters/:id`): eine Spalte ≤ 720 px, Kopfkarte (Spieler mit Elo, Ergebnis, darunter „Meisterpartie · Turnier · Ort · Jahr“ in on-surface-variant) und darunter das Brett der Zusammenfassung unverändert; unbekannte Partie = Leerzustand `link_off` mit Weg zur Startseite, Explorer weg = Ladefehler mit Wiederholen (8, Partie-Zusammenfassung) | Wunsch 15.11.: Beispielpartien „am besten mit einem Link“; lokale Meisterpartien gibt es auf lichess.org nicht | User über die betreuende Sitzung |

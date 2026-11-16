@@ -100,6 +100,11 @@ export const routes: Routes = [
   // Gaeste behalten Ruecksprungziel und Anmelde-Hinweis.
   { path: 'woodpecker', loadComponent: () => import('./features/woodpecker/woodpecker-list.component').then(m => m.WoodpeckerListComponent), canActivate: [authGuard, menuGuard('woodpecker')] },
   { path: 'woodpecker/:planId/solve', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [authGuard, menuGuard('woodpecker')] },
+  // Trainerstunden (privat je Konto, docs/frontend/trainerstunden.md): literale Wege vor :id.
+  { path: 'training-videos', loadComponent: () => import('./features/training-videos/training-videos-list.component').then(m => m.TrainingVideosListComponent), canActivate: [authGuard, menuGuard('training-videos')] },
+  { path: 'training-videos/questions', loadComponent: () => import('./features/training-videos/training-drill.component').then(m => m.TrainingDrillComponent), canActivate: [authGuard, menuGuard('training-videos')], data: { source: 'questions' } },
+  { path: 'training-videos/:id/drill', loadComponent: () => import('./features/training-videos/training-drill.component').then(m => m.TrainingDrillComponent), canActivate: [authGuard, menuGuard('training-videos')] },
+  { path: 'training-videos/:id', loadComponent: () => import('./features/training-videos/training-lesson.component').then(m => m.TrainingLessonComponent), canActivate: [authGuard, menuGuard('training-videos')] },
   { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent), canActivate: [authGuard, menuGuard('courses')] },
   { path: 'catalog', loadComponent: () => import('./features/catalog/catalog.component').then(m => m.CatalogComponent), canActivate: [authGuard, menuGuard('catalog')] },
   { path: 'courses/:bookId/chapter/:chapterIndex/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [authGuard, menuGuard('courses')] },

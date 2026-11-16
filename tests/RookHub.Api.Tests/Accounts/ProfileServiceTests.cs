@@ -174,6 +174,31 @@ public class ProfileServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAccount_RemovesTrainingLessonsWithChildrenAndProgress_KeepsOtherUsersLessons()
+    {
+        var id = await CreateUserWithPasswordAsync("gone", "secret123");
+        var other = await CreateUserWithPasswordAsync("alice", "x");
+        var mine = new Models.TrainingLesson { UserId = id, Date = new DateOnly(2026, 10, 27), ImportedAt = DateTime.UtcNow };
+        mine.Games.Add(new Models.TrainingLessonGame { Key = "g1" });
+        mine.Segments.Add(new Models.TrainingSegment { StartSec = 1, Comment = "x", Question = new Models.TrainingQuestion { Prompt = "?" } });
+        mine.Notes.Add(new Models.TrainingNote { Text = "n" });
+        var theirs = new Models.TrainingLesson { UserId = other, Date = new DateOnly(2026, 10, 27), ImportedAt = DateTime.UtcNow };
+        _db.TrainingLessons.AddRange(mine, theirs);
+        await _db.SaveChangesAsync();
+        _db.TrainingSegmentProgress.Add(new Models.TrainingSegmentProgress { UserId = id, LessonId = mine.Id, SegmentKey = "1|", Status = "wrong" });
+        await _db.SaveChangesAsync();
+
+        await _profileService.DeleteAccountAsync(id, "secret123");
+
+        Assert.Equal(other, Assert.Single(await _db.TrainingLessons.AsNoTracking().ToListAsync()).UserId);
+        Assert.Empty(await _db.TrainingSegments.ToListAsync());
+        Assert.Empty(await _db.TrainingQuestions.ToListAsync());
+        Assert.Empty(await _db.TrainingNotes.ToListAsync());
+        Assert.Empty(await _db.TrainingLessonGames.ToListAsync());
+        Assert.Empty(await _db.TrainingSegmentProgress.ToListAsync());
+    }
+
+    [Fact]
     public async Task DeleteAccount_RemovesChallengesAndRevengeInBothRoles_KeepsOtherUsersRows()
     {
         // A1-018, Entscheidung User 25.10.: Puzzle-Challenges und Revanche-Vermerke gehen mit dem Konto — gesendet wie

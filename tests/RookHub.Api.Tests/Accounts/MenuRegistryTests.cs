@@ -46,9 +46,12 @@ public class MenuRegistryTests
     [Fact]
     public void EveryDefault_IsAllOrRegistered()
     {
-        // Aktuell gibt es keine Admin-/Groups-Defaults — Overrides liegen in der DB.
+        // Keine Admin-/Groups-Defaults — Overrides liegen in der DB. Einzige Ausnahme: die Trainerstunden sind private
+        // Mitschnitte EINES Kontos (Import nur durch Admins); für alle anderen wäre der Eintrag eine leere Seite.
+        var adminDefaults = new[] { "training-videos" };
         Assert.All(MenuRegistry.Items, i =>
-            Assert.True(i.Default is MenuVisibilityLevel.All or MenuVisibilityLevel.Registered));
+            Assert.True(i.Default is MenuVisibilityLevel.All or MenuVisibilityLevel.Registered
+                || (i.Default == MenuVisibilityLevel.Admin && adminDefaults.Contains(i.Key)), i.Key));
     }
 
     /// <summary>

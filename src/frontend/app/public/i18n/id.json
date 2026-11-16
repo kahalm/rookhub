@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Kaidah praktis",
     "visitors": "RookHub di seluruh dunia",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Sesi pelatih"
   },
   "app": {
     "changelogTitle": "Catatan Perubahan",
@@ -2776,7 +2777,8 @@
         "ebooks": "Perpustakaan e-book",
         "woodpecker": "Latihan Woodpecker",
         "maxims": "Kaidah praktis (pepatah catur)",
-        "visitors": "RookHub di seluruh dunia"
+        "visitors": "RookHub di seluruh dunia",
+        "training-videos": "Sesi pelatih"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "RookHub di seluruh dunia",
         "p": [
           "Di ☰ → Komunitas → RookHub di seluruh dunia, peta dunia menunjukkan dari negara mana saja RookHub digunakan. Ketuk sebuah negara atau pilih benua untuk memperbesar; hanya negara yang dihitung, tidak pernah orang per orang."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Sesi pelatih",
+        "p": [
+          "Jika sesi diaktifkan untuk akunmu, “Sesi pelatih” di menu ☰ (Latihan) menampilkan video sesimu: tanggal, durasi, ringkasan singkat, dan partai yang dibahas. “Tonton” membuka video di samping papan; daftar posisi mengikuti video.",
+          "Kamu bisa mencari dengan kata atau FEN, atau menyusun posisi; di papan analisis menu ⋮ menawarkan “Dibahas di sesi?”. “Main ulang” menanyakan langkah dari sesi di papan lalu hanya memutar penjelasan yang sesuai; “Set pertanyaan” mengumpulkan pertanyaan semua sesi."
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Situs turnamen"
+    }
+  },
+  "trainingVideos": {
+    "title": "Sesi pelatih",
+    "intro": "Video sesimu bersama pelatih dan posisi yang dibahas — tonton, cari, dan mainkan ulang.",
+    "empty": "Belum ada sesi.",
+    "questionSet": "Set pertanyaan",
+    "watch": "Tonton",
+    "replay": "Main ulang",
+    "positions": "{{count}} posisi",
+    "positionsOne": "1 posisi",
+    "duration": "Durasi {{time}}",
+    "noVideoShort": "tanpa video",
+    "owner": "Akun: {{name}}",
+    "unknownPlayer": "Tidak diketahui",
+    "flip": "Balik papan",
+    "toList": "Ke ringkasan",
+    "trainerComment": "Komentar pelatih",
+    "quote": "“{{text}}”",
+    "menuDiscussed": "Dibahas di sesi?",
+    "kind": {
+      "own": "partai sendiri",
+      "lesson": "partai contoh",
+      "exercise": "latihan"
+    },
+    "tags": {
+      "question": "pertanyaan",
+      "key": "momen kunci",
+      "mistake": "kesalahan",
+      "plan": "rencana",
+      "opening": "pembukaan",
+      "endgame": "akhir permainan",
+      "tactic": "taktik"
+    },
+    "moveKind": {
+      "analysis": "variasi sampingan"
+    },
+    "search": {
+      "title": "Cari di sesi",
+      "label": "Kata atau FEN",
+      "setup": "Susun papan",
+      "setupTitle": "Susun posisi",
+      "tooShort": "Minimal tiga huruf.",
+      "none": "Tidak ada hasil.",
+      "truncated": "Ada lebih banyak hasil — ditampilkan {{count}} pertama.",
+      "position": "Posisi yang dicari",
+      "otherSide": "giliran pihak lain",
+      "note": "catatan",
+      "drillFromHere": "Main ulang dari sini",
+      "failed": "Pencarian gagal."
+    },
+    "lesson": {
+      "title": "Sesi {{date}}",
+      "notFound": "Sesi ini tidak ada.",
+      "noVideo": "Sesi ini tidak punya video — posisinya tetap bisa dipakai.",
+      "videoFailed": "Video tidak dapat dimuat.",
+      "segments": "Posisi yang dibahas",
+      "games": "Partai",
+      "openGame": "Buka partai",
+      "openAnalysis": "Buka analisis",
+      "openBoard": "Buka di papan analisis",
+      "noPosition": "tanpa posisi"
+    },
+    "drill": {
+      "onlyWrong": "Ulangi yang salah saja",
+      "noWrong": "Tidak ada posisi yang salah.",
+      "empty": "Tidak ada posisi untuk dimainkan ulang di sini.",
+      "progress": "Posisi {{n}} / {{total}}",
+      "lessonOf": "Sesi tanggal {{date}}",
+      "findMove": "Langkah apa yang dimainkan di sesi?",
+      "hint": "Petunjuk",
+      "hintText": "Petunjuk: bidak di {{square}} yang melangkah.",
+      "reveal": "Tampilkan solusi",
+      "skip": "Lewati",
+      "wrong": "{{move}} bukan langkah dari sesi ({{n}}/{{max}}) — coba lagi.",
+      "wrongFinal": "Tiga percobaan salah — langkahnya {{move}}.",
+      "solved": "Benar: {{move}}",
+      "solvedAfter": "Benar: {{move}} · percobaan salah: {{count}}",
+      "revealed": "Solusi: {{move}}",
+      "skipped": "Dilewati — langkahnya {{move}}.",
+      "variations": "Variasi",
+      "explanation": "Penjelasan",
+      "answerLine": "Alur",
+      "listen": "Dengarkan penjelasan",
+      "stop": "Berhenti",
+      "audioOnly": "hanya suara",
+      "clipFailed": "Cuplikan tidak dapat diputar.",
+      "saveFailed": "Hasil tidak tersimpan.",
+      "done": "Selesai!",
+      "countSolved": "{{count}} benar",
+      "countWrong": "{{count}} salah",
+      "countSkipped": "{{count}} dilewati",
+      "repeatWrong": "Ulangi yang salah",
+      "restart": "Mulai lagi",
+      "toLesson": "Ke sesi",
+      "toGame": "Ke partai"
+    },
+    "comments": {
+      "title": "Komentar pelatih · {{date}}",
+      "movesLine": "Komentar pelatih untuk",
+      "start": "Posisi awal",
+      "inVideo": "▶ di video mulai {{time}}",
+      "sideLine": "Variasi sampingan dari sesi"
     }
   }
 }

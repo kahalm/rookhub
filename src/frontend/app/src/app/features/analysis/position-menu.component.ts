@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Injector, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
+import { MenuService } from '../../core/menu.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AnalysisJobDialogComponent, AnalysisJobDialogData } from './analysis-job-dialog.component';
 import { MoveCompareCandidate, MoveCompareDialogComponent, MoveCompareDialogData } from './move-compare-dialog.component';
@@ -39,7 +40,7 @@ export interface PositionMenuEngines {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconLabelDirective, MatButtonModule, MatDividerModule, MatIconModule, MatMenuModule, RouterLink, TranslatePipe],
   template: `
-    <button mat-icon-button type="button" class="position-menu-btn" [matMenuTriggerFor]="menu" (menuOpened)="ensureEngines()"
+    <button mat-icon-button type="button" class="position-menu-btn" [matMenuTriggerFor]="menu" (menuOpened)="onOpened()"
             [appIconLabel]="'analysis.menu.title' | translate">
       <mat-icon>more_vert</mat-icon>
     </button>
@@ -59,6 +60,12 @@ export interface PositionMenuEngines {
       <button mat-menu-item type="button" class="pm-copy" (click)="copyFen()">
         <mat-icon>content_copy</mat-icon> {{ 'analysis.copyFen' | translate }}
       </button>
+      @if (trainingVideos()) {
+        <!-- „Im Training besprochen?“ (Trainerstunden): Stellungssuche in den eigenen Trainerstunden. -->
+        <a mat-menu-item class="pm-training" routerLink="/training-videos" [queryParams]="{ fen: fen() }">
+          <mat-icon>video_library</mat-icon> {{ 'trainingVideos.menuDiscussed' | translate }}
+        </a>
+      }
       @if (auth.isLoggedIn) {
         <mat-divider />
         @if (deep() && auth.has('league.view')) {
@@ -88,6 +95,10 @@ export class PositionMenuComponent {
   private readonly translate = inject(TranslateService);
   private readonly externalEngines = inject(ExternalEngineService);
   private readonly dialog = inject(MatDialog);
+  private readonly injector = inject(Injector);
+  /** Menüpunkt „Trainerstunden“ sichtbar → Eintrag „Im Training besprochen?“. Erst beim Öffnen gefragt (wie die Engines):
+   *  der Menü-Dienst lädt `/api/menu` — das braucht kein Brett, dessen ⋮ nie geöffnet wird. */
+  readonly trainingVideos = signal(false);
 
   /** Die Stellung auf dem Brett (auch die einer eigenen Nebenvariante). */
   readonly fen = input.required<string>();
@@ -115,6 +126,11 @@ export class PositionMenuComponent {
 
   chessableUrl(): string {
     return chessableFenSearchUrl(this.fen());
+  }
+
+  onOpened(): void {
+    this.trainingVideos.set(this.injector.get(MenuService).isVisible('training-videos'));
+    this.ensureEngines();
   }
 
   /** Die Engine-Frage erst beim Öffnen — und nur einmal. Still bei Fehlern: dann fehlt eben der Hintergrund-Eintrag. */

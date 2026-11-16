@@ -253,6 +253,10 @@ services:
       # steht). Leer = Hochladen bzw. Einlesen aus; Übersicht und Leser laufen trotzdem.
       Ebooks__Root: ${EBOOKS_ROOT:-/data/ebooks}
       Ebooks__LibraryRoot: ${EBOOKS_LIBRARY_HOST_PATH:+/data/ebooks-library}
+      # Trainingsvideos (privat): Video-Ordner (mp4) und Ordner der aufbereiteten JSON-Dateien, beide nur lesend
+      # eingehängt; gesetzt, sobald TRAINING_VIDEOS_HOST_PATH bzw. TRAINING_VIDEOS_DATA_HOST_PATH in der .env steht.
+      TrainingVideos__VideoRoot: ${TRAINING_VIDEOS_HOST_PATH:+/app/trainingvideos}
+      TrainingVideos__DataRoot: ${TRAINING_VIDEOS_DATA_HOST_PATH:+/app/trainingvideos-data}
       # Admin-Tab „CI / Actions": GitHub-PAT (actions:read) + Push-Modell. Leer -> Tab/Meldungen aus;
       # die CI-Endpoints antworten ohne Secret mit 401 (fail-closed).
       GitHub__Token: ${GITHUB_TOKEN:-}
@@ -272,6 +276,9 @@ services:
       # E-Books: Uploads + Titelbilder (benanntes Volume); die Bibliothek des Hosts nur lesend (Pfad aus der .env).
       - ebooks-data:/data/ebooks
       - ${EBOOKS_LIBRARY_HOST_PATH:-./.ebooks-library-empty}:/data/ebooks-library:ro
+      # Trainingsvideos: nur lesend, leer → Platzhalter-Verzeichnis (wie die E-Book-Bibliothek).
+      - ${TRAINING_VIDEOS_HOST_PATH:-./.trainingvideos-empty}:/app/trainingvideos:ro
+      - ${TRAINING_VIDEOS_DATA_HOST_PATH:-./.trainingvideos-empty}:/app/trainingvideos-data:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:8080/health || exit 1"]
       interval: 30s

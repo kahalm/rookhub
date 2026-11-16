@@ -41,6 +41,7 @@ internal sealed class UserDataEraser
         ClubDataEraser.MembershipAsync,
         KidsDataEraser.ProgressAsync,
         TrainingDataEraser.MarksAndWorksheetsAsync,
+        TrainingDataEraser.TrainingLessonsAsync,
         EbookDataEraser.ReadingAsync,
         AccountDataEraser.AccessAsync,
         ScoresheetDataEraser.ScansAsync,

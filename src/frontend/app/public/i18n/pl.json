@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Zasady praktyczne",
     "visitors": "RookHub na świecie",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Lekcje z trenerem"
   },
   "app": {
     "changelogTitle": "Lista zmian",
@@ -2776,7 +2777,8 @@
         "ebooks": "Biblioteka e-booków",
         "woodpecker": "Trening Woodpecker",
         "maxims": "Zasady praktyczne (maksymy szachowe)",
-        "visitors": "RookHub na świecie"
+        "visitors": "RookHub na świecie",
+        "training-videos": "Lekcje z trenerem"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "RookHub na świecie",
         "p": [
           "W ☰ → Społeczność → RookHub na świecie mapa świata pokazuje, z jakich krajów korzysta się z RookHub. Dotknij kraju lub wybierz kontynent, aby powiększyć wycinek; liczone są tylko kraje, nigdy pojedyncze osoby."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Lekcje z trenerem",
+        "p": [
+          "Jeśli twoje konto ma włączone lekcje, „Lekcje z trenerem” w menu ☰ (Trening) pokazują nagrania twoich lekcji: datę, czas trwania, krótkie podsumowanie i omawiane partie. „Obejrzyj” otwiera nagranie obok szachownicy; lista pozycji podąża za nagraniem.",
+          "Możesz szukać po słowie lub FEN albo ustawić pozycję; na szachownicy analizy menu ⋮ oferuje „Omawiane na lekcji?”. „Rozegraj ponownie” pyta o ruchy z lekcji na szachownicy, a potem odtwarza tylko pasujące wyjaśnienie; „Zestaw pytań” zbiera pytania ze wszystkich lekcji."
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Strona turniejowa"
+    }
+  },
+  "trainingVideos": {
+    "title": "Lekcje z trenerem",
+    "intro": "Nagrania twoich lekcji z trenerem i omawiane pozycje — oglądaj, przeszukuj i rozgrywaj ponownie.",
+    "empty": "Nie ma jeszcze lekcji.",
+    "questionSet": "Zestaw pytań",
+    "watch": "Obejrzyj",
+    "replay": "Rozegraj ponownie",
+    "positions": "{{count}} pozycji",
+    "positionsOne": "1 pozycja",
+    "duration": "Czas {{time}}",
+    "noVideoShort": "bez nagrania",
+    "owner": "Konto: {{name}}",
+    "unknownPlayer": "Nieznany",
+    "flip": "Obróć szachownicę",
+    "toList": "Do przeglądu",
+    "trainerComment": "Komentarz trenera",
+    "quote": "„{{text}}”",
+    "menuDiscussed": "Omawiane na lekcji?",
+    "kind": {
+      "own": "własna partia",
+      "lesson": "partia wzorcowa",
+      "exercise": "ćwiczenie"
+    },
+    "tags": {
+      "question": "pytanie",
+      "key": "kluczowy moment",
+      "mistake": "błąd",
+      "plan": "plan",
+      "opening": "debiut",
+      "endgame": "końcówka",
+      "tactic": "taktyka"
+    },
+    "moveKind": {
+      "analysis": "wariant poboczny"
+    },
+    "search": {
+      "title": "Szukaj w lekcjach",
+      "label": "Słowo lub FEN",
+      "setup": "Ustaw szachownicę",
+      "setupTitle": "Ustaw pozycję",
+      "tooShort": "Co najmniej trzy litery.",
+      "none": "Brak wyników.",
+      "truncated": "Jest więcej wyników — pokazano pierwsze {{count}}.",
+      "position": "Szukana pozycja",
+      "otherSide": "ruch drugiej strony",
+      "note": "notatka",
+      "drillFromHere": "Rozegraj stąd",
+      "failed": "Wyszukiwanie nie powiodło się."
+    },
+    "lesson": {
+      "title": "Lekcja z {{date}}",
+      "notFound": "Ta lekcja nie istnieje.",
+      "noVideo": "Ta lekcja nie ma nagrania — pozycje i tak działają.",
+      "videoFailed": "Nie udało się wczytać nagrania.",
+      "segments": "Omawiane pozycje",
+      "games": "Partie",
+      "openGame": "Otwórz partię",
+      "openAnalysis": "Otwórz analizę",
+      "openBoard": "Otwórz na szachownicy analizy",
+      "noPosition": "bez pozycji"
+    },
+    "drill": {
+      "onlyWrong": "Powtarzaj tylko błędne",
+      "noWrong": "Brak błędnie rozwiązanych pozycji.",
+      "empty": "Nie ma tu pozycji do rozegrania.",
+      "progress": "Pozycja {{n}} / {{total}}",
+      "lessonOf": "Lekcja z {{date}}",
+      "findMove": "Jaki ruch zagrano na lekcji?",
+      "hint": "Podpowiedź",
+      "hintText": "Podpowiedź: rusza się bierka z pola {{square}}.",
+      "reveal": "Pokaż rozwiązanie",
+      "skip": "Pomiń",
+      "wrong": "{{move}} to nie ruch z lekcji ({{n}}/{{max}}) — spróbuj jeszcze raz.",
+      "wrongFinal": "Trzy błędne próby — zagrano {{move}}.",
+      "solved": "Dobrze: {{move}}",
+      "solvedAfter": "Dobrze: {{move}} · błędne próby: {{count}}",
+      "revealed": "Rozwiązanie: {{move}}",
+      "skipped": "Pominięto — zagrano {{move}}.",
+      "variations": "Warianty",
+      "explanation": "Wyjaśnienie",
+      "answerLine": "Linia",
+      "listen": "Posłuchaj wyjaśnienia",
+      "stop": "Zatrzymaj",
+      "audioOnly": "tylko dźwięk",
+      "clipFailed": "Nie udało się odtworzyć fragmentu.",
+      "saveFailed": "Wynik nie został zapisany.",
+      "done": "Gotowe!",
+      "countSolved": "{{count}} dobrze",
+      "countWrong": "{{count}} błędnie",
+      "countSkipped": "{{count}} pominięto",
+      "repeatWrong": "Powtórz błędne",
+      "restart": "Od początku",
+      "toLesson": "Do lekcji",
+      "toGame": "Do partii"
+    },
+    "comments": {
+      "title": "Komentarz trenera · {{date}}",
+      "movesLine": "Komentarze trenera do",
+      "start": "Pozycja początkowa",
+      "inVideo": "▶ w nagraniu od {{time}}",
+      "sideLine": "Wariant poboczny z lekcji"
     }
   }
 }

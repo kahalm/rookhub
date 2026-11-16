@@ -5,6 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
+import { MenuService } from '../../core/menu.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ExternalEngineService } from './external-engine.service';
 import { PositionMenuComponent } from './position-menu.component';
@@ -18,6 +19,7 @@ describe('PositionMenuComponent', () => {
   let dialog: jasmine.SpyObj<MatDialog>;
   let loggedIn = true;
   let perms: string[] = [];
+  let menuKeys: string[] = [];
 
   function setup(inputs: Record<string, unknown> = {}): void {
     engines = jasmine.createSpyObj<ExternalEngineService>('ExternalEngineService', ['listEngines']);
@@ -31,6 +33,7 @@ describe('PositionMenuComponent', () => {
         provideNoopAnimations(), provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: { get isLoggedIn() { return loggedIn; }, has: (p: string) => perms.includes(p) } },
         { provide: ExternalEngineService, useValue: engines },
+        { provide: MenuService, useValue: { isVisible: (k: string) => menuKeys.includes(k) } },
         { provide: SnackbarService, useValue: snackbar },
         { provide: MatDialog, useValue: dialog },
       ],
@@ -47,7 +50,21 @@ describe('PositionMenuComponent', () => {
   }
   const item = (cls: string) => document.querySelector(`.cdk-overlay-container .${cls}`) as HTMLElement | null;
 
-  beforeEach(() => { loggedIn = true; perms = []; });
+  beforeEach(() => { loggedIn = true; perms = []; menuKeys = []; });
+
+  it('„Im Training besprochen?“ nur mit Menüpunkt Trainerstunden — Stellungssuche mit der FEN', () => {
+    setup();
+    open();
+    expect(item('pm-training')).toBeNull();
+    document.querySelectorAll('.cdk-overlay-container').forEach(c => c.innerHTML = '');
+    TestBed.resetTestingModule();
+    menuKeys = ['training-videos'];
+    setup();
+    open();
+    const a = item('pm-training') as HTMLAnchorElement;
+    expect(a).not.toBeNull();
+    expect(decodeURIComponent(a.getAttribute('href')!)).toBe('/training-videos?fen=' + FEN);
+  });
   afterEach(() => document.querySelectorAll('.cdk-overlay-container').forEach(c => c.innerHTML = ''));
 
   it('der Chessable-Eintrag öffnet Chessables FEN-Suche für die Stellung in einem neuen Tab', () => {

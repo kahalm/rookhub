@@ -210,6 +210,11 @@ export const ROUTES = [
   r('rookhub', '/messages', 'user', { main: ['.msg-container .thread .bubble-row', '.msg-container .empty-state', '.msg-container mat-card.admin-hint', '.msg-container .reply', '.msg-container app-load-error'] }),
   r('rookhub', '/courses', 'user', { main: ['.courses-container .course-grid mat-card.course-card', '.courses-container .empty-state', '.courses-container app-loading-spinner'] }),
   r('rookhub', '/woodpecker', 'user', { main: ['.plans .plan', '.page .empty-state', '.page app-load-error'] }),
+  // Trainerstunden (0.986.0): Menüpunkt standardmäßig nur für Admins, Stunden nur per Admin-Import.
+  r('rookhub', '/training-videos', 'user', { roles: ['admin'], main: ['.lessons .lesson', '.page .empty-state', '.page app-load-error'] }),
+  r('rookhub', '/training-videos/questions', 'user', { roles: ['admin'], main: ['app-chess-board', '.page .empty-state', '.page app-load-error'] }),
+  r('rookhub', '/training-videos/{trainingLessonId}', 'user', { roles: ['admin'], main: ['.segments', '.page app-load-error'] }),
+  r('rookhub', '/training-videos/{trainingLessonId}/drill', 'user', { roles: ['admin'], main: ['app-chess-board', '.page .empty-state', '.page app-load-error'] }),
   r('rookhub', '/woodpecker/{woodpeckerPlanId}/solve', 'user', { main: ['.solver app-puzzle-board', '.page mat-card.done', '.page app-load-error'], expectedFailures: [/^GET \/api\/woodpecker\/\d+\/next → 404$/] }),
   r('rookhub', '/catalog', 'user', { main: ['.catalog .item-list .item-row', '.catalog mat-card:not(.admin-card) .empty-state', '.catalog mat-card:not(.admin-card) app-load-error', '.catalog mat-card:not(.admin-card) p.empty'] }),
   r('rookhub', '/courses/{bookId}', 'user', { main: ['.detail-page .head-card .actions button', '.detail-page .head-card', '.detail-page .center', '.detail-page > mat-card'] }),
@@ -353,6 +358,7 @@ export const ROUTES = [
 // ohne Treffer gehört zu „sonstiges". Neue Seite → passt sie nicht in einen Bereich, hier eine Regel ergänzen.
 export const AREAS = [
   ['woodpecker', r => r.app === 'rookhub' && /^\/woodpecker/.test(r.url)],
+  ['trainerstunden', r => r.app === 'rookhub' && /^\/training-videos/.test(r.url)],
   ['kurse', r => r.app === 'rookhub' && (/^\/(courses|catalog|puzzles\/book|chessable)/.test(r.url) || /slug/.test(r.label ?? ''))],
   ['repertoire', r => r.app === 'rookhub' && /^\/(repertoires|remembered|l\/)/.test(r.url)],
   ['puzzles', r => r.app === 'rookhub' && /^\/(puzzles|favorites|stats|leaderboards|visitors)/.test(r.url)],

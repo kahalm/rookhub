@@ -107,7 +107,7 @@ export const SHARED_GAME_STYLES = `
     .train-section {
       display: flex; flex-direction: column; gap: 8px; flex: 1 1 260px; min-width: 0; max-width: 680px; box-sizing: border-box;
     }
-    .side-section > .review-slot:empty, .side-section > .pr-slot:empty { display: none; }
+    .side-section > .review-slot:empty, .side-section > .pr-slot:empty, .side-section > .tc-slot:empty { display: none; }
     /* Breit genug für drei Spalten: ein FESTES Raster (Brett | Zugliste | Auswertung). Die Spaltenbreiten hängen
        nicht am Inhalt — vorher wuchs die Karte, sobald die Auswertung erschien, und lange Linien wurden rechts
        abgeschnitten (gemeldet 2026-10-10). */

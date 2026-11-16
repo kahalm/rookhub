@@ -362,7 +362,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Merksätze",
     "visitors": "RookHub weltweit",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Trainerstunden"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2805,7 +2806,8 @@
         "ebooks": "E-Book-Bibliothek",
         "woodpecker": "Woodpecker-Training",
         "maxims": "Merksätze",
-        "visitors": "RookHub weltweit"
+        "visitors": "RookHub weltweit",
+        "training-videos": "Trainerstunden"
       }
     },
     "messages": {
@@ -4306,6 +4308,13 @@
         "t": "RookHub weltweit",
         "p": [
           "Unter ☰ → Community → RookHub weltweit zeigt eine Weltkarte, aus welchen Ländern RookHub genutzt wird. Ein Tipp auf ein Land oder die Wahl eines Erdteils vergrößert den Ausschnitt; gezählt werden nur Länder, nie einzelne Personen."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Trainerstunden",
+        "p": [
+          "Ist für dein Konto die Trainerstunde freigeschaltet, listet „Trainerstunden“ im ☰-Menü (Training) die Videos deiner Stunden beim Trainer: Datum, Dauer, eine kurze Zusammenfassung und die besprochenen Partien. „Ansehen“ öffnet das Video neben dem Brett — die Liste der besprochenen Stellungen folgt dem Video, ein Klick auf eine Stellung springt dorthin.",
+          "Suchen kannst du nach Wort oder FEN oder eine Stellung auf dem Brett aufbauen; im Analysebrett bietet das ⋮-Menü „Im Training besprochen?“. „Nachspielen“ fragt die Züge aus der Stunde auf dem Brett ab (mit Hinweis und Lösung) und spielt danach nur die passende Erklärung; der „Fragen-Satz“ sammelt die Fragen aller Stunden. An deinen eigenen Partien stehen die Kommentare des Trainers neben den Zügen."
         ]
       }
     }
@@ -6870,6 +6879,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Turnierseite"
+    }
+  },
+  "trainingVideos": {
+    "title": "Trainerstunden",
+    "intro": "Videos deiner Trainerstunden mit den besprochenen Stellungen — ansehen, durchsuchen und nachspielen.",
+    "empty": "Noch keine Trainerstunden.",
+    "questionSet": "Fragen-Satz",
+    "watch": "Ansehen",
+    "replay": "Nachspielen",
+    "positions": "{{count}} Stellungen",
+    "positionsOne": "1 Stellung",
+    "duration": "Dauer {{time}}",
+    "noVideoShort": "ohne Video",
+    "owner": "Konto: {{name}}",
+    "unknownPlayer": "Unbekannt",
+    "flip": "Brett drehen",
+    "toList": "Zur Übersicht",
+    "trainerComment": "Trainerkommentar",
+    "quote": "„{{text}}“",
+    "menuDiscussed": "Im Training besprochen?",
+    "kind": {
+      "own": "eigene Partie",
+      "lesson": "Lehrpartie",
+      "exercise": "Übung"
+    },
+    "tags": {
+      "question": "Frage",
+      "key": "Schlüsselstelle",
+      "mistake": "Fehler",
+      "plan": "Plan",
+      "opening": "Eröffnung",
+      "endgame": "Endspiel",
+      "tactic": "Taktik"
+    },
+    "moveKind": {
+      "analysis": "Nebenlinie"
+    },
+    "search": {
+      "title": "In den Trainerstunden suchen",
+      "label": "Wort oder FEN",
+      "setup": "Brett aufbauen",
+      "setupTitle": "Stellung aufbauen",
+      "tooShort": "Mindestens drei Buchstaben.",
+      "none": "Keine Treffer.",
+      "truncated": "Es gibt mehr Treffer — gezeigt werden die ersten {{count}}.",
+      "position": "Gesuchte Stellung",
+      "otherSide": "anderes Zugrecht",
+      "note": "Notiz",
+      "drillFromHere": "Nachspielen ab hier",
+      "failed": "Die Suche ist fehlgeschlagen."
+    },
+    "lesson": {
+      "title": "Trainerstunde vom {{date}}",
+      "notFound": "Diese Trainerstunde gibt es nicht.",
+      "noVideo": "Zu dieser Stunde gibt es kein Video — die Stellungen gehen trotzdem.",
+      "videoFailed": "Das Video konnte nicht geladen werden.",
+      "segments": "Besprochene Stellungen",
+      "games": "Partien",
+      "openGame": "Partie öffnen",
+      "openAnalysis": "Analyse öffnen",
+      "openBoard": "Im Analysebrett öffnen",
+      "noPosition": "ohne Stellung"
+    },
+    "drill": {
+      "onlyWrong": "Nur Falsche wiederholen",
+      "noWrong": "Keine falsch gelösten Stellungen.",
+      "empty": "Hier gibt es keine Stellungen zum Nachspielen.",
+      "progress": "Stellung {{n}} / {{total}}",
+      "lessonOf": "Stunde vom {{date}}",
+      "findMove": "Welcher Zug wurde in der Stunde gespielt?",
+      "hint": "Hinweis",
+      "hintText": "Hinweis: Es zieht die Figur auf {{square}}.",
+      "reveal": "Auflösen",
+      "skip": "Überspringen",
+      "wrong": "{{move}} ist nicht der Zug aus der Stunde ({{n}}/{{max}}) — versuch es noch einmal.",
+      "wrongFinal": "Drei Fehlversuche — gespielt wurde {{move}}.",
+      "solved": "Richtig: {{move}}",
+      "solvedAfter": "Richtig: {{move}} · Fehlversuche: {{count}}",
+      "revealed": "Lösung: {{move}}",
+      "skipped": "Übersprungen — gespielt wurde {{move}}.",
+      "variations": "Varianten",
+      "explanation": "Erklärung",
+      "answerLine": "Lösungsweg",
+      "listen": "Erklärung hören",
+      "stop": "Anhalten",
+      "audioOnly": "nur Ton",
+      "clipFailed": "Der Ausschnitt konnte nicht abgespielt werden.",
+      "saveFailed": "Ergebnis nicht gespeichert.",
+      "done": "Fertig!",
+      "countSolved": "{{count}} richtig",
+      "countWrong": "{{count}} falsch",
+      "countSkipped": "{{count}} übersprungen",
+      "repeatWrong": "Falsche wiederholen",
+      "restart": "Von vorn",
+      "toLesson": "Zur Stunde",
+      "toGame": "Zur Partie"
+    },
+    "comments": {
+      "title": "Trainerkommentar · {{date}}",
+      "movesLine": "Trainerkommentare zu",
+      "start": "Anfangsstellung",
+      "inVideo": "▶ im Video ab {{time}}",
+      "sideLine": "Nebenvariante aus der Stunde"
     }
   }
 }

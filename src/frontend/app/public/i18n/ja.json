@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "経験則",
     "visitors": "世界のRookHub",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "コーチのレッスン"
   },
   "app": {
     "changelogTitle": "変更履歴",
@@ -2776,7 +2777,8 @@
         "ebooks": "電子書籍ライブラリ",
         "woodpecker": "Woodpecker トレーニング",
         "maxims": "経験則（チェスの格言）",
-        "visitors": "世界のRookHub"
+        "visitors": "世界のRookHub",
+        "training-videos": "コーチのレッスン"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "世界のRookHub",
         "p": [
           "☰ → コミュニティ → 世界のRookHub では、RookHubがどの国から使われているかを世界地図で確認できます。国をタップするか大陸を選ぶと拡大します。数えるのは国だけで、個人は数えません。"
+        ]
+      },
+      "trainingVideos": {
+        "t": "コーチのレッスン",
+        "p": [
+          "アカウントでレッスンが有効なら、☰ メニュー（トレーニング）の「コーチのレッスン」にレッスン動画が並びます: 日付、長さ、短い要約、取り上げた対局。「見る」で盤の横に動画が開き、局面リストが動画に合わせて進みます。",
+          "語句や FEN で検索したり、局面を並べたりできます。解析盤の ⋮ メニューには「レッスンで扱った？」があります。「もう一度指す」は盤上でレッスンの手を尋ね、その後に該当する解説だけを再生します。「問題セット」はすべてのレッスンの質問を集めます。"
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "大会サイト"
+    }
+  },
+  "trainingVideos": {
+    "title": "コーチのレッスン",
+    "intro": "コーチとのレッスン動画と取り上げた局面 — 見る、探す、もう一度指す。",
+    "empty": "まだレッスンはありません。",
+    "questionSet": "問題セット",
+    "watch": "見る",
+    "replay": "もう一度指す",
+    "positions": "{{count}} 局面",
+    "positionsOne": "1 局面",
+    "duration": "長さ {{time}}",
+    "noVideoShort": "動画なし",
+    "owner": "アカウント: {{name}}",
+    "unknownPlayer": "不明",
+    "flip": "盤を反転",
+    "toList": "一覧へ",
+    "trainerComment": "コーチのコメント",
+    "quote": "「{{text}}」",
+    "menuDiscussed": "レッスンで扱った？",
+    "kind": {
+      "own": "自分の対局",
+      "lesson": "お手本の対局",
+      "exercise": "練習"
+    },
+    "tags": {
+      "question": "質問",
+      "key": "重要な場面",
+      "mistake": "ミス",
+      "plan": "プラン",
+      "opening": "オープニング",
+      "endgame": "エンドゲーム",
+      "tactic": "タクティクス"
+    },
+    "moveKind": {
+      "analysis": "サイドライン"
+    },
+    "search": {
+      "title": "レッスン内を検索",
+      "label": "語句または FEN",
+      "setup": "盤を並べる",
+      "setupTitle": "局面を並べる",
+      "tooShort": "3 文字以上。",
+      "none": "該当なし。",
+      "truncated": "ほかにも結果があります — 最初の {{count}} 件を表示。",
+      "position": "検索した局面",
+      "otherSide": "相手の手番",
+      "note": "メモ",
+      "drillFromHere": "ここから指す",
+      "failed": "検索に失敗しました。"
+    },
+    "lesson": {
+      "title": "{{date}} のレッスン",
+      "notFound": "このレッスンはありません。",
+      "noVideo": "このレッスンには動画がありません — 局面は使えます。",
+      "videoFailed": "動画を読み込めませんでした。",
+      "segments": "取り上げた局面",
+      "games": "対局",
+      "openGame": "対局を開く",
+      "openAnalysis": "解析を開く",
+      "openBoard": "解析盤で開く",
+      "noPosition": "局面なし"
+    },
+    "drill": {
+      "onlyWrong": "間違えたものだけ",
+      "noWrong": "間違えた局面はありません。",
+      "empty": "ここには指し直す局面がありません。",
+      "progress": "局面 {{n}} / {{total}}",
+      "lessonOf": "レッスン {{date}}",
+      "findMove": "レッスンで指された手は？",
+      "hint": "ヒント",
+      "hintText": "ヒント: {{square}} の駒が動きます。",
+      "reveal": "答えを見る",
+      "skip": "スキップ",
+      "wrong": "{{move}} はレッスンの手ではありません（{{n}}/{{max}}） — もう一度。",
+      "wrongFinal": "3 回間違えました — 正解は {{move}}。",
+      "solved": "正解: {{move}}",
+      "solvedAfter": "正解: {{move}} · 間違い: {{count}}",
+      "revealed": "答え: {{move}}",
+      "skipped": "スキップ — 正解は {{move}}。",
+      "variations": "変化",
+      "explanation": "解説",
+      "answerLine": "手順",
+      "listen": "解説を聞く",
+      "stop": "停止",
+      "audioOnly": "音声のみ",
+      "clipFailed": "抜粋を再生できませんでした。",
+      "saveFailed": "結果を保存できませんでした。",
+      "done": "完了！",
+      "countSolved": "{{count}} 正解",
+      "countWrong": "{{count}} 不正解",
+      "countSkipped": "{{count}} スキップ",
+      "repeatWrong": "間違いを復習",
+      "restart": "最初から",
+      "toLesson": "レッスンへ",
+      "toGame": "対局へ"
+    },
+    "comments": {
+      "title": "コーチのコメント · {{date}}",
+      "movesLine": "コーチのコメントがある手:",
+      "start": "初期局面",
+      "inVideo": "▶ 動画の {{time}} から",
+      "sideLine": "レッスンのサイドライン"
     }
   }
 }

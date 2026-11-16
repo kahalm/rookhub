@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Vuistregels",
     "visitors": "RookHub wereldwijd",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Trainingslessen"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2776,7 +2777,8 @@
         "ebooks": "E-bookbibliotheek",
         "woodpecker": "Woodpecker-training",
         "maxims": "Vuistregels (schaakmaximes)",
-        "visitors": "RookHub wereldwijd"
+        "visitors": "RookHub wereldwijd",
+        "training-videos": "Trainingslessen"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "RookHub wereldwijd",
         "p": [
           "Onder ☰ → Community → RookHub wereldwijd toont een wereldkaart vanuit welke landen RookHub wordt gebruikt. Tik op een land of kies een werelddeel om in te zoomen; er worden alleen landen geteld, nooit afzonderlijke personen."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Trainingslessen",
+        "p": [
+          "Als trainingslessen voor je account zijn ingeschakeld, toont “Trainingslessen” in het ☰-menu (Training) de video’s van je lessen: datum, duur, een korte samenvatting en de besproken partijen. “Bekijken” opent de video naast het bord; de lijst met stellingen volgt de video.",
+          "Je kunt zoeken op woord of FEN, of een stelling opzetten; op het analysebord biedt het ⋮-menu “Besproken in de les?”. “Naspelen” vraagt de zetten uit de les op het bord en speelt daarna alleen de bijbehorende uitleg; de “Vragenset” verzamelt de vragen van alle lessen."
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Toernooisite"
+    }
+  },
+  "trainingVideos": {
+    "title": "Trainingslessen",
+    "intro": "Video’s van je lessen bij de trainer met de besproken stellingen — bekijk, doorzoek en speel ze na.",
+    "empty": "Nog geen trainingslessen.",
+    "questionSet": "Vragenset",
+    "watch": "Bekijken",
+    "replay": "Naspelen",
+    "positions": "{{count}} stellingen",
+    "positionsOne": "1 stelling",
+    "duration": "Duur {{time}}",
+    "noVideoShort": "geen video",
+    "owner": "Account: {{name}}",
+    "unknownPlayer": "Onbekend",
+    "flip": "Bord draaien",
+    "toList": "Naar het overzicht",
+    "trainerComment": "Commentaar van de trainer",
+    "quote": "“{{text}}”",
+    "menuDiscussed": "Besproken in de les?",
+    "kind": {
+      "own": "eigen partij",
+      "lesson": "voorbeeldpartij",
+      "exercise": "oefening"
+    },
+    "tags": {
+      "question": "vraag",
+      "key": "sleutelmoment",
+      "mistake": "fout",
+      "plan": "plan",
+      "opening": "opening",
+      "endgame": "eindspel",
+      "tactic": "tactiek"
+    },
+    "moveKind": {
+      "analysis": "zijvariant"
+    },
+    "search": {
+      "title": "Zoeken in de lessen",
+      "label": "Woord of FEN",
+      "setup": "Bord opzetten",
+      "setupTitle": "Stelling opzetten",
+      "tooShort": "Minstens drie letters.",
+      "none": "Geen resultaten.",
+      "truncated": "Er zijn meer resultaten — de eerste {{count}} worden getoond.",
+      "position": "Gezochte stelling",
+      "otherSide": "andere kant aan zet",
+      "note": "notitie",
+      "drillFromHere": "Naspelen vanaf hier",
+      "failed": "Het zoeken is mislukt."
+    },
+    "lesson": {
+      "title": "Les van {{date}}",
+      "notFound": "Deze les bestaat niet.",
+      "noVideo": "Bij deze les hoort geen video — de stellingen werken toch.",
+      "videoFailed": "De video kon niet worden geladen.",
+      "segments": "Besproken stellingen",
+      "games": "Partijen",
+      "openGame": "Partij openen",
+      "openAnalysis": "Analyse openen",
+      "openBoard": "Openen in het analysebord",
+      "noPosition": "geen stelling"
+    },
+    "drill": {
+      "onlyWrong": "Alleen foute herhalen",
+      "noWrong": "Geen fout opgeloste stellingen.",
+      "empty": "Hier zijn geen stellingen om na te spelen.",
+      "progress": "Stelling {{n}} / {{total}}",
+      "lessonOf": "Les van {{date}}",
+      "findMove": "Welke zet werd in de les gespeeld?",
+      "hint": "Tip",
+      "hintText": "Tip: het stuk op {{square}} zet.",
+      "reveal": "Oplossing tonen",
+      "skip": "Overslaan",
+      "wrong": "{{move}} is niet de zet uit de les ({{n}}/{{max}}) — probeer het nog eens.",
+      "wrongFinal": "Drie foute pogingen — de zet was {{move}}.",
+      "solved": "Goed: {{move}}",
+      "solvedAfter": "Goed: {{move}} · foute pogingen: {{count}}",
+      "revealed": "Oplossing: {{move}}",
+      "skipped": "Overgeslagen — de zet was {{move}}.",
+      "variations": "Varianten",
+      "explanation": "Uitleg",
+      "answerLine": "Lijn",
+      "listen": "Uitleg beluisteren",
+      "stop": "Stoppen",
+      "audioOnly": "alleen geluid",
+      "clipFailed": "Het fragment kon niet worden afgespeeld.",
+      "saveFailed": "Resultaat niet opgeslagen.",
+      "done": "Klaar!",
+      "countSolved": "{{count}} goed",
+      "countWrong": "{{count}} fout",
+      "countSkipped": "{{count}} overgeslagen",
+      "repeatWrong": "Foute herhalen",
+      "restart": "Opnieuw beginnen",
+      "toLesson": "Naar de les",
+      "toGame": "Naar de partij"
+    },
+    "comments": {
+      "title": "Commentaar van de trainer · {{date}}",
+      "movesLine": "Trainerscommentaar bij",
+      "start": "Beginstelling",
+      "inVideo": "▶ in de video vanaf {{time}}",
+      "sideLine": "Zijvariant uit de les"
     }
   }
 }

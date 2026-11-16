@@ -1017,6 +1017,23 @@ public class DeploymentConfigTests
     }
 
     [Fact]
+    public void TrainingVideosLocation_StreamsUnbuffered_AndPassesRange()
+    {
+        // Trainingsvideos: das mp4 kommt in Bereichsanfragen; gepuffert schriebe nginx jedes Stück erst in seine Puffer
+        // bzw. eine Temp-Datei, und eine angehaltene Wiedergabe liefe in die 60-s-Vorgabe von proxy_read_timeout.
+        // Den Range-Kopf darf die Location nicht leeren (proxy_set_header Range "" schaltete das Springen im Video ab).
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var loc = Regex.Match(nginx, @"location \^~ /api/training-videos \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(loc.Success, "location ^~ /api/training-videos fehlt in nginx.conf");
+        var body = loc.Groups["body"].Value;
+        Assert.Contains("proxy_buffering off;", body);
+        Assert.Contains("proxy_read_timeout 3600s;", body);
+        Assert.DoesNotContain("Range", body.Split('\n').Where(l => l.TrimStart().StartsWith("proxy_set_header")).Aggregate("", (a, b) => a + b));
+        Assert.True(nginx.IndexOf("location ^~ /api/training-videos", StringComparison.Ordinal)
+            < nginx.IndexOf("location ^~ /api/ {", StringComparison.Ordinal), "eigene Location vor der generischen /api/-Regel");
+    }
+
+    [Fact]
     public void DiagramWorkerLocation_AllowsTheResultLimit_AndStreamsUnbuffered()
     {
         // Externe Diagramm-Worker (0.870.0): das Ergebnis eines Riesenbands ist EIN JSON-Rumpf mit mehreren 10 MB — die

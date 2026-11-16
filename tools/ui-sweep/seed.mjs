@@ -335,6 +335,11 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
     if (!plan && p.bookId) plan = await a.post('/api/woodpecker', { bookIds: [Number(p.bookId)], startedAt: null });
     return plan ? { woodpeckerPlanId: plan.id } : { _why: 'kein Aufgabenkurs für einen Plan' };
   });
+  // Trainerstunde (Trainingsvideos, 0.986.0): wird nicht angelegt — nur Admins importieren sie (Admin sieht alle Stunden).
+  await step(['trainingLessonId'], async () => {
+    const lesson = list(await a.get('/api/training-videos'))[0];
+    return lesson ? { trainingLessonId: lesson.id } : { _why: 'keine Trainerstunde importiert (Admin → POST /api/admin/training-videos/import)' };
+  });
   // Lern-Kurs (Kind „Study", kein Aufgabenbuch) und Kurz-URL eines öffentlichen Kurses (/{slug}). Art, „öffentlich" und
   // Alias stehen nur in der Detailantwort, nicht in der Liste. Hat kein öffentlicher Kurs einen Alias, macht das
   // Admin-Konto den ersten Aufgabenkurs öffentlich mit dem Alias „ui-sweep" (Dev-Daten; das normale Konto darf das nicht).

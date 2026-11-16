@@ -362,7 +362,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Pravila",
     "visitors": "RookHub diljem svijeta",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Satovi s trenerom"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -2805,7 +2806,8 @@
         "ebooks": "Knjižnica e-knjiga",
         "woodpecker": "Woodpecker trening",
         "maxims": "Pravila (šahovske maksime)",
-        "visitors": "RookHub diljem svijeta"
+        "visitors": "RookHub diljem svijeta",
+        "training-videos": "Satovi s trenerom"
       }
     },
     "messages": {
@@ -4306,6 +4308,13 @@
         "t": "RookHub diljem svijeta",
         "p": [
           "Pod ☰ → Zajednica → RookHub diljem svijeta karta svijeta pokazuje iz kojih se zemalja koristi RookHub. Dodir na zemlju ili odabir kontinenta uvećava isječak; broje se samo zemlje, nikada pojedine osobe."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Satovi s trenerom",
+        "p": [
+          "Ako su za tvoj račun uključeni satovi s trenerom, „Satovi s trenerom“ u izborniku ☰ (Trening) prikazuju videozapise tvojih satova: datum, trajanje, kratak sažetak i obrađene partije. „Pogledaj“ otvara video uz ploču — popis obrađenih pozicija prati video, a klik na poziciju skače onamo.",
+          "Pretraživati možeš po riječi ili FEN-u ili postaviti poziciju na ploči; na ploči za analizu izbornik ⋮ nudi „Obrađeno na treningu?“. „Odigraj ponovno“ traži od tebe poteze sa sata na ploči (sa savjetom i rješenjem), a zatim reproducira samo pripadajuće objašnjenje; „Skup pitanja“ skuplja pitanja svih satova. Uz tvoje vlastite partije stoje komentari trenera."
         ]
       }
     }
@@ -6870,6 +6879,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Turnirska stranica"
+    }
+  },
+  "trainingVideos": {
+    "title": "Satovi s trenerom",
+    "intro": "Videozapisi tvojih satova s trenerom i pozicije o kojima ste razgovarali — gledaj, pretražuj i ponavljaj.",
+    "empty": "Još nema satova s trenerom.",
+    "questionSet": "Skup pitanja",
+    "watch": "Pogledaj",
+    "replay": "Odigraj ponovno",
+    "positions": "{{count}} pozicija",
+    "positionsOne": "1 pozicija",
+    "duration": "Trajanje {{time}}",
+    "noVideoShort": "bez videa",
+    "owner": "Račun: {{name}}",
+    "unknownPlayer": "Nepoznato",
+    "flip": "Okreni ploču",
+    "toList": "Na pregled",
+    "trainerComment": "Komentar trenera",
+    "quote": "„{{text}}“",
+    "menuDiscussed": "Obrađeno na treningu?",
+    "kind": {
+      "own": "vlastita partija",
+      "lesson": "poučna partija",
+      "exercise": "vježba"
+    },
+    "tags": {
+      "question": "pitanje",
+      "key": "ključni trenutak",
+      "mistake": "pogreška",
+      "plan": "plan",
+      "opening": "otvaranje",
+      "endgame": "završnica",
+      "tactic": "taktika"
+    },
+    "moveKind": {
+      "analysis": "sporedna varijanta"
+    },
+    "search": {
+      "title": "Pretraži satove",
+      "label": "Riječ ili FEN",
+      "setup": "Postavi ploču",
+      "setupTitle": "Postavi poziciju",
+      "tooShort": "Barem tri slova.",
+      "none": "Nema pogodaka.",
+      "truncated": "Ima više pogodaka — prikazano je prvih {{count}}.",
+      "position": "Tražena pozicija",
+      "otherSide": "druga strana na potezu",
+      "note": "bilješka",
+      "drillFromHere": "Odigraj odavde",
+      "failed": "Pretraga nije uspjela."
+    },
+    "lesson": {
+      "title": "Sat od {{date}}",
+      "notFound": "Ovaj sat s trenerom ne postoji.",
+      "noVideo": "Za ovaj sat nema videa — pozicije ipak rade.",
+      "videoFailed": "Video se nije mogao učitati.",
+      "segments": "Obrađene pozicije",
+      "games": "Partije",
+      "openGame": "Otvori partiju",
+      "openAnalysis": "Otvori analizu",
+      "openBoard": "Otvori na ploči za analizu",
+      "noPosition": "bez pozicije"
+    },
+    "drill": {
+      "onlyWrong": "Ponovi samo pogrešne",
+      "noWrong": "Nema pogrešno riješenih pozicija.",
+      "empty": "Ovdje nema pozicija za ponavljanje.",
+      "progress": "Pozicija {{n}} / {{total}}",
+      "lessonOf": "Sat od {{date}}",
+      "findMove": "Koji je potez odigran na satu?",
+      "hint": "Savjet",
+      "hintText": "Savjet: vuče figura na {{square}}.",
+      "reveal": "Prikaži rješenje",
+      "skip": "Preskoči",
+      "wrong": "{{move}} nije potez sa sata ({{n}}/{{max}}) — pokušaj ponovno.",
+      "wrongFinal": "Tri pogrešna pokušaja — odigrano je {{move}}.",
+      "solved": "Točno: {{move}}",
+      "solvedAfter": "Točno: {{move}} · pogrešni pokušaji: {{count}}",
+      "revealed": "Rješenje: {{move}}",
+      "skipped": "Preskočeno — odigrano je {{move}}.",
+      "variations": "Varijante",
+      "explanation": "Objašnjenje",
+      "answerLine": "Put do rješenja",
+      "listen": "Poslušaj objašnjenje",
+      "stop": "Zaustavi",
+      "audioOnly": "samo zvuk",
+      "clipFailed": "Isječak se nije mogao reproducirati.",
+      "saveFailed": "Rezultat nije spremljen.",
+      "done": "Gotovo!",
+      "countSolved": "{{count}} točno",
+      "countWrong": "{{count}} pogrešno",
+      "countSkipped": "{{count}} preskočeno",
+      "repeatWrong": "Ponovi pogrešne",
+      "restart": "Ispočetka",
+      "toLesson": "Na sat",
+      "toGame": "Na partiju"
+    },
+    "comments": {
+      "title": "Komentar trenera · {{date}}",
+      "movesLine": "Komentari trenera uz",
+      "start": "Početna pozicija",
+      "inVideo": "▶ u videu od {{time}}",
+      "sideLine": "Sporedna varijanta sa sata"
     }
   }
 }

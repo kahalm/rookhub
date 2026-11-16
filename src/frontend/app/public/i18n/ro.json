@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Reguli practice",
     "visitors": "RookHub în lume",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Ore cu antrenorul"
   },
   "app": {
     "changelogTitle": "Jurnal de modificări",
@@ -2776,7 +2777,8 @@
         "ebooks": "Biblioteca de e-books",
         "woodpecker": "Antrenament Woodpecker",
         "maxims": "Reguli practice (maxime de șah)",
-        "visitors": "RookHub în lume"
+        "visitors": "RookHub în lume",
+        "training-videos": "Ore cu antrenorul"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "RookHub în lume",
         "p": [
           "La ☰ → Comunitate → RookHub în lume, o hartă a lumii arată din ce țări este folosit RookHub. Atinge o țară sau alege un continent pentru a mări secțiunea; se numără doar țări, niciodată persoane individuale."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Ore cu antrenorul",
+        "p": [
+          "Dacă orele sunt activate pentru contul tău, „Ore cu antrenorul” din meniul ☰ (Antrenament) arată videoclipurile orelor tale: dată, durată, un scurt rezumat și partidele discutate. „Vezi” deschide videoclipul lângă tablă; lista pozițiilor urmează videoclipul.",
+          "Poți căuta după cuvânt sau FEN ori poți așeza o poziție; pe tabla de analiză meniul ⋮ oferă „Discutat la oră?”. „Rejoacă” îți cere mutările de la oră pe tablă și apoi redă doar explicația potrivită; „Setul de întrebări” adună întrebările tuturor orelor."
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Site-ul de turnee"
+    }
+  },
+  "trainingVideos": {
+    "title": "Ore cu antrenorul",
+    "intro": "Videoclipurile orelor tale cu antrenorul și pozițiile discutate — urmărește, caută și rejoacă.",
+    "empty": "Încă nu există ore.",
+    "questionSet": "Set de întrebări",
+    "watch": "Vezi",
+    "replay": "Rejoacă",
+    "positions": "{{count}} poziții",
+    "positionsOne": "1 poziție",
+    "duration": "Durată {{time}}",
+    "noVideoShort": "fără video",
+    "owner": "Cont: {{name}}",
+    "unknownPlayer": "Necunoscut",
+    "flip": "Întoarce tabla",
+    "toList": "La prezentare",
+    "trainerComment": "Comentariul antrenorului",
+    "quote": "„{{text}}”",
+    "menuDiscussed": "Discutat la oră?",
+    "kind": {
+      "own": "partidă proprie",
+      "lesson": "partidă model",
+      "exercise": "exercițiu"
+    },
+    "tags": {
+      "question": "întrebare",
+      "key": "moment-cheie",
+      "mistake": "greșeală",
+      "plan": "plan",
+      "opening": "deschidere",
+      "endgame": "final",
+      "tactic": "tactică"
+    },
+    "moveKind": {
+      "analysis": "variantă"
+    },
+    "search": {
+      "title": "Caută în ore",
+      "label": "Cuvânt sau FEN",
+      "setup": "Așază tabla",
+      "setupTitle": "Așază o poziție",
+      "tooShort": "Cel puțin trei litere.",
+      "none": "Niciun rezultat.",
+      "truncated": "Sunt mai multe rezultate — se afișează primele {{count}}.",
+      "position": "Poziția căutată",
+      "otherSide": "mută cealaltă parte",
+      "note": "notă",
+      "drillFromHere": "Rejoacă de aici",
+      "failed": "Căutarea a eșuat."
+    },
+    "lesson": {
+      "title": "Ora din {{date}}",
+      "notFound": "Această oră nu există.",
+      "noVideo": "Ora nu are video — pozițiile funcționează oricum.",
+      "videoFailed": "Videoclipul nu a putut fi încărcat.",
+      "segments": "Poziții discutate",
+      "games": "Partide",
+      "openGame": "Deschide partida",
+      "openAnalysis": "Deschide analiza",
+      "openBoard": "Deschide pe tabla de analiză",
+      "noPosition": "fără poziție"
+    },
+    "drill": {
+      "onlyWrong": "Repetă doar greșelile",
+      "noWrong": "Nicio poziție greșită.",
+      "empty": "Aici nu există poziții de rejucat.",
+      "progress": "Poziția {{n}} / {{total}}",
+      "lessonOf": "Ora din {{date}}",
+      "findMove": "Ce mutare s-a jucat la oră?",
+      "hint": "Indiciu",
+      "hintText": "Indiciu: mută piesa de pe {{square}}.",
+      "reveal": "Arată soluția",
+      "skip": "Sari peste",
+      "wrong": "{{move}} nu este mutarea de la oră ({{n}}/{{max}}) — încearcă din nou.",
+      "wrongFinal": "Trei încercări greșite — mutarea era {{move}}.",
+      "solved": "Corect: {{move}}",
+      "solvedAfter": "Corect: {{move}} · încercări greșite: {{count}}",
+      "revealed": "Soluție: {{move}}",
+      "skipped": "Sărit — mutarea era {{move}}.",
+      "variations": "Variante",
+      "explanation": "Explicație",
+      "answerLine": "Linie",
+      "listen": "Ascultă explicația",
+      "stop": "Oprește",
+      "audioOnly": "doar sunet",
+      "clipFailed": "Fragmentul nu a putut fi redat.",
+      "saveFailed": "Rezultatul nu a fost salvat.",
+      "done": "Gata!",
+      "countSolved": "{{count}} corecte",
+      "countWrong": "{{count}} greșite",
+      "countSkipped": "{{count}} sărite",
+      "repeatWrong": "Repetă greșelile",
+      "restart": "De la început",
+      "toLesson": "La oră",
+      "toGame": "La partidă"
+    },
+    "comments": {
+      "title": "Comentariul antrenorului · {{date}}",
+      "movesLine": "Comentariile antrenorului la",
+      "start": "Poziția inițială",
+      "inVideo": "▶ în video de la {{time}}",
+      "sideLine": "Variantă de la oră"
     }
   }
 }

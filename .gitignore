@@ -40,3 +40,4 @@ __pycache__/
 .claude/worktrees/
 # Platzhalter-Bind-Mount der E-Book-Bibliothek (compose ohne EBOOKS_LIBRARY_HOST_PATH)
 .ebooks-library-empty/
+.trainingvideos-empty/

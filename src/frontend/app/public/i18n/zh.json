@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "经验法则",
     "visitors": "RookHub 遍布全球",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "教练课"
   },
   "app": {
     "changelogTitle": "更新日志",
@@ -2776,7 +2777,8 @@
         "ebooks": "电子书库",
         "woodpecker": "Woodpecker 训练",
         "maxims": "经验法则（国际象棋格言）",
-        "visitors": "RookHub 遍布全球"
+        "visitors": "RookHub 遍布全球",
+        "training-videos": "教练课"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "RookHub 遍布全球",
         "p": [
           "在 ☰ → 社区 → RookHub 遍布全球 中，世界地图显示 RookHub 在哪些国家被使用。点按某个国家或选择一个大洲即可放大；只统计国家，从不统计个人。"
+        ]
+      },
+      "trainingVideos": {
+        "t": "教练课",
+        "p": [
+          "如果你的账户开通了教练课，☰ 菜单（训练）中的“教练课”会列出你上课的视频：日期、时长、简短摘要和讨论过的对局。“观看”在棋盘旁打开视频，局面列表跟随视频。",
+          "你可以按词语或 FEN 搜索，也可以摆一个局面；在分析棋盘中，⋮ 菜单提供“课上讲过吗？”。“重练”让你在棋盘上找出课上的着法，然后只播放相应的讲解；“问题集”汇总所有课程的问题。"
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "赛事站点"
+    }
+  },
+  "trainingVideos": {
+    "title": "教练课",
+    "intro": "你和教练上课的视频及讨论过的局面——观看、搜索、重新练习。",
+    "empty": "还没有教练课。",
+    "questionSet": "问题集",
+    "watch": "观看",
+    "replay": "重练",
+    "positions": "{{count}} 个局面",
+    "positionsOne": "1 个局面",
+    "duration": "时长 {{time}}",
+    "noVideoShort": "无视频",
+    "owner": "账户：{{name}}",
+    "unknownPlayer": "未知",
+    "flip": "翻转棋盘",
+    "toList": "返回概览",
+    "trainerComment": "教练点评",
+    "quote": "“{{text}}”",
+    "menuDiscussed": "课上讲过吗？",
+    "kind": {
+      "own": "自己的对局",
+      "lesson": "示范对局",
+      "exercise": "练习"
+    },
+    "tags": {
+      "question": "问题",
+      "key": "关键时刻",
+      "mistake": "错误",
+      "plan": "计划",
+      "opening": "开局",
+      "endgame": "残局",
+      "tactic": "战术"
+    },
+    "moveKind": {
+      "analysis": "旁支变化"
+    },
+    "search": {
+      "title": "在课程中搜索",
+      "label": "词语或 FEN",
+      "setup": "摆棋盘",
+      "setupTitle": "摆一个局面",
+      "tooShort": "至少三个字母。",
+      "none": "没有结果。",
+      "truncated": "还有更多结果——仅显示前 {{count}} 个。",
+      "position": "搜索的局面",
+      "otherSide": "另一方走棋",
+      "note": "笔记",
+      "drillFromHere": "从这里重练",
+      "failed": "搜索失败。"
+    },
+    "lesson": {
+      "title": "{{date}} 的课",
+      "notFound": "这节课不存在。",
+      "noVideo": "这节课没有视频——局面照样可用。",
+      "videoFailed": "视频无法加载。",
+      "segments": "讨论过的局面",
+      "games": "对局",
+      "openGame": "打开对局",
+      "openAnalysis": "打开分析",
+      "openBoard": "在分析棋盘中打开",
+      "noPosition": "无局面"
+    },
+    "drill": {
+      "onlyWrong": "只重练错题",
+      "noWrong": "没有答错的局面。",
+      "empty": "这里没有可重练的局面。",
+      "progress": "局面 {{n}} / {{total}}",
+      "lessonOf": "课程 {{date}}",
+      "findMove": "课上走的是哪一步？",
+      "hint": "提示",
+      "hintText": "提示：{{square}} 上的棋子走。",
+      "reveal": "显示答案",
+      "skip": "跳过",
+      "wrong": "{{move}} 不是课上的那步（{{n}}/{{max}}） ——再试一次。",
+      "wrongFinal": "三次答错——那步是 {{move}}。",
+      "solved": "正确：{{move}}",
+      "solvedAfter": "正确：{{move}} · 答错次数：{{count}}",
+      "revealed": "答案：{{move}}",
+      "skipped": "已跳过——那步是 {{move}}。",
+      "variations": "变化",
+      "explanation": "讲解",
+      "answerLine": "着法",
+      "listen": "听讲解",
+      "stop": "停止",
+      "audioOnly": "仅声音",
+      "clipFailed": "片段无法播放。",
+      "saveFailed": "结果未保存。",
+      "done": "完成！",
+      "countSolved": "{{count}} 正确",
+      "countWrong": "{{count}} 错误",
+      "countSkipped": "{{count}} 跳过",
+      "repeatWrong": "重练错题",
+      "restart": "重新开始",
+      "toLesson": "回到课程",
+      "toGame": "前往对局"
+    },
+    "comments": {
+      "title": "教练点评 · {{date}}",
+      "movesLine": "教练点评：",
+      "start": "初始局面",
+      "inVideo": "▶ 视频 {{time}} 起",
+      "sideLine": "课上的旁支变化"
     }
   }
 }

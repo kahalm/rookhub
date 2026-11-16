@@ -30,6 +30,7 @@ public static partial class DomainServicesSetup
         AddGameServices(services, configuration);
         AddLibraryServices(services, configuration);
         AddScoresheetServices(services, configuration);
+        AddTrainingVideoServices(services, configuration);
         return services;
     }
 }

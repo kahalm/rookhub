@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Praktická pravidla",
     "visitors": "RookHub ve světě",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Lekce s trenérem"
   },
   "app": {
     "changelogTitle": "Seznam změn",
@@ -2776,7 +2777,8 @@
         "ebooks": "Knihovna e-knih",
         "woodpecker": "Trénink Woodpecker",
         "maxims": "Praktická pravidla (šachové zásady)",
-        "visitors": "RookHub ve světě"
+        "visitors": "RookHub ve světě",
+        "training-videos": "Lekce s trenérem"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "RookHub ve světě",
         "p": [
           "V ☰ → Komunita → RookHub ve světě ukazuje mapa světa, ze kterých zemí se RookHub používá. Klepnutím na zemi nebo výběrem kontinentu výřez přiblížíte; počítají se jen země, nikdy jednotlivé osoby."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Lekce s trenérem",
+        "p": [
+          "Pokud má tvůj účet lekce zapnuté, „Lekce s trenérem“ v nabídce ☰ (Trénink) ukazují videa tvých lekcí: datum, délku, krátké shrnutí a probírané partie. „Přehrát“ otevře video vedle šachovnice; seznam pozic sleduje video.",
+          "Hledat můžeš podle slova nebo FEN, případně postavit pozici; na analytické šachovnici nabízí nabídka ⋮ „Probíráno na lekci?“. „Zahrát znovu“ se ptá na tahy z lekce na šachovnici a pak přehraje jen příslušné vysvětlení; „Sada otázek“ sbírá otázky ze všech lekcí."
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Turnajový web"
+    }
+  },
+  "trainingVideos": {
+    "title": "Lekce s trenérem",
+    "intro": "Videa tvých lekcí s trenérem a probírané pozice — sleduj, prohledávej a přehrávej.",
+    "empty": "Zatím žádné lekce.",
+    "questionSet": "Sada otázek",
+    "watch": "Přehrát",
+    "replay": "Zahrát znovu",
+    "positions": "{{count}} pozic",
+    "positionsOne": "1 pozice",
+    "duration": "Délka {{time}}",
+    "noVideoShort": "bez videa",
+    "owner": "Účet: {{name}}",
+    "unknownPlayer": "Neznámý",
+    "flip": "Otočit šachovnici",
+    "toList": "Na přehled",
+    "trainerComment": "Komentář trenéra",
+    "quote": "„{{text}}“",
+    "menuDiscussed": "Probíráno na lekci?",
+    "kind": {
+      "own": "vlastní partie",
+      "lesson": "vzorová partie",
+      "exercise": "cvičení"
+    },
+    "tags": {
+      "question": "otázka",
+      "key": "klíčový okamžik",
+      "mistake": "chyba",
+      "plan": "plán",
+      "opening": "zahájení",
+      "endgame": "koncovka",
+      "tactic": "taktika"
+    },
+    "moveKind": {
+      "analysis": "vedlejší varianta"
+    },
+    "search": {
+      "title": "Hledat v lekcích",
+      "label": "Slovo nebo FEN",
+      "setup": "Postavit šachovnici",
+      "setupTitle": "Postavit pozici",
+      "tooShort": "Aspoň tři písmena.",
+      "none": "Žádné výsledky.",
+      "truncated": "Výsledků je víc — zobrazeno prvních {{count}}.",
+      "position": "Hledaná pozice",
+      "otherSide": "na tahu je druhá strana",
+      "note": "poznámka",
+      "drillFromHere": "Zahrát odsud",
+      "failed": "Hledání selhalo."
+    },
+    "lesson": {
+      "title": "Lekce z {{date}}",
+      "notFound": "Tato lekce neexistuje.",
+      "noVideo": "K této lekci není video — pozice přesto fungují.",
+      "videoFailed": "Video se nepodařilo načíst.",
+      "segments": "Probírané pozice",
+      "games": "Partie",
+      "openGame": "Otevřít partii",
+      "openAnalysis": "Otevřít analýzu",
+      "openBoard": "Otevřít na analytické šachovnici",
+      "noPosition": "bez pozice"
+    },
+    "drill": {
+      "onlyWrong": "Opakovat jen chybné",
+      "noWrong": "Žádné chybně vyřešené pozice.",
+      "empty": "Nejsou tu žádné pozice k zahrání.",
+      "progress": "Pozice {{n}} / {{total}}",
+      "lessonOf": "Lekce z {{date}}",
+      "findMove": "Jaký tah se na lekci hrál?",
+      "hint": "Nápověda",
+      "hintText": "Nápověda: táhne figura na {{square}}.",
+      "reveal": "Ukázat řešení",
+      "skip": "Přeskočit",
+      "wrong": "{{move}} není tah z lekce ({{n}}/{{max}}) — zkus to znovu.",
+      "wrongFinal": "Tři chybné pokusy — hrálo se {{move}}.",
+      "solved": "Správně: {{move}}",
+      "solvedAfter": "Správně: {{move}} · chybné pokusy: {{count}}",
+      "revealed": "Řešení: {{move}}",
+      "skipped": "Přeskočeno — hrálo se {{move}}.",
+      "variations": "Varianty",
+      "explanation": "Vysvětlení",
+      "answerLine": "Linie",
+      "listen": "Poslechnout vysvětlení",
+      "stop": "Zastavit",
+      "audioOnly": "jen zvuk",
+      "clipFailed": "Úryvek se nepodařilo přehrát.",
+      "saveFailed": "Výsledek nebyl uložen.",
+      "done": "Hotovo!",
+      "countSolved": "{{count}} správně",
+      "countWrong": "{{count}} chybně",
+      "countSkipped": "{{count}} přeskočeno",
+      "repeatWrong": "Opakovat chybné",
+      "restart": "Od začátku",
+      "toLesson": "K lekci",
+      "toGame": "K partii"
+    },
+    "comments": {
+      "title": "Komentář trenéra · {{date}}",
+      "movesLine": "Komentáře trenéra k",
+      "start": "Výchozí pozice",
+      "inVideo": "▶ ve videu od {{time}}",
+      "sideLine": "Vedlejší varianta z lekce"
     }
   }
 }

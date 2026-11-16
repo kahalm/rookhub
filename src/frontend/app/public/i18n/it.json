@@ -356,7 +356,8 @@
     "woodpecker": "Woodpecker",
     "maxims": "Regole pratiche",
     "visitors": "RookHub nel mondo",
-    "leagueHub": "LeagueHub"
+    "leagueHub": "LeagueHub",
+    "trainingVideos": "Lezioni con l’istruttore"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2776,7 +2777,8 @@
         "ebooks": "Biblioteca e-book",
         "woodpecker": "Allenamento Woodpecker",
         "maxims": "Regole pratiche (massime scacchistiche)",
-        "visitors": "RookHub nel mondo"
+        "visitors": "RookHub nel mondo",
+        "training-videos": "Lezioni con l’istruttore"
       }
     },
     "messages": {
@@ -4228,6 +4230,13 @@
         "t": "RookHub nel mondo",
         "p": [
           "In ☰ → Community → RookHub nel mondo una mappa del mondo mostra da quali paesi viene usato RookHub. Tocca un paese o scegli un continente per ingrandire la sezione; si contano solo i paesi, mai le singole persone."
+        ]
+      },
+      "trainingVideos": {
+        "t": "Lezioni con l’istruttore",
+        "p": [
+          "Se il tuo account ha le lezioni attivate, «Lezioni con l’istruttore» nel menu ☰ (Allenamento) elenca i video delle tue lezioni: data, durata, breve riassunto e partite discusse. «Guarda» apre il video accanto alla scacchiera; l’elenco delle posizioni segue il video.",
+          "Puoi cercare per parola o FEN, oppure impostare una posizione; nella scacchiera di analisi il menu ⋮ offre «Visto a lezione?». «Rigioca» ti chiede le mosse della lezione sulla scacchiera e poi riproduce solo la spiegazione relativa; la «Serie di domande» raccoglie le domande di tutte le lezioni."
         ]
       }
     }
@@ -6606,6 +6615,109 @@
       "kidhub": "KidHub",
       "clubhub": "ClubHub",
       "turnier": "Sito dei tornei"
+    }
+  },
+  "trainingVideos": {
+    "title": "Lezioni con l’istruttore",
+    "intro": "I video delle tue lezioni con l’istruttore e le posizioni discusse: guardali, cercali e rigiocali.",
+    "empty": "Ancora nessuna lezione.",
+    "questionSet": "Serie di domande",
+    "watch": "Guarda",
+    "replay": "Rigioca",
+    "positions": "{{count}} posizioni",
+    "positionsOne": "1 posizione",
+    "duration": "Durata {{time}}",
+    "noVideoShort": "senza video",
+    "owner": "Account: {{name}}",
+    "unknownPlayer": "Sconosciuto",
+    "flip": "Ruota scacchiera",
+    "toList": "Alla panoramica",
+    "trainerComment": "Commento dell’istruttore",
+    "quote": "«{{text}}»",
+    "menuDiscussed": "Visto a lezione?",
+    "kind": {
+      "own": "partita propria",
+      "lesson": "partita modello",
+      "exercise": "esercizio"
+    },
+    "tags": {
+      "question": "domanda",
+      "key": "momento chiave",
+      "mistake": "errore",
+      "plan": "piano",
+      "opening": "apertura",
+      "endgame": "finale",
+      "tactic": "tattica"
+    },
+    "moveKind": {
+      "analysis": "variante"
+    },
+    "search": {
+      "title": "Cerca nelle lezioni",
+      "label": "Parola o FEN",
+      "setup": "Imposta scacchiera",
+      "setupTitle": "Imposta una posizione",
+      "tooShort": "Almeno tre lettere.",
+      "none": "Nessun risultato.",
+      "truncated": "Ci sono altri risultati: vengono mostrati i primi {{count}}.",
+      "position": "Posizione cercata",
+      "otherSide": "muove l’altro colore",
+      "note": "nota",
+      "drillFromHere": "Rigioca da qui",
+      "failed": "La ricerca non è riuscita."
+    },
+    "lesson": {
+      "title": "Lezione del {{date}}",
+      "notFound": "Questa lezione non esiste.",
+      "noVideo": "Questa lezione non ha video: le posizioni funzionano comunque.",
+      "videoFailed": "Impossibile caricare il video.",
+      "segments": "Posizioni discusse",
+      "games": "Partite",
+      "openGame": "Apri partita",
+      "openAnalysis": "Apri analisi",
+      "openBoard": "Apri nella scacchiera di analisi",
+      "noPosition": "senza posizione"
+    },
+    "drill": {
+      "onlyWrong": "Ripeti solo le sbagliate",
+      "noWrong": "Nessuna posizione sbagliata.",
+      "empty": "Qui non ci sono posizioni da rigiocare.",
+      "progress": "Posizione {{n}} / {{total}}",
+      "lessonOf": "Lezione del {{date}}",
+      "findMove": "Quale mossa è stata giocata a lezione?",
+      "hint": "Suggerimento",
+      "hintText": "Suggerimento: muove il pezzo in {{square}}.",
+      "reveal": "Mostra soluzione",
+      "skip": "Salta",
+      "wrong": "{{move}} non è la mossa della lezione ({{n}}/{{max}}) — riprova.",
+      "wrongFinal": "Tre tentativi sbagliati: la mossa era {{move}}.",
+      "solved": "Giusto: {{move}}",
+      "solvedAfter": "Giusto: {{move}} · tentativi sbagliati: {{count}}",
+      "revealed": "Soluzione: {{move}}",
+      "skipped": "Saltata: la mossa era {{move}}.",
+      "variations": "Varianti",
+      "explanation": "Spiegazione",
+      "answerLine": "Linea",
+      "listen": "Ascolta la spiegazione",
+      "stop": "Ferma",
+      "audioOnly": "solo audio",
+      "clipFailed": "Impossibile riprodurre l’estratto.",
+      "saveFailed": "Risultato non salvato.",
+      "done": "Fatto!",
+      "countSolved": "{{count}} giuste",
+      "countWrong": "{{count}} sbagliate",
+      "countSkipped": "{{count}} saltate",
+      "repeatWrong": "Ripeti le sbagliate",
+      "restart": "Ricomincia",
+      "toLesson": "Alla lezione",
+      "toGame": "Alla partita"
+    },
+    "comments": {
+      "title": "Commento dell’istruttore · {{date}}",
+      "movesLine": "Commenti dell’istruttore su",
+      "start": "Posizione iniziale",
+      "inVideo": "▶ nel video da {{time}}",
+      "sideLine": "Variante della lezione"
     }
   }
 }

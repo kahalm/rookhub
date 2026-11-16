@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "date": "2026-10-27",
+  "video": { "file": "2026-10-27.mp4", "originalFile": "Bildschirmaufnahme 2026-10-27 202311.mp4", "durationSec": 3737 },
+  "summary": "Französisch Tarrasch mit 3…c5: Läuferzug Lb5 und die Struktur nach cxd4.",
+  "producer": "unbekanntes Zusatzfeld wird toleriert",
+  "games": [
+    { "id": "g1", "kind": "own", "white": "Oberschmid, Patrik", "black": "Gegner, Max", "event": "Tiroler Liga", "year": 2025,
+      "eco": "C07", "result": "1-0", "from": "0:04:32", "to": "1:00:14", "pgn": null, "rookhubGameId": 4711, "matchConfidence": "high" },
+    { "id": "g2", "kind": "lesson", "white": "Karpov", "black": "Korchnoi", "event": "WM", "year": 1974,
+      "eco": "C07", "result": "1/2-1/2", "from": "1:00:20", "to": "1:02:00", "pgn": "1. e4 e6 2. d4 d5 *", "analysisPgn": "1. e4 e6 2. d4 d5 (2... c5 3. d5) *", "rookhubGameId": null, "matchConfidence": "none" }
+  ],
+  "segments": [
+    { "t": "0:04:32", "tEnd": "0:05:02", "gameId": "g1",
+      "fen": "r1bqkbnr/pp3ppp/2n1p3/2pp4/3PP3/5N2/PPPN1PPP/R1BQKB1R w KQkq - 2 5",
+      "move": "Bb5", "comment": "Mit Lb5 nimmst du dem Springer c6 den Halt — gut.", "quote": "ja Läufer b5 passt",
+      "variations": null, "tags": ["opening", "key"], "question": null },
+    { "t": "0:06:10", "tEnd": "0:07:00", "gameId": "g1",
+      "fen": "r1bqkbnr/pp3ppp/2n1p3/1B1p4/3NP3/8/PPPN1PPP/R1BQK2R b KQkq - 0 6",
+      "move": null, "comment": "Hier fehlt dir der Plan im Mittelspiel: isolierter Bauer d5.", "quote": "isolani",
+      "variations": "6... Bd7 7. O-O", "tags": ["plan"],
+      "question": { "prompt": "Was spielt Schwarz hier?", "answer": "Bd7", "answerLine": "6... Bd7 7. O-O", "answerT": "0:06:40", "explanation": "Entwickeln." } },
+    { "t": "0:08:00", "gameId": "g1", "fen": "kaputt", "comment": "Stellung ohne gültige FEN.", "tags": [] },
+    { "t": "1:00:30", "gameId": "g2", "fen": "rnbqkbnr/ppp2ppp/4p3/3p4/3PP3/8/PPP2PPP/RNBQKBNR w KQkq - 0 3",
+      "move": null, "comment": "Die Grundstellung des Franzosen.", "quote": "Franzose", "tags": ["opening"] }
+  ],
+  "notes": [
+    { "t": "0:30:00", "gameId": "g1", "category": "zeit", "text": "Zu viel Bedenkzeit in der Eröffnung verbraucht.", "quote": "Uhr" },
+    { "t": "0:40:00", "gameId": null, "category": "unbekannt", "text": "Allgemein: Springer vor Läufer entwickeln.", "quote": null }
+  ]
+}

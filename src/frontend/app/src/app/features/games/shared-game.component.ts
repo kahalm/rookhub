@@ -1,6 +1,6 @@
 import { leagueHubUrl } from '../../core/partner-site';
 import {
-  Component, DoCheck, OnInit, HostListener, inject, ChangeDetectionStrategy, signal, viewChild, DestroyRef,
+  Component, DoCheck, OnInit, HostListener, inject, ChangeDetectionStrategy, signal, viewChild, DestroyRef, Injector,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -47,6 +47,8 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
 import { SHARED_GAME_STYLES } from './shared-game.styles';
 import { gameSourceLabel } from './game-source';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
+import { MenuService } from '../../core/menu.service';
+import { TrainerCommentsComponent } from './trainer-comments.component';
 
 /** Ab so viel Bewegung (px) bzw. Dauer (ms) ist eine Berührung des Bretts kein Tipp mehr, sondern Ziehen/Halten. */
 const TAP_SLOP_PX = 10;
@@ -68,7 +70,7 @@ const TAP_MAX_MS = 500;
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
     MistakesTrainerComponent, LiveEnginePanelComponent, PositionMenuComponent, MarkPositionButtonComponent, MatMenuModule, MatDialogModule,
-    SimilarGamesComponent, GameRecapComponent, LoadErrorComponent, ClubSummaryLinkComponent,
+    SimilarGamesComponent, GameRecapComponent, LoadErrorComponent, ClubSummaryLinkComponent, TrainerCommentsComponent,
   ],
   providers: [PgnViewerService, GameActionsService],
   templateUrl: './shared-game.component.html',
@@ -187,6 +189,16 @@ export class SharedGameComponent implements OnInit, DoCheck {
   analysisRunning(): boolean {
     const s = this.reviewStatus();
     return s === 'pending' || s === 'running';
+  }
+
+  private readonly injector = inject(Injector);
+  /** Menüpunkt „Trainerstunden“ sichtbar → Trainerkommentare an der eigenen Partie (`app-trainer-comments`). */
+  readonly trainingVideos = signal(false);
+  private sansMemo: { moves: readonly { san: string }[]; sans: string[] } | null = null;
+  /** SAN-Liste der Partie — gemerkt, damit die Eingabe der Kommentar-Karte nicht bei jedem Zeichnen neu entsteht. */
+  gameSans(moves: readonly { san: string }[]): string[] {
+    if (this.sansMemo?.moves !== moves) this.sansMemo = { moves, sans: moves.map(m => m.san) };
+    return this.sansMemo.sans;
   }
 
   /** Id der eigenen Partie (`/games/:id`) — ohne sie wird nichts gemeldet (geteilte Ansicht). */
@@ -377,6 +389,9 @@ export class SharedGameComponent implements OnInit, DoCheck {
     this.roastId = Number.isInteger(roast) && roast > 0 ? roast : null;
     const mode = this.route.snapshot.data?.['mode'];
     this.own = mode === 'own';
+    // Trainerkommentare (Trainerstunden) nur an der eigenen Partie und nur mit dem Menüpunkt; der Menü-Dienst erst hier,
+    // damit Teilen-Links und Vereinspartien ihn nicht laden.
+    if (this.own) this.trainingVideos.set(this.injector.get(MenuService).isVisible('training-videos'));
     this.club = mode === 'club' || mode === 'club-share' || mode === 'club-link';
     if (mode === 'club-link') {
       // Kein „+" mit der Partie als Herkunft: das schriebe an der Vereinspartie, der Link ist nur zum Lesen da.
