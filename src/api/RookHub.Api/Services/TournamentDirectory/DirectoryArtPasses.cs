@@ -43,19 +43,33 @@ internal static class DirectoryArtPasses
     /// </summary>
     /// <param name="fetch">Holt eine Trefferliste vom Crawler (Pfad samt Abfrage).</param>
     /// <param name="log">Logger des Aufrufers — die Warnungen erscheinen unter seiner Kategorie wie vorher.</param>
+    /// <param name="retryPause">Seit 2026-11-17: ein VORUEBERGEHENDER Fehler eines Durchgangs (504 waehrend der VPN-Rotation
+    /// des Crawlers, Timeout, keine Verbindung — <see cref="DirectoryCrawlerClient.IsTransient"/>) wird nach dieser Pause
+    /// EINMAL wiederholt; erst wenn auch das scheitert, steht die Warnung im Log.</param>
     internal static async Task<Dictionary<string, (TournamentKind Kind, TournamentSystem System)>?> FetchMapAsync(
         Func<string, CancellationToken, Task<JsonElement>> fetch, ILogger log,
-        string federation, DateOnly from, DateOnly to, int maxRows, CancellationToken ct)
+        string federation, DateOnly from, DateOnly to, int maxRows, CancellationToken ct, TimeSpan retryPause = default)
     {
         var map = new Dictionary<string, (TournamentKind, TournamentSystem)>(StringComparer.Ordinal);
         foreach (var (art, kind, system) in Passes)
         {
             List<DirectorySearchRows.CrawlerDirectoryRow> rows;
+            var path = $"/api/tournament-search?fed={Uri.EscapeDataString(federation)}" +
+                       $"&from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}&maxRows={maxRows}&art={art}";
             try
             {
-                var path = $"/api/tournament-search?fed={Uri.EscapeDataString(federation)}" +
-                           $"&from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}&maxRows={maxRows}&art={art}";
-                rows = DirectorySearchRows.ParseRows(await fetch(path, ct));
+                try
+                {
+                    rows = DirectorySearchRows.ParseRows(await fetch(path, ct));
+                }
+                catch (Exception first) when (DirectoryCrawlerClient.IsTransient(first, ct))
+                {
+                    log.LogInformation(
+                        "Turnierart-Durchgang {Federation} (Art {Art}): {Error} — neuer Versuch in {Seconds} s",
+                        federation, art, first.Message, (int)retryPause.TotalSeconds);
+                    if (retryPause > TimeSpan.Zero) await Task.Delay(retryPause, ct);
+                    rows = DirectorySearchRows.ParseRows(await fetch(path, ct));
+                }
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
             {

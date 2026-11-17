@@ -25,6 +25,21 @@ public static class DirectoryCrawlerClient
     public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     /// <summary>
+    /// Ein VORUEBERGEHENDER Crawler-Fehler, den ein zweiter Versuch ein paar Minuten spaeter heilen kann (2026-11-17):
+    /// 5xx (vor allem 504 „Upstream request timed out." waehrend der Crawler seinen VPN-Ausgang wechselt), 408/429,
+    /// keine Verbindung (<see cref="HttpRequestException"/>) und ein HttpClient-TIMEOUT (eine
+    /// <see cref="OperationCanceledException"/>, die der Aufrufer NICHT ausgeloest hat). Kein vorübergehender Fehler: ein
+    /// 4xx des Crawlers, unlesbares JSON, ein Speicherfehler.
+    /// </summary>
+    public static bool IsTransient(Exception ex, CancellationToken ct) => ex switch
+    {
+        CrawlerRequestException c => (int)c.StatusCode >= 500 || c.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests,
+        HttpRequestException => true,
+        OperationCanceledException => !ct.IsCancellationRequested,
+        _ => false,
+    };
+
+    /// <summary>
     /// <c>GET path</c> und die Antwort als <typeparamref name="T"/>.
     /// </summary>
     /// <param name="absentOn">Statuscode, der „gibt es nicht" heisst (404 Detailseite weg, 204 kein

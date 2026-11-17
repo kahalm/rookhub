@@ -41,6 +41,7 @@ public class TournamentDirectoryServiceTests : IDisposable
         {
             // Ohne das schliefe jeder Mehr-Foederationen-Test acht Sekunden je Schritt.
             DelayBetweenFederations = TimeSpan.Zero,
+            RetryPause = TimeSpan.Zero,
         };
     }
 

@@ -55,6 +55,15 @@ public class TournamentDirectoryService
     internal int MaxRows { get; set; } = 2000;
 
     /// <summary>
+    /// Pause vor dem zweiten Versuch einer Foederation, deren ABRUF voruebergehend scheiterte (2026-11-17), und vor dem
+    /// zweiten Versuch eines Turnierart-Durchgangs. Je Nacht scheiterten rund 20 von 257 Foederationen mit „Crawler
+    /// returned 504: Upstream request timed out." — der Crawler wechselt waehrend des Laufs seinen VPN-Ausgang, und
+    /// laufende Anfragen reissen ab. Ohne zweiten Versuch blieb eine solche Foederation bis zu einer der naechsten Naechte
+    /// ohne Aktualisierung (AUT am 17.11.).
+    /// </summary>
+    internal TimeSpan RetryPause { get; set; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
     /// Name des eigenen Crawler-Clients (laengeres Zeitlimit als der Live-Pfad, siehe Program.cs).
     /// </summary>
     public const string CrawlerClientName = "CrawlerDirectory";
@@ -110,6 +119,11 @@ public class TournamentDirectoryService
     /// Sweept die uebergebenen Foederationen nacheinander und meldet am Ende EINMAL die neuen
     /// Turniere je Suchprofil. Nacheinander, weil der Crawler ohnehin einen prozessweiten
     /// Rate-Limiter hat - parallel wuerde nur die Warteschlange dort waschen.
+    ///
+    /// <para>Scheitert der ABRUF einer Foederation voruebergehend (<see cref="DirectoryCrawlerClient.IsTransient"/>),
+    /// wird sie am Ende des Durchgangs nach <see cref="RetryPause"/> genau EINMAL erneut versucht; erst das endgueltige
+    /// Scheitern zaehlt (<c>ConsecutiveFailures</c>, <c>LastError</c>, EINE Warnung). Ein Speicherfehler wird nicht
+    /// wiederholt — er stuende beim zweiten Mal genauso da.</para>
     /// </summary>
     public async Task<List<DirectorySweepResult>> RunSweepAsync(
         IReadOnlyList<string> federations, CancellationToken ct = default)
@@ -117,6 +131,7 @@ public class TournamentDirectoryService
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var results = new List<DirectorySweepResult>();
         var newEntryIds = new List<int>();
+        var retry = new List<int>();                 // Index in results: Abruf voruebergehend gescheitert
 
         foreach (var federation in federations)
         {
@@ -124,19 +139,26 @@ public class TournamentDirectoryService
             if (results.Count > 0 && DelayBetweenFederations > TimeSpan.Zero)
                 await Task.Delay(DelayBetweenFederations, ct);
 
-            // Je Foederation gefangen: SweepFederationAsync faengt nur den ABRUF, sein SaveChanges
-            // steht ausserhalb. Ein Speicherfehler (Unique-Index, „Data too long") in einer
-            // Foederation riss sonst die uebrigen, die Umkreis-Meldung und im Nachtlauf alle
-            // folgenden Schritte mit.
-            try
+            var (result, added, deferred) = await SweepCaughtAsync(federation, today, deferTransient: true, ct);
+            if (deferred) retry.Add(results.Count);
+            results.Add(result);
+            newEntryIds.AddRange(added);
+        }
+
+        // Zweiter Versuch fuer die voruebergehend gescheiterten Abrufe — EINMAL, nach einer kurzen Pause.
+        if (retry.Count > 0)
+        {
+            _log.LogInformation("Verzeichnis-Sweep: {Count} Foederationen nach voruebergehendem Fehler erneut ({List})",
+                retry.Count, string.Join(", ", retry.Select(i => results[i].Federation)));
+            for (var n = 0; n < retry.Count; n++)
             {
-                var (result, added) = await SweepFederationAsync(federation, today, ct);
-                results.Add(result);
+                ct.ThrowIfCancellationRequested();
+                var pause = n == 0 ? RetryPause : DelayBetweenFederations;
+                if (pause > TimeSpan.Zero) await Task.Delay(pause, ct);
+                var i = retry[n];
+                var (result, added, _) = await SweepCaughtAsync(results[i].Federation, today, deferTransient: false, ct);
+                results[i] = result;
                 newEntryIds.AddRange(added);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                results.Add(await RecordFailedSweepAsync(federation, ex, ct));
             }
         }
 
@@ -144,6 +166,24 @@ public class TournamentDirectoryService
             await _notifier.NotifyNearbyAsync(newEntryIds, today, ct);
 
         return results;
+    }
+
+    /// <summary>
+    /// Eine Foederation, je Foederation gefangen: <see cref="SweepFederationAsync"/> faengt nur den ABRUF, sein
+    /// SaveChanges steht ausserhalb. Ein Speicherfehler (Unique-Index, „Data too long") in einer Foederation riss sonst
+    /// die uebrigen, die Umkreis-Meldung und im Nachtlauf alle folgenden Schritte mit.
+    /// </summary>
+    private async Task<(DirectorySweepResult Result, List<int> NewEntryIds, bool Deferred)> SweepCaughtAsync(
+        string federation, DateOnly today, bool deferTransient, CancellationToken ct)
+    {
+        try
+        {
+            return await SweepFederationCoreAsync(federation, today, deferTransient, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            return (await RecordFailedSweepAsync(federation, ex, ct), [], false);
+        }
     }
 
     /// <summary>
@@ -196,6 +236,16 @@ public class TournamentDirectoryService
     public async Task<(DirectorySweepResult Result, List<int> NewEntryIds)> SweepFederationAsync(
         string federation, DateOnly today, CancellationToken ct = default)
     {
+        var (result, added, _) = await SweepFederationCoreAsync(federation, today, deferTransient: false, ct);
+        return (result, added);
+    }
+
+    /// <param name="deferTransient">Ein voruebergehender Abruffehler wird NICHT als Fehlschlag vermerkt (kein
+    /// <c>ConsecutiveFailures</c>, keine Warnung), sondern mit <c>Deferred</c> = true gemeldet — der Aufrufer versucht
+    /// die Foederation am Ende des Durchgangs erneut.</param>
+    private async Task<(DirectorySweepResult Result, List<int> NewEntryIds, bool Deferred)> SweepFederationCoreAsync(
+        string federation, DateOnly today, bool deferTransient, CancellationToken ct)
+    {
         federation = federation.Trim().ToUpperInvariant();
         var from = today.AddDays(-LookBackDays);
         var to = today.AddMonths(LookAheadMonths);
@@ -220,6 +270,15 @@ public class TournamentDirectoryService
         // auf den Typ allein liess ihn durch und riss den ganzen Sweep mit: in Dev beendete die
         // eine Foederation, die hinter einer VPN-Rotation wartete, den Lauf der acht anderen mit
         // einem 500er. Durchgereicht wird deshalb nur, was der AUFRUFER abgebrochen hat.
+        catch (Exception ex) when (deferTransient && DirectoryCrawlerClient.IsTransient(ex, ct))
+        {
+            // Erster Versuch, voruebergehender Fehler: nur der Versuch wird vermerkt, gezaehlt wird erst, wenn auch der
+            // zweite Versuch am Ende des Durchgangs scheitert — sonst stuenden zwei Warnungen und zwei Fehlschlaege da.
+            await _db.SaveChangesAsync(ct);
+            _log.LogInformation("Verzeichnis-Sweep {Federation}: {Error} — wird am Ende des Durchgangs erneut versucht",
+                federation, ex.Message);
+            return (new DirectorySweepResult(federation, 0, 0, 0, 0, 0, ex.Message), [], true);
+        }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             // Fehlgeschlagener Sweep: LastSweptAt bleibt ALT. Damit nimmt die Rotation die
@@ -229,10 +288,10 @@ public class TournamentDirectoryService
             sweep.ConsecutiveFailures++;
             await _db.SaveChangesAsync(ct);
             _log.LogWarning(ex, "Verzeichnis-Sweep {Federation} fehlgeschlagen", federation);
-            return (new DirectorySweepResult(federation, 0, 0, 0, 0, 0, ex.Message), []);
+            return (new DirectorySweepResult(federation, 0, 0, 0, 0, 0, ex.Message), [], false);
         }
 
-        var artMap = await DirectoryArtPasses.FetchMapAsync(FetchAsync, _log, federation, from, to, MaxRows, ct);
+        var artMap = await DirectoryArtPasses.FetchMapAsync(FetchAsync, _log, federation, from, to, MaxRows, ct, RetryPause);
 
         var (existing, byId) = await _merge.LoadKnownAsync(federation, from, rows, ct);
 
@@ -255,7 +314,7 @@ public class TournamentDirectoryService
             federation, rows.Count, added.Count, changed.Count, removed.Count);
 
         return (new DirectorySweepResult(federation, rows.Count, added.Count, updated, changed.Count, removed.Count),
-                added.Select(e => e.Id).ToList());
+                added.Select(e => e.Id).ToList(), false);
     }
 
     /// <summary>

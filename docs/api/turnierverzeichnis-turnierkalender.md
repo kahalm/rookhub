@@ -13,6 +13,16 @@ Turnierart-Durchgaenge in `DirectoryArtPasses`, Schluessel/Hash in `DirectoryKey
 Die Admin-Endpunkte liegen in `AdminTournamentDirectoryController` (Partial: Wartung + FIDE/chess-results in der
 Hauptdatei, die Verbandskalender-Ausloeser in `AdminTournamentDirectoryController.Federations.cs`).
 
+**Zweiter Versuch fuer voruebergehend gescheiterte Abrufe** (0.989.8, 2026-11-17): je Nacht scheiterten rund 20 von 257
+Foederationen mit `Crawler returned 504: {"message":"Upstream request timed out."}` — der Crawler wechselt waehrend des
+Laufs seinen VPN-Ausgang. `RunSweepAsync` versucht jede Foederation, deren ABRUF voruebergehend scheiterte
+(`DirectoryCrawlerClient.IsTransient`: 5xx, 408/429, keine Verbindung, HttpClient-Timeout), am Ende des Durchgangs nach
+`RetryPause` (60 s) genau EINMAL erneut. Im ersten Versuch steht nur eine Information im Log, `ConsecutiveFailures`/`LastError`
+bleiben unberuehrt; erst das endgueltige Scheitern zaehlt (eine Warnung je Foederation). Speicherfehler und 4xx werden nicht
+wiederholt. Die Umkreis-Meldung erfasst auch die Eintraege aus dem zweiten Versuch. Die Turnierart-Durchgaenge
+(`DirectoryArtPasses`) wiederholen einen voruebergehend gescheiterten Durchgang sofort nach derselben Pause einmal; erst danach
+die Warnung „Turnierart-Durchgang … fehlgeschlagen".
+
 **Ohne Anmeldung** (seit 0.643.0): Suche, Karte, Kalender, Einzelturnier und die beiden Orts-Endpunkte sind
 `[AllowAnonymous]` mit der Policy `directory-read` (`RateLimitPartitions.DirectoryRead`, 120/min je Konto bzw. IP,
 mal `RateLimitScale`). Was am NUTZER haengt, faellt fuer Gaeste still weg statt zu scheitern: keine ausgeblendeten und

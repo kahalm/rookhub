@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.989.8", date: "2026-11-17", changes: [
+    { en: "Tournament directory: when fetching a country’s tournaments fails only briefly during the nightly update (e.g. a timeout while the crawler switches its connection), that country is tried once more at the end of the run after a short pause. If the second attempt works, the country counts as updated that night. The same applies to the extra queries for the tournament type.",
+      de: "Turnierverzeichnis: Scheitert beim nächtlichen Abgleich der Abruf eines Landes nur vorübergehend (z. B. ein Timeout, während der Crawler seine Verbindung wechselt), wird das Land am Ende des Durchgangs nach einer kurzen Pause noch einmal versucht. Gelingt der zweite Versuch, gilt das Land in dieser Nacht als aktualisiert. Dasselbe gilt für die Zusatzabfragen der Turnierart." },
+  ] },
   { version: "0.989.7", date: "2026-11-17", changes: [
     { en: "Internal: the test helpers of the tournament directory sweep moved into their own file (no change in behaviour).",
       de: "Intern: die Testhilfen des Turnierverzeichnis-Durchgangs liegen jetzt in einer eigenen Datei (am Verhalten ändert sich nichts)." },
