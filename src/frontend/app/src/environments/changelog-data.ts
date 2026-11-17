@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.990.0", date: "2026-11-17", changes: [
+    { en: "Admin: new repair tool for game analyses that were damaged by an engine helper running “one search behind”: it finds positions without lines or with too few lines (checkmate and stalemate excluded), shows them in a dry run and, on request, reopens them page by page so that they are recalculated; accuracy, move classes and the affected move explanations are recalculated afterwards. The position cache no longer copies such damaged results into other games.",
+      de: "Admin: neues Reparatur-Werkzeug für Partieanalysen, die ein „eine Suche hinterherhängender“ Engine-Helfer verdorben hat: es findet Stellungen ohne oder mit zu wenigen Linien (Matt und Patt ausgenommen), zeigt sie im Trockenlauf und öffnet sie auf Zuruf seitenweise wieder, damit sie neu gerechnet werden; Genauigkeit, Zugklassen und die betroffenen Zugerklärungen entstehen danach neu. Der Stellungs-Zwischenspeicher kopiert solche verdorbenen Ergebnisse nicht mehr in andere Partien." },
+  ] },
   { version: "0.989.9", date: "2026-11-17", changes: [
     { en: "Background analysis: if the engine output does not fit the position of the same job in 4 runs on at least 2 different engines, the job itself is at fault (position or check) — it now fails with a clear message instead of running forever and putting one engine after another on hold. A job that only gets foreign output on one engine keeps waiting for that engine to resynchronise, as before.",
       de: "Hintergrund-Analyse: passt die Engine-Ausgabe zur Stellung desselben Auftrags in 4 Läufen auf mindestens 2 verschiedenen Engines nicht, liegt es am Auftrag selbst (Stellung oder Prüfung) — er scheitert jetzt mit klarer Meldung, statt endlos zu laufen und eine Engine nach der anderen auszusetzen. Ein Auftrag, der nur auf einer Engine fremde Ausgabe bekommt, wartet wie bisher, bis sich diese Engine wieder eingetaktet hat." },

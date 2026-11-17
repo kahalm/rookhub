@@ -223,3 +223,25 @@ VORIGEN Stellung samt deren `bestmove`. 11 Stunden auf zwei Engines: 865 leere u
   Versatz) scheitert er nie. Ein sauberer Lauf, Done oder Failed vergisst den Auftrag. Partieanalyse: der gescheiterte
   Auftrag ist ein Fehlversuch der Stellung, nach `MaxPositionAttempts` steht `[]`.
 - Offen: das Analysebrett (Live) prüft die Ausgabe nicht selbst — es profitiert nur von der neuen Sitzung.
+
+**Reparatur der Altdaten (0.990.0, Admin, `GameAnalysisRepair`)**: `GET /api/admin/game-analysis-repair?after=0&maxAnalyses=50&maxScan=5000`
+(Trockenlauf, ändert nichts) und `POST /api/admin/game-analysis-repair/apply?after=…&maxAnalyses=50&maxScan=5000[&dropMistakeComparisons=true]`.
+Nur Admin-Recht, nie aus einer Impersonation, jede Ausführung eine Audit-Warnung (Admin, Modus, Zahlen, Cursor). Antwort:
+`scanned`, `foundEmpty`, `foundMissingLines`, `skippedTerminal`, `positionsReopened`, `analysesReopened`, `explanationsDeleted`,
+`mistakeComparisonsDeleted`, `nextCursor` (für `after`, `null` = Ende), `samples[]`.
+- **Lesen**: am Primärschlüssel entlang (`Id > after`, höchstens `maxScan` Zeilen, Grenzen 20 000 bzw. 500 Analysen), nur
+  gerechnete Stellungen ohne offenen Auftrag in nicht gescheiterten Analysen. Bei `maxAnalyses` Analysen mit Funden endet der
+  Aufruf VOR der nächsten, der Cursor zeigt dorthin.
+- **Fund** (`GameAnalysisRepair.Classify`): `[]` bei mindestens einem legalen Zug, oder weniger Kandidaten als
+  min(verlangte Linien, legale Züge); verlangt = `MultiPv`, bei vertieften Stellungen min(`MultiPv`, `RefineMultiPv`).
+  Kein Fund: Matt/Patt, nicht ladbare FEN, unlesbares JSON; die Zähl-Regel gilt nicht für Lc0-/Knotenanalysen (`EngineId`/
+  `TargetNodes`), `[]` dort schon. Prod-Stichprobe 17.11.: 40 Analysen der gestörten Nacht → 51 leer + 20 zu wenige Linien in
+  30 Analysen; 40 Analysen vom 12./13.11. (3 145 Stellungen) → 0.
+- **Öffnen** wie `GameAnalysisPump.RestartAsync`, nur die Funde: Kandidaten, Tiefe, Bewertung, Knotenstufen leer, Fehlversuche 0,
+  nicht vertieft; Analyse Done → Pending, `FinishedAt`, Genauigkeit, `MoveClasses` leer, `RefinedAt` leer (wenn vertieft wird).
+  Fehler-Erklärungen der Halbzüge p und p−1 werden gelöscht. Nichts wird angestoßen: die Pumpe nimmt Pending-Analysen in ihrem
+  Takt und mit ihren Deckeln; beim Abschluss rechnet sie Genauigkeit und Zugklassen neu und stößt die Texte an.
+- **Positions-Cache**: `GameAnalysisPositionCache.FindAsync` nimmt keine Quelle mehr, die selbst zu wenige Linien trägt.
+- **Bleibt stehen** (bewusst): Taktik-Ernte (`TacticCandidates`, ggf. schon in Kursen; Ligapartien werden ohnehin nicht geerntet),
+  Nacherzählung und Roasts der Partie, Zugvergleiche zu den Fehlern (nur mit `dropMistakeComparisons=true` gelöscht — sie
+  entstehen dann neu, Tiefe 30 und ggf. Fable-Kosten), schon verschickte Benachrichtigungen und Punktepartie-Stände.

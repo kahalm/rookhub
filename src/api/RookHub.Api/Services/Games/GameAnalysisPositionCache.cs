@@ -42,10 +42,15 @@ internal static class GameAnalysisPositionCache
         var rows = await db.GameAnalysisPositions.AsNoTracking()
             .Where(p => EF.Functions.Like(p.Fen, key + "%") && p.Depth >= depth && p.CandidatesJson != null
                 && p.GameAnalysisId != analysis.Id && p.GameAnalysis!.EngineId == null && p.GameAnalysis.TargetNodes == null)
-            .Select(p => new { p.Fen, p.CandidatesJson, p.EvalText, p.Depth })
+            .Select(p => new { p.Fen, p.CandidatesJson, p.EvalText, p.Depth, p.Refined, p.GameAnalysis!.MultiPv, p.GameAnalysis.RefineMultiPv })
             .Take(MaxRows)
             .ToListAsync(ct);
-        var hit = rows.FirstOrDefault(r => KeyOf(r.Fen) == key && LineCount(r.CandidatesJson!) >= multiPv);
+        // Nie eine Quelle, die selbst zu wenige Linien trägt (fremde Engine-Ausgabe, Provider-Versatz 16./17.11.2026 —
+        // GameAnalysisRepair.Classify): sonst kopierte die Pumpe die falschen Zahlen in frisch geöffnete Stellungen zurück.
+        int? legal = null;
+        var hit = rows.FirstOrDefault(r => KeyOf(r.Fen) == key && LineCount(r.CandidatesJson!) >= multiPv
+            && LineCount(r.CandidatesJson!) >= Math.Min(GameAnalysisRepair.ExpectedLines(r.MultiPv, r.RefineMultiPv, r.Refined),
+                legal ??= GameAnalysisRepair.LegalMoveCount(fen) ?? 0));
         return hit is null ? null : new CachedPosition(hit.CandidatesJson!, hit.EvalText, hit.Depth);
     }
 

@@ -48,6 +48,9 @@ public class ImpersonationGuardTests
         { typeof(RookHub.Api.Controllers.Puzzles.EndlessController), nameof(RookHub.Api.Controllers.Puzzles.EndlessController.ClaimSession) },
         // Kein Einstieg aus einem Einstieg (R1-005).
         { typeof(AdminController), nameof(AdminController.Impersonate) },
+        // Reparatur der Partieanalysen (0.990.0): besitzerübergreifend, nur der Admin selbst.
+        { typeof(RookHub.Api.Controllers.Games.AdminGameAnalysisRepairController), nameof(RookHub.Api.Controllers.Games.AdminGameAnalysisRepairController.DryRun) },
+        { typeof(RookHub.Api.Controllers.Games.AdminGameAnalysisRepairController), nameof(RookHub.Api.Controllers.Games.AdminGameAnalysisRepairController.Apply) },
     };
 
     [Theory]

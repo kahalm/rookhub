@@ -90,6 +90,7 @@ public static partial class DomainServicesSetup
         services.AddScoped<GameAnalysisService>();
         services.AddScoped<SavedGameService>();
         services.AddScoped<ClubGameReferences>();   // Kopien von Vereinspartien → Verweise (0.924.0)
+        services.AddScoped<GameAnalysisRepair>();   // Reparatur nach dem Provider-Versatz (0.990.0, Admin)
         services.AddScoped<OwnGameSummaries>();   // Zusammenfassung eigener Partien (0.923.0)
         services.AddScoped<AnonGameShares>();   // anonymer Link der Zusammenfassung (/ga/{token}/summary)
         services.AddScoped<GameMistakeProgressService>();
