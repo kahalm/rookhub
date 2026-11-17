@@ -267,6 +267,35 @@ public class AnalysisJobWorkerBrokerTests : IAsyncDisposable
         Assert.True(job.NextAttemptAt <= DateTime.UtcNow + AnalysisJobRunEnd.RetryAfterForeign);
     }
 
+    [Fact]
+    public async Task FremdeAusgabe_schonAufAndererEngine_vierterLauf_scheitert_ohneDieEngineZuBelasten()
+    {
+        var (userId, engines) = await SetupAsync();
+        _broker.Answers[engines[0]] = (200,
+            "{\"time\":9,\"depth\":12,\"nodes\":5000,\"pvs\":[{\"moves\":[],\"cp\":35,\"depth\":12}],\"bestmove\":\"e2e4\"}\n");
+        var jobId = await JobAsync(userId, depth: 12);
+        var epochs = new EngineSessionEpochs("abcde");
+        // Dreimal schon auf einer anderen Engine fremd (dort gezählt und ausgesetzt).
+        for (var i = 0; i < 3; i++) epochs.ReportForeignRun(jobId, "rhe_otherengine01", DateTime.UtcNow);
+        var worker = new AnalysisJobWorker(_sp.GetRequiredService<IServiceScopeFactory>(), new EngineActivityTracker(), _broker,
+            NullLogger<AnalysisJobWorker>.Instance, _sp.GetRequiredService<IConfiguration>(), new AnalysisJobLive(), epochs: epochs);
+        try
+        {
+            await worker.StartAsync(CancellationToken.None);
+            var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Done or AnalysisJobStatus.Failed or AnalysisJobStatus.Paused);
+
+            Assert.Equal(AnalysisJobStatus.Failed, job.Status);
+            Assert.StartsWith("Engine-Ausgabe passte in 4 Läufen auf 2 Engines nicht zur Stellung", job.LastError);
+            Assert.False(epochs.IsBenched(engines[0], DateTime.UtcNow));
+            Assert.Equal(1, epochs.ReportForeignRun(jobId + 1000, engines[0], DateTime.UtcNow).Strike!.Value.InARow);   // vorher kein Treffer
+        }
+        finally
+        {
+            await worker.StopAsync(CancellationToken.None);
+            worker.Dispose();
+        }
+    }
+
     [Theory]
     [InlineData(null, 39_000L, false)]      // erster Lauf: kein Vergleich
     [InlineData(39_367L, 39_000L, true)]    // gleiche Stelle

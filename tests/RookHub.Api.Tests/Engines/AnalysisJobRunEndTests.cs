@@ -63,6 +63,12 @@ public class AnalysisJobRunEndTests
             $"Paused|{AnalysisJobRunEnd.ForeignOutputError}|10|Keep"),
         ["fremde Ausgabe, letzter Versuch"] = (Depth(reached: 10, fruitless: Max - 1) with { ForeignOutput = true },
             $"Paused|{AnalysisJobRunEnd.ForeignOutputError}|10|Keep"),
+        ["fremde Ausgabe, 4 Läufe auf 2 Engines"] = (Depth(reached: 20) with { ForeignOutput = true, ForeignRunsOfJob = 4, ForeignEnginesOfJob = 2 },
+            "Failed|Engine-Ausgabe passte in 4 Läufen auf 2 Engines nicht zur Stellung — Stellung oder Prüfung fehlerhaft|-|Keep"),
+        ["fremde Ausgabe, 9 Läufe auf 1 Engine"] = (Depth(reached: 20) with { ForeignOutput = true, ForeignRunsOfJob = 9, ForeignEnginesOfJob = 1 },
+            $"Paused|{AnalysisJobRunEnd.ForeignOutputError}|10|Keep"),
+        ["fremde Ausgabe, 3 Läufe auf 3 Engines"] = (Depth(reached: 20) with { ForeignOutput = true, ForeignRunsOfJob = 3, ForeignEnginesOfJob = 3 },
+            $"Paused|{AnalysisJobRunEnd.ForeignOutputError}|10|Keep"),
         ["fremde Ausgabe, Knotenziel gesehen"] = (Nodes(50_000, 50_000, goalReached: true, bestMove: true) with { ForeignOutput = true },
             $"Paused|{AnalysisJobRunEnd.ForeignOutputError}|10|Keep"),
     };

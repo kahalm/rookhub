@@ -358,7 +358,12 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
                 + "Smart Pruning) — Ergebnis gilt", job.Id, stream.CurrentNodes, job.TargetNodes);
         var outcome = AnalysisJobRunEnd.ClassifyRunEnd(facts);
         await AnalysisJobTransitions.ApplyAsync(db, job, outcome);
-        if (stream.GotData) _epochs.ReportClean(run.EngineId);   // jede Zeile passte zur Stellung: die Folge ist unterbrochen
+        if (stream.GotData)
+        {
+            _epochs.ReportClean(run.EngineId);   // jede Zeile passte zur Stellung: die Folge ist unterbrochen
+            _epochs.ForgetJob(job.Id);           // … und dieser Auftrag ist offenbar in Ordnung
+        }
+        else if (outcome.Kind != RunEndKind.Paused) _epochs.ForgetJob(job.Id);
         ledger.Outcome = OutcomeOf(outcome);
         if (outcome.Kind == RunEndKind.Done) ledger.DoneJobSeconds = job.SecondsSpent;
         if (outcome.Kind == RunEndKind.Done)
@@ -377,12 +382,32 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         CancellationToken ct, RunLedger ledger)
     {
         await stream.DiscardAsync();
-        var outcome = AnalysisJobRunEnd.ClassifyRunEnd(
-            stream.Facts(ct.IsCancellationRequested, _tracker.IsEngineBusy(run.EngineId), _settings.FruitlessMinRuntime));
+        var verdict = _epochs.ReportForeignRun(job.Id, run.EngineId, DateTime.UtcNow);
+        var facts = stream.Facts(ct.IsCancellationRequested, _tracker.IsEngineBusy(run.EngineId), _settings.FruitlessMinRuntime)
+            with { ForeignRunsOfJob = verdict.JobRuns, ForeignEnginesOfJob = verdict.JobEngines };
+        var outcome = AnalysisJobRunEnd.ClassifyRunEnd(facts);
         await AnalysisJobTransitions.ApplyAsync(db, job, outcome);
-        ledger.Outcome = EngineRunOutcome.Retried;
+        ledger.Outcome = outcome.Kind == RunEndKind.Failed ? EngineRunOutcome.Failed : EngineRunOutcome.Retried;
         ledger.Nodes = 0;   // Knoten einer fremden Suche sind kein Durchsatz für diesen Auftrag
-        var strike = _epochs.ReportForeign(run.EngineId, DateTime.UtcNow);
+        if (outcome.Kind == RunEndKind.Failed)
+        {
+            _epochs.ForgetJob(job.Id);
+            _logger.LogWarning(
+                "AnalysisJob {JobId}: Engine-Ausgabe passte in {Runs} Läufen auf {Engines} Engines nicht zur Stellung {Fen} "
+                + "({Reason}) — Auftrag gescheitert (Stellung oder Prüfung fehlerhaft, nicht die Engine)",
+                job.Id, verdict.JobRuns, verdict.JobEngines, job.Fen, stream.ForeignReason);
+            return;
+        }
+        if (verdict.Strike is not { } strike)
+        {
+            // Der Auftrag war schon auf einer anderen Engine fremd: kein Treffer gegen diese Engine.
+            _logger.LogWarning(
+                "AnalysisJob {JobId}: auch auf Engine {EngineName} ({EngineId}) fremde Ausgabe ({Reason}), {Runs}. Lauf auf "
+                + "{Engines} Engines — zählt nicht gegen die Engine (Verdacht: Stellung/Prüfung), Sitzung {Epoch}",
+                job.Id, engine.Name, run.EngineId, stream.ForeignReason, verdict.JobRuns, verdict.JobEngines,
+                _epochs.EpochOf(run.EngineId));
+            return;
+        }
         _logger.LogWarning(
             "AnalysisJob {JobId}: Engine {EngineName} ({EngineId}) lieferte Ausgabe einer ANDEREN Stellung ({Reason}) — "
             + "Lauf verworfen, nächste Sitzung {Epoch} (Provider wird neu synchronisiert), {InARow}. Mal in Folge",

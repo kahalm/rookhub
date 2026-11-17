@@ -114,6 +114,59 @@ public class EngineSessionEpochsTests
         Assert.False(next.RepeatOffender);
     }
 
+    // ── Deckel je Auftrag: Stellung/Prüfung schuld statt Engine ─────────────────────────────────────────────────────
+
+    [Fact]
+    public void AuftragAufMehrerenEngines_scheitert_undBelastetDieZweiteEngineNicht()
+    {
+        var epochs = new EngineSessionEpochs("abcde");
+        ForeignRunVerdict v = default;
+        for (var i = 0; i < 3; i++) v = epochs.ReportForeignRun(42, EngineA, T0.AddSeconds(i));
+        Assert.True(v.Strike!.Value.RepeatOffender);                 // A wurde (noch) als Täter gezählt und ausgesetzt
+        Assert.Equal(RunEndKind.Paused, AnalysisJobRunEnd.ClassifyForeign(v.JobRuns, v.JobEngines).Kind);
+
+        var epochB = epochs.SessionFor(EngineB, "s");
+        v = epochs.ReportForeignRun(42, EngineB, T0.AddSeconds(5));   // Rebalancer reichte ihn weiter
+        Assert.Null(v.Strike);                                        // kein Treffer gegen B …
+        Assert.False(epochs.IsBenched(EngineB, T0.AddSeconds(6)));
+        Assert.NotEqual(epochB, epochs.SessionFor(EngineB, "s"));     // … neu synchronisiert wird trotzdem
+        Assert.Equal((4, 2), (v.JobRuns, v.JobEngines));
+        var outcome = AnalysisJobRunEnd.ClassifyForeign(v.JobRuns, v.JobEngines);
+        Assert.Equal(RunEndKind.Failed, outcome.Kind);
+        Assert.Equal("Engine-Ausgabe passte in 4 Läufen auf 2 Engines nicht zur Stellung — Stellung oder Prüfung fehlerhaft",
+            outcome.Error);
+        Assert.Equal(FruitlessChange.Keep, outcome.Fruitless);
+
+        // Ein weiterer Lauf eines anderen Auftrags auf B ist wieder ein normaler Treffer gegen B.
+        Assert.Equal(1, epochs.ReportForeignRun(43, EngineB, T0.AddSeconds(7)).Strike!.Value.InARow);
+    }
+
+    [Fact]
+    public void EchterVersatz_aufEinerEngine_scheitertNie()
+    {
+        var epochs = new EngineSessionEpochs("abcde");
+        for (var i = 0; i < 20; i++)
+        {
+            var v = epochs.ReportForeignRun(42, EngineA, T0.AddMinutes(i));
+            Assert.NotNull(v.Strike);
+            Assert.Equal(1, v.JobEngines);
+            Assert.Equal(RunEndKind.Paused, AnalysisJobRunEnd.ClassifyForeign(v.JobRuns, v.JobEngines).Kind);
+        }
+    }
+
+    [Fact]
+    public void ZweiEngines_unterDerLaufschwelle_scheitertNoch_nicht_undVergessenSetztZurueck()
+    {
+        var epochs = new EngineSessionEpochs("abcde");
+        epochs.ReportForeignRun(42, EngineA, T0);
+        var v = epochs.ReportForeignRun(42, EngineB, T0);
+        Assert.Equal(RunEndKind.Paused, AnalysisJobRunEnd.ClassifyForeign(v.JobRuns, v.JobEngines).Kind);   // 2 Läufe < 4
+        epochs.ForgetJob(42);                                          // sauberer Lauf dazwischen
+        v = epochs.ReportForeignRun(42, EngineB, T0);
+        Assert.Equal((1, 1), (v.JobRuns, v.JobEngines));
+        Assert.NotNull(v.Strike);
+    }
+
     // ── Verdrahtung: der Router hängt die Epoche an, beim Provider kommt sie an ─────────────────────────────────────
 
     private const string Start = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";

@@ -11,6 +11,13 @@ namespace RookHub.Api.Services.EngineBroker;
 /// <param name="BenchedUntil">Bis dann bekommt die Engine keine Hintergrund-Aufträge (nur bei <paramref name="RepeatOffender"/>).</param>
 public readonly record struct ForeignStrike(int InARow, bool RepeatOffender, bool LogError, DateTime? BenchedUntil);
 
+/// <summary>Was ein fremder Lauf eines AUFTRAGS bedeutet (<see cref="EngineSessionEpochs.ReportForeignRun"/>).</summary>
+/// <param name="Strike">Der Treffer gegen die Engine — <c>null</c>, wenn der Auftrag schon auf einer ANDEREN Engine fremde
+/// Ausgabe bekam: dann ist vermutlich der Auftrag (Stellung oder Prüfung) schuld, nicht diese Engine.</param>
+/// <param name="JobRuns">Fremde Läufe dieses Auftrags (dieser mitgezählt).</param>
+/// <param name="JobEngines">Verschiedene Engines, auf denen dieser Auftrag fremde Ausgabe bekam.</param>
+public readonly record struct ForeignRunVerdict(ForeignStrike? Strike, int JobRuns, int JobEngines);
+
 /// <summary>
 /// Sitzungs-Epoche je Engine (17.11.2026, „Engine-Provider-Versatz"): der lichess-Provider gerät nach einem abgerissenen
 /// Upload dauerhaft eine Suche hinter die Aufträge — die Ausgabe der vorigen Suche bleibt in der Pipe, jeder folgende
@@ -52,6 +59,20 @@ public sealed class EngineSessionEpochs
     }
 
     private readonly ConcurrentDictionary<string, State> _states = new(StringComparer.Ordinal);
+
+    private sealed class JobState
+    {
+        public int Runs;
+        public readonly HashSet<string> Engines = new(StringComparer.Ordinal);
+        public DateTime LastSeen;
+    }
+
+    /// <summary>Fremde Läufe je Auftrag (nur im Speicher — nach einem Neustart beginnt die Zählung neu).</summary>
+    private readonly ConcurrentDictionary<int, JobState> _jobs = new();
+
+    /// <summary>Ab so vielen Einträgen werden Aufträge vergessen, die seit <see cref="JobMemory"/> nicht mehr fremd waren.</summary>
+    private const int JobPruneThreshold = 2000;
+    private static readonly TimeSpan JobMemory = TimeSpan.FromHours(12);
 
     /// <summary>Der feste Anteil dieses Prozesses (5 Zeichen a–z0–9, zufällig beim Start).</summary>
     public string ProcessPart { get; }
@@ -111,6 +132,47 @@ public sealed class EngineSessionEpochs
                 }
             }
             return new ForeignStrike(s.InARow, repeat, log, repeat ? s.BenchedUntil : null);
+        }
+    }
+
+    /// <summary>
+    /// Fremder Lauf eines Auftrags: die Epoche der Engine rückt IMMER weiter (Neusynchronisieren schadet nie), mitgezählt
+    /// wird je Auftrag Zahl der Läufe und Engines. Ein Treffer gegen die ENGINE (<see cref="ReportForeign"/>, Folge,
+    /// Aussetzen, Fehler-Log) entsteht nur, solange der Auftrag auf keiner anderen Engine fremd war — sonst wanderte ein
+    /// Auftrag, dessen Prüfung deterministisch falsch anschlägt, aussetzend durch die ganze Flotte.
+    /// </summary>
+    public ForeignRunVerdict ReportForeignRun(int jobId, string engineId, DateTime nowUtc)
+    {
+        PruneJobs(nowUtc);
+        var j = _jobs.GetOrAdd(jobId, _ => new JobState());
+        bool elsewhere;
+        int runs, engines;
+        lock (j)
+        {
+            elsewhere = j.Engines.Any(e => e != engineId);
+            j.Runs++;
+            j.Engines.Add(engineId);
+            j.LastSeen = nowUtc;
+            runs = j.Runs;
+            engines = j.Engines.Count;
+        }
+        if (!elsewhere) return new ForeignRunVerdict(ReportForeign(engineId, nowUtc), runs, engines);
+        var s = StateOf(engineId);
+        lock (s) s.Counter++;   // nur neu synchronisieren, kein Treffer gegen die Engine
+        return new ForeignRunVerdict(null, runs, engines);
+    }
+
+    /// <summary>Den Auftrag vergessen: er lief sauber, ist fertig oder gescheitert.</summary>
+    public void ForgetJob(int jobId) => _jobs.TryRemove(jobId, out _);
+
+    private void PruneJobs(DateTime nowUtc)
+    {
+        if (_jobs.Count < JobPruneThreshold) return;
+        foreach (var (id, j) in _jobs)
+        {
+            bool old;
+            lock (j) old = nowUtc - j.LastSeen > JobMemory;
+            if (old) _jobs.TryRemove(id, out _);
         }
     }
 

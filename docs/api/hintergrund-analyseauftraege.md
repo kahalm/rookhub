@@ -213,4 +213,13 @@ VORIGEN Stellung samt deren `bestmove`. 11 Stunden auf zwei Engines: 865 leere u
   „fertig, aber unbrauchbar“ zählt wie ein gescheiterter Auftrag (`FailedAttempts`, erst ab
   `GameAnalysisDefaults.MaxPositionAttempts` endgültig `[]`), der Auftrag wird gelöscht, die Stellung bekommt einen neuen.
   Vertiefung: unbrauchbar lässt wie bisher den ersten Durchgang stehen.
+- **Deckel je Auftrag (0.989.9)**: ist nicht die Engine, sondern der AUFTRAG schuld (FEN, die `ChessBoard` lädt, bei der die
+  Engine aber einen Wurzelzug liefert, den die Bibliothek nicht kennt), schlüge die Erkennung bei jedem Lauf an — der Auftrag
+  liefe endlos, setzte jede Engine aus und wanderte über den Rebalancer durch die Flotte. `EngineSessionEpochs.ReportForeignRun`
+  zählt deshalb je Auftrag (im Speicher) Läufe und Engines: ab `AnalysisJobRunEnd.ForeignGiveUpRuns` (4) Läufen auf
+  `ForeignGiveUpEngines` (2) Engines scheitert er („Engine-Ausgabe passte in N Läufen auf M Engines nicht zur Stellung —
+  Stellung oder Prüfung fehlerhaft“, Warnung mit FEN). War er schon auf einer ANDEREN Engine fremd, zählt sein Lauf nicht
+  gegen die Engine (kein Aussetzen, kein Error), neu synchronisiert wird trotzdem. Nur auf EINER Engine fremd (echter
+  Versatz) scheitert er nie. Ein sauberer Lauf, Done oder Failed vergisst den Auftrag. Partieanalyse: der gescheiterte
+  Auftrag ist ein Fehlversuch der Stellung, nach `MaxPositionAttempts` steht `[]`.
 - Offen: das Analysebrett (Live) prüft die Ausgabe nicht selbst — es profitiert nur von der neuen Sitzung.

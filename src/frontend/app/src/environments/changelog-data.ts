@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.989.9", date: "2026-11-17", changes: [
+    { en: "Background analysis: if the engine output does not fit the position of the same job in 4 runs on at least 2 different engines, the job itself is at fault (position or check) — it now fails with a clear message instead of running forever and putting one engine after another on hold. A job that only gets foreign output on one engine keeps waiting for that engine to resynchronise, as before.",
+      de: "Hintergrund-Analyse: passt die Engine-Ausgabe zur Stellung desselben Auftrags in 4 Läufen auf mindestens 2 verschiedenen Engines nicht, liegt es am Auftrag selbst (Stellung oder Prüfung) — er scheitert jetzt mit klarer Meldung, statt endlos zu laufen und eine Engine nach der anderen auszusetzen. Ein Auftrag, der nur auf einer Engine fremde Ausgabe bekommt, wartet wie bisher, bis sich diese Engine wieder eingetaktet hat." },
+  ] },
   { version: "0.989.8", date: "2026-11-17", changes: [
     { en: "Tournament directory: when fetching a country’s tournaments fails only briefly during the nightly update (e.g. a timeout while the crawler switches its connection), that country is tried once more at the end of the run after a short pause. If the second attempt works, the country counts as updated that night. The same applies to the extra queries for the tournament type.",
       de: "Turnierverzeichnis: Scheitert beim nächtlichen Abgleich der Abruf eines Landes nur vorübergehend (z. B. ein Timeout, während der Crawler seine Verbindung wechselt), wird das Land am Ende des Durchgangs nach einer kurzen Pause noch einmal versucht. Gelingt der zweite Versuch, gilt das Land in dieser Nacht als aktualisiert. Dasselbe gilt für die Zusatzabfragen der Turnierart." },

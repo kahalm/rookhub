@@ -36,11 +36,14 @@ internal sealed record RunOutcome(RunEndKind Kind, string? Error = null, TimeSpa
 /// <param name="FruitlessMinRuntime">Ab dieser Laufzeit zählt „kein Fortschritt" nicht mehr als Fehlversuch.</param>
 /// <param name="FruitlessAttempts">Bisherige Fehlversuche des Auftrags.</param>
 /// <param name="ForeignOutput">Eine Zeile gehörte zu einer ANDEREN Stellung (Provider-Versatz, <see cref="JobStreamRun.ForeignReason"/>).</param>
+/// <param name="ForeignRunsOfJob">Fremde Läufe dieses Auftrags bisher (dieser mitgezählt, <see cref="EngineBroker.EngineSessionEpochs.ReportForeignRun"/>).</param>
+/// <param name="ForeignEnginesOfJob">Verschiedene Engines, auf denen dieser Auftrag fremde Ausgabe bekam.</param>
 internal readonly record struct RunFacts(
     long? TargetNodes, int TargetDepth, int ReachedDepth, int DepthAtStart,
     bool NodeGoalReached, long CurrentNodes, bool EngineFinished, long? PreviousNodes,
     bool DirectEngine, bool CancelledByUs, bool LiveOnEngine, bool GotData,
-    TimeSpan RunTime, TimeSpan FruitlessMinRuntime, int FruitlessAttempts, bool ForeignOutput = false);
+    TimeSpan RunTime, TimeSpan FruitlessMinRuntime, int FruitlessAttempts, bool ForeignOutput = false,
+    int ForeignRunsOfJob = 0, int ForeignEnginesOfJob = 0);
 
 /// <summary>
 /// Die Statusentscheidung des Auftrags-Workers als reine Funktionen (Zerlegung Z11): wie ein beendeter Stream
@@ -61,6 +64,21 @@ internal static class AnalysisJobRunEnd
 
     /// <summary>Fremder Lauf: pausiert mit kurzer Wartezeit, OHNE Fehlversuch — die Stellung kann nichts dafür.</summary>
     internal static RunOutcome ForeignRun => RunOutcome.Pause(ForeignOutputError, RetryAfterForeign, FruitlessChange.Keep);
+
+    /// <summary>Ab so vielen fremden Läufen desselben Auftrags …</summary>
+    internal const int ForeignGiveUpRuns = 4;
+    /// <summary>… auf mindestens so vielen verschiedenen Engines ist der AUFTRAG das Problem (Stellung oder Prüfung), nicht
+    /// die Engine: ein echter Versatz betrifft einen Provider-Prozess, und eine andere Engine rechnet die Stellung sauber.</summary>
+    internal const int ForeignGiveUpEngines = 2;
+
+    /// <summary>Fremder Lauf eines Auftrags: pausiert wie <see cref="ForeignRun"/>, bis der Auftrag in
+    /// <see cref="ForeignGiveUpRuns"/> Läufen auf <see cref="ForeignGiveUpEngines"/> Engines fremd war — dann gescheitert. Nur
+    /// auf EINER Engine wiederholt fremd scheitert nie (das ist der echte Versatz).</summary>
+    internal static RunOutcome ClassifyForeign(int jobRuns, int jobEngines)
+        => jobRuns >= ForeignGiveUpRuns && jobEngines >= ForeignGiveUpEngines
+            ? RunOutcome.Fail($"Engine-Ausgabe passte in {jobRuns} Läufen auf {jobEngines} Engines nicht zur Stellung — "
+                + "Stellung oder Prüfung fehlerhaft")
+            : ForeignRun;
 
     /// <summary>Hat die Engine einen Knotenauftrag VOR dem Ziel aus eigenem Ermessen beendet (Lc0 Smart Pruning)?
     /// Dann gilt das Ergebnis — siehe <see cref="AnalysisJobStream.EngineEndedOwnSearch"/>.</summary>
@@ -103,7 +121,7 @@ internal static class AnalysisJobRunEnd
     /// </summary>
     internal static RunOutcome ClassifyRunEnd(in RunFacts f)
     {
-        if (f.ForeignOutput) return ForeignRun;
+        if (f.ForeignOutput) return ClassifyForeign(f.ForeignRunsOfJob, f.ForeignEnginesOfJob);
         if (GoalMet(f)) return RunOutcome.Done();
         if (f.CancelledByUs) return RunOutcome.Pause(null);
         if (f.ReachedDepth > f.DepthAtStart)
