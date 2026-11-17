@@ -39,7 +39,10 @@ public static class BrokerCandidates
 
     /// <summary>
     /// Liest die <c>pvs</c> einer Broker-Zeile. <c>null</c>, wenn die Zeile unbrauchbar ist
-    /// (kein JSON, keine pvs, keine Stellung).
+    /// (kein JSON, keine pvs, keine Stellung) — oder wenn sie nicht zu <paramref name="fen"/> gehört
+    /// (<see cref="MismatchOf(JsonElement, Move[])"/>): seit dem Provider-Versatz vom 16./17.11.2026 wird eine Zeile mit
+    /// EINER fremden Linie oder fremdem <c>bestmove</c> ganz verworfen statt gefiltert — blieb früher zufällig ein legaler
+    /// Zug übrig, landete die Bewertung einer anderen Stellung still in der Analyse.
     /// </summary>
     /// <param name="fen">Stellung, zu der die Zeile gehört — bestimmt Seite am Zug und Rochade-Form.</param>
     public static List<Candidate>? Parse(string? resultJson, string fen)
@@ -58,17 +61,19 @@ public static class BrokerCandidates
         try
         {
             using var doc = JsonDocument.Parse(resultJson);
-            if (!doc.RootElement.TryGetProperty("pvs", out var pvs) || pvs.ValueKind != JsonValueKind.Array)
+            if (doc.RootElement.ValueKind != JsonValueKind.Object
+                || !doc.RootElement.TryGetProperty("pvs", out var pvs) || pvs.ValueKind != JsonValueKind.Array)
                 return null;
+            if (MismatchOf(doc.RootElement, legal) is not null) return null;   // gehört zu einer anderen Stellung
 
             var list = new List<Candidate>();
             foreach (var pv in pvs.EnumerateArray())
             {
-                if (!pv.TryGetProperty("moves", out var moves)) continue;
+                if (pv.ValueKind != JsonValueKind.Object || !pv.TryGetProperty("moves", out var moves)) continue;
                 var first = FirstMove(moves);
                 if (first is null) continue;
                 var uci = NormalizeUci(legal, first);
-                if (uci is null) continue;   // Zug passt zu keinem legalen Zug → Zeile überspringen
+                if (uci is null) continue;   // nach MismatchOf nicht mehr möglich — Riegel bleibt
 
                 int? cp = pv.TryGetProperty("cp", out var c) && c.ValueKind == JsonValueKind.Number ? c.GetInt32() : null;
                 int? mate = pv.TryGetProperty("mate", out var m) && m.ValueKind == JsonValueKind.Number ? m.GetInt32() : null;
@@ -85,6 +90,63 @@ public static class BrokerCandidates
             return list.Count == 0 ? null : list;
         }
         catch (JsonException) { return null; }
+    }
+
+    /// <summary>
+    /// Gehört die Broker-Zeile NICHT zu dieser Stellung? Dann der Grund, sonst <c>null</c>. Sichere Merkmale (eine Engine
+    /// liefert für ihre eigene Stellung nie einen illegalen Wurzelzug):
+    /// <list type="bullet">
+    /// <item>Eine Linie, deren erster Zug in der Stellung illegal ist — auch die LEERE Linie: der Broker (eigener wie
+    /// lila-engine) spielt jede Variante auf der Stellung nach und schneidet sie beim ersten illegalen Zug ab, aus einer
+    /// fremden Linie wird so <c>"moves":[]</c>. Eine Linie ohne <c>pv</c> (Matt/Patt: <c>info depth 0 score mate 0</c>)
+    /// wird gar nicht erst gesendet.</item>
+    /// <item>Ein <c>bestmove</c>, der in der Stellung illegal ist. Fehlt er (<c>bestmove (none)</c> bei Matt/Patt, oder die
+    /// Suche läuft noch), ist das KEIN Merkmal.</item>
+    /// </list>
+    /// Rochade gilt in beiden Schreibweisen (<c>e1g1</c> und König-schlägt-Turm <c>e1h1</c>, der Provider setzt
+    /// <c>UCI_Chess960 true</c>). Die ganze Variante zu prüfen bringt hier nichts: der Broker hat sie schon auf den
+    /// legalen Anfang gekürzt.
+    /// </summary>
+    public static string? MismatchOf(string? line, string fen)
+    {
+        if (string.IsNullOrWhiteSpace(line) || string.IsNullOrWhiteSpace(fen)) return null;
+        Move[] legal;
+        try { legal = ChessBoard.LoadFromFen(fen).Moves(generateSan: false); }
+        catch { return null; }
+        return MismatchOf(line, legal);
+    }
+
+    /// <inheritdoc cref="MismatchOf(string?, string)"/>
+    /// <param name="legal">Die legalen Züge der Stellung (einmal je Stellung erzeugt — der Worker prüft jede Zeile).</param>
+    internal static string? MismatchOf(string line, Move[] legal)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(line);
+            return doc.RootElement.ValueKind == JsonValueKind.Object ? MismatchOf(doc.RootElement, legal) : null;
+        }
+        catch (JsonException) { return null; }
+    }
+
+    internal static string? MismatchOf(JsonElement root, Move[] legal)
+    {
+        if (root.TryGetProperty("pvs", out var pvs) && pvs.ValueKind == JsonValueKind.Array)
+        {
+            var index = 0;
+            foreach (var pv in pvs.EnumerateArray())
+            {
+                index++;
+                if (pv.ValueKind != JsonValueKind.Object || !pv.TryGetProperty("moves", out var moves)) continue;
+                if (moves.ValueKind is not (JsonValueKind.Array or JsonValueKind.String)) continue;
+                var first = FirstMove(moves);
+                if (string.IsNullOrWhiteSpace(first)) return $"Linie {index} ohne legalen ersten Zug";
+                if (NormalizeUci(legal, first) is null) return $"Linie {index}: {first} ist hier illegal";
+            }
+        }
+        if (root.TryGetProperty("bestmove", out var b) && b.ValueKind == JsonValueKind.String
+            && b.GetString() is { Length: > 0 } best && best != "(none)" && NormalizeUci(legal, best) is null)
+            return $"bestmove {best} ist hier illegal";
+        return null;
     }
 
     /// <summary>Serialisiert die Kandidaten so, wie sie in <c>GameAnalysisPosition.CandidatesJson</c> landen.</summary>
@@ -176,7 +238,7 @@ public static class BrokerCandidates
     {
         // Der Broker schickt die Variante als Array; ältere Zeilen auch als Leerzeichen-Text.
         if (moves.ValueKind == JsonValueKind.Array)
-            return moves.GetArrayLength() > 0 ? moves[0].GetString() : null;
+            return moves.GetArrayLength() > 0 && moves[0].ValueKind == JsonValueKind.String ? moves[0].GetString() : null;
         if (moves.ValueKind == JsonValueKind.String)
             return moves.GetString()?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
         return null;

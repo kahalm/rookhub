@@ -35,11 +35,12 @@ internal sealed record RunOutcome(RunEndKind Kind, string? Error = null, TimeSpa
 /// <param name="RunTime">Dauer des Laufs ab den Kopfzeilen.</param>
 /// <param name="FruitlessMinRuntime">Ab dieser Laufzeit zählt „kein Fortschritt" nicht mehr als Fehlversuch.</param>
 /// <param name="FruitlessAttempts">Bisherige Fehlversuche des Auftrags.</param>
+/// <param name="ForeignOutput">Eine Zeile gehörte zu einer ANDEREN Stellung (Provider-Versatz, <see cref="JobStreamRun.ForeignReason"/>).</param>
 internal readonly record struct RunFacts(
     long? TargetNodes, int TargetDepth, int ReachedDepth, int DepthAtStart,
     bool NodeGoalReached, long CurrentNodes, bool EngineFinished, long? PreviousNodes,
     bool DirectEngine, bool CancelledByUs, bool LiveOnEngine, bool GotData,
-    TimeSpan RunTime, TimeSpan FruitlessMinRuntime, int FruitlessAttempts);
+    TimeSpan RunTime, TimeSpan FruitlessMinRuntime, int FruitlessAttempts, bool ForeignOutput = false);
 
 /// <summary>
 /// Die Statusentscheidung des Auftrags-Workers als reine Funktionen (Zerlegung Z11): wie ein beendeter Stream
@@ -50,6 +51,16 @@ internal static class AnalysisJobRunEnd
 {
     /// <summary>Wartezeit nach einem Stream, der vor dem Ziel endete.</summary>
     internal static readonly TimeSpan RetryAfterEarlyEnd = TimeSpan.FromSeconds(30);
+
+    /// <summary>Wartezeit nach einem fremden Lauf: kurz — der nächste Auftrag der Engine beginnt mit neuer Sitzung und
+    /// synchronisiert den Provider damit wieder (<see cref="EngineBroker.EngineSessionEpochs"/>).</summary>
+    internal static readonly TimeSpan RetryAfterForeign = TimeSpan.FromSeconds(10);
+
+    /// <summary>Meldung eines fremden Laufs (<see cref="AnalysisJob.LastError"/>).</summary>
+    internal const string ForeignOutputError = "Engine lieferte Ausgabe einer anderen Stellung — verworfen, Provider wird neu synchronisiert";
+
+    /// <summary>Fremder Lauf: pausiert mit kurzer Wartezeit, OHNE Fehlversuch — die Stellung kann nichts dafür.</summary>
+    internal static RunOutcome ForeignRun => RunOutcome.Pause(ForeignOutputError, RetryAfterForeign, FruitlessChange.Keep);
 
     /// <summary>Hat die Engine einen Knotenauftrag VOR dem Ziel aus eigenem Ermessen beendet (Lc0 Smart Pruning)?
     /// Dann gilt das Ergebnis — siehe <see cref="AnalysisJobStream.EngineEndedOwnSearch"/>.</summary>
@@ -62,14 +73,16 @@ internal static class AnalysisJobRunEnd
     /// <summary>Ziel erreicht? Knotenauftrag: Ziel gesehen, Engine hat selbst beendet, oder der Stream endete (nicht
     /// durch uns) knapp darunter. Tiefenauftrag: gespeicherte Tiefe ≥ Zieltiefe.</summary>
     internal static bool GoalMet(in RunFacts f)
-        => f.TargetNodes is { } goalNodes
+        => !f.ForeignOutput && (f.TargetNodes is { } goalNodes
             ? f.NodeGoalReached || EndedOwnSearch(f)
               || (!f.CancelledByUs && f.GotData && AnalysisJobStream.NodeGoalMet(goalNodes, f.CurrentNodes, streamEnded: true))
-            : f.ReachedDepth >= f.TargetDepth;
+            : f.ReachedDepth >= f.TargetDepth);
 
     /// <summary>
     /// Wie ein beendeter Stream den Auftrag stellt — in dieser Reihenfolge:
     /// <list type="number">
+    /// <item>Fremde Ausgabe (Provider-Versatz) → pausiert (10 s), Meldung, KEIN Fehlversuch und NIE fertig — auch wenn die
+    /// fremde Suche die Zieltiefe erreicht hatte (<see cref="ForeignRun"/>). Der Lauf ist schon verworfen.</item>
     /// <item>Ziel erreicht → fertig, Fehlversuche auf 0.</item>
     /// <item>Von uns abgebrochen (Live hatte Vorrang / gelöscht / Shutdown) → pausiert, ohne Meldung, kein Fehlversuch.</item>
     /// <item>Tiefer als beim Start → pausiert (30 s), Fehlversuche auf 0: es ging voran, einfach weiter.</item>
@@ -90,6 +103,7 @@ internal static class AnalysisJobRunEnd
     /// </summary>
     internal static RunOutcome ClassifyRunEnd(in RunFacts f)
     {
+        if (f.ForeignOutput) return ForeignRun;
         if (GoalMet(f)) return RunOutcome.Done();
         if (f.CancelledByUs) return RunOutcome.Pause(null);
         if (f.ReachedDepth > f.DepthAtStart)

@@ -1,3 +1,4 @@
+using Chess;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
@@ -10,6 +11,9 @@ internal enum StreamEnd
     Ended,
     /// <summary>Der Stillstands-Wächter hat ausgelöst: keine frische Datenzeile binnen der Frist.</summary>
     Silent,
+    /// <summary>Eine Zeile gehörte zu einer ANDEREN Stellung (<see cref="BrokerCandidates.MismatchOf(string?, string)"/>):
+    /// der Lauf ist abgebrochen, nichts davon darf bleiben (<see cref="JobStreamRun.DiscardAsync"/>).</summary>
+    Foreign,
 }
 
 /// <summary>
@@ -34,6 +38,11 @@ internal sealed class JobStreamRun
     private string? _pendingLine;
     private int _pendingDepth;
     private string? _lastLine;
+    /// <summary>Legale Züge der Auftragsstellung — einmal erzeugt, jede Zeile wird dagegen geprüft (null = FEN nicht ladbar,
+    /// dann prüft der Broker ohnehin nichts).</summary>
+    private readonly Move[]? _legal;
+    /// <summary>Gespeicherter Stand beim Start — ein fremder Lauf wird darauf zurückgesetzt.</summary>
+    private readonly (string? Result, int Depth, string? Eval, string? Steps, int Seconds) _atStart;
 
     /// <summary>Beginn des Laufs (nach den Kopfzeilen).</summary>
     internal DateTime RunStart { get; }
@@ -48,6 +57,8 @@ internal sealed class JobStreamRun
     /// <summary>Mindestens eine FRISCHE Datenzeile kam an (Wiederholungen sind Lebenszeichen).</summary>
     internal bool GotData { get; private set; }
     internal StreamTally Tally { get; } = new();
+    /// <summary>Warum eine Zeile nicht zur Stellung des Auftrags gehörte (Provider-Versatz); <c>null</c> = alles passte.</summary>
+    internal string? ForeignReason { get; private set; }
 
     internal JobStreamRun(AppDbContext db, AnalysisJob job, string engineId, AnalysisJobLive live, ILogger logger,
         long snapshotStep, TimeSpan persistInterval, TimeSpan firstLineTimeout, TimeSpan stallTimeout)
@@ -62,6 +73,9 @@ internal sealed class JobStreamRun
         _stallTimeout = stallTimeout;
 
         RunStart = DateTime.UtcNow;
+        _atStart = (job.ResultJson, job.ReachedDepth, job.EvalText, job.NodeStepsJson, job.SecondsSpent);
+        try { _legal = ChessBoard.LoadFromFen(job.Fen).Moves(generateSan: false); }
+        catch { _legal = null; }
         // Anzeige-Stand ohne Datenbank: die Zeit läuft ab HIER, auch wenn die Engine noch schweigt.
         _live.Start(job.Id, job.UserId, job.SecondsSpent, RunStart);
         _lastPersist = RunStart;
@@ -93,11 +107,19 @@ internal sealed class JobStreamRun
             await AnalysisJobStream.ConsumeAsync(ndjson!, (line, depth) => OnLineAsync(line, depth, silence, streamCts),
                 streamCts.Token, Tally);
         }
+        catch (OperationCanceledException) when (ForeignReason is not null)
+        {
+            return StreamEnd.Foreign;
+        }
         catch (OperationCanceledException) when (silence.IsCancellationRequested && !ct.IsCancellationRequested)
         {
             return StreamEnd.Silent;
         }
         catch (OperationCanceledException) { /* Pause (Live), Löschung oder Shutdown */ }
+        catch (IOException) when (ForeignReason is not null)
+        {
+            return StreamEnd.Foreign;
+        }
         catch (IOException ex)
         {
             // Die Zahlen entscheiden die Ursachenfrage: kam bis zuletzt Verkehr, ist es KEIN
@@ -112,13 +134,23 @@ internal sealed class JobStreamRun
                 Fmt(Tally.DataGapSeconds(now)), Fmt(Tally.AnyGapSeconds(now)), _engineId,
                 CurrentDepth, _job.TargetDepth);
         }
-        return StreamEnd.Ended;
+        return ForeignReason is not null ? StreamEnd.Foreign : StreamEnd.Ended;
     }
 
-    /// <summary>Eine Zeile mit Tiefe: Stand nachführen, ggf. sichern, beim Knotenziel selbst abbrechen.</summary>
+    /// <summary>Eine Zeile mit Tiefe: erst prüfen, ob sie überhaupt zu dieser Stellung gehört (sonst Abbruch, nichts
+    /// sichern), dann Stand nachführen, ggf. sichern, beim Knotenziel selbst abbrechen.</summary>
     private async Task OnLineAsync(string line, int depth, CancellationTokenSource silence, CancellationTokenSource streamCts)
     {
         var job = _job;
+        if (ForeignReason is not null) return;
+        // Provider-Versatz (17.11.2026): die Zeile gehört zur VORIGEN Suche des Providers. VOR jedem Sichern geprüft —
+        // eine fremde Zeile darf weder Tiefe noch Ergebnis noch Zwischenstand werden.
+        if (_legal is not null && BrokerCandidates.MismatchOf(line, _legal) is { } foreign)
+        {
+            ForeignReason = foreign;
+            streamCts.Cancel();
+            return;
+        }
         // Nur eine FRISCHE Zeile stellt den Wächter neu — die Wiederholung ist ein Lebenszeichen.
         if (!StreamTally.IsRepeat(line, _lastLine)) { GotData = true; silence.CancelAfter(_stallTimeout); }
         _lastLine = line;
@@ -182,13 +214,33 @@ internal sealed class JobStreamRun
         await _db.Entry(job).ReloadAsync(CancellationToken.None);
     }
 
-    /// <summary>Die Tatsachen für <see cref="AnalysisJobRunEnd.ClassifyRunEnd"/> — nach <see cref="FinishAsync"/>.</summary>
+    /// <summary>
+    /// Nach einem fremden Lauf (<see cref="StreamEnd.Foreign"/>) statt <see cref="FinishAsync"/>: den Auftrag auf den Stand
+    /// vom Start zurücksetzen — Ergebnis, Tiefe, Bewertungstext, Knoten-Zwischenstände und Rechenzeit. Auch Zeilen, die
+    /// vor der Erkennung noch unauffällig waren, stammen aus demselben fremden Lauf.
+    /// </summary>
+    internal async Task DiscardAsync()
+    {
+        var job = _job;
+        _logger.LogInformation(
+            "AnalysisJob {JobId}: Lauf verworfen nach {RunSeconds:F0} s — fremde Ausgabe ({Reason}), {DataLines} Datenzeilen "
+            + "(Engine {EngineId})", job.Id, (DateTime.UtcNow - RunStart).TotalSeconds, ForeignReason, Tally.DataLines, _engineId);
+        (job.ResultJson, job.ReachedDepth, job.EvalText, job.NodeStepsJson, job.SecondsSpent) = _atStart;
+        job.CurrentDepth = 0; job.CurrentNps = 0;
+        job.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(CancellationToken.None);
+        await _db.Entry(job).ReloadAsync(CancellationToken.None);
+    }
+
+    /// <summary>Die Tatsachen für <see cref="AnalysisJobRunEnd.ClassifyRunEnd"/> — nach <see cref="FinishAsync"/>
+    /// bzw. <see cref="DiscardAsync"/>.</summary>
     internal RunFacts Facts(bool cancelledByUs, bool liveOnEngine, TimeSpan fruitlessMinRuntime) => new(
         _job.TargetNodes, _job.TargetDepth, _job.ReachedDepth, DepthAtStart,
         NodeGoalReached, CurrentNodes, EngineFinished, PreviousNodes,
         DirectEngine: _engineId.StartsWith(ExternalEngineRegistration.IdPrefix, StringComparison.Ordinal),
         CancelledByUs: cancelledByUs, LiveOnEngine: liveOnEngine, GotData: GotData,
-        RunTime: DateTime.UtcNow - RunStart, fruitlessMinRuntime, _job.FruitlessAttempts);
+        RunTime: DateTime.UtcNow - RunStart, fruitlessMinRuntime, _job.FruitlessAttempts,
+        ForeignOutput: ForeignReason is not null);
 
     /// <summary>Sekunden auf eine Stelle, „—" wenn es den Messwert nicht gibt (nie eine Zeile gesehen).</summary>
     private static string Fmt(double? seconds) => seconds is { } v ? v.ToString("F1") : "—";

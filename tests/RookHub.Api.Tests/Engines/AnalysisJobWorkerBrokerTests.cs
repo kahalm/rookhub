@@ -231,6 +231,42 @@ public class AnalysisJobWorkerBrokerTests : IAsyncDisposable
         Assert.Single(_broker.Calls);                         // nichts doppelt gerechnet
     }
 
+    // ── Provider-Versatz (16./17.11.2026): Ausgabe einer ANDEREN Stellung ────────────────────────────────────────
+
+    [Fact]
+    public async Task FremdeAusgabe_wirdVerworfen_pausiertOhneFehlversuch_undWirdNieFertig()
+    {
+        var (userId, engines) = await SetupAsync();
+        // Erst eine unauffällige Zeile (sie wird kurz gesichert), dann die fremde Suche — sie hat sogar die Zieltiefe
+        // und endet mit bestmove: früher war der Auftrag damit Done. Fen ist nach 1.e4, e2e4 gehört Weiß.
+        _broker.Answers[engines[0]] = (200,
+            "{\"time\":5,\"depth\":9,\"nodes\":900,\"pvs\":[{\"moves\":[\"e7e5\"],\"cp\":-20,\"depth\":9}]}\n"
+            + "{\"time\":9,\"depth\":12,\"nodes\":5000,\"pvs\":[{\"moves\":[],\"cp\":35,\"depth\":12},"
+            + "{\"moves\":[\"e7e5\"],\"cp\":30,\"depth\":12}],\"bestmove\":\"e2e4\"}\n");
+        var jobId = await JobAsync(userId, depth: 12);
+        const string earlier = "{\"time\":3,\"depth\":6,\"nodes\":300,\"pvs\":[{\"moves\":[\"c7c5\"],\"cp\":-30,\"depth\":6}]}";
+        using (var scope = _sp.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var j = await db.AnalysisJobs.SingleAsync(x => x.Id == jobId);
+            j.ResultJson = earlier; j.ReachedDepth = 6; j.EvalText = "-0.30"; j.SecondsSpent = 3; j.FruitlessAttempts = 1;
+            await db.SaveChangesAsync();
+        }
+
+        await _worker.StartAsync(CancellationToken.None);
+        var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Done or AnalysisJobStatus.Failed or AnalysisJobStatus.Paused);
+
+        Assert.Equal(AnalysisJobStatus.Paused, job.Status);
+        Assert.Equal(AnalysisJobRunEnd.ForeignOutputError, job.LastError);
+        Assert.Equal(1, job.FruitlessAttempts);              // kein Fehlversuch dazu — die Stellung kann nichts dafür
+        Assert.Equal(earlier, job.ResultJson);               // nichts aus dem Lauf geblieben, auch nicht die Tiefe 9
+        Assert.Equal(6, job.ReachedDepth);
+        Assert.Equal("-0.30", job.EvalText);
+        Assert.Equal(3, job.SecondsSpent);
+        Assert.NotNull(job.NextAttemptAt);                   // kurze Wartezeit
+        Assert.True(job.NextAttemptAt <= DateTime.UtcNow + AnalysisJobRunEnd.RetryAfterForeign);
+    }
+
     [Theory]
     [InlineData(null, 39_000L, false)]      // erster Lauf: kein Vergleich
     [InlineData(39_367L, 39_000L, true)]    // gleiche Stelle

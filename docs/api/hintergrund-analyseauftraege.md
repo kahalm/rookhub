@@ -187,3 +187,30 @@ Migration `AnalysisJobWorkerIndexes`.
 Vertiefung) sucht die Pumpe dieselbe Stellung in fertigen Analysen anderer Partien: gleich bis auf die Zugzähler, mindestens
 so tief, mindestens so viele Linien. Treffer werden kopiert, ohne Engine. Lc0-Analysen und Knotenziele bleiben außen vor.
 Index `(Fen, Depth)`; die Spalte vergleicht ohne Groß-/Kleinschreibung, der genaue Vergleich läuft danach im Speicher.
+
+**Fremde Engine-Ausgabe (Provider-Versatz, 0.989.2)**: Nacht 16./17.11.2026: einzelne Provider-Prozesse (lichess
+`example-provider.py`, ein Prozess je Engine) blieben nach einem abgerissenen Upload (z. B. API-Neustart) dauerhaft eine
+Suche hinter den Aufträgen — die Ausgabe der vorigen Suche lag ungelesen in der Pipe, jeder Auftrag bekam die Zeilen der
+VORIGEN Stellung samt deren `bestmove`. 11 Stunden auf zwei Engines: 865 leere und mindestens 257 still falsche Stellungen in
+432 Partieanalysen. Jetzt:
+- **Erkennen** (`BrokerCandidates.MismatchOf`, im Stream des Workers `JobStreamRun.OnLineAsync` VOR jedem Sichern): eine
+  Linie, deren erster Zug in der Auftragsstellung illegal ist — auch die LEERE Linie, denn beide Broker spielen jede Variante
+  nach und schneiden beim ersten illegalen Zug ab (`"moves":[]`) — oder ein illegales `bestmove`. Rochade in beiden
+  Schreibweisen. Kein Merkmal: `bestmove (none)`, fehlendes `bestmove`, keine Linien (Matt/Patt). „Ganze Variante legal“ ist
+  hier nicht prüfbar (der Broker hat schon gekürzt). Prod-Stichprobe 17.11.: 84 von 84 Ergebnissen mit fremder Ausgabe
+  erkannt, 0 Fehlalarme in 2 472 guten (Zugvergleich-Linien + fertige Aufträge).
+- **Verwerfen**: der Stream wird abgebrochen, der Auftrag auf den Stand vom Laufbeginn zurückgesetzt (Ergebnis, Tiefe,
+  Bewertungstext, Knoten-Zwischenstände, Rechenzeit — `JobStreamRun.DiscardAsync`) und pausiert 10 s mit Meldung, OHNE
+  Fehlversuch und nie fertig (`AnalysisJobRunEnd.ForeignRun`, erster Zweig von `ClassifyRunEnd`).
+- **Neu synchronisieren**: die Sitzungs-Epoche der Engine rückt weiter (`EngineSessionEpochs`, siehe
+  `eigener-engine-broker.md`), der nächste Auftrag auf ihr kommt mit neuer `sessionId` → `ucinewgame` + `isready` beim
+  Provider verwirft die liegengebliebene Ausgabe.
+- **Wiederholungstäter**: dreimal in Folge ohne sauberen Lauf dazwischen → `LogError` (höchstens stündlich je Engine,
+  „Provider-Prozess neu starten“) und die Engine bekommt 5 min keine Hintergrund-Aufträge (Tick überspringt sie, der
+  Rebalancer behandelt sie als belegt und gibt ihre wartenden Aufträge ab). Jede Erkennung davor ist eine `LogWarning`.
+- **Übernahme**: `BrokerCandidates.Parse` liefert für ein solches Ergebnis `null` (ganz verworfen statt gefiltert); alle
+  Aufrufer behandeln `null` als „kein Ergebnis“. Partieanalyse, erster Durchgang (`GameAnalysisIngest.TakeFirstPass`):
+  „fertig, aber unbrauchbar“ zählt wie ein gescheiterter Auftrag (`FailedAttempts`, erst ab
+  `GameAnalysisDefaults.MaxPositionAttempts` endgültig `[]`), der Auftrag wird gelöscht, die Stellung bekommt einen neuen.
+  Vertiefung: unbrauchbar lässt wie bisher den ersten Durchgang stehen.
+- Offen: das Analysebrett (Live) prüft die Ausgabe nicht selbst — es profitiert nur von der neuen Sitzung.

@@ -124,7 +124,7 @@ internal sealed class GameAnalysisIngest
     private bool TakeFirstPass(GameAnalysis analysis, GameAnalysisPosition pos, AnalysisJob job, List<AnalysisJob> consumed)
     {
         var changed = false;
-        if (job.Status == AnalysisJobStatus.Done && !string.IsNullOrEmpty(job.ResultJson))
+        if (job.Status == AnalysisJobStatus.Done)
         {
             var candidates = BrokerCandidates.Parse(job.ResultJson, pos.Fen);
             if (candidates is { Count: > 0 })
@@ -134,20 +134,27 @@ internal sealed class GameAnalysisIngest
                 pos.Depth = job.ReachedDepth;
                 pos.AnalyzedAt = DateTime.UtcNow;
                 pos.NodeStepsJson = job.NodeStepsJson;   // Zwischenstände der Knotenanalyse, bevor der Auftrag gelöscht wird
-                changed = true;
             }
             else
             {
-                // Fertig, aber unlesbar → als analysiert MIT LEERER Liste ablegen, sonst hinge die
-                // Partie ewig an dieser Stellung. Die Wertung überspringt solche Stellungen.
-                pos.CandidatesJson = "[]";
-                pos.AnalyzedAt = DateTime.UtcNow;
-                changed = true;
-                _logger.LogWarning("GameAnalysis {Id}: Ergebnis von Auftrag {JobId} unlesbar (Ply {Ply})",
-                    analysis.Id, job.Id, pos.Ply);
+                // Fertig, aber unbrauchbar (leer, unlesbar oder zu einer ANDEREN Stellung, BrokerCandidates.MismatchOf):
+                // zählt wie ein gescheiterter Auftrag. Früher stand hier sofort die leere Liste — in der Nacht 16./17.11.2026
+                // legte ein um eine Suche versetzter Provider so 865 Stellungen still als „analysiert, ohne Linien“ ab, die
+                // nie wieder gerechnet wurden. Der Auftrag wird trotzdem gelöscht: er trägt das unbrauchbare Ergebnis, und
+                // die Stellung bekommt beim nächsten Pumpen einen NEUEN (AnalysisJobId = null, CandidatesJson = null).
+                pos.FailedAttempts++;
+                if (pos.FailedAttempts >= GameAnalysisDefaults.MaxPositionAttempts)
+                {
+                    pos.CandidatesJson = "[]";
+                    pos.AnalyzedAt = DateTime.UtcNow;
+                }
+                _logger.LogWarning("GameAnalysis {Id}: Ergebnis von Auftrag {JobId} unbrauchbar (Ply {Ply}, Anlauf {Tries}/{Max}){Final}",
+                    analysis.Id, job.Id, pos.Ply, pos.FailedAttempts, GameAnalysisDefaults.MaxPositionAttempts,
+                    pos.CandidatesJson == "[]" ? " — aufgegeben" : " — wird neu eingereiht");
             }
             pos.AnalysisJobId = null;
             consumed.Add(job);
+            changed = true;
         }
         else if (job.Status == AnalysisJobStatus.Failed)
         {

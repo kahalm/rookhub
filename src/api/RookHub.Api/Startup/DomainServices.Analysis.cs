@@ -79,6 +79,8 @@ public static partial class DomainServicesSetup
         services.AddScoped<RookHub.Api.Services.EngineBroker.EngineOverviewService>();
         services.AddSingleton<RookHub.Api.Services.EngineBroker.LocalEngineBroker>();
         services.AddTransient<RookHub.Api.Services.EngineBroker.LichessEngineBroker>();
+        // Sitzungs-Epoche je Engine (Provider-Versatz neu synchronisieren): EINE Instanz für Router und Auftrags-Worker.
+        services.AddSingleton(_ => new RookHub.Api.Services.EngineBroker.EngineSessionEpochs());
         services.AddTransient<RookHub.Api.Services.EngineBroker.IEngineBroker, RookHub.Api.Services.EngineBroker.EngineBrokerRouter>();
     }
 

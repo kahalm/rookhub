@@ -53,12 +53,16 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
     private readonly PauseGate _pause;
     /// <summary>Durchsatz je Engine für die Admin-Seite „Engines" (ohne Registrierung, z. B. in Tests: nicht gezählt).</summary>
     private readonly EngineThroughputRecorder? _throughput;
+    /// <summary>Sitzungs-Epoche je Engine: dieselbe Instanz wie im <see cref="EngineBrokerRouter"/> (ohne Registrierung,
+    /// z. B. in Tests, eine eigene — dann zählt sie nur hier).</summary>
+    private readonly EngineSessionEpochs _epochs;
 
     public AnalysisJobWorker(IServiceScopeFactory scopeFactory, EngineActivityTracker tracker,
         IEngineBroker broker, ILogger<AnalysisJobWorker> logger, IConfiguration config, AnalysisJobLive live,
-        BackgroundPause? pause = null, EngineThroughputRecorder? throughput = null)
+        BackgroundPause? pause = null, EngineThroughputRecorder? throughput = null, EngineSessionEpochs? epochs = null)
     {
         _throughput = throughput;
+        _epochs = epochs ?? new EngineSessionEpochs();
         _scopeFactory = scopeFactory;
         _tracker = tracker;
         _live = live;
@@ -169,8 +173,10 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             // Freie Engines nehmen wartenden Aufträgen anderer Engines derselben Liste ab (0.920.0).
             try
             {
+                // Eine ausgesetzte Engine (Wiederholungstäter, EngineSessionEpochs) gilt als belegt: sie gibt ihre
+                // wartenden Aufträge an freie ab und nimmt selbst keine.
                 await AnalysisJobRebalancer.RebalanceAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), now,
-                    e => _running.ContainsKey(e) || _tracker.IsEngineBusy(e), _settings.ExplicitOnly,
+                    e => _running.ContainsKey(e) || _tracker.IsEngineBusy(e) || _epochs.IsBenched(e, now), _settings.ExplicitOnly,
                     scope.ServiceProvider.GetService<QuietHours>(), _logger, ct);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -183,6 +189,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         foreach (var engineId in engines)
         {
             if (_running.ContainsKey(engineId)) continue;                                   // Engine rechnet schon einen Auftrag
+            if (_epochs.IsBenched(engineId, now)) continue;                                 // lieferte wiederholt fremde Ausgabe
             if (_tracker.IsEngineBusy(engineId) || _tracker.EngineIdleFor(engineId) < _settings.IdleGrace) continue;   // Live hat Vorrang
 
             using var scope = _scopeFactory.CreateScope();
@@ -229,7 +236,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             await using (upstream)
             {
                 if (!upstream.IsSuccess) await OnBrokerRejectedAsync(db, job, engine, upstream, ledger);
-                else await StreamAndClassifyAsync(db, job, run, upstream, ct, ledger);
+                else await StreamAndClassifyAsync(db, job, run, engine, upstream, ct, ledger);
             }
         }
         catch (DbUpdateConcurrencyException)
@@ -321,12 +328,18 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
 
     /// <summary>Den Stream lesen (<see cref="JobStreamRun"/>) und den Auftrag danach einordnen
     /// (<see cref="AnalysisJobRunEnd.ClassifyRunEnd"/>; Regeln und Begründungen dort).</summary>
-    private async Task StreamAndClassifyAsync(AppDbContext db, AnalysisJob job, Running run, EngineAnalysisSession upstream,
-        CancellationToken ct, RunLedger ledger)
+    private async Task StreamAndClassifyAsync(AppDbContext db, AnalysisJob job, Running run, EngineRef engine,
+        EngineAnalysisSession upstream, CancellationToken ct, RunLedger ledger)
     {
         var stream = new JobStreamRun(db, job, run.EngineId, _live, _logger, _settings.SnapshotStep, _settings.PersistInterval,
             _settings.FirstLineTimeout, _settings.StallTimeout);
-        if (await stream.ConsumeAsync(upstream.Ndjson, ct) == StreamEnd.Silent)
+        var end = await stream.ConsumeAsync(upstream.Ndjson, ct);
+        if (end == StreamEnd.Foreign)
+        {
+            await OnForeignAsync(db, job, run, engine, stream, ct, ledger);
+            return;
+        }
+        if (end == StreamEnd.Silent)
         {
             ledger.Nodes = stream.CurrentNodes;
             ledger.Nps = stream.CurrentNps;
@@ -345,10 +358,40 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
                 + "Smart Pruning) — Ergebnis gilt", job.Id, stream.CurrentNodes, job.TargetNodes);
         var outcome = AnalysisJobRunEnd.ClassifyRunEnd(facts);
         await AnalysisJobTransitions.ApplyAsync(db, job, outcome);
+        if (stream.GotData) _epochs.ReportClean(run.EngineId);   // jede Zeile passte zur Stellung: die Folge ist unterbrochen
         ledger.Outcome = OutcomeOf(outcome);
         if (outcome.Kind == RunEndKind.Done) ledger.DoneJobSeconds = job.SecondsSpent;
         if (outcome.Kind == RunEndKind.Done)
             _logger.LogInformation("AnalysisJob {JobId}: fertig bei Tiefe {Depth} ({Nodes} Knoten)", job.Id, job.ReachedDepth, stream.CurrentNodes);
+    }
+
+    /// <summary>
+    /// Fremde Ausgabe (Provider-Versatz, 17.11.2026): der Lauf wird verworfen (<see cref="JobStreamRun.DiscardAsync"/>),
+    /// der Auftrag pausiert kurz ohne Fehlversuch (<see cref="AnalysisJobRunEnd.ForeignRun"/>), und die Sitzungs-Epoche
+    /// der Engine rückt weiter — der nächste Auftrag auf ihr kommt mit neuer <c>sessionId</c>, der Provider schickt
+    /// <c>ucinewgame</c> + <c>isready</c> und verwirft dabei die liegengebliebene Ausgabe. Warnung je Ereignis; ab
+    /// <see cref="EngineSessionEpochs.RepeatOffenderStrikes"/> in Folge ein Fehler (höchstens stündlich je Engine) und die
+    /// Engine wird für <see cref="EngineSessionEpochs.BenchDuration"/> aus dem Hintergrund genommen.
+    /// </summary>
+    private async Task OnForeignAsync(AppDbContext db, AnalysisJob job, Running run, EngineRef engine, JobStreamRun stream,
+        CancellationToken ct, RunLedger ledger)
+    {
+        await stream.DiscardAsync();
+        var outcome = AnalysisJobRunEnd.ClassifyRunEnd(
+            stream.Facts(ct.IsCancellationRequested, _tracker.IsEngineBusy(run.EngineId), _settings.FruitlessMinRuntime));
+        await AnalysisJobTransitions.ApplyAsync(db, job, outcome);
+        ledger.Outcome = EngineRunOutcome.Retried;
+        ledger.Nodes = 0;   // Knoten einer fremden Suche sind kein Durchsatz für diesen Auftrag
+        var strike = _epochs.ReportForeign(run.EngineId, DateTime.UtcNow);
+        _logger.LogWarning(
+            "AnalysisJob {JobId}: Engine {EngineName} ({EngineId}) lieferte Ausgabe einer ANDEREN Stellung ({Reason}) — "
+            + "Lauf verworfen, nächste Sitzung {Epoch} (Provider wird neu synchronisiert), {InARow}. Mal in Folge",
+            job.Id, engine.Name, run.EngineId, stream.ForeignReason, _epochs.EpochOf(run.EngineId), strike.InARow);
+        if (strike.LogError)
+            _logger.LogError(
+                "Engine {EngineName} ({EngineId}) liefert {InARow}-mal in Folge Ausgabe einer anderen Stellung, die neue Sitzung "
+                + "hilft nicht — Provider-Prozess neu starten. Bis {BenchedUntil:HH:mm} UTC keine Hintergrund-Aufträge auf ihr.",
+                engine.Name, run.EngineId, strike.InARow, strike.BenchedUntil);
     }
 
     /// <summary>Zählung eines regulär eingeordneten Laufendes: Pause ohne Fehlertext = von uns unterbrochen

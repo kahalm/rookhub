@@ -552,6 +552,59 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Null(pos.AnalysisJobId);
     }
 
+    /// <summary>
+    /// „Fertig, aber unbrauchbar“ (hier: Ausgabe einer ANDEREN Stellung, Provider-Versatz 16./17.11.2026) zählt wie ein
+    /// gescheiterter Auftrag: früher stand sofort die leere Liste, und die Stellung wurde nie wieder gerechnet (865 Stellungen
+    /// in einer Nacht). Der verbrauchte Auftrag verschwindet, die Stellung bekommt einen NEUEN.
+    /// </summary>
+    [Fact]
+    public async Task FertigerAuftragMitFremderAusgabe_zaehltAlsFehlversuch_undReihtNeuEin()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var pos = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == dto.Id && p.Ply == 0);
+        var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+        var oldJobId = job.Id;
+
+        job.Status = AnalysisJobStatus.Done;
+        job.ReachedDepth = 20;
+        // Ply 0 = Grundstellung, Weiß am Zug: die leere Linie und d8f8 stammen aus einer anderen Stellung.
+        job.ResultJson = "{\"depth\":20,\"pvs\":[{\"moves\":[\"e2e4\"],\"cp\":30,\"depth\":20},{\"moves\":[],\"cp\":10,\"depth\":20}],"
+            + "\"bestmove\":\"d8f8\"}";
+        await _db.SaveChangesAsync();
+        await _svc.PumpOneAsync(dto.Id);
+
+        await _db.Entry(pos).ReloadAsync();
+        Assert.Equal(1, pos.FailedAttempts);
+        Assert.Null(pos.CandidatesJson);                      // NICHT als „analysiert, leer“ abgelegt
+        Assert.NotNull(pos.AnalysisJobId);                    // schon wieder eingereiht …
+        Assert.NotEqual(oldJobId, pos.AnalysisJobId);         // … mit einem neuen Auftrag
+        Assert.False(await _db.AnalysisJobs.AnyAsync(j => j.Id == oldJobId));
+    }
+
+    [Fact]
+    public async Task FertigerAuftragUnbrauchbar_gibtNachDreiAnlaeufenAuf()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var pos = await _db.GameAnalysisPositions.FirstAsync(p => p.GameAnalysisId == dto.Id && p.Ply == 0);
+
+        for (var i = 0; i < GameAnalysisDefaults.MaxPositionAttempts; i++)
+        {
+            await _db.Entry(pos).ReloadAsync();
+            var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+            job.Status = AnalysisJobStatus.Done;
+            job.ResultJson = "{\"depth\":20,\"pvs\":[{\"moves\":[],\"cp\":10,\"depth\":20}]}";
+            await _db.SaveChangesAsync();
+            await _svc.PumpOneAsync(dto.Id);
+        }
+
+        await _db.Entry(pos).ReloadAsync();
+        Assert.Equal(GameAnalysisDefaults.MaxPositionAttempts, pos.FailedAttempts);
+        Assert.Equal("[]", pos.CandidatesJson);
+        Assert.Null(pos.AnalysisJobId);
+    }
+
     // ===== Mehrere Hintergrund-Engines ==================================================
 
     /// <summary>

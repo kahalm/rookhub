@@ -129,3 +129,11 @@ DAZU (`.env` mit `ROOKHUB_URL`/`ROOKHUB_API_TOKEN`, 1 Live + Hintergrund-Engines
 auf die eine Live-Engine zurückfahren (0.538.0: beide Wege = zwei Container) und die Hintergrund-Liste im Profil auf
 die `rhe_`-Engines. Die Lichess-Registrierungen bleiben liegen und stören nicht; der Lichess-Token bleibt für
 Cloud-Engines und für das Analysebrett von lichess.org.
+
+**Sitzungs-Epoche je Engine (0.989.2, `EngineSessionEpochs`)**: `EngineBrokerRouter` hängt an JEDE `sessionId` (Hintergrund
+und Live, eigener Broker und Lichess) `-e<Prozessanteil><Zähler>` an, gekürzt auf 64 Zeichen (die Epoche bleibt ganz). Der
+Prozessanteil (5 Zeichen, zufällig beim Start) sorgt dafür, dass nach JEDEM API-Neustart der erste Auftrag jeder Engine in
+einer neuen Sitzung beginnt; den Zähler je Engine zählt der Auftrags-Worker bei erkannter fremder Ausgabe hoch. Grund: der
+Provider schickt `ucinewgame` + `isready` nur bei neuer Sitzung, und sein `isready()` verwirft dabei alles bis `readyok` —
+auch die Ausgabe einer Suche, die ihn „um eine Suche versetzt“ hat (siehe `hintergrund-analyseauftraege.md`, „Fremde
+Engine-Ausgabe“). Sonst bleibt die Kennung gleich: Hash warm wie bisher, flache Aufträge behalten ihre eigene Sitzung (0.974.0).

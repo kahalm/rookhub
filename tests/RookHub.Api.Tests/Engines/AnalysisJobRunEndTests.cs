@@ -58,6 +58,13 @@ public class AnalysisJobRunEndTests
         ["weit unter dem Ziel ohne bestmove"] = (Nodes(100_000, 40_000), "Paused|Stream vor der Zieltiefe beendet|30|Reset"),
         ["bestmove, aber Live auf der Engine"] = (Nodes(50_000, 39_000, bestMove: true, live: true),
             "Paused|Stream vor der Zieltiefe beendet|30|Reset"),
+        // Fremde Ausgabe (Provider-Versatz 16./17.11.2026): nie fertig, kein Fehlversuch — auch am Ziel und beim letzten Versuch
+        ["fremde Ausgabe, Zieltiefe erreicht"] = (Depth(reached: 20) with { ForeignOutput = true },
+            $"Paused|{AnalysisJobRunEnd.ForeignOutputError}|10|Keep"),
+        ["fremde Ausgabe, letzter Versuch"] = (Depth(reached: 10, fruitless: Max - 1) with { ForeignOutput = true },
+            $"Paused|{AnalysisJobRunEnd.ForeignOutputError}|10|Keep"),
+        ["fremde Ausgabe, Knotenziel gesehen"] = (Nodes(50_000, 50_000, goalReached: true, bestMove: true) with { ForeignOutput = true },
+            $"Paused|{AnalysisJobRunEnd.ForeignOutputError}|10|Keep"),
     };
 
     public static TheoryData<string> RunEndCaseNames() => new(RunEndCases.Keys);
@@ -68,6 +75,14 @@ public class AnalysisJobRunEndTests
     {
         var (facts, expected) = RunEndCases[fall];
         Assert.Equal(expected, Show(AnalysisJobRunEnd.ClassifyRunEnd(facts)));
+    }
+
+    [Fact]
+    public void GoalMet_nieBeiFremderAusgabe()
+    {
+        Assert.True(AnalysisJobRunEnd.GoalMet(Depth(reached: 20)));
+        Assert.False(AnalysisJobRunEnd.GoalMet(Depth(reached: 20) with { ForeignOutput = true }));
+        Assert.False(AnalysisJobRunEnd.GoalMet(Nodes(50_000, 50_000, goalReached: true) with { ForeignOutput = true }));
     }
 
     [Fact]

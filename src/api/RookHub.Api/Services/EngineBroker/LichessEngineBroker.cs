@@ -47,11 +47,18 @@ public sealed class LichessEngineBroker(LichessEngineService lichess, ILogger<Li
     }
 }
 
-/// <summary>Leitet je Quelle an den richtigen Broker weiter: <c>rhe_</c> → eigener Broker, sonst Lichess.</summary>
-public sealed class EngineBrokerRouter(LocalEngineBroker local, LichessEngineBroker lichess) : IEngineBroker
+/// <summary>Leitet je Quelle an den richtigen Broker weiter: <c>rhe_</c> → eigener Broker, sonst Lichess. Vorher bekommt
+/// die <c>sessionId</c> die Sitzungs-Epoche der Engine angehängt (<see cref="EngineSessionEpochs"/>) — hier, weil BEIDE
+/// Wege (Hintergrund-Worker und Live-Analysebrett) und beide Broker durch diese eine Stelle gehen.</summary>
+public sealed class EngineBrokerRouter(LocalEngineBroker local, LichessEngineBroker lichess, EngineSessionEpochs? epochs = null)
+    : IEngineBroker
 {
-    public Task<EngineAnalysisSession> AnalyseAsync(EngineRef engine, EngineWork work, CancellationToken ct) =>
-        engine.Source == EngineSource.Local
+    public Task<EngineAnalysisSession> AnalyseAsync(EngineRef engine, EngineWork work, CancellationToken ct)
+    {
+        if (epochs is not null && !string.IsNullOrEmpty(work.SessionId))
+            work = work with { SessionId = epochs.SessionFor(engine.Id, work.SessionId) };
+        return engine.Source == EngineSource.Local
             ? local.AnalyseAsync(engine, work, ct)
             : lichess.AnalyseAsync(engine, work, ct);
+    }
 }
