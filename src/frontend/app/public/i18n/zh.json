@@ -6755,6 +6755,17 @@
         "psychologie": "心理",
         "allgemein": "综合"
       }
+    },
+    "part": {
+      "label": "课程部分",
+      "private": "个人对局",
+      "general": "通用对局",
+      "privateHint": "你自己的对局，附教练点评。",
+      "generalHint": "课程中的示范对局和练习。",
+      "privateEmpty": "还没有包含你自己对局的课程。",
+      "generalEmpty": "还没有包含示范对局或练习的课程。",
+      "toGeneral": "本节课的通用对局",
+      "toPrivate": "本节课的个人对局"
     }
   }
 }

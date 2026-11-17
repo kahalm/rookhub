@@ -6755,6 +6755,17 @@
         "psychologie": "Psychologie",
         "allgemein": "Algemeen"
       }
+    },
+    "part": {
+      "label": "Deel van de les",
+      "private": "Privépartijen",
+      "general": "Algemene partijen",
+      "privateHint": "Je eigen partijen met het commentaar van de trainer.",
+      "generalHint": "Voorbeeldpartijen en oefeningen uit de lessen.",
+      "privateEmpty": "Nog geen les met je eigen partijen.",
+      "generalEmpty": "Nog geen les met voorbeeldpartijen of oefeningen.",
+      "toGeneral": "Algemene partijen van deze les",
+      "toPrivate": "Privépartijen van deze les"
     }
   }
 }

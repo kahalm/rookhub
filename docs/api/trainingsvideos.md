@@ -26,9 +26,35 @@ Schema 1 (bzw. 2 = Schema 1 + optionale Felder), Zeiten als `h:mm:ss`-Zeichenket
   allgemein; `endspiel` erst ab 0.987.0 — vorher importierte Endspiel-Notizen stehen als `allgemein` da, bis die Stunde
   neu importiert wird), `text`, `quote`.
 
+## Zwei Einträge je Stunde: private / general (0.988.0)
+
+Eine Stunde (Datum) wird beim Import in bis zu **zwei Einträge** (`TrainingLessons.Part`) geteilt, beide mit demselben
+Video und denselben Zeitstempeln:
+
+- **`private`** („Private Partien“): Partien `kind: own` (die eigenen Partien mit den Kommentaren des Trainers) und ihre
+  Segmente/Fragen.
+- **`general`** („Allgemeine Partien“): Partien `lesson`/`exercise` und ihre Segmente/Fragen.
+
+Regeln (`TrainingVideoImporter.SplitParts`): Hat die Stunde nur eine Art, gibt es nur diesen Eintrag (ohne jede Partie:
+einen privaten). **Segmente ohne (bekannte) Partie** (Einleitung, Plauderei, allgemeine Erklärung) gehören zum Teil ihrer
+Nachbarn in der Zeitfolge — stimmen voriger und nächster zugeordneter Nachbar überein oder gibt es nur einen, dorthin;
+liegen sie zwischen den Teilen (unklar), zum privaten. **Notizen** (meist Aussagen über die eigenen Schwächen) gehen
+geschlossen zum privaten Teil, auch wenn sie eine Lehrpartie nennen; gibt es keinen privaten, zum einzigen Teil. Das
+Notizbuch und die Notiz-Suche schlagen die Partie einer Notiz deshalb über alle Teile derselben Stunde nach (Konto +
+Datum, `SessionGamesAsync`); `gameLessonId` nennt den Eintrag der Partie.
+
+**Übungsstand** zieht beim Re-Import mit (`MoveProgress`): jede Zeile geht zu dem Eintrag desselben Datums, der ein
+Segment mit ihrem `SegmentKey` hat (der bisherige zuerst); passt keines mehr, bleibt sie, wo sie ist (bzw. geht zum
+ersten neuen Eintrag, wenn ihrer wegfällt). Treffen zwei Zeilen desselben Kontos aufeinander, gilt der jüngere Versuch,
+`plays` wird addiert — es geht nichts verloren, auch nicht der Stand anderer Konten (Admins). Bestehende Zeilen werden
+weiterverwendet (gleicher Teil zuerst, sonst die übrige — so wird die alte ungeteilte Stunde zum privaten Teil und
+behält Id und Links); übrige Zeilen werden erst nach dem Umzug gelöscht. Die Migration `TrainingLessonParts` setzt
+Altbestand auf `private`, Stunden ganz ohne eigene Partie gleich auf `general`; gemischte Stunden teilt erst der
+Re-Import.
+
 ## Tabellen
 
-`TrainingLessons` (UNIQUE UserId+Date) → `TrainingLessonGames`, `TrainingSegments` (→ `TrainingQuestions` 1:1),
+`TrainingLessons` (UNIQUE UserId+Date+Part) → `TrainingLessonGames`, `TrainingSegments` (→ `TrainingQuestions` 1:1),
 `TrainingNotes`; `TrainingSegmentProgress` (Übungsstand je Konto). Details: `docs/datenbank-schema.md`.
 
 - **Stellungssuche** über `TrainingSegments.BoardFen` = nur das Figurenfeld der FEN (indiziert, `TrainingBoardKey`):
@@ -43,10 +69,11 @@ Schema 1 (bzw. 2 = Schema 1 + optionale Felder), Zeiten als `h:mm:ss`-Zeichenket
 - **Übungsstand** (`TrainingSegmentProgress`) hängt NICHT an der Segment-Id (die ein Re-Import neu vergibt), sondern an
   Stunde + `SegmentKey` = `<startSec>|<figurenfeld>` — ein Re-Import behält ihn, solange Zeit und Stellung gleich bleiben.
 
-## Import (Admin, idempotent je Konto + Datum)
+## Import (Admin, idempotent je Konto + Datum + Teil)
 
-`TrainingVideoImporter`: gibt es die Stunde des Kontos zum Datum schon, bleibt ihre Zeile (Id, Links, Übungsstand),
-Partien/Segmente/Fragen/Notizen werden ersetzt. **`dryRun` ist Vorgabe** (`true`): geprüft, gezählt, nichts geschrieben.
+`TrainingVideoImporter`: gibt es die Einträge des Kontos zum Datum schon, bleiben ihre Zeilen (Id, Links, Übungsstand),
+Partien/Segmente/Fragen/Notizen werden ersetzt (Teilung siehe oben). Bericht zusätzlich: `parts[]` (`part`, `lessonId`,
+`replaced`, Zähler je Eintrag) und `progressMoved`; `lessonId` = der erste Teil. **`dryRun` ist Vorgabe** (`true`): geprüft, gezählt, nichts geschrieben.
 Bericht je Datei: Zähler, ungültige FENs, ob das Video im Video-Ordner liegt, Warnungen, Fehler (Fehler im Inhalt sind
 200 mit `ok: false`, kein 4xx).
 
@@ -63,10 +90,10 @@ Prod-Import nur auf Zuruf des Users, vorher Probelauf.
 
 | Methode | Endpoint | Zweck |
 |---|---|---|
-| GET | `/api/training-videos` | Stundenliste (neueste zuerst; `ownerName` nur für Admins bei fremden Stunden) |
-| GET | `/api/training-videos/{id}` | Stunde: Partien, `pgns`, `analysisPgns`, Segmente mit Frage und eigenem Stand |
+| GET | `/api/training-videos` | Einträge (neueste zuerst, privat vor allgemein; je Eintrag `part`; `ownerName` nur für Admins bei fremden Stunden) |
+| GET | `/api/training-videos/{id}` | Eintrag: `part`, `otherParts[]` (`id`, `part` der übrigen Teile desselben Datums), Partien, `pgns`, `analysisPgns`, Segmente mit Frage und eigenem Stand |
 | GET | `/api/training-videos/search/position?fen=` | „Im Training besprochen?“ — volle FEN oder nur Figurenfeld, ≤ 100 Treffer |
-| GET | `/api/training-videos/search/text?q=` | Volltext über Segmente und Notizen, ≤ 100 je Art (Notiz-Treffer mit `noteId`) |
+| GET | `/api/training-videos/search/text?q=` | Volltext über Segmente und Notizen, ≤ 100 je Art (Notiz-Treffer mit `noteId`; alle Treffer mit `part`, auch die Stellungssuche) |
 | GET | `/api/training-videos/notebook` | Trainer-Notizbuch: alle Notizen, wiederkehrende Themen, Eröffnungsempfehlungen (0.987.0, siehe unten) |
 | GET | `/api/training-videos/games/{gameId}/comments` | Trainerkommentare an einer RookHub-Partie, je Stellung |
 | GET | `/api/training-videos/questions?onlyWrong=` | stundenübergreifender Fragen-Satz (je Eintrag `rookhubGameId`, falls zugeordnet) |

@@ -7,11 +7,20 @@ Privat je Konto, Menüpunkt `training-videos` (Vorgabe Admin-Stufe, `MenuRegistr
 
 | Weg | Komponente | Zweck |
 |---|---|---|
-| `/training-videos` | `TrainingVideosListComponent` | Stundenliste + Suche; `?fen=` startet die Stellungssuche |
+| `/training-videos` | `TrainingVideosListComponent` | Einträge + Suche; `?part=private\|general` wählt die Gruppe, `?fen=` startet die Stellungssuche |
 | `/training-videos/notebook` | `TrainingNotebookComponent` | Trainer-Notizbuch (0.987.0): Themen, Eröffnungsempfehlungen, alle Notizen |
 | `/training-videos/questions` | `TrainingDrillComponent` (`data.source = 'questions'`) | Fragen-Satz über alle Stunden |
 | `/training-videos/:id/drill` | `TrainingDrillComponent` | Nachspielen einer Stunde, `?seg=` = Startstellung |
 | `/training-videos/:id` | `TrainingLessonComponent` | Video + Brett + Segmentliste, `?t=` (Sekunde) und `?seg=` springen |
+
+**Zwei Teile je Stunde** (0.988.0, Server teilt beim Import, siehe `docs/api/trainingsvideos.md`): „Private Partien“
+(eigene Partien) und „Allgemeine Partien“ (Lehrbeispiele/Übungen) sind getrennte Einträge mit eigener Id, demselben
+Video und denselben Zeitstempeln. Die Liste trennt sie per `mat-button-toggle-group` mit Anzahl (Vorgabe privat, nur
+allgemeine Einträge → allgemein; Wahl in `?part=`), jede Karte heißt „Datum · Teil“, Suchtreffer und Fragen-Satz nennen
+den Teil. Die Stundenseite zeigt „Datum · Teil“ und einen Knopf „Allgemeine/Private Partien dieser Stunde“
+(`otherParts`), der an der aktuellen Videostelle (`?t=`) zum anderen Teil wechselt; die Komponente lädt bei Id-Wechsel
+neu (`paramMap`). Der Zurück-Pfeil führt in die Gruppe des Eintrags. Notizen stehen im privaten Teil — der Partie-Link
+im Notizbuch geht über `gameLessonId` zum Eintrag der Partie.
 
 ## Bausteine (`features/training-videos/`)
 

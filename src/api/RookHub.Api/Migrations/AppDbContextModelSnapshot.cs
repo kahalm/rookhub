@@ -8844,6 +8844,11 @@ namespace RookHub.Api.Migrations
                     b.Property<DateTime>("ImportedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("Part")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
                     b.Property<int>("Schema")
                         .HasColumnType("int");
 
@@ -8859,7 +8864,7 @@ namespace RookHub.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "Date")
+                    b.HasIndex("UserId", "Date", "Part")
                         .IsUnique();
 
                     b.ToTable("TrainingLessons");

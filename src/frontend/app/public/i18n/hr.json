@@ -7019,6 +7019,17 @@
         "psychologie": "Psihologija",
         "allgemein": "Općenito"
       }
+    },
+    "part": {
+      "label": "Dio sata",
+      "private": "Privatne partije",
+      "general": "Opće partije",
+      "privateHint": "Tvoje vlastite partije s komentarima trenera.",
+      "generalHint": "Poučne partije i vježbe iz sati.",
+      "privateEmpty": "Još nema sata s vlastitim partijama.",
+      "generalEmpty": "Još nema sata s poučnim partijama ili vježbama.",
+      "toGeneral": "Opće partije ovog sata",
+      "toPrivate": "Privatne partije ovog sata"
     }
   }
 }

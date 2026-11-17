@@ -6755,6 +6755,17 @@
         "psychologie": "Psikoloji",
         "allgemein": "Genel"
       }
+    },
+    "part": {
+      "label": "Dersin bölümü",
+      "private": "Özel oyunlar",
+      "general": "Genel oyunlar",
+      "privateHint": "Antrenörün yorumlarıyla kendi oyunların.",
+      "generalHint": "Derslerden örnek oyunlar ve alıştırmalar.",
+      "privateEmpty": "Henüz kendi oyunlarını içeren bir ders yok.",
+      "generalEmpty": "Henüz örnek oyun veya alıştırma içeren bir ders yok.",
+      "toGeneral": "Bu dersin genel oyunları",
+      "toPrivate": "Bu dersin özel oyunları"
     }
   }
 }

@@ -73,9 +73,10 @@ export function clipRange(n: Pick<TrainingNotebookNote, 'startSec' | 'lessonDura
   return { start, end: Math.min(n.startSec + CLIP_LENGTH_SEC, limit) };
 }
 
-/** Linkziel der Partie: die eigene RookHub-Partie, sonst die Stundenseite an der Notizzeit. */
-export function noteGameLink(n: Pick<TrainingNotebookNote, 'rookhubGameId' | 'gameKind' | 'lessonId' | 'startSec'>):
+/** Linkziel der Partie: die eigene RookHub-Partie, sonst der Eintrag, in dem die Partie liegt (die Notiz steht im
+ *  privaten Teil, eine Lehrpartie im allgemeinen), an der Notizzeit. */
+export function noteGameLink(n: Pick<TrainingNotebookNote, 'rookhubGameId' | 'gameKind' | 'lessonId' | 'startSec' | 'gameLessonId'>):
   { link: (string | number)[]; query: Record<string, number> | null } {
   if (n.rookhubGameId != null && n.gameKind === 'own') return { link: ['/games', n.rookhubGameId], query: null };
-  return { link: ['/training-videos', n.lessonId], query: n.startSec != null ? { t: n.startSec } : null };
+  return { link: ['/training-videos', n.gameLessonId ?? n.lessonId], query: n.startSec != null ? { t: n.startSec } : null };
 }

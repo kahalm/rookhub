@@ -6755,6 +6755,17 @@
         "psychologie": "Tâm lý",
         "allgemein": "Chung"
       }
+    },
+    "part": {
+      "label": "Phần của buổi học",
+      "private": "Ván cờ riêng",
+      "general": "Ván cờ chung",
+      "privateHint": "Các ván cờ của chính bạn kèm nhận xét của huấn luyện viên.",
+      "generalHint": "Ván mẫu và bài tập từ các buổi học.",
+      "privateEmpty": "Chưa có buổi học nào với ván cờ của bạn.",
+      "generalEmpty": "Chưa có buổi học nào với ván mẫu hoặc bài tập.",
+      "toGeneral": "Ván cờ chung của buổi học này",
+      "toPrivate": "Ván cờ riêng của buổi học này"
     }
   }
 }

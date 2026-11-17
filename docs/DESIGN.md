@@ -914,7 +914,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Hamburger; abgemeldet ≤ 480 px nur „Anmelden“ und ☰ (0.740.0). Fußzeile (`shared/app-footer/`) bleibt auf
   kurzen Seiten unten; Links ≥ 44 px.
 - **Trainerstunden** `/training-videos` (0.986.0, privat, Menüpunkt Admin-Stufe; Doku `docs/frontend/trainerstunden.md`):
-  Liste als gleich hohe Karten (5.2) — Datum `mediumDate` als Titel, Meta `.rh-dots` (Dauer h:mm:ss `tabular-nums`,
+  Über der Liste ein Umschalter (`mat-button-toggle-group`, ≥ 44 px) „Private Partien (n)“ / „Allgemeine Partien (n)“
+  mit einem Satz darunter, was die Gruppe enthält (0.988.0); leere Gruppe = eigener Leersatz, nie gesperrt.
+  Liste als gleich hohe Karten (5.2) — Datum `mediumDate` als Titel mit „· Teil“ in normaler Stärke, Meta `.rh-dots` (Dauer h:mm:ss `tabular-nums`,
   „18 Stellungen“, „ohne Video“), Zusammenfassung über `appClampMore` auf 3 Zeilen, Partien „Weiß – Schwarz“ + Art als
   `.chip`; genau eine Primäraktion „Ansehen“, daneben „Nachspielen“ umrandet. Suche über der Liste: EIN Feld „Wort oder
   FEN“ (FEN wird erkannt) + „Suchen“ + „Brett aufbauen“ (Stellungs-Editor im Dialog, Muster E-Book); gesuchte Stellung

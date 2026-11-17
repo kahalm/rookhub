@@ -7,7 +7,8 @@ namespace RookHub.Api.IntegrationTests;
 
 /// <summary>
 /// Trainingsvideos gegen ECHTES MariaDB: der Volltext (FULLTEXT + MATCH im Boolean-Modus, InMemory hat nur die
-/// Contains-Krücke), die Unterabfrage der Sichtbarkeit und der Re-Import mit eindeutigem (UserId, Date).
+/// Contains-Krücke), die Unterabfrage der Sichtbarkeit, der Re-Import mit eindeutigem (UserId, Date, Part) und das Teilen einer alten
+/// Stunde in privat/allgemein samt Umzug des Übungsstands (eindeutiger Index je Konto + Eintrag + Stellung).
 /// </summary>
 public class TrainingVideoSqlTests(TrainingVideoSqlFixture fixture) : IAsyncLifetime, IClassFixture<TrainingVideoSqlFixture>
 {
@@ -79,6 +80,57 @@ public class TrainingVideoSqlTests(TrainingVideoSqlFixture fixture) : IAsyncLife
             var comments = await service.GameCommentsAsync(userId, false, gameId, default);
             Assert.Equal(new[] { 9, 11 }, comments.Items.Select(i => i.FenIndex));
             Assert.Empty((await service.GameCommentsAsync(otherId, false, gameId, default)).Items);
+        }
+    }
+
+    [MySqlFact]
+    public async Task SplitLegacyLesson_MovesProgress_OnMariaDb()
+    {
+        int userId;
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var u = new AppUser { Username = "tv-split", Email = "s@test.invalid", PasswordHash = "x" };
+            db.AppUsers.Add(u);
+            await db.SaveChangesAsync();
+            userId = u.Id;
+        }
+        var split = Lesson.Replace("\"rookhubGameId\": GAMEID, ", "").Replace("\"answer\": \"Bd7\" } }", "\"answer\": \"Bd7\" } }, { \"t\": \"1:00:30\", \"gameId\": \"g2\", "
+            + "\"fen\": \"rnbqkbnr/ppp2ppp/4p3/3p4/3PP3/8/PPP2PPP/RNBQKBNR w KQkq - 0 3\", \"comment\": \"Franzose.\" }").Replace("\"matchConfidence\": \"high\" } ]",
+            "\"matchConfidence\": \"high\" }, { \"id\": \"g2\", \"kind\": \"lesson\", \"white\": \"Karpov\", \"black\": \"Korchnoi\" } ]");
+        Assert.Contains("Franzose.", split);
+        Assert.Contains("\"g2\"", split);
+        var legacy = split.Replace("\"kind\": \"lesson\"", "\"kind\": \"own\"");
+        var options = Options.Create(new TrainingVideoOptions());
+
+        int id;
+        await using (var db = fixture.Schema.NewContext())
+            id = (await new TrainingVideoImporter(db, options).ImportAsync(userId, legacy, false, default)).LessonId!.Value;
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var service = new TrainingVideoService(db, options);
+            var segs = (await service.GetAsync(userId, false, id, default)).Segments;
+            await service.SetProgressAsync(userId, false, id, segs.Single(s => s.StartSec == 370).Id, new("wrong", 1), default);
+            await service.SetProgressAsync(userId, false, id, segs.Single(s => s.StartSec == 3630).Id, new("solved", 0), default);
+        }
+
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var report = await new TrainingVideoImporter(db, options).ImportAsync(userId, split, false, default);
+            Assert.Equal(1, report.ProgressMoved);
+            Assert.Equal(new[] { "private", "general" }, report.Parts.Select(p => p.Part));
+            Assert.Equal(id, report.Parts[0].LessonId);
+        }
+
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var service = new TrainingVideoService(db, options);
+            var list = await service.ListAsync(userId, false, default);
+            Assert.Equal(new[] { "private", "general" }, list.Select(l => l.Part));
+            var general = await service.GetAsync(userId, false, list[1].Id, default);
+            Assert.Equal("solved", Assert.Single(general.Segments).Progress!.Status);
+            var priv = await service.GetAsync(userId, false, id, default);
+            Assert.Equal("wrong", priv.Segments.Single(s => s.StartSec == 370).Progress!.Status);
+            Assert.Equal("general", Assert.Single((await service.SearchTextAsync(userId, false, "Franzose", default)).Hits).Part);
         }
     }
 }

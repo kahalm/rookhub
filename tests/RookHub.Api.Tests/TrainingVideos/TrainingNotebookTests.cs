@@ -201,4 +201,27 @@ public sealed class TrainingNotebookTests : IDisposable
         var hit = Assert.Single(result.Hits);
         Assert.Equal(lesson.Notes[0].Id, hit.NoteId);
     }
+    /// <summary>Notizen stehen im privaten Teil; zeigt eine auf eine Lehrpartie im allgemeinen Teil desselben Datums,
+    /// findet das Notizbuch Partie, Art und deren Segmente trotzdem (und nennt den Eintrag der Partie).</summary>
+    [Fact]
+    public async Task GetAsync_NoteAboutGameInTheGeneralPart_ResolvesAcrossParts()
+    {
+        var me = await UserAsync("patrik");
+        var priv = await LessonAsync(me.Id, "2026-03-03", ("eroeffnung", "Französisch: so baut man es auf.", 130));
+        priv.Notes[0].GameKey = "g2";
+        var general = new TrainingLesson { UserId = me.Id, Date = DateOnly.Parse("2026-03-03"), Part = TrainingLessonParts.General, ImportedAt = DateTime.UtcNow };
+        general.Games.Add(new TrainingLessonGame { Key = "g2", Kind = "lesson", White = "Karpov", Black = "Korchnoi" });
+        general.Segments.Add(new TrainingSegment { Position = 0, StartSec = 120, GameKey = "g2", Fen = FrenchFen, BoardFen = TrainingBoardKey.Of(FrenchFen) });
+        _db.TrainingLessons.Add(general);
+        await _db.SaveChangesAsync();
+
+        var nb = await _notebook.GetAsync(me.Id, false, default);
+
+        var note = Assert.Single(nb.Notes);
+        Assert.Equal(priv.Id, note.LessonId);
+        Assert.Equal(("lesson", "Karpov", general.Id), (note.GameKind, note.GameWhite, note.GameLessonId));
+        Assert.Equal(FrenchFen, Assert.Single(nb.Openings).Fen);
+        var hit = Assert.Single((await _videos.SearchTextAsync(me.Id, false, "Französisch", default)).Hits);
+        Assert.Equal("Karpov – Korchnoi", hit.GameLabel);
+    }
 }

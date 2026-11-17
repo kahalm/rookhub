@@ -6755,6 +6755,17 @@
         "psychologie": "Psychologie",
         "allgemein": "Général"
       }
+    },
+    "part": {
+      "label": "Partie de la séance",
+      "private": "Parties personnelles",
+      "general": "Parties générales",
+      "privateHint": "Tes propres parties avec les commentaires de l'entraîneur.",
+      "generalHint": "Parties modèles et exercices des séances.",
+      "privateEmpty": "Aucune séance avec tes propres parties pour l'instant.",
+      "generalEmpty": "Aucune séance avec des parties modèles ou des exercices pour l'instant.",
+      "toGeneral": "Parties générales de cette séance",
+      "toPrivate": "Parties personnelles de cette séance"
     }
   }
 }

@@ -6755,6 +6755,17 @@
         "psychologie": "心理",
         "allgemein": "一般"
       }
+    },
+    "part": {
+      "label": "レッスンの区分",
+      "private": "自分の対局",
+      "general": "一般の対局",
+      "privateHint": "コーチのコメント付きの自分の対局。",
+      "generalHint": "レッスンの模範局と練習問題。",
+      "privateEmpty": "自分の対局を含むレッスンはまだありません。",
+      "generalEmpty": "模範局や練習問題を含むレッスンはまだありません。",
+      "toGeneral": "このレッスンの一般の対局",
+      "toPrivate": "このレッスンの自分の対局"
     }
   }
 }

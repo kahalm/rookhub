@@ -19,7 +19,7 @@ import { TrainingClipPlayerComponent } from './training-clip-player.component';
 import {
   DrillItem, attemptOutcome, clipRange, countResults, drillItemsOfLesson, drillItemsOfQuestions, isTargetMove, startsGroup,
 } from './training-drill.util';
-import { TrainingStatus, TrainingVideosService } from './training-videos.service';
+import { TrainingStatus, TrainingVideosService, trainingPartKey } from './training-videos.service';
 
 /** So lange steht ein falscher Zug auf dem Brett, bevor es zurückspringt (der Text darunter bleibt stehen). */
 const WRONG_MOVE_SHOW_MS = 700;
@@ -86,7 +86,9 @@ const WRONG_MOVE_SHOW_MS = 700;
           <h2 class="group">
             <span class="rh-dots">
               @if (it.gameLabel) { <span>{{ it.gameLabel }}</span> }
-              @if (questions || !it.gameLabel) { <span>{{ 'trainingVideos.drill.lessonOf' | translate: { date: (it.date | date: 'mediumDate') } }}</span> }
+              @if (questions || !it.gameLabel) {
+                <span>{{ 'trainingVideos.drill.lessonOf' | translate: { date: (it.date | date: 'mediumDate') } }} · {{ partKey(it.part) | translate }}</span>
+              }
               @if (questions && it.rookhubGameId) { <a [routerLink]="['/games', it.rookhubGameId]">{{ 'trainingVideos.drill.toGame' | translate }}</a> }
             </span>
           </h2>
@@ -379,4 +381,6 @@ export class TrainingDrillComponent implements OnInit {
   private clearTimer(): void {
     if (this.resetTimer !== null) { clearTimeout(this.resetTimer); this.resetTimer = null; }
   }
+
+  partKey(part: string | null | undefined): string { return trainingPartKey(part); }
 }

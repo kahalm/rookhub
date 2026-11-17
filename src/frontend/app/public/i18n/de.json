@@ -7019,6 +7019,17 @@
         "psychologie": "Psychologie",
         "allgemein": "Allgemein"
       }
+    },
+    "part": {
+      "label": "Teil der Stunde",
+      "private": "Private Partien",
+      "general": "Allgemeine Partien",
+      "privateHint": "Deine eigenen Partien mit den Kommentaren des Trainers.",
+      "generalHint": "Lehrbeispiele und Übungen aus den Stunden.",
+      "privateEmpty": "Noch keine Stunde mit eigenen Partien.",
+      "generalEmpty": "Noch keine Stunde mit Lehrbeispielen oder Übungen.",
+      "toGeneral": "Allgemeine Partien dieser Stunde",
+      "toPrivate": "Private Partien dieser Stunde"
     }
   }
 }

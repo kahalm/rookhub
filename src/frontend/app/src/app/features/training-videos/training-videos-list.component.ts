@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -21,7 +22,8 @@ import { whiteToMove } from '../../shared/chess/fen-side';
 import { apiErrorText } from '../../core/api-error';
 import { TrainingPositionDialogComponent, TrainingPositionDialogData } from './training-position-dialog.component';
 import {
-  TrainingGame, TrainingLessonListItem, TrainingSearchHit, TrainingVideosService, trainingGameLabel,
+  TRAINING_PARTS, TrainingGame, TrainingLessonListItem, TrainingPart, TrainingSearchHit, TrainingVideosService, trainingGameLabel,
+  trainingPartKey,
 } from './training-videos.service';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -39,6 +41,18 @@ export function displayFen(fen: string): string {
   return t.length >= 2 ? t.join(' ') : `${t[0]} w - - 0 1`;
 }
 
+/** Teil eines Listeneintrags (ältere Antworten ohne Feld: privat). */
+export function lessonPart(l: Pick<TrainingLessonListItem, 'part'>): TrainingPart {
+  return l.part === 'general' ? 'general' : 'private';
+}
+
+/** Gewählter Teil: der aus der Adresse, sonst „privat“ — außer es gibt nur allgemeine Einträge. */
+export function pickPart(requested: string | null, lessons: readonly TrainingLessonListItem[]): TrainingPart {
+  if (requested === 'private' || requested === 'general') return requested;
+  const hasPrivate = lessons.some(l => lessonPart(l) === 'private');
+  return !hasPrivate && lessons.length > 0 ? 'general' : 'private';
+}
+
 /** Stellungssuche: Treffer mit gleichem Zugrecht zuerst, sonst die Reihenfolge des Servers. */
 export function sortPositionHits(hits: readonly TrainingSearchHit[]): TrainingSearchHit[] {
   return [...hits].sort((a, b) => Number(b.sameSide === true) - Number(a.sameSide === true));
@@ -54,7 +68,8 @@ interface SearchState {
 }
 
 /**
- * `/training-videos` „Trainerstunden“: Stunden als Karten (Datum, Dauer, Zusammenfassung, Partien), dazu die Suche —
+ * `/training-videos` „Trainerstunden“: Stunden als Karten (Datum, Dauer, Zusammenfassung, Partien), getrennt nach
+ * „Private Partien“ (eigene Partien) und „Allgemeine Partien“ (Lehrbeispiele/Übungen) per Umschalter (`?part=`), dazu die Suche —
  * Text (MariaDB-Volltext, ≥ 3 Buchstaben) oder Stellung (FEN einfügen, „Brett aufbauen“, `?fen=` vom Analysebrett).
  * Doku: `docs/frontend/trainerstunden.md`.
  */
@@ -62,7 +77,7 @@ interface SearchState {
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-training-videos-list',
   standalone: true,
-  imports: [DatePipe, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule,
+  imports: [DatePipe, RouterLink, MatButtonModule, MatButtonToggleModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule,
     MatProgressBarModule, TranslatePipe, ClampMoreDirective, LoadErrorComponent, LoadingSpinnerComponent, ChessBoardComponent, SanPipe],
   template: `
     <div class="page">
@@ -120,6 +135,7 @@ interface SearchState {
                     <div class="rh-dots hit-meta">
                       <span>{{ h.date | date: 'mediumDate' }}</span>
                       @if (h.startSec != null) { <span class="time">▶ {{ clock(h.startSec) }}</span> }
+                      <span class="part">{{ partKey(h.part) | translate }}</span>
                       @if (h.gameLabel) { <span class="game">{{ h.gameLabel }}</span> }
                       @if (h.kind === 'note') { <span class="chip">{{ 'trainingVideos.search.note' | translate }}</span> }
                       @if (s.kind === 'position' && h.sameSide === false) {
@@ -155,11 +171,23 @@ interface SearchState {
       } @else if (lessons().length === 0) {
         <p class="empty-state">{{ 'trainingVideos.empty' | translate }}</p>
       } @else {
+        <mat-button-toggle-group class="parts" [value]="part()" (change)="selectPart($event.value)"
+                                 [attr.aria-label]="'trainingVideos.part.label' | translate">
+          @for (p of parts; track p) {
+            <mat-button-toggle [value]="p" [class]="'tv-part-' + p">
+              {{ partKey(p) | translate }} ({{ partCount()[p] }})
+            </mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+        <p class="part-hint muted">{{ (part() === 'general' ? 'trainingVideos.part.generalHint' : 'trainingVideos.part.privateHint') | translate }}</p>
+        @if (shown().length === 0) {
+          <p class="empty-state">{{ (part() === 'general' ? 'trainingVideos.part.generalEmpty' : 'trainingVideos.part.privateEmpty') | translate }}</p>
+        }
         <div class="lessons">
-          @for (l of lessons(); track l.id) {
+          @for (l of shown(); track l.id) {
             <mat-card appearance="outlined" class="lesson">
               <div class="lesson-head">
-                <h2>{{ l.date | date: 'mediumDate' }}</h2>
+                <h2>{{ l.date | date: 'mediumDate' }} <span class="part-label">· {{ partKey(l.part) | translate }}</span></h2>
                 <div class="rh-dots meta">
                   @if (l.durationSec) { <span class="duration" [attr.aria-label]="'trainingVideos.duration' | translate: { time: clock(l.durationSec) }">{{ clock(l.durationSec) }}</span> }
                   <span>{{ (l.segmentCount === 1 ? 'trainingVideos.positionsOne' : 'trainingVideos.positions') | translate: { count: l.segmentCount } }}</span>
@@ -222,6 +250,10 @@ interface SearchState {
     .lessons { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; }
     .lesson { display: flex; flex-direction: column; gap: 8px; padding: 16px; min-width: 0; }
     .lesson-head h2 { margin: 0; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .part-label { font-weight: 400; font-size: .95rem; color: var(--mat-sys-on-surface-variant); }
+    .parts { flex-wrap: wrap; max-width: 100%; }
+    .parts mat-button-toggle { min-height: 44px; }
+    .part-hint { margin: 6px 0 12px; font-size: .9rem; }
     .meta { font-size: .85rem; color: var(--mat-sys-on-surface-variant); font-variant-numeric: tabular-nums; }
     .summary { margin: 0; overflow-wrap: anywhere; }
     .clamp-more { background: none; border: 0; padding: 0 2px; color: var(--rh-accent); cursor: pointer; font: inherit; text-decoration: underline; }
@@ -243,6 +275,17 @@ export class TrainingVideosListComponent implements OnInit {
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
   readonly open = signal<ReadonlySet<number>>(new Set());
+
+  /** Teil aus der Adresse (`?part=private|general`), null = Vorgabe (`pickPart`). */
+  private readonly requestedPart = signal<string | null>(null);
+  readonly parts = TRAINING_PARTS;
+  readonly part = computed(() => pickPart(this.requestedPart(), this.lessons()));
+  readonly partCount = computed(() => {
+    const c: Record<TrainingPart, number> = { private: 0, general: 0 };
+    for (const l of this.lessons()) c[lessonPart(l)]++;
+    return c;
+  });
+  readonly shown = computed(() => this.lessons().filter(l => lessonPart(l) === this.part()));
 
   readonly query = signal('');
   readonly searching = signal(false);
@@ -273,6 +316,7 @@ export class TrainingVideosListComponent implements OnInit {
     ).subscribe(s => { this.searching.set(false); this.search.set(s); });
 
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(p => {
+      this.requestedPart.set(p.get('part'));
       const fen = p.get('fen');
       if (fen && looksLikeFen(fen)) {
         this.query.set(fen);
@@ -327,6 +371,14 @@ export class TrainingVideosListComponent implements OnInit {
       void this.router.navigate([], { relativeTo: this.route, queryParams: { fen: null }, replaceUrl: true });
     }
   }
+
+  /** Teil wählen — über die Adresse, damit Zurück aus einer Stunde in derselben Gruppe landet. */
+  selectPart(part: TrainingPart): void {
+    this.requestedPart.set(part);
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { part }, queryParamsHandling: 'merge', replaceUrl: true });
+  }
+
+  partKey(part: string | null | undefined): string { return trainingPartKey(part); }
 
   toggle(id: number): void {
     const next = new Set(this.open());

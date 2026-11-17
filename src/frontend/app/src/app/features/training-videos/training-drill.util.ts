@@ -15,6 +15,8 @@ export const DEFAULT_CLIP_SEC = 60;
 export interface DrillItem {
   lessonId: number;
   date: string;
+  /** Teil der Stunde (`private` | `general`). */
+  part: string;
   hasVideo: boolean;
   gameKey: string | null;
   /** „Weiß – Schwarz“ (Stunde) bzw. der Name aus dem Fragen-Satz. */
@@ -89,7 +91,7 @@ export function drillItemsOfLesson(lesson: TrainingLesson, unknownName: string):
   return lesson.segments
     .filter(s => isValidFen(s.fen))
     .map(s => ({
-      lessonId: lesson.id, date: lesson.date, hasVideo: lesson.hasVideo, gameKey: s.gameKey,
+      lessonId: lesson.id, date: lesson.date, part: lesson.part ?? 'private', hasVideo: lesson.hasVideo, gameKey: s.gameKey,
       gameLabel: s.gameKey ? labels.get(s.gameKey) ?? null : null, segment: s, fen: drillFen(s),
       rookhubGameId: s.gameKey ? lesson.games.find(g => g.key === s.gameKey)?.rookhubGameId ?? null : null,
       target: drillTarget(s),
@@ -104,7 +106,7 @@ export function drillItemsOfQuestions(items: TrainingDrillItemDto[]): DrillItem[
   return items
     .filter(i => isValidFen(i.segment.fen))
     .map(i => ({
-      lessonId: i.lessonId, date: i.date, hasVideo: i.hasVideo, gameKey: i.segment.gameKey ?? i.gameLabel,
+      lessonId: i.lessonId, date: i.date, part: i.part ?? 'private', hasVideo: i.hasVideo, gameKey: i.segment.gameKey ?? i.gameLabel,
       gameLabel: i.gameLabel, segment: i.segment, fen: drillFen(i.segment), rookhubGameId: i.rookhubGameId ?? null,
       target: drillTarget(i.segment),
     }))

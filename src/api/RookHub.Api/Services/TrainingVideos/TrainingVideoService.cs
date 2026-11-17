@@ -38,17 +38,17 @@ public class TrainingVideoService
     public async Task<List<TrainingLessonListItemDto>> ListAsync(int userId, bool isAdmin, CancellationToken ct)
     {
         var rows = await Visible(userId, isAdmin)
-            .OrderByDescending(l => l.Date)
+            .OrderByDescending(l => l.Date).ThenBy(l => l.Part == TrainingLessonParts.Private ? 0 : 1)
             .Select(l => new
             {
-                l.Id, l.Date, l.Summary, l.DurationSec, l.VideoFile, l.UserId,
+                l.Id, l.Date, l.Part, l.Summary, l.DurationSec, l.VideoFile, l.UserId,
                 Owner = l.User != null ? l.User.Username : null,
                 Segments = l.Segments.Count,
                 Games = l.Games.OrderBy(g => g.Position).ToList(),
             })
             .ToListAsync(ct);
         return rows.Select(r => new TrainingLessonListItemDto(r.Id, Iso(r.Date), r.Summary, r.DurationSec, HasVideo(r.VideoFile),
-            r.Segments, r.Games.Select(ToDto).ToList(), isAdmin && r.UserId != userId ? r.Owner : null)).ToList();
+            r.Segments, r.Games.Select(ToDto).ToList(), isAdmin && r.UserId != userId ? r.Owner : null, r.Part)).ToList();
     }
 
     public async Task<TrainingLessonDto> GetAsync(int userId, bool isAdmin, int id, CancellationToken ct)
@@ -60,12 +60,16 @@ public class TrainingVideoService
         var games = l.Games.OrderBy(g => g.Position).ToList();
         var progress = await ProgressAsync(userId, new List<int> { l.Id }, ct);
         var positions = await GamePositionsAsync(new List<int> { l.Id }, ct);
+        var others = await _db.TrainingLessons.AsNoTracking()
+            .Where(o => o.UserId == l.UserId && o.Date == l.Date && o.Id != l.Id)
+            .OrderBy(o => o.Part == TrainingLessonParts.Private ? 0 : 1)
+            .Select(o => new TrainingLessonPartRefDto(o.Id, o.Part)).ToListAsync(ct);
         return new TrainingLessonDto(l.Id, Iso(l.Date), l.Summary, l.DurationSec, HasVideo(l.VideoFile),
             isAdmin && l.UserId != userId ? l.User?.Username : null,
             games.Select(ToDto).ToList(),
             l.Segments.OrderBy(s => s.Position).Select(s => ToDto(s, progress, positions)).ToList(),
             games.Where(g => g.Pgn != null).ToDictionary(g => g.Key, g => g.Pgn!),
-            games.Where(g => g.AnalysisPgn != null).ToDictionary(g => g.Key, g => g.AnalysisPgn!));
+            games.Where(g => g.AnalysisPgn != null).ToDictionary(g => g.Key, g => g.AnalysisPgn!), l.Part, others);
     }
 
     /// <summary>„Im Training besprochen?“ — alle Segmente mit demselben Figurenfeld (Zugrecht als Zusatzangabe).</summary>
@@ -78,12 +82,12 @@ public class TrainingVideoService
             .Where(s => s.BoardFen == board && lessons.Any(l => l.Id == s.LessonId))
             .OrderByDescending(s => s.Lesson!.Date).ThenBy(s => s.Position)
             .Take(MaxHits + 1)
-            .Select(s => new { s.Id, s.LessonId, s.Lesson!.Date, s.StartSec, s.Fen, s.Move, s.Comment, s.Quote, s.GameKey })
+            .Select(s => new { s.Id, s.LessonId, s.Lesson!.Date, s.Lesson.Part, s.StartSec, s.Fen, s.Move, s.Comment, s.Quote, s.GameKey })
             .ToListAsync(ct);
         var labels = await GameLabelsAsync(rows.Select(r => r.LessonId).Distinct().ToList(), ct);
         var hits = rows.Take(MaxHits).Select(r => new TrainingSearchHitDto("segment", r.LessonId, Iso(r.Date), r.Id, r.StartSec, r.Fen,
             r.Move, r.Comment ?? r.Quote, Label(labels, r.LessonId, r.GameKey), null,
-            side == null ? null : TrainingBoardKey.Side(r.Fen) == side)).ToList();
+            side == null ? null : TrainingBoardKey.Side(r.Fen) == side, null, r.Part)).ToList();
         return new TrainingSearchResultDto(hits, rows.Count > MaxHits);
     }
 
@@ -122,16 +126,19 @@ public class TrainingVideoService
             }
         }
         var segRows = await segments.OrderByDescending(s => s.Lesson!.Date).ThenBy(s => s.Position).Take(MaxHits + 1)
-            .Select(s => new { s.Id, s.LessonId, s.Lesson!.Date, s.StartSec, s.Fen, s.Move, s.Comment, s.Quote, s.GameKey })
+            .Select(s => new { s.Id, s.LessonId, s.Lesson!.Date, s.Lesson.Part, s.StartSec, s.Fen, s.Move, s.Comment, s.Quote, s.GameKey })
             .ToListAsync(ct);
         var noteRows = await notes.OrderByDescending(n => n.Lesson!.Date).ThenBy(n => n.Position).Take(MaxHits + 1)
-            .Select(n => new { n.Id, n.LessonId, n.Lesson!.Date, n.StartSec, n.Text, n.Category, n.GameKey })
+            .Select(n => new { n.Id, n.LessonId, n.Lesson!.Date, n.Lesson.Part, n.Lesson.UserId, n.StartSec, n.Text, n.Category, n.GameKey })
             .ToListAsync(ct);
-        var labels = await GameLabelsAsync(segRows.Select(r => r.LessonId).Concat(noteRows.Select(r => r.LessonId)).Distinct().ToList(), ct);
+        var labels = await GameLabelsAsync(segRows.Select(r => r.LessonId).Distinct().ToList(), ct);
+        // Notizen liegen im privaten Teil, ihre Partie kann im allgemeinen Teil desselben Datums liegen.
+        var noteGames = await SessionGamesAsync(noteRows.Select(r => (r.UserId, r.Date)).Distinct().ToList(), ct);
         var hits = segRows.Take(MaxHits).Select(r => new TrainingSearchHitDto("segment", r.LessonId, Iso(r.Date), r.Id, r.StartSec, r.Fen,
-                r.Move, PickText(r.Comment, r.Quote, words), Label(labels, r.LessonId, r.GameKey), null, null))
+                r.Move, PickText(r.Comment, r.Quote, words), Label(labels, r.LessonId, r.GameKey), null, null, null, r.Part))
             .Concat(noteRows.Take(MaxHits).Select(r => new TrainingSearchHitDto("note", r.LessonId, Iso(r.Date), null, r.StartSec, null,
-                null, r.Text, Label(labels, r.LessonId, r.GameKey), r.Category, null, r.Id)))
+                null, r.Text, r.GameKey != null && noteGames.TryGetValue((r.UserId, r.Date, r.GameKey), out var g) ? g.Label : null,
+                r.Category, null, r.Id, r.Part)))
             .ToList();
         return new TrainingSearchResultDto(hits, segRows.Count > MaxHits || noteRows.Count > MaxHits);
     }
@@ -149,7 +156,7 @@ public class TrainingVideoService
         var lessons = Visible(userId, isAdmin);
         var links = await _db.TrainingLessonGames
             .Where(g => g.RookhubGameId == gameId && lessons.Any(l => l.Id == g.LessonId))
-            .Select(g => new { g.LessonId, g.Key, g.Lesson!.Date, g.Lesson.VideoFile })
+            .Select(g => new { g.LessonId, g.Key, g.Lesson!.Date, g.Lesson.VideoFile, g.Lesson.Part })
             .ToListAsync(ct);
         if (links.Count == 0) return new TrainingGameCommentsDto(new(), 0);
 
@@ -182,7 +189,7 @@ public class TrainingVideoService
                 any = true;
                 last = match.Value.Index;
                 items.Add(new TrainingGameCommentDto(match.Value.Index, match.Value.By, s.LessonId, Iso(link.Date), s.Id, s.StartSec, s.EndSec,
-                    s.Fen, s.Move, s.MoveKind, s.Comment ?? s.Quote, s.Variations, Tags(s.Tags), HasVideo(link.VideoFile)));
+                    s.Fen, s.Move, s.MoveKind, s.Comment ?? s.Quote, s.Variations, Tags(s.Tags), HasVideo(link.VideoFile), link.Part));
             }
         }
         return new TrainingGameCommentsDto(items.OrderBy(i => i.FenIndex).ThenBy(i => i.Date, StringComparer.Ordinal).ThenBy(i => i.StartSec).ToList(), unmatched);
@@ -243,7 +250,7 @@ public class TrainingVideoService
         var items = rows.Select(s => new TrainingDrillItemDto(s.LessonId, Iso(s.Lesson!.Date), HasVideo(s.Lesson.VideoFile),
             Label(labels, s.LessonId, s.GameKey),
             s.GameKey != null && gameIdOf.TryGetValue((s.LessonId, s.GameKey), out var gid) ? gid : null,
-            ToDto(s, progress, positions))).ToList();
+            ToDto(s, progress, positions), s.Lesson.Part)).ToList();
         return onlyWrong ? items.Where(i => i.Segment.Progress?.Status == "wrong").ToList() : items;
     }
 
@@ -441,6 +448,28 @@ public class TrainingVideoService
             .Select(g => new { g.LessonId, g.Key, g.White, g.Black }).ToListAsync(ct);
         return games.ToDictionary(g => (g.LessonId, g.Key), g => $"{g.White ?? "?"} – {g.Black ?? "?"}");
     }
+
+    /// <summary>Partien je Stunde (Konto + Datum) über ALLE Teile: Schlüssel → Eintrag, Beschriftung, Art, RookHub-Partie.
+    /// Für Notizen, deren Partie in einem anderen Teil derselben Stunde liegt.</summary>
+    internal async Task<Dictionary<(int UserId, DateOnly Date, string Key), SessionGame>> SessionGamesAsync(
+        List<(int UserId, DateOnly Date)> sessions, CancellationToken ct)
+    {
+        if (sessions.Count == 0) return new();
+        var users = sessions.Select(x => x.UserId).Distinct().ToList();
+        var dates = sessions.Select(x => x.Date).Distinct().ToList();
+        var rows = await _db.TrainingLessonGames.AsNoTracking()
+            .Where(g => users.Contains(g.Lesson!.UserId) && dates.Contains(g.Lesson.Date))
+            .Select(g => new { g.LessonId, g.Lesson!.UserId, g.Lesson.Date, g.Lesson.Part, g.Key, g.White, g.Black, g.Kind, g.RookhubGameId })
+            .ToListAsync(ct);
+        var wanted = sessions.ToHashSet();
+        var result = new Dictionary<(int, DateOnly, string), SessionGame>();
+        // Bei doppeltem Schlüssel (alte Daten) gewinnt der private Teil.
+        foreach (var g in rows.Where(r => wanted.Contains((r.UserId, r.Date))).OrderBy(r => r.Part == TrainingLessonParts.Private ? 0 : 1))
+            result.TryAdd((g.UserId, g.Date, g.Key), new SessionGame(g.LessonId, $"{g.White ?? "?"} – {g.Black ?? "?"}", g.White, g.Black, g.Kind, g.RookhubGameId));
+        return result;
+    }
+
+    internal sealed record SessionGame(int LessonId, string Label, string? White, string? Black, string Kind, int? RookhubGameId);
 
     private static string? Label(Dictionary<(int, string), string> labels, int lessonId, string? key) =>
         key != null && labels.TryGetValue((lessonId, key), out var l) ? l : null;

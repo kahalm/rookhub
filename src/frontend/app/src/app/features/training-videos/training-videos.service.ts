@@ -11,6 +11,15 @@ import { AuthService } from '../../core/auth.service';
 export type TrainingGameKind = 'own' | 'lesson' | 'exercise';
 export type TrainingStatus = 'solved' | 'wrong' | 'skipped';
 export type TrainingTag = 'question' | 'key' | 'mistake' | 'plan' | 'opening' | 'endgame' | 'tactic';
+/** Teil einer Stunde: `private` = eigene Partien (mit Trainerkommentaren), `general` = Lehrbeispiele und Übungen.
+ *  Eine Stunde kann beide Teile als getrennte Einträge haben (dasselbe Video). */
+export type TrainingPart = 'private' | 'general';
+export const TRAINING_PARTS: readonly TrainingPart[] = ['private', 'general'];
+
+/** Übersetzungsschlüssel des Teils (Unbekanntes/Fehlendes gilt als privat — ältere Antworten ohne Feld). */
+export function trainingPartKey(part: string | null | undefined): string {
+  return part === 'general' ? 'trainingVideos.part.general' : 'trainingVideos.part.private';
+}
 
 export interface TrainingGame {
   key: string;
@@ -39,6 +48,8 @@ export interface TrainingLessonListItem {
   games: TrainingGame[];
   /** Nur für Admins bei fremden Stunden, sonst null. */
   ownerName: string | null;
+  /** Teil der Stunde (ältere Antworten ohne Feld: privat). */
+  part?: TrainingPart | string;
 }
 
 export interface TrainingQuestion {
@@ -95,6 +106,9 @@ export interface TrainingLesson {
   pgns: Record<string, string>;
   /** Voller ChessBase-Analysebaum (mit Varianten) je Partie. */
   analysisPgns: Record<string, string>;
+  part?: TrainingPart | string;
+  /** Die übrigen Teile desselben Datums (für „zum anderen Teil“). */
+  otherParts?: { id: number; part: TrainingPart | string }[] | null;
 }
 
 export interface TrainingSearchHit {
@@ -112,6 +126,7 @@ export interface TrainingSearchHit {
   sameSide: boolean | null;
   /** Nur Notizen: die Notiz (für den Filter im Notizbuch). */
   noteId?: number | null;
+  part?: TrainingPart | string;
 }
 
 export interface TrainingSearchResult { hits: TrainingSearchHit[]; truncated: boolean; }
@@ -132,6 +147,7 @@ export interface TrainingGameComment {
   variations: string | null;
   tags: string[];
   hasVideo: boolean;
+  part?: TrainingPart | string;
 }
 
 export interface TrainingGameComments { items: TrainingGameComment[]; unmatched: number; }
@@ -144,6 +160,7 @@ export interface TrainingDrillItemDto {
   /** Die RookHub-Partie zur Frage, falls zugeordnet. */
   rookhubGameId: number | null;
   segment: TrainingSegment;
+  part?: TrainingPart | string;
 }
 
 /** Kategorien der Trainer-Notizen, in der Reihenfolge der Reiter des Notizbuchs (Server: `TrainingVideoImporter`). */
@@ -167,6 +184,8 @@ export interface TrainingNotebookNote {
   rookhubGameId: number | null;
   hasVideo: boolean;
   lessonDurationSec: number | null;
+  /** Der Eintrag (Teil der Stunde), in dem die Partie der Notiz liegt — kann der allgemeine Teil sein. */
+  gameLessonId?: number | null;
 }
 
 /** „Sagt er immer wieder“: `lessons` Stunden, `noteId` = stellvertretende Notiz, `noteIds` neueste zuerst. */

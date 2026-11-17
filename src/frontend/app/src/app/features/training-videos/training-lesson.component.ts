@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, computed, effect, inject, signal, viewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,7 +17,9 @@ import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.compone
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { whiteToMove } from '../../shared/chess/fen-side';
 import { activeSegmentAt, isValidFen } from './training-drill.util';
-import { TrainingGame, TrainingLesson, TrainingSegment, TrainingVideosService, trainingGameLabel } from './training-videos.service';
+import {
+  TrainingGame, TrainingLesson, TrainingSegment, TrainingVideosService, trainingGameLabel, trainingPartKey,
+} from './training-videos.service';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const KNOWN_TAGS = new Set(['question', 'key', 'mistake', 'plan', 'opening', 'endgame', 'tactic']);
@@ -50,10 +53,17 @@ const KNOWN_TAGS = new Set(['question', 'key', 'mistake', 'plan', 'opening', 'en
       } @else if (lesson(); as l) {
         <div class="header">
           <div class="title">
-            <a mat-icon-button routerLink="/training-videos" [appIconLabel]="'common.back' | translate"><mat-icon>arrow_back</mat-icon></a>
-            <h1>{{ 'trainingVideos.lesson.title' | translate: { date: (l.date | date: 'mediumDate') } }}</h1>
+            <a mat-icon-button routerLink="/training-videos" [queryParams]="{ part: l.part ?? 'private' }"
+               [appIconLabel]="'common.back' | translate"><mat-icon>arrow_back</mat-icon></a>
+            <h1>{{ 'trainingVideos.lesson.title' | translate: { date: (l.date | date: 'mediumDate') } }}
+              <span class="part-label">· {{ partKey(l.part) | translate }}</span></h1>
           </div>
           <div class="header-actions">
+            @for (o of l.otherParts ?? []; track o.id) {
+              <button mat-stroked-button type="button" class="tv-other-part" (click)="goToPart(o.id)">
+                <mat-icon>swap_horiz</mat-icon>{{ (o.part === 'general' ? 'trainingVideos.part.toGeneral' : 'trainingVideos.part.toPrivate') | translate }}
+              </button>
+            }
             <a mat-flat-button color="primary" class="tv-drill" [routerLink]="['/training-videos', l.id, 'drill']"
                [queryParams]="current() ? { seg: current()!.id } : {}">
               <mat-icon>replay</mat-icon>{{ 'trainingVideos.replay' | translate }}
@@ -171,6 +181,7 @@ const KNOWN_TAGS = new Set(['question', 'key', 'mistake', 'plan', 'opening', 'en
     .title { display: flex; align-items: center; gap: 4px; min-width: 0; }
     .header h1 { margin: 0; font-size: 1.4rem; overflow-wrap: anywhere; }
     .header-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .part-label { font-weight: 400; font-size: .7em; color: var(--mat-sys-on-surface-variant); white-space: nowrap; }
     .meta { font-size: .85rem; color: var(--mat-sys-on-surface-variant); font-variant-numeric: tabular-nums; margin: 4px 0 8px; }
     .summary { margin: 0 0 16px; overflow-wrap: anywhere; }
     .clamp-more { background: none; border: 0; padding: 0 2px; color: var(--rh-accent); cursor: pointer; font: inherit; text-decoration: underline; }
@@ -261,10 +272,23 @@ export class TrainingLessonComponent implements OnInit {
     inject(DestroyRef).onDestroy(() => this.video()?.nativeElement.pause());
   }
 
-  ngOnInit(): void { this.load(); }
+  private readonly destroyRef = inject(DestroyRef);
+
+  /** Neu laden, wenn die Id wechselt — „zum anderen Teil“ bleibt auf derselben Komponente. */
+  ngOnInit(): void {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.load());
+  }
 
   load(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
+    if (this.lesson() && this.lesson()!.id !== id) {
+      this.video()?.nativeElement.pause();
+      this.lesson.set(null);
+      this.videoSrc.set(null);
+      this.selectedId.set(null);
+      this.lastActiveId = null;
+      this.pendingSeek = null;
+    }
     this.loading.set(true);
     this.loadFailed.set(false);
     this.notFound.set(false);
@@ -306,6 +330,15 @@ export class TrainingLessonComponent implements OnInit {
       error: () => this.videoFailed.set(true),
     });
   }
+
+  /** Zum anderen Teil derselben Stunde, an der aktuellen Videostelle (beide Teile zeigen dasselbe Video). */
+  goToPart(id: number): void {
+    const el = this.video()?.nativeElement;
+    const t = el && el.currentTime > 0 ? Math.floor(el.currentTime) : null;
+    void this.router.navigate(['/training-videos', id], { queryParams: t != null ? { t } : {} });
+  }
+
+  partKey(part: string | null | undefined): string { return trainingPartKey(part); }
 
   reloadVideo(): void {
     const el = this.video()?.nativeElement;

@@ -7019,6 +7019,17 @@
         "psychologie": "Pszichológia",
         "allgemein": "Általános"
       }
+    },
+    "part": {
+      "label": "Az óra része",
+      "private": "Saját játszmák",
+      "general": "Általános játszmák",
+      "privateHint": "A saját játszmáid az edző megjegyzéseivel.",
+      "generalHint": "Mintajátszmák és gyakorlatok az órákról.",
+      "privateEmpty": "Még nincs óra saját játszmákkal.",
+      "generalEmpty": "Még nincs óra mintajátszmákkal vagy gyakorlatokkal.",
+      "toGeneral": "Az óra általános játszmái",
+      "toPrivate": "Az óra saját játszmái"
     }
   }
 }

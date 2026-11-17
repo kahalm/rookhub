@@ -12,8 +12,9 @@ internal sealed class TrainingLessonConfiguration : IEntityTypeConfiguration<Tra
     public void Configure(EntityTypeBuilder<TrainingLesson> e)
     {
         e.HasOne(l => l.User).WithMany().HasForeignKey(l => l.UserId).OnDelete(DeleteBehavior.Cascade);
-        // Re-Import ersetzt die Stunde desselben Datums für dasselbe Konto.
-        e.HasIndex(l => new { l.UserId, l.Date }).IsUnique();
+        // Re-Import ersetzt den Teil (privat/allgemein) der Stunde desselben Datums für dasselbe Konto.
+        e.Property(l => l.Part).HasMaxLength(16);
+        e.HasIndex(l => new { l.UserId, l.Date, l.Part }).IsUnique();
         e.Property(l => l.VideoFile).HasMaxLength(200);
         e.Property(l => l.Summary).HasColumnType("text");
     }

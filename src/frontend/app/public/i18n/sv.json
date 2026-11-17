@@ -6755,6 +6755,17 @@
         "psychologie": "Psykologi",
         "allgemein": "Allmänt"
       }
+    },
+    "part": {
+      "label": "Del av lektionen",
+      "private": "Privata partier",
+      "general": "Allmänna partier",
+      "privateHint": "Dina egna partier med tränarens kommentarer.",
+      "generalHint": "Mönsterpartier och övningar från lektionerna.",
+      "privateEmpty": "Ingen lektion med dina egna partier ännu.",
+      "generalEmpty": "Ingen lektion med mönsterpartier eller övningar ännu.",
+      "toGeneral": "Allmänna partier i denna lektion",
+      "toPrivate": "Privata partier i denna lektion"
     }
   }
 }

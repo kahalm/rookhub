@@ -3,8 +3,8 @@ import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
-import { TrainingVideosListComponent, displayFen, looksLikeFen, sortPositionHits } from './training-videos-list.component';
-import { TrainingSearchHit, TrainingVideosService } from './training-videos.service';
+import { TrainingVideosListComponent, displayFen, looksLikeFen, pickPart, sortPositionHits } from './training-videos-list.component';
+import { TrainingLessonListItem, TrainingSearchHit, TrainingVideosService } from './training-videos.service';
 
 function hit(p: Partial<TrainingSearchHit>): TrainingSearchHit {
   return { kind: 'segment', lessonId: 1, date: '2026-10-27', segmentId: 5, startSec: 730, fen: null, move: null, text: 'x',
@@ -68,5 +68,32 @@ describe('TrainingVideosListComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.tv-hit-watch')!.getAttribute('href')).toBe('/training-videos/1?t=730&seg=5');
     expect(el.querySelector('.tv-hit-drill')!.getAttribute('href')).toBe('/training-videos/1/drill?seg=5');
+  });
+
+  function item(id: number, part: 'private' | 'general'): TrainingLessonListItem {
+    return { id, date: '2026-10-27', summary: null, durationSec: null, hasVideo: true, segmentCount: 1, games: [], ownerName: null, part };
+  }
+
+  it('Vorgabe-Teil: aus der Adresse, sonst privat — nur allgemeine Einträge → allgemein', () => {
+    expect(pickPart('general', [item(1, 'private')])).toBe('general');
+    expect(pickPart(null, [item(1, 'private'), item(2, 'general')])).toBe('private');
+    expect(pickPart(null, [item(2, 'general')])).toBe('general');
+    expect(pickPart('quatsch', [])).toBe('private');
+    expect(pickPart(null, [{ ...item(3, 'private'), part: undefined }])).toBe('private');   // ältere Antwort ohne Feld
+  });
+
+  it('trennt private und allgemeine Partien per Umschalter mit Anzahl; jede Karte nennt den Teil', async () => {
+    const fixture = await render({ list: () => of([item(1, 'private'), item(2, 'general'), item(3, 'general')]) });
+    const el: HTMLElement = fixture.nativeElement;
+    const toggles = el.querySelectorAll('mat-button-toggle');
+    expect(toggles.length).toBe(2);
+    expect(toggles[0].textContent).toContain('(1)');
+    expect(toggles[1].textContent).toContain('(2)');
+    expect(el.querySelectorAll('.lesson').length).toBe(1);
+    expect(el.querySelector('.lesson .part-label')!.textContent).toContain('trainingVideos.part.private');
+    fixture.componentInstance.selectPart('general');
+    await fixture.whenStable();
+    expect(el.querySelectorAll('.lesson').length).toBe(2);
+    expect(el.querySelector('.lesson .part-label')!.textContent).toContain('trainingVideos.part.general');
   });
 });

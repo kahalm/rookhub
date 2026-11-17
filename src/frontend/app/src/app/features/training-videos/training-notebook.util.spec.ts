@@ -49,5 +49,7 @@ describe('training-notebook.util', () => {
   it('Partie-Link: eigene RookHub-Partie, sonst die Stunde an der Notizzeit', () => {
     expect(noteGameLink({ rookhubGameId: 7, gameKind: 'own', lessonId: 3, startSec: 90 })).toEqual({ link: ['/games', 7], query: null });
     expect(noteGameLink({ rookhubGameId: null, gameKind: 'lesson', lessonId: 3, startSec: 90 })).toEqual({ link: ['/training-videos', 3], query: { t: 90 } });
+    // Notiz im privaten Teil, Lehrpartie im allgemeinen Teil (Eintrag 4) → dorthin.
+    expect(noteGameLink({ rookhubGameId: null, gameKind: 'lesson', lessonId: 3, startSec: 90, gameLessonId: 4 })).toEqual({ link: ['/training-videos', 4], query: { t: 90 } });
   });
 });

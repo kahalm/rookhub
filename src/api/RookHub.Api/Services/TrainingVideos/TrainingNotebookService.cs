@@ -30,16 +30,16 @@ public class TrainingNotebookService
     {
         var lessons = await _db.TrainingLessons.AsNoTracking()
             .Where(l => isAdmin || l.UserId == userId)
-            .Select(l => new { l.Id, l.Date, l.VideoFile, l.DurationSec })
+            .Select(l => new { l.Id, l.UserId, l.Date, l.VideoFile, l.DurationSec })
             .ToListAsync(ct);
         if (lessons.Count == 0) return new TrainingNotebookDto(new(), new(), new(), false, false);
         var ids = lessons.Select(l => l.Id).ToList();
         var lessonOf = lessons.ToDictionary(l => l.Id);
 
         var notes = await _db.TrainingNotes.AsNoTracking().Where(n => ids.Contains(n.LessonId)).ToListAsync(ct);
-        var games = await _db.TrainingLessonGames.AsNoTracking().Where(g => ids.Contains(g.LessonId))
-            .Select(g => new { g.LessonId, g.Key, g.White, g.Black, g.Kind, g.RookhubGameId }).ToListAsync(ct);
-        var gameOf = games.ToDictionary(g => (g.LessonId, g.Key));
+        // Notizen stehen im privaten Teil der Stunde, ihre Partie kann im allgemeinen Teil desselben Datums liegen:
+        // Partien daher je Stunde (Konto + Datum) über alle Teile nachschlagen.
+        var gameOf = await _videos.SessionGamesAsync(lessons.Select(l => (l.UserId, l.Date)).Distinct().ToList(), ct);
         var video = lessons.ToDictionary(l => l.Id, l => _videos.HasVideo(l.VideoFile));
 
         // Neueste Stunde zuerst, in der Stunde nach Zeit/Reihenfolge.
@@ -47,10 +47,10 @@ public class TrainingNotebookService
             .ThenBy(n => n.Position).ToList();
         var noteDtos = notes.Select(n =>
         {
-            var g = n.GameKey != null && gameOf.TryGetValue((n.LessonId, n.GameKey), out var x) ? x : null;
             var l = lessonOf[n.LessonId];
+            var g = n.GameKey != null && gameOf.TryGetValue((l.UserId, l.Date, n.GameKey), out var x) ? x : null;
             return new TrainingNotebookNoteDto(n.Id, n.LessonId, Iso(l.Date), n.StartSec, n.Category, n.Text, n.Quote, n.GameKey,
-                g?.White, g?.Black, g?.Kind, g?.RookhubGameId, video[n.LessonId], l.DurationSec);
+                g?.White, g?.Black, g?.Kind, g?.RookhubGameId, video[n.LessonId], l.DurationSec, g?.LessonId);
         }).ToList();
 
         var themes = TrainingNoteThemes.Find(notes
@@ -59,15 +59,19 @@ public class TrainingNotebookService
             .Select(t => new TrainingNotebookThemeDto(t.Lessons, t.RepresentativeId, t.Category, t.NoteIds))
             .ToList();
 
-        var (openings, hasRepertoire, truncated) = await OpeningsAsync(userId, notes.Where(n => n.Category == "eroeffnung").ToList(), ct);
+        var sessionOf = lessons.ToDictionary(l => l.Id, l => (l.UserId, l.Date));
+        var (openings, hasRepertoire, truncated) = await OpeningsAsync(userId, notes.Where(n => n.Category == "eroeffnung").ToList(),
+            sessionOf, ct);
         return new TrainingNotebookDto(noteDtos, themes, openings, hasRepertoire, truncated);
     }
 
     private async Task<(List<TrainingNotebookOpeningDto>, bool, bool)> OpeningsAsync(int userId, List<Models.TrainingNote> notes,
-        CancellationToken ct)
+        Dictionary<int, (int UserId, DateOnly Date)> sessionOf, CancellationToken ct)
     {
         if (notes.Count == 0) return (new(), false, false);
-        var lessonIds = notes.Select(n => n.LessonId).Distinct().ToList();
+        // Segmente derselben Partie in allen Teilen der Stunde (die Partie einer Notiz kann im allgemeinen Teil liegen).
+        var sessions = notes.Select(n => sessionOf[n.LessonId]).ToHashSet();
+        var lessonIds = sessionOf.Where(kv => sessions.Contains(kv.Value)).Select(kv => kv.Key).ToList();
         var segments = await _db.TrainingSegments.AsNoTracking()
             .Where(s => lessonIds.Contains(s.LessonId) && s.Fen != null && s.GameKey != null)
             .Select(s => new { s.Id, s.LessonId, s.GameKey, s.StartSec, s.EndSec, s.Fen, s.BoardFen, s.Move })
@@ -75,7 +79,9 @@ public class TrainingNotebookService
 
         var picked = notes.Select(n =>
         {
-            var same = segments.Where(s => s.LessonId == n.LessonId && s.GameKey == n.GameKey).ToList();
+            var session = sessionOf[n.LessonId];
+            var same = segments.Where(s => sessionOf[s.LessonId] == session && s.GameKey == n.GameKey)
+                .OrderBy(s => s.StartSec).ToList();
             var seg = Nearest(same.Select(s => (s.StartSec, s.EndSec)).ToList(), n.StartSec) is int k ? same[k] : null;
             return (Note: n, Segment: seg);
         }).ToList();

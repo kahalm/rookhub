@@ -6755,6 +6755,17 @@
         "psychologie": "Psikologi",
         "allgemein": "Umum"
       }
+    },
+    "part": {
+      "label": "Bagian pelajaran",
+      "private": "Partai pribadi",
+      "general": "Partai umum",
+      "privateHint": "Partai milikmu sendiri dengan komentar pelatih.",
+      "generalHint": "Partai contoh dan latihan dari pelajaran.",
+      "privateEmpty": "Belum ada pelajaran dengan partaimu sendiri.",
+      "generalEmpty": "Belum ada pelajaran dengan partai contoh atau latihan.",
+      "toGeneral": "Partai umum pelajaran ini",
+      "toPrivate": "Partai pribadi pelajaran ini"
     }
   }
 }

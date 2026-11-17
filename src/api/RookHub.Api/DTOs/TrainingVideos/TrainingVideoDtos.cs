@@ -4,9 +4,10 @@ namespace RookHub.Api.DTOs.TrainingVideos;
 public record TrainingGameDto(string Key, string Kind, string? White, string? Black, string? Event, int? Year, string? Eco,
     string? Result, int? FromSec, int? ToSec, int? RookhubGameId, string? MatchConfidence, bool HasPgn);
 
-/// <summary>Eine Stunde in der Übersicht. <c>OwnerName</c> nur für Admins (sie sehen die Stunden aller Konten).</summary>
+/// <summary>Ein Eintrag in der Übersicht (ein Teil einer Stunde). <c>Part</c>: <c>private</c> (eigene Partien) |
+/// <c>general</c> (Lehrbeispiele/Übungen). <c>OwnerName</c> nur für Admins (sie sehen die Stunden aller Konten).</summary>
 public record TrainingLessonListItemDto(int Id, string Date, string? Summary, int? DurationSec, bool HasVideo,
-    int SegmentCount, List<TrainingGameDto> Games, string? OwnerName);
+    int SegmentCount, List<TrainingGameDto> Games, string? OwnerName, string Part = "private");
 
 /// <summary>Ein Segment der Stunde. <c>Progress</c> = eigener Stand im Nachspielen (null = noch nie gespielt).
 /// <c>TaskFen</c>/<c>TaskMove</c> = die Aufgabe im Nachspielen: Stellung VOR dem gesuchten Zug und der Zug (SAN, legal aus
@@ -26,18 +27,22 @@ public record TrainingProgressUpdateDto(string Status, int Attempts);
 
 /// <summary>Eine Aufgabe des stundenübergreifenden Fragen-Satzes.</summary>
 public record TrainingDrillItemDto(int LessonId, string Date, bool HasVideo, string? GameLabel, int? RookhubGameId,
-    TrainingSegmentDto Segment);
+    TrainingSegmentDto Segment, string Part = "private");
 
-/// <summary>Die Stundenseite: Kopf, Partien (mit PGN), Segmente in Reihenfolge.</summary>
+/// <summary>Die Stundenseite: Kopf, Partien (mit PGN), Segmente in Reihenfolge. <c>Part</c> = dieser Teil der Stunde;
+/// <c>OtherParts</c> = die übrigen Teile desselben Datums (für „zum anderen Teil“).</summary>
 public record TrainingLessonDto(int Id, string Date, string? Summary, int? DurationSec, bool HasVideo, string? OwnerName,
     List<TrainingGameDto> Games, List<TrainingSegmentDto> Segments, Dictionary<string, string> Pgns,
-    Dictionary<string, string> AnalysisPgns);
+    Dictionary<string, string> AnalysisPgns, string Part = "private", List<TrainingLessonPartRefDto>? OtherParts = null);
+
+/// <summary>Verweis auf einen anderen Teil derselben Stunde.</summary>
+public record TrainingLessonPartRefDto(int Id, string Part);
 
 /// <summary>Treffer der Stellungs- oder Volltextsuche. <c>Kind</c>: <c>segment</c> oder <c>note</c>;
 /// <c>SameSide</c> = auch das Zugrecht stimmt (nur Stellungssuche); <c>NoteId</c> = die Notiz (nur <c>note</c>, damit das
 /// Notizbuch die Suche wiederverwenden kann).</summary>
 public record TrainingSearchHitDto(string Kind, int LessonId, string Date, int? SegmentId, int? StartSec, string? Fen,
-    string? Move, string? Text, string? GameLabel, string? Category, bool? SameSide, int? NoteId = null);
+    string? Move, string? Text, string? GameLabel, string? Category, bool? SameSide, int? NoteId = null, string Part = "private");
 
 public record TrainingSearchResultDto(List<TrainingSearchHitDto> Hits, bool Truncated);
 
@@ -47,23 +52,32 @@ public record TrainingSearchResultDto(List<TrainingSearchHitDto> Hits, bool Trun
 /// Stellung stimmt) oder <c>variation</c> (die Stellung kommt in der Partie nicht vor — eine Variante, angehängt an die
 /// zuletzt besprochene Partiestellung; <c>Fen</c> zeigt sie).</summary>
 public record TrainingGameCommentDto(int FenIndex, string MatchedBy, int LessonId, string Date, int SegmentId, int StartSec,
-    int? EndSec, string? Fen, string? Move, string? MoveKind, string? Comment, string? Variations, List<string> Tags, bool HasVideo);
+    int? EndSec, string? Fen, string? Move, string? MoveKind, string? Comment, string? Variations, List<string> Tags, bool HasVideo,
+    string Part = "private");
 
 public record TrainingGameCommentsDto(List<TrainingGameCommentDto> Items, int Unmatched);
 
 public record TrainingAccessTokenDto(string Token, DateTime ExpiresAt);
 
-/// <summary>Bericht eines Imports (auch im Probelauf).</summary>
+/// <summary>Bericht eines Imports (auch im Probelauf). <c>LessonId</c> = der erste Teil (privat vor allgemein);
+/// <c>Parts</c> = je Eintrag (Teil) die Zahlen; <c>ProgressMoved</c> = Übungsstand-Zeilen, die zu einem anderen Eintrag
+/// umgezogen sind (im Probelauf 0).</summary>
 public record TrainingImportReportDto(string? Date, bool DryRun, bool Ok, bool Replaced, int? LessonId, int Games,
-    int Segments, int Questions, int Notes, int InvalidFens, bool VideoFound, List<string> Warnings, List<string> Errors);
+    int Segments, int Questions, int Notes, int InvalidFens, bool VideoFound, List<string> Warnings, List<string> Errors,
+    List<TrainingImportPartDto> Parts, int ProgressMoved);
+
+/// <summary>Ein Eintrag (Teil) der eingelesenen Stunde: <c>Part</c> <c>private</c> | <c>general</c>; <c>LessonId</c> null
+/// = im Probelauf neu; <c>Replaced</c> = eine bestehende Zeile wird weiterverwendet.</summary>
+public record TrainingImportPartDto(string Part, int? LessonId, bool Replaced, int Games, int Segments, int Questions, int Notes);
 
 public record TrainingFolderImportDto(bool DryRun, string Owner, List<TrainingImportReportDto> Files);
 
 /// <summary>Eine Notiz im Trainer-Notizbuch (stundenübergreifend). <c>GameKind</c>: <c>own</c> | <c>lesson</c> |
-/// <c>exercise</c> der Partie, auf die die Notiz verweist (null = keine Partie).</summary>
+/// <c>exercise</c> der Partie, auf die die Notiz verweist (null = keine Partie). <c>GameLessonId</c> = der Eintrag (Teil
+/// der Stunde), in dem diese Partie liegt — Notizen stehen im privaten Teil, ihre Partie kann im allgemeinen liegen.</summary>
 public record TrainingNotebookNoteDto(int Id, int LessonId, string Date, int? StartSec, string Category, string Text,
     string? Quote, string? GameKey, string? GameWhite, string? GameBlack, string? GameKind, int? RookhubGameId,
-    bool HasVideo, int? LessonDurationSec);
+    bool HasVideo, int? LessonDurationSec, int? GameLessonId = null);
 
 /// <summary>„Sagt er immer wieder“: Notizen mit sehr ähnlichem Inhalt aus mindestens zwei Stunden. <c>Lessons</c> =
 /// Anzahl verschiedener Stunden, <c>NoteId</c> = die stellvertretende Notiz, <c>NoteIds</c> = alle (neueste zuerst).</summary>

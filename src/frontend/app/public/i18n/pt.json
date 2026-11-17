@@ -6755,6 +6755,17 @@
         "psychologie": "Psicologia",
         "allgemein": "Geral"
       }
+    },
+    "part": {
+      "label": "Parte da aula",
+      "private": "Partidas privadas",
+      "general": "Partidas gerais",
+      "privateHint": "As tuas próprias partidas com os comentários do treinador.",
+      "generalHint": "Partidas modelo e exercícios das aulas.",
+      "privateEmpty": "Ainda não há nenhuma aula com as tuas partidas.",
+      "generalEmpty": "Ainda não há nenhuma aula com partidas modelo ou exercícios.",
+      "toGeneral": "Partidas gerais desta aula",
+      "toPrivate": "Partidas privadas desta aula"
     }
   }
 }

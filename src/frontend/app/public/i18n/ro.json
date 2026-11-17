@@ -6755,6 +6755,17 @@
         "psychologie": "Psihologie",
         "allgemein": "General"
       }
+    },
+    "part": {
+      "label": "Partea lecției",
+      "private": "Partide private",
+      "general": "Partide generale",
+      "privateHint": "Propriile tale partide cu comentariile antrenorului.",
+      "generalHint": "Partide model și exerciții din lecții.",
+      "privateEmpty": "Încă nicio lecție cu partidele tale.",
+      "generalEmpty": "Încă nicio lecție cu partide model sau exerciții.",
+      "toGeneral": "Partidele generale ale acestei lecții",
+      "toPrivate": "Partidele private ale acestei lecții"
     }
   }
 }

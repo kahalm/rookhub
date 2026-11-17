@@ -6755,6 +6755,17 @@
         "psychologie": "Psychologia",
         "allgemein": "Ogólne"
       }
+    },
+    "part": {
+      "label": "Część lekcji",
+      "private": "Partie prywatne",
+      "general": "Partie ogólne",
+      "privateHint": "Twoje własne partie z komentarzami trenera.",
+      "generalHint": "Partie wzorcowe i ćwiczenia z lekcji.",
+      "privateEmpty": "Nie ma jeszcze lekcji z twoimi partiami.",
+      "generalEmpty": "Nie ma jeszcze lekcji z partiami wzorcowymi ani ćwiczeniami.",
+      "toGeneral": "Partie ogólne tej lekcji",
+      "toPrivate": "Partie prywatne tej lekcji"
     }
   }
 }

@@ -83,7 +83,19 @@ public sealed class TrainingVideoTests : IDisposable
         Assert.True(report.Ok);
         Assert.True(report.VideoFound);
         Assert.DoesNotContain(report.Warnings, w => w.Contains("4711"));
-        var lesson = await _db.TrainingLessons.Include(l => l.Segments).ThenInclude(s => s.Question).Include(l => l.Notes).SingleAsync();
+        // Zwei Einträge: privat (eigene Partie g1 + alle Notizen) und allgemein (Lehrpartie g2), dasselbe Video.
+        Assert.Equal(new[] { "private", "general" }, report.Parts.Select(p => p.Part));
+        var lesson = await _db.TrainingLessons.Include(l => l.Segments).ThenInclude(s => s.Question).Include(l => l.Notes)
+            .SingleAsync(l => l.Part == TrainingLessonParts.Private);
+        var general = await _db.TrainingLessons.Include(l => l.Segments).Include(l => l.Games).Include(l => l.Notes)
+            .SingleAsync(l => l.Part == TrainingLessonParts.General);
+        Assert.Equal(report.LessonId, lesson.Id);
+        Assert.Equal(new[] { 3630 }, general.Segments.Select(s => s.StartSec));
+        Assert.Equal("g2", Assert.Single(general.Games).Key);
+        Assert.Empty(general.Notes);
+        Assert.Equal(lesson.VideoFile, general.VideoFile);
+        Assert.Equal(3, lesson.Segments.Count);
+        Assert.Equal(2, lesson.Notes.Count);
         Assert.Equal(new DateOnly(2026, 10, 27), lesson.Date);
         Assert.Equal(3737, lesson.DurationSec);
         var first = lesson.Segments.OrderBy(s => s.Position).First();
@@ -109,7 +121,9 @@ public sealed class TrainingVideoTests : IDisposable
 
         Assert.True(second.Replaced);
         Assert.Equal(first.LessonId, second.LessonId);
-        Assert.Single(_db.TrainingLessons);
+        Assert.Equal(first.Parts.Select(p => p.LessonId), second.Parts.Select(p => p.LessonId));
+        Assert.All(second.Parts, p => Assert.True(p.Replaced));
+        Assert.Equal(2, await _db.TrainingLessons.CountAsync());
         Assert.Equal(4, await _db.TrainingSegments.CountAsync());
         Assert.Equal(1, await _db.TrainingQuestions.CountAsync());
         Assert.Equal(2, await _db.TrainingNotes.CountAsync());
@@ -123,7 +137,7 @@ public sealed class TrainingVideoTests : IDisposable
         var b = await UserAsync("b");
         await _importer.ImportAsync(a.Id, _fixture, false, default);
         await _importer.ImportAsync(b.Id, _fixture, false, default);
-        Assert.Equal(2, await _db.TrainingLessons.CountAsync());
+        Assert.Equal(4, await _db.TrainingLessons.CountAsync());   // je Konto privat + allgemein
     }
 
     [Theory]
@@ -146,7 +160,7 @@ public sealed class TrainingVideoTests : IDisposable
         var json = _fixture.Replace("\"file\": \"2026-10-27.mp4\"", "\"file\": \"../etc/passwd\"");
         var report = await _importer.ImportAsync(u.Id, json, false, default);
         Assert.Contains(report.Warnings, w => w.Contains("Dateiname"));
-        Assert.Null((await _db.TrainingLessons.SingleAsync()).VideoFile);
+        Assert.All(await _db.TrainingLessons.ToListAsync(), l => Assert.Null(l.VideoFile));
     }
 
     [Fact]
@@ -167,10 +181,12 @@ public sealed class TrainingVideoTests : IDisposable
         var report = await _importer.ImportAsync(owner.Id, _fixture, false, default);
         var id = report.LessonId!.Value;
 
-        Assert.Single(await _service.ListAsync(owner.Id, false, default));
+        var own = await _service.ListAsync(owner.Id, false, default);
+        Assert.Equal(new[] { "private", "general" }, own.Select(l => l.Part));
         Assert.Empty(await _service.ListAsync(other.Id, false, default));
         var adminList = await _service.ListAsync(admin.Id, true, default);
-        Assert.Equal("patrik", Assert.Single(adminList).OwnerName);
+        Assert.Equal(2, adminList.Count);
+        Assert.All(adminList, l => Assert.Equal("patrik", l.OwnerName));
         await Assert.ThrowsAsync<NotFoundException>(() => _service.GetAsync(other.Id, false, id, default));
         Assert.Empty((await _service.SearchPositionAsync(other.Id, false,
             "r1bqkbnr/pp3ppp/2n1p3/2pp4/3PP3/5N2/PPPN1PPP/R1BQKB1R w KQkq - 2 5", default)).Hits);
@@ -184,11 +200,17 @@ public sealed class TrainingVideoTests : IDisposable
         var u = await UserAsync("patrik");
         var id = (await _importer.ImportAsync(u.Id, _fixture, false, default)).LessonId!.Value;
         var dto = await _service.GetAsync(u.Id, false, id, default);
-        Assert.Equal(new[] { 272, 370, 480, 3630 }, dto.Segments.Select(s => s.StartSec));
+        Assert.Equal("private", dto.Part);
+        Assert.Equal(new[] { 272, 370, 480 }, dto.Segments.Select(s => s.StartSec));
         Assert.True(dto.Segments[1].HasQuestion);
-        Assert.Equal("1. e4 e6 2. d4 d5 *", dto.Pgns["g2"]);
-        Assert.Contains("(2... c5", dto.AnalysisPgns["g2"]);
         Assert.False(dto.HasVideo);
+        var other = Assert.Single(dto.OtherParts!);
+        Assert.Equal("general", other.Part);
+        var general = await _service.GetAsync(u.Id, false, other.Id, default);
+        Assert.Equal(new[] { 3630 }, general.Segments.Select(s => s.StartSec));
+        Assert.Equal("1. e4 e6 2. d4 d5 *", general.Pgns["g2"]);
+        Assert.Contains("(2... c5", general.AnalysisPgns["g2"]);
+        Assert.Equal(id, Assert.Single(general.OtherParts!).Id);
     }
 
     [Fact]
@@ -349,7 +371,8 @@ public sealed class TrainingVideoTests : IDisposable
         var question = lesson.Segments.Single(s => s.StartSec == 370);
         Assert.Equal(question.Fen, question.TaskFen);    // Frage: Antwort Ld7 aus der eigenen Stellung
         Assert.Equal("Bd7", question.TaskMove);
-        Assert.Null(lesson.Segments.Single(s => s.StartSec == 3630).TaskFen);   // ohne Zug/Frage keine Aufgabe
+        var general = await _service.GetAsync(u.Id, false, lesson.OtherParts!.Single().Id, default);
+        Assert.Null(general.Segments.Single(s => s.StartSec == 3630).TaskFen);   // ohne Zug/Frage keine Aufgabe
 
         var set = await _service.QuestionSetAsync(u.Id, false, false, default);
         Assert.Equal(4711, Assert.Single(set).RookhubGameId);
@@ -387,6 +410,172 @@ public sealed class TrainingVideoTests : IDisposable
         await Assert.ThrowsAsync<NotFoundException>(() => _service.ResolveVideoAsync(u.Id, false, id, default));
         File.WriteAllText(Path.Combine(_videoRoot, "2026-10-27.mp4"), "x");
         Assert.EndsWith("2026-10-27.mp4", await _service.ResolveVideoAsync(u.Id, false, id, default));
+    }
+
+    // ---------------------------------------------------------------- Teilung privat / allgemein
+
+    [Fact]
+    public async Task Split_OnlyLessonGames_GivesOneGeneralEntryWithTheNotes()
+    {
+        var u = await UserAsync("patrik");
+        var json = _fixture.Replace("\"kind\": \"own\"", "\"kind\": \"exercise\"");
+        var report = await _importer.ImportAsync(u.Id, json, false, default);
+        var part = Assert.Single(report.Parts);
+        Assert.Equal("general", part.Part);
+        var lesson = await _db.TrainingLessons.Include(l => l.Notes).Include(l => l.Segments).SingleAsync();
+        Assert.Equal(TrainingLessonParts.General, lesson.Part);
+        Assert.Equal(4, lesson.Segments.Count);
+        Assert.Equal(2, lesson.Notes.Count);
+    }
+
+    [Fact]
+    public async Task Split_SegmentsWithoutGame_FollowTheirNeighbours_UnclearIsPrivate()
+    {
+        var all = new TrainingLesson
+        {
+            Games =
+            {
+                new TrainingLessonGame { Key = "o", Kind = "own" },
+                new TrainingLessonGame { Key = "l", Kind = "lesson" },
+            },
+        };
+        TrainingSegment Seg(int t, string? key) { var s = new TrainingSegment { StartSec = t, Position = t, GameKey = key }; all.Segments.Add(s); return s; }
+        var intro = Seg(0, null);            // vor allem: nur ein Nachbar (privat)
+        Seg(10, "o");
+        var between = Seg(20, null);         // zwischen privat und allgemein: unklar → privat
+        Seg(30, "l");
+        var inLesson = Seg(40, null);        // zwischen zwei allgemeinen → allgemein
+        Seg(50, "l");
+        var unknown = Seg(60, "gibtsnicht"); // unbekannte Partie = ohne Partie; nur Nachbar davor → allgemein
+        all.Notes.Add(new TrainingNote { Text = "Schwäche", GameKey = "l" });
+
+        var parts = TrainingVideoImporter.SplitParts(all);
+
+        var priv = parts.Single(p => p.Part == TrainingLessonParts.Private);
+        var gen = parts.Single(p => p.Part == TrainingLessonParts.General);
+        Assert.Contains(intro, priv.Segments);
+        Assert.Contains(between, priv.Segments);
+        Assert.Contains(inLesson, gen.Segments);
+        Assert.Contains(unknown, gen.Segments);
+        Assert.Single(priv.Notes);           // Notizen immer zum privaten Teil, auch mit Lehrpartie
+        Assert.Empty(gen.Notes);
+        Assert.Equal(new[] { "private", "general" }, parts.Select(p => p.Part));
+    }
+
+    [Fact]
+    public void Split_NoGamesAtAll_IsOnePrivateEntry()
+    {
+        var all = new TrainingLesson { Segments = { new TrainingSegment { StartSec = 5 } }, Notes = { new TrainingNote { Text = "x" } } };
+        var part = Assert.Single(TrainingVideoImporter.SplitParts(all));
+        Assert.Equal(TrainingLessonParts.Private, part.Part);
+        Assert.Single(part.Segments);
+        Assert.Single(part.Notes);
+    }
+
+    /// <summary>Altbestand (eine Zeile je Datum, Migration setzt „private“) mit Übungsstand an eigenen UND Lehrpartie-
+    /// Segmenten: der Re-Import teilt, die private Zeile behält ihre Id, der Stand der Lehrpartie zieht in den neuen
+    /// allgemeinen Eintrag um — nichts geht verloren, auch nicht der Stand eines fremden Kontos (Admin).</summary>
+    [Fact]
+    public async Task Split_LegacyCombinedLesson_MovesProgressToTheMatchingPart()
+    {
+        var u = await UserAsync("patrik");
+        var admin = await UserAsync("admin", admin: true);
+        var legacy = _fixture.Replace("\"kind\": \"lesson\"", "\"kind\": \"own\"");   // alles in EINEM Eintrag
+        var id = (await _importer.ImportAsync(u.Id, legacy, false, default)).LessonId!.Value;
+        Assert.Single(_db.TrainingLessons);
+        var q = await _db.TrainingSegments.SingleAsync(s => s.StartSec == 370);
+        var french = await _db.TrainingSegments.SingleAsync(s => s.StartSec == 3630);
+        await _service.SetProgressAsync(u.Id, false, id, q.Id, new("wrong", 2), default);
+        await _service.SetProgressAsync(u.Id, false, id, french.Id, new("solved", 0), default);
+        await _service.SetProgressAsync(u.Id, false, id, french.Id, new("solved", 1), default);
+        await _service.SetProgressAsync(admin.Id, true, id, french.Id, new("skipped", 0), default);
+        // Ein Stand ohne passendes Segment mehr (Datei geändert) bleibt am privaten Eintrag.
+        _db.TrainingSegmentProgress.Add(new TrainingSegmentProgress { UserId = u.Id, LessonId = id, SegmentKey = "9999|alt", Status = "wrong", Plays = 3, UpdatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var report = await _importer.ImportAsync(u.Id, _fixture, false, default);
+
+        Assert.Equal(2, report.ProgressMoved);
+        Assert.Equal(id, report.Parts.Single(p => p.Part == "private").LessonId);
+        var generalId = report.Parts.Single(p => p.Part == "general").LessonId!.Value;
+        Assert.NotEqual(id, generalId);
+        Assert.Equal(4, await _db.TrainingSegmentProgress.CountAsync());
+        Assert.Equal(7, await _db.TrainingSegmentProgress.SumAsync(p => p.Plays));   // 1 + 2 + 1 + 3
+        var priv = await _service.GetAsync(u.Id, false, id, default);
+        Assert.Equal("wrong", priv.Segments.Single(s => s.StartSec == 370).Progress!.Status);
+        var gen = await _service.GetAsync(u.Id, false, generalId, default);
+        var fr = gen.Segments.Single(s => s.StartSec == 3630).Progress!;
+        Assert.Equal(("solved", 1, 2), (fr.Status, fr.Attempts, fr.Plays));
+        Assert.Equal("skipped", (await _service.GetAsync(admin.Id, true, generalId, default)).Segments.Single().Progress!.Status);
+        Assert.True(await _db.TrainingSegmentProgress.AnyAsync(p => p.LessonId == id && p.SegmentKey == "9999|alt"));
+
+        // Nochmals einlesen: nichts zieht mehr um, Ids bleiben.
+        _db.ChangeTracker.Clear();
+        var again = await _importer.ImportAsync(u.Id, _fixture, false, default);
+        Assert.Equal(0, again.ProgressMoved);
+        Assert.Equal(report.Parts.Select(p => p.LessonId), again.Parts.Select(p => p.LessonId));
+        Assert.Equal(4, await _db.TrainingSegmentProgress.CountAsync());
+    }
+
+    /// <summary>Altbestand einer Stunde nur mit Lehrpartien, aber noch als „private“ markiert: die Zeile wird zum
+    /// allgemeinen Eintrag (gleiche Id, Stand bleibt) — kein zweiter Eintrag.</summary>
+    [Fact]
+    public async Task Split_LegacyRowOfTheOtherPart_IsReused()
+    {
+        var u = await UserAsync("patrik");
+        var json = _fixture.Replace("\"kind\": \"own\"", "\"kind\": \"lesson\"");
+        var id = (await _importer.ImportAsync(u.Id, json, false, default)).LessonId!.Value;
+        var row = await _db.TrainingLessons.SingleAsync();
+        row.Part = TrainingLessonParts.Private;
+        await _db.SaveChangesAsync();
+        var seg = await _db.TrainingSegments.SingleAsync(s => s.StartSec == 370);
+        await _service.SetProgressAsync(u.Id, false, id, seg.Id, new("wrong", 1), default);
+        _db.ChangeTracker.Clear();
+
+        var report = await _importer.ImportAsync(u.Id, json, false, default);
+
+        Assert.Equal(id, Assert.Single(report.Parts).LessonId);
+        var lesson = await _db.TrainingLessons.SingleAsync();
+        Assert.Equal(TrainingLessonParts.General, lesson.Part);
+        Assert.Equal("wrong", (await _service.GetAsync(u.Id, false, id, default)).Segments.Single(s => s.StartSec == 370).Progress!.Status);
+    }
+
+    /// <summary>Wird aus einer gemischten Stunde eine ohne Lehrpartie, verschwindet der allgemeine Eintrag — sein Stand
+    /// zieht vorher in den privaten (dort gibt es das Segment jetzt).</summary>
+    [Fact]
+    public async Task Split_PartDisappears_ProgressMovesBeforeTheRowIsDeleted()
+    {
+        var u = await UserAsync("patrik");
+        var report = await _importer.ImportAsync(u.Id, _fixture, false, default);
+        var generalId = report.Parts.Single(p => p.Part == "general").LessonId!.Value;
+        var seg = await _db.TrainingSegments.SingleAsync(s => s.StartSec == 3630);
+        await _service.SetProgressAsync(u.Id, false, generalId, seg.Id, new("solved", 0), default);
+        _db.ChangeTracker.Clear();
+
+        var onlyOwn = _fixture.Replace("\"kind\": \"lesson\"", "\"kind\": \"own\"");
+        var again = await _importer.ImportAsync(u.Id, onlyOwn, false, default);
+
+        var part = Assert.Single(again.Parts);
+        Assert.Equal(report.LessonId, part.LessonId);
+        Assert.Single(_db.TrainingLessons);
+        var p = await _db.TrainingSegmentProgress.SingleAsync();
+        Assert.Equal(report.LessonId, p.LessonId);
+        Assert.Equal("solved", (await _service.GetAsync(u.Id, false, part.LessonId!.Value, default))
+            .Segments.Single(s => s.StartSec == 3630).Progress!.Status);
+    }
+
+    [Fact]
+    public async Task Search_AndQuestionSet_CarryThePart()
+    {
+        var u = await UserAsync("patrik");
+        await _importer.ImportAsync(u.Id, _fixture, false, default);
+        var hits = (await _service.SearchTextAsync(u.Id, false, "Franzose", default)).Hits;
+        Assert.Equal("general", Assert.Single(hits).Part);
+        var note = (await _service.SearchTextAsync(u.Id, false, "Bedenkzeit", default)).Hits.Single();
+        Assert.Equal(("note", "private"), (note.Kind, note.Part));
+        Assert.Equal("Oberschmid, Patrik – Gegner, Max", note.GameLabel);
+        Assert.Equal("private", Assert.Single(await _service.QuestionSetAsync(u.Id, false, false, default)).Part);
     }
 
     [Theory]

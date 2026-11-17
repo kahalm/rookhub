@@ -6755,6 +6755,17 @@
         "psychologie": "심리",
         "allgemein": "일반"
       }
+    },
+    "part": {
+      "label": "레슨 구분",
+      "private": "개인 대국",
+      "general": "일반 대국",
+      "privateHint": "코치의 코멘트가 달린 나의 대국.",
+      "generalHint": "레슨의 모범 대국과 연습 문제.",
+      "privateEmpty": "아직 나의 대국이 있는 레슨이 없습니다.",
+      "generalEmpty": "아직 모범 대국이나 연습 문제가 있는 레슨이 없습니다.",
+      "toGeneral": "이 레슨의 일반 대국",
+      "toPrivate": "이 레슨의 개인 대국"
     }
   }
 }

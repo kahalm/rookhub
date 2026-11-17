@@ -7019,6 +7019,17 @@
         "psychologie": "Psychology",
         "allgemein": "General"
       }
+    },
+    "part": {
+      "label": "Part of the lesson",
+      "private": "Private games",
+      "general": "General games",
+      "privateHint": "Your own games with the coach's comments.",
+      "generalHint": "Model games and exercises from the lessons.",
+      "privateEmpty": "No lesson with your own games yet.",
+      "generalEmpty": "No lesson with model games or exercises yet.",
+      "toGeneral": "General games of this lesson",
+      "toPrivate": "Private games of this lesson"
     }
   }
 }

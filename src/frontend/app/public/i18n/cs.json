@@ -6755,6 +6755,17 @@
         "psychologie": "Psychologie",
         "allgemein": "Obecné"
       }
+    },
+    "part": {
+      "label": "Část lekce",
+      "private": "Soukromé partie",
+      "general": "Obecné partie",
+      "privateHint": "Tvé vlastní partie s komentáři trenéra.",
+      "generalHint": "Vzorové partie a cvičení z lekcí.",
+      "privateEmpty": "Zatím žádná lekce s tvými partiemi.",
+      "generalEmpty": "Zatím žádná lekce se vzorovými partiemi nebo cvičeními.",
+      "toGeneral": "Obecné partie této lekce",
+      "toPrivate": "Soukromé partie této lekce"
     }
   }
 }
