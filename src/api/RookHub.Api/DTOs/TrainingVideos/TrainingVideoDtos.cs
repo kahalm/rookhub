@@ -97,3 +97,9 @@ public record TrainingNotebookOpeningDto(int NoteId, string? Fen, int? SegmentId
 /// Abgleich); <c>RepertoireTruncated</c> = der Abgleich lief ins Zeitbudget.</summary>
 public record TrainingNotebookDto(List<TrainingNotebookNoteDto> Notes, List<TrainingNotebookThemeDto> Themes,
     List<TrainingNotebookOpeningDto> Openings, bool HasRepertoire, bool RepertoireTruncated);
+
+/// <summary>Ein aktiver Teilen-Link eines Eintrags (nur für den Besitzer). Geteilt wird <c>/tl/{Token}</c>.</summary>
+public record TrainingShareDto(int Id, string Token, DateTime CreatedAt, DateTime ExpiresAt);
+
+/// <summary>Neuer Teilen-Link: <c>Days</c> 1 | 7 | 30 (fehlt: 7).</summary>
+public record TrainingShareCreateDto(int? Days);

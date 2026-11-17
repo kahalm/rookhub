@@ -6766,6 +6766,25 @@
       "generalEmpty": "Aucune séance avec des parties modèles ou des exercices pour l'instant.",
       "toGeneral": "Parties générales de cette séance",
       "toPrivate": "Parties personnelles de cette séance"
+    },
+    "share": {
+      "title": "Partager",
+      "hint": "Toute personne disposant du lien voit cette entrée sans se connecter : vidéo, positions, commentaires, parties et rejeu. Les notes et ta progression restent privées.",
+      "validity": "Validité",
+      "days": "{{count}} jours",
+      "daysOne": "1 jour",
+      "create": "Créer un lien",
+      "loadFailed": "Impossible de charger les liens.",
+      "expires": "Valable jusqu’au {{date}}",
+      "revoke": "Révoquer",
+      "none": "Aucun lien actif pour l’instant.",
+      "copied": "Lien copié.",
+      "createFailed": "Impossible de créer le lien.",
+      "revokeFailed": "Impossible de révoquer le lien.",
+      "revokeConfirm": "Révoquer ce lien ? Les personnes qui l’ont ne verront plus la leçon.",
+      "expiredTitle": "Lien expiré",
+      "expiredText": "Ce lien a expiré ou a été révoqué. Demande-en un nouveau.",
+      "guestNote": "Séance d’entraînement partagée – lecture seule, rien n’est enregistré."
     }
   }
 }

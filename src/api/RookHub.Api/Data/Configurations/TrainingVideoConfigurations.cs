@@ -99,3 +99,14 @@ internal sealed class TrainingSegmentProgressConfiguration : IEntityTypeConfigur
         e.Property(p => p.Status).HasMaxLength(16);
     }
 }
+
+internal sealed class TrainingLessonShareConfiguration : IEntityTypeConfiguration<TrainingLessonShare>
+{
+    public void Configure(EntityTypeBuilder<TrainingLessonShare> e)
+    {
+        // Eintrag weg (Re-Import ohne diesen Teil, Konto gelöscht) → seine Links mit.
+        e.HasOne(s => s.Lesson).WithMany().HasForeignKey(s => s.LessonId).OnDelete(DeleteBehavior.Cascade);
+        e.Property(s => s.Token).HasMaxLength(64);
+        e.HasIndex(s => s.Token).IsUnique();
+    }
+}

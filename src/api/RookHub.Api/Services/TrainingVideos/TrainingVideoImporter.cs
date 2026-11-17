@@ -278,6 +278,8 @@ public class TrainingVideoImporter
             foreach (var gone in free)
             {
                 RemoveChildren(gone);
+                // Teilen-Links des wegfallenden Eintrags gehen mit (InMemory kaskadiert nicht); behaltene Zeilen behalten ihre.
+                _db.TrainingLessonShares.RemoveRange(await _db.TrainingLessonShares.Where(x => x.LessonId == gone.Id).ToListAsync(ct));
                 _db.TrainingLessons.Remove(gone);
             }
             await _db.SaveChangesAsync(ct);

@@ -6766,6 +6766,25 @@
       "generalEmpty": "Ancora nessuna lezione con partite modello o esercizi.",
       "toGeneral": "Partite generali di questa lezione",
       "toPrivate": "Partite private di questa lezione"
+    },
+    "share": {
+      "title": "Condividi",
+      "hint": "Chi ha il link vede questa voce senza accedere: video, posizioni, commenti, partite e ripasso. Le note e i tuoi progressi restano privati.",
+      "validity": "Validità",
+      "days": "{{count}} giorni",
+      "daysOne": "1 giorno",
+      "create": "Crea link",
+      "loadFailed": "Impossibile caricare i link.",
+      "expires": "Valido fino al {{date}}",
+      "revoke": "Revoca",
+      "none": "Ancora nessun link attivo.",
+      "copied": "Link copiato.",
+      "createFailed": "Impossibile creare il link.",
+      "revokeFailed": "Impossibile revocare il link.",
+      "revokeConfirm": "Revocare questo link? Chi lo ha non vedrà più la lezione.",
+      "expiredTitle": "Link scaduto",
+      "expiredText": "Questo link è scaduto o è stato revocato. Chiedine uno nuovo.",
+      "guestNote": "Lezione di allenamento condivisa – solo visualizzazione, nulla viene salvato."
     }
   }
 }

@@ -17,7 +17,7 @@ internal static class TrainingDataEraser
         db.Worksheets.RemoveRange(await db.Worksheets.Where(w => w.UserId == userId).ToListAsync());
     }
 
-    /// <summary>Trainerstunden (Trainingsvideos): Stunden samt Partien, Segmenten, Fragen, Notizen und der Übungsstand —
+    /// <summary>Trainerstunden (Trainingsvideos): Stunden samt Partien, Segmenten, Fragen, Notizen, Teilen-Links und der Übungsstand —
     /// Trainerkommentare und Rohtranskripte sind Gesprächsinhalt über den Nutzer. Kinder explizit (InMemory kaskadiert
     /// nicht); die Video-Dateien liegen außerhalb der DB im nur lesend eingehängten Ordner und bleiben dort.</summary>
     internal static async Task TrainingLessonsAsync(UserErasureContext ctx)
@@ -32,6 +32,7 @@ internal static class TrainingDataEraser
         db.TrainingSegments.RemoveRange(await db.TrainingSegments.Where(s => lessonIds.Contains(s.LessonId)).ToListAsync());
         db.TrainingLessonGames.RemoveRange(await db.TrainingLessonGames.Where(g => lessonIds.Contains(g.LessonId)).ToListAsync());
         db.TrainingNotes.RemoveRange(await db.TrainingNotes.Where(n => lessonIds.Contains(n.LessonId)).ToListAsync());
+        db.TrainingLessonShares.RemoveRange(await db.TrainingLessonShares.Where(x => lessonIds.Contains(x.LessonId)).ToListAsync());
         db.TrainingLessons.RemoveRange(await db.TrainingLessons.Where(l => l.UserId == userId).ToListAsync());
     }
 

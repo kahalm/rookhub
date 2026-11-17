@@ -72,6 +72,35 @@ public class TrainingVideoService
             games.Where(g => g.AnalysisPgn != null).ToDictionary(g => g.Key, g => g.AnalysisPgn!), l.Part, others);
     }
 
+    /// <summary>
+    /// Der Eintrag für einen Gast über einen Teilen-Link (<see cref="TrainingLessonShares"/>; die Id kommt NUR aus der
+    /// Link-Zeile, nie aus der Adresse). Dieselbe Stundenseite wie für den Besitzer, aber ohne: Konto-/Besitzername, Verweise
+    /// auf andere Teile, Übungsstand, Verweise auf RookHub-Partien des Besitzers (Id + Zuordnungsgüte). Notizen (Notizbuch)
+    /// sind ohnehin nicht Teil der Stundenseite. Die Aufgaben im Nachspielen dürfen weiter aus der RookHub-Partie gelesen
+    /// werden — heraus geht nur die Stellung, keine Kopfdaten. <c>null</c> = Eintrag gibt es nicht mehr.
+    /// </summary>
+    public async Task<TrainingLessonDto?> GetForGuestAsync(int lessonId, CancellationToken ct)
+    {
+        var l = await _db.TrainingLessons.AsNoTracking()
+            .Include(x => x.Games).Include(x => x.Segments).ThenInclude(s => s.Question)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(x => x.Id == lessonId, ct);
+        if (l == null) return null;
+        var games = l.Games.OrderBy(g => g.Position).ToList();
+        var positions = await GamePositionsAsync(new List<int> { l.Id }, ct);
+        var noProgress = new Dictionary<(int, string), TrainingSegmentProgress>();
+        return new TrainingLessonDto(l.Id, Iso(l.Date), l.Summary, l.DurationSec, HasVideo(l.VideoFile), null,
+            games.Select(g => ToDto(g) with { RookhubGameId = null, MatchConfidence = null }).ToList(),
+            l.Segments.OrderBy(s => s.Position).Select(s => ToDto(s, noProgress, positions)).ToList(),
+            games.Where(g => g.Pgn != null).ToDictionary(g => g.Key, g => g.Pgn!),
+            games.Where(g => g.AnalysisPgn != null).ToDictionary(g => g.Key, g => g.AnalysisPgn!), l.Part,
+            new List<TrainingLessonPartRefDto>());
+    }
+
+    /// <summary>Pfad der Video-Datei eines Eintrags für den Gast-Weg (Besitz prüft dort der Link); <c>null</c> = keins.</summary>
+    public async Task<string?> ResolveVideoForGuestAsync(int lessonId, CancellationToken ct) =>
+        VideoPath(await _db.TrainingLessons.Where(l => l.Id == lessonId).Select(l => l.VideoFile).FirstOrDefaultAsync(ct));
+
     /// <summary>„Im Training besprochen?“ — alle Segmente mit demselben Figurenfeld (Zugrecht als Zusatzangabe).</summary>
     public async Task<TrainingSearchResultDto> SearchPositionAsync(int userId, bool isAdmin, string? fen, CancellationToken ct)
     {
@@ -434,8 +463,10 @@ public class TrainingVideoService
     private string? VideoPath(string? file)
     {
         if (string.IsNullOrWhiteSpace(file) || string.IsNullOrWhiteSpace(_options.VideoRoot)) return null;
-        if (Path.GetFileName(file) != file) return null;
-        var root = Path.GetFullPath(_options.VideoRoot);
+        // Nur ein reiner Dateiname aus der DB (nie aus der Anfrage): kein Ordner, kein „..“, und der volle Pfad muss
+        // INNERHALB des Video-Ordners liegen (mit Trenner verglichen — „/videos-alt“ beginnt auch mit „/videos“).
+        if (Path.GetFileName(file) != file || file is "." or "..") return null;
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(_options.VideoRoot)) + Path.DirectorySeparatorChar;
         var path = Path.GetFullPath(Path.Combine(root, file));
         if (!path.StartsWith(root, StringComparison.Ordinal)) return null;
         return File.Exists(path) ? path : null;

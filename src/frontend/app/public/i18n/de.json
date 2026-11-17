@@ -7030,6 +7030,25 @@
       "generalEmpty": "Noch keine Stunde mit Lehrbeispielen oder Übungen.",
       "toGeneral": "Allgemeine Partien dieser Stunde",
       "toPrivate": "Private Partien dieser Stunde"
+    },
+    "share": {
+      "title": "Teilen",
+      "hint": "Wer den Link hat, sieht diesen Eintrag ohne Anmeldung: Video, Stellungen, Kommentare, Partien und Nachspielen. Notizen und dein Übungsstand bleiben privat.",
+      "validity": "Gültigkeit",
+      "days": "{{count}} Tage",
+      "daysOne": "1 Tag",
+      "create": "Link erstellen",
+      "loadFailed": "Die Links konnten nicht geladen werden.",
+      "expires": "Gültig bis {{date}}",
+      "revoke": "Widerrufen",
+      "none": "Noch kein aktiver Link.",
+      "copied": "Link kopiert.",
+      "createFailed": "Der Link konnte nicht erstellt werden.",
+      "revokeFailed": "Der Link konnte nicht widerrufen werden.",
+      "revokeConfirm": "Diesen Link widerrufen? Wer ihn hat, sieht die Stunde danach nicht mehr.",
+      "expiredTitle": "Link abgelaufen",
+      "expiredText": "Dieser Link ist abgelaufen oder wurde widerrufen. Bitte frag nach einem neuen.",
+      "guestNote": "Geteilte Trainerstunde – nur zum Ansehen, nichts wird gespeichert."
     }
   }
 }

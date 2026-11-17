@@ -6766,6 +6766,25 @@
       "generalEmpty": "Nie ma jeszcze lekcji z partiami wzorcowymi ani ćwiczeniami.",
       "toGeneral": "Partie ogólne tej lekcji",
       "toPrivate": "Partie prywatne tej lekcji"
+    },
+    "share": {
+      "title": "Udostępnij",
+      "hint": "Każdy, kto ma link, zobaczy ten wpis bez logowania: wideo, pozycje, komentarze, partie i powtórkę. Notatki i twoje postępy pozostają prywatne.",
+      "validity": "Ważność",
+      "days": "{{count}} dni",
+      "daysOne": "1 dzień",
+      "create": "Utwórz link",
+      "loadFailed": "Nie udało się wczytać linków.",
+      "expires": "Ważny do {{date}}",
+      "revoke": "Unieważnij",
+      "none": "Brak aktywnego linku.",
+      "copied": "Link skopiowany.",
+      "createFailed": "Nie udało się utworzyć linku.",
+      "revokeFailed": "Nie udało się unieważnić linku.",
+      "revokeConfirm": "Unieważnić ten link? Osoby, które go mają, nie zobaczą już lekcji.",
+      "expiredTitle": "Link wygasł",
+      "expiredText": "Ten link wygasł lub został unieważniony. Poproś o nowy.",
+      "guestNote": "Udostępniona lekcja treningowa – tylko do oglądania, nic nie jest zapisywane."
     }
   }
 }

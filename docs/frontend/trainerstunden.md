@@ -22,6 +22,15 @@ den Teil. Die Stundenseite zeigt „Datum · Teil“ und einen Knopf „Allgemei
 neu (`paramMap`). Der Zurück-Pfeil führt in die Gruppe des Eintrags. Notizen stehen im privaten Teil — der Partie-Link
 im Notizbuch geht über `gameLessonId` zum Eintrag der Partie.
 
+**Teilen-Link** (Wunsch 2026-11-17, `docs/api/trainingsvideos.md` → „Teilen-Links“): `/tl/:token` und
+`/tl/:token/drill` (ohne Guard, `data.mode = 'share'`) öffnen `TrainingLessonComponent` bzw. `TrainingDrillComponent`
+über `getShared(token)`; das Video läuft über `sharedVideoUrl(token)` (kein `access-token`). Gast-Ansicht: kein
+Zurück-Pfeil zur Liste, kein Knopf zum anderen Teil, kein „Partie öffnen“, kein Teilen-Feld, Hinweis „nur zum Ansehen“;
+„Nachspielen“ bleibt unter `/tl/:token/drill` und speichert NICHTS (auch „Erklärung hören“ über das Token). 404 und 410
+zeigen dieselbe Seite „Link abgelaufen“ ohne Weg zur Liste. Der Besitzer sieht unter der Stunde
+`TrainingSharePanelComponent`: Frist 1/7/30 Tage (Vorgabe 7, `mat-button-toggle-group`), „Link erstellen“ (kopiert gleich),
+aktive Links mit Ablauf, „Kopieren“ und „Widerrufen“ (Rückfrage). Admins bei fremden Stunden (`ownerName`) sehen es nicht.
+
 ## Bausteine (`features/training-videos/`)
 
 - `training-videos.service.ts` — alle Aufrufe unter `/api/training-videos`, Typen der Antworten, `accessToken()` für

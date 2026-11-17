@@ -6766,6 +6766,25 @@
       "generalEmpty": "Aún no hay ninguna clase con partidas modelo o ejercicios.",
       "toGeneral": "Partidas generales de esta clase",
       "toPrivate": "Partidas privadas de esta clase"
+    },
+    "share": {
+      "title": "Compartir",
+      "hint": "Quien tenga el enlace ve esta entrada sin iniciar sesión: vídeo, posiciones, comentarios, partidas y repaso. Las notas y tu progreso siguen siendo privados.",
+      "validity": "Validez",
+      "days": "{{count}} días",
+      "daysOne": "1 día",
+      "create": "Crear enlace",
+      "loadFailed": "No se pudieron cargar los enlaces.",
+      "expires": "Válido hasta {{date}}",
+      "revoke": "Revocar",
+      "none": "Aún no hay ningún enlace activo.",
+      "copied": "Enlace copiado.",
+      "createFailed": "No se pudo crear el enlace.",
+      "revokeFailed": "No se pudo revocar el enlace.",
+      "revokeConfirm": "¿Revocar este enlace? Quien lo tenga ya no verá la clase.",
+      "expiredTitle": "Enlace caducado",
+      "expiredText": "Este enlace ha caducado o ha sido revocado. Pide uno nuevo.",
+      "guestNote": "Clase de entrenamiento compartida: solo lectura, no se guarda nada."
     }
   }
 }

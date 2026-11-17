@@ -114,6 +114,36 @@ Zeigt die FEN der Aufbereitung schon die Stellung danach, rechnet der Server üb
 sonst PGN der Stunde) zurück; eine Frage wird zuerst aus ihrer eigenen Stellung gelesen. Ist der Zug nirgends legal: beide
 `null` (nur ansehen).
 
+## Teilen-Links (Wunsch 2026-11-17, `TrainingLessonShares`)
+
+Ein EINZELNER Eintrag (ein Teil einer Stunde) lässt sich per Link mit Token zeitlich begrenzt teilen. Tabelle
+`TrainingLessonShares` (LessonId FK Cascade, Token ≤64 UNIQUE, CreatedAt, ExpiresAt, RevokedAt). Token = 256 Bit
+Base64URL (43 Zeichen, `SecretTokens.NewRaw`), **im Klartext** gespeichert wie beim Vorbild `SavedGame.AnonShareToken`
+(`AnonGameShares`) — der Besitzer soll einen bestehenden Link wieder kopieren können. Mehrere Links je Eintrag, höchstens
+20 gleichzeitig aktive. Geteilt wird `/tl/{token}`.
+
+| Methode | Endpoint | Zweck |
+|---|---|---|
+| GET | `/api/training-videos/{id}/shares` | aktive Links des EIGENEN Eintrags (`id`, `token`, `createdAt`, `expiresAt`), neueste zuerst |
+| POST | `/api/training-videos/{id}/shares` | `{ days: 1\|7\|30 }` (fehlt: 7) → neuer Link; 400 andere Frist / zu viele aktive |
+| DELETE | `/api/training-videos/{id}/shares/{shareId}` | widerrufen (204) |
+| GET | `/api/training-videos/shared/{token}` | **ohne Anmeldung**: der Eintrag für den Gast |
+| GET | `/api/training-videos/shared/{token}/video` | **ohne Anmeldung**: mp4 mit Bereichsanfragen, Rate-Limit `ebook-file` |
+
+- Anlegen/Listen/Widerrufen nur durch das Konto des Eintrags — auch ein Admin teilt keine fremden Stunden (404).
+- Gast-Antworten: unbekanntes Token 404, abgelaufen oder widerrufen **410** (`{ message, code: share_expired }`), sonst nichts
+  Näheres. Jede Gast-Anfrage — auch jede Bereichsanfrage des Videos — schlägt das Token neu nach (Widerruf wirkt sofort);
+  die Id des Eintrags kommt nur aus der Link-Zeile, eine Id in der Adresse gibt es auf dem Gast-Weg nicht. Ein Token, das
+  nicht wie eines aussieht (Base64URL, 20–64 Zeichen), wird gar nicht nachgeschlagen. Die Stunde: globaler Rate-Limiter je IP.
+- **Was der Gast sieht** (`TrainingVideoService.GetForGuestAsync`): Datum, Teil, Zusammenfassung, Video, Segmente mit
+  Kommentar/Zitat/Varianten/Frage, Partien der Stunde mit `pgns`/`analysisPgns`, Aufgaben fürs Nachspielen.
+  **Nicht**: Notizen (Notizbuch), Übungsstand (`progress` immer null), andere Teile (`otherParts` leer), RookHub-Partien
+  des Besitzers (`rookhubGameId`/`matchConfidence` null), Konto- oder Besitzername. Spielernamen in den Partien der
+  Stunde bleiben (sie sind der Inhalt).
+- Video: der Dateiname kommt nur aus der DB-Zeile; `VideoPath` lässt nur einen reinen Dateinamen zu und vergleicht mit
+  Trenner gegen den Video-Ordner. `Cache-Control: private, max-age=300`, `X-Robots-Tag: noindex`.
+- Re-Import: behaltene Einträge behalten ihre Links; ein wegfallender Eintrag nimmt sie mit, die Kontolöschung ebenso.
+
 ## Trainer-Notizbuch (0.987.0, `TrainingNotebookService`)
 
 `GET notebook` → `{ notes[], themes[], openings[], hasRepertoire, repertoireTruncated }`, sichtbar wie alles hier (eigene

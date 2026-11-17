@@ -8945,6 +8945,41 @@ namespace RookHub.Api.Migrations
                     b.ToTable("TrainingLessonGames");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.TrainingLessonShare", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("LessonId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("TrainingLessonShares");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.TrainingNote", b =>
                 {
                     b.Property<int>("Id")
@@ -11829,6 +11864,17 @@ namespace RookHub.Api.Migrations
                 {
                     b.HasOne("RookHub.Api.Models.TrainingLesson", "Lesson")
                         .WithMany("Games")
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lesson");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.TrainingLessonShare", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.TrainingLesson", "Lesson")
+                        .WithMany()
                         .HasForeignKey("LessonId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

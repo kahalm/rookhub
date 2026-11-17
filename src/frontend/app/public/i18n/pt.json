@@ -6766,6 +6766,25 @@
       "generalEmpty": "Ainda não há nenhuma aula com partidas modelo ou exercícios.",
       "toGeneral": "Partidas gerais desta aula",
       "toPrivate": "Partidas privadas desta aula"
+    },
+    "share": {
+      "title": "Partilhar",
+      "hint": "Quem tiver o link vê esta entrada sem iniciar sessão: vídeo, posições, comentários, partidas e repetição. As notas e o teu progresso continuam privados.",
+      "validity": "Validade",
+      "days": "{{count}} dias",
+      "daysOne": "1 dia",
+      "create": "Criar link",
+      "loadFailed": "Não foi possível carregar os links.",
+      "expires": "Válido até {{date}}",
+      "revoke": "Revogar",
+      "none": "Ainda não há nenhum link ativo.",
+      "copied": "Link copiado.",
+      "createFailed": "Não foi possível criar o link.",
+      "revokeFailed": "Não foi possível revogar o link.",
+      "revokeConfirm": "Revogar este link? Quem o tiver deixa de ver a aula.",
+      "expiredTitle": "Link expirado",
+      "expiredText": "Este link expirou ou foi revogado. Pede um novo.",
+      "guestNote": "Aula de treino partilhada – apenas visualização, nada é guardado."
     }
   }
 }

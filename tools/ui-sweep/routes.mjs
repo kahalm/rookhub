@@ -216,6 +216,9 @@ export const ROUTES = [
   r('rookhub', '/training-videos/questions', 'user', { roles: ['admin'], main: ['app-chess-board', '.page .empty-state', '.page app-load-error'] }),
   r('rookhub', '/training-videos/{trainingLessonId}', 'user', { roles: ['admin'], main: ['.segments', '.page app-load-error'] }),
   r('rookhub', '/training-videos/{trainingLessonId}/drill', 'user', { roles: ['admin'], main: ['app-chess-board', '.page .empty-state', '.page app-load-error'] }),
+  // Teilen-Link eines Eintrags (/tl/{token}, ohne Anmeldung, zeitlich begrenzt): die Ungültig-Zeile prüft „Link abgelaufen“.
+  r('rookhub', '/tl/ungueltig', 'any', { label: 'tl-invalid', main: ['.tv-share-expired'], expectedFailures: [
+    /^GET \/api\/training-videos\/shared\/ungueltig → 404$/, /^GET \/api\/training-videos\/shared\/ungueltig — net::ERR_ABORTED$/] }),
   r('rookhub', '/woodpecker/{woodpeckerPlanId}/solve', 'user', { main: ['.solver app-puzzle-board', '.page mat-card.done', '.page app-load-error'], expectedFailures: [/^GET \/api\/woodpecker\/\d+\/next → 404$/] }),
   r('rookhub', '/catalog', 'user', { main: ['.catalog .item-list .item-row', '.catalog mat-card:not(.admin-card) .empty-state', '.catalog mat-card:not(.admin-card) app-load-error', '.catalog mat-card:not(.admin-card) p.empty'] }),
   r('rookhub', '/courses/{bookId}', 'user', { main: ['.detail-page .head-card .actions button', '.detail-page .head-card', '.detail-page .center', '.detail-page > mat-card'] }),
@@ -359,7 +362,7 @@ export const ROUTES = [
 // ohne Treffer gehört zu „sonstiges". Neue Seite → passt sie nicht in einen Bereich, hier eine Regel ergänzen.
 export const AREAS = [
   ['woodpecker', r => r.app === 'rookhub' && /^\/woodpecker/.test(r.url)],
-  ['trainerstunden', r => r.app === 'rookhub' && /^\/training-videos/.test(r.url)],
+  ['trainerstunden', r => r.app === 'rookhub' && /^\/(training-videos|tl\/)/.test(r.url)],
   ['kurse', r => r.app === 'rookhub' && (/^\/(courses|catalog|puzzles\/book|chessable)/.test(r.url) || /slug/.test(r.label ?? ''))],
   ['repertoire', r => r.app === 'rookhub' && /^\/(repertoires|remembered|l\/)/.test(r.url)],
   ['puzzles', r => r.app === 'rookhub' && /^\/(puzzles|favorites|stats|leaderboards|visitors)/.test(r.url)],

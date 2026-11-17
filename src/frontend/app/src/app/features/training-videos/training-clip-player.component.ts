@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, effect, inject, input, signal, untracked, viewChild,
 } from '@angular/core';
+import { of } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -58,6 +59,8 @@ export class TrainingClipPlayerComponent {
   /** Gleich nach dem Anzeigen abspielen (Notizbuch: „▶ anhören“ hat den Player eben erst aufgeklappt — der Klick gilt
    *  als Nutzergeste, sonst blockt der Browser das Abspielen). */
   readonly autoplay = input(false);
+  /** Über einen Teilen-Link: das Token ist der Ausweis (kein `access-token` — der Gast hat kein Konto). */
+  readonly shareToken = input<string | null>(null);
 
   readonly audioOnly = signal(this.eink.enabled());
   readonly playing = signal(false);
@@ -99,12 +102,14 @@ export class TrainingClipPlayerComponent {
     this.failed.set(false);
     const id = this.lessonId();
     if (this.srcLesson === id && this.src()) { this.startPlayback(); return; }
-    this.svc.accessToken().subscribe({
+    const share = this.shareToken();
+    const source = share !== null ? of(share) : this.svc.accessToken();
+    source.subscribe({
       next: token => {
         this.srcLesson = id;
         this.waitingForMeta = true;
         this.playing.set(true);
-        const url = this.svc.videoUrl(id, token);
+        const url = share !== null ? this.svc.sharedVideoUrl(share) : this.svc.videoUrl(id, token);
         this.src.set(url);
         const el = this.video()?.nativeElement;
         if (el) { el.src = url; el.load(); }
@@ -133,7 +138,7 @@ export class TrainingClipPlayerComponent {
     if (!this.src()) return;
     this.playing.set(false);
     this.failed.set(true);
-    this.svc.forgetToken();
+    if (this.shareToken() === null) this.svc.forgetToken();
     this.srcLesson = null;
   }
 

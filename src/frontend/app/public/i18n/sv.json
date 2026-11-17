@@ -6766,6 +6766,25 @@
       "generalEmpty": "Ingen lektion med mönsterpartier eller övningar ännu.",
       "toGeneral": "Allmänna partier i denna lektion",
       "toPrivate": "Privata partier i denna lektion"
+    },
+    "share": {
+      "title": "Dela",
+      "hint": "Den som har länken ser den här posten utan att logga in: video, ställningar, kommentarer, partier och repetition. Anteckningar och din övningsstatus förblir privata.",
+      "validity": "Giltighet",
+      "days": "{{count}} dagar",
+      "daysOne": "1 dag",
+      "create": "Skapa länk",
+      "loadFailed": "Länkarna kunde inte läsas in.",
+      "expires": "Giltig till {{date}}",
+      "revoke": "Återkalla",
+      "none": "Ingen aktiv länk ännu.",
+      "copied": "Länken kopierad.",
+      "createFailed": "Länken kunde inte skapas.",
+      "revokeFailed": "Länken kunde inte återkallas.",
+      "revokeConfirm": "Återkalla den här länken? Den som har den ser inte lektionen längre.",
+      "expiredTitle": "Länken har gått ut",
+      "expiredText": "Den här länken har gått ut eller återkallats. Be om en ny.",
+      "guestNote": "Delad träningslektion – endast visning, inget sparas."
     }
   }
 }

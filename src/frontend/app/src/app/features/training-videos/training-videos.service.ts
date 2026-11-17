@@ -111,6 +111,18 @@ export interface TrainingLesson {
   otherParts?: { id: number; part: TrainingPart | string }[] | null;
 }
 
+/** Ein aktiver Teilen-Link eines Eintrags (nur der Besitzer sieht ihn). Geteilt wird `/tl/{token}`. */
+export interface TrainingShare {
+  id: number;
+  token: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+/** Wählbare Fristen eines Teilen-Links in Tagen (Server: `TrainingLessonShares.AllowedDays`), Vorgabe 7. */
+export const TRAINING_SHARE_DAYS = [1, 7, 30] as const;
+export const TRAINING_SHARE_DEFAULT_DAYS = 7;
+
 export interface TrainingSearchHit {
   kind: 'segment' | 'note' | string;
   lessonId: number;
@@ -297,6 +309,35 @@ export class TrainingVideosService {
 
   videoUrl(lessonId: number, token: string): string {
     return `${this.base}/${lessonId}/video?t=${encodeURIComponent(token)}`;
+  }
+
+  // ------------------------------------------------------------ Teilen-Links
+
+  shares(lessonId: number): Observable<TrainingShare[]> {
+    return this.http.get<TrainingShare[]>(`${this.base}/${lessonId}/shares`);
+  }
+
+  createShare(lessonId: number, days: number): Observable<TrainingShare> {
+    return this.http.post<TrainingShare>(`${this.base}/${lessonId}/shares`, { days });
+  }
+
+  revokeShare(lessonId: number, shareId: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${lessonId}/shares/${shareId}`);
+  }
+
+  /** Der Eintrag hinter einem Teilen-Link (ohne Anmeldung): 404 unbekannt, 410 abgelaufen/widerrufen. */
+  getShared(token: string): Observable<TrainingLesson> {
+    return this.http.get<TrainingLesson>(`${this.base}/shared/${encodeURIComponent(token)}`);
+  }
+
+  /** Video über den Teilen-Link — das Token IST der Ausweis, der Server prüft es bei jeder Bereichsanfrage. */
+  sharedVideoUrl(token: string): string {
+    return `${this.base}/shared/${encodeURIComponent(token)}/video`;
+  }
+
+  /** Die Adresse zum Weitergeben. */
+  shareUrl(token: string): string {
+    return `${window.location.origin}/tl/${token}`;
   }
 }
 

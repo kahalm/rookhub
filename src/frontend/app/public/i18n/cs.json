@@ -6766,6 +6766,25 @@
       "generalEmpty": "Zatím žádná lekce se vzorovými partiemi nebo cvičeními.",
       "toGeneral": "Obecné partie této lekce",
       "toPrivate": "Soukromé partie této lekce"
+    },
+    "share": {
+      "title": "Sdílet",
+      "hint": "Kdo má odkaz, uvidí tento záznam bez přihlášení: video, pozice, komentáře, partie a přehrávání. Poznámky a tvůj pokrok zůstávají soukromé.",
+      "validity": "Platnost",
+      "days": "{{count}} dní",
+      "daysOne": "1 den",
+      "create": "Vytvořit odkaz",
+      "loadFailed": "Odkazy se nepodařilo načíst.",
+      "expires": "Platí do {{date}}",
+      "revoke": "Zrušit",
+      "none": "Zatím žádný aktivní odkaz.",
+      "copied": "Odkaz zkopírován.",
+      "createFailed": "Odkaz se nepodařilo vytvořit.",
+      "revokeFailed": "Odkaz se nepodařilo zrušit.",
+      "revokeConfirm": "Zrušit tento odkaz? Kdo ho má, lekci už neuvidí.",
+      "expiredTitle": "Odkaz vypršel",
+      "expiredText": "Tento odkaz vypršel nebo byl zrušen. Požádej o nový.",
+      "guestNote": "Sdílená trenérská lekce – jen k prohlížení, nic se neukládá."
     }
   }
 }

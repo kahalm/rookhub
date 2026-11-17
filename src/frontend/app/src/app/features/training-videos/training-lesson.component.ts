@@ -17,6 +17,7 @@ import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.compone
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { whiteToMove } from '../../shared/chess/fen-side';
 import { activeSegmentAt, isValidFen } from './training-drill.util';
+import { TrainingSharePanelComponent } from './training-share-panel.component';
 import {
   TrainingGame, TrainingLesson, TrainingSegment, TrainingVideosService, trainingGameLabel, trainingPartKey,
 } from './training-videos.service';
@@ -38,33 +39,44 @@ const KNOWN_TAGS = new Set(['question', 'key', 'mistake', 'plan', 'opening', 'en
   selector: 'app-training-lesson',
   standalone: true,
   imports: [DatePipe, RouterLink, MatButtonModule, MatIconModule, TranslatePipe, ClampMoreDirective, IconLabelDirective,
-    LoadErrorComponent, LoadingSpinnerComponent, ChessBoardComponent, SanPipe],
+    LoadErrorComponent, LoadingSpinnerComponent, ChessBoardComponent, SanPipe, TrainingSharePanelComponent],
   template: `
     <div class="page">
       @if (loading()) {
         <app-loading-spinner />
       } @else if (notFound()) {
-        <div class="empty-state">
-          <p>{{ 'trainingVideos.lesson.notFound' | translate }}</p>
-          <a mat-stroked-button routerLink="/training-videos">{{ 'trainingVideos.toList' | translate }}</a>
-        </div>
+        @if (shareToken) {
+          <!-- Abgelaufen, widerrufen oder unbekannt: für den Gast dieselbe Seite, ohne Einzelheiten. -->
+          <div class="empty-state tv-share-expired">
+            <mat-icon aria-hidden="true">link_off</mat-icon>
+            <h1>{{ 'trainingVideos.share.expiredTitle' | translate }}</h1>
+            <p>{{ 'trainingVideos.share.expiredText' | translate }}</p>
+          </div>
+        } @else {
+          <div class="empty-state">
+            <p>{{ 'trainingVideos.lesson.notFound' | translate }}</p>
+            <a mat-stroked-button routerLink="/training-videos">{{ 'trainingVideos.toList' | translate }}</a>
+          </div>
+        }
       } @else if (loadFailed()) {
         <app-load-error (retry)="load()" />
       } @else if (lesson(); as l) {
         <div class="header">
           <div class="title">
-            <a mat-icon-button routerLink="/training-videos" [queryParams]="{ part: l.part ?? 'private' }"
-               [appIconLabel]="'common.back' | translate"><mat-icon>arrow_back</mat-icon></a>
+            @if (!shareToken) {
+              <a mat-icon-button routerLink="/training-videos" [queryParams]="{ part: l.part ?? 'private' }"
+                 [appIconLabel]="'common.back' | translate"><mat-icon>arrow_back</mat-icon></a>
+            }
             <h1>{{ 'trainingVideos.lesson.title' | translate: { date: (l.date | date: 'mediumDate') } }}
               <span class="part-label">· {{ partKey(l.part) | translate }}</span></h1>
           </div>
           <div class="header-actions">
-            @for (o of l.otherParts ?? []; track o.id) {
+            @for (o of shareToken ? [] : (l.otherParts ?? []); track o.id) {
               <button mat-stroked-button type="button" class="tv-other-part" (click)="goToPart(o.id)">
                 <mat-icon>swap_horiz</mat-icon>{{ (o.part === 'general' ? 'trainingVideos.part.toGeneral' : 'trainingVideos.part.toPrivate') | translate }}
               </button>
             }
-            <a mat-flat-button color="primary" class="tv-drill" [routerLink]="['/training-videos', l.id, 'drill']"
+            <a mat-flat-button color="primary" class="tv-drill" [routerLink]="drillLink(l)"
                [queryParams]="current() ? { seg: current()!.id } : {}">
               <mat-icon>replay</mat-icon>{{ 'trainingVideos.replay' | translate }}
             </a>
@@ -75,6 +87,7 @@ const KNOWN_TAGS = new Set(['question', 'key', 'mistake', 'plan', 'opening', 'en
           <span>{{ (segments().length === 1 ? 'trainingVideos.positionsOne' : 'trainingVideos.positions') | translate: { count: segments().length } }}</span>
           @if (l.ownerName) { <span>{{ 'trainingVideos.owner' | translate: { name: l.ownerName } }}</span> }
         </div>
+        @if (shareToken) { <p class="guest-note">{{ 'trainingVideos.share.guestNote' | translate }}</p> }
         @if (l.summary) {
           <p class="summary" id="tv-lesson-sum" [appClampMore]="l.summary" [clampLines]="3" [clampExpanded]="summaryOpen()">
             <span class="clamp-text"></span>
@@ -158,7 +171,7 @@ const KNOWN_TAGS = new Set(['question', 'key', 'mistake', 'plan', 'opening', 'en
                     @if (l.hasVideo && g.fromSec != null) {
                       <button mat-button type="button" class="tv-game-seek" (click)="seek(g.fromSec, true)">▶ {{ clock(g.fromSec) }}</button>
                     }
-                    @if (g.rookhubGameId) {
+                    @if (g.rookhubGameId && !shareToken) {
                       <a mat-button class="tv-game-open" [routerLink]="['/games', g.rookhubGameId]"><mat-icon>sports_esports</mat-icon>{{ 'trainingVideos.lesson.openGame' | translate }}</a>
                     }
                     @if (l.analysisPgns[g.key] || l.pgns[g.key]) {
@@ -171,6 +184,9 @@ const KNOWN_TAGS = new Set(['question', 'key', 'mistake', 'plan', 'opening', 'en
               }
             </ul>
           </section>
+        }
+        @if (!shareToken && !l.ownerName) {
+          <app-training-share-panel [lessonId]="l.id" />
         }
       }
     </div>
@@ -186,6 +202,9 @@ const KNOWN_TAGS = new Set(['question', 'key', 'mistake', 'plan', 'opening', 'en
     .summary { margin: 0 0 16px; overflow-wrap: anywhere; }
     .clamp-more { background: none; border: 0; padding: 0 2px; color: var(--rh-accent); cursor: pointer; font: inherit; text-decoration: underline; }
     .empty-state { text-align: center; padding: 2rem 1rem; }
+    .tv-share-expired h1 { font-size: 1.3rem; margin: 8px 0; }
+    .tv-share-expired mat-icon { font-size: 40px; width: 40px; height: 40px; color: var(--mat-sys-on-surface-variant); }
+    .guest-note { margin: 0 0 8px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
     .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
     .media { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
     .video { width: 100%; max-width: 100%; max-height: 70vh; background: black; border-radius: 8px; display: block; }
@@ -238,6 +257,9 @@ export class TrainingLessonComponent implements OnInit {
   readonly videoFailed = signal(false);
   readonly flipped = signal(false);
   readonly selectedId = signal<number | null>(null);
+  /** `/tl/:token` (Teilen-Link, ohne Anmeldung): nur lesen — kein Weg zur Liste, zu anderen Teilen oder eigenen Partien,
+   *  kein Teilen; das Video holt der Server über das Token. */
+  readonly shareToken: string | null = this.route.snapshot.data?.['mode'] === 'share' ? this.route.snapshot.paramMap.get('token') : null;
 
   /** Segmente nach Zeit. */
   readonly segments = computed(() => [...(this.lesson()?.segments ?? [])].sort((a, b) => a.startSec - b.startSec || a.id - b.id));
@@ -280,6 +302,7 @@ export class TrainingLessonComponent implements OnInit {
   }
 
   load(): void {
+    if (this.shareToken !== null) { this.loadShared(this.shareToken); return; }
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (this.lesson() && this.lesson()!.id !== id) {
       this.video()?.nativeElement.pause();
@@ -307,6 +330,29 @@ export class TrainingLessonComponent implements OnInit {
     });
   }
 
+  /** Gast über den Teilen-Link: 404 (unbekannt) und 410 (abgelaufen/widerrufen) zeigen dieselbe „Link abgelaufen“-Seite. */
+  private loadShared(token: string): void {
+    this.loading.set(true);
+    this.loadFailed.set(false);
+    this.notFound.set(false);
+    this.svc.getShared(token).subscribe({
+      next: l => {
+        this.lesson.set(l);
+        this.loading.set(false);
+        this.applyQuery();
+        if (l.hasVideo) this.loadVideo();
+      },
+      error: (err: HttpErrorResponse) => {
+        if (err?.status === 404 || err?.status === 410) this.notFound.set(true); else this.loadFailed.set(true);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  drillLink(l: TrainingLesson): unknown[] {
+    return this.shareToken !== null ? ['/tl', this.shareToken, 'drill'] : ['/training-videos', l.id, 'drill'];
+  }
+
   private applyQuery(): void {
     const q = this.route.snapshot.queryParamMap;
     const seg = Number(q.get('seg'));
@@ -325,6 +371,7 @@ export class TrainingLessonComponent implements OnInit {
     const l = this.lesson();
     if (!l) return;
     this.videoFailed.set(false);
+    if (this.shareToken !== null) { this.videoSrc.set(this.svc.sharedVideoUrl(this.shareToken)); return; }
     this.svc.accessToken().subscribe({
       next: token => this.videoSrc.set(this.svc.videoUrl(l.id, token)),
       error: () => this.videoFailed.set(true),
@@ -343,7 +390,7 @@ export class TrainingLessonComponent implements OnInit {
   reloadVideo(): void {
     const el = this.video()?.nativeElement;
     if (el && !this.pendingSeek) this.pendingSeek = { t: el.currentTime, play: false };
-    this.svc.forgetToken();
+    if (this.shareToken === null) this.svc.forgetToken();
     this.videoSrc.set(null);
     this.loadVideo();
   }

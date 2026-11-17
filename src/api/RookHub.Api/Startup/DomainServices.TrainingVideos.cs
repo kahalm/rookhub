@@ -13,5 +13,6 @@ public static partial class DomainServicesSetup
         // Trainer-Notizbuch: Themen + Eröffnungsstellungen, Abgleich mit dem eigenen Repertoire.
         services.AddScoped<RookHub.Api.Services.Repertoires.RepertoireBoardContinuations>();
         services.AddScoped<RookHub.Api.Services.TrainingVideos.TrainingNotebookService>();
+        services.AddScoped<RookHub.Api.Services.TrainingVideos.TrainingLessonShares>();
     }
 }

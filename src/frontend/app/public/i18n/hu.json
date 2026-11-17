@@ -7030,6 +7030,25 @@
       "generalEmpty": "Még nincs óra mintajátszmákkal vagy gyakorlatokkal.",
       "toGeneral": "Az óra általános játszmái",
       "toPrivate": "Az óra saját játszmái"
+    },
+    "share": {
+      "title": "Megosztás",
+      "hint": "Akinek megvan a link, bejelentkezés nélkül láthatja ezt a bejegyzést: videó, állások, megjegyzések, játszmák és visszajátszás. A jegyzetek és a gyakorlási állapotod privát maradnak.",
+      "validity": "Érvényesség",
+      "days": "{{count}} nap",
+      "daysOne": "1 nap",
+      "create": "Link létrehozása",
+      "loadFailed": "A linkeket nem sikerült betölteni.",
+      "expires": "Érvényes eddig: {{date}}",
+      "revoke": "Visszavonás",
+      "none": "Még nincs aktív link.",
+      "copied": "Link másolva.",
+      "createFailed": "A linket nem sikerült létrehozni.",
+      "revokeFailed": "A linket nem sikerült visszavonni.",
+      "revokeConfirm": "Visszavonod ezt a linket? Aki ismeri, többé nem látja az órát.",
+      "expiredTitle": "A link lejárt",
+      "expiredText": "Ez a link lejárt vagy visszavonták. Kérj egy újat.",
+      "guestNote": "Megosztott edzői óra – csak megtekintés, semmi sem mentődik."
     }
   }
 }

@@ -6766,6 +6766,25 @@
       "generalEmpty": "Belum ada pelajaran dengan partai contoh atau latihan.",
       "toGeneral": "Partai umum pelajaran ini",
       "toPrivate": "Partai pribadi pelajaran ini"
+    },
+    "share": {
+      "title": "Bagikan",
+      "hint": "Siapa pun yang memiliki tautan dapat melihat entri ini tanpa masuk: video, posisi, komentar, partai, dan ulangan. Catatan dan kemajuan latihanmu tetap pribadi.",
+      "validity": "Masa berlaku",
+      "days": "{{count}} hari",
+      "daysOne": "1 hari",
+      "create": "Buat tautan",
+      "loadFailed": "Tautan tidak dapat dimuat.",
+      "expires": "Berlaku hingga {{date}}",
+      "revoke": "Cabut",
+      "none": "Belum ada tautan aktif.",
+      "copied": "Tautan disalin.",
+      "createFailed": "Tautan tidak dapat dibuat.",
+      "revokeFailed": "Tautan tidak dapat dicabut.",
+      "revokeConfirm": "Cabut tautan ini? Siapa pun yang memilikinya tidak akan melihat sesi ini lagi.",
+      "expiredTitle": "Tautan kedaluwarsa",
+      "expiredText": "Tautan ini sudah kedaluwarsa atau dicabut. Silakan minta yang baru.",
+      "guestNote": "Sesi latihan bersama – hanya untuk dilihat, tidak ada yang disimpan."
     }
   }
 }

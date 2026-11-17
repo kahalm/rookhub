@@ -63,6 +63,8 @@ public class EndpointAuthInventoryTests
         "GET /api/ebooks/{id:int}/cover",                            // EbooksController.GetCover
         "GET /api/ebooks/{id:int}/file",                             // EbooksController.GetFile
         "GET /api/training-videos/{id:int}/video",                   // TrainingVideosController.Video (<video src> ohne Header: Ausweis ?t=, Besitz je Anfrage)
+        "GET /api/training-videos/shared/{token}",                   // TrainingVideosController.Shared (Teilen-Link eines Eintrags, nur lesend, ohne Notizen)
+        "GET /api/training-videos/shared/{token}/video",             // TrainingVideosController.SharedVideo (Token je Bereichsanfrage)
         "GET /api/ebooks/{id:int}/epub/{token}/{**path}",            // EbooksController.GetEpubEntry (Ausweis im Pfad, EPUB als Ordner)
         "GET /api/ebooks/{id:int}/translations/{lang}/epub/{token}/{**path}", // EbooksController.GetTranslatedEpubEntry (0.876.0, Übersetzung als Ordner)
         "GET /api/ebooks/{id:int}/translations/{lang}/file",         // EbooksController.GetTranslatedFile (0.876.0, Ausweis)

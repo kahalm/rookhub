@@ -21,14 +21,14 @@ public static class ShareTokens
 
     /// <summary>Neues Token, das laut <paramref name="exists"/> noch nicht vergeben ist. Nach
     /// <see cref="MaxAttempts"/> Kollisionen (bei 128 Bit praktisch ausgeschlossen) kommt ungeprueft ein weiteres —
-    /// der Unique-Index der Tabelle faengt den Rest.</summary>
-    public static async Task<string> NewUniqueAsync(Func<string, Task<bool>> exists)
+    /// der Unique-Index der Tabelle faengt den Rest. <paramref name="bytes"/>: Laenge wie bei <see cref="New"/>.</summary>
+    public static async Task<string> NewUniqueAsync(Func<string, Task<bool>> exists, int bytes = DefaultBytes)
     {
         for (var attempt = 0; attempt < MaxAttempts; attempt++)
         {
-            var token = New();
+            var token = New(bytes);
             if (!await exists(token)) return token;
         }
-        return New();   // extrem unwahrscheinlicher Kollisions-Fallback
+        return New(bytes);   // extrem unwahrscheinlicher Kollisions-Fallback
     }
 }

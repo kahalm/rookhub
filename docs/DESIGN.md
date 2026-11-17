@@ -922,6 +922,12 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   FEN“ (FEN wird erkannt) + „Suchen“ + „Brett aufbauen“ (Stellungs-Editor im Dialog, Muster E-Book); gesuchte Stellung
   als Mini-Brett 160 px + Zugrecht, nie als rohe FEN (5.12). Treffer als umrandete Zeilen: Datum · ▶ Zeit · Partie,
   Ausschnitt, Textknöpfe „Ansehen“ / „Nachspielen ab hier“ (≥ 44 px); „anderes Zugrecht“ als Zustands-Chip.
+  **Teilen** (Wunsch 2026-11-17): unter der Stunde ein Abschnitt „Teilen“ mit Trennlinie oben — ein Satz, was der Gast
+  sieht und was privat bleibt; Frist als `mat-button-toggle-group` (1 / 7 / 30 Tage, Vorgabe 7) + „Link erstellen“ als
+  einzige Primäraktion (kopiert gleich); aktive Links als umrandete Zeilen: „Gültig bis …“ (`medium`, `tabular-nums`),
+  der Link als umbrechender `code`, „Kopieren“ umrandet + „Widerrufen“ als Textknopf (Rückfrage, ≥ 44 px). Gast-Ansicht
+  `/tl/:token`: dieselbe Seite ohne Zurück-Pfeil, Teil-Wechsel, „Partie öffnen“ und Teilen, dafür ein grauer Satz „nur zum
+  Ansehen“; abgelaufen/widerrufen = zentrierte Leerseite mit `link_off`-Symbol, Titel „Link abgelaufen“ und einem Satz.
   **Video + Segmentliste** (Stundenseite): natives `<video controls preload="metadata">` (volle Breite, ≤ 70vh), darunter
   das Brett (≤ 420 px) mit der Stellung des gewählten bzw. gerade laufenden Segments, darunter Zug/Kommentar/Zitat;
   die Segmentliste als Knöpfe (Zeit, Zug über `| san`, Schlagwörter als `.chip`, Kommentar), gewählt = 2-px-Akzentrahmen
@@ -1604,3 +1610,4 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-11-09 | 0.928.0 | RookHub, Partie-Zusammenfassung: Seitenbrett neben dem Text (5.12), Seite mit Brett `--page-max-width` statt 860 px; unter 900 px Brett UNTER dem Text | Partie neben dem Text durchklicken; Text bleibt über der Falz (4.6) | Wunsch 09.11. |
 | 2026-11-09 | 0.932.0 | RookHub, Partie-Zusammenfassung: Züge im Text wie `.mv` (Akzentfarbe, gepunktet unterstrichen), Fett/Kursiv bleiben; Partiezug springt aufs Seitenbrett, eine Variante erscheint dort samt ←/→; eigene Züge auf dem Seitenbrett ergeben eine Variante (Leiste „Variante“ mit Zügen und „Zurück zur Partie“, ← am Anfang führt ebenfalls zurück). Nichts wird gespeichert; unter 900 px rollt das Brett ins Bild | Varianten aus dem Text direkt nachspielen und eigene Ideen probieren | Wunsch 09.11. |
 | 2026-11-15 | 0.982.0 | RookHub, neue Seite Besucher-Herkunft `/visitors` (8.1): Flächenkarte in fünf Akzent-Stufen mit Skala, Kennzahlenreihe, Rangliste als Tabelle mit Balken, Kontinent-Wahl und Admin-Filter als Chips mit URL-Zustand, zweispaltig per Containerabfrage, E-Ink-Helligkeitstreppe | Erste Karte dieser Art — Stufen, Tastaturweg und „Farbe nie allein“ festgelegt | Wunsch User 15.11. (Vorlage „Vorschlag A“) |
+| 2026-11-17 | Trainerstunden teilen | RookHub, Stundenseite: Abschnitt „Teilen“ (Frist-Umschalter, Liste der aktiven Links mit Kopieren/Widerrufen) und Gast-Ansicht `/tl/:token` samt Seite „Link abgelaufen“ (8.1) | Einzelne Stunden zeitlich begrenzt ohne Konto zeigen; der Gast darf nicht in private Bereiche abbiegen | Wunsch User 17.11. |

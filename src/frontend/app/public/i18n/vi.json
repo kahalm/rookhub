@@ -6766,6 +6766,25 @@
       "generalEmpty": "Chưa có buổi học nào với ván mẫu hoặc bài tập.",
       "toGeneral": "Ván cờ chung của buổi học này",
       "toPrivate": "Ván cờ riêng của buổi học này"
+    },
+    "share": {
+      "title": "Chia sẻ",
+      "hint": "Ai có liên kết đều xem được mục này mà không cần đăng nhập: video, thế cờ, bình luận, ván cờ và chơi lại. Ghi chú và tiến độ luyện tập của bạn vẫn riêng tư.",
+      "validity": "Thời hạn",
+      "days": "{{count}} ngày",
+      "daysOne": "1 ngày",
+      "create": "Tạo liên kết",
+      "loadFailed": "Không thể tải các liên kết.",
+      "expires": "Có hiệu lực đến {{date}}",
+      "revoke": "Thu hồi",
+      "none": "Chưa có liên kết nào đang hoạt động.",
+      "copied": "Đã sao chép liên kết.",
+      "createFailed": "Không thể tạo liên kết.",
+      "revokeFailed": "Không thể thu hồi liên kết.",
+      "revokeConfirm": "Thu hồi liên kết này? Người có liên kết sẽ không xem được buổi học nữa.",
+      "expiredTitle": "Liên kết đã hết hạn",
+      "expiredText": "Liên kết này đã hết hạn hoặc bị thu hồi. Hãy xin một liên kết mới.",
+      "guestNote": "Buổi huấn luyện được chia sẻ – chỉ xem, không lưu gì cả."
     }
   }
 }

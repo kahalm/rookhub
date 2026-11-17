@@ -106,6 +106,10 @@ export const routes: Routes = [
   { path: 'training-videos/notebook', loadComponent: () => import('./features/training-videos/training-notebook.component').then(m => m.TrainingNotebookComponent), canActivate: [authGuard, menuGuard('training-videos')] },
   { path: 'training-videos/:id/drill', loadComponent: () => import('./features/training-videos/training-drill.component').then(m => m.TrainingDrillComponent), canActivate: [authGuard, menuGuard('training-videos')] },
   { path: 'training-videos/:id', loadComponent: () => import('./features/training-videos/training-lesson.component').then(m => m.TrainingLessonComponent), canActivate: [authGuard, menuGuard('training-videos')] },
+  // Teilen-Link eines Eintrags der Trainerstunden (Wunsch 2026-11-17): ohne Anmeldung, nur lesend, zeitlich begrenzt — der
+  // Server prüft das Token bei jeder Anfrage (auch am Video); kein Guard, sonst landete der Gast vor der Anmeldemaske.
+  { path: 'tl/:token/drill', loadComponent: () => import('./features/training-videos/training-drill.component').then(m => m.TrainingDrillComponent), data: { mode: 'share' } },
+  { path: 'tl/:token', loadComponent: () => import('./features/training-videos/training-lesson.component').then(m => m.TrainingLessonComponent), data: { mode: 'share' } },
   { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent), canActivate: [authGuard, menuGuard('courses')] },
   { path: 'catalog', loadComponent: () => import('./features/catalog/catalog.component').then(m => m.CatalogComponent), canActivate: [authGuard, menuGuard('catalog')] },
   { path: 'courses/:bookId/chapter/:chapterIndex/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [authGuard, menuGuard('courses')] },

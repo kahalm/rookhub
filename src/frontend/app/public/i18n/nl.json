@@ -6766,6 +6766,25 @@
       "generalEmpty": "Nog geen les met voorbeeldpartijen of oefeningen.",
       "toGeneral": "Algemene partijen van deze les",
       "toPrivate": "Privépartijen van deze les"
+    },
+    "share": {
+      "title": "Delen",
+      "hint": "Wie de link heeft, ziet dit item zonder in te loggen: video, stellingen, commentaar, partijen en naspelen. Notities en je oefenvoortgang blijven privé.",
+      "validity": "Geldigheid",
+      "days": "{{count}} dagen",
+      "daysOne": "1 dag",
+      "create": "Link maken",
+      "loadFailed": "De links konden niet worden geladen.",
+      "expires": "Geldig tot {{date}}",
+      "revoke": "Intrekken",
+      "none": "Nog geen actieve link.",
+      "copied": "Link gekopieerd.",
+      "createFailed": "De link kon niet worden gemaakt.",
+      "revokeFailed": "De link kon niet worden ingetrokken.",
+      "revokeConfirm": "Deze link intrekken? Wie hem heeft, ziet de les daarna niet meer.",
+      "expiredTitle": "Link verlopen",
+      "expiredText": "Deze link is verlopen of ingetrokken. Vraag om een nieuwe.",
+      "guestNote": "Gedeelde trainingsles – alleen bekijken, er wordt niets opgeslagen."
     }
   }
 }

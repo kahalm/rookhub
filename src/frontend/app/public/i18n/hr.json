@@ -7030,6 +7030,25 @@
       "generalEmpty": "Još nema sata s poučnim partijama ili vježbama.",
       "toGeneral": "Opće partije ovog sata",
       "toPrivate": "Privatne partije ovog sata"
+    },
+    "share": {
+      "title": "Podijeli",
+      "hint": "Svatko s poveznicom vidi ovaj unos bez prijave: video, pozicije, komentare, partije i ponavljanje. Bilješke i tvoj napredak ostaju privatni.",
+      "validity": "Vrijedi",
+      "days": "{{count}} dana",
+      "daysOne": "1 dan",
+      "create": "Izradi poveznicu",
+      "loadFailed": "Poveznice se nisu mogle učitati.",
+      "expires": "Vrijedi do {{date}}",
+      "revoke": "Opozovi",
+      "none": "Još nema aktivne poveznice.",
+      "copied": "Poveznica kopirana.",
+      "createFailed": "Poveznica se nije mogla izraditi.",
+      "revokeFailed": "Poveznica se nije mogla opozvati.",
+      "revokeConfirm": "Opozvati ovu poveznicu? Tko je ima, više neće vidjeti sat.",
+      "expiredTitle": "Poveznica je istekla",
+      "expiredText": "Ova je poveznica istekla ili je opozvana. Zatraži novu.",
+      "guestNote": "Podijeljeni trenerski sat – samo za gledanje, ništa se ne sprema."
     }
   }
 }

@@ -31,6 +31,22 @@ describe('TrainingVideosService', () => {
     expect(http.expectOne(r => r.url === '/api/training-videos/questions').request.params.get('onlyWrong')).toBe('true');
   });
 
+  it('Teilen-Links: anlegen, auflisten, widerrufen, Gast-Stunde und Video über das Token', () => {
+    svc.createShare(3, 30).subscribe();
+    const post = http.expectOne('/api/training-videos/3/shares');
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body).toEqual({ days: 30 });
+    post.flush({ id: 1, token: 'tok', createdAt: '', expiresAt: '' });
+    svc.shares(3).subscribe();
+    http.expectOne(r => r.method === 'GET' && r.url === '/api/training-videos/3/shares').flush([]);
+    svc.revokeShare(3, 1).subscribe();
+    expect(http.expectOne('/api/training-videos/3/shares/1').request.method).toBe('DELETE');
+    svc.getShared('a/b').subscribe();
+    http.expectOne('/api/training-videos/shared/a%2Fb').flush({});
+    expect(svc.sharedVideoUrl('tok_-1')).toBe('/api/training-videos/shared/tok_-1/video');
+    expect(svc.shareUrl('tok')).toBe(`${window.location.origin}/tl/tok`);
+  });
+
   it('speichert den Stand per PUT', () => {
     svc.saveProgress(3, 17, 'wrong', 2).subscribe();
     const req = http.expectOne('/api/training-videos/3/segments/17/progress');

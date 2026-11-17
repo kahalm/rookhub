@@ -55,8 +55,8 @@ const WRONG_MOVE_SHOW_MS = 700;
         <app-loading-spinner />
       } @else if (notFound()) {
         <div class="empty-state">
-          <p>{{ 'trainingVideos.lesson.notFound' | translate }}</p>
-          <a mat-stroked-button routerLink="/training-videos">{{ 'trainingVideos.toList' | translate }}</a>
+          <p>{{ (shareToken ? 'trainingVideos.share.expiredTitle' : 'trainingVideos.lesson.notFound') | translate }}</p>
+          @if (!shareToken) { <a mat-stroked-button routerLink="/training-videos">{{ 'trainingVideos.toList' | translate }}</a> }
         </div>
       } @else if (loadFailed()) {
         <app-load-error (retry)="load()" />
@@ -89,7 +89,7 @@ const WRONG_MOVE_SHOW_MS = 700;
               @if (questions || !it.gameLabel) {
                 <span>{{ 'trainingVideos.drill.lessonOf' | translate: { date: (it.date | date: 'mediumDate') } }} · {{ partKey(it.part) | translate }}</span>
               }
-              @if (questions && it.rookhubGameId) { <a [routerLink]="['/games', it.rookhubGameId]">{{ 'trainingVideos.drill.toGame' | translate }}</a> }
+              @if (questions && it.rookhubGameId && !shareToken) { <a [routerLink]="['/games', it.rookhubGameId]">{{ 'trainingVideos.drill.toGame' | translate }}</a> }
             </span>
           </h2>
         }
@@ -135,7 +135,7 @@ const WRONG_MOVE_SHOW_MS = 700;
                 <section class="block"><h3>{{ 'trainingVideos.drill.variations' | translate }}</h3><p class="variations">{{ seg.variations | san: 'text' }}</p></section>
               }
               @if (it.hasVideo) {
-                <app-training-clip-player [lessonId]="it.lessonId" [start]="clip().start" [end]="clip().end" />
+                <app-training-clip-player [lessonId]="it.lessonId" [shareToken]="shareToken" [start]="clip().start" [end]="clip().end" />
               }
               <div class="actions">
                 <button mat-flat-button color="primary" type="button" class="tv-next" (click)="next()">
@@ -187,6 +187,8 @@ export class TrainingDrillComponent implements OnInit {
   /** Fragen-Satz über alle Stunden statt einer Stunde. */
   readonly questions = this.route.snapshot.data?.['source'] === 'questions';
   private lessonId: number | null = null;
+  /** `/tl/:token/drill` (Teilen-Link, ohne Anmeldung): rein im Browser — der Stand wird NICHT gespeichert. */
+  readonly shareToken: string | null = this.route.snapshot.data?.['mode'] === 'share' ? this.route.snapshot.paramMap.get('token') : null;
 
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
@@ -217,7 +219,8 @@ export class TrainingDrillComponent implements OnInit {
   readonly whiteMoves = computed(() => whiteToMove(this.boardFen()));
   readonly clip = computed(() => clipRange(this.current()!.segment));
   readonly counts = computed(() => countResults(this.results()));
-  readonly backLink = computed(() => this.questions || this.lessonId == null ? ['/training-videos'] : ['/training-videos', this.lessonId]);
+  readonly backLink = computed(() => this.shareToken !== null ? ['/tl', this.shareToken]
+    : this.questions || this.lessonId == null ? ['/training-videos'] : ['/training-videos', this.lessonId]);
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.clearTimer());
@@ -237,9 +240,13 @@ export class TrainingDrillComponent implements OnInit {
       this.begin(items, Number.isInteger(seg) ? seg : null);
     };
     const failed = (err: HttpErrorResponse) => {
-      if (err?.status === 404) this.notFound.set(true); else this.loadFailed.set(true);
+      if (err?.status === 404 || (this.shareToken !== null && err?.status === 410)) this.notFound.set(true); else this.loadFailed.set(true);
       this.loading.set(false);
     };
+    if (this.shareToken !== null) {
+      this.svc.getShared(this.shareToken).subscribe({ next: l => done(drillItemsOfLesson(l, unknown)), error: failed });
+      return;
+    }
     if (this.questions) {
       this.svc.questions(false).subscribe({ next: list => done(drillItemsOfQuestions(list ?? [])), error: failed });
       return;
@@ -366,6 +373,7 @@ export class TrainingDrillComponent implements OnInit {
     const r = new Map(this.results());
     r.set(it.segment.id, status);
     this.results.set(r);
+    if (this.shareToken !== null) return;   // Gast: nur dieser Durchgang zählt, nichts geht an den Server
     const attempts = this.attempts();
     this.svc.saveProgress(it.lessonId, it.segment.id, status, attempts).subscribe({
       next: progress => this.allItems.update(list => list.map(x => x.segment.id === it.segment.id
