@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -37,62 +36,38 @@ public class PuzzleService
         _revenge = revenge;
     }
 
-    /// <param name="themes">Leerzeichengetrennt; Puzzle muss ALLE enthalten (UND-Verknüpfung).</param>
-    /// <param name="themesAny">Leerzeichengetrennt; Puzzle muss MINDESTENS EINS enthalten (ODER-Verknüpfung).
+    /// <param name="themes">Leerzeichengetrennt; Puzzle muss ALLE enthalten (UND-Verknüpfung, Teilstring des Themes-Texts).</param>
+    /// <param name="themesAny">Leerzeichengetrennt; Puzzle muss MINDESTENS EINS tragen (ODER-Verknüpfung, exakter Tag-Name).
     /// Für „5 schwächste Themen trainieren" — ein Puzzle trägt selten alle Schwächen-Themen gleichzeitig.</param>
     public async Task<PuzzleDto?> GetRandomAsync(int? userId, int? minRating, int? maxRating, string? themes, bool excludeSolved,
         string? themesAny = null, IReadOnlyCollection<int>? excludeIds = null)
     {
-        // Schnellpfad: reiner ODER-Themenfilter über die normalisierte Tag-Tabelle (Index (TagId,Rating))
-        // statt LIKE-Full-Scan. Nur wenn PuzzleTags befüllt ist (sonst Fallback auf LIKE unten).
-        if (!string.IsNullOrEmpty(themesAny) && string.IsNullOrEmpty(themes) && await HasPuzzleTagsAsync())
-        {
-            // FALLE: die Kandidatenmenge NICHT materialisieren. Häufige Tags (mateIn1/mateIn2) bringen
-            // über eine Million (PuzzleId,Rating)-Zeilen — und /api/puzzles/random ist anonym erreichbar.
-            // Darum derselbe Random-Seek wie im Batch-Pfad: LIMIT 1 über den Index (TagId, Rating).
-            // Offene Rating-Grenzen werden mit der gecachten Pool-Spanne geschlossen, damit der Seek
-            // ein endliches Fenster hat.
-            var tagIds = await TagIdsAsync(themesAny);
-            if (tagIds.Count == 0) return null;
-            var (poolMin, poolMax) = await GetCachedRatingRangeAsync();
-            if (poolMin == null || poolMax == null) return null;
-            var seekMin = Math.Max(minRating ?? poolMin.Value, poolMin.Value);
-            var seekMax = Math.Min(maxRating ?? poolMax.Value, poolMax.Value);
-            // OFFENE Spanne (Aufrufer hat eine Grenze weggelassen — das Frontend schickt immer beide,
-            // betroffen ist der rohe API-Aufruf) auf die Rating-Spanne DER TAGS eindampfen. Sonst zieht
-            // der Seek gleichverteilt über die Ratings des GESAMTEN Pools, und die leeren Ränder
-            // (z. B. mateIn1 gibt es kaum über 2000) fallen samt ihrer Wahrscheinlichkeitsmasse per
-            // Vorwärts-/Rückwärts-Fallback auf das eine Rand-Puzzle des Tags: bei ~2600 Rating-Punkten
-            // Pool und einem Tag in einem 100-Punkte-Band bekam EIN Puzzle über 90 % aller Ziehungen.
-            // Kostet einen indexgestützten MIN/MAX-Seek über (TagId, Rating).
-            if (minRating == null || maxRating == null)
-            {
-                var tagRange = _db.PuzzleTags.Where(pt => tagIds.Contains(pt.TagId)
-                    && pt.Rating >= seekMin && pt.Rating <= seekMax);
-                var tagMin = await tagRange.MinAsync(pt => (int?)pt.Rating);
-                var tagMax = await tagRange.MaxAsync(pt => (int?)pt.Rating);
-                if (tagMin == null || tagMax == null) return null;   // kein Puzzle mit diesen Tags im Fenster
-                if (minRating == null) seekMin = tagMin.Value;
-                if (maxRating == null) seekMax = tagMax.Value;
-            }
-            // BLEIBENDER Trade-off: innerhalb des Fensters zieht der Seek gleichverteilt über RATING,
-            // nicht über PUZZLES — dünn besetzte Ratings sind damit überrepräsentiert. Das ist der Preis
-            // für den O(1)-Index-Seek; die Alternative (Kandidatenmenge materialisieren) bringt bei
-            // häufigen Tags über eine Million Zeilen pro anonymem Request.
-            var exclude = excludeIds is { Count: > 0 } ? new HashSet<int>(excludeIds) : new HashSet<int>();
-            var pickId = await SeekTaggedIdAsync(tagIds, seekMin, seekMax, excludeSolved, userId, exclude);
-            if (pickId == null) return null;
-            var picked = await _db.Puzzles.FirstOrDefaultAsync(p => p.Id == pickId.Value);
-            return picked == null ? null : MapToDto(picked);
-        }
+        var hasThemeFilter = !string.IsNullOrEmpty(themes) || !string.IsNullOrEmpty(themesAny);
+        if (hasThemeFilter && !await HasPuzzleTagsAsync())
+            return await GetRandomByLikeScanAsync(userId, minRating, maxRating, themes, themesAny, excludeSolved, excludeIds);
 
+        // Index-Seeks mit LIMIT 1 statt MIN/MAX über den Rating-Bereich bzw. LIKE-Scan (siehe PuzzleRandomPicker).
+        var picker = await PuzzleRandomPicker.CreateAsync(_db, _cache, themes, themesAny, userId, excludeSolved);
+        if (picker == null) return null;
+        var exclude = excludeIds is { Count: > 0 } ? new HashSet<int>(excludeIds) : new HashSet<int>();
+        var pickId = await picker.PickAsync(minRating, maxRating, exclude);
+        if (pickId == null) return null;
+        var picked = await _db.Puzzles.FirstOrDefaultAsync(p => p.Id == pickId.Value);
+        return picked == null ? null : MapToDto(picked);
+    }
+
+    /// <summary>
+    /// Rückfall bei Themen-Filter OHNE befüllte <c>PuzzleTags</c>-Tabelle (frische Installation vor dem Backfill):
+    /// die durch Rating eingegrenzte Treffer-Id-Liste einmal laden und zufällig wählen.
+    /// </summary>
+    private async Task<PuzzleDto?> GetRandomByLikeScanAsync(int? userId, int? minRating, int? maxRating,
+        string? themes, string? themesAny, bool excludeSolved, IReadOnlyCollection<int>? excludeIds)
+    {
         var query = _db.Puzzles.AsQueryable();
-
         if (minRating.HasValue)
             query = query.Where(p => p.Rating >= minRating.Value);
         if (maxRating.HasValue)
             query = query.Where(p => p.Rating <= maxRating.Value);
-        var hasThemeFilter = !string.IsNullOrEmpty(themes) || !string.IsNullOrEmpty(themesAny);
         query = ApplyThemeFilters(query, themes, themesAny);
         if (excludeSolved && userId.HasValue)
         {
@@ -102,67 +77,14 @@ public class PuzzleService
                 .Select(a => a.PuzzleId);
             query = query.Where(p => !solvedIds.Contains(p.Id));
         }
-        // Bereits im selben Batch vergebene Puzzles ausschliessen (Offline-Vorab-Laden).
         if (excludeIds is { Count: > 0 })
             query = query.Where(p => !excludeIds.Contains(p.Id));
 
-        // Theme-Filter (LIKE) kann KEINEN Index nutzen → die ID-Range-Methode (Min/Max + Seek)
-        // würde mehrere Full-Scans pro Aufruf auslösen (im Endless-Batch ×Fensteranzahl = sehr lahm).
-        // Stattdessen die (durch Rating bereits eingegrenzte) Treffer-ID-Liste EINMAL laden und
-        // zufällig wählen: 1 Scan + 1 PK-Lookup.
-        if (hasThemeFilter)
-        {
-            var ids = await query.Select(p => p.Id).ToListAsync();
-            if (ids.Count == 0) return null;
-            var pickId = ids[Random.Shared.Next(ids.Count)];
-            var picked = await _db.Puzzles.FirstOrDefaultAsync(p => p.Id == pickId);
-            return picked == null ? null : MapToDto(picked);
-        }
-
-        // Fast random selection via ID-range instead of COUNT(*)+SKIP(N).
-        // COUNT+SKIP is O(N) and takes 10+ seconds on millions of rows.
-        // ID-range picks a random point in the PK space and seeks forward - O(1).
-        // Theme-Filter ist oben schon behandelt (early return) → hier nur Rating/Solved/ExcludeIds.
-        var anyFilter = minRating.HasValue || maxRating.HasValue
-            || (excludeSolved && userId.HasValue)
-            || excludeIds is { Count: > 0 };
-
-        int? minId, maxId;
-        if (anyFilter)
-        {
-            // ID-Range ueber die GEFILTERTE Menge bestimmen. Min/Max-Aggregate statt
-            // GroupBy(_=>1)+FirstOrDefault — so entsteht KEIN "FirstOrDefault ohne OrderBy"
-            // (das Aggregat ist deterministisch). Die globale Range wuerde randomId fast immer
-            // ausserhalb der gefilterten Treffer platzieren -> degenerierter Always-First-Fallback.
-            if (!await query.AnyAsync()) return null; // leere gefilterte Menge
-            minId = await query.MinAsync(p => p.Id);
-            maxId = await query.MaxAsync(p => p.Id);
-        }
-        else
-        {
-            (minId, maxId) = await GetCachedIdRangeAsync();
-        }
-        if (minId == null || maxId == null) return null;
-
-        for (int attempt = 0; attempt < 5; attempt++)
-        {
-            var randomId = Random.Shared.Next(minId.Value, maxId.Value + 1);
-            // Vorwaerts suchen; wenn nichts mehr kommt (randomId nahe Max), rueckwaerts –
-            // so liefert jeder randomId in [min,max] einen Treffer (kein Always-First-Bias).
-            var puzzle = await query
-                .Where(p => p.Id >= randomId)
-                .OrderBy(p => p.Id)
-                .FirstOrDefaultAsync()
-                ?? await query
-                .Where(p => p.Id <= randomId)
-                .OrderByDescending(p => p.Id)
-                .FirstOrDefaultAsync();
-            if (puzzle != null) return MapToDto(puzzle);
-        }
-
-        // Fallback: get any matching puzzle
-        var fallback = await query.OrderBy(p => p.Id).FirstOrDefaultAsync();
-        return fallback == null ? null : MapToDto(fallback);
+        var ids = await query.Select(p => p.Id).ToListAsync();
+        if (ids.Count == 0) return null;
+        var pickId = ids[Random.Shared.Next(ids.Count)];
+        var picked = await _db.Puzzles.FirstOrDefaultAsync(p => p.Id == pickId);
+        return picked == null ? null : MapToDto(picked);
     }
 
     /// <summary>
@@ -174,61 +96,31 @@ public class PuzzleService
         IEnumerable<(int Min, int Max)> windows, string? themes, bool excludeSolved, string? themesAny = null)
     {
         var winList = windows.ToList();
-        // Theme-Filter (LIKE, kein Index): NICHT pro Fenster scannen (×40 = sehr lahm), sondern
-        // EINMAL alle Treffer der Gesamt-Rating-Spanne laden und in-memory auf die Fenster verteilen.
-        if ((!string.IsNullOrEmpty(themes) || !string.IsNullOrEmpty(themesAny)) && winList.Count > 0)
-            return await GetThemedBatchAsync(userId, winList, themes, themesAny, excludeSolved);
+        if (winList.Count == 0) return new List<PuzzleDto>();
 
-        var used = new HashSet<int>();
-        var result = new List<PuzzleDto>();
-        foreach (var (min, max) in winList)
-        {
-            var dto = await GetRandomAsync(userId, min, max, themes, excludeSolved, themesAny, used);
-            if (dto != null && used.Add(dto.Id))
-                result.Add(dto);
-        }
-        return result;
-    }
-
-    /// <summary>
-    /// Theme-Batch: je Rating-Fenster GENAU EIN zufälliges, im Batch eindeutiges Treffer-Puzzle,
-    /// danach die gewählten Puzzles EINMAL nachladen (Reihenfolge = Fensterreihenfolge).
-    /// </summary>
-    private async Task<List<PuzzleDto>> GetThemedBatchAsync(int? userId,
-        List<(int Min, int Max)> windows, string? themes, string? themesAny, bool excludeSolved)
-    {
+        var hasThemeFilter = !string.IsNullOrEmpty(themes) || !string.IsNullOrEmpty(themesAny);
         List<int> chosenIds;
-        if (!string.IsNullOrEmpty(themesAny) && string.IsNullOrEmpty(themes) && await HasPuzzleTagsAsync())
+        if (hasThemeFilter && !await HasPuzzleTagsAsync())
         {
-            // Schneller Index-Pfad: pro Fenster ein gezielter Random-Seek über (TagId, Rating) mit
-            // LIMIT 1 — NICHT die gesamte Spanne materialisieren (bei häufigen Tags Millionen Zeilen).
-            chosenIds = await PickTaggedPerWindowAsync(themesAny, windows, excludeSolved, userId);
+            chosenIds = await PickByLikeScanAsync(userId, winList, themes, themesAny, excludeSolved);
         }
         else
         {
-            // Fallback (manuelle UND-Themen oder PuzzleTags noch nicht befüllt): LIKE-Scan über die
-            // Gesamtspanne (1 Scan), dann in-memory je Fenster wählen. Kein Index → kein Per-Fenster-Seek.
-            var spanMin = windows.Min(w => w.Min);
-            var spanMax = windows.Max(w => w.Max);
-            var q = _db.Puzzles.Where(p => p.Rating >= spanMin && p.Rating <= spanMax);
-            q = ApplyThemeFilters(q, themes, themesAny);
-            if (excludeSolved && userId.HasValue)
-            {
-                var uid = userId.Value;
-                var solvedIds = _db.PuzzleAttempts.Where(a => a.UserId == uid && a.Solved).Select(a => a.PuzzleId);
-                q = q.Where(p => !solvedIds.Contains(p.Id));
-            }
-            var candidates = (await q.Select(p => new { p.Id, p.Rating }).ToListAsync())
-                .Select(r => (r.Id, r.Rating)).ToList();
-            var used = new HashSet<int>();
+            // Je Fenster Probe + Index-Seek (PuzzleRandomPicker): 40 Fenster ≈ 40–80 Abfragen à ~1 ms statt
+            // MIN/MAX über den Rating-Bereich bzw. LIKE-Scan über die Gesamtspanne (gemessen bis 30 s).
             chosenIds = new List<int>();
-            foreach (var (min, max) in windows)
+            var picker = await PuzzleRandomPicker.CreateAsync(_db, _cache, themes, themesAny, userId, excludeSolved);
+            if (picker != null)
             {
-                var pool = candidates.Where(c => c.Rating >= min && c.Rating <= max && !used.Contains(c.Id)).ToList();
-                if (pool.Count == 0) continue;
-                var pick = pool[Random.Shared.Next(pool.Count)].Id;
-                used.Add(pick);
-                chosenIds.Add(pick);
+                var used = new HashSet<int>();
+                foreach (var (min, max) in winList)
+                {
+                    // Defense in depth zur DTO-Validierung: unsinnige Fenster entfallen still.
+                    if (max < min || max == int.MaxValue) continue;
+                    var id = await picker.PickAsync(min, max, used);
+                    if (id.HasValue && used.Add(id.Value))
+                        chosenIds.Add(id.Value);
+                }
             }
         }
         if (chosenIds.Count == 0) return new List<PuzzleDto>();
@@ -239,67 +131,35 @@ public class PuzzleService
     }
 
     /// <summary>
-    /// Wählt je Rating-Fenster EIN zufälliges, im Batch eindeutiges Tag-Puzzle über den Index
-    /// (TagId, Rating) per Random-Seek + LIMIT 1 — statt die gesamte Kandidatenmenge zu laden.
-    /// Reihenfolge der Rückgabe folgt den Fenstern; Fenster ohne Treffer entfallen.
+    /// Rückfall für Themen ohne befüllte <c>PuzzleTags</c>: LIKE-Scan über die Gesamtspanne (1 Scan), dann in-memory
+    /// je Fenster wählen. Nur für kleine, frisch importierte Bestände gedacht.
     /// </summary>
-    private async Task<List<int>> PickTaggedPerWindowAsync(string themesAny,
-        List<(int Min, int Max)> windows, bool excludeSolved, int? userId)
+    private async Task<List<int>> PickByLikeScanAsync(int? userId, List<(int Min, int Max)> windows,
+        string? themes, string? themesAny, bool excludeSolved)
     {
-        var tagIds = await TagIdsAsync(themesAny);
-        if (tagIds.Count == 0) return new List<int>();
-
-        var used = new HashSet<int>();
-        var chosen = new List<int>();
-        foreach (var (min, max) in windows)
-        {
-            var id = await SeekTaggedIdAsync(tagIds, min, max, excludeSolved, userId, used);
-            if (id.HasValue && used.Add(id.Value))
-                chosen.Add(id.Value);
-        }
-        return chosen;
-    }
-
-    /// <summary>
-    /// Ein zufälliges Tag-Puzzle im Fenster [min,max]: Zufalls-Rating r ziehen, dann die Tags in
-    /// zufälliger Reihenfolge durchgehen und je Tag per Index-Seek (TagId, Rating) das nächste Puzzle
-    /// ab r holen. Pro Tag ist die Abfrage ein reiner Index-Range-Read (rating-sortiert) + LIMIT 1 —
-    /// KEIN Filesort über eine IN-Liste (das machte häufige Tags langsam).
-    /// </summary>
-    private async Task<int?> SeekTaggedIdAsync(List<int> tagIds, int min, int max,
-        bool excludeSolved, int? userId, ISet<int> used)
-    {
-        // Defense in depth zur DTO-Validierung: ein unsinniges Fenster (min > max) bzw. max == int.MaxValue
-        // würde Random.Shared.Next werfen (ArgumentOutOfRange/Overflow) → unbehandelter 500.
-        if (max < min || max == int.MaxValue) return null;
-        var r = Random.Shared.Next(min, max + 1);
-        foreach (var tagId in tagIds.OrderBy(_ => Random.Shared.Next()))
-        {
-            var id = await SeekOneTagAsync(tagId, r, min, max, excludeSolved, userId, used);
-            if (id.HasValue) return id;
-        }
-        return null;
-    }
-
-    /// <summary>Nächstes Puzzle EINES Tags im Fenster: vorwärts ab r (sonst rückwärts), Index-Seek + LIMIT 1.</summary>
-    private async Task<int?> SeekOneTagAsync(int tagId, int r, int min, int max,
-        bool excludeSolved, int? userId, ISet<int> used)
-    {
-        var q = _db.PuzzleTags.Where(pt => pt.TagId == tagId);
+        var spanMin = windows.Min(w => w.Min);
+        var spanMax = windows.Max(w => w.Max);
+        var q = _db.Puzzles.Where(p => p.Rating >= spanMin && p.Rating <= spanMax);
+        q = ApplyThemeFilters(q, themes, themesAny);
         if (excludeSolved && userId.HasValue)
         {
             var uid = userId.Value;
             var solvedIds = _db.PuzzleAttempts.Where(a => a.UserId == uid && a.Solved).Select(a => a.PuzzleId);
-            q = q.Where(pt => !solvedIds.Contains(pt.PuzzleId));
+            q = q.Where(p => !solvedIds.Contains(p.Id));
         }
-        if (used.Count > 0)
-            q = q.Where(pt => !used.Contains(pt.PuzzleId));
-
-        var fwd = await q.Where(pt => pt.Rating >= r && pt.Rating <= max)
-            .OrderBy(pt => pt.Rating).Select(pt => (int?)pt.PuzzleId).FirstOrDefaultAsync();
-        if (fwd.HasValue) return fwd;
-        return await q.Where(pt => pt.Rating >= min && pt.Rating < r)
-            .OrderByDescending(pt => pt.Rating).Select(pt => (int?)pt.PuzzleId).FirstOrDefaultAsync();
+        var candidates = (await q.Select(p => new { p.Id, p.Rating }).ToListAsync())
+            .Select(r => (r.Id, r.Rating)).ToList();
+        var used = new HashSet<int>();
+        var chosenIds = new List<int>();
+        foreach (var (min, max) in windows)
+        {
+            var pool = candidates.Where(c => c.Rating >= min && c.Rating <= max && !used.Contains(c.Id)).ToList();
+            if (pool.Count == 0) continue;
+            var pick = pool[Random.Shared.Next(pool.Count)].Id;
+            used.Add(pick);
+            chosenIds.Add(pick);
+        }
+        return chosenIds;
     }
 
     /// <summary>Wendet UND-Themen (<paramref name="themes"/>) und ODER-Themen (<paramref name="themesAny"/>) auf die Query an.</summary>
@@ -313,8 +173,11 @@ public class PuzzleService
                 query = query.Where(p => p.Themes != null && EF.Functions.Like(p.Themes, $"%{sanitized}%"));
             }
         }
-        if (!string.IsNullOrEmpty(themesAny))
-            query = WhereAnyThemeLike(query, themesAny);
+        // ODER-Themen als ganze Tokens — dieselbe Treffermenge wie der exakte Tag-Vergleich im Index-Pfad.
+        var anyNames = (themesAny ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (anyNames.Count > 0)
+            query = query.Where(PuzzleRandomPicker.AnyTokenLike(anyNames));
         return query;
     }
 
@@ -325,53 +188,6 @@ public class PuzzleService
         _puzzleTagsReady = await _db.PuzzleTags.AnyAsync();
         return _puzzleTagsReady;
     }
-
-    /// <summary>Tag-Ids zu einem leerzeichengetrennten Themen-String (ODER-Filter); leer = keine bekannten Themen.</summary>
-    private async Task<List<int>> TagIdsAsync(string themesAny)
-    {
-        var names = themesAny.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct().ToList();
-        if (names.Count == 0) return new List<int>();
-        return await _db.Tags.Where(t => names.Contains(t.Name)).Select(t => t.Id).ToListAsync();
-    }
-
-
-    /// <summary>
-    /// Filtert auf Puzzles, deren Themes-String mindestens EINES der übergebenen Themen enthält
-    /// (ODER-Verknüpfung). Baut ein EF-übersetzbares OrElse-Prädikat über LIKE-Vergleiche.
-    /// </summary>
-    private static IQueryable<Puzzle> WhereAnyThemeLike(IQueryable<Puzzle> query, string themesAny)
-    {
-        var list = themesAny
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(SanitizeLikeInput)
-            .Where(t => t.Length > 0)
-            .Distinct()
-            .ToList();
-        if (list.Count == 0) return query;
-
-        var p = Expression.Parameter(typeof(Puzzle), "p");
-        var themesProp = Expression.Property(p, nameof(Puzzle.Themes));
-        // EF.Functions als STATISCHER Property-Zugriff (nicht als Konstante!) — nur so erkennt
-        // der Pomelo/MySQL-Übersetzer das Like-Muster und erzeugt SQL statt zu scheitern.
-        var efFns = Expression.Property(null, typeof(EF).GetProperty(nameof(EF.Functions))!);
-        var likeMethod = typeof(DbFunctionsExtensions).GetMethod(
-            nameof(DbFunctionsExtensions.Like),
-            new[] { typeof(Microsoft.EntityFrameworkCore.DbFunctions), typeof(string), typeof(string) })!;
-
-        Expression? anyLike = null;
-        foreach (var t in list)
-        {
-            var pattern = Expression.Constant($"%{t}%", typeof(string));
-            Expression like = Expression.Call(likeMethod, efFns, themesProp, pattern);
-            anyLike = anyLike == null ? like : Expression.OrElse(anyLike, like);
-        }
-        // p.Themes != null && (LIKE %t1% || LIKE %t2% || ...)
-        var notNull = Expression.NotEqual(themesProp, Expression.Constant(null, typeof(string)));
-        var body = Expression.AndAlso(notNull, anyLike!);
-        return query.Where(Expression.Lambda<Func<Puzzle, bool>>(body, p));
-    }
-
 
     public async Task<(int Min, int Max)?> GetRatingRangeAsync()
     {
@@ -668,36 +484,6 @@ public class PuzzleService
             _logger.LogWarning("Puzzle-Import: {Rejected} Zeilen mit ungueltiger Zugfolge verworfen (erste: {Lines})",
                 result.RejectedInvalidMoves, string.Join(", ", result.RejectedLineNumbers));
         result.Imported = imported;
-        return result;
-    }
-
-    private async Task<(int? Min, int? Max)> GetCachedIdRangeAsync()
-    {
-        const string cacheKey = "PuzzleIdRange";
-        if (_cache.TryGetValue<(int?, int?)>(cacheKey, out var cached))
-            return cached;
-
-        var min = await _db.Puzzles.MinAsync(p => (int?)p.Id);
-        var max = await _db.Puzzles.MaxAsync(p => (int?)p.Id);
-        var result = (min, max);
-        _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
-        return result;
-    }
-
-    /// <summary>
-    /// Rating-Spanne des gesamten Pools (gecacht) — schließt offene Rating-Grenzen im Tag-Seek.
-    /// Min/Max laufen über den Index auf Puzzles.Rating, der Cache hält sie trotzdem aus dem Request-Pfad.
-    /// </summary>
-    private async Task<(int? Min, int? Max)> GetCachedRatingRangeAsync()
-    {
-        const string cacheKey = "PuzzleRatingRange";
-        if (_cache.TryGetValue<(int?, int?)>(cacheKey, out var cached))
-            return cached;
-
-        var min = await _db.Puzzles.MinAsync(p => (int?)p.Rating);
-        var max = await _db.Puzzles.MaxAsync(p => (int?)p.Rating);
-        var result = (min, max);
-        _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
         return result;
     }
 

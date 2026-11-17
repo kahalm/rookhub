@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.989.5", date: "2026-11-17", changes: [
+    { en: "Puzzles: loading a batch of puzzles (offline pre-loading, Endless chain, weakest themes) is much faster — about 0.1–0.3 s instead of 4–30 s, and no more timeouts with theme filters. Puzzles within a rating window now vary much more; before, the theme filter kept returning the same few puzzles.",
+      de: "Puzzles: ein Stapel Puzzles (Offline-Vorabladen, Endless-Kette, schwächste Themen) lädt viel schneller — etwa 0,1–0,3 s statt 4–30 s, mit Themenfilter keine Zeitüberschreitungen mehr. Innerhalb eines Rating-Fensters wechseln die Puzzles jetzt deutlich stärker; vorher lieferte der Themenfilter immer wieder dieselben wenigen." },
+  ] },
   { version: "0.989.4", date: "2026-11-17", changes: [
     { en: "Engine provider guide (README): the setup steps for Windows and without Docker now also download the new “patch_search_owner.py” (pinned to a commit, with checksum) and apply it.",
       de: "Anleitung zum Engine-Provider (README): die Einrichtungsschritte für Windows und ohne Docker holen jetzt auch die neue „patch_search_owner.py“ (auf einen Commit gepinnt, mit Prüfsumme) und wenden sie an." },
