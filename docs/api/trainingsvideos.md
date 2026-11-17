@@ -86,6 +86,16 @@ Skript (über `~/bin/rookhub-prod-api`, gedrosselt; ohne `--apply` Probelauf):
 `tools/trainingvideos/import.py /srv/media/claude-sessions/schachvideos/aufbereitet --user kahalm [--dev] [--apply]`.
 Prod-Import nur auf Zuruf des Users, vorher Probelauf.
 
+**Sprecherwechsel** (Knopf „Nächster Sprecher“, Wunsch 2026-11-17): optionales Feld `speakerTurns: [{t, sp}]` (Sekunden,
+Sprecher-Kennung `[a-z0-9_-]{1,16}`, z. B. `sasa`/`patrik`) in der Stundendatei. Der Importer ordnet nach Zeit, rundet,
+fasst gleiche Sprecher hintereinander zusammen (`TrainingSpeakerTurns`, höchstens 5 000) und speichert sie als JSON in
+`TrainingLessons.SpeakerTurns` — in JEDEM Teil des Datums gleich (dasselbe Video). Feld fehlt = vorhandene bleiben
+(ein neu entstehender Teil übernimmt sie vom bisherigen), `[]` = löschen. Bericht: `speakerTurns` (Anzahl, `null` = keine
+Angabe). Die Wechsel kommen aus `aufbereitet/sprecher/<datum>.json` (`{"date", "minTurnSec", "turns"}`, erzeugt von
+`~/claude/schachvideos/sprecher_turns.py` aus der Diarisierung, kurze Einwürfe < 4 s bzw. reine „ja/mhm“ < 8 s
+geglättet; unsichere Stunden bekommen keine Datei). `import.py` hängt sie an (`--speakers DIR`, `--no-speakers`), der
+Ordner-Import liest `<DataRoot>/sprecher/<datum>.json` selbst; der Unterordner zählt nicht als Stunde.
+
 ## Lesen (auth, nur eigene Stunden bzw. Admin)
 
 | Methode | Endpoint | Zweck |

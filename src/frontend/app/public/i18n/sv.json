@@ -6785,6 +6785,11 @@
       "expiredTitle": "Länken har gått ut",
       "expiredText": "Den här länken har gått ut eller återkallats. Be om en ny.",
       "guestNote": "Delad träningslektion – endast visning, inget sparas."
+    },
+    "speaker": {
+      "next": "Nästa talare",
+      "nextTo": "Nästa talare: {{name}} från {{time}}",
+      "prev": "Tillbaka till början av inlägget"
     }
   }
 }

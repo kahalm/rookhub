@@ -6785,6 +6785,11 @@
       "expiredTitle": "Enlace caducado",
       "expiredText": "Este enlace ha caducado o ha sido revocado. Pide uno nuevo.",
       "guestNote": "Clase de entrenamiento compartida: solo lectura, no se guarda nada."
+    },
+    "speaker": {
+      "next": "Siguiente interlocutor",
+      "nextTo": "Siguiente interlocutor: {{name}} desde {{time}}",
+      "prev": "Volver al inicio de la intervención"
     }
   }
 }

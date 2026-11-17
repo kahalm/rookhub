@@ -46,6 +46,12 @@ aktive Links mit Ablauf, „Kopieren“ und „Widerrufen“ (Rückfrage). Admin
   Figurenfeld; Text ab drei Buchstaben), „Brett aufbauen“ (`training-position-dialog.component.ts`, der Stellungs-Editor
   des Analysebretts). Stellungssuche läuft über die Adresse (`?fen=`), Treffer mit gleichem Zugrecht zuerst. Suchen als
   `Subject` + `switchMap` mit `catchError` innen.
+- `training-speaker.util.ts` — Sprecherwechsel (Spec `training-speaker.spec.ts`): `turnIndexAt`, `nextTurn` (0,5 s
+  Vorlauf), `previousTurn` (Anfang des laufenden Beitrags, in den ersten 3 s der des vorigen — wie ⏮), `speakerBands`
+  (Leiste in Prozent der Videolänge), `speakerName` (`sasa` → „Saša“, `patrik` → „Patrik“, Eigennamen, nicht übersetzt).
+  Unter dem Video der Stundenseite (auch Gast `/tl/:token`, nicht im Nachspielen — dort laufen nur kurze Ausschnitte):
+  Sprecherleiste (Klick = an den Beginn des Beitrags dort, `aria-hidden`), Legende mit dem gerade Sprechenden fett,
+  ⏮ „Zum Anfang des Redebeitrags“ und „Nächster Sprecher“ (Tooltip mit Name + Zeit). Ohne `speakerTurns` fehlt alles.
 - `training-lesson.component.ts` — natives `<video controls preload="metadata">`; `timeupdate`/`loadedmetadata` hängen
   per `addEventListener` am Element (kein Template-Listener → kein Neuzeichnen 4×/s), das Signal der Auswahl ändert sich
   nur, wenn ein anderes Segment dran ist; die Liste scrollt nur ihren eigenen Kasten (≥ 900 px). Sprünge vor

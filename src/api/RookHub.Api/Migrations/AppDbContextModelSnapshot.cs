@@ -8852,6 +8852,9 @@ namespace RookHub.Api.Migrations
                     b.Property<int>("Schema")
                         .HasColumnType("int");
 
+                    b.Property<string>("SpeakerTurns")
+                        .HasColumnType("mediumtext");
+
                     b.Property<string>("Summary")
                         .HasColumnType("text");
 

@@ -6785,6 +6785,11 @@
       "expiredTitle": "Link expirado",
       "expiredText": "Este link expirou ou foi revogado. Pede um novo.",
       "guestNote": "Aula de treino partilhada – apenas visualização, nada é guardado."
+    },
+    "speaker": {
+      "next": "Próximo orador",
+      "nextTo": "Próximo orador: {{name}} a partir de {{time}}",
+      "prev": "Voltar ao início da intervenção"
     }
   }
 }

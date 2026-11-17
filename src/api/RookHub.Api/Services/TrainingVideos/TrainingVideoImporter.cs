@@ -217,6 +217,11 @@ public class TrainingVideoImporter
             });
         }
 
+        // Sprecherwechsel: gelten fürs ganze Video, also für jeden Teil gleich. Fehlt die Angabe, bleiben vorhandene.
+        var turns = TrainingSpeakerTurns.Normalize(file.SpeakerTurns, warnings);
+        var turnsJson = turns == null ? null : TrainingSpeakerTurns.Serialize(turns);
+        lesson.SpeakerTurns = turnsJson;
+
         // Teilen: eigene Partien → „private“, Lehrbeispiele/Übungen → „general“ (zwei Einträge, dasselbe Video).
         var parts = SplitParts(lesson);
 
@@ -264,10 +269,13 @@ public class TrainingVideoImporter
                     row.Games = part.Games;
                     row.Segments = part.Segments;
                     row.Notes = part.Notes;
+                    if (turns != null) row.SpeakerTurns = turnsJson;
                     final.Add(row);
                 }
                 else
                 {
+                    // Neuer Teil ohne Angabe: die Wechsel eines bisherigen Teils desselben Videos übernehmen.
+                    if (turns == null) part.SpeakerTurns = existing.Select(e => e.SpeakerTurns).FirstOrDefault(t => t != null);
                     _db.TrainingLessons.Add(part);
                     final.Add(part);
                 }
@@ -297,7 +305,7 @@ public class TrainingVideoImporter
         if (!dryRun && free.Count > 0) warnings.Add($"{free.Count} alte Einträge dieses Datums entfernt (Übungsstand übernommen).");
         return new TrainingImportReportDto(date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), dryRun, true, existing.Count > 0,
             partReports.FirstOrDefault()?.LessonId, lesson.Games.Count, lesson.Segments.Count, questions, lesson.Notes.Count, invalidFens,
-            videoFound, warnings, new(), partReports, progressMoved);
+            videoFound, warnings, new(), partReports, progressMoved, turns?.Count);
     }
 
     /// <summary>
@@ -348,6 +356,7 @@ public class TrainingVideoImporter
             Summary = all.Summary,
             Schema = all.Schema,
             ImportedAt = all.ImportedAt,
+            SpeakerTurns = all.SpeakerTurns,
             Games = all.Games.Where(g => partOf[g.Key] == part).ToList(),
             Segments = all.Segments.Where(s => assigned[s] == part).ToList(),
             Notes = part == noteTarget ? all.Notes.ToList() : new(),
@@ -423,11 +432,53 @@ public class TrainingVideoImporter
         {
             ct.ThrowIfCancellationRequested();
             var json = await File.ReadAllTextAsync(path, ct);
-            var report = await ImportAsync(ownerId, json, dryRun, ct);
+            var report = await ImportWithSpeakersAsync(ownerId, json, SpeakerFileOf(path), dryRun, ct);
             reports.Add(report.Ok ? report : report with { Date = report.Date ?? Path.GetFileNameWithoutExtension(path) });
             _db.ChangeTracker.Clear();
         }
         return reports;
+    }
+
+    /// <summary>Die Sprecher-Datei zu einer Stunde: <c>&lt;ordner&gt;/sprecher/&lt;datum&gt;.json</c> (fehlt = <c>null</c>).
+    /// Der Unterordner stört den Ordner-Import nicht — der liest nur <c>*.json</c> direkt im Ordner.</summary>
+    internal static string? SpeakerFileOf(string lessonPath)
+    {
+        var dir = Path.GetDirectoryName(lessonPath);
+        if (dir == null) return null;
+        var path = Path.Combine(dir, "sprecher", Path.GetFileName(lessonPath));
+        return File.Exists(path) ? path : null;
+    }
+
+    /// <summary>Wie <see cref="ImportAsync(int, string, bool, CancellationToken)"/>, aber die Sprecherwechsel kommen aus der
+    /// Sprecher-Datei, wenn die Stunde selbst keine trägt.</summary>
+    internal async Task<TrainingImportReportDto> ImportWithSpeakersAsync(int ownerId, string json, string? speakerPath, bool dryRun,
+        CancellationToken ct)
+    {
+        TrainingLessonFile? file;
+        try
+        {
+            file = JsonSerializer.Deserialize<TrainingLessonFile>(json, TrainingLessonFile.Json);
+        }
+        catch (JsonException ex)
+        {
+            return Failed(null, dryRun, $"JSON unlesbar: {ex.Message}");
+        }
+        if (file == null) return Failed(null, dryRun, "Leere Datei.");
+        if (file.SpeakerTurns == null && speakerPath != null)
+        {
+            try
+            {
+                var sp = JsonSerializer.Deserialize<TrainingSpeakerFile>(await File.ReadAllTextAsync(speakerPath, ct), TrainingLessonFile.Json);
+                if (sp?.Turns != null) file = file with { SpeakerTurns = sp.Turns };
+            }
+            catch (JsonException ex)
+            {
+                var report = await ImportAsync(ownerId, file, dryRun, ct);
+                report.Warnings.Add($"Sprecher-Datei unlesbar: {ex.Message}");
+                return report;
+            }
+        }
+        return await ImportAsync(ownerId, file, dryRun, ct);
     }
 
     private static TrainingImportReportDto Failed(string? date, bool dryRun, string error) =>

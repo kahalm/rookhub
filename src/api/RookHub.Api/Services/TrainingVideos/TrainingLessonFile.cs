@@ -17,6 +17,9 @@ public sealed record TrainingLessonFile
     public List<TrainingGameFile>? Games { get; init; }
     public List<TrainingSegmentFile>? Segments { get; init; }
     public List<TrainingNoteFile>? Notes { get; init; }
+    /// <summary>Optional: Sprecherwechsel (<c>[{"t": 12, "sp": "sasa"}]</c>, Sekunden). Fehlt = vorhandene bleiben,
+    /// leere Liste = löschen. <c>import.py</c> und der Ordner-Import holen sie aus <c>sprecher/&lt;datum&gt;.json</c>.</summary>
+    public List<TrainingSpeakerTurnFile>? SpeakerTurns { get; init; }
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -24,6 +27,19 @@ public sealed record TrainingLessonFile
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
     };
+}
+
+public sealed record TrainingSpeakerTurnFile
+{
+    public double? T { get; init; }
+    public string? Sp { get; init; }
+}
+
+/// <summary>Eine Datei <c>sprecher/&lt;datum&gt;.json</c> (<c>{"date": …, "turns": [{"t", "sp"}]}</c>).</summary>
+public sealed record TrainingSpeakerFile
+{
+    public string? Date { get; init; }
+    public List<TrainingSpeakerTurnFile>? Turns { get; init; }
 }
 
 public sealed record TrainingVideoRef

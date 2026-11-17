@@ -6785,6 +6785,11 @@
       "expiredTitle": "Liên kết đã hết hạn",
       "expiredText": "Liên kết này đã hết hạn hoặc bị thu hồi. Hãy xin một liên kết mới.",
       "guestNote": "Buổi huấn luyện được chia sẻ – chỉ xem, không lưu gì cả."
+    },
+    "speaker": {
+      "next": "Người nói tiếp theo",
+      "nextTo": "Người nói tiếp theo: {{name}} từ {{time}}",
+      "prev": "Về đầu lượt nói"
     }
   }
 }

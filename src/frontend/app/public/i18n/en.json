@@ -7049,6 +7049,11 @@
       "expiredTitle": "Link expired",
       "expiredText": "This link has expired or was revoked. Please ask for a new one.",
       "guestNote": "Shared coaching session – view only, nothing is saved."
+    },
+    "speaker": {
+      "next": "Next speaker",
+      "nextTo": "Next speaker: {{name}} at {{time}}",
+      "prev": "Back to the start of this speaker's turn"
     }
   }
 }

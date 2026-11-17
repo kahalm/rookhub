@@ -6785,6 +6785,11 @@
       "expiredTitle": "Link verlopen",
       "expiredText": "Deze link is verlopen of ingetrokken. Vraag om een nieuwe.",
       "guestNote": "Gedeelde trainingsles – alleen bekijken, er wordt niets opgeslagen."
+    },
+    "speaker": {
+      "next": "Volgende spreker",
+      "nextTo": "Volgende spreker: {{name}} vanaf {{time}}",
+      "prev": "Terug naar het begin van de beurt"
     }
   }
 }

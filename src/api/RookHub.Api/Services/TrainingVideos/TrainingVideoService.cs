@@ -69,7 +69,8 @@ public class TrainingVideoService
             games.Select(ToDto).ToList(),
             l.Segments.OrderBy(s => s.Position).Select(s => ToDto(s, progress, positions)).ToList(),
             games.Where(g => g.Pgn != null).ToDictionary(g => g.Key, g => g.Pgn!),
-            games.Where(g => g.AnalysisPgn != null).ToDictionary(g => g.Key, g => g.AnalysisPgn!), l.Part, others);
+            games.Where(g => g.AnalysisPgn != null).ToDictionary(g => g.Key, g => g.AnalysisPgn!), l.Part, others,
+            TrainingSpeakerTurns.Parse(l.SpeakerTurns));
     }
 
     /// <summary>
@@ -94,7 +95,7 @@ public class TrainingVideoService
             l.Segments.OrderBy(s => s.Position).Select(s => ToDto(s, noProgress, positions)).ToList(),
             games.Where(g => g.Pgn != null).ToDictionary(g => g.Key, g => g.Pgn!),
             games.Where(g => g.AnalysisPgn != null).ToDictionary(g => g.Key, g => g.AnalysisPgn!), l.Part,
-            new List<TrainingLessonPartRefDto>());
+            new List<TrainingLessonPartRefDto>(), TrainingSpeakerTurns.Parse(l.SpeakerTurns));
     }
 
     /// <summary>Pfad der Video-Datei eines Eintrags für den Gast-Weg (Besitz prüft dort der Link); <c>null</c> = keins.</summary>

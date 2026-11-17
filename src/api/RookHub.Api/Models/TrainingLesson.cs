@@ -35,6 +35,11 @@ public class TrainingLesson
 
     public DateTime ImportedAt { get; set; }
 
+    /// <summary>Sprecherwechsel im Video als JSON <c>[{"t":12,"sp":"sasa"},…]</c> (Sekunden, nach Zeit; aus der
+    /// Diarisierung, kurze Einwürfe schon geglättet) — für „Nächster Sprecher“ am Player. Gilt fürs ganze Video, steht also
+    /// in jedem Teil desselben Datums gleich. <c>null</c> = keine (Trennung unsicher oder nie eingelesen).</summary>
+    public string? SpeakerTurns { get; set; }
+
     public List<TrainingLessonGame> Games { get; set; } = new();
     public List<TrainingSegment> Segments { get; set; } = new();
     public List<TrainingNote> Notes { get; set; } = new();

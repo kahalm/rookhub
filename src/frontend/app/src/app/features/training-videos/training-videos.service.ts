@@ -109,7 +109,12 @@ export interface TrainingLesson {
   part?: TrainingPart | string;
   /** Die übrigen Teile desselben Datums (für „zum anderen Teil“). */
   otherParts?: { id: number; part: TrainingPart | string }[] | null;
+  /** Sprecherwechsel im Video (Sekunden, nach Zeit); leer/fehlt = keine, der Knopf „Nächster Sprecher“ fehlt dann. */
+  speakerTurns?: TrainingSpeakerTurn[] | null;
 }
+
+/** Ab `t` Sekunden spricht `sp` (Kennung, z. B. `sasa` | `patrik`). */
+export interface TrainingSpeakerTurn { t: number; sp: string }
 
 /** Ein aktiver Teilen-Link eines Eintrags (nur der Besitzer sieht ihn). Geteilt wird `/tl/{token}`. */
 export interface TrainingShare {

@@ -17,6 +17,7 @@ internal sealed class TrainingLessonConfiguration : IEntityTypeConfiguration<Tra
         e.HasIndex(l => new { l.UserId, l.Date, l.Part }).IsUnique();
         e.Property(l => l.VideoFile).HasMaxLength(200);
         e.Property(l => l.Summary).HasColumnType("text");
+        e.Property(l => l.SpeakerTurns).HasColumnType("mediumtext");
     }
 }
 

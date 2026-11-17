@@ -7049,6 +7049,11 @@
       "expiredTitle": "Link abgelaufen",
       "expiredText": "Dieser Link ist abgelaufen oder wurde widerrufen. Bitte frag nach einem neuen.",
       "guestNote": "Geteilte Trainerstunde – nur zum Ansehen, nichts wird gespeichert."
+    },
+    "speaker": {
+      "next": "Nächster Sprecher",
+      "nextTo": "Nächster Sprecher: {{name}} ab {{time}}",
+      "prev": "Zum Anfang des Redebeitrags"
     }
   }
 }

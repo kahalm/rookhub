@@ -6785,6 +6785,11 @@
       "expiredTitle": "Link wygasł",
       "expiredText": "Ten link wygasł lub został unieważniony. Poproś o nowy.",
       "guestNote": "Udostępniona lekcja treningowa – tylko do oglądania, nic nie jest zapisywane."
+    },
+    "speaker": {
+      "next": "Następny mówca",
+      "nextTo": "Następny mówca: {{name}} od {{time}}",
+      "prev": "Wróć do początku wypowiedzi"
     }
   }
 }

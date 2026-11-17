@@ -6785,6 +6785,11 @@
       "expiredTitle": "Odkaz vypršel",
       "expiredText": "Tento odkaz vypršel nebo byl zrušen. Požádej o nový.",
       "guestNote": "Sdílená trenérská lekce – jen k prohlížení, nic se neukládá."
+    },
+    "speaker": {
+      "next": "Další mluvčí",
+      "nextTo": "Další mluvčí: {{name}} od {{time}}",
+      "prev": "Zpět na začátek promluvy"
     }
   }
 }

@@ -6785,6 +6785,11 @@
       "expiredTitle": "Link expirat",
       "expiredText": "Acest link a expirat sau a fost revocat. Cere unul nou.",
       "guestNote": "Lecție de antrenament distribuită – doar vizualizare, nu se salvează nimic."
+    },
+    "speaker": {
+      "next": "Următorul vorbitor",
+      "nextTo": "Următorul vorbitor: {{name}} de la {{time}}",
+      "prev": "Înapoi la începutul intervenției"
     }
   }
 }

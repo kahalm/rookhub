@@ -7049,6 +7049,11 @@
       "expiredTitle": "A link lejárt",
       "expiredText": "Ez a link lejárt vagy visszavonták. Kérj egy újat.",
       "guestNote": "Megosztott edzői óra – csak megtekintés, semmi sem mentődik."
+    },
+    "speaker": {
+      "next": "Következő beszélő",
+      "nextTo": "Következő beszélő: {{name}}, {{time}}-tól",
+      "prev": "Vissza a megszólalás elejére"
     }
   }
 }

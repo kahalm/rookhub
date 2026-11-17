@@ -6785,6 +6785,11 @@
       "expiredTitle": "Tautan kedaluwarsa",
       "expiredText": "Tautan ini sudah kedaluwarsa atau dicabut. Silakan minta yang baru.",
       "guestNote": "Sesi latihan bersama – hanya untuk dilihat, tidak ada yang disimpan."
+    },
+    "speaker": {
+      "next": "Pembicara berikutnya",
+      "nextTo": "Pembicara berikutnya: {{name}} mulai {{time}}",
+      "prev": "Kembali ke awal giliran bicara"
     }
   }
 }

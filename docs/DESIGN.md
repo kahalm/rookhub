@@ -933,7 +933,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   die Segmentliste als Knöpfe (Zeit, Zug über `| san`, Schlagwörter als `.chip`, Kommentar), gewählt = 2-px-Akzentrahmen
   + Fläche + `aria-current` (E-Ink: Innenrahmen + fett, nie nur Farbe). Ab 900 px zwei Spalten (Video/Brett | Liste),
   die Liste scrollt dort in ihrem Kasten und folgt dem Video nur in sich (nie die Seite, 5.3); darunter einspaltig.
-  Ohne Video ein Satz statt des Players. **Nachspielen**: Kopf mit Zurück-Pfeil, Titel, Schalter „Nur Falsche
+  Ohne Video ein Satz statt des Players. **Sprecher** (Wunsch 2026-11-17, nur wenn Sprecherwechsel da sind): direkt
+  unter dem Video eine 8-px-Leiste (Touch 12 px, Klick springt, `aria-hidden`) mit den Beiträgen in zwei Tönen —
+  Akzent voll / Akzent 35 % (in Graustufen unterscheidbar); darunter links die Legende (Farbfeld + Name, der gerade
+  Sprechende fett), rechts ⏮ als Symbolknopf „Zum Anfang des Redebeitrags“ und „Nächster Sprecher“ (`skip_next`,
+  umrandet, Tooltip „Nächster Sprecher: Name ab Zeit“). Keine Tastenkürzel (die Seite hat keine). **Nachspielen**: Kopf mit Zurück-Pfeil, Titel, Schalter „Nur Falsche
   wiederholen“; „Stellung 4 / 18“ und Partie-Kopf beim Partiewechsel; Brett (≤ 480 px, zur Seite am Zug gedreht) |
   Seitenspalte ab 900 px. Aufgabe: Satz (Frage bzw. „Welcher Zug …?“), Meldung als umrandete Zeile mit Text (richtig
   `--rh-success`, falsch `--rh-error`, Bedeutung im Text), „Hinweis“ (Kreis um die Figur + Satz mit Feld), „Auflösen“
@@ -1611,3 +1615,4 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-11-09 | 0.932.0 | RookHub, Partie-Zusammenfassung: Züge im Text wie `.mv` (Akzentfarbe, gepunktet unterstrichen), Fett/Kursiv bleiben; Partiezug springt aufs Seitenbrett, eine Variante erscheint dort samt ←/→; eigene Züge auf dem Seitenbrett ergeben eine Variante (Leiste „Variante“ mit Zügen und „Zurück zur Partie“, ← am Anfang führt ebenfalls zurück). Nichts wird gespeichert; unter 900 px rollt das Brett ins Bild | Varianten aus dem Text direkt nachspielen und eigene Ideen probieren | Wunsch 09.11. |
 | 2026-11-15 | 0.982.0 | RookHub, neue Seite Besucher-Herkunft `/visitors` (8.1): Flächenkarte in fünf Akzent-Stufen mit Skala, Kennzahlenreihe, Rangliste als Tabelle mit Balken, Kontinent-Wahl und Admin-Filter als Chips mit URL-Zustand, zweispaltig per Containerabfrage, E-Ink-Helligkeitstreppe | Erste Karte dieser Art — Stufen, Tastaturweg und „Farbe nie allein“ festgelegt | Wunsch User 15.11. (Vorlage „Vorschlag A“) |
 | 2026-11-17 | Trainerstunden teilen | RookHub, Stundenseite: Abschnitt „Teilen“ (Frist-Umschalter, Liste der aktiven Links mit Kopieren/Widerrufen) und Gast-Ansicht `/tl/:token` samt Seite „Link abgelaufen“ (8.1) | Einzelne Stunden zeitlich begrenzt ohne Konto zeigen; der Gast darf nicht in private Bereiche abbiegen | Wunsch User 17.11. |
+| 2026-11-17 | Nächster Sprecher | RookHub, Stundenseite der Trainerstunden (auch Gast): Sprecherleiste unter dem Video, Legende, „Zum Anfang des Redebeitrags“ und „Nächster Sprecher“ (8.1) | Im Video gezielt zum Trainer bzw. zur eigenen Frage springen | Wunsch User 17.11. |

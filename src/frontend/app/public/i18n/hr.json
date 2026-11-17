@@ -7049,6 +7049,11 @@
       "expiredTitle": "Poveznica je istekla",
       "expiredText": "Ova je poveznica istekla ili je opozvana. Zatraži novu.",
       "guestNote": "Podijeljeni trenerski sat – samo za gledanje, ništa se ne sprema."
+    },
+    "speaker": {
+      "next": "Sljedeći govornik",
+      "nextTo": "Sljedeći govornik: {{name}} od {{time}}",
+      "prev": "Na početak ovog izlaganja"
     }
   }
 }

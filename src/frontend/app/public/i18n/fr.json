@@ -6785,6 +6785,11 @@
       "expiredTitle": "Lien expiré",
       "expiredText": "Ce lien a expiré ou a été révoqué. Demande-en un nouveau.",
       "guestNote": "Séance d’entraînement partagée – lecture seule, rien n’est enregistré."
+    },
+    "speaker": {
+      "next": "Intervenant suivant",
+      "nextTo": "Intervenant suivant : {{name}} à {{time}}",
+      "prev": "Retour au début de l’intervention"
     }
   }
 }

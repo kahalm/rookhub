@@ -30,10 +30,15 @@ public record TrainingDrillItemDto(int LessonId, string Date, bool HasVideo, str
     TrainingSegmentDto Segment, string Part = "private");
 
 /// <summary>Die Stundenseite: Kopf, Partien (mit PGN), Segmente in Reihenfolge. <c>Part</c> = dieser Teil der Stunde;
-/// <c>OtherParts</c> = die übrigen Teile desselben Datums (für „zum anderen Teil“).</summary>
+/// <c>OtherParts</c> = die übrigen Teile desselben Datums (für „zum anderen Teil“); <c>SpeakerTurns</c> = Sprecherwechsel
+/// im Video (leer = keine, der Knopf „Nächster Sprecher“ fehlt dann).</summary>
 public record TrainingLessonDto(int Id, string Date, string? Summary, int? DurationSec, bool HasVideo, string? OwnerName,
     List<TrainingGameDto> Games, List<TrainingSegmentDto> Segments, Dictionary<string, string> Pgns,
-    Dictionary<string, string> AnalysisPgns, string Part = "private", List<TrainingLessonPartRefDto>? OtherParts = null);
+    Dictionary<string, string> AnalysisPgns, string Part = "private", List<TrainingLessonPartRefDto>? OtherParts = null,
+    List<TrainingSpeakerTurnDto>? SpeakerTurns = null);
+
+/// <summary>Ein Sprecherwechsel: ab <c>T</c> Sekunden spricht <c>Sp</c> (Kennung, z. B. <c>sasa</c> | <c>patrik</c>).</summary>
+public record TrainingSpeakerTurnDto(int T, string Sp);
 
 /// <summary>Verweis auf einen anderen Teil derselben Stunde.</summary>
 public record TrainingLessonPartRefDto(int Id, string Part);
@@ -61,10 +66,10 @@ public record TrainingAccessTokenDto(string Token, DateTime ExpiresAt);
 
 /// <summary>Bericht eines Imports (auch im Probelauf). <c>LessonId</c> = der erste Teil (privat vor allgemein);
 /// <c>Parts</c> = je Eintrag (Teil) die Zahlen; <c>ProgressMoved</c> = Übungsstand-Zeilen, die zu einem anderen Eintrag
-/// umgezogen sind (im Probelauf 0).</summary>
+/// umgezogen sind (im Probelauf 0); <c>SpeakerTurns</c> = eingelesene Sprecherwechsel (null = Datei ohne, vorhandene bleiben).</summary>
 public record TrainingImportReportDto(string? Date, bool DryRun, bool Ok, bool Replaced, int? LessonId, int Games,
     int Segments, int Questions, int Notes, int InvalidFens, bool VideoFound, List<string> Warnings, List<string> Errors,
-    List<TrainingImportPartDto> Parts, int ProgressMoved);
+    List<TrainingImportPartDto> Parts, int ProgressMoved, int? SpeakerTurns = null);
 
 /// <summary>Ein Eintrag (Teil) der eingelesenen Stunde: <c>Part</c> <c>private</c> | <c>general</c>; <c>LessonId</c> null
 /// = im Probelauf neu; <c>Replaced</c> = eine bestehende Zeile wird weiterverwendet.</summary>

@@ -17,6 +17,7 @@ import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.compone
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { whiteToMove } from '../../shared/chess/fen-side';
 import { activeSegmentAt, isValidFen } from './training-drill.util';
+import { nextTurn, previousTurn, sortedTurns, speakerBands, speakerName, turnIndexAt } from './training-speaker.util';
 import { TrainingSharePanelComponent } from './training-share-panel.component';
 import {
   TrainingGame, TrainingLesson, TrainingSegment, TrainingVideosService, trainingGameLabel, trainingPartKey,
@@ -107,6 +108,33 @@ const KNOWN_TAGS = new Set(['question', 'key', 'mistake', 'plan', 'opening', 'en
                   <mat-icon aria-hidden="true">cloud_off</mat-icon>{{ 'trainingVideos.lesson.videoFailed' | translate }}
                   <button mat-button type="button" (click)="reloadVideo()">{{ 'common.retry' | translate }}</button>
                 </p>
+              }
+              @if (turns().length && videoSrc()) {
+                <div class="tv-speakers">
+                  <!-- Leiste nur für die Maus (Klick = springen); die Knöpfe darunter tragen die Funktion für alle. -->
+                  <div class="speaker-track" aria-hidden="true" (click)="seekTrack($event)">
+                    @for (b of bands(); track $index) {
+                      <span class="band" [class.alt]="slot(b.sp) === 1" [style.left.%]="b.startPct" [style.width.%]="b.widthPct"></span>
+                    }
+                  </div>
+                  <div class="speaker-bar">
+                    <span class="speaker-legend">
+                      @for (sp of speakers(); track sp) {
+                        <span class="speaker" [class.now]="sp === currentTurn()?.sp">
+                          <span class="swatch" [class.alt]="slot(sp) === 1" aria-hidden="true"></span>{{ name(sp) }}
+                        </span>
+                      }
+                    </span>
+                    <span class="speaker-actions">
+                      <button mat-icon-button type="button" class="tv-speaker-prev" (click)="jumpPrevSpeaker()"
+                              [appIconLabel]="'trainingVideos.speaker.prev' | translate"><mat-icon>skip_previous</mat-icon></button>
+                      <button mat-stroked-button type="button" class="tv-speaker-next" (click)="jumpNextSpeaker()"
+                              [appIconLabel]="upcoming() ? ('trainingVideos.speaker.nextTo' | translate: { name: name(upcoming()!.sp), time: clock(upcoming()!.t) }) : ('trainingVideos.speaker.next' | translate)">
+                        <mat-icon>skip_next</mat-icon>{{ 'trainingVideos.speaker.next' | translate }}
+                      </button>
+                    </span>
+                  </div>
+                </div>
               }
             } @else {
               <p class="no-video">{{ 'trainingVideos.lesson.noVideo' | translate }}</p>
@@ -209,6 +237,20 @@ const KNOWN_TAGS = new Set(['question', 'key', 'mistake', 'plan', 'opening', 'en
     .media { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
     .video { width: 100%; max-width: 100%; max-height: 70vh; background: black; border-radius: 8px; display: block; }
     .video-error { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--rh-error); margin: 0; }
+    .tv-speakers { display: flex; flex-direction: column; gap: 4px; margin-top: -4px; }
+    .speaker-track { position: relative; height: 8px; border-radius: 4px; cursor: pointer; overflow: hidden;
+      background: color-mix(in srgb, currentColor 10%, transparent); }
+    @media (pointer: coarse) { .speaker-track { height: 12px; } }
+    /* zwei Sprecher: Akzent voll / Akzent hell — unterscheidbar auch in Graustufen (E-Ink), Namen stehen in der Legende */
+    .band { position: absolute; top: 0; bottom: 0; background: var(--rh-accent); }
+    .band.alt, .swatch.alt { background: color-mix(in srgb, var(--rh-accent) 35%, transparent); }
+    .speaker-bar { display: flex; align-items: center; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; }
+    .speaker-legend { display: flex; gap: 12px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
+    .speaker { display: inline-flex; align-items: center; gap: 6px; }
+    .speaker.now { font-weight: 600; color: var(--mat-sys-on-surface); }
+    .swatch { width: 12px; height: 12px; border-radius: 3px; background: var(--rh-accent); }
+    .speaker-actions { display: flex; align-items: center; gap: 4px; }
+    .speaker-actions .tv-speaker-next { min-height: 44px; }
     .no-video { margin: 0; color: var(--mat-sys-on-surface-variant); }
     .board-wrap { width: min(100%, 420px); align-self: center; }
     .board-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -274,6 +316,18 @@ export class TrainingLessonComponent implements OnInit {
   });
   readonly whiteMoves = computed(() => whiteToMove(this.boardFen()));
 
+  /** Sprecherwechsel (aus der Diarisierung, kurze Einwürfe schon geglättet); leer = kein Knopf, keine Leiste. */
+  readonly turns = computed(() => sortedTurns(this.lesson()?.speakerTurns));
+  /** Die Sprecher in fester Reihenfolge (alphabetisch) — Platz 0 = Akzent voll, 1 = hell. */
+  readonly speakers = computed(() => [...new Set(this.turns().map(t => t.sp))].sort());
+  /** Index des laufenden Beitrags; gesetzt nur, wenn er wechselt (wie die Segment-Auswahl). */
+  readonly turnIdx = signal(-1);
+  readonly currentTurn = computed(() => this.turns()[this.turnIdx()] ?? null);
+  readonly upcoming = computed(() => this.turns()[this.turnIdx() + 1] ?? null);
+  /** Videolänge für die Leiste: aus dem Video, sonst aus der Datei. */
+  private readonly videoDuration = signal<number | null>(null);
+  readonly bands = computed(() => speakerBands(this.turns(), this.videoDuration() ?? this.lesson()?.durationSec ?? 0));
+
   private readonly video = viewChild<ElementRef<HTMLVideoElement>>('video');
   private readonly segList = viewChild<ElementRef<HTMLElement>>('segList');
   /** Sprung, der wartet, bis das Video seine Länge kennt (vorher ignorieren Browser `currentTime`). */
@@ -285,7 +339,10 @@ export class TrainingLessonComponent implements OnInit {
       const el = this.video()?.nativeElement;
       if (!el) return;
       const onTime = () => this.onTimeUpdate(el.currentTime);
-      const onMeta = () => this.applyPendingSeek(el);
+      const onMeta = () => {
+        if (Number.isFinite(el.duration) && el.duration > 0) this.videoDuration.set(el.duration);
+        this.applyPendingSeek(el);
+      };
       el.addEventListener('timeupdate', onTime);
       el.addEventListener('loadedmetadata', onMeta);
       if (el.readyState >= 1) this.applyPendingSeek(el);
@@ -309,6 +366,8 @@ export class TrainingLessonComponent implements OnInit {
       this.lesson.set(null);
       this.videoSrc.set(null);
       this.selectedId.set(null);
+      this.turnIdx.set(-1);
+      this.videoDuration.set(null);
       this.lastActiveId = null;
       this.pendingSeek = null;
     }
@@ -420,6 +479,7 @@ export class TrainingLessonComponent implements OnInit {
 
   /** Während das Video läuft, folgt die Auswahl der Zeit — gesetzt wird nur, wenn ein ANDERES Segment dran ist. */
   private onTimeUpdate(t: number): void {
+    this.followSpeaker(t);
     const active = activeSegmentAt(this.segments(), t);
     const id = active?.id ?? null;
     if (id === null || id === this.lastActiveId) return;
@@ -427,6 +487,49 @@ export class TrainingLessonComponent implements OnInit {
     this.selectedId.set(id);
     this.scrollListTo(id);
   }
+
+  private followSpeaker(t: number): void {
+    if (!this.turns().length) return;
+    const i = turnIndexAt(this.turns(), t);
+    if (i !== this.turnIdx()) this.turnIdx.set(i);
+  }
+
+  /** Aktuelle Videozeit (oder der wartende Sprung, solange das Video noch lädt). */
+  private now(): number {
+    const el = this.video()?.nativeElement;
+    return el && el.readyState >= 1 ? el.currentTime : this.pendingSeek?.t ?? 0;
+  }
+
+  /** „Nächster Sprecher“: an den Beginn des nächsten Redebeitrags (Wiedergabe läuft weiter, wie sie war). */
+  jumpNextSpeaker(): void {
+    const n = nextTurn(this.turns(), this.now());
+    if (!n) return;
+    this.seek(n.t, false);
+    this.followSpeaker(n.t);
+  }
+
+  /** Zurück an den Anfang des laufenden Beitrags; direkt nach einem Wechsel (< 3 s) an den des vorigen. */
+  jumpPrevSpeaker(): void {
+    const p = previousTurn(this.turns(), this.now());
+    const t = p?.t ?? 0;
+    this.seek(t, false);
+    this.followSpeaker(t);
+  }
+
+  /** Klick in die Sprecherleiste: an den Beginn des Beitrags unter dem Zeiger. */
+  seekTrack(e: MouseEvent): void {
+    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const dur = this.videoDuration() ?? this.lesson()?.durationSec ?? 0;
+    if (!(box.width > 0) || !(dur > 0)) return;
+    const at = Math.max(0, Math.min(1, (e.clientX - box.left) / box.width)) * dur;
+    const turn = this.turns()[turnIndexAt(this.turns(), at)];
+    const t = turn?.t ?? 0;
+    this.seek(t, false);
+    this.followSpeaker(t);
+  }
+
+  name(sp: string): string { return speakerName(sp); }
+  slot(sp: string): number { return this.speakers().indexOf(sp) % 2; }
 
   /** Nur der Kasten der Liste scrollt (zweispaltig), nie die Seite. */
   private scrollListTo(id: number): void {

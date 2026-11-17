@@ -6785,6 +6785,11 @@
       "expiredTitle": "Bağlantının süresi doldu",
       "expiredText": "Bu bağlantının süresi doldu veya iptal edildi. Lütfen yenisini iste.",
       "guestNote": "Paylaşılan antrenör dersi – yalnızca görüntüleme, hiçbir şey kaydedilmez."
+    },
+    "speaker": {
+      "next": "Sonraki konuşmacı",
+      "nextTo": "Sonraki konuşmacı: {{name}}, {{time}}",
+      "prev": "Konuşmanın başına dön"
     }
   }
 }

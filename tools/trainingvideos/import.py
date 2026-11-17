@@ -16,6 +16,10 @@ Jede Stunde wird in bis zu zwei Einträge geteilt: „private" (eigene Partien) 
 beide mit demselben Video. Re-Import ist idempotent je Konto + Datum + Teil: bestehende Einträge behalten ihre Id, der
 Übungsstand zieht mit seinen Segmenten in den passenden Teil um (nichts geht verloren). 2026-02-13 ist keine
 Trainerstunde und wird nie eingelesen.
+
+Sprecherwechsel (Knopf „Nächster Sprecher" am Player): liegt neben der Stunde eine Datei sprecher/<datum>.json (von
+~/claude/schachvideos/sprecher_turns.py), gehen ihre „turns" als „speakerTurns" mit. Ohne Datei bleiben vorhandene
+Wechsel stehen; --speakers DIR nimmt einen anderen Ordner, --no-speakers schickt keine.
 """
 import argparse, json, os, sys, urllib.parse
 
@@ -36,12 +40,24 @@ def files_of(path):
     return [f for f in files if os.path.basename(f) not in SKIP]
 
 
+def speaker_turns(lesson_path, speakers_dir):
+    """Die Sprecherwechsel zu einer Stunde (Liste) oder None, wenn es keine Sprecher-Datei gibt."""
+    d = speakers_dir or os.path.join(os.path.dirname(os.path.abspath(lesson_path)), 'sprecher')
+    p = os.path.join(d, os.path.basename(lesson_path))
+    if not os.path.isfile(p):
+        return None
+    with open(p, encoding='utf-8') as fh:
+        return json.load(fh).get('turns')
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('path', help='Ordner mit <datum>.json oder eine Datei')
     ap.add_argument('--user', required=True, help='Zielkonto: Benutzername oder Id')
     ap.add_argument('--dev', action='store_true', help='Dev-API statt Prod')
     ap.add_argument('--apply', action='store_true', help='wirklich schreiben (sonst Probelauf)')
+    ap.add_argument('--speakers', help='Ordner mit Sprecher-Dateien <datum>.json (Vorgabe: <ordner>/sprecher)')
+    ap.add_argument('--no-speakers', action='store_true', help='keine Sprecherwechsel mitschicken')
     args = ap.parse_args()
 
     client = Client('dev' if args.dev else 'prod', quiet=True)
@@ -52,6 +68,10 @@ def main():
     for f in files_of(args.path):
         with open(f, encoding='utf-8') as fh:
             body = json.load(fh)
+        if not args.no_speakers and 'speakerTurns' not in body:
+            turns = speaker_turns(f, args.speakers)
+            if turns is not None:
+                body['speakerTurns'] = turns
         status, data = client.request('POST', f'/api/admin/training-videos/import?{query}', body)
         if status != 200 or not isinstance(data, dict):
             failed += 1
@@ -60,7 +80,9 @@ def main():
         mark = 'OK ' if data.get('ok') else 'FEHLER'
         print(f"{mark} {data.get('date')}: {data.get('segments')} Segmente, {data.get('games')} Partien, "
               f"{data.get('questions')} Fragen, {data.get('notes')} Notizen, ungültige FEN {data.get('invalidFens')}, "
-              f"Video {'ja' if data.get('videoFound') else 'nein'}, {'ersetzt' if data.get('replaced') else 'neu'}"
+              f"Video {'ja' if data.get('videoFound') else 'nein'}, "
+              f"Sprecherwechsel {data.get('speakerTurns') if data.get('speakerTurns') is not None else '–'}, "
+              f"{'ersetzt' if data.get('replaced') else 'neu'}"
               f"{'' if args.apply else ' (Probelauf)'}")
         for p in data.get('parts') or []:
             t = totals.setdefault(p['part'], [0, 0, 0, 0])

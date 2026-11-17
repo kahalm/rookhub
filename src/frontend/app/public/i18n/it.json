@@ -6785,6 +6785,11 @@
       "expiredTitle": "Link scaduto",
       "expiredText": "Questo link è scaduto o è stato revocato. Chiedine uno nuovo.",
       "guestNote": "Lezione di allenamento condivisa – solo visualizzazione, nulla viene salvato."
+    },
+    "speaker": {
+      "next": "Prossimo interlocutore",
+      "nextTo": "Prossimo interlocutore: {{name}} da {{time}}",
+      "prev": "Torna all’inizio dell’intervento"
     }
   }
 }
