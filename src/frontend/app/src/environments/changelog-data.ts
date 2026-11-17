@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.989.7", date: "2026-11-17", changes: [
+    { en: "Internal: the test helpers of the tournament directory sweep moved into their own file (no change in behaviour).",
+      de: "Intern: die Testhilfen des Turnierverzeichnis-Durchgangs liegen jetzt in einer eigenen Datei (am Verhalten ändert sich nichts)." },
+  ] },
   { version: "0.989.6", date: "2026-11-17", changes: [
     { en: "Endless offline pre-loading: several selected themes now count as “any of them”, exactly like the live Endless run. Before, the background pre-loading required ALL themes at once (e.g. fork AND pin AND skewer), so the offline pool for theme presets stayed almost empty.",
       de: "Endless-Offline-Vorabladen: mehrere gewählte Themen gelten jetzt als „eines davon“, genau wie im laufenden Endless. Vorher verlangte das Vorabladen im Hintergrund ALLE Themen zugleich (etwa Gabel UND Fesselung UND Spieß), der Offline-Vorrat blieb für Themen-Vorauswahlen deshalb fast leer." },
