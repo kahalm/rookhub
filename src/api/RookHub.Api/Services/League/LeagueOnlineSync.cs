@@ -47,7 +47,14 @@ public sealed class LeagueOnlineSync
     /// <summary>Eine Seite des Abrufs: die lesbaren Partien und bis wohin gelesen wurde (auch Übersprungenes zählt).</summary>
     public sealed record Page(List<Game> Games, long Cursor, int Rows);
 
-    public sealed class RateLimitedException(string site) : Exception($"{site}: zu viele Anfragen");
+    /// <summary>Die Gegenseite drosselt (429) oder pausiert noch (<see cref="LeagueRateGate"/>). <see cref="Site"/> ist
+    /// <see cref="LeagueRateGate.Lichess"/> oder <see cref="LeagueRateGate.ChessCom"/>, <see cref="Remaining"/> die Restpause,
+    /// sofern das Tor sie kennt.</summary>
+    public sealed class RateLimitedException(string site, TimeSpan? remaining = null) : Exception($"{site}: zu viele Anfragen")
+    {
+        public string Site { get; } = site;
+        public TimeSpan? Remaining { get; } = remaining;
+    }
 
     private readonly AppDbContext _db;
     private readonly HttpClient _http;
@@ -324,27 +331,38 @@ public sealed class LeagueOnlineSync
             .OrderBy(a => a.SyncedAt.HasValue).ThenBy(a => a.SyncedAt).Select(a => a.Id).ToListAsync(ct);
         var started = DateTime.UtcNow;
         var queue = new Queue<int>(ids);
+        // Drosselt eine Seite, bleiben nur IHRE Konten liegen — chess.com läuft weiter, wenn nur Lichess pausiert (und
+        // umgekehrt). Die Warnung schreibt das Tor (LeagueRateGate) einmal je Pause, hier nur Debug.
+        var throttled = new HashSet<string>(StringComparer.Ordinal);
+        var skipped = false;
         while (queue.Count > 0 && DateTime.UtcNow - started < budget)
         {
             var id = queue.Dequeue();
             var acc = await _db.LeagueOnlineAccounts.FirstOrDefaultAsync(a => a.Id == id, ct);
             if (acc is null) continue;
             if (!LeagueOnlineSites.All.Contains(acc.Site)) continue;
+            if (throttled.Contains(acc.Site))
+            {
+                skipped = true;
+                _db.ChangeTracker.Clear();
+                continue;
+            }
             try
             {
                 if (await SyncAccountAsync(acc, ct)) queue.Enqueue(id);
             }
             catch (RateLimitedException e)
             {
-                _logger.LogWarning("LeagueHub: {Message} — Abruf der Online-Partien pausiert", e.Message);
-                return true;
+                _logger.LogDebug("LeagueHub: {Message} — Konten von {Site} bleiben für diese Runde liegen", e.Message, acc.Site);
+                throttled.Add(acc.Site);
+                skipped = true;
             }
             finally
             {
                 _db.ChangeTracker.Clear();
             }
         }
-        return queue.Count > 0;
+        return skipped || queue.Count > 0;
     }
 }
 
@@ -353,10 +371,11 @@ public sealed class LeagueOnlineSync
 /// nach einem Weckruf (neues/geändertes Konto) und in kurzen Abständen, solange ein Konto noch Rückstand hat. Abschaltbar mit
 /// <c>LeagueOnline:Enabled=false</c>. Seit 0.607.0 läuft danach je Runde die Konto-Suche (<see cref="LeagueAccountFinder"/>,
 /// abschaltbar mit <c>LeagueOnline:Suggestions=false</c>), seit 0.608.0 die Lichess-Übertragungen (<see cref="LeagueBroadcastImport"/>,
-/// <c>LeagueBroadcasts:Enabled=false</c>).
+/// <c>LeagueBroadcasts:Enabled=false</c>). Seit 2026-11-17 überspringt die Runde die Schritte einer pausierten Gegenseite
+/// (<see cref="LeagueRateGate"/>) und wartet bis zur nächsten Runde mindestens bis zum Ende der Pause.
 /// </summary>
 public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, LeagueOnlineSyncSignal signal, IConfiguration config,
-    ILogger<LeagueOnlineSyncScheduler> logger) : BackgroundService, IBackgroundJobInfo
+    ILogger<LeagueOnlineSyncScheduler> logger, LeagueRateGate gate) : BackgroundService, IBackgroundJobInfo
 {
     // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): Takt faellt bei Pause aus.
     private PauseGate? _pauseGate;
@@ -373,6 +392,18 @@ public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, Leagu
     /// <summary>Die Konto-Suche je Runde (sie fragt je Spieler rund zehnmal nach, mit Pausen).</summary>
     public static readonly TimeSpan SearchBudget = TimeSpan.FromMinutes(5);
 
+    /// <summary>Wartezeit bis zur nächsten Runde: <see cref="BacklogPause"/> bzw. <see cref="IdlePoll"/>, aber nie kürzer als
+    /// die längste laufende Pause des Tors (sonst begänne die Runde mit einer Anfrage, die ohnehin nicht hinausgeht).</summary>
+    public static TimeSpan NextWait(bool more, LeagueRateGate gate)
+    {
+        var wait = more ? BacklogPause : IdlePoll;
+        var paused = gate.LongestRemaining();
+        return paused > wait ? paused : wait;
+    }
+
+    /// <summary>Darf der Schritt laufen? Nein, wenn eine der Gegenseiten, die er anspricht, gerade pausiert.</summary>
+    public static bool CanRun(LeagueRateGate gate, params string[] sites) => sites.All(s => !gate.IsPaused(s));
+
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         if (!config.GetValue("LeagueOnline:Enabled", true)) return;
@@ -387,18 +418,23 @@ public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, Leagu
             if (await Pause.SkipAndWaitAsync(scopes, PauseGate.Recheck, ct)) continue;
             Pause.MarkTick();
             var more = false;
-            try
+            // Konten-Abruf: Lichess UND chess.com — er lässt die Konten einer pausierten Seite selbst liegen.
+            if (CanRun(gate, LeagueRateGate.Lichess) || CanRun(gate, LeagueRateGate.ChessCom))
             {
-                using var scope = scopes.CreateScope();
-                more = await scope.ServiceProvider.GetRequiredService<LeagueOnlineSync>().RunOnceAsync(interval, Budget, ct);
+                try
+                {
+                    using var scope = scopes.CreateScope();
+                    more = await scope.ServiceProvider.GetRequiredService<LeagueOnlineSync>().RunOnceAsync(interval, Budget, ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+                catch (Exception e)
+                {
+                    logger.LogError(e, "LeagueHub: Abruf der Online-Partien gescheitert");
+                }
             }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
-            catch (Exception e)
-            {
-                logger.LogError(e, "LeagueHub: Abruf der Online-Partien gescheitert");
-            }
+            else more = true;
             // Lichess-Übertragungen (0.608.0): suchen höchstens alle DiscoverEvery, einspielen je Runde höchstens SearchBudget.
-            if (broadcasts)
+            if (broadcasts && Gate(ref more, LeagueRateGate.Lichess))
             {
                 try
                 {
@@ -414,7 +450,7 @@ public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, Leagu
                 }
             }
             // Danach die Konto-Suche (0.607.0): abwechselnd mit dem Abruf, je Runde höchstens SearchBudget.
-            if (suggestions)
+            if (suggestions && Gate(ref more, LeagueRateGate.Lichess, LeagueRateGate.ChessCom))
             {
                 try
                 {
@@ -428,7 +464,7 @@ public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, Leagu
                 }
             }
             // Tiroler Lichess-Teams und ihre Team-Battles (0.612.0): Bestand höchstens alle PoolEvery neu, dann Konten prüfen.
-            if (teamScout)
+            if (teamScout && Gate(ref more, LeagueRateGate.Lichess))
             {
                 try
                 {
@@ -444,15 +480,24 @@ public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, Leagu
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                 catch (LeagueOnlineSync.RateLimitedException e)
                 {
-                    logger.LogWarning("LeagueHub: {Message} — Team-Suche pausiert", e.Message);
+                    logger.LogDebug("LeagueHub: {Message} — Team-Suche pausiert", e.Message);   // Warnung schreibt das Tor
+                    more = true;
                 }
                 catch (Exception e)
                 {
                     logger.LogError(e, "LeagueHub: Team-Suche gescheitert");
                 }
             }
-            try { await signal.WaitAsync(more ? BacklogPause : IdlePoll, ct); }
+            try { await signal.WaitAsync(NextWait(more, gate), ct); }
             catch (OperationCanceledException) { return; }
         }
+    }
+
+    /// <summary><see cref="CanRun"/>; ein übersprungener Schritt zählt als „noch Arbeit".</summary>
+    private bool Gate(ref bool more, params string[] sites)
+    {
+        if (CanRun(gate, sites)) return true;
+        more = true;
+        return false;
     }
 }

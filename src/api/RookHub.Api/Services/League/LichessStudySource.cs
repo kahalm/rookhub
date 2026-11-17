@@ -52,7 +52,10 @@ public sealed partial class LichessStudySource
         {
             res = await _http.CreateClient(ClientName).GetAsync(ApiPath(s), HttpCompletionOption.ResponseHeadersRead, ct);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return (null, "lichessFailed"); }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or LeagueOnlineSync.RateLimitedException)
+        {
+            return (null, "lichessFailed");                                       // 429/Pause des Tors (LeagueRateGate) ebenso
+        }
         using (res)
         {
             if (res.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized)

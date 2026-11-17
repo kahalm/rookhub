@@ -243,7 +243,7 @@ public sealed partial class LeagueTeamScout
                     url, (int?)e.StatusCode);
                 if (RetryPause > TimeSpan.Zero) await Task.Delay(RetryPause, ct);
             }
-            catch (LeagueOnlineSync.RateLimitedException) when (bulk && waits < RateLimitWaits)
+            catch (LeagueOnlineSync.RateLimitedException e) when (bulk && waits < RateLimitWaits)
             {
                 // Der BESTANDS-Aufbau sitzt eine Drossel aus, statt den ganzen Durchgang zu beenden: er macht hunderte
                 // Abrufe in Folge und traf die Drossel am 01.10.2026 zweimal nach rund einer Minute — jedes Mal ohne
@@ -251,9 +251,12 @@ public sealed partial class LeagueTeamScout
                 // Warten ist also billig. Die Konto-Pruefung bleibt unberuehrt: dort beendet ein 429 den Durchgang.
                 waits++;
                 tries = 0;
-                _logger.LogWarning("LeagueHub: Team-Suche — Lichess drosselt, warte {Seconds} s und mache weiter ({Wait}/{Max})",
-                    (int)RateLimitCooldown.TotalSeconds, waits, RateLimitWaits);
-                if (RateLimitCooldown > TimeSpan.Zero) await Task.Delay(RateLimitCooldown, ct);
+                // Seit 2026-11-17 mindestens die Restpause des gemeinsamen Tors (LeagueRateGate) — sonst ginge die nächste
+                // Anfrage nicht hinaus, und die Wartezüge wären vor Ende der Pause verbraucht. Die Warnung schreibt das Tor.
+                var wait = e.Remaining is { } left && left > RateLimitCooldown ? left : RateLimitCooldown;
+                _logger.LogInformation("LeagueHub: Team-Suche — Lichess drosselt, warte {Seconds} s und mache weiter ({Wait}/{Max})",
+                    (int)Math.Ceiling(wait.TotalSeconds), waits, RateLimitWaits);
+                if (wait > TimeSpan.Zero) await Task.Delay(wait, ct);
             }
         }
     }
@@ -492,7 +495,7 @@ public sealed partial class LeagueTeamScout
         }
         catch (LeagueOnlineSync.RateLimitedException e)
         {
-            _logger.LogWarning("LeagueHub: {Message} — Team-Suche pausiert", e.Message);
+            _logger.LogDebug("LeagueHub: {Message} — Team-Suche pausiert", e.Message);   // Warnung schreibt LeagueRateGate
             return true;
         }
     }

@@ -27,19 +27,25 @@ public static class HttpClientsSetup
     /// <summary>LeagueHub: Online-Konten, Lichess-Studien und die direkten Liga-Quellen (Ligamanager, Zugspitze).</summary>
     private static void AddLeagueSourceClients(IServiceCollection services, IConfiguration configuration)
     {
+        // Gemeinsame Pause je Gegenseite nach einem 429 (2026-11-17): EIN Tor für alle LeagueHub-Aufrufe an Lichess/chess.com.
+        var lichessHost = new Uri(configuration["Lichess:SiteUrl"] ?? "https://lichess.org").Host;
+        services.AddSingleton(sp => new RookHub.Api.Services.League.LeagueRateGate(
+            sp.GetRequiredService<ILogger<RookHub.Api.Services.League.LeagueRateGate>>()));
         // chess.com verlangt einen aussagekräftigen User-Agent (sonst 403); Lichess streamt 500 Partien in rund 25 s.
         services.AddHttpClient(RookHub.Api.Services.League.LeagueOnlineSync.ClientName, client =>
         {
             client.Timeout = TimeSpan.FromMinutes(3);
             client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub-LeagueHub/1.0 (+https://rookhub.oberschmid.homes)");
-        });
+        }).AddHttpMessageHandler(sp => new RookHub.Api.Services.League.LeagueRateGateHandler(
+            sp.GetRequiredService<RookHub.Api.Services.League.LeagueRateGate>(), lichessHost));
         // Öffentliche Lichess-Studien für den Import in die Vereins-Datenbank (nur die feste API, siehe LichessStudySource).
         services.AddHttpClient(RookHub.Api.Services.League.LichessStudySource.ClientName, client =>
         {
             client.BaseAddress = new Uri(configuration["Lichess:SiteUrl"] ?? "https://lichess.org");
             client.Timeout = TimeSpan.FromSeconds(60);
             client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub-LeagueHub/1.0 (+https://rookhub.oberschmid.homes)");
-        });
+        }).AddHttpMessageHandler(sp => new RookHub.Api.Services.League.LeagueRateGateHandler(
+            sp.GetRequiredService<RookHub.Api.Services.League.LeagueRateGate>(), lichessHost));
         // Zweite Liga-Quelle: SBV-Ligamanager (Bayern, 2026-10-07) — direkt, höflich, ohne Crawler/VPN.
         services.AddHttpClient(RookHub.Api.Services.League.LigamanagerSource.ClientName, client =>
         {

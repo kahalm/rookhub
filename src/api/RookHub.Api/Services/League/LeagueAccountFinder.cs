@@ -685,7 +685,7 @@ public sealed partial class LeagueAccountFinder
             }
             catch (LeagueOnlineSync.RateLimitedException e)
             {
-                _logger.LogWarning("LeagueHub: {Message} — Konto-Suche pausiert", e.Message);
+                _logger.LogDebug("LeagueHub: {Message} — Konto-Suche pausiert", e.Message);   // Warnung schreibt LeagueRateGate
                 return true;
             }
             catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException && !ct.IsCancellationRequested)

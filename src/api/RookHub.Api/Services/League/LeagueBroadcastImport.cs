@@ -319,7 +319,7 @@ public sealed partial class LeagueBroadcastImport
         }
         catch (LeagueOnlineSync.RateLimitedException e)
         {
-            _logger.LogWarning("LeagueHub: {Message} — Übertragungen pausiert", e.Message);
+            _logger.LogDebug("LeagueHub: {Message} — Übertragungen pausiert", e.Message);   // Warnung schreibt LeagueRateGate
             return true;
         }
     }

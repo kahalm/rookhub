@@ -315,7 +315,14 @@ Seite, gesichert oder unsicher + Kommentare; im Hintergrund holst du die Spiele 
   alle Züge und die ersten 30 Halbzüge als `Line` (für den Baum) — beide in derselben SAN wie die Brettpartien, OHNE
   Schach-/Mattzeichen (`PgnParser.ExtractMainlineSans`; Lichess liefert „Bb4+“, sonst stand derselbe Zug zweimal im Baum,
   Codereview N4-001 — den Altbestand bereinigt die Migration `LeagueOnlineLinesWithoutCheckSigns`). Der Stand steht am Konto
-  (`SyncCursor` in ms, `SyncMore` = es gibt noch Rückstand, `SyncedAt`, `GameCount`, `SyncError`); 404 = „Konto nicht gefunden", ein 429 beendet den ganzen Lauf.
+  (`SyncCursor` in ms, `SyncMore` = es gibt noch Rückstand, `SyncedAt`, `GameCount`, `SyncError`); 404 = „Konto nicht gefunden", ein 429 lässt die übrigen Konten DIESER Seite für den Lauf liegen
+  (chess.com läuft weiter, wenn nur Lichess drosselt).
+* **Gemeinsame Drossel-Pause** (`LeagueRateGate` + `LeagueRateGateHandler` am Client `LeagueOnline` und `LichessStudy`,
+  2026-11-17): nach einem 429 geht bis zum Ablauf KEINE LeagueHub-Anfrage mehr an diese Gegenseite (Lichess und chess.com
+  getrennt) — wer es versucht, bekommt ohne Netzaufruf `RateLimitedException` (mit `Site`, `Remaining`). Dauer 75 s (60 s +
+  Reserve), bei 429 in Folge verdoppelt bis 20 min, mindestens `Retry-After` + 5 s (höchstens 1 h); eine Antwort ohne 429 setzt
+  die Folge zurück. EINE Warnung je Beginn einer Pause, das Ende als Information. Der Takt überspringt die Schritte einer
+  pausierten Seite und wartet mindestens bis zum Ende der Pause; Nutzer-Prüfungen (`LeagueAccountChecks`) zeigen „bremst gerade".
 * **Takt** (`LeagueOnlineSyncScheduler`): zwei Minuten nach dem Start, dann je Konto alle `LeagueOnline:IntervalHours` (12), sofort
   nach einem Weckruf; solange ein Konto Rückstand hat, eine Minute Pause zwischen den Läufen (je Lauf höchstens 10 min), sonst
   schaut er alle 30 min. `LeagueOnline:Enabled=false` schaltet ihn ab. Die Integrationstests nehmen alle Hosted Services heraus.
