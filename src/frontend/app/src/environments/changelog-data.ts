@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.990.1", date: "2026-11-17", changes: [
+    { en: "Internal: an integration test still expected the old background session id without the per-engine session epoch (red since 0.989.2); it now checks the new format. New integration test for the game-analysis repair tool against a real MariaDB database.",
+      de: "Intern: ein Integrationstest erwartete noch die alte Hintergrund-Sitzungskennung ohne Sitzungs-Epoche der Engine (rot seit 0.989.2); er prüft jetzt das neue Format. Neuer Integrationstest für das Reparatur-Werkzeug der Partieanalysen gegen eine echte MariaDB-Datenbank." },
+  ] },
   { version: "0.990.0", date: "2026-11-17", changes: [
     { en: "Admin: new repair tool for game analyses that were damaged by an engine helper running “one search behind”: it finds positions without lines or with too few lines (checkmate and stalemate excluded), shows them in a dry run and, on request, reopens them page by page so that they are recalculated; accuracy, move classes and the affected move explanations are recalculated afterwards. The position cache no longer copies such damaged results into other games.",
       de: "Admin: neues Reparatur-Werkzeug für Partieanalysen, die ein „eine Suche hinterherhängender“ Engine-Helfer verdorben hat: es findet Stellungen ohne oder mit zu wenigen Linien (Matt und Patt ausgenommen), zeigt sie im Trockenlauf und öffnet sie auf Zuruf seitenweise wieder, damit sie neu gerechnet werden; Genauigkeit, Zugklassen und die betroffenen Zugerklärungen entstehen danach neu. Der Stellungs-Zwischenspeicher kopiert solche verdorbenen Ergebnisse nicht mehr in andere Partien." },

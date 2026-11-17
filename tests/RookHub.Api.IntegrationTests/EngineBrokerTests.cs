@@ -335,7 +335,8 @@ public class EngineBrokerTests(EngineBrokerFixture fixture) : IAsyncLifetime, IC
         var provider = await ProviderAsync(engineToken, async (job, write, ct) =>
         {
             var work = job.GetProperty("work");
-            Assert.Equal($"rh-bg-{userId}", work.GetProperty("sessionId").GetString());
+            // Sitzung des Kontos plus Sitzungs-Epoche der Engine (0.989.2, EngineSessionEpochs): -e<5 Zeichen Prozess><Zähler>.
+            Assert.Matches($"^rh-bg-{userId}-e[a-z0-9]{{5}}[0-9]+$", work.GetProperty("sessionId").GetString());
             var depth = work.GetProperty("depth").GetInt32();
             for (var d = 1; d <= depth; d++)
             {
