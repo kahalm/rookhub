@@ -70,8 +70,9 @@ ARG PROVIDER_SHA256=aea0bb0258c7afbb4177eba91d1beaed5a9d102d1d46122aae7f6f00433c
 RUN curl -fsSL "https://raw.githubusercontent.com/lichess-org/external-engine/${PROVIDER_SHA}/example-provider.py" \
       -o /opt/provider.py \
  && echo "${PROVIDER_SHA256}  /opt/provider.py" | sha256sum -c -
-COPY patch_force_close.py /opt/
-RUN python3 /opt/patch_force_close.py /opt/provider.py
+COPY patch_force_close.py patch_search_owner.py /opt/
+RUN python3 /opt/patch_force_close.py /opt/provider.py \
+ && python3 /opt/patch_search_owner.py /opt/provider.py
 COPY entrypoint.sh preflight.py /opt/
 COPY lc0/lc0-uci.py /opt/lc0/lc0-uci
 RUN chmod +x /opt/entrypoint.sh /opt/lc0/lc0-uci

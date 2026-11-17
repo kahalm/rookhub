@@ -319,6 +319,24 @@ if (-not (Select-String -Path $script -SimpleMatch "force_close=True" -Quiet -Er
     }
 }
 
+# Zweiter Eingriff (README, "Abgerissener Upload"): die Engine weiss selbst, ob eine Suche aussteht und wem
+# sie gehoert. Ohne ihn liefert ein Provider nach einem abgerissenen Upload (API-Neustart) bis zu seinem Ende
+# bei JEDEM Auftrag die Zeilen der vorigen Stellung. Gleiche Regeln wie oben: nur der gepinnte Patch, er liegt
+# nach README-Schritt 3 neben dem Provider-Skript, Aufruf idempotent, Abbruch ohne Aenderung bei fremdem Stand.
+$ownerSha256 = "A71632D9682AFDDACF59C7E677EB5105E6BA8C8E56624CFB1C9AF09926D6FA85"
+$ownerPatch = Join-Path (Split-Path -Parent $script) "patch_search_owner.py"
+if (-not (Select-String -Path $script -SimpleMatch "# patch_search_owner:" -Quiet -ErrorAction SilentlyContinue)) {
+    if ((Test-Path $ownerPatch) -and (Get-FileHash $ownerPatch -Algorithm SHA256).Hash -ne $ownerSha256) {
+        Write-WrapperLog "WARNUNG: $ownerPatch hat nicht die gepinnte Pruefsumme - nicht ausgefuehrt"
+    } elseif (Test-Path $ownerPatch) {
+        $patchOut = & $pythonExe $ownerPatch $script 2>&1 | Out-String
+        Write-WrapperLog "patch_search_owner: $($patchOut.Trim())"
+    }
+    if (-not (Select-String -Path $script -SimpleMatch "# patch_search_owner:" -Quiet -ErrorAction SilentlyContinue)) {
+        Write-WrapperLog "WARNUNG: $script ist NICHT gepatcht (search_owner) - nach einem abgerissenen Upload liefert jeder Auftrag die vorige Stellung, siehe README Schritt 3"
+    }
+}
+
 # Die Engines dieses Rechners. NAMENSREGEL: Der Name IST die Registrierung - die erste
 # Hintergrund-Engine heisst genau $bgName, die zweite "$bgName 2", die dritte "$bgName 3" (so wie
 # im Docker-Image). Wird ein Name geaendert, entsteht eine NEUE Engine mit neuer Kennung, und die

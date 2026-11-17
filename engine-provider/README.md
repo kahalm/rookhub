@@ -223,6 +223,27 @@ TLS-Handshake kosten). Der Patch wird NACH der Prüfsummen-Kontrolle angewandt u
 die Textstelle fehlt; `test/provider.test.py` prüft, dass drei Uploads auf drei Verbindungen kommen. Behebt
 upstream das Problem, fliegen Skript und Dockerfile-Zeilen wieder raus.
 
+**Zweiter Eingriff: Abgerissener Upload — „um eine Suche versetzt"** (`patch_search_owner.py`, seit 0.989.3).
+*Fehlerbild* (Prod 16./17.11.2026, auf allen Rechnern): ab einem API-Neustart liefert JEDER Auftrag eines
+Provider-Prozesses die Zeilen der VORIGEN Stellung samt deren `bestmove` (in der eigenen FEN illegal) und endet
+sofort, erreichte Tiefe 16–19 statt 20 — bis der Provider-Prozess endet. *Ursache*: der Upload einer Suche ist
+ein Async-Generator, das Aufräumen einer abgebrochenen Suche (`stop`, dann bis zu ihrem `bestmove` lesen) stand
+in dessen `finally`. Merkt aiohttp den Abriss beim SCHREIBEN einer Zeile (Stockfish liefert die ersten Tiefen im
+Schwall), bleibt der Generator am `yield` liegen und räumt nie oder viel später auf. Der nächste Auftrag liest
+dann die Reste der alten Suche bis zu deren `bestmove`, endet damit „regulär" und lässt die eigene Suche
+ungelesen stehen — ab da liest jeder Auftrag die Ausgabe seines Vorgängers. Läuft das `finally` später doch
+noch, schickt es `stop` an die gerade laufende, fremde Suche (sie endet zu flach) und liest als zweiter Leser
+mit. Nachgestellt mit echtem Stockfish und der Schein-Engine (`test/provider_offset.test.py`: Verbindung
+gekappt, Broker kurz weg, späte Finalisierung; `test/search_owner.test.py` Schritt für Schritt); ein 502 mitten
+im Upload löst es nicht aus. Ein Auftrag mit neuer `sessionId` (`ucinewgame` + `isready`) heilt den Versatz
+(nachgeprüft mit beiden Engines). *Behebung*: die Engine führt selbst, ob eine Suche aussteht und wem sie
+gehört; gelesen wird nur über EINEN Lese-Task. Vor `position`/`go` räumt jeder neue Auftrag eine ausstehende
+Suche ab (`stop`, bis `bestmove` lesen und verwerfen; ohne Antwort binnen 30 s wird die Engine neu gestartet),
+und das `finally` eines verlassenen Generators tut nichts mehr, sobald ein neuerer Auftrag die Engine hat.
+**Ältere Clients behalten den Fehler, bis sie neu gebaut bzw. aktualisiert sind**: Docker-Abbilder (Stockfish
+und Lc0) neu bauen, unter Windows und ohne Docker `patch_search_owner.py` neben das Provider-Skript legen
+(Schritt 3 unten) und den Provider neu starten — `run_provider.ps1` wendet ihn beim Start selbst an.
+
 ### Zeitplan (`ENGINE_SCHEDULE`)
 
 Ohne Zeitplan rechnen alle Engines rund um die Uhr. Oft soll das nicht sein: tagsüber gehört der

@@ -93,6 +93,13 @@ RUN curl -fsSL "https://raw.githubusercontent.com/lichess-org/external-engine/${
 COPY patch_force_close.py /opt/
 RUN python3 /opt/patch_force_close.py /opt/provider.py
 
+# Zweiter Eingriff (seit 0.989.3): die Engine weiss selbst, ob eine Suche aussteht und wem sie gehoert.
+# Ohne ihn geraet ein Provider nach einem abgerissenen Upload dauerhaft „um eine Suche versetzt" — jeder
+# Auftrag liefert die Zeilen der vorigen Stellung (README, „Abgerissener Upload"). Gleiche Regeln wie oben:
+# nach der Pruefsumme, Abbruch wenn eine Textstelle fehlt.
+COPY patch_search_owner.py /opt/
+RUN python3 /opt/patch_search_owner.py /opt/provider.py
+
 COPY entrypoint.sh preflight.py cpu_pressure.py /opt/
 RUN chmod +x /opt/entrypoint.sh
 

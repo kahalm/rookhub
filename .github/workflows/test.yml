@@ -228,6 +228,10 @@ jobs:
       # Vertragstest unten prüft ihn mit und ist ungepatcht rot.
       - run: python3 patch_force_close.py /tmp/provider.py
         working-directory: engine-provider
+      # … und der zweite (Suche gehoert der Engine, kein Versatz nach abgerissenem Upload) — geprueft von
+      # test/search_owner.test.py und test/provider_offset.test.py ganz unten, ungepatcht sind beide rot.
+      - run: python3 patch_search_owner.py /tmp/provider.py
+        working-directory: engine-provider
       # Argument-Aufbau + Vorprüfungen (Dry-Run) …
       - run: bash test/entrypoint.test.sh
         working-directory: engine-provider
@@ -250,6 +254,12 @@ jobs:
       # Lebenszeichen, kein Warten nach einer beendeten Suche — gegen einen nachgebauten Broker (~20 s).
       # Ein fehlender Pfad lässt den Test scheitern statt sich zu überspringen.
       - run: python3 test/provider.test.py /tmp/provider.py
+        working-directory: engine-provider
+      # Abgerissener Upload: der verlassene Generator Schritt fuer Schritt (Versatz, fremdes stop, Stillstand) …
+      - run: python3 test/search_owner.test.py /tmp/provider.py
+        working-directory: engine-provider
+      # … und ueber echte Verbindungen: Abriss, 502 mitten im Upload, Broker weg, spaete Finalisierung (~30 s).
+      - run: python3 test/provider_offset.test.py /tmp/provider.py
         working-directory: engine-provider
 
   # Die Tests der Betriebs-Skripte (scripts/tests/, Codereview I1-015). Sie liefen in KEINEM
