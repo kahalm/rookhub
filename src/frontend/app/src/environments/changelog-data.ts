@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.989.4", date: "2026-11-17", changes: [
+    { en: "Engine provider guide (README): the setup steps for Windows and without Docker now also download the new “patch_search_owner.py” (pinned to a commit, with checksum) and apply it.",
+      de: "Anleitung zum Engine-Provider (README): die Einrichtungsschritte für Windows und ohne Docker holen jetzt auch die neue „patch_search_owner.py“ (auf einen Commit gepinnt, mit Prüfsumme) und wenden sie an." },
+  ] },
   { version: "0.989.3", date: "2026-11-17", changes: [
     { en: "Engine provider (your own engine on your computer): after an interrupted upload — e.g. while RookHub restarted — a provider could stay “one search behind” until it was restarted: every analysis returned the lines and best move of the PREVIOUS position and ended at once; some searches also stopped too early. The provider now keeps track of a running search itself, finishes it before starting the next one and reads the engine output in one place only. To get the fix, rebuild the Docker images (Stockfish and Lc0); on Windows and without Docker put the new “patch_search_owner.py” next to the provider script (README, step 3) and restart it.",
       de: "Engine-Provider (eigene Engine am eigenen Rechner): nach einem abgerissenen Upload — etwa während RookHub neu startete — konnte ein Provider bis zu seinem Neustart „um eine Suche versetzt“ bleiben: jede Analyse lieferte die Zeilen und den besten Zug der VORIGEN Stellung und endete sofort; manche Suchen hörten auch zu früh auf. Der Provider führt eine laufende Suche jetzt selbst, räumt sie vor der nächsten ab und liest die Ausgabe der Engine nur noch an einer Stelle. Für die Korrektur die Docker-Abbilder (Stockfish und Lc0) neu bauen; unter Windows und ohne Docker die neue „patch_search_owner.py“ neben das Provider-Skript legen (README, Schritt 3) und ihn neu starten." },

@@ -538,13 +538,17 @@ echo "aea0bb0258c7afbb4177eba91d1beaed5a9d102d1d46122aae7f6f00433c44a1  example-
 curl -O https://raw.githubusercontent.com/kahalm/rookhub/fa7c72261e6620016ed824f83e8a9d03b6bac359/engine-provider/patch_force_close.py
 echo "f6e589e3b2fa12fc0e2141698e92fe72dca18cc31862da4b435f6dfaaefa33f5  patch_force_close.py" | sha256sum -c - || rm -f example-provider.py patch_force_close.py
 .venv/bin/python patch_force_close.py example-provider.py
+curl -O https://raw.githubusercontent.com/kahalm/rookhub/d5a1e841aa32e53b29b2128bca8b5691f9376ce5/engine-provider/patch_search_owner.py
+echo "a71632d9682afddacf59c7e677eb5105e6ba8c8e56624cfb1c9af09926d6fa85  patch_search_owner.py" | sha256sum -c - || rm -f example-provider.py patch_search_owner.py
+.venv/bin/python patch_search_owner.py example-provider.py
 LICHESS_API_TOKEN=lip_dein_token .venv/bin/python example-provider.py \
   --engine /usr/games/stockfish --name "RookHub Heim-Engine" --max-threads 6
 ```
 
 Das sind dieselben drei Sicherungen wie im Image: die aiohttp-Fassung aus `requirements.txt`, die
 Prüfsumme des gepinnten Skripts und die frische Verbindung je Upload (`patch_force_close.py`,
-Abschnitt „Ein Eingriff bleibt" oben — ohne sie endet ein Teil der Suchen nach 15 s mit 503).
+Abschnitt „Ein Eingriff bleibt" oben — ohne sie endet ein Teil der Suchen nach 15 s mit 503); dazu
+`patch_search_owner.py` gegen den Versatz nach einem abgerissenen Upload (Abschnitt „Abgerissener Upload").
 Stimmt die Prüfsumme nicht, wird die Datei verworfen (`|| rm -f example-provider.py`): Patch und
 Start scheitern dann an der fehlenden Datei, statt einem veränderten Skript den Token zu zeigen —
 auch wenn der ganze Block auf einmal eingefügt wird. Auf macOS lautet die Zeile
@@ -601,13 +605,18 @@ if ((Get-FileHash .\example-provider.py -Algorithm SHA256).Hash -ne "aea0bb0258c
 curl.exe -O https://raw.githubusercontent.com/kahalm/rookhub/fa7c72261e6620016ed824f83e8a9d03b6bac359/engine-provider/patch_force_close.py
 if ((Get-FileHash .\patch_force_close.py -Algorithm SHA256).Hash -ne "F6E589E3B2FA12FC0E2141698E92FE72DCA18CC31862DA4B435F6DFAAEFA33F5") { Remove-Item .\patch_force_close.py, .\example-provider.py; throw "Pruefsumme des Patches stimmt nicht - Dateien verworfen" }
 python patch_force_close.py example-provider.py
+curl.exe -O https://raw.githubusercontent.com/kahalm/rookhub/d5a1e841aa32e53b29b2128bca8b5691f9376ce5/engine-provider/patch_search_owner.py
+if ((Get-FileHash .\patch_search_owner.py -Algorithm SHA256).Hash -ne "A71632D9682AFDDACF59C7E677EB5105E6BA8C8E56624CFB1C9AF09926D6FA85") { Remove-Item .\patch_search_owner.py, .\example-provider.py; throw "Pruefsumme des zweiten Patches stimmt nicht - Dateien verworfen" }
+python patch_search_owner.py example-provider.py
 ```
 
 Die Prüfsumme schützt den Token (ein verändertes Skript bekäme ihn zu sehen), der Patch die
 Uploads: ohne ihn stirbt ein Teil davon im ersten Byte, und RookHub bekommt nach 15 s einen 503
 (Abschnitt „Ein Eingriff bleibt" oben). `run_provider.ps1` (unten) prüft beim Start, ob der Patch
 drin ist, und holt ihn mit dem daneben liegenden `patch_force_close.py` nach — nur, wenn dessen Prüfsumme die
-gepinnte ist (sonst eine Warnzeile im Wrapper-Log und kein Patch).
+gepinnte ist (sonst eine Warnzeile im Wrapper-Log und kein Patch). Genauso mit dem zweiten Patch
+`patch_search_owner.py` (Abschnitt „Abgerissener Upload" oben): wer den Provider schon eingerichtet hat, holt
+nur die beiden `patch_search_owner.py`-Zeilen samt Prüfung nach und startet den Wrapper neu.
 
 **4. Starten** — direkt mit RookHub (der Token ist der rkh_-Token aus dem Profil, Bereich
 „Engine"; die Umgebungsvariable heisst trotzdem `LICHESS_API_TOKEN`, weil der Provider nur diesen
