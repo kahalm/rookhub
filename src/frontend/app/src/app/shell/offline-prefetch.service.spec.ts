@@ -3,7 +3,7 @@ import { OfflinePrefetchService } from './offline-prefetch.service';
 import { PUZZLE_POOL_KEY } from '../core/offline.service';
 import { ENDLESS_CHAIN_BLOCK } from '../features/puzzles/endless-prefetch.util';
 
-function make(opts: { loggedIn?: boolean; puzzleCount?: number; endlessCached?: number } = {}) {
+function make(opts: { loggedIn?: boolean; puzzleCount?: number; endlessCached?: number; config?: any } = {}) {
   const puzzleService = {
     getStats: jasmine.createSpy('getStats').and.returnValue(of({ puzzleElo: 1500 })),
     getAnonymousStats: jasmine.createSpy('getAnonymousStats').and.returnValue(of({ puzzleElo: 1200 })),
@@ -14,7 +14,7 @@ function make(opts: { loggedIn?: boolean; puzzleCount?: number; endlessCached?: 
   const auth = { isLoggedIn: opts.loggedIn ?? false } as any;
   const offline = { puzzleCount: opts.puzzleCount ?? 0 } as any;
   const endlessStorage = {
-    loadConfig: (d: any) => d,
+    loadConfig: (d: any) => ({ ...d, ...(opts.config ?? {}) }),
     loadSessionHistory: () => [],
     loadOfflinePool: () => new Array(opts.endlessCached ?? (ENDLESS_CHAIN_BLOCK + 5)).fill({}),
     saveOfflinePool: jasmine.createSpy('saveOfflinePool'),
@@ -58,5 +58,35 @@ describe('OfflinePrefetchService', () => {
     const { svc, endlessStorage } = make({ puzzleCount: 1, endlessCached: 0 });
     svc.prefetchAll();
     expect(endlessStorage.saveOfflinePool).toHaveBeenCalled();
+  });
+
+  it('sends the endless themes as themesAny (OR, like the live run), never as themes (AND)', () => {
+    spyOnProperty(navigator, 'onLine', 'get').and.returnValue(true);
+    spyOn(localStorage, 'getItem').and.returnValue(JSON.stringify(new Array(999).fill({})));
+    const { svc, puzzleService } = make({ puzzleCount: 1, endlessCached: 0, config: { themes: ' fork pin skewer ' } });
+    svc.prefetchAll();
+    const args = puzzleService.getRandomBatch.calls.mostRecent().args;
+    expect(args[1]).toBeUndefined();            // themes (UND)
+    expect(args[3]).toBe('fork pin skewer');    // themesAny (ODER)
+  });
+
+  it('falls back to config.themes as themesAny when "weakest themes" is on (no list at hand)', () => {
+    spyOnProperty(navigator, 'onLine', 'get').and.returnValue(true);
+    spyOn(localStorage, 'getItem').and.returnValue(JSON.stringify(new Array(999).fill({})));
+    const { svc, puzzleService } = make({ puzzleCount: 1, endlessCached: 0, config: { themes: 'mateIn2 fork', worstTags: true } });
+    svc.prefetchAll();
+    const args = puzzleService.getRandomBatch.calls.mostRecent().args;
+    expect(args[1]).toBeUndefined();
+    expect(args[3]).toBe('mateIn2 fork');
+  });
+
+  it('sends no theme filter when the endless config has none', () => {
+    spyOnProperty(navigator, 'onLine', 'get').and.returnValue(true);
+    spyOn(localStorage, 'getItem').and.returnValue(JSON.stringify(new Array(999).fill({})));
+    const { svc, puzzleService } = make({ puzzleCount: 1, endlessCached: 0 });
+    svc.prefetchAll();
+    const args = puzzleService.getRandomBatch.calls.mostRecent().args;
+    expect(args[1]).toBeUndefined();
+    expect(args[3]).toBeUndefined();
   });
 });

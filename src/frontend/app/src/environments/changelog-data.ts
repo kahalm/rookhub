@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.989.6", date: "2026-11-17", changes: [
+    { en: "Endless offline pre-loading: several selected themes now count as “any of them”, exactly like the live Endless run. Before, the background pre-loading required ALL themes at once (e.g. fork AND pin AND skewer), so the offline pool for theme presets stayed almost empty.",
+      de: "Endless-Offline-Vorabladen: mehrere gewählte Themen gelten jetzt als „eines davon“, genau wie im laufenden Endless. Vorher verlangte das Vorabladen im Hintergrund ALLE Themen zugleich (etwa Gabel UND Fesselung UND Spieß), der Offline-Vorrat blieb für Themen-Vorauswahlen deshalb fast leer." },
+  ] },
   { version: "0.989.5", date: "2026-11-17", changes: [
     { en: "Puzzles: loading a batch of puzzles (offline pre-loading, Endless chain, weakest themes) is much faster — about 0.1–0.3 s instead of 4–30 s, and no more timeouts with theme filters. Puzzles within a rating window now vary much more; before, the theme filter kept returning the same few puzzles.",
       de: "Puzzles: ein Stapel Puzzles (Offline-Vorabladen, Endless-Kette, schwächste Themen) lädt viel schneller — etwa 0,1–0,3 s statt 4–30 s, mit Themenfilter keine Zeitüberschreitungen mehr. Innerhalb eines Rating-Fensters wechseln die Puzzles jetzt deutlich stärker; vorher lieferte der Themenfilter immer wieder dieselben wenigen." },

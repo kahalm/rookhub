@@ -6,7 +6,7 @@ import { AuthService } from '../core/auth.service';
 import { OfflineService, PUZZLE_POOL_KEY } from '../core/offline.service';
 import { EndlessStorageService, EndlessConfig } from '../features/puzzles/endless-storage.service';
 import { puzzleWindow } from '../features/puzzles/puzzle-window.util';
-import { buildChainWindows, autoFasttrackThresholds, ENDLESS_CHAIN_BLOCK } from '../features/puzzles/endless-prefetch.util';
+import { buildChainWindows, autoFasttrackThresholds, buildBatchThemes, ENDLESS_CHAIN_BLOCK } from '../features/puzzles/endless-prefetch.util';
 
 const ENDLESS_DEFAULT_CONFIG: EndlessConfig = { startElo: 700, themes: '', stockfishDepth: 16 };
 
@@ -67,8 +67,13 @@ export class OfflinePrefetchService {
       const t2 = config.fasttrackThreshold2 ?? auto.second;
       const windows = buildChainWindows(config.startElo, t1, t2, bounds?.max ?? 3000);
       if (!windows.length) return;
-      const themes = config.themes.trim() || undefined;
-      this.puzzleService.getRandomBatch(windows, themes).subscribe({
+      // Dieselbe Themen-Regel wie der Live-Lauf (EndlessProfile.batchThemes): die Liste ist ODER gemeint
+      // (themesAny). Vorher ging sie als UND (themes) raus — Vorauswahlen wie „fork pin skewer“ fanden damit
+      // fast nichts, und der Server scannte dafür bis in den Timeout. Die schwächsten Themen hat das
+      // Vorabladen nicht zur Hand (kein eigener Abruf): leere Liste → Rückfall auf config.themes, in das
+      // der Schalter „schwächste Themen“ die zuletzt geladene Liste schreibt.
+      const { themes, themesAny } = buildBatchThemes(config.worstTags ?? false, [], config.themes);
+      this.puzzleService.getRandomBatch(windows, themes, false, themesAny).subscribe({
         next: pool => {
           this.endlessStorage.saveOfflinePool(pool || []);
           this.endlessStorage.saveChainSeed('');   // Prefetch gehört zu keinem laufenden Run
