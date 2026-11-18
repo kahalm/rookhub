@@ -45,6 +45,7 @@ import {
 import { AnalysisLineModel, boardMove, playLine } from './analysis-line-model';
 import { pgnTitle } from './analysis-title.util';
 import { LineStudyService, lineStudyKey } from './line-study.service';
+import { blindResumeNode } from './line-study.util';
 import { LineStudySession } from './line-study-session';
 import { LineStudyCardComponent } from './line-study-card.component';
 import { CalcAnnotateCardComponent } from '../courses/calc/calc-annotate-card.component';
@@ -308,7 +309,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       this.startStudy(blind);
     } else if (pgn) {
       this.pgnInput = pgn;
-      this.loadPgn(true);      // aus einer Partie hergesprungen: das PGN bleibt im Feld stehen (kopierbar, Wunsch 2026-09-28)
+      // aus einer Partie hergesprungen: das PGN bleibt im Feld stehen (kopierbar, Wunsch 2026-09-28); ohne Engine beginnt
+      // die Partie in der Ausgangsstellung (Wunsch 2026-11-18), sonst am Ende
+      this.loadPgn(true, blind);
     } else if (p.moves.length) {
       this.loadFromUci(p.fen ?? START_FEN, p.moves);
     } else {
@@ -329,6 +332,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    * Baum holen bzw. anlegen. Gespeichert wird in den Linien-Baum statt in den Analyse-Verlauf, der Server bewertet jede
    * Stellung im Hintergrund (nur für diesen Nutzer, nicht in Genauigkeit/Zug-Klassen der Partie). `blind` = Start ohne
    * Engine (Engine aus nur für diese Seite); sonst wird der Baum gleich aufgedeckt.
+   * Ohne Engine beginnt die Partie in der AUSGANGSSTELLUNG (Wunsch 2026-11-18: „ohne Engine lande ich am Ende der Partie") —
+   * ein neuer Baum wird so angelegt, ein gespeicherter öffnet an seiner gemerkten Stellung (`blindResumeNode`: die unberührte
+   * Partie am letzten Zug zählt nicht als gemerkt). Mit Engine bleibt es beim Partieende bzw. der gespeicherten Stellung.
    */
   private startStudy(blind: boolean): void {
     this.studyEngineHidden = blind;
@@ -339,14 +345,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.study = new LineStudySession(this.lineStudies!, {
       root: () => this.root,
       current: () => this.currentNode,
-      setTree: (root, current) => this.setTree(root, current),
+      setTree: (root, current) => this.setTree(root, this.studyEngineHidden ? blindResumeNode(root, current, parsed.root) : current),
       // aufgedeckt (Server): die Bewertungen hängen am Baum; ob sie zu sehen sind, entscheidet der Modus
       revealed: () => { this.cdr.markForCheck(); },
       changed: () => { this.treeVersion++; this.cdr.markForCheck(); },
       // F2-003: gescheitertes Speichern melden — die Änderung bleibt offen und geht mit dem nächsten Zug bzw. beim Verlassen mit
       saveFailed: err => this.snackbar.warn(apiErrorText(err, this.translate, 'analysis.lineStudy.saveFailed')),
     }, lineStudyKey(parsed.root.fen, gameUcis), gameUcis, pgnTitle(parsed.headers));
-    this.loadPgn(true);
+    this.loadPgn(true, blind);
     this.study.open();
     if (!blind) this.study.revealWhenReady();
   }
@@ -753,8 +759,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
 
   /** PGN samt Varianten laden (0.604.0 — vorher nur die Hauptlinie) und ans Ende der Hauptlinie springen.
-   *  @param keepText Das PGN im Feld stehen lassen (Sprung aus einer Partie) — beim Einfügen von Hand wird es geleert. */
-  loadPgn(keepText = false): void {
+   *  @param keepText Das PGN im Feld stehen lassen (Sprung aus einer Partie) — beim Einfügen von Hand wird es geleert.
+   *  @param atStart In der Ausgangsstellung bleiben statt ans Ende zu springen („ohne Engine", Wunsch 2026-11-18). */
+  loadPgn(keepText = false, atStart = false): void {
     const pgn = this.pgnInput.trim();
     if (!pgn) return;
     const parsed = parsePgnTree(pgn);
@@ -762,7 +769,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.historySaver.newSession(pgnTitle(parsed.headers));
     if (!keepText) this.pgnInput = '';
     const main = mainline(parsed.root);
-    this.setTree(parsed.root, main[main.length - 1] ?? parsed.root);
+    this.setTree(parsed.root, atStart ? parsed.root : main[main.length - 1] ?? parsed.root);
     this.pgnHeaders = parsed.headers;
   }
 

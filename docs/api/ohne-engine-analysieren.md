@@ -121,3 +121,25 @@ Engine* auf `analysis?blind=1` — vermutlich besser `games/236?blind=1`“. Als
 - Gescheitertes Speichern bleibt offen (dirty) und meldet sich per Snackbar (`analysis.lineStudy.saveFailed`); der nächste
   Zug bzw. das Verlassen versucht es erneut.
 - „Engine einschalten“ während eines laufenden Speicherns wird vorgemerkt und nach dem Speichern ausgeführt.
+
+
+## Nachtrag 0.991.1 — Start in der Ausgangsstellung
+
+Wunsch 2026-11-18: „wenn ich eine Vereinspartie analysieren will und sag ohne Engine, lande ich am Ende der Partie“. Das
+Analysebrett springt beim Laden eines PGN ans Ende der Hauptlinie (`loadPgn`, sinnvoll beim Einfügen von Hand und mit
+Engine) — ohne Engine will man die Partie aber von vorn durchdenken.
+
+- **Neuer Baum**: `startStudy(blind)` lädt die Partie mit `loadPgn(true, atStart)` in der Ausgangsstellung; der Baum wird
+  so angelegt (`current: -1`). Ohne Konto (freies Brett, `?blind=1` + Partie) gilt dasselbe.
+- **Wiederöffnen**: die gespeicherte Stellung bleibt (jede Navigation speichert `current` mit — man macht dort weiter, wo
+  man war, auch nach dem Wechsel Partieseite ⇄ Brett). Ausnahme `blindResumeNode` (`line-study.util.ts`): ist der Baum noch
+  die unberührte Partie (`isUntouchedGame`: dieselben Züge wie das PGN samt dessen Varianten, kein Stern, Symbol, keine
+  eigene Bewertung, kein Kommentar — Engine-Bewertungen zählen nicht) UND steht `current` auf ihrem letzten Zug, beginnt das
+  Brett in der Ausgangsstellung. So wurden die Bäume bis 0.991.0 angelegt (Prod am 18.11.: 8 von 14); die neue Stellung
+  geht mit dem nächsten Speichern mit, eine Datenmigration gibt es nicht.
+- **Mit Engine** (`startStudy(false)`, „Im Analysebrett öffnen“, `?pgn=` ohne `blind`) ändert sich nichts: neu am
+  Partieende, sonst an der gespeicherten Stellung. Die Regel greift nur, solange die Engine verdeckt ist
+  (`studyEngineHidden` beim Laden).
+
+Specs: `line-study.util.spec.ts` („wo ‚ohne Engine‘ beim Wiederöffnen steht“), `analysis.component.spec.ts` („wo das Brett
+beim Öffnen steht“).

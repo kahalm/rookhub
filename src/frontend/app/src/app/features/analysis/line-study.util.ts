@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { AnalysisNode } from './analysis-tree';
+import { AnalysisNode, mainline } from './analysis-tree';
 import { EvalScore, MoveClass, classifyMove, formatEval, winPercent } from '../games/game-review.util';
 import { whiteToMove } from '../../shared/chess/fen-side';
 
@@ -33,6 +33,37 @@ export function gameNodes(root: AnalysisNode, gameUcis: readonly string[]): Set<
     set.add(node);
   }
   return set;
+}
+
+/** Eigenes am Knoten: Stern, Zug-Symbol, Stellungsbewertung oder Kommentar (die Engine-Bewertung zählt nicht dazu). */
+function hasOwnMark(n: AnalysisNode): boolean {
+  return !!(n.starred || n.glyph || n.evaluation || n.comment);
+}
+
+/** Ist der Baum noch die unberührte Partie — dieselben Züge in derselben Form wie `game` (der Baum aus dem PGN, samt dessen
+ *  Varianten), nichts Eigenes daran? Ohne Rekursion: eine lange Partie ist eine tiefe Kette. */
+export function isUntouchedGame(root: AnalysisNode, game: AnalysisNode): boolean {
+  const open: [AnalysisNode, AnalysisNode][] = [[root, game]];
+  while (open.length > 0) {
+    const [a, b] = open.pop()!;
+    if (hasOwnMark(a) || a.children.length !== b.children.length) return false;
+    for (let i = 0; i < a.children.length; i++) {
+      if (a.children[i].uci !== b.children[i].uci) return false;
+      open.push([a.children[i], b.children[i]]);
+    }
+  }
+  return true;
+}
+
+/**
+ * Wo das Brett „ohne Engine" beim Wiederöffnen steht (Wunsch 2026-11-18: „ohne Engine lande ich am Ende der Partie"): an der
+ * gespeicherten Stellung — außer der Baum ist noch die unberührte Partie UND die gespeicherte Stellung ihr letzter Zug. So
+ * wurden die Bäume bis 0.991.0 ANGELEGT (das Brett sprang beim Laden ans Partieende); dort liegt keine Arbeit, also beginnt
+ * die Analyse in der Ausgangsstellung. Jede andere gespeicherte Stellung bleibt (Fortsetzen, wo man war).
+ */
+export function blindResumeNode(root: AnalysisNode, current: AnalysisNode, game: AnalysisNode): AnalysisNode {
+  const main = mainline(root);
+  return main.length > 0 && current === main[main.length - 1] && isUntouchedGame(root, game) ? root : current;
 }
 
 /** Eine eigene Entscheidung im Vergleich: der Zug, seine Klasse, der Verlust (Prozentpunkte Gewinnchance) und der bessere Zug. */

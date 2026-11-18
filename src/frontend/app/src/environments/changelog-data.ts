@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.991.1", date: "2026-11-18", changes: [
+    { en: "Analysing a game “without engine” now starts at the first position of the game instead of at its end — so you can think your way through it from move one. If you come back to a game you have already worked on, the board still opens where you left off; games that were only opened before (and therefore remembered the final position) start at the beginning as well. With engine nothing changes.",
+      de: "Eine Partie „ohne Engine“ analysieren beginnt jetzt in der Ausgangsstellung statt am Partieende — so lässt sie sich von Zug eins an selbst durchdenken. Wer zu einer Partie zurückkehrt, an der er schon gearbeitet hat, landet weiter dort, wo er war; Partien, die bisher nur geöffnet wurden (und sich deshalb die Schlussstellung gemerkt hatten), beginnen ebenfalls vorn. Mit Engine ändert sich nichts." },
+  ] },
   { version: "0.991.0", date: "2026-11-17", changes: [
     { en: "Coaching sessions: below the video there is now a speaker bar (who talks when, click to jump), the name of the current speaker and two buttons — “Next speaker” jumps to the next speaker turn, ⏮ goes back to the start of the current turn (right after a change: of the previous one). Short interjections such as “yes” or “mhm” are smoothed out so the button does not jump every second. Works in the shared guest view as well; sessions whose speaker separation is unreliable show no buttons.",
       de: "Trainerstunden: unter dem Video gibt es jetzt eine Sprecherleiste (wer wann spricht, Klick springt), den Namen des gerade Sprechenden und zwei Knöpfe — „Nächster Sprecher“ springt zum nächsten Redebeitrag, ⏮ zurück an den Anfang des laufenden (direkt nach einem Wechsel: des vorigen). Kurze Einwürfe wie „ja“ oder „mhm“ sind geglättet, damit der Knopf nicht jede Sekunde springt. Geht auch in der geteilten Gast-Ansicht; Stunden mit unsicherer Sprechertrennung zeigen keine Knöpfe." },

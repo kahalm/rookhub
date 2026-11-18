@@ -434,6 +434,119 @@ describe('AnalysisComponent Partie immer im Linien-Baum (0.898.0)', () => {
     expect(api.reveal).toHaveBeenCalledWith(7);
     c.ngOnDestroy();
   });
+
+  // Wunsch 2026-11-18: „wenn ich eine Vereinspartie analysieren will und sag ohne Engine, lande ich am Ende der Partie"
+  describe('wo das Brett beim Öffnen steht', () => {
+    const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    /** Die Partie als gespeicherter Baum (1.e4 e5 2.Nf3), optional mit der eigenen Variante 2.Nc3. */
+    function saved(current: number, ownLine = false) {
+      const n = [{ p: -1, u: 'e2e4' }, { p: 0, u: 'e7e5' }, { p: 1, u: 'g1f3' }];
+      if (ownLine) n.push({ p: 1, u: 'b1c3' });
+      return of({ id: 7, revealed: false, analyzed: 0, total: n.length + 1, startFen: START_FEN, tree: { n }, current });
+    }
+
+    it('ohne Engine, neuer Baum: Ausgangsstellung, und so wird er auch angelegt (current −1)', () => {
+      const c = makeComponent({ pgn, blind: '1' }, { loggedIn: true });
+      const api = fakeStudies();
+      (c as any).lineStudies = api;
+      c.ngOnInit();
+      expect(c.blind).toBeTrue();
+      expect(c.currentNode).toBe(c.root);
+      expect(c.ply).toBe(0);
+      expect(c.root.children[0].children[0].children[0].uci).toBe('g1f3');   // die Partie liegt ganz auf dem Brett
+      expect(api.save).toHaveBeenCalledWith(jasmine.objectContaining({ createOnly: true, current: -1 }));
+      c.ngOnDestroy();
+    });
+
+    it('ohne Engine, gespeicherter Baum mit eigener Linie: an der gemerkten Stellung', () => {
+      const c = makeComponent({ pgn, blind: '1' }, { loggedIn: true });
+      const api = fakeStudies();
+      api.get.and.returnValue(saved(3, true));
+      (c as any).lineStudies = api;
+      c.ngOnInit();
+      expect(c.currentNode.uci).toBe('b1c3');
+      c.ngOnDestroy();
+    });
+
+    it('ohne Engine, eigene Linie im Baum und am Partieende gemerkt: bleibt am Partieende', () => {
+      const c = makeComponent({ pgn, blind: '1' }, { loggedIn: true });
+      const api = fakeStudies();
+      api.get.and.returnValue(saved(2, true));
+      (c as any).lineStudies = api;
+      c.ngOnInit();
+      expect(c.currentNode.uci).toBe('g1f3');
+      c.ngOnDestroy();
+    });
+
+    it('ohne Engine, unberührte Partie mittendrin gemerkt: dort weiter', () => {
+      const c = makeComponent({ pgn, blind: '1' }, { loggedIn: true });
+      const api = fakeStudies();
+      api.get.and.returnValue(saved(1));
+      (c as any).lineStudies = api;
+      c.ngOnInit();
+      expect(c.currentNode.uci).toBe('e7e5');
+      c.ngOnDestroy();
+    });
+
+    it('ohne Engine, Altbestand (unberührte Partie, am letzten Zug angelegt): Ausgangsstellung, beim Verlassen so gespeichert', () => {
+      const c = makeComponent({ pgn, blind: '1' }, { loggedIn: true });
+      const api = fakeStudies();
+      api.get.and.returnValue(saved(2));
+      (c as any).lineStudies = api;
+      c.ngOnInit();
+      expect(c.currentNode).toBe(c.root);
+      expect(c.ply).toBe(0);
+      expect(c.root.children[0].children[0].children[0].uci).toBe('g1f3');
+      c.ngOnDestroy();   // flush: die neue Stellung geht mit
+      expect(api.save).toHaveBeenCalledWith(jasmine.objectContaining({ current: -1 }));
+      expect(api.save.calls.mostRecent().args[0].createOnly).toBeUndefined();
+    });
+
+    it('mit Engine bleibt alles wie bisher: gespeicherte Stellung (auch das Partieende) bzw. neu am Partieende', () => {
+      const reopened = makeComponent({ pgn }, { loggedIn: true });
+      const api = fakeStudies();
+      api.get.and.returnValue(saved(2));
+      (reopened as any).lineStudies = api;
+      reopened.ngOnInit();
+      expect(reopened.blind).toBeFalse();
+      expect(reopened.currentNode.uci).toBe('g1f3');
+      reopened.ngOnDestroy();
+
+      const fresh = makeComponent({ pgn }, { loggedIn: true });
+      const freshApi = fakeStudies();
+      (fresh as any).lineStudies = freshApi;
+      fresh.ngOnInit();
+      expect(fresh.ply).toBe(3);
+      expect(freshApi.save).toHaveBeenCalledWith(jasmine.objectContaining({ createOnly: true, current: 2 }));
+      fresh.ngOnDestroy();
+    });
+
+    it('ohne Anmeldung: ?blind=1 mit Partie beginnt in der Ausgangsstellung, ohne blind am Partieende', () => {
+      const blind = makeComponent({ pgn, blind: '1' });
+      blind.ngOnInit();
+      expect(blind.study).toBeNull();
+      expect(blind.blind).toBeTrue();
+      expect(blind.ply).toBe(0);
+      expect(blind.root.children[0].children[0].children[0].uci).toBe('g1f3');
+      expect(blind.pgnInput).toBe(pgn);
+      blind.ngOnDestroy();
+
+      const open = makeComponent({ pgn });
+      open.ngOnInit();
+      expect(open.blind).toBeFalse();
+      expect(open.ply).toBe(3);
+      open.ngOnDestroy();
+    });
+
+    it('PGN von Hand laden springt weiter ans Ende', () => {
+      const c = makeComponent({});
+      c.ngOnInit();
+      c.pgnInput = pgn;
+      c.loadPgn();
+      expect(c.ply).toBe(3);
+      c.ngOnDestroy();
+    });
+  });
 });
 
 describe('AnalysisComponent back-to-puzzle + depth', () => {

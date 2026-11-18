@@ -1,5 +1,5 @@
 import { addMove, createRoot, playUci, toDto } from './analysis-tree';
-import { compareLines, flatNodes, gameNodes, NodeEval, sanOf } from './line-study.util';
+import { blindResumeNode, compareLines, flatNodes, gameNodes, isUntouchedGame, NodeEval, sanOf } from './line-study.util';
 import { lineStudyKey } from './line-study.service';
 import { AnalysisNode } from './analysis-tree';
 
@@ -73,3 +73,72 @@ describe('line-study.util (ohne Engine, 0.855.0)', () => {
 
 // addMove wird hier nur für die Typprüfung gebraucht
 void addMove;
+
+// Wunsch 2026-11-18: „wenn ich eine Vereinspartie ohne Engine analysieren will, lande ich am Ende der Partie"
+describe('line-study.util: wo „ohne Engine" beim Wiederöffnen steht', () => {
+  /** 1.e4 e5 2.Nf3 als nackte Partie. */
+  function game() {
+    const root = createRoot(START);
+    const e4 = playUci(root, 'e2e4')!;
+    const e5 = playUci(e4, 'e7e5')!;
+    const nf3 = playUci(e5, 'g1f3')!;
+    return { root, e4, e5, nf3 };
+  }
+
+  it('unberührte Partie am letzten Zug (so wurden die Bäume bis 0.991.0 angelegt) → Ausgangsstellung', () => {
+    const saved = game();
+    expect(isUntouchedGame(saved.root, game().root)).toBeTrue();
+    expect(blindResumeNode(saved.root, saved.nf3, game().root)).toBe(saved.root);
+  });
+
+  it('unberührte Partie mittendrin bzw. an der Wurzel → bleibt, wo man war', () => {
+    const saved = game();
+    expect(blindResumeNode(saved.root, saved.e5, game().root)).toBe(saved.e5);
+    expect(blindResumeNode(saved.root, saved.root, game().root)).toBe(saved.root);
+  });
+
+  it('eigene Variante im Baum → die gespeicherte Stellung bleibt, auch am Partieende', () => {
+    const saved = game();
+    const c5 = playUci(saved.e4, 'c7c5')!;
+    expect(isUntouchedGame(saved.root, game().root)).toBeFalse();
+    expect(blindResumeNode(saved.root, saved.nf3, game().root)).toBe(saved.nf3);
+    expect(blindResumeNode(saved.root, c5, game().root)).toBe(c5);
+  });
+
+  it('eigener Zug hinter dem Partieende → kein unberührter Baum', () => {
+    const saved = game();
+    const nc6 = playUci(saved.nf3, 'b8c6')!;
+    expect(isUntouchedGame(saved.root, game().root)).toBeFalse();
+    expect(blindResumeNode(saved.root, nc6, game().root)).toBe(nc6);
+  });
+
+  it('Symbol, Bewertung, Kommentar oder Stern zählen als eigene Arbeit — die Engine-Bewertung nicht', () => {
+    for (const mark of [
+      (g: ReturnType<typeof game>) => { g.e5.glyph = '?!'; },
+      (g: ReturnType<typeof game>) => { g.e4.evaluation = '='; },
+      (g: ReturnType<typeof game>) => { g.nf3.comment = 'Plan: d4'; },
+      (g: ReturnType<typeof game>) => { g.e4.starred = true; },
+      (g: ReturnType<typeof game>) => { g.root.starred = true; },
+    ]) {
+      const saved = game();
+      mark(saved);
+      expect(isUntouchedGame(saved.root, game().root)).toBeFalse();
+      expect(blindResumeNode(saved.root, saved.nf3, game().root)).toBe(saved.nf3);
+    }
+    const evaluated = game();
+    evaluated.nf3.evalText = '+0.30';
+    expect(blindResumeNode(evaluated.root, evaluated.nf3, game().root)).toBe(evaluated.root);
+  });
+
+  it('eine Partie, deren PGN selbst Varianten hat, gilt samt ihnen als unberührt; ein kürzerer Baum nicht', () => {
+    const pgnTree = game();
+    playUci(pgnTree.e4, 'c7c5');
+    const saved = game();
+    playUci(saved.e4, 'c7c5');
+    expect(blindResumeNode(saved.root, saved.nf3, pgnTree.root)).toBe(saved.root);
+    const shorter = createRoot(START);
+    const e4 = playUci(shorter, 'e2e4')!;
+    expect(isUntouchedGame(shorter, game().root)).toBeFalse();
+    expect(blindResumeNode(shorter, e4, game().root)).toBe(e4);
+  });
+});
