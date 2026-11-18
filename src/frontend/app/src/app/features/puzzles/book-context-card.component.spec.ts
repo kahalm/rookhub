@@ -120,10 +120,12 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
     const goal = (el: HTMLElement) => Array.from(el.querySelectorAll('.wp-meta app-woodpecker-daily-goal .wdg > *')).map(x => x.textContent!.trim());
     const inputs = (plan: unknown) => ({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
 
-    it('offen: „Heute: 23 von 90“ als letzte Angabe der Zyklus-Zeile, ohne Haken', () => {
+    it('offen: „Heute: 23 von 90“ am Ende der Zyklus-Zeile (dahinter nur der Zeitplan), ohne Haken', () => {
       const { el } = make(inputs(running(141, 23)));   // 247 offen; Soll = ⌈(247 + 23) / 3⌉ = 90
       expect(goal(el)).toEqual(['woodpecker.overview.todayLabel:', 'woodpecker.daily.count']);
-      expect(el.querySelector('.wp-meta')!.lastElementChild?.tagName.toLowerCase()).toBe('app-woodpecker-daily-goal');
+      // letzte Angaben der Zyklus-Zeile: Tagesziel, dahinter (seit 0.994.0) der Zeitplan
+      expect(Array.from(el.querySelector('.wp-meta')!.children).slice(3).map(x => x.tagName.toLowerCase()))
+        .toEqual(['app-woodpecker-daily-goal', 'app-woodpecker-schedule']);
       expect(el.querySelector('.wp-meta .wdg-check')).toBeNull();
     });
 
@@ -144,7 +146,9 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
     it('kein Element ohne Ziel: Feld fehlt (älterer Server), Frist vorbei — sonst stünde ein Trennpunkt ohne Angabe', () => {
       const old = make(inputs(running(141, undefined)));
       expect(old.el.querySelector('app-woodpecker-daily-goal')).toBeNull();
-      expect(old.el.querySelector('.wp-meta')!.children.length).toBe(3);
+      // drei feste Angaben + der Zeitplan (braucht `todayAttempted` nicht) — kein leeres Element fürs Tagesziel
+      expect(Array.from(old.el.querySelector('.wp-meta')!.children).map(x => x.tagName.toLowerCase()))
+        .toEqual(['span', 'span', 'span', 'app-woodpecker-schedule']);
       TestBed.resetTestingModule();
       const late = running(141, 23);
       late.cycles[1].deadline = new Date(Date.now() - 86_400_000).toISOString();
@@ -162,6 +166,59 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
     it('außerhalb von Woodpecker nie', () => {
       const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inCourse: true, woodpeckerPlan: running(208, 90) });
       expect(el.querySelector('app-woodpecker-daily-goal')).toBeNull();
+    });
+  });
+
+  // 0.994.0, Wunsch 18.11.: „neben x pro Tag für fertig auch noch ein Checkmark, wenn ich % der Gesamtpuzzles passend
+  // zum aktuellen Tag hab“ — Zyklus 2 über 14 Kalendertage, heute Tag 8; Satz 270 → Soll ⌈270 × 8 / 14⌉ = 155.
+  describe('Woodpecker-Zeitplan im Plan-Kopf', () => {
+    const midnightIn = (n: number) => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, 0, 0, 0).toISOString(); };
+    const running = (attempted: number, over: Record<string, unknown> = {}) => wpPlan({
+      setSize: 270,
+      cycles: [
+        { number: 1, attempted: 270, solved: 240, timeSeconds: 9000, startedAt: '', deadline: '', finishedAt: 'x' },
+        { number: 2, attempted, solved: attempted, timeSeconds: 60, startedAt: midnightIn(-7), deadline: midnightIn(7), finishedAt: null },
+      ],
+      ...over,
+    });
+    const sched = (el: HTMLElement) => Array.from(el.querySelectorAll('.wp-meta .wsc > :not(.wsc-ok), .wp-meta .wsc-ok > *')).map(x => x.textContent!.trim());
+    const inputs = (plan: unknown) => ({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
+
+    it('dahinter: „Zeitplan: noch …“ als letzte Angabe der Zyklus-Zeile, ohne Haken', () => {
+      const { el } = make(inputs(running(143)));
+      expect(sched(el)).toEqual(['woodpecker.schedule.label:', 'woodpecker.schedule.left']);   // ohne geladene Sprache = Schlüssel
+      expect(el.querySelector('.wp-meta')!.lastElementChild?.tagName.toLowerCase()).toBe('app-woodpecker-schedule');
+      expect(el.querySelector('.wp-meta .wsc-check')).toBeNull();
+    });
+
+    it('im Zeitplan: grüner Haken + „Im Zeitplan“ + Soll-Anteil (57 %)', () => {
+      const { el } = make(inputs(running(155)));
+      const parts = sched(el);
+      expect(parts.slice(0, 2)).toEqual(['check_circle', 'woodpecker.schedule.onTrack']);
+      expect(parts[2].replace(/\D+/g, '')).toBe('57');
+      expect(el.querySelector('.wp-meta .wsc-done .wsc-check')?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('läuft mit: der Plan aus der Antwort auf die gemeldete Aufgabe schaltet auf „Im Zeitplan“', () => {
+      const { el, fixture } = make(inputs(running(154)));
+      expect(el.querySelector('.wp-meta .wsc-check')).toBeNull();
+      fixture.componentRef.setInput('woodpeckerPlan', running(155));
+      fixture.detectChanges();
+      expect(el.querySelector('.wp-meta .wsc-done .wsc-check')).not.toBeNull();
+    });
+
+    it('kein Element ohne Zeitplan: Zyklus 1 — sonst stünde ein Trennpunkt ohne Angabe', () => {
+      const p = wpPlan({ currentCycle: 1, setSize: 12, cycles: [
+        { number: 1, attempted: 12, solved: 10, timeSeconds: 600, startedAt: midnightIn(-3), deadline: midnightIn(25), finishedAt: null },
+      ] });
+      const { el } = make(inputs(p));
+      expect(el.querySelector('app-woodpecker-schedule')).toBeNull();
+      expect(el.querySelector('.wp-meta')!.children.length).toBe(3);
+    });
+
+    it('außerhalb von Woodpecker nie', () => {
+      const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inCourse: true, woodpeckerPlan: running(155) });
+      expect(el.querySelector('app-woodpecker-schedule')).toBeNull();
     });
   });
 

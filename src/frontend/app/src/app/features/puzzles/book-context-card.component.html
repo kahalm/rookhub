@@ -38,6 +38,11 @@
               @if (woodpeckerGoal(); as g) {
                 <app-woodpecker-daily-goal class="wp-daily" [goal]="g" />
               }
+              <!-- Zeitplan (0.994.0): „Zeitplan: noch 12 bis 55 %“ bzw. grüner Haken + „Im Zeitplan“ — die Angabe
+                   direkt hinter dem Tagesziel; bricht wie dieses als Ganzes um. -->
+              @if (woodpeckerScheduleInfo(); as sc) {
+                <app-woodpecker-schedule class="wp-schedule" [schedule]="sc" />
+              }
             </div>
             <!-- Statistik als Fenster (Wunsch 2026-11-18, DESIGN 5.12): kleiner Rahmenknopf in eigener Zeile unter der
                  Zyklus-Zeile (0.958.1: ein Textlink am Zeilenende wurde nicht gefunden). Der Löser öffnet das Fenster

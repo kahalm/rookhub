@@ -11,12 +11,14 @@ import { apiErrorText } from '../../core/api-error';
 import { SnackbarService } from '../../core/snackbar.service';
 import { activeWoodpeckerPlan, daysLeft, WoodpeckerPlan, WoodpeckerService } from '../woodpecker/woodpecker.service';
 import { WoodpeckerDailyGoalComponent } from '../woodpecker/woodpecker-daily-goal.component';
-import { woodpeckerDailyGoal } from '../woodpecker/woodpecker-stats.util';
+import { WoodpeckerScheduleComponent } from '../woodpecker/woodpecker-schedule.component';
+import { woodpeckerDailyGoal, woodpeckerSchedule } from '../woodpecker/woodpecker-stats.util';
 
 /**
  * Inhalt der Dashboard-Kachel „Woodpecker“ (Kopf mit Titel/Untertitel baut das Dashboard wie bei jeder Kachel):
  * das laufende Training auf einen Blick — Name, Fortschritt des Zyklus, Frist — und genau EINE Aktion je Zustand
- * (DESIGN 2.1/8.1): `solving` → Tagesziel („Heute: 23 von 50“, erreicht mit grünem Haken; 0.993.0) und „Weiter
+ * (DESIGN 2.1/8.1): `solving` → Tagesziel („Heute: 23 von 50“, erreicht mit grünem Haken; 0.993.0), darunter der
+ * Zeitplan („Zeitplan: noch 12 bis 55 %“ bzw. Haken + „Im Zeitplan“; 0.994.0) und „Weiter
  * lösen“ (Kurs-Löser `/woodpecker/:id/solve`, wie die Übersicht), `ready` →
  * „Zyklus N starten“ startet den Zyklus DIREKT (`next-cycle`) und springt in den Löser (Nutzerentscheidung 10.11.,
  * 0.958.0), `break` → Pause-Satz + Textlink zur Übersicht. Ohne laufendes Training (nur im Anpassen-Modus sichtbar) ein
@@ -31,7 +33,7 @@ import { woodpeckerDailyGoal } from '../woodpecker/woodpecker-stats.util';
   selector: 'app-woodpecker-tile',
   standalone: true,
   imports: [DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule,
-    TranslatePipe, WoodpeckerDailyGoalComponent],
+    TranslatePipe, WoodpeckerDailyGoalComponent, WoodpeckerScheduleComponent],
   template: `
     @if (plan(); as p) {
       @let c = cycle()!;
@@ -52,6 +54,11 @@ import { woodpeckerDailyGoal } from '../woodpecker/woodpecker-stats.util';
             <!-- Tagesziel (0.993.0): „Heute: 23 von 50“, erreicht mit grünem Haken — ohne die Statistik zu öffnen. -->
             @if (dailyGoal(); as g) {
               <p class="wp-daily"><app-woodpecker-daily-goal [goal]="g" /></p>
+            }
+            <!-- Zeitplan (0.994.0): Anteil des Satzes passend zum Tag des Zyklus — eigene Zeile direkt darunter, damit
+                 zwei erreichte Ziele als zwei Haken untereinander stehen. -->
+            @if (schedule(); as s) {
+              <p class="wp-schedule"><app-woodpecker-schedule [schedule]="s" /></p>
             }
           }
           @case ('break') {
@@ -108,7 +115,7 @@ import { woodpeckerDailyGoal } from '../woodpecker/woodpecker-stats.util';
     .wp-deadline { margin: 0; font-size: 0.85rem; color: var(--mat-sys-on-surface-variant); }
     .wp-deadline.over { color: var(--rh-warn); }
     /* Tagesziel: eigene Zeile, leise wie die Frist; der erreichte Zustand färbt sich im Baustein selbst. */
-    .wp-daily { margin: 0; font-size: 0.85rem; color: var(--mat-sys-on-surface-variant); }
+    .wp-daily, .wp-schedule { margin: 0; font-size: 0.85rem; color: var(--mat-sys-on-surface-variant); }
     .wp-empty { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; margin: 0; font-size: 0.9rem; }
     mat-card-actions { margin-top: auto; flex-wrap: wrap; }
     mat-card-actions > a, mat-card-actions > button { min-width: 0; white-space: nowrap; }
@@ -143,6 +150,10 @@ export class WoodpeckerTileComponent {
   /** Tagesziel des laufenden Zyklus (`woodpeckerDailyGoal`): heute bearbeitet gegen das Soll; `null` ohne laufenden
    *  Zyklus, nach der Frist oder wenn der Server `todayAttempted` (noch) nicht liefert. */
   readonly dailyGoal = computed(() => woodpeckerDailyGoal(this.plan()));
+
+  /** Zeitplan des laufenden Zyklus (`woodpeckerSchedule`): bearbeiteter Anteil des Satzes gegen den Anteil, der zum
+   *  heutigen Tag des Zyklus passt; `null` in Zyklus 1 oder ohne laufenden Zyklus. */
+  readonly schedule = computed(() => woodpeckerSchedule(this.plan()));
 
   left(): number { const c = this.cycle(); return c ? daysLeft(c.deadline) : 0; }
   overdue(): boolean { const c = this.cycle(); return !!c && new Date(c.deadline).getTime() < Date.now(); }

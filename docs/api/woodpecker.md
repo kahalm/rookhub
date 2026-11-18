@@ -56,7 +56,7 @@ nicht — dessen Antwort zeigt niemand an. Am Tag einer Zeitumstellung kann die 
 das notwendige Minimum erledigt habe (sowohl im Dashboard als auch wenn ich drinnen bin)“, „grüne Checkmark oder so“):
 `woodpeckerDailyGoal(plan)` in `features/woodpecker/woodpecker-stats.util.ts` (rein, getestet), gezeigt vom geteilten
 Baustein `features/woodpecker/woodpecker-daily-goal.component` an DREI Stellen — Dashboard-Kachel (eigene Zeile unter
-der Frist), Löser-Kopf (letzte Angabe der Zyklus-Zeile) und Statistik-Fenster (Je-Tag-Zeile).
+der Frist), Löser-Kopf (am Ende der Zyklus-Zeile, dahinter seit 0.994.0 der Zeitplan) und Statistik-Fenster (Je-Tag-Zeile).
 
 | Größe | Formel |
 |---|---|
@@ -69,6 +69,26 @@ der Frist), Löser-Kopf (letzte Angabe der Zyklus-Zeile) und Statistik-Fenster (
 **Entscheidung (18.11.2026, löst die Formel aus 0.992.0 ab):** „nötig je Tag = ⌈offen / Resttage⌉“ sank mit jeder gelösten
 Aufgabe und konnte nie „erreicht“ sein; das Fenster zeigt seither dasselbe feste Tagessoll wie Kachel und Löser-Kopf —
 es gibt nur noch EINE Soll-Zahl.
+
+**Zeitplan — Anteil des Satzes passend zum Tag des Zyklus (0.994.0,** Wunsch 18.11.2026: „neben x pro Tag für fertig auch
+noch ein Checkmark, wenn ich % der Gesamtpuzzles passend zum aktuellen Tag hab (und in Statistik oben ausgewiesen: noch
+x Puzzle bis z. B. 55 % erfüllt)“): `woodpeckerSchedule(plan)` in `features/woodpecker/woodpecker-stats.util.ts` (rein,
+getestet) — NUR im Frontend gerechnet, der Plan liefert seit jeher alles Nötige (`setSize`, `attempted`, `startedAt`,
+`deadline` des laufenden Zyklus); keine API-Änderung. Gezeigt vom geteilten Baustein
+`features/woodpecker/woodpecker-schedule.component` an denselben drei Stellen wie das Tagesziel, jeweils direkt
+dahinter bzw. darunter. Vom Tagesziel unabhängig: das eine fragt „heute genug?“, das andere „insgesamt dort, wo ich
+heute stehen soll?“.
+
+| Größe | Formel |
+|---|---|
+| Tag k | begonnene lokale Kalendertage seit Zyklusbeginn, der Tag des Beginns ist Tag 1 (`calendarDaysSince`), höchstens D |
+| Tage D | Kalendertage vom Tag des Beginns bis zum Fristtag, beide mitgezählt (`calendarDaysUntil` ab dem Beginn; endet die Frist genau um Mitternacht, zählt ihr Tag nicht). Dieselbe Zählung wie beim Tagesziel: an jedem Tag vor der Frist gilt `D = k − 1 + Tage bis zur Frist`. Ein Zyklus über 14 × 24 h ab Mitternacht (rückdatierter Beginn) hat 14 Tage, einer ab mittags berührt 15 (erster und letzter Tag sind halbe) |
+| **Soll bis Ende heute** | `⌈setSize × k / D⌉`; Soll-Anteil `k / D` (höchstens 1), angezeigt gerundet in Prozentpunkten |
+| im Zeitplan | `attempted ≥ Soll` → grüner Haken `check_circle` + „Im Zeitplan“ + Soll-Anteil; sonst neutral „Zeitplan: noch x bis n %“ mit `x = Soll − attempted` |
+| aktueller Stand | `attempted / setSize`, gerundet wie der Soll-Anteil (100 % erst, wenn nichts mehr offen ist) — nur im Fenster, nur wenn erreicht: „57 % erreicht (aktuell 61 %)“ |
+| letzter Tag / nach der Frist | Soll = der ganze Satz (100 %), „noch x“ = offene Aufgaben; nach der Frist ohne Tagesangabe. Bleibt — anders als das Tagesziel — nach der Frist stehen |
+| nur ab Zyklus 2 | Status `solving`, Zyklus ≥ 2. Zyklus 1 (der Satz wächst, es gibt keinen Anteil), Pause, bereit, abgeschlossen, archiviert oder unbrauchbare Daten (Beginn, Frist, Satz): nichts |
+| im Fenster | mit dem Stand aus `/stats` (`planWithStats`), wie alle Zahlen der Übersicht |
 
 **Statistik je Zyklus** (`WoodpeckerCycleDto`): `attempted`, `solved`, `timeSeconds` und seit 0.956.0 `hinted` (Versuche
 mit mindestens einem Tipp, gelöst oder nicht) und `solvedWithHint` (davon gelöst). **Entscheidung:** gelöst mit Tipp
@@ -102,6 +122,7 @@ Quelle `GET …/stats` + Frist aus dem Plan):
 | Richtig — „Bisher“ / „Zyklus k“ | `solved / attempted` bzw. `sameAsNow.ratePctThen` (Prozentpunkte, `pct`-Pipe) |
 | Schnittmenge kleiner als jetzt bearbeitet | zusätzlich ein Satz je Zyklus mit `count`, `secondsNow`, `ratePctNow` — die Jetzt-Werte auf genau diesen Aufgaben, damit nie Gesamtzeit gegen eine Teilmenge steht (normal ist `count` = bearbeitet: der Satz ist ab Zyklus 2 fest) |
 | Je Tag (ab Zyklus 2, seit 0.993.0) | das **Tagesziel** (siehe oben, Baustein `app-woodpecker-daily-goal`): „Heute: n von Soll“ bzw. grüner Haken + „Tagesziel erreicht“, dahinter klein die Herleitung „(offen + heute, verteilt auf d Tage)“ bzw. am letzten Tag „(…, heute ist der letzte Tag)“. Bis 0.992.0 stand hier „Nötig je Tag: ⌈offen / Resttage⌉ · Heute: n“. Frist vorbei → „Frist überschritten“ + offen + „Heute: n“ |
+| Zeitplan (ab Zyklus 2, seit 0.994.0) | eigene Zeile unter „Je Tag“ (Baustein `app-woodpecker-schedule`, ausführlich): „Zeitplan (Tag k von D): noch x Aufgaben bis n %“ bzw. Haken + „n % erreicht (aktuell m %)“; nach der Frist „Zeitplan: noch x Aufgaben bis 100 %“. Formeln siehe oben |
 | Heute | `days[]`-Eintrag mit dem lokalen Datum des Geräts (`attempted`); kein Eintrag = heute noch nichts = 0 |
 | Zyklus 1 | kein Soll (der Satz wächst): das bisherige Tempo `attempted / begonnene Kalendertage` + „Heute: n“; keine Vergleichsspalten |
 
@@ -158,7 +179,7 @@ Fenster, lädt dann sofort und bei einem neuen Planstand (`planId:Zyklus:bearbei
 jetzt/damals; die Zeiten und Quoten selbst stehen in der Übersicht) → Wechsel je Aufgabe (+ Zeitstufen jetzt/damals) →
 Hochrechnung → Tipps → Verlauf (Tabelle je ganzem Zyklus; die Spalte „dieselben wie jetzt“ ist in die Übersicht
 gewandert) bzw. in Zyklus 1 „Je Tag“ (jüngste 14) + Zeitstufen → Sorgenkinder (Link „ansehen“ = `/puzzles/book/:id`).
-Ohne Versuch im Zyklus: Übersicht (mit „–“ und dem Tagesziel „Heute: 0 von Soll“) + ein Leersatz.
+Ohne Versuch im Zyklus: Übersicht (mit „–“, dem Tagesziel „Heute: 0 von Soll“ und dem Zeitplan) + ein Leersatz.
 
 `WoodpeckerPlanDto.status`: `solving` (Zyklus läuft), `break` (Pause bis `nextCycleAt`), `ready`, `completed`, seit 0.958.0
 `archived` (geht allem vor; `completedAt` bleibt daneben erhalten) und `archivedAt`.

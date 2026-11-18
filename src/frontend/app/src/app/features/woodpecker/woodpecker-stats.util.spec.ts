@@ -1,6 +1,7 @@
 import { WoodpeckerCycle, WoodpeckerOverlap, WoodpeckerPlan, WoodpeckerStats, WoodpeckerStatsCycle } from './woodpecker.service';
 import {
   calendarDaysSince, calendarDaysUntil, planWithStats, woodpeckerCycleStats, woodpeckerDailyGoal, woodpeckerOverview,
+  woodpeckerSchedule,
 } from './woodpecker-stats.util';
 
 const DAY = 86_400_000;
@@ -202,6 +203,114 @@ describe('woodpeckerDailyGoal (Tagesziel für Kachel, Löser-Kopf und Fenster, 0
   });
 });
 
+// Wunsch 2026-11-18: „neben x pro Tag für fertig auch noch ein Checkmark, wenn ich % der Gesamtpuzzles passend zum
+// aktuellen Tag hab (und in Statistik oben ausgewiesen: noch x Puzzle bis z. B. 55 % erfüllt)“.
+describe('woodpeckerSchedule (Zeitplan für Kachel, Löser-Kopf und Fenster, 0.994.0)', () => {
+  /** Zyklus 2 über 14 Tage ab lokaler Mitternacht (rückdatierter Beginn): 9. 00:00 → Frist 23. 00:00 = 14 Kalendertage
+   *  (9. bis 22.; der 23. hat keine Zeit mehr). Satz 270. */
+  const wp = (attempted: number, over: Partial<WoodpeckerPlan> = {}, c2: Partial<WoodpeckerCycle> = {}) => plan([
+    cycle({ start: at(9, 0) - 40 * DAY, days: 28, attempted: 270, solved: 240, timeSeconds: 30000, finishedAt: 'x' }),
+    cycle({ number: 2, start: at(9, 0), days: 14, attempted, solved: attempted, timeSeconds: 60 * attempted, ...c2 }),
+  ], { setSize: 270, ...over });
+
+  it('Tag 8 von 14: Soll = ⌈270 × 8 / 14⌉ = 155 (57 %) — „noch 12“, solange 143 bearbeitet sind', () => {
+    expect(woodpeckerSchedule(wp(143), at(16, 15))).toEqual({
+      day: 8, days: 14, targetPct: 57, target: 155, attempted: 143, setSize: 270, currentPct: 53, left: 12, reached: false, overdue: false,
+    });
+  });
+
+  it('genau auf Soll: im Zeitplan; eine Aufgabe darunter noch nicht; darüber bleibt es erreicht', () => {
+    const now = at(16, 15);
+    expect(woodpeckerSchedule(wp(154), now)).toEqual(jasmine.objectContaining({ target: 155, left: 1, reached: false }));
+    expect(woodpeckerSchedule(wp(155), now)).toEqual(jasmine.objectContaining({ target: 155, left: 0, reached: true, currentPct: 57 }));
+    expect(woodpeckerSchedule(wp(165), now)).toEqual(jasmine.objectContaining({ left: 0, reached: true, targetPct: 57, currentPct: 61 }));
+  });
+
+  it('Tag 1: schon am ersten Tag gibt es ein Soll (⌈270 / 14⌉ = 20, 7 %)', () => {
+    const now = at(9, 10);
+    expect(woodpeckerSchedule(wp(0), now)).toEqual(jasmine.objectContaining({ day: 1, days: 14, targetPct: 7, target: 20, left: 20, reached: false, currentPct: 0 }));
+    expect(woodpeckerSchedule(wp(20), now)).toEqual(jasmine.objectContaining({ day: 1, left: 0, reached: true }));
+  });
+
+  it('letzter Tag: das Soll ist der ganze Satz — im Zeitplan erst, wenn nichts mehr offen ist', () => {
+    const now = at(22, 9);
+    expect(woodpeckerSchedule(wp(260), now)).toEqual(jasmine.objectContaining({ day: 14, days: 14, targetPct: 100, target: 270, left: 10, reached: false, overdue: false }));
+    expect(woodpeckerSchedule(wp(260), now)!.currentPct).toBe(96);
+    expect(woodpeckerSchedule(wp(270), now)).toEqual(jasmine.objectContaining({ left: 0, reached: true, currentPct: 100 }));
+  });
+
+  it('nach der Frist: Soll 100 %, „noch x“ = offene Aufgaben, der Tag bleibt beim letzten stehen', () => {
+    expect(woodpeckerSchedule(wp(230), at(25, 9))).toEqual({
+      day: 14, days: 14, targetPct: 100, target: 270, attempted: 230, setSize: 270, currentPct: 85, left: 40, reached: false, overdue: true,
+    });
+    // am Fristtag selbst, nach der Uhrzeit der Frist (Beginn mittags → Frist am 23. um 12 Uhr)
+    const noon = wp(230, {}, { startedAt: new Date(at(9)).toISOString(), deadline: new Date(at(23)).toISOString() });
+    expect(woodpeckerSchedule(noon, at(23, 13))).toEqual(jasmine.objectContaining({ day: 15, days: 15, targetPct: 100, left: 40, overdue: true }));
+  });
+
+  it('Beginn mittags: ein Zyklus über 14 × 24 h berührt 15 Kalendertage — dieselbe Zählung wie das Tagesziel', () => {
+    // 9. um 12 Uhr → Frist 23. um 12 Uhr: der 9. und der 23. sind halbe Tage, beide zählen.
+    const noon = (attempted: number) => wp(attempted, {}, { startedAt: new Date(at(9)).toISOString(), deadline: new Date(at(23)).toISOString() });
+    expect(woodpeckerSchedule(noon(100), at(18, 15))).toEqual(jasmine.objectContaining({ day: 10, days: 15, targetPct: 67, target: 180, left: 80 }));
+    // D = k − 1 + Tage bis zur Frist — an JEDEM Tag des Zyklus (Kalender-Resttage des Tagesziels, calendarDaysUntil)
+    for (let d = 9; d <= 23; d++) {
+      const now = at(d, d === 23 ? 9 : 15);
+      const s = woodpeckerSchedule(noon(0), now)!;
+      expect(s.days).withContext(`Tag ${d}`).toBe(15);
+      expect(s.day - 1 + calendarDaysUntil(at(23), now)).withContext(`Tag ${d}`).toBe(s.days);
+      expect(s.day).withContext(`Tag ${d}`).toBe(calendarDaysSince(at(9), now));
+    }
+  });
+
+  it('Zeitumstellung im Zyklus (25.10.2026): kein Tag mehr oder weniger', () => {
+    const start = new Date(2026, 9, 20, 0, 0, 0).getTime();          // 20.10. 00:00 Ortszeit
+    const deadline = new Date(2026, 9, 27, 0, 0, 0).getTime();       // 7 Kalendertage später (in Mitteleuropa 169 h)
+    const p = wp(0, { setSize: 70 }, { startedAt: new Date(start).toISOString(), deadline: new Date(deadline).toISOString() });
+    expect(woodpeckerSchedule(p, new Date(2026, 9, 26, 12, 0, 0).getTime())).toEqual(jasmine.objectContaining({ day: 7, days: 7, target: 70 }));
+    expect(woodpeckerSchedule(p, new Date(2026, 9, 24, 12, 0, 0).getTime())).toEqual(jasmine.objectContaining({ day: 5, days: 7, target: 50, targetPct: 71 }));
+  });
+
+  it('das Soll rechnet exakt: geht Satz × Tag / Tage auf, wird nicht aufgerundet (300 × 7 / 14 = 150, nicht 151)', () => {
+    expect(woodpeckerSchedule(wp(150, { setSize: 300 }), at(15, 12))).toEqual(jasmine.objectContaining({ day: 7, target: 150, targetPct: 50, reached: true }));
+  });
+
+  it('„aktuell“ zeigt 100 % erst, wenn nichts mehr offen ist (269 von 270 = 99 %)', () => {
+    expect(woodpeckerSchedule(wp(269), at(16, 15))!.currentPct).toBe(99);
+    expect(woodpeckerSchedule(wp(999), at(16, 15))).toEqual(jasmine.objectContaining({ attempted: 270, currentPct: 100, reached: true }));   // nie über den Satz
+  });
+
+  it('keine Anzeige: Zyklus 1, Pause/bereit/abgeschlossen/archiviert, beendeter Zyklus, ohne Plan', () => {
+    const now = at(16, 15);
+    expect(woodpeckerSchedule(plan([cycle({ start: at(9, 0), days: 28, attempted: 40 })], { setSize: 40 }), now)).toBeNull();   // Satz wächst noch
+    for (const status of ['break', 'ready', 'completed', 'archived'] as const)
+      expect(woodpeckerSchedule(wp(143, { status }), now)).withContext(status).toBeNull();
+    expect(woodpeckerSchedule(wp(270, {}, { finishedAt: 'x' }), now)).toBeNull();
+    expect(woodpeckerSchedule(null, now)).toBeNull();
+    expect(woodpeckerSchedule(plan([]), now)).toBeNull();
+  });
+
+  it('keine Anzeige bei fehlenden oder unbrauchbaren Daten: Beginn, Frist, Satz, bearbeitet', () => {
+    const now = at(16, 15);
+    expect(woodpeckerSchedule(wp(143, {}, { startedAt: '' }), now)).toBeNull();
+    expect(woodpeckerSchedule(wp(143, {}, { deadline: 'kein Datum' }), now)).toBeNull();
+    expect(woodpeckerSchedule(wp(143, {}, { deadline: new Date(at(9, 0)).toISOString() }), now)).toBeNull();   // Frist nicht nach dem Beginn
+    expect(woodpeckerSchedule(wp(143, { setSize: 0 }), now)).toBeNull();
+    expect(woodpeckerSchedule(wp(143, { setSize: undefined as unknown as number }), now)).toBeNull();
+    expect(woodpeckerSchedule(wp(undefined as unknown as number), now)).toBeNull();
+  });
+
+  it('braucht todayAttempted nicht (anders als das Tagesziel): auch ein Plan ohne das Feld hat einen Zeitplan', () => {
+    const p = wp(143);
+    expect(p.todayAttempted).toBeUndefined();
+    expect(woodpeckerDailyGoal(p, at(16, 15))).toBeNull();
+    expect(woodpeckerSchedule(p, at(16, 15))!.left).toBe(12);
+  });
+
+  it('Uhr vor dem Zyklusbeginn (verstellte Geräteuhr): Tag 1, nie 0', () => {
+    expect(woodpeckerSchedule(wp(0), at(8, 12))).toEqual(jasmine.objectContaining({ day: 1, target: 20 }));
+  });
+});
+
 describe('woodpeckerOverview (Übersicht im Statistik-Fenster)', () => {
   const overlap = (over: Partial<WoodpeckerOverlap>): WoodpeckerOverlap => ({
     cycle: 1, count: 0, secondsNow: 0, secondsThen: 0, solvedNow: 0, solvedThen: 0, hintedNow: 0, hintedThen: 0,
@@ -249,6 +358,9 @@ describe('woodpeckerOverview (Übersicht im Statistik-Fenster)', () => {
     expect(o.goal).toEqual({ today: 12, target: 18, open: 60, days: 4, reached: false });
     expect(o.today).toBe(12);
     expect(o.overdue).toBeFalse();
+    // Zeitplan mit dem Stand aus /stats (40, nicht 39 aus dem Plan): Beginn am 1. um 8 Uhr, Frist am 8. um 8 Uhr = 8
+    // Kalendertage; heute Tag 5 → Soll ⌈100 × 5 / 8⌉ = 63 (63 %), noch 23.
+    expect(o.schedule).toEqual({ day: 5, days: 8, targetPct: 63, target: 63, attempted: 40, setSize: 100, currentPct: 40, left: 23, reached: false, overdue: false });
   });
 
   it('Schnittmenge kleiner als jetzt bearbeitet: die Jetzt-Werte auf genau diesen Aufgaben stehen dabei', () => {
@@ -280,6 +392,7 @@ describe('woodpeckerOverview (Übersicht im Statistik-Fenster)', () => {
     const o = woodpeckerOverview(s, p, at(4))!;
     expect(o.open).toBeNull();
     expect(o.goal).toEqual({ today: 7, target: null, open: null, days: null, reached: false });   // kein Soll
+    expect(o.schedule).toBeNull();           // Zyklus 1: der Satz wächst noch, kein Anteil
     expect(o.perDay).toBe(10);
     expect(o.today).toBe(7);
     expect(o.earlier).toEqual([]);
@@ -293,6 +406,8 @@ describe('woodpeckerOverview (Übersicht im Statistik-Fenster)', () => {
     const o = woodpeckerOverview(stats([row({ number: 1 }), row({ number: 2 })]), p, at(5))!;
     expect(o.overdue).toBeTrue();
     expect(o.goal).toBeNull();
+    // Zeitplan nach der Frist: Soll = der ganze Satz, noch 100 offen
+    expect(o.schedule).toEqual(jasmine.objectContaining({ targetPct: 100, target: 100, left: 100, reached: false, overdue: true }));
     expect(o.open).toBe(100);
     expect(o.ratePctNow).toBeNull();
     expect(o.secondsNow).toBe(0);

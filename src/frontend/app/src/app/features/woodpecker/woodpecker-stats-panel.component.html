@@ -69,6 +69,12 @@
             <span class="wps-ov-today">{{ 'woodpecker.overview.todayLabel' | translate }}: <strong>{{ o.today }}</strong></span>
           }
         </p>
+        <!-- Zeitplan (0.994.0, Wunsch 18.11.: „in Statistik oben ausgewiesen: noch x Puzzle bis z. B. 55 % erfüllt“):
+             eigene Zeile — „Zeitplan (Tag 8 von 14): noch 12 Aufgaben bis 55 %“ bzw. Haken + „55 % erreicht“ und der
+             aktuelle Stand. Derselbe Baustein und dieselbe Rechnung wie auf Kachel und im Löser-Kopf; ab Zyklus 2. -->
+        @if (o.schedule; as sc) {
+          <p class="wps-line wps-ov-schedule"><app-woodpecker-schedule [full]="true" [schedule]="sc" /></p>
+        }
       </section>
     }
     @if (!current()?.attempted) {

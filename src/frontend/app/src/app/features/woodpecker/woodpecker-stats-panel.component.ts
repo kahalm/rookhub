@@ -11,6 +11,7 @@ import { formatSecondsClock } from '../../shared/clock-format.util';
 import { WoodpeckerPlan, WoodpeckerService, WoodpeckerStats, WoodpeckerStatsCycle } from './woodpecker.service';
 import { planWithStats, woodpeckerCycleStats, woodpeckerOverview } from './woodpecker-stats.util';
 import { WoodpeckerDailyGoalComponent } from './woodpecker-daily-goal.component';
+import { WoodpeckerScheduleComponent } from './woodpecker-schedule.component';
 
 /** Wie lange nach einer gemeldeten Aufgabe gewartet wird, bevor `/stats` neu geholt wird (mehrere schnelle Meldungen = ein Abruf). */
 export const WOODPECKER_STATS_DEBOUNCE_MS = 800;
@@ -28,13 +29,13 @@ type Result = { stats: WoodpeckerStats; error: null } | { stats: null; error: un
  * (`WoodpeckerStatsDialogComponent`, DESIGN 5.12), nicht mehr ein aufklappbarer Block der Kontext-Karte; entsteht mit
  * dem Fenster und lädt `GET /api/woodpecker/{id}/stats` — beim Erzeugen und bei einem neuen Planstand, entprellt.
  * Gerechnet ist der ausführliche Teil am Server (`WoodpeckerStatsCalculator`), die Übersicht und die Zeilen „Dieser
- * Zyklus“ in `woodpecker-stats.util.ts`; hier nur Darstellung: Übersicht (Zeit · Quote · Tagesziel) · Dieser Zyklus ·
+ * Zyklus“ in `woodpecker-stats.util.ts`; hier nur Darstellung: Übersicht (Zeit · Quote · Tagesziel · Zeitplan) · Dieser Zyklus ·
  * Dieselben Aufgaben · Wechsel · Hochrechnung · Tipps · Verlauf · (Zyklus 1: je Tag) · Sorgenkinder.
  */
 @Component({
   selector: 'app-woodpecker-stats-panel',
   imports: [DatePipe, DecimalPipe, PctPipe, RouterLink, TranslatePipe, LoadErrorComponent, MatProgressBarModule,
-    WoodpeckerDailyGoalComponent],
+    WoodpeckerDailyGoalComponent, WoodpeckerScheduleComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './woodpecker-stats-panel.component.html',
   styleUrl: './woodpecker-stats-panel.component.scss',

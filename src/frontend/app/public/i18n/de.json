@@ -6555,6 +6555,16 @@
       "how": "{{open}} offen + {{today}} heute, verteilt auf {{days}} Tage",
       "howLastDay": "{{open}} offen + {{today}} heute, heute ist der letzte Tag"
     },
+    "schedule": {
+      "label": "Zeitplan",
+      "labelDay": "Zeitplan (Tag {{k}} von {{d}})",
+      "onTrack": "Im Zeitplan",
+      "left": "noch {{n}} bis {{pct}}",
+      "leftLong": "noch {{n}} Aufgaben bis {{pct}}",
+      "leftLongOne": "noch {{n}} Aufgabe bis {{pct}}",
+      "reachedPct": "{{pct}} erreicht",
+      "current": "aktuell {{pct}}"
+    },
     "stats": {
       "solvedCount": "{{solved}} von {{done}} gelöst",
       "clean": "{{n}} ohne Tipp",

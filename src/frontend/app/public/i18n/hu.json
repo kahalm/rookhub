@@ -6555,6 +6555,16 @@
       "how": "{{open}} hátra + {{today}} ma, {{days}} napra elosztva",
       "howLastDay": "{{open}} hátra + {{today}} ma, ma van az utolsó nap"
     },
+    "schedule": {
+      "label": "Ütemterv",
+      "labelDay": "Ütemterv ({{k}}. nap / {{d}})",
+      "onTrack": "Ütemterv szerint",
+      "left": "még {{n}} a célig ({{pct}})",
+      "leftLong": "még {{n}} feladat a célig ({{pct}})",
+      "leftLongOne": "még {{n}} feladat a célig ({{pct}})",
+      "reachedPct": "{{pct}} teljesítve",
+      "current": "jelenleg {{pct}}"
+    },
     "stats": {
       "solvedCount": "{{solved}}/{{done}} megoldva",
       "clean": "{{n}} tipp nélkül",

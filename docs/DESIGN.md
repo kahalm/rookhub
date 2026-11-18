@@ -772,12 +772,15 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   geteilte Baustein unten): „Heute: 23 von 45“ in Textfarbe bzw. grüner Haken + „Tagesziel erreicht“, dahinter klein in
   Klammern die Herleitung „(247 offen + 23 heute, verteilt auf 6 Tage)“. Frist vorbei → „Frist überschritten“
   (`--rh-warn`) + „n offen“ + „Heute: n“ statt des Ziels; Zyklus 1 hat kein Soll (der Satz wächst) → „bisher n pro Tag“
-  + „Heute“. Ohne Versuch „–“ statt 0:00 / 0 %, das Tagesziel steht trotzdem. Die Tabelle hat ihren eigenen
-  `overflow-x: auto`-Kasten (viele Zyklen, 4.4).
+  + „Heute“. Ohne Versuch „–“ statt 0:00 / 0 %, das Tagesziel steht trotzdem. Direkt darunter als eigene Zeile der
+  **Zeitplan** (seit 0.994.0, ausführliche Form des zweiten geteilten Bausteins unten): „Zeitplan (Tag 8 von 14): noch
+  12 Aufgaben bis 57 %“ bzw. „Zeitplan (Tag 8 von 14): ✓ 57 % erreicht (aktuell 61 %)“; gleiche Größe und Textfarbe wie
+  das Tagesziel, ab Zyklus 2, auch nach der Frist (dann ohne Tagesangabe: „Zeitplan: noch 40 Aufgaben bis 100 %“). Die
+  Tabelle hat ihren eigenen `overflow-x: auto`-Kasten (viele Zyklen, 4.4).
 - **Woodpecker-Tagesziel = EIN Baustein an drei Stellen** (0.993.0, Nutzerwunsch 18.11.2026: „oben auch ohne Statistik
   visualisieren, wenn ich heute das notwendige Minimum erledigt habe (sowohl im Dashboard als auch wenn ich drinnen
   bin)“, „grüne Checkmark oder so vielleicht“): `app-woodpecker-daily-goal` (`features/woodpecker/`) steht im Löser-Kopf
-  als LETZTE Angabe der Zyklus-Zeile (`.wp-meta.rh-dots`, bricht als Ganzes um), auf der Dashboard-Kachel als eigene
+  am ENDE der Zyklus-Zeile (`.wp-meta.rh-dots`, bricht als Ganzes um; dahinter seit 0.994.0 nur noch der Zeitplan), auf der Dashboard-Kachel als eigene
   Zeile unter der Frist (8.1) und im Statistik-Fenster in der Je-Tag-Zeile. **Noch offen:** leise „Heute: 23 von 45“
   (Farbe der Zeile, `tabular-nums`), kein Symbol. **Erreicht:** Symbol `check_circle` (1,3 em) und „Tagesziel erreicht“
   halbfett in `--rh-success`, die Zahl „45 von 45“ klein dahinter — das Hauptzeichen ist der grüne Haken, die Bedeutung
@@ -803,6 +806,25 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   `min-width: 420px`), damit bei 390 px weder Seite noch Fenster waagerecht scrollen (4.4, 5.3). Laden = schmaler
   `mat-progress-bar` statt Seiten-Spinner, Fehler = `app-load-error` mit „Erneut versuchen“, leer = ein Satz (5.10).
   Gelöst mit Tipp zählt als gelöst. Datum `mediumDate`, Tempo `number:'1.0-1'`.
+- **Woodpecker-Zeitplan = Geschwister des Tagesziels an denselben drei Stellen** (0.994.0, Nutzerwunsch 18.11.2026:
+  „neben x pro Tag für fertig auch noch ein Checkmark, wenn ich % der Gesamtpuzzles passend zum aktuellen Tag hab (und in
+  Statistik oben ausgewiesen: noch x Puzzle bis z. B. 55 % erfüllt)“): `app-woodpecker-schedule` (`features/woodpecker/`)
+  steht im Löser-Kopf direkt HINTER dem Tagesziel als letzte Angabe der Zyklus-Zeile (`.wp-meta.rh-dots`, bricht als
+  Ganzes um — am Handy eine dritte Zeile, nie breiter als die Karte), auf der Dashboard-Kachel als eigene Zeile UNTER
+  dem Tagesziel (zwei erreichte Ziele = zwei Haken untereinander) und im Statistik-Fenster als eigene Zeile der
+  Übersicht. Beantwortet eine zweite Frage als das Tagesziel: liegt der bearbeitete Anteil des Satzes dort, wo er am
+  heutigen Tag des Zyklus liegen soll (`⌈Satz × Tag / Tage⌉`, `docs/api/woodpecker.md`)? **Im Zeitplan:** Symbol
+  `check_circle` (1,3 em) + „Im Zeitplan“ halbfett in `--rh-success`, der Soll-Anteil („57 %“, `| pct`) klein dahinter —
+  gleiche Gestalt wie „Tagesziel erreicht 45 von 45“, Symbol `aria-hidden`, Bedeutung immer auch als Klartext (7, E-Ink
+  3.6). **Dahinter:** leise „Zeitplan: noch 12 bis 57 %“ in der Farbe der Zeile — bewusst NEUTRAL, keine Warnfarbe und
+  kein Symbol: am Vormittag hinter dem Soll von heute Abend zu liegen ist der Normalfall, kein Fehler. **Ausführlich**
+  (nur im Fenster): Beschriftung mit dem Tag „Zeitplan (Tag 8 von 14):“, die Anzahl mit Hauptwort („noch 12 Aufgaben
+  bis 57 %“), erreicht „57 % erreicht“ und klein in Klammern der Stand „(aktuell 61 %)“ (0,85 em,
+  `--mat-sys-on-surface-variant`, wie die Herleitung des Tagesziels). Haken und sein Text sind EIN nicht umbrechendes
+  Teil (der Haken stünde sonst bei 360 px allein hinter der Beschriftung). Kein Zeitplan (Zyklus 1 — der Satz wächst
+  noch —, Pause, bereit, abgeschlossen, archiviert) → der Baustein wird gar nicht gerendert. Anders als das Tagesziel
+  bleibt er nach der Frist stehen („Zeitplan: noch 40 bis 100 %“) und braucht `todayAttempted` nicht. Kein zweiter
+  Fortschrittsbalken und keine Markierung im Zyklus-Balken.
 - **Tagespuzzle** nennt sich: Chip „Tagespuzzle“ + Datum (`mediumDate`, UTC) in der Kontext-Card wie der Wochenpost-Chip (d4).
 - Gleiche Erweiterung in allen drei Puzzle-Modi prüfen (Standard, Endless, Buch/Kurs; `rookhub/CLAUDE.md`).
 
@@ -1020,7 +1042,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   (`.sub-part`), darunter der Name (bis zwei Zeilen), in Zyklus 1 „Satz: n Aufgaben von N“, ab Zyklus 2 „n von N
   erledigt“ mit 6-px-Balken, dann „noch N Tage“ bzw. „Frist überschritten“ (`--rh-warn`), darunter seit 0.993.0 das
   Tagesziel als eigene leise Zeile (0,85 rem; „Heute: 23 von 45“ bzw. grüner Haken + „Tagesziel erreicht“, Baustein
-  aus 5.12; nur solange der Zyklus läuft und die Frist nicht vorbei ist); genau eine Aktion: „Weiter
+  aus 5.12; nur solange der Zyklus läuft und die Frist nicht vorbei ist) und direkt darunter seit 0.994.0 der
+  Zeitplan als weitere leise Zeile („Zeitplan: noch 12 bis 57 %“ bzw. grüner Haken + „Im Zeitplan“ + „57 %“, Baustein
+  aus 5.12; ab Zyklus 2, auch nach der Frist); genau eine Aktion: „Weiter
   lösen“ (Kurs-Löser, gefüllt), bereit → „Zyklus N starten“ (gefüllt, startet den Zyklus direkt und springt in den Löser;
   während des Aufrufs gesperrt mit 16-px-Spinner statt Symbol, Fehler als Snackbar mit dem API-Grund; seit 0.958.0,
   vorher „Zur Übersicht“), Pause → Pause-Satz + Textknopf „Zur Übersicht“. Kein Prozent-Text; nur mit Menüpunkt
@@ -1438,6 +1462,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-18 | 0.994.0 · Woodpecker | Zeitplan als zweiter geteilter Baustein `app-woodpecker-schedule` neben dem Tagesziel: Löser-Kopf (letzte Angabe der Zyklus-Zeile, hinter dem Tagesziel), Dashboard-Kachel (eigene Zeile unter dem Tagesziel), Statistik-Fenster (eigene Zeile der Übersicht, ausführlich mit „Tag k von D“ und „aktuell n %“); im Zeitplan grüner Haken `check_circle` + „Im Zeitplan“ in `--rh-success` + Soll-Anteil klein, dahinter NEUTRAL „Zeitplan: noch 12 bis 57 %“ ohne Warnfarbe; Haken + Text brechen nie auseinander (5.12, 8.1) | Das Tagesziel sagt nur, ob das Minimum von HEUTE geschafft ist; ob man insgesamt dort steht, wo man am heutigen Tag des Zyklus stehen soll, stand nirgends | Nutzerwunsch 18.11.2026 („neben x pro tag für fertig auch noch ein checkmark haben wenn ich % der gesamtpuzzles passend zum aktuellen tag hab (und in statistik oben ausgewiesen noch x puzzle bis z.b. 55% erfüllt)“) |
 | 2026-11-18 | 0.993.0 · Woodpecker | Tagesziel ohne Statistik-Fenster: geteilter Baustein `app-woodpecker-daily-goal` im Löser-Kopf (letzte Angabe der Zyklus-Zeile), auf der Dashboard-Kachel (eigene Zeile unter der Frist) und im Statistik-Fenster (ersetzt dort „Nötig je Tag: n (offen ÷ Resttage) · Heute: n“); offen leise „Heute: 23 von 45“, erreicht grüner Haken `check_circle` + „Tagesziel erreicht“ in `--rh-success` + Zahl klein, Zyklus 1 nur „Heute: n“; das Soll ist über den Tag fest (5.12, 8.1) | Ob das heutige Minimum geschafft ist, stand nur im Statistik-Fenster, und die Soll-Zahl dort sank mit jeder gelösten Aufgabe — „erreicht“ gab es nicht | Nutzerwunsch 18.11.2026 („oben auch ohne statistik visualisieren, wenn ich heute das notwendige minimum erledigt habe (sowohl im dashboard als auch wenn ich drinnen bin)“, „grüne checkmark oder so vielleicht“) |
 | 2026-11-18 | 0.992.0 · Woodpecker-Löser | Statistik als modaler Inhalts-Dialog (760 px / 94vw) statt aufklappbarem Block in der Kontext-Card (löst die Einträge 0.957.0 und 0.958.1 ab): Knopf „Statistik“ (`bar_chart`) unter der Zyklus-Zeile; oben Übersicht in Lesegröße — Tabelle „Bisher“ gegen dieselben Aufgaben je früherem Zyklus (Zeit, Richtig), „Nötig je Tag: n (offen ÷ Resttage) · Heute: n“; darunter die bisherigen Abschnitte ohne Doppeltes; solange das Fenster offen ist, steht die Lösezeit und das Brett ist unkenntlich (Blur), Hauptknopf „Weiter lösen“ (5.12) | Die wichtigsten Zahlen standen mitten in einem langen Block in der Seitenspalte; beim Lesen lief die Uhr der Aufgabe weiter | Nutzerwunsch 18.11. |
 | 2026-11-16 | 0.987.0 · Trainer-Notizbuch | Unterseite `/training-videos/notebook`: Themen „Sagt er immer wieder“ mit Häufigkeit, Eröffnungsempfehlungen mit Mini-Brett + Repertoire-Satz, alle Notizen als Kategorie-Reiter (Chip-Liste mit Anzahl) je Stunde, Aufklapper „▶ anhören“/„Rohzitat“ je Notiz (8.1) | Trainer-Aussagen stundenübergreifend nachschlagen statt Stunde für Stunde | Auftrag der betreuenden Sitzung 16.11. |

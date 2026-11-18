@@ -172,6 +172,69 @@ export function woodpeckerDailyGoal(
   return { today: done, target, open, days, reached: open === 0 || done >= target };
 }
 
+/**
+ * Zeitplan des laufenden Zyklus (Wunsch 2026-11-18: „neben x pro Tag für fertig auch noch ein Checkmark, wenn ich % der
+ * Gesamtpuzzles passend zum aktuellen Tag hab — und in Statistik oben ausgewiesen: noch x Puzzle bis z. B. 55 %
+ * erfüllt“). Die zweite, vom Tagesziel unabhängige Frage: liegt der bisher bearbeitete Anteil des Satzes dort, wo er am
+ * heutigen Tag des Zyklus liegen soll? EINE Rechnung für Dashboard-Kachel, Löser-Kopf und Statistik-Fenster.
+ */
+export interface WoodpeckerSchedule {
+  /** Laufender Kalendertag des Zyklus (lokal, ≥ 1; der Tag des Beginns ist Tag 1), höchstens `days`. */
+  day: number;
+  /** Kalendertage des Zyklus gesamt: vom Tag des Beginns bis zum Fristtag, beide mitgezählt — dieselbe Zählung wie die
+   *  „Tage bis zur Frist“ des Tagesziels ({@link calendarDaysUntil}): `days = day − 1 + Tage bis zur Frist`. */
+  days: number;
+  /** Soll-Anteil bis Ende heute in Prozentpunkten, gerundet: `min(1, day / days)`. */
+  targetPct: number;
+  /** Soll-Anzahl bis Ende heute: `⌈Satz × day / days⌉`. */
+  target: number;
+  /** Im laufenden Zyklus bearbeitet (höchstens der Satz). */
+  attempted: number;
+  setSize: number;
+  /** Bearbeiteter Anteil des Satzes in Prozentpunkten, gerundet wie `targetPct` (100 erst, wenn nichts mehr offen ist). */
+  currentPct: number;
+  /** Noch so viele Aufgaben bis zum Soll: `max(0, target − attempted)`. */
+  left: number;
+  /** Im Zeitplan: `attempted ≥ target`. */
+  reached: boolean;
+  /** Frist vorbei: das Soll ist der ganze Satz (100 %), `left` = offene Aufgaben. */
+  overdue: boolean;
+}
+
+/**
+ * Zeitplan aus dem Plan; rein (Zeit über `now`), getestet in `woodpecker-stats.util.spec.ts`.
+ *
+ * - **Tag k** = begonnene lokale Kalendertage seit Zyklusbeginn ({@link calendarDaysSince}), **D** = Kalendertage vom
+ *   Tag des Beginns bis zum Fristtag ({@link calendarDaysUntil} ab dem Beginn). Dieselbe Tageszählung wie beim
+ *   Tagesziel: an jedem Tag vor der Frist gilt `D = k − 1 + Tage bis zur Frist`. Ein Zyklus über 14 × 24 h, der
+ *   mittags beginnt, berührt deshalb 15 Kalendertage (erster und letzter Tag sind halbe).
+ * - **Soll bis Ende heute = ⌈Satz × k / D⌉**, der Anteil `k / D` (höchstens 1); **im Zeitplan**, wenn bearbeitet ≥ Soll.
+ *   Am letzten Tag und nach der Frist ist das Soll der ganze Satz.
+ * - Nur mit laufendem Zyklus (`status === 'solving'`) ab Zyklus 2 — in Zyklus 1 wächst der Satz noch, es gibt keinen
+ *   Anteil. Sonst und ohne brauchbare Daten (Beginn, Frist, Satz) `null`: KEINE Anzeige.
+ * - Braucht `todayAttempted` nicht — alles steht seit jeher im Plan (`setSize`, `attempted`, `startedAt`, `deadline`).
+ */
+export function woodpeckerSchedule(plan: WoodpeckerPlan | null | undefined, now: number = Date.now()): WoodpeckerSchedule | null {
+  const c = plan?.cycles.length ? plan.cycles[plan.cycles.length - 1] : null;
+  if (!plan || !c || plan.status !== 'solving' || c.finishedAt || c.number <= 1) return null;
+  const start = new Date(c.startedAt).getTime();
+  const deadline = new Date(c.deadline).getTime();
+  const setSize = Math.floor(plan.setSize);
+  if (!Number.isFinite(start) || !Number.isFinite(deadline) || deadline <= start || !(setSize > 0)) return null;
+  if (typeof c.attempted !== 'number' || !Number.isFinite(c.attempted)) return null;
+  const attempted = Math.min(setSize, Math.max(0, Math.floor(c.attempted)));
+  const days = calendarDaysUntil(deadline, start);
+  const overdue = deadline <= now;
+  const day = overdue ? days : Math.min(days, calendarDaysSince(start, now));
+  // Erst multiplizieren, dann teilen: geht die Teilung auf, ist das Ergebnis exakt (kein ⌈30,000000000000004⌉ = 31).
+  const target = Math.ceil((setSize * day) / days);
+  const currentPct = Math.min(attempted < setSize ? 99 : 100, Math.round((100 * attempted) / setSize));
+  return {
+    day, days, targetPct: Math.round((100 * day) / days), target, attempted, setSize, currentPct,
+    left: Math.max(0, target - attempted), reached: attempted >= target, overdue,
+  };
+}
+
 /** Ein früherer Zyklus in der Übersicht: Zeit und Quote auf DENSELBEN Aufgaben wie jetzt. */
 export interface WoodpeckerOverviewEarlier {
   cycle: number;
@@ -208,6 +271,9 @@ export interface WoodpeckerOverview {
   goal: WoodpeckerDailyGoal | null;
   /** Bisheriges Tempo (bearbeitet / begonnene Kalendertage) — in Zyklus 1 statt einer Soll-Zahl gezeigt. */
   perDay: number;
+  /** Zeitplan mit den Zahlen aus `/stats` ({@link woodpeckerSchedule}) — dieselbe Rechnung wie auf Kachel und im
+   *  Löser-Kopf; `null` in Zyklus 1 oder ohne laufenden Zyklus. */
+  schedule: WoodpeckerSchedule | null;
 }
 
 /**
@@ -237,6 +303,7 @@ export function planWithStats(plan: WoodpeckerPlan, stats: WoodpeckerStats | nul
  * - „heute“ = Eintrag von `days[]` mit dem lokalen Datum von `now` (der Server bildet die Tage mit dem
  *   `utcOffsetMinutes` dieses Geräts); gibt es keinen, ist heute noch nichts bearbeitet → 0.
  * - Tagesziel = {@link woodpeckerDailyGoal} mit diesem „heute“ und dem Stand aus `/stats`.
+ * - Zeitplan = {@link woodpeckerSchedule} mit dem Stand aus `/stats` (0.994.0).
  */
 export function woodpeckerOverview(
   stats: WoodpeckerStats | null | undefined, plan: WoodpeckerPlan | null | undefined, now: number = Date.now(),
@@ -257,8 +324,10 @@ export function woodpeckerOverview(
     });
   const todayKey = todayYmd(new Date(now));
   const today = stats.days.find(d => d.date === todayKey)?.attempted ?? 0;
+  const merged = planWithStats(plan, stats);
   return {
     cycle: cur.number, attempted: cur.attempted, secondsNow: cur.timeSeconds, ratePctNow: s.ratePct, earlier, today,
-    open: s.open, overdue: s.overdue, goal: woodpeckerDailyGoal(planWithStats(plan, stats), now, today), perDay: s.perDay,
+    open: s.open, overdue: s.overdue, goal: woodpeckerDailyGoal(merged, now, today), perDay: s.perDay,
+    schedule: woodpeckerSchedule(merged, now),
   };
 }

@@ -41,6 +41,7 @@ function render(p: WoodpeckerPlan | null, service: Partial<WoodpeckerService> = 
       readyOne: 'Cycle {{n}} is ready: {{size}} puzzles in {{days}} day.',
       startCycle: 'Start cycle {{n}}', saveFailed: 'Saving failed.',
       overview: { todayLabel: 'Today' }, daily: { count: '{{today}} of {{target}}', reached: 'Daily goal reached' },
+      schedule: { label: 'Schedule', onTrack: 'On schedule', left: '{{n}} more to reach {{pct}}' },
     },
     apiErrors: { woodpecker_archived: 'This training is archived.' },
   });
@@ -114,6 +115,68 @@ describe('WoodpeckerTileComponent (Dashboard-Kachel)', () => {
       fixture.componentRef.setInput('plan', running(208, 90));
       fixture.detectChanges();
       expect(goalText(el)).toEqual(['check_circle', 'Daily goal reached', '90 of 90']);
+    });
+  });
+
+  // 0.994.0, Wunsch 18.11.: „neben x pro Tag für fertig auch noch ein Checkmark, wenn ich % der Gesamtpuzzles passend
+  // zum aktuellen Tag hab“ — Zyklus 2 über 14 Kalendertage (Beginn vor 7 Tagen um Mitternacht), heute Tag 8; Satz 270
+  // → Soll ⌈270 × 8 / 14⌉ = 155 (57 %).
+  describe('Zeitplan', () => {
+    const midnightIn = (n: number) => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, 0, 0, 0).toISOString(); };
+    const running = (attempted: number, over: Partial<WoodpeckerPlan> = {}, c2: Partial<WoodpeckerCycle> = {}) =>
+      plan('solving', [cycle(1, { finishedAt: iso(-9 * DAY) }),
+        cycle(2, { targetDays: 14, attempted, startedAt: midnightIn(-7), deadline: midnightIn(7), ...c2 })], { setSize: 270, ...over });
+    const scheduleText = (el: HTMLElement) => Array.from(el.querySelectorAll('.wp-schedule .wsc > :not(.wsc-ok), .wp-schedule .wsc-ok > *')).map(x => x.textContent!.trim());
+
+    it('dahinter: leise Zeile „Zeitplan: noch 12 bis 57 %“ direkt unter dem Tagesziel, ohne Haken', () => {
+      const { el } = render(running(143, { todayAttempted: 10 }));
+      expect(scheduleText(el)).toEqual(['Schedule:', '12 more to reach 57%']);
+      expect(el.querySelector('.wp-schedule mat-icon')).toBeNull();
+      const lines = Array.from(el.querySelectorAll('.wp-content > *')).map(x => x.className.split(' ')[0]);
+      expect(lines.slice(-3)).toEqual(['wp-deadline', 'wp-daily', 'wp-schedule']);
+    });
+
+    it('genau auf Soll: grüner Haken + „Im Zeitplan“ + Soll-Anteil; darüber bleibt es so', () => {
+      const exact = render(running(155));
+      expect(scheduleText(exact.el)).toEqual(['check_circle', 'On schedule', '57%']);
+      expect(exact.el.querySelector('.wp-schedule .wsc-done mat-icon.wsc-check')).not.toBeNull();
+      TestBed.resetTestingModule();
+      expect(scheduleText(render(running(200)).el)).toEqual(['check_circle', 'On schedule', '57%']);
+    });
+
+    it('unabhängig vom Tagesziel: ohne todayAttempted (älterer Server, Zwischenstand) steht nur der Zeitplan', () => {
+      const { el } = render(running(143));
+      expect(el.querySelector('.wp-daily')).toBeNull();
+      expect(scheduleText(el)).toEqual(['Schedule:', '12 more to reach 57%']);
+    });
+
+    it('beide erreicht: zwei Haken untereinander (Tagesziel, Zeitplan)', () => {
+      // 155 bearbeitet, 20 davon heute: Soll heute = ⌈(115 + 20) / 7⌉ = 20
+      const { el } = render(running(155, { todayAttempted: 20 }));
+      expect(Array.from(el.querySelectorAll('.wp-content mat-icon')).map(i => i.className.split(' ').find(c => c.endsWith('-check'))))
+        .toEqual(['wdg-check', 'wsc-check']);
+    });
+
+    it('Frist vorbei: „Frist überschritten“ und der Zeitplan nennt das Offene bis 100 %', () => {
+      const { el, text } = render(running(230, {}, { startedAt: midnightIn(-16), deadline: midnightIn(-2) }));
+      expect(text).toContain('Deadline passed');
+      expect(scheduleText(el)).toEqual(['Schedule:', '40 more to reach 100%']);
+    });
+
+    it('Zyklus 1, Pause und bereit: kein Zeitplan', () => {
+      expect(render(plan('solving', [cycle(1, { attempted: 12 })], { todayAttempted: 5 })).el.querySelector('.wp-schedule')).toBeNull();
+      TestBed.resetTestingModule();
+      expect(render(plan('break', [cycle(1, { finishedAt: iso(-3_600_000) })], { nextCycleAt: iso(DAY) })).el.querySelector('.wp-schedule')).toBeNull();
+      TestBed.resetTestingModule();
+      expect(render(plan('ready', [cycle(1, { finishedAt: iso(-2 * DAY) })])).el.querySelector('.wp-schedule')).toBeNull();
+    });
+
+    it('neuer Planstand: die Zeile wechselt auf „Im Zeitplan“', () => {
+      const { fixture, el } = render(running(154));
+      expect(scheduleText(el)).toEqual(['Schedule:', '1 more to reach 57%']);
+      fixture.componentRef.setInput('plan', running(155));
+      fixture.detectChanges();
+      expect(scheduleText(el)).toEqual(['check_circle', 'On schedule', '57%']);
     });
   });
 

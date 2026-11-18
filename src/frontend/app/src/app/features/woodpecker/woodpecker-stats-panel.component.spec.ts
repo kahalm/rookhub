@@ -157,6 +157,67 @@ describe('WoodpeckerStatsPanelComponent (0.957.0, Übersicht 2026-11-18)', () =>
     expect(day.querySelector('app-woodpecker-daily-goal')).toBeNull();   // nach der Frist kein Tagesziel
   });
 
+  // 0.994.0, Wunsch 18.11.: „… und in Statistik oben ausgewiesen: noch x Puzzle bis z. B. 55 % erfüllt“.
+  describe('Übersicht „Zeitplan“', () => {
+    /** Mitternacht in n Tagen (Ortszeit): Beginn/Frist auf Tagesgrenzen, damit Tag k und D nicht von der Uhrzeit des
+     *  Testlaufs abhängen. */
+    const midnightIn = (n: number) => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, 0, 0, 0).toISOString(); };
+    const SCHEDULE = { label: 'schedule', labelDay: 'schedule (day {{k}}/{{d}})', leftLong: '{{n}} more puzzles to {{pct}}',
+      leftLongOne: '{{n}} more puzzle to {{pct}}', reachedPct: '{{pct}} reached', current: 'now {{pct}}' };
+    const line = () => Array.from(el.querySelectorAll('.wps-ov-schedule .wsc > :not(.wsc-ok), .wps-ov-schedule .wsc-ok > *')).map(x => squash(x.textContent!.trim()));
+
+    it('dahinter: eigene Zeile unter dem Tagesziel — „Zeitplan (Tag 8 von 14): noch 149 Aufgaben bis 57 %“, Zahlen aus /stats', () => {
+      const p = plan(70);                       // Plan: 70, /stats: 73
+      p.cycles[1].startedAt = midnightIn(-7);   // heute ist Tag 8
+      p.cycles[1].deadline = midnightIn(7);     // 14 Kalendertage
+      make(p, { woodpecker: { schedule: SCHEDULE } });
+      expectStats().flush(stats2());
+      fixture.detectChanges();
+      // Soll = ⌈388 × 8 / 14⌉ = 222 (57 %); 73 bearbeitet → noch 149
+      expect(line()).toEqual(['schedule (day 8/14):', '149 more puzzles to 57%']);
+      const top = Array.from(el.querySelector('.wps-top')!.children).map(x => x.className);
+      expect(top[top.length - 1]).toContain('wps-ov-schedule');                       // letzte Zeile der Übersicht …
+      expect(top[top.length - 2]).toContain('wps-ov-day');                            // … direkt unter „je Tag“
+      expect(el.querySelector('.wps-ov-schedule app-woodpecker-schedule .wsc-full')).not.toBeNull();   // derselbe Baustein, ausführlich
+      expect(el.querySelector('.wps-ov-schedule .wsc-check')).toBeNull();
+    });
+
+    it('im Zeitplan: grüner Haken, „7 % erreicht“ und der aktuelle Stand', () => {
+      const p = plan(73);
+      p.cycles[1].startedAt = midnightIn(0);    // heute ist Tag 1
+      p.cycles[1].deadline = midnightIn(14);
+      make(p, { woodpecker: { schedule: SCHEDULE } });
+      expectStats().flush(stats2());
+      fixture.detectChanges();
+      // Soll = ⌈388 × 1 / 14⌉ = 28 (7 %); 73 bearbeitet = 19 %
+      expect(line()).toEqual(['schedule (day 1/14):', 'check_circle', '7% reached', '(now 19%)']);
+      expect(el.querySelector('.wps-ov-schedule .wsc-done mat-icon.wsc-check')?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('Frist vorbei: ohne Tagesangabe — alles Offene bis 100 %', () => {
+      const p = plan(73);
+      p.cycles[1].startedAt = midnightIn(-16);
+      p.cycles[1].deadline = midnightIn(-2);
+      make(p, { woodpecker: { schedule: SCHEDULE } });
+      expectStats().flush(stats2());
+      fixture.detectChanges();
+      expect(line()).toEqual(['schedule:', '315 more puzzles to 100%']);
+      expect(el.querySelector('.wps-ov-day .wps-late')).not.toBeNull();   // „Frist überschritten“ steht weiter darüber
+    });
+
+    it('Zyklus 1: keine Zeitplan-Zeile (der Satz wächst noch)', () => {
+      const p = plan(40, { currentCycle: 1, setSize: 40 });
+      p.cycles = [{ number: 1, targetDays: 28, startedAt: midnightIn(-3), deadline: midnightIn(25), finishedAt: null, attempted: 40, solved: 30, timeSeconds: 2400 }];
+      make(p, { woodpecker: { schedule: SCHEDULE } });
+      expectStats().flush(stats2({ currentCycle: 1, setSize: 40, changes: null, forecast: null,
+        cycles: [row({ finishedAt: null, attempted: 40, solved: 30, solvedClean: 30, timeSeconds: 2400, ratePct: 75, avgSeconds: 60, daysUsed: 3 })] }));
+      fixture.detectChanges();
+      expect(el.querySelector('.wps-top')).not.toBeNull();
+      expect(el.querySelector('.wps-ov-schedule')).toBeNull();
+      expect(el.querySelector('app-woodpecker-schedule')).toBeNull();
+    });
+  });
+
   it('mehrere frühere Zyklen: jüngster zuerst; kleinere Schnittmenge wird mit den Jetzt-Werten auf diesen Aufgaben ausgewiesen', () => {
     const p = plan(40, { currentCycle: 3, setSize: 100 });
     p.cycles = [p.cycles[0], { ...p.cycles[0], number: 2, targetDays: 14 }, { ...p.cycles[1], number: 3, targetDays: 7 }];

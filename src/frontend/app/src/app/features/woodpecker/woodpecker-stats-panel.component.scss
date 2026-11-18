@@ -20,6 +20,9 @@
 .wps-ov-goal-row { display: inline-flex; flex-wrap: wrap; align-items: center; column-gap: 0.5em; row-gap: 2px; }
 .wps-ov-goal { color: var(--mat-sys-on-surface); }
 .wps-ov-how { font-size: .85rem; }
+/* Zeitplan (0.994.0, geteilter Baustein in der ausführlichen Form): eigene Zeile unter dem Tagesziel, gleiche Größe und
+   Textfarbe; bricht zwischen Beschriftung und Angabe um, nie mitten in einem Teil. */
+.wps-ov-schedule { font-size: 1rem; color: var(--mat-sys-on-surface); }
 .wps-busy { margin: 4px 0; }
 .wps-empty { margin: 0; }
 .wps-sec { display: flex; flex-direction: column; gap: 2px; }

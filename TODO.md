@@ -6,6 +6,17 @@ _Legende: `[ ]` offen · `[~]` Hauptteil erledigt, Rest bewusst geparkt (Begrün
 `[x]` erledigt, bleibt als Beleg stehen. Erledigte Einzelfunde ohne weiteren Wert stehen unten
 im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
+## [ ] Woodpecker-Löser: nach der Frist steht „noch 0 Tage“ statt „Frist überschritten“ (2026-11-18)
+
+Gesehen beim Zeitplan (0.994.0), nicht mit behoben. Der Plan-Kopf des Lösers (`features/puzzles/book-context-card.component.html`,
+`.wp-meta`) zeigt `woodpeckerDaysLeft()`; läuft der Zyklus nach der Frist weiter, steht dort „noch 0 Tage“ — die
+Dashboard-Kachel sagt im selben Zustand „Frist überschritten“ in `--rh-warn`. Seit 0.994.0 steht direkt dahinter
+„Zeitplan: noch 40 bis 100 %“, was richtig ist, neben „noch 0 Tage“ aber seltsam liest. Vorschlag: im Kopf dieselbe
+Angabe wie auf der Kachel (Wortlaut `woodpecker.overdue`, Farbe `--rh-warn`), Test in `book-context-card.component.spec.ts`.
+
+Dazu: die kroatischen und ungarischen Texte von `woodpecker.schedule.*` (wie schon `woodpecker.daily.*` und
+`woodpecker.overview.*`) hat niemand gegengelesen, der die Sprache spricht.
+
 ## [~] Klickbare Züge in Buch-/Kurs-Kommentaren: Restklassen nach dem Feld-Aufzählungs-Fix — 0.991.2 (2026-11-18)
 
 `features/puzzles/comment-variation.util.ts`. Fertig (Buch-Aufgabe 35167): eine Feld-Aufzählung hinter einer Präposition

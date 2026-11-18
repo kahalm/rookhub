@@ -6555,6 +6555,16 @@
       "how": "{{open}} preostalo + {{today}} danas, raspoređeno na {{days}} dana",
       "howLastDay": "{{open}} preostalo + {{today}} danas, danas je zadnji dan"
     },
+    "schedule": {
+      "label": "Plan",
+      "labelDay": "Plan ({{k}}. dan od {{d}})",
+      "onTrack": "Prema planu",
+      "left": "još {{n}} do {{pct}}",
+      "leftLong": "još {{n}} zadataka do {{pct}}",
+      "leftLongOne": "još {{n}} zadatak do {{pct}}",
+      "reachedPct": "{{pct}} postignuto",
+      "current": "trenutačno {{pct}}"
+    },
     "stats": {
       "solvedCount": "riješeno {{solved}} od {{done}}",
       "clean": "{{n}} bez savjeta",

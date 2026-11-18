@@ -6555,6 +6555,16 @@
       "how": "{{open}} left + {{today}} today, spread over {{days}} days",
       "howLastDay": "{{open}} left + {{today}} today, today is the last day"
     },
+    "schedule": {
+      "label": "Schedule",
+      "labelDay": "Schedule (day {{k}} of {{d}})",
+      "onTrack": "On schedule",
+      "left": "{{n}} more to reach {{pct}}",
+      "leftLong": "{{n}} more puzzles to reach {{pct}}",
+      "leftLongOne": "{{n}} more puzzle to reach {{pct}}",
+      "reachedPct": "{{pct}} reached",
+      "current": "currently {{pct}}"
+    },
     "stats": {
       "solvedCount": "{{solved}} of {{done}} solved",
       "clean": "{{n}} without hints",
