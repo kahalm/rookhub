@@ -11,7 +11,20 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 `features/puzzles/comment-variation.util.ts`. Fertig (Buch-Aufgabe 35167): eine Feld-Aufzählung hinter einer Präposition
 („can’t take on g5 or e4“) ist Ortsangabe, kein Zug. Bestandsvergleich alte gegen neue Fassung über 125 727 Buch-Aufgaben
 (Prod, nur gelesen): 3 215 geänderte Absätze, 1 655 Züge neu klickbar, 322 Züge passen jetzt zur Zugnummer (umgekehrt 3).
-Rohdaten und Vergleichsdateien: `/srv/media/claude-sessions/kommentar-parser/`. Dabei aufgefallen, NICHT behoben:
+Rohdaten und Vergleichsdateien: `/srv/media/claude-sessions/kommentar-parser/`.
+
+**Nachtrag 0.993.1 (Buch-Aufgabe 34900, „36.Nxf7+ … was played in the game, but Black had Rxf7 37.g6 …“):** liegt eine
+Zugnummer AUSSERHALB der Linie (das Buch zählt die Partiezüge, die Aufgaben-FEN beginnt bei Zug 1), ist die per Suche
+gefundene Stellung jetzt der Rahmen für den numerlosen Zweig danach — als Angebot (die freie Suche gilt weiter, wenn sie
+mehr Züge findet) und mit geprüfter Zählung (eine Zugnummer, die nicht zur Fortsetzung passt, wird nicht als Fortsetzung
+gespielt). Bestandsvergleich gegen 0.993.0 (22 318 Absätze nachgespielt, in denen die Regel greifen kann): 271 geänderte
+Absätze in 236 Aufgaben aus 45 Büchern, 1 212 Züge neu klickbar (vor allem zitierte Partiefortsetzungen, Bücher 146 und 82),
+492 mit anderer Stellung, KEIN vorher klickbarer Zug verloren. Verworfen nach dem Bestandsvergleich: „Komma trennt nicht,
+wenn die Nummerierung die Fortsetzung belegt“ — hart 792 verlorene Züge (289 davon passten zur Zugnummer: der numerlose
+Zug war nur erwähnt, die Nummer passte zufällig, z. B. 14418), eng (nur Notation dazwischen) noch 173, weil die
+zusammengelegte Folge dann als Ganzes an EINER Stellung aufgehen muss (z. B. 96431).
+
+Beim ersten und zweiten Vergleich aufgefallen, NICHT behoben:
 - [ ] Numerloser Zug vor einer nummerierten Variante wird gemeinsam mit ihr erraten, an der Zugnummer vorbei (häufigste
       Restursache): 14327 („9.f4“ erscheint bei Zug 21), 119611 („26.Qxe3“ bei Zug 35, der Rest bleibt Text), 33260.
 - [ ] Flachgeklopfte PGN-Schachtelung: ein numerloser Zug nach einer eingeschobenen Nebenvariante findet nicht zur äußeren
@@ -19,6 +32,13 @@ Rohdaten und Vergleichsdateien: `/srv/media/claude-sessions/kommentar-parser/`. 
 - [ ] Gleichstand Alternative/Fortsetzung bei numerlosem Zweig ignoriert die folgende Zugnummer: 100671 (seit 0.991.2
       gemischt: drei Züge richtig, „g2“/„21.Kxg2“ einen Halbzug daneben).
 - [ ] Bücher mit eigener Zugzählung: die Suche nimmt die früheste passende Stellung, nicht die am Kommentar-Halbzug: 95986.
+      Seit 0.993.1 hängt der numerlose Zweig danach an dieser Stellung; nummerierte Folgezweige („37...Rf8“ hinter einer
+      Untervariante) finden ihre Untervariante weiter nicht, weil `resolveInSubline` die Zählung der FEN vergleicht —
+      der Versatz Kommentar-Zählung ↔ FEN wäre aus dem gefundenen Zweig bekannt.
+- [ ] Passt im gesuchten Rahmen eine spätere Zugnummer nicht zur Fortsetzung, gewinnt oft wieder die freie Suche und der
+      numerlose Zug davor bleibt an der alten, falschen Stelle: 148183 („23.Qb6, idea Rc7. Black should … 21...Kg8“).
+- [ ] Erwähnter Plan der ANDEREN Seite wird als Zug der Seite am Zug gespielt: 94486 („win the a-file with Ra3 or Ra5“
+      zeigt einen schwarzen Turm auf a3), vorher wie nachher falsch.
 - [ ] Feld-Aufzählung mit Schrägstrich („knight on d2/d7“, 664 Stellen) und Feldangaben wie „the e4 -pawn“ oder
       „Reinforcing d4“ werden weiter als Zug gelesen.
 - [ ] Echter Verlust durch 0.991.2: 54043 („57.Bg4“ war vorher richtig klickbar, jetzt Text).

@@ -25,6 +25,11 @@ import { whiteToMove } from '../../shared/chess/fen-side';
  * 2026-11-18). Solche Prosa mit einer Feld-Aufzählung ist dafür (c) eine MÖGLICHE Trennstelle vor dem
  * nächsten nummerierten Zug — entschieden wird sie erst beim Auflösen ({@link resolveWithSoftSplits}).
  *
+ * EIGENE ZUGZÄHLUNG DES BUCHS: Liegt eine Zugnummer AUSSERHALB der Linie (die Aufgaben-FEN beginnt bei Zug 1,
+ * der Kommentar zitiert die Partie mit Zug 36), wird der Zweig per Suche gefunden. Die gefundene Stellung ist
+ * dann sein Ort — auch für den numerlosen Zweig danach ({@link BranchContext}, `searched`; Buch-Aufgabe 34900,
+ * gemeldet 2026-11-18).
+ *
  * VORWÄRTS-SPRUNG: Bricht die Auflösung genau an einem nummerierten Zug ab, der ÜBER die erwartete
  * Fortsetzung hinausspringt („… nach 2.Sf3 … 4.c3 Sc6" — dazwischen fehlen Züge), wird der Rest als
  * eigener Zweig aufgelöst, und zwar NUR an der Hauptlinien-Stellung seiner Zugnummer (kein Raten
@@ -388,7 +393,15 @@ function candidatesFor(c: Chess, san: string): (string | { from: string; to: str
  * gewinnt immer; der Anker verliert nie Züge (kein Abschneiden).
  */
 export function resolveVariation(startFen: string, ucis: string[], sans: string[], startPly?: number): VariationStep[] {
-  if (!sans.length) return [];
+  return resolveVariationFrom(startFen, ucis, sans, startPly).steps;
+}
+
+/** Wie {@link resolveVariation}, dazu die Basis-Stellung, aus der der Präfix gespielt wurde (`undefined`,
+ *  wenn kein Zug aufging) — der ORT des Zweigs für den Rahmen des nächsten ({@link nextContext}). */
+function resolveVariationFrom(
+  startFen: string, ucis: string[], sans: string[], startPly?: number,
+): { steps: VariationStep[]; baseFen?: string } {
+  if (!sans.length) return { steps: [] };
   const bases = mainlineFens(startFen, ucis);
   const firstPly = baseStartPly(startFen);
   const order: number[] = [];
@@ -398,7 +411,10 @@ export function resolveVariation(startFen: string, ucis: string[], sans: string[
     // nur Vorrang bei Gleichstand: ging der Zug dort nicht (mehrdeutig, Tippfehler), suchte der
     // Resolver weiter und fand „16.Ne4" in 1.d4 Sf6 2.c4 Se4 wieder — die Vorschau zeigte Zug 2
     // statt Zug 16 (gemeldet 2026-09-23). Text ist die ehrlichere Antwort als ein falsches Brett.
-    if (anchor >= 0 && anchor < bases.length) return playPrefix(bases[anchor], sans);
+    if (anchor >= 0 && anchor < bases.length) {
+      const steps = playPrefix(bases[anchor], sans);
+      return { steps, baseFen: steps.length ? bases[anchor] : undefined };
+    }
   }
   for (let i = 0; i < bases.length; i++) {
     // Außerhalb der Linie (Kommentar zählt anders als die Start-FEN) bleibt die Suche — aber nur in
@@ -408,12 +424,13 @@ export function resolveVariation(startFen: string, ucis: string[], sans: string[
   }
 
   let best: VariationStep[] = [];
+  let baseFen: string | undefined;
   for (const i of order) {
     const s = playPrefix(bases[i], sans);
-    if (s.length > best.length) best = s;   // strikt > → bei Gleichstand gewinnt die zuerst geprüfte (Anker, sonst früheste)
+    if (s.length > best.length) { best = s; baseFen = bases[i]; }   // strikt > → bei Gleichstand gewinnt die zuerst geprüfte (Anker, sonst früheste)
     if (best.length === sans.length) break;
   }
-  return best;
+  return { steps: best, baseFen };
 }
 
 /** Ply, die der Zug an Position `k` als FORTSETZUNG der Züge davor hätte (ab dem ersten nummerierten
@@ -441,8 +458,31 @@ function resolveAtAnchor(startFen: string, ucis: string[], sans: string[], start
  * dessen letztem („16.Nd5 ist besser, nach Lf5 17.Sxe7 …"). Sonst nirgends — vorher suchte der
  * Resolver die ganze Partie ab und fand „after Bf5" hinter „16.Ne4" bei 10…Lf5 (gemeldet 2026-09-23).
  * `contFen` fehlt, wenn der Zweig davor nicht bis zum Ende aufging: dann ist unbekannt, wo er endet.
+ *
+ * <p>`searched`: die Zugnummer des Zweigs davor liegt AUSSERHALB der Linie (das Buch zählt die Partiezüge),
+ * sein Ort ist per Suche gefunden. Bis 0.993.0 gab es dann gar keinen Rahmen, und der numerlose Zweig suchte
+ * wieder die ganze Linie ab — die Antwort auf den eben gezeigten Zug fand er dort nicht („36.Nxf7+ … was
+ * played in the game, but Black had Rxf7 …", Buch-Aufgabe 34900, gemeldet 2026-11-18). Ein gesuchter Ort ist
+ * aber ein ANGEBOT, kein Zwang: findet die freie Suche mehr Züge als Alternative und Fortsetzung, gilt sie
+ * weiter (Bestandsprüfung: sonst würden hunderte erwähnte Züge, die bisher eine Stellung hatten, zu Text).
+ * Und er zählt mit: `altPly`/`contPly` sind die Ply der Stellungen in der ZÄHLUNG DES KOMMENTARS (36. = 70);
+ * eine Zugnummer im numerlosen Zweig, die dazu nicht passt, gehört nicht in diese Folge
+ * ({@link numberedPrefix}).</p>
  */
-interface BranchContext { altFen: string; contFen?: string; }
+interface BranchContext { altFen: string; contFen?: string; searched?: boolean; altPly?: number; contPly?: number; }
+
+/**
+ * Der Teil eines numerlosen Zweigs, dessen Zugnummern zur Zählung ab `basePly` passen: „36.Nxf7+ …, but
+ * Black had Rxf7 37.g6 Rxf5+ 38.Rxf5" zählt hinter 36.Nxf7+ lückenlos weiter (Rxf7 = 71, „37." = 72 …) — die
+ * ganze Folge. Trägt ein Zug eine Nummer, die NICHT passt („… ready for either Nxa5 or Nd6 next. 36.Nc4 does
+ * win" hinter 41.Nc4 Nb6), endet die Folge vor ihm: er ist kein Fortsetzungszug, sondern steht an seiner
+ * eigenen Zugnummer (Bestandsprüfung, Aufgabe 91401 — sonst spielte Schwarz dort „36.Nc4").
+ */
+function numberedPrefix(b: CommentBranch, basePly: number | undefined): string[] {
+  if (basePly === undefined) return b.sans;
+  const cut = (b.plies ?? []).findIndex((p, k) => p !== undefined && p !== basePly + k);
+  return cut < 0 ? b.sans : b.sans.slice(0, cut);
+}
 
 /**
  * Ein NUMMERIERTER Zweig, der die Hauptlinie gar nicht meint, sondern eine Untervariante desselben
@@ -485,23 +525,37 @@ function resolveBranch(
 ): { out: (VariationStep | null)[]; ctx?: BranchContext; guessed: number } {
   let steps: VariationStep[];
   let usedFen: string | undefined;
+  let searchedFen: string | undefined;
+  let unframed = false;   // Rahmen aus einer Suche ausgeschlagen: die freie Suche fand mehr
+  let basePly: number | undefined;   // Ply des Zweig-Anfangs in der Zählung des Kommentars (nur `searched`)
   if (b.startPly === undefined && ctx) {
-    const alt = playPrefix(ctx.altFen, b.sans);
-    const cont = ctx.contFen ? playPrefix(ctx.contFen, b.sans) : [];
+    const alt = playPrefix(ctx.altFen, ctx.searched ? numberedPrefix(b, ctx.altPly) : b.sans);
+    const cont = ctx.contFen ? playPrefix(ctx.contFen, ctx.searched ? numberedPrefix(b, ctx.contPly) : b.sans) : [];
     // Gleichstand → Alternative: dafür trennt das Komma überhaupt („c5, a5, Kd4" = Aufzählung).
-    [steps, usedFen] = cont.length > alt.length ? [cont, ctx.contFen] : [alt, ctx.altFen];
+    [steps, usedFen, basePly] = cont.length > alt.length ? [cont, ctx.contFen, ctx.contPly] : [alt, ctx.altFen, ctx.altPly];
+    if (ctx.searched) {
+      const free = resolveVariation(startFen, ucis, b.sans);
+      if (free.length > steps.length) { steps = free; usedFen = undefined; unframed = true; }
+    }
   } else {
-    steps = resolveVariation(startFen, ucis, b.sans, b.startPly);
-    if (b.startPly !== undefined && priorFens.length) {
-      const sub = resolveInSubline(b, steps, anchorFen(startFen, ucis, b.startPly), priorFens);
-      if (sub) [steps, usedFen] = [sub.steps, sub.fen];
+    const found = resolveVariationFrom(startFen, ucis, b.sans, b.startPly);
+    steps = found.steps;
+    if (b.startPly !== undefined) {
+      const main = anchorFen(startFen, ucis, b.startPly);
+      if (priorFens.length) {
+        const sub = resolveInSubline(b, steps, main, priorFens);
+        if (sub) [steps, usedFen] = [sub.steps, sub.fen];
+      }
+      // Zugnummer AUSSERHALB der Linie (das Buch zählt die Partiezüge, die Aufgaben-FEN beginnt bei Zug 1):
+      // der Zweig ist per Suche gefunden — die gefundene Stellung ist sein Ort, siehe nextContext.
+      if (!usedFen && main === undefined) { searchedFen = found.baseFen; basePly = b.startPly; }
     }
   }
   const plies = b.plies ?? [];
   // Numerloser Zweig ohne Rahmen: sein Anfang ist per Suche irgendwo in der Partie gelandet — bis zum
   // ersten Zug, dessen Zugnummer die gefundene Stelle bestätigt (ab dort ist sie kein Raten mehr).
   let guessed = 0;
-  if (b.startPly === undefined && !ctx) {
+  if (b.startPly === undefined && (!ctx || unframed)) {
     const confirmed = steps.findIndex((_st, k) => k > 0 && b.plies?.[k] !== undefined && baseStartPly(steps[k - 1].fen) === b.plies[k]);
     guessed = confirmed < 0 ? steps.length : confirmed;
   }
@@ -520,7 +574,16 @@ function resolveBranch(
     rest.forEach((step, j) => { out[k + j] = step; });
     k += rest.length;
   }
-  return { out, ctx: nextContext(startFen, ucis, b, out, usedFen ?? ctx?.altFen, usedFen), guessed };
+  // Ausgeschlagener Rahmen bleibt für den nächsten Zweig stehen, wie er war (auf erratene Züge baut keiner auf).
+  if (unframed) return { out, ctx, guessed };
+  const searched = b.startPly !== undefined ? !usedFen && searchedFen !== undefined : !!ctx?.searched;
+  const next = nextContext(startFen, ucis, b, out, usedFen ?? ctx?.altFen, usedFen ?? searchedFen);
+  if (next && searched) {
+    next.searched = true;
+    next.altPly = basePly;
+    next.contPly = continuationPly(plies, b.sans.length) ?? (basePly === undefined ? undefined : basePly + b.sans.length);
+  }
+  return { out, ctx: next, guessed };
 }
 
 /** Hauptlinien-Stellung, an der der Halbzug `ply` dran ist; `undefined` außerhalb der Linie. */
@@ -533,14 +596,15 @@ function anchorFen(startFen: string, ucis: string[], ply: number): string | unde
 /** Der Rahmen für den NÄCHSTEN Zweig (siehe {@link BranchContext}). */
 function nextContext(
   startFen: string, ucis: string[], b: CommentBranch, out: (VariationStep | null)[], inheritedAlt?: string,
-  sublineFen?: string,
+  ownFen?: string,
 ): BranchContext | undefined {
   let altFen = inheritedAlt;
   if (b.startPly !== undefined) {
-    // Nur eine Zugnummer INNERHALB der Linie gibt einen Ort; liegt sie außerhalb, weiß niemand, wo der
-    // Zweig stand — dann bleibt es für den nächsten bei der alten Suche. Ausnahme: der Zweig stand in
-    // einer Untervariante ({@link resolveInSubline}) — dann ist DEREN Stellung der Ort.
-    altFen = sublineFen ?? anchorFen(startFen, ucis, b.startPly);
+    // Der Ort eines nummerierten Zweigs ist die Hauptlinien-Stellung seiner Zugnummer. `ownFen` geht vor:
+    // er stand in einer Untervariante ({@link resolveInSubline}) — oder seine Nummer liegt AUSSERHALB der
+    // Linie und die Suche hat ihn gefunden (`searched`, siehe {@link BranchContext}). Ging der Zweig gar
+    // nicht auf, gibt es keinen Ort.
+    altFen = ownFen ?? anchorFen(startFen, ucis, b.startPly);
   }
   if (!altFen) return undefined;
   const last = out[out.length - 1];

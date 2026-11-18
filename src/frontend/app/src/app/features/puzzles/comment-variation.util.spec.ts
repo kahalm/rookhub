@@ -519,3 +519,72 @@ describe('comment-variation.util — Prosa mit Feld-Aufzählung vor einem nummer
     expect(new Chess(segs.find(s => s.move === '15.Qg6#')!.fen!).isCheckmate()).toBeTrue();
   });
 });
+
+describe('comment-variation.util — Antwort hinter einem Komma, Buch zählt die Partiezüge (Buch-Aufgabe 34900, gemeldet 2026-11-18)', () => {
+  // „The Woodpecker Method", Exercise 41: die Aufgaben-FEN beginnt bei Zug 1, der Kommentar zitiert die Partie mit
+  // IHREN Zugnummern („36.Nxf7+ … was played in the game, but Black had Rxf7 37.g6 …"). Klickbar war nur
+  // „36.Nxf7+": das Komma trennt „Rxf7 …" als eigenen Zweig ab (Aufzählungs-Regel), und weil die 36 außerhalb der
+  // Linie liegt, bekam dieser Zweig keinen Rahmen — er suchte die ganze Linie ab und fand die Antwort auf den eben
+  // gezeigten Zug nirgends. Jetzt ist die per Suche gefundene Stellung von 36.Nxf7+ der Ort, an dem es weitergeht.
+  const FEN = '3k4/p1p2prr/1p5N/3PRPP1/b1P5/4B3/P4K2/8 w - - 0 1';
+  const UCIS = ['f5f6', 'g7g6', 'e3f4'];
+  const TEXT = '36.Nxf7+?! looks like a combination and was played in the game, but Black had Rxf7 37.g6 Rxf5+! '
+    + '38.Rxf5 Rg7 when he collects the g-pawn with a draw. The key in this exercise is to avoid this line! '
+    + 'Instead normal moves give two points.';
+  const board = (fen: string) => fen.split(' ')[0];
+  const chips = (t: string, fen = FEN, ucis = UCIS) =>
+    buildCommentSegments(t, fen, ucis).filter(s => s.move).map(s => [s.move, board(s.fen!)]);
+
+  it('alle sechs Züge sind klickbar, als EINE Folge ab der Ausgangsstellung', () => {
+    expect(splitBranches(TEXT)).toEqual([['Nxf7+'], ['Rxf7', 'g6', 'Rxf5+', 'Rxf5', 'Rg7']]);
+    expect(chips(TEXT)).toEqual([
+      ['36.Nxf7+', '3k4/p1p2Nrr/1p6/3PRPP1/b1P5/4B3/P4K2/8'],
+      ['Rxf7', '3k4/p1p2r1r/1p6/3PRPP1/b1P5/4B3/P4K2/8'],     // Antwort auf Nxf7+: Turm f7, kein Springer mehr
+      ['37.g6', '3k4/p1p2r1r/1p4P1/3PRP2/b1P5/4B3/P4K2/8'],
+      ['Rxf5+', '3k4/p1p4r/1p4P1/3PRr2/b1P5/4B3/P4K2/8'],
+      ['38.Rxf5', '3k4/p1p4r/1p4P1/3P1R2/b1P5/4B3/P4K2/8'],
+      ['Rg7', '3k4/p1p3r1/1p4P1/3P1R2/b1P5/4B3/P4K2/8'],
+    ]);
+    // Der volle Wortlaut bleibt erhalten.
+    expect(buildCommentSegments(TEXT, FEN, UCIS).map(s => s.move ?? s.text).join('')).toBe(TEXT);
+  });
+
+  it('der Rahmen zählt mit: eine Zugnummer, die nicht zur Fortsetzung passt, wird nicht als Fortsetzung gespielt', () => {
+    // Hinter 36.Nxf7+ wäre Rxf7 Halbzug 71 und der nächste weiße Zug „37." — „38.g6" passt nicht dazu. Ohne die
+    // Prüfung spielte Weiß nach Rxf7 einfach g6 und zeigte es unter der Nummer 38 (Bestandsprüfung, Aufgabe 91401:
+    // dort zog SCHWARZ „36.Nc4"). „38.g6" liegt außerhalb der Linie und bleibt Text.
+    expect(chips('36.Nxf7+ loses, Rxf7 38.g6 was the idea.')).toEqual([
+      ['36.Nxf7+', '3k4/p1p2Nrr/1p6/3PRPP1/b1P5/4B3/P4K2/8'],
+      ['Rxf7', '3k4/p1p2r1r/1p6/3PRPP1/b1P5/4B3/P4K2/8'],
+    ]);
+  });
+
+  it('Aufzählungen bleiben Aufzählungen (die Komma-Regel selbst ist unverändert)', () => {
+    expect(splitBranches('16.Ne4, Nd5 or Bf4 17.Rd1')).toEqual([['Ne4'], ['Nd5'], ['Bf4', 'Rd1']]);
+    expect(splitBranches('16.Rd2, Bf4 or Bg5')).toEqual([['Rd2'], ['Bf4'], ['Bg5']]);
+    expect(splitBranches('c5, a5, Kd4')).toEqual([['c5'], ['a5'], ['Kd4']]);
+  });
+
+  it('Zugnummer außerhalb der Linie: der gefundene Ort gilt auch für den numerlosen Zweig danach', () => {
+    // Fortsetzung OHNE spätere Nummer: „Rxf7" antwortet auf den per Suche gefundenen 36.Nxf7+.
+    expect(chips('36.Nxf7+ is bad, Rxf7 wins a piece.')).toEqual([
+      ['36.Nxf7+', '3k4/p1p2Nrr/1p6/3PRPP1/b1P5/4B3/P4K2/8'],
+      ['Rxf7', '3k4/p1p2r1r/1p6/3PRPP1/b1P5/4B3/P4K2/8'],
+    ]);
+    // Alternative: „37.Nf5" geht erst nach 1.f6 Rg6 (vorher steht dort der eigene Bauer) — „Kf3" ist die
+    // Alternative in DIESER Stellung (Bauer f6, Turm g6), nicht in der Ausgangsstellung, wo Kf3 auch ginge.
+    expect(chips('37.Nf5 or Kf3 was possible.')).toEqual([
+      ['37.Nf5', '3k4/p1p2p1r/1p3Pr1/3PRNP1/b1P5/4B3/P4K2/8'],
+      ['Kf3', '3k4/p1p2p1r/1p3PrN/3PR1P1/b1P5/4BK2/P7/8'],
+    ]);
+  });
+
+  it('der gesuchte Ort ist ein Angebot: passt der numerlose Zug dort nicht, gilt die freie Suche wie bisher', () => {
+    // „Rg6" geht weder anstelle von 36.Nxf7+ noch als Antwort darauf (Schwarz steht im Schach), wohl aber in der
+    // Linie nach 1.f6 — dort stand der Zug schon vor dem Fix, und dort bleibt er.
+    expect(chips('36.Nxf7+ is bad, whereas Rg6 defends.')).toEqual([
+      ['36.Nxf7+', '3k4/p1p2Nrr/1p6/3PRPP1/b1P5/4B3/P4K2/8'],
+      ['Rg6', '3k4/p1p2p1r/1p3PrN/3PR1P1/b1P5/4B3/P4K2/8'],
+    ]);
+  });
+});
