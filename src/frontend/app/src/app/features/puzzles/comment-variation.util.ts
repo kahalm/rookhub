@@ -65,6 +65,9 @@ export interface CommentBranch {
   /** MÖGLICHE Trennstellen (Index in `sans`): nummerierter Zug hinter Prosa mit einer Feld-Aufzählung, siehe
    *  {@link branches} Regel (c). `exact`: seine Zugnummer ist genau die Fortsetzung der Züge davor. */
   soft?: { at: number; exact: boolean }[];
+  /** Der erste Zug ist die ausdrückliche Alternative zum LETZTEN Zug des Zweigs davor („… Ke8 or 2...Nd5 …"):
+   *  er steht an der Stellung, aus der jener gespielt wurde — siehe {@link resolveInSubline}, `first`. */
+  altOfPrev?: boolean;
 }
 
 // Deutsche → englische Figurenbuchstaben (für übersetzte Kurse). K bleibt K.
@@ -89,7 +92,18 @@ function normalizeSan(san: string): string {
   return s.replace(/=([DTLS])/g, (_m, p: string) => '=' + DE_PIECE[p]);
 }
 
-interface Tok { san: string; ply?: number; start: number; end: number; }
+/** `altOfPrev`: ausdrückliche Alternative zum numerlosen Zug unmittelbar davor („Ke8 or 2...Nd5"), siehe
+ *  {@link dropMentionedMoves}. */
+interface Tok { san: string; ply?: number; start: number; end: number; altOfPrev?: boolean; }
+
+// Alle Alternativ-Signale eines Zwischenraums (zum Herausnehmen, siehe isAlternativeGap).
+const ALT_WORD_ALL = new RegExp(ALT_WORD.source, 'gi');
+
+/** Steht zwischen zwei Zügen NUR ein Alternativ-Signal („ or ", „, oder ", „! (or ", „+- / ") — keine weiteren
+ *  Wörter oder Ziffern? Satzzeichen, Klammern und Bewertungszeichen zählen nicht. */
+function isAlternativeGap(gap: string): boolean {
+  return ALT_WORD.test(gap) && !/[\p{L}\d]/u.test(gap.replace(ALT_WORD_ALL, ' '));
+}
 
 // Ein nacktes Feld („d6") ist in Prosa oft eine ORTSANGABE, kein Bauernzug: „keine Angst vor dem Springer
 // auf d6", „the knight on d6", „das e5-Feld". Solche Token zählen nicht als Zug. Bewusst eng: nur ohne
@@ -193,6 +207,19 @@ function scanTokens(text: string): Scan {
  * ohne widersprechende Nummer bleibt also klickbar, ebenso jede nummerierte Folge. Nach einem
  * Alternativ-Signal („oder", „/") zählt die Nummerierung nicht weiter — dort beginnt ein eigener
  * Zweig, dessen erster Zug keine Fortsetzung ist.</p>
+ *
+ * <p>AUSNAHME — die ausdrückliche Alternative (Buch-Aufgabe 35205, Woodpecker Exercise 346, gemeldet
+ * 2026-11-18): „1...Kxf7 2.Qb3+ Ke8 or 2...Nd5 3.exd5 … 6.Nxe5+- with two pawns more 3.Qe6+ Qe7 4.Qxe7#" ist
+ * die flachgeklopfte Schachtelung 2…Ke8 (2…Nd5 …) 3.Qe6+. „2...Nd5" beansprucht den Halbzug von „Ke8", weil
+ * es die ANDERE Antwort ist — das „or" sagt es. Bis 0.994.1 flog „Ke8" trotzdem als Erwähnung raus, und
+ * „3.Qe6+ Qe7 4.Qxe7#" fand danach kein Zweig-Ende, an dem es weitergeht. Bewusst eng: der nummerierte Zug
+ * folgt UNMITTELBAR, und im Zwischenraum steht außer dem Alternativ-Signal kein Wort ({@link isAlternativeGap}).
+ * Bestandsprüfung: mit Prosa dazwischen („he can either allow g4, or prevent it. … 32...Ra8") ist der
+ * numerlose Zug wirklich nur erwähnt — dort riss die weitere Fassung 19 richtige Züge einer Variante mit
+ * (Aufgabe 32429); ein Alternativ-Signal irgendwo vor der Nummer („Threatening Rc3+ … or so you may
+ * think. … Rc2+ and Nd2+ … 47.a4", Aufgabe 12383) kostete im Bestand 160 vorher klickbare Züge. Beansprucht
+ * die Alternative genau den Halbzug des numerlosen Zugs, merkt sie sich das (`altOfPrev`): sie steht an der
+ * Stellung, aus der er gespielt wurde ({@link resolveInSubline}, `first`).</p>
  */
 function dropMentionedMoves(text: string, toks: Tok[]): Tok[] {
   const out: Tok[] = [];
@@ -209,7 +236,13 @@ function dropMentionedMoves(text: string, toks: Tok[]): Tok[] {
       // springt sie hinter die letzte Nummer zurück, beginnt dort ein eigener Zweig („… 43.h4 a4.
       // Weiß gewinnt nach 40.b5") und sagt nichts über diesen Zug. Beansprucht sie dagegen die Ply,
       // die dieser numerlose Zug hätte, können nicht beide derselbe Halbzug sein → Erwähnung.
-      if (later && later.ply! >= lastNumbered! && later.ply! <= nextPly) continue;
+      if (later && later.ply! >= lastNumbered! && later.ply! <= nextPly) {
+        // Es sei denn, der nummerierte Zug ist die AUSDRÜCKLICHE ALTERNATIVE: „2.Qb3+ Ke8 or 2...Nd5 …" — er
+        // folgt unmittelbar, und dazwischen steht nichts als das Alternativ-Signal (siehe isAlternativeGap).
+        // Dann beansprucht er den Halbzug nicht als derselbe Zug, sondern als der andere (Buch-Aufgabe 35205).
+        if (later !== toks[i + 1] || !isAlternativeGap(text.slice(t.end, later.start))) continue;
+        if (later.ply === nextPly) later.altOfPrev = true;
+      }
     }
     out.push(t);
     if (t.ply !== undefined) { lastNumbered = t.ply; nextPly = t.ply + 1; }
@@ -245,11 +278,15 @@ export function branches(text: string): CommentBranch[] {
   let curPlies: (number | undefined)[] = [];
   let curSoft: { at: number; exact: boolean }[] = [];
   let curStartPly: number | undefined;
+  let curAltOfPrev = false;          // der Zweig beginnt als ausdrückliche Alternative zum Zug davor
   let lastPly = -Infinity;
   let nextPly: number | undefined;   // Ply, die der nächste Zug als direkte Fortsetzung hätte
   let listSince = false;             // Feld-Aufzählung im Text dieses Zweigs seit der letzten Zugnummer, siehe (c)
   let prevEnd = 0;
-  const push = () => out.push({ sans: cur, startPly: curStartPly, plies: curPlies, ...(curSoft.length ? { soft: curSoft } : {}) });
+  const push = () => out.push({
+    sans: cur, startPly: curStartPly, plies: curPlies,
+    ...(curSoft.length ? { soft: curSoft } : {}), ...(curAltOfPrev ? { altOfPrev: true } : {}),
+  });
 
   for (const t of toks) {
     let boundary = false;
@@ -274,6 +311,7 @@ export function branches(text: string): CommentBranch[] {
       curPlies = [];
       curSoft = [];
       curStartPly = undefined;
+      curAltOfPrev = !!t.altOfPrev;
       lastPly = -Infinity;
       nextPly = undefined;
     }
@@ -501,13 +539,27 @@ function numberedPrefix(b: CommentBranch, basePly: number | undefined): string[]
  * Zweig (je jüngste zuerst): „5...Kd6 6.Rd8+ Ke7 6...Ke5 7.Qe6 7.Qc7+" ist die aus dem PGN geklopfte
  * Schachtelung 6…Ke7 (6…Ke5 7.Qe6) 7.Qc7+ — die äußere Variante wartet hinter 6…Ke7 auf ihren
  * 7. Zug, in der eingeschobenen ist er mit 7.Qe6 schon vergeben.</p>
+ *
+ * <p>`first` geht allen voran: die Stellung, aus der der letzte Zug des Zweigs davor gespielt wurde, wenn dieser
+ * Zweig dessen AUSDRÜCKLICHE ALTERNATIVE ist („3.Qxh6 Re8 or 3...f6 4.exf6" — „3...f6" steht hinter 3.Qxh6).
+ * Seit „Re8" dort nicht mehr als Erwähnung wegfällt, ist diese Stellung kein Zweig-Ende mehr; ohne Vorrang
+ * gewänne das Ende einer älteren, fremden Variante mit derselben Zugnummer (Bestandsprüfung, Aufgabe 51263:
+ * „3...f6" landete in der Variante 1...Qxb4 statt hinter 1...Qc7 … 3.Qxh6). Eine andere Stellung gilt nur,
+ * wenn dort MEHR Züge aufgehen.</p>
  */
 interface PriorFen { fen: string; end: boolean; }
 
 function resolveInSubline(
-  b: CommentBranch, mainSteps: VariationStep[], mainFen: string | undefined, prior: PriorFen[],
+  b: CommentBranch, mainSteps: VariationStep[], mainFen: string | undefined, prior: PriorFen[], first?: string,
 ): { steps: VariationStep[]; fen: string } | undefined {
   let best: { steps: VariationStep[]; fen: string } | undefined;
+  if (first !== undefined && baseStartPly(first) === b.startPly) {
+    if (first === mainFen) { if (mainSteps.length) return undefined; }   // die Alternative steht in der Partie selbst
+    else {
+      const steps = playPrefix(first, b.sans);
+      if (steps.length) best = { steps, fen: first };
+    }
+  }
   for (const wantEnd of [true, false]) {
     for (let i = prior.length - 1; i >= 0; i--) {
       const { fen, end } = prior[i];
@@ -521,7 +573,7 @@ function resolveInSubline(
 
 /** Löst einen Zweig auf (siehe Datei-Kopf, „VORWÄRTS-SPRUNG"): ein aufgelöster Schritt je Zug oder null. */
 function resolveBranch(
-  startFen: string, ucis: string[], b: CommentBranch, ctx?: BranchContext, priorFens: PriorFen[] = [],
+  startFen: string, ucis: string[], b: CommentBranch, ctx?: BranchContext, priorFens: PriorFen[] = [], altBase?: string,
 ): { out: (VariationStep | null)[]; ctx?: BranchContext; guessed: number } {
   let steps: VariationStep[];
   let usedFen: string | undefined;
@@ -543,7 +595,7 @@ function resolveBranch(
     if (b.startPly !== undefined) {
       const main = anchorFen(startFen, ucis, b.startPly);
       if (priorFens.length) {
-        const sub = resolveInSubline(b, steps, main, priorFens);
+        const sub = resolveInSubline(b, steps, main, priorFens, altBase);
         if (sub) [steps, usedFen] = [sub.steps, sub.fen];
       }
       // Zugnummer AUSSERHALB der Linie (das Buch zählt die Partiezüge, die Aufgaben-FEN beginnt bei Zug 1):
@@ -613,11 +665,17 @@ function nextContext(
 
 /** Was ein aufgelöster Zweig dem nächsten hinterlässt: Rahmen ({@link BranchContext}) und die Stellungen
  *  der bisher aufgelösten Kommentar-Züge ({@link resolveInSubline}). */
-interface ResolveState { ctx?: BranchContext; prior: PriorFen[]; }
+interface ResolveState {
+  ctx?: BranchContext; prior: PriorFen[];
+  /** Stellung, aus der der LETZTE Zug des zuletzt aufgelösten Zweigs gespielt wurde — der Ort einer
+   *  ausdrücklichen Alternative zu ihm ({@link CommentBranch}, `altOfPrev`). Fehlt, wenn dieser Zug nicht
+   *  aufging oder nur erraten ist. */
+  lastBase?: string;
+}
 
 /** Löst einen Zweig auf und schreibt Rahmen + Stellungen in `state` fort. */
 function resolveInto(startFen: string, ucis: string[], b: CommentBranch, state: ResolveState): (VariationStep | null)[] {
-  const r = resolveBranch(startFen, ucis, b, state.ctx, state.prior);
+  const r = resolveBranch(startFen, ucis, b, state.ctx, state.prior, b.altOfPrev ? state.lastBase : undefined);
   // Auf per Suche gefundene Züge (`guessed`, erwähnte Pläne wie „with Rfe1 and Qd5") baut kein späterer
   // Zweig auf; was dahinter an seiner Zugnummer verankert wurde, zählt.
   // Zweig-Ende nur, wenn der Zweig bis zum letzten Zug aufging — sonst weiß niemand, wo er endet.
@@ -625,13 +683,17 @@ function resolveInto(startFen: string, ucis: string[], b: CommentBranch, state: 
     if (step && k >= r.guessed) state.prior.push({ fen: step.fen, end: k === r.out.length - 1 });
   });
   state.ctx = r.ctx;
+  const n = r.out.length;
+  const last = r.out[n - 1];
+  const before = r.out[n - 2];
+  state.lastBase = n >= 2 && n - 2 >= r.guessed && last && before ? before.fen : undefined;
   return r.out;
 }
 
 /** Teil eines Zweigs als eigener Zweig (ohne Trennstellen). */
 function sliceBranch(b: CommentBranch, from: number, to: number): CommentBranch {
   const plies = (b.plies ?? []).slice(from, to);
-  return { sans: b.sans.slice(from, to), startPly: plies[0], plies };
+  return { sans: b.sans.slice(from, to), startPly: plies[0], plies, ...(from === 0 && b.altOfPrev ? { altOfPrev: true } : {}) };
 }
 
 /**
@@ -656,7 +718,7 @@ function resolveWithSoftSplits(startFen: string, ucis: string[], b: CommentBranc
   const soft = b.soft ?? [];
   const plies = b.plies ?? [];
   const out: (VariationStep | null)[] = [];
-  const copy = (st: ResolveState): ResolveState => ({ ctx: st.ctx, prior: [...st.prior] });
+  const copy = (st: ResolveState): ResolveState => ({ ctx: st.ctx, prior: [...st.prior], lastBase: st.lastBase });
   /** Aufgelöste NUMMERIERTE Züge des Abschnitts, der bei `offset` beginnt. */
   const numbered = (steps: (VariationStep | null)[], offset: number) =>
     steps.filter((x, k) => x && plies[offset + k] !== undefined).length;
@@ -679,6 +741,7 @@ function resolveWithSoftSplits(startFen: string, ucis: string[], b: CommentBranc
       out.push(...head);
       state.ctx = headState.ctx;
       state.prior = headState.prior;
+      state.lastBase = headState.lastBase;
       from = at;
     }
   });

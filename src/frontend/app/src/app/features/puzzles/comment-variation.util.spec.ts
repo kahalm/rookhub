@@ -588,3 +588,68 @@ describe('comment-variation.util — Antwort hinter einem Komma, Buch zählt die
     ]);
   });
 });
+
+describe('comment-variation.util — numerloser Zug vor seiner ausdrücklichen Alternative „Ke8 or 2...Nd5" (Buch-Aufgabe 35205, gemeldet 2026-11-18)', () => {
+  // „The Woodpecker Method", Exercise 346 (Capablanca – Glicco). Der Kommentar ist eine flachgeklopfte Schachtelung:
+  // 1...Kxf7 2.Qb3+ Ke8 (2...Nd5 3.exd5 … 6.Nxe5+-) 3.Qe6+ Qe7 4.Qxe7#. „2...Nd5" beansprucht den Halbzug von „Ke8" —
+  // als die ANDERE Antwort („or"), nicht als Beleg, dass Ke8 nur erwähnt wäre. Bis 0.994.1 flog „Ke8" als Erwähnung
+  // raus; damit endete die äußere Variante bei 2.Qb3+, und „3.Qe6+ Qe7 4.Qxe7#" fand keine Stellung mehr.
+  const FEN = 'r1br1qk1/pp1n1p2/2p2npp/4pN2/2BPP3/5N2/PP3PPP/2RQR1K1 w - - 0 1';
+  const UCIS = 'c4f7 g8h7 f7g6 h7g6 d4e5'.split(' ');
+  const TEXT = '1...Qxf7 2.Nxh6++- ✔ A fork. 1...Kxf7 2.Qb3+ Ke8 or 2...Nd5 3.exd5 gxf5 4.dxc6+ ✔ Kg7 5.cxd7 Bxd7 '
+    + '6.Nxe5+- with two pawns more 3.Qe6+ Qe7 4.Qxe7# ✔';
+  const segs = buildCommentSegments(TEXT, FEN, UCIS);
+  const move = (m: string) => segs.find(s => s.move === m);
+  const after = (...sans: string[]) => { const c = new Chess(FEN); for (const san of sans) c.move(san); return c; };
+  const chips = (t: string, fen = FEN, ucis = UCIS) => buildCommentSegments(t, fen, ucis).filter(s => s.move).map(s => s.move);
+
+  it('alle 16 Züge sind klickbar (vorher 12), der Wortlaut bleibt vollständig', () => {
+    expect(segs.filter(s => s.move).map(s => s.move)).toEqual([
+      '1...Qxf7', '2.Nxh6+', '1...Kxf7', '2.Qb3+', 'Ke8', '2...Nd5', '3.exd5', 'gxf5', '4.dxc6+', 'Kg7', '5.cxd7', 'Bxd7',
+      '6.Nxe5', '3.Qe6+', 'Qe7', '4.Qxe7#']);
+    expect(segs.map(s => s.move ?? s.text).join('')).toBe(TEXT);
+  });
+
+  it('„Ke8" steht hinter 2.Qb3+, „2...Nd5" ist die Alternative dazu (König bleibt auf f7)', () => {
+    expect(move('Ke8')!.fen).toBe(after('Bxf7+', 'Kxf7', 'Qb3+', 'Ke8').fen());
+    expect(move('2...Nd5')!.fen).toBe(after('Bxf7+', 'Kxf7', 'Qb3+', 'Nd5').fen());
+  });
+
+  it('„3.Qe6+ Qe7 4.Qxe7#" setzt hinter Ke8 fort und endet matt', () => {
+    expect(move('3.Qe6+')!.fen).toBe(after('Bxf7+', 'Kxf7', 'Qb3+', 'Ke8', 'Qe6+').fen());
+    const mate = after('Bxf7+', 'Kxf7', 'Qb3+', 'Ke8', 'Qe6+', 'Qe7', 'Qxe7#');
+    expect(move('4.Qxe7#')!.fen).toBe(mate.fen());
+    expect(mate.isCheckmate()).toBeTrue();
+  });
+
+  it('auch mit Satz- und Bewertungszeichen um das „or" („Ke8! (or 2...Nd5 …) 3.Qe6+")', () => {
+    expect(chips('1...Kxf7 2.Qb3+ Ke8! (or 2...Nd5 3.exd5) 3.Qe6+ Qe7 4.Qxe7#'))
+      .toEqual(['1...Kxf7', '2.Qb3+', 'Ke8', '2...Nd5', '3.exd5', '3.Qe6+', 'Qe7', '4.Qxe7#']);
+  });
+
+  it('PROSA zwischen Zug und Alternative: der numerlose Zug bleibt eine Erwähnung (wie bisher)', () => {
+    // „Ke8" ist hier nur genannt („… would allow Ke8 – or so it seems"), die Nummer danach widerlegt ihn weiter.
+    expect(chips('1...Kxf7 2.Qb3+ would allow Ke8, or so it seems. 2...Nd5 3.exd5'))
+      .toEqual(['1...Kxf7', '2.Qb3+', '2...Nd5', '3.exd5']);
+  });
+
+  it('die Erwähnungs-Regel selbst greift weiter („70...c6 Preventing Rd5+ runs into mate! 71.Rc3+")', () => {
+    const fen = '8/2p5/5Kp1/2k4p/5R1n/2R2P1r/8/8 b - - 0 68';
+    const main = 'c5d5 c3d3 d5c5 f6e6 h3h1 d3d5 c5c6 f4c4 c6b6 e6d7'.split(' ');
+    expect(chips('70...c6 Preventing Rd5+ runs into mate! 71.Rc3+ Kb5 72.Rb3+ Kc5 73.Rbb4!!', fen, main))
+      .toEqual(['70...c6', '71.Rc3+', 'Kb5', '72.Rb3+', 'Kc5', '73.Rbb4']);
+  });
+
+  it('die Alternative steht an der Stellung VOR dem Zug, den sie ersetzt — nicht am Ende einer älteren Variante', () => {
+    // Bestandsprüfung, Aufgabe 51263 (verkürzt): zwei Varianten erreichen 3.Qxh6 (nach 1...Qxb4 und nach 1...Qc7).
+    // „3...f6" hinter „3.Qxh6 Re8 or" gehört in die ZWEITE (Dame c7) — seit „Re8" bleibt, ist die Stellung nach
+    // 3.Qxh6 dort kein Zweig-Ende mehr, das Ende der ersten Variante hätte sonst Vorrang.
+    const fen = 'r1n2rk1/1b2qpp1/p6p/1p2P2Q/1P1p4/3B4/1P3PPP/R1B1R1K1 b - - 0 1';
+    const s2 = buildCommentSegments(
+      '1...Qxb4 2.Bxh6 gxh6 3.Qxh6 wins. Or 1...Qc7 2.Bxh6 gxh6 3.Qxh6 Re8 or 3...f6 4.exf6 4.Rac1', fen, ['c8b6']);
+    const f6 = s2.find(s => s.move === '3...f6')!;
+    expect(f6.fen!.split(' ')[0]).toBe('r1n2rk1/1bq5/p4p1Q/1p2P3/1P1p4/3B4/1P3PPP/R3R1K1');   // Dame c7, Bauer b4
+    // … und die äußere Variante geht hinter „Re8" weiter.
+    expect(s2.find(s => s.move === '4.Rac1')!.fen!.split(' ')[0]).toBe('r1n1r1k1/1bq2p2/p6Q/1p2P3/1P1p4/3B4/1P3PPP/2R1R1K1');
+  });
+});

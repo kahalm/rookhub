@@ -35,6 +35,33 @@ wenn die Nummerierung die Fortsetzung belegt“ — hart 792 verlorene Züge (28
 Zug war nur erwähnt, die Nummer passte zufällig, z. B. 14418), eng (nur Notation dazwischen) noch 173, weil die
 zusammengelegte Folge dann als Ganzes an EINER Stellung aufgehen muss (z. B. 96431).
 
+**Nachtrag 0.994.2 (Buch-Aufgabe 35205, Woodpecker Exercise 346, „2.Qb3+ Ke8 or 2...Nd5 3.exd5 … 3.Qe6+ Qe7 4.Qxe7#“):** ein
+numerloser Zug, dem UNMITTELBAR seine ausdrückliche Alternative folgt (im Zwischenraum nur das Alternativ-Signal, keine
+Wörter), ist kein „erwähnter“ Zug mehr; beansprucht die Alternative genau seinen Halbzug, steht sie an der Stellung, aus
+der er gespielt wurde (`altOfPrev`, Vorrang in `resolveInSubline`). Bestandsvergleich gegen 0.994.1 (125 727 Aufgaben,
+638 833 Absätze): 2 009 geänderte Absätze in 1 827 Aufgaben aus 166 Büchern, 4 846 Züge neu klickbar, 2 047 mit anderer
+Stellung, 104 passen jetzt zur Zugnummer (umgekehrt 3), 10 verloren (3 Erwähnungen, 6 standen vorher an falscher
+Stellung, 1 echter Verlust: 118771). Stichprobe von Hand: 28 zufällige Absätze mit verschobenen Zügen — 26 besser (die
+Fortsetzung steht jetzt hinter dem Zug vor dem „or“ statt in der eingeschobenen Alternative), 1 vorher wie nachher
+falsch (120647), 1 unklar; dazu 16 der 22 Absätze, in denen die Alternative einen FRÜHEREN Zug ersetzt und sich etwas
+verschob: 7 besser, 5 vorher wie nachher falsch, 1 schlechter (118771), 1 gemischt (116909), 3 unklar.
+Verworfene Fassungen: Alternativ-Signal IRGENDWO vor der späteren Nummer — 3 222 Absätze, 6 703 neu, aber 160 verloren
+und 55 passen nicht mehr (12383: „Threatening Rc3+ … or so you may think … 47.a4“); Signal direkt vor dem nummerierten
+Zug, davor beliebig viele numerlose — 5 621 neu, 34 verloren (erwähnte Pläne „meet f4 with b5 and g4 with d5 … or
+7...Be7“ ziehen die nummerierte Variante an sich, 13810); unmittelbar folgend, aber mit Prosa dazwischen — 5 461 neu,
+29 verloren (32429: „he can either allow g4, or prevent it“ riss 19 richtige Züge mit). Dateien `f3-*.jsonl` (F = eingebaut).
+Dabei aufgefallen, NICHT behoben:
+- [ ] Dieselbe Schachtelung OHNE „or“ („32.Qe3 Qf6 32...Rh8? loses a rook after 33.Qe5+ 33.Qh6+ Kf7 34.Re3“, 120030): „Qf6“
+      gilt weiter als erwähnt, „33.Qh6+“ landet hinter 32...Rh8. Idee: Zwischenraum VOR und NACH dem numerlosen Zug ohne
+      Wörter → Fortsetzung, die Nummer danach ist die Alternative. Vorher am Bestand prüfen (Abgrenzung zu „Preventing
+      Rd5+ 71.Rc3+“ ist dann nur noch die Prosa DAVOR).
+- [ ] Alternative zu einem FRÜHEREN Zug („21.Be3 Qxb2-+ or 21.Bxe5 f6 22.Bd6 … and after 22.Bd4“, 118771; 80319): der
+      behaltene Zug macht das Ende der ersten Variante zu einem Zweig-Ende mit passender Zugnummer — ein späterer
+      nummerierter Zug („22.Bd4“, eigentlich Alternative zu 22.Bd6 in der ZWEITEN Variante) hängt sich dort an. Sauber
+      wäre: ein Zweig-Ende „wartet“ nur, wenn der nächste Zweig als Alternative zu seinem LETZTEN Zug begann.
+- [ ] Vom Import verwürfelte Schachtelung (98186: „58...h5 59.gxh5 59.fxg6+! Kxg6 60.Kf4 … gxh5 60.Kg3“) — nicht lösbar
+      ohne die Klammern des Originals.
+
 Beim ersten und zweiten Vergleich aufgefallen, NICHT behoben:
 - [ ] Numerloser Zug vor einer nummerierten Variante wird gemeinsam mit ihr erraten, an der Zugnummer vorbei (häufigste
       Restursache): 14327 („9.f4“ erscheint bei Zug 21), 119611 („26.Qxe3“ bei Zug 35, der Rest bleibt Text), 33260.
