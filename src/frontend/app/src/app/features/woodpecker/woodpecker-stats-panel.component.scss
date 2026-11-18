@@ -15,6 +15,10 @@
 .wps-overview thead th:nth-child(2) { font-weight: 600; color: var(--mat-sys-on-surface); }
 .wps-ov-day { font-size: 1rem; color: var(--mat-sys-on-surface-variant); margin-top: 4px; }
 .wps-ov-day strong { font-weight: 600; color: var(--mat-sys-on-surface); }
+/* Tagesziel (0.993.0, geteilter Baustein): in Textfarbe wie die Übersicht darüber; die Herleitung klein dahinter,
+   bricht als Ganzes in die nächste Zeile, wenn sie daneben keinen Platz hat. */
+.wps-ov-goal-row { display: inline-flex; flex-wrap: wrap; align-items: center; column-gap: 0.5em; row-gap: 2px; }
+.wps-ov-goal { color: var(--mat-sys-on-surface); }
 .wps-ov-how { font-size: .85rem; }
 .wps-busy { margin: 4px 0; }
 .wps-empty { margin: 0; }

@@ -185,6 +185,30 @@ public class WoodpeckerSqlTests(WoodpeckerFixture fixture) : IAsyncLifetime, ICl
         Assert.Equal(0, await _db.WoodpeckerPlanBooks.CountAsync());
     }
 
+    /// <summary>0.993.0: „heute bearbeitet“ (<c>TodayAttempted</c>) ist eine Zählabfrage mit Zeitvergleich auf
+    /// <c>AttemptedAt</c> (datetime(6), UTC) — die Grenze ist die lokale Mitternacht des Betrachters. Versuche um
+    /// 13.10. 21:59 und 22:00 UTC sowie 14.10. 12:00 UTC: UTC-Tag → 1, UTC+2 (Tag ab 13.10. 22:00 UTC) → 2.</summary>
+    [MySqlFact]
+    public async Task TodayAttempted_TranslatesOnMariaDb_CountsFromLocalMidnight()
+    {
+        var (userId, bookId, ids) = await SeedAsync(4);
+        var service = new WoodpeckerService(_db, _clock);
+        _clock.Now = new DateTime(2026, 10, 13, 21, 0, 0, DateTimeKind.Utc);
+        var plan = await service.CreateAsync(userId, false, new CreateWoodpeckerPlanDto { BookIds = { bookId } });
+        _clock.Now = new DateTime(2026, 10, 13, 21, 59, 0, DateTimeKind.Utc);
+        await service.RecordAttemptAsync(userId, plan.Id, new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 5 });
+        _clock.Now = new DateTime(2026, 10, 13, 22, 0, 0, DateTimeKind.Utc);
+        await service.RecordAttemptAsync(userId, plan.Id, new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[1], Solved = false, TimeSeconds = 5 });
+        _clock.Now = new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
+        var last = await service.RecordAttemptAsync(userId, plan.Id,
+            new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[2], Solved = true, TimeSeconds = 5 }, utcOffsetMinutes: 120);
+
+        Assert.Equal(2, last.TodayAttempted);
+        Assert.Equal(1, (await service.GetAsync(userId, plan.Id)).TodayAttempted);
+        Assert.Equal(2, (await service.ListAsync(userId, utcOffsetMinutes: 120)).Single().TodayAttempted);
+        Assert.Equal(3, (await service.GetNextAsync(userId, plan.Id, utcOffsetMinutes: -780)).Plan.TodayAttempted);
+    }
+
     /// <summary>0.957.0: <c>GET stats</c> lädt die Versuche des Plans in einer Abfrage (Projektion in einen Record) und
     /// die Bezeichnungen der Sorgenkinder über <c>Contains</c> — beides muss MariaDB übersetzen.</summary>
     [MySqlFact]

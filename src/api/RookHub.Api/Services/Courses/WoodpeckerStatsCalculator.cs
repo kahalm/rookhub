@@ -43,6 +43,19 @@ public static class WoodpeckerStatsCalculator
 
     public sealed record Attempt(int Cycle, int BookPuzzleId, int BookId, bool Solved, int TimeSeconds, int HintsUsed, DateTime AttemptedAt);
 
+    /// <summary>Zeitzone des Betrachters als Abstand zu UTC (Minuten östlich von UTC, wie <c>-getTimezoneOffset()</c> im
+    /// Browser), geklemmt auf ±14 h — EINE Stelle für die Tageszeilen der Statistik und „heute bearbeitet“ im Plan.</summary>
+    public static TimeSpan ViewerOffset(int utcOffsetMinutes) =>
+        TimeSpan.FromMinutes(Math.Clamp(utcOffsetMinutes, -14 * 60, 14 * 60));
+
+    /// <summary>Beginn des lokalen Kalendertags des Betrachters als UTC-Zeitpunkt (lokale Mitternacht). Gerechnet mit
+    /// dem Abstand von JETZT — am Tag einer Zeitumstellung kann die Grenze um eine Stunde danebenliegen.</summary>
+    public static DateTime LocalDayStartUtc(DateTime nowUtc, int utcOffsetMinutes)
+    {
+        var offset = ViewerOffset(utcOffsetMinutes);
+        return (nowUtc + offset).Date - offset;
+    }
+
     public sealed record Cycle(int Number, DateTime StartedAt, DateTime? FinishedAt);
 
     /// <param name="cycles">Alle Zyklen des Plans (Reihenfolge egal); der mit der höchsten Nummer ist der laufende.</param>
@@ -101,7 +114,7 @@ public static class WoodpeckerStatsCalculator
         dto.Hints = Hints(now.Values);
         dto.TimeBuckets = Buckets(now.Values.Select(a => a.TimeSeconds));
 
-        var offset = TimeSpan.FromMinutes(Math.Clamp(utcOffsetMinutes, -14 * 60, 14 * 60));
+        var offset = ViewerOffset(utcOffsetMinutes);
         dto.Days = now.Values
             .GroupBy(a => (a.AttemptedAt + offset).Date)
             .OrderBy(g => g.Key)

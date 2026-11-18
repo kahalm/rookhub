@@ -78,6 +78,10 @@ public class WoodpeckerPlanDto
     /// archiviertes Training läuft nie, auch wenn es mitten im Zyklus abgelegt wurde.</summary>
     public string Status { get; set; } = "solving";
     public DateTime? NextCycleAt { get; set; }
+    /// <summary>Heute im LAUFENDEN Zyklus bearbeitete Aufgaben (gewertete Erstversuche seit der lokalen Mitternacht des
+    /// Betrachters, <c>?utcOffsetMinutes=</c>; ohne Angabe der UTC-Tag) — Grundlage der Tagesziel-Anzeige auf
+    /// Dashboard-Kachel und im Löser-Kopf (0.993.0), ohne den teuren <c>/stats</c>-Abruf.</summary>
+    public int TodayAttempted { get; set; }
     public List<WoodpeckerCycleDto> Cycles { get; set; } = new();
 }
 

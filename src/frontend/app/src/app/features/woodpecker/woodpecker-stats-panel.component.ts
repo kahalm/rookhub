@@ -10,6 +10,7 @@ import { PctPipe } from '../../shared/format/pct';
 import { formatSecondsClock } from '../../shared/clock-format.util';
 import { WoodpeckerPlan, WoodpeckerService, WoodpeckerStats, WoodpeckerStatsCycle } from './woodpecker.service';
 import { planWithStats, woodpeckerCycleStats, woodpeckerOverview } from './woodpecker-stats.util';
+import { WoodpeckerDailyGoalComponent } from './woodpecker-daily-goal.component';
 
 /** Wie lange nach einer gemeldeten Aufgabe gewartet wird, bevor `/stats` neu geholt wird (mehrere schnelle Meldungen = ein Abruf). */
 export const WOODPECKER_STATS_DEBOUNCE_MS = 800;
@@ -27,12 +28,13 @@ type Result = { stats: WoodpeckerStats; error: null } | { stats: null; error: un
  * (`WoodpeckerStatsDialogComponent`, DESIGN 5.12), nicht mehr ein aufklappbarer Block der Kontext-Karte; entsteht mit
  * dem Fenster und lädt `GET /api/woodpecker/{id}/stats` — beim Erzeugen und bei einem neuen Planstand, entprellt.
  * Gerechnet ist der ausführliche Teil am Server (`WoodpeckerStatsCalculator`), die Übersicht und die Zeilen „Dieser
- * Zyklus“ in `woodpecker-stats.util.ts`; hier nur Darstellung: Übersicht (Zeit · Quote · je Tag) · Dieser Zyklus ·
+ * Zyklus“ in `woodpecker-stats.util.ts`; hier nur Darstellung: Übersicht (Zeit · Quote · Tagesziel) · Dieser Zyklus ·
  * Dieselben Aufgaben · Wechsel · Hochrechnung · Tipps · Verlauf · (Zyklus 1: je Tag) · Sorgenkinder.
  */
 @Component({
   selector: 'app-woodpecker-stats-panel',
-  imports: [DatePipe, DecimalPipe, PctPipe, RouterLink, TranslatePipe, LoadErrorComponent, MatProgressBarModule],
+  imports: [DatePipe, DecimalPipe, PctPipe, RouterLink, TranslatePipe, LoadErrorComponent, MatProgressBarModule,
+    WoodpeckerDailyGoalComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './woodpecker-stats-panel.component.html',
   styleUrl: './woodpecker-stats-panel.component.scss',
@@ -96,8 +98,14 @@ export class WoodpeckerStatsPanelComponent {
   }
 
   /** Übersicht ganz oben (Wunsch 2026-11-18): Zeit und Quote jetzt gegen dieselben Aufgaben je früherem Zyklus,
-   *  nötig je Tag, heute. Aus `/stats` + Frist des Plans. */
+   *  dazu das Tagesziel. Aus `/stats` + Frist des Plans. */
   readonly overview = computed(() => woodpeckerOverview(this.stats(), this.plan()));
+
+  /** Tagesziel MIT Soll (ab Zyklus 2, vor der Frist) für die Je-Tag-Zeile; sonst `null` (Zyklus 1: Tempo + heute). */
+  readonly dailyTarget = computed(() => {
+    const g = this.overview()?.goal;
+    return g && g.target !== null ? g : null;
+  });
 
   /** Zählung, Tipps, Ø und Hochrechnung des laufenden Zyklus — mit den Zahlen aus `/stats`, damit sie zur Übersicht
    *  passen (der Plan aus dem Löser kann eine Meldung hinterher sein). */

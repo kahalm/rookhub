@@ -20,6 +20,22 @@ public class WoodpeckerStatsCalculatorTests
     private static A At(int cycle, int id, bool solved, int seconds, int hints = 0, DateTime? at = null) =>
         new(cycle, id, 7, solved, seconds, hints, at ?? (cycle == 1 ? Start1.AddDays(1) : Start2.AddHours(2)));
 
+    /// <summary>Lokale Mitternacht des Betrachters als UTC-Zeitpunkt (0.993.0, „heute bearbeitet“): 03.11. 08:00 UTC ist
+    /// in UTC+1 09:00 am 03.11. (Tag beginnt 02.11. 23:00 UTC), in UTC−10 22:00 am 02.11. (Tag beginnt 02.11. 10:00 UTC);
+    /// die Angabe ist auf ±14 h geklemmt.</summary>
+    [Fact]
+    public void LocalDayStartUtc_LiteralZones_AndClamp()
+    {
+        Assert.Equal(new DateTime(2026, 11, 3, 0, 0, 0, DateTimeKind.Utc), WoodpeckerStatsCalculator.LocalDayStartUtc(Now, 0));
+        Assert.Equal(new DateTime(2026, 11, 2, 23, 0, 0, DateTimeKind.Utc), WoodpeckerStatsCalculator.LocalDayStartUtc(Now, 60));
+        Assert.Equal(new DateTime(2026, 11, 2, 10, 0, 0, DateTimeKind.Utc), WoodpeckerStatsCalculator.LocalDayStartUtc(Now, -600));
+        Assert.Equal(new DateTime(2026, 11, 2, 18, 30, 0, DateTimeKind.Utc), WoodpeckerStatsCalculator.LocalDayStartUtc(Now, 330));
+        Assert.Equal(TimeSpan.FromHours(14), WoodpeckerStatsCalculator.ViewerOffset(100_000));
+        Assert.Equal(TimeSpan.FromHours(-14), WoodpeckerStatsCalculator.ViewerOffset(-100_000));
+        Assert.Equal(WoodpeckerStatsCalculator.LocalDayStartUtc(Now, 840), WoodpeckerStatsCalculator.LocalDayStartUtc(Now, 100_000));
+        Assert.Equal(DateTimeKind.Utc, WoodpeckerStatsCalculator.LocalDayStartUtc(Now, 60).Kind);
+    }
+
     [Fact]
     public void UserExample_FiftySharedPuzzles_HalfTime_FactorTwo()
     {

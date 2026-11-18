@@ -38,6 +38,9 @@ export interface WoodpeckerPlan {
   maxCycles: number;
   status: WoodpeckerStatus;
   nextCycleAt: string | null;
+  /** Heute (lokaler Kalendertag dieses Geräts, `utcOffsetMinutes`) im LAUFENDEN Zyklus bearbeitete Aufgaben (0.993.0) —
+   *  Grundlage der Tagesziel-Anzeige (`woodpeckerDailyGoal`). Fehlt bei einem älteren Server: dann keine Anzeige. */
+  todayAttempted?: number;
   cycles: WoodpeckerCycle[];
 }
 
@@ -161,44 +164,52 @@ export class WoodpeckerService {
   private http = inject(HttpClient);
   private readonly base = '/api/woodpecker';
 
-  list(): Observable<WoodpeckerPlan[]> { return this.http.get<WoodpeckerPlan[]>(this.base); }
+  /**
+   * Zeitzone dieses Geräts als Abfrage-Parameter (`utcOffsetMinutes`, Minuten östlich von UTC). JEDER Aufruf, der einen
+   * Plan zurückgibt, schickt sie mit: der Server zählt damit `todayAttempted` für den lokalen Kalendertag (0.993.0) —
+   * ohne sie gälte der UTC-Tag, und „heute“ begänne bei uns um 1 bzw. 2 Uhr nachts.
+   */
+  private tz(extra: Record<string, string> = {}): { params: Record<string, string> } {
+    return { params: { ...extra, utcOffsetMinutes: String(-new Date().getTimezoneOffset()) } };
+  }
 
-  get(planId: number): Observable<WoodpeckerPlan> { return this.http.get<WoodpeckerPlan>(`${this.base}/${planId}`); }
+  list(): Observable<WoodpeckerPlan[]> { return this.http.get<WoodpeckerPlan[]>(this.base, this.tz()); }
+
+  get(planId: number): Observable<WoodpeckerPlan> { return this.http.get<WoodpeckerPlan>(`${this.base}/${planId}`, this.tz()); }
 
   /** `startedAt` (ISO, UTC) leer = jetzt. `archiveCurrent`: das bisherige aktive Training dabei archivieren — ohne
    *  das antwortet der Server mit 409, solange eins existiert. */
   create(bookIds: number[], startedAt?: string, archiveCurrent = false): Observable<WoodpeckerPlan> {
-    return this.http.post<WoodpeckerPlan>(this.base, { bookIds, startedAt: startedAt ?? null, archiveCurrent });
+    return this.http.post<WoodpeckerPlan>(this.base, { bookIds, startedAt: startedAt ?? null, archiveCurrent }, this.tz());
   }
 
   /** Ins Archiv legen (jederzeit; bleibt lesbar). */
   archive(planId: number): Observable<WoodpeckerPlan> {
-    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/archive`, {});
+    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/archive`, {}, this.tz());
   }
 
   /** Aus dem Archiv holen — nur ohne anderes aktives Training (sonst 409). */
   unarchive(planId: number): Observable<WoodpeckerPlan> {
-    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/unarchive`, {});
+    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/unarchive`, {}, this.tz());
   }
 
   delete(planId: number): Observable<void> { return this.http.delete<void>(`${this.base}/${planId}`); }
 
   updateStart(planId: number, startedAt: string): Observable<WoodpeckerPlan> {
-    return this.http.put<WoodpeckerPlan>(`${this.base}/${planId}/start`, { startedAt });
+    return this.http.put<WoodpeckerPlan>(`${this.base}/${planId}/start`, { startedAt }, this.tz());
   }
 
   finishSet(planId: number): Observable<WoodpeckerPlan> {
-    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/finish-set`, {});
+    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/finish-set`, {}, this.tz());
   }
 
   startNextCycle(planId: number): Observable<WoodpeckerPlan> {
-    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/next-cycle`, {});
+    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/next-cycle`, {}, this.tz());
   }
 
   /** `lang`: Kommentare in dieser Sprache, wo der Kurs eine Übersetzung hat (wie `GET /api/courses/{id}/next`). */
   next(planId: number, lang?: string | null): Observable<WoodpeckerNext> {
-    const params: Record<string, string> = lang ? { lang } : {};
-    return this.http.get<WoodpeckerNext>(`${this.base}/${planId}/next`, { params });
+    return this.http.get<WoodpeckerNext>(`${this.base}/${planId}/next`, this.tz(lang ? { lang } : {}));
   }
 
   /** Ausführliche Statistik; Tageszeilen in der Zeitzone dieses Geräts. */
@@ -208,7 +219,7 @@ export class WoodpeckerService {
 
   /** `hintsUsed` = höchste aufgedeckte Tipp-Stufe (0–3), der Server klemmt. */
   recordAttempt(planId: number, bookPuzzleId: number, solved: boolean, timeSeconds: number, hintsUsed = 0): Observable<WoodpeckerPlan> {
-    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/attempts`, { bookPuzzleId, solved, timeSeconds, hintsUsed });
+    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/attempts`, { bookPuzzleId, solved, timeSeconds, hintsUsed }, this.tz());
   }
 }
 

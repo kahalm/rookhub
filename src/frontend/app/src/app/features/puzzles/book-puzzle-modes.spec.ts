@@ -1,6 +1,7 @@
 import { Injector, runInInjectionContext } from '@angular/core';
 import { WoodpeckerService } from '../woodpecker/woodpecker.service';
 import { WoodpeckerStatsDialogComponent } from '../woodpecker/woodpecker-stats-dialog.component';
+import { woodpeckerDailyGoal } from '../woodpecker/woodpecker-stats.util';
 import { of, Subject, throwError } from 'rxjs';
 import { discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { BookPuzzleComponent } from './book-puzzle.component';
@@ -704,6 +705,32 @@ describe('BookPuzzle Modus Woodpecker (0.882.0: dieselbe Oberfläche wie im Kurs
     expect(c.state).toBe('SOLVED');
     expect(svc.recordAttempt).toHaveBeenCalledOnceWith(3, 501, true, jasmine.any(Number), 0);
     expect(c.woodpecker.cycle.attempted).toBe(5);
+    c.ngOnDestroy();
+  });
+
+  // 0.993.0: das Tagesziel im Kopf läuft mit — der Plan aus der Antwort auf die Meldung trägt das neue „heute“.
+  it('Tagesziel läuft mit: vor der Meldung 1 von 2 offen, mit der Antwort (heute 2) erreicht', () => {
+    // Satz 10, Frist in 14 Tagen (≥ 14 Kalendertage): vorher 4 bearbeitet/heute 1 → Soll ⌈(6 + 1) / 14…15⌉ = 1 → erreicht wäre
+    // schon 1; deshalb ein enger Plan: Frist heute Abend = letzter Tag, Soll = alles Offene.
+    const d = new Date();
+    const tonight = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).toISOString();
+    const running = (attempted: number, todayAttempted: number) => plan({
+      setSize: 5, todayAttempted,
+      cycles: [plan().cycles[0], { ...plan().cycles[1], deadline: tonight, attempted }],
+    });
+    const svc: any = {
+      next: jasmine.createSpy('next').and.returnValue(of({ puzzle: { ...WP }, plan: running(4, 1) })),
+      recordAttempt: jasmine.createSpy('recordAttempt').and.returnValue(of(running(5, 2))),
+    };
+    const c = makeComponent({ params: { planId: '3' }, woodpecker: svc });
+    c.stockfish.getBestMove = () => new Promise(() => {});
+    c.ngOnInit();
+    // letzter Tag: 1 offen + 1 heute → Soll 2, erst 1 erledigt
+    expect(woodpeckerDailyGoal(c.woodpecker.plan)).toEqual({ today: 1, target: 2, open: 1, days: 1, reached: false });
+    const before = c.woodpecker.plan;
+    c.onMoveMade({ orig: 'a1', dest: 'a8' });
+    expect(c.woodpecker.plan).not.toBe(before);   // neuer Plan = neue Eingabe der Kontext-Karte (OnPush)
+    expect(woodpeckerDailyGoal(c.woodpecker.plan)).toEqual({ today: 2, target: 2, open: 0, days: 1, reached: true });
     c.ngOnDestroy();
   });
 

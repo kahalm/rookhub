@@ -104,6 +104,67 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
     http.expectNone(r => r.url.includes('/stats'));
   });
 
+  // 0.993.0, Wunsch 18.11.: „auch ohne Statistik visualisieren, wenn ich heute das notwendige Minimum erledigt habe
+  // (… als auch wenn ich drinnen bin)“ — das Tagesziel steht im Plan-Kopf und läuft mit jeder gemeldeten Aufgabe mit.
+  describe('Woodpecker-Tagesziel im Plan-Kopf', () => {
+    const noonIn = (n: number) => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, 12, 0, 0).toISOString(); };
+    /** Satz 388, Frist übermorgen Mittag = 3 Kalendertage inkl. heute. */
+    const running = (attempted: number, todayAttempted: number | undefined, over: Record<string, unknown> = {}) => wpPlan({
+      setSize: 388, todayAttempted,
+      cycles: [
+        { number: 1, attempted: 388, solved: 337, timeSeconds: 9000, startedAt: '', deadline: '', finishedAt: 'x' },
+        { number: 2, attempted, solved: attempted, timeSeconds: 60, startedAt: new Date().toISOString(), deadline: noonIn(2), finishedAt: null },
+      ],
+      ...over,
+    });
+    const goal = (el: HTMLElement) => Array.from(el.querySelectorAll('.wp-meta app-woodpecker-daily-goal .wdg > *')).map(x => x.textContent!.trim());
+    const inputs = (plan: unknown) => ({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
+
+    it('offen: „Heute: 23 von 90“ als letzte Angabe der Zyklus-Zeile, ohne Haken', () => {
+      const { el } = make(inputs(running(141, 23)));   // 247 offen; Soll = ⌈(247 + 23) / 3⌉ = 90
+      expect(goal(el)).toEqual(['woodpecker.overview.todayLabel:', 'woodpecker.daily.count']);
+      expect(el.querySelector('.wp-meta')!.lastElementChild?.tagName.toLowerCase()).toBe('app-woodpecker-daily-goal');
+      expect(el.querySelector('.wp-meta .wdg-check')).toBeNull();
+    });
+
+    it('erreicht: grüner Haken + „Tagesziel erreicht“', () => {
+      const { el } = make(inputs(running(208, 90)));   // 180 offen; Soll = ⌈270 / 3⌉ = 90
+      expect(goal(el)).toEqual(['check_circle', 'woodpecker.daily.reached', 'woodpecker.daily.count']);
+      expect(el.querySelector('.wp-meta .wdg-done .wdg-check')?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('läuft mit: der Plan aus der Antwort auf die gemeldete Aufgabe schaltet von offen auf erreicht', () => {
+      const { el, fixture } = make(inputs(running(207, 89)));
+      expect(el.querySelector('.wp-meta .wdg-check')).toBeNull();
+      fixture.componentRef.setInput('woodpeckerPlan', running(208, 90));
+      fixture.detectChanges();
+      expect(el.querySelector('.wp-meta .wdg-done .wdg-check')).not.toBeNull();
+    });
+
+    it('kein Element ohne Ziel: Feld fehlt (älterer Server), Frist vorbei — sonst stünde ein Trennpunkt ohne Angabe', () => {
+      const old = make(inputs(running(141, undefined)));
+      expect(old.el.querySelector('app-woodpecker-daily-goal')).toBeNull();
+      expect(old.el.querySelector('.wp-meta')!.children.length).toBe(3);
+      TestBed.resetTestingModule();
+      const late = running(141, 23);
+      late.cycles[1].deadline = new Date(Date.now() - 86_400_000).toISOString();
+      expect(make(inputs(late)).el.querySelector('app-woodpecker-daily-goal')).toBeNull();
+    });
+
+    it('Zyklus 1 (kein Soll): nur „Heute: n“', () => {
+      const p = wpPlan({ currentCycle: 1, setSize: 12, todayAttempted: 5, cycles: [
+        { number: 1, attempted: 12, solved: 10, timeSeconds: 600, startedAt: new Date().toISOString(), deadline: noonIn(20), finishedAt: null },
+      ] });
+      const { el } = make(inputs(p));
+      expect(goal(el)).toEqual(['woodpecker.overview.todayLabel:', '5']);
+    });
+
+    it('außerhalb von Woodpecker nie', () => {
+      const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inCourse: true, woodpeckerPlan: running(208, 90) });
+      expect(el.querySelector('app-woodpecker-daily-goal')).toBeNull();
+    });
+  });
+
   it('ohne Woodpecker kein Statistik-Knopf', () => {
     const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inCourse: true });
     expect(el.querySelector('.wp-stats-open')).toBeNull();

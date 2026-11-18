@@ -31,9 +31,6 @@ export interface WoodpeckerCycleStats {
   /** Ganze Resttage bis zur Frist (wie im Kopf „noch N Tage“); 0 = Frist erreicht. */
   daysLeft: number;
   overdue: boolean;
-  /** Ab Zyklus 2: nötige Aufgaben je Tag bis zur Frist (aufgerundet); `null` in Zyklus 1, wenn nichts offen ist
-   *  oder die Frist schon vorbei ist. */
-  neededPerDay: number | null;
   /** Ab Zyklus 2: voraussichtliches Ende beim bisherigen Tempo (ISO); `null` ohne Tempo oder nichts offen. */
   etaIso: string | null;
   /** Ab Zyklus 2: reicht das Tempo bis zur Frist? `null` ohne Tempo bzw. nichts offen. */
@@ -65,8 +62,8 @@ export function calendarDaysSince(fromMs: number, nowMs: number): number {
  * - Quote = gelöst / bearbeitet; Ø = Σ Zeit / bearbeitet.
  * - Tempo = bearbeitet / begonnene Kalendertage seit Zyklusbeginn (heute zählt als ganzer Tag — „gerade begonnen“
  *   mit 5 Aufgaben = 5/Tag statt einer Hochrechnung aus Minuten).
- * - ab Zyklus 2: offen = Satz − bearbeitet; Restzeit = offen × Ø; nötig/Tag = ⌈offen / Resttage⌉ (Resttage wie
- *   `daysLeft`, aufgerundet); voraussichtlich fertig = jetzt + offen / Tempo Tage, im Plan, wenn ≤ Frist.
+ * - ab Zyklus 2: offen = Satz − bearbeitet; Restzeit = offen × Ø; voraussichtlich fertig = jetzt + offen / Tempo
+ *   Tage, im Plan, wenn ≤ Frist. Das Soll je Tag steht in {@link woodpeckerDailyGoal} (über den Tag fest).
  * - Zyklus 1: ≈ Satz bis zur Frist = bearbeitet + Tempo × verbleibende Tage (anteilig), höchstens alle Aufgaben.
  *
  * Der Vorzyklus (Quote, Ø) steht seit 2026-11-18 nicht mehr hier: die Übersicht ({@link woodpeckerOverview}) vergleicht
@@ -91,7 +88,6 @@ export function woodpeckerCycleStats(plan: WoodpeckerPlan | null | undefined, no
 
   let open: number | null = null;
   let remainingSeconds: number | null = null;
-  let neededPerDay: number | null = null;
   let etaIso: string | null = null;
   let onTrack: boolean | null = null;
   let projectedSet: number | null = null;
@@ -99,7 +95,6 @@ export function woodpeckerCycleStats(plan: WoodpeckerPlan | null | undefined, no
   if (c.number > 1) {
     open = Math.max(0, plan.setSize - attempted);
     remainingSeconds = avgSeconds != null ? open * avgSeconds : null;
-    if (open > 0 && daysLeft > 0) neededPerDay = Math.ceil(open / daysLeft);
     if (open > 0 && perDay > 0) {
       const eta = now + (open / perDay) * DAY_MS;
       etaIso = new Date(eta).toISOString();
@@ -112,9 +107,69 @@ export function woodpeckerCycleStats(plan: WoodpeckerPlan | null | undefined, no
 
   return {
     cycle: c.number, attempted, solved, solvedClean: Math.max(0, solved - solvedWithHint), hinted, ratePct, avgSeconds,
-    open, remainingSeconds, daysElapsed, perDay, daysLeft, overdue, neededPerDay, etaIso, onTrack, projectedSet,
+    open, remainingSeconds, daysElapsed, perDay, daysLeft, overdue, etaIso, onTrack, projectedSet,
     deadlineIso: c.deadline,
   };
+}
+
+/**
+ * Tagesziel des laufenden Zyklus (Wunsch 2026-11-18: „auch ohne Statistik visualisieren, wenn ich heute das notwendige
+ * Minimum erledigt habe — sowohl im Dashboard als auch wenn ich drinnen bin“). EINE Zahl für Dashboard-Kachel,
+ * Löser-Kopf und Statistik-Fenster.
+ */
+export interface WoodpeckerDailyGoal {
+  /** Heute (lokaler Kalendertag) im laufenden Zyklus bearbeitete Aufgaben. */
+  today: number;
+  /** Tagessoll; `null` in Zyklus 1 (der Satz wächst noch, es gibt kein Soll) — dann nur „Heute: n“. */
+  target: number | null;
+  /** Offene Aufgaben des Satzes (ab Zyklus 2), sonst `null`. */
+  open: number | null;
+  /** Kalendertage bis zur Frist — heute und der Fristtag zählen mit (≥ 1); `null` ohne Soll. */
+  days: number | null;
+  /** Soll erfüllt (`today ≥ target`) bzw. nichts mehr offen. Ohne Soll immer `false`. */
+  reached: boolean;
+}
+
+/**
+ * Kalendertage von heute bis zur Frist, beide mitgezählt (≥ 1) = ⌈(Frist − lokale Mitternacht heute) / 24 h⌉ — über
+ * Kalendertage gerechnet (wie {@link calendarDaysSince}), damit ein Sommerzeitwechsel keinen Tag dazu- oder wegrechnet.
+ * Endet die Frist genau um Mitternacht, zählt ihr Tag nicht mehr (er hat keine Zeit mehr).
+ */
+export function calendarDaysUntil(deadlineMs: number, nowMs: number): number {
+  const deadlineDay = localDayStart(deadlineMs);
+  const whole = Math.round((deadlineDay - localDayStart(nowMs)) / DAY_MS);
+  return Math.max(1, whole + (deadlineMs > deadlineDay ? 1 : 0));
+}
+
+/**
+ * Tagesziel aus dem Plan; rein (Zeit über `now`), getestet in `woodpecker-stats.util.spec.ts`.
+ *
+ * - **Soll heute = ⌈(offen jetzt + heute bearbeitet) / Kalendertage bis zur Frist⌉** ({@link calendarDaysUntil}). Die
+ *   Summe „offen + heute“ ist der Stand von heute früh, das Soll bleibt deshalb über den Tag FEST — mit ⌈offen /
+ *   Resttage⌉ (bis 0.992.0) sank es mit jeder gelösten Aufgabe und war nie „erreicht“.
+ * - **erreicht**, wenn heute ≥ Soll (oder nichts mehr offen ist).
+ * - Nur mit laufendem Zyklus (`status === 'solving'`) und vor der Frist; sonst `null` (Pause, bereit, abgeschlossen,
+ *   archiviert, Frist überschritten — dort steht bereits „Frist überschritten“).
+ * - Zyklus 1 hat kein Soll (`target: null`): nur die Zahl von heute.
+ * - `today`: Vorgabe `plan.todayAttempted` (Server, lokaler Tag über `utcOffsetMinutes`). Fehlt das Feld (älterer
+ *   Server hinter neuem Frontend) → `null`, also KEINE Anzeige statt eines falschen „0 von n“. Das Statistik-Fenster
+ *   übergibt die Zahl aus `/stats`.
+ */
+export function woodpeckerDailyGoal(
+  plan: WoodpeckerPlan | null | undefined, now: number = Date.now(), today: number | null | undefined = plan?.todayAttempted,
+): WoodpeckerDailyGoal | null {
+  const c = plan?.cycles.length ? plan.cycles[plan.cycles.length - 1] : null;
+  if (!plan || !c || plan.status !== 'solving' || c.finishedAt) return null;
+  if (typeof today !== 'number' || !Number.isFinite(today)) return null;
+  const deadline = new Date(c.deadline).getTime();
+  if (!Number.isFinite(deadline) || deadline <= now) return null;
+  const attempted = Math.max(0, c.attempted);
+  const done = Math.min(Math.max(0, Math.floor(today)), attempted);
+  if (c.number <= 1) return { today: done, target: null, open: null, days: null, reached: false };
+  const open = Math.max(0, plan.setSize - attempted);
+  const days = calendarDaysUntil(deadline, now);
+  const target = Math.ceil((open + done) / days);
+  return { today: done, target, open, days, reached: open === 0 || done >= target };
 }
 
 /** Ein früherer Zyklus in der Übersicht: Zeit und Quote auf DENSELBEN Aufgaben wie jetzt. */
@@ -132,7 +187,7 @@ export interface WoodpeckerOverviewEarlier {
 
 /**
  * Übersicht ganz oben im Statistik-Fenster (Wunsch 2026-11-18): bisherige Zeit und Quote des laufenden Zyklus, daneben
- * dieselben Aufgaben in JEDEM früheren Zyklus, dazu „nötig je Tag“ und „heute“.
+ * dieselben Aufgaben in JEDEM früheren Zyklus, dazu das Tagesziel („heute n von Soll“, {@link woodpeckerDailyGoal}).
  */
 export interface WoodpeckerOverview {
   cycle: number;
@@ -147,11 +202,10 @@ export interface WoodpeckerOverview {
   today: number;
   /** Ab Zyklus 2: offene Aufgaben des Satzes; in Zyklus 1 `null` (der Satz wächst noch, es gibt kein Soll). */
   open: number | null;
-  /** Ganze Resttage bis zur Frist (aufgerundet wie „noch N Tage“); 0 = Frist erreicht. */
-  daysLeft: number;
   overdue: boolean;
-  /** Ab Zyklus 2: ⌈offen / Resttage⌉; `null` in Zyklus 1, ohne offene Aufgabe oder nach der Frist. */
-  neededPerDay: number | null;
+  /** Tagesziel mit den Zahlen aus `/stats` — dieselbe Rechnung wie auf Kachel und im Löser-Kopf; `null` nach der
+   *  Frist oder ohne laufenden Zyklus. In Zyklus 1 ohne Soll (`goal.target === null`). */
+  goal: WoodpeckerDailyGoal | null;
   /** Bisheriges Tempo (bearbeitet / begonnene Kalendertage) — in Zyklus 1 statt einer Soll-Zahl gezeigt. */
   perDay: number;
 }
@@ -182,7 +236,7 @@ export function planWithStats(plan: WoodpeckerPlan, stats: WoodpeckerStats | nul
  *
  * - „heute“ = Eintrag von `days[]` mit dem lokalen Datum von `now` (der Server bildet die Tage mit dem
  *   `utcOffsetMinutes` dieses Geräts); gibt es keinen, ist heute noch nichts bearbeitet → 0.
- * - „nötig je Tag“ = ⌈offene Aufgaben / Resttage⌉ (Vorgabe des Nutzers), siehe {@link woodpeckerCycleStats}.
+ * - Tagesziel = {@link woodpeckerDailyGoal} mit diesem „heute“ und dem Stand aus `/stats`.
  */
 export function woodpeckerOverview(
   stats: WoodpeckerStats | null | undefined, plan: WoodpeckerPlan | null | undefined, now: number = Date.now(),
@@ -202,9 +256,9 @@ export function woodpeckerOverview(
       };
     });
   const todayKey = todayYmd(new Date(now));
+  const today = stats.days.find(d => d.date === todayKey)?.attempted ?? 0;
   return {
-    cycle: cur.number, attempted: cur.attempted, secondsNow: cur.timeSeconds, ratePctNow: s.ratePct, earlier,
-    today: stats.days.find(d => d.date === todayKey)?.attempted ?? 0,
-    open: s.open, daysLeft: s.daysLeft, overdue: s.overdue, neededPerDay: s.neededPerDay, perDay: s.perDay,
+    cycle: cur.number, attempted: cur.attempted, secondsNow: cur.timeSeconds, ratePctNow: s.ratePct, earlier, today,
+    open: s.open, overdue: s.overdue, goal: woodpeckerDailyGoal(planWithStats(plan, stats), now, today), perDay: s.perDay,
   };
 }

@@ -42,6 +42,34 @@ diese Aufgaben im Satz. Umgekehrt schreibt der Woodpecker-Löser KEINE `CourseAt
 | GET | `/api/woodpecker/{id}/stats` | ausführliche Statistik (`WoodpeckerStatsDto`, 0.957.0; `?utcOffsetMinutes=`), fremdes → 404 — siehe unten |
 | POST | `/api/woodpecker/{id}/attempts` | `{ bookPuzzleId, solved, timeSeconds, hintsUsed? }` → `plan` (`hintsUsed` 0–3, geklemmt über `AttemptRecording`, fehlt = 0; 0.956.0); Aufgabe nicht im Plan (Zyklus 1: nicht in den Kursen, ab 2: nicht im Satz) oder Kurs ohne Zugang (R3-003) → 404; zweiter Versuch im selben Zyklus ändert nichts |
 
+**Zeitzone des Betrachters (`?utcOffsetMinutes=`, 0.993.0):** JEDER Endpunkt, der einen Plan zurückgibt (Liste,
+Einzelplan, Anlegen, `archive`, `unarchive`, `start`, `finish-set`, `next-cycle`, `next`, `attempts`), nimmt wie `stats`
+`?utcOffsetMinutes=` — Minuten östlich von UTC (`-getTimezoneOffset()`), auf ±14 h geklemmt
+(`WoodpeckerStatsCalculator.ViewerOffset`). Damit zählt **`WoodpeckerPlanDto.todayAttempted`** die gewerteten Versuche des
+LAUFENDEN Zyklus seit der lokalen Mitternacht (`LocalDayStartUtc`; eine Zählabfrage in `BuildDtoAsync`, keine Migration);
+ohne Angabe gilt der UTC-Tag. Die Oberfläche schickt den Wert bei allen diesen Aufrufen mit (`WoodpeckerService.tz()`,
+literal geprüft in `woodpecker.service.spec.ts`). Nur der nachgesendete Versuch der Offline-Warteschlange trägt ihn
+nicht — dessen Antwort zeigt niemand an. Am Tag einer Zeitumstellung kann die Grenze um eine Stunde danebenliegen
+(gerechnet wird mit dem Abstand von jetzt).
+
+**Tagesziel ohne Statistik-Fenster (0.993.0,** Wunsch 18.11.2026: „oben auch ohne Statistik visualisieren, wenn ich heute
+das notwendige Minimum erledigt habe (sowohl im Dashboard als auch wenn ich drinnen bin)“, „grüne Checkmark oder so“):
+`woodpeckerDailyGoal(plan)` in `features/woodpecker/woodpecker-stats.util.ts` (rein, getestet), gezeigt vom geteilten
+Baustein `features/woodpecker/woodpecker-daily-goal.component` an DREI Stellen — Dashboard-Kachel (eigene Zeile unter
+der Frist), Löser-Kopf (letzte Angabe der Zyklus-Zeile) und Statistik-Fenster (Je-Tag-Zeile).
+
+| Größe | Formel |
+|---|---|
+| Tage bis zur Frist | Kalendertage von heute bis zum Fristtag, beide mitgezählt (≥ 1) = `⌈(Frist − lokale Mitternacht heute) / 24 h⌉`, über Kalendertage gerechnet (`calendarDaysUntil`: eine Zeitumstellung zählt keinen Tag dazu); endet die Frist genau um Mitternacht, zählt ihr Tag nicht |
+| **Soll heute** | `⌈(offen jetzt + heute bearbeitet) / Tage bis zur Frist⌉`, offen = `setSize − attempted`. „offen + heute“ ist der Stand von heute früh — das Soll bleibt deshalb über den Tag FEST |
+| erreicht | `heute ≥ Soll` (oder nichts mehr offen) → grüner Haken `check_circle` + „Tagesziel erreicht“ + „n von Soll“; sonst leise „Heute: n von Soll“ |
+| nur mit Soll | Status `solving`, Zyklus ≥ 2, Frist nicht vorbei. Zyklus 1 (der Satz wächst, kein Soll): nur „Heute: n“. Pause, bereit, abgeschlossen, archiviert, Frist überschritten: nichts |
+| „heute“ | `plan.todayAttempted`; im Fenster der `days[]`-Eintrag von `/stats` (derselbe Zeitzonen-Parameter). Fehlt das Feld (älterer Server hinter neuem Frontend): KEINE Anzeige statt „0 von n“ |
+
+**Entscheidung (18.11.2026, löst die Formel aus 0.992.0 ab):** „nötig je Tag = ⌈offen / Resttage⌉“ sank mit jeder gelösten
+Aufgabe und konnte nie „erreicht“ sein; das Fenster zeigt seither dasselbe feste Tagessoll wie Kachel und Löser-Kopf —
+es gibt nur noch EINE Soll-Zahl.
+
 **Statistik je Zyklus** (`WoodpeckerCycleDto`): `attempted`, `solved`, `timeSeconds` und seit 0.956.0 `hinted` (Versuche
 mit mindestens einem Tipp, gelöst oder nicht) und `solvedWithHint` (davon gelöst). **Entscheidung:** gelöst mit Tipp
 bleibt GELÖST (zählt in `solved` und in der Quote), wird aber getrennt ausgewiesen — „sauber gelöst“ = `solved −
@@ -73,9 +101,9 @@ Quelle `GET …/stats` + Frist aus dem Plan):
 | Zeit — „Zyklus k“ (jeder frühere, jüngster zuerst) | `cycles[k].sameAsNow.secondsThen` = dieselben Aufgaben damals (Schnittmenge, siehe unten); Zyklen ohne gemeinsame Aufgabe fehlen |
 | Richtig — „Bisher“ / „Zyklus k“ | `solved / attempted` bzw. `sameAsNow.ratePctThen` (Prozentpunkte, `pct`-Pipe) |
 | Schnittmenge kleiner als jetzt bearbeitet | zusätzlich ein Satz je Zyklus mit `count`, `secondsNow`, `ratePctNow` — die Jetzt-Werte auf genau diesen Aufgaben, damit nie Gesamtzeit gegen eine Teilmenge steht (normal ist `count` = bearbeitet: der Satz ist ab Zyklus 2 fest) |
-| Nötig je Tag (ab Zyklus 2) | `⌈offen / Resttage⌉`, offen = `setSize − attempted`, Resttage aufgerundet wie „noch N Tage“; Frist vorbei → „Frist überschritten“ + offen; nichts offen → „0 offen“ |
+| Je Tag (ab Zyklus 2, seit 0.993.0) | das **Tagesziel** (siehe oben, Baustein `app-woodpecker-daily-goal`): „Heute: n von Soll“ bzw. grüner Haken + „Tagesziel erreicht“, dahinter klein die Herleitung „(offen + heute, verteilt auf d Tage)“ bzw. am letzten Tag „(…, heute ist der letzte Tag)“. Bis 0.992.0 stand hier „Nötig je Tag: ⌈offen / Resttage⌉ · Heute: n“. Frist vorbei → „Frist überschritten“ + offen + „Heute: n“ |
 | Heute | `days[]`-Eintrag mit dem lokalen Datum des Geräts (`attempted`); kein Eintrag = heute noch nichts = 0 |
-| Zyklus 1 | kein Soll (der Satz wächst): statt „nötig“ das bisherige Tempo `attempted / begonnene Kalendertage`; keine Vergleichsspalten |
+| Zyklus 1 | kein Soll (der Satz wächst): das bisherige Tempo `attempted / begonnene Kalendertage` + „Heute: n“; keine Vergleichsspalten |
 
 Alle Zahlen des Fensters kommen aus EINEM Serverstand: `planWithStats` legt die Werte des laufenden Zyklus aus `/stats`
 über den Plan aus dem Löser (der kann eine Meldung hinterher sein); nur Frist und `availableCount` stammen aus dem Plan.
@@ -130,7 +158,7 @@ Fenster, lädt dann sofort und bei einem neuen Planstand (`planId:Zyklus:bearbei
 jetzt/damals; die Zeiten und Quoten selbst stehen in der Übersicht) → Wechsel je Aufgabe (+ Zeitstufen jetzt/damals) →
 Hochrechnung → Tipps → Verlauf (Tabelle je ganzem Zyklus; die Spalte „dieselben wie jetzt“ ist in die Übersicht
 gewandert) bzw. in Zyklus 1 „Je Tag“ (jüngste 14) + Zeitstufen → Sorgenkinder (Link „ansehen“ = `/puzzles/book/:id`).
-Ohne Versuch im Zyklus: Übersicht (mit „–“ und dem Soll je Tag) + ein Leersatz.
+Ohne Versuch im Zyklus: Übersicht (mit „–“ und dem Tagesziel „Heute: 0 von Soll“) + ein Leersatz.
 
 `WoodpeckerPlanDto.status`: `solving` (Zyklus läuft), `break` (Pause bis `nextCycleAt`), `ready`, `completed`, seit 0.958.0
 `archived` (geht allem vor; `completedAt` bleibt daneben erhalten) und `archivedAt`.

@@ -6547,10 +6547,13 @@
       "sameNote": "Earlier cycles: time and rate on the same puzzles as now.",
       "partial": "Cycle {{k}}: only {{n}} puzzles in common – on those now {{time}}, {{pct}} correct.",
       "partialOne": "Cycle {{k}}: only {{n}} puzzle in common – on it now {{time}}, {{pct}} correct.",
-      "neededLabel": "Needed per day",
-      "neededHow": "{{open}} left ÷ {{days}} days",
-      "neededHowOneDay": "{{open}} left ÷ {{days}} day",
       "todayLabel": "Today"
+    },
+    "daily": {
+      "count": "{{today}} of {{target}}",
+      "reached": "Daily goal reached",
+      "how": "{{open}} left + {{today}} today, spread over {{days}} days",
+      "howLastDay": "{{open}} left + {{today}} today, today is the last day"
     },
     "stats": {
       "solvedCount": "{{solved}} of {{done}} solved",

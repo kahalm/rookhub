@@ -31,7 +31,7 @@ public class WoodpeckerService
 
     private DateTime Now => _clock.GetUtcNow().UtcDateTime;
 
-    public async Task<List<WoodpeckerPlanDto>> ListAsync(int userId, CancellationToken ct = default)
+    public async Task<List<WoodpeckerPlanDto>> ListAsync(int userId, CancellationToken ct = default, int utcOffsetMinutes = 0)
     {
         var plans = await _db.WoodpeckerPlans.Where(p => p.UserId == userId)
             .OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id)
@@ -41,20 +41,20 @@ public class WoodpeckerService
         foreach (var plan in plans)
         {
             await RefreshAsync(plan, userId, ct);
-            result.Add(await BuildDtoAsync(plan, ct));
+            result.Add(await BuildDtoAsync(plan, utcOffsetMinutes, ct));
         }
         return result;
     }
 
-    public async Task<WoodpeckerPlanDto> GetAsync(int userId, int planId, CancellationToken ct = default)
+    public async Task<WoodpeckerPlanDto> GetAsync(int userId, int planId, CancellationToken ct = default, int utcOffsetMinutes = 0)
     {
         var plan = await LoadAsync(userId, planId, ct);
         await RefreshAsync(plan, userId, ct);
-        return await BuildDtoAsync(plan, ct);
+        return await BuildDtoAsync(plan, utcOffsetMinutes, ct);
     }
 
     public async Task<WoodpeckerPlanDto> CreateAsync(int userId, bool isAdmin, CreateWoodpeckerPlanDto dto,
-        CancellationToken ct = default)
+        CancellationToken ct = default, int utcOffsetMinutes = 0)
     {
         var bookIds = dto.BookIds.Distinct().ToList();
         if (bookIds.Count == 0) throw new DomainValidationException("Choose at least one course.");
@@ -108,7 +108,7 @@ public class WoodpeckerService
         }
 
         await RefreshAsync(plan, userId, ct);
-        return await BuildDtoAsync(plan, ct);
+        return await BuildDtoAsync(plan, utcOffsetMinutes, ct);
     }
 
     /// <summary>Wiederholbarer Kern von <see cref="CreateAsync"/>: liest die nicht archivierten Trainings neu, bricht
@@ -129,7 +129,7 @@ public class WoodpeckerService
 
     /// <summary>Training ins Archiv legen — jederzeit, auch mitten im Zyklus. Es bleibt lesbar (Zyklen, Statistik),
     /// ändert sich aber nicht mehr (keine Fristen, kein Kurs-Import). Schon archiviert → unverändert.</summary>
-    public async Task<WoodpeckerPlanDto> ArchiveAsync(int userId, int planId, CancellationToken ct = default)
+    public async Task<WoodpeckerPlanDto> ArchiveAsync(int userId, int planId, CancellationToken ct = default, int utcOffsetMinutes = 0)
     {
         var plan = await LoadAsync(userId, planId, ct);
         if (plan.ArchivedAt == null)
@@ -139,11 +139,11 @@ public class WoodpeckerService
             plan.ArchivedAt = Now;
             await _db.SaveChangesAsync(ct);
         }
-        return await BuildDtoAsync(plan, ct);
+        return await BuildDtoAsync(plan, utcOffsetMinutes, ct);
     }
 
     /// <summary>Archiviertes Training wieder aktiv machen — nur, wenn es kein anderes nicht archiviertes gibt (409).</summary>
-    public async Task<WoodpeckerPlanDto> UnarchiveAsync(int userId, int planId, CancellationToken ct = default)
+    public async Task<WoodpeckerPlanDto> UnarchiveAsync(int userId, int planId, CancellationToken ct = default, int utcOffsetMinutes = 0)
     {
         var plan = await LoadAsync(userId, planId, ct);
         if (plan.ArchivedAt != null)
@@ -155,7 +155,7 @@ public class WoodpeckerService
             await _db.SaveChangesAsync(ct);
             await RefreshAsync(plan, userId, ct);
         }
-        return await BuildDtoAsync(plan, ct);
+        return await BuildDtoAsync(plan, utcOffsetMinutes, ct);
     }
 
     public async Task DeleteAsync(int userId, int planId, CancellationToken ct = default)
@@ -171,7 +171,7 @@ public class WoodpeckerService
     /// <summary>Beginn des laufenden Zyklus verschieben — vor allem Zyklus 1 rückdatieren. Nicht in die Zukunft,
     /// nicht hinter den ersten Versuch dieses Zyklus und nicht vor das Ende des vorigen.</summary>
     public async Task<WoodpeckerPlanDto> UpdateStartAsync(int userId, int planId, DateTime startedAt,
-        CancellationToken ct = default)
+        CancellationToken ct = default, int utcOffsetMinutes = 0)
     {
         var plan = await LoadAsync(userId, planId, ct);
         EnsureNotArchived(plan);
@@ -192,11 +192,11 @@ public class WoodpeckerService
         current.StartedAt = startedAt;
         await _db.SaveChangesAsync(ct);
         await RefreshAsync(plan, userId, ct);
-        return await BuildDtoAsync(plan, ct);
+        return await BuildDtoAsync(plan, utcOffsetMinutes, ct);
     }
 
     /// <summary>Zyklus 1 vor der Frist beenden — der Satz steht dann fest.</summary>
-    public async Task<WoodpeckerPlanDto> FinishSetAsync(int userId, int planId, CancellationToken ct = default)
+    public async Task<WoodpeckerPlanDto> FinishSetAsync(int userId, int planId, CancellationToken ct = default, int utcOffsetMinutes = 0)
     {
         var plan = await LoadAsync(userId, planId, ct);
         EnsureNotArchived(plan);
@@ -208,11 +208,11 @@ public class WoodpeckerService
             throw new DomainValidationException("Solve at least one puzzle first.");
         current.FinishedAt = Now;
         await _db.SaveChangesAsync(ct);
-        return await BuildDtoAsync(plan, ct);
+        return await BuildDtoAsync(plan, utcOffsetMinutes, ct);
     }
 
     /// <summary>Nächsten Zyklus beginnen — erst nach der Pause von mindestens einem Tag.</summary>
-    public async Task<WoodpeckerPlanDto> StartNextCycleAsync(int userId, int planId, CancellationToken ct = default)
+    public async Task<WoodpeckerPlanDto> StartNextCycleAsync(int userId, int planId, CancellationToken ct = default, int utcOffsetMinutes = 0)
     {
         var plan = await LoadAsync(userId, planId, ct);
         EnsureNotArchived(plan);
@@ -224,13 +224,14 @@ public class WoodpeckerService
             throw new ConflictException("Take at least one day off before the next cycle.");
         plan.Cycles.Add(new WoodpeckerCycle { PlanId = plan.Id, Number = current.Number + 1, StartedAt = Now });
         await _db.SaveChangesAsync(ct);
-        return await BuildDtoAsync(plan, ct);
+        return await BuildDtoAsync(plan, utcOffsetMinutes, ct);
     }
 
     /// <summary>Nächste Aufgabe. Nur aus Kursen, auf die das Konto JETZT Zugriff hat (R3-003): wer aus der Kursgruppe fällt (oder
     /// dessen Kurs privat wird), bekommt aus diesem Kurs nichts mehr — die übrigen Kurse des Plans laufen weiter, der Kurs ruht,
     /// bis der Zugang wieder da ist. Ein Kalkulationsbuch liefert nie die Lösung.</summary>
-    public async Task<WoodpeckerNextDto> GetNextAsync(int userId, int planId, CancellationToken ct = default, bool isAdmin = false)
+    public async Task<WoodpeckerNextDto> GetNextAsync(int userId, int planId, CancellationToken ct = default, bool isAdmin = false,
+        int utcOffsetMinutes = 0)
     {
         var plan = await LoadAsync(userId, planId, ct);
         EnsureNotArchived(plan);
@@ -252,11 +253,11 @@ public class WoodpeckerService
             puzzle = BookPuzzleService.MapToDto(bp);
             if (bp.Book?.IsCalculation == true) BookPuzzleService.WithholdSolution(puzzle);
         }
-        return new WoodpeckerNextDto { Puzzle = puzzle, Plan = await BuildDtoAsync(plan, ct) };
+        return new WoodpeckerNextDto { Puzzle = puzzle, Plan = await BuildDtoAsync(plan, utcOffsetMinutes, ct) };
     }
 
     public async Task<WoodpeckerPlanDto> RecordAttemptAsync(int userId, int planId, RecordWoodpeckerAttemptDto dto,
-        CancellationToken ct = default, bool isAdmin = false)
+        CancellationToken ct = default, bool isAdmin = false, int utcOffsetMinutes = 0)
     {
         var plan = await LoadAsync(userId, planId, ct);
         EnsureNotArchived(plan);
@@ -300,7 +301,7 @@ public class WoodpeckerService
             else
                 plan = await LoadAsync(userId, planId, ct);   // paralleler Doppel-Klick: der andere hat gespeichert
         }
-        return await BuildDtoAsync(plan, ct);
+        return await BuildDtoAsync(plan, utcOffsetMinutes, ct);
     }
 
     /// <summary>Ausführliche Statistik (Vergleich auf denselben Aufgaben, Hochrechnung, Verlauf, Sorgenkinder) — eigener
@@ -474,7 +475,7 @@ public class WoodpeckerService
         return remaining.Count == 0 ? null : remaining[Random.Shared.Next(remaining.Count)];
     }
 
-    private async Task<WoodpeckerPlanDto> BuildDtoAsync(WoodpeckerPlan plan, CancellationToken ct)
+    private async Task<WoodpeckerPlanDto> BuildDtoAsync(WoodpeckerPlan plan, int utcOffsetMinutes, CancellationToken ct)
     {
         var bookIds = plan.Books.Select(b => b.BookId).ToList();
         var books = await _db.Books.Where(b => bookIds.Contains(b.Id))
@@ -495,6 +496,12 @@ public class WoodpeckerService
 
         var cycles = plan.Cycles.OrderBy(c => c.Number).ToList();
         var current = cycles.Last();
+        // „Heute bearbeitet“ (0.993.0): gewertete Versuche des laufenden Zyklus seit der lokalen Mitternacht des
+        // Betrachters — je Aufgabe und Zyklus gibt es nur den ersten, jede Zeile ist also eine Aufgabe. Eine Zählabfrage,
+        // damit Kachel und Löser-Kopf das Tagesziel ohne /stats zeigen können.
+        var dayStart = WoodpeckerStatsCalculator.LocalDayStartUtc(Now, utcOffsetMinutes);
+        var todayAttempted = await _db.WoodpeckerAttempts.CountAsync(
+            a => a.PlanId == plan.Id && a.Cycle == current.Number && a.AttemptedAt >= dayStart, ct);
         string status;
         DateTime? nextAt = null;
         if (plan.ArchivedAt != null) status = "archived";
@@ -529,6 +536,7 @@ public class WoodpeckerService
             MaxCycles = WoodpeckerRules.MaxCycles,
             Status = status,
             NextCycleAt = nextAt,
+            TodayAttempted = todayAttempted,
             Cycles = cycles.Select(c =>
             {
                 var s = stats.FirstOrDefault(x => x.Cycle == c.Number);

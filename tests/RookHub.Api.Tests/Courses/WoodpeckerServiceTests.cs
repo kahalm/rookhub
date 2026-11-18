@@ -536,6 +536,99 @@ public class WoodpeckerServiceTests : IDisposable
         await Assert.ThrowsAsync<NotFoundException>(() => _service.GetStatsAsync(OtherUserId, plan.Id));
     }
 
+    // ===== „Heute bearbeitet“ (TodayAttempted, 0.993.0) =====
+
+    /// <summary>Uhr: 14.10.2026 12:00 UTC. Drei Versuche um 13.10. 21:59, 13.10. 22:00 und 14.10. 12:00 UTC. Der lokale
+    /// Tag beginnt je nach Zeitzone woanders: UTC 14.10. 00:00 → 1; UTC+2 13.10. 22:00 → 2 (23:59 gestern zählt nicht,
+    /// 00:00 heute schon); UTC−13 13.10. 13:00 → 3; UTC−10 14.10. 10:00 → 1.</summary>
+    [Fact]
+    public async Task TodayAttempted_CountsFromViewersLocalMidnight()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 5);
+        _clock.Now = new DateTime(2026, 10, 13, 21, 0, 0, DateTimeKind.Utc);
+        var plan = await CreateAsync(bookId);
+        _clock.Now = new DateTime(2026, 10, 13, 21, 59, 0, DateTimeKind.Utc);
+        await SolveAsync(plan.Id, ids[0]);
+        _clock.Now = new DateTime(2026, 10, 13, 22, 0, 0, DateTimeKind.Utc);
+        await SolveAsync(plan.Id, ids[1], solved: false);
+        _clock.Now = new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
+        await SolveAsync(plan.Id, ids[2]);
+
+        Assert.Equal(1, (await _service.GetAsync(UserId, plan.Id)).TodayAttempted);
+        Assert.Equal(2, (await _service.GetAsync(UserId, plan.Id, utcOffsetMinutes: 120)).TodayAttempted);
+        Assert.Equal(3, (await _service.GetAsync(UserId, plan.Id, utcOffsetMinutes: -780)).TodayAttempted);
+        Assert.Equal(1, (await _service.GetAsync(UserId, plan.Id, utcOffsetMinutes: -600)).TodayAttempted);
+        // Unsinnige Angabe wird wie bei /stats auf ±14 h geklemmt: UTC+14 → Tag beginnt 14.10. 10:00 UTC → 1 (ungeklemmt
+        // wären es 3), UTC−14 → Tag beginnt 13.10. 14:00 UTC → 3 (ungeklemmt 1).
+        Assert.Equal(1, (await _service.GetAsync(UserId, plan.Id, utcOffsetMinutes: 99_999)).TodayAttempted);
+        Assert.Equal(3, (await _service.GetAsync(UserId, plan.Id, utcOffsetMinutes: -99_999)).TodayAttempted);
+        // Liste und „nächste Aufgabe“ liefern dieselbe Zahl.
+        Assert.Equal(2, (await _service.ListAsync(UserId, utcOffsetMinutes: 120)).Single().TodayAttempted);
+        Assert.Equal(2, (await _service.GetNextAsync(UserId, plan.Id, utcOffsetMinutes: 120)).Plan.TodayAttempted);
+    }
+
+    [Fact]
+    public async Task TodayAttempted_RecordAttempt_ReturnsNewCount_SecondTryOnSamePuzzleDoesNotCount()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 3);
+        var plan = await CreateAsync(bookId);
+        Assert.Equal(0, plan.TodayAttempted);
+        Assert.Equal(1, (await SolveAsync(plan.Id, ids[0], solved: false)).TodayAttempted);
+        Assert.Equal(1, (await SolveAsync(plan.Id, ids[0])).TodayAttempted);   // je Zyklus zählt der erste Versuch
+        Assert.Equal(2, (await SolveAsync(plan.Id, ids[1])).TodayAttempted);
+    }
+
+    /// <summary>Nur der LAUFENDE Zyklus: Zyklus 1 (2 Aufgaben) endet, einen Tag später beginnt Zyklus 2 mit 1 Versuch.
+    /// Eine Zeitzone, deren Tag beide umfasst, gibt es nicht (Pause ≥ 24 h) — die alten Versuche werden deshalb für den
+    /// Test auf heute gelegt: gezählt wird trotzdem nur Zyklus 2.</summary>
+    [Fact]
+    public async Task TodayAttempted_OnlyCurrentCycle()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 2);
+        var plan = await CreateAsync(bookId);
+        await SolveAsync(plan.Id, ids[0]);
+        await SolveAsync(plan.Id, ids[1]);   // Satz voll → Zyklus 1 endet
+        _clock.Now = _clock.Now.AddDays(1).AddMinutes(1);
+        var second = await _service.StartNextCycleAsync(UserId, plan.Id);
+        Assert.Equal(2, second.CurrentCycle);
+        Assert.Equal(0, second.TodayAttempted);
+        foreach (var old in await _db.WoodpeckerAttempts.Where(a => a.PlanId == plan.Id && a.Cycle == 1).ToListAsync())
+            old.AttemptedAt = _clock.Now;
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(1, (await SolveAsync(plan.Id, ids[0])).TodayAttempted);
+        Assert.Equal(1, (await _service.GetAsync(UserId, plan.Id)).TodayAttempted);
+    }
+
+    [Fact]
+    public async Task PlanEndpoints_PassUtcOffsetToTodayAttempted()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 3);
+        _clock.Now = new DateTime(2026, 10, 13, 22, 30, 0, DateTimeKind.Utc);   // 14.10. 00:30 in UTC+2
+        var plan = await CreateAsync(bookId);
+        await SolveAsync(plan.Id, ids[0]);
+        _clock.Now = new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
+        var controller = new WoodpeckerController(_service)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, UserId.ToString())], "Test")),
+                },
+            },
+        };
+        static T Body<T>(IActionResult r) => Assert.IsType<T>(Assert.IsType<OkObjectResult>(r).Value);
+
+        Assert.Equal(0, Body<WoodpeckerPlanDto>(await controller.Get(plan.Id)).TodayAttempted);            // UTC-Tag
+        Assert.Equal(1, Body<WoodpeckerPlanDto>(await controller.Get(plan.Id, 120)).TodayAttempted);       // UTC+2
+        Assert.Equal(1, Body<List<WoodpeckerPlanDto>>(await controller.List(120)).Single().TodayAttempted);
+        Assert.Equal(1, Body<WoodpeckerNextDto>(await controller.Next(plan.Id, null, 120)).Plan.TodayAttempted);
+        var after = Body<WoodpeckerPlanDto>(await controller.RecordAttempt(plan.Id,
+            new RecordWoodpeckerAttemptDto { BookPuzzleId = ids[1], Solved = true, TimeSeconds = 20 }, 120));
+        Assert.Equal(2, after.TodayAttempted);
+    }
+
     [Fact]
     public async Task StatsEndpoint_OwnPlanOk_ForeignPlanNotFound()
     {

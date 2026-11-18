@@ -645,7 +645,10 @@ export class DashboardComponent implements OnInit {
       this.puzzleSolved = cached.puzzleSolved;
       this.puzzleAccuracy = cached.puzzleAccuracy;
       this.puzzleElo = cached.puzzleElo;
-      this.woodpeckerPlan = cached.woodpeckerPlan ?? null;
+      // „Heute bearbeitet“ (`todayAttempted`, 0.993.0) gilt nur frisch vom Server: aus dem Zwischenstand — womöglich
+      // von gestern — stünde sonst „Tagesziel erreicht“ auf der Kachel, bis (offline: ohne dass je) die Antwort kommt.
+      // Ohne das Feld zeigt die Kachel kein Tagesziel; der Abruf unten bringt es nach.
+      this.woodpeckerPlan = cached.woodpeckerPlan ? { ...cached.woodpeckerPlan, todayAttempted: undefined } : null;
     }
 
     // Menü-Sichtbarkeit live nachziehen (steuert, welche Kacheln überhaupt erscheinen).

@@ -1,5 +1,7 @@
 import { WoodpeckerCycle, WoodpeckerOverlap, WoodpeckerPlan, WoodpeckerStats, WoodpeckerStatsCycle } from './woodpecker.service';
-import { calendarDaysSince, planWithStats, woodpeckerCycleStats, woodpeckerOverview } from './woodpecker-stats.util';
+import {
+  calendarDaysSince, calendarDaysUntil, planWithStats, woodpeckerCycleStats, woodpeckerDailyGoal, woodpeckerOverview,
+} from './woodpecker-stats.util';
 
 const DAY = 86_400_000;
 /** Lokale Zeitpunkte, damit die Kalendertage in jeder Zeitzone gleich zählen. */
@@ -33,7 +35,7 @@ describe('woodpeckerCycleStats (Statistik + Hochrechnung, 0.956.0)', () => {
     expect(calendarDaysSince(at(5), at(1))).toBe(1);             // Uhr vor dem Beginn: nie < 1
   });
 
-  it('Zyklus 2, im Plan: Quote, Ø, offen, Restzeit, nötig/Tag, Tempo und voraussichtliches Ende', () => {
+  it('Zyklus 2, im Plan: Quote, Ø, offen, Restzeit, Tempo und voraussichtliches Ende', () => {
     // 14 Tage, Beginn am 1., heute der 5. (5 Kalendertage) — 50 von 100 bearbeitet, 40 gelöst, 10 davon mit Tipp.
     const c2 = cycle({ number: 2, start: at(1, 8), days: 14, attempted: 50, solved: 40, timeSeconds: 3000, hinted: 12, solvedWithHint: 10 });
     const s = woodpeckerCycleStats(plan([cycle({ start: at(1) - 40 * DAY, days: 28, attempted: 100, solved: 70, timeSeconds: 9000 }), c2]), at(5))!;
@@ -47,7 +49,6 @@ describe('woodpeckerCycleStats (Statistik + Hochrechnung, 0.956.0)', () => {
     expect(s.daysElapsed).toBe(5);
     expect(s.perDay).toBe(10);
     expect(s.daysLeft).toBe(10);          // Frist am 15. um 8 Uhr, jetzt der 5. um 12 Uhr → 9,8 → 10
-    expect(s.neededPerDay).toBe(5);
     expect(new Date(s.etaIso!).getTime()).toBe(at(10));   // 50 offen / 10 pro Tag = 5 Tage
     expect(s.onTrack).toBeTrue();
     expect(s.projectedSet).toBeNull();
@@ -57,11 +58,10 @@ describe('woodpeckerCycleStats (Statistik + Hochrechnung, 0.956.0)', () => {
     const c2 = cycle({ number: 2, start: at(1), days: 7, attempted: 10, solved: 10, timeSeconds: 600 });
     const s = woodpeckerCycleStats(plan([cycle({ start: at(1) - 30 * DAY, days: 28 }), c2]), at(5))!;
     expect(s.perDay).toBe(2);
-    expect(s.neededPerDay).toBe(30);      // 90 offen, 3 Tage
     expect(s.onTrack).toBeFalse();
   });
 
-  it('Zyklus 2 gerade begonnen, 0 Versuche: offen = Satz, nötig/Tag, aber kein Tempo, kein Ende, kein Ø', () => {
+  it('Zyklus 2 gerade begonnen, 0 Versuche: offen = Satz, aber kein Tempo, kein Ende, kein Ø', () => {
     const now = at(3);
     const c2 = cycle({ number: 2, start: now - 60_000, days: 14 });
     const s = woodpeckerCycleStats(plan([cycle({ start: at(1) - 30 * DAY, days: 28, attempted: 100, solved: 50, timeSeconds: 100 }), c2]), now)!;
@@ -69,7 +69,6 @@ describe('woodpeckerCycleStats (Statistik + Hochrechnung, 0.956.0)', () => {
     expect(s.avgSeconds).toBeNull();
     expect(s.open).toBe(100);
     expect(s.remainingSeconds).toBeNull();
-    expect(s.neededPerDay).toBe(8);       // ⌈100 / 14⌉
     expect(s.perDay).toBe(0);
     expect(s.etaIso).toBeNull();
     expect(s.onTrack).toBeNull();
@@ -84,12 +83,11 @@ describe('woodpeckerCycleStats (Statistik + Hochrechnung, 0.956.0)', () => {
     expect(s.onTrack).toBeFalse();        // 95 offen / 5 pro Tag = 19 Tage > 14
   });
 
-  it('Frist überschritten: überfällig, nötig/Tag entfällt, Ende nach der Frist', () => {
+  it('Frist überschritten: überfällig, Ende nach der Frist', () => {
     const c2 = cycle({ number: 2, start: at(1), days: 2, attempted: 20, solved: 18, timeSeconds: 400 });
     const s = woodpeckerCycleStats(plan([cycle({ start: at(1) - 30 * DAY, days: 28 }), c2]), at(5))!;
     expect(s.overdue).toBeTrue();
     expect(s.daysLeft).toBe(0);
-    expect(s.neededPerDay).toBeNull();
     expect(s.onTrack).toBeFalse();
     expect(s.open).toBe(80);
   });
@@ -98,7 +96,6 @@ describe('woodpeckerCycleStats (Statistik + Hochrechnung, 0.956.0)', () => {
     const c2 = cycle({ number: 2, start: at(1), days: 14, attempted: 100, solved: 90, timeSeconds: 1000 });
     const s = woodpeckerCycleStats(plan([cycle({ start: at(1) - 30 * DAY, days: 28 }), c2]), at(4))!;
     expect(s.open).toBe(0);
-    expect(s.neededPerDay).toBeNull();
     expect(s.etaIso).toBeNull();
     expect(s.remainingSeconds).toBe(0);
   });
@@ -107,7 +104,6 @@ describe('woodpeckerCycleStats (Statistik + Hochrechnung, 0.956.0)', () => {
     // Beginn am 1. um 12 Uhr, heute der 4. um 12 Uhr: 4 Kalendertage, 40 Aufgaben → 10/Tag, noch 25 Tage.
     const s = woodpeckerCycleStats(plan([cycle({ start: at(1), days: 28, attempted: 40, solved: 30, timeSeconds: 2400 })]), at(4))!;
     expect(s.open).toBeNull();
-    expect(s.neededPerDay).toBeNull();
     expect(s.etaIso).toBeNull();
     expect(s.remainingSeconds).toBeNull();
     expect(s.perDay).toBe(10);
@@ -131,6 +127,81 @@ describe('woodpeckerCycleStats (Statistik + Hochrechnung, 0.956.0)', () => {
 });
 
 // Wunsch 2026-11-18: ganz oben bisherige Zeit/Quote gegen dieselben Aufgaben der früheren Zyklen, nötig je Tag, heute.
+// Wunsch 2026-11-18: „auch ohne Statistik visualisieren, wenn ich heute das notwendige Minimum erledigt habe“.
+describe('woodpeckerDailyGoal (Tagesziel für Kachel, Löser-Kopf und Fenster, 0.993.0)', () => {
+  /** Zyklus 2 über 14 Tage: Beginn am 9. um 14 Uhr → Frist am 23. um 14 Uhr; Satz 388. */
+  const wp = (attempted: number, todayAttempted: number | undefined, over: Partial<WoodpeckerPlan> = {}) => plan([
+    cycle({ start: at(9) - 40 * DAY, days: 28, attempted: 388, solved: 337, timeSeconds: 51379, finishedAt: 'x' }),
+    cycle({ number: 2, start: at(9, 14), days: 14, attempted, solved: attempted, timeSeconds: 60 * attempted }),
+  ], { setSize: 388, todayAttempted, ...over });
+
+  it('calendarDaysUntil: heute und der Fristtag zählen mit; Frist genau um Mitternacht → ihr Tag zählt nicht; mindestens 1', () => {
+    expect(calendarDaysUntil(at(23, 14), at(18, 15))).toBe(6);     // 18., 19., 20., 21., 22., 23.
+    expect(calendarDaysUntil(at(23, 14), at(18, 0))).toBe(6);      // die Uhrzeit von heute spielt keine Rolle
+    expect(calendarDaysUntil(at(23, 14), at(23, 9))).toBe(1);      // Fristtag
+    expect(calendarDaysUntil(at(23, 0), at(18, 15))).toBe(5);      // 18. bis 22. — der 23. hat keine Zeit mehr
+    expect(calendarDaysUntil(at(18, 9), at(18, 15))).toBe(1);      // schon vorbei: nie unter 1
+  });
+
+  it('calendarDaysUntil rechnet Kalendertage, nicht 24-h-Blöcke: die Zeitumstellung (25.10.2026) fügt keinen Tag hinzu', () => {
+    // 24.10. mittags bis 26.10. 00:00 Ortszeit = 24. und 25. — in Mitteleuropa sind das 49 Stunden (⌈49 / 24⌉ wäre 3).
+    expect(calendarDaysUntil(new Date(2026, 9, 26, 0, 0, 0).getTime(), new Date(2026, 9, 24, 12, 0, 0).getTime())).toBe(2);
+    expect(calendarDaysUntil(new Date(2026, 9, 26, 12, 0, 0).getTime(), new Date(2026, 9, 24, 12, 0, 0).getTime())).toBe(3);
+  });
+
+  it('Soll heute = ⌈(offen + heute) / Tage bis zur Frist⌉ — bleibt über den Tag FEST, bis es erreicht ist', () => {
+    const now = at(18, 15);   // 6 Kalendertage bis zum 23.
+    // morgens 270 offen; im Lauf des Tages 23, 45, 52 bearbeitet — das Soll bleibt ⌈270 / 6⌉ = 45
+    expect(woodpeckerDailyGoal(wp(118, 0), now)).toEqual({ today: 0, target: 45, open: 270, days: 6, reached: false });
+    expect(woodpeckerDailyGoal(wp(141, 23), now)).toEqual({ today: 23, target: 45, open: 247, days: 6, reached: false });
+    expect(woodpeckerDailyGoal(wp(162, 44), now)).toEqual({ today: 44, target: 45, open: 226, days: 6, reached: false });
+    expect(woodpeckerDailyGoal(wp(163, 45), now)).toEqual({ today: 45, target: 45, open: 225, days: 6, reached: true });    // genau erreicht
+    expect(woodpeckerDailyGoal(wp(170, 52), now)).toEqual({ today: 52, target: 45, open: 218, days: 6, reached: true });    // übererfüllt
+  });
+
+  it('Tageswechsel: am nächsten Tag zählt heute wieder von 0, das Soll kommt aus dem Rest und einem Tag weniger', () => {
+    const g = woodpeckerDailyGoal(wp(170, 0), at(19, 0) + 60_000)!;   // 19. um 00:01
+    expect(g).toEqual({ today: 0, target: 44, open: 218, days: 5, reached: false });   // ⌈218 / 5⌉
+  });
+
+  it('Fristtag: alles Offene ist das Soll — erreicht erst, wenn nichts mehr offen ist', () => {
+    expect(woodpeckerDailyGoal(wp(358, 10), at(23, 9))).toEqual({ today: 10, target: 40, open: 30, days: 1, reached: false });
+    expect(woodpeckerDailyGoal(wp(388, 40), at(23, 9))).toEqual({ today: 40, target: 40, open: 0, days: 1, reached: true });
+  });
+
+  it('Zyklus beginnt heute: die heutigen Aufgaben sind alle bisherigen', () => {
+    const now = at(18, 12);
+    const p = plan([
+      cycle({ start: now - 40 * DAY, days: 28, attempted: 100, finishedAt: 'x' }),
+      cycle({ number: 2, start: now - 10 * 60_000, days: 7, attempted: 5, solved: 5, timeSeconds: 300 }),   // Frist am 25. um 11:50
+    ], { setSize: 100, todayAttempted: 5 });
+    expect(woodpeckerDailyGoal(p, now)).toEqual({ today: 5, target: 13, open: 95, days: 8, reached: false });   // ⌈100 / 8⌉
+  });
+
+  it('Zyklus 1 hat kein Soll: nur die Zahl von heute, nie „erreicht“', () => {
+    const p = plan([cycle({ start: at(1), days: 28, attempted: 40, solved: 30, timeSeconds: 2400 })], { todayAttempted: 7 });
+    expect(woodpeckerDailyGoal(p, at(4))).toEqual({ today: 7, target: null, open: null, days: null, reached: false });
+  });
+
+  it('keine Anzeige: Feld fehlt (älterer Server), Frist vorbei, Pause/bereit/abgeschlossen/archiviert, ohne Plan', () => {
+    const now = at(18, 15);
+    expect(woodpeckerDailyGoal(wp(141, undefined), now)).toBeNull();          // kein „0 von 42“ aus einem fehlenden Feld
+    expect(woodpeckerDailyGoal(wp(141, 23), at(23, 15))).toBeNull();          // Frist (23., 14 Uhr) vorbei
+    for (const status of ['break', 'ready', 'completed', 'archived'] as const)
+      expect(woodpeckerDailyGoal(wp(141, 23, { status }), now)).withContext(status).toBeNull();
+    expect(woodpeckerDailyGoal(null, now)).toBeNull();
+    expect(woodpeckerDailyGoal(plan([], { todayAttempted: 3 }), now)).toBeNull();
+  });
+
+  it('„heute“ lässt sich übergeben (Statistik-Fenster: Zahl aus /stats) und ist nie größer als das im Zyklus Bearbeitete', () => {
+    const now = at(18, 15);
+    expect(woodpeckerDailyGoal(wp(141, undefined), now, 23)).toEqual({ today: 23, target: 45, open: 247, days: 6, reached: false });
+    expect(woodpeckerDailyGoal(wp(141, 5), now, 23)!.today).toBe(23);         // die übergebene Zahl gewinnt
+    expect(woodpeckerDailyGoal(wp(10, 99), now)!.today).toBe(10);             // 99 heute bei 10 im Zyklus kann nicht sein
+    expect(woodpeckerDailyGoal(wp(141, undefined), now, null)).toBeNull();
+  });
+});
+
 describe('woodpeckerOverview (Übersicht im Statistik-Fenster)', () => {
   const overlap = (over: Partial<WoodpeckerOverlap>): WoodpeckerOverlap => ({
     cycle: 1, count: 0, secondsNow: 0, secondsThen: 0, solvedNow: 0, solvedThen: 0, hintedNow: 0, hintedThen: 0,
@@ -159,7 +230,7 @@ describe('woodpeckerOverview (Übersicht im Statistik-Fenster)', () => {
     expect(woodpeckerOverview(stats([row({})]), null)).toBeNull();
   });
 
-  it('Zyklus 3: Zeit und Quote jetzt, dieselben Aufgaben je früherem Zyklus (jüngster zuerst), nötig je Tag = ⌈offen / Resttage⌉, heute', () => {
+  it('Zyklus 3: Zeit und Quote jetzt, dieselben Aufgaben je früherem Zyklus (jüngster zuerst), Tagesziel aus /stats, heute', () => {
     const s = stats([
       row({ number: 1, sameAsNow: overlap({ cycle: 1, count: 40, secondsNow: 2000, secondsThen: 5200, ratePctNow: 75, ratePctThen: 65 }) }),
       row({ number: 2, sameAsNow: overlap({ cycle: 2, count: 40, secondsNow: 2000, secondsThen: 3100, ratePctNow: 75, ratePctThen: 80 }) }),
@@ -174,8 +245,8 @@ describe('woodpeckerOverview (Übersicht im Statistik-Fenster)', () => {
     expect(o.earlier[0]).toEqual({ cycle: 2, count: 40, secondsThen: 3100, ratePctThen: 80, partial: null });
     expect(o.earlier[1].secondsThen).toBe(5200);
     expect(o.open).toBe(60);                 // 100 − 40
-    expect(o.daysLeft).toBe(3);              // Frist am 8. um 8 Uhr, jetzt der 5. um 12 Uhr → 2,8 → 3
-    expect(o.neededPerDay).toBe(20);         // ⌈60 / 3⌉
+    // Frist am 8. um 8 Uhr, jetzt der 5. um 12 Uhr → Kalendertage 5., 6., 7., 8. = 4; Soll = ⌈(60 offen + 12 heute) / 4⌉ = 18
+    expect(o.goal).toEqual({ today: 12, target: 18, open: 60, days: 4, reached: false });
     expect(o.today).toBe(12);
     expect(o.overdue).toBeFalse();
   });
@@ -208,7 +279,7 @@ describe('woodpeckerOverview (Übersicht im Statistik-Fenster)', () => {
       { days: [{ date: '2026-11-04', attempted: 7, solved: 5, timeSeconds: 420 }] });
     const o = woodpeckerOverview(s, p, at(4))!;
     expect(o.open).toBeNull();
-    expect(o.neededPerDay).toBeNull();
+    expect(o.goal).toEqual({ today: 7, target: null, open: null, days: null, reached: false });   // kein Soll
     expect(o.perDay).toBe(10);
     expect(o.today).toBe(7);
     expect(o.earlier).toEqual([]);
@@ -221,7 +292,7 @@ describe('woodpeckerOverview (Übersicht im Statistik-Fenster)', () => {
     ]);
     const o = woodpeckerOverview(stats([row({ number: 1 }), row({ number: 2 })]), p, at(5))!;
     expect(o.overdue).toBeTrue();
-    expect(o.neededPerDay).toBeNull();
+    expect(o.goal).toBeNull();
     expect(o.open).toBe(100);
     expect(o.ratePctNow).toBeNull();
     expect(o.secondsNow).toBe(0);

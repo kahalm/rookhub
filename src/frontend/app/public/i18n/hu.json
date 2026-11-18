@@ -6547,10 +6547,13 @@
       "sameNote": "Korábbi ciklusok: idő és arány ugyanazokon a feladatokon, mint most.",
       "partial": "{{k}}. ciklus: csak {{n}} közös feladat – ezeken most {{time}}, {{pct}} helyes.",
       "partialOne": "{{k}}. ciklus: csak {{n}} közös feladat – ezen most {{time}}, {{pct}} helyes.",
-      "neededLabel": "Naponta szükséges",
-      "neededHow": "{{open}} hátra ÷ {{days}} nap",
-      "neededHowOneDay": "{{open}} hátra ÷ {{days}} nap",
       "todayLabel": "Ma"
+    },
+    "daily": {
+      "count": "{{today}} / {{target}}",
+      "reached": "Napi cél teljesítve",
+      "how": "{{open}} hátra + {{today}} ma, {{days}} napra elosztva",
+      "howLastDay": "{{open}} hátra + {{today}} ma, ma van az utolsó nap"
     },
     "stats": {
       "solvedCount": "{{solved}}/{{done}} megoldva",

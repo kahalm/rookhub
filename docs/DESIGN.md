@@ -768,11 +768,25 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   früherem Zyklus „Zyklus k“ (jüngster zuerst), Zeilen „Zeit“ (`formatSecondsClock`) und „Richtig“ (`| pct`); die
   früheren Zyklen zeigen DIESELBEN Aufgaben wie jetzt (ein leiser Satz sagt es). Ist die Schnittmenge kleiner als die
   jetzt bearbeiteten Aufgaben, steht je betroffenem Zyklus ein Satz mit Anzahl und den Jetzt-Werten auf genau diesen
-  Aufgaben — nie Gesamtzeit gegen Teilmenge. Darunter eine `.rh-dots`-Zeile „Nötig je Tag: **50** (247 offen ÷ 5 Tage)
-  · Heute: **23**“: Beschriftung leise, Zahl halbfett, Rechnung klein in Klammern; nötig = ⌈offen / Resttage⌉. Frist
-  vorbei → „Frist überschritten“ (`--rh-warn`) + „n offen“ statt der Soll-Zahl; Zyklus 1 hat kein Soll (der Satz wächst)
-  → „bisher n pro Tag“ + „Heute“. Ohne Versuch „–“ statt 0:00 / 0 %, das Soll je Tag steht trotzdem. Die Tabelle hat
-  ihren eigenen `overflow-x: auto`-Kasten (viele Zyklen, 4.4).
+  Aufgaben — nie Gesamtzeit gegen Teilmenge. Darunter eine `.rh-dots`-Zeile mit dem **Tagesziel** (seit 0.993.0, der
+  geteilte Baustein unten): „Heute: 23 von 45“ in Textfarbe bzw. grüner Haken + „Tagesziel erreicht“, dahinter klein in
+  Klammern die Herleitung „(247 offen + 23 heute, verteilt auf 6 Tage)“. Frist vorbei → „Frist überschritten“
+  (`--rh-warn`) + „n offen“ + „Heute: n“ statt des Ziels; Zyklus 1 hat kein Soll (der Satz wächst) → „bisher n pro Tag“
+  + „Heute“. Ohne Versuch „–“ statt 0:00 / 0 %, das Tagesziel steht trotzdem. Die Tabelle hat ihren eigenen
+  `overflow-x: auto`-Kasten (viele Zyklen, 4.4).
+- **Woodpecker-Tagesziel = EIN Baustein an drei Stellen** (0.993.0, Nutzerwunsch 18.11.2026: „oben auch ohne Statistik
+  visualisieren, wenn ich heute das notwendige Minimum erledigt habe (sowohl im Dashboard als auch wenn ich drinnen
+  bin)“, „grüne Checkmark oder so vielleicht“): `app-woodpecker-daily-goal` (`features/woodpecker/`) steht im Löser-Kopf
+  als LETZTE Angabe der Zyklus-Zeile (`.wp-meta.rh-dots`, bricht als Ganzes um), auf der Dashboard-Kachel als eigene
+  Zeile unter der Frist (8.1) und im Statistik-Fenster in der Je-Tag-Zeile. **Noch offen:** leise „Heute: 23 von 45“
+  (Farbe der Zeile, `tabular-nums`), kein Symbol. **Erreicht:** Symbol `check_circle` (1,3 em) und „Tagesziel erreicht“
+  halbfett in `--rh-success`, die Zahl „45 von 45“ klein dahinter — das Hauptzeichen ist der grüne Haken, die Bedeutung
+  steht aber immer auch als Klartext daneben (nie nur Farbe/Symbol: 7, E-Ink 3.6; das Symbol ist `aria-hidden`, kein
+  Tooltip nötig). **Zyklus 1** (kein Soll): nur „Heute: n“. Kein Ziel (Pause, bereit, abgeschlossen, archiviert, Frist
+  überschritten, Server ohne `todayAttempted`) → der Baustein wird gar nicht gerendert, damit in der `.rh-dots`-Zeile
+  kein Trennpunkt ohne Angabe steht. Kein zweiter Fortschrittsbalken (der Zyklus-Balken bleibt der einzige). Das Soll
+  ist über den Tag fest (`⌈(offen + heute) / Kalendertage bis zur Frist⌉`, `docs/api/woodpecker.md`), damit „erreicht“
+  auch erreichbar ist und alle drei Stellen dieselbe Zahl zeigen.
   **Darunter** leise (0,85 rem, `--mat-sys-on-surface-variant`, `tabular-nums`) in Abschnitten mit kleiner h3 (0,85 rem,
   halbfett, `--mat-sys-on-surface`), feste Reihenfolge, und nichts doppelt zur Übersicht: Dieser Zyklus („127 von 141
   gelöst“ halbfett ohne Quote, „121 ohne Tipp“, „9 mit Tipp“ in `--rh-hint`, „Ø 0:51 je Aufgabe“; Hochrechnung „Rest ≈ …
@@ -1004,7 +1018,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   damit man sie vorab einordnen kann. **Woodpecker-Kachel** (0.955.0, `features/dashboard/woodpecker-tile.component.ts`):
   das laufende Training (nicht abgeschlossen; bei mehreren das zuletzt bewegte), Untertitel „Zyklus N von 7 · Status“
   (`.sub-part`), darunter der Name (bis zwei Zeilen), in Zyklus 1 „Satz: n Aufgaben von N“, ab Zyklus 2 „n von N
-  erledigt“ mit 6-px-Balken, dann „noch N Tage“ bzw. „Frist überschritten“ (`--rh-warn`); genau eine Aktion: „Weiter
+  erledigt“ mit 6-px-Balken, dann „noch N Tage“ bzw. „Frist überschritten“ (`--rh-warn`), darunter seit 0.993.0 das
+  Tagesziel als eigene leise Zeile (0,85 rem; „Heute: 23 von 45“ bzw. grüner Haken + „Tagesziel erreicht“, Baustein
+  aus 5.12; nur solange der Zyklus läuft und die Frist nicht vorbei ist); genau eine Aktion: „Weiter
   lösen“ (Kurs-Löser, gefüllt), bereit → „Zyklus N starten“ (gefüllt, startet den Zyklus direkt und springt in den Löser;
   während des Aufrufs gesperrt mit 16-px-Spinner statt Symbol, Fehler als Snackbar mit dem API-Grund; seit 0.958.0,
   vorher „Zur Übersicht“), Pause → Pause-Satz + Textknopf „Zur Übersicht“. Kein Prozent-Text; nur mit Menüpunkt
@@ -1422,6 +1438,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-18 | 0.993.0 · Woodpecker | Tagesziel ohne Statistik-Fenster: geteilter Baustein `app-woodpecker-daily-goal` im Löser-Kopf (letzte Angabe der Zyklus-Zeile), auf der Dashboard-Kachel (eigene Zeile unter der Frist) und im Statistik-Fenster (ersetzt dort „Nötig je Tag: n (offen ÷ Resttage) · Heute: n“); offen leise „Heute: 23 von 45“, erreicht grüner Haken `check_circle` + „Tagesziel erreicht“ in `--rh-success` + Zahl klein, Zyklus 1 nur „Heute: n“; das Soll ist über den Tag fest (5.12, 8.1) | Ob das heutige Minimum geschafft ist, stand nur im Statistik-Fenster, und die Soll-Zahl dort sank mit jeder gelösten Aufgabe — „erreicht“ gab es nicht | Nutzerwunsch 18.11.2026 („oben auch ohne statistik visualisieren, wenn ich heute das notwendige minimum erledigt habe (sowohl im dashboard als auch wenn ich drinnen bin)“, „grüne checkmark oder so vielleicht“) |
 | 2026-11-18 | 0.992.0 · Woodpecker-Löser | Statistik als modaler Inhalts-Dialog (760 px / 94vw) statt aufklappbarem Block in der Kontext-Card (löst die Einträge 0.957.0 und 0.958.1 ab): Knopf „Statistik“ (`bar_chart`) unter der Zyklus-Zeile; oben Übersicht in Lesegröße — Tabelle „Bisher“ gegen dieselben Aufgaben je früherem Zyklus (Zeit, Richtig), „Nötig je Tag: n (offen ÷ Resttage) · Heute: n“; darunter die bisherigen Abschnitte ohne Doppeltes; solange das Fenster offen ist, steht die Lösezeit und das Brett ist unkenntlich (Blur), Hauptknopf „Weiter lösen“ (5.12) | Die wichtigsten Zahlen standen mitten in einem langen Block in der Seitenspalte; beim Lesen lief die Uhr der Aufgabe weiter | Nutzerwunsch 18.11. |
 | 2026-11-16 | 0.987.0 · Trainer-Notizbuch | Unterseite `/training-videos/notebook`: Themen „Sagt er immer wieder“ mit Häufigkeit, Eröffnungsempfehlungen mit Mini-Brett + Repertoire-Satz, alle Notizen als Kategorie-Reiter (Chip-Liste mit Anzahl) je Stunde, Aufklapper „▶ anhören“/„Rohzitat“ je Notiz (8.1) | Trainer-Aussagen stundenübergreifend nachschlagen statt Stunde für Stunde | Auftrag der betreuenden Sitzung 16.11. |
 | 2026-11-16 | 0.986.0 · Trainerstunden | Neue Seiten `/training-videos` (Liste + Suche), Stunde (Video + Brett + Segmentliste, Liste folgt dem Video), Nachspielen (Zug finden, Hinweis/Auflösen/Überspringen, Ausschnitt-Player „Erklärung hören“ mit „nur Ton“, im E-Ink-Modus vorgewählt) und die Karte „Trainerkommentar“ an der eigenen Partie, getrennt von der Engine-Erklärung (8.1) | Erste Video-Seite der App; Trainer- und Engine-Aussagen dürfen nicht verwechselt werden; E-Ink zeigt bewegtes Bild nur verschmiert | Auftrag der betreuenden Sitzung 16.11. |

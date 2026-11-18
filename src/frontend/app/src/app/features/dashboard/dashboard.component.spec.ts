@@ -791,4 +791,21 @@ describe('DashboardComponent Woodpecker-Kachel', () => {
     expect(ok.component.woodpeckerPlan?.id).toBe(6);
     expect(JSON.parse(localStorage.getItem(CACHE_KEY)!).woodpeckerPlan.id).toBe(6);
   });
+
+  // 0.993.0: „heute bearbeitet“ aus dem Zwischenstand kann von gestern sein — die Kachel zeigte dann fälschlich
+  // „Tagesziel erreicht“, offline sogar dauerhaft.
+  it('todayAttempted kommt nie aus dem Zwischenstand, nur frisch vom Server', () => {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      repertoireCount: 0, courseCount: 0, pinnedCourses: [], subscriptions: [], subscriptionCount: 0,
+      friendCount: 0, favoriteCount: 0, puzzleSolved: 0, puzzleAccuracy: 0, puzzleElo: 1500,
+      woodpeckerPlan: { ...wp(4, 'solving'), todayAttempted: 50 },
+    }));
+    const offline = mount({ menu: [...MENU, 'woodpecker'], plans: () => throwError(() => new Error('offline')) });
+    expect(offline.component.woodpeckerPlan?.id).toBe(4);
+    expect(offline.component.woodpeckerPlan?.todayAttempted).toBeUndefined();
+
+    TestBed.resetTestingModule();
+    const online = mount({ menu: [...MENU, 'woodpecker'], plans: () => of([{ ...wp(4, 'solving'), todayAttempted: 7 }]) });
+    expect(online.component.woodpeckerPlan?.todayAttempted).toBe(7);
+  });
 });

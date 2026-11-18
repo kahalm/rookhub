@@ -6,7 +6,7 @@
     @if (loading()) { <mat-progress-bar class="wps-busy" mode="indeterminate" /> }
     @if (error()) { <app-load-error [error]="error()" (retry)="retry()" /> }
     <!-- 0 Übersicht (Wunsch 2026-11-18): bisherige Zeit und Quote, daneben DIESELBEN Aufgaben je früherem Zyklus
-         (jüngster zuerst); darunter nötig je Tag = ⌈offen / Resttage⌉ und heute. Steht auch ohne Versuch (Soll je Tag). -->
+         (jüngster zuerst); darunter das Tagesziel (heute n von Soll). Steht auch ohne Versuch (Soll je Tag). -->
     @if (overview(); as o) {
       <section class="wps-top">
         <div class="wps-scroll">
@@ -43,23 +43,31 @@
             <p class="wps-line wps-ov-partial">{{ (e.count === 1 ? 'woodpecker.overview.partialOne' : 'woodpecker.overview.partial') | translate: { k: e.cycle, n: e.count, time: clock(pt.secondsNow), pct: (pt.ratePctNow === null ? '–' : (pt.ratePctNow | pct)) } }}</p>
           }
         }
-        <!-- Je Tag: Beschriftung leise, die Zahl halbfett, die Rechnung in Klammern dahinter (offen ÷ Resttage). -->
+        <!-- Je Tag (0.993.0): das Tagesziel — derselbe Baustein und dieselbe Zahl wie auf der Dashboard-Kachel und im
+             Löser-Kopf („Heute: 23 von 50“, erreicht mit grünem Haken); dahinter klein, woraus das Soll entsteht. Nach
+             der Frist und in Zyklus 1 (kein Soll) die bisherigen Angaben. -->
         <p class="wps-line rh-dots wps-ov-day">
           @if (o.overdue) {
             <span class="wps-late">{{ 'woodpecker.overdue' | translate }}</span>
             @if (o.open !== null) {
               <span class="wps-ov-open">{{ 'woodpecker.stats.open' | translate: { n: o.open } }}</span>
             }
-          } @else if (o.neededPerDay !== null) {
-            <span class="wps-ov-needed">{{ 'woodpecker.overview.neededLabel' | translate }}: <strong>{{ o.neededPerDay }}</strong><span class="wps-ov-how">&ngsp;({{ (o.daysLeft === 1 ? 'woodpecker.overview.neededHowOneDay' : 'woodpecker.overview.neededHow') | translate: { open: o.open, days: o.daysLeft } }})</span></span>
-          } @else if (o.open !== null) {
-            <span class="wps-ov-open">{{ 'woodpecker.stats.open' | translate: { n: o.open } }}</span>
+            <span class="wps-ov-today">{{ 'woodpecker.overview.todayLabel' | translate }}: <strong>{{ o.today }}</strong></span>
+          } @else if (dailyTarget(); as g) {
+            <!-- EIN Kind der .rh-dots-Zeile: zwischen Ziel und Herleitung steht kein Trennpunkt. -->
+            <span class="wps-ov-goal-row">
+              <app-woodpecker-daily-goal class="wps-ov-goal" [goal]="g" />
+              <span class="wps-ov-how">({{ (g.days === 1 ? 'woodpecker.daily.howLastDay' : 'woodpecker.daily.how') | translate: { open: g.open, today: g.today, days: g.days } }})</span>
+            </span>
+          } @else {
+            @if (o.open !== null) {
+              <span class="wps-ov-open">{{ 'woodpecker.stats.open' | translate: { n: o.open } }}</span>
+            } @else if (o.attempted > 0) {
+              <!-- Zyklus 1: der Satz wächst noch, es gibt kein Soll — das bisherige Tempo statt einer erfundenen Zahl. -->
+              <span class="wps-ov-pace">{{ 'woodpecker.stats.pace' | translate: { n: (o.perDay | number: '1.0-1') } }}</span>
+            }
+            <span class="wps-ov-today">{{ 'woodpecker.overview.todayLabel' | translate }}: <strong>{{ o.today }}</strong></span>
           }
-          @if (o.open === null && o.attempted > 0) {
-            <!-- Zyklus 1: der Satz wächst noch, es gibt kein Soll — das bisherige Tempo statt einer erfundenen Zahl. -->
-            <span class="wps-ov-pace">{{ 'woodpecker.stats.pace' | translate: { n: (o.perDay | number: '1.0-1') } }}</span>
-          }
-          <span class="wps-ov-today">{{ 'woodpecker.overview.todayLabel' | translate }}: <strong>{{ o.today }}</strong></span>
         </p>
       </section>
     }

@@ -12,6 +12,8 @@ import { CourseLangPickerComponent } from '../courses/course-lang-picker.compone
 import { CourseLineEbookRef, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { WeeklyMode } from '../weekly/weekly.service';
 import { WoodpeckerPlan } from '../woodpecker/woodpecker.service';
+import { WoodpeckerDailyGoalComponent } from '../woodpecker/woodpecker-daily-goal.component';
+import { woodpeckerDailyGoal } from '../woodpecker/woodpecker-stats.util';
 import { BookPuzzleDto } from './puzzle.service';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { CourseStatsPanelComponent } from './course-stats-panel.component';
@@ -28,6 +30,7 @@ import { dailyDateValue } from './book-daily-mode';
   imports: [
     DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatTooltipModule,
     TranslatePipe, IconLabelDirective, CourseLangPickerComponent, PuzzleTagsComponent, CourseStatsPanelComponent,
+    WoodpeckerDailyGoalComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './book-context-card.component.html',
@@ -129,6 +132,11 @@ export class BookContextCardComponent {
   readonly randomInBook = output<void>();
   readonly prevDaily = output<void>();
   readonly nextDaily = output<void>();
+
+  /** Woodpecker-Tagesziel im Plan-Kopf („Heute: 23 von 50“, erreicht mit grünem Haken; 0.993.0) — aus dem Plan, der
+   *  nach jeder gemeldeten Aufgabe neu hereinkommt. `null` = keine Anzeige (kein laufender Zyklus, Frist vorbei,
+   *  Server ohne `todayAttempted`). */
+  readonly woodpeckerGoal = computed(() => (this.inWoodpecker() ? woodpeckerDailyGoal(this.woodpeckerPlan()) : null));
 
   /** Tag des Tagespuzzles als Datum für die DatePipe (nur mit Tagespuzzle). */
   readonly day = computed(() => (this.isDaily() ? dailyDateValue(this.dailyDate()) : null));

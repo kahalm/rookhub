@@ -6547,10 +6547,13 @@
       "sameNote": "Raniji ciklusi: vrijeme i postotak na istim zadacima kao sada.",
       "partial": "Ciklus {{k}}: samo {{n}} zajedničkih zadataka – na njima sada {{time}}, {{pct}} točno.",
       "partialOne": "Ciklus {{k}}: samo {{n}} zajednički zadatak – na njemu sada {{time}}, {{pct}} točno.",
-      "neededLabel": "Potrebno dnevno",
-      "neededHow": "{{open}} preostalo ÷ {{days}} dana",
-      "neededHowOneDay": "{{open}} preostalo ÷ {{days}} dan",
       "todayLabel": "Danas"
+    },
+    "daily": {
+      "count": "{{today}} od {{target}}",
+      "reached": "Dnevni cilj postignut",
+      "how": "{{open}} preostalo + {{today}} danas, raspoređeno na {{days}} dana",
+      "howLastDay": "{{open}} preostalo + {{today}} danas, danas je zadnji dan"
     },
     "stats": {
       "solvedCount": "riješeno {{solved}} od {{done}}",

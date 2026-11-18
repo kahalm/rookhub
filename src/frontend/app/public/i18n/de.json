@@ -6547,10 +6547,13 @@
       "sameNote": "Frühere Zyklen: Zeit und Quote auf denselben Aufgaben wie jetzt.",
       "partial": "Zyklus {{k}}: nur {{n}} gemeinsame Aufgaben – darauf jetzt {{time}}, {{pct}} richtig.",
       "partialOne": "Zyklus {{k}}: nur {{n}} gemeinsame Aufgabe – darauf jetzt {{time}}, {{pct}} richtig.",
-      "neededLabel": "Nötig je Tag",
-      "neededHow": "{{open}} offen ÷ {{days}} Tage",
-      "neededHowOneDay": "{{open}} offen ÷ {{days}} Tag",
       "todayLabel": "Heute"
+    },
+    "daily": {
+      "count": "{{today}} von {{target}}",
+      "reached": "Tagesziel erreicht",
+      "how": "{{open}} offen + {{today}} heute, verteilt auf {{days}} Tage",
+      "howLastDay": "{{open}} offen + {{today}} heute, heute ist der letzte Tag"
     },
     "stats": {
       "solvedCount": "{{solved}} von {{done}} gelöst",

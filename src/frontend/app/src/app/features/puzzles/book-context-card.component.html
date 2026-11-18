@@ -33,6 +33,11 @@
                 <span>{{ 'woodpecker.cycleProgress' | translate: { done: woodpeckerAttempted(), total: p.setSize } }}</span>
               }
               <span>{{ (woodpeckerDaysLeft() === 1 ? 'woodpecker.daysLeftOne' : 'woodpecker.daysLeft') | translate: { days: woodpeckerDaysLeft() } }}</span>
+              <!-- Tagesziel (0.993.0): „Heute: 23 von 50“, erreicht mit grünem Haken — läuft mit jeder gemeldeten
+                   Aufgabe mit (der Plan kommt aus der Antwort). Ohne Ziel kein Element (sonst stünde ein Trennpunkt). -->
+              @if (woodpeckerGoal(); as g) {
+                <app-woodpecker-daily-goal class="wp-daily" [goal]="g" />
+              }
             </div>
             <!-- Statistik als Fenster (Wunsch 2026-11-18, DESIGN 5.12): kleiner Rahmenknopf in eigener Zeile unter der
                  Zyklus-Zeile (0.958.1: ein Textlink am Zeilenende wurde nicht gefunden). Der Löser öffnet das Fenster

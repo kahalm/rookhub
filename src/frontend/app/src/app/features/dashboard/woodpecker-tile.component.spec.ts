@@ -40,6 +40,7 @@ function render(p: WoodpeckerPlan | null, service: Partial<WoodpeckerService> = 
       ready: 'Cycle {{n}} is ready: {{size}} puzzles in {{days}} days.',
       readyOne: 'Cycle {{n}} is ready: {{size}} puzzles in {{days}} day.',
       startCycle: 'Start cycle {{n}}', saveFailed: 'Saving failed.',
+      overview: { todayLabel: 'Today' }, daily: { count: '{{today}} of {{target}}', reached: 'Daily goal reached' },
     },
     apiErrors: { woodpecker_archived: 'This training is archived.' },
   });
@@ -53,6 +54,69 @@ function render(p: WoodpeckerPlan | null, service: Partial<WoodpeckerService> = 
 }
 
 describe('WoodpeckerTileComponent (Dashboard-Kachel)', () => {
+  // 0.993.0, Wunsch 18.11.: „auch ohne Statistik visualisieren, wenn ich heute das notwendige Minimum erledigt habe
+  // (sowohl im Dashboard …)“ — Zahlen: Satz 388, Frist übermorgen Mittag = 3 Kalendertage inkl. heute.
+  describe('Tagesziel', () => {
+    const noonIn = (n: number) => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, 12, 0, 0).toISOString(); };
+    const running = (attempted: number, todayAttempted: number | undefined, over: Partial<WoodpeckerPlan> = {}) =>
+      plan('solving', [cycle(1, { finishedAt: iso(-4 * DAY) }), cycle(2, { targetDays: 14, attempted, deadline: noonIn(2) })],
+        { setSize: 388, todayAttempted, ...over });
+    const goalText = (el: HTMLElement) => Array.from(el.querySelectorAll('.wp-daily .wdg > *')).map(x => x.textContent!.trim());
+
+    it('noch offen: leise Zeile „Heute: 23 von 90“ unter der Frist, ohne Haken', () => {
+      // 141 bearbeitet → 247 offen; Soll = ⌈(247 + 23) / 3⌉ = 90
+      const { el } = render(running(141, 23));
+      expect(goalText(el)).toEqual(['Today:', '23 of 90']);
+      expect(el.querySelector('.wp-daily mat-icon')).toBeNull();
+      const lines = Array.from(el.querySelectorAll('.wp-content > *')).map(x => x.className.split(' ')[0]);
+      expect(lines.indexOf('wp-daily')).toBe(lines.indexOf('wp-deadline') + 1);
+    });
+
+    it('genau erreicht: grüner Haken + „Tagesziel erreicht“', () => {
+      // 208 bearbeitet → 180 offen; Soll = ⌈(180 + 90) / 3⌉ = 90
+      const { el } = render(running(208, 90));
+      expect(goalText(el)).toEqual(['check_circle', 'Daily goal reached', '90 of 90']);
+      expect(el.querySelector('.wp-daily .wdg-done mat-icon.wdg-check')).not.toBeNull();
+    });
+
+    it('übererfüllt: bleibt erreicht', () => {
+      const { el } = render(running(218, 100));   // 170 offen; Soll = ⌈270 / 3⌉ = 90
+      expect(goalText(el)).toEqual(['check_circle', 'Daily goal reached', '100 of 90']);
+    });
+
+    it('älterer Server ohne todayAttempted: keine Zeile (kein falsches „0 von n“)', () => {
+      const { el } = render(running(141, undefined));
+      expect(el.querySelector('.wp-daily')).toBeNull();
+      expect(el.querySelector('app-woodpecker-daily-goal')).toBeNull();
+    });
+
+    it('Zyklus 1 hat kein Soll: nur „Heute: 5“', () => {
+      const { el } = render(plan('solving', [cycle(1, { attempted: 12 })], { todayAttempted: 5 }));
+      expect(goalText(el)).toEqual(['Today:', '5']);
+      expect(el.querySelector('.wp-daily mat-icon')).toBeNull();
+    });
+
+    it('Frist vorbei, Pause und bereit: kein Tagesziel', () => {
+      const late = render(plan('solving', [cycle(1, { finishedAt: iso(-9 * DAY) }), cycle(2, { attempted: 3, deadline: iso(-DAY) })], { todayAttempted: 3 }));
+      expect(late.el.querySelector('.wp-daily')).toBeNull();
+      expect(late.text).toContain('Deadline passed');
+      TestBed.resetTestingModule();
+      const pause = render(plan('break', [cycle(1, { finishedAt: iso(-3_600_000) })], { nextCycleAt: iso(DAY), todayAttempted: 40 }));
+      expect(pause.el.querySelector('.wp-daily')).toBeNull();
+      TestBed.resetTestingModule();
+      const ready = render(plan('ready', [cycle(1, { finishedAt: iso(-2 * DAY) })], { todayAttempted: 0 }));
+      expect(ready.el.querySelector('.wp-daily')).toBeNull();
+    });
+
+    it('neuer Planstand (z. B. nach dem Lösen zurück im Dashboard): die Zeile wechselt auf erreicht', () => {
+      const { fixture, el } = render(running(207, 89));   // 181 offen; Soll = ⌈270 / 3⌉ = 90
+      expect(goalText(el)).toEqual(['Today:', '89 of 90']);
+      fixture.componentRef.setInput('plan', running(208, 90));
+      fixture.detectChanges();
+      expect(goalText(el)).toEqual(['check_circle', 'Daily goal reached', '90 of 90']);
+    });
+  });
+
   it('solving, Zyklus 1: Name, Satzgröße, Resttage, genau eine Hauptaktion „Weiter lösen“ in den Kurs-Löser', () => {
     const { el, actions, text } = render(plan('solving', [cycle(1)]));
     expect(el.querySelector('.wp-name')!.textContent!.trim()).toBe('Taktik 1');

@@ -16,6 +16,12 @@ describe('WoodpeckerStatsPanelComponent (0.957.0, Übersicht 2026-11-18)', () =>
 
   const DAY = 86_400_000;
   const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY).toISOString();
+  /** Mittag in n Tagen (Ortszeit): von heute bis dorthin sind es — unabhängig von der Uhrzeit des Testlaufs — genau
+   *  n + 1 Kalendertage (heute und der Fristtag zählen mit). */
+  const noonIn = (n: number) => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, 12, 0, 0).toISOString(); };
+  /** Frist heute kurz vor Mitternacht: heute ist der letzte Tag. */
+  const endOfToday = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).toISOString(); };
+  const DAILY = { count: '{{today}} of {{target}}', how: '{{open}}+{{today}}:{{days}}', howLastDay: '{{open}}+{{today}} last day', reached: 'goal reached' };
   /** Zyklus 2 läuft seit gestern, Frist in 12,5 Tagen (→ „noch 13 Tage“). Der Plan trägt bewusst ALTE Zahlen im
    *  laufenden Zyklus (solved/timeSeconds 0): gezeigt wird der Stand aus `/stats`. */
   const plan = (attempted: number, over: Partial<WoodpeckerPlan> = {}): WoodpeckerPlan => ({
@@ -101,23 +107,42 @@ describe('WoodpeckerStatsPanelComponent (0.957.0, Übersicht 2026-11-18)', () =>
     expect(el.querySelector('.wps-ov-partial')).toBeNull();      // 73 gemeinsam = 73 bearbeitet: nichts zu erklären
   });
 
-  it('Übersicht „je Tag“: nötig = ⌈offen / Resttage⌉ mit den Zahlen aus /stats, daneben heute', () => {
-    make(plan(70), { woodpecker: { overview: { neededLabel: 'need', neededHow: '{{open}}:{{days}}', todayLabel: 'today' } } });   // Plan: 70, /stats: 73
+  it('Übersicht „je Tag“: das Tagesziel mit den Zahlen aus /stats — „heute n von Soll“ und woraus das Soll entsteht', () => {
+    const p = plan(70);                       // Plan: 70, /stats: 73
+    p.cycles[1].deadline = noonIn(12);        // 13 Kalendertage inkl. heute
+    make(p, { woodpecker: { overview: { todayLabel: 'today' }, daily: DAILY } });
     expectStats().flush(stats2({ days: [{ date: '2020-01-01', attempted: 61, solved: 45, timeSeconds: 4000 }, { date: todayYmd(), attempted: 12, solved: 10, timeSeconds: 1106 }] }));
     fixture.detectChanges();
     const day = el.querySelector('.wps-ov-day')!;
-    expect(cells(day).map(squash)).toEqual(['need: 25 (315:13)', 'today: 12']);   // 388 − 73 = 315 offen, ⌈315 / 13⌉ = 25
+    // 388 − 73 = 315 offen; Soll = ⌈(315 + 12 heute) / 13⌉ = 26 — fest über den Tag, nicht mehr ⌈offen / Resttage⌉
+    expect(cells(day.querySelector('.wps-ov-goal-row')).map(squash)).toEqual(['today:12 of 26', '(315+12:13)']);
     expect(day.classList).toContain('rh-dots');
-    expect(Array.from(day.querySelectorAll('strong')).map(x => x.textContent)).toEqual(['25', '12']);   // die Zahlen halbfett
+    expect(day.children.length).toBe(1);   // Ziel + Herleitung sind EIN Kind: kein Trennpunkt dazwischen
+    expect(day.querySelector('.wps-ov-goal-row')!.firstElementChild?.tagName.toLowerCase()).toBe('app-woodpecker-daily-goal');   // derselbe Baustein wie Kachel und Löser-Kopf
+    expect(day.querySelector('.wdg-check')).toBeNull();          // nicht erreicht: kein Haken
+    expect(day.querySelector('.wdg-done')).toBeNull();
   });
 
-  it('heute noch nichts bearbeitet: „heute 0“ (letzter Tageseintrag ist älter); ein Resttag in der Einzahl', () => {
+  it('Tagesziel erreicht: grüner Haken und „Tagesziel erreicht“ stehen auch im Fenster', () => {
     const p = plan(73);
-    p.cycles[1].deadline = iso(0.5);
-    make(p, { woodpecker: { overview: { neededLabel: 'need', neededHowOneDay: '{{open}}:{{days}} day', todayLabel: 'today' } } });
+    p.cycles[1].deadline = noonIn(12);
+    make(p, { woodpecker: { overview: { todayLabel: 'today' }, daily: DAILY } });
+    expectStats().flush(stats2({ days: [{ date: '2020-01-01', attempted: 43, solved: 30, timeSeconds: 3000 }, { date: todayYmd(), attempted: 30, solved: 25, timeSeconds: 2106 }] }));
+    fixture.detectChanges();
+    const goal = el.querySelector('.wps-ov-day app-woodpecker-daily-goal')!;
+    expect(goal.querySelector('.wdg-done mat-icon.wdg-check')?.textContent?.trim()).toBe('check_circle');
+    expect(goal.querySelector('.wdg-reached')?.textContent).toContain('goal reached');
+    expect(goal.querySelector('.wdg-count')?.textContent?.trim()).toBe('30 of 27');   // ⌈(315 + 30) / 13⌉ = 27
+    expect(el.querySelector('.wps-ov-how')?.textContent?.trim()).toBe('(315+30:13)');
+  });
+
+  it('heute noch nichts bearbeitet: „heute 0“ (letzter Tageseintrag ist älter); am letzten Tag ist alles Offene das Soll', () => {
+    const p = plan(73);
+    p.cycles[1].deadline = endOfToday();
+    make(p, { woodpecker: { overview: { todayLabel: 'today' }, daily: DAILY } });
     expectStats().flush(stats2());   // Tage 9./10.11.2026
     fixture.detectChanges();
-    expect(cells(el.querySelector('.wps-ov-day')).map(squash)).toEqual(['need: 315 (315:1 day)', 'today: 0']);
+    expect(cells(el.querySelector('.wps-ov-day .wps-ov-goal-row')).map(squash)).toEqual(['today:0 of 315', '(315+0 last day)']);
   });
 
   it('Frist vorbei: „Frist überschritten“ + offen statt einer Soll-Zahl', () => {
@@ -129,7 +154,7 @@ describe('WoodpeckerStatsPanelComponent (0.957.0, Übersicht 2026-11-18)', () =>
     const day = el.querySelector('.wps-ov-day')!;
     expect(cells(day).map(squash)).toEqual(['woodpecker.overdue', 'woodpecker.stats.open', 'woodpecker.overview.todayLabel: 0']);
     expect(day.querySelector('.wps-late')).not.toBeNull();
-    expect(day.querySelector('.wps-ov-needed')).toBeNull();
+    expect(day.querySelector('app-woodpecker-daily-goal')).toBeNull();   // nach der Frist kein Tagesziel
   });
 
   it('mehrere frühere Zyklen: jüngster zuerst; kleinere Schnittmenge wird mit den Jetzt-Werten auf diesen Aufgaben ausgewiesen', () => {
@@ -217,7 +242,7 @@ describe('WoodpeckerStatsPanelComponent (0.957.0, Übersicht 2026-11-18)', () =>
     expect(cells(table.querySelector('.wps-ov-time'))[1]).toBe('1:25:06');
     expect(el.querySelector('.wps-ov-note')).toBeNull();
     expect(cells(el.querySelector('.wps-ov-day')).map(squash)).toEqual(['woodpecker.stats.pace', 'woodpecker.overview.todayLabel: 0']);
-    expect(el.querySelector('.wps-ov-needed')).toBeNull();
+    expect(el.querySelector('.wps-ov-day app-woodpecker-daily-goal')).toBeNull();   // Zyklus 1: kein Soll
     expect(el.querySelector('.wps-cycle')?.textContent).toContain('woodpecker.stats.projection');
     expect(el.querySelector('.wps-same')).toBeNull();
     expect(el.querySelector('.wps-forecast')).toBeNull();
@@ -229,8 +254,10 @@ describe('WoodpeckerStatsPanelComponent (0.957.0, Übersicht 2026-11-18)', () =>
     expect(el.querySelector('.wps-buckets-line')).not.toBeNull();
   });
 
-  it('ohne Versuch im Zyklus: Leerzustand statt Nullen — die Übersicht nennt trotzdem das Soll je Tag und „heute 0“', () => {
-    make(plan(0), { woodpecker: { overview: { neededLabel: 'need', neededHow: '{{open}}:{{days}}', todayLabel: 'today' } } });
+  it('ohne Versuch im Zyklus: Leerzustand statt Nullen — die Übersicht nennt trotzdem das Tagesziel („heute 0 von Soll“)', () => {
+    const p0 = plan(0);
+    p0.cycles[1].deadline = noonIn(12);
+    make(p0, { woodpecker: { overview: { todayLabel: 'today' }, daily: DAILY } });
     expectStats().flush(stats2({ days: [], changes: null, forecast: null,
       cycles: [row({}), row({ number: 2, attempted: 0, solved: 0, solvedClean: 0, timeSeconds: 0, ratePct: null, avgSeconds: null })] }));
     fixture.detectChanges();
@@ -239,7 +266,7 @@ describe('WoodpeckerStatsPanelComponent (0.957.0, Übersicht 2026-11-18)', () =>
     const table = el.querySelector('table.wps-overview')!;
     expect(cells(table.querySelector('.wps-ov-time'))[1]).toBe('–');   // keine vorgetäuschte 0:00
     expect(cells(table.querySelector('.wps-ov-rate'))[1]).toBe('–');
-    expect(cells(el.querySelector('.wps-ov-day')).map(squash)).toEqual(['need: 30 (388:13)', 'today: 0']);   // ⌈388 / 13⌉
+    expect(cells(el.querySelector('.wps-ov-day .wps-ov-goal-row')).map(squash)).toEqual(['today:0 of 30', '(388+0:13)']);   // ⌈388 / 13⌉
   });
 
   it('Fehler: app-load-error mit Wiederholen, der Strom lebt danach weiter', () => {
