@@ -111,6 +111,27 @@ export abstract class SolverAssistBase<S extends string = never> extends SolverB
     this.elapsedSeconds = this.timer.stop();
   }
 
+  /** Lösezeit von Hand angehalten ({@link pauseTimer})? Das Brett ist dann unkenntlich (Pausieren ist keine
+   *  Gratis-Denkzeit). */
+  timerPaused = false;
+
+  /** Lösezeit anhalten, solange etwas über der Aufgabe liegt (Woodpecker-Statistik, 2026-11-18): die angezeigte Uhr
+   *  bleibt stehen und die gemeldete Zeit wächst nicht; ebenso stehen der Countdown bis zum Verdecken
+   *  (Visualisierung) und der Countdown zur nächsten Aufgabe ({@link SolverReviewBase}). Wirkt auch auf eine Aufgabe,
+   *  die währenddessen startet — sie beginnt angehalten. Idempotent. */
+  protected pauseTimer(): void {
+    this.timerPaused = true;
+    this.timer.pause();
+    this.viz.setCountdownPaused(true);   // Einprägezeit im Visualisierungsmodus läuft nicht hinter dem Fenster ab
+  }
+
+  /** Nach {@link pauseTimer} weiterlaufen lassen. Idempotent. */
+  protected resumeTimer(): void {
+    this.timerPaused = false;
+    this.timer.resume();
+    this.viz.setCountdownPaused(false);
+  }
+
   /** Stockfish-Suchtiefe (Komponente liefert ihre Einstellung). */
   protected get depth(): number { return 16; }
 

@@ -10,12 +10,18 @@
  * Bewusst kein Angular-Service: jede Solver-Instanz hält ihre eigene(n) Stoppuhr(en)
  * (pro Puzzle + ggf. pro Endless-Session). `start()` ist mehrfach aufrufbar (re-armiert,
  * ohne Listener zu stapeln); `stop()` hängt den Listener wieder ab.
+ *
+ * ANHALTEN VON HAND ({@link hold}/{@link release}, 2026-11-18): liegt ein Fenster über der Aufgabe (Woodpecker-
+ * Statistik), zählt die Zeit ebenfalls nicht — gezählt wird nur „sichtbar UND nicht angehalten“. Der Halt gehört der
+ * Uhr, nicht dem Lauf: ein `start()` während des Halts (nächste Aufgabe lädt hinter dem Fenster) beginnt angehalten
+ * und läuft erst mit `release()` los.
  */
 export class VisibilityStopwatch {
   private accumulatedMs = 0;
   private resumedAt = 0;     // Zeitstempel des laufenden sichtbaren Abschnitts (nur gültig, wenn counting)
   private counting = false;  // zählt gerade (sichtbar)
   private running = false;   // zwischen start() und stop()
+  private held = false;      // von Hand angehalten (hold() … release()), unabhängig von start()/stop()
   private readonly listener = () => this.onVisibilityChange();
 
   /**
@@ -26,10 +32,27 @@ export class VisibilityStopwatch {
     this.detach();
     this.accumulatedMs = Math.max(0, initialSeconds) * 1000;
     this.running = true;
-    this.counting = this.isVisible();
+    this.counting = this.isVisible() && !this.held;
     this.resumedAt = this.counting ? this.now() : 0;
     this.attach();
   }
+
+  /** Von Hand anhalten (idempotent): ab jetzt zählt nichts, bis {@link release} — auch über `start()` hinweg. */
+  hold(): void {
+    if (this.held) return;
+    this.held = true;
+    this.pause();
+  }
+
+  /** Halt aufheben (idempotent): läuft weiter, wenn die Uhr gestartet und der Tab sichtbar ist. */
+  release(): void {
+    if (!this.held) return;
+    this.held = false;
+    if (this.running && !this.counting && this.isVisible()) { this.counting = true; this.resumedAt = this.now(); }
+  }
+
+  /** Von Hand angehalten? */
+  get isHeld(): boolean { return this.held; }
 
   /** Aktive (sichtbare) Sekunden seit `start()`. */
   get elapsedSeconds(): number {
@@ -52,7 +75,7 @@ export class VisibilityStopwatch {
   private onVisibilityChange(): void {
     if (!this.running) return;
     if (this.isVisible()) {
-      if (!this.counting) { this.counting = true; this.resumedAt = this.now(); }   // fortsetzen
+      if (!this.counting && !this.held) { this.counting = true; this.resumedAt = this.now(); }   // fortsetzen
     } else {
       this.pause();                                                                // anhalten
     }

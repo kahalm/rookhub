@@ -2,15 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
-import { provideTranslateService, TranslateService } from '@ngx-translate/core';
-import { BookContextCardComponent, WOODPECKER_STATS_OPEN_KEY } from './book-context-card.component';
+import { provideTranslateService } from '@ngx-translate/core';
+import { BookContextCardComponent } from './book-context-card.component';
 
 describe('BookContextCardComponent (Zerlegung Z18)', () => {
   const providers = () => [provideTranslateService({ fallbackLang: 'en' }), provideRouter([]), provideHttpClient(), provideHttpClientTesting()];
-  /** Woodpecker-Statistik: Vorgabe zugeklappt (10.11.2026); Tests, die die Zeilen sehen wollen, klappen über den Gerätespeicher auf. */
-  const setStatsOpen = (open: boolean) => { try { localStorage.setItem(WOODPECKER_STATS_OPEN_KEY, JSON.stringify(open)); } catch { /* gesperrt */ } };
-  beforeEach(() => { try { localStorage.removeItem(WOODPECKER_STATS_OPEN_KEY); } catch { /* gesperrt */ } });
-  afterEach(() => { try { localStorage.removeItem(WOODPECKER_STATS_OPEN_KEY); } catch { /* gesperrt */ } });
 
   function make(inputs: Record<string, unknown>) {
     TestBed.configureTestingModule({
@@ -85,145 +81,32 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
     expect(el.querySelector('.wp-repeat')?.textContent).toContain('woodpecker.repeatHint');
   });
 
-  // 0.956.0: Statistik des laufenden Zyklus (gelöst, mit Tipp, offen, Ø, Hochrechnung, Vorzyklus).
-  const DAY = 86_400_000;
-  const wpCycle = (over: Record<string, unknown>) => ({
-    number: 1, targetDays: 28, startedAt: new Date(Date.now() - 3 * DAY).toISOString(),
-    deadline: new Date(Date.now() + 25 * DAY).toISOString(), finishedAt: null,
-    attempted: 0, solved: 0, timeSeconds: 0, hinted: 0, solvedWithHint: 0, ...over,
-  });
-
-  it('Woodpecker-Statistik Zyklus 2+: gelöst/bearbeitet mit Quote, ohne/mit Tipp, offen, Ø; Hochrechnung; Vorzyklus', () => {
+  // 2026-11-18: die Statistik ist ein Fenster über dem Löser (vorher aufklappbarer Block in der Karte, 0.956.0–0.958.1).
+  it('Woodpecker: Knopf „Statistik“ in eigener Zeile meldet den Wunsch an den Löser — die Karte zeigt und lädt selbst keine Statistik', () => {
     const plan = wpPlan({ setSize: 100, cycles: [
-      wpCycle({ attempted: 100, solved: 75, timeSeconds: 9000 }),
-      wpCycle({ number: 2, targetDays: 14, deadline: new Date(Date.now() + 10 * DAY).toISOString(),
-        attempted: 40, solved: 30, timeSeconds: 2400, hinted: 6, solvedWithHint: 5 }),
+      { number: 1, attempted: 100, solved: 75, timeSeconds: 9000 }, { number: 2, attempted: 40, solved: 30, timeSeconds: 2400 },
     ] });
-    setStatsOpen(true);
-    const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
-    const rows = Array.from(el.querySelectorAll('.wp-stats .wp-stats-row'));
-    const kinds = (row: Element) => Array.from(row.children).map(x => x.textContent!.trim());
-    expect(kinds(rows[0])).toEqual(['woodpecker.stats.solvedOf', 'woodpecker.stats.clean', 'woodpecker.stats.hinted',
-      'woodpecker.stats.open', 'woodpecker.stats.avg']);
-    expect(rows[0].classList).toContain('rh-dots');
-    expect(kinds(rows[1])).toEqual(['woodpecker.stats.remaining', 'woodpecker.stats.needed', 'woodpecker.stats.pace',
-      'woodpecker.stats.etaOnTrack']);   // 40 in 4 Kalendertagen = 10/Tag → 60 offen in 6 Tagen, Frist in 10
-    expect(rows[2].textContent).toContain('woodpecker.stats.prev');
-  });
-
-  it('Woodpecker-Statistik: Werte gehen formatiert in die Übersetzung (Prozent über formatPct, Zeit als Uhr)', () => {
-    const plan = wpPlan({ setSize: 100, cycles: [
-      wpCycle({ attempted: 100, solved: 75, timeSeconds: 9000 }),
-      wpCycle({ number: 2, attempted: 40, solved: 30, timeSeconds: 2400 }),
-    ] });
-    setStatsOpen(true);
-    TestBed.configureTestingModule({
-      imports: [BookContextCardComponent],
-      providers: providers(),
-    });
-    const t = TestBed.inject(TranslateService);
-    t.setTranslation('en', { woodpecker: { stats: { solvedOf: '{{solved}}/{{done}} ({{pct}})', avg: 'avg {{time}}', prev: 'C{{n}} {{pct}} {{time}}' } } });
-    t.use('en');
-    const fixture = TestBed.createComponent(BookContextCardComponent);
-    for (const [k, v] of Object.entries({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan }))
-      fixture.componentRef.setInput(k, v);
-    fixture.detectChanges();
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.wp-solved')?.textContent?.trim()).toBe('30/40 (75%)');   // Prozentpunkte, nie 0,75
-    expect(el.querySelector('.wp-avg')?.textContent?.trim()).toBe('avg 1:00');
-    expect(el.querySelector('.wp-prev')?.textContent?.trim()).toBe('C1 75% 1:30');
-    expect(el.querySelector('.wp-hinted')).toBeNull();   // ohne Tipp-Versuche keine Tipp-Angaben
-  });
-
-  it('Woodpecker-Statistik Zyklus 1: Kennzahlen ohne „offen“, dazu ≈ Satz bis zur Frist; ohne Versuch nichts', () => {
-    setStatsOpen(true);
-    const one = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true,
-      woodpeckerPlan: wpPlan({ currentCycle: 1, setSize: 40, cycles: [wpCycle({ attempted: 40, solved: 30, timeSeconds: 1200 })] }) });
-    expect(one.el.querySelector('.wp-open')).toBeNull();
-    expect(one.el.querySelector('.wp-forecast')?.textContent).toContain('woodpecker.stats.projection');
-    TestBed.resetTestingModule();
-    const empty = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true,
-      woodpeckerPlan: wpPlan({ currentCycle: 1, setSize: 0, cycles: [wpCycle({})] }) });
-    expect(empty.el.querySelector('.wp-stats-row')).toBeNull();
-  });
-
-  it('Woodpecker-Statistik Zyklus 2 ohne Versuch, Frist vorbei: „Frist überschritten“ statt nötig/Tag, kein Tempo', () => {
-    const plan = wpPlan({ setSize: 20, cycles: [
-      wpCycle({ attempted: 20, solved: 10, timeSeconds: 100 }),
-      wpCycle({ number: 2, startedAt: new Date(Date.now() - 3 * DAY).toISOString(), deadline: new Date(Date.now() - DAY).toISOString() }),
-    ] });
-    setStatsOpen(true);
-    const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
-    const forecast = el.querySelector('.wp-forecast')!;
-    expect(Array.from(forecast.children).map(x => x.textContent!.trim())).toEqual(['woodpecker.overdue']);
-    expect(el.querySelector('.wp-solved')).toBeNull();
-  });
-
-  it('Woodpecker-Statistik ist standardmäßig zugeklappt: eigener Knopf „anzeigen“, kein Abruf; Aufklappen merkt es je Gerät und lädt /stats', () => {
-    const plan = wpPlan({ setSize: 100, cycles: [
-      wpCycle({ attempted: 100, solved: 75, timeSeconds: 9000 }),
-      wpCycle({ number: 2, attempted: 40, solved: 30, timeSeconds: 2400 }),
-    ] });
-    const { el, fixture } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
+    const { el, c, fixture } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
     const http = TestBed.inject(HttpTestingController);
-    // Knopf in eigener Zeile unter der Zyklus-Zeile (0.958.1), nicht mehr als Textlink in der .rh-dots-Zeile
-    expect(el.querySelector('.wp-meta .wp-stats-toggle')).toBeNull();
-    const btn = el.querySelector('.wp-stats-actions > button.wp-stats-toggle[mat-stroked-button]') as HTMLButtonElement;
+    expect(el.querySelector('.wp-meta button')).toBeNull();   // nicht als Textlink in der .rh-dots-Zeile (0.958.1)
+    const btn = el.querySelector('.wp-stats-actions > button.wp-stats-open[mat-stroked-button]') as HTMLButtonElement;
     expect(btn).not.toBeNull();
-    expect(btn.getAttribute('aria-expanded')).toBe('false');
-    expect(btn.getAttribute('aria-controls')).toBe('wp-stats-block');
-    expect(btn.textContent).toContain('woodpecker.statsShow');   // ohne geladene Sprache = Schlüssel
-    expect(btn.querySelector('mat-icon')?.textContent?.trim()).toBe('expand_more');
-    expect(el.querySelector('.wp-stats')).toBeNull();
-    expect(el.querySelector('.wp-stats-hide-end')).toBeNull();   // unterer Knopf nur offen
+    expect(btn.textContent).toContain('woodpecker.statistics');   // ohne geladene Sprache = Schlüssel
+    expect(btn.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(btn.hasAttribute('aria-expanded')).toBeFalse();        // kein Auf-/Zuklappen mehr
+    let asked = 0;
+    c.woodpeckerStats.subscribe(() => asked++);
+    btn.click();
+    fixture.detectChanges();
+    expect(asked).toBe(1);
     expect(el.querySelector('app-woodpecker-stats-panel')).toBeNull();
-    http.expectNone(r => r.url.includes('/stats'));
-
-    btn.click();
-    fixture.detectChanges();
-    expect(btn.getAttribute('aria-expanded')).toBe('true');
-    expect(btn.textContent).toContain('woodpecker.statsHide');
-    expect(btn.querySelector('mat-icon')?.textContent?.trim()).toBe('expand_less');
-    expect(localStorage.getItem(WOODPECKER_STATS_OPEN_KEY)).toBe('true');
-    expect(el.querySelector('.wp-stats .wp-solved')).not.toBeNull();   // die drei kompakten Zeilen zuerst …
-    expect(el.querySelector('.wp-stats app-woodpecker-stats-panel')).not.toBeNull();   // … darunter das Ausführliche
-    const end = el.querySelector('#wp-stats-block > .wp-stats-end > button.wp-stats-hide-end') as HTMLButtonElement;
-    expect(end).not.toBeNull();   // … und ganz unten der zweite Knopf
-    expect(end.textContent).toContain('woodpecker.statsHide');
-    http.expectOne(r => r.url === '/api/woodpecker/3/stats');
-
-    btn.click();
-    fixture.detectChanges();
     expect(el.querySelector('.wp-stats')).toBeNull();
-    expect(el.querySelector('.wp-stats-hide-end')).toBeNull();
-    expect(btn.textContent).toContain('woodpecker.statsShow');
-    expect(localStorage.getItem(WOODPECKER_STATS_OPEN_KEY)).toBe('false');
+    http.expectNone(r => r.url.includes('/stats'));
   });
 
-  it('Woodpecker-Statistik: gemerkt offen startet aufgeklappt; Zuklappen über den unteren Knopf fokussiert den oberen und holt ihn in den Blick', async () => {
-    setStatsOpen(true);
-    const plan = wpPlan({ setSize: 100, cycles: [
-      wpCycle({ attempted: 100, solved: 75, timeSeconds: 9000 }),
-      wpCycle({ number: 2, attempted: 40, solved: 30, timeSeconds: 2400 }),
-    ] });
-    const { el, fixture } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: plan });
-    document.body.appendChild(el);   // fokussierbar nur im Dokument
-    try {
-      const top = el.querySelector('.wp-stats-toggle') as HTMLButtonElement;
-      expect(top.getAttribute('aria-expanded')).toBe('true');
-      const scrolled = spyOn(top, 'scrollIntoView');
-      (el.querySelector('.wp-stats-hide-end') as HTMLButtonElement).click();
-      fixture.detectChanges();
-      await fixture.whenStable();
-      expect(el.querySelector('.wp-stats')).toBeNull();
-      expect(el.querySelector('.wp-stats-hide-end')).toBeNull();
-      expect(top.getAttribute('aria-expanded')).toBe('false');
-      expect(document.activeElement).toBe(top);
-      expect(scrolled).toHaveBeenCalledWith({ block: 'nearest' });
-      expect(localStorage.getItem(WOODPECKER_STATS_OPEN_KEY)).toBe('false');
-    } finally {
-      el.remove();
-    }
+  it('ohne Woodpecker kein Statistik-Knopf', () => {
+    const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inCourse: true });
+    expect(el.querySelector('.wp-stats-open')).toBeNull();
   });
 
   it('Woodpecker ohne Aufgabe: Abschluss bzw. „gibt es nicht (mehr)“ (c1-wp-loeser-404-verbindung), je mit „Zur Übersicht“', () => {

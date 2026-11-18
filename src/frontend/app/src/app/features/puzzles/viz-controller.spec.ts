@@ -28,6 +28,20 @@ describe('VizController', () => {
     expect(calls.unhide).toBe(1);
   });
 
+  it('angehalten (Fenster über der Aufgabe): die Einprägezeit läuft nicht ab, danach geht sie weiter', () => {
+    const { v, clock, calls } = make();
+    v.startCountdown();
+    clock.advance();
+    v.setCountdownPaused(true);
+    clock.advance(10);
+    expect(v.countdownSeconds).toBe(2);
+    expect(v.piecesHidden).toBeFalse();
+    v.setCountdownPaused(false);
+    clock.advance(2);
+    expect(v.piecesHidden).toBeTrue();
+    expect(calls.hide).toBe(1);
+  });
+
   it('„Anzeigen" ist ein Umschalter und zählt nur das Aufdecken', () => {
     const { v } = make();
     v.toggleShow();

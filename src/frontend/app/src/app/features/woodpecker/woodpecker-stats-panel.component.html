@@ -1,14 +1,109 @@
-<!-- Ausführliche Woodpecker-Statistik (0.957.0, DESIGN 5.12): nur im aufgeklappten Block, Abschnitte mit h3, Zahlen
-     rechtsbündig mit tabular-nums, Tabellen in eigenem waagerechten Scrollkasten (DESIGN 4.4/5.3). Laden, Fehler und
-     leer sind drei Zustände (5.10). -->
+<!-- Woodpecker-Statistik im Fenster (Übersicht seit 2026-11-18, ausführlicher Teil 0.957.0; DESIGN 5.12): oben die
+     Übersicht (Zeit, Quote, je Tag), darunter Abschnitte mit h3, Zahlen rechtsbündig mit tabular-nums, Tabellen in
+     eigenem waagerechten Scrollkasten (DESIGN 4.4/5.3). Laden, Fehler und leer sind drei Zustände (5.10). -->
 <div class="wps">
   @if (stats(); as s) {
     @if (loading()) { <mat-progress-bar class="wps-busy" mode="indeterminate" /> }
     @if (error()) { <app-load-error [error]="error()" (retry)="retry()" /> }
+    <!-- 0 Übersicht (Wunsch 2026-11-18): bisherige Zeit und Quote, daneben DIESELBEN Aufgaben je früherem Zyklus
+         (jüngster zuerst); darunter nötig je Tag = ⌈offen / Resttage⌉ und heute. Steht auch ohne Versuch (Soll je Tag). -->
+    @if (overview(); as o) {
+      <section class="wps-top">
+        <div class="wps-scroll">
+          <table class="wps-table wps-overview">
+            <thead>
+              <tr>
+                <th scope="col"></th>
+                <th scope="col" class="num">{{ 'woodpecker.overview.now' | translate }}</th>
+                @for (e of o.earlier; track e.cycle) {
+                  <th scope="col" class="num">{{ 'woodpecker.panel.colCycle' | translate: { k: e.cycle } }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="wps-ov-time">
+                <th scope="row">{{ 'woodpecker.panel.colTime' | translate }}</th>
+                <td class="num wps-ov-now">{{ o.attempted ? clock(o.secondsNow) : '–' }}</td>
+                @for (e of o.earlier; track e.cycle) { <td class="num">{{ clock(e.secondsThen) }}</td> }
+              </tr>
+              <tr class="wps-ov-rate">
+                <th scope="row">{{ 'woodpecker.overview.correct' | translate }}</th>
+                <td class="num wps-ov-now">{{ o.ratePctNow === null ? '–' : (o.ratePctNow | pct) }}</td>
+                @for (e of o.earlier; track e.cycle) { <td class="num">{{ e.ratePctThen === null ? '–' : (e.ratePctThen | pct) }}</td> }
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        @if (o.earlier.length) {
+          <p class="wps-line wps-ov-note">{{ 'woodpecker.overview.sameNote' | translate }}</p>
+        }
+        <!-- Schnittmenge kleiner als die jetzt bearbeiteten Aufgaben: der ehrliche Vergleich steht dabei. -->
+        @for (e of o.earlier; track e.cycle) {
+          @if (e.partial; as pt) {
+            <p class="wps-line wps-ov-partial">{{ (e.count === 1 ? 'woodpecker.overview.partialOne' : 'woodpecker.overview.partial') | translate: { k: e.cycle, n: e.count, time: clock(pt.secondsNow), pct: (pt.ratePctNow === null ? '–' : (pt.ratePctNow | pct)) } }}</p>
+          }
+        }
+        <!-- Je Tag: Beschriftung leise, die Zahl halbfett, die Rechnung in Klammern dahinter (offen ÷ Resttage). -->
+        <p class="wps-line rh-dots wps-ov-day">
+          @if (o.overdue) {
+            <span class="wps-late">{{ 'woodpecker.overdue' | translate }}</span>
+            @if (o.open !== null) {
+              <span class="wps-ov-open">{{ 'woodpecker.stats.open' | translate: { n: o.open } }}</span>
+            }
+          } @else if (o.neededPerDay !== null) {
+            <span class="wps-ov-needed">{{ 'woodpecker.overview.neededLabel' | translate }}: <strong>{{ o.neededPerDay }}</strong><span class="wps-ov-how">&ngsp;({{ (o.daysLeft === 1 ? 'woodpecker.overview.neededHowOneDay' : 'woodpecker.overview.neededHow') | translate: { open: o.open, days: o.daysLeft } }})</span></span>
+          } @else if (o.open !== null) {
+            <span class="wps-ov-open">{{ 'woodpecker.stats.open' | translate: { n: o.open } }}</span>
+          }
+          @if (o.open === null && o.attempted > 0) {
+            <!-- Zyklus 1: der Satz wächst noch, es gibt kein Soll — das bisherige Tempo statt einer erfundenen Zahl. -->
+            <span class="wps-ov-pace">{{ 'woodpecker.stats.pace' | translate: { n: (o.perDay | number: '1.0-1') } }}</span>
+          }
+          <span class="wps-ov-today">{{ 'woodpecker.overview.todayLabel' | translate }}: <strong>{{ o.today }}</strong></span>
+        </p>
+      </section>
+    }
     @if (!current()?.attempted) {
       <p class="wps-empty">{{ 'woodpecker.panel.empty' | translate }}</p>
     } @else {
-      <!-- 1 Dieselben Aufgaben: laufender Zyklus gegen den Vorzyklus auf der Schnittmenge -->
+      <!-- Dieser Zyklus (bis 2026-11-18 drei Zeilen in der Kontext-Karte, 0.956.0): Zählung, Tipps, Ø; Hochrechnung als
+           eine Zeile. Quote, offen und nötig je Tag stehen oben in der Übersicht, nicht noch einmal hier. -->
+      @if (cycleStats(); as cs) {
+        <section class="wps-sec wps-cycle">
+          <h3>{{ 'woodpecker.panel.cycleTitle' | translate }}</h3>
+          <p class="wps-line rh-dots">
+            <span class="wps-strong wps-solved">{{ 'woodpecker.stats.solvedCount' | translate: { solved: cs.solved, done: cs.attempted } }}</span>
+            @if (cs.hinted > 0) {
+              <span class="wps-clean">{{ 'woodpecker.stats.clean' | translate: { n: cs.solvedClean } }}</span>
+              <span class="wps-hinted">{{ (cs.hinted === 1 ? 'woodpecker.stats.hintedOne' : 'woodpecker.stats.hinted') | translate: { n: cs.hinted } }}</span>
+            }
+            @if (cs.avgSeconds !== null) {
+              <span class="wps-avg">{{ 'woodpecker.stats.avg' | translate: { time: clock(cs.avgSeconds) } }}</span>
+            }
+          </p>
+          @if (cs.cycle > 1) {
+            @if (cs.open) {
+              <p class="wps-line rh-dots wps-cycle-forecast">
+                @if (cs.remainingSeconds !== null) {
+                  <span>{{ 'woodpecker.stats.remaining' | translate: { time: clock(cs.remainingSeconds) } }}</span>
+                }
+                <span>{{ 'woodpecker.stats.pace' | translate: { n: (cs.perDay | number: '1.0-1') } }}</span>
+                @if (cs.etaIso) {
+                  @if (cs.onTrack) {
+                    <span class="wps-ok">{{ 'woodpecker.stats.etaOnTrack' | translate: { date: (cs.etaIso | date: 'mediumDate') } }}</span>
+                  } @else {
+                    <span class="wps-late">{{ 'woodpecker.stats.etaLate' | translate: { date: (cs.etaIso | date: 'mediumDate'), deadline: (cs.deadlineIso | date: 'mediumDate') } }}</span>
+                  }
+                }
+              </p>
+            }
+          } @else if (cs.projectedSet !== null) {
+            <p class="wps-line wps-cycle-forecast">{{ (cs.projectedSet === 1 ? 'woodpecker.stats.projectionOne' : 'woodpecker.stats.projection') | translate: { n: cs.projectedSet, pace: (cs.perDay | number: '1.0-1') } }}</p>
+          }
+        </section>
+      }
+
+      <!-- 1 Dieselben Aufgaben gegen den Vorzyklus: Anteil der Zeit und Faktor (die Zeiten und Quoten selbst stehen oben) -->
       @if (prevRow(); as pr) {
         <section class="wps-sec wps-same">
           <h3>{{ 'woodpecker.panel.sameTitle' | translate }}</h3>
@@ -16,8 +111,6 @@
             @if (o.count > 0) {
               <p class="wps-line rh-dots">
                 <span class="wps-strong">{{ (o.count === 1 ? 'woodpecker.panel.sameCountOne' : 'woodpecker.panel.sameCount') | translate: { n: o.count, k: o.cycle } }}</span>
-                <span class="wps-now">{{ 'woodpecker.panel.nowTime' | translate: { time: clock(o.secondsNow) } }}</span>
-                <span class="wps-then">{{ 'woodpecker.panel.thenTime' | translate: { k: o.cycle, time: clock(o.secondsThen) } }}</span>
                 @if (o.timeRatio !== null) {
                   <span class="wps-share" [class.wps-ok]="o.timeRatio <= 0.5">{{ 'woodpecker.panel.share' | translate: { pct: (o.timeRatio * 100 | pct) } }}</span>
                 }
@@ -26,13 +119,12 @@
                 } @else if (o.speedFactor !== null && o.speedFactor > 0) {
                   <span class="wps-factor wps-late">{{ 'woodpecker.panel.slower' | translate: { x: (1 / o.speedFactor | number: '1.1-1') } }}</span>
                 }
-              </p>
-              <p class="wps-line rh-dots">
-                <span class="wps-rate">{{ 'woodpecker.panel.rateNowThen' | translate: { now: (o.ratePctNow | pct), then: (o.ratePctThen | pct) } }}</span>
-                <span>{{ 'woodpecker.panel.solvedNowThen' | translate: { now: o.solvedNow, then: o.solvedThen, n: o.count } }}</span>
+                <span class="wps-solved-change">{{ 'woodpecker.panel.solvedNowThen' | translate: { now: o.solvedNow, then: o.solvedThen, n: o.count } }}</span>
               </p>
               @for (old of olderOverlaps(); track old.cycle) {
-                <p class="wps-line wps-older">{{ 'woodpecker.panel.older' | translate: { k: old.cycle, n: old.count, time: clock(old.secondsThen), pct: (old.timeRatio === null ? '' : (old.timeRatio * 100 | pct)) } }}</p>
+                @if (old.timeRatio !== null) {
+                  <p class="wps-line wps-older">{{ 'woodpecker.panel.olderShare' | translate: { k: old.cycle, n: old.count, pct: (old.timeRatio * 100 | pct) } }}</p>
+                }
               }
             } @else {
               <p class="wps-line">{{ 'woodpecker.panel.noOverlap' | translate: { k: o.cycle } }}</p>
@@ -134,7 +226,7 @@
         }
       </section>
 
-      <!-- 5 Verlauf über alle Zyklen (ab Zyklus 2), Spalte „dieselben wie jetzt“ macht die Zeilen vergleichbar -->
+      <!-- 5 Verlauf über alle Zyklen (ab Zyklus 2), je ganzer Zyklus; der Vergleich auf denselben Aufgaben steht oben -->
       @if (s.cycles.length > 1) {
         <section class="wps-sec wps-history">
           <h3>{{ 'woodpecker.panel.historyTitle' | translate }}</h3>
@@ -149,7 +241,6 @@
                   <th scope="col" class="num">{{ 'woodpecker.panel.colAvg' | translate }}</th>
                   <th scope="col" class="num">{{ 'woodpecker.panel.colTime' | translate }}</th>
                   <th scope="col" class="num">{{ 'woodpecker.panel.colDays' | translate }}</th>
-                  <th scope="col" class="num">{{ 'woodpecker.panel.colSame' | translate }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -162,7 +253,6 @@
                     <td class="num">{{ c.avgSeconds === null ? '–' : clock(c.avgSeconds) }}</td>
                     <td class="num">{{ clock(c.timeSeconds) }}</td>
                     <td class="num">{{ 'woodpecker.panel.daysOf' | translate: { used: (c.daysUsed | number: '1.0-1'), target: c.targetDays } }}</td>
-                    <td class="num">{{ c.sameAsNow && c.sameAsNow.count > 0 ? clock(c.sameAsNow.secondsThen) : '–' }}</td>
                   </tr>
                 }
               </tbody>

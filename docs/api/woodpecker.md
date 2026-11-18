@@ -49,27 +49,50 @@ solvedWithHint`. Gewertet ist wie immer nur der erste Versuch je Aufgabe und Zyk
 nichts. Versuche von vor 0.956 stehen auf `HintsUsed = 0`. Kurs-Versuche, die in Zyklus 1 übernommen werden, bringen
 ihr `CourseAttempt.HintsUsed` mit.
 
-**Statistik auf der Lösen-Seite** (0.956.0, Wunsch 10.11.: „wie viel gelöst, wie viel mit Hint, Hochrechnung“): die
-Kontext-Karte des Lösers zeigt den laufenden Zyklus — gerechnet im Client aus `plan.cycles`
-(`features/woodpecker/woodpecker-stats.util.ts`, rein und getestet):
+**Statistik auf der Lösen-Seite = Fenster** (0.992.0, Wunsch 18.11.2026: „ganz oben bisherige Zeit, Zeit für
+die gleichen Puzzles in den vorherigen Zyklen, bisherige % richtig verglichen mit vorher, Puzzles/Tag nötig (offene
+Puzzle / Resttage), Anzahl heute“ + „als modales Overlay, das aktuelle Puzzle währenddessen pausieren“). Vorher
+(0.956.0–0.958.1) ein aufklappbarer Block in der Kontext-Karte mit gemerktem Zustand `rh.woodpecker.statsOpen` — beides
+entfällt. Die Kontext-Karte hat nur noch den Knopf „Statistik“ (Ausgabe `woodpeckerStats`); der Buch-Löser öffnet
+`features/woodpecker/woodpecker-stats-dialog.component` (`BookPuzzleComponent.openWoodpeckerStats`).
+
+**Pause:** solange das Fenster offen ist, steht die Lösezeit der Aufgabe — in der angezeigten Uhr und im gemeldeten
+`timeSeconds` (`POST …/attempts`). Technik: `VisibilityStopwatch.hold()/release()` (zählt nur „Tab sichtbar UND nicht
+angehalten“), `SolverTimer.pause()/resume()`, `SolverAssistBase.pauseTimer()/resumeTimer()` + `timerPaused`. Der Halt
+gehört der Uhr, nicht dem Lauf: lädt hinter dem Fenster die nächste Aufgabe (Auto-Weiter), beginnt deren Uhr angehalten.
+Das Brett ist währenddessen unkenntlich (`.board-paused` → Blur) — Pausieren ist keine Gratis-Denkzeit. Mit angehalten
+werden der Countdown bis zum Verdecken im Visualisierungsmodus (`VizController.setCountdownPaused`) und der
+2-s-Countdown zur nächsten Aufgabe (`SecondsCountdown.paused`): die nächste Aufgabe lädt erst nach dem Schließen.
+
+**Übersicht ganz oben** (`woodpeckerOverview` in `features/woodpecker/woodpecker-stats.util.ts`, rein und getestet;
+Quelle `GET …/stats` + Frist aus dem Plan):
+
+| Zeile | Formel |
+|---|---|
+| Zeit — „Bisher“ | `timeSeconds` des laufenden Zyklus |
+| Zeit — „Zyklus k“ (jeder frühere, jüngster zuerst) | `cycles[k].sameAsNow.secondsThen` = dieselben Aufgaben damals (Schnittmenge, siehe unten); Zyklen ohne gemeinsame Aufgabe fehlen |
+| Richtig — „Bisher“ / „Zyklus k“ | `solved / attempted` bzw. `sameAsNow.ratePctThen` (Prozentpunkte, `pct`-Pipe) |
+| Schnittmenge kleiner als jetzt bearbeitet | zusätzlich ein Satz je Zyklus mit `count`, `secondsNow`, `ratePctNow` — die Jetzt-Werte auf genau diesen Aufgaben, damit nie Gesamtzeit gegen eine Teilmenge steht (normal ist `count` = bearbeitet: der Satz ist ab Zyklus 2 fest) |
+| Nötig je Tag (ab Zyklus 2) | `⌈offen / Resttage⌉`, offen = `setSize − attempted`, Resttage aufgerundet wie „noch N Tage“; Frist vorbei → „Frist überschritten“ + offen; nichts offen → „0 offen“ |
+| Heute | `days[]`-Eintrag mit dem lokalen Datum des Geräts (`attempted`); kein Eintrag = heute noch nichts = 0 |
+| Zyklus 1 | kein Soll (der Satz wächst): statt „nötig“ das bisherige Tempo `attempted / begonnene Kalendertage`; keine Vergleichsspalten |
+
+Alle Zahlen des Fensters kommen aus EINEM Serverstand: `planWithStats` legt die Werte des laufenden Zyklus aus `/stats`
+über den Plan aus dem Löser (der kann eine Meldung hinterher sein); nur Frist und `availableCount` stammen aus dem Plan.
+
+**Abschnitt „Dieser Zyklus“** (bis 0.992.0 die Zeilen in der Kontext-Karte; `woodpeckerCycleStats`):
 
 | Kennzahl | Formel |
 |---|---|
-| Gelöst | `solved / attempted` + Quote (Prozentpunkte über die `pct`-Pipe); „ohne Tipp“ = `solved − solvedWithHint`, „mit Tipp“ = `hinted` (beides nur, wenn `hinted > 0`) |
-| offen (ab Zyklus 2) | `setSize − attempted` |
+| Gelöst | `solved` von `attempted` (ohne Quote — die steht oben); „ohne Tipp“ = `solved − solvedWithHint`, „mit Tipp“ = `hinted` (beides nur, wenn `hinted > 0`) |
 | Ø | `timeSeconds / attempted` (Uhrform `formatSecondsClock`) |
 | Restzeit (ab 2) | `offen × Ø` — reine Lösezeit |
 | Tempo | `attempted / begonnene lokale Kalendertage seit Zyklusbeginn` (heute zählt ganz; „gerade begonnen“ mit 5 Aufgaben = 5/Tag) |
-| nötig je Tag (ab 2) | `⌈offen / Resttage⌉`, Resttage aufgerundet wie „noch N Tage“; Frist vorbei → „Frist überschritten“ |
 | voraussichtlich fertig (ab 2) | `jetzt + offen / Tempo` Tage; „rechtzeitig“, wenn ≤ Frist, sonst mit Frist daneben; ohne Versuch keins |
-| Zyklus 1 | kein Ziel, stattdessen „bei diesem Tempo ≈ N Aufgaben im Satz bis zur Frist“ = `attempted + Tempo × Resttage (anteilig)`, höchstens `availableCount` |
-| Vorzyklus | Quote und Ø des Zyklus davor (nur mit Versuchen) |
+| Zyklus 1 | „bei diesem Tempo ≈ N Aufgaben im Satz bis zur Frist“ = `attempted + Tempo × Resttage (anteilig)`, höchstens `availableCount` |
 
-**Seit 0.957.0 ist die ganze Statistik im Löser standardmäßig ZUGEKLAPPT** (Nutzerentscheidung 10.11.2026): sichtbar
-bleiben Zyklus-Kopf, Balken und Frist plus — seit 0.958.1 — ein eigener kleiner Knopf „Statistik anzeigen“ bzw.
-„Statistik ausblenden“ unter der Zyklus-Zeile (`aria-expanded`, Zustand je Gerät `rh.woodpecker.statsOpen`). Aufgeklappt
-stehen zuerst die drei Zeilen oben, darunter die ausführliche Statistik und am Ende ein zweiter Knopf „Statistik
-ausblenden“, der nach dem Zuklappen den Fokus auf den oberen Knopf setzt (DESIGN 5.12).
+Der Vorzyklus als eigene Zeile („Zyklus 1: 75 % gelöst, Ø 1:30“) ist entfallen: die Übersicht vergleicht auf denselben
+Aufgaben, die Verlaufstabelle zeigt die ganzen Zyklen.
 
 ### Ausführliche Statistik (`GET /api/woodpecker/{id}/stats`, 0.957.0)
 
@@ -98,15 +121,16 @@ Prod-Deploy von 0.956.0): `HintsUsed` gibt es erst seitdem; ältere Versuche ste
 Kurs-Versuchen übernommenen. Sie zählen in keiner Tipp-Auswertung; die Oberfläche sagt „Tipps werden erst seit … gezählt“
 und zeigt in der Verlaufstabelle „ohne Tipp“ nur für Zyklen, deren Versuche ALLE Tipp-Daten haben (sonst „–“).
 
-**Entscheidung „Rest ≈“:** die obere Zeile bleibt `offen × Ø` (aus `plan`, ohne zusätzlichen Abruf); die genauere
-Hochrechnung steht im ausführlichen Teil mit ihrer Grundlage („aus dem Vergleich mit Zyklus N−1“) — eine Zahl, die sich
-beim Aufklappen ändert, wäre verwirrender als zwei klar benannte.
+**Entscheidung „Rest ≈“:** die Zeile „Dieser Zyklus“ bleibt bei `offen × Ø`; die genauere Hochrechnung steht im
+Abschnitt „Hochrechnung“ mit ihrer Grundlage („aus dem Vergleich mit Zyklus N−1“) — zwei klar benannte Zahlen.
 
-**Oberfläche** (`features/woodpecker/woodpecker-stats-panel.component`): entsteht erst beim Aufklappen, lädt dann sofort
-und nach jeder gemeldeten Aufgabe (neuer Stand `planId:Zyklus:bearbeitet`) entprellt 800 ms neu. Abschnitte: Dieselben
-Aufgaben → Wechsel je Aufgabe (+ Zeitstufen jetzt/damals) → Hochrechnung → Tipps → Verlauf (Tabelle je Zyklus mit Spalte
-„dieselben wie jetzt“) bzw. in Zyklus 1 „Je Tag“ (jüngste 14) + Zeitstufen → Sorgenkinder (Link „ansehen“ =
-`/puzzles/book/:id`).
+**Oberfläche** (`features/woodpecker/woodpecker-stats-panel.component`, Inhalt des Statistik-Fensters): entsteht mit dem
+Fenster, lädt dann sofort und bei einem neuen Planstand (`planId:Zyklus:bearbeitet`) entprellt 800 ms neu. Reihenfolge:
+Übersicht (siehe oben) → Dieser Zyklus → Dieselben Aufgaben (gemeinsame Zahl · Anteil der Zeit · Faktor · gelöst
+jetzt/damals; die Zeiten und Quoten selbst stehen in der Übersicht) → Wechsel je Aufgabe (+ Zeitstufen jetzt/damals) →
+Hochrechnung → Tipps → Verlauf (Tabelle je ganzem Zyklus; die Spalte „dieselben wie jetzt“ ist in die Übersicht
+gewandert) bzw. in Zyklus 1 „Je Tag“ (jüngste 14) + Zeitstufen → Sorgenkinder (Link „ansehen“ = `/puzzles/book/:id`).
+Ohne Versuch im Zyklus: Übersicht (mit „–“ und dem Soll je Tag) + ein Leersatz.
 
 `WoodpeckerPlanDto.status`: `solving` (Zyklus läuft), `break` (Pause bis `nextCycleAt`), `ready`, `completed`, seit 0.958.0
 `archived` (geht allem vor; `completedAt` bleibt daneben erhalten) und `archivedAt`.

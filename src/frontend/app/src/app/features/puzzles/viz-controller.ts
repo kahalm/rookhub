@@ -46,6 +46,10 @@ export class VizController {
   /** Sekunden bis zum Verdecken (0 = kein Countdown). */
   get countdownSeconds(): number { return this.countdown.remaining; }
 
+  /** Countdown bis zum Verdecken anhalten/fortsetzen (Aufgabe angehalten: die Einprägezeit läuft nicht hinter einem
+   *  Fenster ab). Gilt auch für einen währenddessen gestarteten Countdown. */
+  setCountdownPaused(paused: boolean): void { this.countdown.paused = paused; }
+
   /** Countdown bis zum Verdecken starten (Stufe 2–4, beim Lösungsbeginn). */
   startCountdown(): void {
     this.countdown.stop();

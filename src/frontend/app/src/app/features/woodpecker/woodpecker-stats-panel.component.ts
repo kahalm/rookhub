@@ -9,6 +9,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { PctPipe } from '../../shared/format/pct';
 import { formatSecondsClock } from '../../shared/clock-format.util';
 import { WoodpeckerPlan, WoodpeckerService, WoodpeckerStats, WoodpeckerStatsCycle } from './woodpecker.service';
+import { planWithStats, woodpeckerCycleStats, woodpeckerOverview } from './woodpecker-stats.util';
 
 /** Wie lange nach einer gemeldeten Aufgabe gewartet wird, bevor `/stats` neu geholt wird (mehrere schnelle Meldungen = ein Abruf). */
 export const WOODPECKER_STATS_DEBOUNCE_MS = 800;
@@ -21,12 +22,13 @@ export const WOODPECKER_STATS_MAX_DAYS = 14;
 type Result = { stats: WoodpeckerStats; error: null } | { stats: null; error: unknown };
 
 /**
- * Ausführliche Woodpecker-Statistik im Löser (0.957.0, Wunsch 10.11.: „momentan 1 h für 50 Puzzle, die gleichen Puzzle
- * haben letztes Mal 2 h gebraucht“ + Tipp-Auswertung). Steht nur im AUFGEKLAPPTEN Statistik-Block der Kontext-Karte
- * (DESIGN 5.12); wird erst dann erzeugt und lädt `GET /api/woodpecker/{id}/stats` — beim Erzeugen und nach jeder
- * gemeldeten Aufgabe (neuer Planstand), entprellt. Gerechnet ist alles am Server (`WoodpeckerStatsCalculator`), hier
- * nur Darstellung: Abschnitte Dieselben Aufgaben · Wechsel · Hochrechnung · Tipps · Verlauf · (Zyklus 1: je Tag) ·
- * Sorgenkinder.
+ * Woodpecker-Statistik (0.957.0, Wunsch 10.11.: „momentan 1 h für 50 Puzzle, die gleichen Puzzle haben letztes Mal 2 h
+ * gebraucht“ + Tipp-Auswertung). Seit 2026-11-18 der Inhalt des Statistik-FENSTERS
+ * (`WoodpeckerStatsDialogComponent`, DESIGN 5.12), nicht mehr ein aufklappbarer Block der Kontext-Karte; entsteht mit
+ * dem Fenster und lädt `GET /api/woodpecker/{id}/stats` — beim Erzeugen und bei einem neuen Planstand, entprellt.
+ * Gerechnet ist der ausführliche Teil am Server (`WoodpeckerStatsCalculator`), die Übersicht und die Zeilen „Dieser
+ * Zyklus“ in `woodpecker-stats.util.ts`; hier nur Darstellung: Übersicht (Zeit · Quote · je Tag) · Dieser Zyklus ·
+ * Dieselben Aufgaben · Wechsel · Hochrechnung · Tipps · Verlauf · (Zyklus 1: je Tag) · Sorgenkinder.
  */
 @Component({
   selector: 'app-woodpecker-stats-panel',
@@ -92,6 +94,17 @@ export class WoodpeckerStatsPanelComponent {
     const p = this.plan();
     if (p) this.reload$.next({ planId: p.id, immediate: true });
   }
+
+  /** Übersicht ganz oben (Wunsch 2026-11-18): Zeit und Quote jetzt gegen dieselben Aufgaben je früherem Zyklus,
+   *  nötig je Tag, heute. Aus `/stats` + Frist des Plans. */
+  readonly overview = computed(() => woodpeckerOverview(this.stats(), this.plan()));
+
+  /** Zählung, Tipps, Ø und Hochrechnung des laufenden Zyklus — mit den Zahlen aus `/stats`, damit sie zur Übersicht
+   *  passen (der Plan aus dem Löser kann eine Meldung hinterher sein). */
+  readonly cycleStats = computed(() => {
+    const p = this.plan();
+    return p ? woodpeckerCycleStats(planWithStats(p, this.stats())) : null;
+  });
 
   /** Vorzyklus-Zeile mit dem Vergleich auf denselben Aufgaben (Zyklus 2+). */
   readonly prevRow = computed<WoodpeckerStatsCycle | null>(() => {

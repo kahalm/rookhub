@@ -96,4 +96,68 @@ describe('VisibilityStopwatch', () => {
     expect(sw.elapsedSeconds).toBe(1);
     sw.stop();
   });
+  // 2026-11-18: Woodpecker-Statistik liegt als Fenster über der Aufgabe — die Lösezeit steht so lange.
+  describe('hold()/release() — von Hand anhalten', () => {
+    it('zählt während des Halts nicht und läuft danach weiter', () => {
+      const sw = new VisibilityStopwatch();
+      sw.start();
+      jasmine.clock().tick(4000);
+      sw.hold();
+      sw.hold();                         // idempotent
+      expect(sw.isHeld).toBeTrue();
+      jasmine.clock().tick(90000);       // Fenster offen → zählt NICHT
+      expect(sw.elapsedSeconds).toBe(4);
+      sw.release();
+      sw.release();
+      jasmine.clock().tick(3000);
+      expect(sw.elapsedSeconds).toBe(7);
+      expect(sw.stop()).toBe(7);
+    });
+
+    it('ein start() während des Halts beginnt angehalten (nächste Aufgabe lädt hinter dem Fenster)', () => {
+      const sw = new VisibilityStopwatch();
+      sw.start();
+      jasmine.clock().tick(2000);
+      sw.hold();
+      sw.start();                        // neue Aufgabe
+      jasmine.clock().tick(30000);
+      expect(sw.elapsedSeconds).toBe(0);
+      sw.release();
+      jasmine.clock().tick(5000);
+      expect(sw.elapsedSeconds).toBe(5);
+      sw.stop();
+    });
+
+    it('Halt und verdeckter Tab: es zählt nur „sichtbar UND nicht angehalten“', () => {
+      const sw = new VisibilityStopwatch();
+      sw.start();
+      jasmine.clock().tick(1000);
+      sw.hold();
+      setVisibility('hidden');
+      jasmine.clock().tick(10000);
+      setVisibility('visible');          // wieder sichtbar, aber noch angehalten
+      jasmine.clock().tick(10000);
+      expect(sw.elapsedSeconds).toBe(1);
+      setVisibility('hidden');
+      sw.release();                      // Halt weg, aber Tab verdeckt
+      jasmine.clock().tick(10000);
+      expect(sw.elapsedSeconds).toBe(1);
+      setVisibility('visible');
+      jasmine.clock().tick(2000);
+      expect(sw.elapsedSeconds).toBe(3);
+      sw.stop();
+    });
+
+    it('release() nach stop() startet nichts; der Halt überlebt stop()', () => {
+      const sw = new VisibilityStopwatch();
+      sw.start();
+      jasmine.clock().tick(2000);
+      sw.hold();
+      expect(sw.stop()).toBe(2);
+      expect(sw.isHeld).toBeTrue();
+      sw.release();
+      jasmine.clock().tick(5000);
+      expect(sw.elapsedSeconds).toBe(2);
+    });
+  });
 });

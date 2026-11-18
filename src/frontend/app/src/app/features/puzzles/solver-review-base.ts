@@ -23,6 +23,18 @@ export abstract class SolverReviewBase<S extends string = never> extends SolverA
   private readonly solvedTicker = new SecondsCountdown();
   /** Sekunden bis zum Auto-Weiter (0 = kein Countdown). */
   get solvedCountdown(): number { return this.solvedTicker.remaining; }
+
+  /** Angehalten (Fenster über der Aufgabe): auch der Countdown zur nächsten Aufgabe steht — sonst lüde sie hinter dem
+   *  Fenster. */
+  protected override pauseTimer(): void {
+    super.pauseTimer();
+    this.solvedTicker.paused = true;
+  }
+
+  protected override resumeTimer(): void {
+    super.resumeTimer();
+    this.solvedTicker.paused = false;
+  }
   protected static readonly SOLVED_COUNTDOWN_SECONDS = 2;
 
   // ---- Lebenszyklus des Lösungsgangs (Seite verlassen, Auto-Weiter-Timer) ----

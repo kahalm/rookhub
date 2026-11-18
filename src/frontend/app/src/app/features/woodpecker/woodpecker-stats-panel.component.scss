@@ -1,15 +1,30 @@
-/* Ausführliche Woodpecker-Statistik (0.957.0, DESIGN 5.12): leise wie die Kennzahlzeilen darüber, Abschnitte mit kleinen
+/* Woodpecker-Statistik im Fenster (0.957.0, Übersicht 2026-11-18, DESIGN 5.12): Abschnitte leise mit kleinen
    Überschriften, Zahlen rechtsbündig + tabular-nums (5.3); Tabellen scrollen in ihrem eigenen Kasten (4.4). */
 :host { display: block; }
-.wps { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; font-size: .85rem;
+.wps { display: flex; flex-direction: column; gap: 10px; font-size: .85rem;
   color: var(--mat-sys-on-surface-variant); font-variant-numeric: tabular-nums; }
+/* Übersicht (2026-11-18): das, wofür man das Fenster öffnet — Schrift in Lesegröße und Textfarbe, „Bisher“ halbfett;
+   Zeilenbeschriftung und frühere Zyklen leise. Bleibt eine Tabelle (Spalte je Zyklus) im eigenen Scrollkasten. */
+.wps-top { display: flex; flex-direction: column; gap: 4px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant); }
+.wps-overview { font-size: 1rem; color: var(--mat-sys-on-surface); }
+.wps-overview th, .wps-overview td { padding: 3px 16px 3px 0; }
+.wps-overview thead th { font-size: .85rem; font-weight: normal; color: var(--mat-sys-on-surface-variant); }
+.wps-overview tbody th { color: var(--mat-sys-on-surface-variant); }
+.wps-overview .wps-ov-now { font-weight: 600; }
+.wps-overview thead th:nth-child(2) { font-weight: 600; color: var(--mat-sys-on-surface); }
+.wps-ov-day { font-size: 1rem; color: var(--mat-sys-on-surface-variant); margin-top: 4px; }
+.wps-ov-day strong { font-weight: 600; color: var(--mat-sys-on-surface); }
+.wps-ov-how { font-size: .85rem; }
 .wps-busy { margin: 4px 0; }
 .wps-empty { margin: 0; }
 .wps-sec { display: flex; flex-direction: column; gap: 2px; }
 .wps-sec h3 { margin: 0 0 2px; font-size: .85rem; font-weight: 600; color: var(--mat-sys-on-surface); }
 .wps-line { margin: 0; row-gap: 2px; }
 .wps-line.rh-dots > span, .wps-list li.rh-dots > * { white-space: nowrap; }
+.wps-ov-day.rh-dots > span { white-space: normal; }
 .wps-strong { font-weight: 600; color: var(--mat-sys-on-surface); }
+.wps-hinted { color: var(--rh-hint); }
 .wps-ok { color: var(--rh-success); }
 .wps-late { color: var(--rh-warn); }
 .wps-note { font-style: italic; }

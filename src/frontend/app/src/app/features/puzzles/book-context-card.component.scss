@@ -58,21 +58,9 @@
 .wp-chip { overflow-wrap: anywhere; }
 .context-card .wp-repeat, .context-card .wp-missing { margin: 0.5rem 0 0; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
 
-/* Woodpecker-Statistik (0.956.0): leise Kennzahlzeilen unter dem Fortschritt; jede Angabe bricht nie in sich um. */
-.context-card .wp-stats { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 2px; font-size: .85rem;
-  color: var(--mat-sys-on-surface-variant); font-variant-numeric: tabular-nums; }
-.context-card .wp-stats-row { margin: 0; row-gap: 2px; }
-.context-card .wp-stats-row.rh-dots > span { white-space: nowrap; }
-.context-card .wp-solved { font-weight: 600; color: var(--mat-sys-on-surface); }
-.context-card .wp-ok { color: var(--rh-success); }
-.context-card .wp-late { color: var(--rh-warn); }
-.context-card .wp-hinted { color: var(--rh-hint); }
-
-/* „Statistik anzeigen/ausblenden“ (0.958.1, DESIGN 5.12): kleiner Rahmenknopf in eigener Zeile unter der Zyklus-Zeile,
-   linksbündig, nicht volle Breite; derselbe Knopf am Ende des aufgeklappten Blocks. Kompakt 32 px, mit grobem Zeiger
-   ≥ 44 px (DESIGN 7). */
+/* „Statistik“ (öffnet das Statistik-Fenster, DESIGN 5.12): kleiner Rahmenknopf in eigener Zeile unter der Zyklus-Zeile,
+   linksbündig, nicht volle Breite. Kompakt 32 px, mit grobem Zeiger ≥ 44 px (DESIGN 7). */
 .context-card .wp-stats-actions { display: flex; margin-top: 4px; }
-.context-card .wp-stats-end { margin-top: 0.5rem; }
 .context-card .wp-stats-actions .mat-mdc-button-base { height: 32px; padding: 0 12px; font-size: .85rem; }
 @media (pointer: coarse) {
   .context-card .wp-stats-actions .mat-mdc-button-base { height: 44px; }

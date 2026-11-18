@@ -58,6 +58,7 @@ import { BookSettingsController } from './book-settings';
 import { BookHints } from './book-hints';
 import { BookWoodpeckerMode } from './book-woodpecker-mode';
 import { WoodpeckerService } from '../woodpecker/woodpecker.service';
+import { WoodpeckerStatsDialogComponent } from '../woodpecker/woodpecker-stats-dialog.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -511,6 +512,22 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
   retryLoad(): void {
     this.loadError = false;
     this.retryFn?.();
+  }
+
+  /**
+   * Woodpecker-Statistik als Fenster über der Aufgabe (Wunsch 2026-11-18): solange es offen ist, steht die Lösezeit —
+   * angezeigte Uhr und gemeldete Zeit — und das Brett ist unkenntlich (`timerPaused` → `.board-paused`), damit die
+   * Pause keine Gratis-Denkzeit ist. Lädt hinter dem Fenster die nächste Aufgabe (Auto-Weiter), beginnt auch deren
+   * Uhr angehalten ({@link pauseTimer}). Schließen (Knopf, Esc, Klick daneben, Seitenwechsel) lässt sie weiterlaufen.
+   */
+  openWoodpeckerStats(): void {
+    const plan = this.woodpecker.plan;
+    if (!plan || this.timerPaused) return;
+    this.pauseTimer();
+    WoodpeckerStatsDialogComponent.open(this.dialog, { plan, solving: this.isSolving }).afterClosed().subscribe(() => {
+      this.resumeTimer();
+      this.requestRender();
+    });
   }
 
   /** Auge im Wochenpost: NACH dem ersten Zug aufgedeckt → dieses Puzzle zählt als „einfach".

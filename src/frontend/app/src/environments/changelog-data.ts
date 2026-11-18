@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.992.0", date: "2026-11-18", changes: [
+    { en: "Woodpecker: the statistics are now a window on top of the solver instead of a fold-out block in the side column — button “Statistics” below the cycle line. At the very top it shows what matters most: the time so far and the share solved correctly, next to the same puzzles in each earlier cycle (most recent first), then “Needed per day” (open puzzles ÷ days left) and how many you have done today. Below that the detailed statistics as before, without repeating the numbers from the top.",
+      de: "Woodpecker: die Statistik ist jetzt ein Fenster über dem Löser statt eines aufklappbaren Blocks in der Seitenspalte — Knopf „Statistik“ unter der Zyklus-Zeile. Ganz oben steht das Wichtigste: die bisherige Zeit und der Anteil richtig gelöster Aufgaben, daneben dieselben Aufgaben in jedem früheren Zyklus (jüngster zuerst), dann „Nötig je Tag“ (offene Aufgaben ÷ Resttage) und wie viele heute schon erledigt sind. Darunter die ausführliche Statistik wie bisher, ohne die Zahlen von oben zu wiederholen." },
+    { en: "Woodpecker: while the statistics window is open, the current puzzle is paused — the clock stands still and the time in the window does not count towards the solving time; the board behind it is blurred so that pausing is not free thinking time. The countdown to the next puzzle and the memorising countdown of the visualisation mode wait as well. “Continue solving”, Esc or a click next to the window resumes.",
+      de: "Woodpecker: solange das Statistik-Fenster offen ist, ist die laufende Aufgabe angehalten — die Uhr steht, und die Zeit im Fenster zählt nicht zur Lösezeit; das Brett dahinter ist unkenntlich, damit Pausieren keine Gratis-Denkzeit ist. Auch der Countdown zur nächsten Aufgabe und der Einpräge-Countdown im Visualisierungsmodus warten. „Weiter lösen“, Esc oder ein Klick neben das Fenster setzt fort." },
+  ] },
   { version: "0.991.3", date: "2026-11-18", changes: [
     { en: "Internal: the remaining error classes of the clickable moves in book and course comments — found while comparing the old and the new parser across all book puzzles — are now recorded in the TODO list.",
       de: "Intern: die verbliebenen Fehlerklassen der klickbaren Züge in Buch- und Kurs-Kommentaren — gefunden beim Vergleich des alten und des neuen Parsers über alle Buch-Aufgaben — stehen jetzt in der TODO-Liste." },

@@ -750,37 +750,45 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   „Eigene Fehler“); das Vollbild-Abzeichen zählt die gezeigten Tipps und sagt es im `title` (d4).
 - **Hinweiszeile unter dem Brett** (`.board-hint`, Zugrecht/Tipp): EINE Grundregel in `styles.scss`, 0,875 rem in allen
   Modi (vorher Standard 1em, Buch/Endlos 0,88em, d4).
-- **Woodpecker-Statistik im Löser** (0.956.0): unter dem Zyklus-Fortschritt der Kontext-Card, leise (0,85 rem,
-  `--mat-sys-on-surface-variant`, Ziffern `tabular-nums`) und höchstens drei Zeilen, damit die Status-Card oben bleibt:
-  (1) Kennzahlen als EINE `.rh-dots`-Zeile — „30 von 40 gelöst (75 %)“ halbfett in `--mat-sys-on-surface`, „25 ohne Tipp“,
-  „6 mit Tipp“ in `--rh-hint` (nur mit Tipp-Versuchen), „60 offen“ (ab Zyklus 2), „Ø 1:00 je Aufgabe“; (2) Hochrechnung
-  ab Zyklus 2 als `.rh-dots`-Zeile „Rest ≈ 1:00:00 Lösezeit · 6 pro Tag nötig · bisher 10 pro Tag · fertig ≈ 14.11.2026,
-  rechtzeitig“ (`--rh-success`; zu langsam „…, Frist 18.11.2026“ und „Frist überschritten“ in `--rh-warn`), in Zyklus 1
-  ein Satz „Bei diesem Tempo (10 pro Tag) ≈ 290 Aufgaben im Satz bis zur Frist“; (3) „Zyklus 1: 75 % gelöst, Ø 1:30“.
-  Ohne Versuch nur die Hochrechnungszeile (Zyklus 2+: nötig je Tag). Gelöst mit Tipp zählt als gelöst. Prozent über
-  `| pct`, Zeiten `formatSecondsClock`, Datum `mediumDate`, Tempo `number:'1.0-1'`.
-  **Seit 0.957.0 standardmäßig eingeklappt** (Nutzerentscheidung 10.11.2026: „Statistik standardmäßig eingeklappt →
-  ausklappbar“): sichtbar sind nur Zyklus-Kopf, Balken und Frist. **Seit 0.958.1 ein richtiger Knopf** (der Textlink
-  „Statistik ▾“ am Ende der `.rh-dots`-Zeile wurde nicht gefunden, „nein da steht nichts“): eigene kleine Aktionszeile
-  direkt unter der Zyklus-Zeile, linksbündig, nicht volle Breite — `mat-stroked-button` kompakt (32 px, mit
-  `(pointer: coarse)` 44 px hoch, 7) mit Symbol + Beschriftung, die den Zustand sagt: zu `expand_more` „Statistik
-  anzeigen“, offen `expand_less` „Statistik ausblenden“ (`aria-expanded` + `aria-controls`). Zugeklappt macht er die Karte
-  nur um diese eine Zeile höher. Am Ende des aufgeklappten Blocks steht ein zweiter Knopf „Statistik ausblenden“
-  (nur offen, gleicher Zustand); nach dem Zuklappen darüber bekommt der obere Knopf den Fokus und wird per
-  `scrollIntoView({ block: 'nearest' })` in den Blick geholt — sonst stünde man nach dem Zusammenfallen des Blocks
-  irgendwo auf der Seite. Zustand je Gerät (`rh.woodpecker.statsOpen`, `core/local-json-store`), Vorgabe zu.
-  Aufgeklappt zuerst die drei Zeilen oben, darunter die **ausführliche Statistik** (`app-woodpecker-stats-panel`, lädt
-  `/stats` erst dann, danach entprellt nach jeder Meldung): Abschnitte mit kleiner h3 (0,85 rem, halbfett,
-  `--mat-sys-on-surface`) in fester Reihenfolge — Dieselben Aufgaben (gemeinsam · jetzt · damals · Anteil der Zeit, ≤ 50 %
-  in `--rh-success` · Faktor „2,2× schneller“ über `DecimalPipe` `1.1-1`; Quote jetzt/damals) → Wechsel je Aufgabe
-  (verbessert in `--rh-success`, verschlechtert in `--rh-warn`; schneller/langsamer, gespart/verloren; Zeitstufen-Tabelle
-  jetzt/damals) → Hochrechnung (gesamt, Vorzyklus, Rest; Ziel „halbe Zeit“ erreicht/nicht) → Tipps (Tabelle Anzahl +
-  Anteil je Stufe; vor dem Stichtag ein Satz „Tipps werden erst seit … gezählt“, nie eine vorgetäuschte 0) → Verlauf
-  (Tabelle je Zyklus, laufender halbfett, Spalte „dieselben wie jetzt“, „–“ wo nichts belastbar ist) bzw. in Zyklus 1
-  „Je Tag“ (jüngste 14) → Sorgenkinder (Bezeichnung · Zeiten · Link „ansehen“, nie Stellung/Lösung, 2.7). Jede Angabe als
-  eigenes `.rh-dots`-Kind ohne Umbruch in sich; Tabellen rechtsbündig + `tabular-nums` in eigenem `overflow-x: auto`-Kasten
-  (Verlaufstabelle `min-width: 420px`), damit die Seite bei 390 px nie waagerecht scrollt (4.4, 5.3). Laden = schmaler
+- **Woodpecker-Statistik = Fenster über dem Löser** (0.992.0, Nutzerwunsch 18.11.2026: „mach die Statistik als
+  modales Overlay und pausiere das aktuelle Puzzle währenddessen“; löst den aufklappbaren Block in der Kontext-Card ab,
+  0.956.0–0.958.1). In der Kontext-Card bleibt nur der Knopf: eigene kleine Aktionszeile direkt unter der Zyklus-Zeile,
+  linksbündig, nicht volle Breite — `mat-stroked-button` kompakt (32 px, mit `(pointer: coarse)` 44 px hoch, 7) mit
+  Symbol `bar_chart` und der Beschriftung „Statistik“ (`aria-haspopup="dialog"`; ein Textlink am Zeilenende wurde 0.958.1
+  nicht gefunden). Kein gemerkter Auf/Zu-Zustand mehr.
+  **Fenster** (`WoodpeckerStatsDialogComponent`): Inhalts-Dialog nach 5.6 — 760 px / `94vw`, ein Scrollbereich mit
+  Weiterscroll-Schatten, Titel „Statistik“, darunter leise Trainingsname · „Zyklus n von 7“, EINE Knopfzeile (kein ✕),
+  `autoFocus: 'dialog'`; Esc und Klick daneben schließen, der Fokus kehrt zum Knopf zurück. **Die Aufgabe steht, solange
+  es offen ist:** die Lösezeit zählt nicht (angezeigte Uhr und gemeldete Zeit), das Brett dahinter ist unkenntlich
+  (`filter: blur(18px)`, ohne Übergang — Pausieren ist keine Gratis-Denkzeit). Läuft gerade eine Aufgabe, sagt eine leise
+  Zeile mit `pause_circle` „Die Uhr der Aufgabe steht, solange dieses Fenster offen ist.“ und der Hauptknopf heißt
+  „Weiter lösen“, sonst „Schließen“.
+  **Übersicht ganz oben** (`.wps-top`, durch eine Haarlinie vom Rest getrennt) — das, wofür man das Fenster öffnet,
+  deshalb in Lesegröße (1 rem) und Textfarbe statt leise: kleine Tabelle mit den Spalten „Bisher“ (halbfett) und je
+  früherem Zyklus „Zyklus k“ (jüngster zuerst), Zeilen „Zeit“ (`formatSecondsClock`) und „Richtig“ (`| pct`); die
+  früheren Zyklen zeigen DIESELBEN Aufgaben wie jetzt (ein leiser Satz sagt es). Ist die Schnittmenge kleiner als die
+  jetzt bearbeiteten Aufgaben, steht je betroffenem Zyklus ein Satz mit Anzahl und den Jetzt-Werten auf genau diesen
+  Aufgaben — nie Gesamtzeit gegen Teilmenge. Darunter eine `.rh-dots`-Zeile „Nötig je Tag: **50** (247 offen ÷ 5 Tage)
+  · Heute: **23**“: Beschriftung leise, Zahl halbfett, Rechnung klein in Klammern; nötig = ⌈offen / Resttage⌉. Frist
+  vorbei → „Frist überschritten“ (`--rh-warn`) + „n offen“ statt der Soll-Zahl; Zyklus 1 hat kein Soll (der Satz wächst)
+  → „bisher n pro Tag“ + „Heute“. Ohne Versuch „–“ statt 0:00 / 0 %, das Soll je Tag steht trotzdem. Die Tabelle hat
+  ihren eigenen `overflow-x: auto`-Kasten (viele Zyklen, 4.4).
+  **Darunter** leise (0,85 rem, `--mat-sys-on-surface-variant`, `tabular-nums`) in Abschnitten mit kleiner h3 (0,85 rem,
+  halbfett, `--mat-sys-on-surface`), feste Reihenfolge, und nichts doppelt zur Übersicht: Dieser Zyklus („127 von 141
+  gelöst“ halbfett ohne Quote, „121 ohne Tipp“, „9 mit Tipp“ in `--rh-hint`, „Ø 0:51 je Aufgabe“; Hochrechnung „Rest ≈ …
+  Lösezeit · bisher 47 pro Tag · fertig ≈ 23.11.2026, rechtzeitig“ in `--rh-success` bzw. „…, Frist …“ in `--rh-warn`;
+  Zyklus 1 ein Satz „Bei diesem Tempo (10 pro Tag) ≈ 290 Aufgaben im Satz bis zur Frist“) → Dieselben Aufgaben (gemeinsam
+  · Anteil der Zeit, ≤ 50 % in `--rh-success` · Faktor „1,5× schneller“ über `DecimalPipe` `1.1-1` · „127 statt 131 von
+  141“; ältere Zyklen je eine Zeile mit Anteil) → Wechsel je Aufgabe (verbessert in `--rh-success`, verschlechtert in
+  `--rh-warn`; schneller/langsamer, gespart/verloren; Zeitstufen-Tabelle jetzt/damals) → Hochrechnung (gesamt, Vorzyklus,
+  Rest; Ziel „halbe Zeit“ erreicht/nicht) → Tipps (Tabelle Anzahl + Anteil je Stufe; vor dem Stichtag ein Satz „Tipps
+  werden erst seit … gezählt“, nie eine vorgetäuschte 0) → Verlauf (Tabelle je ganzem Zyklus, laufender halbfett, „–“
+  wo nichts belastbar ist) bzw. in Zyklus 1 „Je Tag“ (jüngste 14) → Sorgenkinder (Bezeichnung · Zeiten · Link „ansehen“,
+  nie Stellung/Lösung, 2.7). Jede Angabe als eigenes `.rh-dots`-Kind ohne Umbruch in sich (die Tageszeile der Übersicht
+  darf umbrechen); Tabellen rechtsbündig + `tabular-nums` in eigenem `overflow-x: auto`-Kasten (Verlaufstabelle
+  `min-width: 420px`), damit bei 390 px weder Seite noch Fenster waagerecht scrollen (4.4, 5.3). Laden = schmaler
   `mat-progress-bar` statt Seiten-Spinner, Fehler = `app-load-error` mit „Erneut versuchen“, leer = ein Satz (5.10).
+  Gelöst mit Tipp zählt als gelöst. Datum `mediumDate`, Tempo `number:'1.0-1'`.
 - **Tagespuzzle** nennt sich: Chip „Tagespuzzle“ + Datum (`mediumDate`, UTC) in der Kontext-Card wie der Wochenpost-Chip (d4).
 - Gleiche Erweiterung in allen drei Puzzle-Modi prüfen (Standard, Endless, Buch/Kurs; `rookhub/CLAUDE.md`).
 
@@ -1414,6 +1422,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-18 | 0.992.0 · Woodpecker-Löser | Statistik als modaler Inhalts-Dialog (760 px / 94vw) statt aufklappbarem Block in der Kontext-Card (löst die Einträge 0.957.0 und 0.958.1 ab): Knopf „Statistik“ (`bar_chart`) unter der Zyklus-Zeile; oben Übersicht in Lesegröße — Tabelle „Bisher“ gegen dieselben Aufgaben je früherem Zyklus (Zeit, Richtig), „Nötig je Tag: n (offen ÷ Resttage) · Heute: n“; darunter die bisherigen Abschnitte ohne Doppeltes; solange das Fenster offen ist, steht die Lösezeit und das Brett ist unkenntlich (Blur), Hauptknopf „Weiter lösen“ (5.12) | Die wichtigsten Zahlen standen mitten in einem langen Block in der Seitenspalte; beim Lesen lief die Uhr der Aufgabe weiter | Nutzerwunsch 18.11. |
 | 2026-11-16 | 0.987.0 · Trainer-Notizbuch | Unterseite `/training-videos/notebook`: Themen „Sagt er immer wieder“ mit Häufigkeit, Eröffnungsempfehlungen mit Mini-Brett + Repertoire-Satz, alle Notizen als Kategorie-Reiter (Chip-Liste mit Anzahl) je Stunde, Aufklapper „▶ anhören“/„Rohzitat“ je Notiz (8.1) | Trainer-Aussagen stundenübergreifend nachschlagen statt Stunde für Stunde | Auftrag der betreuenden Sitzung 16.11. |
 | 2026-11-16 | 0.986.0 · Trainerstunden | Neue Seiten `/training-videos` (Liste + Suche), Stunde (Video + Brett + Segmentliste, Liste folgt dem Video), Nachspielen (Zug finden, Hinweis/Auflösen/Überspringen, Ausschnitt-Player „Erklärung hören“ mit „nur Ton“, im E-Ink-Modus vorgewählt) und die Karte „Trainerkommentar“ an der eigenen Partie, getrennt von der Engine-Erklärung (8.1) | Erste Video-Seite der App; Trainer- und Engine-Aussagen dürfen nicht verwechselt werden; E-Ink zeigt bewegtes Bild nur verschmiert | Auftrag der betreuenden Sitzung 16.11. |
 | 2026-11-15 | 0.983.0 · Dashboard/Menü | LeagueHub-Kachel (8.1) als dritte Ausnahme in `DEFAULT_VISIBLE`, nur mit `league.view`; Knopf und Menüeintrag „LeagueHub“ (Community, nach „Turniere“) mit `open_in_new` | Wer Zugriff hat, soll LeagueHub ohne „Anpassen“ und ohne Adresse zu kennen erreichen; das Symbol kündigt den Wechsel der Oberfläche an | Nutzerwunsch 15.11. |

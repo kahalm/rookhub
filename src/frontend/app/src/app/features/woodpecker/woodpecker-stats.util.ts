@@ -1,14 +1,6 @@
-import { WoodpeckerPlan } from './woodpecker.service';
+import { todayYmd, WoodpeckerPlan, WoodpeckerStats } from './woodpecker.service';
 
 const DAY_MS = 86_400_000;
-
-/** Kennzahlen eines vorigen Zyklus zum Vergleich (nur mit mindestens einem Versuch). */
-export interface WoodpeckerPrevStats {
-  number: number;
-  /** Quote in Prozentpunkten (0–100), für `| pct`. */
-  ratePct: number;
-  avgSeconds: number;
-}
 
 /**
  * Statistik + Hochrechnung des laufenden Zyklus (Wunsch 2026-11-10: „wie viel gelöst, wie viel mit Hint,
@@ -50,7 +42,6 @@ export interface WoodpeckerCycleStats {
    *  `null` ohne Versuch oder ab Zyklus 2. */
   projectedSet: number | null;
   deadlineIso: string;
-  prev: WoodpeckerPrevStats | null;
 }
 
 /** Lokale Mitternacht des Zeitpunkts (ms). */
@@ -77,6 +68,9 @@ export function calendarDaysSince(fromMs: number, nowMs: number): number {
  * - ab Zyklus 2: offen = Satz − bearbeitet; Restzeit = offen × Ø; nötig/Tag = ⌈offen / Resttage⌉ (Resttage wie
  *   `daysLeft`, aufgerundet); voraussichtlich fertig = jetzt + offen / Tempo Tage, im Plan, wenn ≤ Frist.
  * - Zyklus 1: ≈ Satz bis zur Frist = bearbeitet + Tempo × verbleibende Tage (anteilig), höchstens alle Aufgaben.
+ *
+ * Der Vorzyklus (Quote, Ø) steht seit 2026-11-18 nicht mehr hier: die Übersicht ({@link woodpeckerOverview}) vergleicht
+ * auf denselben Aufgaben, die Verlaufstabelle zeigt die ganzen Zyklen.
  */
 export function woodpeckerCycleStats(plan: WoodpeckerPlan | null | undefined, now: number = Date.now()): WoodpeckerCycleStats | null {
   const c = plan?.cycles.length ? plan.cycles[plan.cycles.length - 1] : null;
@@ -116,14 +110,101 @@ export function woodpeckerCycleStats(plan: WoodpeckerPlan | null | undefined, no
     projectedSet = Math.min(Math.max(plan.availableCount, attempted), Math.round(attempted + perDay * rest));
   }
 
-  const p = plan.cycles.length > 1 ? plan.cycles[plan.cycles.length - 2] : null;
-  const prev = p && p.attempted > 0
-    ? { number: p.number, ratePct: (100 * p.solved) / p.attempted, avgSeconds: Math.round(p.timeSeconds / p.attempted) }
-    : null;
-
   return {
     cycle: c.number, attempted, solved, solvedClean: Math.max(0, solved - solvedWithHint), hinted, ratePct, avgSeconds,
     open, remainingSeconds, daysElapsed, perDay, daysLeft, overdue, neededPerDay, etaIso, onTrack, projectedSet,
-    deadlineIso: c.deadline, prev,
+    deadlineIso: c.deadline,
+  };
+}
+
+/** Ein früherer Zyklus in der Übersicht: Zeit und Quote auf DENSELBEN Aufgaben wie jetzt. */
+export interface WoodpeckerOverviewEarlier {
+  cycle: number;
+  /** Gemeinsame Aufgaben (jetzt bearbeitet UND damals mit Versuch). */
+  count: number;
+  secondsThen: number;
+  /** Quote damals in Prozentpunkten; `null` ohne gemeinsame Aufgabe. */
+  ratePctThen: number | null;
+  /** Nur wenn die Schnittmenge KLEINER ist als die jetzt bearbeiteten Aufgaben: die Jetzt-Werte auf genau diesen
+   *  Aufgaben — sonst stünde die Gesamtzeit von jetzt gegen die Zeit einer Teilmenge. Sonst `null`. */
+  partial: { secondsNow: number; ratePctNow: number | null } | null;
+}
+
+/**
+ * Übersicht ganz oben im Statistik-Fenster (Wunsch 2026-11-18): bisherige Zeit und Quote des laufenden Zyklus, daneben
+ * dieselben Aufgaben in JEDEM früheren Zyklus, dazu „nötig je Tag“ und „heute“.
+ */
+export interface WoodpeckerOverview {
+  cycle: number;
+  attempted: number;
+  /** Bisherige Lösezeit im laufenden Zyklus (Sekunden). */
+  secondsNow: number;
+  /** Bisherige Quote in Prozentpunkten; `null` ohne Versuch. */
+  ratePctNow: number | null;
+  /** Frühere Zyklen mit mindestens einer gemeinsamen Aufgabe, jüngster zuerst. */
+  earlier: WoodpeckerOverviewEarlier[];
+  /** Heute (lokaler Kalendertag) im laufenden Zyklus bearbeitete Aufgaben. */
+  today: number;
+  /** Ab Zyklus 2: offene Aufgaben des Satzes; in Zyklus 1 `null` (der Satz wächst noch, es gibt kein Soll). */
+  open: number | null;
+  /** Ganze Resttage bis zur Frist (aufgerundet wie „noch N Tage“); 0 = Frist erreicht. */
+  daysLeft: number;
+  overdue: boolean;
+  /** Ab Zyklus 2: ⌈offen / Resttage⌉; `null` in Zyklus 1, ohne offene Aufgabe oder nach der Frist. */
+  neededPerDay: number | null;
+  /** Bisheriges Tempo (bearbeitet / begonnene Kalendertage) — in Zyklus 1 statt einer Soll-Zahl gezeigt. */
+  perDay: number;
+}
+
+/**
+ * Der Plan mit den Zahlen des laufenden Zyklus aus `/stats` — damit Übersicht, Kennzahlzeilen und Abschnitte im
+ * Fenster denselben Serverstand zeigen (der Plan im Löser kann eine Meldung hinterher sein). Frist, Beginn und
+ * `availableCount` gibt es nur im Plan; passt `/stats` nicht zum Plan (anderer Zyklus), bleibt der Plan, wie er ist.
+ */
+export function planWithStats(plan: WoodpeckerPlan, stats: WoodpeckerStats | null | undefined): WoodpeckerPlan {
+  const cur = stats?.cycles.find(c => c.number === stats.currentCycle);
+  const last = plan.cycles[plan.cycles.length - 1];
+  if (!stats || !cur || !last || last.number !== cur.number || stats.planId !== plan.id) return plan;
+  return {
+    ...plan,
+    setSize: plan.currentCycle > 1 ? stats.setSize : plan.setSize,
+    cycles: plan.cycles.map(c => (c === last
+      ? { ...c, attempted: cur.attempted, solved: cur.solved, timeSeconds: cur.timeSeconds, hinted: cur.hinted,
+          solvedWithHint: Math.max(0, cur.solved - cur.solvedClean) }
+      : c)),
+  };
+}
+
+/**
+ * Übersicht aus `/stats` (Zeit, Quote, dieselben Aufgaben je früherem Zyklus, heute) und dem Plan (Frist). Rein
+ * (Zeit über `now`), getestet in `woodpecker-stats.util.spec.ts`. `null`, solange `/stats` fehlt oder nicht zum
+ * Plan passt.
+ *
+ * - „heute“ = Eintrag von `days[]` mit dem lokalen Datum von `now` (der Server bildet die Tage mit dem
+ *   `utcOffsetMinutes` dieses Geräts); gibt es keinen, ist heute noch nichts bearbeitet → 0.
+ * - „nötig je Tag“ = ⌈offene Aufgaben / Resttage⌉ (Vorgabe des Nutzers), siehe {@link woodpeckerCycleStats}.
+ */
+export function woodpeckerOverview(
+  stats: WoodpeckerStats | null | undefined, plan: WoodpeckerPlan | null | undefined, now: number = Date.now(),
+): WoodpeckerOverview | null {
+  if (!stats || !plan) return null;
+  const cur = stats.cycles.find(c => c.number === stats.currentCycle);
+  const s = woodpeckerCycleStats(planWithStats(plan, stats), now);
+  if (!cur || !s || s.cycle !== cur.number) return null;
+  const earlier = stats.cycles
+    .filter(c => c.number < stats.currentCycle && (c.sameAsNow?.count ?? 0) > 0)
+    .sort((a, b) => b.number - a.number)
+    .map(c => {
+      const o = c.sameAsNow!;
+      return {
+        cycle: c.number, count: o.count, secondsThen: o.secondsThen, ratePctThen: o.ratePctThen,
+        partial: o.count < cur.attempted ? { secondsNow: o.secondsNow, ratePctNow: o.ratePctNow } : null,
+      };
+    });
+  const todayKey = todayYmd(new Date(now));
+  return {
+    cycle: cur.number, attempted: cur.attempted, secondsNow: cur.timeSeconds, ratePctNow: s.ratePct, earlier,
+    today: stats.days.find(d => d.date === todayKey)?.attempted ?? 0,
+    open: s.open, daysLeft: s.daysLeft, overdue: s.overdue, neededPerDay: s.neededPerDay, perDay: s.perDay,
   };
 }

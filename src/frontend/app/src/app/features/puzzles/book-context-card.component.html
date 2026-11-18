@@ -34,13 +34,13 @@
               }
               <span>{{ (woodpeckerDaysLeft() === 1 ? 'woodpecker.daysLeftOne' : 'woodpecker.daysLeft') | translate: { days: woodpeckerDaysLeft() } }}</span>
             </div>
-            <!-- Statistik-Umschalter als eigener kleiner Rahmenknopf unter der Zyklus-Zeile (0.958.1, DESIGN 5.12): der
-                 Textlink am Zeilenende wurde nicht gefunden. Beschriftung sagt den Zustand; Vorgabe zugeklappt, je Gerät gemerkt. -->
+            <!-- Statistik als Fenster (Wunsch 2026-11-18, DESIGN 5.12): kleiner Rahmenknopf in eigener Zeile unter der
+                 Zyklus-Zeile (0.958.1: ein Textlink am Zeilenende wurde nicht gefunden). Der Löser öffnet das Fenster
+                 und hält die Aufgabe so lange an; die Karte selbst zeigt keine Statistik mehr. -->
             <div class="wp-stats-actions">
-              <button #wpStatsTop mat-stroked-button type="button" class="wp-stats-toggle" [attr.aria-expanded]="wpStatsOpen()"
-                      aria-controls="wp-stats-block" (click)="toggleWpStats()">
-                <mat-icon aria-hidden="true">{{ wpStatsOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
-                {{ (wpStatsOpen() ? 'woodpecker.statsHide' : 'woodpecker.statsShow') | translate }}
+              <button mat-stroked-button type="button" class="wp-stats-open" aria-haspopup="dialog" (click)="woodpeckerStats.emit()">
+                <mat-icon aria-hidden="true">bar_chart</mat-icon>
+                {{ 'woodpecker.statistics' | translate }}
               </button>
             </div>
           }
@@ -149,67 +149,6 @@
         <div class="ctx-progress">
           <mat-progress-bar mode="determinate" [value]="woodpeckerPercent()"
                             [attr.aria-label]="'woodpecker.cycleProgress' | translate: { done: woodpeckerAttempted(), total: woodpeckerPlan()?.setSize }"></mat-progress-bar>
-        </div>
-      }
-      <!-- Statistik des laufenden Zyklus (Wunsch 2026-11-10, 0.956.0): Kennzahlen als EINE .rh-dots-Zeile, darunter die
-           Hochrechnung als ein Satz und der Vorzyklus — leise Schrift, damit die Bedienung (Status-Card) oben bleibt
-           (DESIGN 5.12). Gelöst mit Tipp zählt als gelöst; „ohne Tipp“ = sauber gelöst. -->
-      @if (wpStatsOpen() && woodpeckerStats(); as s) {
-        <div class="wp-stats" id="wp-stats-block">
-          @if (s.attempted > 0) {
-            <div class="wp-stats-row rh-dots">
-              <span class="wp-solved">{{ 'woodpecker.stats.solvedOf' | translate: { solved: s.solved, done: s.attempted, pct: (s.ratePct | pct) } }}</span>
-              @if (s.hinted > 0) {
-                <span class="wp-clean">{{ 'woodpecker.stats.clean' | translate: { n: s.solvedClean } }}</span>
-                <span class="wp-hinted">{{ (s.hinted === 1 ? 'woodpecker.stats.hintedOne' : 'woodpecker.stats.hinted') | translate: { n: s.hinted } }}</span>
-              }
-              @if (s.open !== null) {
-                <span class="wp-open">{{ 'woodpecker.stats.open' | translate: { n: s.open } }}</span>
-              }
-              @if (s.avgSeconds !== null) {
-                <span class="wp-avg">{{ 'woodpecker.stats.avg' | translate: { time: clock(s.avgSeconds) } }}</span>
-              }
-            </div>
-          }
-          @if (s.cycle > 1) {
-            @if (s.open) {
-              <div class="wp-stats-row wp-forecast rh-dots">
-                @if (s.remainingSeconds !== null) {
-                  <span>{{ 'woodpecker.stats.remaining' | translate: { time: clock(s.remainingSeconds) } }}</span>
-                }
-                @if (s.overdue) {
-                  <span class="wp-late">{{ 'woodpecker.overdue' | translate }}</span>
-                } @else if (s.neededPerDay !== null) {
-                  <span>{{ 'woodpecker.stats.needed' | translate: { n: s.neededPerDay } }}</span>
-                }
-                @if (s.attempted > 0) {
-                  <span>{{ 'woodpecker.stats.pace' | translate: { n: (s.perDay | number: '1.0-1') } }}</span>
-                }
-                @if (s.etaIso) {
-                  @if (s.onTrack) {
-                    <span class="wp-ok">{{ 'woodpecker.stats.etaOnTrack' | translate: { date: (s.etaIso | date: 'mediumDate') } }}</span>
-                  } @else {
-                    <span class="wp-late">{{ 'woodpecker.stats.etaLate' | translate: { date: (s.etaIso | date: 'mediumDate'), deadline: (s.deadlineIso | date: 'mediumDate') } }}</span>
-                  }
-                }
-              </div>
-            }
-          } @else if (s.projectedSet !== null) {
-            <p class="wp-stats-row wp-forecast">{{ (s.projectedSet === 1 ? 'woodpecker.stats.projectionOne' : 'woodpecker.stats.projection') | translate: { n: s.projectedSet, pace: (s.perDay | number: '1.0-1') } }}</p>
-          }
-          @if (s.prev; as pv) {
-            <p class="wp-stats-row wp-prev">{{ 'woodpecker.stats.prev' | translate: { n: pv.number, pct: (pv.ratePct | pct), time: clock(pv.avgSeconds) } }}</p>
-          }
-          <!-- Ausführlich (0.957.0): Vergleich auf denselben Aufgaben, Wechsel, Hochrechnung, Tipps, Verlauf, Sorgenkinder -->
-          <app-woodpecker-stats-panel [plan]="woodpeckerPlan()" />
-          <!-- Zweiter Knopf am Blockende (0.958.1): der Block ist lang; nach dem Zuklappen Fokus + Blick auf den oberen Knopf. -->
-          <div class="wp-stats-actions wp-stats-end">
-            <button mat-stroked-button type="button" class="wp-stats-hide-end" aria-expanded="true" aria-controls="wp-stats-block"
-                    (click)="hideWpStatsFromEnd()">
-              <mat-icon aria-hidden="true">expand_less</mat-icon>
-              {{ 'woodpecker.statsHide' | translate }}
-            </button>
-          </div>
         </div>
       }
       @if (inWoodpecker() && woodpeckerRepeatHint()) {

@@ -1,5 +1,5 @@
-import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, inject, Injector, input, output, signal, viewChild } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -12,18 +12,10 @@ import { CourseLangPickerComponent } from '../courses/course-lang-picker.compone
 import { CourseLineEbookRef, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { WeeklyMode } from '../weekly/weekly.service';
 import { WoodpeckerPlan } from '../woodpecker/woodpecker.service';
-import { woodpeckerCycleStats } from '../woodpecker/woodpecker-stats.util';
-import { WoodpeckerStatsPanelComponent } from '../woodpecker/woodpecker-stats-panel.component';
-import { localStore, readJson, writeJson } from '../../core/local-json-store';
-import { PctPipe } from '../../shared/format/pct';
-import { formatSecondsClock } from '../../shared/clock-format.util';
 import { BookPuzzleDto } from './puzzle.service';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { CourseStatsPanelComponent } from './course-stats-panel.component';
 import { dailyDateValue } from './book-daily-mode';
-
-/** Gerätevorliebe: Woodpecker-Statistik im Löser aufgeklappt (Vorgabe zu, Nutzerentscheidung 10.11.2026). */
-export const WOODPECKER_STATS_OPEN_KEY = 'rh.woodpecker.statsOpen';
 
 /**
  * Kontext-Karte des Buch-Lösers (Zerlegung Z18): Puzzle-Info (Wochenpost-/Tagespuzzle-Chip, Titel, Kapitel, Buch,
@@ -34,9 +26,8 @@ export const WOODPECKER_STATS_OPEN_KEY = 'rh.woodpecker.statsOpen';
 @Component({
   selector: 'app-book-context-card',
   imports: [
-    DatePipe, DecimalPipe, PctPipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatTooltipModule,
+    DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatTooltipModule,
     TranslatePipe, IconLabelDirective, CourseLangPickerComponent, PuzzleTagsComponent, CourseStatsPanelComponent,
-    WoodpeckerStatsPanelComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './book-context-card.component.html',
@@ -129,6 +120,8 @@ export class BookContextCardComponent {
   readonly weeklyOverview = output<void>();
   readonly courseOverview = output<void>();
   readonly woodpeckerOverview = output<void>();
+  /** „Statistik“ im Woodpecker-Kopf: der Löser öffnet das Statistik-Fenster und hält die Aufgabe so lange an. */
+  readonly woodpeckerStats = output<void>();
   readonly retryFailed = output<void>();
   readonly restartCourse = output<void>();
   readonly courseNext = output<void>();
@@ -136,32 +129,6 @@ export class BookContextCardComponent {
   readonly randomInBook = output<void>();
   readonly prevDaily = output<void>();
   readonly nextDaily = output<void>();
-
-  /** Statistik + Hochrechnung des laufenden Woodpecker-Zyklus (0.956.0); neu bei jedem Planstand (nach jeder Meldung). */
-  readonly woodpeckerStats = computed(() => (this.inWoodpecker() ? woodpeckerCycleStats(this.woodpeckerPlan(), Date.now()) : null));
-  readonly clock = formatSecondsClock;
-  /** Woodpecker-Statistik aufgeklappt? Vorgabe zu (nur Kopf + Balken, die Bedienung bleibt oben); je Gerät gemerkt.
-   *  Zu = keine Kennzahlzeilen und kein `/stats`-Abruf (die Kind-Komponente entsteht erst beim Aufklappen). */
-  readonly wpStatsOpen = signal(readJson<boolean>(localStore(), WOODPECKER_STATS_OPEN_KEY) === true);
-
-  toggleWpStats(): void {
-    const open = !this.wpStatsOpen();
-    this.wpStatsOpen.set(open);
-    writeJson(localStore(), WOODPECKER_STATS_OPEN_KEY, open);   // gescheitert = nur nicht gemerkt, Anzeige stimmt trotzdem
-  }
-
-  private readonly injector = inject(Injector);
-  private readonly wpStatsTop = viewChild('wpStatsTop', { read: ElementRef<HTMLButtonElement> });
-
-  /** Zuklappen über den Knopf am Blockende (0.958.1): danach steht man sonst irgendwo auf der Seite — Fokus auf den
-   *  oberen Knopf und ihn nach dem Zusammenfallen des Blocks in den Blick holen. */
-  hideWpStatsFromEnd(): void {
-    if (this.wpStatsOpen()) this.toggleWpStats();
-    const top = this.wpStatsTop()?.nativeElement;
-    if (!top) return;
-    top.focus({ preventScroll: true });
-    afterNextRender(() => top.scrollIntoView({ block: 'nearest' }), { injector: this.injector });
-  }
 
   /** Tag des Tagespuzzles als Datum für die DatePipe (nur mit Tagespuzzle). */
   readonly day = computed(() => (this.isDaily() ? dailyDateValue(this.dailyDate()) : null));

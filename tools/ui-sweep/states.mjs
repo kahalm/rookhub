@@ -200,6 +200,9 @@ export const STATES = [
   { of: 'rookhub__woodpecker', name: 'anlegen', auth: ['user', 'admin'],
     steps: [{ click: '.page .header-actions button, .page .empty-state button' }], expect: DIALOG },
   { of: 'rookhub__woodpecker', name: 'plan-menue', auth: ['admin'], steps: [{ click: '.plans .plan .plan-head button[mat-icon-button]' }], expect: MENU },
+  // Statistik-Fenster über dem Löser (0.992.0): Übersicht oben, die Aufgabe steht so lange (Brett unkenntlich).
+  { of: 'rookhub__woodpecker-woodpeckerPlanId-solve', name: 'statistik', steps: [{ click: '.wp-stats-open' }],
+    expect: dlg('app-woodpecker-stats-dialog') },
 
   // ---------------------------------------------------------------- Dialoge (Runde 28.10.2026)
   // Je Dialog EIN Zustand: öffnen, nie bestätigen. `expect` prüft einen Inhalt IM Dialog (Titel der Komponente), nicht

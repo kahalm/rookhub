@@ -45,6 +45,13 @@ export class SolverTimer {
     this.ticking = true;
   }
 
+  /** Uhr anhalten, ohne den Lauf zu beenden (Fenster über der Aufgabe): die Sekunden bleiben stehen, bis {@link resume}.
+   *  Gilt auch für einen `start()` währenddessen — die nächste Aufgabe beginnt dann angehalten. Idempotent. */
+  pause(): void { this.stopwatch.hold(); }
+
+  /** Nach {@link pause} weiterlaufen lassen. Idempotent. */
+  resume(): void { this.stopwatch.release(); }
+
   /** Anhalten; liefert den finalen aktiven Stand in Sekunden. */
   stop(): number {
     if (this.ticking) {
@@ -64,6 +71,9 @@ export class SolverTimer {
  */
 export class SecondsCountdown {
   remaining = 0;
+  /** Angehalten (Fenster über der Aufgabe, 2026-11-18): der Takt läuft weiter, zählt aber nicht herunter — auch ein
+   *  währenddessen gestarteter Countdown wartet, bis `paused` wieder `false` ist. */
+  paused = false;
   private handle: unknown;
   private ticking = false;
 
@@ -73,6 +83,7 @@ export class SecondsCountdown {
     this.stop();
     this.remaining = seconds;
     this.handle = this.clock.setInterval(() => {
+      if (this.paused) return;
       this.remaining--;
       if (this.remaining <= 0) {
         this.stop();

@@ -2205,6 +2205,30 @@ describe('BookPuzzleComponent Woodpecker-Training gibt es nicht (mehr) (d10)', (
   });
 });
 
+// Wunsch 2026-11-18: Woodpecker-Statistik als Fenster, die Aufgabe steht so lange (Zeit: book-puzzle-modes.spec).
+describe('BookPuzzleComponent Woodpecker-Statistik: Knopf der Karte und unkenntliches Brett', () => {
+  beforeEach(() => spyOn(BookPuzzleComponent.prototype, 'ngOnInit'));
+
+  const wpPlan = () => ({ id: 3, name: 'WP', setSize: 10, availableCount: 100, currentCycle: 2, maxCycles: 7, status: 'solving', cycles: [] });
+
+  it('„Statistik“ der Kontext-Karte öffnet das Fenster über den Löser', () => {
+    const { el, c } = renderBookPuzzle(c => {
+      c.inWoodpecker = true; c.state = 'AWAITING_USER_MOVE'; c.woodpecker.plan = wpPlan();
+    }, '/woodpecker/3/solve');
+    const open = spyOn(c, 'openWoodpeckerStats');
+    (el.querySelector('app-book-context-card .wp-stats-open') as HTMLButtonElement).click();
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('angehalten: die Brett-Spalte trägt .board-paused (Stellung unkenntlich), sonst nicht', () => {
+    const paused = renderBookPuzzle(c => { c.inWoodpecker = true; c.state = 'AWAITING_USER_MOVE'; c.timerPaused = true; }, '/woodpecker/3/solve');
+    expect(paused.el.querySelector('.board-section')?.classList).toContain('board-paused');
+    TestBed.resetTestingModule();
+    const running = renderBookPuzzle(c => { c.inWoodpecker = true; c.state = 'AWAITING_USER_MOVE'; }, '/woodpecker/3/solve');
+    expect(running.el.querySelector('.board-section')?.classList).not.toContain('board-paused');
+  });
+});
+
 // Codereview UX-047: mat-progress-bar ohne Namen (axe aria-progressbar-name, serious, auf /weekly/:id) — ein
 // Screenreader sagte nur „Fortschrittsbalken". Dieselbe Form hatten die Buch-, Kapitel- und Kursbalken.
 describe('BookPuzzleComponent Fortschrittsbalken mit Namen (UX-047)', () => {

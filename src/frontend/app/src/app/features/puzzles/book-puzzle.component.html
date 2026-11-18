@@ -11,7 +11,8 @@
       <div class="puzzle-layout">
 
         <!-- Brett-Spalte -->
-        <div class="board-section" [class.viz-hidden]="vizPiecesHidden && !vizShowPressed">
+        <!-- board-paused: Statistik-Fenster offen, die Uhr steht — die Stellung ist so lange unkenntlich (keine Gratis-Denkzeit). -->
+        <div class="board-section" [class.viz-hidden]="vizPiecesHidden && !vizShowPressed" [class.board-paused]="timerPaused">
           <app-puzzle-board
             [fen]="variationPreview ? variationPreview.fen : boardFen"
             [actualFen]="actualFen"
@@ -115,7 +116,7 @@
             (back)="inWeekly ? weekly.backToOverview() : inWoodpecker ? woodpecker.backToOverview() : course.backToCourses()" (languagePicked)="lang.pick($event)"
             (statsToggled)="statsOpen.set(!statsOpen())" (switchLinked)="course.switchToLinked()"
             (weeklyModeToggled)="weekly.toggleMode()" (weeklyOverview)="weekly.backToOverview()"
-            (courseOverview)="course.backToCourses()" (woodpeckerOverview)="woodpecker.backToOverview()" (retryFailed)="course.retryFailed()" (restartCourse)="course.restart()"
+            (courseOverview)="course.backToCourses()" (woodpeckerOverview)="woodpecker.backToOverview()" (woodpeckerStats)="openWoodpeckerStats()" (retryFailed)="course.retryFailed()" (restartCourse)="course.restart()"
             (courseNext)="course.next()" (nextInBook)="book.next()" (randomInBook)="book.random()"
             (prevDaily)="daily.prev()" (nextDaily)="daily.next()" />
 

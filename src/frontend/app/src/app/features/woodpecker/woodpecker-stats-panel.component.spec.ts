@@ -4,22 +4,26 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { provideTranslateService, TranslateService, TranslationObject } from '@ngx-translate/core';
 import { WOODPECKER_STATS_DEBOUNCE_MS, WoodpeckerStatsPanelComponent } from './woodpecker-stats-panel.component';
-import { WoodpeckerPlan, WoodpeckerStats, WoodpeckerStatsCycle } from './woodpecker.service';
+import { todayYmd, WoodpeckerPlan, WoodpeckerStats, WoodpeckerStatsCycle } from './woodpecker.service';
 
 /** Ziffern allein — vergleicht Zahlen unabhängig von Sprache, Leer- und Trennzeichen („46 %“ / „46%“, „2,2“ / „2.2“). */
 const digits = (s: string | null | undefined) => (s ?? '').replace(/\D+/g, ' ').trim();
 
-describe('WoodpeckerStatsPanelComponent (0.957.0)', () => {
+describe('WoodpeckerStatsPanelComponent (0.957.0, Übersicht 2026-11-18)', () => {
   let fixture: ComponentFixture<WoodpeckerStatsPanelComponent>;
   let http: HttpTestingController;
   let el: HTMLElement;
 
+  const DAY = 86_400_000;
+  const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY).toISOString();
+  /** Zyklus 2 läuft seit gestern, Frist in 12,5 Tagen (→ „noch 13 Tage“). Der Plan trägt bewusst ALTE Zahlen im
+   *  laufenden Zyklus (solved/timeSeconds 0): gezeigt wird der Stand aus `/stats`. */
   const plan = (attempted: number, over: Partial<WoodpeckerPlan> = {}): WoodpeckerPlan => ({
     id: 3, name: 'WP', createdAt: '', completedAt: null, books: [], setSize: 388, availableCount: 400,
     currentCycle: 2, maxCycles: 7, status: 'solving', nextCycleAt: null,
     cycles: [
-      { number: 1, targetDays: 28, startedAt: '', deadline: '', finishedAt: '', attempted: 388, solved: 337, timeSeconds: 51379 },
-      { number: 2, targetDays: 14, startedAt: '', deadline: '', finishedAt: null, attempted, solved: 0, timeSeconds: 0 },
+      { number: 1, targetDays: 28, startedAt: iso(-30), deadline: iso(-2), finishedAt: iso(-2), attempted: 388, solved: 337, timeSeconds: 51379 },
+      { number: 2, targetDays: 14, startedAt: iso(-1), deadline: iso(12.5), finishedAt: null, attempted, solved: 0, timeSeconds: 0 },
     ],
     ...over,
   });
@@ -74,24 +78,108 @@ describe('WoodpeckerStatsPanelComponent (0.957.0)', () => {
 
   afterEach(() => http.verify());
 
-  it('lädt sofort, zeigt erst den Ladebalken, dann Vergleich auf denselben Aufgaben mit Anteil und Faktor', () => {
-    make(plan(73), { woodpecker: { panel: {
-      sameCount: '{{n}} like C{{k}}', nowTime: 'now {{time}}', thenTime: 'then {{time}}', share: 'share {{pct}}',
-      faster: 'x{{x}}', rateNowThen: '{{now}}|{{then}}',
-    } } });
+  const cells = (row: Element | null | undefined) => Array.from(row?.children ?? []).map(c => c.textContent!.trim());
+  /** Leerraum aus dem Template (Zeilenumbrüche zwischen Beschriftung, Zahl und Klammer) zu einem Leerzeichen. */
+  const squash = (t: string) => t.replace(/\s+/g, ' ');
+
+  it('lädt sofort, zeigt erst den Ladebalken, dann ganz oben die Übersicht: Zeit und Quote bisher gegen dieselben Aufgaben in Zyklus 1', () => {
+    make(plan(73), { woodpecker: { overview: { now: 'so far', correct: 'correct' }, panel: { colTime: 'time', colCycle: 'C{{k}}' } } });
     const req = expectStats();
     expect(req.request.params.has('utcOffsetMinutes')).toBeTrue();
     expect(el.querySelector('mat-progress-bar')).not.toBeNull();
+    expect(el.querySelector('.wps-top')).toBeNull();
     req.flush(stats2());
+    fixture.detectChanges();
+    expect(el.querySelector('.wps')!.firstElementChild?.classList).toContain('wps-top');   // die Übersicht steht zuoberst
+    const table = el.querySelector('.wps-top table.wps-overview')!;
+    expect(cells(table.querySelector('thead tr'))).toEqual(['', 'so far', 'C1']);
+    expect(cells(table.querySelector('.wps-ov-time'))).toEqual(['time', '1:25:06', '3:06:30']);
+    const rate = cells(table.querySelector('.wps-ov-rate'));
+    expect(rate[0]).toBe('correct');
+    expect(rate.slice(1).map(digits)).toEqual(['75', '95']);     // Prozentpunkte, nie 0,75
+    expect(el.querySelector('.wps-ov-note')?.textContent).toContain('woodpecker.overview.sameNote');
+    expect(el.querySelector('.wps-ov-partial')).toBeNull();      // 73 gemeinsam = 73 bearbeitet: nichts zu erklären
+  });
+
+  it('Übersicht „je Tag“: nötig = ⌈offen / Resttage⌉ mit den Zahlen aus /stats, daneben heute', () => {
+    make(plan(70), { woodpecker: { overview: { neededLabel: 'need', neededHow: '{{open}}:{{days}}', todayLabel: 'today' } } });   // Plan: 70, /stats: 73
+    expectStats().flush(stats2({ days: [{ date: '2020-01-01', attempted: 61, solved: 45, timeSeconds: 4000 }, { date: todayYmd(), attempted: 12, solved: 10, timeSeconds: 1106 }] }));
+    fixture.detectChanges();
+    const day = el.querySelector('.wps-ov-day')!;
+    expect(cells(day).map(squash)).toEqual(['need: 25 (315:13)', 'today: 12']);   // 388 − 73 = 315 offen, ⌈315 / 13⌉ = 25
+    expect(day.classList).toContain('rh-dots');
+    expect(Array.from(day.querySelectorAll('strong')).map(x => x.textContent)).toEqual(['25', '12']);   // die Zahlen halbfett
+  });
+
+  it('heute noch nichts bearbeitet: „heute 0“ (letzter Tageseintrag ist älter); ein Resttag in der Einzahl', () => {
+    const p = plan(73);
+    p.cycles[1].deadline = iso(0.5);
+    make(p, { woodpecker: { overview: { neededLabel: 'need', neededHowOneDay: '{{open}}:{{days}} day', todayLabel: 'today' } } });
+    expectStats().flush(stats2());   // Tage 9./10.11.2026
+    fixture.detectChanges();
+    expect(cells(el.querySelector('.wps-ov-day')).map(squash)).toEqual(['need: 315 (315:1 day)', 'today: 0']);
+  });
+
+  it('Frist vorbei: „Frist überschritten“ + offen statt einer Soll-Zahl', () => {
+    const p = plan(73);
+    p.cycles[1].deadline = iso(-1);
+    make(p);
+    expectStats().flush(stats2());
+    fixture.detectChanges();
+    const day = el.querySelector('.wps-ov-day')!;
+    expect(cells(day).map(squash)).toEqual(['woodpecker.overdue', 'woodpecker.stats.open', 'woodpecker.overview.todayLabel: 0']);
+    expect(day.querySelector('.wps-late')).not.toBeNull();
+    expect(day.querySelector('.wps-ov-needed')).toBeNull();
+  });
+
+  it('mehrere frühere Zyklen: jüngster zuerst; kleinere Schnittmenge wird mit den Jetzt-Werten auf diesen Aufgaben ausgewiesen', () => {
+    const p = plan(40, { currentCycle: 3, setSize: 100 });
+    p.cycles = [p.cycles[0], { ...p.cycles[0], number: 2, targetDays: 14 }, { ...p.cycles[1], number: 3, targetDays: 7 }];
+    make(p, { woodpecker: { overview: { partial: 'C{{k}} only {{n}}: {{time}} {{pct}}' }, panel: { colCycle: 'C{{k}}', olderShare: 'C{{k}} {{n}} {{pct}}' } } });
+    const over = (cycle: number, count: number, secondsNow: number, secondsThen: number, now: number, then: number) => ({
+      cycle, count, secondsNow, secondsThen, solvedNow: 0, solvedThen: 0, hintedNow: 0, hintedThen: 0,
+      ratePctNow: now, ratePctThen: then, timeRatio: secondsNow / secondsThen, speedFactor: secondsThen / secondsNow });
+    expectStats().flush(stats2({ currentCycle: 3, setSize: 100, changes: null, forecast: null, cycles: [
+      row({ sameAsNow: over(1, 40, 2000, 5200, 75, 65) }),
+      row({ number: 2, targetDays: 14, sameAsNow: over(2, 25, 1100, 1800, 72, 88) }),
+      row({ number: 3, targetDays: 7, finishedAt: null, attempted: 40, solved: 30, solvedClean: 30, timeSeconds: 2000, ratePct: 75, avgSeconds: 50 }),
+    ] }));
+    fixture.detectChanges();
+    const table = el.querySelector('table.wps-overview')!;
+    expect(cells(table.querySelector('thead tr')).slice(1)).toEqual(['woodpecker.overview.now', 'C2', 'C1']);
+    expect(cells(table.querySelector('.wps-ov-time')).slice(1)).toEqual(['33:20', '30:00', '1:26:40']);
+    expect(cells(table.querySelector('.wps-ov-rate')).slice(1).map(digits)).toEqual(['75', '88', '65']);
+    const partial = Array.from(el.querySelectorAll('.wps-ov-partial')).map(x => x.textContent!.trim());
+    expect(partial.length).toBe(1);                                // nur Zyklus 2 (25 von 40)
+    expect(partial[0].replace(/\s*%/, '%')).toBe('C2 only 25: 18:20 72%');
+    // Abschnitt „Dieselben Aufgaben“: ältere Zyklen nur noch mit Anteil der Zeit (die Zeit selbst steht oben)
+    expect(digits(el.querySelector('.wps-older')?.textContent)).toBe('1 40 38');
+  });
+
+  it('Abschnitt „Dieser Zyklus“ (vorher in der Kontext-Karte): Zählung ohne Quote, Tipps, Ø; Hochrechnung ohne „nötig je Tag“', () => {
+    make(plan(73), { woodpecker: { stats: { solvedCount: '{{solved}}/{{done}}', avg: 'avg {{time}}', clean: 'clean {{n}}', hinted: 'hint {{n}}' } } });
+    expectStats().flush(stats2({ cycles: [stats2().cycles[0], { ...stats2().cycles[1], solvedClean: 50, hinted: 6 }] }));
+    fixture.detectChanges();
+    const sec = el.querySelector('.wps-cycle')!;
+    const rows = Array.from(sec.querySelectorAll('.wps-line'));
+    expect(cells(rows[0])).toEqual(['55/73', 'clean 50', 'hint 6', 'avg 1:10']);   // 5106 s / 73
+    expect(cells(rows[1])).toEqual(['woodpecker.stats.remaining', 'woodpecker.stats.pace', 'woodpecker.stats.etaOnTrack']);
+    expect(sec.textContent).not.toContain('%');
+    expect(el.querySelector('.wps-top')!.compareDocumentPosition(sec) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('Abschnitt „Dieselben Aufgaben“: gemeinsame Zahl, Anteil der Zeit, Faktor und gelöst jetzt/damals — Zeiten und Quoten nur oben', () => {
+    make(plan(73), { woodpecker: { panel: { sameCount: '{{n}} like C{{k}}', share: 'share {{pct}}', faster: 'x{{x}}', solvedNowThen: '{{now}}/{{then}}/{{n}}' } } });
+    expectStats().flush(stats2());
     fixture.detectChanges();
     const same = el.querySelector('.wps-same')!;
     expect(same.querySelector('.wps-strong')?.textContent?.trim()).toBe('73 like C1');
-    expect(same.querySelector('.wps-now')?.textContent?.trim()).toBe('now 1:25:06');
-    expect(same.querySelector('.wps-then')?.textContent?.trim()).toBe('then 3:06:30');
     expect(digits(same.querySelector('.wps-share')?.textContent)).toBe('46');        // Prozentpunkte, nie 0,46
     expect(same.querySelector('.wps-share')?.classList).toContain('wps-ok');          // ≤ halbe Zeit
     expect(digits(same.querySelector('.wps-factor')?.textContent)).toBe('2 2');      // 2,2× / 2.2×
-    expect(digits(same.querySelector('.wps-rate')?.textContent)).toBe('75 95');
+    expect(same.querySelector('.wps-solved-change')?.textContent?.trim()).toBe('55/69/73');
+    expect(same.textContent).not.toContain('1:25:06');
+    expect(same.textContent).not.toContain('3:06:30');
   });
 
   it('zeigt Wechsel, Zeitstufen, Hochrechnung mit Ziel, Tipps mit Stichtag, Verlauf und Sorgenkinder — keine Tageszeilen ab Zyklus 2', () => {
@@ -107,7 +195,7 @@ describe('WoodpeckerStatsPanelComponent (0.957.0)', () => {
     expect(hist.length).toBe(2);
     // „Ohne Tipp“ nur, wenn ALLE Versuche des Zyklus Tipp-Daten haben — sonst „–“ statt einer vorgetäuschten Zahl.
     expect(hist[0].children[3].textContent?.trim()).toBe('–');
-    expect(hist[0].children[7].textContent?.trim()).toBe('3:06:30');   // dieselben Aufgaben wie jetzt
+    expect(hist[0].children.length).toBe(7);   // Spalte „dieselben wie jetzt“ steht seit 2026-11-18 oben in der Übersicht
     expect(el.querySelector('.wps-days')).toBeNull();
     const links = Array.from(el.querySelectorAll('.wps-trouble a')).map(a => a.getAttribute('href'));
     expect(links).toEqual(['/puzzles/book/35000', '/puzzles/book/34885']);
@@ -115,14 +203,22 @@ describe('WoodpeckerStatsPanelComponent (0.957.0)', () => {
     expect(el.textContent).not.toContain('/8/8/');   // nie eine FEN
   });
 
-  it('Zyklus 1: kein Vergleich, stattdessen je Tag (jüngste zuerst) und Zeitstufen', () => {
-    make(plan(5, { currentCycle: 1, cycles: [plan(0).cycles[0]] }));
+  it('Zyklus 1: kein Vergleich und kein Soll — Übersicht nur mit „Bisher“, Tempo und heute; dazu je Tag (jüngste zuerst) und Zeitstufen', () => {
+    const c1 = { ...plan(0).cycles[0], startedAt: iso(-3), deadline: iso(25), finishedAt: null };
+    make(plan(5, { currentCycle: 1, cycles: [c1] }));
     expectStats().flush(stats2({
-      currentCycle: 1, cycles: [row({ finishedAt: null, attempted: 73 })], changes: null, forecast: null,
+      currentCycle: 1, cycles: [row({ finishedAt: null, attempted: 73, solved: 55, timeSeconds: 5106 })], changes: null, forecast: null,
       hints: { tracked: 0, untracked: 73, solvedNoHint: 0, solvedHint1: 0, solvedHint2: 0, solvedHint3: 0, missedNoHint: 0, missedWithHint: 0 },
       alwaysMissedCount: 0, alwaysMissed: [],
     }));
     fixture.detectChanges();
+    const table = el.querySelector('table.wps-overview')!;
+    expect(cells(table.querySelector('thead tr'))).toEqual(['', 'woodpecker.overview.now']);   // keine früheren Zyklen
+    expect(cells(table.querySelector('.wps-ov-time'))[1]).toBe('1:25:06');
+    expect(el.querySelector('.wps-ov-note')).toBeNull();
+    expect(cells(el.querySelector('.wps-ov-day')).map(squash)).toEqual(['woodpecker.stats.pace', 'woodpecker.overview.todayLabel: 0']);
+    expect(el.querySelector('.wps-ov-needed')).toBeNull();
+    expect(el.querySelector('.wps-cycle')?.textContent).toContain('woodpecker.stats.projection');
     expect(el.querySelector('.wps-same')).toBeNull();
     expect(el.querySelector('.wps-forecast')).toBeNull();
     expect(el.querySelector('.wps-history')).toBeNull();
@@ -133,12 +229,17 @@ describe('WoodpeckerStatsPanelComponent (0.957.0)', () => {
     expect(el.querySelector('.wps-buckets-line')).not.toBeNull();
   });
 
-  it('ohne Versuch im Zyklus: Leerzustand statt Nullen', () => {
-    make(plan(0));
-    expectStats().flush(stats2({ cycles: [row({}), row({ number: 2, attempted: 0, ratePct: null, avgSeconds: null })], changes: null, forecast: null }));
+  it('ohne Versuch im Zyklus: Leerzustand statt Nullen — die Übersicht nennt trotzdem das Soll je Tag und „heute 0“', () => {
+    make(plan(0), { woodpecker: { overview: { neededLabel: 'need', neededHow: '{{open}}:{{days}}', todayLabel: 'today' } } });
+    expectStats().flush(stats2({ days: [], changes: null, forecast: null,
+      cycles: [row({}), row({ number: 2, attempted: 0, solved: 0, solvedClean: 0, timeSeconds: 0, ratePct: null, avgSeconds: null })] }));
     fixture.detectChanges();
     expect(el.querySelector('.wps-empty')).not.toBeNull();
     expect(el.querySelector('.wps-sec')).toBeNull();
+    const table = el.querySelector('table.wps-overview')!;
+    expect(cells(table.querySelector('.wps-ov-time'))[1]).toBe('–');   // keine vorgetäuschte 0:00
+    expect(cells(table.querySelector('.wps-ov-rate'))[1]).toBe('–');
+    expect(cells(el.querySelector('.wps-ov-day')).map(squash)).toEqual(['need: 30 (388:13)', 'today: 0']);   // ⌈388 / 13⌉
   });
 
   it('Fehler: app-load-error mit Wiederholen, der Strom lebt danach weiter', () => {

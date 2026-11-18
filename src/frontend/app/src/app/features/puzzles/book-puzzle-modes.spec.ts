@@ -1,5 +1,6 @@
 import { Injector, runInInjectionContext } from '@angular/core';
 import { WoodpeckerService } from '../woodpecker/woodpecker.service';
+import { WoodpeckerStatsDialogComponent } from '../woodpecker/woodpecker-stats-dialog.component';
 import { of, Subject, throwError } from 'rxjs';
 import { discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { BookPuzzleComponent } from './book-puzzle.component';
@@ -704,6 +705,92 @@ describe('BookPuzzle Modus Woodpecker (0.882.0: dieselbe Oberfläche wie im Kurs
     expect(svc.recordAttempt).toHaveBeenCalledOnceWith(3, 501, true, jasmine.any(Number), 0);
     expect(c.woodpecker.cycle.attempted).toBe(5);
     c.ngOnDestroy();
+  });
+
+  // Wunsch 2026-11-18: „mach die Statistik als modales Overlay und pausiere das aktuelle Puzzle währenddessen“.
+  describe('Statistik-Fenster hält die Aufgabe an', () => {
+    beforeEach(() => { jasmine.clock().install(); jasmine.clock().mockDate(new Date(2026, 10, 18, 12)); });
+    afterEach(() => jasmine.clock().uninstall());
+
+    function withDialog() {
+      const r = make(of({ puzzle: { ...WP }, plan: plan() }));
+      const closed = new Subject<void>();
+      r.c.dialog.open = jasmine.createSpy('open').and.returnValue({ afterClosed: () => closed });
+      return { ...r, close: () => { closed.next(); closed.complete(); } };
+    }
+
+    it('die Zeit im Fenster zählt weder in der angezeigten Uhr noch in der gemeldeten Lösezeit; danach läuft sie weiter', () => {
+      const { c, svc, close } = withDialog();
+      jasmine.clock().tick(10_000);
+      expect(c.elapsedSeconds).toBe(10);
+      c.openWoodpeckerStats();
+      expect(c.dialog.open).toHaveBeenCalledTimes(1);
+      const [component, config] = c.dialog.open.calls.mostRecent().args;
+      expect(component).toBe(WoodpeckerStatsDialogComponent);
+      expect(config.data.plan).toBe(c.woodpecker.plan);
+      expect(config.data.solving).toBeTrue();
+      expect(config.disableClose).toBeFalsy();
+      expect(c.timerPaused).toBeTrue();           // Brett unkenntlich (.board-paused)
+      jasmine.clock().tick(300_000);              // 5 min im Fenster
+      expect(c.elapsedSeconds).toBe(10);          // die Uhr steht
+      c.openWoodpeckerStats();                    // kein zweites Fenster über dem ersten
+      expect(c.dialog.open).toHaveBeenCalledTimes(1);
+      close();
+      expect(c.timerPaused).toBeFalse();
+      jasmine.clock().tick(5_000);
+      expect(c.elapsedSeconds).toBe(15);
+      c.onMoveMade({ orig: 'a1', dest: 'a8' });
+      expect(c.state).toBe('SOLVED');
+      expect(svc.recordAttempt).toHaveBeenCalledOnceWith(3, 501, true, 15, 0);   // 315 s wären es ohne Pause
+      c.ngOnDestroy();
+    });
+
+    it('lädt hinter dem Fenster die nächste Aufgabe, beginnt deren Uhr angehalten', () => {
+      const { c, close } = withDialog();
+      jasmine.clock().tick(4_000);
+      c.openWoodpeckerStats();
+      c.woodpecker.next();                        // z. B. Auto-Weiter
+      expect(c.state).toBe('AWAITING_USER_MOVE');
+      jasmine.clock().tick(60_000);
+      expect(c.elapsedSeconds).toBe(0);
+      close();
+      jasmine.clock().tick(3_000);
+      expect(c.elapsedSeconds).toBe(3);
+      c.ngOnDestroy();
+    });
+
+    it('nach dem Lösen geöffnet: der Countdown zur nächsten Aufgabe steht; erst nach dem Schließen lädt sie', () => {
+      const { c, svc, close } = withDialog();
+      c.onMoveMade({ orig: 'a1', dest: 'a8' });
+      expect(c.solvedCountdown).toBe(2);
+      c.openWoodpeckerStats();
+      jasmine.clock().tick(30_000);
+      expect(c.solvedCountdown).toBe(2);
+      expect(svc.next).toHaveBeenCalledTimes(1);   // nur der Start
+      close();
+      jasmine.clock().tick(2_000);
+      expect(svc.next).toHaveBeenCalledTimes(2);
+      c.ngOnDestroy();
+    });
+
+    it('nach dem Lösen geöffnet: nichts wird angehalten gemeldet („solving“ false), Schließen nach dem Verlassen der Seite ist harmlos', () => {
+      const { c, close } = withDialog();
+      c.onMoveMade({ orig: 'a1', dest: 'a8' });
+      c.openWoodpeckerStats();
+      expect(c.dialog.open.calls.mostRecent().args[1].data.solving).toBeFalse();
+      c.ngOnDestroy();
+      expect(() => close()).not.toThrow();
+      expect(c.timerPaused).toBeFalse();
+    });
+
+    it('ohne Plan (Training noch nicht geladen) öffnet nichts', () => {
+      const { c } = withDialog();
+      c.woodpecker.plan = null;
+      c.openWoodpeckerStats();
+      expect(c.dialog.open).not.toHaveBeenCalled();
+      expect(c.timerPaused).toBeFalse();
+      c.ngOnDestroy();
+    });
   });
 
   it('meldet die höchste aufgedeckte Tipp-Stufe mit (0.956.0, „mit Tipp“ in der Statistik)', () => {
