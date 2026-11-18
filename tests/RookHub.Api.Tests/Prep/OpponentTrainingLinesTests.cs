@@ -479,9 +479,9 @@ public class OpponentTrainingLinesTests
     {
         using var db = new Db();
         var pgn = ChessableSection("10", "1 | Spanisch | Hauptlinie", "1. e4 e5 2. Nf3 Nc6 3. Bb5")                        // Hauptlinie, ungelernt
-                  + ChessableSection("11", "12 | Steinitz ohne f2-f4 | Alternative 7...a5 #1", "1. e4 e5 2. Nf3 d6 3. d4")  // Alternative, trainiert
-                  + ChessableSection("12", "12 | Steinitz | Alternative 3...f5 #2", "1. e4 e5 2. Nf3 f5 3. exf5")          // Alternative, übersprungen
-                  + ChessableSection("13", "Alternative 2...Nf6", "1. e4 e5 2. Nf3 Nf6 3. Nxe5");                        // Alternative, nie trainiert
+                  + ChessableSection("11", "12 | Steinitz ohne f2-f4 | Alternative 3.d4 #1", "1. e4 e5 2. Nf3 d6 3. d4")    // Alternative, trainiert
+                  + ChessableSection("12", "12 | Steinitz | Alternative 3.exf5 #2", "1. e4 e5 2. Nf3 f5 3. exf5")           // Alternative, übersprungen
+                  + ChessableSection("13", "2...Nf6 3.Nxe5 [Alternative] #1", "1. e4 e5 2. Nf3 Nf6 3. Nxe5");            // Alternative (0.994.1), nie trainiert
         var id = await db.RepertoireAsync(1, "Weiß", pgn);
         var at = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
         AddSession(db, "11", """[{"mid":0,"practiceMode":"w","level":4}]""", at);
@@ -513,6 +513,21 @@ public class OpponentTrainingLinesTests
         // dieselben Linien-Schlüssel wie die Liste
         var keys = r["lines"]!.AsArray().Select(l => l!["key"]!.GetValue<string>()).ToList();
         Assert.Equal(keys, RepertoireReach.Build(TrainingLinesService.Sections(file), 'w').Mainlines.Select(KeyOf));
+    }
+
+    [Fact]
+    public async Task Alternatives_OfTheOpponent_AreMainLines_Stay()
+    {
+        // 0.994.1: „Alternative 2...d6" im Weiß-Repertoire ist eine Hauptlinie gegen eine Alternative von Schwarz — bleibt ungelernt
+        using var db = new Db();
+        var pgn = ChessableSection("20", "1 | Spanisch | Alternative 2...d6 #1", "1. e4 e5 2. Nf3 d6 3. d4")
+                  + ChessableSection("21", "Spanisch 3.Bb5 a6 (4.Ba4 ALTERNATIVE)", "1. e4 e5 2. Nf3 Nc6 3. Bb5");
+        var id = await db.RepertoireAsync(1, "Weiß", pgn);
+
+        var r = (await db.Service().LinesAsync(1, Q(id, "w"), NoGames, default))!;
+        var firstMoves = r["lines"]!.AsArray().Select(l => l!["moves"]!.AsArray()[3]!.GetValue<string>()).ToList();
+        Assert.Equal(["d6"], firstMoves);
+        Assert.Equal(1, r["skippedAlternatives"]!.GetValue<int>());
     }
 
     [Fact]

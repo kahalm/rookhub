@@ -189,11 +189,24 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   und vor jedem Zug mit Fehlern `{Chessable: hier 3× falsch (zuletzt 7…Sc6)}` (Zug wie mitgeschnitten); Züge, Varianten und
   Linien-Schlüssel bleiben (Tests Server + Trainer-Parser). Linien ohne oid bleiben unverändert. **Liste**: je gezeigter Linie
   `chessableLastTrained` (`yyyy-MM-dd`), `chessableLevel`, `chessableUrl` (eine Abfrage je Tabelle für die gezeigten Linien).
-  **Alternativen**: eine Linie, deren White- oder Black-Header einen durch „|" getrennten Teil mit „Alternative" am Anfang trägt
-  (z. B. „12 | Steinitz ohne f2-f4 | Alternative 7...a5 #1"), bleibt nur, wenn es einen Durchlauf ohne `alternativeSkipped` gibt;
-  sonst fällt sie vor der Reihung weg (zählt nicht gegen die 50), Antwort `skippedAlternatives`, Beschreibung des „Prep: …"
-  „N ungelernte Alternativen ausgelassen.". Die `alternative`-Flags der getReview-Rohdaten werden NICHT ausgewertet (ohne
-  Beispieldaten nicht prüfbar, und es hieße, je Anfrage alle LONGTEXT-Rohantworten zu laden).
+  **Alternativen**: eine Linie, die laut Namen eine EIGENE Alternative ist, bleibt nur, wenn es einen Durchlauf ohne
+  `alternativeSkipped` gibt; sonst fällt sie vor der Reihung weg (zählt nicht gegen die 50), Antwort `skippedAlternatives`,
+  Beschreibung des „Prep: …" „N ungelernte Alternativen ausgelassen.". Erkennung (`ChessableLineHistory.IsAlternative(white,
+  black, color)`, seit 0.994.1, Prod Repertoire 308: „9.O-O-O d5 10.Kb1 [Alternative] #1" kam als Hauptlinie): das Wort
+  „Alternative"/„Alternativa" (Groß/klein egal, Einzahl — „Alternatives", „Alternativas", „Alternativen" zählen nicht) irgendwo
+  im White- oder Black-Header. Je Fundstelle zählt der benachbarte Zug mit Nummer — erst direkt dahinter (nach `:`/`-`/`–`/`−`
+  und optional „Recommendation": „Alternative 7...a5", „Alternative: 6...e5", „Alternative Recommendation 11.Na3"), sonst direkt
+  davor (optional `!`/`?`, `#n`, öffnende Klammer: „10.Kb1 [Alternative]", „(12.Bg5 ALTERNATIVE #4)", „5.Qb3!? alternative",
+  „6.De2 #1 (Alternativa)"); „N." = Weiß, „N..."/„N…" = Schwarz, Figuren auch deutsch/spanisch (De2, Sgf3, Ad2, Cc3). Gehört
+  der Zug der Gegenseite der Trainingsfarbe, ist es eine Hauptlinie gegen eine Alternative des Gegners und bleibt
+  („QS | 1E | Alternative 2.d3 #1" im Schwarz-Repertoire — Chessable selbst führt „QS | 1B | Alternative 2.De2 #1" mit
+  `alternative: 0`; bis 0.994.0 fiel sie ungelernt weg). Kein Zug daneben („… details #4 [ALTERNATIVE]", „(Ulvestad
+  Variation) (ALTERNATIVE)") → Alternative; eine eigene Fundstelle genügt. Die Überladung ohne Farbe (Wort vorhanden →
+  Alternative) bleibt für Aufrufer ohne Trainingsfarbe; heute nutzt sie nur der Test. Die `alternative`-Flags der
+  getReview-Rohdaten werden NICHT ausgewertet (ohne Beispieldaten nicht prüfbar, und es hieße, je Anfrage alle
+  LONGTEXT-Rohantworten zu laden). **Grenze:** den Chessable-Status „pausiert" kennt RookHub nicht (kein Feld, pausierte Linien
+  tauchen in keinem Mitschnitt auf) — eine pausierte HAUPTlinie kommt weiterhin. Ein schon angelegtes „Prep: …" behält die
+  Linien bis zum nächsten „Trainings-Repertoire anlegen → Ersetzen".
 - Eigene Startstellung (0.717.0, Screenshot 08.10.: „Prep: Stoettner" bestand aus 50 Chessable-Übungen aus Modellpartien):
   Eine Linie mit `[FEN]` zählt nur, wenn er ihre Startstellung in einer Partie erreicht hat (`OpponentTrainingLines.StartReached`:
   Grundstellung oder `Stats[start].Reached > 0`); sonst bleibt sie „nie erreicht"/`source = none` — OHNE Schätzung, denn der
@@ -240,9 +253,25 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   (`CreateRequest.Opponent`). Beide `training-repertoire`-Endpunkte setzen sie, auch beim Ersetzen (`CreateRepertoireAsync`
   `trainer:`). `GET /api/repertoires/{id}` liefert sie als `opponent` (`RepertoireOpponentDto.Parse`: ungültig → `null`).
   Kopieren/Klonen übernimmt sie nicht; ältere „Prep: …" bleiben ohne (kein Backfill).
-- Referenz-/Musterpartien raus (0.894.1, Wunsch 07.11.: „reference games auch ausnehmen … beide varianten", Prod Repertoire 14
-  „Reference Games" in „Prep: Moritz"): `TrainingLinesService.IsReferenceGamesChapter(Kapitel = [Black])` — Regex
-  `(reference|model|illustrative|sample|annotated) game(s)`, `Referenz-/Muster-/Beispiel-/Modellpartie(n)`, `^Game <n>$`
-  (Groß/klein egal); „Center Game", „Vienna Game 2.Nc3", „Italian Game: …", „Learning the Game" bleiben. Angewendet in
+- Referenz-/Musterpartien, Übungen und Taktik-Sammlungen raus (0.894.1, Wunsch 07.11.: „reference games auch ausnehmen …
+  beide varianten", Prod Repertoire 14 „Reference Games" in „Prep: Moritz"; erweitert 0.994.1, Prod Repertoire 308: die
+  Taktikaufgabe „Howell, James C vs. Wahls, Matthias" aus „VII) Tactical Exercises" stand mit allen Partiezügen ab der
+  Grundstellung im PGN und spielte 3.d4 statt des eigenen 3.Sc3): `TrainingLinesService.IsGamesOrExercisesChapter(Kapitel =
+  [Black])`, Groß/klein egal —
+  - Partien: `(reference|model|illustrative|sample|annotated|instructive|additional|student|inspirational|example)
+    (master )?game(s)`, `game(s) example(s)`, `game(s) for self-study`, Possessiv `…'s games`/`…’s games`,
+    `Referenz-/Muster-/Beispiel-/Modellpartie(n)`, `partida(s) modelo`, `partida(s) de referencia`, `^Game <n>$`;
+  - Übungen/Tests: `exercise(s)`, `puzzle(s)`, `quiz(zes)`, `drill(s)`, `memory marker(s)`, `self-study`, `ejercicio(s)`,
+    `…übungen`, `…aufgaben`, `(final|basic) test`, genau `test(s)`, `test position(s)`, `training position(s)`,
+    `Abschluss-/Eingangstest`;
+  - Taktik: das Wort `tactics` (Plural) und `tactical (idea|motif|pattern|theme)(s)`.
+
+  Beispiele raus: „VII) Tactical Exercises", „VIII) Additional Games For Self-Study", „VI) It's Your Move: Exercises and Memory
+  Markers", „Warmup Puzzles", „Thematic Tactics", „2b) Jobava London Sub-Sidelines: Tactics", „Muddy Waters: Tactics Quiz",
+  „Final Test", „15. Abschlusstest", „Partidas Modelo", „Other Game Examples", „Kamil's Games". Bleiben: „Center Game",
+  „Scotch Game 4...Qh4", „Vienna Game 2.Nc3", „Italian Game: …", „Learning the Game", „Middlegame Play Examples", „Lesson 4:
+  Sveshnikov - The Tactical 9.Bxf6", „La Táctica 5.Ad2", „Practical Endgames", „Practice Your Move Orders", „Testing
+  Quickstarter". Gegenprobe gegen alle Prod-Kapitel (18.11.): 97 → 165 Kapitel, 4 610 → 8 183 Linien. Angewendet in
   `LoadSourcesAsync` (Trainingslinien, „Prep: …"-Anlegen, Abweichungen) und im nächtlichen Vorrechnen. Ein schon angelegtes
-  „Prep: …" behält solche Linien bis zum nächsten Ersetzen.
+  „Prep: …" behält solche Linien bis zum nächsten „Trainings-Repertoire anlegen → Ersetzen". Keine Strukturprüfung („Linie
+  widerspricht dem Repertoire"): eine Aufgabe in einem gewöhnlich benannten Kapitel kommt weiterhin.

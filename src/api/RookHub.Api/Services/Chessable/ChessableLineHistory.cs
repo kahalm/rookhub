@@ -60,18 +60,56 @@ public sealed class ChessableLineHistory(AppDbContext db)
         return oid is { Length: > 0 and <= 32 } && oid.All(char.IsAsciiDigit) ? oid : null;
     }
 
-    private static readonly Regex AlternativePart = new(@"^\s*alternative\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    /// <summary>„alternative"/„alternativa" als eigenes Wort (nicht „alternatives"/„alternativas"/„Alternativen").</summary>
+    private static readonly Regex AlternativeWord = new(@"\balternativ[ea]\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>Zug mit Nummer, Gruppe <c>dots</c> = „." (Weiß) bzw. „..."/„…" (Schwarz); Figuren auch deutsch (K D T L S) und
+    /// spanisch (R D T A C).</summary>
+    private const string NumberedMove =
+        @"\d+\s*(?<dots>\.\.\.|…|\.)\s*(?:O-O(?:-O)?|0-0(?:-0)?|[KQRBNDTLSAC]?[a-h]?[1-8]?x?[a-h][1-8](?:=?[QRBNDTLSAC])?)[+#]?";
+
+    /// <summary>Zug direkt HINTER dem Wort: „Alternative 7...a5", „Alternative: 6...e5", „Alternative - 10.Qd2",
+    /// „Alternative Recommendation 11.Na3".</summary>
+    private static readonly Regex MoveAfter = new(@"^\s*[:\-–−]?\s*(?:recommendation\s*)?[:\-–−]?\s*" + NumberedMove,
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>Zug direkt VOR dem Wort: „10.Kb1 [Alternative]", „(12.Bg5 ALTERNATIVE #4)", „5.Qb3!? alternative",
+    /// „6.De2 #1 (Alternativa)".</summary>
+    private static readonly Regex MoveBefore = new(NumberedMove + @"[!?]*\s*(?:#\d+\s*)?[(\[]?\s*$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     /// <summary>
-    /// Ist die Linie auf Chessable eine ALTERNATIVE? Erkannt am Namen: ein durch „|" getrennter Teil des White- oder Black-Headers
-    /// (bei Chessable-Importen <c>opening_name</c> bzw. Kapitel) beginnt mit „Alternative" (Groß/klein egal), z. B.
-    /// „12 | Steinitz ohne f2-f4 | Alternative 7...a5 #1".
+    /// Ist die Linie auf Chessable eine ALTERNATIVE — ohne Farbprüfung: das Wort „Alternative"/„Alternativa" (Groß/klein egal, Einzahl)
+    /// steht irgendwo im White- oder Black-Header (bei Chessable-Importen <c>opening_name</c> bzw. Kapitel). Für Aufrufer, die die
+    /// Trainingsfarbe nicht kennen; wer sie kennt, nimmt <see cref="IsAlternative(string?, string?, char)"/>.
     /// </summary>
     public static bool IsAlternative(string? white, string? black) =>
-        HasAlternativePart(white) || HasAlternativePart(black);
+        OwnAlternative(white, null) || OwnAlternative(black, null);
 
-    private static bool HasAlternativePart(string? name) =>
-        !string.IsNullOrWhiteSpace(name) && name.Split('|').Any(p => AlternativePart.IsMatch(p));
+    /// <summary>
+    /// Ist die Linie eine EIGENE Alternative in Trainingsfarbe <paramref name="color"/> (<c>'w'</c>/<c>'b'</c>)? Wie oben, aber je
+    /// Fundstelle des Worts zählt der benachbarte Zug (erst dahinter, sonst davor; „N." = Weiß, „N..." = Schwarz): gehört er der
+    /// Gegenseite, ist das eine Hauptlinie gegen eine Alternative des Gegners (Chessable führt „QS | 1B | Alternative 2.De2 #1" im
+    /// Schwarz-Kurs mit <c>alternative: 0</c>). Kein Zug daneben → Alternative. Eine eigene Fundstelle genügt (0.994.1, Prod
+    /// Repertoire 308: „9.O-O-O d5 10.Kb1 [Alternative] #1" galt vorher als Hauptlinie).
+    /// </summary>
+    public static bool IsAlternative(string? white, string? black, char color) =>
+        OwnAlternative(white, color) || OwnAlternative(black, color);
+
+    private static bool OwnAlternative(string? name, char? color)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        foreach (Match m in AlternativeWord.Matches(name))
+        {
+            if (color is not { } own) return true;
+            var move = MoveAfter.Match(name[(m.Index + m.Length)..]);
+            if (!move.Success) move = MoveBefore.Match(name[..m.Index]);
+            if (!move.Success) return true;
+            var side = move.Groups["dots"].Value == "." ? 'w' : 'b';
+            if (side == own) return true;
+        }
+        return false;
+    }
 
     /// <summary>Stand aller Linien in EINER Abfrage je Tabelle (Portionen à 500 oids); Linien ohne jeden Mitschnitt fehlen.</summary>
     public async Task<Dictionary<string, Status>> LoadAsync(int userId, IReadOnlyCollection<LineRef> lines, CancellationToken ct)

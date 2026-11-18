@@ -76,10 +76,52 @@ public class ChessableLineHistoryTests : IDisposable
     [InlineData("12 | Steinitz ohne f2-f4 | Alternative 7...a5 #1", null, true)]
     [InlineData("3...g6 #11", "ALTERNATIVE lines", true)]
     [InlineData("Alternatives? no", null, false)]
-    [InlineData("Main line, not an alternative", "Kapitel 3", false)]
+    [InlineData("9.O-O-O d5 10.Kb1 [Alternative] #1", null, true)]                    // 0.994.1: Wort irgendwo im Namen
+    [InlineData("QS | 1E | Alternative 2.d3 #1", null, true)]                         // ohne Farbe keine Zugprüfung
+    [InlineData("Italian 3...Bc5 − Black's Alternatives − 4...Nf6 #1", null, false)]
+    [InlineData("Alternativas 6.Ae2 Dc7 7.O-O #1", null, false)]
+    [InlineData("3...g6 #1", "8) Catalan: 5th & 6th Move Alternatives", false)]
+    [InlineData("Endspiel 94 - Alternativer Versuch für Schwarz", null, false)]
     [InlineData(null, null, false)]
     public void IsAlternative_ByName(string? white, string? black, bool expected) =>
         Assert.Equal(expected, ChessableLineHistory.IsAlternative(white, black));
+
+    // 0.994.1: nur EIGENE Alternativen — der Zug neben dem Wort (erst dahinter, sonst davor) gehört der Trainingsfarbe oder fehlt
+    [Theory]
+    [InlineData("9.O-O-O d5 10.Kb1 [Alternative] #1", 'w', true)]                    // Prod Repertoire 308, oid 36730009
+    [InlineData("8...Nge7 9.h4 h6 10.h5 Rc8: Alternative Recommendation 11.Na3 #2", 'w', true)]
+    [InlineData("8...Ng8 9.Bd4 Qa5 10.f4 Rb8 11.Qd2 Rxb2: Alternative 12.Nd5", 'w', true)]
+    [InlineData("6...a6 7...bxc6 : 19.Bxh3 details #4 [ALTERNATIVE]", 'w', true)]   // kein Zug direkt daneben
+    [InlineData("4...Qc7  [8.e5 ALTERNATIVE]", 'w', true)]
+    [InlineData("4. Nc3 dxe4 5.fxe4 e5  (12.Bg5 ALTERNATIVE #4)", 'w', true)]
+    [InlineData("5th Move Deviations: 5...b5 (Ulvestad Variation)  (ALTERNATIVE)", 'w', true)]
+    [InlineData("QGD 4...Bg4 - 5.Qb3!? alternative #2", 'w', true)]
+    [InlineData("Alternative - 10.Qd2", 'w', true)]
+    [InlineData("(9.Cc3 Alternativa)", 'w', true)]
+    [InlineData("12 | Steinitz ohne f2-f4 | Alternative 7...a5 #1", 'b', true)]
+    [InlineData("9 | Tarrasch mit 5.Sgf3 | Alternative 18...Db6", 'b', true)]
+    [InlineData("QGD with 5.Bf4: 8.cxd5  (Alternative 14...Qf6)", 'b', true)]
+    [InlineData("Línea Principal 6.Ae2 - Alternativa 6...e5 #1", 'b', true)]
+    [InlineData("Najdorf: 6.Be3 (Alternative: 6...Ng4 #1)", 'b', true)]
+    [InlineData("Catalan: 5.Nc3 #10 (14…fxe5 Alternative)", 'b', true)]
+    [InlineData("QS | 1E | Alternative 2.d3 #1", 'b', false)]                         // Chessable: „QS | 1B | Alternative 2.De2 #1" alternative: 0
+    [InlineData("Najdorf: 6.Be3 (Alternative: 6...Ng4 #1)", 'w', false)]
+    [InlineData("7.Nf3 Be7 8.Bc4 O-O 9.O-O − Alternative 9...Be6", 'w', false)]
+    [InlineData("Defensa Petrov 3...Cxe4 con 4...d5 y 5...Cd7 - 6.De2 #1 (Alternativa)", 'b', false)]
+    [InlineData("Italian 3...Bc5 − Black's Alternatives − 4...Nf6 5.d3 O-O 6.O-O h6 #1", 'w', false)]
+    [InlineData("Alternativas 6.Ae2 Dc7 7.O-O #1", 'w', false)]
+    [InlineData("3rd move alternatives #6", 'w', false)]
+    [InlineData("Hauptlinie 10.Kb1", 'w', false)]
+    public void IsAlternative_OwnSideOnly(string white, char color, bool expected) =>
+        Assert.Equal(expected, ChessableLineHistory.IsAlternative(white, "Kapitel", color));
+
+    [Theory]
+    [InlineData("8) Catalan: 5th & 6th Move Alternatives", 'b', false)]
+    [InlineData("ALTERNATIVE lines", 'w', true)]
+    [InlineData("Alternative 3...e5", 'w', false)]
+    [InlineData("Alternative 3...e5", 'b', true)]
+    public void IsAlternative_OwnSideOnly_ChapterToo(string chapter, char color, bool expected) =>
+        Assert.Equal(expected, ChessableLineHistory.IsAlternative("1.e4 e5 #1", chapter, color));
 
     [Fact]
     public void Urls()

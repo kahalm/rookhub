@@ -203,7 +203,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
                 // Kapitel und PGN-Text auseinander.
                 // Referenz-/Musterpartien (Chessable-Kapitel „Reference Games", „Model Games" …) sind keine Linien, die man gegen einen
                 // Gegner trainiert — weder in Trainingslinien/„Prep: …" noch in den Abweichungen (Wunsch 2026-11-07)
-                .Where(x => x.Parsed.Moves.Count > 0 && Loadable(x.Parsed) && !IsReferenceGamesChapter(Chapter(x.Parsed))).ToList();
+                .Where(x => x.Parsed.Moves.Count > 0 && Loadable(x.Parsed) && !IsGamesOrExercisesChapter(Chapter(x.Parsed))).ToList();
             var colors = ChapterColors(sections.Select(x => x.Parsed), q.ChapterColors.For(rep.Id, q.Repertoire == rep.Id));
             byRep.Add((rep, sections.Select(x => (x, colors.GetValueOrDefault(Chapter(x.Parsed), 'w'))).ToList()));
         }
@@ -226,7 +226,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
 
         var mine = sources.SelectMany(x => x.Sections.Where(s => s.Color == color).Select(s => new Source(x.Rep, s.Section))).ToList();
         // Ungelernte Chessable-Alternativen gar nicht erst (Wunsch 2026-11-07); sie zählen auch nicht gegen die 50
-        var (kept, skippedAlternatives) = await WithoutUnlearnedAlternativesAsync(userId, mine, ct);
+        var (kept, skippedAlternatives) = await WithoutUnlearnedAlternativesAsync(userId, mine, color, ct);
         var graph = RepertoireReach.Build(kept.Select(x => x.Section.Parsed), color);
         return new Loaded(infos, available, refs, color, kept, graph, skippedAlternatives, list.Count, sectionCount);
     }
@@ -315,13 +315,14 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
 
     /// <summary>
     /// Lässt Chessable-ALTERNATIVEN weg, die der Nutzer dort nie gelernt hat (Wunsch 2026-11-07: „alternativen als lines aus
-    /// chessable nur ziehen wenn ich sie dort trainiert habe"): Alternative = Namensteil „Alternative …" im White-/Black-Header
-    /// (<see cref="ChessableLineHistory.IsAlternative"/>); gelernt = mindestens ein Durchlauf ohne <c>alternativeSkipped</c>
+    /// chessable nur ziehen wenn ich sie dort trainiert habe"): Alternative = eigene Alternative in der Trainingsfarbe laut Namen
+    /// (<see cref="ChessableLineHistory.IsAlternative(string?, string?, char)"/>, alle <paramref name="mine"/> haben <paramref name="color"/>); gelernt = mindestens ein Durchlauf ohne <c>alternativeSkipped</c>
     /// (<see cref="ChessableLineHistory.TrainedAsync"/>, eine Abfrage). Hauptlinien bleiben immer, auch ungelernte.
     /// </summary>
-    private async Task<(List<Source> Kept, int Skipped)> WithoutUnlearnedAlternativesAsync(int userId, List<Source> mine, CancellationToken ct)
+    private async Task<(List<Source> Kept, int Skipped)> WithoutUnlearnedAlternativesAsync(int userId, List<Source> mine, char color,
+        CancellationToken ct)
     {
-        var alternatives = mine.Where(x => ChessableLineHistory.IsAlternative(x.Section.Parsed.White, x.Section.Parsed.Black)).ToList();
+        var alternatives = mine.Where(x => ChessableLineHistory.IsAlternative(x.Section.Parsed.White, x.Section.Parsed.Black, color)).ToList();
         if (alternatives.Count == 0) return (mine, 0);
         var oids = alternatives.Select(x => ChessableLineHistory.OidOf(x.Section.Raw)).OfType<string>().ToList();
         var trained = oids.Count == 0 ? new HashSet<string>() : await Chessable.TrainedAsync(userId, oids, ct);
@@ -361,7 +362,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         foreach (var rep in await RepertoiresAsync(userId, ct))
         {
             var sections = RawSections(await repertoires.GetCombinedPgnAsync(rep.Id, userId))
-                .Where(x => x.Parsed.Moves.Count > 0 && Loadable(x.Parsed) && !IsReferenceGamesChapter(Chapter(x.Parsed))).Select(x => x.Parsed).ToList();
+                .Where(x => x.Parsed.Moves.Count > 0 && Loadable(x.Parsed) && !IsGamesOrExercisesChapter(Chapter(x.Parsed))).Select(x => x.Parsed).ToList();
             var colors = ChapterColors(sections, ChapterOverrides.None.Flat);
             foreach (var section in sections) byColor[colors.GetValueOrDefault(Chapter(section), 'w')].Add(section);
         }
@@ -744,15 +745,35 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
 
     private static string Chapter(ParsedSection s) => (s.Black ?? "").Trim();
 
-    private static readonly Regex ReferenceGames = new(
-        @"\b(reference|model|illustrative|sample|annotated)\s+games?\b|\b(referenz|muster|beispiel|modell)partien?\b|^game\s+\d+$",
+    private static readonly Regex GamesOrExercises = new(
+        // Partiesammlungen
+        @"\b(reference|model|illustrative|sample|annotated|instructive|additional|student|inspirational|example)\s+(master\s+)?games?\b"
+        + @"|\bgames?\s+examples?\b|\bgames?\s+for\s+self-study\b|\w['’]s\s+games\b"
+        + @"|\b(referenz|muster|beispiel|modell)partien?\b|\bpartidas?\s+(modelo|de\s+referencia)\b|^game\s+\d+$"
+        // Übungen / Tests
+        + @"|\bexercises?\b|\bpuzzles?\b|\bquiz(zes)?\b|\bdrills?\b|\bmemory\s+markers?\b|\bself-study\b|\bejercicios?\b"
+        + @"|übungen\b|aufgaben\b|\b(final|basic)\s+test\b|^tests?$|\btest\s+positions?\b|\btraining\s+positions?\b"
+        + @"|\b(abschluss|eingangs)tests?\b"
+        // Taktik-Sammlungen
+        + @"|\btactics\b|\btactical\s+(ideas?|motifs?|patterns?|themes?)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
-    /// <summary>Kapitel mit Referenz-/Musterpartien (Chessable: „Reference Games", „IV.D4) Other Sicilians: Model Games",
-    /// „Musterpartien", „Game 3") — sie fallen aus Trainingslinien, „Prep: …" und Abweichungen heraus. „Center Game",
-    /// „Vienna Game 2.Nc3", „Italian Game: …" und „Learning the Game" bleiben.</summary>
-    internal static bool IsReferenceGamesChapter(string? chapter) =>
-        !string.IsNullOrWhiteSpace(chapter) && ReferenceGames.IsMatch(chapter.Trim());
+    /// <summary>Kapitel, die kein Repertoire sind, sondern Partien oder Aufgaben — sie fallen aus Trainingslinien, „Prep: …" und
+    /// Abweichungen heraus (Kapitel = <c>[Black]</c>, Groß/klein egal):
+    /// <list type="bullet">
+    /// <item>Partiesammlungen: „Reference Games", „IV.D4) Other Sicilians: Model Games", „Illustrative Master Games", „Instructive
+    /// Games", „VIII) Additional Games For Self-Study", „Other Game Examples", „Kamil's Games", „Musterpartien", „Partidas Modelo",
+    /// „Partidas de referencia", „Game 3" (0.894.1, erweitert 0.994.1);</item>
+    /// <item>Übungen/Tests (0.994.1, Prod Repertoire 308: Taktikaufgabe „Howell vs. Wahls" aus „VII) Tactical Exercises" — mit allen
+    /// Partiezügen ab der Grundstellung, 3.d4 statt des eigenen 3.Sc3): „… Exercises", „Puzzles", „Tactics Quiz", „… drills",
+    /// „Memory markers", „Final Test", „Tests", „Test Positions", „Training Positions", „Abschlusstest", „Übungen", „Ejercicios";</item>
+    /// <item>Taktik-Sammlungen: das Wort „Tactics" („Thematic Tactics", „2b) Jobava London Sub-Sidelines: Tactics") und „Tactical
+    /// Ideas/Motifs/Patterns/Themes".</item>
+    /// </list>
+    /// Es bleiben u. a. „Center Game", „Scotch Game 4...Qh4", „Italian Game: …", „Learning the Game", „Middlegame Play Examples",
+    /// „Lesson 4: Sveshnikov - The Tactical 9.Bxf6", „Practical Endgames", „Practice Your Move Orders", „Testing Quickstarter".</summary>
+    internal static bool IsGamesOrExercisesChapter(string? chapter) =>
+        !string.IsNullOrWhiteSpace(chapter) && GamesOrExercises.IsMatch(chapter.Trim());
 
     /// <summary>
     /// Trainingsfarbe je Kapitel — der Spiegel von <c>chapterColorsOf</c> (<c>repertoire-color.util.ts</c>): die Seite, die in der
