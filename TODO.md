@@ -6,6 +6,24 @@ _Legende: `[ ]` offen · `[~]` Hauptteil erledigt, Rest bewusst geparkt (Begrün
 `[x]` erledigt, bleibt als Beleg stehen. Erledigte Einzelfunde ohne weiteren Wert stehen unten
 im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
+## [~] Klickbare Züge in Buch-/Kurs-Kommentaren: Restklassen nach dem Feld-Aufzählungs-Fix — 0.991.2 (2026-11-18)
+
+`features/puzzles/comment-variation.util.ts`. Fertig (Buch-Aufgabe 35167): eine Feld-Aufzählung hinter einer Präposition
+(„can’t take on g5 or e4“) ist Ortsangabe, kein Zug. Bestandsvergleich alte gegen neue Fassung über 125 727 Buch-Aufgaben
+(Prod, nur gelesen): 3 215 geänderte Absätze, 1 655 Züge neu klickbar, 322 Züge passen jetzt zur Zugnummer (umgekehrt 3).
+Rohdaten und Vergleichsdateien: `/srv/media/claude-sessions/kommentar-parser/`. Dabei aufgefallen, NICHT behoben:
+- [ ] Numerloser Zug vor einer nummerierten Variante wird gemeinsam mit ihr erraten, an der Zugnummer vorbei (häufigste
+      Restursache): 14327 („9.f4“ erscheint bei Zug 21), 119611 („26.Qxe3“ bei Zug 35, der Rest bleibt Text), 33260.
+- [ ] Flachgeklopfte PGN-Schachtelung: ein numerloser Zug nach einer eingeschobenen Nebenvariante findet nicht zur äußeren
+      Linie zurück — 112971 („10.O-O (10.Nxe5 …) Nge7 11.d4“). Sauber wohl nur, wenn der Import die Klammern erhält.
+- [ ] Gleichstand Alternative/Fortsetzung bei numerlosem Zweig ignoriert die folgende Zugnummer: 100671 (seit 0.991.2
+      gemischt: drei Züge richtig, „g2“/„21.Kxg2“ einen Halbzug daneben).
+- [ ] Bücher mit eigener Zugzählung: die Suche nimmt die früheste passende Stellung, nicht die am Kommentar-Halbzug: 95986.
+- [ ] Feld-Aufzählung mit Schrägstrich („knight on d2/d7“, 664 Stellen) und Feldangaben wie „the e4 -pawn“ oder
+      „Reinforcing d4“ werden weiter als Zug gelesen.
+- [ ] Echter Verlust durch 0.991.2: 54043 („57.Bg4“ war vorher richtig klickbar, jetzt Text).
+- Kein Parser-Thema: Zählfehler der Autoren (17585–17588, 33244); 155221 und 33260 waren vorher wie nachher falsch.
+
 ## [~] Fehler-Erklärungen: warum die naheliegende Antwort auf den besten Zug nicht geht — 0.974.0 (2026-11-14)
 
 `docs/api/zuege-vergleichen.md` → „Warum die naheliegende Antwort auf den BESTEN Zug nicht geht“. Fertig: flache Sicht (Tiefe 1,
