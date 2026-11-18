@@ -401,3 +401,121 @@ describe('comment-variation.util — „Qd5/g4" ist Kurzschrift, kein Bauernzug 
     expect(segs.find(s => s.move === '2.Ng5')!.fen).toBe(c.fen());
   });
 });
+
+describe('comment-variation.util — Feld-Aufzählung „on g5 or e4" ist Ortsangabe (Buch-Aufgabe 35167, gemeldet 2026-11-18)', () => {
+  // Capablanca – Tennenwurzel, New York 1911. Der Kommentar ist die aus dem PGN geklopfte Schachtelung
+  // 2...Bc8 3.f5 dxe4 (3...Bxg5 4.Qh5+) 4.Bc4+ Be6 5.Qxh7 … — „4.Bc4+" setzt 3...dxe4 fort.
+  const FEN = 'r2qrnk1/1b2bppp/pp6/2ppN1B1/3PnP2/2PB1N1Q/PP4PP/4RRK1 w - - 0 1';
+  const UCIS = ['e5f7', 'g8f7', 'e1e4', 'd5e4', 'd3c4', 'b7d5', 'h3f5', 'f7g8', 'c4d5', 'g8h8', 'f3e5'];
+  const TEXT = 'Tennenwurzel played 2...Bc8 ✔ and Capablanca had several ways to win. The easiest is 3.f5, '
+    + 'when Black still can\'t take on g5 or e4, and other moves are just losing. 3...dxe4 3...Bxg5 4.Qh5++- and '
+    + 'White picks up almost everything. 4.Bc4+ Be6 5.Qxh7! Not the only winning move, but the prettiest and '
+    + 'strongest. 5...Nxh7 6.Ne5+ Kg8 7.Bxe6+ Kh8 8.Ng6#';
+  const ALL = ['2...Bc8', '3.f5', '3...dxe4', '3...Bxg5', '4.Qh5+', '4.Bc4+', 'Be6', '5.Qxh7', '5...Nxh7', '6.Ne5+',
+    'Kg8', '7.Bxe6+', 'Kh8', '8.Ng6#'];
+  const segs = buildCommentSegments(TEXT, FEN, UCIS);
+  const move = (m: string) => segs.find(s => s.move === m);
+
+  it('alle 14 Züge sind klickbar, die Felder „g5" und „e4" bleiben Text', () => {
+    expect(segs.filter(s => s.move).map(s => s.move)).toEqual(ALL);
+    expect(segs.map(s => s.move ?? s.text).join('')).toBe(TEXT);
+  });
+
+  it('„3...dxe4" hängt an 3.f5 — das „or" zwischen den Feldern trennt keinen Zweig', () => {
+    expect(splitBranches(TEXT)).toEqual([
+      ['Bc8', 'f5', 'dxe4'],
+      ['Bxg5', 'Qh5+'],
+      ['Bc4+', 'Be6', 'Qxh7', 'Nxh7', 'Ne5+', 'Kg8', 'Bxe6+', 'Kh8', 'Ng6#'],
+    ]);
+    const c = new Chess(move('3.f5')!.fen!);
+    c.move('dxe4');
+    expect(move('3...dxe4')!.fen).toBe(c.fen());
+  });
+
+  it('„4.Bc4+" steht hinter 3...dxe4 (Bauer e4, Läufer e7), nicht hinter 3...Bxg5', () => {
+    const c = new Chess(move('3...dxe4')!.fen!);
+    c.move('Bc4+');
+    expect(move('4.Bc4+')!.fen).toBe(c.fen());
+    expect(move('4.Bc4+')!.fen!.split(' ')[0]).toBe('r1bqrn2/4bkpp/pp6/2p2PB1/2BPp3/2P2N1Q/PP4PP/5RK1');
+    expect(new Chess(move('4.Bc4+')!.fen!).isCheck()).toBeTrue();
+    // Die eingeschobene Nebenvariante bleibt an 3.f5 hängen.
+    const side = new Chess(move('3.f5')!.fen!);
+    side.move('Bxg5'); side.move('Qh5+');
+    expect(move('4.Qh5+')!.fen).toBe(side.fen());
+  });
+
+  it('die Variante endet matt nach 8.Ng6#', () => {
+    const end = new Chess(move('8.Ng6#')!.fen!);
+    expect(end.isCheckmate()).toBeTrue();
+    expect(move('8.Ng6#')!.fen!.split(' ')[0]).toBe('r2qr2k/4b1pn/pp2B1N1/2p2PB1/3Pp3/2P5/PP4PP/5RK1');
+  });
+
+  it('Aufzählungen hinter einer Präposition sind keine Züge (englisch und deutsch)', () => {
+    for (const t of ['✔ either immediately, or after capturing on a8, e7 or e4.', 'Black can\'t take on g5 or e4.',
+      'Schwarz kann weder auf g5 oder e4 nehmen.', 'Nach dem Schlagen auf a8, e7 und e4 ist es aus.',
+      'The squares e4, d5, and c6 are weak.', 'Der Springer kommt von f3 bzw. d2.']) {
+      expect(extractSanTokens(t)).withContext(t).toEqual([]);
+    }
+    // Hinter der Aufzählung geht die Variante als EIN Zweig weiter.
+    expect(splitBranches('3.f5 when Black can\'t take on g5 or e4. dxe4 4.Bc4+')).toEqual([['f5', 'dxe4', 'Bc4+']]);
+  });
+
+  it('Komma OHNE Liste dahinter bleibt ein Zug; „oder" zwischen ZÜGEN trennt weiter', () => {
+    expect(extractSanTokens('With the pawn on e5, e4 is a strong move.')).toEqual(['e4']);
+    expect(extractSanTokens('Der Bauer steht auf e5, d4 gewinnt.')).toEqual(['d4']);
+    expect(splitBranches('ein Zug wie c5, oder a5')).toEqual([['c5'], ['a5']]);
+    expect(splitBranches('3.f5 or 3.Bc4')).toEqual([['f5'], ['Bc4']]);
+  });
+});
+
+describe('comment-variation.util — Prosa mit Feld-Aufzählung vor einem nummerierten Zug (Bestandsprüfung 2026-11-18)', () => {
+  // Solange das zweite Feld einer Aufzählung als (unspielbarer) Bauernzug gelesen wurde, riss es die Folge an
+  // dieser Stelle zufällig ab. Ohne Regel (c) in branches() hingen die erwähnten Pläne davor und die
+  // nummerierte Variante danach an EINER gemeinsam erratenen Stellung — an der Zugnummer vorbei.
+  const board = (fen: string) => fen.split(' ')[0];
+  const moveNo = (fen: string) => fen.split(' ')[1] + fen.split(' ')[5];
+
+  it('erwähnter Plan („...Nf6-g4") + Aufzählung: die Variante danach steht an IHRER Zugnummer (Aufgabe 119938)', () => {
+    const ucis = ('d2d4 g8f6 g1f3 e7e6 e2e3 b7b6 f1d3 c8b7 e1g1 f8e7 c2c4 e8g8 b2b3 d7d5 c1b2 b8d7 d1e2 a7a6 f1d1 f6e4 '
+      + 'f3e1 f7f5 f2f3 e7d6 f3e4 f5e4 d3c2 d8g5 b1d2 d7f6').split(' ');
+    const text = 'A very strong move, preparing ...Nf6-g4 to which White does not have a satisfactory defence despite '
+      + 'having an extra piece. Black’s pawns on d5 and e4 are the key as they restrict the mobility of White’s '
+      + 'forces. It is possible that White expected 14...Qh4? 15.g3 but not 15.h3?? Qg3 followed by...Qh2# 15...Qh3 '
+      + 'threatening to double rooks.';
+    const segs = buildCommentSegments(text, START, ucis);
+    const qh4 = segs.find(s => s.move === '14...Qh4')!;
+    expect(moveNo(qh4.fen!)).toBe('w15');
+    expect(board(qh4.fen!)).toBe('r4rk1/1bpn2pp/pp1bp3/3p4/2PPp2q/1P2P3/PBB1Q1PP/RN1RN1K1');
+    expect(board(segs.find(s => s.move === '15.g3')!.fen!)).toBe('r4rk1/1bpn2pp/pp1bp3/3p4/2PPp2q/1P2P1P1/PBB1Q2P/RN1RN1K1');
+    expect(segs.map(s => s.move ?? s.text).join('')).toBe(text);
+  });
+
+  it('erwähnter Zug („with Qf3 on the next move") hinter der Aufzählung reißt die Variante nicht mit (Aufgabe 101243)', () => {
+    const fen = 'rnb1kbnr/1p3ppp/p3p3/2q5/2NN1B2/3B4/P1P3PP/R2Q1R1K b kq - 0 14';
+    const segs = buildCommentSegments('An ultra-important move, securing a decent advantage after the double attack on b7 and '
+      + 'f7 with Qf3 on the next move. For example, 17...Be5 18.Qf3! Nf6 19.Bxb7. White is much better.',
+      fen, ['c5d4', 'c4d6', 'd4d6', 'f4d6', 'f8d6', 'd3e4']);
+    for (const m of ['17...Be5', '18.Qf3', 'Nf6', '19.Bxb7']) expect(segs.find(s => s.move === m)).withContext(m).toBeTruthy();
+    expect(moveNo(segs.find(s => s.move === '18.Qf3')!.fen!)).toBe('b18');
+    expect(board(segs.find(s => s.move === '19.Bxb7')!.fen!)).toBe('rnb1k2r/1B3ppp/p3pn2/4b3/8/5Q2/P1P3PP/R4R1K');
+  });
+
+  it('weiterzählende Nummer, die NICHT fortsetzt: „5...Be7 … 6.g3 … 6...Be5" gehört in die Partie', () => {
+    // Nach 5...Be7 ginge 6...Be5 nicht — der Läufer steht in der Partie auf d6.
+    const segs = buildCommentSegments('Not 5...Be7. The knight heads via a6 to c5 or c7. The immediate 6.g3 runs into 6...Be5.',
+      START, ['d2d4', 'e7e6', 'c2c4', 'b7b6', 'a2a3', 'c8b7', 'b1c3', 'g8f6', 'd4d5', 'f8d6']);
+    expect(board(segs.find(s => s.move === '6.g3')!.fen!)).toBe('rn1qk2r/pbpp1ppp/1p1bpn2/3P4/2P5/P1N3P1/1P2PP1P/R1BQKBNR');
+    expect(board(segs.find(s => s.move === '6...Be5')!.fen!)).toBe('rn1qk2r/pbpp1ppp/1p2pn2/3Pb3/2P5/P1N3P1/1P2PP1P/R1BQKBNR');
+  });
+
+  it('eigene Zugzählung des Buchs: die Folge über die Aufzählung hinweg bleibt EIN Zweig (Aufgabe 51332)', () => {
+    // Start-FEN zählt ab 1, der Kommentar ab 11 — „12.Qd3+" findet seine Stellung nur als Fortsetzung von 11...Kg6.
+    const fen = 'rnbqr1k1/ppp1bppp/4p3/3pP3/3P3P/2NB1N2/PPP2PP1/R2QK2R b KQkq - 0 1';
+    const text = '11...Kg6 would be hopeless here; the formation comprising rook on h1 and pawns on h4 and e5 is a '
+      + 'formidable weapon against it, e.g. 12.Qd3+ f5 13.h5+ Kxg5 14.Qg3+ Kh6 15.Qg6#.';
+    const segs = buildCommentSegments(text, fen, 'c7c5 d3h7 g8h7 f3g5 h7g8 d1h5 e7g5 h4g5 g8f8 g5g6 f8e7 g6f7'.split(' '));
+    expect(segs.filter(s => s.move).map(s => s.move))
+      .toEqual(['11...Kg6', '12.Qd3+', 'f5', '13.h5+', 'Kxg5', '14.Qg3+', 'Kh6', '15.Qg6#']);
+    expect(new Chess(segs.find(s => s.move === '15.Qg6#')!.fen!).isCheckmate()).toBeTrue();
+  });
+});

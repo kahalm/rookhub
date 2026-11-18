@@ -20,7 +20,10 @@ import { whiteToMove } from '../../shared/chess/fen-side';
  *   (a) Zugnummer-Rücksprüngen  („… 43.h4 a4 . Weiß gewinnt nach 40.b5 …" → „40.b5" ist ein neuer Zweig),
  *   (b) Alternativ-Wörtern      („eine Zug wie c5, oder a5" → zwei getrennte Alternativzüge, KEINE Folge —
  *                                sonst spielte der Parser c5 mit Weiß und a5 danach mit Schwarz),
- * und lösen JEDEN Zweig eigenständig auf.
+ * und lösen JEDEN Zweig eigenständig auf. Ein „oder"/„or" ZWISCHEN ZWEI FELDANGABEN („can't take on g5 or
+ * e4") ist kein solches Signal: die Felder sind Ortsangaben, keine Züge (Buch-Aufgabe 35167, gemeldet
+ * 2026-11-18). Solche Prosa mit einer Feld-Aufzählung ist dafür (c) eine MÖGLICHE Trennstelle vor dem
+ * nächsten nummerierten Zug — entschieden wird sie erst beim Auflösen ({@link resolveWithSoftSplits}).
  *
  * VORWÄRTS-SPRUNG: Bricht die Auflösung genau an einem nummerierten Zug ab, der ÜBER die erwartete
  * Fortsetzung hinausspringt („… nach 2.Sf3 … 4.c3 Sc6" — dazwischen fehlen Züge), wird der Rest als
@@ -52,7 +55,12 @@ export interface VariationStep { san: string; fen: string; from: string; to: str
 
 /** Ein Zweig: SAN-Folge + optionale absolute Ply des ERSTEN Zugs (aus seiner Zugnummer).
  *  `plies` = absolute Ply je Zug, soweit er eine Zugnummer trägt (parallel zu `sans`). */
-export interface CommentBranch { sans: string[]; startPly?: number; plies?: (number | undefined)[]; }
+export interface CommentBranch {
+  sans: string[]; startPly?: number; plies?: (number | undefined)[];
+  /** MÖGLICHE Trennstellen (Index in `sans`): nummerierter Zug hinter Prosa mit einer Feld-Aufzählung, siehe
+   *  {@link branches} Regel (c). `exact`: seine Zugnummer ist genau die Fortsetzung der Züge davor. */
+  soft?: { at: number; exact: boolean }[];
+}
 
 // Deutsche → englische Figurenbuchstaben (für übersetzte Kurse). K bleibt K.
 const DE_PIECE: Record<string, string> = { D: 'Q', T: 'R', L: 'B', S: 'N' };
@@ -102,21 +110,70 @@ function isSquareMention(text: string, san: string, hasNumber: boolean, start: n
   return SQUARE_BEFORE.test(text.slice(Math.max(0, start - 20), start)) || SQUARE_AFTER.test(text.slice(end, end + 12));
 }
 
+// FELD-AUFZÄHLUNG hinter einer Präposition: „can't take on g5 or e4", „capturing on a8, e7 or e4", „auf g5
+// oder e4", „auf a8, e7 und e4" — JEDES Feld der Liste ist Ortsangabe, nicht nur das erste direkt hinter der
+// Präposition. Als Bauernzug gelesen eröffnete „e4" einen numerlosen Zweig, an dem die folgende Variante
+// („3...dxe4 …") hängen blieb; ihre Fortsetzung landete hinter der falschen Nebenvariante und brach dort ab
+// (Buch-Aufgabe 35167, gemeldet 2026-11-18). Bewusst eng:
+//   (i)  direkt hinter „PRÄP Feld[, Feld …] KONJUNKTION" (or/and/oder/und/bzw./sowie) → Ortsangabe;
+//   (ii) hinter „PRÄP Feld[, Feld …]," (nur Komma) → Ortsangabe NUR, wenn die Liste danach bis zu
+//        „KONJUNKTION Feld" weiterläuft. „With the pawn on e5, e4 is a strong move" bleibt also ein Zug.
+const LIST_PREP = 'auf|von|vom|über|ueber|zum|zur|feld|felder|on|onto|square|squares|from|via|to';
+const LIST_SQ = '[a-h][1-8]';
+const LIST_CONJ = '(?:or|and|oder|und|bzw\\.?|sowie)';
+const LIST_SEP_CONJ = `(?:\\s*,\\s*|\\s+)${LIST_CONJ}\\s+`;
+const LIST_SEP_COMMA = '\\s*,\\s*';
+const LIST_HEAD = `(?:^|[^\\p{L}])(?:${LIST_PREP})\\s+(?:${LIST_SQ}(?:${LIST_SEP_CONJ}|${LIST_SEP_COMMA}))*${LIST_SQ}`;
+const LIST_BEFORE_CONJ = new RegExp(`${LIST_HEAD}(${LIST_SEP_CONJ})$`, 'iu');
+const LIST_BEFORE_COMMA = new RegExp(`${LIST_HEAD}(${LIST_SEP_COMMA})$`, 'iu');
+const LIST_AFTER_TO_CONJ = new RegExp(`^(?:${LIST_SEP_COMMA}${LIST_SQ})*${LIST_SEP_CONJ}${LIST_SQ}(?![\\p{L}\\d])`, 'iu');
+const LIST_WINDOW = 60;
+
+/** Länge des Trenners VOR dem Feld, wenn es in einer Feld-Aufzählung hinter einer Präposition steht
+ *  (siehe oben); sonst `undefined`. Der Trenner („ or ", „, ") gehört zur Ortsangabe. */
+function squareListSeparator(text: string, start: number, end: number): number | undefined {
+  const before = text.slice(Math.max(0, start - LIST_WINDOW), start);
+  const conj = LIST_BEFORE_CONJ.exec(before);
+  if (conj) return conj[1].length;
+  const comma = LIST_BEFORE_COMMA.exec(before);
+  if (comma && LIST_AFTER_TO_CONJ.test(text.slice(end, end + LIST_WINDOW))) return comma[1].length;
+  return undefined;
+}
+
+/** Ergebnis von {@link scanTokens}: die Zug-Token und der Text für die ZWISCHENRAUM-Tests. In `gaps` sind
+ *  die Trenner einer Feld-Aufzählung durch Leerzeichen ersetzt (gleiche Länge, Positionen bleiben): das
+ *  „or" aus „on g5 or e4" verbindet zwei Felder und ist kein Alternativ-Signal zwischen zwei Zügen.
+ *  `listSquares` = Textpositionen der Felder solcher Aufzählungen (siehe {@link branches}, Regel (c)). */
+interface Scan { toks: Tok[]; gaps: string; listSquares: number[]; }
+
 /** Scannt die Token samt Position + implizierter (absoluter) Ply aus Zugnummer + Farbe.
- *  Feldangaben (siehe {@link isSquareMention}) fehlen — sie bleiben Text und trennen keine Zweige. */
-function scanTokens(text: string): Tok[] {
+ *  Feldangaben (siehe {@link isSquareMention}, {@link squareListSeparator}) fehlen — sie bleiben Text und
+ *  trennen keine Zweige. */
+function scanTokens(text: string): Scan {
   const re = new RegExp(TOKEN_RE.source, 'g');
   const out: Tok[] = [];
+  const listSquares: number[] = [];
+  let gaps = text;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
-    if (isSquareMention(text, m[3], !!m[1], m.index, m.index + m[0].length)) continue;
+    const start = m.index;
+    const end = m.index + m[0].length;
+    if (!m[1] && BARE_SQUARE.test(m[3])) {
+      const sep = squareListSeparator(text, start, end);
+      if (sep !== undefined) {
+        gaps = gaps.slice(0, start - sep) + ' '.repeat(sep) + gaps.slice(start);
+        listSquares.push(start);
+        continue;
+      }
+    }
+    if (isSquareMention(text, m[3], !!m[1], start, end)) continue;
     const num = m[1] ? parseInt(m[1], 10) : undefined;
     const isBlack = !!m[2];
     // 0-basierte Ply: Weiß N → 2N-2, Schwarz N → 2N-1.
     const ply = num !== undefined ? (num * 2 - (isBlack ? 1 : 2)) : undefined;
-    out.push({ san: m[3], ply, start: m.index, end: m.index + m[0].length });
+    out.push({ san: m[3], ply, start, end });
   }
-  return dropMentionedMoves(text, out);
+  return { toks: dropMentionedMoves(gaps, out), gaps, listSquares };
 }
 
 /**
@@ -158,47 +215,74 @@ function dropMentionedMoves(text: string, toks: Tok[]): Tok[] {
 
 /** Alle SAN-Token (nur der reine Zug, ohne Nummer) in Textreihenfolge. */
 export function extractSanTokens(text: string): string[] {
-  return scanTokens(text).map(t => t.san);
+  return scanTokens(text).toks.map(t => t.san);
 }
 
 /**
  * Zerlegt die Tokenfolge in Zweige (siehe Datei-Kopf: Zugnummer-Rücksprung ODER Alternativ-Signal).
  * Ein Komma trennt nur, wenn der Folgezug KEINE eigene Nummer hat (Aufzählung „c5, a5, Kd4"); ein
  * Komma vor einem nummerierten Zug („… a3, 41.b6 …") gilt als Fortsetzung, nicht als Alternative.
+ *
+ * <p>(c) PROSA mit einer Feld-Aufzählung vor einem NUMMERIERTEN Zug („… preparing ...Nf6-g4 … Black's pawns
+ * on d5 and e4 are the key … 14...Qh4 15.g3", „the double attack on b7 and f7 with Qf3 on the next move.
+ * For example, 17...Be5 18.Qf3"): stand im Text DIESES Zweigs seit seiner letzten Zugnummer eine solche
+ * Aufzählung, ist der nummerierte Zug eine MÖGLICHE Trennstelle (`soft`) — die Züge davor können erwähnte
+ * Pläne oder eine andere Variante sein. Entschieden wird beim Auflösen ({@link resolveWithSoftSplits}) an der
+ * Spielbarkeit, nicht an der bloßen Nummernfolge. Solange das zweite Feld der Aufzählung als (unspielbarer)
+ * Bauernzug gelesen wurde, riss es die Folge an dieser Stelle zufällig ab; ohne die Regel hingen jetzt z. B.
+ * „...Nf6-g4" und „14...Qh4" an einer gemeinsamen, zur Zugnummer unpassenden Stellung. Eine Aufzählung VOR
+ * dem Trenner, der den Zweig eröffnet („… pieces on a4 and g7, … Nge7 11.d4"), gehört zum Zweig davor.</p>
  */
 export function branches(text: string): CommentBranch[] {
-  const toks = scanTokens(text);
+  const { toks, gaps, listSquares } = scanTokens(text);
   const out: CommentBranch[] = [];
   let cur: string[] = [];
   let curPlies: (number | undefined)[] = [];
+  let curSoft: { at: number; exact: boolean }[] = [];
   let curStartPly: number | undefined;
   let lastPly = -Infinity;
+  let nextPly: number | undefined;   // Ply, die der nächste Zug als direkte Fortsetzung hätte
+  let listSince = false;             // Feld-Aufzählung im Text dieses Zweigs seit der letzten Zugnummer, siehe (c)
   let prevEnd = 0;
+  const push = () => out.push({ sans: cur, startPly: curStartPly, plies: curPlies, ...(curSoft.length ? { soft: curSoft } : {}) });
 
   for (const t of toks) {
     let boundary = false;
+    // Letztes Aufzählungs-Feld im Zwischenraum vor diesem Zug (-1: keines).
+    const listAt = listSquares.reduce((last, p) => (p >= prevEnd && p < t.start ? p : last), -1);
+    if (listAt >= 0) listSince = true;
     if (cur.length) {
-      const gap = text.slice(prevEnd, t.start);
+      const gap = gaps.slice(prevEnd, t.start);
       if (t.ply !== undefined && t.ply <= lastPly) boundary = true;          // (a) Zugnummer-Rücksprung
       else if (ALT_WORD.test(gap)) boundary = true;                          // (b) „oder"/„or"/„/" …
       else if (gap.includes(',') && t.ply === undefined) boundary = true;    // Komma + numerloser Zug = Aufzählung
+      else if (t.ply !== undefined && listSince) curSoft.push({ at: cur.length, exact: t.ply === nextPly });   // (c)
+      // Die Aufzählung zählt für den NEUEN Zweig nur, wenn sie hinter dem Trenner steht, der ihn eröffnet.
+      if (boundary && listSince) {
+        const tail = listAt >= 0 ? gaps.slice(listAt, t.start) : null;
+        if (tail === null || ALT_WORD.test(tail) || tail.includes(',')) listSince = false;
+      }
     }
     if (boundary) {
-      out.push({ sans: cur, startPly: curStartPly, plies: curPlies });
+      push();
       cur = [];
       curPlies = [];
+      curSoft = [];
       curStartPly = undefined;
       lastPly = -Infinity;
+      nextPly = undefined;
     }
     if (t.ply !== undefined) {
       lastPly = t.ply;
+      nextPly = t.ply + 1;
+      listSince = false;
       if (!cur.length) curStartPly = t.ply;
-    }
+    } else if (nextPly !== undefined) nextPly++;
     cur.push(t.san);
     curPlies.push(t.ply);
     prevEnd = t.end;
   }
-  if (cur.length) out.push({ sans: cur, startPly: curStartPly, plies: curPlies });
+  if (cur.length) push();
   return out;
 }
 
@@ -463,6 +547,81 @@ function nextContext(
   return { altFen, contFen: last?.fen };
 }
 
+/** Was ein aufgelöster Zweig dem nächsten hinterlässt: Rahmen ({@link BranchContext}) und die Stellungen
+ *  der bisher aufgelösten Kommentar-Züge ({@link resolveInSubline}). */
+interface ResolveState { ctx?: BranchContext; prior: PriorFen[]; }
+
+/** Löst einen Zweig auf und schreibt Rahmen + Stellungen in `state` fort. */
+function resolveInto(startFen: string, ucis: string[], b: CommentBranch, state: ResolveState): (VariationStep | null)[] {
+  const r = resolveBranch(startFen, ucis, b, state.ctx, state.prior);
+  // Auf per Suche gefundene Züge (`guessed`, erwähnte Pläne wie „with Rfe1 and Qd5") baut kein späterer
+  // Zweig auf; was dahinter an seiner Zugnummer verankert wurde, zählt.
+  // Zweig-Ende nur, wenn der Zweig bis zum letzten Zug aufging — sonst weiß niemand, wo er endet.
+  r.out.forEach((step, k) => {
+    if (step && k >= r.guessed) state.prior.push({ fen: step.fen, end: k === r.out.length - 1 });
+  });
+  state.ctx = r.ctx;
+  return r.out;
+}
+
+/** Teil eines Zweigs als eigener Zweig (ohne Trennstellen). */
+function sliceBranch(b: CommentBranch, from: number, to: number): CommentBranch {
+  const plies = (b.plies ?? []).slice(from, to);
+  return { sans: b.sans.slice(from, to), startPly: plies[0], plies };
+}
+
+/**
+ * Löst einen Zweig mit MÖGLICHEN Trennstellen auf ({@link branches}, Regel (c)). An jeder steht die Frage:
+ * setzt der nummerierte Zug die Züge davor fort, oder beginnt er einen eigenen Zweig an seiner Zugnummer?
+ *
+ * <ul>
+ * <li><b>Nummer springt oder davor stand keine</b> („with Qf3 on the next move. For example, 17...Be5",
+ *   „12...Nxd5 - but look at the pawns … on d5 and d6 … 15.Bf4"), und sie liegt in der Linie: die Zugnummer
+ *   ist der Anker — eigener Zweig.</li>
+ * <li><b>Nummer ist die genaue Fortsetzung</b>, liegt aber außerhalb der Linie (Buch mit eigener Zugzählung,
+ *   „11...Kg6 would be hopeless … pawns on h4 and e5 …, e.g. 12.Qd3+ f5"): die Folge findet ihre Stellung
+ *   nur als GANZES — Fortsetzung.</li>
+ * <li><b>Sonst</b> wird der Abschnitt bis zur nächsten Trennstelle in beiden Lesarten gespielt, und es
+ *   gilt die, in der mehr seiner NUMMERIERTEN Züge aufgehen (numerlose sind oft nur erwähnt und gehen
+ *   irgendwo zufällig); bei Gleichstand die Fortsetzung. „3.f5, when Black can't take on g5 or e4 …
+ *   3...dxe4" bleibt so zusammen, während „5...Be7 … lands on c5 or c7 … The immediate 6.g3 which runs into
+ *   6...Be5" zwar weiterzählt, aber in die Partie gehört (nach 5...Be7 ginge 6...Be5 nicht).</li>
+ * </ul>
+ */
+function resolveWithSoftSplits(startFen: string, ucis: string[], b: CommentBranch, state: ResolveState): (VariationStep | null)[] {
+  const soft = b.soft ?? [];
+  const plies = b.plies ?? [];
+  const out: (VariationStep | null)[] = [];
+  const copy = (st: ResolveState): ResolveState => ({ ctx: st.ctx, prior: [...st.prior] });
+  /** Aufgelöste NUMMERIERTE Züge des Abschnitts, der bei `offset` beginnt. */
+  const numbered = (steps: (VariationStep | null)[], offset: number) =>
+    steps.filter((x, k) => x && plies[offset + k] !== undefined).length;
+  let from = 0;   // Beginn der laufenden Gruppe (alles davor ist entschieden und steht in `out`/`state`)
+  soft.forEach(({ at, exact }, i) => {
+    const to = i + 1 < soft.length ? soft[i + 1].at : b.sans.length;
+    const ply = plies[at];
+    const inLine = ply !== undefined && anchorFen(startFen, ucis, ply) !== undefined;
+    const headState = copy(state);
+    const head = resolveInto(startFen, ucis, sliceBranch(b, from, at), headState);
+    let own: boolean;
+    if (!exact && inLine) own = true;
+    else if (exact && !inLine) own = false;
+    else {
+      const joint = resolveInto(startFen, ucis, sliceBranch(b, from, to), copy(state));
+      const alone = resolveInto(startFen, ucis, sliceBranch(b, at, to), copy(headState));
+      own = numbered(alone, at) > numbered(joint.slice(at - from), at);
+    }
+    if (own) {
+      out.push(...head);
+      state.ctx = headState.ctx;
+      state.prior = headState.prior;
+      from = at;
+    }
+  });
+  out.push(...resolveInto(startFen, ucis, sliceBranch(b, from, b.sans.length), state));
+  return out;
+}
+
 /**
  * Zerlegt einen Kommentar in Segmente (Text + klickbare Züge). Jeder Zweig wird eigenständig gegen die
  * Puzzle-Hauptlinie (`startFen`/`ucis`) aufgelöst; ein Zug ist NUR klickbar, wenn er Teil des legalen
@@ -471,24 +630,13 @@ function nextContext(
 export function buildCommentSegments(text: string, startFen: string, ucis: string[]): CommentSegment[] {
   // Pro Token in Original-Reihenfolge den aufgelösten Schritt (oder null) bestimmen.
   const perToken: (VariationStep | null)[] = [];
-  let ctx: BranchContext | undefined;
-  const priorFens: PriorFen[] = [];   // Stellungen der bisher aufgelösten Kommentar-Züge, siehe resolveInSubline
-  for (const b of branches(text)) {
-    const r = resolveBranch(startFen, ucis, b, ctx, priorFens);
-    perToken.push(...r.out);
-    // Auf per Suche gefundene Züge (`guessed`, erwähnte Pläne wie „with Rfe1 and Qd5") baut kein späterer
-    // Zweig auf; was dahinter an seiner Zugnummer verankert wurde, zählt.
-    // Zweig-Ende nur, wenn der Zweig bis zum letzten Zug aufging — sonst weiß niemand, wo er endet.
-    r.out.forEach((step, k) => {
-      if (step && k >= r.guessed) priorFens.push({ fen: step.fen, end: k === r.out.length - 1 });
-    });
-    ctx = r.ctx;
-  }
+  const state: ResolveState = { prior: [] };
+  for (const b of branches(text)) perToken.push(...resolveWithSoftSplits(startFen, ucis, b, state));
 
   const segments: CommentSegment[] = [];
   let last = 0;
   // Dieselbe Tokenfolge wie in branches() — sonst verrutscht die Zuordnung Token ↔ Schritt.
-  scanTokens(text).forEach((t, tokenIdx) => {
+  scanTokens(text).toks.forEach((t, tokenIdx) => {
     if (t.start > last) segments.push({ text: text.slice(last, t.start) });
     const raw = text.slice(t.start, t.end);
     const step = tokenIdx < perToken.length ? perToken[tokenIdx] : null;
