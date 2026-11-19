@@ -76,7 +76,7 @@ public class PrepReadApiTests(PrepReadFixture fixture) : IAsyncLifetime, IClassF
         var urls = new[]
         {
             "/api/prep/players?q=hub", $"/api/prep/player/{id}", $"/api/prep/player/{id}/profile", $"/api/prep/player/{id}/tree",
-            $"/api/prep/player/{id}/recent", $"/api/prep/player/{id}/pgn",
+            $"/api/prep/player/{id}/recent", $"/api/prep/player/{id}/pgn", "/api/prep/history",
         };
 
         using var anonymous = Client(null);
@@ -230,6 +230,79 @@ public class PrepReadApiTests(PrepReadFixture fixture) : IAsyncLifetime, IClassF
         Assert.Equal(new[] { "Mair, Josef" }, await Names("Mair, Josef"));
         Assert.Empty(await Names("%"));
         Assert.Empty(await Names("_a%"));
+    }
+
+    /// <summary>„Frühere Vorbereitungen" (0.995.0) so, wie MariaDB die vier Abfragen ausführt: LIKE mit Escape auf den Repertoire-Namen
+    /// (die Kollation vergleicht ohne Groß/klein — „prep: …" darf trotzdem nicht zählen), <c>IN</c> auf Id und FIDE-ID, und der
+    /// Namensschlüssel gezählt per <c>GROUP BY</c> (genau ein Spieler → aufgelöst; zwei, keiner oder nur ein kollationsgleicher
+    /// „ø = o" → nicht). Nur die eigenen, jüngste zuerst, je Gegner einer.</summary>
+    [MySqlFact]
+    public async Task History_ThreeForms_ResolvedTheSameWay_OnMariaDb()
+    {
+        await ImportAsync(Game("Huber, Franz", "Mair, Josef", "1. e4 c5 2. Nf3 d6", "2024.05.17", "990001", "990002")
+                          + Game("Moser, Christian", "Huber, Franz", "1. d4 d5 2. c4 e6", "2023.01.02", "990030", "990001")
+                          + Game("Berger, Armin", "Huber, Franz", "1. c4 e5 2. Nc3 Nf6", "2022.01.02", "990040", "990001")
+                          + Game("Berger, Armin", "Huber, Franz", "1. Nf3 d5 2. g3 c5", "2021.01.02", blackFide: "990001")       // Zwilling ohne FIDE-ID
+                          + Game("Høgh, Jan", "Huber, Franz", "1. g3 d5 2. Bg2 e5", "2020.01.02", blackFide: "990001"));
+        await ImportAsync(Game("Höcher, Michael", "Huber, Franz", "1. b3 e5 2. Bb2 Nc6", "2019.01.02", blackFide: "990001"), PrepSources.Lumbra, 1);
+        var huber = await PlayerIdAsync("990001");
+        var moser = await PlayerIdAsync("990030");
+        int hoecher;
+        await using (var db = fixture.Schema.NewContext()) hoecher = db.PrepPlayers.Single(p => p.NameKey == "hocher, michael").Id;
+
+        using var viewer = Client(await UserAsync("verlauf", false, Permissions.PrepView));
+        using var stranger = Client(await UserAsync("verlauf-fremd", false, Permissions.PrepView));
+        var day = new DateTime(2026, 11, 1, 12, 0, 0, DateTimeKind.Utc);
+        var ids = new Dictionary<string, int>();
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var me = db.AppUsers.Single(u => u.Username == "verlauf").Id;
+            var other = db.AppUsers.Single(u => u.Username == "verlauf-fremd").Id;
+            Repertoire Rep(string name, int days, string? json = null, int? user = null) =>
+                new() { UserId = user ?? me, Name = name, OpponentJson = json, CreatedAt = day, UpdatedAt = day.AddDays(days) };
+            string Opponent(string key, string name, string color) =>
+                new RookHub.Api.DTOs.Repertoires.RepertoireOpponentDto { Opponent = key, Name = name, Color = color }.ToJson();
+            var rows = new[]
+            {
+                Rep("Prep: Huber, Franz 2026", 9, Opponent($"prep:{huber}", "Huber", "b")),
+                Rep("Prep: Mair, Josef 2026", 8, Opponent("league:990002", "Mair", "w")),
+                Rep("Prep: Nichtda, Nina 2026", 7, Opponent("league:990777", "Nichtda", "w")),
+                Rep("Prep: Moser, Christian Mag. 2026", 6),                 // nur der Name, genau einer
+                Rep("Prep: Berger, Armin Mag. 2026", 5),                    // zwei Namensvettern
+                Rep("Prep: Höcher, Michael 2026", 4),                       // Bestand schreibt „hocher"
+                Rep("Prep: Hogh, Jan 2026", 3),                             // Bestand führt nur „høgh, jan"
+                Rep("Prep: Huber, Franz 2025", 2),                          // derselbe Spieler wie ganz oben → fällt weg
+                Rep("prep: klein, karl 2026", 1),                           // so vergibt es das Anlegen nie
+                Rep("Sizilianisch", 10),
+                Rep("Prep: Fremd, Fritz 2026", 11, user: other),
+            };
+            db.Repertoires.AddRange(rows);
+            await db.SaveChangesAsync();
+            foreach (var r in rows) ids[r.Name] = r.Id;
+        }
+
+        var items = JsonNode.Parse(await viewer.GetStringAsync("/api/prep/history"))!["items"]!.AsArray();
+        Assert.Equal(new[]
+        {
+            "Prep: Huber, Franz 2026", "Prep: Mair, Josef 2026", "Prep: Nichtda, Nina 2026", "Prep: Moser, Christian Mag. 2026",
+            "Prep: Berger, Armin Mag. 2026", "Prep: Höcher, Michael 2026", "Prep: Hogh, Jan 2026",
+        }, items.Select(i => i!["repertoireName"]!.GetValue<string>()));
+        Assert.Equal(new int?[] { huber, await PlayerIdAsync("990002"), null, moser, null, hoecher, null },
+            items.Select(i => i!["playerId"]?.GetValue<int>()));
+        Assert.Equal(new[] { "Huber, Franz", "Mair, Josef", "Nichtda, Nina", "Moser, Christian", "Berger, Armin Mag.", "Höcher, Michael", "Hogh, Jan" },
+            items.Select(i => i!["name"]!.GetValue<string>()));
+        Assert.Equal(new[] { "Huber, Franz", "Mair, Josef", "Nichtda, Nina", "Moser, Christian", "Berger, Armin", "Höcher, Michael", "Hogh, Jan" },
+            items.Select(i => i!["query"]!.GetValue<string>()));
+        Assert.Equal(new[] { "990001", "990002", "990777", "990030", null, null, null }, items.Select(i => i!["fide"]?.GetValue<string>()));
+        Assert.Equal(new[] { "b", "w", "w", null, null, null, null }, items.Select(i => i!["color"]?.GetValue<string>()));
+        var first = items[0]!;
+        Assert.Equal((6, 2019, 2024, ids["Prep: Huber, Franz 2026"]), (first["games"]!.GetValue<int>(), first["firstYear"]!.GetValue<int>(),
+            first["lastYear"]!.GetValue<int>(), first["repertoireId"]!.GetValue<int>()));
+        Assert.Equal(day.AddDays(9), first["preparedAt"]!.GetValue<DateTime>().ToUniversalTime());
+        Assert.Null(items[2]!["games"]);
+
+        var foreign = JsonNode.Parse(await stranger.GetStringAsync("/api/prep/history"))!["items"]!.AsArray();
+        Assert.Equal("Fremd, Fritz", Assert.Single(foreign)!["name"]!.GetValue<string>());
     }
 
     [MySqlFact]

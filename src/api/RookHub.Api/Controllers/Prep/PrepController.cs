@@ -67,6 +67,26 @@ public class PrepController : BaseApiController
         });
     }
 
+    /// <summary>Frühere Vorbereitungen des angemeldeten Nutzers (<see cref="PrepHistoryService"/>): seine Trainings-Repertoires
+    /// „Prep: …", jüngste zuerst, je Gegner eines → <c>{ items[{ playerId, name, fide, games, firstYear, lastYear, maxElo,
+    /// repertoireId, repertoireName, preparedAt, color, query }] }</c>. <c>playerId</c> <c>null</c> = der Gegner ließ sich keinem
+    /// Spieler des Bestands eindeutig zuordnen — die Oberfläche sucht dann nach <c>query</c>. <c>color</c> = die EIGENE Farbe.</summary>
+    [HttpGet("history")]
+    [HasPermission(Permissions.PrepView)]
+    public async Task<IActionResult> History([FromServices] PrepHistoryService history, CancellationToken ct)
+    {
+        var items = await history.ListAsync(GetUserId(), ct);
+        return Ok(new
+        {
+            items = items.Select(i => new
+            {
+                playerId = i.PlayerId, name = i.Name, fide = i.Fide, games = i.Games, firstYear = i.FirstYear, lastYear = i.LastYear,
+                maxElo = i.MaxElo, repertoireId = i.RepertoireId, repertoireName = i.RepertoireName, preparedAt = i.PreparedAt,
+                color = i.Color, query = i.Query,
+            }),
+        });
+    }
+
     /// <summary>Spielerkarte in der Form der Liga-Karte (Profil, Quellen, letzte Partien, Online-Konten — mit <c>prep.view</c> nur
     /// gesicherte ohne Kommentar wie über einen Teilen-Link, mit <c>prep.manage</c> wie für LeagueHub-Leser) plus <c>id</c>, <c>games</c>
     /// (im Bestand), <c>loaded</c>/<c>limited</c>/<c>limit</c>/<c>since</c> (Vorgabe: die jüngsten <see cref="PrepCardService.DefaultLimit"/>,

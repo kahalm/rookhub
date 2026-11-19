@@ -5909,6 +5909,12 @@
     "twinHint": "Isto ime, ali bez FIDE ID-a — vjerojatno isti igrač, ali to nije sigurno. Uključite ih samo ako odgovaraju.",
     "sources": "Izvori: ChessBase Megabase i Lumbrina GigaBase (partija koja je u obje računa se jednom); uz FIDE ID i partije koje poznaje LeagueHub (chess-results, Lichess prijenosi, klupske partije) te online partije potvrđenih računa. Ubrojene su i brzopotezne i ubrzane partije.",
     "noFide": "bez FIDE ID-a",
+    "history": {
+      "title": "Ranije pripreme",
+      "preparedOn": "Pripremljeno {{date}}",
+      "find": "Potraži igrača",
+      "openRepertoire": "Otvori repertoar za trening: {{name}}"
+    },
     "accounts": {
       "title": "Pronađi online račune",
       "intro": "Traži na Lichessu i chess.comu račune čije ime odgovara ovom igraču. Vi odlučujete: preuzeti ili odbaciti. Jedna pretraga istodobno, najviše {{perHour}} na sat.",

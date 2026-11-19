@@ -17,6 +17,19 @@
   geteilte Baustein sagt nur „ließ sich gerade nicht laden“. Darunter „Eingetragene Konten“ mit Umstufen und Entfernen
   nach einer Rückfrage im Abschnitt (0.639.0); bei einem Ligaspieler nur ansehen. Geteilte Komponenten bleiben dafür
   unverändert.
+- Frühere Vorbereitungen (0.995.0, `prep-search.component`): unter dem Suchfeld der Abschnitt `section.history` mit den
+  eigenen „Prep: …"-Repertoires (`PrepApiService.history()` → `GET /api/prep/history`, Typ `PrepHistoryEntry`), einmal beim
+  Öffnen geladen. Sichtbar nur, solange nicht gesucht wird (`showHistory`: Feld leer oder unter `PREP_MIN_QUERY` Zeichen) —
+  beim Tippen weicht er sofort, nach dem Leeren steht er wieder da (ohne neuen Abruf). Zeile `ul.history-list > li`:
+  `.main` (Name + Meta-Zeile `.rh-dots`: „Vorbereitet am …" `mediumDate`, eigene Farbe über `prep.trainingRepertoire.asWhite/
+  asBlack`, dann Partien/Jahre/Elo wie beim Treffer) und daneben `a.rep` (Symbolknopf `library_books`,
+  `/repertoires/<id>`, `appIconLabel` „Trainings-Repertoire zu … öffnen"). Mit `playerId` ist `.main` ein Link auf
+  `/prep/<id>`; ohne ein `<button>`, der `searchFor` ruft: Suchfeld = `query`, Suche sofort (ohne Wartezeit), Meta-Zeile
+  endet mit `.find` „Spieler suchen". Per Tastatur ausgelöst (`click` mit `detail` 0) geht der Fokus ins Suchfeld — der Knopf
+  verschwindet mit der Liste; bei Maus/Finger nicht (am Handy klappte sonst die Tastatur auf). Leere Liste: kein Abschnitt.
+  Ladefehler: Überschrift + `app-load-error`, „Wiederholen" ruft `loadHistory()` (nie still wie „es gibt keine", DESIGN
+  5.10). Zustand in Signalen (`history`, `historyError`); Texte `prep.history.*` in en/de/hr/hu. Kommt die Seite mit
+  `?q=` oder einer gemerkten Suche, stehen die Treffer da und die Liste erst nach dem Leeren des Felds.
 - Gestaltung: `features/prep/prep-card.scss` lädt `leaguehub.scss` per `meta.load-css`, begrenzt auf
   `.prep-card-scope`, als nicht eingebundenes Style-Bündel `prep-card.css` (`angular.json`, `inject: false`), das die
   Spielerseite nachlädt — sonst sprengte die LeagueHub-Gestaltung das Komponenten-Budget. Klassen in Prep-Komponenten

@@ -423,6 +423,12 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 - `matListItemMeta` nie direkt auf einen Text-Knopf (`mat-flat-button`/`mat-stroked-button`), sondern auf ein
   umschließendes `<div>` — sonst übernimmt der Knopf Schrift, Farbe und Ausrichtung des Listen-Endbereichs
   (Beschriftung winzig und fast unsichtbar, d1-rk-revenge-loesen-knopf-kaputt).
+- **Listenzeile mit zweitem Ziel** (Spielervorbereitung „Frühere Vorbereitungen“, 0.995.0): die Zeile selbst ist das
+  Hauptziel (ein `<a>` bzw. `<button>` über Name + Meta-Zeile, `flex: 1 1 auto; min-width: 0`, bricht in sich um); das
+  Nebenziel steht als `mat-icon-button` mit `[appIconLabel]` (Name nennt die Zeile: „Trainings-Repertoire zu … öffnen“)
+  rechts DANEBEN als Geschwister im `<li>` (`flex: none`) — nie ein Link im Link. Führt eine Zeile ausnahmsweise nicht
+  zum Ziel, sondern löst etwas auf der Seite aus (Suche füllen), ist sie ein `<button>` und sagt es in der Meta-Zeile mit
+  Symbol + Text (Lupe + „Spieler suchen“), nicht nur durch anderes Aussehen.
 
 ### 5.4 Aktionen und Knöpfe
 
@@ -1057,6 +1063,17 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   `prep-card`), ihre Variablen werden auf Material-Rollen abgebildet (`--ink: var(--mat-sys-on-surface)` …);
   Bedienelemente sprechen in RookHub Material (r2-rg-prep-style).
   Ihre Texte, Notation, Datum und Prozent folgen der Oberflächensprache (Abschnitt 6, e1-rk-prep-card-german).
+- Spielervorbereitung, Suchseite `/prep` (0.995.0): unter dem Suchfeld steht — nur solange NICHT gesucht wird (Feld leer
+  oder unter zwei Zeichen) — der Abschnitt „Frühere Vorbereitungen“ (`h2` 1,1 rem): die eigenen „Prep: …“-Repertoires,
+  jüngste zuerst, je Gegner eine Zeile im Stil der Trefferliste. Zeile = Name, darunter die Meta-Zeile als `.rh-dots`
+  (5.13): „Vorbereitet am <mediumDate>“, eigene Farbe („ich mit Weiß“), dann Partien · Jahre · „Elo bis …“ wie beim
+  Treffer. Zugeordneter Gegner → Link auf `/prep/<id>`; nicht eindeutig zugeordnet → `<button>`, der das Suchfeld mit dem
+  Namen füllt und sofort sucht, Meta-Zeile endet dann mit Lupe + „Spieler suchen“ statt der Kennzahlen. Rechts je Zeile
+  der Symbolknopf `library_books` zum Trainings-Repertoire (5.3 „Listenzeile mit zweitem Ziel“). Sobald gesucht wird,
+  weicht der Abschnitt den Treffern. Ohne Vorbereitungen gibt es ihn gar nicht (kein Leerzustand-Satz — die Hauptsache
+  der Seite ist die Suche); scheitert das Laden, stehen Überschrift + `app-load-error` mit „Wiederholen“ (5.10), nie
+  nichts. Kein Ladekreis — die Liste erscheint, wenn sie da ist. Der Hinweis unter dem Suchfeld läuft mit
+  `subscriptSizing="dynamic"` (5.8), damit seine zweite Zeile am Handy nicht auf der Überschrift liegt.
 - E-Book-Bibliothek (`features/ebooks/`, 0.764.0): Karten als **Regal** — Titelbild im Verhältnis 2:3 oben (ohne Bild:
   Symbol + Titel auf getönter Fläche), Lesestand als dünner Balken an der Bildunterkante, Titel zweizeilig mit „…“,
   Formate/Seitenzahl/Sichtbarkeit als `.chip`-Abzeichen, Aktionszeile unten (Hauptaktion links, ⋮ rechts); Raster
@@ -1462,6 +1479,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-19 | 0.995.0 · Spielervorbereitung | `/prep`: Abschnitt „Frühere Vorbereitungen“ unter dem Suchfeld, nur solange nicht gesucht wird — Zeilen wie die Treffer (Name, Meta als `.rh-dots`: Datum, eigene Farbe, Partien · Jahre · Elo), zugeordneter Gegner als Link auf die Spielerseite, nicht zugeordneter als `<button>` mit Lupe + „Spieler suchen“ (füllt die Suche), daneben je Zeile ein Symbolknopf zum Trainings-Repertoire; leer → kein Abschnitt, Ladefehler → `app-load-error`; Suchfeld-Hinweis `subscriptSizing="dynamic"`. Neues Muster „Listenzeile mit zweitem Ziel“ (5.3, 8.1) | Man bereitet sich auf dieselben Gegner wieder vor und musste sie jedes Mal neu suchen; zwei Ziele je Zeile ohne Link im Link; ein Eintrag, der nur sucht, darf nicht wie ein Sprung aussehen | Nutzerwunsch 19.11. („zeig dort liste der alten vorbereitungen an und mit klick hol ich den spieler gleich wieder“) |
 | 2026-11-18 | 0.994.0 · Woodpecker | Zeitplan als zweiter geteilter Baustein `app-woodpecker-schedule` neben dem Tagesziel: Löser-Kopf (letzte Angabe der Zyklus-Zeile, hinter dem Tagesziel), Dashboard-Kachel (eigene Zeile unter dem Tagesziel), Statistik-Fenster (eigene Zeile der Übersicht, ausführlich mit „Tag k von D“ und „aktuell n %“); im Zeitplan grüner Haken `check_circle` + „Im Zeitplan“ in `--rh-success` + Soll-Anteil klein, dahinter NEUTRAL „Zeitplan: noch 12 bis 57 %“ ohne Warnfarbe; Haken + Text brechen nie auseinander (5.12, 8.1) | Das Tagesziel sagt nur, ob das Minimum von HEUTE geschafft ist; ob man insgesamt dort steht, wo man am heutigen Tag des Zyklus stehen soll, stand nirgends | Nutzerwunsch 18.11.2026 („neben x pro tag für fertig auch noch ein checkmark haben wenn ich % der gesamtpuzzles passend zum aktuellen tag hab (und in statistik oben ausgewiesen noch x puzzle bis z.b. 55% erfüllt)“) |
 | 2026-11-18 | 0.993.0 · Woodpecker | Tagesziel ohne Statistik-Fenster: geteilter Baustein `app-woodpecker-daily-goal` im Löser-Kopf (letzte Angabe der Zyklus-Zeile), auf der Dashboard-Kachel (eigene Zeile unter der Frist) und im Statistik-Fenster (ersetzt dort „Nötig je Tag: n (offen ÷ Resttage) · Heute: n“); offen leise „Heute: 23 von 45“, erreicht grüner Haken `check_circle` + „Tagesziel erreicht“ in `--rh-success` + Zahl klein, Zyklus 1 nur „Heute: n“; das Soll ist über den Tag fest (5.12, 8.1) | Ob das heutige Minimum geschafft ist, stand nur im Statistik-Fenster, und die Soll-Zahl dort sank mit jeder gelösten Aufgabe — „erreicht“ gab es nicht | Nutzerwunsch 18.11.2026 („oben auch ohne statistik visualisieren, wenn ich heute das notwendige minimum erledigt habe (sowohl im dashboard als auch wenn ich drinnen bin)“, „grüne checkmark oder so vielleicht“) |
 | 2026-11-18 | 0.992.0 · Woodpecker-Löser | Statistik als modaler Inhalts-Dialog (760 px / 94vw) statt aufklappbarem Block in der Kontext-Card (löst die Einträge 0.957.0 und 0.958.1 ab): Knopf „Statistik“ (`bar_chart`) unter der Zyklus-Zeile; oben Übersicht in Lesegröße — Tabelle „Bisher“ gegen dieselben Aufgaben je früherem Zyklus (Zeit, Richtig), „Nötig je Tag: n (offen ÷ Resttage) · Heute: n“; darunter die bisherigen Abschnitte ohne Doppeltes; solange das Fenster offen ist, steht die Lösezeit und das Brett ist unkenntlich (Blur), Hauptknopf „Weiter lösen“ (5.12) | Die wichtigsten Zahlen standen mitten in einem langen Block in der Seitenspalte; beim Lesen lief die Uhr der Aufgabe weiter | Nutzerwunsch 18.11. |

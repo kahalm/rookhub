@@ -41,6 +41,50 @@ nicht). Messung 01.10.: 554 B/Partie, voller Bestand ≈ 15,2 Mio. Zeilen ≈ 8,
 Spielerkarte von LeagueHub inline, darüber der Umfang mit „Alle laden — höchstens N" und der Namens-Zwilling als
 Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt ihre Daten über `PLAYER_CARD_API`.
 
+**Frühere Vorbereitungen (0.995.0, Wunsch 19.11.: „zeig dort liste der alten vorbereitungen an und mit klick hol ich den
+spieler gleich wieder").** `GET /api/prep/history` (`prep.view`, `PrepHistoryService`) → die Vorbereitungen des angemeldeten
+Nutzers, jüngste zuerst, je Gegner eine, höchstens 50 (`MaxItems`; angesehen werden die 300 zuletzt geänderten, `MaxScan`):
+
+```
+{ items: [{ playerId|null, name, fide|null, games|null, firstYear|null, lastYear|null, maxElo|null,
+            repertoireId, repertoireName, preparedAt, color|null, query }] }
+```
+
+- **Was eine Vorbereitung ist:** ein EIGENES Trainings-Repertoire, wie „Trainings-Repertoire anlegen" es erzeugt — erkannt an
+  `Repertoires.OpponentJson != NULL` (seit 0.894.0) ODER am Namen „Prep: <Gegner> <Jahr>" (`TrainingLinesService.RepertoirePrefix`,
+  dieselbe Konstante, mit der `RepertoireName` den Namen baut; Umkehrung `OpponentOfRepertoireName`: Präfix und angehängtes
+  Jahr weg). Keine eigene Tabelle, kein „zuletzt geöffnet", keine Migration. Gelöschte Repertoires sind echte Löschungen
+  (`RepertoireService.DeleteAsync`) und fehlen damit von selbst; fremde und mit mir geteilte zählen nicht.
+- **Auflösung zum Spieler des Bestands** (`playerId` = `PrepPlayers.Id`, Ziel `/prep/<id>`):
+  - `prep:<id>` → der Spieler mit dieser Id (gibt es ihn nicht mehr: nicht aufgelöst);
+  - `league:<FIDE>` → der Spieler mit dieser FIDE-ID (Index `IX_PrepPlayers_FideId`, bei mehreren der mit den meisten Partien
+    wie die Suche); steht er nicht im Bestand, bleibt der Eintrag unaufgelöst — auch wenn jemand im Bestand so HEISST (mit
+    anderer FIDE-ID wäre das ein anderer). `fide` trägt die FIDE-ID dann trotzdem; der Schlüssel eines Ligaspielers ohne
+    FIDE-ID (`league:n-…`) ist keine;
+  - ohne (oder mit kaputtem) `OpponentJson` → der Name aus dem Repertoire-Namen, aufgelöst NUR, wenn im Bestand GENAU EIN
+    Spieler exakt diesen Namensschlüssel trägt: `PrepPgn.NameKey` (klein, ohne Akzente, Titel wie „Mag."/„FM" weg — dieselbe
+    Normalisierung wie beim Einlesen) und zusätzlich `NameKeyTransliterated` (Megabase-Schreibweise „hoecher"); beide zusammen
+    müssen genau einen ergeben. Zwei Namensvettern (auch FIDE-Spieler + Zwilling ohne FIDE-ID) oder keiner → `playerId: null`.
+    Die Rückschreibweise der Suche (ae → a) zählt nicht. Gezählt wird in der Datenbank (`GROUP BY NameKey` über den Index
+    `NameKey, Games`); weil die Kollation (`utf8mb4_uca1400_ai_ci`) „ø" = „o" setzt, gilt ein Treffer nur, wenn sein Schlüssel
+    Zeichen für Zeichen der gefragte ist.
+- **Nicht aufgelöst** (`playerId: null`): `name` = der volle Name aus dem Repertoire-Namen (sonst der Kurzname aus
+  `OpponentJson`, sonst der Repertoire-Name), `games`…`maxElo` `null`, `query` = dieser Name OHNE Titel („Moser, Christian
+  Mag." → „Moser, Christian" — mit „Mag." nähme `PrepPlayerSearch` „Mag" als Vornamen und fände niemanden). Die Oberfläche
+  setzt damit die Suche.
+- **Je Gegner ein Eintrag, der jüngste:** gleicher aufgelöster Spieler (egal über welche der drei Formen), sonst gleicher
+  Gegner-Schlüssel; ein Eintrag ohne Schlüssel fällt außerdem hinter einem jüngeren gleichen Namens weg („Prep: Hess, Max 2025"
+  hinter „… 2026"). Zwei verschiedene aufgelöste Spieler gleichen Namens bleiben zwei Einträge.
+- **Felder:** `name` = der des Bestands, wenn aufgelöst; `games`/`firstYear`/`lastYear`/`maxElo` wie `/api/prep/players`;
+  `preparedAt` = `Repertoire.UpdatedAt` (UTC) — Anlegen und „Ersetzen" setzen es (die Dateien werden neu geschrieben), aber
+  auch jede andere Änderung am Repertoire (Umbenennen, Chessable-„Aktualisieren"); danach ist auch sortiert. `color` = MEINE
+  Farbe (`w`/`b`), wie `OpponentJson.color` sie führt (`CreateRepertoireAsync` setzt dort die eigene Farbe aus der Reihung);
+  ältere Einträge ohne `OpponentJson`: `null`.
+- Vier Abfragen, keine je Zeile: Repertoires des Nutzers (LIKE mit Escape + `OpponentJson IS NOT NULL`), Namensschlüssel
+  gezählt, Spieler nach Id, Spieler nach FIDE-ID. Gegen MariaDB geprüft in `PrepReadApiTests.History_ThreeForms_…` (auch
+  „prep: …" klein geschrieben zählt trotz Kollation nicht); Prod 19.11.: beide `PrepPlayers`-Abfragen laufen als `range` über
+  ihren Index. Oberfläche: `docs/frontend/spielerkarte-geteilt-spielervorbereitung.md`.
+
 **Online-Konten (0.637.0–0.639.0)** — nur `prep.manage` UND Schalter `Prep:AccountSearch` (Vorgabe aus → 404 `disabled`):
 - `GET /api/prep/player/{id}/suggestions` → `{ items, perHour, remaining, accounts, leagueHub }`;
   `POST …/suggestions/scan` (nur Spieler mit FIDE-ID, nur auf Knopfdruck, kein Hintergrundlauf);

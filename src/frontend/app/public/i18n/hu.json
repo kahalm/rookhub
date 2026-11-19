@@ -5909,6 +5909,12 @@
     "twinHint": "Azonos név, de FIDE-azonosító nélkül — valószínűleg ugyanaz a játékos, de ez nem biztos. Csak akkor vegye hozzá, ha illik.",
     "sources": "Források: ChessBase Megabase és Lumbra GigaBase (a mindkettőben szereplő játszma egyszer számít); FIDE-azonosítóval a LeagueHub által ismert játszmák is (chess-results, Lichess-közvetítések, klubjátszmák), valamint a megerősített fiókok online játszmái. A villám- és rapidjátszmák is beleszámítanak.",
     "noFide": "FIDE-azonosító nélkül",
+    "history": {
+      "title": "Korábbi felkészülések",
+      "preparedOn": "Felkészülés: {{date}}",
+      "find": "Játékos keresése",
+      "openRepertoire": "Edzésrepertoár megnyitása: {{name}}"
+    },
     "accounts": {
       "title": "Online fiókok keresése",
       "intro": "Olyan fiókokat keres a Lichessen és a chess.comon, amelyek neve illik ehhez a játékoshoz. Ön dönt: átveszi vagy elveti. Egyszerre egy keresés, óránként legfeljebb {{perHour}}.",

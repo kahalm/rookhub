@@ -5909,6 +5909,12 @@
     "twinHint": "Same name, but no FIDE ID — probably the same player, but that is not certain. Only include them if they fit.",
     "sources": "Sources: ChessBase Megabase and Lumbra’s GigaBase (a game in both counts once); with a FIDE ID also the games LeagueHub knows (chess-results, Lichess broadcasts, club games) and online games of confirmed accounts. Blitz and rapid games are included.",
     "noFide": "no FIDE ID",
+    "history": {
+      "title": "Earlier preparations",
+      "preparedOn": "Prepared on {{date}}",
+      "find": "Find player",
+      "openRepertoire": "Open the training repertoire for {{name}}"
+    },
     "accounts": {
       "title": "Find online accounts",
       "intro": "Searches Lichess and Chess.com for accounts whose name fits this player. You decide: accept or reject. One search at a time, at most {{perHour}} per hour.",

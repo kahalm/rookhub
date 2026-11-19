@@ -5909,6 +5909,12 @@
     "twinHint": "Gleicher Name, aber ohne FIDE-ID — vermutlich derselbe Spieler, sicher ist es nicht. Nur dazunehmen, wenn es passt.",
     "sources": "Quellen: die ChessBase-Megabase und Lumbras GigaBase (eine Partie, die beide führen, zählt einmal); mit FIDE-ID dazu die Partien, die LeagueHub kennt (chess-results, Lichess-Übertragungen, Vereinspartien), und Online-Partien gesicherter Konten. Blitz- und Schnellschach sind mitgezählt.",
     "noFide": "ohne FIDE-ID",
+    "history": {
+      "title": "Frühere Vorbereitungen",
+      "preparedOn": "Vorbereitet am {{date}}",
+      "find": "Spieler suchen",
+      "openRepertoire": "Trainings-Repertoire zu {{name}} öffnen"
+    },
     "accounts": {
       "title": "Online-Konten suchen",
       "intro": "Sucht auf Lichess und chess.com nach Konten, deren Name zu diesem Spieler passt. Du entscheidest: übernehmen oder verwerfen. Eine Suche zur Zeit, höchstens {{perHour}} je Stunde.",

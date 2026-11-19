@@ -98,6 +98,8 @@ public static partial class DomainServicesSetup
         // Spielervorbereitung (Prep): Partiebestand aus Megabase + Lumbra paketweise einspielen, suchen, Karte.
         services.AddScoped<RookHub.Api.Services.Prep.PrepImportService>();
         services.AddScoped<RookHub.Api.Services.Prep.PrepPlayerSearch>();
+        // „Frühere Vorbereitungen“ der Suchseite: die eigenen „Prep: …“-Repertoires, zum Spieler des Bestands aufgelöst.
+        services.AddScoped<RookHub.Api.Services.Prep.PrepHistoryService>();
         // Online-Konto-Suche der Spielervorbereitung: eine Suche zur Zeit, Obergrenze je Verwalter und Stunde (Phase 4).
         services.AddSingleton<RookHub.Api.Services.Prep.PrepAccountSearchGate>();
         services.AddScoped<RookHub.Api.Services.Prep.PrepAccountSearch>();

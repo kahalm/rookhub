@@ -572,11 +572,26 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         public string Name { get; } = name;
     }
 
+    /// <summary>Damit beginnt der Name jedes Trainings-Repertoires — daran erkennt <see cref="PrepHistoryService"/> auch die
+    /// älteren ohne <c>OpponentJson</c>.</summary>
+    public const string RepertoirePrefix = "Prep: ";
+
     /// <summary>Name des Trainings-Repertoires: „Prep: Huber, Franz 2026".</summary>
     public static string RepertoireName(string opponent, int year)
     {
-        var name = $"Prep: {(string.IsNullOrWhiteSpace(opponent) ? "?" : opponent.Trim())} {year.ToString(CultureInfo.InvariantCulture)}";
+        var name = $"{RepertoirePrefix}{(string.IsNullOrWhiteSpace(opponent) ? "?" : opponent.Trim())} {year.ToString(CultureInfo.InvariantCulture)}";
         return name.Length <= 200 ? name : name[..200];
+    }
+
+    private static readonly Regex TrailingYear = new(@"\s+\d{4}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>Umkehrung von <see cref="RepertoireName"/>: „Prep: Huber, Franz 2026" → „Huber, Franz" (Präfix und das angehängte
+    /// Jahr weg). <c>null</c>, wenn der Name nicht so beginnt oder kein Gegner drinsteht („Prep: ? 2026").</summary>
+    public static string? OpponentOfRepertoireName(string? name)
+    {
+        if (name is null || !name.StartsWith(RepertoirePrefix, StringComparison.Ordinal)) return null;
+        var rest = TrailingYear.Replace(name[RepertoirePrefix.Length..].Trim(), "").Trim();
+        return rest.Length == 0 || rest == "?" ? null : rest;
     }
 
     /// <summary>Beschreibung des angelegten „Prep: …" (Wunsch 2026-10-10): aus Sicht des Gegners UND eigener Farbe ausgeschrieben —

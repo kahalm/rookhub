@@ -4,7 +4,7 @@ import { firstValueFrom, map } from 'rxjs';
 import { filterParams } from '@lh/core/league-api.service';
 import { TrainingLines, TrainingLinesQuery, TrainingRepertoireResult, trainingLinesParams, trainingRepertoireBody, Deviations } from '@rh/shared/player-card/training-lines';
 import { Account, AccountChecks, OpeningTree, ProfileView, RecentGames, TreeFilter } from '@lh/core/league.models';
-import { PrepCardJson, PrepHit, PrepOptions, PrepSuggestionList } from './prep.models';
+import { PrepCardJson, PrepHistoryEntry, PrepHit, PrepOptions, PrepSuggestionList } from './prep.models';
 
 /**
  * Die Spielervorbereitung (`/api/prep/*`, Recht `prep.view`): Spieler suchen und seine Karte lesen. Die Filter des
@@ -19,6 +19,11 @@ export class PrepApiService {
 
   search(q: string): Promise<PrepHit[]> {
     return firstValueFrom(this.http.get<{ items: PrepHit[] }>('/api/prep/players', { params: { q } }).pipe(map(r => r.items)));
+  }
+
+  /** Frühere Vorbereitungen des angemeldeten Nutzers (seine „Prep: …"-Repertoires), jüngste zuerst (0.995.0). */
+  history(): Promise<PrepHistoryEntry[]> {
+    return firstValueFrom(this.http.get<{ items: PrepHistoryEntry[] }>('/api/prep/history').pipe(map(r => r.items ?? [])));
   }
 
   card(id: number, o: PrepOptions): Promise<PrepCardJson> {

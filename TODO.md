@@ -6,6 +6,25 @@ _Legende: `[ ]` offen · `[~]` Hauptteil erledigt, Rest bewusst geparkt (Begrün
 `[x]` erledigt, bleibt als Beleg stehen. Erledigte Einzelfunde ohne weiteren Wert stehen unten
 im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
+## [~] Spielervorbereitung: „Frühere Vorbereitungen“ auf `/prep` — gebaut in 0.995.0, Reste (2026-11-19)
+
+Gebaut: `GET /api/prep/history` (`PrepHistoryService`) + Abschnitt unter dem Suchfeld (`prep-search.component`), Doku in
+`docs/api/spielervorbereitung.md`. Gegenprobe am Bestand des Betreibers (Prod, nur gelesen, 19.11.): alle neun „Prep: …“
+lösen direkt auf — zwei über die Id, drei über die FIDE-ID, vier ältere über den Namen (je genau ein Spieler). Offen:
+
+- **Ligaspieler, die nicht im Partiebestand stehen** (`league:<FIDE>` ohne Treffer in `PrepPlayers`): die Zeile setzt die
+  Suche auf den Namen und findet dann niemanden — den Spieler gibt es nur in LeagueHub. Der direkte Weg wäre ein Link auf
+  seine LeagueHub-Karte (`leagueHubUrl`, nur mit `league.view`); dafür müsste die Antwort den Gegner-Schlüssel mitgeben.
+- **Namens-Zwilling zählt als zweiter Spieler:** heißt im Bestand genau EIN FIDE-Spieler so und daneben sein Zwilling
+  ohne FIDE-ID, bleibt ein älterer Eintrag (nur Name) unaufgelöst. Denkbar: dann den FIDE-Spieler nehmen, wie
+  `PrepCardService.TwinAsync` den Zwilling zuordnet — bewusst nicht gebaut (Vorgabe: nur bei genau einem).
+- **UI-Sweep zeigt die Liste nicht:** `claude-dev` hat auf Dev kein „Prep: …“-Repertoire (geprüft 19.11.), das normale
+  Testkonto kein `prep.view`. Ein Seed in `tools/ui-sweep/seed.mjs` ist nicht angelegt — ein weiteres Repertoire kann
+  verschieben, welches `repertoireId` (`list[0]`) der Sweep für `/repertoires/{repertoireId}` nimmt.
+- **„Vorbereitet am“ ist `Repertoire.UpdatedAt`:** auch Umbenennen oder Chessable-„Aktualisieren“ setzt das Datum neu;
+  ein eigenes Feld gäbe es nur mit einer Migration.
+- Die kroatischen und ungarischen Texte `prep.history.*` hat niemand gegengelesen, der die Sprache spricht.
+
 ## [ ] Woodpecker-Löser: nach der Frist steht „noch 0 Tage“ statt „Frist überschritten“ (2026-11-18)
 
 Gesehen beim Zeitplan (0.994.0), nicht mit behoben. Der Plan-Kopf des Lösers (`features/puzzles/book-context-card.component.html`,

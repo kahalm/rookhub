@@ -115,9 +115,16 @@ public static partial class PrepPgn
 
     /// <summary>„Grimm, Wolfgang, Dr." → „grimm, wolfgang" — klein, ohne Akzente und Titel (wie das Megabase-Verzeichnis,
     /// das ebenfalls keine Umlaute kennt).</summary>
-    public static string NameKey(string? name)
+    public static string NameKey(string? name) => NameKey(name, transliterate: false);
+
+    /// <summary>Wie <see cref="NameKey(string?)"/>, Umlaute aber ausgeschrieben („Höcher, Michael" → „hoecher, michael") — so
+    /// schreibt die Megabase den Namen, der Schlüssel eines solchen Spielers ist also dieser. Für den Abgleich eines Namens
+    /// aus anderer Quelle (Meldeliste) mit dem Bestand: beide Schlüssel fragen.</summary>
+    public static string NameKeyTransliterated(string? name) => NameKey(name, transliterate: true);
+
+    private static string NameKey(string? name, bool transliterate)
     {
-        var k = LeagueRosterIndex.Fold(LeagueNames.NameKey(LeagueNames.StripTitles(name)), false).Trim().TrimEnd(',', '.', ' ');
+        var k = LeagueRosterIndex.Fold(LeagueNames.NameKey(LeagueNames.StripTitles(name)), transliterate).Trim().TrimEnd(',', '.', ' ');
         return k.Length > NameMax ? k[..NameMax] : k;
     }
 

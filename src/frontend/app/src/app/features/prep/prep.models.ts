@@ -11,6 +11,31 @@ export interface PrepHit {
   maxElo: number | null;
 }
 
+/**
+ * Eine frühere Vorbereitung (`GET /api/prep/history`, 0.995.0): ein eigenes Trainings-Repertoire „Prep: …" samt dem
+ * Gegner, gegen den es angelegt wurde — jüngste zuerst, je Gegner eines.
+ */
+export interface PrepHistoryEntry {
+  /** Spieler des Bestands (`/prep/:id`). `null`: der Gegner ließ sich nicht eindeutig zuordnen — dann wird nach {@link query} gesucht. */
+  playerId: number | null;
+  /** Voller Name: der des Bestands, sonst der aus dem Repertoire-Namen. */
+  name: string;
+  fide: string | null;
+  /** Wie beim Suchtreffer; nur bei zugeordnetem Spieler. */
+  games: number | null;
+  firstYear: number | null;
+  lastYear: number | null;
+  maxElo: number | null;
+  repertoireId: number;
+  repertoireName: string;
+  /** ISO-Zeitpunkt (UTC): wann das Repertoire zuletzt angelegt/ersetzt (oder sonst geändert) wurde. */
+  preparedAt: string;
+  /** MEINE Farbe in dieser Vorbereitung; ältere Einträge kennen sie nicht. */
+  color: 'w' | 'b' | null;
+  /** Suchtext für die Spielersuche (der Name ohne Titel). */
+  query: string;
+}
+
 /** Namens-Zwilling: dieselbe Schreibweise ohne FIDE-ID (nur angeboten, wenn genau EIN FIDE-Spieler so heißt). */
 export interface PrepTwin { id: number; name: string; games: number }
 
