@@ -51,7 +51,9 @@ import { whiteToMove } from '../../shared/chess/fen-side';
       } @else {
         <div class="list">
           @for (f of favorites; track f.id) {
-            <mat-card class="fav">
+            <!-- Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört der ersten Aktion „Nochmal lösen“; Analysieren und
+                 Entfernen bleiben eigene Ziele. -->
+            <mat-card class="fav rh-tile">
               <div class="info">
                 <mat-icon class="src" [matTooltip]="(f.source === 'Book' ? 'favorites.sourceBook' : 'favorites.sourceStandard') | translate">
                   {{ f.source === 'Book' ? 'menu_book' : 'extension' }}
@@ -70,7 +72,7 @@ import { whiteToMove } from '../../shared/chess/fen-side';
                 </div>
               </div>
               <div class="actions">
-                <button mat-icon-button (click)="replay(f)" [appIconLabel]="'favorites.replay' | translate">
+                <button mat-icon-button class="fav-replay rh-tile-target" (click)="replay(f)" [appIconLabel]="'favorites.replay' | translate">
                   <mat-icon>play_arrow</mat-icon>
                 </button>
                 <button mat-icon-button (click)="analyze(f)" [appIconLabel]="'favorites.analyze' | translate">

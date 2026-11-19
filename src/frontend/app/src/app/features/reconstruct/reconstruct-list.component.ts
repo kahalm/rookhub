@@ -63,8 +63,10 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
       } @else {
         <div class="grid">
           @for (item of items(); track item.id) {
-            <mat-card class="item">
-              <a class="item-title" [routerLink]="['/reconstruct', item.id]">{{ item.title }}</a>
+            <!-- Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört dem Titel-Link; „Öffnen“ führt an dasselbe Ziel,
+                 Löschen bleibt eigenes Ziel. -->
+            <mat-card class="item rh-tile">
+              <a class="item-title rh-tile-target" [routerLink]="['/reconstruct', item.id]">{{ item.title }}</a>
               @if (item.white || item.black) {
                 <div class="muted">{{ item.white || '?' }} – {{ item.black || '?' }}</div>
               }

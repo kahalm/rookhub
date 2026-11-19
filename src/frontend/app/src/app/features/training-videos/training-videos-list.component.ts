@@ -131,7 +131,8 @@ interface SearchState {
             } @else {
               <ul class="hits">
                 @for (h of s.hits; track $index) {
-                  <li class="hit">
+                  <!-- Ganze Zeile klickbar (DESIGN 5.2): die Fläche gehört „Ansehen“, „Nachspielen ab hier“ bleibt eigenes Ziel. -->
+                  <li class="hit rh-tile">
                     <div class="rh-dots hit-meta">
                       <span>{{ h.date | date: 'mediumDate' }}</span>
                       @if (h.startSec != null) { <span class="time">▶ {{ clock(h.startSec) }}</span> }
@@ -146,7 +147,7 @@ interface SearchState {
                       <p class="snippet">@if (h.move) {<strong>{{ h.move | san }}</strong> }{{ h.text }}</p>
                     }
                     <div class="hit-actions">
-                      <a mat-button class="tv-hit-watch" [routerLink]="['/training-videos', h.lessonId]" [queryParams]="hitParams(h)">
+                      <a mat-button class="tv-hit-watch rh-tile-target" [routerLink]="['/training-videos', h.lessonId]" [queryParams]="hitParams(h)">
                         <mat-icon>play_circle</mat-icon>{{ 'trainingVideos.watch' | translate }}
                       </a>
                       @if (h.kind === 'segment' && h.segmentId != null) {
@@ -185,7 +186,8 @@ interface SearchState {
         }
         <div class="lessons">
           @for (l of shown(); track l.id) {
-            <mat-card appearance="outlined" class="lesson">
+            <!-- Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört „Ansehen“; „Mehr“ und „Nachspielen“ bleiben eigene Ziele. -->
+            <mat-card appearance="outlined" class="lesson rh-tile">
               <div class="lesson-head">
                 <h2>{{ l.date | date: 'mediumDate' }} <span class="part-label">· {{ partKey(l.part) | translate }}</span></h2>
                 <div class="rh-dots meta">
@@ -210,7 +212,7 @@ interface SearchState {
                 </ul>
               }
               <div class="actions">
-                <a mat-flat-button color="primary" class="tv-watch" [routerLink]="['/training-videos', l.id]">
+                <a mat-flat-button color="primary" class="tv-watch rh-tile-target" [routerLink]="['/training-videos', l.id]">
                   <mat-icon>play_arrow</mat-icon>{{ 'trainingVideos.watch' | translate }}
                 </a>
                 <a mat-stroked-button class="tv-drill" [routerLink]="['/training-videos', l.id, 'drill']">

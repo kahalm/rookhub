@@ -61,8 +61,8 @@ Material-Knopf ist aber selbst `position: relative`, das `::after` bliebe in ihm
 ## Fallen
 
 - **`opacity`, `transform`, `filter` an einem Kasten ZWISCHEN Kachel und Nebenelement** bilden einen eigenen Stapel —
-  das Nebenelement liegt dann samt seinem `z-index` unter der Fläche (eine Meta-Zeile mit `opacity: .75`, in der
-  Knöpfe stehen). Abtönen über die Farbe (`color-mix`, DESIGN 3.1) statt über `opacity`.
+  das Nebenelement liegt dann samt seinem `z-index` unter der Fläche (E-Book-Karte: Autoren-Knöpfe in `.eb-meta` mit
+  `opacity: .75`). Abtönen über die Farbe (`color-mix`, DESIGN 3.1) statt über `opacity`.
 - **`transform`/`contain` an einem Kasten zwischen Kachel und Hauptziel** macht DIESEN zum Bezugskasten — die Fläche
   schrumpft auf ihn.
 - **Gesperrte Nebenknöpfe** als `<button>` (schlucken den Klick); ein gesperrter `<a mat-button>` ließe ihn auf die
@@ -97,5 +97,6 @@ Bearbeiten-Modus und das gesperrte Hauptziel. Aus den anderen Oberflächen: `@rh
 
 ## Wo es benutzt wird
 
-- RookHub: Dashboard (Kacheln, Kurs-Zeilen der angepinnten Kurse, Woodpecker-Kachel), Repertoire-Karten, frühere
-  Vorbereitungen (`/prep`).
+- RookHub: Dashboard (Kacheln, Kurs-Zeilen der angepinnten Kurse, Woodpecker-Kachel), Repertoire-Karten, Kurskarten,
+  E-Book-Regal (Bücher und Sammlungen), Trainerstunden (Karten und Trefferzeilen), Wochenpost, Punktepartie-Durchläufe,
+  Partie-Analysen, Rekonstruktionen, Favoriten, Aufgabenblätter, frühere Vorbereitungen (`/prep`).

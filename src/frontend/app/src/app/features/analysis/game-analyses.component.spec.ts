@@ -9,6 +9,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
 import { GameAnalysesComponent } from './game-analyses.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { GameAnalysis } from './game-analysis.service';
+import { clickCenter, clickFreeSpot, expectWholeTileClickable, recordNavigation } from '../../testing/tile-hit';
 
 function analysis(over: Partial<GameAnalysis> = {}): GameAnalysis {
   return {
@@ -45,6 +46,30 @@ describe('GameAnalysesComponent', () => {
   afterEach(() => {
     drainThroughput();
     http.verify();
+  });
+
+  // Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört dem Titel-Link; Neu starten und Löschen bleiben eigene Ziele.
+  it('Karte als Ganzes klickbar: Fläche → Analyse öffnen; Neu starten und Löschen lösen nur sich selbst aus', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ id: 7, status: 'done', analyzedPlies: 40 })]);
+    drainThroughput();
+    fixture.detectChanges();
+    const went = recordNavigation();
+    const restart = spyOn(fixture.componentInstance, 'restart');
+    const remove = spyOn(fixture.componentInstance, 'remove');
+    const card = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('mat-card.ga')!;
+    const title = card.querySelector<HTMLElement>('a.ga-title')!;
+    expectWholeTileClickable(card, title);
+    clickFreeSpot(card, title);
+    clickCenter(card.querySelector('.ga-foot')!);
+    expect(went()).toEqual(['/analysis/games/7', '/analysis/games/7']);
+    const [again, del] = Array.from(card.querySelectorAll<HTMLElement>('.ga-actions button'));
+    clickCenter(again);
+    clickCenter(del);
+    expect(restart).toHaveBeenCalledTimes(1);
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(went().length).toBe(2);
   });
 
   it('zeigt den Fortschritt je Partie in Prozent', () => {

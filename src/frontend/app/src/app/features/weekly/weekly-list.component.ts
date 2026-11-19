@@ -104,7 +104,9 @@ interface WeeklyPostRow extends WeeklyPost {
       } @else {
         <div class="wp-list">
           @for (r of rows; track r.id) {
-            <mat-card class="wp-card">
+            <!-- Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört „Spielen“; Bearbeiten, ⋮ und die Bestenliste (samt
+                 aufgeklappter Tabelle) bleiben eigene Ziele. Im Bearbeiten-Formular ist die Karte keine Kachel. -->
+            <mat-card class="wp-card" [class.rh-tile]="editId !== r.id">
               @if (editId === r.id && draft; as d) {
                 <div class="wp-edit">
                   <div class="upload-row">
@@ -170,9 +172,9 @@ interface WeeklyPostRow extends WeeklyPost {
                     }
                   </div>
                   <div class="wp-actions">
-                    <button mat-stroked-button color="primary" [routerLink]="['/weekly', r.id]">
+                    <a mat-stroked-button color="primary" class="wp-play rh-tile-target" [routerLink]="['/weekly', r.id]">
                       <mat-icon>play_arrow</mat-icon> {{ 'weekly.play' | translate }}
-                    </button>
+                    </a>
                     <button mat-icon-button (click)="toggleBoard(r)"
                             [attr.title]="'weekly.leaderboard.toggle' | translate" [attr.aria-expanded]="expandedId === r.id">
                       <mat-icon>{{ expandedId === r.id ? 'expand_less' : 'leaderboard' }}</mat-icon>
@@ -182,7 +184,7 @@ interface WeeklyPostRow extends WeeklyPost {
               }
 
               @if (expandedId === r.id) {
-                <div class="lb">
+                <div class="lb rh-tile-above">
                   @if (boardLoading[r.id]) {
                     <app-loading-spinner />
                   } @else if (boardError[r.id] !== undefined) {

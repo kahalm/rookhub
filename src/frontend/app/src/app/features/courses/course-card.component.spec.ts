@@ -8,6 +8,7 @@ import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { MatMenuTrigger } from '@angular/material/menu';
 import { CourseCardComponent } from './course-card.component';
+import { clickCenter, clickFreeSpot, expectWholeTileClickable, recordNavigation } from '../../testing/tile-hit';
 
 describe('CourseCardComponent', () => {
   it('creates (template AOT-compiles + DI resolves)', async () => {
@@ -346,5 +347,73 @@ describe('CourseCardComponent bündig', () => {
     expect(cs.textOverflow).toBe('ellipsis');
     expect(getComputedStyle(el.querySelector('mat-card-content') as HTMLElement).flexDirection).toBe('column');
     el.remove();
+  });
+});
+
+/**
+ * Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört dem Titel-Link (Kurs-Detailseite); Start-Knöpfe, ⋮, Hinweis-Chip,
+ * verknüpfter Kurs und der aufgeklappte Kapitelblock bleiben eigene Ziele. Treffertest am gerenderten Element.
+ */
+describe('CourseCardComponent: ganze Karte klickbar', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  async function render(expanded: boolean) {
+    await TestBed.configureTestingModule({
+      imports: [CourseCardComponent],
+      providers: [provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseCardComponent);
+    const c = fixture.componentInstance;
+    c.course = {
+      bookId: 7, displayName: 'Woodpecker-Methode: 1128 Aufgaben mit einem langen Titel', puzzleCount: 12, solvedCount: 3,
+      progressPercent: 25, needsReimport: true, linkedBookId: 9, linkedDisplayName: 'Teil 2', difficulty: 'Mittel',
+      isOwned: true, isPinned: false, lastMode: null,
+    } as never;
+    c.expanded = expanded;
+    c.chapters = [{ index: 0, name: 'Gabeln', label: null, puzzleCount: 12, solvedCount: 3, progressPercent: 25, infoCount: 2 }];
+    fixture.detectChanges();
+    const went = recordNavigation();
+    const card = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('mat-card.course-card')!;
+    return { fixture, card, went, title: card.querySelector<HTMLElement>('a.card-title')! };
+  }
+
+  it('Fläche, Angaben und Fortschritt treffen den Titel-Link; Knöpfe, ⋮, Chip und Verknüpfung treffen sich selbst', async () => {
+    const { card, title, went } = await render(false);
+    expect(title.getAttribute('href')).toBe('/courses/7');
+    expectWholeTileClickable(card, title);
+    clickFreeSpot(card, title);
+    clickCenter(card.querySelector('.card-meta')!);
+    clickCenter(card.querySelector('.progress-label')!);
+    expect(went()).toEqual(['/courses/7', '/courses/7', '/courses/7']);
+  });
+
+  it('Nebenelemente lösen nur ihre eigene Sache aus', async () => {
+    const { fixture, card, went } = await render(false);
+    const [sequential, random] = Array.from(card.querySelectorAll<HTMLElement>('.primary-actions button'));
+    clickCenter(sequential);
+    clickCenter(random);
+    clickCenter(card.querySelector('a.linked-badge')!);
+    expect(went()).toEqual(['/courses/7/sequential', '/courses/7/random', '/courses/9/sequential']);
+    clickCenter(card.querySelector('.stale-chip')!);
+    fixture.detectChanges();
+    expect(card.querySelector('.stale-hint')).withContext('Chip klappt die Erklärung auf').not.toBeNull();
+    clickCenter(card.querySelector('.util-actions button')!);
+    fixture.detectChanges();
+    expect(document.querySelectorAll('.mat-mdc-menu-item').length).withContext('⋮-Menü offen').toBeGreaterThan(3);
+    const toggled = jasmine.createSpy('chaptersToggle');
+    fixture.componentInstance.chaptersToggle.subscribe(toggled);
+    clickCenter(card.querySelector('.chapters-toggle')!);
+    expect(toggled).toHaveBeenCalledTimes(1);
+    expect(went().length).toBe(3);
+  });
+
+  it('aufgeklappte Kapitel liegen über der Fläche: die Kapitelzeile öffnet nicht die Detailseite, ▶ startet das Kapitel', async () => {
+    const { card, title, went } = await render(true);
+    expectWholeTileClickable(card, title);
+    clickCenter(card.querySelector('.chapter-name')!);
+    clickCenter(card.querySelector('.chapter-label')!);
+    expect(went()).toEqual([]);
+    clickCenter(card.querySelector('.chapter-btns button')!);
+    expect(went()).toEqual(['/courses/7/chapter/0/sequential']);
   });
 });

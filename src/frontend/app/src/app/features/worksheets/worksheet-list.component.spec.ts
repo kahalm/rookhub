@@ -8,6 +8,7 @@ import { of } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import { WorksheetListComponent } from './worksheet-list.component';
 import { WorksheetService, WorksheetSummary } from './worksheet.service';
+import { clickCenter, clickFreeSpot, expectWholeTileClickable, recordNavigation } from '../../testing/tile-hit';
 
 const summary = (over: Partial<WorksheetSummary> = {}): WorksheetSummary => ({
   id: 1, name: 'Blatt', isClipboard: false, perPage: 6, itemCount: 3, themes: [],
@@ -104,6 +105,26 @@ describe('WorksheetListComponent Zwischenablage kompakt', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.wl-save input')).not.toBeNull();
     expect(el.querySelector('.wl-new-empty')).toBeNull();
+  });
+
+  // Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört der ersten Aktion (Blatt öffnen); PDF und ⋮ bleiben eigene Ziele.
+  it('Blatt-Karte als Ganzes klickbar: Fläche → Blatt öffnen; PDF, ⋮ und die Teilen-Marke treffen sich selbst', async () => {
+    const fixture = await render([summary({ id: 3, name: 'Gabeln für die Jugend', itemCount: 6, themes: ['gabel', 'jugend'], shareToken: 't', updatedAt: '2026-10-11T10:00:00Z' })]);
+    const went = recordNavigation();
+    const card = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('mat-card.wl-sheet')!;
+    const open = card.querySelector<HTMLElement>('a.wl-open')!;
+    expect(open.getAttribute('href')).toBe('/worksheets/3');
+    expectWholeTileClickable(card, open);
+    clickFreeSpot(card, open);
+    clickCenter(card.querySelector('.wl-sub .wl-part')!);
+    clickCenter(card.querySelector('.wl-theme')!);
+    clickCenter(card.querySelectorAll('.wl-actions a')[1]);
+    expect(went()).toEqual(['/worksheets/3', '/worksheets/3', '/worksheets/3', '/worksheets/3/print?print=1']);
+    clickCenter(card.querySelector('.wl-more')!);
+    fixture.detectChanges();
+    expect(document.querySelector('.mat-mdc-menu-item.delete-item')).withContext('⋮-Menü offen').not.toBeNull();
+    clickCenter(card.querySelector('.wl-shared')!);
+    expect(went().length).toBe(4);
   });
 
   it('der Erklärtext ist ein Satz, der Rest steht hinter dem ⓘ', async () => {

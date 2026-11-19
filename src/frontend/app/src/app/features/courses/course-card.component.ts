@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { IconLabelDirective, TILE_TOOLTIP_DELAY_MS } from '../../shared/icon-label/icon-label.directive';
 import { MatMenuModule } from '@angular/material/menu';
 import { TranslatePipe } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -31,11 +31,17 @@ import { setThemeKeys } from './course-themes.util';
     MatProgressBarModule, MatTooltipModule, IconLabelDirective, MatMenuModule, TranslatePipe, LoadingSpinnerComponent,
   ],
   template: `
-      <mat-card class="course-card">
+      <!-- Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört dem Titel-Link (Kurs-Detailseite, wie die Kurs-Zeile der
+           Startseite); Start-Knöpfe, ⋮, Hinweis-Chip und verknüpfter Kurs bleiben eigene Ziele. Der aufgeklappte
+           Kapitelblock liegt über der Fläche — ein Klick auf eine Kapitelzeile soll nicht die Detailseite öffnen. -->
+      <mat-card class="course-card rh-tile">
         <mat-card-content>
           <div class="title-row">
-          <a class="card-title" [routerLink]="['/courses', course.bookId]" [attr.title]="course.displayName"
-             [matTooltip]="'courses.detail.openTooltip' | translate">{{ course.displayName }}</a>
+          <!-- Der Zeiger über der Karte gilt als „über dem Titel“: der Tooltip kommt verzögert und über dem Titel,
+               statt bei jeder Mausbewegung über die Karte die Angaben darunter zu verdecken. -->
+          <a class="card-title rh-tile-target" [routerLink]="['/courses', course.bookId]" [attr.title]="course.displayName"
+             [matTooltip]="'courses.detail.openTooltip' | translate" [matTooltipShowDelay]="tooltipDelay"
+             matTooltipPosition="above">{{ course.displayName }}</a>
           </div>
           <!-- UI-Sweep 2026-10-11 (r2-rp-course-dupes): gleichnamige Kurse bekommen ihre Herkunft als Untertitel.
                UI-Sweep z2 (z2-rk-course-card-chip-titel): der „Neu holen"-Chip steht vorn in dieser Zeile statt neben
@@ -225,7 +231,7 @@ import { setThemeKeys } from './course-themes.util';
           <!-- Kalkulationsbücher haben keine Kapitel-Modi (kein Lösen/Fortschritt je Kapitel) —
                die Kapitel dienen dort nur als Sprungliste IM Kalkulations-Modus. -->
           @if (course.puzzleCount > 0 && !course.isCalculation) {
-            <div class="chapters-block">
+            <div class="chapters-block rh-tile-above">
               <button class="chapters-toggle" (click)="chaptersToggle.emit()"
                       [attr.aria-expanded]="expanded">
                 <mat-icon class="toggle-icon">{{ expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
@@ -397,6 +403,8 @@ export class CourseCardComponent {
   @Input() origin: { chessable: boolean; owner: string | null } | null = null;
   /** Erklärung „Neu holen" aufgeklappt? (r2-rp-course-warn) */
   staleOpen = false;
+  /** Tooltip am Titel-Link (Hauptziel der ganz klickbaren Karte) verzögert, siehe Template. */
+  readonly tooltipDelay = TILE_TOOLTIP_DELAY_MS;
 
   /** Angezeigter Kapitelname: die Übersetzung (`label`, nur mit `?lang=`), sonst das Original. */
   chapterName(ch: CourseChapter): string | null {

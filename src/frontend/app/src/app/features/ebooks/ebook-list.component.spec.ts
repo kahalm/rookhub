@@ -11,6 +11,7 @@ import { AuthService } from '../../core/auth.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { EbookListComponent, ebookFormats, eloParam } from './ebook-list.component';
 import { Ebook, EbookList, EbookService, EbookTranslationItem } from './ebook.service';
+import { clickCenter, clickFreeSpot, expectTileNotClickable, expectWholeTileClickable, recordNavigation } from '../../testing/tile-hit';
 
 const book = (over: Partial<Ebook> = {}): Ebook => ({
   id: 1, title: 'Buch', author: 'Autor', year: 2000, tags: [], description: null, targetMinElo: null, source: 'upload',
@@ -280,6 +281,54 @@ describe('EbookListComponent', () => {
   }
 
   const manyTags = Array.from({ length: 20 }, (_, i) => ({ tag: `T${i}`, count: 40 - i }));
+
+  // Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört dem Titel-Link (Buch öffnen) bzw. dem Titel der Sammlung; Autoren,
+  // Abzeichen mit Tooltip, Lesen und ⋮ bleiben eigene Ziele; beim Auswählen (Mehrfachauswahl) ist die Karte keine Kachel.
+  it('Buchkarte als Ganzes klickbar: Fläche → Buch öffnen; Autor, Abzeichen, Lesen und ⋮ treffen sich selbst', () => {
+    const fixture = render([book({ id: 7, title: 'Mein System — mit einem langen Titel, der umbricht', author: 'Nimzowitsch, Aaron', targetMinElo: 1600, diagramCount: 12 })]);
+    const went = recordNavigation();
+    const setAuthor = spyOn(fixture.componentInstance, 'setAuthor');
+    const card = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('mat-card.eb-card')!;
+    const title = card.querySelector<HTMLElement>('a.eb-title')!;
+    expectWholeTileClickable(card, title);
+    clickFreeSpot(card, title);
+    clickCenter(card.querySelector('.eb-badges .chip:not(.mat-mdc-tooltip-trigger)')!);
+    clickCenter(card.querySelector('a.eb-cover')!);
+    clickCenter(card.querySelector('a.eb-act')!);
+    expect(went()).toEqual(['/ebooks/7', '/ebooks/7', '/ebooks/7', '/ebooks/7']);
+    clickCenter(card.querySelector('.eb-author-link')!);
+    expect(setAuthor).toHaveBeenCalledTimes(1);
+    clickCenter(card.querySelector('.eb-elo-badge')!);   // Abzeichen mit Tooltip: eigenes Ziel, löst nichts aus
+    clickCenter(card.querySelector('.eb-actions button')!);
+    fixture.detectChanges();
+    expect(document.querySelectorAll('.mat-mdc-menu-item').length).withContext('⋮-Menü offen').toBeGreaterThan(1);
+    expect(went().length).toBe(4);
+  });
+
+  it('Auswählen (Mehrfachauswahl): die Karte ist keine Kachel, das Häkchen wählt nur aus', () => {
+    const fixture = render([book({ id: 7 })]);
+    const went = recordNavigation();
+    fixture.componentInstance.selecting.set(true);
+    fixture.detectChanges();
+    const card = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('mat-card.eb-card')!;
+    expect(card.classList).not.toContain('rh-tile');
+    expectTileNotClickable(card, card.querySelector('a.eb-title'));
+    clickCenter(card.querySelector('.eb-meta')!);
+    expect(went()).toEqual([]);
+    clickCenter(card.querySelector('.eb-select input')!);
+    expect(fixture.componentInstance.selected().has(7)).toBeTrue();
+  });
+
+  it('Sammlungskarte als Ganzes klickbar: Fläche → Sammlung öffnen', () => {
+    const fixture = render([book({ id: 7, collectionStub: true, collection: { id: 3, name: 'Schachbibliothek der Weltmeister', bookCount: 14 } })]);
+    const openCollection = spyOn(fixture.componentInstance, 'openCollection');
+    const card = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('mat-card.eb-card--folder')!;
+    const title = card.querySelector<HTMLElement>('button.eb-folder-title')!;
+    expectWholeTileClickable(card, title);
+    clickFreeSpot(card, title);
+    clickCenter(card.querySelector('.eb-meta')!);
+    expect(openCollection.calls.allArgs()).toEqual([[3], [3]]);
+  });
 
   it('0.877.0: Schlagwörter, Sprache und Elo nur hinter „Filter ▾“ (jede Breite), Zahl der aktiven Filter, Chips zugeklappt', () => {
     const fixture = render([book()], { tags: manyTags, languages: [{ language: 'de', count: 1 }] });

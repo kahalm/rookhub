@@ -9,6 +9,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { WeeklyService } from './weekly.service';
 import { WeeklyListComponent } from './weekly-list.component';
+import { clickCenter, clickFreeSpot, expectTileNotClickable, expectWholeTileClickable, recordNavigation } from '../../testing/tile-hit';
 
 describe('WeeklyListComponent file validation', () => {
   let component: WeeklyListComponent;
@@ -291,5 +292,66 @@ describe('WeeklyListComponent Ladefehler (F1-014)', () => {
     expect(getResults).toHaveBeenCalledTimes(2);
     expect(c.boardError[1]).toBeUndefined();
     expect(c.board[1]).toEqual([]);
+  });
+});
+
+/**
+ * Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört „Spielen“ (ein echter Link); Bearbeiten, ⋮ und die Bestenliste —
+ * samt aufgeklappter Tabelle — bleiben eigene Ziele; im Bearbeiten-Formular ist die Karte keine Kachel.
+ */
+describe('WeeklyListComponent: ganze Karte klickbar', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  async function render() {
+    const weekly = {
+      getAll: () => of([{ id: 1, title: 'Wochenpost 12: Gabeln und Spieße', scheduledAt: '2026-07-09T19:00:00', description: 'Zwölf Aufgaben zum Aufwärmen' }]),
+      getAllProgress: () => of([{ weeklyPostId: 1, total: 12, solvedCount: 3, playedCount: 5, totalSeconds: 95 }]),
+      getResults: () => of({ total: 12, players: [{ userId: 2, name: 'anna', solvedCount: 12, playedCount: 12, totalSeconds: 300, completed: true }] }),
+    };
+    await TestBed.configureTestingModule({
+      imports: [WeeklyListComponent],
+      providers: [provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isLoggedIn: true, isAdmin: false, has: (p: string) => p === 'weeklyposts.manage' } },
+        { provide: WeeklyService, useValue: weekly },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+        { provide: MatDialog, useValue: { open: () => {} } },
+        { provide: ConfirmService, useValue: { ask: () => of(false) } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(WeeklyListComponent);
+    fixture.detectChanges();
+    const went = recordNavigation();
+    const card = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('mat-card.wp-card')!;
+    return { fixture, card, went };
+  }
+
+  it('Fläche, Titel und Termin treffen „Spielen“; Bearbeiten, ⋮ und Bestenliste treffen sich selbst', async () => {
+    const { fixture, card, went } = await render();
+    const play = card.querySelector<HTMLElement>('a.wp-play')!;
+    expect(play.getAttribute('href')).toBe('/weekly/1');
+    expectWholeTileClickable(card, play);
+    clickFreeSpot(card, play);
+    clickCenter(card.querySelector('.wp-title')!);
+    clickCenter(card.querySelector('.wp-sched')!);
+    expect(went()).toEqual(['/weekly/1', '/weekly/1', '/weekly/1']);
+    // Bestenliste aufklappen: bleibt auf der Seite, die Tabelle liegt über der Fläche.
+    clickCenter(card.querySelector('.wp-actions button')!);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.expandedId).toBe(1);
+    const board = card.querySelector<HTMLElement>('.lb')!;
+    expect(board).not.toBeNull();
+    expect(clickCenter(board)?.closest('.lb')).toBe(board);
+    expectWholeTileClickable(card, play);
+    expect(went().length).toBe(3);
+  });
+
+  it('Bearbeiten: der Stift öffnet nur das Formular — dann ist die Karte keine Kachel mehr', async () => {
+    const { fixture, card, went } = await render();
+    clickCenter(card.querySelector('.wp-edit-btn')!);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.editId).toBe(1);
+    expect(card.classList).not.toContain('rh-tile');
+    expect(card.querySelector('a.wp-play')).toBeNull();
+    expectTileNotClickable(card, null);
+    expect(went()).toEqual([]);
   });
 });

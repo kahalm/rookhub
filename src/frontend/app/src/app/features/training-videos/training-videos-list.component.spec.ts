@@ -5,6 +5,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { TrainingVideosListComponent, displayFen, looksLikeFen, pickPart, sortPositionHits } from './training-videos-list.component';
 import { TrainingLessonListItem, TrainingSearchHit, TrainingVideosService } from './training-videos.service';
+import { clickCenter, clickFreeSpot, expectWholeTileClickable, recordNavigation } from '../../testing/tile-hit';
 
 function hit(p: Partial<TrainingSearchHit>): TrainingSearchHit {
   return { kind: 'segment', lessonId: 1, date: '2026-10-27', segmentId: 5, startSec: 730, fen: null, move: null, text: 'x',
@@ -68,6 +69,47 @@ describe('TrainingVideosListComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.tv-hit-watch')!.getAttribute('href')).toBe('/training-videos/1?t=730&seg=5');
     expect(el.querySelector('.tv-hit-drill')!.getAttribute('href')).toBe('/training-videos/1/drill?seg=5');
+  });
+
+  // Ganze Karte / ganze Trefferzeile klickbar (DESIGN 5.2): die Fläche gehört „Ansehen“, „Mehr“ und „Nachspielen“ bleiben
+  // eigene Ziele — Treffertest am gerenderten Element.
+  it('Stundenkarte als Ganzes klickbar: Fläche → „Ansehen“; „Mehr“ und „Nachspielen“ treffen sich selbst', async () => {
+    const fixture = await render({
+      list: () => of([{ id: 4, date: '2026-10-27', summary: 'Sehr lange Zusammenfassung der Stunde. '.repeat(20), durationSec: 3725, hasVideo: true, segmentCount: 18,
+        games: [{ key: 'g', kind: 'own', white: 'Anna', black: 'Bert', event: null, year: null, eco: null, result: null, fromSec: null, toSec: null, rookhubGameId: null, matchConfidence: null, hasPgn: false }],
+        ownerName: null }]),
+    });
+    const went = recordNavigation();
+    const card = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('mat-card.lesson')!;
+    const watch = card.querySelector<HTMLElement>('a.tv-watch')!;
+    expectWholeTileClickable(card, watch);
+    clickFreeSpot(card, watch);
+    clickCenter(card.querySelector('.lesson-head h2')!);
+    clickCenter(card.querySelector('.game-name')!);
+    clickCenter(card.querySelector('a.tv-drill')!);
+    expect(went()).toEqual(['/training-videos/4', '/training-videos/4', '/training-videos/4', '/training-videos/4/drill']);
+    const more = card.querySelector<HTMLElement>('.clamp-more');
+    if (more) {
+      clickCenter(more);
+      expect(fixture.componentInstance.open().has(4)).withContext('„Mehr“ klappt auf').toBeTrue();
+      expect(went().length).toBe(4);
+    }
+  });
+
+  it('Trefferzeile als Ganzes klickbar: Fläche → „Ansehen“ an der Stelle, „Nachspielen ab hier“ bleibt eigenes Ziel', async () => {
+    const searchText = jasmine.createSpy('searchText').and.returnValue(of({ hits: [hit({ move: 'Nf3', text: 'Der Springer gehört nach f3.' })], truncated: false }));
+    const fixture = await render({ list: () => of([]), searchText });
+    fixture.componentInstance.query.set('Springer');
+    fixture.componentInstance.submit();
+    await fixture.whenStable();
+    const went = recordNavigation();
+    const row = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('li.hit')!;
+    const watch = row.querySelector<HTMLElement>('a.tv-hit-watch')!;
+    expectWholeTileClickable(row, watch);
+    clickFreeSpot(row, watch);
+    clickCenter(row.querySelector('.snippet')!);
+    clickCenter(row.querySelector('a.tv-hit-drill')!);
+    expect(went()).toEqual(['/training-videos/1?t=730&seg=5', '/training-videos/1?t=730&seg=5', '/training-videos/1/drill?seg=5']);
   });
 
   function item(id: number, part: 'private' | 'general'): TrainingLessonListItem {

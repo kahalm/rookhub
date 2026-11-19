@@ -195,13 +195,14 @@
       <div class="eb-grid">
         @for (book of items; track book.id) {
           @if (book.collectionStub && book.collection; as coll) {
-            <mat-card class="eb-card eb-card--folder">
+            <!-- Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört dem Titel (Sammlung öffnen). -->
+            <mat-card class="eb-card eb-card--folder rh-tile">
               <button type="button" class="eb-cover eb-folder" (click)="openCollection(coll.id)" [attr.aria-label]="coll.name">
                 @if (coverUrl(book); as url) { <img [src]="url" [alt]="''" loading="lazy" decoding="async" /> }
                 <span class="eb-folder-badge"><mat-icon>folder</mat-icon>{{ coll.bookCount }}</span>
               </button>
               <mat-card-content class="eb-body">
-                <button type="button" class="eb-title eb-folder-title" (click)="openCollection(coll.id)">{{ coll.name }}</button>
+                <button type="button" class="eb-title eb-folder-title rh-tile-target" (click)="openCollection(coll.id)">{{ coll.name }}</button>
                 <div class="eb-meta"><span>{{ 'ebooks.collection.count' | translate: { n: coll.bookCount } }}</span></div>
               </mat-card-content>
               <div class="eb-actions">
@@ -212,7 +213,9 @@
               </div>
             </mat-card>
           } @else {
-          <mat-card class="eb-card" [class.eb-card--selected]="selected().has(book.id)">
+          <!-- Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört dem Titel-Link (Buch öffnen); Autoren, Abzeichen mit
+               Tooltip, Lesen/Herunterladen und ⋮ bleiben eigene Ziele. Nicht beim Auswählen (Mehrfachauswahl). -->
+          <mat-card class="eb-card" [class.rh-tile]="!selecting()" [class.eb-card--selected]="selected().has(book.id)">
             <a class="eb-cover" [routerLink]="['/ebooks', book.id]" [attr.aria-label]="bookTitle(book)">
               @if (coverUrl(book); as url) {
                 <img [src]="url" [alt]="''" loading="lazy" decoding="async" />
@@ -231,12 +234,12 @@
                             [attr.aria-label]="bookTitle(book)"></mat-checkbox>
             }
             <mat-card-content class="eb-body">
-              <a class="eb-title" [routerLink]="['/ebooks', book.id]" [title]="bookTitleTooltip(book)">{{ bookTitle(book) }}</a>
+              <a class="eb-title rh-tile-target" [routerLink]="['/ebooks', book.id]" [title]="bookTitleTooltip(book)">{{ bookTitle(book) }}</a>
               <div class="eb-meta">
                 @if (book.author) {
                   <span class="eb-author">
                     @for (n of authorNames(book.author); track n; let last = $last) {
-                      <button type="button" class="eb-author-link" [matTooltip]="'ebooks.filter.byAuthor' | translate: { name: n }"
+                      <button type="button" class="eb-author-link rh-tile-above" [matTooltip]="'ebooks.filter.byAuthor' | translate: { name: n }"
                               (click)="setAuthor(n)">{{ n }}</button>@if (!last) {<span>, </span>}
                     }
                   </span>

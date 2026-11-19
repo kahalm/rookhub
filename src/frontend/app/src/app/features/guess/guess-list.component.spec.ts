@@ -7,6 +7,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { GuessListComponent } from './guess-list.component';
 import { GuessSession } from './guess.service';
+import { clickCenter, clickFreeSpot, expectWholeTileClickable, recordNavigation } from '../../testing/tile-hit';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { GameAnalysis } from '../analysis/game-analysis.service';
 import { AuthService } from '../../core/auth.service';
@@ -336,6 +337,35 @@ describe('GuessListComponent', () => {
     expect(kinds).toEqual(['main', 'a', 'button']);
     expect(row.querySelector('.resume-main .resume-meta')?.textContent).toContain('guess.score');
     expect(row.querySelector('a.resume-btn')?.getAttribute('aria-label')).toBe('guess.resume');
+  });
+
+  // Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört dem Titel-Link des Durchlaufs; Löschen bleibt eigenes Ziel.
+  it('Durchlauf-Karten (laufend und beendet) als Ganzes klickbar: Fläche → Durchlauf; Löschen löst nur sich selbst aus', () => {
+    const fixture = setup();
+    http.expectOne('/api/view-state/guess.list').flush({ annotatedOnly: false });
+    http.expectOne('/api/game-analyses/public').flush([]);
+    http.expectOne('/api/game-analyses').flush([]);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    http.expectOne('/api/guess-sessions').flush([
+      { id: 4, title: 'Kasparow – Karpow, Weltmeisterschaft 1985', guessWhite: true, status: 'running', points: 3, maxPoints: 10 } as GuessSession,
+      { id: 5, title: 'Lauf 5', guessWhite: false, status: 'done', points: 7, maxPoints: 10 } as GuessSession,
+    ]);
+    fixture.detectChanges();
+    const went = recordNavigation();
+    const remove = spyOn(fixture.componentInstance, 'remove');
+    const el = fixture.nativeElement as HTMLElement;
+    const running = el.querySelector<HTMLElement>('mat-card.run.resume')!;
+    const finished = el.querySelector<HTMLElement>('mat-card.run:not(.resume)')!;
+    for (const card of [running, finished]) {
+      const title = card.querySelector<HTMLElement>('a.g-title')!;
+      expectWholeTileClickable(card, title);
+      clickFreeSpot(card, title);
+      clickCenter(card.querySelector('.pts')!);
+      clickCenter(card.querySelector('button.mat-mdc-icon-button')!);
+    }
+    clickCenter(running.querySelector('a.resume-btn')!);
+    expect(went()).toEqual(['/guess/4', '/guess/4', '/guess/5', '/guess/5', '/guess/4']);
+    expect(remove).toHaveBeenCalledTimes(2);
   });
 
   // d3-rk-punktepartie-null-von-null: „Weiß · 0 von 0 Punkten“ vor dem ersten Zug — die Punkte fallen dann weg.

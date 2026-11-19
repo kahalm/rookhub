@@ -164,13 +164,14 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
         <app-loading-spinner />
       } @else if (analyses.length > 0) {
         @for (a of analyses; track a.id) {
-          <mat-card class="ga">
+          <!-- Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört dem Titel-Link; Neu starten und Löschen bleiben eigene Ziele. -->
+          <mat-card class="ga rh-tile">
             <mat-card-content>
               <!-- Zwei Teile: links Titel/Status/Tiefe (bricht um), rechts die Knöpfe fest in der ersten Zeile —
                    sonst rutscht am Handy der Papierkorb allein in eine eigene Zeile (v1-rk-analysis-jobs-percent-wrap). -->
               <div class="ga-head">
                 <div class="ga-main">
-                  <a class="ga-title" [routerLink]="['/analysis/games', a.id]">{{ title(a) }}</a>
+                  <a class="ga-title rh-tile-target" [routerLink]="['/analysis/games', a.id]">{{ title(a) }}</a>
                   <span class="chip" [class]="'st-' + a.status">{{ 'gameAnalysis.status.' + a.status | translate }}</span>
                   @if (a.targetNodes) {
                     <span class="ga-meta muted small">

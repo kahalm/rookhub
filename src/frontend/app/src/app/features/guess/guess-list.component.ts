@@ -94,11 +94,13 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
         <!-- Angefangene Durchläufe stehen oben (d2-rk-guess-durchlaeufe-unten): wer weiterspielen will, scrollt nicht ans Ende. -->
         <!-- z1-rk-guess-vorlauf: EINE Zeile — Titel einzeilig mit „…", Seite + Punkte klein darunter, ▶ und Löschen rechts. -->
         @for (s of runningSessions; track s.id) {
-          <mat-card class="run resume">
+          <!-- Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört dem Titel-Link (Durchlauf fortsetzen); Löschen bleibt
+               eigenes Ziel. -->
+          <mat-card class="run resume rh-tile">
             <mat-card-content>
               <div class="run-row resume-row">
                 <div class="resume-main">
-                  <a class="g-title" [routerLink]="['/guess', s.id]" [title]="s.title || ''"><span class="resume-label">{{ 'guess.resume' | translate }}:</span>
+                  <a class="g-title rh-tile-target" [routerLink]="['/guess', s.id]" [title]="s.title || ''"><span class="resume-label">{{ 'guess.resume' | translate }}:</span>
                     {{ s.title || ('guess.untitled' | translate) }}</a>
                   <!-- d3-rk-punktepartie-null-von-null: Punkte erst, wenn es welche zu holen gab. -->
                   <span class="muted small resume-meta">{{ (s.guessWhite ? 'guess.white' : 'guess.black') | translate }}@if (s.maxPoints > 0) { ·
@@ -319,10 +321,10 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
         @if (finishedSessions.length) {
           <h2 class="sec">{{ 'guess.yourRuns' | translate }}</h2>
           @for (s of finishedSessions; track s.id) {
-            <mat-card class="run">
+            <mat-card class="run rh-tile">
               <mat-card-content>
                 <div class="run-row">
-                  <a class="g-title" [routerLink]="['/guess', s.id]">{{ s.title || ('guess.untitled' | translate) }}</a>
+                  <a class="g-title rh-tile-target" [routerLink]="['/guess', s.id]">{{ s.title || ('guess.untitled' | translate) }}</a>
                   <span class="muted small">{{ (s.guessWhite ? 'guess.white' : 'guess.black') | translate }}</span>
                   <span class="pts">{{ 'guess.score' | translate:{ points: s.points, max: s.maxPoints } }}</span>
                   <span class="spacer"></span>
@@ -426,6 +428,8 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     /* Abgeschlossene Durchläufe am Inhaltsrand der Liste (die Liste sitzt ohne Rahmen 16 px eingerückt im Reiter). */
     h2.sec, .run:not(.resume) { margin-left: 16px; margin-right: 16px; }
     .resume { border-left: 4px solid var(--mat-sys-primary); }
+    /* Ganze Karte klickbar (DESIGN 5.2): die Fläche reicht auch über die 4-px-Kante links. */
+    .resume.rh-tile { --rh-tile-inset: 0 0 0 -4px; }
     .resume-label { font-weight: 600; }
     .resume .mat-mdc-card-content { padding-top: 6px; padding-bottom: 6px; }
     .resume-row { flex-wrap: nowrap; gap: 8px; padding: 2px 0; }

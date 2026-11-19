@@ -6,6 +6,7 @@ import { FavoritesComponent } from './favorites.component';
 import { FavoritePuzzle, FavoritesService } from '../../core/favorites.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { clickCenter, clickFreeSpot, expectWholeTileClickable } from '../../testing/tile-hit';
 
 const STD: FavoritePuzzle = {
   id: 1, puzzleId: 42, source: 'Standard', rating: 1500, themes: 'fork pin', title: null,
@@ -131,5 +132,44 @@ describe('FavoritesComponent Leerzustand (a1-rk-leer-hinweis-blass)', () => {
     expect(m).not.toBeNull();
     expect(m![1]).toContain('color:inherit');
     expect(m![1]).not.toContain('color-mix');
+  });
+});
+
+/**
+ * Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört der ersten Aktion „Nochmal lösen“; Analysieren und Entfernen
+ * bleiben eigene Ziele. Treffertest am gerenderten Element.
+ */
+describe('FavoritesComponent: ganze Karte klickbar', () => {
+  it('Fläche → Nochmal lösen; Analysieren und Entfernen lösen nur sich selbst aus', () => {
+    const router = { navigate: jasmine.createSpy('navigate') };
+    const confirm = { ask: jasmine.createSpy('ask').and.returnValue(of(false)) };
+    TestBed.configureTestingModule({
+      imports: [FavoritesComponent],
+      providers: [
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: FavoritesService, useValue: { list: () => of([STD, BOOK]) } },
+        { provide: Router, useValue: router },
+        { provide: SnackbarService, useValue: { warn: () => {} } },
+        { provide: ConfirmService, useValue: confirm },
+      ],
+    });
+    const fixture = TestBed.createComponent(FavoritesComponent);
+    fixture.detectChanges();
+    const cards = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('mat-card.fav'));
+    expect(cards.length).toBe(2);
+    const replay = cards[1].querySelector<HTMLElement>('button.fav-replay')!;
+    for (const card of cards) expectWholeTileClickable(card, card.querySelector('button.fav-replay')!);
+    clickFreeSpot(cards[1], replay);
+    clickCenter(cards[1].querySelector('.title')!);
+    expect(router.navigate.calls.allArgs()).toEqual([
+      [['/puzzles/book', 77], { queryParams: { single: 1 } }], [['/puzzles/book', 77], { queryParams: { single: 1 } }],
+    ]);
+    const [, analyze, remove] = Array.from(cards[1].querySelectorAll<HTMLElement>('.actions button'));
+    clickCenter(analyze);
+    expect(router.navigate.calls.mostRecent().args[0]).toEqual(['/analysis']);
+    clickCenter(remove);
+    expect(confirm.ask).toHaveBeenCalledTimes(1);
+    clickCenter(cards[1].querySelector('.src')!);   // Symbol mit Tooltip: eigenes Ziel, löst nichts aus
+    expect(router.navigate).toHaveBeenCalledTimes(3);
   });
 });
