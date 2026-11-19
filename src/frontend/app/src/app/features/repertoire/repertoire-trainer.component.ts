@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, HostListener, Optional, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, HostListener, Optional } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -17,7 +17,7 @@ import { Key } from 'chessground/types';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { RepertoireTrainingService, LineStateDto, RepertoireMeta, RepertoireOpponent } from './repertoire-training.service';
+import { RepertoireTrainingService, LineStateDto, RepertoireMeta, RepertoireOpponent, SrConfigDto } from './repertoire-training.service';
 import { TrainerSrSync } from './repertoire-trainer-sr-sync';
 import { buildRepertoireGraph } from './repertoire-tree.util';
 import { chapterColorsOf, TrainColor } from '../../shared/repertoire/repertoire-color.util';
@@ -25,18 +25,21 @@ import { SrConfigDialogComponent } from './sr-config-dialog.component';
 import { ParsedGame, exceedsSyncLimits, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
 import { parsePgnTextParallel } from '../../shared/pgn-viewer/pgn-parse-pool';
 import { isInfoLineGame } from './repertoire-info-line.util';
-import { isStateDue, isStateLearnable, earliestDueIso, relDueLabel, shuffle } from './repertoire-sr.util';
-import { getRepertoireOffline, refreshRepertoireOffline } from './repertoire-offline.util';
+import { isStateDue, isStateLearnable, earliestDueIso, hoursUntilReturnIfSolved, relDueLabel } from './repertoire-sr.util';
+import { OfflineTrainerSettings, getRepertoireOffline, refreshRepertoireOffline, updateRepertoireOfflineSettings } from './repertoire-offline.util';
+import { LineOrder, effectiveLineOrder, lineOrderLabelKey, readLegacyFrequencyOrder } from './repertoire-line-order';
+import { openTrainOrderDialog } from './train-order-dialog.component';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { EvalCompare } from './repertoire-trainer-eval-compare';
 import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent } from './repertoire-explorer.service';
 import { TrainerFrequencyLoader } from './repertoire-trainer-frequency-loader';
-import { TrainerLineSet, byRank, extendQueue, lineKeyOf, opponentLines, playableLines } from './repertoire-trainer-queue.util';
+import { TrainerLineSet, byRank, extendQueue, lineKeyOf, opponentLines, orderLines, playableLines } from './repertoire-trainer-queue.util';
 import { BoardMove, PlayedComment, TrainerMode, TrainerOutcome, TrainerPhase, TrainerSession } from './repertoire-trainer-session';
 import { LineMoveToken } from './repertoire-trainer-line-view.util';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
+import { injectOptional } from '../../core/inject-optional';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { TRAINER_PASS_THROUGH, TRAINING_LINES_ALL, TrainingLines, trainingLinesUrl } from '../../shared/player-card/training-lines';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
@@ -51,17 +54,6 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
 import { loadErrorKind } from '../../shared/load-error/load-error-cause';
 
 const NO_COMMENTS: PlayedComment[] = [];
-
-/** „Häufigste zuerst" merkt sich das Gerät — wie die übrigen Anzeige-Vorlieben des Trainers. */
-const FREQ_ORDER_KEY = 'rookhub_rep_train_freq_order';
-
-function readFreqOrder(): boolean {
-  return readRaw(localStore(), FREQ_ORDER_KEY) === '1';
-}
-
-function saveFreqOrder(on: boolean): void {
-  writeRaw(localStore(), FREQ_ORDER_KEY, on ? '1' : '0');   // gesperrt/voll → nur diese Sitzung
-}
 
 /** „Kommentare zeigen" (0.893.0) merkt sich ebenfalls das Gerät; Vorgabe aus. */
 export const SHOW_COMMENTS_KEY = 'rookhub_rep_train_show_comments';
@@ -81,9 +73,10 @@ function saveShowComments(on: boolean): void {
  * Ein `?chapter=Name`-Query beschränkt die Sitzung auf ein Kapitel (Black-Header). SM-2-Reviews
  * werden je Linie ans Backend gesendet.
  *
- * <p>Aufbau (Zerlegung Z21): die Komponente lädt (PGN, Zustände, Gegner-Reihung), baut die Warteschlange
- * (`repertoire-trainer-queue.util`) und verdrahtet; das Abspielen samt Phasen, Timern und Zugurteil ist
- * {@link TrainerSession}, der SR-Abgleich {@link TrainerSrSync}, „Häufigste zuerst" {@link TrainerFrequencyLoader},
+ * <p>Aufbau (Zerlegung Z21): die Komponente lädt (PGN, Zustände, Einstellungen, Gegner-Reihung), baut die Warteschlange
+ * (`repertoire-trainer-queue.util`, Reihenfolge nach {@link LineOrder}) und verdrahtet; das Abspielen samt Phasen, Timern
+ * und Zugurteil ist {@link TrainerSession}, der SR-Abgleich {@link TrainerSrSync}, die Häufigkeiten für „Häufigste
+ * zuerst" {@link TrainerFrequencyLoader},
  * der Stockfish-Vergleich nach einem Fehlzug {@link EvalCompare}. Die Felder fürs Template reicht sie durch.</p>
  */
 @Component({
@@ -135,9 +128,15 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   });
   private get s(): TrainerSession { return this.session; }
 
-  /** Modus „Häufigste zuerst": Linien, die man in echten Partien öfter erreicht, kommen zuerst
-   *  (Lichess-Explorer, gerechnet am Server wie der Lochfinder). Aus = bisherige Reihenfolge. */
-  freqOrder = readFreqOrder();
+  /** Reihenfolge der Linien (0.996.0) — je Nutzer und Repertoire am Server gewählt (`GET …/training/config`), offline aus
+   *  der Kopie; Vorgabe „Wenig trainierte zuerst". Bis die Einstellung da ist bzw. solange nichts gewählt wurde, gilt der
+   *  frühere Geräte-Schalter „Häufigste zuerst" weiter ({@link effectiveLineOrder}). Gilt für Abfragen und Lernen; die
+   *  Gegner-Sitzung und eine ausdrücklich gewählte Einzellinie berührt sie nicht. */
+  lineOrder: LineOrder = effectiveLineOrder(null, readLegacyFrequencyOrder());
+  /** Linien, Zustände und Einstellungen sind da (online oder aus der Offline-Kopie). Erst dann gibt es den Knopf
+   *  „Reihenfolge": vorher stünde dort die Vorgabe statt der gespeicherten Wahl, und eine Wahl während des ersten Ladens
+   *  würde von der eintreffenden Antwort wieder überschrieben. */
+  sessionLoaded = false;
   /** „Kommentare zeigen" (0.893.0): Kommentare der zuletzt gespielten Züge während des Spiels in allen Modi, ohne Halt.
    *  Aus = wie bisher (Abfragen ohne Kommentare; Lern-Kontextkarte und COMMENT-Halt bleiben). Formen kommen nie
    *  während des Spiels, nur am Linienende. */
@@ -357,12 +356,14 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       pgn: this.training.getPgn(this.repertoireId),
       states: this.training.getLineStates(this.repertoireId),
       meta: this.loadMeta(),
+      config: this.loadConfig(),
     }).subscribe({
-      next: ({ pgn, states, meta }) => {
+      next: ({ pgn, states, meta, config }) => {
         if (meta?.name && !this.repertoireName) this.repertoireName = meta.name;
         this.useStoredOpponent(meta?.opponent ?? null);
-        // Eine vorhandene Offline-Kopie beim Online-Öffnen aktuell halten (No-op ohne Kopie).
-        refreshRepertoireOffline(this.repertoireId, pgn, states);
+        // Eine vorhandene Offline-Kopie beim Online-Öffnen aktuell halten (No-op ohne Kopie) — samt den Einstellungen,
+        // damit offline dieselbe Reihenfolge und dieselben Intervalle gelten.
+        refreshRepertoireOffline(this.repertoireId, pgn, states, this.useConfig(config));
         void this.initSession(pgn, states);
         this.loadChessableMisses(pgn);
       },
@@ -374,6 +375,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
           this.offlineSession = true;
           this.repertoireName ??= cached.meta?.name || null;
           this.sr.setSrLevels(cached.config);
+          this.lineOrder = effectiveLineOrder(cached.lineOrder, readLegacyFrequencyOrder());
           void this.initSession(cached.pgn, cached.states);
         } else {
           this.loadError = err ?? true;
@@ -391,6 +393,32 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       ?? this.training.getRepertoireName?.(this.repertoireId)?.pipe(map((name): RepertoireMeta => ({ name, opponent: null })))
       ?? of(null);
     return meta.pipe(catchError(() => of(null)));
+  }
+
+  /** Effektive SR-Intervalle + gewählte Reihenfolge (`GET …/training/config`, EIN Abruf). Ein Ausfall hält den Trainer nicht
+   *  auf und fällt NICHT in die Offline-Sitzung: dann gelten die Werte einer Offline-Kopie bzw. die Vorgaben. `?.`: Test-Doubles
+   *  ohne die Methode. */
+  private loadConfig(): Observable<SrConfigDto | null> {
+    return (this.training.getConfig?.(this.repertoireId) ?? of(null)).pipe(catchError(() => of(null)));
+  }
+
+  /** Einstellungen vom Server übernehmen; liefert, was davon in eine Offline-Kopie gehört (offline gilt dann dasselbe). */
+  private useConfig(config: SrConfigDto | null): OfflineTrainerSettings {
+    if (!config) {
+      // Server-Einstellungen nicht zu haben: was die Offline-Kopie weiß, sonst Vorgabe/Geräte-Schalter (steht schon).
+      const cached = getRepertoireOffline(this.repertoireId);
+      if (cached) this.lineOrder = effectiveLineOrder(cached.lineOrder, readLegacyFrequencyOrder());
+      return {};
+    }
+    this.lineOrder = effectiveLineOrder(config.lineOrder, readLegacyFrequencyOrder());
+    return { ...this.useLevels(config), lineOrder: config.lineOrder ?? null };
+  }
+
+  /** Nur die effektiven Intervalle übernehmen (Reihenfolge nach Wiederkehr, lokales Fälligkeits-Rechnen). */
+  private useLevels(config: SrConfigDto): OfflineTrainerSettings {
+    const levels = Array.isArray(config.effective) && config.effective.length ? config.effective : null;
+    this.sr.setSrLevels(levels);
+    return levels ? { config: levels } : {};
   }
 
   /** Ohne `?opponent=` in der Adresse gilt der Gegner, den ein „Prep: …"-Repertoire beim Anlegen behalten hat (0.894.0) —
@@ -421,6 +449,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     // Farben mischt.
     this.chapterColors = chapterColorsOf(this.repertoireId, this.allLines);
     this.sr.setStates(states);
+    this.sessionLoaded = true;
     if (this.opponent && !this.offlineSession) {
       // Gegen einen Gegner (2026-10-08): ?line= ist der EINSTIEG — die Linie sofort zeigen, die Reihung im Hintergrund nachholen.
       this.opponentStart = this.singleLineKey;
@@ -428,7 +457,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       if (this.opponentStart) this.buildQueue();
       this.loadOpponentOrder(!this.opponentStart);
     }
-    else if (this.freqOrder && !this.offlineSession) this.loadFrequencies();
+    else if (this.lineOrder === 'frequency' && !this.offlineSession) this.loadFrequencies();
     else this.buildQueue();
   }
 
@@ -496,18 +525,47 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.s.extend(queue);
   }
 
-  /** Reihenfolge der Warteschlange: nach dem Gegner, sonst „Häufigste zuerst" (wenn an). */
+  /** Reihenfolge der Warteschlange: nach dem Gegner, sonst die gewählte ({@link lineOrder}, `orderLines`) — `lines` in
+   *  Repertoire-Reihenfolge. „Häufigste zuerst" ohne Häufigkeiten (offline, Abruf gescheitert) fällt auf die Vorgabe. */
   private ordered(lines: ParsedGame[]): ParsedGame[] {
-    return this.opponentRank ? byRank(lines, this.opponentRank) : this.freq.order(lines, this.freqOrder);
+    if (this.opponentRank) return byRank(lines, this.opponentRank);
+    const levels = this.sr.effectiveSrLevels();   // einmal je Warteschlange (liest ggf. die Offline-Kopie)
+    return orderLines(lines, {
+      order: this.lineOrder,
+      mode: this.mode,
+      returnHours: l => hoursUntilReturnIfSolved(this.sr.stateOf(lineKeyOf(l)), levels),
+      frequency: this.freq.available ? l => this.freq.freqOf(l) : null,
+    });
   }
 
-  /** „Häufigste zuerst" an/aus. Baut die Sitzung neu auf (wie ein Moduswechsel). */
-  toggleFreqOrder(): void {
-    if (this.offlineSession) return;
-    this.freqOrder = !this.freqOrder;
-    saveFreqOrder(this.freqOrder);
-    if (this.freqOrder && !this.freq.lineFreq) this.loadFrequencies();
-    else { this.freq.notice = null; this.buildQueue(); }
+  /** Der Knopf „Reihenfolge" steht, sobald die Einstellung geladen ist — nicht im Leerzustand (nichts zu ordnen) und nicht
+   *  in der Gegner-Sitzung (dort bestimmt der Gegner die Reihenfolge). Offline blendet die Vorlage die ganze Gruppe aus. */
+  get showOrderButton(): boolean { return this.sessionLoaded && this.phase !== 'EMPTY' && !this.opponent; }
+
+  /** Ohne Reihenfolge-Knopf (Leerzustand, Gegner-Sitzung) rückt das ⋮ am Handy in die Titelzeile, statt allein in einer
+   *  eigenen Zeile zu stehen (DESIGN 5.5). Während des ersten Ladens bleibt es, wo es danach steht — kein Sprung. */
+  get moreSolo(): boolean { return this.phase === 'EMPTY' || !!this.opponent; }
+
+  /** i18n-Schlüssel der geltenden Reihenfolge — Beschriftung des Knopfs in der Kopfleiste. */
+  get lineOrderLabelKey(): string { return lineOrderLabelKey(this.lineOrder); }
+
+  /** Knopf „Reihenfolge": der geteilte Dialog speichert die Wahl je Nutzer und Repertoire am Server (offline ausgeblendet,
+   *  wie Intervalle und Zurücksetzen); danach wird die Sitzung in der neuen Reihenfolge aufgebaut. */
+  openOrder(): void {
+    if (this.offlineSession || !this.sessionLoaded) return;
+    openTrainOrderDialog(this.dialog, { repertoireId: this.repertoireId, repertoireName: this.repertoireName, current: this.lineOrder })
+      .subscribe(order => { if (order) this.useLineOrder(order); });
+  }
+
+  /** Reihenfolge wechseln — baut die Sitzung neu auf (wie ein Moduswechsel); „Häufigste zuerst" holt erst die Häufigkeiten. */
+  private useLineOrder(order: LineOrder): void {
+    if (this.destroyed || order === this.lineOrder) return;
+    this.lineOrder = order;
+    // Ein noch laufender Häufigkeits-Abruf baute sonst später ein zweites Mal neu auf — mitten in der Sitzung.
+    if (order !== 'frequency') this.freq.cancel();
+    if (order === 'frequency' && !this.freq.available) this.loadFrequencies();
+    else this.buildQueue();
+    this.cdr.markForCheck();   // OnPush: die Antwort des Dialogs markiert diese Ansicht nicht
   }
 
   /** Häufigkeiten holen — Runde um Runde, bis alles ausgewertet ist; dann die Sitzung aufbauen. */
@@ -522,7 +580,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** Häufigkeit der aktuellen Linie für die Anzeige, `null` = aus/unbekannt. */
   get currentLineFrequency(): number | null {
-    if (!this.freqOrder || !this.freq.lineFreq) return null;
+    if (this.lineOrder !== 'frequency' || !this.freq.lineFreq) return null;
     const line = this.s.currentLine;
     const f = line ? this.freq.freqOf(line) : -1;
     return f >= 0 ? f : null;
@@ -574,8 +632,10 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     return isStateLearnable(this.sr.stateOf(this.lineKeyOf(line)));
   }
 
-  /** Baut die Session-Warteschlange: quiz = fällige Pool-Linien (gemischt), learn = ungelernte
-   * Linien der Reihe nach. Chapter-/Einzellinien-Filter greifen in beiden Modi. */
+  /** Baut die Session-Warteschlange: quiz = fällige Pool-Linien, learn = ungelernte Linien — beide in der gewählten
+   * Reihenfolge ({@link ordered}; Vorgabe „Wenig trainierte zuerst", Gleichstand: Abfragen zufällig, Lernen wie im
+   * Repertoire). Jeder Neuaufbau (Moduswechsel, „Erneut", „Alle fällig machen", Zurücksetzen) geht hier durch.
+   * Chapter-/Einzellinien-Filter greifen in beiden Modi. */
   private buildQueue(): void {
     this.s.clearTimers();
     const now = Date.now();
@@ -587,8 +647,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       : againstOpponent
       ? this.opponentLines()                                       // der Reihe nach, unabhängig von Fälligkeit und Modus
       : this.mode === 'learn'
-        ? this.ordered(usable.filter(l => this.isLearnable(l)))   // sonst PGN-Reihenfolge
-        : this.ordered(shuffle(usable.filter(l => this.isDue(l, now))));
+        ? this.ordered(usable.filter(l => this.isLearnable(l)))
+        : this.ordered(usable.filter(l => this.isDue(l, now)));
     this.opponentTotal = againstOpponent ? queue.length : 0;
     if (queue.length === 0) this.nextDueAt = this.mode === 'quiz' ? this.computeNextDue(usable) : null;
     this.s.start(queue);   // leer → EMPTY
@@ -651,7 +711,15 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** Intervall-Zyklen bearbeiten (global + pro-Repertoire-Override). */
   openConfig(): void {
-    this.dialog.open(SrConfigDialogComponent, { data: { repertoireId: this.repertoireId }, width: '420px' });
+    // Gespeicherte Intervalle gelten ab dem nächsten Aufbau der Warteschlange (Reihenfolge nach Wiederkehr) und fürs
+    // lokale Fälligkeits-Rechnen; die laufende Sitzung bleibt, wie sie ist.
+    this.dialog.open(SrConfigDialogComponent, { data: { repertoireId: this.repertoireId }, width: '420px' })
+      .afterClosed().subscribe(saved => {
+        if (!saved || this.destroyed) return;
+        this.loadConfig().subscribe(config => {
+          if (config && !this.destroyed) updateRepertoireOfflineSettings(this.repertoireId, this.useLevels(config));
+        });
+      });
   }
 
   /** Alle SM-2-Zustände dieses Repertoires löschen (Bestätigungs-Dialog vorher). */
@@ -766,9 +834,4 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (key === 'k') { if (this.canToggleComments) { this.toggleShowComments(); e.preventDefault(); } return; }
     if (this.s.tap()) e.preventDefault();
   }
-}
-
-/** `inject(…, { optional: true })`, außerhalb eines Injektors (Specs mit `new`) `null`. */
-function injectOptional<T>(token: new (...args: never[]) => T): T | null {
-  try { return inject(token, { optional: true }); } catch { return null; }
 }

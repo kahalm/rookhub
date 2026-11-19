@@ -495,6 +495,67 @@ public class RepertoireControllerTests : IDisposable
         Assert.False(await _db.Books.AnyAsync(b => b.OwnerUserId == user.Id));  // kein Kurs-Torso
     }
 
+    // ===== Reihenfolge der Linien im Trainer (PUT …/training/line-order, 0.996.0) =====
+
+    [Fact]
+    public async Task SetTrainingLineOrder_Own_NoContent_AndConfigReturnsIt()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        var rep = await CreateRepertoireAsync(user.Id);
+
+        var put = await _controller.SetTrainingLineOrder(rep.Id, new SetLineOrderRequest { Order = "mostTrained" }, default);
+
+        Assert.IsType<NoContentResult>(put);
+        var cfg = Assert.IsType<SrConfigDto>(Assert.IsType<OkObjectResult>((await _controller.TrainingConfig(rep.Id, default)).Result).Value);
+        Assert.Equal("mostTrained", cfg.LineOrder);
+    }
+
+    [Fact]
+    public async Task SetTrainingLineOrder_UnknownValue_BadRequestWithMessage_NothingStored()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        var rep = await CreateRepertoireAsync(user.Id);
+
+        var put = await _controller.SetTrainingLineOrder(rep.Id, new SetLineOrderRequest { Order = "alphabetical" }, default);
+
+        var bad = Assert.IsType<BadRequestObjectResult>(put);
+        Assert.Equal("{\"message\":\"Unknown line order.\"}", System.Text.Json.JsonSerializer.Serialize(bad.Value));
+        Assert.Empty(_db.RepertoireTrainingPrefs);
+    }
+
+    [Fact]
+    public async Task SetTrainingLineOrder_ForeignRepertoire_NotFound_NothingStored()
+    {
+        var owner = await CreateUserAsync("owner");
+        var other = await CreateUserAsync("other");
+        var rep = await CreateRepertoireAsync(owner.Id);
+        SetUser(other.Id);
+
+        var put = await _controller.SetTrainingLineOrder(rep.Id, new SetLineOrderRequest { Order = "random" }, default);
+
+        Assert.IsType<NotFoundObjectResult>(put);
+        Assert.Empty(_db.RepertoireTrainingPrefs);
+    }
+
+    [Fact]
+    public async Task SetTrainingLineOrder_SharedRepertoire_RecipientMaySetHisOwn()
+    {
+        var owner = await CreateUserAsync("owner");
+        var friend = await CreateUserAsync("friend");
+        var rep = await CreateRepertoireAsync(owner.Id);
+        _db.RepertoireShares.Add(new RepertoireShare { RepertoireId = rep.Id, OwnerId = owner.Id, RecipientId = friend.Id });
+        await _db.SaveChangesAsync();
+        SetUser(friend.Id);
+
+        var put = await _controller.SetTrainingLineOrder(rep.Id, new SetLineOrderRequest { Order = "repertoire" }, default);
+
+        Assert.IsType<NoContentResult>(put);
+        var pref = Assert.Single(_db.RepertoireTrainingPrefs);
+        Assert.Equal((friend.Id, rep.Id, "repertoire"), (pref.UserId, pref.RepertoireId, pref.LineOrder));
+    }
+
     /// <summary>Liest das optionale <c>code</c>-Feld aus dem anonymen Fehlerobjekt (null, wenn keins da).</summary>
     private static string? CodeOf(IActionResult result)
     {

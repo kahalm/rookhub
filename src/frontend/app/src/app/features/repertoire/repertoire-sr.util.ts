@@ -63,6 +63,19 @@ export function hoursOfLevel(l: SrLevel): number {
 }
 
 /**
+ * Wiederkehr in Stunden, WENN die Linie jetzt richtig gelöst wird: das Intervall der Stufe `min(Stufe + 1, 9)` —
+ * derselbe Stufen-Übergang wie {@link applySrReview} (Spiegel von Backend `ScheduleLevel`). Sortierschlüssel
+ * „Wenig/Viel trainierte zuerst": mit den Vorgabe-Intervallen heißt kleiner = niedrigere Stufe (0 vor 1 vor 2 …),
+ * bei frei eingestellten Intervallen entscheidet die ZEIT, nicht die Stufennummer. Ohne Zustand (nie bewertet) wie
+ * Stufe 0; `levels` leer → Vorgaben.
+ */
+export function hoursUntilReturnIfSolved(st: LineStateDto | undefined, levels: readonly SrLevel[]): number {
+  const eff = levels.length ? levels : DEFAULT_SR_LEVELS;
+  const next = Math.min(Math.max(st?.level ?? 0, 0) + 1, 9);
+  return hoursOfLevel(eff[Math.min(next - 1, eff.length - 1)]);
+}
+
+/**
  * Lokale (Offline-)SR-Bewertung einer Linie — Spiegel von Backend `ScheduleLevel`:
  * richtig → Stufe+1 (max 9, Reps+1), falsch → Stufe 1 (Lapses+1), richtig mit Tipp → Stufe bleibt; DueAt = jetzt + Intervall der
  * neuen Stufe. Liefert den NEUEN Zustand (Eingabe bleibt unverändert); `prev` fehlt bei einer

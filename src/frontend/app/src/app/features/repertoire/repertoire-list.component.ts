@@ -26,6 +26,7 @@ import { saveRepertoireOffline, hasRepertoireOffline, removeRepertoireOffline, c
 import { downloadBlob } from '../../shared/download.util';
 import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { openTrainOrderDialog } from './train-order-dialog.component';
 
 export const RECENT_DAYS = 7;
 export const RECENT_MAX = 8;
@@ -223,6 +224,11 @@ export function recentRepertoires(list: readonly Repertoire[], now: number): Rep
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #repMenu="matMenu">
+              <!-- Trainer-Einstellung je Nutzer und Repertoire (0.996.0) — auch für ein geteiltes fremdes Repertoire. -->
+              <button mat-menu-item class="train-order-item" (click)="openTrainOrder(rep)">
+                <mat-icon>sort</mat-icon>
+                <span>{{ 'repertoire.trainOrder.title' | translate }}</span>
+              </button>
               <button mat-menu-item (click)="downloadPgn(rep)">
                 <mat-icon>download</mat-icon>
                 <span>{{ 'common.downloadPgn' | translate }}</span>
@@ -425,7 +431,7 @@ export class RepertoireListComponent implements OnInit {
     }).subscribe({
       next: ({ pgn, states, config }) => {
         this.savingOffline = null;
-        const ok = saveRepertoireOffline({ meta: rep, pgn, states, config: config?.effective ?? null, savedAt: new Date().toISOString() });
+        const ok = saveRepertoireOffline({ meta: rep, pgn, states, config: config?.effective ?? null, lineOrder: config?.lineOrder ?? null, savedAt: new Date().toISOString() });
         const key = ok ? 'repertoire.list.offlineSaved' : 'repertoire.list.offlineFailed';
         this.snackbar.info(this.translate.instant(key, { name: rep.name }), { action: 'common.ok', duration: 2500 });
       },
@@ -449,6 +455,11 @@ export class RepertoireListComponent implements OnInit {
   }
 
   /** Öffnet den „Repertoire teilen"-Dialog (Freunde auswählen / Freigaben verwalten). */
+  /** „Reihenfolge im Training" dieses Repertoires — der geteilte Dialog (auch im Trainer und auf der Detailseite). */
+  openTrainOrder(rep: Repertoire): void {
+    openTrainOrderDialog(this.dialog, { repertoireId: rep.id, repertoireName: rep.name });
+  }
+
   openShareDialog(rep: Repertoire): void {
     this.dialog.open<ShareRepertoireDialogComponent, ShareRepertoireDialogData>(
       ShareRepertoireDialogComponent, {

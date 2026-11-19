@@ -19,6 +19,9 @@ import { MarkSet } from '../../shared/lines/mark-set';
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { pgnHeaderText } from '../../shared/pgn-viewer/pgn-header.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { MatDialog } from '@angular/material/dialog';
+import { injectOptional } from '../../core/inject-optional';
+import { openTrainOrderDialog } from './train-order-dialog.component';
 
 /** Ein Chapter-Bucket mit seinen Linien. Reihenfolge = erstes Auftreten im PGN (die Gruppierung
  *  selbst liegt in `shared/lines/chapter-groups.util`, geteilt mit der Kurs-Durchsicht). */
@@ -93,6 +96,8 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
               <button mat-menu-item (click)="makeDue(allKeys())"><mat-icon>bolt</mat-icon>{{ 'repertoire.lines.sr.makeAllDue' | translate }}</button>
               <button mat-menu-item (click)="setPaused(allKeys(), true)"><mat-icon>pause_circle</mat-icon>{{ 'repertoire.lines.sr.pauseAll' | translate }}</button>
               <button mat-menu-item (click)="setPaused(allKeys(), false)"><mat-icon>play_circle</mat-icon>{{ 'repertoire.lines.sr.resumeAll' | translate }}</button>
+              <!-- Einstellung des Trainers je Nutzer und Repertoire (0.996.0) — derselbe Dialog wie im Trainer und im ⋮ der Karte. -->
+              <button mat-menu-item class="train-order-item" (click)="openTrainOrder()"><mat-icon>sort</mat-icon>{{ 'repertoire.trainOrder.title' | translate }}</button>
               <button mat-menu-item (click)="createSubset.emit(markedKeys())"><mat-icon>library_add</mat-icon>{{ 'repertoire.subset.action' | translate }}</button>
             </mat-menu>
           </div>
@@ -349,6 +354,15 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
   private colorOverrides = signal<Record<string, TrainColor>>({});
 
   constructor(private training: RepertoireTrainingService) {}
+
+  /** Für den Dialog „Reihenfolge im Training"; `null` nur in Specs, die die Komponente mit `new` bauen. */
+  private readonly dialog = injectOptional(MatDialog);
+
+  /** „Reihenfolge im Training" dieses Repertoires (⋮ der Linienleiste) — der geteilte Dialog lädt und speichert selbst. */
+  openTrainOrder(): void {
+    if (this.repertoireId == null || !this.dialog) return;
+    openTrainOrderDialog(this.dialog, { repertoireId: this.repertoireId });
+  }
 
   ngOnInit(): void {
     this.loadStates();

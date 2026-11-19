@@ -48,9 +48,6 @@
     "nextLine": "下一条变化线",
     "offlineBadge": "离线",
     "offlineHint": "正在使用离线副本训练 — 结果保存在本设备上，恢复联网后会自动同步。",
-    "freqOrder": "最常见的变化线优先",
-    "freqOrderOn": "最常见的变化线优先：开（顺序来自 Lichess 开局浏览器）",
-    "freqOrderOff": "最常见的变化线优先：关",
     "freqLoading": "正在从 Lichess 开局浏览器加载频率…",
     "freqSkip": "跳过",
     "freqToken": "“最常见优先”需要在个人资料中设置 Lichess 令牌 – 将使用常规顺序。",
@@ -1446,6 +1443,11 @@
       "created": "已创建“{{name}}”，包含 {{n}} 条变化线。",
       "open": "打开",
       "failed": "无法创建开局库。"
+    },
+    "trainOrder": {
+      "option": {
+        "frequency": "最常见的变化线优先"
+      }
     }
   },
   "tournaments": {

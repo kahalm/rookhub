@@ -301,6 +301,121 @@ public class RepertoireTrainingServiceTests : IDisposable
         Assert.Empty((await _service.GetLineStatesAsync(user, repId))!);
     }
 
+    // ===== Reihenfolge der Linien im Trainer (je Nutzer und Repertoire, 0.996.0) =====
+
+    [Fact]
+    public async Task GetConfig_LineOrder_IsNull_WhenNothingChosen()
+    {
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+
+        // null = „nichts gewählt“: die Vorgabe wird NICHT gespeichert und nicht geliefert — das Frontend entscheidet
+        // (Vorgabe bzw. alter Geräte-Schalter „Häufigste zuerst“).
+        Assert.Null((await _service.GetConfigAsync(user, repId))!.LineOrder);
+        Assert.Empty(_db.RepertoireTrainingPrefs);
+    }
+
+    [Fact]
+    public async Task SetLineOrder_OwnRepertoire_IsStoredAndReturned_AndOverwritesInPlace()
+    {
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+
+        Assert.True(await _service.SetLineOrderAsync(user, repId, "mostTrained"));
+        Assert.Equal("mostTrained", (await _service.GetConfigAsync(user, repId))!.LineOrder);
+
+        Assert.True(await _service.SetLineOrderAsync(user, repId, "repertoire"));
+        Assert.Equal("repertoire", (await _service.GetConfigAsync(user, repId))!.LineOrder);
+        Assert.Single(_db.RepertoireTrainingPrefs);   // eine Zeile je (Nutzer, Repertoire), kein Verlauf
+    }
+
+    [Fact]
+    public async Task SetLineOrder_IsPerRepertoire()
+    {
+        var user = await CreateUserAsync();
+        var a = await CreateRepertoireAsync(user);
+        var b = await CreateRepertoireAsync(user);
+
+        Assert.True(await _service.SetLineOrderAsync(user, a, "random"));
+
+        Assert.Equal("random", (await _service.GetConfigAsync(user, a))!.LineOrder);
+        Assert.Null((await _service.GetConfigAsync(user, b))!.LineOrder);
+    }
+
+    [Fact]
+    public async Task SetLineOrder_ForeignRepertoire_ReturnsNull_AndStoresNothing()
+    {
+        var owner = await CreateUserAsync("owner");
+        var stranger = await CreateUserAsync("stranger");
+        var repId = await CreateRepertoireAsync(owner);
+
+        Assert.Null(await _service.SetLineOrderAsync(stranger, repId, "random"));
+        Assert.Null(await _service.SetLineOrderAsync(stranger, 99_999, "random"));   // gibt es nicht
+        Assert.Empty(_db.RepertoireTrainingPrefs);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("byDate")]
+    [InlineData("LeastTrained")]      // Groß-/Kleinschreibung zählt
+    [InlineData(" leastTrained")]     // kein Trimmen
+    [InlineData("leastTrained,random")]
+    public async Task SetLineOrder_ValueOutsideTheList_ReturnsFalse_AndKeepsTheStoredOne(string? order)
+    {
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+        Assert.True(await _service.SetLineOrderAsync(user, repId, "frequency"));
+
+        Assert.False(await _service.SetLineOrderAsync(user, repId, order));
+
+        Assert.Equal("frequency", (await _service.GetConfigAsync(user, repId))!.LineOrder);
+    }
+
+    [Fact]
+    public async Task SetLineOrder_SharedRepertoire_RecipientHasOwnValue_OwnerKeepsHis()
+    {
+        var owner = await CreateUserAsync("owner");
+        var friend = await CreateUserAsync("friend");
+        var repId = await CreateRepertoireAsync(owner);
+        _db.RepertoireShares.Add(new RepertoireShare { RepertoireId = repId, OwnerId = owner, RecipientId = friend });
+        await _db.SaveChangesAsync();
+        Assert.True(await _service.SetLineOrderAsync(owner, repId, "repertoire"));
+
+        // Der Empfänger einer Freigabe trainiert mit eigenem Fortschritt — und mit eigener Reihenfolge.
+        Assert.Null((await _service.GetConfigAsync(friend, repId))!.LineOrder);
+        Assert.True(await _service.SetLineOrderAsync(friend, repId, "mostTrained"));
+
+        Assert.Equal("mostTrained", (await _service.GetConfigAsync(friend, repId))!.LineOrder);
+        Assert.Equal("repertoire", (await _service.GetConfigAsync(owner, repId))!.LineOrder);
+        Assert.Equal(2, _db.RepertoireTrainingPrefs.Count());
+    }
+
+    [Fact]
+    public async Task GetConfig_StoredValueOutsideTheList_IsReportedAsNothingChosen()
+    {
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+        // z. B. ein Wert, den eine spätere Fassung gestrichen hat
+        _db.RepertoireTrainingPrefs.Add(new RepertoireTrainingPref { UserId = user, RepertoireId = repId, LineOrder = "alphabetical" });
+        await _db.SaveChangesAsync();
+
+        Assert.Null((await _service.GetConfigAsync(user, repId))!.LineOrder);
+    }
+
+    // ===== Spiegel-Pin: erlaubte Reihenfolgen ====================================================
+    // Dieselbe Liste steht ein zweites Mal im Frontend (features/repertoire/repertoire-line-order.ts, LINE_ORDERS;
+    // festgenagelt in repertoire-line-order.spec.ts). BEIDE Seiten prüfen literale Werte, nicht die jeweils andere
+    // Implementierung: kennt nur das Frontend einen Wert, scheitert das Speichern mit 400; kennt ihn nur der Server,
+    // fällt das Frontend beim Lesen still auf die Vorgabe. Wer hier etwas ändert, ändert die Spec dort mit.
+    [Fact]
+    public void LineOrders_MatchTheFrontendMirror()
+    {
+        Assert.Equal(new[] { "leastTrained", "mostTrained", "random", "repertoire", "frequency" }, RepertoireLineOrders.All);
+        Assert.Equal("leastTrained", RepertoireLineOrders.Default);
+        Assert.All(RepertoireLineOrders.All, o => Assert.True(o.Length <= 20, $"„{o}“ passt nicht in RepertoireTrainingPref.LineOrder (20)"));
+    }
+
     // ===== Spiegel-Pin: SR-Intervall-Vorgaben =====================================================
     // Dieselben neun Stufen stehen ein zweites Mal im Frontend (features/repertoire/repertoire-sr.util.ts,
     // DEFAULT_SR_LEVELS) — der Offline-Trainer bewertet damit ohne Server. Laufen die beiden auseinander,

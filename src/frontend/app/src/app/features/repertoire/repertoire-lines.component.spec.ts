@@ -224,6 +224,53 @@ describe('RepertoireLinesComponent Abfragen-Knopf', () => {
   });
 });
 
+/** 0.996.0: „Reihenfolge im Training“ im ⋮ der Linienleiste (Detailseite) — der geteilte Dialog. */
+describe('RepertoireLinesComponent ⋮ „Reihenfolge im Training“', () => {
+  it('der Menüpunkt steht im ⋮ der Linienleiste und öffnet den Dialog für dieses Repertoire', async () => {
+    const { TestBed } = await import('@angular/core/testing');
+    const { provideRouter } = await import('@angular/router');
+    const { provideNoopAnimations } = await import('@angular/platform-browser/animations');
+    const { provideTranslateService } = await import('@ngx-translate/core');
+    const { MatDialog } = await import('@angular/material/dialog');
+    const { RepertoireTrainingService } = await import('./repertoire-training.service');
+    const { TrainOrderDialogComponent } = await import('./train-order-dialog.component');
+    const open = jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(undefined) });
+    TestBed.configureTestingModule({
+      imports: [RepertoireLinesComponent],
+      providers: [provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: MatDialog, useValue: { open } },
+        { provide: RepertoireTrainingService, useValue: { getLineStates: () => of([]), getFlashcardMarks: () => of({ lineKeys: [] }) } }],
+    });
+    const fixture = TestBed.createComponent(RepertoireLinesComponent);
+    fixture.componentInstance.repertoireId = 3;
+    fixture.componentInstance.lines = [line('A', 0)];
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('.course-bar button[mat-icon-button]') as HTMLElement).click();
+    fixture.detectChanges();
+    const items = Array.from(document.querySelectorAll<HTMLElement>('.mat-mdc-menu-item'));
+    const item = items.find(i => i.classList.contains('train-order-item'))!;
+    expect(item).withContext('Menüpunkt im ⋮').toBeTruthy();
+    expect(item.textContent).toContain('repertoire.trainOrder.title');
+    // Einstellung nach den Pool-Aktionen, vor „Teil-Repertoire“ (Export/Ableitung)
+    expect(items.indexOf(item)).toBe(items.length - 2);
+
+    item.click();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    const [component, cfg] = open.calls.mostRecent().args;
+    expect(component).toBe(TrainOrderDialogComponent);
+    expect(cfg.data).toEqual({ repertoireId: 3 });        // der Dialog holt den Stand selbst
+    document.querySelectorAll('.cdk-overlay-container').forEach(o => o.innerHTML = '');
+  });
+
+  it('mit `new` gebaut (ohne Injektor) öffnet nichts und wirft nicht', () => {
+    const c = makeComponent();
+    c.repertoireId = 3;
+    expect(() => c.openTrainOrder()).not.toThrow();
+  });
+});
+
 /** b1-rk-repertoire-linien-handy-lang: großes Repertoire startet gegliedert statt ≈ 14 Bildschirme lang. */
 describe('RepertoireLinesComponent viele Linien', () => {
   const many = (perChapter: number[]): RepertoireLine[] => {

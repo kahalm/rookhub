@@ -27,20 +27,23 @@
     @if (!offlineSession) {
       <!-- d4-rk-trainer-leerzustand-bedienelemente: im Leerzustand (keine Linien im Pool) weder Umschalter noch
            „Fortschritt zurücksetzen“ — nichts zu ordnen, nichts zu löschen; Übungszyklen bleiben im ⋮. -->
-      <!-- „Häufigste zuerst" braucht den Server (Lichess-Explorer) → offline ausgeblendet.
-           d3-rk-trainer-symbolknoepfe-ohne-text: beschrifteter Umschalter (Häkchen + aria-pressed) statt nacktem
-           trending_up; Einstellungen und das gefährliche „Fortschritt zurücksetzen“ (zuletzt, rot) im ⋮ (DESIGN 5.4/5.5). -->
-      @if (phase !== 'EMPTY') {
-        <button mat-stroked-button class="freq-toggle" (click)="toggleFreqOrder()" [class.freq-on]="freqOrder"
-                [attr.aria-pressed]="freqOrder"
-                [matTooltip]="(freqOrder ? 'repertoireTrainer.freqOrderOn' : 'repertoireTrainer.freqOrderOff') | translate">
-          <mat-icon>{{ freqOrder ? 'check' : 'sort' }}</mat-icon>{{ 'repertoireTrainer.freqOrder' | translate }}
+      <!-- Reihenfolge der Linien (0.996.0): beschrifteter Rahmenknopf mit der GELTENDEN Reihenfolge, öffnet die Auswahl
+           (derselbe Dialog wie im ⋮ des Repertoires). Die Wahl liegt je Nutzer und Repertoire am Server → offline
+           ausgeblendet; in der Gegner-Sitzung bestimmt der Gegner die Reihenfolge → dort kein Knopf; und erst, wenn
+           die Einstellung geladen ist (sonst stünde kurz die Vorgabe da).
+           d3-rk-trainer-symbolknoepfe-ohne-text: beschriftet statt nacktem Symbol; Einstellungen und das gefährliche
+           „Fortschritt zurücksetzen“ (zuletzt, rot) im ⋮ (DESIGN 5.4/5.5). -->
+      @if (showOrderButton) {
+        <button mat-stroked-button class="order-btn" (click)="openOrder()"
+                [matTooltip]="'repertoire.trainOrder.change' | translate"
+                [attr.aria-label]="('repertoire.trainOrder.title' | translate) + ': ' + (lineOrderLabelKey | translate)">
+          <mat-icon>sort</mat-icon><span class="order-label">{{ lineOrderLabelKey | translate }}</span>
         </button>
       }
       <!-- Config/Reset verwalten Server-Zustand → in einer Offline-Session ausgeblendet.
-           d5-rk-trainer-mobil-menue-eigene-zeile: im Leerzustand fehlt der Umschalter — dann steht das ⋮ am Handy
-           in der Titelzeile statt allein in einer dritten Zeile (DESIGN 5.5). -->
-      <button mat-icon-button class="more" [class.more-solo]="phase === 'EMPTY'" [matMenuTriggerFor]="trainerMenu" [appIconLabel]="'common.moreActions' | translate">
+           d5-rk-trainer-mobil-menue-eigene-zeile: im Leerzustand und in der Gegner-Sitzung fehlt der Reihenfolge-Knopf —
+           dann steht das ⋮ am Handy in der Titelzeile statt allein in einer dritten Zeile (DESIGN 5.5). -->
+      <button mat-icon-button class="more" [class.more-solo]="moreSolo" [matMenuTriggerFor]="trainerMenu" [appIconLabel]="'common.moreActions' | translate">
         <mat-icon>more_vert</mat-icon>
       </button>
       <mat-menu #trainerMenu="matMenu">
@@ -57,7 +60,7 @@
   @if (opponentNotice) {
     <!-- Reihenfolge nach einem Gegner (Spielerkarte → „Alle in dieser Reihenfolge trainieren") -->
     <p class="freq-notice opponent-notice">{{ opponentNotice | translate }}</p>
-  } @else if (freqOrder && freqNotice && !freqRunning) {
+  } @else if (lineOrder === 'frequency' && freqNotice && !freqRunning) {
     <p class="freq-notice">{{ freqNotice | translate }}</p>
   }
 

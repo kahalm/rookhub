@@ -219,6 +219,7 @@ public partial class AppDbContext : DbContext
 
     public DbSet<RepertoireCardState> RepertoireCardStates => Set<RepertoireCardState>();
     public DbSet<RepertoireSrSettings> RepertoireSrSettings => Set<RepertoireSrSettings>();
+    public DbSet<RepertoireTrainingPref> RepertoireTrainingPrefs => Set<RepertoireTrainingPref>();
     public DbSet<RepertoireShare> RepertoireShares => Set<RepertoireShare>();
     public DbSet<UserPushSubscription> UserPushSubscriptions => Set<UserPushSubscription>();
     public DbSet<NotificationPushSetting> NotificationPushSettings => Set<NotificationPushSetting>();

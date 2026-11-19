@@ -1,5 +1,5 @@
-import { isStateDue, isStateLearnable, earliestDueIso, relDueLabel, shuffle, applySrReview, applyPromote, hoursOfLevel, DEFAULT_SR_LEVELS } from './repertoire-sr.util';
-import { LineStateDto } from './repertoire-training.service';
+import { isStateDue, isStateLearnable, earliestDueIso, relDueLabel, shuffle, applySrReview, applyPromote, hoursOfLevel, hoursUntilReturnIfSolved, DEFAULT_SR_LEVELS } from './repertoire-sr.util';
+import { LineStateDto, SrLevel } from './repertoire-training.service';
 
 function st(overrides: Partial<LineStateDto> = {}): LineStateDto {
   return {
@@ -74,6 +74,51 @@ describe('repertoire-sr.util', () => {
     });
     it('months beyond 9w', () => {
       expect(relDueLabel(new Date(now + 90 * 24 * 3_600_000).toISOString(), now)).toBe('3 mo');
+    });
+  });
+
+  describe('hoursUntilReturnIfSolved (Sortierschlüssel „Wenig/Viel trainierte zuerst“)', () => {
+    it('Vorgabe-Intervalle: Stufe 0 → 4 h, Stufe 1 → 10 h, Stufe 2 → 24 h (Intervall der NÄCHSTEN Stufe)', () => {
+      expect(hoursUntilReturnIfSolved(st({ level: 0 }), DEFAULT_SR_LEVELS)).toBe(4);
+      expect(hoursUntilReturnIfSolved(st({ level: 1 }), DEFAULT_SR_LEVELS)).toBe(10);
+      expect(hoursUntilReturnIfSolved(st({ level: 2 }), DEFAULT_SR_LEVELS)).toBe(24);
+      expect(hoursUntilReturnIfSolved(st({ level: 8 }), DEFAULT_SR_LEVELS)).toBe(6 * 30 * 24);
+    });
+
+    it('Stufe 9 und darüber bleiben auf dem Intervall der Stufe 9 (kein Griff hinter die Leiter)', () => {
+      const top = 6 * 30 * 24;
+      expect(hoursUntilReturnIfSolved(st({ level: 9 }), DEFAULT_SR_LEVELS)).toBe(top);
+      expect(hoursUntilReturnIfSolved(st({ level: 12 }), DEFAULT_SR_LEVELS)).toBe(top);
+    });
+
+    it('fehlender Zustand und negative Stufe zählen wie Stufe 0', () => {
+      expect(hoursUntilReturnIfSolved(undefined, DEFAULT_SR_LEVELS)).toBe(4);
+      expect(hoursUntilReturnIfSolved(st({ level: -3 }), DEFAULT_SR_LEVELS)).toBe(4);
+    });
+
+    it('dieselbe Wiederkehr, die applySrReview nach einer richtigen Lösung plant', () => {
+      for (const level of [0, 1, 4, 8, 9]) {
+        const prev = st({ level });
+        const planned = applySrReview(prev, 'k', true, DEFAULT_SR_LEVELS, now);
+        expect(new Date(planned.dueAt).getTime() - now).withContext(`Stufe ${level}`)
+          .toBe(hoursUntilReturnIfSolved(prev, DEFAULT_SR_LEVELS) * 3_600_000);
+      }
+    });
+
+    it('eigene Intervalle: die ZEIT entscheidet — eine höhere Stufe kann früher wiederkommen als eine niedrigere', () => {
+      // Stufe 1 = 2 Tage, Stufe 2 = 6 Stunden, Stufe 3 = 1 Woche …
+      const own: SrLevel[] = [
+        { value: 2, unit: 'd' }, { value: 6, unit: 'h' }, { value: 1, unit: 'w' },
+        ...DEFAULT_SR_LEVELS.slice(3),
+      ];
+      expect(hoursUntilReturnIfSolved(st({ level: 0 }), own)).toBe(48);
+      expect(hoursUntilReturnIfSolved(st({ level: 1 }), own)).toBe(6);
+      expect(hoursUntilReturnIfSolved(st({ level: 2 }), own)).toBe(168);
+    });
+
+    it('leere Intervall-Liste → Vorgaben; kürzere Liste klemmt auf ihren letzten Eintrag', () => {
+      expect(hoursUntilReturnIfSolved(st({ level: 1 }), [])).toBe(10);
+      expect(hoursUntilReturnIfSolved(st({ level: 7 }), [{ value: 1, unit: 'h' }, { value: 3, unit: 'h' }])).toBe(3);
     });
   });
 

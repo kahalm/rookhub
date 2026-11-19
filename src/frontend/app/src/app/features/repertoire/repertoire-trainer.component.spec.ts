@@ -989,20 +989,33 @@ describe('RepertoireTrainerComponent „Häufigste zuerst"', () => {
     expect(c.freqNotice).toBe('repertoireTrainer.freqToken');
   });
 
-  it('toggling remembers the choice and rebuilds the queue in frequency order', () => {
+  // Seit 0.996.0 ist „Häufigste zuerst“ ein Wert der Reihenfolge je Repertoire (am Server), kein Geräte-Schalter mehr —
+  // gewählt wird im geteilten Dialog (mehr dazu: repertoire-trainer.component.order.spec.ts).
+  it('choosing „most frequent first“ loads the frequencies and rebuilds the queue in that order; choosing another drops them', () => {
     const run = jasmine.createSpy('run').and.returnValue(of(result()));
     const explorer = explorerWith(run);
     const c = make('w', null, PGN, undefined, undefined, true, undefined, explorer);
+    const choose = (order: string) => {
+      (c as any).dialog = { open: () => ({ afterClosed: () => of(order) }) };
+      c.openOrder();
+    };
 
-    c.toggleFreqOrder();
+    choose('frequency');
 
-    expect(localStorage.getItem('rookhub_rep_train_freq_order')).toBe('1');
+    expect(c.lineOrder).toBe('frequency');
+    expect(localStorage.getItem('rookhub_rep_train_freq_order')).toBeNull();   // der alte Schalter wird nicht mehr geschrieben
     expect(run).toHaveBeenCalledTimes(1);
     expect(c.queue[0].headers['White']).toBe('1.d4 d5');
+    expect(c.currentLineFrequency).toBeCloseTo(0.4, 6);
 
-    c.toggleFreqOrder();
-    expect(localStorage.getItem('rookhub_rep_train_freq_order')).toBe('0');
+    choose('repertoire');
+    expect(c.lineOrder).toBe('repertoire');
     expect(c.currentLineFrequency).toBeNull();
+    expect(c.queue.map(l => l.headers['White'])).toEqual(['1.e4 e5', '1.d4 d5']);
+
+    choose('frequency');
+    expect(run).toHaveBeenCalledTimes(1);       // die Häufigkeiten sind schon da
+    expect(c.queue[0].headers['White']).toBe('1.d4 d5');
   });
 });
 

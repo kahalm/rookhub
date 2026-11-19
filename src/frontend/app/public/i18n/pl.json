@@ -48,9 +48,6 @@
     "nextLine": "Następny wariant",
     "offlineBadge": "Offline",
     "offlineHint": "Trening z kopii offline — wyniki są zapisywane na tym urządzeniu i synchronizowane automatycznie, gdy znów będziesz online.",
-    "freqOrder": "Najczęstsze warianty najpierw",
-    "freqOrderOn": "Najczęstsze warianty najpierw: wł. (kolejność z eksploratora Lichess)",
-    "freqOrderOff": "Najczęstsze warianty najpierw: wył.",
     "freqLoading": "Ładowanie częstości z eksploratora Lichess …",
     "freqSkip": "Pomiń",
     "freqToken": "„Najczęstsze najpierw” wymaga tokenu Lichess w profilu – używana jest zwykła kolejność.",
@@ -1446,6 +1443,11 @@
       "created": "Utworzono „{{name}}” (warianty: {{n}}).",
       "open": "Otwórz",
       "failed": "Nie udało się utworzyć repertuaru."
+    },
+    "trainOrder": {
+      "option": {
+        "frequency": "Najczęstsze warianty najpierw"
+      }
     }
   },
   "tournaments": {

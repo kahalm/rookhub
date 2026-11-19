@@ -562,6 +562,15 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
   mit `autoFocus: 'dialog'`, damit das Feld nicht fokussiert ans Ende springt (d8).
 - **Lange Optionstexte im `mat-select`:** geschlossen per `<mat-select-trigger>` nur der Kurzname, die Liste zeigt den
   vollen Text (Token-Bereich, d7).
+- **Einstellung mit wenigen, sich ausschließenden Werten** (Reihenfolge im Repertoire-Training, 0.996.0,
+  `features/repertoire/train-order-dialog.component.ts`): schmaler Dialog (440 px, `maxWidth: '94vw'`,
+  `autoFocus: 'dialog'`), langer Name (Repertoire) als leise Zeile unter dem Titel; `mat-radio-group` mit `aria-label` =
+  Titel, je Wert der Name und EIN leiser Erklärsatz darunter (`.hint`, `--mat-sys-on-surface-variant`), Zeile mind. 44 px;
+  der GELTENDE Wert ist vorgewählt; unter der Liste ein Satz zur Geltung. Knöpfe „Abbrechen“ + „Speichern“ (Hauptknopf):
+  gespeichert wird erst mit „Speichern“, Erfolg als `success`-Snackbar; scheitert es, bleibt der Dialog mit der Wahl offen
+  (`warn`-Snackbar) — nie ein vorgetäuschtes „gespeichert“. Holt der Dialog den Stand selbst und scheitert das, steht
+  `app-load-error` (Erneut versuchen) STATT der Auswahl und es gibt keinen Speichern-Knopf — eine Vorgabe sähe sonst wie
+  die gespeicherte Wahl aus. Jede Stelle, die die Einstellung anbietet, öffnet DENSELBEN Dialog (Grundsatz 9).
 
 ### 5.7 Snackbars
 
@@ -1148,10 +1157,15 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Wiederherstellen ist neben einem aktiven Training gesperrt und nennt den Grund als zweite leise Zeile im Eintrag
   („Erst das aktive Training archivieren.“, Muster 5.4 „Aktion mit Arten“). Ohne archivierte kein Abschnitt; ohne
   aktives, aber mit Archiv sagt der Leerzustand „Kein aktives Training. …“.
-- Repertoire-Trainer (d3): Kopf = Name des Repertoires, „Repertoire-Trainer“ leise daneben; „Häufigste Linien zuerst“
-  als beschrifteter Umschalter (Häkchen, `aria-pressed`), Übungszyklen und „Fortschritt zurücksetzen“ (zuletzt, rot)
-  im ⋮; Leerzustand mit genau einer Aktion — dort weder „Häufigste Linien zuerst“ noch „Fortschritt zurücksetzen“ (nur
-  Übungszyklen im ⋮, d4). Unter 900 px steht nur der Name (Zusatz visuell versteckt, für Bildschirmleser da), darüber
+- Repertoire-Trainer (d3): Kopf = Name des Repertoires, „Repertoire-Trainer“ leise daneben; **Reihenfolge der Linien**
+  (0.996.0, löst den Umschalter „Häufigste Linien zuerst“ ab) als beschrifteter Rahmenknopf `.order-btn` (`sort` + die
+  GELTENDE Reihenfolge als Text, `aria-label` „Reihenfolge im Training: <Wert>“, Tooltip sagt, was der Knopf tut) — er
+  öffnet den Einstellungs-Dialog (5.6); derselbe Dialog steht als „Reihenfolge im Training“ (`sort`) im ⋮ der
+  Linienleiste der Detailseite und als erster Eintrag im ⋮ der Repertoire-Karte (auch bei geteilten Repertoires).
+  Übungszyklen und „Fortschritt zurücksetzen“ (zuletzt, rot) im ⋮; Leerzustand mit genau einer Aktion — dort weder der
+  Reihenfolge-Knopf noch „Fortschritt zurücksetzen“ (nur Übungszyklen im ⋮, d4); offline und in der Gegner-Sitzung
+  (dort bestimmt der Gegner die Reihenfolge) ebenfalls kein Reihenfolge-Knopf — in der Gegner-Sitzung rückt das ⋮ am
+  Handy wie im Leerzustand in die Titelzeile (`.more-solo`), nie ein Knopf allein in einer Zeile. Unter 900 px steht nur der Name (Zusatz visuell versteckt, für Bildschirmleser da), darüber
   schrumpft der Zusatz zuerst (d4). Lernen: solange der Trainer den Zug vorspielt (Brett gesperrt), ohne Imperativ —
   „Schwarz am Zug — das ist dein Repertoirezug.“ (d4). Linienliste: neue Linie mit umrandeter 44-px-Pille „⊕ Üben“
   (`playlist_add`) statt eines „+“ im Abzeichen-Stil (d4). Abfragen (0.886.0): ein falscher Zug bleibt mit ROTEM Pfeil
@@ -1159,14 +1173,14 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Zeile, wie oft dort schon falsch (Chessable je Zug, RookHub je Linie) — nur mit Daten. Unter der Anweisung eine
   Aktionszeile `.trainer-actions` aus Rahmenknöpfen: „Tipp“ (`lightbulb`, beschriftet mit der nächsten Stufe: Tipp → Pfeil
   zeigen → Zug ausspielen; Tipp-Markierung GRÜN, Startfeld bzw. Pfeil), „Linie überspringen“ (`skip_next`) und „Linie
-  pausieren“ (`pause_circle`, 0.889.0; Snackbar mit „Rückgängig“), Tasten H/S/P im Tooltip; zuletzt der Schalter „Kommentare zeigen“ (0.893.0, Rahmenknopf mit Häkchen + `aria-pressed` wie „Häufigste zuerst“, sonst `chat_bubble_outline`, Taste K, gemerkt je Gerät): an = die Kommentare der zuletzt gespielten Züge (eigener Zug + Antwort) während des Spiels als `.ctx-comment.played-comment` unter der Zugliste, ohne Halt; Pfeile/Felder aus `[%cal]`/`[%csl]` NIE während des Spiels, nur in der Schlussstellung und in der Nachbetrachtung je Stellung (Tipp grün und Fehlzug rot bleiben); eine ausdrücklich gewählte
+  pausieren“ (`pause_circle`, 0.889.0; Snackbar mit „Rückgängig“), Tasten H/S/P im Tooltip; zuletzt der Schalter „Kommentare zeigen“ (0.893.0, Rahmenknopf mit Häkchen + `aria-pressed`, sonst `chat_bubble_outline`, Taste K, gemerkt je Gerät): an = die Kommentare der zuletzt gespielten Züge (eigener Zug + Antwort) während des Spiels als `.ctx-comment.played-comment` unter der Zugliste, ohne Halt; Pfeile/Felder aus `[%cal]`/`[%csl]` NIE während des Spiels, nur in der Schlussstellung und in der Nachbetrachtung je Stellung (Tipp grün und Fehlzug rot bleiben); eine ausdrücklich gewählte
   pausierte Linie zeigt unter dem Label `.paused-note` (`pause_circle`, `--rh-warn`); im Gegner-Modus (0.892.0) unter dem
   Label `.opponent-note` (Randlinie links `--rh-info`, `person_search`; ab dem ersten Zug ohne Partien des Gegners `--rh-warn`,
   fett, `call_split`, bleibt bis Linienende) — derselbe Baustein im Abweichungs-Trainer (`/repertoires/deviations`: Aufbau wie der
   Trainer, Schwelle als kleines `select` in der Kopfzeile, Frage `.ask` in `--rh-info`, gut/nicht optimal in
   `--rh-success`/`--rh-error`, am Ende ein Primärknopf „Gegen Maia weiterspielen (Elo)“ als Link in neuem Tab); im „Linie fertig“-Kasten (0.890.0) eine
   Nachbetrachtungs-Zeile `.review`: Symbolknöpfe `first_page`/`chevron_left`/`chevron_right`/`last_page`, Rahmenknopf
-  „Engine“ (Häkchen + `aria-pressed` wie „Häufigste zuerst“), Textknopf „Im Analysebrett öffnen“ (`open_in_new`); bei
+  „Engine“ (Häkchen + `aria-pressed` wie „Kommentare zeigen“), Textknopf „Im Analysebrett öffnen“ (`open_in_new`); bei
   laufender Engine eine QUERE Bewertungsleiste (10 px, Farben wie die Leiste des Analysebretts) mit Wert + Tiefe und die
   beste Linie darunter; Züge der Zugliste sind dort Knöpfe, der gezeigte hervorgehoben (`--rh-accent` 25 %); benutzte Tipps als `lightbulb`-Zähler in `--rh-hint` neben ✓/✗. Chessable-Link als kleiner Textlink hinter dem
   Linienlabel (neuer Tab). Woodpecker-Löser: seit 0.882.0 der Kurs-Löser (gleiche Oberfläche
@@ -1479,6 +1493,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-19 | 0.996.0 · Repertoire-Trainer | Reihenfolge der Linien als Einstellung je Repertoire: im Trainer ein beschrifteter Rahmenknopf mit der geltenden Reihenfolge statt des Umschalters „Häufigste Linien zuerst“ (8.1); EIN Einstellungs-Dialog mit Optionsgruppe (`mat-radio-group`, je Wert Name + ein Erklärsatz, „Speichern“ erst auf Knopfdruck, Ladefehler statt Auswahl) für Trainer, ⋮ der Linienleiste und ⋮ der Repertoire-Karte (5.6) | Fünf sich ausschließende Reihenfolgen passen nicht in einen Umschalter; die Wahl gilt je Nutzer und Repertoire auf allen Geräten und muss auch außerhalb des Trainers erreichbar sein | Nutzerwunsch 19.11. |
 | 2026-11-19 | 0.995.0 · Spielervorbereitung | `/prep`: Abschnitt „Frühere Vorbereitungen“ unter dem Suchfeld, nur solange nicht gesucht wird — Zeilen wie die Treffer (Name, Meta als `.rh-dots`: Datum, eigene Farbe, Partien · Jahre · Elo), zugeordneter Gegner als Link auf die Spielerseite, nicht zugeordneter als `<button>` mit Lupe + „Spieler suchen“ (füllt die Suche), daneben je Zeile ein Symbolknopf zum Trainings-Repertoire; leer → kein Abschnitt, Ladefehler → `app-load-error`; Suchfeld-Hinweis `subscriptSizing="dynamic"`. Neues Muster „Listenzeile mit zweitem Ziel“ (5.3, 8.1) | Man bereitet sich auf dieselben Gegner wieder vor und musste sie jedes Mal neu suchen; zwei Ziele je Zeile ohne Link im Link; ein Eintrag, der nur sucht, darf nicht wie ein Sprung aussehen | Nutzerwunsch 19.11. („zeig dort liste der alten vorbereitungen an und mit klick hol ich den spieler gleich wieder“) |
 | 2026-11-18 | 0.994.0 · Woodpecker | Zeitplan als zweiter geteilter Baustein `app-woodpecker-schedule` neben dem Tagesziel: Löser-Kopf (letzte Angabe der Zyklus-Zeile, hinter dem Tagesziel), Dashboard-Kachel (eigene Zeile unter dem Tagesziel), Statistik-Fenster (eigene Zeile der Übersicht, ausführlich mit „Tag k von D“ und „aktuell n %“); im Zeitplan grüner Haken `check_circle` + „Im Zeitplan“ in `--rh-success` + Soll-Anteil klein, dahinter NEUTRAL „Zeitplan: noch 12 bis 57 %“ ohne Warnfarbe; Haken + Text brechen nie auseinander (5.12, 8.1) | Das Tagesziel sagt nur, ob das Minimum von HEUTE geschafft ist; ob man insgesamt dort steht, wo man am heutigen Tag des Zyklus stehen soll, stand nirgends | Nutzerwunsch 18.11.2026 („neben x pro tag für fertig auch noch ein checkmark haben wenn ich % der gesamtpuzzles passend zum aktuellen tag hab (und in statistik oben ausgewiesen noch x puzzle bis z.b. 55% erfüllt)“) |
 | 2026-11-18 | 0.993.0 · Woodpecker | Tagesziel ohne Statistik-Fenster: geteilter Baustein `app-woodpecker-daily-goal` im Löser-Kopf (letzte Angabe der Zyklus-Zeile), auf der Dashboard-Kachel (eigene Zeile unter der Frist) und im Statistik-Fenster (ersetzt dort „Nötig je Tag: n (offen ÷ Resttage) · Heute: n“); offen leise „Heute: 23 von 45“, erreicht grüner Haken `check_circle` + „Tagesziel erreicht“ in `--rh-success` + Zahl klein, Zyklus 1 nur „Heute: n“; das Soll ist über den Tag fest (5.12, 8.1) | Ob das heutige Minimum geschafft ist, stand nur im Statistik-Fenster, und die Soll-Zahl dort sank mit jeder gelösten Aufgabe — „erreicht“ gab es nicht | Nutzerwunsch 18.11.2026 („oben auch ohne statistik visualisieren, wenn ich heute das notwendige minimum erledigt habe (sowohl im dashboard als auch wenn ich drinnen bin)“, „grüne checkmark oder so vielleicht“) |

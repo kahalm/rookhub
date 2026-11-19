@@ -50,9 +50,6 @@
     "nextLine": "Nächste Linie",
     "offlineBadge": "Offline",
     "offlineHint": "Training aus der Offline-Kopie — Ergebnisse werden auf diesem Gerät gespeichert und automatisch synchronisiert, sobald du wieder online bist.",
-    "freqOrder": "Häufigste Linien zuerst",
-    "freqOrderOn": "Häufigste Linien zuerst: an (Reihenfolge nach Lichess-Explorer)",
-    "freqOrderOff": "Häufigste Linien zuerst: aus",
     "freqLoading": "Häufigkeiten werden aus dem Lichess-Explorer geladen …",
     "freqSkip": "Überspringen",
     "freqToken": "Für „Häufigste zuerst“ fehlt ein Lichess-Token im Profil – die Reihenfolge bleibt wie gewohnt.",
@@ -1467,6 +1464,27 @@
       "created": "„{{name}}“ mit {{n}} Linien angelegt.",
       "open": "Öffnen",
       "failed": "Das Repertoire konnte nicht angelegt werden."
+    },
+    "trainOrder": {
+      "title": "Reihenfolge im Training",
+      "change": "Reihenfolge der Linien ändern",
+      "scope": "Gilt für Abfragen und Lernen dieses Repertoires – für dich, auf allen deinen Geräten.",
+      "saved": "Reihenfolge gespeichert",
+      "saveFailed": "Die Reihenfolge konnte nicht gespeichert werden – bitte erneut versuchen.",
+      "option": {
+        "leastTrained": "Wenig trainierte zuerst",
+        "mostTrained": "Viel trainierte zuerst",
+        "random": "Zufällig",
+        "repertoire": "Reihenfolge im Repertoire",
+        "frequency": "Häufigste zuerst"
+      },
+      "hint": {
+        "leastTrained": "Zuerst die Linien, die nach einer richtigen Lösung am schnellsten wiederkommen – Stufe 0 vor 1 vor 2 …",
+        "mostTrained": "Umgekehrt: zuerst die Linien mit dem längsten Abstand bis zur nächsten Wiederholung.",
+        "random": "Jedes Mal neu gemischt.",
+        "repertoire": "So, wie die Linien im Repertoire stehen.",
+        "frequency": "Zuerst die Linien, die du in echten Partien öfter erreichst (Lichess-Explorer, nur online)."
+      }
     }
   },
   "tournaments": {

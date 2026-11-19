@@ -7464,6 +7464,38 @@ namespace RookHub.Api.Migrations
                     b.ToTable("RepertoireSrSettings");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.RepertoireTrainingPref", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("LineOrder")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int>("RepertoireId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RepertoireId");
+
+                    b.HasIndex("UserId", "RepertoireId")
+                        .IsUnique();
+
+                    b.ToTable("RepertoireTrainingPrefs");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.RevengeNotification", b =>
                 {
                     b.Property<int>("Id")
@@ -11601,6 +11633,25 @@ namespace RookHub.Api.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.RepertoireTrainingPref", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Repertoire", "Repertoire")
+                        .WithMany()
+                        .HasForeignKey("RepertoireId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Repertoire");
 
                     b.Navigation("User");
                 });

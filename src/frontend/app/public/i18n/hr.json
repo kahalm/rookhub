@@ -50,9 +50,6 @@
     "nextLine": "Sljedeća linija",
     "offlineBadge": "Offline",
     "offlineHint": "Trening iz offline kopije — rezultati se spremaju na ovom uređaju i automatski sinkroniziraju kad ponovno budeš na mreži.",
-    "freqOrder": "Najčešće varijante prve",
-    "freqOrderOn": "Najčešće varijante prve: uključeno (redoslijed prema Lichess exploreru)",
-    "freqOrderOff": "Najčešće varijante prve: isključeno",
     "freqLoading": "Učitavanje učestalosti iz Lichess explorera …",
     "freqSkip": "Preskoči",
     "freqToken": "Za „Najčešće prve“ nedostaje Lichess token u profilu – koristi se uobičajeni redoslijed.",
@@ -1467,6 +1464,27 @@
       "created": "„{{name}}” izrađen s {{n}} linija.",
       "open": "Otvori",
       "failed": "Repertoar nije moguće izraditi."
+    },
+    "trainOrder": {
+      "title": "Redoslijed u treningu",
+      "change": "Promijeni redoslijed linija",
+      "scope": "Vrijedi za provjeru i učenje ovog repertoara – za tebe, na svim tvojim uređajima.",
+      "saved": "Redoslijed spremljen",
+      "saveFailed": "Redoslijed nije bilo moguće spremiti – pokušaj ponovno.",
+      "option": {
+        "leastTrained": "Najmanje trenirane prve",
+        "mostTrained": "Najviše trenirane prve",
+        "random": "Nasumično",
+        "repertoire": "Redoslijed u repertoaru",
+        "frequency": "Najčešće prve"
+      },
+      "hint": {
+        "leastTrained": "Prvo linije koje se nakon točnog rješenja najbrže vraćaju – razina 0 prije 1 prije 2 …",
+        "mostTrained": "Obrnuto: prvo linije s najdužim razmakom do sljedećeg ponavljanja.",
+        "random": "Svaki put iznova promiješano.",
+        "repertoire": "Onako kako linije stoje u repertoaru.",
+        "frequency": "Prvo linije do kojih u stvarnim partijama češće dolaziš (Lichess explorer, samo na mreži)."
+      }
     }
   },
   "tournaments": {

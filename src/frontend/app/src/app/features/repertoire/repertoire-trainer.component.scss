@@ -8,7 +8,7 @@
       .bar .mode-toggle { order: 1; flex: 1 1 100%; }
       .bar .mode-toggle mat-button-toggle { flex: 1 1 50%; }
       .bar > button { order: 2; }
-      /* d3-rk-trainer-symbolknoepfe-ohne-text: Umschalter links, ⋮ rechts in derselben Zeile (DESIGN 5.5). */
+      /* d3-rk-trainer-symbolknoepfe-ohne-text: Reihenfolge-Knopf links, ⋮ rechts in derselben Zeile (DESIGN 5.5). */
       .bar > .more { margin-left: auto; }
       /* d5-rk-trainer-mobil-menue-eigene-zeile: ohne Umschalter (Leerzustand) rückt das ⋮ in die Titelzeile —
          nie ein Knopf allein in einer eigenen Zeile (DESIGN 5.2/5.5); der Titel (flex 1, min-width 0) kürzt sich. */
@@ -23,12 +23,12 @@
     .rep-name { flex: 0 1 auto; }
     .title-kind { flex: 0 1000 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       font-weight: 400; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
-    .freq-toggle mat-icon { margin-right: 4px; }
+    .order-btn mat-icon { margin-right: 4px; }
     .chapter-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
       background: color-mix(in srgb, currentColor 12%, transparent); font-weight: 500; font-size: .85rem; }
     .chapter-chip mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .offline-chip { background: color-mix(in srgb, var(--rh-warn) 22%, transparent); }
-    .freq-on, .comments-on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
+    .comments-on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
     .freq-notice { margin: -4px 0 8px; font-size: .85rem; color: color-mix(in srgb, currentColor 70%, transparent); }
     .freq-progress { font-size: .85rem; color: color-mix(in srgb, currentColor 70%, transparent); }
     .counts .freq { display: inline-flex; align-items: center; gap: 2px; }

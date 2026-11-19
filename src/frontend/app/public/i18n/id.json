@@ -48,9 +48,6 @@
     "nextLine": "Lini berikutnya",
     "offlineBadge": "Offline",
     "offlineHint": "Berlatih dari salinan offline — hasil disimpan di perangkat ini dan disinkronkan otomatis saat Anda kembali online.",
-    "freqOrder": "Lini paling sering dulu",
-    "freqOrderOn": "Lini paling sering dulu: aktif (urutan dari Lichess explorer)",
-    "freqOrderOff": "Lini paling sering dulu: nonaktif",
     "freqLoading": "Memuat frekuensi dari Lichess explorer …",
     "freqSkip": "Lewati",
     "freqToken": "“Paling sering dulu” memerlukan token Lichess di profil Anda – urutan biasa digunakan.",
@@ -1446,6 +1443,11 @@
       "created": "“{{name}}” dibuat dengan {{n}} lini.",
       "open": "Buka",
       "failed": "Repertoir tidak dapat dibuat."
+    },
+    "trainOrder": {
+      "option": {
+        "frequency": "Lini paling sering dulu"
+      }
     }
   },
   "tournaments": {

@@ -48,9 +48,6 @@
     "nextLine": "Biến tiếp theo",
     "offlineBadge": "Ngoại tuyến",
     "offlineHint": "Đang luyện từ bản ngoại tuyến — kết quả được lưu trên thiết bị này và tự đồng bộ khi bạn trực tuyến trở lại.",
-    "freqOrder": "Biến phổ biến nhất trước",
-    "freqOrderOn": "Biến phổ biến nhất trước: bật (thứ tự từ Lichess explorer)",
-    "freqOrderOff": "Biến phổ biến nhất trước: tắt",
     "freqLoading": "Đang tải tần suất từ Lichess explorer …",
     "freqSkip": "Bỏ qua",
     "freqToken": "“Phổ biến nhất trước” cần token Lichess trong hồ sơ của bạn – đang dùng thứ tự thông thường.",
@@ -1446,6 +1443,11 @@
       "created": "Đã tạo “{{name}}” với {{n}} biến.",
       "open": "Mở",
       "failed": "Không thể tạo repertoire."
+    },
+    "trainOrder": {
+      "option": {
+        "frequency": "Biến phổ biến nhất trước"
+      }
     }
   },
   "tournaments": {

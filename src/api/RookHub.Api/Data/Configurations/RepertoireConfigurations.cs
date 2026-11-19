@@ -61,6 +61,17 @@ internal sealed class RepertoireSrSettingsConfiguration : IEntityTypeConfigurati
     }
 }
 
+internal sealed class RepertoireTrainingPrefConfiguration : IEntityTypeConfiguration<RepertoireTrainingPref>
+{
+    public void Configure(EntityTypeBuilder<RepertoireTrainingPref> e)
+    {
+        // Wie RepertoireFlashcardMark: stirbt mit dem Repertoire UND mit dem Nutzer; eine Zeile je (Nutzer, Repertoire).
+        e.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+        e.HasOne(p => p.Repertoire).WithMany().HasForeignKey(p => p.RepertoireId).OnDelete(DeleteBehavior.Cascade);
+        e.HasIndex(p => new { p.UserId, p.RepertoireId }).IsUnique();
+    }
+}
+
 internal sealed class RepertoireShareConfiguration : IEntityTypeConfiguration<RepertoireShare>
 {
     public void Configure(EntityTypeBuilder<RepertoireShare> e)

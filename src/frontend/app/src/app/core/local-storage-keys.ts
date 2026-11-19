@@ -111,7 +111,7 @@ export const STORAGE_KEYS: readonly StorageKeyEntry[] = [
   d('rookhub_guess_comment_lang', 'Punktepartie: Kommentarsprache'),
   d('rookhub_guess_list_filter', 'Punktepartien: Filter'),
   d('rookhub_position_reps_', 'Stellungssuche: Modus und Ähnlichkeit', true),
-  d('rookhub_rep_train_freq_order', 'Repertoire-Training: Reihenfolge'),
+  d('rookhub_rep_train_freq_order', 'Repertoire-Training: früherer Schalter „Häufigste zuerst“ (seit 0.996.0 nur noch gelesen)'),
   d('rookhub_rep_train_show_comments', 'Repertoire-Training: Kommentare während des Spiels zeigen'),
   d('rookhub_rep_train_review_engine', 'Repertoire-Training: Engine in der Nachbetrachtung an/aus'),
   d('rookhub_deviation_threshold', 'Abweichungs-Trainer: Schwelle „gut“ in Zentibauern'),

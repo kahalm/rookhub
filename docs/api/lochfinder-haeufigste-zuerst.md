@@ -66,9 +66,11 @@ nicht, steht „—" (kaum gespielt). **Bewusst NICHT die Häufigkeit „wie oft
 Weiß-Repertoire mit nur 1.e4 also 100 % —, und das las sich wie eine Aussage über den Zug.
 
 Frontend: vierter Modus der Repertoire-Detailseite (`repertoire-holes.component.ts`, Lupe;
-`?mode=holes`), Brett zeigt die Stellung NACH dem fehlenden Zug. Trainer: Trend-Knopf in der Leiste
-(`freqOrder`, localStorage `rookhub_rep_train_freq_order`), die Explorer-Auswahl teilt er sich mit dem
-Lochfinder (`rookhub_explorer_settings`). Offline ist der Knopf ausgeblendet.
+`?mode=holes`), Brett zeigt die Stellung NACH dem fehlenden Zug. Trainer: „Häufigste zuerst“ ist seit 0.996.0 ein
+Wert der Reihenfolge je Nutzer und Repertoire (`frequency`, `docs/api/repertoires.md` → „Trainer: Reihenfolge der
+Linien“) statt eines Geräte-Schalters; der alte Schalter (localStorage `rookhub_rep_train_freq_order`) wird nur noch
+gelesen und gilt weiter, solange für das Repertoire nichts gewählt ist. Die Explorer-Auswahl teilt sich der Trainer mit
+dem Lochfinder (`rookhub_explorer_settings`). Offline gibt es keine Häufigkeiten — dort gilt die Vorgabe.
 
 **Zweite Quelle: der LOKALE Explorer** (0.503.0, `LocalExplorerClient`): `lila-openingexplorer` als
 Container im Stack (`rookhub-explorer:9002`, von der Parallel-Sitzung aufgebaut), dieselben

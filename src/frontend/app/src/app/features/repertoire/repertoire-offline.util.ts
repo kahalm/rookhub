@@ -18,6 +18,9 @@ export interface OfflineRepertoire {
   states: LineStateDto[];
   /** Effektive SR-Intervalle zum Download-Zeitpunkt; null → Client-Defaults. */
   config: SrLevel[] | null;
+  /** Gewählte Reihenfolge der Linien im Trainer (`LineOrder`, 0.996.0) — wie der Server sie lieferte; `null`/fehlend
+   *  (auch bei Kopien von vor 0.996.0) = nichts gewählt → `effectiveLineOrder`. */
+  lineOrder?: string | null;
   savedAt: string;
 }
 
@@ -55,12 +58,26 @@ export function cachedRepertoires(): Repertoire[] {
   return out.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 }
 
-/** PGN + SR-Zustände einer bestehenden Offline-Kopie auffrischen (Meta/Config bleiben).
+/** Die Trainer-Einstellungen in der Offline-Kopie: effektive Intervalle und gewählte Reihenfolge. Ein fehlendes Feld
+ * heißt „nicht anfassen" — NICHT „zurücksetzen". */
+export type OfflineTrainerSettings = Partial<Pick<OfflineRepertoire, 'config' | 'lineOrder'>>;
+
+/** PGN + SR-Zustände einer bestehenden Offline-Kopie auffrischen (Meta bleibt) — und mit `settings` in DEMSELBEN
+ * Schreibvorgang die Trainer-Einstellungen, die der Server gerade lieferte (ohne: Config/Reihenfolge bleiben).
  * No-op, wenn das Repertoire nicht heruntergeladen ist. */
-export function refreshRepertoireOffline(id: number, pgn: string, states: LineStateDto[]): void {
+export function refreshRepertoireOffline(id: number, pgn: string, states: LineStateDto[], settings: OfflineTrainerSettings = {}): void {
   const entry = getRepertoireOffline(id);
   if (!entry) return;
-  saveRepertoireOffline({ ...entry, pgn, states, savedAt: new Date().toISOString() });
+  saveRepertoireOffline({ ...entry, ...settings, pgn, states, savedAt: new Date().toISOString() });
+}
+
+/** Trainer-Einstellungen einer bestehenden Offline-Kopie nachziehen — so wie der Server sie gerade lieferte bzw.
+ * annahm (nur die übergebenen Felder; PGN/Zustände bleiben). No-op ohne Felder oder ohne Offline-Kopie. */
+export function updateRepertoireOfflineSettings(id: number, settings: OfflineTrainerSettings): void {
+  if (Object.keys(settings).length === 0) return;
+  const entry = getRepertoireOffline(id);
+  if (!entry) return;
+  saveRepertoireOffline({ ...entry, ...settings });
 }
 
 /** Nur die SR-Zustände einer bestehenden Offline-Kopie ersetzen (nach lokaler Bewertung).

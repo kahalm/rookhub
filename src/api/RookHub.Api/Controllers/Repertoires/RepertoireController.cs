@@ -235,6 +235,16 @@ public class RepertoireController : BaseApiController
         return res is null ? RepertoireNotFound() : res.Value ? NoContent() : InvalidSrLevels();
     }
 
+    /// <summary>Reihenfolge der Linien im Trainer für den anfragenden Nutzer und dieses Repertoire (0.996.0) — Besitzer
+    /// ODER Freigabe-Empfänger, jeder mit eigenem Wert; gelesen wird sie mit <c>GET …/training/config</c>
+    /// (<c>lineOrder</c>). 404 ohne Lesezugriff, 400 bei einem Wert außerhalb von <see cref="RepertoireLineOrders.All"/>.</summary>
+    [HttpPut("{id:int}/training/line-order")]
+    public async Task<IActionResult> SetTrainingLineOrder(int id, [FromBody] SetLineOrderRequest req, CancellationToken ct)
+    {
+        var res = await _training.SetLineOrderAsync(GetUserId(), id, req.Order, ct);
+        return res is null ? RepertoireNotFound() : res.Value ? NoContent() : BadRequest(new { message = "Unknown line order." });
+    }
+
     /// <summary>Pausiert/aktiviert Linien (Kapitel = alle seine Linien-Schlüssel) — pausierte Linien
     /// fallen NICHT in den Übungspool. 404 nicht eigenes Repertoire.</summary>
     [HttpPost("{id:int}/training/pause")]

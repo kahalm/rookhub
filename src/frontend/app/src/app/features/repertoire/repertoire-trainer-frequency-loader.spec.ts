@@ -34,7 +34,7 @@ function make(run: (...a: any[]) => any) {
 }
 
 describe('TrainerFrequencyLoader', () => {
-  it('fragt mit den Vorgabe-Einstellungen nach Linien-Häufigkeiten (ohne Löcher) und sortiert danach', () => {
+  it('fragt mit den Vorgabe-Einstellungen nach Linien-Häufigkeiten (ohne Löcher) und kennt sie danach je Linie', () => {
     const { loader, done, runSpy } = make(() => of(result()));
     loader.load(7, { A: 'w' });
     const [id, req] = runSpy.calls.mostRecent().args;
@@ -44,9 +44,32 @@ describe('TrainerFrequencyLoader', () => {
     expect(done).toHaveBeenCalledTimes(1);
     expect(loader.running).toBeFalse();
     expect(loader.notice).toBeNull();
-    expect(loader.order(LINES, true).map(l => l.headers['White'])).toEqual(['B', 'A', 'C']);
-    expect(loader.order(LINES, false)).toBe(LINES);
-    expect(loader.freqOf(LINES[2])).toBe(-1);
+    // gereiht wird in orderLines (repertoire-trainer-queue.util) — hier nur die Werte dafür
+    expect(LINES.map(l => loader.freqOf(l))).toEqual([0.1, 0.4, -1]);
+    expect(loader.available).toBeTrue();
+  });
+
+  it('available: erst mit geladenen Häufigkeiten — nicht vor dem Abruf und nicht bei leerem Ergebnis', () => {
+    const { loader } = make(() => of(result({ lineFrequencies: {} })));
+    expect(loader.available).toBeFalse();
+    expect(loader.freqOf(LINES[0])).toBe(-1);
+    loader.load(1, {});
+    expect(loader.lineFreq?.size).toBe(0);
+    expect(loader.available).toBeFalse();
+  });
+
+  it('cancel bricht den laufenden Abruf ab, OHNE done zu melden; ein neuer Abruf geht danach wieder', () => {
+    const runs = new Subject<ExplorerAnalysisResult>();
+    const { loader, done, runSpy } = make(() => runs);
+    loader.load(1, {});
+    runs.next(result({ complete: false }));
+    loader.cancel();
+    expect(runs.observed).toBeFalse();
+    expect(loader.running).toBeFalse();
+    expect(done).not.toHaveBeenCalled();
+    expect(loader.available).toBeFalse();     // abgebrochener erster Lauf hinterlässt keine Häufigkeiten
+    loader.load(1, {});
+    expect(runSpy).toHaveBeenCalledTimes(2);
   });
 
   it('meldet Fortschritt über changed und hält ihn', () => {

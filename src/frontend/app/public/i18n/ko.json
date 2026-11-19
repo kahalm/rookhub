@@ -48,9 +48,6 @@
     "nextLine": "다음 라인",
     "offlineBadge": "오프라인",
     "offlineHint": "오프라인 사본으로 훈련 중입니다 — 결과는 이 기기에 저장되며 다시 온라인이 되면 자동으로 동기화됩니다.",
-    "freqOrder": "자주 나오는 라인 먼저",
-    "freqOrderOn": "자주 나오는 라인 먼저: 켜짐 (Lichess 탐색기 순서)",
-    "freqOrderOff": "자주 나오는 라인 먼저: 꺼짐",
     "freqLoading": "Lichess 탐색기에서 빈도를 불러오는 중…",
     "freqSkip": "건너뛰기",
     "freqToken": "\"자주 나오는 순\"에는 프로필의 Lichess 토큰이 필요합니다 – 일반 순서를 사용합니다.",
@@ -1446,6 +1443,11 @@
       "created": "\"{{name}}\"을(를) 라인 {{n}}개로 만들었습니다.",
       "open": "열기",
       "failed": "레퍼토리를 만들 수 없습니다."
+    },
+    "trainOrder": {
+      "option": {
+        "frequency": "자주 나오는 라인 먼저"
+      }
     }
   },
   "tournaments": {

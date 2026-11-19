@@ -12,7 +12,8 @@ import { RepertoireListComponent } from './repertoire-list.component';
 import { RepertoireService } from '../../core/repertoire.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { RepertoireTrainingService } from './repertoire-training.service';
-import { saveRepertoireOffline, hasRepertoireOffline } from './repertoire-offline.util';
+import { saveRepertoireOffline, hasRepertoireOffline, getRepertoireOffline } from './repertoire-offline.util';
+import { TrainOrderDialogComponent } from './train-order-dialog.component';
 import { REPERTOIRE_OFFLINE_PREFIX } from '../../core/offline.service';
 
 /**
@@ -167,6 +168,28 @@ describe('RepertoireListComponent offline', () => {
     expect(hasRepertoireOffline(7)).toBeFalse();
   });
 
+  it('toggleOffline nimmt die gewählte Trainings-Reihenfolge mit in die Kopie — offline gilt dieselbe wie online', () => {
+    const repertoireService: any = { getPgnText: () => of('1. e4 *') };
+    const training: any = {
+      getLineStates: () => of([]),
+      getConfig: () => of({ effective: [{ value: 4, unit: 'h' }], user: [], repertoire: null, source: 'default', lineOrder: 'mostTrained' }),
+    };
+    const comp = new RepertoireListComponent(repertoireService, training, {} as any, { info: () => {} } as any, { instant: (k: string) => k } as any, {} as any);
+    comp.toggleOffline(rep(7, 'Sizilianisch'));
+    expect(getRepertoireOffline(7)!.lineOrder).toBe('mostTrained');
+    expect(getRepertoireOffline(7)!.config).toEqual([{ value: 4, unit: 'h' }]);
+  });
+
+  it('toggleOffline ohne abrufbare Einstellungen: Kopie trotzdem da, Reihenfolge „nichts gewählt“ (der Trainer nimmt die Vorgabe)', () => {
+    const repertoireService: any = { getPgnText: () => of('1. e4 *') };
+    const training: any = { getLineStates: () => of([]), getConfig: () => throwError(() => new Error('500')) };
+    const comp = new RepertoireListComponent(repertoireService, training, {} as any, { info: () => {} } as any, { instant: (k: string) => k } as any, {} as any);
+    comp.toggleOffline(rep(7, 'Sizilianisch'));
+    expect(hasRepertoireOffline(7)).toBeTrue();
+    expect(getRepertoireOffline(7)!.lineOrder).toBeNull();
+    expect(getRepertoireOffline(7)!.config).toBeNull();
+  });
+
   it('falls back to downloaded repertoires when the list request fails (offline)', () => {
     saveRepertoireOffline({ meta: rep(3, 'Caro-Kann'), pgn: '1. e4 c6 *', states: [], config: null, savedAt: '2026-07-18T00:00:00Z' });
     const repertoireService: any = { list: () => throwError(() => new Error('offline')) };
@@ -250,7 +273,10 @@ describe('RepertoireListComponent Karten-Aktionen (⋮-Menü)', () => {
     fixture.detectChanges();
 
     const labels = menuItemLabels();
-    expect(labels.length).toBe(5);
+    expect(labels.length).toBe(6);
+    // Einstellung vor Export (DESIGN 5.5): „Reihenfolge im Training“ zuerst, Löschen zuletzt
+    expect(labels[0]).toContain('repertoire.trainOrder.title');
+    expect(labels[5]).toContain('common.delete');
     expect(labels.join(' ')).toContain('common.downloadPgn');
     expect(labels.join(' ')).toContain('repertoire.list.convertToCourse');
     expect(labels.join(' ')).toContain('repertoire.share.action');
@@ -281,15 +307,34 @@ describe('RepertoireListComponent Karten-Aktionen (⋮-Menü)', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('noDescription');
   });
 
-  it('geteilte Karte: im Menü nur der PGN-Download', async () => {
+  it('geteilte Karte: im Menü nur die eigene Trainings-Reihenfolge und der PGN-Download — keine Besitzer-Aktionen', async () => {
     const fixture = await render([rep(2, { isShared: true, sharedByUsername: 'noel' })]);
     const trigger = fixture.debugElement.query(By.directive(MatMenuTrigger));
     (trigger.nativeElement as HTMLElement).click();
     fixture.detectChanges();
 
     const labels = menuItemLabels();
-    expect(labels.length).toBe(1);
-    expect(labels[0]).toContain('common.downloadPgn');
+    expect(labels.length).toBe(2);
+    // auch wer ein fremdes Repertoire trainiert, stellt SEINE Reihenfolge ein (je Nutzer und Repertoire)
+    expect(labels[0]).toContain('repertoire.trainOrder.title');
+    expect(labels[1]).toContain('common.downloadPgn');
+  });
+
+  it('„Reihenfolge im Training“ öffnet den geteilten Dialog für genau dieses Repertoire (mit Namen)', async () => {
+    const fixture = await render([rep(7, { name: 'Weiß: Italienisch' })]);
+    // Der Dialog-Dienst der Komponente selbst (MatDialogModule in ihren imports stellt einen eigenen bereit).
+    const open = spyOn((fixture.componentInstance as unknown as { dialog: MatDialog }).dialog, 'open')
+      .and.returnValue({ afterClosed: () => of(undefined) } as never);
+    (fixture.debugElement.query(By.directive(MatMenuTrigger)).nativeElement as HTMLElement).click();
+    fixture.detectChanges();
+
+    (document.querySelector('.mat-mdc-menu-item.train-order-item') as HTMLElement).click();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    const [component, cfg] = open.calls.mostRecent().args;
+    expect(component).toBe(TrainOrderDialogComponent);
+    // ohne `current`: die Liste kennt die gewählte Reihenfolge nicht — der Dialog holt sie selbst
+    expect(cfg?.data).toEqual({ repertoireId: 7, repertoireName: 'Weiß: Italienisch' });
   });
 });
 

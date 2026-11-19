@@ -48,9 +48,6 @@
     "nextLine": "Volgende lijn",
     "offlineBadge": "Offline",
     "offlineHint": "Training vanuit de offline kopie — resultaten worden op dit apparaat opgeslagen en automatisch gesynchroniseerd zodra je weer online bent.",
-    "freqOrder": "Meest gespeelde lijnen eerst",
-    "freqOrderOn": "Meest gespeelde lijnen eerst: aan (volgorde uit de Lichess-explorer)",
-    "freqOrderOff": "Meest gespeelde lijnen eerst: uit",
     "freqLoading": "Frequenties laden uit de Lichess-explorer …",
     "freqSkip": "Overslaan",
     "freqToken": "\"Meest gespeelde eerst\" vereist een Lichess-token in je profiel – de gewone volgorde wordt gebruikt.",
@@ -1446,6 +1443,11 @@
       "created": "\"{{name}}\" aangemaakt met {{n}} lijnen.",
       "open": "Openen",
       "failed": "Kon het repertoire niet aanmaken."
+    },
+    "trainOrder": {
+      "option": {
+        "frequency": "Meest gespeelde lijnen eerst"
+      }
     }
   },
   "tournaments": {

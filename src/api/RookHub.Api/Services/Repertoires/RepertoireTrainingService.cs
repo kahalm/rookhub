@@ -78,7 +78,42 @@ public class RepertoireTrainingService
 
         var effective = repLevels ?? userLevels ?? DefaultLevels;
         var source = repLevels != null ? "repertoire" : userLevels != null ? "user" : "default";
-        return new SrConfigDto(effective, userLevels ?? DefaultLevels, repLevels, source);
+        // Ein Wert, den die Liste nicht (mehr) kennt, gilt als „nichts gewählt“ — das Frontend fällt auf die Vorgabe.
+        var lineOrder = await _db.RepertoireTrainingPrefs
+            .Where(p => p.UserId == userId && p.RepertoireId == repertoireId)
+            .Select(p => p.LineOrder).FirstOrDefaultAsync(ct);
+        return new SrConfigDto(effective, userLevels ?? DefaultLevels, repLevels, source)
+        {
+            LineOrder = RepertoireLineOrders.IsValid(lineOrder) ? lineOrder : null,
+        };
+    }
+
+    /// <summary>Reihenfolge der Linien im Trainer für DIESEN Nutzer und dieses Repertoire setzen (0.996.0) — erlaubt für
+    /// Besitzer UND Freigabe-Empfänger, jeder mit eigenem Wert (wie der SR-Fortschritt). Null ohne Lesezugriff bzw. bei
+    /// unbekanntem Repertoire, false bei einem Wert außerhalb von <see cref="RepertoireLineOrders.All"/>.</summary>
+    public async Task<bool?> SetLineOrderAsync(int userId, int repertoireId, string? order, CancellationToken ct = default)
+    {
+        if (!await CanTrainAsync(userId, repertoireId, ct)) return null;
+        if (!RepertoireLineOrders.IsValid(order)) return false;
+        if (await UpsertLineOrderAsync(userId, repertoireId, order!, ct)) return true;
+        // Wettlauf auf dem Unique-Index (UserId, RepertoireId) — zwei Geräte stellen gleichzeitig um: den verworfenen
+        // Insert vergessen, die Zeile des anderen laden und den eigenen Wert hineinschreiben (der letzte gewinnt).
+        _db.ChangeTracker.Clear();
+        if (!await UpsertLineOrderAsync(userId, repertoireId, order!, ct))
+            throw new DbUpdateException("Line order could not be saved.");
+        return true;
+    }
+
+    /// <summary>false = der Insert stieß auf die Zeile eines parallelen Aufrufs.</summary>
+    private async Task<bool> UpsertLineOrderAsync(int userId, int repertoireId, string order, CancellationToken ct)
+    {
+        var pref = await _db.RepertoireTrainingPrefs
+            .FirstOrDefaultAsync(p => p.UserId == userId && p.RepertoireId == repertoireId, ct);
+        if (pref == null)
+            _db.RepertoireTrainingPrefs.Add(new RepertoireTrainingPref { UserId = userId, RepertoireId = repertoireId, LineOrder = order });
+        else { pref.LineOrder = order; pref.UpdatedAt = DateTime.UtcNow; }
+        try { await _db.SaveChangesAsync(ct); return true; }
+        catch (DbUpdateException ex) when (pref == null && AuthService.IsUniqueViolation(ex)) { return false; }
     }
 
     /// <summary>Globale Nutzer-Intervalle der 9 Stufen (fällt auf die eingebauten Defaults zurück).</summary>

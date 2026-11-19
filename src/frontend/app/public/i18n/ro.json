@@ -48,9 +48,6 @@
     "nextLine": "Varianta următoare",
     "offlineBadge": "Offline",
     "offlineHint": "Antrenament din copia offline — rezultatele sunt salvate pe acest dispozitiv și sincronizate automat când revii online.",
-    "freqOrder": "Cele mai frecvente variante întâi",
-    "freqOrderOn": "Cele mai frecvente variante întâi: activat (ordine din exploratorul Lichess)",
-    "freqOrderOff": "Cele mai frecvente variante întâi: dezactivat",
     "freqLoading": "Se încarcă frecvențele din exploratorul Lichess …",
     "freqSkip": "Sari",
     "freqToken": "„Cele mai frecvente întâi” necesită un token Lichess în profil – se folosește ordinea obișnuită.",
@@ -1446,6 +1443,11 @@
       "created": "„{{name}}” creat cu {{n}} variante.",
       "open": "Deschide",
       "failed": "Repertoriul nu a putut fi creat."
+    },
+    "trainOrder": {
+      "option": {
+        "frequency": "Cele mai frecvente variante întâi"
+      }
     }
   },
   "tournaments": {

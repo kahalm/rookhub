@@ -12,7 +12,7 @@ internal static class RepertoireDataEraser
         db.Repertoires.RemoveRange(await db.Repertoires.Where(r => r.UserId == userId).ToListAsync());
     }
 
-    /// <summary>Karten-Zustände und eigene SR-Intervalle.</summary>
+    /// <summary>Karten-Zustände, eigene SR-Intervalle und Trainer-Einstellungen je Repertoire.</summary>
     internal static async Task LearningStateAsync(UserErasureContext ctx)
     {
         var (db, userId) = (ctx.Db, ctx.UserId);
@@ -20,5 +20,7 @@ internal static class RepertoireDataEraser
         // Karten-Zustände hängen aber an (UserId, LineKey) und blieben sonst als Waisen liegen.
         db.RepertoireCardStates.RemoveRange(await db.RepertoireCardStates.Where(x => x.UserId == userId).ToListAsync());
         db.RepertoireSrSettings.RemoveRange(await db.RepertoireSrSettings.Where(x => x.UserId == userId).ToListAsync());
+        // Reihenfolge im Trainer je Repertoire — auch die zu FREMDEN (geteilten) Repertoires, die oben nicht mitgehen.
+        db.RepertoireTrainingPrefs.RemoveRange(await db.RepertoireTrainingPrefs.Where(x => x.UserId == userId).ToListAsync());
     }
 }

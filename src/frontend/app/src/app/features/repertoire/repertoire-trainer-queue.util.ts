@@ -2,11 +2,54 @@ import type { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
 import type { TrainColor } from '../../shared/repertoire/repertoire-color.util';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { linesInChapter, userMoveCount } from './repertoire-trainer.util';
+import { DEFAULT_LINE_ORDER, LineOrder } from './repertoire-line-order';
+import { shuffle } from './repertoire-sr.util';
 
 /**
  * Warteschlangen-Bausteine des Repertoire-Trainers (Zerlegung Z21): welche Linien übbar sind und in welcher
- * Reihenfolge sie gegen einen Gegner kommen. Rein, ohne Angular.
+ * Reihenfolge sie kommen — nach der gewählten Reihenfolge ({@link orderLines}) bzw. gegen einen Gegner. Rein, ohne Angular.
  */
+
+/** Was {@link orderLines} zum Reihen braucht — alles von außen, damit die Regel ohne Trainer prüfbar bleibt. */
+export interface LineOrderRule<T> {
+  order: LineOrder;
+  /** Abfragen oder Lernen — bestimmt nur den GLEICHSTAND: Abfragen zufällig, Lernen in Repertoire-Reihenfolge. */
+  mode: 'quiz' | 'learn';
+  /** Wiederkehr in Stunden bei richtiger Lösung (`hoursUntilReturnIfSolved`): kleiner = weniger trainiert. */
+  returnHours: (line: T) => number;
+  /** Häufigkeit 0…1, −1 = unbekannt; `null` = es gibt keine Häufigkeiten (offline, Abruf gescheitert, kein Token). */
+  frequency: ((line: T) => number) | null;
+  /** Mischen — Vorgabe {@link shuffle}; Tests nageln es fest. */
+  shuffle?: (lines: readonly T[]) => T[];
+}
+
+/**
+ * Die Linien einer Sitzung in der gewählten Reihenfolge (0.996.0); `lines` kommt in Repertoire-(PGN-)Reihenfolge und
+ * bleibt unverändert.
+ *
+ * - `leastTrained` (Vorgabe): kürzeste Wiederkehr bei richtiger Lösung zuerst — Stufe 0 vor 1 vor 2 …
+ * - `mostTrained`: die Umkehrung.
+ * - `random`: gemischt — in beiden Modi.
+ * - `repertoire`: wie im Repertoire.
+ * - `frequency`: häufigste zuerst, Linien ohne Wert zuletzt; OHNE Häufigkeiten gilt die Vorgabe.
+ *
+ * Gleichstand (gleiche Wiederkehr bzw. Häufigkeit): beim Abfragen zufällig, beim Lernen Repertoire-Reihenfolge.
+ * Die Sortierung ist stabil (eigener Index als letzter Schlüssel, unabhängig von der Engine).
+ */
+export function orderLines<T>(lines: readonly T[], rule: LineOrderRule<T>): T[] {
+  const order: LineOrder = rule.order === 'frequency' && !rule.frequency ? DEFAULT_LINE_ORDER : rule.order;
+  if (order === 'repertoire') return [...lines];
+  const base = rule.mode === 'quiz' || order === 'random' ? (rule.shuffle ?? shuffle)(lines) : [...lines];
+  if (order === 'random') return base;
+  const frequency = rule.frequency;
+  // Kleinster Schlüssel zuerst: Wiederkehr aufsteigend bzw. (negiert) absteigend, Häufigkeit absteigend.
+  const key = order === 'frequency' && frequency ? (l: T) => -frequency(l)
+    : order === 'mostTrained' ? (l: T) => -rule.returnHours(l)
+    : rule.returnHours;
+  return base.map((line, at) => ({ line, at, key: key(line) }))
+    .sort((a, b) => a.key - b.key || a.at - b.at)
+    .map(x => x.line);
+}
 
 /** Die Linien einer Sitzung mit ihrem Kapitel-Filter und der Trainingsfarbe je Linie. */
 export interface TrainerLineSet {

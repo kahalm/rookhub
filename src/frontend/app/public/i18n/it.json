@@ -48,9 +48,6 @@
     "nextLine": "Linea successiva",
     "offlineBadge": "Offline",
     "offlineHint": "Allenamento dalla copia offline — i risultati vengono salvati su questo dispositivo e sincronizzati automaticamente quando torni online.",
-    "freqOrder": "Prima le linee più frequenti",
-    "freqOrderOn": "Prima le linee più frequenti: attivo (ordine dall'explorer di Lichess)",
-    "freqOrderOff": "Prima le linee più frequenti: disattivato",
     "freqLoading": "Caricamento delle frequenze dall'explorer di Lichess …",
     "freqSkip": "Salta",
     "freqToken": "“Prima le più frequenti” richiede un token Lichess nel tuo profilo – viene usato l'ordine abituale.",
@@ -1446,6 +1443,11 @@
       "created": "“{{name}}” creato con {{n}} linee.",
       "open": "Apri",
       "failed": "Impossibile creare il repertorio."
+    },
+    "trainOrder": {
+      "option": {
+        "frequency": "Prima le linee più frequenti"
+      }
     }
   },
   "tournaments": {

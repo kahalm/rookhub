@@ -49,6 +49,14 @@ describe('RepertoireTrainingService', () => {
     req.flush({ affected: 2 });
   });
 
+  it('setLineOrder PUTet die Reihenfolge an die line-order-Route des Repertoires', () => {
+    service.setLineOrder(12, 'mostTrained').subscribe();
+    const req = httpMock.expectOne('/api/repertoires/12/training/line-order');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ order: 'mostTrained' });
+    req.flush(null);
+  });
+
   it('setPaused POSTet lineKeys + paused', () => {
     service.setPaused(12, ['a'], true).subscribe();
     const req = httpMock.expectOne('/api/repertoires/12/training/pause');

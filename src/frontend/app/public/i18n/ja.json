@@ -48,9 +48,6 @@
     "nextLine": "次のライン",
     "offlineBadge": "オフライン",
     "offlineHint": "オフラインコピーでトレーニング中です — 結果はこの端末に保存され、オンラインに戻ると自動で同期されます。",
-    "freqOrder": "頻出ラインを先に",
-    "freqOrderOn": "頻出ラインを先に: オン（Lichessエクスプローラーの順序）",
-    "freqOrderOff": "頻出ラインを先に: オフ",
     "freqLoading": "Lichessエクスプローラーから頻度を読み込み中…",
     "freqSkip": "スキップ",
     "freqToken": "「頻出順」にはプロフィールにLichessトークンが必要です – 通常の順序を使います。",
@@ -1446,6 +1443,11 @@
       "created": "「{{name}}」を{{n}}本のラインで作成しました。",
       "open": "開く",
       "failed": "レパートリーを作成できませんでした。"
+    },
+    "trainOrder": {
+      "option": {
+        "frequency": "頻出ラインを先に"
+      }
     }
   },
   "tournaments": {

@@ -21,6 +21,8 @@
 | POST | `/api/repertoires/reprocess` | Bereitet veraltete eigene Repertoires auf: Chessable-Repertoires mit `[ChessableOid]` bekommen je Datei die Zugtexte aus dem Linien-Cache (`StaleAction.Cache`, ausgeblendete Partien bleiben), dann wie alle übrigen den Versions-Mark; Chessable ohne oids wird als Re-Fetch-Job eingereiht (mit Bearer bzw. als Admin aus dem Kurs-Cache). `?localOnly=true` („Aus Cache") lässt nur den Re-Fetch aus. Läuft im Hintergrund, antwortet 202; Ergebnis im Log (`reprocessed, rebuiltFromCache, cacheLinesReplaced, enqueued, skipped, failed`) |
 | GET | `/api/repertoires/{id:int}/flashcards` | PERSISTENT als Flashcard markierte Linien `{ lineKeys }` — Besitzer UND Freigabe-Empfänger, jeweils EIGENER Satz (404 ohne Lese-Zugriff) |
 | POST/DELETE | `/api/repertoires/{id:int}/flashcards/{lineKey}` | Flashcard-Markierung einer Linie setzen/entfernen (idempotent) → `{ marked }`; LineKey = Frontend-Linien-Hash (`repertoire-line-key.util.ts`, wie SR — Re-Import mit geänderter Zugfolge lässt Markierungen ins Leere laufen, gewollt). Frontend: Checkboxen der Linienliste + „(n)"-Knopf → `/repertoires/:id/flashcards?marked=1` |
+| GET | `/api/repertoires/{id:int}/training/config` | Trainer-Einstellungen dieses Repertoires für den anfragenden Nutzer: `{ effective[9], user[9], repertoire[9]?, source, lineOrder? }` — die effektiven SR-Intervalle (Override des Repertoires > global je Nutzer > Vorgabe) samt beider Ebenen und die gewählte Reihenfolge der Linien (`lineOrder`, `null` = nichts gewählt; siehe „Trainer: Reihenfolge der Linien“). Besitzer UND Freigabe-Empfänger; 404 ohne Lesezugriff |
+| PUT | `/api/repertoires/{id:int}/training/line-order` | Reihenfolge der Linien im Trainer setzen `{ order }` (0.996.0) — je Nutzer UND Repertoire, auch für ein geteiltes fremdes; `order` ∈ `leastTrained`/`mostTrained`/`random`/`repertoire`/`frequency` (`RepertoireLineOrders.All`). 204; 400 `{ message: "Unknown line order." }` bei jedem anderen Wert, 404 ohne Lesezugriff |
 | GET | `/api/repertoires/shared-lines` | „Meine Teilen-Links" (Codereview A2-006, 25.10.2026): eigene öffentliche Linien-Links `[{ id, shareToken, title, repertoireName, repertoireId, createdAt }]`, neueste zuerst (`repertoireId` null = aus RepCheck). Frontend: Karte `profile/shared-links-card.component.ts` im Profil |
 | DELETE | `/api/repertoires/shared-lines/{lineId:int}` | Linien-Link widerrufen → 204, danach `/l/{token}` 404; 404 für fremde/fehlende. Erneutes Teilen derselben Linie gibt einen NEUEN Link. Löschen eines Repertoires räumt dessen `/l/`-Links mit ab (vorher überlebten sie) |
 | POST | `/api/repertoires/{id:int}/share-line` | Öffentlichen Nur-Ansehen-Link `/l/{token}` anlegen (nur Besitzer) `{ pgn, title?, chapter? }` → `{ shareToken, expiresAt }`. `chapter: true` (0.915.0) = ganzes Kapitel, je Linie eine Partie im PGN, Deckel 512 KB statt 32 KB; die öffentliche Seite zeigt dann eine Linienauswahl (Pfeil hoch/runter). **Ablauf (0.915.0): 30 Tage** (`SharedLineService.Lifetime`); dieselbe Linie/dasselbe Kapitel erneut teilen gibt denselben Token und verlängert auf 30 Tage ab jetzt (auch einen abgelaufenen). Links von vor 0.915.0 haben `ExpiresAt = null` und laufen nicht ab |
@@ -122,6 +124,51 @@ chessable line".
 - Geduldeter Zug (`[%alt]`) steht 3,5 s (`TOLERATED_HOLD_MS`) mit „Auch spielbar — jetzt den Hauptzug.", Klick/Leertaste/
   Enter überspringt.
 - Linien mit `[ChessableOid]` zeigen hinter dem Linienlabel einen Textlink „Chessable" (`https://www.chessable.com/variation/<oid>/`).
+
+## Trainer: Reihenfolge der Linien (0.996.0)
+
+Wunsch des Users 19.11.: „wenn ich ein repo reviewe und er hat lines die schon 1 mal trainiert wurden und welche die noch
+0 mal waren, die mit 0mal als erstes bringen … aka sortiere nach zeit die das braucht bis es wieder kommt wenn ich es löse“
+und „beim train auch einstellbar … irgendwo im menu für das repo umstellbar: reihenfolge. random, nach reihenfolge im repo,
+wenig trainerte zuerst, viel trainierte zuerst“.
+
+**Eine Einstellung je Nutzer UND Repertoire**, fünf Werte (`LINE_ORDERS` in `repertoire-line-order.ts` ↔
+`RepertoireLineOrders.All`, handgespiegelt mit literalen Tests auf beiden Seiten):
+
+| Wert | Name | Regel |
+|---|---|---|
+| `leastTrained` | Wenig trainierte zuerst — **Vorgabe** | kürzeste Wiederkehr zuerst: Sortierschlüssel ist das Intervall, das die Linie bekäme, WENN sie jetzt richtig gelöst wird = Intervall der Stufe `min(Stufe + 1, 9)` aus den EFFEKTIVEN Intervallen (`hoursUntilReturnIfSolved`, Spiegel von `ScheduleLevel`). Mit den Vorgabe-Intervallen also Stufe 0 vor 1 vor 2 …; bei frei eingestellten Intervallen entscheidet die Zeit, nicht die Stufennummer. Kein Zustand = Stufe 0 |
+| `mostTrained` | Viel trainierte zuerst | die Umkehrung |
+| `random` | Zufällig | gemischt (das Verhalten der Abfrage bis 0.995.0) — auch im Lernen-Modus |
+| `repertoire` | Reihenfolge im Repertoire | wie im PGN |
+| `frequency` | Häufigste zuerst | absteigend nach Linien-Häufigkeit (Lichess-Explorer, `TrainerFrequencyLoader`), Linien ohne Wert zuletzt — der frühere Geräte-Schalter. OHNE Häufigkeiten (offline, kein Token, Abruf gescheitert) gilt die Vorgabe |
+
+- **Gleichstand** (gleiche Wiederkehr bzw. Häufigkeit): beim Abfragen zufällig, beim Lernen in Repertoire-Reihenfolge.
+  Die Sortierung ist stabil. Eine reine Funktion: `orderLines(lines, rule)` in `repertoire-trainer-queue.util.ts`.
+- **Geltung**: Abfragen (fällige Pool-Linien) UND Lernen (ungelernte Linien — sie haben keinen Trainingsstand, `leastTrained`/
+  `mostTrained` ergeben dort über die Gleichstand-Regel die Repertoire-Reihenfolge wie bisher). **Unberührt**: die
+  Gegner-Sitzung (`?opponent=`, Reihenfolge des Gegners ohne Fälligkeit) und eine ausdrücklich gewählte Einzellinie (`?line=`).
+- **Jeder Neuaufbau** geht durch dieselbe Stelle (`buildQueue` → `ordered`): Start, Moduswechsel, „Erneut trainieren“,
+  „Alle jetzt fällig machen“/„Alle in den Pool“, Zurücksetzen, Wechsel der Reihenfolge. `extendQueue` gibt es nur in der
+  Gegner-Sitzung. Nach „Übungszyklen“ → Speichern holt der Trainer die Intervalle neu; sie gelten ab dem nächsten Aufbau.
+- **Speicherung**: Tabelle `RepertoireTrainingPrefs` (UserId + RepertoireId eindeutig, `LineOrder`), gelesen mit
+  `GET …/training/config` (`lineOrder`, `null` = nichts gewählt — die Vorgabe wird NICHT gespeichert), geschrieben mit
+  `PUT …/training/line-order`. Besitzer und Freigabe-Empfänger haben je ihre eigene Zeile (wie der SR-Fortschritt). Der
+  Server prüft den Wert gegen die Liste (400) und reiht selbst nichts — Linien, Fälligkeit und Häufigkeiten liegen im Frontend.
+  Der Trainer holt die Konfiguration seit 0.996.0 beim Öffnen mit (ein Abruf: effektive Intervalle + Reihenfolge; ein Ausfall
+  hält ihn nicht auf → Werte der Offline-Kopie bzw. Vorgaben).
+- **Alter Schalter „Häufigste zuerst“** (Gerät, `rookhub_rep_train_freq_order`): wird nur noch gelesen. Ist er an und für
+  das Repertoire nichts gewählt, gilt `frequency` weiter (`effectiveLineOrder`); jede Wahl für das Repertoire schlägt ihn.
+- **Offline**: die Offline-Kopie trägt `lineOrder` (beim Herunterladen, beim Online-Öffnen des Trainers und beim Speichern
+  im Dialog nachgezogen); fehlend/unbekannt = Vorgabe, `frequency` = Vorgabe (keine Häufigkeiten). Umstellen geht offline
+  nicht (kein Knopf) — die Wahl liegt am Server.
+- **Oberfläche**: EIN Dialog `TrainOrderDialogComponent` (`openTrainOrderDialog`) — (a) Knopf mit der geltenden Reihenfolge in
+  der Kopfleiste des Trainers (wo der Umschalter saß; die Wahl baut die Sitzung neu auf, ein laufender Häufigkeits-Abruf wird
+  abgebrochen), (b) „Reihenfolge im Training“ im ⋮ der Linienleiste der Detailseite, (c) erster Eintrag im ⋮ der
+  Repertoire-Karte (auch geteilte Repertoires). Speichern scheitert → Snackbar, Dialog bleibt offen. Gestaltung: `docs/DESIGN.md` 5.6/8.1.
+- **Kein zweiter Ort** reiht fällige Repertoire-Linien: kein Backend-Endpunkt gibt eine Reihenfolge vor
+  (`GET …/training/lines` liefert Zustände ungeordnet), es gibt keine Abfrage über mehrere Repertoires und keinen
+  Dashboard-Einstieg mit eigener Warteschlange; der Abweichungs-Trainer (`/repertoires/deviations`) hat kein SR.
 
 ## Bereich „Letzte Woche" (0.888.0)
 

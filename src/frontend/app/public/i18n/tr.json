@@ -48,9 +48,6 @@
     "nextLine": "Sonraki varyant",
     "offlineBadge": "Çevrimdışı",
     "offlineHint": "Çevrimdışı kopyadan çalışılıyor — sonuçlar bu cihazda saklanır ve tekrar çevrimiçi olduğunuzda otomatik olarak eşitlenir.",
-    "freqOrder": "En sık varyantlar önce",
-    "freqOrderOn": "En sık varyantlar önce: açık (sıralama Lichess explorer'dan)",
-    "freqOrderOff": "En sık varyantlar önce: kapalı",
     "freqLoading": "Sıklıklar Lichess explorer'dan yükleniyor …",
     "freqSkip": "Atla",
     "freqToken": "\"En sık önce\" profilinizde bir Lichess token'ı gerektirir – olağan sıralama kullanılıyor.",
@@ -1446,6 +1443,11 @@
       "created": "\"{{name}}\" {{n}} varyantla oluşturuldu.",
       "open": "Aç",
       "failed": "Repertuar oluşturulamadı."
+    },
+    "trainOrder": {
+      "option": {
+        "frequency": "En sık varyantlar önce"
+      }
     }
   },
   "tournaments": {

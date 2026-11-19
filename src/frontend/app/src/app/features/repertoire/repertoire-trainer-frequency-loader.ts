@@ -12,9 +12,10 @@ export interface FrequencyExplorer {
 
 /**
  * „Häufigste zuerst" im Repertoire-Trainer (Zerlegung Z21): holt die Linien-Häufigkeiten Runde um Runde über den
- * Explorer (wie der Lochfinder) und sortiert danach. `changed` meldet Fortschritt, `done` das Ende — beendet,
- * übersprungen oder gescheitert; danach baut der Trainer die Warteschlange. Nach {@link dispose} startet kein Lauf
- * mehr (Codereview F3-025: kein Explorer-Lauf ohne Abnehmer).
+ * Explorer (wie der Lochfinder); gereiht wird danach in `orderLines` (`repertoire-trainer-queue.util`, Reihenfolge
+ * `frequency`). `changed` meldet Fortschritt, `done` das Ende — beendet, übersprungen oder gescheitert; danach baut
+ * der Trainer die Warteschlange. Nach {@link dispose} startet kein Lauf mehr (Codereview F3-025: kein Explorer-Lauf
+ * ohne Abnehmer).
  */
 export class TrainerFrequencyLoader {
   /** Endstellung einer Linie (erste drei FEN-Felder) → wie oft man sie erreicht; null = nicht geladen. */
@@ -82,10 +83,16 @@ export class TrainerFrequencyLoader {
     return this.lineFreq.get(normalizeFen(end)) ?? -1;
   }
 
-  /** Bei `on` absteigend nach Häufigkeit; unbekannte hinten, sonst Reihenfolge wie gehabt (stabile Sortierung). */
-  order(lines: ParsedGame[], on: boolean): ParsedGame[] {
-    if (!on || !this.lineFreq) return lines;
-    return [...lines].sort((a, b) => this.freqOf(b) - this.freqOf(a));
+  /** Gibt es überhaupt Häufigkeiten? Nein = nicht geladen oder leer (kein Token, Abruf gescheitert, übersprungen vor der
+   *  ersten Runde) — dann reiht der Trainer nach der Vorgabe statt nach lauter „unbekannt". */
+  get available(): boolean { return (this.lineFreq?.size ?? 0) > 0; }
+
+  /** Laufenden Abruf abbrechen, OHNE `done` — der Trainer hat inzwischen eine andere Reihenfolge und baut selbst auf.
+   *  Schon geholte Häufigkeiten bleiben; ein abgebrochener erster Lauf hinterlässt keine ({@link available} bleibt falsch). */
+  cancel(): void {
+    this.sub?.unsubscribe();
+    this.sub = null;
+    this.running = false;
   }
 
   /** Laufenden Abruf beenden; danach startet {@link load} nichts mehr. */

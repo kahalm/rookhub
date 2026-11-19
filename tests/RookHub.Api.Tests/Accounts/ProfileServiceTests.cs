@@ -335,6 +335,8 @@ public class ProfileServiceTests : IDisposable
         _db.FavoritePuzzles.Add(new Models.FavoritePuzzle { UserId = id, PuzzleId = 5 });
         _db.TournamentMonitors.Add(new Models.TournamentMonitor { UserId = id, CrawlerTournamentId = "42", ActiveUntil = DateTime.UtcNow.AddDays(3) });
         _db.RepertoireSrSettings.Add(new Models.RepertoireSrSettings { UserId = id, IntervalsJson = "[]" });
+        // Reihenfolge im Trainer zu einem FREMDEN (geteilten) Repertoire — geht nicht mit den eigenen Repertoires mit.
+        _db.RepertoireTrainingPrefs.Add(new Models.RepertoireTrainingPref { UserId = id, RepertoireId = 4711, LineOrder = "random" });
         // Manuelle Aktivität bleibt als Statistik, aber die Notiz (PII) wird geleert:
         _db.ManualActivities.Add(new Models.ManualActivity { UserId = id, Date = new DateOnly(2026, 7, 1), Kind = Models.ManualActivityKind.OtbGame, Amount = 1, Note = "gegen Max am Vereinsabend" });
         // Vereins-Datenbank: die Partie bleibt (Ligadaten), nur der Vermerk, wer sie hochlud, geht.
@@ -389,6 +391,7 @@ public class ProfileServiceTests : IDisposable
         Assert.False(await _db.FavoritePuzzles.AnyAsync(x => x.UserId == id));
         Assert.False(await _db.TournamentMonitors.AnyAsync(x => x.UserId == id));
         Assert.False(await _db.RepertoireSrSettings.AnyAsync(x => x.UserId == id));
+        Assert.False(await _db.RepertoireTrainingPrefs.AnyAsync(x => x.UserId == id));
         // Manuelle Aktivität bleibt (Statistik), aber ohne Freitext-Notiz
         var manual = await _db.ManualActivities.SingleAsync(a => a.UserId == id);
         Assert.Null(manual.Note);

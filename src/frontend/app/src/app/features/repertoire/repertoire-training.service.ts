@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { RepertoireService } from '../../core/repertoire.service';
+import type { LineOrder } from './repertoire-line-order';
 
 /** Ein Intervall-Eintrag der 9-Stufen-Leiter. */
 export interface SrLevel {
@@ -28,6 +29,9 @@ export interface SrConfigDto {
   user: SrLevel[];
   repertoire: SrLevel[] | null;
   source: 'repertoire' | 'user' | 'default';
+  /** Reihenfolge der Linien im Trainer, die der Nutzer für dieses Repertoire gewählt hat (`LineOrder`, 0.996.0);
+   *  `null`/fehlend = nichts gewählt → `effectiveLineOrder` (Vorgabe bzw. alter Geräte-Schalter). */
+  lineOrder?: string | null;
 }
 
 export interface LineReviewRequest {
@@ -118,6 +122,12 @@ export class RepertoireTrainingService {
   /** Effektive Intervall-Konfiguration dieses Repertoires (+ globale & Override-Ebene). */
   getConfig(repertoireId: number): Observable<SrConfigDto> {
     return this.http.get<SrConfigDto>(`/api/repertoires/${repertoireId}/training/config`);
+  }
+
+  /** Reihenfolge der Linien im Trainer für diesen Nutzer und dieses Repertoire speichern (0.996.0; auch für ein
+   *  geteiltes fremdes Repertoire — jeder hat seine eigene). 400 bei einem Wert außerhalb von `LINE_ORDERS`. */
+  setLineOrder(repertoireId: number, order: LineOrder): Observable<void> {
+    return this.http.put<void>(`/api/repertoires/${repertoireId}/training/line-order`, { order });
   }
 
   /** Pro-Repertoire-Override setzen (levels=null → Override löschen = globale Defaults). */

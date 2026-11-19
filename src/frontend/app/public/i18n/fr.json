@@ -48,9 +48,6 @@
     "nextLine": "Ligne suivante",
     "offlineBadge": "Hors ligne",
     "offlineHint": "Entraînement depuis la copie hors ligne — les résultats sont enregistrés sur cet appareil et se synchronisent automatiquement dès que vous êtes de nouveau en ligne.",
-    "freqOrder": "Lignes les plus fréquentes d'abord",
-    "freqOrderOn": "Lignes les plus fréquentes d'abord : activé (ordre de l'explorateur Lichess)",
-    "freqOrderOff": "Lignes les plus fréquentes d'abord : désactivé",
     "freqLoading": "Chargement des fréquences depuis l'explorateur Lichess …",
     "freqSkip": "Passer",
     "freqToken": "« Les plus fréquentes d'abord » nécessite un jeton Lichess dans votre profil – l'ordre habituel est utilisé.",
@@ -1446,6 +1443,11 @@
       "created": "« {{name}} » créé avec {{n}} lignes.",
       "open": "Ouvrir",
       "failed": "Impossible de créer le répertoire."
+    },
+    "trainOrder": {
+      "option": {
+        "frequency": "Lignes les plus fréquentes d'abord"
+      }
     }
   },
   "tournaments": {

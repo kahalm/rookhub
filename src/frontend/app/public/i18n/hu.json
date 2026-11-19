@@ -1171,6 +1171,27 @@
       "created": "„{{name}}” létrehozva {{n}} változattal.",
       "open": "Megnyitás",
       "failed": "A repertoárt nem sikerült létrehozni."
+    },
+    "trainOrder": {
+      "title": "Sorrend a gyakorlásban",
+      "change": "A változatok sorrendjének módosítása",
+      "scope": "Ennek a repertoárnak a kérdezésére és tanulására érvényes – neked, minden eszközödön.",
+      "saved": "Sorrend mentve",
+      "saveFailed": "A sorrendet nem sikerült menteni – próbáld újra.",
+      "option": {
+        "leastTrained": "Keveset gyakoroltak előre",
+        "mostTrained": "Sokat gyakoroltak előre",
+        "random": "Véletlenszerű",
+        "repertoire": "A repertoár sorrendje",
+        "frequency": "Leggyakoribb előre"
+      },
+      "hint": {
+        "leastTrained": "Elöl azok a változatok, amelyek helyes megoldás után a leghamarabb térnek vissza – 0. szint az 1. előtt, az a 2. előtt …",
+        "mostTrained": "Fordítva: elöl azok a változatok, amelyeknél a leghosszabb idő telik el a következő ismétlésig.",
+        "random": "Minden alkalommal újra megkeverve.",
+        "repertoire": "Ahogy a változatok a repertoárban állnak.",
+        "frequency": "Elöl azok a változatok, amelyeket valódi játszmákban gyakrabban érsz el (Lichess explorer, csak online)."
+      }
     }
   },
   "tournaments": {
@@ -3226,9 +3247,6 @@
     "nextLine": "Következő változat",
     "offlineBadge": "Offline",
     "offlineHint": "Gyakorlás az offline másolatból — az eredmények ezen az eszközön tárolódnak, és automatikusan szinkronizálódnak, amint újra online vagy.",
-    "freqOrder": "Leggyakoribb változatok előre",
-    "freqOrderOn": "Leggyakoribb változatok előre: be (sorrend a Lichess explorer alapján)",
-    "freqOrderOff": "Leggyakoribb változatok előre: ki",
     "freqLoading": "Gyakoriságok betöltése a Lichess explorerből …",
     "freqSkip": "Kihagyás",
     "freqToken": "A „Leggyakoribb előre” módhoz Lichess-token kell a profilban – a szokásos sorrend marad.",

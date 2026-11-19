@@ -91,7 +91,21 @@ public record SrConfigDto(
     List<SrLevelDto> Effective,
     List<SrLevelDto> User,
     List<SrLevelDto>? Repertoire,
-    string Source);   // "repertoire" | "user" | "default"
+    string Source)   // "repertoire" | "user" | "default"
+{
+    /// <summary>Reihenfolge der Linien im Trainer, die DIESER Nutzer für dieses Repertoire gewählt hat (0.996.0) — einer
+    /// der Werte aus <c>RepertoireLineOrders.All</c>; <c>null</c> = nichts gewählt (das Frontend nimmt die Vorgabe
+    /// bzw. den alten Geräte-Schalter „Häufigste zuerst“).</summary>
+    public string? LineOrder { get; init; }
+}
+
+/// <summary>Setzt die Reihenfolge der Linien im Trainer für den anfragenden Nutzer und dieses Repertoire.</summary>
+public class SetLineOrderRequest
+{
+    /// <summary>Einer der Werte aus <c>RepertoireLineOrders.All</c>; alles andere → 400.</summary>
+    [Required, MaxLength(20)]
+    public string Order { get; set; } = string.Empty;
+}
 
 /// <summary>Setzt Intervalle. Bei null wird der (pro-Repertoire) Override gelöscht bzw. für die
 /// globale Route auf die Defaults zurückgesetzt.</summary>

@@ -34,7 +34,8 @@ const browserOffline = () => typeof navigator !== 'undefined' && !navigator.onLi
  */
 export class TrainerSrSync {
   private states = new Map<string, LineStateDto>();   // key = lineKey
-  /** Effektive SR-Intervalle aus der Offline-Kopie (nur fürs lokale Fälligkeits-Rechnen). */
+  /** Effektive SR-Intervalle vom Server bzw. aus der Offline-Kopie — fürs lokale Fälligkeits-Rechnen und für die
+   *  Reihenfolge „Wenig/Viel trainierte zuerst" (Wiederkehr bei richtiger Lösung). */
   private srLevels: SrLevel[] | null = null;
 
   constructor(private readonly deps: SrSyncDeps) {}
@@ -109,8 +110,9 @@ export class TrainerSrSync {
     onDue(st.dueAt);
   }
 
-  /** Intervalle fürs lokale Fälligkeits-Rechnen: Offline-Kopie → Client-Defaults. */
-  private effectiveSrLevels(): SrLevel[] {
+  /** Die geltenden Intervalle: gesetzt (Server/Offline-Kopie) → Offline-Kopie → Client-Defaults. Liest ohne gesetzte
+   *  Intervalle die Offline-Kopie aus dem Speicher — je Warteschlange EINMAL holen, nicht je Linie. */
+  effectiveSrLevels(): SrLevel[] {
     if (this.srLevels?.length) return this.srLevels;
     const cached = getRepertoireOffline(this.repId);
     return cached?.config?.length ? cached.config : DEFAULT_SR_LEVELS;

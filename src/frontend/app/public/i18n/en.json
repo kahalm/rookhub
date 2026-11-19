@@ -50,9 +50,6 @@
     "nextLine": "Next line",
     "offlineBadge": "Offline",
     "offlineHint": "Training from the offline copy — results are stored on this device and sync automatically once you're back online.",
-    "freqOrder": "Most frequent lines first",
-    "freqOrderOn": "Most frequent lines first: on (order from the Lichess explorer)",
-    "freqOrderOff": "Most frequent lines first: off",
     "freqLoading": "Loading frequencies from the Lichess explorer …",
     "freqSkip": "Skip",
     "freqToken": "“Most frequent first” needs a Lichess token in your profile – the usual order is used.",
@@ -1467,6 +1464,27 @@
       "created": "“{{name}}” created with {{n}} lines.",
       "open": "Open",
       "failed": "Could not create the repertoire."
+    },
+    "trainOrder": {
+      "title": "Training order",
+      "change": "Change the order of the lines",
+      "scope": "Applies to reviewing and learning this repertoire – for you, on all your devices.",
+      "saved": "Order saved",
+      "saveFailed": "The order could not be saved – please try again.",
+      "option": {
+        "leastTrained": "Least trained first",
+        "mostTrained": "Most trained first",
+        "random": "Random",
+        "repertoire": "Repertoire order",
+        "frequency": "Most frequent first"
+      },
+      "hint": {
+        "leastTrained": "Lines that come back soonest after a correct answer go first – level 0 before 1 before 2 …",
+        "mostTrained": "The other way round: lines with the longest gap until the next review go first.",
+        "random": "Shuffled anew every time.",
+        "repertoire": "As the lines appear in the repertoire.",
+        "frequency": "Lines you reach more often in real games go first (Lichess explorer, online only)."
+      }
     }
   },
   "tournaments": {

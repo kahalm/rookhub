@@ -48,9 +48,6 @@
     "nextLine": "Další varianta",
     "offlineBadge": "Offline",
     "offlineHint": "Trénink z offline kopie — výsledky se ukládají v tomto zařízení a po opětovném připojení se automaticky synchronizují.",
-    "freqOrder": "Nejčastější varianty první",
-    "freqOrderOn": "Nejčastější varianty první: zap. (pořadí z průzkumníku Lichess)",
-    "freqOrderOff": "Nejčastější varianty první: vyp.",
     "freqLoading": "Načítám četnosti z průzkumníku Lichess …",
     "freqSkip": "Přeskočit",
     "freqToken": "„Nejčastější první“ vyžaduje token Lichess v profilu – použije se obvyklé pořadí.",
@@ -1446,6 +1443,11 @@
       "created": "„{{name}}“ vytvořen (varianty: {{n}}).",
       "open": "Otevřít",
       "failed": "Repertoár se nepodařilo vytvořit."
+    },
+    "trainOrder": {
+      "option": {
+        "frequency": "Nejčastější varianty první"
+      }
     }
   },
   "tournaments": {

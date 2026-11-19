@@ -114,12 +114,14 @@ describe('RepertoireTrainerComponent Kopf + Leerzustand (d3)', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  // d3-rk-trainer-symbolknoepfe-ohne-text
-  it('„Häufigste zuerst“ ist ein beschrifteter Umschalter; Einstellungen und Zurücksetzen liegen im ⋮', async () => {
+  // d3-rk-trainer-symbolknoepfe-ohne-text; seit 0.996.0 statt des Umschalters „Häufigste zuerst“ der Knopf „Reihenfolge“
+  it('die Reihenfolge ist ein beschrifteter Knopf mit der geltenden Reihenfolge; Einstellungen und Zurücksetzen liegen im ⋮', async () => {
     const el = await renderQuiz(null, DUE);
-    const toggle = el.querySelector('.bar .freq-toggle')!;
-    expect(toggle.textContent).toContain('repertoireTrainer.freqOrder');
-    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    const order = el.querySelector('.bar .order-btn')!;
+    expect(order.textContent).toContain('repertoire.trainOrder.option.leastTrained');   // Vorgabe, nichts gewählt
+    expect(order.getAttribute('aria-label')).toBe('repertoire.trainOrder.title: repertoire.trainOrder.option.leastTrained');
+    expect(order.hasAttribute('aria-pressed')).toBeFalse();                             // kein Umschalter mehr
+    expect(order.querySelector('mat-icon')!.textContent!.trim()).toBe('sort');
     const icons = Array.from(el.querySelectorAll('.bar > button mat-icon')).map(i => i.textContent!.trim());
     expect(icons).not.toContain('trending_up');
     expect(icons).not.toContain('restart_alt');   // der Reset steht nicht offen in der Leiste
@@ -138,9 +140,9 @@ describe('RepertoireTrainerComponent Kopf + Leerzustand (d3)', () => {
   });
 
   // d4-rk-trainer-leerzustand-bedienelemente
-  it('Leerzustand: kein „Häufigste Linien zuerst“, im ⋮ kein „Fortschritt zurücksetzen“ (Übungszyklen bleiben)', async () => {
+  it('Leerzustand: kein Knopf „Reihenfolge“, im ⋮ kein „Fortschritt zurücksetzen“ (Übungszyklen bleiben)', async () => {
     const el = await renderQuiz('Leer');
-    expect(el.querySelector('.bar .freq-toggle')).toBeNull();
+    expect(el.querySelector('.bar .order-btn')).toBeNull();
     const more = el.querySelector('.bar > button.more') as HTMLButtonElement;
     expect(more).not.toBeNull();
     more.click();
@@ -166,9 +168,9 @@ describe('RepertoireTrainerComponent Kopf + Leerzustand (d3)', () => {
     expect(rule).toContain('margin-left:0');
   });
 
-  it('mit Linien im Pool sind Umschalter und „Fortschritt zurücksetzen“ da', async () => {
+  it('mit Linien im Pool sind der Knopf „Reihenfolge“ und „Fortschritt zurücksetzen“ da', async () => {
     const el = await renderQuiz('Voll', DUE);
-    expect(el.querySelector('.bar .freq-toggle')).not.toBeNull();
+    expect(el.querySelector('.bar .order-btn')).not.toBeNull();
     expect(el.querySelector('.bar > button.more')!.classList).not.toContain('more-solo');
     (el.querySelector('.bar > button.more') as HTMLButtonElement).click();
     lastFixture.detectChanges();

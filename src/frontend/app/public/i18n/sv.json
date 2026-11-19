@@ -48,9 +48,6 @@
     "nextLine": "Nästa linje",
     "offlineBadge": "Offline",
     "offlineHint": "Tränar från offlinekopian — resultaten sparas på den här enheten och synkas automatiskt när du är online igen.",
-    "freqOrder": "Vanligaste linjerna först",
-    "freqOrderOn": "Vanligaste linjerna först: på (ordning från Lichess-utforskaren)",
-    "freqOrderOff": "Vanligaste linjerna först: av",
     "freqLoading": "Läser in frekvenser från Lichess-utforskaren …",
     "freqSkip": "Hoppa över",
     "freqToken": "”Vanligaste först” kräver en Lichess-token i din profil – den vanliga ordningen används.",
@@ -1446,6 +1443,11 @@
       "created": "”{{name}}” skapad med {{n}} linjer.",
       "open": "Öppna",
       "failed": "Kunde inte skapa repertoaren."
+    },
+    "trainOrder": {
+      "option": {
+        "frequency": "Vanligaste linjerna först"
+      }
     }
   },
   "tournaments": {
