@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.999.1", date: "2026-11-19", changes: [
+    { en: "Repertoire trainer on narrow tablets and in small windows (600–768 px wide): the name of the repertoire in the top bar is readable again — the order button and the ⋮ menu now sit together in a second row instead of squeezing the name down to “S…”.",
+      de: "Repertoire-Trainer auf schmalen Tablets und in kleinen Fenstern (600–768 px breit): der Name des Repertoires in der Kopfleiste ist wieder lesbar — der Reihenfolge-Knopf und das ⋮-Menü stehen dort gemeinsam in einer zweiten Zeile, statt den Namen auf „S…“ zusammenzudrücken." },
+  ] },
   { version: "0.999.0", date: "2026-11-19", changes: [
     { en: "Tournament site: a tournament card opens the tournament page wherever you click on it — in the calendar list, in the map pop-up and in the calendar window; bookmark, calendar, hide and report stay separate buttons. The lines of your bookmarked tournaments work the same way. ClubHub: a line of the register opens the child’s sheet (the phone number still dials), and a group card opens the group — “Take attendance” stays its own button.",
       de: "Turnierseite: eine Turnierkarte öffnet die Turnierseite, egal wo man sie anklickt — in der Kalender-Liste, im Karten-Popup und im Kalenderfenster; Merken, Kalender, Ausblenden und Melden bleiben eigene Knöpfe. Die Zeilen der gemerkten Turniere ebenso. ClubHub: eine Zeile der Kartei öffnet das Karteiblatt (die Telefonnummer wählt weiterhin), eine Gruppenkarte öffnet die Gruppe — „Anwesenheit abhaken“ bleibt ein eigener Knopf." },

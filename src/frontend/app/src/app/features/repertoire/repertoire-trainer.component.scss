@@ -14,6 +14,18 @@
          nie ein Knopf allein in einer eigenen Zeile (DESIGN 5.2/5.5); der Titel (flex 1, min-width 0) kürzt sich. */
       .bar > .more-solo { order: 0; margin-left: 0; }
     }
+    /* Sichtprüfung 0.999.1: zwischen Handy und Tablet quer (600–768 px) passen Zurück, Name, Moduswahl, Reihenfolge-Knopf
+       und ⋮ nicht in EINE Zeile — der Name (flex 1, min-width 0) gab allen Platz ab und stand als „S…“ da. Dort gehen
+       Reihenfolge-Knopf und ⋮ GEMEINSAM in eine zweite Zeile (Knopf links, ⋮ rechts — wie am Handy; nie ein Knopf allein
+       in einer Zeile, DESIGN 5.5), der Name behält die erste. Der Umbruch (::after als volle Leerzeile ohne Höhe, deshalb
+       der halbe Zeilenabstand) hängt am ⋮ ohne more-solo: im Leerzustand und in der Gegner-Sitzung bleibt es bei einer
+       Zeile, und während des ersten Ladens steht das ⋮ schon dort, wo es danach steht (kein Sprung). */
+    @media (min-width: 600px) and (max-width: 768px) {
+      .bar:has(> .more:not(.more-solo)) { row-gap: 4px; }
+      .bar:has(> .more:not(.more-solo))::after { content: ''; flex-basis: 100%; height: 0; order: 1; }
+      .bar > .order-btn, .bar > .more:not(.more-solo) { order: 2; }
+      .bar > .more:not(.more-solo) { margin-left: auto; }
+    }
     /* d3-rk-trainer-leer-zwei-aktionen: Repertoirename als Titel (einzeilig mit „…“), „Repertoire-Trainer“ leise. */
     .bar .title { min-width: 0; }
     .rep-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
