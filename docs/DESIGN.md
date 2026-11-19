@@ -436,7 +436,10 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
     Kapitelblock liegt über der Fläche), E-Book-Regal (Titel; nicht bei Mehrfachauswahl), Trainerstunden (Karte und
     Trefferzeile → „Ansehen“), Wochenpost („Spielen“; nicht im Bearbeiten-Formular, die aufgeklappte Bestenliste liegt
     darüber), Punktepartie-Durchläufe, Partie-Analysen und Rekonstruktionen (Titel-Link), Favoriten („Nochmal lösen“),
-    Aufgabenblätter („Öffnen“), frühere Vorbereitungen (5.3).
+    Aufgabenblätter („Öffnen“), frühere Vorbereitungen (5.3). Turnierseite — Turnierkarte in Liste, Karten-Popup und
+    Kalenderfenster (Name → Detailseite, 8.2) und die Zeilen der Merkliste. ClubHub — Karteizeilen (Name → Karteiblatt,
+    die Telefonnummer bleibt eigenes Ziel) und Gruppenkarten (Name → Gruppenseite, 8.5). KidHubs Kacheln sind selbst
+    Links; LeagueHub hat keine Kachel mit einem einzelnen Hauptziel.
 
 ### 5.3 Listen und Tabellen
 
@@ -1266,7 +1269,10 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Merken | Kalender | Ausblenden | Melden (40 px); fehlt eine Aktion, hält `.tc-slot` den Platz. ≤ 600 px:
   Kurzwort unter jedem Symbol, Fläche ≥ 64×48, Radius 12, `justify-content: space-between`. Gemerkt =
   gefülltes Symbol + `color-mix(var(--mat-sys-primary) 16%)`. Gedrängte Fassung `.tc-overview` für Karten-Popup
-  und Kalenderfenster.
+  und Kalenderfenster. Die Karte ist **als Ganzes klickbar** (5.2): die Fläche gehört dem Namen (Detailseite), die vier
+  Aktionen und Angaben mit Tooltip bleiben eigene Ziele; in der Liste ist die umgebende `mat-card` die Kachel (samt
+  Polster), als Kurzansicht die Karte selbst. Ebenso die Zeilen der Merkliste (Fläche = Titel, „Merken aufheben“ eigenes
+  Ziel; solange ein Turnier geöffnet wird, ist die Zeile gesperrt).
 - **Karten-Pins** (`pin-palette.ts`, `map-pin-marker.ts`, Leaflet): eingefärbt nach **genau einem** Merkmal
   (Bedenkzeit | Turnierart | Nachwuchs | Geschlecht), Rand je Füllung von Hand, Zahl auf hellen Füllungen dunkel
   (`darkLabel`).
@@ -1452,6 +1458,10 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   (d4-c-gruppe-zwei-hauptknoepfe).
 - `.sheet` (Karteiblatt, Kopflinie `2px solid var(--rule)`), `.cards` (Liste in einer Karte), `.gate`
   (Sperrkarte mit `.gate-actions`), `.empty` (gestrichelter Rahmen), klebende `.form-save` über die volle Breite.
+- **Karteizeile und Gruppenkarte sind als Ganzes klickbar** (5.2): die Zeile der Kartei führt zum Karteiblatt (Ziel = der
+  Name), die Telefonnummer bleibt eigenes Ziel (wählt); die Gruppenkarte führt zur Gruppenseite, „Anwesenheit abhaken“
+  bleibt eigenes Ziel. Fokusring 3 px `--focus`, in der Kartei nach innen gesetzt (`.cards` schneidet ab), Tönung 5 %
+  `--ink`.
 - Anwesenheit `.matrix`: eigener Scrollkasten, Namensspalte klebt links, Zellen ✓/✗ 26 px.
 - Datum TT.MM.JJJJ; der Verknüpfungsstand des Kontos steht in der Fußzeile (r2-c-footer-link).
 - Gesperrte `.btn` mit voller Deckkraft: Schrift `--muted`, Rahmen gestrichelt in `--muted`, `.btn.primary` auf 14 %
@@ -1533,7 +1543,6 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | Handy-Grenze in TS | `SolveModeService.narrow()` `max-width: 600px` vs. CSS `599.98px` | bei 600 px genau ein Pixel Überlappung; angleichen |
 | Kommentar-Markierung | `UI-Sweep r3: …` ohne Datum/ID neben `UI-Sweep 2026-10-11 (r2-…)` | immer Datum + ID |
 | KidHub dunkel | bewusst nicht vorhanden | bleibt so (Entscheidung) |
-| Kacheln, die noch folgen (5.2) | Turnierkarte und Merkliste der Turnierseite, ClubHub-Kartei und -Gruppen: noch nur Titel bzw. Knopf klickbar | Umstellung auf `rh-tile` in den nächsten Fassungen |
 | Kacheln ohne `rh-tile` (5.2) | bewusst nicht umgestellt, weil ohne eindeutiges Hauptziel oder Inhaltskarte: Stellungen merken (`remembered`: Titel-Link → Quelle, Knopf → Analysebrett), Woodpecker-Übersicht (eine Inhaltskarte mit Zyklustabelle; „Zyklus starten“ ändert Daten), Punktepartie-/Katalog-/Meisterpartien-Zeilen (Listen mit Startknopf, der etwas anlegt), Freundeszeilen (mehrere gleichrangige Ziele) | neue und angefasste Kacheln über `rh-tile`; ohne Hauptziel bleibt es beim Knopf |
 | Klick am Container statt am Ziel | Analyseaufträge (Kopf `role="button"` mit `stopPropagation` an den Knöpfen), Rekonstruktions-Teile und Endlos-Verlauf am Handy (`(click)` an der Karte, kein Tastaturziel) | beim Anfassen auf ein echtes `<button>`/`<a>` als `rh-tile-target` umstellen |
 
@@ -1543,6 +1552,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-19 | 0.999.0 · Turnierseite/ClubHub | „Ganze Kachel klickbar“ (5.2) auf den anderen Oberflächen: Turnierkarte in Liste, Karten-Popup und Kalenderfenster sowie Merkliste (8.2); ClubHub-Karteizeilen und -Gruppenkarten mit Fokusring/Tönung aus `--focus`/`--ink` (8.5). KidHub war schon so (Kacheln sind Links), LeagueHub hat keine Kachel mit einem Hauptziel | Die Regel gilt für alle fünf Oberflächen | Nutzerwunsch 19.11. („immer komplett klickbar“) |
 | 2026-11-19 | 0.998.0 · RookHub | „Ganze Kachel klickbar“ (5.2) für die übrigen Karten: Kurskarten (Fläche = Titel-Link → Detailseite, aufgeklappter Kapitelblock über der Fläche), E-Book-Regal (nicht bei Mehrfachauswahl), Trainerstunden (Karte und Trefferzeile), Wochenpost (nicht im Formular, Bestenliste über der Fläche), Punktepartie-Durchläufe, Partie-Analysen, Rekonstruktionen, Favoriten, Aufgabenblätter, frühere Vorbereitungen (5.3); Tooltip am Hauptziel verzögert | Dieselbe Regel in allen Bereichen statt nur auf Startseite und Repertoire-Liste; ein sofortiger Tooltip am Hauptziel blitzte sonst bei jeder Mausbewegung über die Karte auf | Nutzerwunsch 19.11. („immer komplett klickbar“) |
 | 2026-11-19 | 0.997.0 · alle Oberflächen | Neue allgemeine Regel „Ganze Kachel klickbar“ (5.2) mit dem Baustein `rh-tile` / `rh-tile-target` (`src/_tile.scss`): Fläche = Hauptaktion (Titel-Link, sonst Haupt-/erster Knopf), Nebenelemente bleiben eigene Ziele, nicht klickbar bei gesperrtem Hauptziel und im Bearbeiten-Modus, die Fläche ändert nie Daten, ohne eindeutiges Hauptziel keine Kachel; Tönung beim Überfahren/Drücken und Fokusring um die ganze Kachel (E-Ink 3 px schwarz). Zuerst Dashboard (Kacheln, Kurs-Zeilen, Woodpecker — 8.1) und Repertoire-Karten; „Listenzeile mit zweitem Ziel“ (5.3) ist die Zeilen-Form davon; nicht Umgestelltes in Abschnitt 10 | An vielen Kacheln war nur der Titel oder ein Knopf klickbar; Einzellösungen mit `(click)` am Container verlieren Mittelklick, Tastatur und saubere Nebenziele | Nutzerwunsch 19.11. („hast du oft kacheln wo nur einzelne teile klickbar sind. mach die mal immer komplett klickbar“) |
 | 2026-11-19 | 0.996.0 · Repertoire-Trainer | Reihenfolge der Linien als Einstellung je Repertoire: im Trainer ein beschrifteter Rahmenknopf mit der geltenden Reihenfolge statt des Umschalters „Häufigste Linien zuerst“ (8.1); EIN Einstellungs-Dialog mit Optionsgruppe (`mat-radio-group`, je Wert Name + ein Erklärsatz, „Speichern“ erst auf Knopfdruck, Ladefehler statt Auswahl) für Trainer, ⋮ der Linienleiste und ⋮ der Repertoire-Karte (5.6) | Fünf sich ausschließende Reihenfolgen passen nicht in einen Umschalter; die Wahl gilt je Nutzer und Repertoire auf allen Geräten und muss auch außerhalb des Trainers erreichbar sein | Nutzerwunsch 19.11. |

@@ -42,6 +42,11 @@ html {
   --bad-ink: #ffffff;      /* Schrift auf gefülltem --bad (6,5:1); d1-x-account-delete-warn-ignored */
   --bad-soft: #f9e4e2;
   --focus: #1c5fd4;
+  /* Ganze Kachel klickbar (src/_tile.scss, DESIGN 5.2): Fokusring und Tönung in den Farben der Kartei. */
+  --rh-tile-focus: var(--focus);
+  --rh-tile-focus-width: 3px;
+  --rh-tile-hover: color-mix(in srgb, var(--ink) 5%, transparent);
+  --rh-tile-pressed: color-mix(in srgb, var(--ink) 9%, transparent);
   --slab: "Zilla Slab", Rockwell, "Roboto Slab", Georgia, serif;
   --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -259,6 +264,8 @@ html.dark-theme .register > .letter { color: var(--linen-muted); }
 .cards > li.cards-head { padding: 8px 14px 4px; font: 600 15px/1.2 var(--slab); color: var(--muted); }
 .register.coaches { margin-top: 6px; }
 .kid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 14px; align-items: center; padding: 10px 14px; }
+/* Ganze Zeile klickbar (DESIGN 5.2): .cards schneidet ab (overflow) — der Fokusring der Zeile sitzt deshalb innen. */
+.kid.rh-tile { --rh-tile-focus-offset: -3px; }
 .kid-main { color: inherit; text-decoration: none; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 2px 0; }
 .kid-text { display: grid; gap: 2px; min-width: 0; }
 .kid-main:hover .kid-name { text-decoration: underline; text-underline-offset: 3px; }

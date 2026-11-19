@@ -20,6 +20,7 @@ import { TournamentDirectoryService } from './tournament-directory.service';
 import { DirectoryEntry, DirectoryIgnoredChange, isPlaceholderLocation, SameNameMark } from './tournament-directory.model';
 import { Subject } from 'rxjs';
 import { DirectoryNamePipe } from './directory-name.pipe';
+import { TILE_TOOLTIP_DELAY_MS } from '@rh/shared/icon-label/icon-label.directive';
 
 /**
  * Die Kurzansicht EINES Turniers — Name, Termin, Ort, Merkmale und vier Aktionen.
@@ -50,11 +51,16 @@ import { DirectoryNamePipe } from './directory-name.pipe';
     TranslatePipe,
   ],
   template: `
-    <div class="tc" [class.tc-overview]="overview" [class.cancelled]="entry.cancelled"
+    <!-- Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört dem Namen (Detailseite), die vier Aktionen und die Angaben
+         mit Tooltip bleiben eigene Ziele. In der Kalender-Liste ist die umgebende mat-card die Kachel (samt ihrem
+         Polster), im Karten-Popup und im Kalenderfenster (overview) diese Karte selbst. -->
+    <div class="tc" [class.rh-tile]="overview" [class.tc-overview]="overview" [class.cancelled]="entry.cancelled"
          [class.ignored]="ignored()">
       <div class="tc-head">
-        <button type="button" class="tc-name" (click)="selected.emit(entry)"
-                [matTooltip]="'tournamentDirectory.card.openDetail' | translate">
+        <!-- Der Zeiger über der Karte gilt als „über dem Namen“: Tooltip verzögert und über dem Namen. -->
+        <button type="button" class="tc-name rh-tile-target" (click)="selected.emit(entry)"
+                [matTooltip]="'tournamentDirectory.card.openDetail' | translate" [matTooltipShowDelay]="tooltipDelay"
+                matTooltipPosition="above">
           {{ entry | directoryName }}
         </button>
       </div>
@@ -222,8 +228,8 @@ import { DirectoryNamePipe } from './directory-name.pipe';
       cursor: pointer;
     }
 
+    /* Unterstrichen, solange der Zeiger irgendwo über der Fläche der Karte steht; den Fokusring trägt die Kachel (DESIGN 5.2). */
     .tc-name:hover { text-decoration: underline; }
-    .tc-name:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; }
 
     /* z3-t-karte-ortssymbol: Symbol an der ersten Zeile und nie gequetscht — bei zweizeiliger Adresse rutschte es sonst
        schmaler in die Mitte und die Textkante sprang von Karte zu Karte. */
@@ -310,6 +316,8 @@ export class TournamentCardComponent {
   private readonly translate = inject(TranslateService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  /** Tooltip am Namen (Hauptziel der ganz klickbaren Karte) verzögert, siehe Template. */
+  readonly tooltipDelay = TILE_TOOLTIP_DELAY_MS;
 
   /** Ohne Anmeldung (Kalender seit 0.643.0 offen) gibt es nichts auszublenden — der Knopf faellt weg. */
   get loggedIn(): boolean { return this.auth.isLoggedIn; }

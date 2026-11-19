@@ -86,10 +86,12 @@ import { TournamentDatePipe } from '../../core/tournament-date';
     </div>
 
     <ng-template #row let-sub>
-      <mat-card class="row">
+      <!-- Ganze Zeile klickbar (DESIGN 5.2): die Fläche gehört dem Titel-Knopf, „Merken aufheben“ bleibt eigenes Ziel;
+           solange ein Turnier geöffnet wird (Knopf gesperrt), ist die Fläche es auch. -->
+      <mat-card class="row rh-tile">
         <!-- Der TITEL ist der Weg ins Turnier. Ist es noch nicht geholt, wird der Auftrag
              eingereiht und die Seite wechselt hin, sobald er durch ist. -->
-        <button type="button" class="row-open" (click)="open(sub)"
+        <button type="button" class="row-open rh-tile-target" (click)="open(sub)"
                 [disabled]="opening() !== null"
                 [class.busy]="opening() === sub.crawlerTournamentId">
           <span class="row-name">{{ sub.tournamentName }}</span>

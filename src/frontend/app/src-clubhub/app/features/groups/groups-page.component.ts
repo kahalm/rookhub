@@ -59,9 +59,11 @@ export function scheduleText(g: Pick<GroupRow, 'weekday' | 'schedule'>): string 
       }
       <ul class="groups">
         @for (g of groups(); track g.id) {
-          <li class="group" [class.archived]="g.archived">
+          <!-- Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört der Gruppenseite (Name), „Anwesenheit abhaken“ bleibt
+               eigenes Ziel. -->
+          <li class="group rh-tile" [class.archived]="g.archived">
             <div>
-              <h2><a [routerLink]="['/gruppen', g.id]">{{ g.name }}</a></h2>
+              <h2><a class="rh-tile-target" [routerLink]="['/gruppen', g.id]">{{ g.name }}</a></h2>
               <p class="kid-meta">
                 @if (schedule(g); as s) { <span>{{ s }}</span> }
                 <span>{{ g.memberCount }} {{ g.memberCount === 1 ? 'Kind' : 'Kinder' }}</span>

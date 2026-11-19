@@ -29,6 +29,11 @@ html {
   --ok: #1f7a4d;
   --warn: #b45309;         /* unsichere Stelle eines eingelesenen Formulars */
   --focus: #1c5fd4;
+  /* Ganze Kachel klickbar (src/_tile.scss, DESIGN 5.2): Fokusring und Tönung in den Farben von LeagueHub. */
+  --rh-tile-focus: var(--focus);
+  --rh-tile-focus-width: 3px;
+  --rh-tile-hover: color-mix(in srgb, var(--ink) 5%, transparent);
+  --rh-tile-pressed: color-mix(in srgb, var(--ink) 9%, transparent);
   --cond: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
 }

@@ -4,6 +4,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService } from '../../core/club-api.service';
 import { GroupRow, MemberRow } from '../../core/club.models';
 import { MembersPageComponent, matchesName } from './members-page.component';
+import { clickCenter, clickFreeSpot, expectWholeTileClickable, recordNavigation } from '@rh/testing/tile-hit';
 
 const KID = (id: number, firstName: string, lastName: string, extra: Partial<MemberRow> = {}): MemberRow =>
   ({ id, firstName, lastName, birthYear: null, level: null, archived: false, isTrainer: false, linked: false, groups: [], contacts: [], ...extra });
@@ -43,6 +44,25 @@ describe('MembersPageComponent (Kartei)', () => {
       KID(2, 'Ben', 'Berger', { groups: [{ id: 2, name: 'Turnier' }] }),
       KID(3, 'Ivo', 'Šarić', { groups: [{ id: 1, name: 'Anfänger' }] }),
     ]);
+  });
+
+  // Ganze Zeile klickbar (DESIGN 5.2): die Fläche gehört dem Karteiblatt (Name), die Telefonnummer bleibt eigenes Ziel.
+  it('Karteizeile als Ganzes klickbar: Fläche → Karteiblatt; die Telefonnummer wählt nur', async () => {
+    await create();
+    const went = recordNavigation();
+    const rows = Array.from(el().querySelectorAll<HTMLElement>('li.kid'));
+    expect(rows.length).toBe(3);
+    for (const row of rows) expectWholeTileClickable(row, row.querySelector('a.kid-main')!);
+    const anna = rows[0], main = anna.querySelector<HTMLElement>('a.kid-main')!;
+    expect(main.getAttribute('href')).toBe('/kind/1');
+    clickFreeSpot(anna, main);
+    clickCenter(anna.querySelector('.kid-meta .chip')!);
+    clickCenter(anna.querySelector('.kid-call span')!);
+    expect(went()).toEqual(['/kind/1', '/kind/1', '/kind/1']);
+    const tel = anna.querySelector<HTMLAnchorElement>('.kid-call a')!;
+    tel.addEventListener('click', e => e.preventDefault());
+    expect(clickCenter(tel)).toBe(tel);
+    expect(went().length).toBe(3);
   });
 
   it('ohne Club-Recht nur der Hinweis, kein Abruf — mit dem Weg zum Verknüpfen', async () => {

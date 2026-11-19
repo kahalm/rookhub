@@ -201,7 +201,8 @@
       @if (upcomingEntries().length > 0) {
         <div class="entry-grid">
           @for (entry of upcomingEntries(); track trackById($index, entry)) {
-            <mat-card class="entry-card">
+            <!-- Ganze Karte klickbar (DESIGN 5.2): Hauptziel ist der Name in app-tournament-card. -->
+            <mat-card class="entry-card rh-tile">
               <app-tournament-card [entry]="entry" [sameName]="sameNameIds().get(entry.id) ?? null" (selected)="select($event)"
                                    (ignoredChanged)="onIgnoredChanged($event)" />
             </mat-card>
@@ -214,7 +215,7 @@
           <p class="muted block-hint">{{ 'tournamentDirectory.ongoing.hint' | translate }}</p>
           <div class="entry-grid">
             @for (entry of ongoingEntries(); track trackById($index, entry)) {
-              <mat-card class="entry-card">
+              <mat-card class="entry-card rh-tile">
                 <app-tournament-card [entry]="entry" [sameName]="sameNameIds().get(entry.id) ?? null" (selected)="select($event)"
                                      (ignoredChanged)="onIgnoredChanged($event)" />
               </mat-card>

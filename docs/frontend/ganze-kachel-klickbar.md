@@ -100,3 +100,7 @@ Bearbeiten-Modus und das gesperrte Hauptziel. Aus den anderen Oberflächen: `@rh
 - RookHub: Dashboard (Kacheln, Kurs-Zeilen der angepinnten Kurse, Woodpecker-Kachel), Repertoire-Karten, Kurskarten,
   E-Book-Regal (Bücher und Sammlungen), Trainerstunden (Karten und Trefferzeilen), Wochenpost, Punktepartie-Durchläufe,
   Partie-Analysen, Rekonstruktionen, Favoriten, Aufgabenblätter, frühere Vorbereitungen (`/prep`).
+- Turnierseite: Turnierkarte (in der Kalender-Liste ist die umgebende `mat-card` die Kachel, im Karten-Popup und im
+  Kalenderfenster die Karte selbst), Zeilen der Merkliste.
+- ClubHub: Karteizeilen (`.kid`, Fokusring nach innen wegen `overflow` der Liste) und Gruppenkarten.
+- KidHub: nichts umzustellen (die Kacheln sind selbst `<a>`); LeagueHub: keine Kachel mit einem einzelnen Hauptziel.

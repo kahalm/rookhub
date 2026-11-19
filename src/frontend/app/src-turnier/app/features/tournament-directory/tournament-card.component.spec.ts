@@ -10,6 +10,7 @@ import { DirectoryEntry, DirectoryIgnoredChange } from './tournament-directory.m
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { Subject } from 'rxjs';
 import { directoryCalendarEvent } from './directory-calendar-event';
+import { clickCenter, clickFreeSpot, expectWholeTileClickable } from '@rh/testing/tile-hit';
 
 function entry(over: Partial<DirectoryEntry> = {}): DirectoryEntry {
   return {
@@ -99,6 +100,51 @@ describe('TournamentCardComponent', () => {
     setup({ name: cut, chessResultsId: '1405166' });
     const name = (fixture.nativeElement as HTMLElement).querySelector('.tc-name')!;
     expect(name.textContent!.trim()).toBe(cut + '…');
+  });
+
+  // Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört dem Namen (Detailseite); die vier Aktionen und Angaben mit
+  // Tooltip bleiben eigene Ziele. In der Liste ist die umgebende mat-card die Kachel, als Kurzansicht die Karte selbst.
+  function hitTestIn(tile: HTMLElement) {
+    const name = tile.querySelector<HTMLElement>('button.tc-name')!;
+    const picked: string[] = [];
+    component.selected.subscribe(e => picked.push(e.id));
+    const acts = { bookmark: spyOn(component, 'bookmark'), calendar: spyOn(component, 'addToCalendar'),
+      ignore: spyOn(component, 'toggleIgnore'), report: spyOn(component, 'report') };
+    expectWholeTileClickable(tile, name);
+    clickFreeSpot(tile, name);
+    clickCenter(tile.querySelector('.tc-line span')!);
+    clickCenter(tile.querySelector('.tc-meta .badge:not(.mat-mdc-tooltip-trigger)')!);
+    expect(picked).toEqual(['1457129', '1457129', '1457129']);
+    for (const b of Array.from(tile.querySelectorAll<HTMLElement>('.tc-actions button'))) clickCenter(b);
+    expect(Object.values(acts).map(s => s.calls.count())).toEqual([1, 1, 1, 1]);
+    clickCenter(tile.querySelector('.approx')!);   // Symbol mit Tooltip: eigenes Ziel, löst nichts aus
+    expect(picked.length).toBe(3);
+  }
+
+  it('Kurzansicht (Karten-Popup, Kalenderfenster) als Ganzes klickbar: Fläche → Detailseite, Aktionen bleiben eigene Ziele', () => {
+    setup({ geoSource: 'Region', distanceKm: 12 });
+    fixture.componentRef.setInput('overview', true);
+    fixture.detectChanges();
+    const tile = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.tc')!;
+    expect(tile.classList).toContain('rh-tile');
+    hitTestIn(tile);
+  });
+
+  it('in der Liste ist die umgebende Karte die Kachel: auch ihr Polster führt zur Detailseite', () => {
+    setup({ geoSource: 'Region', distanceKm: 12 });
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('.tc')!.classList).not.toContain('rh-tile');
+    // Wie tournament-directory.component.html: <mat-card class="entry-card rh-tile"><app-tournament-card …/></mat-card>
+    const card = document.createElement('div');
+    card.className = 'rh-tile';
+    card.style.cssText = 'display: flex; flex-direction: column; width: 340px; padding: 12px 14px; border-radius: 12px;';
+    host.parentElement!.insertBefore(card, host);
+    card.appendChild(host);
+    hitTestIn(card);
+    const pad = card.getBoundingClientRect();
+    expect(document.elementFromPoint(pad.left + 4, pad.top + 4)).withContext('Polster der Karte').toBe(card.querySelector('.tc-name'));
+    card.parentElement!.insertBefore(host, card);
+    card.remove();
   });
 
   it('bietet vier Aktionen an', () => {

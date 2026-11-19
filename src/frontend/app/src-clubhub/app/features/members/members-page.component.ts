@@ -108,10 +108,12 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
         @for (r of registers(); track r.letter) {
           <section class="register">
             <h2 class="letter" aria-hidden="true">{{ r.letter }}</h2>
+            <!-- Ganze Zeile klickbar (DESIGN 5.2): die Fläche gehört dem Karteiblatt (Name), die Telefonnummer bleibt
+                 eigenes Ziel. -->
             <ul class="cards">
               @for (m of r.items; track m.id) {
-                <li class="kid">
-                  <a class="kid-main" [routerLink]="['/kind', m.id]">
+                <li class="kid rh-tile">
+                  <a class="kid-main rh-tile-target" [routerLink]="['/kind', m.id]">
                     @if (hasPhotos()) { <ch-member-photo [memberId]="m.id" [version]="m.photoVersion" [name]="m.firstName" /> }
                     <span class="kid-text">
                       <span class="kid-name"><b>{{ head(m) }}</b>{{ tail(m) }}</span>
@@ -139,8 +141,8 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
             <ul class="cards">
               <li class="cards-head">Trainer</li>
               @for (m of coaches(); track m.id) {
-                <li class="kid">
-                  <a class="kid-main" [routerLink]="['/kind', m.id]">
+                <li class="kid rh-tile">
+                  <a class="kid-main rh-tile-target" [routerLink]="['/kind', m.id]">
                     @if (hasPhotos()) { <ch-member-photo [memberId]="m.id" [version]="m.photoVersion" [name]="m.firstName" /> }
                     <span class="kid-text"><span class="kid-name"><b>{{ head(m) }}</b>{{ tail(m) }}</span></span>
                   </a>

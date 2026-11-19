@@ -8,6 +8,7 @@ import { Subject } from 'rxjs';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { Subscription } from '@rh/core/models';
 import { TournamentListComponent } from './tournament-list.component';
+import { clickCenter, clickFreeSpot, expectTileNotClickable, expectWholeTileClickable } from '@rh/testing/tile-hit';
 
 /**
  * Termine relativ zum Tagesdatum: upcoming()/past() vergleichen mit dem heutigen Datum. Ein fester
@@ -101,6 +102,29 @@ describe('TournamentListComponent', () => {
     const page = fixture.nativeElement as HTMLElement;
     expect(page.textContent).toContain('tournaments.list.emptyBookmarks');
     expect(page.querySelector('app-load-error')).toBeNull();
+  });
+
+  // Ganze Zeile klickbar (DESIGN 5.2): die Fläche gehört dem Titel-Knopf (Turnier öffnen), „Merken aufheben" bleibt
+  // eigenes Ziel; solange ein Turnier geöffnet wird (Knopf gesperrt), ist auch die Fläche nicht klickbar.
+  it('Merkzeile als Ganzes klickbar: Fläche → Turnier öffnen; „Merken aufheben" löst nur sich selbst aus', async () => {
+    await setup([sub({ tournamentName: 'Schach Tirol Open mit einem sehr langen Namen 2026' })]);
+    fixture.detectChanges();
+    const open = spyOn(component, 'open');
+    const unbookmark = spyOn(component, 'unbookmark');
+    const row = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('mat-card.row')!;
+    const title = row.querySelector<HTMLElement>('button.row-open')!;
+    expectWholeTileClickable(row, title);
+    clickFreeSpot(row, title);
+    clickCenter(row.querySelector('.row-date')!);
+    expect(open).toHaveBeenCalledTimes(2);
+    clickCenter(row.querySelector('.row-drop')!);
+    expect(unbookmark).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledTimes(2);
+
+    (component.opening as unknown as { set(v: string | null): void }).set('1107064');
+    fixture.detectChanges();
+    expect(title.hasAttribute('disabled')).toBeTrue();
+    expectTileNotClickable(row, title);
   });
 
   /** F6-011: dieselbe Aktion heisst ueberall „Merken"/„Merken aufheben" — hier stand „Abo beenden". */

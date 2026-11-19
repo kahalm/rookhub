@@ -6,6 +6,38 @@ _Legende: `[ ]` offen · `[~]` Hauptteil erledigt, Rest bewusst geparkt (Begrün
 `[x]` erledigt, bleibt als Beleg stehen. Erledigte Einzelfunde ohne weiteren Wert stehen unten
 im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
+## [~] Ganze Kachel klickbar (`rh-tile`) — gebaut in 0.997.0–0.999.0, Reste (2026-11-19)
+
+Gebaut: Baustein `rh-tile` / `rh-tile-target` (`src/frontend/app/src/_tile.scss`), Regel `docs/DESIGN.md` 5.2, Anleitung
+`docs/frontend/ganze-kachel-klickbar.md`, Treffertest `src/app/testing/tile-hit.ts`. Umgestellt: Startseite, Repertoire-,
+Kurs-, E-Book-, Trainerstunden-, Wochenpost-, Punktepartie-, Analyse-, Rekonstruktions-, Favoriten- und
+Aufgabenblatt-Karten, Turnierkarte + Merkliste, ClubHub-Kartei + Gruppen. Offen bzw. bewusst nicht gemacht:
+
+- **Entscheidungen, die der Nutzer anders wollen könnte:** (1) Kurskarte: die Fläche gehört dem Titel-Link (Detailseite),
+  nicht „Der Reihe nach“ — wie bei den Kurs-Zeilen der Startseite. (2) Woodpecker-Kachel im Zustand „bereit“: die Fläche
+  führt zur Übersicht, „Zyklus N starten“ bleibt dem Knopf vorbehalten (ändert Daten, die Frist beginnt). (3) Favoriten:
+  die Fläche gehört der ersten Aktion „Nochmal lösen“.
+- **Bewusst keine Kachel** (DESIGN Abschnitt 10): „Stellungen merken“ (Titel-Link → Quelle, Knopf → Analysebrett — kein
+  eindeutiges Hauptziel), Woodpecker-Übersicht (eine Inhaltskarte mit Zyklustabelle), Zeilen von Punktepartie-Liste,
+  Katalog und „Ähnliche Meisterpartien“ (Listen, deren Startknopf etwas anlegt), Freundeszeilen (mehrere gleichrangige
+  Ziele), Partienliste (Tabelle).
+- **Klick am Container ohne echtes Ziel** (vorbestehend, nicht angefasst): Analyseaufträge (Kopf `role="button"` mit
+  `stopPropagation` an den Knöpfen), Rekonstruktions-Teile und Endlos-Verlauf am Handy (`(click)` an der Karte, kein
+  Tastaturziel). Beim Anfassen auf `<button class="rh-tile-target">` umstellen.
+- **Spielweise-Dialog bleibt nach „Zurück“ stehen** (vorbestehend, beim Durchklicken am 19.11. gefunden, auch mit dem
+  Stand vor der Umstellung nachgestellt): `/weekly` → „Durchspielen“ → Browser-Zurück, bevor der Dialog bedient wurde —
+  der Dialog samt Abdunklung liegt dann über der Wochenpost-Liste. Vermutlich öffnet `SolveModeService.openDialog` erst
+  nach dem Laden und ohne `closeOnNavigation`; nicht untersucht.
+- **`title` an gekürztem Text unter der Fläche** erscheint nicht mehr (Repertoire-Karte `.rep-name`, Woodpecker-Übersicht
+  nicht betroffen). Der volle Name steht nach dem Klick auf der Seite; eine Alternative wäre, lange Titel zweizeilig zu
+  setzen.
+- **UI-Sweep prüft keine Trefferflächen.** Das Prüfskript der Umstellung (Treffertest je Kachel im echten Browser, auch
+  Chromium 111) lag nur im Sitzungs-Scratchpad; als Sweep-Prüfung „Kachel: Fläche trifft Hauptziel“ (`checks.mjs`) wäre
+  es dauerhaft.
+- **Nicht im echten Browser durchgeklickt** (keine Dev-Daten; nur Specs): Woodpecker-Kachel „bereit“/„Pause“,
+  Repertoire-Liste offline, E-Book-Sammlungskarte, Wochenpost mit aufgeklappter Bestenliste, Karten-Popup und
+  Kalenderfenster der Turnierseite.
+
 ## [~] Spielervorbereitung: „Frühere Vorbereitungen“ auf `/prep` — gebaut in 0.995.0, Reste (2026-11-19)
 
 Gebaut: `GET /api/prep/history` (`PrepHistoryService`) + Abschnitt unter dem Suchfeld (`prep-search.component`), Doku in
