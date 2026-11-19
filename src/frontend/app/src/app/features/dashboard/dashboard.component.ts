@@ -128,7 +128,10 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
           @let sub = tile.subtitle();
           <!-- UI-Sweep 2026-10-11 (r2-rk-dash-stretch): ab zwei angepinnten Kursen geht die Kachel über die volle
                Breite (Kurse nebeneinander) — sonst streckte sie die Nachbarkacheln ihrer Rasterzeile auf ~440 px. -->
-          <mat-card cdkDrag [cdkDragDisabled]="!editing"
+          <!-- Ganze Kachel klickbar (DESIGN 5.2): die Fläche gehört der ersten Aktion der Kachel (Woodpecker: siehe
+               woodpecker-tile). Nicht im Anpassen-Modus (dort Griff, Auf/Ab, Auge) und nicht bei den Sammel-Kacheln:
+               bei den angepinnten Kursen ist jede Kurs-Zeile selbst die Einheit, die Uhr-Kachel hat kein Sprungziel. -->
+          <mat-card cdkDrag [cdkDragDisabled]="!editing" [class.rh-tile]="!editing && wholeTile(tile)"
                     [class.tile-off]="editing && !isEnabled(tile)" [class.tile-editing]="editing"
                     [class.tile-wide]="tile.id === 'pinnedCourses' && pinnedCourses.length > 1">
             @if (editing) {
@@ -172,10 +175,12 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
                 } @else {
                   @for (c of pinnedCourses; track c.bookId) {
                     @let done = c.puzzleCount > 0 && c.solvedCount >= c.puzzleCount;
-                    <div class="pinned-course">
+                    <!-- Die Kurs-Zeile ist als Ganzes klickbar: Ziel = der Name (Kurs-Detailseite), die zwei
+                         Start-Knöpfe bleiben eigene Ziele (DESIGN 5.2). -->
+                    <div class="pinned-course" [class.rh-tile]="!editing">
                       <div class="pc-header">
                         <!-- Name klickbar → Kurs-Detailseite (Kapitel-Verwaltung/Metadaten). -->
-                        <a class="pc-name" [routerLink]="['/courses', c.bookId]"
+                        <a class="pc-name rh-tile-target" [routerLink]="['/courses', c.bookId]"
                            [title]="c.displayName">{{ c.displayName }}</a>
                         <span class="pc-prog" [class.pc-prog-done]="done">
                           @if (done) { <mat-icon class="pc-done-icon">emoji_events</mat-icon> }
@@ -198,7 +203,7 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
                 }
               </mat-card-content>
               <mat-card-actions>
-                <button mat-button routerLink="/courses">{{ 'dashboard.pinnedCourses.viewAll' | translate }}</button>
+                <a mat-button routerLink="/courses">{{ 'dashboard.pinnedCourses.viewAll' | translate }}</a>
               </mat-card-actions>
             } @else if (tile.id === 'woodpecker') {
               <app-woodpecker-tile [plan]="woodpeckerPlan" (planChange)="setWoodpeckerPlan($event)" />
@@ -208,15 +213,16 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
               </mat-card-content>
             } @else {
               <mat-card-actions>
-                @for (b of tile.buttons; track b.labelKey) {
+                @for (b of tile.buttons; track b.labelKey; let firstBtn = $first) {
                   @if (b.action; as act) {
                     <!-- Sprung auf eine andere Oberfläche (LeagueHub): Knopf statt Link, der Einmal-Code entsteht erst
                          beim Klick; das Symbol sagt, dass man RookHub verlässt (wie im Menü). -->
-                    <button mat-button class="tile-jump" (click)="act()">
+                    <button mat-button class="tile-jump" [class.rh-tile-target]="firstBtn" (click)="act()">
                       <mat-icon>open_in_new</mat-icon>{{ b.labelKey | translate }}
                     </button>
                   } @else {
-                    <button mat-button [routerLink]="b.link">{{ b.labelKey | translate }}</button>
+                    <!-- Echte Links (Mittelklick, „in neuem Tab öffnen“); der erste trägt die Fläche der Kachel. -->
+                    <a mat-button [class.rh-tile-target]="firstBtn" [routerLink]="b.link">{{ b.labelKey | translate }}</a>
                   }
                 }
               </mat-card-actions>
@@ -288,7 +294,7 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
        (schmale Kachel der 5-Spalten-Breitstufe); (a1-rk-dash-play-versatz) ohne Material-Mindestbreite, damit ein
        kurzes Wort („Play“) nicht zentriert eingerückt steht — linksbündig wie die Nachbarkacheln. */
     .dashboard-grid > mat-card > mat-card-actions { flex-wrap: wrap; }
-    .dashboard-grid > mat-card > mat-card-actions > button { min-width: 0; white-space: nowrap; }
+    .dashboard-grid > mat-card > mat-card-actions > button, .dashboard-grid > mat-card > mat-card-actions > a { min-width: 0; white-space: nowrap; }
     /* UI-Sweep 2026-10-11 (r2-rk-dash-stretch): die hohe Kachel steht allein in ihrer Zeile, die Kurse darin im Raster. */
     .dashboard-grid > mat-card.tile-wide { grid-column: 1 / -1; }
     /* b1-rk-dash-raster-angepinnte-kurse: kleine Kacheln füllen die Lücke vor der breiten Kurs-Kachel (Tablet: sonst
@@ -304,8 +310,10 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
     .tile-controls .tc-drag { cursor: grab; }
     .tile-controls .tc-drag:active { cursor: grabbing; }
     .cdk-drag-preview .tc-drag { cursor: grabbing; }
-    .tile-shield { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
-    .tile-controls { position: absolute; top: 6px; right: 6px; z-index: 2; display: flex; align-items: center; gap: 0;
+    /* Ebene 2: Materials Knopfbeschriftung liegt selbst auf z-index 1 — bei Gleichstand gewann sie (später im Markup),
+       ein Klick genau auf den Knopftext navigierte trotz Schild. */
+    .tile-shield { position: absolute; inset: 0; z-index: 2; border-radius: inherit; }
+    .tile-controls { position: absolute; top: 6px; right: 6px; z-index: 3; display: flex; align-items: center; gap: 0;
       background: color-mix(in srgb, var(--mat-sys-surface-container-high, #2a2a2a) 92%, transparent);
       border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
       border-radius: 999px; padding: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.22); }
@@ -551,6 +559,12 @@ export class DashboardComponent implements OnInit {
 
   isEnabled(tile: TileDef): boolean {
     return !this.hidden.has(tile.id);
+  }
+
+  /** Ob die Kachel als Ganzes klickbar ist (DESIGN 5.2): nicht die Sammel-Kachel der angepinnten Kurse (dort ist jede
+   *  Kurs-Zeile die Einheit) und nicht die Uhr-Kachel (Bedienfeld ohne Sprungziel). */
+  wholeTile(tile: TileDef): boolean {
+    return tile.id !== 'pinnedCourses' && tile.id !== 'activityTimer';
   }
 
   /** Woodpecker-Stand setzen (eigener Abruf oder neuer Stand aus der Kachel, z. B. gestarteter Zyklus) und den

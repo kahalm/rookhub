@@ -120,6 +120,13 @@ html.eink {
   --mat-form-field-outlined-focus-outline-color: #000;
   --mat-form-field-outlined-focus-label-text-color: #000;
 }
+// Ganze Kachel klickbar (_tile.scss, DESIGN 5.2): der EINE Fokusrahmen sitzt an der Kachel (3 px schwarz), das Hauptziel
+// darin zeigt keinen zweiten; beim Überfahren/Drücken keine Tönung (helle Grautöne tragen auf E-Ink nichts, 3.6).
+@supports selector(:has(*)) {
+  html.eink .rh-tile:has(.rh-tile-target:focus-visible) { outline: 3px solid #000 !important; outline-offset: var(--rh-tile-focus-offset); }
+  html.eink .rh-tile .rh-tile-target:focus-visible { outline: none !important; }
+  html.eink .rh-tile:has(.rh-tile-target:is(:hover, :active)) { background-image: none; }
+}
 html.eink .mat-button-toggle-checked,
 html.eink [aria-pressed='true'],
 html.eink [aria-current='page'],

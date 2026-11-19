@@ -6,6 +6,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { PrepApiService } from './prep-api.service';
 import { PREP_SEARCH_DELAY_MS, PrepSearchComponent } from './prep-search.component';
 import { PrepHistoryEntry, PrepHit } from './prep.models';
+import { clickCenter, clickFreeSpot, expectWholeTileClickable, recordNavigation } from '../../testing/tile-hit';
 
 const HITS: PrepHit[] = [
   { id: 31252, name: 'Carlsen, Magnus', fide: '1503014', games: 8530, firstYear: 2001, lastYear: 2026, maxElo: 2882 },
@@ -109,6 +110,18 @@ describe('PrepSearchComponent', () => {
       fixture.autoDetectChanges();
       await fixture.whenStable();
     }
+
+    // Zeile mit zweitem Ziel (DESIGN 5.3) über den Baustein aus 5.2: die ganze Zeile trifft ihr Hauptziel, der
+    // Repertoire-Knopf daneben sich selbst.
+    it('jede Zeile ist als Ganzes klickbar; der Repertoire-Knopf bleibt eigenes Ziel', async () => {
+      await open();
+      const went = recordNavigation();
+      for (const li of rows()) expectWholeTileClickable(li, li.querySelector('.main')!);
+      const first = rows()[0];
+      clickFreeSpot(first, first.querySelector('.main')!);
+      clickCenter(first.querySelector('a.rep')!);
+      expect(went()).toEqual(['/prep/154', '/repertoires/' + HISTORY[0].repertoireId]);
+    });
 
     it('stehen unter dem leeren Suchfeld: ein zugeordneter Gegner ist ein Link auf seine Spielerseite, mit Datum, Farbe und Kennzahlen', async () => {
       await create('/prep', HISTORY);

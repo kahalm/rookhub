@@ -1,0 +1,89 @@
+// Kachel als Ganzes klickbar (docs/DESIGN.md 5.2 „Ganze Kachel klickbar“, docs/frontend/ganze-kachel-klickbar.md).
+//
+// Eine Kachel, Karte oder Zeile, die für EIN Ziel steht, trägt `rh-tile`; ihr Hauptziel — das vorhandene, echte
+// `<a routerLink>` bzw. `<button>` (Titel-Link oder Hauptknopf) — trägt `rh-tile-target`. Dessen `::after` deckt die
+// ganze Kachel ab: ein Klick irgendwo auf die Fläche IST ein Klick auf das Hauptziel (Mittelklick, Strg-Klick und „in
+// neuem Tab öffnen“ wie bei jedem Link, kein zweiter Tab-Stopp, kein `(click)` am Container, kein Element im anderen).
+// Alle übrigen Bedienelemente der Kachel liegen darüber und bleiben eigene Ziele.
+//
+// Warum `position: fixed` + `contain: layout` statt des üblichen `position: absolute`: ein Material-Knopf ist selbst
+// `position: relative` (Ripple, State-Layer) — ein absolut gesetztes `::after` bliebe in ihm gefangen. Layout-Containment
+// macht die Kachel zum Bezugskasten AUCH für fest positionierte Nachfahren; das `::after` spannt sich damit über die
+// Kachel, gleich wie viele positionierte oder abschneidende Kästen (`overflow: hidden` am gekürzten Titel) zwischen
+// Kachel und Ziel liegen. Chromium ≥ 52 (Boox: 111). Ohne Containment bliebe ein festes `::after` am FENSTER hängen —
+// deshalb gilt die Regel nur unter `@supports` und nur für ein Ziel IN einer Kachel.
+//
+// Nicht klickbar ist die Fläche, wenn das Hauptziel gesperrt ist; im Bearbeiten-Modus nimmt die Komponente `rh-tile`
+// weg (`[class.rh-tile]="!editing"`). Text unter der Fläche lässt sich nicht markieren (in Kauf genommen).
+
+html {
+  // Rückmeldung für die ganze Kachel; Hubs setzen ihre eigenen Werte (leaguehub.scss, clubhub.scss).
+  --rh-tile-hover: color-mix(in srgb, currentColor 6%, transparent);
+  --rh-tile-pressed: color-mix(in srgb, currentColor 10%, transparent);
+  --rh-tile-focus: var(--mat-sys-primary);
+  --rh-tile-focus-width: 2px;
+  // Nach innen (negativ), wo ein abschneidender Kasten den Ring außen kappen würde (Zeilen einer Liste mit overflow).
+  --rh-tile-focus-offset: 2px;
+}
+
+@supports (contain: layout) {
+  .rh-tile { contain: layout; }
+  // Ebene 1: über allem bloßen Inhalt der Kachel — auch positioniertem, der im Markup hinter dem Ziel steht
+  // (Fortschrittsbalken, `.rh-dots`-Angaben) —, unter den Nebenelementen (Ebene 2). Das Ziel selbst trägt die Ebene mit,
+  // falls es einen eigenen Stapel bildet (Materials Symbolknopf hat `z-index: 0`).
+  .rh-tile .rh-tile-target { z-index: 1; }
+  // `inset: 0` meint die Innenkante des Rahmens (Bezugskasten = Polsterkasten). Eine Kachel mit dickem Rahmen zieht die
+  // Fläche mit `--rh-tile-inset` darüber (z. B. `0 0 0 -4px` für eine 4-px-Kante links).
+  .rh-tile .rh-tile-target::after {
+    content: '';
+    position: fixed;
+    inset: var(--rh-tile-inset, 0);
+    z-index: 1;
+    cursor: pointer;
+  }
+  // Gesperrtes Hauptziel: keine Fläche (Material sperrt Links über die Klasse bzw. aria-disabled).
+  .rh-tile .rh-tile-target:is(:disabled, [aria-disabled='true'], .mat-mdc-button-disabled)::after { content: none; }
+}
+
+// Alles andere Bedienbare der Kachel liegt über der Fläche: Links (auch im Fließtext), Knöpfe, Felder, Menü-Auslöser,
+// Elemente mit Tooltip — und was die Komponente ausdrücklich mit `rh-tile-above` heraushebt (Tabelle zum Markieren,
+// aufgeklappter Inhalt). `:where()` hält die Spezifität bei (0,2,0): schlägt Materials `z-index: 0` am Symbolknopf,
+// eine Komponente kann es mit einer gewöhnlichen Klassenregel aber noch überstimmen.
+.rh-tile :where(a, button, input, select, textarea, label, summary, [tabindex]:not([tabindex='-1']), [role='button'],
+    [role='link'], .mat-mdc-checkbox, .mat-mdc-slide-toggle, .mat-mdc-radio-button, .mat-mdc-form-field,
+    .mat-button-toggle-group, .mat-mdc-tooltip-trigger, .rh-tile-above, .rh-tile):not(.rh-tile-target) {
+  z-index: 2;
+}
+// `position` ganz ohne Gewicht: wer selbst `absolute`/`sticky` setzt, behält es.
+:where(.rh-tile :is(a, button, input, select, textarea, label, summary, [tabindex]:not([tabindex='-1']), [role='button'],
+    [role='link'], .mat-mdc-checkbox, .mat-mdc-slide-toggle, .mat-mdc-radio-button, .mat-mdc-form-field,
+    .mat-button-toggle-group, .mat-mdc-tooltip-trigger, .rh-tile-above, .rh-tile):not(.rh-tile-target)) {
+  position: relative;
+}
+
+// Ausdrücklich Herausgehobenes gilt auch dort, wo eine Komponente ihr Element mit `all: unset` zurücksetzt (Textknöpfe).
+.rh-tile .rh-tile-above.rh-tile-above { position: relative; z-index: 2; }
+
+// Ein gesperrter Nebenknopf schluckt den Klick selbst: Material nimmt gesperrten Knöpfen die Zeigerereignisse, der Klick
+// fiele sonst auf die Fläche durch und löste die Hauptaktion aus. Nur echte `<button>` — die feuern gesperrt nie.
+.rh-tile button:is(:disabled, .mat-mdc-button-disabled):not(.rh-tile-target) { pointer-events: auto; }
+
+// Zustände an der GANZEN Kachel — nur solange der Zeiger über der Fläche (nicht über einem Nebenelement) steht bzw. das
+// Hauptziel den Tastaturfokus hat. Die Tönung liegt als Bild über der Flächenfarbe der Kachel (gleich welche), die
+// Schrift bleibt unberührt. Der Fokusring sitzt an der Kachel, das Hauptziel selbst zeigt dann keinen zweiten — nur wo
+// der Browser `:has()` kennt (sonst bliebe das Ziel ganz ohne Fokusanzeige).
+@supports selector(:has(*)) {
+  @media (hover: hover) {
+    .rh-tile:has(.rh-tile-target:hover:not(:disabled, [aria-disabled='true'])) {
+      background-image: linear-gradient(var(--rh-tile-hover), var(--rh-tile-hover));
+    }
+  }
+  .rh-tile:has(.rh-tile-target:active:not(:disabled, [aria-disabled='true'])) {
+    background-image: linear-gradient(var(--rh-tile-pressed), var(--rh-tile-pressed));
+  }
+  .rh-tile:has(.rh-tile-target:focus-visible) {
+    outline: var(--rh-tile-focus-width) solid var(--rh-tile-focus);
+    outline-offset: var(--rh-tile-focus-offset);
+  }
+  .rh-tile .rh-tile-target:focus-visible { outline: none; }
+}

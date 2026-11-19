@@ -38,6 +38,7 @@ stehen je Bereich in `rookhub/docs/frontend/` (Index unten); neue Feature-Doku d
 - Zugliste: der aktive Zug scrollt NUR seinen Kasten, nie die Seite (0.514.1) → `docs/frontend/zugliste.md`
 - Trainerstunden `/training-videos` (Video + Segmentliste, Nachspielen, Trainerkommentare an der Partie, `features/training-videos/`, 0.986.0) → `docs/frontend/trainerstunden.md`
 - „Taktiken trainieren“ am Ende der Zusammenfassung (0.968.0; Übersicht „Empfohlene Übungen“ seit 0.973.0 entfallen) → `docs/frontend/empfohlene-uebungen.md`
+- Ganze Kachel klickbar: Baustein `rh-tile` / `rh-tile-target` (`src/_tile.scss`), Treffertest `testing/tile-hit.ts` (DESIGN 5.2, 0.997.0) → `docs/frontend/ganze-kachel-klickbar.md`
 
 ## Zusammenspiel
 

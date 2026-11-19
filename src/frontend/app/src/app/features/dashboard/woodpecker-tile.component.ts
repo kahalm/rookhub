@@ -24,6 +24,10 @@ import { woodpeckerDailyGoal, woodpeckerSchedule } from '../woodpecker/woodpecke
  * 0.958.0), `break` → Pause-Satz + Textlink zur Übersicht. Ohne laufendes Training (nur im Anpassen-Modus sichtbar) ein
  * Satz und „Neues Training“.
  *
+ * Ganze Kachel klickbar (DESIGN 5.2; die Kachel `rh-tile` ist die `mat-card` des Dashboards): die Fläche gehört
+ * „Weiter lösen“ (`solving`) bzw. „Zur Übersicht“ (`break`). „Zyklus N starten“ ändert Daten ohne Rückfrage (der Zyklus
+ * und seine Frist beginnen) — das löst nur der Knopf selbst aus; die Fläche führt dort wie der Name zur Übersicht.
+ *
  * Den Aufruf macht die Kachel selbst (wie die Übersicht über `WoodpeckerService`); den neuen Stand meldet sie über
  * `planChange` ans Dashboard, das ihn als `plan` zurückgibt und zwischenspeichert. Scheitert der Start (z. B. die Pause
  * läuft doch noch), Snackbar mit dem Grund und Plan neu laden.
@@ -38,7 +42,7 @@ import { woodpeckerDailyGoal, woodpeckerSchedule } from '../woodpecker/woodpecke
     @if (plan(); as p) {
       @let c = cycle()!;
       <mat-card-content class="wp-content">
-        <a class="wp-name" routerLink="/woodpecker" [title]="p.name">{{ p.name }}</a>
+        <a class="wp-name" [class.rh-tile-target]="p.status === 'ready'" routerLink="/woodpecker" [title]="p.name">{{ p.name }}</a>
         @switch (p.status) {
           @case ('solving') {
             @if (c.number === 1) {
@@ -72,7 +76,7 @@ import { woodpeckerDailyGoal, woodpeckerSchedule } from '../woodpecker/woodpecke
       <mat-card-actions>
         @switch (p.status) {
           @case ('solving') {
-            <a mat-flat-button color="primary" class="wp-primary" [routerLink]="['/woodpecker', p.id, 'solve']">
+            <a mat-flat-button color="primary" class="wp-primary rh-tile-target" [routerLink]="['/woodpecker', p.id, 'solve']">
               <mat-icon>play_arrow</mat-icon>{{ 'woodpecker.continue' | translate }}
             </a>
           }
@@ -88,7 +92,7 @@ import { woodpeckerDailyGoal, woodpeckerSchedule } from '../woodpecker/woodpecke
             </button>
           }
           @default {
-            <a mat-button class="wp-overview" routerLink="/woodpecker">{{ 'woodpecker.toOverview' | translate }}</a>
+            <a mat-button class="wp-overview rh-tile-target" routerLink="/woodpecker">{{ 'woodpecker.toOverview' | translate }}</a>
           }
         }
       </mat-card-actions>
@@ -97,7 +101,7 @@ import { woodpeckerDailyGoal, woodpeckerSchedule } from '../woodpecker/woodpecke
         <p class="wp-empty">{{ 'dashboard.woodpecker.none' | translate }}</p>
       </mat-card-content>
       <mat-card-actions>
-        <a mat-button class="wp-create" routerLink="/woodpecker">{{ 'woodpecker.new' | translate }}</a>
+        <a mat-button class="wp-create rh-tile-target" routerLink="/woodpecker">{{ 'woodpecker.new' | translate }}</a>
       </mat-card-actions>
     }
   `,

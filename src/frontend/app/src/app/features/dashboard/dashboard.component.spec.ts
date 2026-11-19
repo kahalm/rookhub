@@ -15,6 +15,8 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
 import { SnackbarService } from '../../core/snackbar.service';
 import { WoodpeckerPlan, WoodpeckerService } from '../woodpecker/woodpecker.service';
 import { HandoffService } from '../../core/handoff.service';
+import { Router } from '@angular/router';
+import { clickCenter, clickFreeSpot, expectTileNotClickable, expectWholeTileClickable } from '../../testing/tile-hit';
 
 const MENU = new Set<string>([
   'puzzles', 'friends', 'tournaments', 'repertoires', 'training-goals',
@@ -691,7 +693,7 @@ describe('DashboardComponent a1 (Mehrzahl, Prozent, Knopfzeile)', () => {
   it('a1-rk-dash-play-versatz / -puzzles-knoepfe-umbruch: Kachelknöpfe ohne Mindestbreite, einzeilig, Zeile bricht um', () => {
     const css = (((DashboardComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
       .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
-    expect(css).toMatch(/\.dashboard-grid ?> ?mat-card ?> ?mat-card-actions ?> ?button ?\{ ?min-width: ?0; ?white-space: ?nowrap/);
+    expect(css).toMatch(/\.dashboard-grid ?> ?mat-card ?> ?mat-card-actions ?> ?button, ?\.dashboard-grid ?> ?mat-card ?> ?mat-card-actions ?> ?a ?\{ ?min-width: ?0; ?white-space: ?nowrap/);
     expect(css).toMatch(/\.dashboard-grid ?> ?mat-card ?> ?mat-card-actions ?\{ ?flex-wrap: ?wrap/);
   });
 
@@ -807,5 +809,181 @@ describe('DashboardComponent Woodpecker-Kachel', () => {
     TestBed.resetTestingModule();
     const online = mount({ menu: [...MENU, 'woodpecker'], plans: () => of([{ ...wp(4, 'solving'), todayAttempted: 7 }]) });
     expect(online.component.woodpeckerPlan?.todayAttempted).toBe(7);
+  });
+});
+
+/**
+ * Ganze Kachel klickbar (DESIGN 5.2, Nutzerwunsch 19.11. „kacheln wo nur einzelne teile klickbar sind … immer komplett
+ * klickbar“): die Fläche gehört der ersten Aktion, weitere Knöpfe bleiben eigene Ziele; im Anpassen-Modus nichts davon.
+ * Bei den angepinnten Kursen ist jede Kurs-Zeile die Einheit. Gemessen per Treffertest (`testing/tile-hit`).
+ */
+describe('DashboardComponent: ganze Kachel klickbar', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  const wp = (status: WoodpeckerPlan['status']): WoodpeckerPlan => ({
+    id: 9, name: 'Taktik-Training Woodpecker', createdAt: new Date().toISOString(), completedAt: null, books: [], setSize: 40,
+    availableCount: 100, currentCycle: 2, maxCycles: 7, status, nextCycleAt: new Date(Date.now() + 86_400_000).toISOString(),
+    cycles: [{ number: 2, targetDays: 14, startedAt: new Date().toISOString(), deadline: new Date(Date.now() + 5 * 86_400_000).toISOString(),
+      finishedAt: status === 'solving' ? null : new Date().toISOString(), attempted: 10, solved: 9, timeSeconds: 30 }],
+  });
+
+  function render(opts: { courses?: unknown[]; plan?: WoodpeckerPlan; leagueHub?: boolean; menu?: string[] } = {}) {
+    const menu = new Set([...MENU, 'guess', ...(opts.plan ? ['woodpecker'] : []), ...(opts.menu ?? [])]);
+    const startNextCycle = jasmine.createSpy('startNextCycle').and.returnValue(new Subject());
+    const jumpToLeagueHub = jasmine.createSpy('jumpToLeagueHub').and.resolveTo();
+    TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isAdmin: false, has: (p: string) => !!opts.leagueHub && p === 'league.view', currentUser: { username: 'me', userId: 7 } } },
+        { provide: DashboardService, useValue: {
+          getRepertoires: () => of([]), getCourses: () => of(opts.courses ?? []), getSubscriptions: () => of([]),
+          getFriends: () => of([]), getPuzzleStats: () => of({ solved: 12, accuracy: 78.6, puzzleElo: 1500 }),
+        } },
+        { provide: MenuService, useValue: { visible$: of(menu), isVisible: (k: string) => menu.has(k) } },
+        { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
+        { provide: InAppNotificationService, useValue: { arrived$: new Subject<void>().asObservable() } },
+        { provide: FavoritesService, useValue: { count: () => of(0) } },
+        { provide: WoodpeckerService, useValue: { list: () => of(opts.plan ? [opts.plan] : []), startNextCycle } },
+        { provide: HandoffService, useValue: { leagueHubUrl: opts.leagueHub ? 'https://leaguehub.example' : null, jumpToLeagueHub } },
+      ],
+    });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const router = TestBed.inject(Router);
+    const navigate = spyOn(router, 'navigateByUrl').and.resolveTo(true);
+    const went = () => navigate.calls.allArgs().map(a => router.serializeUrl(a[0] as any));
+    const host = fixture.nativeElement as HTMLElement;
+    const tile = (titleKey: string) => Array.from(host.querySelectorAll<HTMLElement>('.dashboard-grid > mat-card'))
+      .find(c => c.querySelector('mat-card-title')!.textContent!.includes(titleKey))!;
+    return { fixture, component: fixture.componentInstance, host, tile, went, startNextCycle, jumpToLeagueHub };
+  }
+
+  it('Kachel mit einer Aktion: Fläche, Titel und Untertitel treffen den Link der Aktion', () => {
+    const { tile, went } = render();
+    const card = tile('dashboard.courses.title');
+    const open = card.querySelector<HTMLElement>('mat-card-actions a')!;
+    expect(open.getAttribute('href')).withContext('echter Link: Mittelklick und „in neuem Tab öffnen“').toBe('/courses');
+    expectWholeTileClickable(card, open);
+    clickFreeSpot(card, open);
+    clickCenter(card.querySelector('mat-card-title')!);
+    clickCenter(card.querySelector('mat-icon[mat-card-avatar]')!);
+    expect(went()).toEqual(['/courses', '/courses', '/courses']);
+  });
+
+  it('Kachel mit mehreren Aktionen (Puzzles): die Fläche gehört der ersten, die anderen bleiben eigene Ziele', () => {
+    const { tile, went } = render();
+    const card = tile('dashboard.puzzles.title');
+    const links = Array.from(card.querySelectorAll<HTMLElement>('mat-card-actions a'));
+    expect(links.map(a => a.getAttribute('href'))).toEqual(['/puzzles', '/puzzles/daily/today', '/puzzles/endless']);
+    expectWholeTileClickable(card, links[0]);
+    clickFreeSpot(card, links[0]);
+    clickCenter(links[1]);
+    clickCenter(links[2]);
+    expect(went()).toEqual(['/puzzles', '/puzzles/daily/today', '/puzzles/endless']);
+  });
+
+  it('Anpassen-Modus: keine Kachel ist klickbar (weder Fläche noch Knöpfe), Griff/Auf/Ab/Auge bedienbar', () => {
+    const { fixture, component, tile, went } = render({ courses: [{ bookId: 58, displayName: 'TestNoel', puzzleCount: 6, solvedCount: 1, progressPercent: 17, isPinned: true }] });
+    component.toggleEdit();
+    fixture.detectChanges();
+    const card = tile('dashboard.courses.title');
+    const open = card.querySelector<HTMLElement>('mat-card-actions a')!;
+    expect(card.classList).not.toContain('rh-tile');
+    expectTileNotClickable(card, open);
+    clickCenter(card.querySelector('mat-card-title')!);
+    // Mitten auf die Beschriftung: Materials Knopftext liegt auf Ebene 1 — das Schild muss darüber liegen.
+    expect(clickCenter(open)?.className).toBe('tile-shield');
+    const pinned = tile('dashboard.pinnedCourses.title');
+    expectTileNotClickable(pinned.querySelector('.pinned-course')!, pinned.querySelector('a.pc-name'));
+    clickCenter(pinned.querySelector('a.pc-name')!);
+    expect(went()).toEqual([]);
+    const eye = card.querySelector<HTMLElement>('.tc-eye')!;
+    expect(clickCenter(eye)?.closest('.tc-eye')).toBe(eye);
+    expect(component.isEnabled(component.tiles.find(t => t.id === 'courses')!)).toBeFalse();
+    // Zurück aus dem Anpassen-Modus: wieder als Ganzes klickbar.
+    component.toggle(component.tiles.find(t => t.id === 'courses')!);
+    component.toggleEdit();
+    fixture.detectChanges();
+    expectWholeTileClickable(tile('dashboard.courses.title'), tile('dashboard.courses.title').querySelector('mat-card-actions a')!);
+  });
+
+  it('angepinnte Kurse: jede Kurs-Zeile ist die Einheit (Ziel = Name), die Start-Knöpfe bleiben eigene Ziele, die Sammel-Kachel nicht', () => {
+    const course = (bookId: number, puzzleCount: number) => ({ bookId, displayName: 'Kurs ' + bookId + ' mit einem langen Namen', puzzleCount, solvedCount: 1, progressPercent: 10, isPinned: true });
+    const { tile, went } = render({ courses: [course(58, 6), course(59, 0)] });
+    const card = tile('dashboard.pinnedCourses.title');
+    const rows = Array.from(card.querySelectorAll<HTMLElement>('.pinned-course'));
+    expect(rows.length).toBe(2);
+    for (const row of rows) expectWholeTileClickable(row, row.querySelector('a.pc-name')!);
+    clickFreeSpot(rows[0], rows[0].querySelector('a.pc-name')!);
+    clickCenter(rows[0].querySelector('.pc-prog')!);
+    clickCenter(rows[0].querySelector('.pc-btn-primary')!);
+    clickCenter(rows[0].querySelectorAll('.pc-btn')[1]);
+    expect(went()).toEqual(['/courses/58', '/courses/58', '/courses/58/sequential', '/courses/58/random']);
+    // Kurs ohne Aufgaben: die gesperrten Start-Knöpfe schlucken den Klick, er fällt nicht auf die Zeile durch.
+    const dead = rows[1].querySelector<HTMLButtonElement>('button.pc-btn-primary')!;
+    expect(clickCenter(dead)?.closest('button')).toBe(dead);
+    expect(went().length).toBe(4);
+    // Die Sammel-Kachel selbst: Kopf und Rand führen nirgends hin, „Alle Kurse“ bleibt ihr Knopf.
+    expect(card.classList).not.toContain('rh-tile');
+    clickCenter(card.querySelector('mat-card-title')!);
+    expect(went().length).toBe(4);
+    clickCenter(card.querySelector('mat-card-actions a')!);
+    expect(went()[4]).toBe('/courses');
+  });
+
+  it('LeagueHub-Kachel: die Fläche springt wie ihr Knopf mit Anmelde-Übergabe', () => {
+    const { tile, jumpToLeagueHub } = render({ leagueHub: true });
+    const card = tile('nav.leagueHub');
+    const jump = card.querySelector<HTMLElement>('button.tile-jump')!;
+    expectWholeTileClickable(card, jump);
+    clickFreeSpot(card, jump);
+    expect(jumpToLeagueHub).toHaveBeenCalledTimes(1);
+  });
+
+  it('Uhr-Kachel (Bedienfeld ohne Sprungziel) ist keine klickbare Kachel', () => {
+    localStorage.setItem('rookhub_dashboard_layout_v2', JSON.stringify({ order: ['activityTimer', 'puzzles'], hidden: [] }));
+    const { tile, went } = render();
+    const card = tile('dashboard.activityTimer.title');
+    expect(card.classList).not.toContain('rh-tile');
+    clickCenter(card.querySelector('mat-card-title')!);
+    expect(went()).toEqual([]);
+  });
+
+  describe('Woodpecker-Kachel', () => {
+    it('Zyklus läuft: die Fläche gehört „Weiter lösen“, der Name führt weiter zur Übersicht', () => {
+      const { tile, went } = render({ plan: wp('solving') });
+      const card = tile('woodpecker.title');
+      const go = card.querySelector<HTMLElement>('a.wp-primary')!;
+      expectWholeTileClickable(card, go);
+      clickFreeSpot(card, go);
+      clickCenter(card.querySelector('.wp-deadline')!);
+      clickCenter(card.querySelector('a.wp-name')!);
+      expect(went()).toEqual(['/woodpecker/9/solve', '/woodpecker/9/solve', '/woodpecker']);
+    });
+
+    it('bereit: „Zyklus N starten“ löst nur der Knopf aus (ändert Daten) — die Fläche führt wie der Name zur Übersicht', () => {
+      const { tile, went, startNextCycle } = render({ plan: wp('ready') });
+      const card = tile('woodpecker.title');
+      const name = card.querySelector<HTMLElement>('a.wp-name')!;
+      expectWholeTileClickable(card, name);
+      clickFreeSpot(card, name);
+      clickCenter(card.querySelector('.wp-line')!);
+      expect(startNextCycle).not.toHaveBeenCalled();
+      expect(went()).toEqual(['/woodpecker', '/woodpecker']);
+      clickCenter(card.querySelector('button.wp-start')!);
+      expect(startNextCycle).toHaveBeenCalledOnceWith(9);
+    });
+
+    it('Pause: die Fläche gehört „Zur Übersicht“', () => {
+      const { tile, went } = render({ plan: wp('break') });
+      const card = tile('woodpecker.title');
+      const overview = card.querySelector<HTMLElement>('a.wp-overview')!;
+      expectWholeTileClickable(card, overview);
+      clickFreeSpot(card, overview);
+      expect(went()).toEqual(['/woodpecker']);
+    });
   });
 });

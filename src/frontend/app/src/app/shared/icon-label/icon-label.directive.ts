@@ -1,5 +1,8 @@
-import { Directive, Input, OnChanges, inject } from '@angular/core';
+import { Directive, ElementRef, Input, OnChanges, inject } from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
+
+/** Verzögerung des Tooltips am Hauptziel einer ganz klickbaren Kachel (`rh-tile-target`, DESIGN 5.2). */
+export const TILE_TOOLTIP_DELAY_MS = 600;
 
 /**
  * Beschriftung für reine Symbolknöpfe (Codereview UX-014): EIN Text setzt Tooltip UND zugänglichen Namen.
@@ -13,6 +16,10 @@ import { MatTooltip } from '@angular/material/tooltip';
  * Element wäre dieselbe Direktive doppelt (Angular wirft NG0309).
  *
  *     <button mat-icon-button [appIconLabel]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
+ *
+ * Ist der Symbolknopf das Hauptziel einer ganz klickbaren Kachel (Klasse `rh-tile-target`, DESIGN 5.2), gilt der Zeiger
+ * über der GANZEN Kachel als „über dem Knopf“ — der Tooltip erscheint dann erst nach {@link TILE_TOOLTIP_DELAY_MS}, statt
+ * bei jeder Mausbewegung über die Karte aufzublitzen.
  */
 @Directive({
   selector: '[appIconLabel]',
@@ -25,8 +32,10 @@ export class IconLabelDirective implements OnChanges {
   @Input({ required: true }) appIconLabel = '';
 
   private readonly tooltip = inject(MatTooltip);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   ngOnChanges(): void {
     this.tooltip.message = this.appIconLabel;
+    if (this.host.nativeElement.classList.contains('rh-tile-target')) this.tooltip.showDelay = TILE_TOOLTIP_DELAY_MS;
   }
 }

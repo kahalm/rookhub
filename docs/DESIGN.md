@@ -398,6 +398,41 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 - **Outline-Feld direkt unter dem Kartentitel:** `mat-card-content` bekommt oben 20 px, damit die schwebende Beschriftung
   nicht an der Überschrift klebt — global in `styles.scss` (`.mat-mdc-card-header + .mat-mdc-card-content:has(> :first-child
   .mat-form-field-appearance-outline)`), keine Ausgleiche je Karte (Wochenpost hochladen, d9-rk-wochenpost-karte-titel-eng).
+- **Ganze Kachel klickbar** (0.997.0, alle fünf Oberflächen): Eine Kachel, Karte oder umrandete Zeile, die für EIN Ziel
+  steht, ist als Ganzes klickbar — nie nur ihr Titel oder ihr Knopf. Baustein: Klasse `rh-tile` an der Kachel,
+  `rh-tile-target` an ihrem Hauptziel (`src/_tile.scss`, Anleitung `docs/frontend/ganze-kachel-klickbar.md`).
+  - **Hauptaktion:** ein Klick irgendwo auf die Fläche ist ein Klick auf das Hauptziel — den Titel-Link der Kachel,
+    sonst ihren Haupt- bzw. ersten Knopf. Das Hauptziel ist das vorhandene, echte `<a routerLink>` bzw. `<button>`
+    (Router-Ziele als `<a>`: Mittelklick und „in neuem Tab öffnen“ gehen); es bleibt sichtbar und sagt, was der Klick
+    tut. Kein `(click)` an der Kachel, kein Bedienelement in einem anderen, kein zweiter Tab-Stopp.
+  - **Eigene Ziele bleiben eigene Ziele:** zweite Knöpfe, ⋮, Schalter, Häkchen, Links im Text und Elemente mit Tooltip
+    liegen über der Fläche und lösen die Hauptaktion nie aus (auch gesperrt nicht). Inhalt, der unberührt bleiben soll
+    (aufgeklappte Tabelle, Kapitelliste), trägt `rh-tile-above`.
+  - **Nicht klickbar** ist die Fläche, wenn das Hauptziel gesperrt ist, und im **Bearbeiten-Modus** — dort nimmt die
+    Komponente `rh-tile` weg (Dashboard „Anpassen“: Griff, Auf/Ab, Auge; Mehrfachauswahl; Formular in der Karte).
+  - **Die Fläche ändert nichts:** löst die Hauptaktion etwas aus, das Daten ohne Rückfrage ändert (Woodpecker „Zyklus N
+    starten“), bleibt das dem Knopf vorbehalten; die Fläche gehört dann dem Titel-Link. Gibt es keinen, ist die Kachel
+    nicht als Ganzes klickbar.
+  - **Kein eindeutiges Hauptziel → keine Kachel:** mehrere gleichrangige Ziele oder Titel-Link und Hauptknopf mit
+    verschiedenen Zielen ohne klare Hauptsache werden nicht geraten. In einer **Sammel-Kachel** ist die Zeile die
+    Einheit (angepinnte Kurse: je Kurs-Zeile, Ziel = der Name), die Sammel-Kachel selbst nicht. Reine Tabellen und
+    Textlisten gehören nicht dazu.
+  - **Rückmeldung an der GANZEN Kachel:** Zeiger; Tönung beim Überfahren (`--rh-tile-hover`, 6 % der Textfarbe, nur mit
+    Maus) und beim Drücken (`--rh-tile-pressed`, 10 %) — nur solange der Zeiger über der Fläche steht, nicht über einem
+    Nebenelement; hat das Hauptziel den Tastaturfokus, ein **Fokusring um die Kachel** (2 px `--mat-sys-primary`, 2 px
+    Abstand; LeagueHub/ClubHub 3 px `--focus`; E-Ink 3 px schwarz und keine Tönung, 3.6), das Hauptziel selbst zeigt
+    dann keinen zweiten Ring.
+  - **Tooltip am Hauptziel:** der Zeiger über der Kachel gilt als „über dem Hauptziel“ — ein `matTooltip` dort
+    erscheint deshalb verzögert (600 ms, `TILE_TOOLTIP_DELAY_MS`; `appIconLabel` macht das an `rh-tile-target` von
+    selbst) und an Text-Links über dem Titel (`matTooltipPosition="above"`), damit er nicht bei jeder Mausbewegung
+    aufblitzt und die Angaben darunter verdeckt.
+  - **In Kauf genommen:** Text unter der Fläche lässt sich nicht markieren; ein `title` an bloßem Text darunter
+    erscheint nicht mehr (Elemente mit `matTooltip` bleiben oben).
+  - **Prüfung:** je Kachel ein Treffertest am gerenderten Element — `expectWholeTileClickable(kachel, hauptziel)` aus
+    `src/app/testing/tile-hit.ts` (`elementFromPoint` an Ecken, Raster und Textstellen; jedes Nebenelement trifft sich
+    selbst); Wache für die Verwendung in `testing/tile-hit.spec.ts`.
+  - **Verwendet:** RookHub — Dashboard-Kacheln, Kurs-Zeilen der angepinnten Kurse und Woodpecker-Kachel (8.1),
+    Repertoire-Karten („Öffnen“; offline „Trainieren“), frühere Vorbereitungen der Spielervorbereitung (5.3).
 
 ### 5.3 Listen und Tabellen
 
@@ -426,7 +461,9 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 - **Listenzeile mit zweitem Ziel** (Spielervorbereitung „Frühere Vorbereitungen“, 0.995.0): die Zeile selbst ist das
   Hauptziel (ein `<a>` bzw. `<button>` über Name + Meta-Zeile, `flex: 1 1 auto; min-width: 0`, bricht in sich um); das
   Nebenziel steht als `mat-icon-button` mit `[appIconLabel]` (Name nennt die Zeile: „Trainings-Repertoire zu … öffnen“)
-  rechts DANEBEN als Geschwister im `<li>` (`flex: none`) — nie ein Link im Link. Führt eine Zeile ausnahmsweise nicht
+  rechts DANEBEN als Geschwister im `<li>` (`flex: none`) — nie ein Link im Link. Das ist die Zeilen-Form von „Ganze
+  Kachel klickbar“ (5.2): die Zeile trägt `rh-tile`, ihr Hauptziel `rh-tile-target` — so trifft auch der Rand um den
+  Symbolknopf das Hauptziel, und Tönung und Fokusring gelten der ganzen Zeile. Führt eine Zeile ausnahmsweise nicht
   zum Ziel, sondern löst etwas auf der Seite aus (Suche füllen), ist sie ein `<button>` und sagt es in der Meta-Zeile mit
   Symbol + Text (Lupe + „Spieler suchen“), nicht nur durch anderes Aussehen.
 
@@ -1045,6 +1082,12 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   sonst leerer 40-px-Platz — die Knöpfe springen nicht), Turnier als gedämpfte dritte Zeile unter den Namen, einzeilig mit
   „…“ und vollem Namen im Tooltip.
 - Dashboard: neue Kacheln nicht in `DEFAULT_VISIBLE`; angepinnte Kurse in eigener breiter Zeile (r2-rk-dash-stretch).
+  **Jede Kachel ist als Ganzes klickbar** (5.2, 0.997.0): die Fläche gehört der ersten Aktion der Kachel (Puzzles: „Puzzles
+  lösen“; „Tagespuzzle“ und „Endlos“ bleiben eigene Ziele), die Aktionen sind echte Links. Bei den angepinnten Kursen
+  ist jede Kurs-Zeile die Einheit (Ziel = Kursname → Kurs-Detailseite; „Der Reihe nach“/„Zufällig“ eigene Ziele), die
+  Sammel-Kachel selbst führt nirgends hin; die Uhr-Kachel (Bedienfeld) ist keine klickbare Kachel. Woodpecker: Zyklus
+  läuft → „Weiter lösen“, Pause → „Zur Übersicht“, bereit → die Fläche führt wie der Name zur Übersicht („Zyklus N
+  starten“ ändert Daten und bleibt dem Knopf vorbehalten). Im Anpassen-Modus ist keine Kachel klickbar.
   **LeagueHub-Kachel** (0.983.0): dritte Ausnahme in `DEFAULT_VISIBLE` (am Ende) — es gibt sie nur für Konten mit
   `league.view` und nur, wo sich die LeagueHub-Adresse bilden lässt; Symbol `shield`, Titel „LeagueHub“, ein Satz, genau
   ein Knopf „LeagueHub öffnen“ mit `open_in_new` (verlässt RookHub, Sprung mit Anmelde-Übergabe). Im Menü steht
@@ -1486,6 +1529,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | Handy-Grenze in TS | `SolveModeService.narrow()` `max-width: 600px` vs. CSS `599.98px` | bei 600 px genau ein Pixel Überlappung; angleichen |
 | Kommentar-Markierung | `UI-Sweep r3: …` ohne Datum/ID neben `UI-Sweep 2026-10-11 (r2-…)` | immer Datum + ID |
 | KidHub dunkel | bewusst nicht vorhanden | bleibt so (Entscheidung) |
+| Kacheln, die noch folgen (5.2) | übrige RookHub-Karten (Kurse, E-Books, Trainerstunden, Wochenpost, Punktepartie-Durchläufe, Partie-Analysen, Rekonstruktionen, Favoriten, Aufgabenblätter), Turnierkarte und Merkliste der Turnierseite, ClubHub-Kartei und -Gruppen: noch nur Titel bzw. Knopf klickbar | Umstellung auf `rh-tile` in den nächsten Fassungen |
+| Kacheln ohne `rh-tile` (5.2) | bewusst nicht umgestellt, weil ohne eindeutiges Hauptziel oder Inhaltskarte: Stellungen merken (`remembered`: Titel-Link → Quelle, Knopf → Analysebrett), Woodpecker-Übersicht (eine Inhaltskarte mit Zyklustabelle; „Zyklus starten“ ändert Daten), Punktepartie-/Katalog-/Meisterpartien-Zeilen (Listen mit Startknopf, der etwas anlegt), Freundeszeilen (mehrere gleichrangige Ziele) | neue und angefasste Kacheln über `rh-tile`; ohne Hauptziel bleibt es beim Knopf |
+| Klick am Container statt am Ziel | Analyseaufträge (Kopf `role="button"` mit `stopPropagation` an den Knöpfen), Rekonstruktions-Teile und Endlos-Verlauf am Handy (`(click)` an der Karte, kein Tastaturziel) | beim Anfassen auf ein echtes `<button>`/`<a>` als `rh-tile-target` umstellen |
 
 ---
 
@@ -1493,6 +1539,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-19 | 0.997.0 · alle Oberflächen | Neue allgemeine Regel „Ganze Kachel klickbar“ (5.2) mit dem Baustein `rh-tile` / `rh-tile-target` (`src/_tile.scss`): Fläche = Hauptaktion (Titel-Link, sonst Haupt-/erster Knopf), Nebenelemente bleiben eigene Ziele, nicht klickbar bei gesperrtem Hauptziel und im Bearbeiten-Modus, die Fläche ändert nie Daten, ohne eindeutiges Hauptziel keine Kachel; Tönung beim Überfahren/Drücken und Fokusring um die ganze Kachel (E-Ink 3 px schwarz). Zuerst Dashboard (Kacheln, Kurs-Zeilen, Woodpecker — 8.1) und Repertoire-Karten; „Listenzeile mit zweitem Ziel“ (5.3) ist die Zeilen-Form davon; nicht Umgestelltes in Abschnitt 10 | An vielen Kacheln war nur der Titel oder ein Knopf klickbar; Einzellösungen mit `(click)` am Container verlieren Mittelklick, Tastatur und saubere Nebenziele | Nutzerwunsch 19.11. („hast du oft kacheln wo nur einzelne teile klickbar sind. mach die mal immer komplett klickbar“) |
 | 2026-11-19 | 0.996.0 · Repertoire-Trainer | Reihenfolge der Linien als Einstellung je Repertoire: im Trainer ein beschrifteter Rahmenknopf mit der geltenden Reihenfolge statt des Umschalters „Häufigste Linien zuerst“ (8.1); EIN Einstellungs-Dialog mit Optionsgruppe (`mat-radio-group`, je Wert Name + ein Erklärsatz, „Speichern“ erst auf Knopfdruck, Ladefehler statt Auswahl) für Trainer, ⋮ der Linienleiste und ⋮ der Repertoire-Karte (5.6) | Fünf sich ausschließende Reihenfolgen passen nicht in einen Umschalter; die Wahl gilt je Nutzer und Repertoire auf allen Geräten und muss auch außerhalb des Trainers erreichbar sein | Nutzerwunsch 19.11. |
 | 2026-11-19 | 0.995.0 · Spielervorbereitung | `/prep`: Abschnitt „Frühere Vorbereitungen“ unter dem Suchfeld, nur solange nicht gesucht wird — Zeilen wie die Treffer (Name, Meta als `.rh-dots`: Datum, eigene Farbe, Partien · Jahre · Elo), zugeordneter Gegner als Link auf die Spielerseite, nicht zugeordneter als `<button>` mit Lupe + „Spieler suchen“ (füllt die Suche), daneben je Zeile ein Symbolknopf zum Trainings-Repertoire; leer → kein Abschnitt, Ladefehler → `app-load-error`; Suchfeld-Hinweis `subscriptSizing="dynamic"`. Neues Muster „Listenzeile mit zweitem Ziel“ (5.3, 8.1) | Man bereitet sich auf dieselben Gegner wieder vor und musste sie jedes Mal neu suchen; zwei Ziele je Zeile ohne Link im Link; ein Eintrag, der nur sucht, darf nicht wie ein Sprung aussehen | Nutzerwunsch 19.11. („zeig dort liste der alten vorbereitungen an und mit klick hol ich den spieler gleich wieder“) |
 | 2026-11-18 | 0.994.0 · Woodpecker | Zeitplan als zweiter geteilter Baustein `app-woodpecker-schedule` neben dem Tagesziel: Löser-Kopf (letzte Angabe der Zyklus-Zeile, hinter dem Tagesziel), Dashboard-Kachel (eigene Zeile unter dem Tagesziel), Statistik-Fenster (eigene Zeile der Übersicht, ausführlich mit „Tag k von D“ und „aktuell n %“); im Zeitplan grüner Haken `check_circle` + „Im Zeitplan“ in `--rh-success` + Soll-Anteil klein, dahinter NEUTRAL „Zeitplan: noch 12 bis 57 %“ ohne Warnfarbe; Haken + Text brechen nie auseinander (5.12, 8.1) | Das Tagesziel sagt nur, ob das Minimum von HEUTE geschafft ist; ob man insgesamt dort steht, wo man am heutigen Tag des Zyklus stehen soll, stand nirgends | Nutzerwunsch 18.11.2026 („neben x pro tag für fertig auch noch ein checkmark haben wenn ich % der gesamtpuzzles passend zum aktuellen tag hab (und in statistik oben ausgewiesen noch x puzzle bis z.b. 55% erfüllt)“) |

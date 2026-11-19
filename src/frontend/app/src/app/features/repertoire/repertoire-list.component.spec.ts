@@ -15,6 +15,8 @@ import { RepertoireTrainingService } from './repertoire-training.service';
 import { saveRepertoireOffline, hasRepertoireOffline, getRepertoireOffline } from './repertoire-offline.util';
 import { TrainOrderDialogComponent } from './train-order-dialog.component';
 import { REPERTOIRE_OFFLINE_PREFIX } from '../../core/offline.service';
+import { Router } from '@angular/router';
+import { clickCenter, clickFreeSpot, expectWholeTileClickable } from '../../testing/tile-hit';
 
 /**
  * Reiner Test des Such-Filters (filteredRepertoires) — Name + Beschreibung, case-insensitive.
@@ -472,5 +474,96 @@ describe('Repertoire-Liste: Bereich „Letzte Woche"', () => {
     const { recentRepertoires, RECENT_MAX } = await import('./repertoire-list.component');
     const list = Array.from({ length: RECENT_MAX + 3 }, (_, i) => rep(i + 1, 100, i * 0.1));
     expect(recentRepertoires(list, now).length).toBe(RECENT_MAX);
+  });
+});
+
+/**
+ * Ganze Karte klickbar (DESIGN 5.2, Nutzerwunsch 19.11.): die Fläche gehört „Öffnen“ — ein echter Link, damit auch
+ * Mittelklick/„in neuem Tab“ gehen —, Offline-Schalter, ⋮ und die Marken mit Tooltip bleiben eigene Ziele. Gemessen per
+ * Treffertest am gerenderten Element (`testing/tile-hit`), nicht an Klassen.
+ */
+describe('RepertoireListComponent: ganze Karte klickbar', () => {
+  const rep = (id: number, extra: object = {}): any =>
+    ({ id, name: `Prep: Schett, Franz 2026 (${id})`, description: 'Trainingslinien gegen Schett, Franz — er hat Schwarz, ich spiele Weiß',
+       kind: 'Opening', fileCount: 1, isPublic: false, useForExtension: true, needsReimport: true, isShared: false, ...extra });
+
+  async function render(list: () => any) {
+    const training = { getLineStates: jasmine.createSpy('getLineStates').and.returnValue(of([])), getConfig: () => of(null) };
+    const service = { list, getPgnText: jasmine.createSpy('getPgnText').and.returnValue(of('1. e4 *')) };
+    await TestBed.configureTestingModule({
+      imports: [RepertoireListComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: RepertoireService, useValue: service },
+        { provide: RepertoireTrainingService, useValue: training },
+        { provide: MatDialog, useValue: {} },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RepertoireListComponent);
+    fixture.detectChanges();
+    const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+    const went = () => navigate.calls.allArgs().map(a => TestBed.inject(Router).serializeUrl(a[0] as any));
+    const card = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('mat-card.rep-card')!;
+    return { fixture, card, went, service, training };
+  }
+
+  function clearOffline(): void {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(REPERTOIRE_OFFLINE_PREFIX)) localStorage.removeItem(k);
+    }
+  }
+  beforeEach(clearOffline);
+  afterEach(() => { clearOffline(); TestBed.resetTestingModule(); });
+
+  it('Fläche, Titel und Beschreibung treffen „Öffnen“; Offline-Schalter, ⋮ und Marken treffen sich selbst', async () => {
+    const { card } = await render(() => of([rep(1)]));
+    const open = card.querySelector<HTMLElement>('a.rep-open')!;
+    expect(open.getAttribute('href')).withContext('echter Link: Mittelklick und „in neuem Tab öffnen“').toBe('/repertoires/1');
+    expect(card.querySelectorAll('.offline-toggle, .ext-badge, .stale-badge, [aria-haspopup="menu"]').length).toBe(4);
+    expectWholeTileClickable(card, open);
+  });
+
+  it('Klick auf eine leere Stelle der Karte öffnet das Repertoire', async () => {
+    const { card, went } = await render(() => of([rep(1)]));
+    clickFreeSpot(card, card.querySelector('a.rep-open')!);
+    clickCenter(card.querySelector('.rep-name')!);
+    clickCenter(card.querySelector('mat-card-content p')!);
+    expect(went()).toEqual(['/repertoires/1', '/repertoires/1', '/repertoires/1']);
+  });
+
+  it('⋮ öffnet nur das Menü, der Offline-Schalter speichert nur offline — kein Öffnen', async () => {
+    const { fixture, card, went, training } = await render(() => of([rep(1)]));
+    clickCenter(card.querySelector('[aria-haspopup="menu"]')!);
+    fixture.detectChanges();
+    expect(document.querySelectorAll('.mat-mdc-menu-item').length).withContext('Menü offen').toBe(6);
+    // Auch der Menüpunkt „Reihenfolge im Training“ (0.996.0) ist ein Nebenelement: er liegt (im Overlay) über der Karte und
+    // öffnet seinen Dialog, nicht das Repertoire.
+    const openTrainOrder = spyOn(fixture.componentInstance, 'openTrainOrder');
+    const item = document.querySelector<HTMLElement>('.mat-mdc-menu-item.train-order-item')!;
+    const box = item.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2) as HTMLElement | null;
+    expect(!!hit && item.contains(hit)).withContext('Menüeintrag liegt über der Karte').toBeTrue();
+    hit!.click();
+    expect(openTrainOrder).toHaveBeenCalledTimes(1);
+    expect(went()).toEqual([]);
+    clickCenter(card.querySelector('.offline-toggle')!);
+    expect(training.getLineStates).toHaveBeenCalledWith(1);
+    expect(hasRepertoireOffline(1)).toBeTrue();
+    clickCenter(card.querySelector('.ext-badge')!);
+    clickCenter(card.querySelector('.stale-badge')!);
+    expect(went()).toEqual([]);
+  });
+
+  it('offline (nur Training möglich): die Fläche gehört „Trainieren“', async () => {
+    saveRepertoireOffline({ meta: rep(3, { needsReimport: false }), pgn: '1. e4 c6 *', states: [], config: null, savedAt: '2026-11-19T00:00:00Z' });
+    const { card, went } = await render(() => throwError(() => new Error('offline')));
+    const train = card.querySelector<HTMLElement>('mat-card-actions a')!;
+    expect(train.getAttribute('href')).toBe('/repertoires/3/train');
+    expectWholeTileClickable(card, train);
+    clickFreeSpot(card, train);
+    expect(went()).toEqual(['/repertoires/3/train']);
   });
 });

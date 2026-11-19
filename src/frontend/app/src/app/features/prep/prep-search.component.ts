@@ -70,14 +70,16 @@ export const PREP_SEARCH_DELAY_MS = 250;
           } @else {
             <ul class="history-list" role="list">
               @for (e of history(); track e.repertoireId) {
-                <li>
+                <!-- Zeile mit zweitem Ziel (DESIGN 5.3) über den Baustein aus 5.2: die Zeile ist als Ganzes klickbar
+                     (Ziel = die Zeile selbst), der Repertoire-Knopf daneben bleibt eigenes Ziel. -->
+                <li class="rh-tile">
                   @if (e.playerId) {
-                    <a class="main" [routerLink]="['/prep', e.playerId]">
+                    <a class="main rh-tile-target" [routerLink]="['/prep', e.playerId]">
                       <ng-container [ngTemplateOutlet]="entry" [ngTemplateOutletContext]="{ $implicit: e }" />
                     </a>
                   } @else {
                     <!-- Nicht zugeordnet: kein Sprung, sondern die Suche nach dem Namen — erkennbar an „Spieler suchen“. -->
-                    <button type="button" class="main" (click)="searchFor(e, $event)">
+                    <button type="button" class="main rh-tile-target" (click)="searchFor(e, $event)">
                       <ng-container [ngTemplateOutlet]="entry" [ngTemplateOutletContext]="{ $implicit: e }" />
                     </button>
                   }

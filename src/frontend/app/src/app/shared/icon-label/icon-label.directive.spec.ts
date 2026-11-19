@@ -2,7 +2,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { MatTooltip } from '@angular/material/tooltip';
-import { IconLabelDirective } from './icon-label.directive';
+import { IconLabelDirective, TILE_TOOLTIP_DELAY_MS } from './icon-label.directive';
 
 @Component({
   standalone: true,
@@ -52,5 +52,27 @@ describe('IconLabelDirective', () => {
     await fixture.whenStable();
     expect(button.hasAttribute('aria-label')).toBeFalse();
     expect(tooltip.message).toBe('');
+  });
+});
+
+/**
+ * Ganze Kachel klickbar (DESIGN 5.2): am Hauptziel `rh-tile-target` gilt der Zeiger über der ganzen Kachel als „über dem
+ * Knopf“ — sein Tooltip kommt dort verzögert, sonst blitzte er bei jeder Mausbewegung über die Karte auf.
+ */
+describe('IconLabelDirective am Hauptziel einer Kachel', () => {
+  @Component({
+    standalone: true,
+    imports: [IconLabelDirective],
+    template: `<a class="open rh-tile-target" href="#" appIconLabel="Öffnen">✎</a><button type="button" class="pdf" appIconLabel="PDF">⎙</button>`,
+  })
+  class TileHostComponent {}
+
+  it('verzögert den Tooltip nur am Hauptziel', async () => {
+    await TestBed.configureTestingModule({ imports: [TileHostComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(TileHostComponent);
+    fixture.detectChanges();
+    const delay = (css: string) => fixture.debugElement.query(By.css(css)).injector.get(MatTooltip).showDelay;
+    expect(delay('.open')).toBe(TILE_TOOLTIP_DELAY_MS);
+    expect(delay('.pdf')).toBe(0);
   });
 });

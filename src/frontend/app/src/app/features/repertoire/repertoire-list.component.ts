@@ -175,7 +175,9 @@ export function recentRepertoires(list: readonly Repertoire[], now: number): Rep
     <ng-template #repCard let-rep>
       <!-- UI-Sweep 2026-10-11 (r2-rg-rep-cards): Titel einzeilig mit Ellipse, die Art als kleine Marke in der
            Unterzeile (bei „keine" gar nicht) und die Aktionszeile unten bündig — sonst sprang „Öffnen" je Karte. -->
-      <mat-card class="rep-card">
+      <!-- Ganze Karte klickbar (DESIGN 5.2): die Fläche gehört „Öffnen" (offline: „Trainieren"); Offline-Schalter, ⋮ und
+           die Marken mit Tooltip bleiben eigene Ziele. -->
+      <mat-card class="rep-card rh-tile">
         <mat-card-header>
           <mat-card-title class="rep-title">
             <span class="rep-name" [title]="rep.name">{{ rep.name }}</span>
@@ -209,11 +211,11 @@ export function recentRepertoires(list: readonly Repertoire[], now: number): Rep
         <mat-card-actions class="rep-actions">
           @if (offlineList) {
             <!-- Offline-Fallback: nur das Training funktioniert (aus dem Offline-Cache). -->
-            <a mat-button color="primary" [routerLink]="['/repertoires', rep.id, 'train']">
+            <a mat-button color="primary" class="rh-tile-target" [routerLink]="['/repertoires', rep.id, 'train']">
               <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.train' | translate }}
             </a>
           } @else {
-            <button mat-button [routerLink]="['/repertoires', rep.id]">{{ 'repertoire.list.open' | translate }}</button>
+            <a mat-button class="rep-open rh-tile-target" [routerLink]="['/repertoires', rep.id]">{{ 'repertoire.list.open' | translate }}</a>
             <button mat-icon-button class="offline-toggle" [disabled]="savingOffline === rep.id"
                     (click)="toggleOffline(rep)"
                     [appIconLabel]="(isOffline(rep) ? 'repertoire.list.offlineRemoveTooltip' : 'repertoire.list.offlineSaveTooltip') | translate">
