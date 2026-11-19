@@ -1,6 +1,7 @@
 import { parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 import {
-  LineOrderRule, TrainerLineSet, byRank, countUserMoves, extendQueue, hasUserMove, lineKeyOf, opponentLines, orderLines, playableLines,
+  LineOrderRule, TrainerLineSet, UNRANKED, byRank, continueQueue, countUserMoves, extendQueue, hasUserMove, lineKeyOf, opponentLines,
+  orderLines, playableLines, storedOpponentLines,
 } from './repertoire-trainer-queue.util';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { LINE_ORDERS, LineOrder } from './repertoire-line-order';
@@ -193,5 +194,170 @@ describe('orderLines', () => {
         expect(orderLines([MIXED[0]], rule(order, mode))).toEqual([MIXED[0]]);
       }
     }
+  });
+});
+
+/**
+ * Reihenfolge gegen den GESPEICHERTEN Gegner eines „Prep: …"-Repertoires (0.999.3): der Rang des Gegners ist ein eigener
+ * Wert („Nach dem Gegner“) und entscheidet bei „Wenig/Viel trainierte zuerst“ den Gleichstand — statt Zufall bzw. PGN.
+ */
+describe('orderLines gegen den gespeicherten Gegner', () => {
+  interface L { name: string; level?: number; freq?: number; rank?: number }
+  const REVERSE = <T>(a: readonly T[]): T[] => [...a].reverse();
+  const names = (ls: L[]) => ls.map(l => l.name).join('');
+  const RANK = (l: L) => l.rank ?? UNRANKED;
+
+  function rule(order: LineOrder, mode: 'quiz' | 'learn', extra: Partial<LineOrderRule<L>> = {}): LineOrderRule<L> {
+    return {
+      order, mode, shuffle: REVERSE,
+      returnHours: l => hoursUntilReturnIfSolved(l.level === undefined ? undefined
+        : { lineKey: l.name, level: l.level, reps: 0, lapses: 0, dueAt: '', lastReviewedAt: null, inPool: true, paused: false }, DEFAULT_SR_LEVELS),
+      frequency: l => l.freq ?? -1,
+      opponent: { rank: RANK },
+      ...extra,
+    };
+  }
+
+  /** Repertoire-Reihenfolge A…H. Gegner spielt am ehesten G, dann C, A, E, B, H; D und F kennt er nicht. */
+  const PREP: L[] = [
+    { name: 'A', level: 2, rank: 2 }, { name: 'B', rank: 4 }, { name: 'C', level: 1, rank: 1 }, { name: 'D', level: 1 },
+    { name: 'E', rank: 3 }, { name: 'F', level: 3 }, { name: 'G', level: 1, rank: 0 }, { name: 'H', level: 0, rank: 5 },
+  ];
+
+  it('„Nach dem Gegner“: seine Reihenfolge, was er nicht kennt dahinter in Repertoire-Reihenfolge — in beiden Modi, nie gemischt', () => {
+    const shuffle = jasmine.createSpy('shuffle').and.callFake(REVERSE);
+    expect(names(orderLines(PREP, rule('opponent', 'quiz', { shuffle })))).toBe('GCAEBHDF');
+    expect(names(orderLines(PREP, rule('opponent', 'learn', { shuffle })))).toBe('GCAEBHDF');
+    expect(shuffle).not.toHaveBeenCalled();
+  });
+
+  it('„Wenig trainierte zuerst“ (Vorgabe): untrainierte zuerst, darin die wahrscheinlichsten zuerst; dann Stufe 1 nach Wahrscheinlichkeit …', () => {
+    // untrainiert/Stufe 0: E(3) B(4) H(5) · Stufe 1: G(0) C(1) D(–) · Stufe 2: A · Stufe 3: F
+    const shuffle = jasmine.createSpy('shuffle').and.callFake(REVERSE);
+    expect(names(orderLines(PREP, rule('leastTrained', 'quiz', { shuffle })))).toBe('EBHGCDAF');
+    expect(names(orderLines(PREP, rule('leastTrained', 'learn', { shuffle })))).toBe('EBHGCDAF');
+    expect(shuffle).withContext('Gleichstand entscheidet der Gegner, nicht der Zufall').not.toHaveBeenCalled();
+  });
+
+  it('„Viel trainierte zuerst“: die Umkehrung, Gleichstand ebenfalls nach dem Gegner', () => {
+    expect(names(orderLines(PREP, rule('mostTrained', 'quiz')))).toBe('FAGCDEBH');
+  });
+
+  it('frisches Prep-Repertoire (nichts trainiert): die Vorgabe ergibt genau die Reihenfolge des Gegners — wie bisher', () => {
+    const fresh: L[] = PREP.map(({ name, rank }) => ({ name, rank }));
+    expect(names(orderLines(fresh, rule('leastTrained', 'quiz')))).toBe(names(orderLines(fresh, rule('opponent', 'quiz'))));
+    expect(names(orderLines(fresh, rule('leastTrained', 'quiz')))).toBe('GCAEBHDF');
+  });
+
+  it('die Reihung fehlt noch (lädt, Abruf gescheitert): Gleichstand in Repertoire-Reihenfolge, „Nach dem Gegner“ = Repertoire-Reihenfolge', () => {
+    const noRank = { opponent: { rank: null } };
+    expect(names(orderLines(PREP, rule('leastTrained', 'quiz', noRank)))).toBe('BEHCDGAF');
+    expect(names(orderLines(PREP, rule('mostTrained', 'quiz', noRank)))).toBe('FACDGBEH');
+    expect(names(orderLines(PREP, rule('opponent', 'quiz', noRank)))).toBe('ABCDEFGH');
+  });
+
+  it('„Zufällig“, „Reihenfolge im Repertoire“ und „Häufigste zuerst“ bleiben wie ohne Gegner', () => {
+    const withFreq = PREP.map((l, i) => ({ ...l, freq: i % 2 ? 0.2 : 0.1 }));
+    for (const mode of ['quiz', 'learn'] as const) {
+      for (const order of ['random', 'repertoire', 'frequency'] as const) {
+        const plain = rule(order, mode); delete plain.opponent;
+        expect(names(orderLines(withFreq, rule(order, mode)))).withContext(`${order}/${mode}`).toBe(names(orderLines(withFreq, plain)));
+      }
+    }
+    expect(names(orderLines(PREP, rule('random', 'learn')))).toBe('HGFEDCBA');
+    expect(names(orderLines(PREP, rule('repertoire', 'quiz')))).toBe('ABCDEFGH');
+  });
+
+  it('„Häufigste zuerst“ ohne Häufigkeiten: die Vorgabe — und gegen den Gegner mit seinem Gleichstand', () => {
+    expect(names(orderLines(PREP, rule('frequency', 'quiz', { frequency: null })))).toBe('EBHGCDAF');
+  });
+
+  it('OHNE Gegner-Sitzung fällt ein gewähltes „Nach dem Gegner“ auf die Vorgabe (Gleichstand wie sonst: Abfragen gemischt, Lernen wie im Repertoire)', () => {
+    const plainQuiz = rule('opponent', 'quiz'); delete plainQuiz.opponent;
+    const plainLearn = rule('opponent', 'learn'); delete plainLearn.opponent;
+    const leastQuiz = rule('leastTrained', 'quiz'); delete leastQuiz.opponent;
+    expect(names(orderLines(PREP, plainQuiz))).toBe(names(orderLines(PREP, leastQuiz)));
+    expect(names(orderLines(PREP, plainLearn))).toBe('BEHCDGAF');
+  });
+
+  it('lässt die Eingabe unberührt und liefert in jeder Reihenfolge dieselben Linien', () => {
+    for (const order of LINE_ORDERS) {
+      const input = PREP.map(l => ({ ...l }));
+      const out = orderLines(input, rule(order, 'quiz'));
+      expect(names(input)).toBe('ABCDEFGH');
+      expect(out).not.toBe(input);
+      expect([...out].sort((a, b) => a.name.localeCompare(b.name))).toEqual(input);
+    }
+  });
+});
+
+describe('storedOpponentLines (Sitzung gegen den gespeicherten Gegner, 0.999.3)', () => {
+  // A, B im Weiß-Kapitel W1; C im Schwarz-Kapitel S1; D hat für Schwarz nichts zu üben
+  const identity = (ls: typeof LINES) => ls;
+  const reversed = (ls: typeof LINES) => [...ls].reverse();
+  const base = { color: null, start: null, isPaused: () => false, keep: null, order: identity };
+
+  it('ohne Filter (Lernen, ausdrückliche Wiederholung): alle übbaren Linien, in der gewählten Reihenfolge', () => {
+    expect(names(storedOpponentLines(set(), base))).toEqual(['A', 'B', 'C']);
+    expect(names(storedOpponentLines(set(), { ...base, order: reversed }))).toEqual(['C', 'B', 'A']);
+  });
+
+  it('nur die Kapitel der Farbe gegen ihn; der Kapitel-Filter der Sitzung gilt', () => {
+    expect(names(storedOpponentLines(set(), { ...base, color: 'w' }))).toEqual(['A', 'B']);
+    expect(names(storedOpponentLines(set(), { ...base, color: 'b' }))).toEqual(['C']);
+    expect(names(storedOpponentLines(set('S1'), base))).toEqual(['C']);
+  });
+
+  it('Abfragen: nur, was der Filter durchlässt (fällig oder untrainiert) — pausierte nie', () => {
+    const keep = (l: (typeof LINES)[number]) => l.headers['White'] !== 'B';
+    expect(names(storedOpponentLines(set(), { ...base, keep }))).toEqual(['A', 'C']);
+    const isPaused = (k: string) => k === KEY('A');
+    expect(names(storedOpponentLines(set(), { ...base, keep, isPaused }))).toEqual(['C']);
+    expect(names(storedOpponentLines(set(), { ...base, isPaused }))).toEqual(['B', 'C']);
+  });
+
+  it('die Einstiegslinie kommt IMMER und zuerst — auch pausiert oder nicht fällig; danach ALLE übrigen der Regel, nichts wird abgeschnitten', () => {
+    const keep = (l: (typeof LINES)[number]) => l.headers['White'] !== 'B';
+    const isPaused = (k: string) => k === KEY('B');
+    expect(names(storedOpponentLines(set(), { ...base, start: KEY('B'), keep, isPaused }))).toEqual(['B', 'A', 'C']);
+    // die Reihenfolge gilt für den Rest; die Einstiegslinie steht nicht doppelt da
+    expect(names(storedOpponentLines(set(), { ...base, start: KEY('B'), order: reversed }))).toEqual(['B', 'C', 'A']);
+    expect(names(storedOpponentLines(set(), { ...base, start: KEY('C'), order: reversed }))).toEqual(['C', 'B', 'A']);
+  });
+
+  it('Einstiegslinie einer anderen Farbe oder unbekannt: keine Sonderrolle', () => {
+    expect(names(storedOpponentLines(set(), { ...base, color: 'w', start: KEY('C') }))).toEqual(['A', 'B']);
+    expect(names(storedOpponentLines(set(), { ...base, start: 'unbekannt' }))).toEqual(['A', 'B', 'C']);
+  });
+
+  it('nichts übrig: leer (der Trainer zeigt dann den Leerzustand)', () => {
+    expect(storedOpponentLines(set(), { ...base, keep: () => false })).toEqual([]);
+  });
+});
+
+describe('continueQueue (Warteschlange einer laufenden Sitzung fortschreiben)', () => {
+  const [a, b, c] = LINES;
+
+  it('alles bis zur laufenden Linie bleibt, danach die übrigen in der NEUEN Reihenfolge', () => {
+    expect(continueQueue([b, a, c], 0, [c, b, a])).toEqual([b, c, a]);
+    expect(continueQueue([b], 0, [a, b, c])).toEqual([b, a, c]);
+  });
+
+  it('schon gespielte Linien kommen nicht noch einmal — auch wenn sie in der neuen Reihenfolge hinter der laufenden stünden', () => {
+    expect(continueQueue([a, b, c], 1, [b, c, a])).toEqual([a, b, c]);
+    expect(continueQueue([a, b], 1, [c, b, a])).toEqual([a, b, c]);
+  });
+
+  it('nichts geht verloren, was in der neuen Reihenfolge VOR der laufenden steht (anders als extendQueue)', () => {
+    expect(continueQueue([b], 0, [a, c, b])).toEqual([b, a, c]);
+    expect(extendQueue([b], 0, [a, c, b])).toEqual([b]);          // die ausdrückliche Gegner-Sitzung schneidet ab der Einstiegslinie
+  });
+
+  it('die laufende Linie fehlt in der neuen Liste (z. B. nicht mehr fällig): sie läuft weiter, der Rest folgt', () => {
+    expect(continueQueue([b], 0, [a, c])).toEqual([b, a, c]);
+  });
+
+  it('leere Warteschlange: einfach die neue Liste', () => {
+    expect(continueQueue([], 0, [a, c])).toEqual([a, c]);
   });
 });

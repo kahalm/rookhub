@@ -60,6 +60,10 @@
     "opponentDone": "Svih {{n}} linija protiv ovog protivnika je gotovo.",
     "opponentAgain": "Ispočetka",
     "opponentBack": "Natrag na karticu igrača",
+    "opponentPrepTies": "Protiv ovog protivnika: samo poglavlja tvoje boje protiv njega. Uz jednak stupanj treniranosti prvo dolazi ono što će najvjerojatnije igrati.",
+    "opponentPrep": "Protiv ovog protivnika: samo poglavlja tvoje boje protiv njega.",
+    "opponentDueDone": "Svih {{n}} dospjelih i novih linija protiv ovog protivnika je gotovo.",
+    "practiceAll": "Vježbaj sve linije",
     "freqLineTip": "Koliko često dosegneš ovu varijantu u stvarnim partijama (Lichess explorer, isti odabir kao kod traženja rupa)",
     "whiteToMoveLearn": "Bijeli na potezu — ovo je tvoj potez iz repertoara.",
     "blackToMoveLearn": "Crni na potezu — ovo je tvoj potez iz repertoara.",
@@ -1476,14 +1480,16 @@
         "mostTrained": "Najviše trenirane prve",
         "random": "Nasumično",
         "repertoire": "Redoslijed u repertoaru",
-        "frequency": "Najčešće prve"
+        "frequency": "Najčešće prve",
+        "opponent": "Prema protivniku"
       },
       "hint": {
         "leastTrained": "Prvo linije koje se nakon točnog rješenja najbrže vraćaju – razina 0 prije 1 prije 2 …",
         "mostTrained": "Obrnuto: prvo linije s najdužim razmakom do sljedećeg ponavljanja.",
         "random": "Svaki put iznova promiješano.",
         "repertoire": "Onako kako linije stoje u repertoaru.",
-        "frequency": "Prvo linije do kojih u stvarnim partijama češće dolaziš (Lichess explorer, samo na mreži)."
+        "frequency": "Prvo linije do kojih u stvarnim partijama češće dolaziš (Lichess explorer, samo na mreži).",
+        "opponent": "Prvo linije koje će ovaj protivnik najvjerojatnije igrati (iz njegovih partija)."
       }
     }
   },

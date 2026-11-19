@@ -9,7 +9,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { RepertoireTrainingService } from './repertoire-training.service';
 import {
-  DEFAULT_LINE_ORDER, LINE_ORDERS, LineOrder, effectiveLineOrder, lineOrderHintKey, lineOrderLabelKey, parseLineOrder,
+  DEFAULT_LINE_ORDER, LineOrder, availableLineOrders, effectiveLineOrder, lineOrderHintKey, lineOrderLabelKey, parseLineOrder,
   readLegacyFrequencyOrder,
 } from './repertoire-line-order';
 import { updateRepertoireOfflineSettings } from './repertoire-offline.util';
@@ -20,6 +20,9 @@ export interface TrainOrderDialogData {
   repertoireName?: string | null;
   /** Die geltende Reihenfolge, wenn der Aufrufer sie schon kennt (Trainer); sonst holt der Dialog sie vom Server. */
   current?: LineOrder;
+  /** Nur zusammen mit `current`: das Repertoire wird gegen seinen gespeicherten Gegner trainiert — dann steht auch
+   *  „Nach dem Gegner" zur Wahl. Lädt der Dialog selbst, sagt es ihm der Server (`hasOpponent`). */
+  hasOpponent?: boolean;
 }
 
 /** Den Dialog öffnen — EIN Baustein für Trainer, Linienleiste der Detailseite und ⋮ der Repertoire-Karte.
@@ -35,7 +38,7 @@ export function openTrainOrderDialog(dialog: MatDialog, data: TrainOrderDialogDa
 
 /**
  * „Reihenfolge im Training" (0.996.0): in welcher Reihenfolge der Trainer die Linien DIESES Repertoires bringt — eine
- * Wahl aus {@link LINE_ORDERS}, je Nutzer und Repertoire am Server gespeichert (gilt auf allen Geräten, auch für ein
+ * Wahl aus `LINE_ORDERS` („Nach dem Gegner" nur mit gespeichertem Gegner), je Nutzer und Repertoire am Server gespeichert (gilt auf allen Geräten, auch für ein
  * geteiltes fremdes Repertoire). Gespeichert wird erst mit „Speichern"; scheitert das, bleibt der Dialog offen und eine
  * Snackbar sagt es — nie ein vorgetäuschtes „gespeichert".
  */
@@ -46,7 +49,7 @@ export function openTrainOrderDialog(dialog: MatDialog, data: TrainOrderDialogDa
   imports: [MatDialogModule, MatButtonModule, MatRadioModule, MatProgressSpinnerModule, TranslatePipe, LoadErrorComponent],
   template: `
     <h2 mat-dialog-title>{{ 'repertoire.trainOrder.title' | translate }}</h2>
-    <mat-dialog-content>
+    <mat-dialog-content class="rh-scroll-hint">
       @if (data.repertoireName) {
         <p class="subtitle">{{ data.repertoireName }}</p>
       }
@@ -58,7 +61,7 @@ export function openTrainOrderDialog(dialog: MatDialog, data: TrainOrderDialogDa
       } @else {
         <mat-radio-group class="orders" [value]="selected()" (change)="selected.set($event.value)"
                          [attr.aria-label]="'repertoire.trainOrder.title' | translate">
-          @for (o of orders; track o) {
+          @for (o of orders(); track o) {
             <mat-radio-button [value]="o" [attr.data-order]="o">
               <span class="name">{{ labelKey(o) | translate }}</span>
               <span class="hint">{{ hintKey(o) | translate }}</span>
@@ -97,7 +100,8 @@ export class TrainOrderDialogComponent implements OnInit {
   private readonly snackbar = inject(SnackbarService);
   private readonly translate = inject(TranslateService);
 
-  readonly orders = LINE_ORDERS;
+  /** Die wählbaren Reihenfolgen — „Nach dem Gegner" nur für ein Repertoire mit gespeichertem Gegner. */
+  readonly orders = signal<LineOrder[]>(availableLineOrders(false));
   readonly loading = signal(true);
   readonly loadError = signal<unknown>(null);
   readonly saving = signal(false);
@@ -108,6 +112,7 @@ export class TrainOrderDialogComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.data.current) {
+      this.orders.set(availableLineOrders(!!this.data.hasOpponent));
       this.selected.set(this.data.current);
       this.loading.set(false);
     } else {
@@ -121,7 +126,9 @@ export class TrainOrderDialogComponent implements OnInit {
     this.loadError.set(null);
     this.training.getConfig(this.data.repertoireId).subscribe({
       next: cfg => {
-        this.selected.set(effectiveLineOrder(cfg?.lineOrder, readLegacyFrequencyOrder()));
+        const hasOpponent = !!cfg?.hasOpponent;
+        this.orders.set(availableLineOrders(hasOpponent));
+        this.selected.set(effectiveLineOrder(cfg?.lineOrder, readLegacyFrequencyOrder(), hasOpponent));
         this.loading.set(false);
       },
       error: err => { this.loadError.set(err ?? true); this.loading.set(false); },

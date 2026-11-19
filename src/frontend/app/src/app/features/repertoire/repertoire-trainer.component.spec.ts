@@ -1528,8 +1528,10 @@ describe('RepertoireTrainerComponent: gespeicherter Gegner eines „Prep: …"-R
     expect(opts.params.get('years')).toBe('3');
     expect(opts.params.get('evil')).toBeNull();
     expect(c.opponent).toBe('league:1608169');
-    expect(c.opponentNotice).toBe('repertoireTrainer.opponentOrder');
-    expect(c.queue.map(l => l.headers['White'])[0]).toBe('1.d4 d5');           // Reihenfolge des Gegners (B vor A)
+    // Seit 0.999.3 gilt gegen den GESPEICHERTEN Gegner die Reihenfolge-Einstellung (Vorgabe „Wenig trainierte zuerst“);
+    // der Hinweis sagt deshalb nicht mehr „Reihenfolge nach Gegner“, sondern was von ihm gilt: Farbe + Gleichstand.
+    expect(c.opponentNotice).toBe('repertoireTrainer.opponentPrepTies');
+    expect(c.queue.map(l => l.headers['White'])).toEqual(['1.d4 d5', '1.e4 e5']);   // beide Stufe 1 → Gleichstand: seine Reihenfolge (B vor A)
     expect(c.repertoireName).toBe('Prep: Moritz, Christian Mag. 2026');
   });
 

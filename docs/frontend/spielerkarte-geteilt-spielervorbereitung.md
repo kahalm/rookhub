@@ -75,6 +75,16 @@
   Zuständen, Ausfall = kein Gegner, nie Offline-Kopie) — `useStoredOpponent` setzt `opponent`, `opponentName`, `opponentColor`
   (falls nicht in der Adresse) und `opponentParams` (`TRAINER_PASS_THROUGH`). Damit Gegner-Zeile und Reihenfolge auch von
   Detailseite, Liste und Dashboard. Die Adresse geht immer vor. Nach dem Anlegen führt die Karte weiter auf die Detailseite.
+- Gespeicherter Gegner ist seit 0.999.3 eine EIGENE Sitzungsart (`storedOpponentSession` = `opponentStored` und Gegner
+  gesetzt; die Sitzung mit `?opponent=` in der Adresse bleibt, was sie war): Abfragen bringt nur fällige + nie trainierte
+  Linien (`storedOpponentQueue` → `storedOpponentLines` mit `isStateDueOrUntrained`), Lernen alle; die
+  Reihenfolge-Einstellung gilt (`ordered` gibt `orderLines` den Rang des Gegners mit, Knopf sichtbar, sechster Wert
+  `opponent`); kommt die Reihung nach, schreibt `continueQueue` die Warteschlange fort (die laufende Linie bleibt).
+  Leerzustand mit „Alle Linien üben" (`practiceAll`, nur in der Sitzung), Abschluss `opponentDueDone` bzw. `opponentDone`;
+  Hinweis-Getter `opponentNotice` (`opponentOrder` / `opponentPrepTies` / `opponentPrep` / `opponentFailed`). Ganze Regel
+  mit Tabelle: `docs/api/repertoires.md`, „Trainer gegen den gespeicherten Gegner …". Specs:
+  `repertoire-trainer.component.prep.spec.ts` (+ `.prep.dom.spec.ts`), reine Funktionen in
+  `repertoire-trainer-queue.util.spec.ts`.
 - Unvollständige Schätzung (0.725.1): `.tl-incomplete` „Schätzung unvollständig — {{n}} Stellungen offen" (`explorerPending`)
   mit `.tl-continue` „Weiter rechnen" (dieselbe Abfrage); automatisch nach 3 s, höchstens 3 Runden
   (`AutoContinueMs`/`AutoContinueRounds`, Wecker außerhalb der Zone, damit `whenStable` nicht wartet; Wahl/Öffnen setzt

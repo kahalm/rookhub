@@ -32,6 +32,8 @@ export interface SrConfigDto {
   /** Reihenfolge der Linien im Trainer, die der Nutzer für dieses Repertoire gewählt hat (`LineOrder`, 0.996.0);
    *  `null`/fehlend = nichts gewählt → `effectiveLineOrder` (Vorgabe bzw. alter Geräte-Schalter). */
   lineOrder?: string | null;
+  /** Das Repertoire hat einen gespeicherten Gegner („Prep: …") — nur dann steht „Nach dem Gegner" (`opponent`) zur Wahl. */
+  hasOpponent?: boolean;
 }
 
 export interface LineReviewRequest {

@@ -610,6 +610,8 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
   `features/repertoire/train-order-dialog.component.ts`): schmaler Dialog (440 px, `maxWidth: '94vw'`,
   `autoFocus: 'dialog'`), langer Name (Repertoire) als leise Zeile unter dem Titel; `mat-radio-group` mit `aria-label` =
   Titel, je Wert der Name und EIN leiser Erklärsatz darunter (`.hint`, `--mat-sys-on-surface-variant`), Zeile mind. 44 px;
+  ein Wert, der für diesen Gegenstand nicht gilt, steht gar nicht in der Liste (statt gesperrt — „Nach dem Gegner“ nur
+  für ein Repertoire mit gespeichertem Gegner, 0.999.3); der Inhalt trägt `rh-scroll-hint` (sechs Werte am kleinen Handy);
   der GELTENDE Wert ist vorgewählt; unter der Liste ein Satz zur Geltung. Knöpfe „Abbrechen“ + „Speichern“ (Hauptknopf):
   gespeichert wird erst mit „Speichern“, Erfolg als `success`-Snackbar; scheitert es, bleibt der Dialog mit der Wahl offen
   (`warn`-Snackbar) — nie ein vorgetäuschtes „gespeichert“. Holt der Dialog den Stand selbst und scheitert das, steht
@@ -1218,7 +1220,15 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Handy wie im Leerzustand in die Titelzeile (`.more-solo`), nie ein Knopf allein in einer Zeile. **Kopfleiste bei
   600–768 px** (0.999.1): Zurück, Name und Moduswahl in der ersten Zeile, Reihenfolge-Knopf (links) und ⋮ (rechts)
   GEMEINSAM in einer zweiten, 8 px darunter wie am Handy — in einer Zeile blieben dem Namen dort nur 28–190 px („S…“);
-  ab 769 px eine Zeile, der Name kürzt sich mit „…“. Ohne Knopf (Leerzustand, Gegner-Sitzung) bleibt es bei einer Zeile. Unter 900 px steht nur der Name (Zusatz visuell versteckt, für Bildschirmleser da), darüber
+  ab 769 px eine Zeile, der Name kürzt sich mit „…“. Ohne Knopf (Leerzustand, Gegner-Sitzung) bleibt es bei einer Zeile.
+  **Gegen den gespeicherten Gegner eines „Prep: …“-Repertoires** (0.999.3) gilt die Reihenfolge-Einstellung: dort steht der
+  Reihenfolge-Knopf (und das ⋮ ohne `.more-solo`), der Dialog hat sechs Werte; „kein Knopf, ⋮ in der Titelzeile“ gilt nur
+  noch für die AUSDRÜCKLICHE Gegner-Sitzung (`?opponent=` von der Spielerkarte). Der Hinweis unter der Leiste nennt, was
+  wirklich gilt („Reihenfolge nach Gegner“ nur, wenn nach ihm gereiht wird). Leerzustand dort (nichts fällig, nichts neu):
+  Uhr-Symbol, „Gerade nichts fällig. Nächste Wiederholung in …“ und EINE Aktion „Alle Linien üben“ (`replay`,
+  Hauptknopf) — sie startet nur die Sitzung und macht am Server nichts fällig; fehlt, wenn es keine Linie gäbe. Abschluss
+  der aufs Fällige beschränkten Sitzung: „Alle n fälligen und neuen Linien …“ mit Hauptknopf „Alle Linien üben“; nach
+  einem Durchgang über alle wie bisher „Von vorn“ (ein Knopf sagt, was er bringt, 5.4). Unter 900 px steht nur der Name (Zusatz visuell versteckt, für Bildschirmleser da), darüber
   schrumpft der Zusatz zuerst (d4). Lernen: solange der Trainer den Zug vorspielt (Brett gesperrt), ohne Imperativ —
   „Schwarz am Zug — das ist dein Repertoirezug.“ (d4). Linienliste: neue Linie mit umrandeter 44-px-Pille „⊕ Üben“
   (`playlist_add`) statt eines „+“ im Abzeichen-Stil (d4). Abfragen (0.886.0): ein falscher Zug bleibt mit ROTEM Pfeil
@@ -1555,6 +1565,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-19 | 0.999.3 · Repertoire-Trainer | Prep-Repertoire gegen den gespeicherten Gegner (8.1): Reihenfolge-Knopf auch dort, Dialog mit sechstem Wert „Nach dem Gegner“ (nur wo er gilt — sonst nicht in der Liste, 5.6); Leerzustand und Abschluss der aufs Fällige beschränkten Abfrage bieten „Alle Linien üben“ statt „Alle jetzt fällig machen“ bzw. „Von vorn“; Hinweis unter der Leiste nennt die geltende Regel | Abfragen brachte dort immer alle Linien; nur Fällige + Untrainierte heißt: es gibt jetzt einen Leerzustand, und „Von vorn“ hätte nach dem Fälligen ins Leere geführt | Nutzerwunsch 19.11. |
 | 2026-11-19 | 0.999.1 · Repertoire-Trainer | Kopfleiste bei 600–768 px zweizeilig: Name + Moduswahl oben, Reihenfolge-Knopf links und ⋮ rechts gemeinsam darunter (8.1) | In einer Zeile schrumpfte der Repertoirename dort auf „S…“ (gemessen 28 px bei 620 px; bestand schon mit dem gleich breiten Umschalter „Häufigste Linien zuerst“) | Sichtprüfung 0.996.0 im Browser |
 | 2026-11-19 | 0.999.0 · Turnierseite/ClubHub | „Ganze Kachel klickbar“ (5.2) auf den anderen Oberflächen: Turnierkarte in Liste, Karten-Popup und Kalenderfenster sowie Merkliste (8.2); ClubHub-Karteizeilen und -Gruppenkarten mit Fokusring/Tönung aus `--focus`/`--ink` (8.5). KidHub war schon so (Kacheln sind Links), LeagueHub hat keine Kachel mit einem Hauptziel | Die Regel gilt für alle fünf Oberflächen | Nutzerwunsch 19.11. („immer komplett klickbar“) |
 | 2026-11-19 | 0.998.0 · RookHub | „Ganze Kachel klickbar“ (5.2) für die übrigen Karten: Kurskarten (Fläche = Titel-Link → Detailseite, aufgeklappter Kapitelblock über der Fläche), E-Book-Regal (nicht bei Mehrfachauswahl), Trainerstunden (Karte und Trefferzeile), Wochenpost (nicht im Formular, Bestenliste über der Fläche), Punktepartie-Durchläufe, Partie-Analysen, Rekonstruktionen, Favoriten, Aufgabenblätter, frühere Vorbereitungen (5.3); Tooltip am Hauptziel verzögert | Dieselbe Regel in allen Bereichen statt nur auf Startseite und Repertoire-Liste; ein sofortiger Tooltip am Hauptziel blitzte sonst bei jeder Mausbewegung über die Karte auf | Nutzerwunsch 19.11. („immer komplett klickbar“) |

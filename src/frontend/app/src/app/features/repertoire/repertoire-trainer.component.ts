@@ -25,9 +25,9 @@ import { SrConfigDialogComponent } from './sr-config-dialog.component';
 import { ParsedGame, exceedsSyncLimits, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
 import { parsePgnTextParallel } from '../../shared/pgn-viewer/pgn-parse-pool';
 import { isInfoLineGame } from './repertoire-info-line.util';
-import { isStateDue, isStateLearnable, earliestDueIso, hoursUntilReturnIfSolved, relDueLabel } from './repertoire-sr.util';
+import { isStateDue, isStateDueOrUntrained, isStateLearnable, earliestDueIso, hoursUntilReturnIfSolved, relDueLabel } from './repertoire-sr.util';
 import { OfflineTrainerSettings, getRepertoireOffline, refreshRepertoireOffline, updateRepertoireOfflineSettings } from './repertoire-offline.util';
-import { LineOrder, effectiveLineOrder, lineOrderLabelKey, readLegacyFrequencyOrder } from './repertoire-line-order';
+import { DEFAULT_LINE_ORDER, LineOrder, effectiveLineOrder, lineOrderLabelKey, readLegacyFrequencyOrder } from './repertoire-line-order';
 import { openTrainOrderDialog } from './train-order-dialog.component';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -35,7 +35,9 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
 import { EvalCompare } from './repertoire-trainer-eval-compare';
 import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent } from './repertoire-explorer.service';
 import { TrainerFrequencyLoader } from './repertoire-trainer-frequency-loader';
-import { TrainerLineSet, byRank, extendQueue, lineKeyOf, opponentLines, orderLines, playableLines } from './repertoire-trainer-queue.util';
+import {
+  TrainerLineSet, UNRANKED, continueQueue, extendQueue, lineKeyOf, opponentLines, orderLines, playableLines, storedOpponentLines,
+} from './repertoire-trainer-queue.util';
 import { BoardMove, PlayedComment, TrainerMode, TrainerOutcome, TrainerPhase, TrainerSession } from './repertoire-trainer-session';
 import { LineMoveToken } from './repertoire-trainer-line-view.util';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
@@ -142,17 +144,30 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
    *  während des Spiels, nur am Linienende. */
   showComments = readShowComments();
   /** Häufigkeiten über den Explorer (Fortschritt, Hinweis, Sortierung). */
-  private readonly freq = new TrainerFrequencyLoader(() => this.explorer, () => this.cdr.markForCheck(), () => this.buildQueue());
+  private readonly freq = new TrainerFrequencyLoader(() => this.explorer, () => this.cdr.markForCheck(), () => this.frequenciesDone());
 
   /** Reihenfolge nach einem Gegner (`?opponent=prep:<id>|league:<fide>`, „Alle in dieser Reihenfolge trainieren" der
    *  Spielerkarte, 2026-10-07): dieselben Trainingslinien wie dort, wahrscheinlichste zuerst; nur die Kapitel der Farbe
    *  (`?color=`). Ohne den Parameter bleibt der Trainer, wie er war. */
   opponent: string | null = null;
+  /**
+   * Der Gegner kommt vom Repertoire selbst (gespeichert an einem „Prep: …"-Repertoire), nicht aus der Adresse (0.999.3).
+   * Dann ist es die Sitzung gegen den GESPEICHERTEN Gegner ({@link storedOpponentSession}): Abfragen bringt nur fällige
+   * und noch nie trainierte Linien, Lernen alle, und die Reihenfolge-Einstellung gilt (bei Gleichstand seine
+   * Reihenfolge). Die ausdrückliche Sitzung (`?opponent=` von der Spielerkarte) bleibt: alle Linien in seiner Reihenfolge.
+   */
+  private opponentStored = false;
   private opponentColor: TrainColor | null = null;
   /** Linien-Schlüssel → Platz in der Reihenfolge des Gegners; null = (noch) keine. */
   private opponentRank: Map<string, number> | null = null;
-  /** Hinweis zur Gegner-Reihenfolge (i18n-Key). */
-  opponentNotice: string | null = null;
+  /** Reihung des Gegners: lädt noch / da / Abruf gescheitert; `null` = keine Gegner-Sitzung. */
+  private opponentRankState: 'loading' | 'loaded' | 'failed' | null = null;
+  /** Ausdrückliche Wiederholung gegen den gespeicherten Gegner („Alle Linien üben", „Von vorn"): diese eine Sitzung bringt
+   *  ALLE Linien, ohne Fälligkeit — bis zum nächsten Moduswechsel. */
+  private practiceAll = false;
+  /** Leerzustand gegen den gespeicherten Gegner (nichts fällig, nichts neu): so viele Linien brächte „Alle Linien üben";
+   *  0 = der Knopf hätte nichts zu tun und fehlt. */
+  practiceAllCount = 0;
   /** Einstieg der Gegner-Sitzung (`?line=` aus der Karte): diese Linie zuerst, danach die nach ihr in der Reihung. */
   private opponentStart: string | null = null;
   /** So viele Linien umfasst die Gegner-Sitzung (für „Alle N Linien … durch"). */
@@ -375,6 +390,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
           this.offlineSession = true;
           this.repertoireName ??= cached.meta?.name || null;
           this.sr.setSrLevels(cached.config);
+          // Offline gibt es keine Gegner-Sitzung (die Reihung käme vom Server): ein gewähltes „Nach dem Gegner" fällt auf die Vorgabe.
           this.lineOrder = effectiveLineOrder(cached.lineOrder, readLegacyFrequencyOrder());
           void this.initSession(cached.pgn, cached.states);
         } else {
@@ -407,10 +423,10 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (!config) {
       // Server-Einstellungen nicht zu haben: was die Offline-Kopie weiß, sonst Vorgabe/Geräte-Schalter (steht schon).
       const cached = getRepertoireOffline(this.repertoireId);
-      if (cached) this.lineOrder = effectiveLineOrder(cached.lineOrder, readLegacyFrequencyOrder());
+      if (cached) this.lineOrder = effectiveLineOrder(cached.lineOrder, readLegacyFrequencyOrder(), this.storedOpponentSession);
       return {};
     }
-    this.lineOrder = effectiveLineOrder(config.lineOrder, readLegacyFrequencyOrder());
+    this.lineOrder = effectiveLineOrder(config.lineOrder, readLegacyFrequencyOrder(), this.storedOpponentSession);
     return { ...this.useLevels(config), lineOrder: config.lineOrder ?? null };
   }
 
@@ -426,6 +442,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   private useStoredOpponent(o: RepertoireOpponent | null): void {
     if (this.opponent || !o || !trainingLinesUrl(o.opponent)) return;
     this.opponent = o.opponent;
+    this.opponentStored = true;
     this.opponentName ??= o.name || null;
     if (!this.opponentColor && (o.color === 'w' || o.color === 'b')) this.opponentColor = o.color;
     this.opponentParams = {};
@@ -481,7 +498,13 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
    *  sonst läuft schon die Einstiegslinie, und die Reihung hängt die weiteren Linien an. */
   private loadOpponentOrder(wait: boolean): void {
     const url = trainingLinesUrl(this.opponent);
-    if (!url || !this.http) { this.opponent = null; if (wait) this.buildQueue(); return; }
+    if (!url || !this.http) {
+      this.opponent = null; this.opponentStored = false;
+      this.lineOrder = effectiveLineOrder(this.lineOrder, false);   // ohne Gegner kein „Nach dem Gegner"
+      if (wait) this.buildQueue();
+      return;
+    }
+    this.opponentRankState = 'loading';
     if (wait) this.s.phase = 'LOADING';
     let params = new HttpParams().set('repertoire', this.repertoireId).set('take', TRAINING_LINES_ALL).set('positions', 'true')
       .set('chapterColors', JSON.stringify(Object.fromEntries(this.chapterColors)));
@@ -493,14 +516,16 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         this.opponentPositions = r.positions ?? null;
         this.opponentBand = r.lichessBand ?? null;
         if (r.color === 'w' || r.color === 'b') this.opponentColor = r.color;
-        this.opponentNotice = 'repertoireTrainer.opponentOrder';
-        if (wait) this.buildQueue(); else this.extendOpponentQueue();
+        this.opponentRankState = 'loaded';
+        if (wait) this.buildWhenOrderReady(); else this.opponentOrderArrived();
       },
       error: () => {
         // ohne die Reihenfolge weiter — aber nicht still
         this.opponentRank = null;
-        this.opponentNotice = 'repertoireTrainer.opponentFailed';
-        if (wait) this.buildQueue();
+        this.opponentRankState = 'failed';
+        if (wait) this.buildWhenOrderReady();
+        // Gegen den gespeicherten Gegner kommen die weiteren Linien trotzdem (Gleichstand dann in Repertoire-Reihenfolge).
+        else if (this.storedOpponentSession) this.opponentOrderArrived();
         else this.cdr.markForCheck();   // läuft schon die Einstiegslinie, zeichnet sonst nichts den Hinweis (OnPush)
       },
     });
@@ -511,40 +536,107 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     return { lines: this.allLines, chapter: this.chapterFilter, colorOf: l => this.colorOf(l) };
   }
 
-  /** Die Linien der Gegner-Sitzung (Farbe, Reihung, Einstieg). */
+  /** Sitzung gegen den GESPEICHERTEN Gegner eines „Prep: …"-Repertoires (online; offline gibt es keine Gegner-Sitzung). */
+  get storedOpponentSession(): boolean { return this.opponentStored && !!this.opponent && !this.offlineSession; }
+
+  /** Die ausdrückliche Gegner-Sitzung (`?opponent=` in der Adresse): alle Linien in seiner Reihenfolge, ohne Fälligkeit. */
+  private get explicitOpponentSession(): boolean { return !!this.opponent && !this.opponentStored && !this.offlineSession; }
+
+  /** Hinweis unter der Kopfleiste (i18n-Key) — passend zur GELTENDEN Reihenfolge: „Reihenfolge nach Gegner" nur, wenn
+   *  wirklich nach ihm gereiht wird; gegen den gespeicherten Gegner sonst, was von ihm noch gilt (Farbe, Gleichstand). */
+  get opponentNotice(): string | null {
+    if (!this.opponent || this.offlineSession) return null;
+    if (this.opponentRankState === 'failed') return 'repertoireTrainer.opponentFailed';
+    if (this.opponentRankState !== 'loaded') return null;
+    if (!this.opponentStored || this.lineOrder === 'opponent') return 'repertoireTrainer.opponentOrder';
+    const effective = this.lineOrder === 'frequency' && !this.freq.available ? DEFAULT_LINE_ORDER : this.lineOrder;
+    return effective === 'leastTrained' || effective === 'mostTrained' ? 'repertoireTrainer.opponentPrepTies' : 'repertoireTrainer.opponentPrep';
+  }
+
+  /** Die Linien der ausdrücklichen Gegner-Sitzung (Farbe, Reihung, Einstieg). */
   private opponentLines(): ParsedGame[] {
     return opponentLines(this.lineSet, {
       color: this.opponentColor, rank: this.opponentRank, start: this.opponentStart, isPaused: k => this.isPausedKey(k),
     });
   }
 
-  /** Die Reihung kam, während die Einstiegslinie läuft: die weiteren Linien hinten anhängen, die laufende bleibt. */
+  /**
+   * Die Linien der Sitzung gegen den gespeicherten Gegner: Abfragen nur fällige oder noch nie trainierte (außer bei der
+   * ausdrücklichen Wiederholung, `all`), Lernen alle — in der gewählten Reihenfolge, eine Einstiegslinie (`?line=`) vorn.
+   * Solange seine Reihung noch lädt, steht der Rest schon da (Gleichstand in Repertoire-Reihenfolge) und wird neu
+   * gereiht, sobald sie kommt — ohne die laufende Linie anzufassen ({@link extendOpponentQueue}).
+   */
+  private storedOpponentQueue(now: number, all = this.practiceAll): ParsedGame[] {
+    const dueOnly = this.mode === 'quiz' && !all;
+    return storedOpponentLines(this.lineSet, {
+      color: this.opponentColor,
+      start: this.opponentStart,
+      isPaused: k => this.isPausedKey(k),
+      keep: dueOnly ? l => isStateDueOrUntrained(this.sr.stateOf(lineKeyOf(l)), now) : null,
+      order: lines => this.ordered(lines),
+    });
+  }
+
+  /** Die Reihung (bzw. ihr Ausfall) kam, während die Einstiegslinie läuft: die weiteren Linien anhängen, die laufende bleibt. */
+  private opponentOrderArrived(): void {
+    this.extendOpponentQueue();
+    // „Häufigste zuerst" gegen den gespeicherten Gegner: die Häufigkeiten im Hintergrund holen, ohne die laufende Linie
+    // anzuhalten — danach wird nur der Rest neu gereiht ({@link frequenciesDone}).
+    if (this.storedOpponentSession && this.lineOrder === 'frequency' && !this.freq.available) {
+      this.freq.load(this.repertoireId, Object.fromEntries(this.chapterColors));
+    }
+  }
+
+  /** Die Warteschlange fortschreiben, ohne die laufende Linie anzufassen. */
   private extendOpponentQueue(): void {
-    const queue = extendQueue(this.s.queue, this.s.qIndex, this.opponentLines());
+    const queue = this.storedOpponentSession
+      ? continueQueue(this.s.queue, this.s.qIndex, this.storedOpponentQueue(Date.now()))
+      : extendQueue(this.s.queue, this.s.qIndex, this.opponentLines());
     this.opponentTotal = queue.length;
     this.s.extend(queue);
   }
 
-  /** Reihenfolge der Warteschlange: nach dem Gegner, sonst die gewählte ({@link lineOrder}, `orderLines`) — `lines` in
-   *  Repertoire-Reihenfolge. „Häufigste zuerst" ohne Häufigkeiten (offline, Abruf gescheitert) fällt auf die Vorgabe. */
+  /** Die Reihung des Gegners ist da (oder gescheitert) und noch läuft nichts: aufbauen — „Häufigste zuerst" holt gegen den
+   *  gespeicherten Gegner erst noch die Häufigkeiten (Ladeansicht mit „Überspringen" wie sonst). */
+  private buildWhenOrderReady(): void {
+    if (this.storedOpponentSession && this.lineOrder === 'frequency' && !this.freq.available) this.loadFrequencies();
+    else this.buildQueue();
+  }
+
+  /** Die Häufigkeiten sind da (oder der Abruf ist beendet): aufbauen — außer sie kamen im Hintergrund, während gegen den
+   *  gespeicherten Gegner schon eine Linie läuft; dann nur den Rest neu reihen. */
+  private frequenciesDone(): void {
+    if (this.s.phase !== 'LOADING' && this.storedOpponentSession && this.s.queue.length > 0) this.extendOpponentQueue();
+    else this.buildQueue();
+  }
+
+  /** Reihenfolge der Warteschlange ({@link lineOrder}, `orderLines`) — `lines` in Repertoire-Reihenfolge. „Häufigste zuerst"
+   *  ohne Häufigkeiten (offline, Abruf gescheitert) fällt auf die Vorgabe. Gegen den gespeicherten Gegner entscheidet bei
+   *  Gleichstand seine Reihenfolge (solange sie fehlt: die des Repertoires). */
   private ordered(lines: ParsedGame[]): ParsedGame[] {
-    if (this.opponentRank) return byRank(lines, this.opponentRank);
     const levels = this.sr.effectiveSrLevels();   // einmal je Warteschlange (liest ggf. die Offline-Kopie)
+    const rank = this.opponentRank;
     return orderLines(lines, {
       order: this.lineOrder,
       mode: this.mode,
       returnHours: l => hoursUntilReturnIfSolved(this.sr.stateOf(lineKeyOf(l)), levels),
       frequency: this.freq.available ? l => this.freq.freqOf(l) : null,
+      ...(this.storedOpponentSession ? { opponent: { rank: rank ? (l: ParsedGame) => rank.get(lineKeyOf(l)) ?? UNRANKED : null } } : {}),
     });
   }
 
   /** Der Knopf „Reihenfolge" steht, sobald die Einstellung geladen ist — nicht im Leerzustand (nichts zu ordnen) und nicht
-   *  in der Gegner-Sitzung (dort bestimmt der Gegner die Reihenfolge). Offline blendet die Vorlage die ganze Gruppe aus. */
-  get showOrderButton(): boolean { return this.sessionLoaded && this.phase !== 'EMPTY' && !this.opponent; }
+   *  in der AUSDRÜCKLICHEN Gegner-Sitzung (dort bestimmt der Gegner die Reihenfolge); gegen den gespeicherten Gegner gilt
+   *  die Einstellung, also steht er. Offline blendet die Vorlage die ganze Gruppe aus. */
+  get showOrderButton(): boolean { return this.sessionLoaded && this.phase !== 'EMPTY' && !this.explicitOpponentSession; }
 
-  /** Ohne Reihenfolge-Knopf (Leerzustand, Gegner-Sitzung) rückt das ⋮ am Handy in die Titelzeile, statt allein in einer
-   *  eigenen Zeile zu stehen (DESIGN 5.5). Während des ersten Ladens bleibt es, wo es danach steht — kein Sprung. */
-  get moreSolo(): boolean { return this.phase === 'EMPTY' || !!this.opponent; }
+  /** Ohne Reihenfolge-Knopf (Leerzustand, ausdrückliche Gegner-Sitzung) rückt das ⋮ am Handy in die Titelzeile, statt allein
+   *  in einer eigenen Zeile zu stehen (DESIGN 5.5). Während des ersten Ladens bleibt es, wo es danach steht — kein Sprung. */
+  get moreSolo(): boolean { return this.phase === 'EMPTY' || this.explicitOpponentSession; }
+
+  /** Die gerade beendete bzw. laufende Sitzung gegen den gespeicherten Gegner war aufs Fällige beschränkt (Abfragen ohne
+   *  ausdrückliche Wiederholung) — dann sagt der Abschluss das und bietet „Alle Linien üben" statt „Von vorn". */
+  get opponentDueOnly(): boolean { return this.storedOpponentSession && this.mode === 'quiz' && !this.practiceAll; }
 
   /** i18n-Schlüssel der geltenden Reihenfolge — Beschriftung des Knopfs in der Kopfleiste. */
   get lineOrderLabelKey(): string { return lineOrderLabelKey(this.lineOrder); }
@@ -553,7 +645,10 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
    *  wie Intervalle und Zurücksetzen); danach wird die Sitzung in der neuen Reihenfolge aufgebaut. */
   openOrder(): void {
     if (this.offlineSession || !this.sessionLoaded) return;
-    openTrainOrderDialog(this.dialog, { repertoireId: this.repertoireId, repertoireName: this.repertoireName, current: this.lineOrder })
+    openTrainOrderDialog(this.dialog, {
+      repertoireId: this.repertoireId, repertoireName: this.repertoireName, current: this.lineOrder,
+      hasOpponent: this.storedOpponentSession,   // „Nach dem Gegner" gibt es nur mit gespeichertem Gegner
+    })
       .subscribe(order => { if (order) this.useLineOrder(order); });
   }
 
@@ -563,6 +658,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.lineOrder = order;
     // Ein noch laufender Häufigkeits-Abruf baute sonst später ein zweites Mal neu auf — mitten in der Sitzung.
     if (order !== 'frequency') this.freq.cancel();
+    // Gegen den gespeicherten Gegner wartet der Aufbau noch auf dessen Reihung: die Wahl nur merken — aufgebaut wird EINMAL,
+    // wenn sie da ist ({@link buildWhenOrderReady}); sonst spränge die eben begonnene Linie beim Eintreffen der Reihung.
+    if (this.opponentRankState === 'loading' && this.s.phase === 'LOADING') { this.cdr.markForCheck(); return; }
     if (order === 'frequency' && !this.freq.available) this.loadFrequencies();
     else this.buildQueue();
     this.cdr.markForCheck();   // OnPush: die Antwort des Dialogs markiert diese Ansicht nicht
@@ -598,6 +696,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.s.clearTimers();
     this.s.mode = m;
     this.singleLineKey = null;   // Moduswechsel hebt die Einzellinien-Beschränkung auf
+    this.practiceAll = false;    // … und die ausdrückliche Wiederholung gegen den gespeicherten Gegner
     this.buildQueue();
   }
 
@@ -635,22 +734,39 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Baut die Session-Warteschlange: quiz = fällige Pool-Linien, learn = ungelernte Linien — beide in der gewählten
    * Reihenfolge ({@link ordered}; Vorgabe „Wenig trainierte zuerst", Gleichstand: Abfragen zufällig, Lernen wie im
    * Repertoire). Jeder Neuaufbau (Moduswechsel, „Erneut", „Alle fällig machen", Zurücksetzen) geht hier durch.
-   * Chapter-/Einzellinien-Filter greifen in beiden Modi. */
+   * Chapter-/Einzellinien-Filter greifen in beiden Modi.
+   *
+   * <p>Gegen einen Gegner: mit `?opponent=` in der Adresse ALLE Linien in seiner Reihenfolge (unabhängig von Fälligkeit
+   * und Modus); gegen den GESPEICHERTEN Gegner eines „Prep: …"-Repertoires (0.999.3) beim Abfragen nur fällige und noch
+   * nie trainierte, beim Lernen alle — in der gewählten Reihenfolge ({@link storedOpponentQueue}).</p> */
   private buildQueue(): void {
     this.s.clearTimers();
     const now = Date.now();
     const usable = playableLines(this.lineSet, this.singleLineKey);
     const againstOpponent = !!this.opponent && !this.offlineSession;
+    const stored = this.storedOpponentSession;
     // Eine ausdrücklich gewählte (`?line=`) PAUSIERTE Linie wird trotzdem gezeigt — mit Hinweis „pausiert" (0.889.0).
     const explicitPaused = !!this.singleLineKey && usable.length === 1 && this.isPausedKey(this.singleLineKey);
     const queue = explicitPaused ? usable
+      : stored ? this.storedOpponentQueue(now)
       : againstOpponent
       ? this.opponentLines()                                       // der Reihe nach, unabhängig von Fälligkeit und Modus
       : this.mode === 'learn'
         ? this.ordered(usable.filter(l => this.isLearnable(l)))
         : this.ordered(usable.filter(l => this.isDue(l, now)));
     this.opponentTotal = againstOpponent ? queue.length : 0;
-    if (queue.length === 0) this.nextDueAt = this.mode === 'quiz' ? this.computeNextDue(usable) : null;
+    this.practiceAllCount = 0;
+    if (queue.length === 0) {
+      if (stored) {
+        // Nichts fällig und nichts neu: die nächste Fälligkeit DIESER Sitzung (nur seine Farbe) — und ob „Alle Linien
+        // üben" etwas zu tun hätte.
+        const all = this.storedOpponentQueue(now, true);
+        if (this.mode === 'quiz' && !this.practiceAll) this.practiceAllCount = all.length;
+        this.nextDueAt = this.mode === 'quiz' ? this.computeNextDue(all) : null;
+      } else {
+        this.nextDueAt = this.mode === 'quiz' ? this.computeNextDue(usable) : null;
+      }
+    }
     this.s.start(queue);   // leer → EMPTY
   }
 
@@ -659,7 +775,14 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     return earliestDueIso(lines.map(l => this.sr.stateOf(this.lineKeyOf(l))));
   }
 
-  restart(): void { this.opponentStart = null; this.buildQueue(); }
+  /** „Erneut trainieren" / „Von vorn" / „Alle Linien üben". Gegen den gespeicherten Gegner ist das eine AUSDRÜCKLICHE
+   *  Wiederholung: diese Sitzung bringt einmal alle Linien, ohne Fälligkeit (sonst stünde nach dem Durchspielen der
+   *  fälligen Linien nur der Leerzustand da). An den Fälligkeiten am Server ändert der Knopf nichts. */
+  restart(): void {
+    this.opponentStart = null;
+    if (this.storedOpponentSession) this.practiceAll = true;
+    this.buildQueue();
+  }
 
   /** Zurück zur Spielerkarte, von der die Gegner-Sitzung kam (Spielervorbereitung oder LeagueHub). */
   backToCard(): void {

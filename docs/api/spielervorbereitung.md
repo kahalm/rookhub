@@ -297,6 +297,12 @@ Nutzers, jüngste zuerst, je Gegner eine, höchstens 50 (`MaxItems`; angesehen w
   (`CreateRequest.Opponent`). Beide `training-repertoire`-Endpunkte setzen sie, auch beim Ersetzen (`CreateRepertoireAsync`
   `trainer:`). `GET /api/repertoires/{id}` liefert sie als `opponent` (`RepertoireOpponentDto.Parse`: ungültig → `null`).
   Kopieren/Klonen übernimmt sie nicht; ältere „Prep: …" bleiben ohne (kein Backfill).
+- Trainer gegen den GESPEICHERTEN Gegner (0.999.3, Wunsch 19.11.: „bringt er immer alle lines. sollte hier nur die fälligen
+  bringen. einzige ausnahme: nicht trainierte sind auch fällig"): das „Prep: …"-Repertoire über „Trainieren" (ohne `?opponent=`)
+  fragt nur noch FÄLLIGE und noch NIE TRAINIERTE Linien ab, „Lernen" geht weiter alle durch, und die Reihenfolge-Einstellung
+  des Repertoires gilt (Vorgabe „Wenig trainierte zuerst", bei Gleichstand seine Reihenfolge; neuer Wert „Nach dem Gegner").
+  Die ausdrückliche Sitzung von der Karte (`?opponent=`: Linie anklicken, „Alle in dieser Reihenfolge trainieren") bleibt:
+  alle Linien in seiner Reihenfolge. Ganze Regel: `docs/api/repertoires.md`, „Trainer gegen den gespeicherten Gegner …".
 - Referenz-/Musterpartien, Übungen und Taktik-Sammlungen raus (0.894.1, Wunsch 07.11.: „reference games auch ausnehmen …
   beide varianten", Prod Repertoire 14 „Reference Games" in „Prep: Moritz"; erweitert 0.994.1, Prod Repertoire 308: die
   Taktikaufgabe „Howell, James C vs. Wahls, Matthias" aus „VII) Tactical Exercises" stand mit allen Partiezügen ab der

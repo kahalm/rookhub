@@ -521,8 +521,28 @@ public class RepertoireControllerTests : IDisposable
         var put = await _controller.SetTrainingLineOrder(rep.Id, new SetLineOrderRequest { Order = "alphabetical" }, default);
 
         var bad = Assert.IsType<BadRequestObjectResult>(put);
-        Assert.Equal("{\"message\":\"Unknown line order.\"}", System.Text.Json.JsonSerializer.Serialize(bad.Value));
+        Assert.Equal("{\"message\":\"Line order is not available for this repertoire.\"}", System.Text.Json.JsonSerializer.Serialize(bad.Value));
         Assert.Empty(_db.RepertoireTrainingPrefs);
+    }
+
+    [Fact]
+    public async Task SetTrainingLineOrder_Opponent_OnlyWithStoredOpponent()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        var plain = await CreateRepertoireAsync(user.Id);
+        var prep = new Repertoire { UserId = user.Id, Name = "Prep: Schett, Franz 2026", OpponentJson = "{\"opponent\":\"prep:154602\",\"color\":\"w\"}" };
+        _db.Repertoires.Add(prep);
+        await _db.SaveChangesAsync();
+
+        Assert.IsType<BadRequestObjectResult>(await _controller.SetTrainingLineOrder(plain.Id, new SetLineOrderRequest { Order = "opponent" }, default));
+        Assert.IsType<NoContentResult>(await _controller.SetTrainingLineOrder(prep.Id, new SetLineOrderRequest { Order = "opponent" }, default));
+
+        var cfg = Assert.IsType<SrConfigDto>(Assert.IsType<OkObjectResult>((await _controller.TrainingConfig(prep.Id, default)).Result).Value);
+        Assert.Equal("opponent", cfg.LineOrder);
+        Assert.True(cfg.HasOpponent);
+        var pref = Assert.Single(_db.RepertoireTrainingPrefs);
+        Assert.Equal(prep.Id, pref.RepertoireId);
     }
 
     [Fact]

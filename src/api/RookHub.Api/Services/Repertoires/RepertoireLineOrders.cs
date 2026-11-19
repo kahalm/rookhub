@@ -1,7 +1,8 @@
 namespace RookHub.Api.Services.Repertoires;
 
 /// <summary>
-/// Die erlaubten Reihenfolgen der Linien im Repertoire-Trainer (0.996.0, je Nutzer und Repertoire einstellbar).
+/// Die erlaubten Reihenfolgen der Linien im Repertoire-Trainer (0.996.0, je Nutzer und Repertoire einstellbar;
+/// „Nach dem Gegner“ seit 0.999.3 für Repertoires mit gespeichertem Gegner).
 /// Der Server speichert nur den Wert; gereiht wird im Frontend (dort liegen Linien, Fälligkeit und Häufigkeiten).
 ///
 /// <para><b>Handgespiegelt</b>: dieselbe Liste steht im Frontend als <c>LINE_ORDERS</c>
@@ -21,13 +22,20 @@ public static class RepertoireLineOrders
     public const string Repertoire = "repertoire";
     /// <summary>Häufigste zuerst (Lichess-Explorer) — der frühere Geräte-Schalter des Trainers.</summary>
     public const string Frequency = "frequency";
+    /// <summary>Nach dem Gegner: was er am wahrscheinlichsten spielt, zuerst — nur für ein Repertoire mit gespeichertem
+    /// Gegner („Prep: …“, <c>Repertoire.OpponentJson</c>); siehe <see cref="IsValidFor"/>.</summary>
+    public const string Opponent = "opponent";
 
     /// <summary>Gilt, solange der Nutzer für das Repertoire nichts gewählt hat. Gespeichert wird sie nicht —
     /// „nichts gewählt“ bleibt <c>null</c>, damit das Frontend den alten Geräte-Schalter „Häufigste zuerst“ weiter ehren kann.</summary>
     public const string Default = LeastTrained;
 
-    public static readonly IReadOnlyList<string> All = [LeastTrained, MostTrained, Random, Repertoire, Frequency];
+    public static readonly IReadOnlyList<string> All = [LeastTrained, MostTrained, Random, Repertoire, Frequency, Opponent];
 
     /// <summary>Genau einer der erlaubten Werte (Groß-/Kleinschreibung zählt, kein Trimmen).</summary>
     public static bool IsValid(string? order) => order is not null && All.Contains(order, StringComparer.Ordinal);
+
+    /// <summary>Wie <see cref="IsValid"/>, und <see cref="Opponent"/> nur, wenn das Repertoire einen gespeicherten Gegner
+    /// hat — ohne ihn gäbe es nichts, wonach zu reihen wäre (das Frontend bietet den Wert dort auch nicht an).</summary>
+    public static bool IsValidFor(string? order, bool hasOpponent) => IsValid(order) && (order != Opponent || hasOpponent);
 }

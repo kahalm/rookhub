@@ -60,6 +60,10 @@
     "opponentDone": "All {{n}} lines against this opponent done.",
     "opponentAgain": "Start over",
     "opponentBack": "Back to the player card",
+    "opponentPrepTies": "Against this opponent: only the chapters of your colour against them. With equal training progress, what they are most likely to play comes first.",
+    "opponentPrep": "Against this opponent: only the chapters of your colour against them.",
+    "opponentDueDone": "All {{n}} due and new lines against this opponent done.",
+    "practiceAll": "Practise all lines",
     "freqLineTip": "How often you reach this line in real games (Lichess explorer, same selection as in the hole finder)",
     "whiteToMoveLearn": "White to move — this is your repertoire move.",
     "blackToMoveLearn": "Black to move — this is your repertoire move.",
@@ -1476,14 +1480,16 @@
         "mostTrained": "Most trained first",
         "random": "Random",
         "repertoire": "Repertoire order",
-        "frequency": "Most frequent first"
+        "frequency": "Most frequent first",
+        "opponent": "By opponent"
       },
       "hint": {
         "leastTrained": "Lines that come back soonest after a correct answer go first – level 0 before 1 before 2 …",
         "mostTrained": "The other way round: lines with the longest gap until the next review go first.",
         "random": "Shuffled anew every time.",
         "repertoire": "As the lines appear in the repertoire.",
-        "frequency": "Lines you reach more often in real games go first (Lichess explorer, online only)."
+        "frequency": "Lines you reach more often in real games go first (Lichess explorer, online only).",
+        "opponent": "Lines this opponent is most likely to play go first (from their games)."
       }
     }
   },

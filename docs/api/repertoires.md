@@ -21,8 +21,8 @@
 | POST | `/api/repertoires/reprocess` | Bereitet veraltete eigene Repertoires auf: Chessable-Repertoires mit `[ChessableOid]` bekommen je Datei die Zugtexte aus dem Linien-Cache (`StaleAction.Cache`, ausgeblendete Partien bleiben), dann wie alle übrigen den Versions-Mark; Chessable ohne oids wird als Re-Fetch-Job eingereiht (mit Bearer bzw. als Admin aus dem Kurs-Cache). `?localOnly=true` („Aus Cache") lässt nur den Re-Fetch aus. Läuft im Hintergrund, antwortet 202; Ergebnis im Log (`reprocessed, rebuiltFromCache, cacheLinesReplaced, enqueued, skipped, failed`) |
 | GET | `/api/repertoires/{id:int}/flashcards` | PERSISTENT als Flashcard markierte Linien `{ lineKeys }` — Besitzer UND Freigabe-Empfänger, jeweils EIGENER Satz (404 ohne Lese-Zugriff) |
 | POST/DELETE | `/api/repertoires/{id:int}/flashcards/{lineKey}` | Flashcard-Markierung einer Linie setzen/entfernen (idempotent) → `{ marked }`; LineKey = Frontend-Linien-Hash (`repertoire-line-key.util.ts`, wie SR — Re-Import mit geänderter Zugfolge lässt Markierungen ins Leere laufen, gewollt). Frontend: Checkboxen der Linienliste + „(n)"-Knopf → `/repertoires/:id/flashcards?marked=1` |
-| GET | `/api/repertoires/{id:int}/training/config` | Trainer-Einstellungen dieses Repertoires für den anfragenden Nutzer: `{ effective[9], user[9], repertoire[9]?, source, lineOrder? }` — die effektiven SR-Intervalle (Override des Repertoires > global je Nutzer > Vorgabe) samt beider Ebenen und die gewählte Reihenfolge der Linien (`lineOrder`, `null` = nichts gewählt; siehe „Trainer: Reihenfolge der Linien“). Besitzer UND Freigabe-Empfänger; 404 ohne Lesezugriff |
-| PUT | `/api/repertoires/{id:int}/training/line-order` | Reihenfolge der Linien im Trainer setzen `{ order }` (0.996.0) — je Nutzer UND Repertoire, auch für ein geteiltes fremdes; `order` ∈ `leastTrained`/`mostTrained`/`random`/`repertoire`/`frequency` (`RepertoireLineOrders.All`). 204; 400 `{ message: "Unknown line order." }` bei jedem anderen Wert, 404 ohne Lesezugriff |
+| GET | `/api/repertoires/{id:int}/training/config` | Trainer-Einstellungen dieses Repertoires für den anfragenden Nutzer: `{ effective[9], user[9], repertoire[9]?, source, lineOrder? }` — die effektiven SR-Intervalle (Override des Repertoires > global je Nutzer > Vorgabe) samt beider Ebenen und die gewählte Reihenfolge der Linien (`lineOrder`, `null` = nichts gewählt; siehe „Trainer: Reihenfolge der Linien“), seit 0.999.3 dazu `hasOpponent` (das Repertoire hat einen gespeicherten Gegner — nur dann steht `opponent` zur Wahl). Besitzer UND Freigabe-Empfänger; 404 ohne Lesezugriff |
+| PUT | `/api/repertoires/{id:int}/training/line-order` | Reihenfolge der Linien im Trainer setzen `{ order }` (0.996.0) — je Nutzer UND Repertoire, auch für ein geteiltes fremdes; `order` ∈ `leastTrained`/`mostTrained`/`random`/`repertoire`/`frequency`/`opponent` (`RepertoireLineOrders.All`; `opponent` nur für ein Repertoire mit gespeichertem Gegner). 204; 400 `{ message: "Line order is not available for this repertoire." }` bei jedem anderen Wert, 404 ohne Lesezugriff |
 | GET | `/api/repertoires/shared-lines` | „Meine Teilen-Links" (Codereview A2-006, 25.10.2026): eigene öffentliche Linien-Links `[{ id, shareToken, title, repertoireName, repertoireId, createdAt }]`, neueste zuerst (`repertoireId` null = aus RepCheck). Frontend: Karte `profile/shared-links-card.component.ts` im Profil |
 | DELETE | `/api/repertoires/shared-lines/{lineId:int}` | Linien-Link widerrufen → 204, danach `/l/{token}` 404; 404 für fremde/fehlende. Erneutes Teilen derselben Linie gibt einen NEUEN Link. Löschen eines Repertoires räumt dessen `/l/`-Links mit ab (vorher überlebten sie) |
 | POST | `/api/repertoires/{id:int}/share-line` | Öffentlichen Nur-Ansehen-Link `/l/{token}` anlegen (nur Besitzer) `{ pgn, title?, chapter? }` → `{ shareToken, expiresAt }`. `chapter: true` (0.915.0) = ganzes Kapitel, je Linie eine Partie im PGN, Deckel 512 KB statt 32 KB; die öffentliche Seite zeigt dann eine Linienauswahl (Pfeil hoch/runter). **Ablauf (0.915.0): 30 Tage** (`SharedLineService.Lifetime`); dieselbe Linie/dasselbe Kapitel erneut teilen gibt denselben Token und verlängert auf 30 Tage ab jetzt (auch einen abgelaufenen). Links von vor 0.915.0 haben `ExpiresAt = null` und laufen nicht ab |
@@ -132,8 +132,9 @@ Wunsch des Users 19.11.: „wenn ich ein repo reviewe und er hat lines die schon
 und „beim train auch einstellbar … irgendwo im menu für das repo umstellbar: reihenfolge. random, nach reihenfolge im repo,
 wenig trainerte zuerst, viel trainierte zuerst“.
 
-**Eine Einstellung je Nutzer UND Repertoire**, fünf Werte (`LINE_ORDERS` in `repertoire-line-order.ts` ↔
-`RepertoireLineOrders.All`, handgespiegelt mit literalen Tests auf beiden Seiten):
+**Eine Einstellung je Nutzer UND Repertoire**, sechs Werte (`LINE_ORDERS` in `repertoire-line-order.ts` ↔
+`RepertoireLineOrders.All`, handgespiegelt mit literalen Tests auf beiden Seiten; der sechste, `opponent`, seit 0.999.3
+und nur für Repertoires mit gespeichertem Gegner — siehe „Trainer gegen den gespeicherten Gegner“ unten):
 
 | Wert | Name | Regel |
 |---|---|---|
@@ -142,15 +143,17 @@ wenig trainerte zuerst, viel trainierte zuerst“.
 | `random` | Zufällig | gemischt (das Verhalten der Abfrage bis 0.995.0) — auch im Lernen-Modus |
 | `repertoire` | Reihenfolge im Repertoire | wie im PGN |
 | `frequency` | Häufigste zuerst | absteigend nach Linien-Häufigkeit (Lichess-Explorer, `TrainerFrequencyLoader`), Linien ohne Wert zuletzt — der frühere Geräte-Schalter. OHNE Häufigkeiten (offline, kein Token, Abruf gescheitert) gilt die Vorgabe |
+| `opponent` | Nach dem Gegner | in der Reihenfolge des GESPEICHERTEN Gegners (wahrscheinlichste zuerst, was er nicht kennt dahinter in Repertoire-Reihenfolge). Nur wählbar, wenn das Repertoire einen gespeicherten Gegner hat (`GET …/training/config` → `hasOpponent`; der Server lehnt den Wert sonst mit 400 ab); OHNE Gegner-Sitzung (offline, Gegner inzwischen entfernt) gilt die Vorgabe |
 
 - **Gleichstand** (gleiche Wiederkehr bzw. Häufigkeit): beim Abfragen zufällig, beim Lernen in Repertoire-Reihenfolge.
   Die Sortierung ist stabil. Eine reine Funktion: `orderLines(lines, rule)` in `repertoire-trainer-queue.util.ts`.
 - **Geltung**: Abfragen (fällige Pool-Linien) UND Lernen (ungelernte Linien — sie haben keinen Trainingsstand, `leastTrained`/
   `mostTrained` ergeben dort über die Gleichstand-Regel die Repertoire-Reihenfolge wie bisher). **Unberührt**: die
-  Gegner-Sitzung (`?opponent=`, Reihenfolge des Gegners ohne Fälligkeit) und eine ausdrücklich gewählte Einzellinie (`?line=`).
+  AUSDRÜCKLICHE Gegner-Sitzung (`?opponent=`, Reihenfolge des Gegners ohne Fälligkeit) und eine ausdrücklich gewählte
+  Einzellinie (`?line=`). Gegen den GESPEICHERTEN Gegner eines „Prep: …“ gilt die Einstellung seit 0.999.3 (Abschnitt unten).
 - **Jeder Neuaufbau** geht durch dieselbe Stelle (`buildQueue` → `ordered`): Start, Moduswechsel, „Erneut trainieren“,
   „Alle jetzt fällig machen“/„Alle in den Pool“, Zurücksetzen, Wechsel der Reihenfolge. `extendQueue` gibt es nur in der
-  Gegner-Sitzung. Nach „Übungszyklen“ → Speichern holt der Trainer die Intervalle neu; sie gelten ab dem nächsten Aufbau.
+  ausdrücklichen Gegner-Sitzung, `continueQueue` nur gegen den gespeicherten Gegner. Nach „Übungszyklen“ → Speichern holt der Trainer die Intervalle neu; sie gelten ab dem nächsten Aufbau.
 - **Speicherung**: Tabelle `RepertoireTrainingPrefs` (UserId + RepertoireId eindeutig, `LineOrder`), gelesen mit
   `GET …/training/config` (`lineOrder`, `null` = nichts gewählt — die Vorgabe wird NICHT gespeichert), geschrieben mit
   `PUT …/training/line-order`. Besitzer und Freigabe-Empfänger haben je ihre eigene Zeile (wie der SR-Fortschritt). Der
@@ -169,6 +172,51 @@ wenig trainerte zuerst, viel trainierte zuerst“.
 - **Kein zweiter Ort** reiht fällige Repertoire-Linien: kein Backend-Endpunkt gibt eine Reihenfolge vor
   (`GET …/training/lines` liefert Zustände ungeordnet), es gibt keine Abfrage über mehrere Repertoires und keinen
   Dashboard-Einstieg mit eigener Warteschlange; der Abweichungs-Trainer (`/repertoires/deviations`) hat kein SR.
+
+## Trainer gegen den gespeicherten Gegner eines „Prep: …"-Repertoires (0.999.3)
+
+Wunsch des Users 19.11. (Repertoire „Prep: …“ mit `OpponentJson`): „wenn ich bei …/repertoires/308/train auf review gehe
+bringt er immer alle lines. sollte hier nur die fälligen bringen. einzige ausnahme: nicht trainierte sind auch fällig.“
+Bis 0.999.2 war der Trainer eines solchen Repertoires (ohne `?opponent=` in der Adresse, `useStoredOpponent`) dieselbe
+Sitzung wie von der Spielerkarte: ALLE Linien der Farbe in der Reihenfolge des Gegners, unabhängig von Fälligkeit und
+Modus — und die Reihenfolge-Einstellung wirkte dort nicht. Seit 0.999.3 sind es zwei Sitzungsarten:
+
+| | Abfragen | Lernen | Reihenfolge | Knopf „Reihenfolge“ |
+|---|---|---|---|---|
+| **gespeicherter Gegner** (Prep-Repertoire über „Trainieren“, `/repertoires/:id/train` ohne `?opponent=`) | nur FÄLLIGE (`isStateDue`) und noch NIE TRAINIERTE (kein Zustand bzw. nicht im Pool) Linien der Farbe, nie pausierte — `isStateDueOrUntrained` | alle Linien der Farbe (zum Durchgehen) | die gewählte (`orderLines`), Vorgabe `leastTrained`; bei Gleichstand von `leastTrained`/`mostTrained` die Reihenfolge des Gegners statt Zufall/PGN (untrainierte zuerst, darin die wahrscheinlichsten; dann Stufe 1 nach Wahrscheinlichkeit …) | ja, mit sechs Werten |
+| **ausdrücklicher Gegner** (`?opponent=` von der Spielerkarte: Linie anklicken, „Alle trainieren“) — unverändert | alle Linien der Farbe | alle Linien der Farbe | die des Gegners; mit `?line=` ab dieser Linie | nein |
+| **ohne Gegner** — unverändert | fällige Pool-Linien | ungelernte Linien | die gewählte | ja, fünf Werte |
+
+- **Einstiegslinie** (`?line=`) in der Sitzung gegen den gespeicherten Gegner: kommt immer und zuerst (auch nicht fällig oder
+  pausiert), danach ALLE übrigen Linien der Regel in der gewählten Reihenfolge — es wird nichts „ab der Linie“ abgeschnitten
+  (das macht nur die ausdrückliche Sitzung). Reine Funktion: `storedOpponentLines` in `repertoire-trainer-queue.util.ts`.
+- **Reihung des Gegners lädt noch / Abruf gescheitert** (`opponentRank` null): Gleichstand in Repertoire-Reihenfolge, Hinweis
+  `opponentFailed`; ohne Einstiegslinie wartet der Trainer auf die Reihung (wie bisher). Kommt sie nach, während die
+  Einstiegslinie läuft, wird nur der Rest neu gereiht — die laufende Linie springt nicht (`continueQueue`: alles bis zur
+  laufenden Linie bleibt, schon Gespieltes kommt nicht noch einmal; `extendQueue` bleibt der ausdrücklichen Sitzung).
+- **Nichts fällig und nichts neu** → Leerzustand wie beim normalen Abfragen („Gerade nichts fällig. Nächste Wiederholung in …“,
+  die nächste Fälligkeit nur der Linien DIESER Sitzung) mit EINER Aktion **„Alle Linien üben“**: bringt einmalig alle Linien
+  der Farbe ohne Fälligkeitsfilter — eine ausdrückliche Wiederholung NUR in der Sitzung (`practiceAll`), am Server wird
+  nichts fällig gemacht (anders als „Alle jetzt fällig machen“). Gibt es gar keine Linie (alle pausiert), fehlt der Knopf.
+- **Ende der Sitzung**: war sie aufs Fällige beschränkt, sagt der Abschluss „Alle n fälligen und neuen Linien gegen diesen
+  Gegner durch.“ und der Knopf heißt „Alle Linien üben“; nach einem Durchgang über alle Linien wie bisher „Alle n Linien
+  gegen diesen Gegner durch.“ + „Von vorn“. Beide Knöpfe sind dieselbe Aktion (`restart()`): einmal alle Linien. Die
+  ausdrückliche Wiederholung endet mit dem Moduswechsel.
+- **`frequency`** gegen den gespeicherten Gegner: nach der Reihung des Gegners werden die Häufigkeiten geholt (Ladeansicht mit
+  „Überspringen“ wie sonst; läuft schon eine Einstiegslinie, im Hintergrund — danach wird nur der Rest neu gereiht).
+- **Hinweis unter der Kopfleiste** passt zur geltenden Reihenfolge: „Reihenfolge nach Gegner …“ (`opponentOrder`) nur bei
+  `opponent` bzw. in der ausdrücklichen Sitzung; bei `leastTrained`/`mostTrained` „Gegen diesen Gegner: nur die Kapitel deiner
+  Farbe … Bei gleichem Trainingsstand kommt zuerst, was er am wahrscheinlichsten spielt.“ (`opponentPrepTies`), sonst nur
+  die Farbe (`opponentPrep`). Die Hinweise an der Stellung (`opponentNote`) bleiben in beiden Sitzungsarten.
+- **Alter Geräte-Schalter „Häufigste zuerst“** zählt gegen den gespeicherten Gegner nicht (er hatte in der Gegner-Sitzung nie
+  Wirkung); nichts gewählt = `leastTrained`. Eine seit 0.996.0 für ein Prep-Repertoire gewählte Reihenfolge wirkt jetzt.
+- **Offline** gibt es keine Gegner-Sitzung (die Reihung käme vom Server, `useStoredOpponent` läuft nur nach einem
+  geglückten Online-Abruf): die Offline-Kopie eines Prep-Repertoires wird normal abgefragt — fällige Pool-Linien,
+  untrainierte über „Lernen“ —, ein gewähltes `opponent` fällt dort auf die Vorgabe. Unverändert seit 0.894.0.
+- **Server**: `GET …/training/config` liefert `hasOpponent` (gültiges `OpponentJson`), `PUT …/training/line-order` nimmt
+  `opponent` nur mit gespeichertem Gegner an (`RepertoireLineOrders.IsValidFor`; 400 „Line order is not available for this
+  repertoire.“ — derselbe Rumpf wie bei einem unbekannten Wert). Ein gespeichertes `opponent` bleibt stehen, wenn der
+  Gegner später fehlt; das Frontend fällt dann auf die Vorgabe (`effectiveLineOrder(…, hasOpponent)`).
 
 ## Bereich „Letzte Woche" (0.888.0)
 

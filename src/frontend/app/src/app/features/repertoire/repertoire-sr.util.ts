@@ -18,6 +18,13 @@ export function isStateLearnable(st: LineStateDto | undefined): boolean {
   return (!st || !st.inPool) && !st?.paused;
 }
 
+/** Fällig ODER noch nie trainiert (kein Zustand bzw. nicht im Pool) — nie pausiert. Die Regel fürs Abfragen eines
+ * „Prep: …"-Repertoires gegen seinen gespeicherten Gegner (0.999.3, Wunsch: „nur die fälligen bringen. einzige
+ * ausnahme: nicht trainierte sind auch fällig"); eine später fällige Pool-Linie gehört NICHT dazu. */
+export function isStateDueOrUntrained(st: LineStateDto | undefined, now: number): boolean {
+  return isStateDue(st, now) || isStateLearnable(st);
+}
+
 /** Früheste künftige Fälligkeit unter den (Pool-)Zuständen als ISO-String; null = nichts im Pool.
  * Pausierte und nicht-im-Pool-Zustände zählen nicht. */
 export function earliestDueIso(states: Iterable<LineStateDto | undefined>): string | null {

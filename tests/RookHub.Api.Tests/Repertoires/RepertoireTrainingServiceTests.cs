@@ -403,6 +403,99 @@ public class RepertoireTrainingServiceTests : IDisposable
         Assert.Null((await _service.GetConfigAsync(user, repId))!.LineOrder);
     }
 
+    // ===== „Nach dem Gegner“ (0.999.3): nur für ein Repertoire mit gespeichertem Gegner =====
+
+    private const string OpponentJson = "{\"opponent\":\"prep:154602\",\"name\":\"Schett, Franz\",\"color\":\"w\",\"params\":{}}";
+
+    private async Task<int> CreatePrepRepertoireAsync(int userId, string? opponentJson = OpponentJson)
+    {
+        var r = new Repertoire { UserId = userId, Name = "Prep: Schett, Franz 2026", OpponentJson = opponentJson };
+        _db.Repertoires.Add(r);
+        await _db.SaveChangesAsync();
+        return r.Id;
+    }
+
+    [Fact]
+    public async Task GetConfig_HasOpponent_OnlyForARepertoireWithAStoredOpponent()
+    {
+        var user = await CreateUserAsync();
+        var plain = await CreateRepertoireAsync(user);
+        var prep = await CreatePrepRepertoireAsync(user);
+        var broken = await CreatePrepRepertoireAsync(user, "{\"opponent\":\"nix\"}");   // kein gültiger Schlüssel = kein Gegner
+
+        Assert.False((await _service.GetConfigAsync(user, plain))!.HasOpponent);
+        Assert.True((await _service.GetConfigAsync(user, prep))!.HasOpponent);
+        Assert.False((await _service.GetConfigAsync(user, broken))!.HasOpponent);
+    }
+
+    [Fact]
+    public async Task SetLineOrder_Opponent_WithStoredOpponent_IsStoredAndReturned()
+    {
+        var user = await CreateUserAsync();
+        var prep = await CreatePrepRepertoireAsync(user);
+
+        Assert.True(await _service.SetLineOrderAsync(user, prep, "opponent"));
+
+        var cfg = (await _service.GetConfigAsync(user, prep))!;
+        Assert.Equal("opponent", cfg.LineOrder);
+        Assert.True(cfg.HasOpponent);
+    }
+
+    [Fact]
+    public async Task SetLineOrder_Opponent_WithoutStoredOpponent_ReturnsFalse_AndKeepsTheStoredOne()
+    {
+        var user = await CreateUserAsync();
+        var plain = await CreateRepertoireAsync(user);
+        var broken = await CreatePrepRepertoireAsync(user, "kaputt");
+        Assert.True(await _service.SetLineOrderAsync(user, plain, "random"));
+
+        Assert.False(await _service.SetLineOrderAsync(user, plain, "opponent"));
+        Assert.False(await _service.SetLineOrderAsync(user, broken, "opponent"));
+
+        Assert.Equal("random", (await _service.GetConfigAsync(user, plain))!.LineOrder);
+        Assert.Null((await _service.GetConfigAsync(user, broken))!.LineOrder);
+    }
+
+    [Fact]
+    public async Task SetLineOrder_Opponent_SharedPrepRepertoire_RecipientMayChooseIt()
+    {
+        var owner = await CreateUserAsync("owner");
+        var friend = await CreateUserAsync("friend");
+        var prep = await CreatePrepRepertoireAsync(owner);
+        _db.RepertoireShares.Add(new RepertoireShare { RepertoireId = prep, OwnerId = owner, RecipientId = friend });
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _service.SetLineOrderAsync(friend, prep, "opponent"));
+
+        Assert.Equal("opponent", (await _service.GetConfigAsync(friend, prep))!.LineOrder);
+        Assert.Null((await _service.GetConfigAsync(owner, prep))!.LineOrder);
+    }
+
+    [Fact]
+    public async Task GetConfig_StoredOpponentOrder_StaysEvenWhenTheOpponentIsGone_HasOpponentTellsTheClient()
+    {
+        var user = await CreateUserAsync();
+        var prep = await CreatePrepRepertoireAsync(user);
+        Assert.True(await _service.SetLineOrderAsync(user, prep, "opponent"));
+        (await _db.Repertoires.SingleAsync(r => r.Id == prep)).OpponentJson = null;
+        await _db.SaveChangesAsync();
+
+        var cfg = (await _service.GetConfigAsync(user, prep))!;
+
+        Assert.Equal("opponent", cfg.LineOrder);   // das Frontend fällt mit HasOpponent = false auf die Vorgabe
+        Assert.False(cfg.HasOpponent);
+    }
+
+    [Theory]
+    [InlineData("opponent", true, true)]
+    [InlineData("opponent", false, false)]
+    [InlineData("leastTrained", false, true)]
+    [InlineData("frequency", true, true)]
+    [InlineData("alphabetical", true, false)]
+    [InlineData(null, true, false)]
+    public void IsValidFor_OpponentNeedsAStoredOpponent(string? order, bool hasOpponent, bool expected)
+        => Assert.Equal(expected, RepertoireLineOrders.IsValidFor(order, hasOpponent));
+
     // ===== Spiegel-Pin: erlaubte Reihenfolgen ====================================================
     // Dieselbe Liste steht ein zweites Mal im Frontend (features/repertoire/repertoire-line-order.ts, LINE_ORDERS;
     // festgenagelt in repertoire-line-order.spec.ts). BEIDE Seiten prüfen literale Werte, nicht die jeweils andere
@@ -411,8 +504,9 @@ public class RepertoireTrainingServiceTests : IDisposable
     [Fact]
     public void LineOrders_MatchTheFrontendMirror()
     {
-        Assert.Equal(new[] { "leastTrained", "mostTrained", "random", "repertoire", "frequency" }, RepertoireLineOrders.All);
+        Assert.Equal(new[] { "leastTrained", "mostTrained", "random", "repertoire", "frequency", "opponent" }, RepertoireLineOrders.All);
         Assert.Equal("leastTrained", RepertoireLineOrders.Default);
+        Assert.Equal("opponent", RepertoireLineOrders.Opponent);   // der eine Wert, der einen gespeicherten Gegner braucht
         Assert.All(RepertoireLineOrders.All, o => Assert.True(o.Length <= 20, $"„{o}“ passt nicht in RepertoireTrainingPref.LineOrder (20)"));
     }
 

@@ -24,7 +24,8 @@ describe('TrainOrderDialogComponent', () => {
   const CONFIG_URL = '/api/repertoires/7/training/config';
   const ORDER_URL = '/api/repertoires/7/training/line-order';
   const OFFLINE_KEY = REPERTOIRE_OFFLINE_PREFIX + '7';
-  const serverConfig = (lineOrder: string | null) => ({ effective: [], user: [], repertoire: null, source: 'default', lineOrder });
+  const serverConfig = (lineOrder: string | null, hasOpponent = false) =>
+    ({ effective: [], user: [], repertoire: null, source: 'default', lineOrder, hasOpponent });
 
   let http: HttpTestingController;
   let fixture: ComponentFixture<Host>;
@@ -125,6 +126,62 @@ describe('TrainOrderDialogComponent', () => {
     });
   });
 
+  describe('„Nach dem Gegner“ (0.999.3) — nur für ein Repertoire mit gespeichertem Gegner', () => {
+    it('ohne gespeicherten Gegner: fünf Werte, „Nach dem Gegner“ fehlt', async () => {
+      await open();
+      http.expectOne(CONFIG_URL).flush(serverConfig(null, false));
+      await fixture.whenStable();
+      expect(radios().map(r => r.getAttribute('data-order'))).toEqual(['leastTrained', 'mostTrained', 'random', 'repertoire', 'frequency']);
+    });
+
+    it('mit gespeichertem Gegner (sagt der Server): sechs Werte, „Nach dem Gegner“ mit Erklärsatz — und markiert, wenn gewählt', async () => {
+      await open({ repertoireName: 'Prep: Schett, Franz 2026' });
+      http.expectOne(CONFIG_URL).flush(serverConfig('opponent', true));
+      await fixture.whenStable();
+      expect(radios().map(r => r.getAttribute('data-order')))
+        .toEqual(['leastTrained', 'mostTrained', 'random', 'repertoire', 'frequency', 'opponent']);
+      expect(checked()).toEqual(['opponent']);
+      const last = radios()[5];
+      expect(last.querySelector('.name')!.textContent).toContain('repertoire.trainOrder.option.opponent');
+      expect(last.querySelector('.hint')!.textContent).toContain('repertoire.trainOrder.hint.opponent');
+    });
+
+    it('gespeichert ist „Nach dem Gegner“, aber der Gegner fehlt (inzwischen): fünf Werte, die Vorgabe ist markiert', async () => {
+      await open();
+      http.expectOne(CONFIG_URL).flush(serverConfig('opponent', false));
+      await fixture.whenStable();
+      expect(radios().length).toBe(5);
+      expect(checked()).toEqual(['leastTrained']);
+    });
+
+    it('mit gespeichertem Gegner zählt der alte Geräte-Schalter nicht: nichts gewählt = die Vorgabe', async () => {
+      localStorage.setItem('rookhub_rep_train_freq_order', '1');
+      await open();
+      http.expectOne(CONFIG_URL).flush(serverConfig(null, true));
+      await fixture.whenStable();
+      expect(checked()).toEqual(['leastTrained']);
+    });
+
+    it('der Trainer gibt mit, ob gegen den gespeicherten Gegner trainiert wird: dann sechs Werte ohne Abruf, und die Wahl wird gespeichert', async () => {
+      await open({ current: 'leastTrained', hasOpponent: true });
+      http.expectNone(CONFIG_URL);
+      expect(radios().length).toBe(6);
+      await choose('opponent');
+      saveButton()!.click();
+      await fixture.whenStable();
+      const req = http.expectOne(ORDER_URL);
+      expect(req.request.body).toEqual({ order: 'opponent' });
+      req.flush(null);
+      await fixture.whenStable();
+      expect(closedWith).toBe('opponent');
+    });
+
+    it('der Trainer ohne Gegner-Sitzung: fünf Werte', async () => {
+      await open({ current: 'leastTrained' });
+      expect(radios().length).toBe(5);
+    });
+  });
+
   it('der Trainer gibt die geltende Reihenfolge mit: kein Abruf, sie ist markiert', async () => {
     await open({ current: 'repertoire' });
     http.expectNone(CONFIG_URL);
@@ -210,7 +267,8 @@ describe('TrainOrderDialogComponent', () => {
   /** Am Handy ist der Dialog 94 % von 390 px breit. Gemessen mit den ECHTEN Texten (Schlüssel wären ein Wort ohne Umbruch). */
   for (const lang of ['de', 'hu', 'en', 'hr']) {
     it(`Handy (366 px, ${lang}): nichts läuft waagerecht heraus, jede Wahl ist ein Tippziel von mindestens 44 px`, async () => {
-      await open({ current: 'leastTrained', repertoireName: 'Ein sehr langer Repertoirename, der in der schmalen Fläche sicher nicht in eine Zeile passt' });
+      // mit gespeichertem Gegner: alle SECHS Werte (der längste Fall)
+      await open({ current: 'leastTrained', hasOpponent: true, repertoireName: 'Ein sehr langer Repertoirename, der in der schmalen Fläche sicher nicht in eine Zeile passt' });
       const translate = TestBed.inject(TranslateService);
       const res = await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`));
       translate.setTranslation(lang, await res.json());
@@ -221,7 +279,8 @@ describe('TrainOrderDialogComponent', () => {
       await fixture.whenStable();
 
       const content = panel()!.querySelector('mat-dialog-content') as HTMLElement;
-      expect(radios()[0].textContent).withContext('echte Texte geladen').not.toContain('repertoire.trainOrder');
+      expect(radios().length).toBe(6);
+      expect(panel()!.textContent).withContext('echte Texte geladen, kein Schlüssel sichtbar').not.toContain('repertoire.trainOrder');
       expect(content.scrollWidth).withContext('Inhalt läuft waagerecht über').toBeLessThanOrEqual(content.clientWidth + 1);
       const right = content.getBoundingClientRect().right;
       for (const r of radios()) {

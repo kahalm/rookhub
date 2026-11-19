@@ -84,17 +84,26 @@ public class RepertoireTrainingService
             .Select(p => p.LineOrder).FirstOrDefaultAsync(ct);
         return new SrConfigDto(effective, userLevels ?? DefaultLevels, repLevels, source)
         {
+            // Ein gespeichertes „opponent“ bleibt stehen, auch wenn der Gegner später fehlt — das Frontend fällt dann
+            // auf die Vorgabe (HasOpponent sagt ihm, ob der Wert gilt).
             LineOrder = RepertoireLineOrders.IsValid(lineOrder) ? lineOrder : null,
+            HasOpponent = RepertoireOpponentDto.Parse(rep.OpponentJson) is not null,
         };
     }
 
     /// <summary>Reihenfolge der Linien im Trainer für DIESEN Nutzer und dieses Repertoire setzen (0.996.0) — erlaubt für
     /// Besitzer UND Freigabe-Empfänger, jeder mit eigenem Wert (wie der SR-Fortschritt). Null ohne Lesezugriff bzw. bei
-    /// unbekanntem Repertoire, false bei einem Wert außerhalb von <see cref="RepertoireLineOrders.All"/>.</summary>
+    /// unbekanntem Repertoire, false bei einem Wert außerhalb von <see cref="RepertoireLineOrders.All"/> — und bei
+    /// <c>opponent</c> für ein Repertoire ohne gespeicherten Gegner (<see cref="RepertoireLineOrders.IsValidFor"/>).</summary>
     public async Task<bool?> SetLineOrderAsync(int userId, int repertoireId, string? order, CancellationToken ct = default)
     {
         if (!await CanTrainAsync(userId, repertoireId, ct)) return null;
         if (!RepertoireLineOrders.IsValid(order)) return false;
+        if (order == RepertoireLineOrders.Opponent)
+        {
+            var opponentJson = await _db.Repertoires.Where(r => r.Id == repertoireId).Select(r => r.OpponentJson).FirstOrDefaultAsync(ct);
+            if (!RepertoireLineOrders.IsValidFor(order, RepertoireOpponentDto.Parse(opponentJson) is not null)) return false;
+        }
         if (await UpsertLineOrderAsync(userId, repertoireId, order!, ct)) return true;
         // Wettlauf auf dem Unique-Index (UserId, RepertoireId) — zwei Geräte stellen gleichzeitig um: den verworfenen
         // Insert vergessen, die Zeile des anderen laden und den eigenen Wert hineinschreiben (der letzte gewinnt).

@@ -307,7 +307,8 @@ describe('RepertoireTrainerComponent — Reihenfolge der Linien (0.996.0)', () =
 
       const [component, cfg] = dialogOpen.calls.mostRecent().args;
       expect(component).toBe(TrainOrderDialogComponent);
-      expect(cfg.data).toEqual({ repertoireId: 1, repertoireName: null, current: 'leastTrained' });
+      // ohne Sitzung gegen einen gespeicherten Gegner steht „Nach dem Gegner“ nicht zur Wahl (0.999.3)
+      expect(cfg.data).toEqual({ repertoireId: 1, repertoireName: null, current: 'leastTrained', hasOpponent: false });
       // Auswahl-Dialog nach DESIGN 5.6: schmal, nie breiter als das Fenster, Fokus auf dem Dialog statt der ersten Option
       expect(cfg).toEqual(jasmine.objectContaining({ width: '440px', maxWidth: '94vw', autoFocus: 'dialog' }));
       expect(c.lineOrder).toBe('repertoire');

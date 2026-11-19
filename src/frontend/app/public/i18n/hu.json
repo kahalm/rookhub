@@ -1183,14 +1183,16 @@
         "mostTrained": "Sokat gyakoroltak előre",
         "random": "Véletlenszerű",
         "repertoire": "A repertoár sorrendje",
-        "frequency": "Leggyakoribb előre"
+        "frequency": "Leggyakoribb előre",
+        "opponent": "Az ellenfél szerint"
       },
       "hint": {
         "leastTrained": "Elöl azok a változatok, amelyek helyes megoldás után a leghamarabb térnek vissza – 0. szint az 1. előtt, az a 2. előtt …",
         "mostTrained": "Fordítva: elöl azok a változatok, amelyeknél a leghosszabb idő telik el a következő ismétlésig.",
         "random": "Minden alkalommal újra megkeverve.",
         "repertoire": "Ahogy a változatok a repertoárban állnak.",
-        "frequency": "Elöl azok a változatok, amelyeket valódi játszmákban gyakrabban érsz el (Lichess explorer, csak online)."
+        "frequency": "Elöl azok a változatok, amelyeket valódi játszmákban gyakrabban érsz el (Lichess explorer, csak online).",
+        "opponent": "Elöl azok a változatok, amelyeket ez az ellenfél a legvalószínűbben játszik (a játszmái alapján)."
       }
     }
   },
@@ -3257,6 +3259,10 @@
     "opponentDone": "Mind a(z) {{n}} vonal kész ez ellen az ellenfél ellen.",
     "opponentAgain": "Elölről",
     "opponentBack": "Vissza a játékoskártyához",
+    "opponentPrepTies": "Ez ellen az ellenfél ellen: csak a te színed fejezetei ellene. Azonos gyakorlottság esetén az kerül előre, amit a legvalószínűbben játszik.",
+    "opponentPrep": "Ez ellen az ellenfél ellen: csak a te színed fejezetei ellene.",
+    "opponentDueDone": "Mind a(z) {{n}} esedékes és új vonal kész ez ellen az ellenfél ellen.",
+    "practiceAll": "Minden vonal gyakorlása",
     "freqLineTip": "Milyen gyakran jutsz el ehhez a változathoz valódi játszmákban (Lichess explorer, ugyanaz a beállítás, mint a lyukkeresőnél)",
     "whiteToMoveLearn": "Világos lép — ez a repertoárlépésed.",
     "blackToMoveLearn": "Sötét lép — ez a repertoárlépésed.",

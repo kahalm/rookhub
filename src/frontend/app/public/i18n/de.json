@@ -60,6 +60,10 @@
     "opponentDone": "Alle {{n}} Linien gegen diesen Gegner durch.",
     "opponentAgain": "Von vorn",
     "opponentBack": "Zurück zur Spielerkarte",
+    "opponentPrepTies": "Gegen diesen Gegner: nur die Kapitel deiner Farbe gegen ihn. Bei gleichem Trainingsstand kommt zuerst, was er am wahrscheinlichsten spielt.",
+    "opponentPrep": "Gegen diesen Gegner: nur die Kapitel deiner Farbe gegen ihn.",
+    "opponentDueDone": "Alle {{n}} fälligen und neuen Linien gegen diesen Gegner durch.",
+    "practiceAll": "Alle Linien üben",
     "freqLineTip": "Wie oft du diese Linie in echten Partien erreichst (Lichess-Explorer, Auswahl wie im Lochfinder)",
     "whiteToMoveLearn": "Weiß am Zug — das ist dein Repertoirezug.",
     "blackToMoveLearn": "Schwarz am Zug — das ist dein Repertoirezug.",
@@ -1476,14 +1480,16 @@
         "mostTrained": "Viel trainierte zuerst",
         "random": "Zufällig",
         "repertoire": "Reihenfolge im Repertoire",
-        "frequency": "Häufigste zuerst"
+        "frequency": "Häufigste zuerst",
+        "opponent": "Nach dem Gegner"
       },
       "hint": {
         "leastTrained": "Zuerst die Linien, die nach einer richtigen Lösung am schnellsten wiederkommen – Stufe 0 vor 1 vor 2 …",
         "mostTrained": "Umgekehrt: zuerst die Linien mit dem längsten Abstand bis zur nächsten Wiederholung.",
         "random": "Jedes Mal neu gemischt.",
         "repertoire": "So, wie die Linien im Repertoire stehen.",
-        "frequency": "Zuerst die Linien, die du in echten Partien öfter erreichst (Lichess-Explorer, nur online)."
+        "frequency": "Zuerst die Linien, die du in echten Partien öfter erreichst (Lichess-Explorer, nur online).",
+        "opponent": "Zuerst die Linien, die dieser Gegner am wahrscheinlichsten spielt (aus seinen Partien)."
       }
     }
   },

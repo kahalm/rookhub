@@ -58,9 +58,11 @@
   </div>
 
   @if (opponentNotice) {
-    <!-- Reihenfolge nach einem Gegner (Spielerkarte → „Alle in dieser Reihenfolge trainieren") -->
+    <!-- Gegen einen Gegner: „Reihenfolge nach Gegner" (Spielerkarte → „Alle in dieser Reihenfolge trainieren" bzw. die
+         gewählte Reihenfolge „Nach dem Gegner"); gegen den gespeicherten Gegner sonst, was von ihm gilt (0.999.3). -->
     <p class="freq-notice opponent-notice">{{ opponentNotice | translate }}</p>
-  } @else if (lineOrder === 'frequency' && freqNotice && !freqRunning) {
+  }
+  @if (lineOrder === 'frequency' && freqNotice && !freqRunning) {
     <p class="freq-notice">{{ freqNotice | translate }}</p>
   }
 
@@ -90,6 +92,18 @@
         } @else {
           <app-load-error messageKey="repertoireTrainer.loadFailed" [error]="loadError" (retry)="retryLoad()" />
         }
+      } @else if (practiceAllCount > 0) {
+        <!-- Gegen den gespeicherten Gegner (0.999.3): nichts fällig und nichts neu. EINE Aktion (DESIGN 5.10): trotzdem
+             alle Linien üben — ohne die Fälligkeiten am Server anzufassen (anders als „Alle jetzt fällig machen"). -->
+        <mat-icon>schedule</mat-icon>
+        @if (nextDueAt) {
+          <p>{{ 'repertoireTrainer.nextDue' | translate: { when: nextDueLabel } }}</p>
+        }
+        <div class="msg-actions">
+          <button mat-flat-button color="primary" class="practice-all" (click)="restart()">
+            <mat-icon>replay</mat-icon> {{ 'repertoireTrainer.practiceAll' | translate }}
+          </button>
+        </div>
       } @else if (mode === 'learn') {
         <mat-icon>school</mat-icon>
         <p>{{ 'repertoireTrainer.nothingToLearn' | translate }}</p>
@@ -133,9 +147,15 @@
     <mat-card *ngSwitchCase="'DONE'" class="msg">
       <mat-icon>celebration</mat-icon>
       @if (opponent && opponentTotal) {
-        <!-- Gegner-Sitzung (2026-10-08): der Reihe nach durch, dann diese Meldung -->
-        <p class="opponent-done">{{ 'repertoireTrainer.opponentDone' | translate: { n: opponentTotal } }}</p>
-        <button mat-flat-button color="primary" (click)="restart()">{{ 'repertoireTrainer.opponentAgain' | translate }}</button>
+        <!-- Gegner-Sitzung (2026-10-08): der Reihe nach durch, dann diese Meldung. Gegen den gespeicherten Gegner war das
+             Abfragen aufs Fällige und Neue beschränkt (0.999.3): das sagen, und der Knopf bringt ausdrücklich ALLE. -->
+        @if (opponentDueOnly) {
+          <p class="opponent-done">{{ 'repertoireTrainer.opponentDueDone' | translate: { n: opponentTotal } }}</p>
+          <button mat-flat-button color="primary" class="practice-all" (click)="restart()">{{ 'repertoireTrainer.practiceAll' | translate }}</button>
+        } @else {
+          <p class="opponent-done">{{ 'repertoireTrainer.opponentDone' | translate: { n: opponentTotal } }}</p>
+          <button mat-flat-button color="primary" (click)="restart()">{{ 'repertoireTrainer.opponentAgain' | translate }}</button>
+        }
         <button mat-stroked-button (click)="backToCard()">{{ 'repertoireTrainer.opponentBack' | translate }}</button>
       } @else if (mode === 'learn') {
         <p>{{ 'repertoireTrainer.learnDone' | translate }}</p>

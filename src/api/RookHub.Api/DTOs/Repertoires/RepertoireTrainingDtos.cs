@@ -97,12 +97,17 @@ public record SrConfigDto(
     /// der Werte aus <c>RepertoireLineOrders.All</c>; <c>null</c> = nichts gewählt (das Frontend nimmt die Vorgabe
     /// bzw. den alten Geräte-Schalter „Häufigste zuerst“).</summary>
     public string? LineOrder { get; init; }
+
+    /// <summary>Das Repertoire hat einen gespeicherten Gegner („Prep: …“, <c>Repertoire.OpponentJson</c>) — nur dann bietet
+    /// die Auswahl der Reihenfolge den Wert <c>opponent</c> („Nach dem Gegner“) an (0.999.3).</summary>
+    public bool HasOpponent { get; init; }
 }
 
 /// <summary>Setzt die Reihenfolge der Linien im Trainer für den anfragenden Nutzer und dieses Repertoire.</summary>
 public class SetLineOrderRequest
 {
-    /// <summary>Einer der Werte aus <c>RepertoireLineOrders.All</c>; alles andere → 400.</summary>
+    /// <summary>Einer der Werte aus <c>RepertoireLineOrders.All</c>; alles andere → 400. <c>opponent</c> nur für ein
+    /// Repertoire mit gespeichertem Gegner.</summary>
     [Required, MaxLength(20)]
     public string Order { get; set; } = string.Empty;
 }

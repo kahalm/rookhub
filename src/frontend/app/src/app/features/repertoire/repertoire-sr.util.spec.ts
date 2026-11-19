@@ -1,4 +1,4 @@
-import { isStateDue, isStateLearnable, earliestDueIso, relDueLabel, shuffle, applySrReview, applyPromote, hoursOfLevel, hoursUntilReturnIfSolved, DEFAULT_SR_LEVELS } from './repertoire-sr.util';
+import { isStateDue, isStateDueOrUntrained, isStateLearnable, earliestDueIso, relDueLabel, shuffle, applySrReview, applyPromote, hoursOfLevel, hoursUntilReturnIfSolved, DEFAULT_SR_LEVELS } from './repertoire-sr.util';
 import { LineStateDto, SrLevel } from './repertoire-training.service';
 
 function st(overrides: Partial<LineStateDto> = {}): LineStateDto {
@@ -38,6 +38,32 @@ describe('repertoire-sr.util', () => {
     });
     it('false when paused (even if not in pool)', () => {
       expect(isStateLearnable(st({ inPool: false, paused: true }))).toBeFalse();
+    });
+  });
+
+  describe('isStateDueOrUntrained (Abfragen gegen den gespeicherten Gegner, 0.999.3)', () => {
+    const past = new Date(now - 1).toISOString();
+    const future = new Date(now + 3_600_000).toISOString();
+
+    it('fällig: ja', () => {
+      expect(isStateDueOrUntrained(st({ dueAt: past }), now)).toBeTrue();
+      expect(isStateDueOrUntrained(st({ dueAt: new Date(now).toISOString() }), now)).toBeTrue();
+    });
+
+    it('später fällig (im Pool, schon trainiert): NEIN — das ist der Fall, um den es geht', () => {
+      expect(isStateDueOrUntrained(st({ dueAt: future, level: 1 }), now)).toBeFalse();
+      expect(isStateDueOrUntrained(st({ dueAt: future, level: 7 }), now)).toBeFalse();
+    });
+
+    it('noch nie trainiert: ja — kein Zustand oder nicht im Pool, egal wann „fällig“', () => {
+      expect(isStateDueOrUntrained(undefined, now)).toBeTrue();
+      expect(isStateDueOrUntrained(st({ inPool: false, level: 0, dueAt: future }), now)).toBeTrue();
+      expect(isStateDueOrUntrained(st({ inPool: false, level: 0, dueAt: past }), now)).toBeTrue();
+    });
+
+    it('pausiert: nie — weder fällig noch untrainiert', () => {
+      expect(isStateDueOrUntrained(st({ paused: true, dueAt: past }), now)).toBeFalse();
+      expect(isStateDueOrUntrained(st({ paused: true, inPool: false, level: 0 }), now)).toBeFalse();
     });
   });
 
