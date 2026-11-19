@@ -19,7 +19,12 @@ import { whiteToMove } from '../../shared/chess/fen-side';
  * Prosa). Wir trennen an
  *   (a) Zugnummer-Rücksprüngen  („… 43.h4 a4 . Weiß gewinnt nach 40.b5 …" → „40.b5" ist ein neuer Zweig),
  *   (b) Alternativ-Wörtern      („eine Zug wie c5, oder a5" → zwei getrennte Alternativzüge, KEINE Folge —
- *                                sonst spielte der Parser c5 mit Weiß und a5 danach mit Schwarz),
+ *                                sonst spielte der Parser c5 mit Weiß und a5 danach mit Schwarz). Dazu zählen
+ *                                Verneinung und Gegenüberstellung UNMITTELBAR vor einem Zug: „not", „nicht", „statt",
+ *                                „anstatt", „instead of", „rather than" („3.fxg6 Qxe7! not 3...Bxg6", „Dxe7! spielen,
+ *                                nicht 3...Lxg6" — der Zug dahinter ist der ANDERE an derselben Stelle; Buch-Aufgabe
+ *                                35105, gemeldet 2026-11-19). Nur als ganzes Wort („cannot", „nothing" bleiben Prosa)
+ *                                und nur direkt vor dem Zug („5.Qxh7! Not the only winning move … 5...Nxh7" läuft weiter),
  * und lösen JEDEN Zweig eigenständig auf. Ein „oder"/„or" ZWISCHEN ZWEI FELDANGABEN („can't take on g5 or
  * e4") ist kein solches Signal: die Felder sind Ortsangaben, keine Züge (Buch-Aufgabe 35167, gemeldet
  * 2026-11-18). Solche Prosa mit einer Feld-Aufzählung ist dafür (c) eine MÖGLICHE Trennstelle vor dem
@@ -84,6 +89,19 @@ const TOKEN_RE = new RegExp(`(?:(\\d+)\\.(\\.\\.|\\u2026)?\\s?)?(${SAN})`, 'g');
 // „Alternativ"-Signale zwischen zwei Zug-Token → neuer Zweig (kein Fortsetzungszug).
 const ALT_WORD = /\b(?:or|oder|bzw\.?|beziehungsweise|resp\.?|respectively)\b|\//i;
 
+// Verneinung und Gegenüberstellung UNMITTELBAR vor dem nächsten Zug („3.fxg6 Qxe7! not 3...Bxg6", „Dxe7! spielen,
+// nicht 3...Lxg6", „statt", „instead of", „rather than"): der Zug dahinter ist der ANDERE an derselben Stelle, keine
+// Fortsetzung (Buch-Aufgabe 35105, Woodpecker Exercise 246). Nur als ganzes Wort („cannot", „nothing", „Nichte"
+// bleiben Prosa) und nur direkt vor dem Zug — „5.Qxh7! Not the only winning move, but … 5...Nxh7" ist Prosa über
+// den Zug davor, die Folge läuft weiter (Buch-Aufgabe 35167).
+const NEG_WORD = '(?<![\\p{L}\\d])(?:not|nicht|statt|anstatt|instead\\s+of|rather\\s+than)(?![\\p{L}\\d])';
+const NEG_BEFORE = new RegExp(`${NEG_WORD}[\\s(:,]*$`, 'iu');
+
+/** Steht im Zwischenraum vor einem Zug ein Alternativ-Signal (Alternativ-Wort irgendwo oder Verneinung direkt davor)? */
+function isAltSignal(gap: string): boolean {
+  return ALT_WORD.test(gap) || NEG_BEFORE.test(gap);
+}
+
 /** Übersetzt einen (evtl. deutschen) SAN-Zug in engl. SAN für chess.js. Englische Züge bleiben unverändert. */
 function normalizeSan(san: string): string {
   let s = san.replace(/^0(?=-0)/, 'O').replace(/-0/g, '-O'); // 0-0(-0) → O-O(-O)
@@ -97,12 +115,12 @@ function normalizeSan(san: string): string {
 interface Tok { san: string; ply?: number; start: number; end: number; altOfPrev?: boolean; }
 
 // Alle Alternativ-Signale eines Zwischenraums (zum Herausnehmen, siehe isAlternativeGap).
-const ALT_WORD_ALL = new RegExp(ALT_WORD.source, 'gi');
+const ALT_WORD_ALL = new RegExp(`${ALT_WORD.source}|${NEG_WORD}`, 'giu');
 
 /** Steht zwischen zwei Zügen NUR ein Alternativ-Signal („ or ", „, oder ", „! (or ", „+- / ") — keine weiteren
  *  Wörter oder Ziffern? Satzzeichen, Klammern und Bewertungszeichen zählen nicht. */
 function isAlternativeGap(gap: string): boolean {
-  return ALT_WORD.test(gap) && !/[\p{L}\d]/u.test(gap.replace(ALT_WORD_ALL, ' '));
+  return isAltSignal(gap) && !/[\p{L}\d]/u.test(gap.replace(ALT_WORD_ALL, ' '));
 }
 
 // Ein nacktes Feld („d6") ist in Prosa oft eine ORTSANGABE, kein Bauernzug: „keine Angst vor dem Springer
@@ -205,8 +223,11 @@ function scanTokens(text: string): Scan {
  *
  * <p>Bewusst eng: Es entscheidet die NUMMERIERUNG, nicht die umgebende Prosa. Ein „besser war Sc3"
  * ohne widersprechende Nummer bleibt also klickbar, ebenso jede nummerierte Folge. Nach einem
- * Alternativ-Signal („oder", „/") zählt die Nummerierung nicht weiter — dort beginnt ein eigener
- * Zweig, dessen erster Zug keine Fortsetzung ist.</p>
+ * Alternativ-Signal („oder", „/", „not 3...", „nicht 3..." …) zählt die Nummerierung nicht weiter — dort beginnt ein
+ * eigener Zweig, dessen erster Zug keine Fortsetzung ist. Und umgekehrt: eine Zugnummer direkt hinter einer
+ * VERNEINUNG ist kein Beleg gegen den numerlosen Zug davor ({@link laterNumbered}): „3.fxg6 Qxe7! is forced, not
+ * 3...Bxg6" — „3...Bxg6" ist die andere Antwort, „Qxe7" bleibt ein Zug (Buch-Aufgabe 35105). Ein „or" in der Prosa
+ * davor („would allow Ke8, or so it seems. 2...Nd5") reicht dafür NICHT: dort ist „Ke8" wirklich nur erwähnt.</p>
  *
  * <p>AUSNAHME — die ausdrückliche Alternative (Buch-Aufgabe 35205, Woodpecker Exercise 346, gemeldet
  * 2026-11-18): „1...Kxf7 2.Qb3+ Ke8 or 2...Nd5 3.exd5 … 6.Nxe5+- with two pawns more 3.Qe6+ Qe7 4.Qxe7#" ist
@@ -221,6 +242,20 @@ function scanTokens(text: string): Scan {
  * die Alternative genau den Halbzug des numerlosen Zugs, merkt sie sich das (`altOfPrev`): sie steht an der
  * Stellung, aus der er gespielt wurde ({@link resolveInSubline}, `first`).</p>
  */
+/** Der nächste nummerierte Zug hinter `toks[i]` — aber nur innerhalb DIESES Zweigs: steht auf dem Weg dorthin eine
+ *  Verneinung direkt vor einem Zug („Qxe7! is best, not 3...Bxg6"), beginnt dort ein neuer Zweig, und seine Nummer
+ *  sagt nichts über den numerlosen Zug davor. Ausnahme: der UNMITTELBAR folgende Zug hinter einem reinen
+ *  Alternativ-Signal ({@link isAlternativeGap}) — das ist die ausdrückliche Alternative, siehe unten. „or"/„oder"
+ *  beenden die Suche bewusst nicht (Buch-Aufgabe 35205, „would allow Ke8, or so it seems. 2...Nd5"). */
+function laterNumbered(text: string, toks: Tok[], i: number): Tok | undefined {
+  for (let j = i + 1; j < toks.length; j++) {
+    const gap = text.slice(toks[j - 1].end, toks[j].start);
+    if (NEG_BEFORE.test(gap) && !(j === i + 1 && isAlternativeGap(gap))) return undefined;
+    if (toks[j].ply !== undefined) return toks[j];
+  }
+  return undefined;
+}
+
 function dropMentionedMoves(text: string, toks: Tok[]): Tok[] {
   const out: Tok[] = [];
   let nextPly: number | undefined;    // Ply, die der nächste Fortsetzungszug hätte
@@ -228,10 +263,10 @@ function dropMentionedMoves(text: string, toks: Tok[]): Tok[] {
   for (let i = 0; i < toks.length; i++) {
     const t = toks[i];
     const gap = i > 0 ? text.slice(toks[i - 1].end, t.start) : '';
-    if (i > 0 && ALT_WORD.test(gap)) { nextPly = undefined; lastNumbered = undefined; }   // neuer Zweig
+    if (i > 0 && isAltSignal(gap)) { nextPly = undefined; lastNumbered = undefined; }   // neuer Zweig
 
     if (t.ply === undefined && nextPly !== undefined) {
-      const later = toks.slice(i + 1).find(n => n.ply !== undefined);
+      const later = laterNumbered(text, toks, i);
       // Beweiskräftig ist die spätere Nummer nur, wenn sie überhaupt eine FORTSETZUNG sein kann:
       // springt sie hinter die letzte Nummer zurück, beginnt dort ein eigener Zweig („… 43.h4 a4.
       // Weiß gewinnt nach 40.b5") und sagt nichts über diesen Zug. Beansprucht sie dagegen die Ply,
@@ -296,13 +331,13 @@ export function branches(text: string): CommentBranch[] {
     if (cur.length) {
       const gap = gaps.slice(prevEnd, t.start);
       if (t.ply !== undefined && t.ply <= lastPly) boundary = true;          // (a) Zugnummer-Rücksprung
-      else if (ALT_WORD.test(gap)) boundary = true;                          // (b) „oder"/„or"/„/" …
+      else if (isAltSignal(gap)) boundary = true;                          // (b) „oder"/„or"/„/" …
       else if (gap.includes(',') && t.ply === undefined) boundary = true;    // Komma + numerloser Zug = Aufzählung
       else if (t.ply !== undefined && listSince) curSoft.push({ at: cur.length, exact: t.ply === nextPly });   // (c)
       // Die Aufzählung zählt für den NEUEN Zweig nur, wenn sie hinter dem Trenner steht, der ihn eröffnet.
       if (boundary && listSince) {
         const tail = listAt >= 0 ? gaps.slice(listAt, t.start) : null;
-        if (tail === null || ALT_WORD.test(tail) || tail.includes(',')) listSince = false;
+        if (tail === null || isAltSignal(tail) || tail.includes(',')) listSince = false;
       }
     }
     if (boundary) {

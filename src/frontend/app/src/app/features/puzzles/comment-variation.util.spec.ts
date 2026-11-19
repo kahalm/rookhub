@@ -653,3 +653,56 @@ describe('comment-variation.util — numerloser Zug vor seiner ausdrücklichen A
     expect(s2.find(s => s.move === '4.Rac1')!.fen!.split(' ')[0]).toBe('r1n1r1k1/1bq2p2/p6Q/1p2P3/1P1p4/3B4/1P3PPP/2R1R1K1');
   });
 });
+
+describe('comment-variation.util — Verneinung trennt Zweige: „Qxe7! not 3...Bxg6" (Buch-Aufgabe 35105, Woodpecker Exercise 246)', () => {
+  // Der Kommentar spielt eine ANDERE Linie als die Partie (1...Nd4 statt 1...Rd5). „3...Bxg6" hinter „Qxe7! not" ist die
+  // Alternative zu Qxe7, kein Beleg, dass Qxe7 nur erwähnt wäre — bis 0.999.3 flog „Qxe7" als Erwähnung raus, und
+  // „4.Nxe7+" landete hinter 3...Rxe7 (dort ging das abschließende „Rxe7" nicht mehr).
+  const FEN = 'r2qb1k1/p1pr2bp/1pn2pN1/3NpPpQ/4P3/B7/PPP3PP/R4R1K b - - 0 1';
+  const UCIS = 'd7d5 e4d5 c6d4 g6e7 d8e7'.split(' ');
+  const TEXT = '1...Nd4?! 2.Be7! is a nice resource, with the point that White can take back twice on e7 with check - '
+    + 'thus not giving Black time to capture on h5. Black has to play 2...hxg6 3.fxg6 Qxe7! not 3...Bxg6?! 4.Qxg6 Rxe7 '
+    + '5.Nxf6++- or 3...Rxe7?! 4.Qh7+ Kf8 5.Nxf6++- 4.Nxe7+ Rxe7 Black is not losing, but probably worse and certainly '
+    + 'not winning this game.';
+  const after = (...sans: string[]) => { const c = new Chess(FEN); for (const san of sans) c.move(san); return c.fen(); };
+  const line = ['Nd4', 'Be7', 'hxg6', 'fxg6'];
+
+  it('alle 15 Züge sind klickbar (vorher 12), der Wortlaut bleibt vollständig', () => {
+    const segs = buildCommentSegments(TEXT, FEN, UCIS);
+    expect(segs.filter(s => s.move).map(s => s.move)).toEqual([
+      '1...Nd4', '2.Be7', '2...hxg6', '3.fxg6', 'Qxe7', '3...Bxg6', '4.Qxg6', 'Rxe7', '5.Nxf6+',
+      '3...Rxe7', '4.Qh7+', 'Kf8', '5.Nxf6+', '4.Nxe7+', 'Rxe7']);
+    expect(segs.map(s => s.move ?? s.text).join('')).toBe(TEXT);
+  });
+
+  it('jede Folge steht in ihrer Stellung: Qxe7 und 3...Bxg6/3...Rxe7 nach 3.fxg6, 4.Nxe7+ nach 3...Qxe7', () => {
+    const segs = buildCommentSegments(TEXT, FEN, UCIS);
+    const at = (m: string, n = 0) => segs.filter(s => s.move === m)[n]?.fen;
+    expect(at('Qxe7')).toBe(after(...line, 'Qxe7'));
+    expect(at('3...Bxg6')).toBe(after(...line, 'Bxg6'));
+    expect(at('5.Nxf6+', 0)).toBe(after(...line, 'Bxg6', 'Qxg6', 'Rxe7', 'Nxf6+'));
+    expect(at('3...Rxe7')).toBe(after(...line, 'Rxe7'));
+    expect(at('5.Nxf6+', 1)).toBe(after(...line, 'Rxe7', 'Qh7+', 'Kf8', 'Nxf6+'));
+    expect(at('4.Nxe7+')).toBe(after(...line, 'Qxe7', 'Nxe7+'));
+    expect(at('Rxe7', 1)).toBe(after(...line, 'Qxe7', 'Nxe7+', 'Rxe7'));
+  });
+
+  it('deutsch: „Dxe7! spielen, nicht 3...Lxg6" — auch mit Prosa vor dem „nicht" bleibt Dxe7 ein Zug', () => {
+    const de = '1...Sd4?! 2.Le7! ist eine schöne Ressource. Schwarz muss 2...hxg6 3.fxg6 Dxe7! spielen, nicht 3...Lxg6?! '
+      + '4.Dxg6 Txe7 5.Sxf6++- oder 3...Txe7?! 4.Dh7+ Kf8 5.Sxf6++- 4.Sxe7+ Txe7 und Schwarz verliert nicht.';
+    const segs = buildCommentSegments(de, FEN, UCIS);
+    expect(segs.filter(s => s.move).map(s => s.move)).toEqual([
+      '1...Sd4', '2.Le7', '2...hxg6', '3.fxg6', 'Dxe7', '3...Lxg6', '4.Dxg6', 'Txe7', '5.Sxf6+',
+      '3...Txe7', '4.Dh7+', 'Kf8', '5.Sxf6+', '4.Sxe7+', 'Txe7']);
+    expect(segs.find(s => s.move === 'Dxe7')!.fen).toBe(after(...line, 'Qxe7'));
+    expect(segs.find(s => s.move === '4.Sxe7+')!.fen).toBe(after(...line, 'Qxe7', 'Nxe7+'));
+  });
+
+  it('„statt", „instead of", „rather than" trennen ebenso; „cannot"/„nothing" sind kein Signal', () => {
+    for (const w of ['statt', 'anstatt', 'instead of', 'rather than', 'NOT']) {
+      expect(splitBranches(`2...hxg6 3.fxg6 Qxe7 ${w} 3...Bxg6 4.Qxg6`))
+        .withContext(w).toEqual([['hxg6', 'fxg6', 'Qxe7'], ['Bxg6', 'Qxg6']]);
+    }
+    expect(splitBranches('1.e4 e5 cannot 2.Nf3 Nc6 nothing 3.Bb5')).toEqual([['e4', 'e5', 'Nf3', 'Nc6', 'Bb5']]);
+  });
+});
