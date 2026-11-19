@@ -34,6 +34,13 @@ Aufgabenblatt-Karten, Turnierkarte + Merkliste, ClubHub-Kartei + Gruppen. Offen 
 - **UI-Sweep prüft keine Trefferflächen.** Das Prüfskript der Umstellung (Treffertest je Kachel im echten Browser, auch
   Chromium 111) lag nur im Sitzungs-Scratchpad; als Sweep-Prüfung „Kachel: Fläche trifft Hauptziel“ (`checks.mjs`) wäre
   es dauerhaft.
+- **Lokal und CI testen in verschiedenen Chrome-Fassungen** (CI rot nach 0.999.0, behoben in 0.999.2): die CI nimmt das
+  `google-chrome` des Runners (157), `karma.conf.js` lokal die Puppeteer-Shell 149 — in 157 zählt gerundetes Abschneiden
+  beim Treffertest, zwei E-Book- und ein ClubHub-Treffertest maßen deshalb neben der Karte. Die Testhilfe misst jetzt in
+  der sichtbaren Form. Ein Chrome for Testing 157 liegt unter `~/.cache/puppeteer/chrome/linux-157.0.8103.78/` (408 MB,
+  nur per `CHROME_BIN`). Offen: ob die lokale Vorgabe der CI folgen soll (z. B. die 157er-Shell in den Ordner
+  `chrome-headless-shell/` legen — dann nimmt jede Sitzung sie von selbst) und ob die CI eine FESTE Fassung bekommt,
+  statt mit dem Runner-Image zu wandern.
 - **Nicht im echten Browser durchgeklickt** (keine Dev-Daten; nur Specs): Woodpecker-Kachel „bereit“/„Pause“,
   Repertoire-Liste offline, E-Book-Sammlungskarte, Wochenpost mit aufgeklappter Bestenliste, Karten-Popup und
   Kalenderfenster der Turnierseite.

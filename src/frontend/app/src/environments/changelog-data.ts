@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.999.2", date: "2026-11-19", changes: [
+    { en: "Internal: the automatic check “a tile is clickable as a whole” now measures inside the visible, rounded shape of a card. In the newer Chrome used by the build pipeline a click two pixels into the cut-off corner of a rounded card lands on what lies behind it, so three checks (e-book cards, ClubHub register) failed there although the cards work — nothing changes in the app itself.",
+      de: "Intern: die automatische Prüfung „Kachel als Ganzes klickbar“ misst jetzt innerhalb der sichtbaren, gerundeten Form einer Karte. Im neueren Chrome der Build-Strecke trifft ein Klick zwei Pixel in der abgeschnittenen Ecke einer gerundeten Karte das, was dahinter liegt — drei Prüfungen (E-Book-Karten, ClubHub-Kartei) schlugen dort fehl, obwohl die Karten funktionieren. An der App selbst ändert sich nichts." },
+  ] },
   { version: "0.999.1", date: "2026-11-19", changes: [
     { en: "Repertoire trainer on narrow tablets and in small windows (600–768 px wide): the name of the repertoire in the top bar is readable again — the order button and the ⋮ menu now sit together in a second row instead of squeezing the name down to “S…”.",
       de: "Repertoire-Trainer auf schmalen Tablets und in kleinen Fenstern (600–768 px breit): der Name des Repertoires in der Kopfleiste ist wieder lesbar — der Reihenfolge-Knopf und das ⋮-Menü stehen dort gemeinsam in einer zweiten Zeile, statt den Namen auf „S…“ zusammenzudrücken." },

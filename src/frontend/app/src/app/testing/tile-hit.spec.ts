@@ -1,4 +1,4 @@
-import { clickCenter, clickFreeSpot, expectTileNotClickable, expectWholeTileClickable, freeSpot, tileHitProblems } from './tile-hit';
+import { clickCenter, clickFreeSpot, expectTileNotClickable, expectWholeTileClickable, freeSpot, insideRoundedBox, tileHitProblems } from './tile-hit';
 
 /**
  * Baustein „ganze Kachel klickbar“ (`src/_tile.scss`, DESIGN 5.2) und seine Testhilfe — an echtem Markup mit den
@@ -104,6 +104,84 @@ describe('rh-tile: ganze Kachel klickbar', () => {
     const collect = el.querySelector('.collect')!.getBoundingClientRect();
     expect(document.elementFromPoint(collect.left + 4, collect.top + 4)).toBe(el.querySelector('.collect'));
     expect(clickCenter(el.querySelector('.all')!)).toBe(el.querySelector('.all'));
+  });
+
+  // CI 19.11. (Chrome 157, lokal 149 grün): Chrome wertet gerundetes Abschneiden (overflow + border-radius) beim
+  // Treffertest inzwischen auch für die fest positionierte Fläche aus. 2 px in der Ecke einer solchen Karte liegt NEBEN
+  // der Karte (dahinter das Raster bzw. der Rahmen der Liste) — die Messpunkte müssen in der sichtbaren Form liegen.
+  describe('gerundete, abschneidende Kacheln', () => {
+    const ROUND = (tileClass: string) => `
+      <div class="grid" style="padding: 12px; background: #bbb;">
+        <div class="card ${tileClass}" style="position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 12px; background: #ddd;">
+          <a class="open rh-tile-target" href="#buch">Mein System</a>
+          <p class="text" style="margin: 0;">Aaron Nimzowitsch</p>
+          <div style="display: flex;"><span style="flex: 1 1 auto;"></span><button type="button" class="menu">⋮</button></div>
+        </div>
+      </div>`;
+    const LIST = `
+      <ul class="cards" style="list-style: none; margin: 0; padding: 0; background: #ddd; border: 1px solid #555; border-radius: 10px; overflow: hidden;">
+        <li class="kid rh-tile" style="display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 10px 14px;">
+          <a class="kid-main rh-tile-target" href="#kind" style="display: flex; align-items: center; gap: 12px; padding: 2px 0;">Anna Auer</a>
+          <a class="tel" href="tel:0660">0660 111</a>
+        </li>
+      </ul>`;
+
+    it('Karte mit overflow: hidden und 12 px Rundung: die ganze sichtbare Form trifft das Hauptziel', () => {
+      const el = mount(ROUND('rh-tile'));
+      expectWholeTileClickable(el.querySelector('.card')!, el.querySelector('.open')!);
+    });
+
+    it('Zeile in einer gerundeten, abschneidenden Liste (ClubHub-Kartei): ebenso', () => {
+      const el = mount(LIST);
+      expectWholeTileClickable(el.querySelector('.kid')!, el.querySelector('.kid-main')!);
+    });
+
+    it('die Eckpunkte liegen im Eckbogen, nicht daneben — und ohne den Baustein melden sie die Karte weiter', () => {
+      const el = mount(ROUND(''));
+      const card = el.querySelector('.card')!, box = card.getBoundingClientRect();
+      const problems = tileHitProblems(card, el.querySelector('.open')!);
+      const corner = problems.find(p => p.startsWith('Ecke oben links'))!;
+      expect(corner).withContext(problems.join('\n')).toContain('trifft <div.card>');   // die Karte selbst, nicht das Raster dahinter
+      const [x, y] = /\((\d+)\/(\d+)\)/.exec(corner)!.slice(1).map(Number);
+      // 12 px Rundung: auf der Diagonale liegt der Bogen 3,5 px von der Ecke; der Messpunkt sitzt knapp dahinter.
+      expect(x - box.left).toBeGreaterThan(3.5);
+      expect(x - box.left).toBeLessThan(8);
+      expect(Math.abs((x - box.left) - (y - box.top))).toBeLessThan(1.5);
+      expect(problems.filter(p => p.startsWith('Ecke')).length).toBe(4);
+    });
+
+    it('eine eckige Kachel wird weiter 2 px vom Rand gemessen: ein dicker Rahmen ohne --rh-tile-inset fällt auf', () => {
+      const el = mount(CARD('rh-tile'));
+      const card = el.querySelector<HTMLElement>('.card')!;
+      card.style.borderRadius = '0';
+      card.style.borderLeft = '4px solid #333';
+      const problems = tileHitProblems(card, el.querySelector('.open')!);
+      expect(problems.some(p => p.startsWith('Ecke oben links') && p.includes('trifft <div.card.rh-tile>'))).withContext(problems.join('\n')).toBeTrue();
+      card.style.setProperty('--rh-tile-inset', '0 0 0 -4px');
+      expect(tileHitProblems(card, el.querySelector('.open')!)).toEqual([]);
+    });
+
+    it('stark gerundet (Pille, Kreis): gemessen wird in der Form, und es bleibt der Großteil des Rasters', () => {
+      const el = mount(`
+        <div style="display: flex; gap: 24px; padding: 12px; background: #bbb;">
+          <div class="pill rh-tile" style="overflow: hidden; border-radius: 999px; padding: 14px 28px; background: #ddd;"><a class="rh-tile-target" href="#p">Stufe 3</a></div>
+          <div class="disc rh-tile" style="overflow: hidden; border-radius: 50%; width: 96px; height: 96px; display: grid; place-items: center; background: #ddd;"><button type="button" class="rh-tile-target">★</button></div>
+        </div>`);
+      for (const tile of Array.from(el.querySelectorAll('.rh-tile'))) expectWholeTileClickable(tile, tile.querySelector('.rh-tile-target')!);
+    });
+
+    it('insideRoundedBox: Eck-Quadrate zählen nach dem Abstand zum Bogenmittelpunkt', () => {
+      const box = { left: 100, top: 100, right: 300, bottom: 200, radii: [12, 12, 0, 12] as [number, number, number, number] };
+      expect(insideRoundedBox(box, 102, 102)).toBeFalse();          // 2 px in der gerundeten Ecke: außerhalb des Bogens
+      expect(insideRoundedBox(box, 104, 104)).toBeTrue();           // (12 − 4)·√2 = 11,3 < 12
+      expect(insideRoundedBox(box, 104, 104, 2)).toBeFalse();       // mit 2 px Abstand zum Rand nicht mehr
+      expect(insideRoundedBox(box, 106, 106, 2)).toBeTrue();
+      expect(insideRoundedBox(box, 298, 198)).toBeTrue();           // eckige Ecke unten rechts
+      expect(insideRoundedBox(box, 298, 102)).toBeFalse();          // oben rechts gerundet
+      expect(insideRoundedBox(box, 200, 101)).toBeTrue();           // Kantenmitte
+      expect(insideRoundedBox(box, 200, 99)).toBeFalse();
+      expect(insideRoundedBox(box, 200, 101, 2)).toBeFalse();
+    });
   });
 
   it('die Kachel verschiebt nichts: gleiche Maße mit und ohne Baustein, kein Seiten-Scroll', () => {

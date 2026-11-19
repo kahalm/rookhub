@@ -57,14 +57,83 @@ function secondaryOf(tile: Element, target: Element, opts: TileHitOptions): Elem
   return all.filter(e => e !== target && !target.contains(e) && !e.contains(target));
 }
 
+/** Ein Kasten mit gerundeten Ecken: Rechteck + Radius je Ecke (oben links, oben rechts, unten rechts, unten links). */
+export interface RoundedBox { left: number; top: number; right: number; bottom: number; radii: [number, number, number, number]; }
+
+/**
+ * Liegt der Punkt im gerundeten Kasten — mit `margin` px Abstand zum Rand? Reine Geometrie (kein Treffertest): in den
+ * Eck-Quadraten zählt der Abstand zum Mittelpunkt des Eckbogens.
+ */
+export function insideRoundedBox(box: RoundedBox, x: number, y: number, margin = 0): boolean {
+  if (x < box.left + margin || x > box.right - margin || y < box.top + margin || y > box.bottom - margin) return false;
+  const [tl, tr, br, bl] = box.radii;
+  const arcs: [number, number, number, boolean][] = [   // Bogenmittelpunkt x/y, Radius, liegt der Punkt in diesem Eck-Quadrat?
+    [box.left + tl, box.top + tl, tl, x < box.left + tl && y < box.top + tl],
+    [box.right - tr, box.top + tr, tr, x > box.right - tr && y < box.top + tr],
+    [box.right - br, box.bottom - br, br, x > box.right - br && y > box.bottom - br],
+    [box.left + bl, box.bottom - bl, bl, x < box.left + bl && y > box.bottom - bl],
+  ];
+  return arcs.every(([cx, cy, r, inCorner]) => !inCorner || Math.hypot(x - cx, y - cy) <= r - margin);
+}
+
+/** Eckradien eines Elements in px (je Ecke der größere der beiden Halbmesser, begrenzt auf die halbe Kastengröße). */
+function cornerRadii(el: Element, r: DOMRect, shrink = 0): [number, number, number, number] {
+  const cs = getComputedStyle(el);
+  const px = (value: string): number => Math.max(...value.split(/\s+/).map((v, i) =>
+    v.endsWith('%') ? parseFloat(v) / 100 * (i === 0 ? r.width : r.height) : parseFloat(v) || 0));
+  const cap = Math.min(r.width, r.height) / 2;
+  return [cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomRightRadius, cs.borderBottomLeftRadius]
+    .map(v => Math.max(0, Math.min(px(v), cap) - shrink)) as [number, number, number, number];
+}
+
+/**
+ * Die sichtbare Form der Kachel: ihr eigener (gerundeter) Rahmenkasten und die Abschneidekästen aller Vorfahren mit
+ * `overflow` ≠ visible (deren Polsterkasten, Innenradius = Radius − Rahmen). Ein Punkt außerhalb gehört nicht zur
+ * Kachel — dort trifft ein Klick, was dahinter liegt. Chrome wertet gerundetes Abschneiden beim Treffertest seit
+ * Fassung 15x auch für die fest positionierte Fläche aus (CI: Chrome 157; die 149er-Shell tat es nicht) — ein Messpunkt
+ * 2 px in der Ecke einer `overflow: hidden`-Karte mit 12 px Rundung liegt dort neben der Karte.
+ */
+function visibleShape(tile: Element): RoundedBox[] {
+  const own = tile.getBoundingClientRect();
+  const shape: RoundedBox[] = [{ left: own.left, top: own.top, right: own.right, bottom: own.bottom, radii: cornerRadii(tile, own) }];
+  for (let a = tile.parentElement; a && a !== document.documentElement; a = a.parentElement) {
+    const cs = getComputedStyle(a);
+    if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+    const r = a.getBoundingClientRect();
+    const bw = [cs.borderLeftWidth, cs.borderTopWidth, cs.borderRightWidth, cs.borderBottomWidth].map(v => parseFloat(v) || 0);
+    shape.push({ left: r.left + bw[0], top: r.top + bw[1], right: r.right - bw[2], bottom: r.bottom - bw[3],
+      radii: cornerRadii(a, r, Math.max(...bw)) });
+  }
+  return shape;
+}
+
+/** Abstand der Messpunkte zum Rand der sichtbaren Form (Rundung der Koordinaten, Kantenglättung des Eckbogens). */
+const SHAPE_MARGIN = 2;
+
 function samplePoints(tile: Element, target: Element, secondary: Element[], grid: number): Point[] {
-  const r = visibleRect(tile);
+  const shape = visibleShape(tile);
+  // Messrechteck: die Kachel, soweit sie im Fenster UND in den Abschneidekästen ihrer Vorfahren liegt.
+  const r = shape.slice(1).reduce<DOMRect | null>((acc, box) => {
+    if (!acc) return null;
+    const left = Math.max(acc.left, box.left), top = Math.max(acc.top, box.top);
+    const right = Math.min(acc.right, box.right), bottom = Math.min(acc.bottom, box.bottom);
+    return right - left >= 1 && bottom - top >= 1 ? new DOMRect(left, top, right - left, bottom - top) : null;
+  }, visibleRect(tile));
   if (!r) throw new Error(`Kachel ${label(tile)} hat keine sichtbare Fläche`);
-  const inset = 2;
-  const x0 = r.left + inset, x1 = r.right - inset, y0 = r.top + inset, y1 = r.bottom - inset;
+  const inShape = (x: number, y: number) => shape.every(box => insideRoundedBox(box, x, y, SHAPE_MARGIN - 0.01));
+  const x0 = r.left + SHAPE_MARGIN, x1 = r.right - SHAPE_MARGIN, y0 = r.top + SHAPE_MARGIN, y1 = r.bottom - SHAPE_MARGIN;
+  // Ecken: so nah am Rand wie die Form es zulässt — 2 px bei einer eckigen Kachel, bei einer Rundung (der Kachel oder
+  // eines abschneidenden Vorfahren) auf der Diagonale nach innen bis in den Eckbogen. Geometrie, nicht Treffertest: liegt
+  // der Punkt in der Form und trifft trotzdem nicht, ist das ein Befund.
+  const corner = (cx: number, cy: number, sx: number, sy: number, what: string): Point => {
+    const limit = Math.min(r.width, r.height) / 2;
+    let d = SHAPE_MARGIN;
+    while (d < limit && !inShape(cx + sx * d, cy + sy * d)) d += 0.5;
+    return { x: cx + sx * d, y: cy + sy * d, what };
+  };
   const points: Point[] = [
-    { x: x0, y: y0, what: 'Ecke oben links' }, { x: x1, y: y0, what: 'Ecke oben rechts' },
-    { x: x0, y: y1, what: 'Ecke unten links' }, { x: x1, y: y1, what: 'Ecke unten rechts' },
+    corner(r.left, r.top, 1, 1, 'Ecke oben links'), corner(r.right, r.top, -1, 1, 'Ecke oben rechts'),
+    corner(r.left, r.bottom, 1, -1, 'Ecke unten links'), corner(r.right, r.bottom, -1, -1, 'Ecke unten rechts'),
     { x: (x0 + x1) / 2, y: (y0 + y1) / 2, what: 'Mitte' },
   ];
   for (let i = 0; i < grid; i++) {
@@ -85,7 +154,13 @@ function samplePoints(tile: Element, target: Element, secondary: Element[], grid
     const x = box.left + box.width / 2, y = box.top + box.height / 2;
     if (x > r.left && x < r.right && y > r.top && y < r.bottom) points.push({ x, y, what: `Text „${text.slice(0, 30)}“` });
   }
-  return points;
+  // Raster- und Textpunkte, die in einer stark gerundeten Ecke außerhalb der Form lägen, zählen nicht zur Kachel. Mehr
+  // als die Ecken darf dabei nie wegfallen — sonst prüfte der Test stillschweigend nur noch einen Rest.
+  const kept = points.filter(p => inShape(p.x, p.y));
+  if (kept.length < points.length * 0.6) {
+    throw new Error(`Kachel ${label(tile)}: nur ${kept.length} von ${points.length} Messpunkten liegen in ihrer sichtbaren Form`);
+  }
+  return kept;
 }
 
 /**

@@ -276,6 +276,13 @@ Default-Browser ist `ChromeHeadlessNoSandbox` (`--no-sandbox --disable-gpu --dis
 
 - Ist keine Cache-Shell da: `npx puppeteer browsers install chrome-headless-shell` (lädt nach `~/.cache/puppeteer`, kein root).
 - Lokal mit installiertem Chrome: einfach `CHROME_BIN` setzen oder `--browsers=Chrome` übergeben.
+- **Die CI testet im `google-chrome` des Runners** (19.11.2026: 157), lokal läuft die ältere Puppeteer-Shell (149) — Specs,
+  die Treffer (`elementFromPoint`), Layout oder Schriftmaße messen, können lokal grün und in der CI rot sein (0.999.0:
+  gerundetes Abschneiden zählt in 157 beim Treffertest, in 149 nicht). Solche Specs zusätzlich im neueren Chrome laufen
+  lassen: `CHROME_BIN=~/.cache/puppeteer/chrome/linux-157.0.8103.78/chrome-linux64/chrome npx ng test <projekt> --watch=false`
+  (Chrome for Testing, liegt bewusst NICHT im Ordner `chrome-headless-shell/`, den `karma.conf.js` von selbst nimmt; ohne
+  `unzip` auf der Maschine: ZIP von `storage.googleapis.com/chrome-for-testing-public/<fassung>/linux64/chrome-linux64.zip`
+  mit Python `zipfile` samt Dateirechten entpacken).
 - **Kontrast-Specs** messen berechnete Farben über `src/app/testing/contrast.ts` (`textContrast`/`effectiveBackground`;
   `mountWithComponentStyles` wendet gekapselte Komponenten-Stile ohne Zustand an) und `testing/board-coords.ts`
   (Brett-Koordinaten gegen ihr Feld); `body` malt `var(--mat-sys-surface)`, die Textfarbe bleibt bewusst die des

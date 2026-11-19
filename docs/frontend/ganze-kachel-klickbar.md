@@ -90,10 +90,20 @@ expect(went()).toEqual(['/repertoires/1']);
 ```
 
 `expectWholeTileClickable` prüft per `document.elementFromPoint` (Ecken, Mitte, 7 × 7-Raster, Mitte jeder Textstelle):
-jeder Punkt trifft das Hauptziel oder ein Nebenelement, und die Mitte jedes Nebenelements trifft dieses selbst. Die
+jeder Punkt trifft das Hauptziel oder ein Nebenelement, und die Mitte jedes Nebenelements trifft dieses selbst. Gemessen
+wird nur IN der sichtbaren Form der Kachel — ihr gerundeter Rahmenkasten, geschnitten mit den Abschneidekästen aller
+Vorfahren mit `overflow` ≠ visible; die Eckpunkte sitzen 2 px vom Rand bzw. bei einer Rundung auf der Diagonale im
+Eckbogen (Geometrie aus den berechneten Radien, kein Herantasten per Treffer). Grund (CI rot am 19.11., 0.999.2): Chrome
+wertet gerundetes Abschneiden beim Treffertest inzwischen auch für die fest positionierte Fläche aus — in Chrome 157 (CI)
+trifft ein Klick 2 px in der Ecke einer `overflow: hidden`-Karte mit 12 px Rundung das Raster DAHINTER, in der 149er-Shell
+(lokal) noch das Hauptziel. Das ist keine Lücke der Kachel, der Punkt liegt neben ihr. Die
 globalen Styles laufen im Karma-Lauf mit; die Kachel muss im Dokument hängen. Der Test ist gegen eine Kachel, bei der
 nur der Knopf klickbar ist, rot (gegengeprüft mit geleertem `_tile.scss`). `expectTileNotClickable` für den
 Bearbeiten-Modus und das gesperrte Hauptziel. Aus den anderen Oberflächen: `@rh/testing/tile-hit`.
+
+Treffer- und Layout-Specs vor dem Push auch im Chrome der CI laufen lassen (dort das `google-chrome` des Runners, lokal
+sonst die ältere Puppeteer-Shell): `CHROME_BIN=~/.cache/puppeteer/chrome/linux-157.0.8103.78/chrome-linux64/chrome npx ng
+test <projekt> --watch=false` — siehe `src/frontend/CLAUDE.md` → „Unit-Tests / Headless-Browser“.
 
 ## Wo es benutzt wird
 
