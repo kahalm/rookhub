@@ -2,11 +2,15 @@
 :host { display: contents; }
 
 /* Kontext-Card (Puzzle-Info + Fortschritt + Navigation) */
-.context-card .ctx-head { display: flex; align-items: flex-start; gap: 0.4rem; }
+/* Kopf: Pfeil | Text | Werkzeuggruppe. Der Text will mindestens 15rem; reicht die Zeile dafür nicht, bricht die ganze
+   Werkzeuggruppe rechtsbündig in eine eigene Zeile (statt Titel/Kapitel Wort für Wort umbrechen zu lassen; 0.999.3:
+   Kurs-Löser, Text nur ~90 px breit). Auf breiten Karten bleibt alles in einer Zeile. */
+.context-card .ctx-head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.4rem; }
 .context-card .ctx-back { flex-shrink: 0; margin: -4px -4px 0 -8px; }
-.context-card .ctx-text { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0; }
+.context-card .ctx-text { display: flex; flex-direction: column; gap: 0.15rem; flex: 1 1 15rem; min-width: 0; }
+.context-card .ctx-tools { display: flex; align-items: flex-start; justify-content: flex-end; gap: 0.4rem; margin-left: auto; max-width: 100%; min-width: 0; }
 /* Schnellwechsel Buch↔Workbook: kompakter Knopf rechts im Kopf, Label gekürzt. */
-.context-card .ctx-switch { flex-shrink: 0; align-self: flex-start; max-width: 45%; height: 30px; line-height: 30px; padding: 0 8px; }
+.context-card .ctx-switch { flex-shrink: 1; min-width: 0; align-self: flex-start; max-width: 12rem; height: 30px; line-height: 30px; padding: 0 8px; }
 .context-card .ctx-switch .ctx-switch-label { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; font-size: 0.8rem; }
 .context-card .ctx-switch mat-icon { font-size: 18px; width: 18px; height: 18px; vertical-align: middle; }
 /* Sprachwahl der Kurs-Kommentare (nur sichtbar mit mehr als einer Sprache). */

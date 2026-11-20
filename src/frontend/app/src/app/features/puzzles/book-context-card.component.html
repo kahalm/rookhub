@@ -85,34 +85,41 @@
             </div>
           }
         </div>
-        @if (langEnabled()) {
-          <app-course-lang-picker class="ctx-lang" [languages]="languages()"
-                                  [value]="langValue()"
-                                  (picked)="languagePicked.emit($event)" />
-        }
-        @if (inCourse() && courseTotal() > 0) {
-          <button mat-icon-button class="ctx-stats-btn" (click)="statsToggled.emit()"
-                  [attr.aria-expanded]="statsOpen()" aria-controls="course-stats-panel"
-                  [class.on]="statsOpen()"
-                  [appIconLabel]="'book.course.progressInfo' | translate">
-            <mat-icon>info_outline</mat-icon>
-          </button>
-        }
-        @if (ebookRef(); as er) {
-          <!-- Kurslinie → Stelle im E-Book (neuer Tab, der Kurs bleibt offen). -->
-          <a mat-stroked-button class="ctx-switch ctx-in-book" target="_blank" rel="noopener"
-             [routerLink]="['/ebooks', er.ebookId]" [queryParams]="{ diagram: er.diagramId, page: er.page }"
-             [matTooltip]="'book.course.inBookTooltip' | translate:{ title: er.ebookTitle, page: er.page }">
-            <mat-icon>menu_book</mat-icon>
-            <span class="ctx-switch-label">{{ 'book.course.inBook' | translate:{ page: er.page } }}</span>
-          </a>
-        }
-        @if (inCourse() && linkedCourseBookId()) {
-          <button mat-stroked-button class="ctx-switch" (click)="switchLinked.emit()"
-                  [matTooltip]="'book.course.switchLinkedTooltip' | translate:{ name: linkedCourseName() }">
-            <mat-icon>swap_horiz</mat-icon>
-            <span class="ctx-switch-label">{{ linkedCourseName() }}</span>
-          </button>
+        <!-- Werkzeuge (Sprachwahl, ⓘ, „Im Buch“, Kurswechsel) als EINE Gruppe rechts: wird der Text daneben zu schmal
+             (< 15rem), rutscht die ganze Gruppe rechtsbündig in eine eigene Zeile, statt den Titel Wort für Wort
+             umbrechen zu lassen (0.999.3: Kurs-Löser bei 1718 px, Text nur ~90 px breit). -->
+        @if (hasTools()) {
+          <div class="ctx-tools">
+          @if (langEnabled()) {
+            <app-course-lang-picker class="ctx-lang" [languages]="languages()"
+                                    [value]="langValue()"
+                                    (picked)="languagePicked.emit($event)" />
+          }
+          @if (inCourse() && courseTotal() > 0) {
+            <button mat-icon-button class="ctx-stats-btn" (click)="statsToggled.emit()"
+                    [attr.aria-expanded]="statsOpen()" aria-controls="course-stats-panel"
+                    [class.on]="statsOpen()"
+                    [appIconLabel]="'book.course.progressInfo' | translate">
+              <mat-icon>info_outline</mat-icon>
+            </button>
+          }
+          @if (ebookRef(); as er) {
+            <!-- Kurslinie → Stelle im E-Book (neuer Tab, der Kurs bleibt offen). -->
+            <a mat-stroked-button class="ctx-switch ctx-in-book" target="_blank" rel="noopener"
+               [routerLink]="['/ebooks', er.ebookId]" [queryParams]="{ diagram: er.diagramId, page: er.page }"
+               [matTooltip]="'book.course.inBookTooltip' | translate:{ title: er.ebookTitle, page: er.page }">
+              <mat-icon>menu_book</mat-icon>
+              <span class="ctx-switch-label">{{ 'book.course.inBook' | translate:{ page: er.page } }}</span>
+            </a>
+          }
+          @if (inCourse() && linkedCourseBookId()) {
+            <button mat-stroked-button class="ctx-switch" (click)="switchLinked.emit()"
+                    [matTooltip]="'book.course.switchLinkedTooltip' | translate:{ name: linkedCourseName() }">
+              <mat-icon>swap_horiz</mat-icon>
+              <span class="ctx-switch-label">{{ linkedCourseName() }}</span>
+            </button>
+          }
+          </div>
         }
       </div>
 

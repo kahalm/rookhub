@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.999.5", date: "2026-11-20", changes: [
+    { en: "Course and book solver: in the card above the board, the language choice, the ⓘ button and the switch to the linked course now form one group. If the card is too narrow for the title next to them, the whole group moves to its own line (right-aligned) — until now they squeezed the title, chapter and book name into a narrow column with one word per line (e.g. „PATTERN 40 (#181) Deflecting the King’s Rook Protection with the Bishop“ next to „100 Tactical Patterns Yo…“). On wide cards everything stays in one line.",
+      de: "Kurs- und Buch-Löser: in der Karte über dem Brett bilden Sprachwahl, ⓘ und der Wechsel zum verknüpften Kurs jetzt eine Gruppe. Reicht die Kartenbreite neben ihnen nicht für den Titel, rutscht die ganze Gruppe rechtsbündig in eine eigene Zeile — bisher drückten sie Titel, Kapitel und Buchnamen in eine schmale Spalte mit einem Wort pro Zeile (z. B. „PATTERN 40 (#181) Deflecting the King’s Rook Protection with the Bishop“ neben „100 Tactical Patterns Yo…“). Auf breiten Karten bleibt alles in einer Zeile." },
+  ] },
   { version: "0.999.4", date: "2026-11-19", changes: [
     { en: "Book and course comments: moves after “not”, “instead of” or “rather than” (German “nicht”, “statt”, “anstatt”) now count as the other choice at the same point. In “2...hxg6 3.fxg6 Qxe7! not 3...Bxg6 … or 3...Rxe7 … 4.Nxe7+ Rxe7” (Woodpecker, exercise 246) “Qxe7” was plain text, “4.Nxe7+” showed the board after 3...Rxe7 and the final “Rxe7” was not clickable — now every move is clickable and shows its own position.",
       de: "Buch- und Kurs-Kommentare: ein Zug nach „not“, „instead of“ oder „rather than“ (deutsch „nicht“, „statt“, „anstatt“) gilt jetzt als die andere Möglichkeit an derselben Stelle. In „2...hxg6 3.fxg6 Qxe7! not 3...Bxg6 … or 3...Rxe7 … 4.Nxe7+ Rxe7“ (Woodpecker, Aufgabe 246) war „Qxe7“ bloßer Text, „4.Nxe7+“ zeigte das Brett nach 3...Rxe7 und das abschließende „Rxe7“ war nicht anklickbar — jetzt ist jeder Zug anklickbar und zeigt seine eigene Stellung." },

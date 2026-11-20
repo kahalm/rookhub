@@ -240,4 +240,58 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
     expect(missing.el.querySelector('.wp-done')).toBeNull();
     expect(missing.el.querySelector('.wp-overview')).not.toBeNull();
   });
+
+  // 0.999.5: Sprachwahl, ⓘ und Kurswechsel stehen als EINE Gruppe .ctx-tools im Kopf; ist die Karte schmal, rutscht die
+  // Gruppe rechtsbündig in eine eigene Zeile, statt den Titel auf ~90 px zusammenzudrücken (Kurs-Löser 0.999.3).
+  describe('Kopf-Werkzeuge (.ctx-tools)', () => {
+    const toolInputs = {
+      hasPuzzle: true, state: 'AWAITING_USER_MOVE', inCourse: true, courseTotal: 5,
+      titleDisplay: 'PATTERN 40 (#181) Deflecting the King’s Rook Protection with the Bishop',
+      chapterDisplay: 'Pattern 40', bookName: '100 Tactical Patterns You Must Know',
+      langEnabled: true, languages: ['en', 'de'], langValue: 'en',
+      linkedCourseBookId: 12, linkedCourseName: '100 Tactical Patterns You Must Know — Workbook',
+    };
+
+    let box: HTMLElement | null = null;
+    afterEach(() => { box?.remove(); box = null; });
+
+    /** Rendert die Karte in einem Kasten fester Breite (der Host selbst ist display: contents). */
+    function layout(width: number) {
+      const r = make(toolInputs);
+      box = document.createElement('div');
+      box.style.width = `${width}px`;
+      document.body.appendChild(box);
+      box.appendChild(r.el);
+      r.fixture.detectChanges();
+      const text = r.el.querySelector('.ctx-head > .ctx-text') as HTMLElement;
+      const tools = r.el.querySelector('.ctx-head > .ctx-tools') as HTMLElement;
+      const head = r.el.querySelector('.ctx-head') as HTMLElement;
+      return { text: text.getBoundingClientRect(), tools: tools.getBoundingClientRect(), head: head.getBoundingClientRect() };
+    }
+
+    it('fasst Sprachwahl, ⓘ und Kurswechsel in einer Gruppe neben dem Text', () => {
+      const { el } = make(toolInputs);
+      const tools = el.querySelector('.ctx-head > .ctx-tools')!;
+      expect(tools.querySelector('app-course-lang-picker.ctx-lang')).not.toBeNull();
+      expect(tools.querySelector('.ctx-stats-btn')).not.toBeNull();
+      expect(tools.querySelector('button.ctx-switch')).not.toBeNull();
+    });
+
+    it('ohne Werkzeuge keine leere Gruppe', () => {
+      const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', titleDisplay: 'Linie 1' });
+      expect(el.querySelector('.ctx-tools')).toBeNull();
+    });
+
+    it('schmale Karte (360 px): Gruppe in eigener Zeile, rechtsbündig, der Text behält die Breite', () => {
+      const { text, tools, head } = layout(360);
+      expect(tools.top).toBeGreaterThanOrEqual(text.bottom - 1);
+      expect(Math.abs(tools.right - head.right)).toBeLessThan(2);
+      expect(text.width).toBeGreaterThan(200);
+    });
+
+    it('breite Karte (900 px): alles in einer Zeile', () => {
+      const { text, tools } = layout(900);
+      expect(Math.abs(tools.top - text.top)).toBeLessThan(2);
+    });
+  });
 });

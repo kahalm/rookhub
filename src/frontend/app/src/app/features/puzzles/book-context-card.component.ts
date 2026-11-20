@@ -144,6 +144,10 @@ export class BookContextCardComponent {
    *  (Zyklus 1, kein laufender Zyklus). */
   readonly woodpeckerScheduleInfo = computed(() => (this.inWoodpecker() ? woodpeckerSchedule(this.woodpeckerPlan()) : null));
 
+  /** Gibt es rechts im Kopf Werkzeuge (Sprachwahl, ⓘ, „Im Buch“, Kurswechsel)? Nur dann steht die `.ctx-tools`-Gruppe. */
+  readonly hasTools = computed(() => this.langEnabled() || (this.inCourse() && this.courseTotal() > 0) || !!this.ebookRef()
+    || (this.inCourse() && !!this.linkedCourseBookId()));
+
   /** Tag des Tagespuzzles als Datum für die DatePipe (nur mit Tagespuzzle). */
   readonly day = computed(() => (this.isDaily() ? dailyDateValue(this.dailyDate()) : null));
   /** Router-Ziel der Partie, aus der die Aufgabe geerntet wurde (Taktik-Ernte); `null` = keine. */
