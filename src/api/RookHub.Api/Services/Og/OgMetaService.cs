@@ -47,6 +47,7 @@ public partial class OgMetaService
     private readonly WorksheetService? _worksheets;
     private readonly LeagueService? _league;
     private readonly LeagueGameShares? _leagueGames;
+    private readonly ClubGameLinks? _clubGames;
 
     private const string StartFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -54,8 +55,9 @@ public partial class OgMetaService
         CrawlerProxyService crawler, AppDbContext db, ILogger<OgMetaService> logger,
         GameReconstructionService? reconstructions = null, SharedLineService? sharedLines = null,
         WeeklyPostService? weekly = null, WorksheetService? worksheets = null,
-        LeagueService? league = null, LeagueGameShares? leagueGames = null)
+        LeagueService? league = null, LeagueGameShares? leagueGames = null, ClubGameLinks? clubGames = null)
     {
+        _clubGames = clubGames;
         _league = league;
         _leagueGames = leagueGames;
         _worksheets = worksheets;
@@ -100,6 +102,9 @@ public partial class OgMetaService
         {
             case "g" when segments.Length >= 2:
                 return ("game", segments[1]);
+            // Geteilte Vereinspartie (2026-11-22) samt ihrer Zusammenfassung /cg/{token}/summary — wie /g/.
+            case "cg" when segments.Length >= 2:
+                return (ClubGameKind, segments[1]);
             case "t" when segments.Length >= 2:
                 return ("tournament", segments[1]);
             case "r" when segments.Length == 2:
@@ -168,7 +173,7 @@ public partial class OgMetaService
                     var white = string.IsNullOrWhiteSpace(g.White) ? "?" : g.White!;
                     var black = string.IsNullOrWhiteSpace(g.Black) ? "?" : g.Black!;
                     // Elo im Namen (0.737.0): „Mitteregger, Gottfried (Elo 1826) – Erlacher, Herbert (Elo 1712)"
-                    var title = $"{white}{(g.WhiteElo is int we ? $" (Elo {we})" : "")} – {black}{(g.BlackElo is int be ? $" (Elo {be})" : "")}";
+                    var title = GameTitle(white, g.WhiteElo, black, g.BlackElo);
                     var descParts = new List<string>();
                     if (!string.IsNullOrWhiteSpace(g.Result)) descParts.Add(g.Result!);
                     if (!string.IsNullOrWhiteSpace(g.Source)) descParts.Add(g.Source!);
@@ -195,11 +200,7 @@ public partial class OgMetaService
                     if (QueryParam(path, "train") is "white" or "black" && QueryParam(path, "train") is { } side)
                     {
                         // Englisch (Wunsch 2026-10-21: „mach das default englisch") — die Vorschau sieht jeder, gleich welche Sprache.
-                        var who = side == "white" ? white : black;
-                        var n = TrainMarks(evals, side == "white").Count;
-                        var trainDesc = n > 0
-                            ? $"{n} {(n == 1 ? "mistake" : "mistakes")} by {who} in {white} – {black} — find the better moves now."
-                            : $"{white} – {black}: replay the mistakes of {who} and find the better moves.";
+                        var trainDesc = TrainDescription(white, black, side, TrainMarks(evals, side == "white").Count);
                         var trainImg = $"{baseUrl}/api/og/img/train/{side}-{Uri.EscapeDataString(id)}.png";
                         // `l=en`: neue Adresse für die englische Karte — das Bild ist eine Woche „immutable" gecacht, Messenger
                         // merken es sich nach der Adresse und zeigten sonst weiter die deutsche.
@@ -218,6 +219,8 @@ public partial class OgMetaService
                     }
                     return new OgPage(title, description, $"{img}?c={CardVersion}{(version == null ? "" : $"&v={version}")}", canonical, "article");
                 }
+                case ClubGameKind:
+                    return await ResolveClubGamePageAsync(id, path, baseUrl, img, canonical, ct);
                 case "recon":
                 case "line":
                     return await ResolveSharedPageAsync(kind, id, img, canonical, ct);
@@ -286,6 +289,9 @@ public partial class OgMetaService
                     var card = GameCard(g, ply, curve);
                     return new OgBoard(card.Boards[0].Fen, card.Boards[0].Flip, curve, Card: card);
                 }
+                case ClubGameKind:
+                case ClubTrainKind:
+                    return await ResolveClubGameBoardAsync(kind, id, ct);
                 case "recon":
                 case "line":
                     return await ResolveSharedBoardAsync(kind, id, ct);
@@ -304,11 +310,7 @@ public partial class OgMetaService
                     var token = id[(dash + 1)..];
                     var g = await _games.GetSharedAsync(token);
                     if (g is null) return null;
-                    var evals = await _games.GetSharedEvalsAsync(token, null, ct);
-                    var who = side == "white" ? (string.IsNullOrWhiteSpace(g.White) ? "Weiß" : g.White!) : (string.IsNullOrWhiteSpace(g.Black) ? "Schwarz" : g.Black!);
-                    return new OgBoard(EndFenFromPgn(g.Pgn), Flip: side == "black", Curve: CurveOf(evals),
-                        Train: new OgImageService.TrainCard(TrainHeadline, TrainSubline, TrainMarks(evals, side == "white"),
-                            $"Mistakes by {who}"));
+                    return TrainBoard(g.Pgn, g.White, g.Black, await _games.GetSharedEvalsAsync(token, null, ct), side);
                 }
                 case "puzzle":
                 case "book":

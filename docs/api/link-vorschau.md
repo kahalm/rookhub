@@ -35,7 +35,12 @@ Basis-URL für `og:url`/`og:image`: `App:BaseUrl`; Turnierseite `App:TurnierBase
 | `/g/{token}?ply=n` | Partie auf Halbzug n (geerntete Aufgabe) | wie `/g` (Endstellung) | Stellung nach n Halbzügen, „Position after 12. Nf5" (`gameply`) |
 | `/g/{token}?train=white\|black` | Fehler-Training | Trainingskarte | unverändert (`train`) |
 | `/g/{token}?roast=id` | Partie + freigegebener Roast | Roast als Beschreibung | unverändert, Bild = Partiekarte |
+| `/cg/{token}` (+ `/summary`) | einzelne geteilte Vereinspartie (2026-11-09) | keine (Weiche kannte `cg` nicht) | seit 2026-11-22 Partiekarte wie `/g` (`cgame`); Name = Anonymisierungs-Name, ohne Event/Elo der ersetzten Seite |
+| `/cg/{token}?train=white\|black` | Fehler-Training der Vereinspartie | keine | Trainingskarte wie `/g` (`cgtrain`, `{side}-{token}`) |
 | `/s/{token}/club-games/{id}` | Vereinspartie über einen Liga-Link | keine | keine (offen, siehe unten) |
+| `/tl/{token}` (+ `/drill`) | Trainerstunden-Eintrag (läuft ab) | keine | keine (offen: nginx-Weiche kennt `tl` nicht) |
+| `/ga/{token}/summary` | anonyme Zusammenfassung einer eigenen Partie | keine | keine (bewusst ohne Namen; offen: allgemeine Karte ohne Spieler) |
+| `/explorer/game/masters/{id}` | Meisterpartie aus dem lokalen Explorer | keine | keine (offen) |
 | `/l/{token}` | Repertoire-Linie/Kapitel (läuft ab) | keine | Karte: Endstellung der Linie, Titel, Repertoire, Zuglänge (`line`) |
 | `/r/{token}` | rekonstruierte Partie | keine | Karte: zuletzt bekannte Stellung, Spieler, „n plies known · g gaps" (`recon`) |
 | `/w/{token}` | Aufgabenblatt zum Lösen (Link liefert auch Lösungen!) | keine | Raster aus ≤ 6 Mini-Diagrammen, Name, Anzahl — ohne Text/Lösung (`worksheet`) |
@@ -90,7 +95,8 @@ KidHub (`/stars/{n}/unlock` u. a.) und ClubHub (alles angemeldet) teilen nichts 
 Nur Daten, die die Route OHNE Anmeldung ohnehin zeigt — gelesen über dieselben Dienste wie die Seite:
 `SavedGameService.GetSharedAsync`, `SharedLineService.GetByTokenAsync` (abgelaufen → null), `GameReconstructionService.GetSharedAsync`,
 `WorksheetService.GetSharedAsync` (Teilen aus → null), `WeeklyPostService` nur `ScheduledAt ≤ jetzt`,
-`LeagueService.PublicShareAsync` (abgelaufen/widerrufen → null), `LeagueGameShares.ReadAsync` (Marke kaputt/abgelaufen/Partie
+`LeagueService.PublicShareAsync` (abgelaufen/widerrufen → null), `ClubGameLinks.ReadAsync`/`EvalsAsync` (`/cg/`: widerrufen/archiviert → null;
+anonymisiert: Anonymisierungs-Name, neu gebautes PGN ohne Event, ohne Elo der ersetzten Seite — `WhiteRealName`/`BlackRealName` nie), `LeagueGameShares.ReadAsync` (Marke kaputt/abgelaufen/Partie
 umgehängt → null; anonymisierte Vereinspartie ohne Brett und Mannschaften, Name = Anonymisierungs-Name). Ungültiger Link →
 keine Tags, Bild 404. Puzzles zeigen nie die Lösung; Aufgabenblätter nur die Stellungen (Überschrift, Begleittext und Lösung
 liefert der Link mit, sie kommen trotzdem nicht aufs Bild).
@@ -100,10 +106,10 @@ liefert der Link mit, sie kommen trotzdem nicht aufs Bild).
 | Bild | `Cache-Control` | Grund |
 |---|---|---|
 | Partie, markierte Stellung, Puzzle, Buch-Puzzle, Tagespuzzle mit Datum, Stellung | `public, max-age=604800, immutable` | Inhalt fest je Adresse; neue Kurve → `?v=`, neue Gestaltung → `?c=` (`OgMetaService.CardVersion`) |
-| Repertoire-Linie, Ligapartie, Wochenpost, Tagespuzzle `today` | `public, max-age=3600` | Link läuft ab/wird widerrufen bzw. Inhalt wechselt |
+| Repertoire-Linie, Ligapartie, Vereinspartie `/cg/` (Partie- und Trainingskarte), Wochenpost, Tagespuzzle `today` | `public, max-age=3600` | Link läuft ab/wird widerrufen bzw. Inhalt wechselt |
 | Rekonstruktion, Aufgabenblatt, Liga-Begegnung | `public, max-age=600` | bearbeitbar/neu gerechnet, widerrufbar |
 
-Die angereicherte `index.html` selbst: `no-cache, must-revalidate` aus der nginx-map (Pfade `r|w|s|partie` dort ergänzt).
+Die angereicherte `index.html` selbst: `no-cache, must-revalidate` aus der nginx-map (Pfade `r|w|s|partie`, seit 2026-11-22 `cg` dort ergänzt).
 
 ## Deploy
 
@@ -119,6 +125,6 @@ Die angereicherte `index.html` selbst: `no-cache, must-revalidate` aus der nginx
 `tests/RookHub.Api.Tests/Og/`: `OgTests` (Bestand), `OgCardTests` (Rendering 1200×630, leere/kaputte Daten, Partie/Stellung
 nach ply, Linie/Rekonstruktion inkl. abgelaufen/unbekannt, Cache-Header), `OgPuzzleCardTests` (Löser-Sicht, Themen,
 `/analysis?fen=`, Wochenpost nur veröffentlicht), `OgWorksheetCardTests` (Raster, kein Text/Lösung, Widerruf),
-`OgLeagueCardTests` (Pfade je Site, Begegnung offen/gespielt/leer, anonymisierte Partie, abgelaufene Links, Basis-URL,
+`OgClubGameTests` (`/cg/` Partie/Training, Anonymisierung: kein Klarname/FIDE/Event, Widerruf), `OgLeagueCardTests` (Pfade je Site, Begegnung offen/gespielt/leer, anonymisierte Partie, abgelaufene Links, Basis-URL,
 Escaping, Entfernen der Shell-Tags). nginx-Map und -Location: `DeploymentConfigTests.OgPreview_*`.
 Bilder ansehen: `OG_DUMP_DIR=/tmp/og dotnet test --filter "FullyQualifiedName~Og"` schreibt einige PNGs.

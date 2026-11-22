@@ -520,7 +520,7 @@ public class DeploymentConfigTests
         // der Nutzer vor einer weissen Seite. 429 (Limiter der API je IP) war der fehlende Fall: im
         // E2E-Lauf bekam ein Test statt der App die Absage als Dokument.
         var nginx = ReadRepoFile("src/frontend/nginx.conf");
-        var og = Regex.Match(nginx, @"location ~ \^/\(g\|t\|puzzles[^)]*\)\(/\|\$\)[^{\n]* \{(?<body>.*?)\n    \}",
+        var og = Regex.Match(nginx, @"location ~ \^/\(g\|cg\|t\|puzzles[^)]*\)\(/\|\$\)[^{\n]* \{(?<body>.*?)\n    \}",
             RegexOptions.Singleline);
         Assert.True(og.Success, "OG-Location in nginx.conf nicht gefunden");
         var body = og.Groups["body"].Value;
@@ -528,7 +528,8 @@ public class DeploymentConfigTests
         // Seit 2026-11-09 auch rekonstruierte Partie /r/, Repertoire-Linie /l/, Aufgabenblatt /w/, Wochenpost /weekly/, LeagueHub
         // /s/ und /partie/ und genau /analysis
         // (geteilte Stellung ?fen=) — Vorschaubilder, docs/api/link-vorschau.md.
-        Assert.Contains("location ~ ^/(g|t|puzzles|tournaments/calendar|l|r|w|weekly|s|partie)(/|$)|^/analysis$ {", nginx);
+        // Seit 2026-11-22 auch die geteilte Vereinspartie /cg/{token} (vorher GAR KEINE Vorschau, die Weiche kannte cg nicht).
+        Assert.Contains("location ~ ^/(g|cg|t|puzzles|tournaments/calendar|l|r|w|weekly|s|partie)(/|$)|^/analysis$ {", nginx);
 
         Assert.Contains("proxy_intercept_errors on;", body);
         var errorPage = Regex.Match(body, @"error_page ([0-9 ]+)= @og_fallback;");
@@ -570,7 +571,7 @@ public class DeploymentConfigTests
         foreach (var host in new[] { "rookhub.oberschmid.homes", "rookhub-dev.oberschmid.homes", "localhost", "172.18.0.5" })
             Assert.Equal("", Site(host));
 
-        var og = Regex.Match(nginx, @"location ~ \^/\(g\|t\|puzzles[^)]*\)\(/\|\$\)[^{\n]* \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        var og = Regex.Match(nginx, @"location ~ \^/\(g\|cg\|t\|puzzles[^)]*\)\(/\|\$\)[^{\n]* \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
         Assert.True(og.Success, "OG-Location in nginx.conf nicht gefunden");
         var body = og.Groups["body"].Value;
         // Seiten ohne Vorschau bekommen ihre eigene index.html, BEVOR etwas an die API geht.
@@ -581,7 +582,7 @@ public class DeploymentConfigTests
         Assert.Contains("proxy_hide_header Cache-Control;", body);
         var cache = Regex.Match(nginx, @"map \$uri \$rookhub_cache_control \{(?<body>.*?)\n\}", RegexOptions.Singleline);
         Assert.True(cache.Success);
-        Assert.Contains("~^/(g|t|l|puzzles|", cache.Groups["body"].Value);
+        Assert.Contains("~^/(g|cg|t|l|puzzles|", cache.Groups["body"].Value);
         // Teilen-Links mit Vorschau (2026-11-09) stehen ebenfalls auf no-cache, must-revalidate
         Assert.Contains("|r|w|s|partie)(/|$)", cache.Groups["body"].Value);
         Assert.Contains("~^/(index\\.html|", cache.Groups["body"].Value);
@@ -685,7 +686,7 @@ public class DeploymentConfigTests
         // steht seit F8-002 in der Kachel-Location und liegt immer vor der OG-Weiche. ALLE Regeln
         // muessen davor stehen, deshalb zaehlt die letzte.
         var lastRule = Regex.Matches(nginx, @"location ~\*? \S+ \{\s*return 404;\s*\}").Max(m => m.Index);
-        Assert.True(lastRule > 0 && lastRule < nginx.IndexOf("location ~ ^/(g|t|puzzles", StringComparison.Ordinal),
+        Assert.True(lastRule > 0 && lastRule < nginx.IndexOf("location ~ ^/(g|cg|t|puzzles", StringComparison.Ordinal),
             "Scanner-Regeln muessen vor der OG-Location stehen");
         Assert.True(lastRule < nginx.IndexOf("location / {", StringComparison.Ordinal));
         foreach (var api in new[] { "/api/", "/api/engine/", "/api/extension/chessable/", "/api/external-engine/" })
@@ -754,7 +755,7 @@ public class DeploymentConfigTests
         Assert.Null(FirstRegex("/leagues/5"));   // => location / mit index.html-Fallback
 
         // Vor der OG-Weiche und dem SPA-Fallback; /api/ bleibt per ^~ unberuehrt.
-        Assert.True(bundleIndex < nginx.IndexOf("location ~ ^/(g|t|puzzles", StringComparison.Ordinal),
+        Assert.True(bundleIndex < nginx.IndexOf("location ~ ^/(g|cg|t|puzzles", StringComparison.Ordinal),
             "Buendel-Location muss vor der OG-Location stehen");
         Assert.True(bundleIndex < nginx.IndexOf("location / {", StringComparison.Ordinal));
         Assert.Contains("try_files $uri $uri/ /index.html;", nginx);
