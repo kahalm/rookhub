@@ -59,3 +59,23 @@ OHNE `matTabContent` im `mat-tab` und laden daher wie vorher beim Seitenaufruf, 
 übrigen bleiben lazy bzw. (Menü, Rollen) nach dem ersten Öffnen behalten (F5-020). Die Gruppenliste, die Gruppen-,
 Bücher-, Menü- und Rollen-Tab teilen, liegt in `admin-groups.store.ts` (je Seite bereitgestellt): mit `groups.manage`
 die volle Liste, sonst nur die Auswahl (`groups/options`).
+
+## Teilen-Link → volle Seite: `shareRedirectGuard` (2026-11-22)
+
+`core/share-redirect.guard.ts` hängt an den Teilen-Links, die ein normales Gegenstück haben. Ist man angemeldet, fragt der Guard
+`GET /api/share-links/target?kind=…&token=…[&id=…]` (siehe `docs/api/gespeicherte-partien.md`, Abschnitt „Teilen-Link → volle
+Seite“) und leitet mit `RedirectCommand(…, { replaceUrl: true })` um — Unterseite (`summary`/`drill`), Query (`?train=`, `?ply=`,
+`?roast=` …) und Fragment bleiben. Als Guard statt in der Komponente, damit die Teilen-Ansicht gar nicht erst rendert (kein Flackern).
+
+| Teilen-Link | Ziel | Bedingung |
+|---|---|---|
+| `/g/:token`, `/g/:token/summary` | `/games/:id[/summary]` | Besitzer, Menüpunkt `games` |
+| `/ga/:token/summary` | `/games/:id/summary` | Besitzer, Menüpunkt `games` |
+| `/cg/:token`, `/cg/:token/summary` | `/club-games/:id[/summary]` | `league.view` + Mitglied des Vereins der Partie (Admin: jeder) |
+| `/s/:token/club-games/:id[/summary]` | `/club-games/:id[/summary]` | wie `/cg` |
+| `/tl/:token`, `/tl/:token/drill` | `/training-videos/:id[/drill]` | Konto der Stunde oder Admin, Link gültig, Menüpunkt `training-videos` |
+| `/r/:token` | `/reconstruct/:id` | Besitzer, Menüpunkt `reconstruct` |
+
+Gäste fragen nicht. Kein Zugriff, Fehler, Zeitüberschreitung (4 s), ausgeblendeter Menüpunkt des Ziels oder ein Ziel außerhalb dieser
+Liste → die Teilen-Ansicht wie bisher. Ohne Gegenstück und deshalb ohne Guard: `/l/:token` (eine Linie, nicht das ganze Repertoire),
+`/w/:token` (Löseseite ≠ Bearbeiten), `/t/:id` und die Kurs-Kurz-URLs (keine Token-Links). Link-Vorschau und Bots: unberührt (nginx).

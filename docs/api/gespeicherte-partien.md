@@ -402,3 +402,13 @@ sie an der `SavedGame`-Id hängen: festgelegte Seite, Teilen-Link, ausgeblendete
 - Bestand: `GET /api/admin/club-game-references` (Probelauf) und `POST …/apply` stellen Kopien auf Verweise um (`ClubGameReferences`). Gibt es die Vereinsanalyse
   noch nicht fertig, wartet der Eintrag (`waiting`); gehört die alte Analyse nur diesem Eintrag und stammt aus „Partie analysieren“, wird sie gelöscht.
 
+
+## Teilen-Link → volle Seite (2026-11-22)
+
+`GET /api/share-links/target?kind=g|ga|cg|s|tl|r&token=…&id=…` (`[Authorize]`, `ShareLinkTargetController` → `ShareLinkTargets`):
+sagt einem ANGEMELDETEN, wohin derselbe Inhalt auf dem normalen Weg führt → `{ path }` (z. B. `/club-games/241`, ohne Unterseite).
+Prüfungen wie auf der normalen Seite: `g`/`ga` nur der Besitzer (auch Admins nicht — `/games/{id}` zeigt nur eigene), `cg`/`s`
+`league.view` + Mitglied des Vereins der Partie (Admin jeder Verein; `s` = Liga-Link `/s/{token}/club-games/{id}`, die Id steht dort
+schon in der Adresse), `tl` Konto der Stunde oder Admin bei gültigem Link, `r` der Besitzer. Alles andere — unbekannter, widerrufener
+oder abgelaufener Link, kein Zugriff, unbekannte Art — ist dasselbe 404 ohne Rumpf, also keine Id an Unberechtigte; Gäste 401.
+Oberfläche: `docs/frontend/routing.md`, Abschnitt „Teilen-Link → volle Seite“.

@@ -97,6 +97,7 @@ public static partial class DomainServicesSetup
         services.AddScoped<GameAnalysisRepair>();   // Reparatur nach dem Provider-Versatz (0.990.0, Admin)
         services.AddScoped<OwnGameSummaries>();   // Zusammenfassung eigener Partien (0.923.0)
         services.AddScoped<AnonGameShares>();   // anonymer Link der Zusammenfassung (/ga/{token}/summary)
+        services.AddScoped<ShareLinkTargets>();   // Teilen-Link → volle Seite für Berechtigte (2026-11-22)
         services.AddScoped<GameMistakeProgressService>();
         services.AddScoped<MarkedPositionService>();
         services.AddScoped<GameReconstructionService>();

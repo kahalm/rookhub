@@ -151,3 +151,16 @@ describe('app.routes — Kurs-Seiten hinter der Anmeldung (F1-017)', () => {
     }
   });
 });
+
+describe('app.routes — Teilen-Links mit normalem Gegenstück (2026-11-22)', () => {
+  it('jeder dieser Teilen-Links trägt den shareRedirectGuard, die Seiten ohne Gegenstück nicht', () => {
+    const guarded = ['g/:token/summary', 'g/:token', 'ga/:token/summary', 's/:token/club-games/:id/summary', 's/:token/club-games/:id',
+      'cg/:token/summary', 'cg/:token', 'tl/:token/drill', 'tl/:token', 'r/:token'];
+    for (const path of guarded) {
+      const r = routes.find(x => x.path === path);
+      expect(r?.canActivate?.length).withContext(path).toBe(1);
+    }
+    // Repertoire-Linie und Aufgabenblatt: kein gleichwertiges Gegenstück, bleiben ohne Guard
+    for (const path of ['l/:token', 'w/:token']) expect(routes.find(x => x.path === path)?.canActivate).withContext(path).toBeUndefined();
+  });
+});

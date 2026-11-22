@@ -7,6 +7,7 @@ import { guestGuard } from './core/guest.guard';
 import { adminAreaGuard } from './features/admin/admin-area.guard';
 import { coursePlayGuard } from './core/course-play.guard';
 import { menuGuard } from './core/menu.guard';
+import { shareRedirectGuard } from './core/share-redirect.guard';
 import { permissionGuard } from './core/permission.guard';
 import { unsavedChangesGuard } from './core/unsaved-changes.guard';
 
@@ -108,8 +109,8 @@ export const routes: Routes = [
   { path: 'training-videos/:id', loadComponent: () => import('./features/training-videos/training-lesson.component').then(m => m.TrainingLessonComponent), canActivate: [authGuard, menuGuard('training-videos')] },
   // Teilen-Link eines Eintrags der Trainerstunden (Wunsch 2026-11-17): ohne Anmeldung, nur lesend, zeitlich begrenzt — der
   // Server prüft das Token bei jeder Anfrage (auch am Video); kein Guard, sonst landete der Gast vor der Anmeldemaske.
-  { path: 'tl/:token/drill', loadComponent: () => import('./features/training-videos/training-drill.component').then(m => m.TrainingDrillComponent), data: { mode: 'share' } },
-  { path: 'tl/:token', loadComponent: () => import('./features/training-videos/training-lesson.component').then(m => m.TrainingLessonComponent), data: { mode: 'share' } },
+  { path: 'tl/:token/drill', loadComponent: () => import('./features/training-videos/training-drill.component').then(m => m.TrainingDrillComponent), data: { mode: 'share' }, canActivate: [shareRedirectGuard('tl', ['drill'])] },
+  { path: 'tl/:token', loadComponent: () => import('./features/training-videos/training-lesson.component').then(m => m.TrainingLessonComponent), data: { mode: 'share' }, canActivate: [shareRedirectGuard('tl')] },
   { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent), canActivate: [authGuard, menuGuard('courses')] },
   { path: 'catalog', loadComponent: () => import('./features/catalog/catalog.component').then(m => m.CatalogComponent), canActivate: [authGuard, menuGuard('catalog')] },
   { path: 'courses/:bookId/chapter/:chapterIndex/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [authGuard, menuGuard('courses')] },
@@ -125,22 +126,24 @@ export const routes: Routes = [
   // Meisterpartie aus dem lokalen Explorer (0.980.0): Linkziel der Beispielpartien in der Partie-Zusammenfassung — ohne Anmeldung,
   // weil die Zusammenfassung auch über Teilen-Links gelesen wird. `?ply=` öffnet die Stellung nach so vielen Halbzügen.
   { path: 'explorer/game/masters/:id', loadComponent: () => import('./features/explorer/master-game.component').then(m => m.MasterGameComponent) },
-  { path: 'g/:token/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'own-share' } },
-  { path: 'g/:token', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent) },
+  // Teilen-Links (g, ga, s/…/club-games, cg, tl, r): wer angemeldet ist und dasselbe auf dem normalen Weg sehen darf, landet per
+  // shareRedirectGuard (Wunsch 2026-11-22) gleich auf der vollen Seite — Unterseite und Query bleiben, die Adresse wird ersetzt.
+  { path: 'g/:token/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'own-share' }, canActivate: [shareRedirectGuard('g', ['summary'])] },
+  { path: 'g/:token', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), canActivate: [shareRedirectGuard('g')] },
   // Anonymer Link der Zusammenfassung einer eigenen Partie (Wunsch 2026-11-15): ohne Anmeldung, ohne Spielernamen (der Server
   // schickt keine) und bewusst OHNE Partieseite dahinter — an /g/:token hängen Seiten und Vorschaubilder mit Namen.
-  { path: 'ga/:token/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'own-anon' } },
+  { path: 'ga/:token/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'own-anon' }, canActivate: [shareRedirectGuard('ga', ['summary'])] },
   // Vereinspartie über einen LeagueHub-Teilen-Link (0.838.3): ohne Anmeldung, nur Partien der geteilten Begegnung — der Server
   // entscheidet; kein Guard, sonst landete der Gast vor der Anmeldemaske.
-  { path: 's/:token/club-games/:id/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'club-share' } },
-  { path: 's/:token/club-games/:id', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), data: { mode: 'club-share' } },
+  { path: 's/:token/club-games/:id/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'club-share' }, canActivate: [shareRedirectGuard('s', ['summary'])] },
+  { path: 's/:token/club-games/:id', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), data: { mode: 'club-share' }, canActivate: [shareRedirectGuard('s')] },
   // Eine einzelne Vereinspartie, per „Teilen-Link kopieren" auf /club-games/:id (2026-11-09): ohne Anmeldung, nur lesend.
-  { path: 'cg/:token/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'club-link' } },
-  { path: 'cg/:token', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), data: { mode: 'club-link' } },
+  { path: 'cg/:token/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), data: { mode: 'club-link' }, canActivate: [shareRedirectGuard('cg', ['summary'])] },
+  { path: 'cg/:token', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), data: { mode: 'club-link' }, canActivate: [shareRedirectGuard('cg')] },
   { path: 'l/:token', loadComponent: () => import('./features/repertoire/shared-line.component').then(m => m.SharedLineComponent) },
   // Geteilte Rekonstruktion: die ganze Partie samt ihrer Lücken, ohne Anmeldung — man verschickt
   // den Link ja gerade, um jemanden auf die offenen Stellen schauen zu lassen.
-  { path: 'r/:token', loadComponent: () => import('./features/reconstruct/shared-reconstruction.component').then(m => m.SharedReconstructionComponent) },
+  { path: 'r/:token', loadComponent: () => import('./features/reconstruct/shared-reconstruction.component').then(m => m.SharedReconstructionComponent), canActivate: [shareRedirectGuard('r')] },
   // Geteiltes Aufgabenblatt: OHNE Anmeldung durchspielbar — das ist der Sinn des QR-Codes auf dem Ausdruck.
   { path: 'w/:token', loadComponent: () => import('./features/worksheets/worksheet-solve.component').then(m => m.WorksheetSolveComponent) },
   { path: 'help', loadComponent: () => import('./features/help/help.component').then(m => m.HelpComponent), canActivate: [menuGuard('help')] },
