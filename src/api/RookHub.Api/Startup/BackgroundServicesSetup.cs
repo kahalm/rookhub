@@ -75,6 +75,7 @@ namespace RookHub.Api.Startup;
 /// PersonalTacticsLineRepair           immer (einmalig)                      Löserseite der Buchdiagramm-Linien im Bestand (0.973.1)
 /// PersonalTacticsWhyBackfill          immer (einmalig)                      „Warum diese Aufgabe“ im Bestand nachtragen (1.001.0)
 /// ClubCopyResultRepair                immer (einmalig)                      Ergebnis der Vereinspartie in Kopien ohne Ergebnis (1.002.1)
+/// ClubCheckMarkRepair                 immer (einmalig)                      Schach-/Mattzeichen in Vereinspartien, Analysen, Kopien (1.002.4)
 /// KidsPuzzleSeeder                    immer (einmalig)                      Kinder-Leiter aufbauen
 /// PlayTimeSyncService                 immer                                 Spielzeit Lichess/chess.com
 /// VisitorOriginFlushWorker            intern: VisitorStats:Enabled          Besucher-Herkunft je Minute wegschreiben
@@ -204,6 +205,8 @@ public static class BackgroundServicesSetup
         services.AddHostedService<PersonalTacticsWhyBackfill>();
         // Bestand „Meine Partien“: Kopien von Vereinspartien ohne Ergebnis bekommen das der Vereinspartie (einmalig).
         services.AddHostedService<ClubCopyResultRepair>();
+        // Bestand Vereinspartien: von der Namen-/Ergebniskorrektur verlorene Schach-/Mattzeichen nachtragen (einmalig, streng).
+        services.AddHostedService<ClubCheckMarkRepair>();
         // Baut die Kinder-Leiter, wenn sie fehlt oder aus einem aelteren Lehrplan stammt.
         services.AddHostedService<KidsPuzzleSeeder>();
         // Externe Spielzeit (Lichess/chess.com) → Kategorie „Spielen" im Trainingsziele-Tracker.

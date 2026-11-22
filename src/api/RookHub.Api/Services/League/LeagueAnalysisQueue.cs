@@ -170,7 +170,7 @@ public sealed class LeagueAnalysisQueue
                     ["Black"] = g.White ? other : me,
                     ["Result"] = g.Result,
                 };
-                items.Add(new Item(PgnOf(headers, Numbered(sans)), key, opponents.Contains(g.FideId), date));
+                items.Add(new Item(PgnOf(headers, Numbered(Games.SavedGamePgn.WithCheckMarks(sans))), key, opponents.Contains(g.FideId), date));
             }
         }
     }

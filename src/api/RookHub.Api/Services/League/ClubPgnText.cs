@@ -117,7 +117,8 @@ internal static class ClubPgnText
         // Dieselben Namen wie bei Lumbra — die Spielerkarte erkennt die Farbe daran (LeagueProfileBuilder.ColorOf).
         if (g.WhiteFide != null) sb.Append(PgnWriter.Tag("WhiteFideId", g.WhiteFide));
         if (g.BlackFide != null) sb.Append(PgnWriter.Tag("BlackFideId", g.BlackFide));
-        sb.Append('\n').Append(PgnWriter.MoveText(sans, null, null, g.Result)).Append('\n');
+        // Mit Schach- und Mattzeichen, auch wenn die Züge aus ExtractMainlineSans kommen (Namen/Ergebnis korrigieren, Teilen-Link).
+        sb.Append('\n').Append(PgnWriter.MoveText(SavedGamePgn.WithCheckMarks(sans), null, null, g.Result)).Append('\n');
         return sb.ToString();
     }
 

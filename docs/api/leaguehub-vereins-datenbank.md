@@ -653,6 +653,13 @@ trug — ein eigener (echter) Name des Besitzers bleibt, `WhiteRealName` & Co. k
 Start-Abgleich `ClubCopyResultRepair` (Marke `SavedGames.ClubCopyResultRepair`): Kopien mit `*`, deren Vereinspartie ein
 Ergebnis hat, bekommen es; ein ANDERES entschiedenes Ergebnis bleibt (die Kopie kann richtiger sein).
 
+**Schach- und Mattzeichen** (1.002.4): `PgnParser.ExtractMainlineSans` schneidet `+`/`#` bewusst ab (Schlüssel, Eröffnungsbaum).
+Wer aus dieser Liste PGN schreibt, setzt sie über `SavedGamePgn.WithCheckMarks` wieder — `ClubPgnText.PgnOf` (Namen/Ergebnis/
+Paarung korrigieren, Import, Teilen-Link), `AnonGameShares.BarePgn` und die Online-Partien der `LeagueAnalysisQueue`. Bis 1.002.1
+verlor jede Namen-/Ergebniskorrektur alle Zeichen (Prod-Partie 10), die Analysen übernahmen das PGN. Einmaliger Start-Abgleich
+`ClubCheckMarkRepair` (Marke `LeagueClub.CheckMarkRepair`) über Vereinspartien, deren Analysen und Kopien: gespeichert nur, wenn sich
+ausschließlich `+`/`#` an Zügen der Hauptvariante ändern (`PgnCheckMarks.Repair`); sonst bleibt der Text und steht im Log.
+
 Oberfläche (LeagueHub): Reiter „Prognosen · Vereinspartien · Partien hinzufügen" (`/`, `/verein`, `/verein/neu`,
 `/verein/formular/:id`); ohne Konto `/s/:token/hochladen` und `/s/:token/formular/:key` — der Teilen-Link zeigt die
 Aufforderung dazu ganz oben. Die Formular-Korrektur benutzt DIESELBE Sitzung wie RookHubs Korrekturseite

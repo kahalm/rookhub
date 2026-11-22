@@ -79,6 +79,17 @@ internal static class SavedGamePgn
         return result;
     }
 
+    /// <summary>Die Züge MIT Schach- und Mattzeichen für einen PGN-Text (1.002.4). <c>PgnParser.ExtractMainlineSans</c> schneidet
+    /// <c>+</c>/<c>#</c> bewusst ab (Schlüssel, Eröffnungsbaum) — wer daraus PGN schreibt, muss sie wieder setzen; vorher verlor eine
+    /// Vereinspartie bei jeder Namen-/Ergebniskorrektur alle Zeichen (Prod-Partie 10: „56. Kg1 Qg2# 1-0" → „56. Kg1 Qg2 0-1").
+    /// Trägt die Liste schon ein Zeichen, kommt sie vom Brett und bleibt; sonst wird nachgespielt. Nicht spielbar → unverändert.</summary>
+    internal static IReadOnlyList<string> WithCheckMarks(IReadOnlyList<string> sans, string? startFen = null)
+    {
+        if (sans.Count == 0 || sans.Any(s => s.EndsWith('+') || s.EndsWith('#'))) return sans;
+        try { return LegalSans(sans, startFen); }
+        catch (Exception) { return sans; }
+    }
+
     /// <summary>PGN aus vorhandenen Headern (bleiben, soweit hier nicht bearbeitet) + neuen Kopfdaten + Zügen.</summary>
     /// <param name="pgnEscaped">PGN-Upload: <paramref name="existing"/> trägt die Werte ROH aus dem Text (noch
     /// maskiert, <c>\"</c>), <paramref name="header"/> bereits entmaskierte (<see cref="UnescapeTag"/>). Geschrieben

@@ -166,6 +166,6 @@ public sealed class AnonGameShares(AppDbContext db)
         var sb = new StringBuilder();
         sb.Append(PgnWriter.Tag("Result", res));
         if (fen is not null) sb.Append(PgnWriter.Tag("SetUp", "1")).Append(PgnWriter.Tag("FEN", fen));
-        return sb.Append('\n').Append(PgnWriter.MoveText(sans, fen, result: res)).ToString();
+        return sb.Append('\n').Append(PgnWriter.MoveText(SavedGamePgn.WithCheckMarks(sans, fen), fen, result: res)).ToString();
     }
 }
