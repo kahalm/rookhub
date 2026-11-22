@@ -739,8 +739,10 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
 - **Formular-Korrektur = EIN Bauteil** (0.816.0): `features/games/sheet-workbench/` (`app-sheet-workbench`) für RookHub
   `/games/:id/edit` UND LeagueHub (Formular prüfen, Vereinspartie korrigieren). Aufteilung Foto | Brett | Prüfen + Zugliste
   (≤ 1 100 px Brett | Prüfen, Foto darunter; ≤ 720 px Prüfen, Brett, Züge, Foto eingeklappt); Seite und „Foto 1 / Foto 2“
-  über dem Foto, die Zeile des Zugs im ganzen Foto markiert, Ausschnitt oben im Prüfteil, „Stimmt so“ + roter Link „Zug
-  löschen“ in der Zeile des Zugs, Kurve + Engine unter dem Brett. Gestaltung im LeagueHub-Stil mit Token-Rückfall auf
+  über dem Foto, die Zeile des Zugs im ganzen Foto markiert, Ausschnitt oben im Prüfteil, „Stimmt so“ + rote Links „Partie
+  hier beenden“ (streicht diesen und alle folgenden Züge, Rückfrage mit Zug und Anzahl Halbzüge, Bestätigen-Knopf „n
+  Halbzüge löschen“, nicht am ersten Zug) und „Zug löschen“ rechts in der Zeile des Zugs (`.danger-links`), beide bis
+  zum Speichern rückgängig (Zeile über dem Zug nennt, was gestrichen wurde), Kurve + Engine unter dem Brett. Gestaltung im LeagueHub-Stil mit Token-Rückfall auf
   RookHub (`--sw-*`). Seiten ergänzen nur über Inhaltsplätze (`sheetPhotoTools`, `sheetPlyExtra`, `sheetEnd`) — nie eine
   zweite Fassung der Korrektur bauen.
 - Analysebrett: Zusatzkarten unter der Zugliste starten zugeklappt — der Eröffnungs-Explorer zeigt nur die Kopfzeile
@@ -1573,6 +1575,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-22 | 1.002.0 · Formular-Werkbank | „Partie hier beenden“ als zweiter roter Link vor „Zug löschen“ in der Zeile des Zugs (5.12); Rückfrage über `ConfirmService` mit Zug, SAN und Anzahl Halbzüge, Bestätigen „n Halbzüge löschen“ (Einzahl/Mehrzahl als Schlüsselpaar); Rückgängig in der bestehenden Zeile über dem Zug | Nach dem echten Ende stehen auf Formularen oft Kritzeleien oder Analysezüge, gekürzt wurde bisher per API (Partien 258, 262); die Rückfrage benennt genau, was wegfällt, weil der Name allein nicht sagt, dass Züge gelöscht werden | Nutzerwunsch 22.11. |
 | 2026-11-22 | 1.001.0 · Kurs-Löser | „Warum diese Aufgabe:“ als leise Textzeile in der Kontext-Karte und in „Linien durchsehen“ (8.1), nur mit Vermerk | Im Kurs „Persönliche Taktiken“ war nicht zu sehen, warum eine Linie zur Partie gehört; die Zeile soll beim Start der Linie da sein, ohne die Bedienung zu verdrängen | Nutzerwunsch 22.11. („kannst du dort immer vermerken, warum du glaubst, dass die Linie relevant ist?“) |
 | 2026-11-19 | 0.999.3 · Repertoire-Trainer | Prep-Repertoire gegen den gespeicherten Gegner (8.1): Reihenfolge-Knopf auch dort, Dialog mit sechstem Wert „Nach dem Gegner“ (nur wo er gilt — sonst nicht in der Liste, 5.6); Leerzustand und Abschluss der aufs Fällige beschränkten Abfrage bieten „Alle Linien üben“ statt „Alle jetzt fällig machen“ bzw. „Von vorn“; Hinweis unter der Leiste nennt die geltende Regel | Abfragen brachte dort immer alle Linien; nur Fällige + Untrainierte heißt: es gibt jetzt einen Leerzustand, und „Von vorn“ hätte nach dem Fälligen ins Leere geführt | Nutzerwunsch 19.11. |
 | 2026-11-19 | 0.999.1 · Repertoire-Trainer | Kopfleiste bei 600–768 px zweizeilig: Name + Moduswahl oben, Reihenfolge-Knopf links und ⋮ rechts gemeinsam darunter (8.1) | In einer Zeile schrumpfte der Repertoirename dort auf „S…“ (gemessen 28 px bei 620 px; bestand schon mit dem gleich breiten Umschalter „Häufigste Linien zuerst“) | Sichtprüfung 0.996.0 im Browser |

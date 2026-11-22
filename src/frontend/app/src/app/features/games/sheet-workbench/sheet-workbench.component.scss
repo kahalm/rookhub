@@ -116,7 +116,8 @@
 .crop-mark { position: absolute; border: 2px solid var(--sw-red); border-radius: 3px; pointer-events: none; box-shadow: 0 0 0 9999px rgb(0 0 0 / .12); }
 .where { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
 .where-actions { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; align-self: center; }
-.where-actions .del { margin-left: auto; color: var(--sw-red); }
+.where-actions .danger-links { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.where-actions .del, .where-actions .truncate { color: var(--sw-red); }
 .undo-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 .san { font: 600 20px/1 var(--sw-cond); }
 .san.bad { color: var(--sw-red); text-decoration: line-through; }

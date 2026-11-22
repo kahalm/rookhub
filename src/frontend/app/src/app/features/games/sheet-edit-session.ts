@@ -65,8 +65,26 @@ export class SheetEditSession {
    */
   private readonly beforeRemove = signal<{
     plies: EditPly[]; unresolved: string[]; unresolvedFrom: number | null; cursor: number;
+    /** `truncate` = „Partie hier beenden“: `count` Halbzüge ab `cursor` gestrichen. */
+    kind: 'remove' | 'truncate'; count: number;
   } | null>(null);
   readonly canUndoRemove = computed(() => this.beforeRemove() !== null);
+  /** Was das Rückgängig zurückholt — für die Zeile darüber („Zug gelöscht.“ / „5 Halbzüge ab 23… gelöscht.“). */
+  readonly undoInfo = computed(() => {
+    const b = this.beforeRemove();
+    return b ? { kind: b.kind, count: b.count, ply: this.plyLabel(b.cursor) } : null;
+  });
+  /**
+   * „Partie hier beenden“ am gewählten Halbzug (Wunsch 2026-11-22): was wegfiele — ab welchem Zug, wie viele Halbzüge.
+   * `null`, wenn es nichts zu kürzen gibt (Ende der Zugliste) oder alles wegfiele (erster Halbzug: eine Partie ohne Züge
+   * lässt sich nicht speichern).
+   */
+  readonly truncateInfo = computed(() => {
+    const i = this.cursor();
+    const list = this.plies();
+    if (i <= 0 || i >= list.length) return null;
+    return { ply: this.plyLabel(i), san: list[i].san, count: list.length - i };
+  });
 
   readonly legalCount = computed(() => {
     const idx = this.plies().findIndex(p => p.illegal);
@@ -248,13 +266,35 @@ export class SheetEditSession {
     const i = this.cursor();
     const list = this.plies();
     if (i >= list.length || this.busy()) return;
-    this.beforeRemove.set({ plies: list, unresolved: this.unresolved(), unresolvedFrom: this.unresolvedFrom(), cursor: i });
+    this.beforeRemove.set({ plies: list, unresolved: this.unresolved(), unresolvedFrom: this.unresolvedFrom(), cursor: i,
+      kind: 'remove', count: 1 });
     this.host.changed?.();
     if (!this.isScoresheet()) {
       this.plies.set(revalidate([...list.slice(0, i), ...list.slice(i + 1)], this.startFen()));
       return;
     }
     this.reResolve(resolveRequest(list, i, 'delete'), list.slice(0, i), list.slice(i + 1), i, false, i);
+  }
+
+  /**
+   * „Partie hier beenden“ (Wunsch 2026-11-22): den gewählten Halbzug und alle folgenden streichen — auf Formularen stehen
+   * nach dem echten Ende oft Kritzeleien oder Analysezüge. Nichts wird neu gelesen: die Partie ENDET hier, auch die offenen
+   * Formular-Einträge dahinter gehören nicht mehr dazu (sonst hinge „Offen: …“ beim Speichern am letzten Zug). Die übrigen
+   * Halbzüge behalten ihren Formular-Eintrag und damit Kasten und Ausschnitt; gelöschte zeigen nichts mehr. Das Ergebnis
+   * bleibt, wie es ist (Kopfdaten der Seite). Rückgängig wie „Zug löschen“, bis zur nächsten Änderung.
+   */
+  truncate(): void {
+    const info = this.truncateInfo();
+    if (!info || this.busy()) return;
+    const i = this.cursor();
+    const list = this.plies();
+    this.beforeRemove.set({ plies: list, unresolved: this.unresolved(), unresolvedFrom: this.unresolvedFrom(), cursor: i,
+      kind: 'truncate', count: info.count });
+    this.host.changed?.();
+    this.plies.set(list.slice(0, i));
+    this.unresolved.set([]);
+    this.unresolvedFrom.set(null);
+    this.go(i);
   }
 
   /** Das letzte „Zug löschen" zurücknehmen: Züge, Lesarten, Bestätigungen und Cursor wie davor. Nicht während der Rest

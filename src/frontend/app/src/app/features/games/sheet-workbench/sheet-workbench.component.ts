@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, HostListener, computed, effect, input, model, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, effect, inject, input, model, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgClass } from '@angular/common';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { BoardArrow, ChessBoardComponent, UserBoardMove } from '../../../shared/pgn-viewer/chess-board.component';
 import { EvalGraphComponent } from '../../../shared/pgn-viewer/eval-graph.component';
 import { SanPipe } from '../../../shared/chess/san.pipe';
 import { isBoardHotkey } from '../../../shared/keyboard.util';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { GameEvals } from '../game-review.util';
 import { SheetEditSession } from '../sheet-edit-session';
 import { correctionCurve } from './correction-curve';
@@ -20,7 +22,8 @@ import { SheetEngineComponent } from './sheet-engine.component';
  *   gewählten Zugs, „Größer"; am Handy eingeklappt (der Ausschnitt steht schon im Prüfteil).
  * - **Brett**: Navigation, Ersetzen/Davor einfügen, nächste unsichere Stelle, Bewertungskurve der gespeicherten Partie
  *   (`evals` + `savedSans`, ein Zickzack zeigt einen falsch gelesenen Zug), zuschaltbare Engine.
- * - **Prüfen**: Ausschnitt der Formularzeile, der Zug mit Hinweisen, „Stimmt so" / „Zug löschen", Lesarten; darunter die
+ * - **Prüfen**: Ausschnitt der Formularzeile, der Zug mit Hinweisen, „Stimmt so" / „Zug löschen" / „Partie hier beenden"
+ *   (ab dem gewählten Zug alles streichen, mit Rückfrage, 2026-11-22), Lesarten; darunter die
  *   Zugliste. Am Handy steht dieser Teil OBEN (Wunsch 2026-09-28).
  *
  * Der Zustand liegt in der `SheetEditSession` der Seite (Speichern, Laden und Kopfdaten bleiben dort); die Seite kann über
@@ -49,6 +52,10 @@ export class SheetWorkbenchComponent {
   readonly pieceSet = input('cburnett');
   /** Engine-Häkchen und -Auswahl als Material-Felder (RookHub, d5-rk-edit-native-engine-select); LeagueHub bleibt nativ. */
   readonly materialControls = input(false);
+
+  private readonly confirm = inject(ConfirmService);
+  private readonly translate = inject(TranslateService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly zoom = signal(false);
   /** Am Handy ist das ganze Foto eingeklappt (UX-036), am PC steht es immer da. */
@@ -89,6 +96,21 @@ export class SheetWorkbenchComponent {
   /** Klick auf die Kurve: der Zug NACH der Stellung wird der gewählte. */
   onCurveClick(ply: number): void {
     this.s().go(ply < 0 ? 0 : ply);
+  }
+
+  /** „Partie hier beenden“: nach Rückfrage (ab welchem Zug, wie viele Halbzüge) den gewählten und alle folgenden streichen. */
+  askTruncate(): void {
+    const s = this.s();
+    const info = s.truncateInfo();
+    if (!info || s.busy()) return;
+    const key = info.count === 1 ? 'sheetEdit.truncateConfirmOne' : 'sheetEdit.truncateConfirm';
+    this.confirm.ask(key, { ply: info.ply, san: info.san, count: info.count },
+      { confirm: this.translate.instant(info.count === 1 ? 'sheetEdit.truncateConfirmBtnOne' : 'sheetEdit.truncateConfirmBtn') })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(ok => {
+        // Zwischen Frage und Antwort kann der Cursor nicht wandern (der Dialog ist modal) — sicherheitshalber derselbe Zug.
+        if (ok && s.truncateInfo()?.ply === info.ply) s.truncate();
+      });
   }
 
   @HostListener('document:keydown', ['$event'])

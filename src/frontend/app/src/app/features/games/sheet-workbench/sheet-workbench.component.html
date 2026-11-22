@@ -83,8 +83,8 @@
           }
         }
         @if (s().busy()) { <p class="muted small">{{ 'sheetEdit.rereading' | translate }}</p> }
-        @if (s().canUndoRemove()) {
-          <p class="undo-line small">{{ 'sheetEdit.deleted' | translate }}
+        @if (s().undoInfo(); as u) {
+          <p class="undo-line small">@if (u.kind === 'truncate') { {{ (u.count === 1 ? 'sheetEdit.truncatedOne' : 'sheetEdit.truncated') | translate: { count: u.count, ply: u.ply } }} } @else { {{ 'sheetEdit.deleted' | translate }} }
             <button type="button" class="btn-sec" [disabled]="s().busy()" (click)="s().undoRemove()">{{ 'common.undo' | translate }}</button></p>
         }
         @if (s().current(); as p) {
@@ -104,7 +104,15 @@
               @if (!p.illegal && !p.confirmed && (p.uncertain || s().isScoresheet())) {
                 <button type="button" class="btn-sec confirm" (click)="s().confirm()">{{ 'sheetEdit.confirm' | translate }}</button>
               }
-              <button type="button" class="btn-link del" [disabled]="s().busy()" (click)="s().remove()">{{ 'sheetEdit.delete' | translate }}</button>
+              <!-- „Partie hier beenden“ (2026-11-22): neben „Zug löschen“, ebenso als roter Link — streicht DIESEN und alle folgenden
+                   Züge (Kritzeleien/Analyse nach dem echten Ende), nach Rückfrage; nicht am ersten Zug (die Partie wäre leer). -->
+              <span class="danger-links">
+                @if (s().truncateInfo()) {
+                  <button type="button" class="btn-link truncate" [disabled]="s().busy()" [title]="'sheetEdit.truncateHint' | translate"
+                          (click)="askTruncate()">{{ 'sheetEdit.truncate' | translate }}</button>
+                }
+                <button type="button" class="btn-link del" [disabled]="s().busy()" (click)="s().remove()">{{ 'sheetEdit.delete' | translate }}</button>
+              </span>
             </span>
           </p>
           @if (p.options?.length && !p.illegal) {

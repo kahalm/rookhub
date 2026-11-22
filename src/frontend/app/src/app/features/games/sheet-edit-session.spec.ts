@@ -1,6 +1,7 @@
 import { Subject } from 'rxjs';
 import { ScoresheetPly, ScoresheetResolveResult } from './scoresheet.service';
 import { SheetEditSession } from './sheet-edit-session';
+import { fromServer, toServer } from './game-edit.util';
 
 /**
  * Codereview 2026-09-29, UX-070: „Zug löschen" liest den Rest neu — Folgezüge und ihre Bestätigungen können sich dabei
@@ -163,5 +164,100 @@ describe('SheetEditSession – Änderung in der Mitte behält die Entscheidungen
     s.go(3); s.confirm();
     pending.error(new Error('offline'));
     expect(s.plies()[3].confirmed).toBeTrue();
+  });
+});
+
+/**
+ * „Partie hier beenden“ (Wunsch 2026-11-22, Partien 258/262): auf Formularen stehen nach dem echten Ende oft Kritzeleien
+ * oder Analysezüge. `truncate()` streicht den gewählten Halbzug und alle folgenden, ohne den Rest neu zu lesen.
+ */
+describe('SheetEditSession – Partie hier beenden', () => {
+  const ply = (w: number, san: string, uci: string, extra: Partial<ScoresheetPly> = {}): ScoresheetPly =>
+    ({ w, written: san, san, uci, match: 'written', uncertain: false, ...extra });
+
+  function scanned() {
+    const host = { resolve: jasmine.createSpy('resolve'), changed: jasmine.createSpy('changed') };
+    const s = new SheetEditSession(host);
+    s.loadSheet({
+      plies: [
+        ply(0, 'e4', 'e2e4'), ply(1, 'e5', 'e7e5'), ply(2, 'Nf3', 'g1f3', { confirmed: true }),
+        ply(3, 'Nc6', 'b8c6'), ply(4, 'Bb5', 'f1b5', { uncertain: true }), ply(5, 'a6', 'a7a6'),
+      ],
+      unresolved: ['Lxc6', '?'], unresolvedFrom: 6,
+      boxes: [[0, 0, 10, 10], [10, 0, 20, 10], [0, 10, 10, 20], [10, 10, 20, 20], [0, 20, 10, 30], [10, 20, 20, 30], [0, 30, 10, 40], [10, 30, 20, 40]],
+      written: ['e4', 'e5', 'Sf3', 'Sc6', 'Lb5', 'a6', 'Lxc6', '?'],
+    });
+    s.photoSize.set({ w: 1000, h: 1000 });
+    return { s, host };
+  }
+
+  it('ab einem Zug von Weiß: dieser und alle folgenden fallen weg, Bestätigungen davor bleiben', () => {
+    const { s, host } = scanned();
+    s.go(4);                                                            // 3. Bb5
+    expect(s.truncateInfo()).toEqual({ ply: '3.', san: 'Bb5', count: 2 });
+    s.truncate();
+    expect(s.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6']);
+    expect(s.plies()[2].confirmed).toBeTrue();
+    expect(s.cursor()).toBe(4);                                         // am Ende der Partie
+    expect(host.resolve).not.toHaveBeenCalled();                        // nichts wird neu gelesen
+    expect(host.changed).toHaveBeenCalled();
+  });
+
+  it('ab einem Zug von Schwarz; die offenen Einträge dahinter gehören nicht mehr zur Partie', () => {
+    const { s } = scanned();
+    s.go(3);                                                            // 2… Nc6
+    expect(s.truncateInfo()).toEqual({ ply: '2…', san: 'Nc6', count: 3 });
+    s.truncate();
+    expect(s.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nf3']);
+    expect(s.unresolved()).toEqual([]);
+    expect(s.unresolvedFrom()).toBeNull();
+    // am Ende kein Ausschnitt eines gestrichenen/offenen Eintrags mehr
+    expect(s.crop()).toBeNull();
+    expect(s.mark()).toBeNull();
+  });
+
+  it('die gespeicherten Halbzüge (plies) werden mitgekürzt, die übrigen behalten Eintrag und Kasten', () => {
+    const { s } = scanned();
+    s.go(4);
+    s.truncate();
+    const saved = toServer(s.plies());
+    expect(saved.map(p => [p.w, p.san])).toEqual([[0, 'e4'], [1, 'e5'], [2, 'Nf3'], [3, 'Nc6']]);
+    s.go(3);
+    expect(s.crop()?.written).toBe('Sc6');
+    expect(s.mark()).toEqual(jasmine.objectContaining({ left: 1, top: 1, width: 1, height: 1 }));
+  });
+
+  it('nicht am ersten Halbzug (die Partie wäre leer) und nicht am Ende der Zugliste', () => {
+    const { s } = scanned();
+    s.go(0);
+    expect(s.truncateInfo()).toBeNull();
+    s.truncate();
+    expect(s.plies().length).toBe(6);
+    s.go(6);
+    expect(s.truncateInfo()).toBeNull();
+    s.go(5);
+    expect(s.truncateInfo()).toEqual({ ply: '3…', san: 'a6', count: 1 });
+  });
+
+  it('Rückgängig holt Züge, offene Einträge und Cursor zurück und nennt, was gestrichen wurde', () => {
+    const { s } = scanned();
+    const before = s.plies();
+    s.go(4);
+    s.truncate();
+    expect(s.undoInfo()).toEqual({ kind: 'truncate', count: 2, ply: '3.' });
+    s.undoRemove();
+    expect(s.plies()).toBe(before);
+    expect(s.unresolved()).toEqual(['Lxc6', '?']);
+    expect(s.unresolvedFrom()).toBe(6);
+    expect(s.cursor()).toBe(4);
+    expect(s.undoInfo()).toBeNull();
+  });
+
+  it('auch in einer gewöhnlichen Partie (ohne Formular)', () => {
+    const s = new SheetEditSession({ resolve: jasmine.createSpy('resolve') });
+    s.plies.set(fromServer([ply(0, 'd4', 'd2d4'), ply(1, 'd5', 'd7d5'), ply(2, 'c4', 'c2c4')]));
+    s.go(1);
+    s.truncate();
+    expect(s.plies().map(p => p.san)).toEqual(['d4']);
   });
 });

@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth.service';
 import { ExternalEngineService } from '../../analysis/external-engine.service';
@@ -28,10 +29,16 @@ class HostComponent {
 }
 
 describe('SheetWorkbenchComponent', () => {
+  let answer: Subject<boolean>;
+  let ask: jasmine.Spy;
+
   function setup() {
+    answer = new Subject<boolean>();
+    ask = jasmine.createSpy('ask').and.callFake(() => answer);
     TestBed.configureTestingModule({
       imports: [HostComponent],
       providers: [
+        { provide: ConfirmService, useValue: { ask } },
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: { isLoggedIn: false } },
         { provide: ExternalEngineService, useValue: { listEngines: () => of({ engines: [] }), analyse: () => of() } },
@@ -117,5 +124,44 @@ describe('SheetWorkbenchComponent', () => {
       plies: [20, 900, 15].map((cp, ply) => ({ ply, cp, mate: null, depth: 20, playedUci: '' })) } as GameEvals);
     f.detectChanges();
     expect(el.querySelector('.eval-curve app-eval-graph')).not.toBeNull();
+  });
+
+  // Wunsch 2026-11-22: „Partie hier beenden“ neben „Zug löschen“, mit Rückfrage (ab welchem Zug, wie viele Halbzüge).
+  it('„Partie hier beenden“ fragt mit Zug und Anzahl nach und kürzt erst nach dem Ja', () => {
+    const { f, h, el } = setup();
+    h.s.go(1);                                                             // 1… e5
+    f.detectChanges();
+    const btn = el.querySelector<HTMLButtonElement>('.where-actions .danger-links .truncate')!;
+    expect(btn).not.toBeNull();
+    expect(btn.textContent?.trim()).toBe('sheetEdit.truncate');
+    btn.click();
+    expect(ask).toHaveBeenCalledWith('sheetEdit.truncateConfirm', { ply: '1…', san: 'e5', count: 2 },
+      { confirm: 'sheetEdit.truncateConfirmBtn' });
+    expect(h.s.plies().length).toBe(3);                                    // noch nichts gelöscht
+    answer.next(true);
+    f.detectChanges();
+    expect(h.s.plies().map(p => p.san)).toEqual(['e4']);
+    const undo = el.querySelector('.undo-line')!;
+    expect(undo.textContent).toContain('sheetEdit.truncated');
+    undo.querySelector<HTMLButtonElement>('button')!.click();
+    f.detectChanges();
+    expect(h.s.plies().length).toBe(3);
+  });
+
+  it('„Partie hier beenden“: Nein lässt alles stehen; ein einzelner letzter Halbzug in Einzahl; nicht am ersten Zug', () => {
+    const { f, h, el } = setup();
+    h.s.go(2);
+    f.detectChanges();
+    el.querySelector<HTMLButtonElement>('.truncate')!.click();
+    expect(ask).toHaveBeenCalledWith('sheetEdit.truncateConfirmOne', { ply: '2.', san: 'Nf3', count: 1 },
+      { confirm: 'sheetEdit.truncateConfirmBtnOne' });
+    answer.next(false);
+    f.detectChanges();
+    expect(h.s.plies().length).toBe(3);
+    expect(el.querySelector('.undo-line')).toBeNull();
+    h.s.go(0);
+    f.detectChanges();
+    expect(el.querySelector('.truncate')).toBeNull();
+    expect(el.querySelector('.where-actions .del')).not.toBeNull();       // „Zug löschen“ bleibt
   });
 });
