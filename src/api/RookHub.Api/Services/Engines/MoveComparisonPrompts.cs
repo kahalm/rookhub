@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Chess;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Games;
 using static RookHub.Api.Services.Engines.MoveComparisonBoard;
@@ -43,14 +44,101 @@ internal static class MoveComparisonPrompts
     {
         /// <summary>Jeder Zug, den der Text nennen darf: beide Kandidaten, alle gegebenen Linien, die Antwort-Tests, — seit
         /// 0.971.0 — die anderen Verteidigungen in der Widerlegung samt ihrer Linien und — seit 0.974.0 — die
-        /// verlockenden, tief widerlegten Antworten auf den besten Zug samt ihrer Linien.</summary>
-        public IEnumerable<string> AllowedMoves() => new[] { BestSan, WeakSan }
-            .Concat(BestReplies.SelectMany(p => p.Line)).Concat(WeakReplies.SelectMany(p => p.Line))
-            .Concat(Tests.Select(t => t.ReplySan)).Concat(Tests.SelectMany(t => t.Answer))
-            .Concat((Defences ?? []).SelectMany(d => d.Prefix.Append(d.MainSan)
-                .Concat(d.Defences.SelectMany(x => x.Line.Prepend(x.San)))))
-            .Concat((Tries ?? []).SelectMany(t => t.Line.Prepend(t.San)));
+        /// verlockenden, tief widerlegten Antworten auf den besten Zug samt ihrer Linien.
+        /// Seit 0.999.6 fehlen die Antworten, die die Drohung des besten Zuges übergehen (<see cref="IgnoresThreat"/>), samt
+        /// ihrer Linien — der Text soll sie nicht besprechen (steht der Zug woanders, etwa als Antwort auf den schwächeren
+        /// Zug, bleibt er dort erlaubt).</summary>
+        public IEnumerable<string> AllowedMoves()
+        {
+            var threats = Threats();
+            var tests = Tests.Where(t => !IgnoresThreat(this, threats, t.ReplySan, t.Answer, t.Eval)).ToList();
+            var tries = (Tries ?? []).Where(t => !IgnoresThreat(this, threats, t.San, t.Line, t.Eval));
+            return new[] { BestSan, WeakSan }
+                .Concat(BestReplies.SelectMany(p => p.Line)).Concat(WeakReplies.SelectMany(p => p.Line))
+                .Concat(tests.Select(t => t.ReplySan)).Concat(tests.SelectMany(t => t.Answer))
+                .Concat((Defences ?? []).SelectMany(d => d.Prefix.Append(d.MainSan)
+                    .Concat(d.Defences.SelectMany(x => x.Line.Prepend(x.San)))))
+                .Concat(tries.SelectMany(t => t.Line.Prepend(t.San)));
+        }
+
+        /// <summary>Die Drohungen des besten Zuges (<see cref="ThreatsOf"/>).</summary>
+        public IReadOnlyList<Threat> Threats() => ThreatsOf(this);
     }
+
+    /// <summary>Eine Figur des Gegners, die der beste Zug angreift: <see cref="Piece"/> wie in der FEN, auf
+    /// <see cref="Square"/>.</summary>
+    internal sealed record Threat(char Piece, string Square)
+    {
+        public string Name => ExplanationFacts.PieceName(char.ToLowerInvariant(Piece));
+    }
+
+    /// <summary>
+    /// Was der beste Zug selbst droht (Befund Vereinspartie 260, Nagy – Schwaz, 22.11.2026: gegen den besten Zug 15...Td8
+    /// rechneten die „same answers“ 16.Tc1 und 16.a3 — die einfach die Dame auf d1 einstellen —, und Fable erklärte lang
+    /// „auf 16.Tc1 oder 16.a3 geht 16...Txd1 17.Tfxd1 mit Damengewinn“; der Nutzer: „es reicht zu sagen, Weiß muss die Dame
+    /// wegziehen“): die Figuren des Gegners (ohne Bauern und König), die die gezogene Figur nach dem besten Zug angreift
+    /// und die entweder mehr wert sind als sie oder ungedeckt stehen. Kein Schachgebot (das nennen die Gabel-Fakten).
+    /// </summary>
+    internal static List<Threat> ThreatsOf(PairFacts f)
+    {
+        var result = new List<Threat>();
+        try
+        {
+            var board = ChessBoard.LoadFromFen(f.Fen);
+            var move = Array.Find(board.Moves(generateSan: true), m => m.San == f.BestSan);
+            if (move is null || move.IsCheck) return result;
+            if (BoardGeometry.FromFen(f.BestFen) is not { } geo) return result;
+            var to = move.NewPosition.ToString();
+            var piece = geo.PieceAt(to);
+            if (piece == '\0') return result;
+            var white = char.IsUpper(piece);
+            foreach (var square in geo.AttackedFrom(to))
+            {
+                var target = geo.PieceAt(square);
+                if (target == '\0' || char.IsUpper(target) == white || char.ToLowerInvariant(target) is 'p' or 'k') continue;
+                if (PieceValue(target) > PieceValue(piece) || geo.Attackers(square, !white).Count == 0)
+                    result.Add(new Threat(target, square));
+            }
+        }
+        catch
+        {
+            // Stellung nicht lesbar — dann eben ohne.
+        }
+        return result.OrderByDescending(t => PieceValue(t.Piece)).ThenBy(t => t.Square, StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>
+    /// Übergeht eine Antwort des Gegners auf den besten Zug dessen Drohung (<see cref="ThreatsOf"/>)? Ja, wenn sie weder
+    /// schlägt noch Schach gibt, danach noch eine bedrohte Figur auf ihrem Feld steht und entweder der erste Zug der
+    /// Erwiderung des Lesers sie schlägt oder die Antwort mindestens <see cref="IgnoredThreatPawns"/> Bauern schlechter
+    /// ausgeht als die beste Antwort des Gegners auf den besten Zug. Solche Antworten sind keine echte Wahl und erscheinen
+    /// nicht als Linie (Befund Vereinspartie 260, siehe <see cref="ThreatsOf"/>).
+    /// </summary>
+    internal static bool IgnoresThreat(PairFacts f, IReadOnlyList<Threat> threats, string replySan, IReadOnlyList<string> answer, string? eval)
+    {
+        if (threats.Count == 0 || replySan.Contains('x') || replySan.Contains('+') || replySan.Contains('#')) return false;
+        if (AfterMove(f.BestFen, replySan) is not { } after) return false;
+        var still = threats.Where(t => PieceAt(after, t.Square) == t.Piece).ToList();
+        if (still.Count == 0) return false;
+        if (answer.Count > 0 && CaptureSquare(answer[0]) is { } sq && still.Any(t => t.Square == sq)) return true;
+        return ScoreOf(eval) is { } e && ScoreOf(f.BestEval) is { } b && e - b >= IgnoredThreatPawns;
+    }
+
+    /// <summary>Ab so vielen Bauern über der Bewertung nach der besten Antwort gilt eine Antwort, die die Drohung übergeht,
+    /// als Einsteller.</summary>
+    internal const double IgnoredThreatPawns = 3.0;
+
+    private static string? CaptureSquare(string san)
+    {
+        var x = san.IndexOf('x');
+        return x >= 0 && x + 3 <= san.Length ? san.Substring(x + 1, 2) : null;
+    }
+
+    private static int PieceValue(char piece) => char.ToLowerInvariant(piece) switch
+    { 'p' => 1, 'n' => 3, 'b' => 3, 'r' => 5, 'q' => 9, 'k' => 100, _ => 0 };
+
+    private static string ThreatText(IReadOnlyList<Threat> threats)
+        => ExplanationFacts.JoinAnd(threats.Select(t => $"the {t.Name} on {t.Square}").ToList());
 
     /// <param name="tries">Schwellen für die verlockenden Antworten auf den besten Zug
     /// (<see cref="MoveComparisonBestMoveTries"/>); <c>null</c> = die Vorgaben.</param>
@@ -82,6 +170,10 @@ internal static class MoveComparisonPrompts
             MoveComparisonBestMoveTries.Of(c, weak, tries ?? MoveComparisonBestMoveTries.Settings.Default));
     }
 
+    /// <summary>Der Auftrag an das lokale Modell. Seit 0.999.6 (Befund Vereinspartie 260, 15...Sb4 statt 15...Td8,
+    /// 22.11.2026: der Text erklärte lang, warum 16.Tc1 und 16.a3 gegen Td8 die Dame verlieren) mit der Regel: droht der
+    /// bessere Zug selbst etwas (ein „Concretely … attacks …“-Fakt), genügt ein kurzer Halbsatz dazu, und als „not a real
+    /// option“ vermerkte Antworten werden nicht besprochen (<see cref="ThreatsOf"/>, <see cref="IgnoresThreat"/>).</summary>
     internal static string SystemPrompt(string lang) =>
         $"""
         You are a friendly, precise chess coach. The reader is to move and considered two candidate moves; the engine
@@ -95,6 +187,9 @@ internal static class MoveComparisonPrompts
            only leads to an equal position). You may add the evaluations in pawns with a decimal POINT and one decimal, in
            every language (e.g. +0.8 against -0.4).
         If the facts say the two moves are almost equal, say that first and keep it short.
+        If a "Concretely" fact says the better move attacks a piece (a direct threat), say so in one short clause (e.g. it
+        attacks the queen, your opponent must move it away) and go on with your opponent's best answer to the better move.
+        Never discuss answers marked "not a real option" — nobody leaves a piece hanging.
         Never give the evaluation itself as the reason: "the engine rates it higher" or "it keeps the advantage" only
         restate THAT it is better, not WHY. Claim an attack, a threat, a capture or a material gain ONLY if a "Concretely"
         fact says so — if none does, describe what the moves of the lines do (which piece goes where), without inventing
@@ -111,7 +206,10 @@ internal static class MoveComparisonPrompts
     /// (<see cref="ExplanationFacts.CheckForks"/>), die anderen Verteidigungen in der Widerlegung
     /// (<see cref="MoveComparisonDefences"/>) und — seit 0.974.0 — die verlockenden, tief widerlegten Antworten auf den
     /// besten Zug (<see cref="MoveComparisonBestMoveTries"/>). Das lokale Modell bekommt ihn NICHT — sein Auftrag (90 Wörter, höchstens zwei
-    /// Züge je Linie) ist dafür nicht gebaut, und sein Prompt bleibt Zeichen für Zeichen wie bisher.</param>
+    /// Züge je Linie) ist dafür nicht gebaut. Für beide gilt seit 0.999.6: Droht der beste Zug selbst etwas
+    /// (<see cref="ThreatsOf"/>), steht das als geprüftes Faktum da, und Antworten, die die Drohung übergehen und die Figur
+    /// einstellen (<see cref="IgnoresThreat"/>), stehen in „The same answers against …“ und „Obvious replies …“ nur noch mit
+    /// dem Vermerk „not a real option, do not discuss“ — ohne Bewertung und Linie (Befund Vereinspartie 260).</param>
     internal static string UserPrompt(PairFacts f, bool detailed = false)
     {
         var you = f.MoverWhite ? "White" : "Black";
@@ -144,6 +242,12 @@ internal static class MoveComparisonPrompts
             if (detailed && f.Defences is { Count: > 0 } decisions) lines.AddRange(DefenceBlock(f, decisions, you, weak));
         }
 
+        var threats = f.Threats();
+        if (threats.Count > 0)
+            lines.Add($"Concretely, {best} attacks {ThreatText(threats)} — a direct threat: the opponent must react to it "
+                      + "(move the piece away, protect it or block the line). One short sentence is enough for this; replies "
+                      + "that ignore the threat and simply lose the piece are not real options.");
+
         if (f.Tests.Count > 0)
         {
             lines.Add($"The same answers against {best}:");
@@ -152,6 +256,11 @@ internal static class MoveComparisonPrompts
                 var reply = Numbered(f.BestFen, [t.ReplySan]);
                 if (t.State == MoveComparisonLineState.Illegal) { lines.Add($"- {reply}: not possible after {best}."); continue; }
                 if (t.State == MoveComparisonLineState.Failed || t.Eval is null) { lines.Add($"- {reply}: could not be calculated."); continue; }
+                if (IgnoresThreat(f, threats, t.ReplySan, t.Answer, t.Eval))
+                {
+                    lines.Add($"- {reply}: ignores the threat to {ThreatText(threats)} — not a real option, do not discuss.");
+                    continue;
+                }
                 var answer = t.Answer.Count > 0 && AfterMove(f.BestFen, t.ReplySan) is { } afterReply
                     ? $" The reader's best reply, with the engine line: {Numbered(afterReply, t.Answer)}." : "";
                 lines.Add($"- {reply}: evaluation from the reader's view {t.Eval}{Level(t.Eval)}.{answer}");
@@ -168,7 +277,7 @@ internal static class MoveComparisonPrompts
             var p = f.BestReplies[0];
             lines.Add($"The opponent's best answer to {best} itself: {Numbered(f.BestFen, [p.San])} ({p.MoverEval(f.MoverWhite)}): {Numbered(f.BestFen, p.Line)}");
         }
-        if (detailed && f.Tries is { Count: > 0 } tries) lines.AddRange(TryBlock(f, tries, best));
+        if (detailed && f.Tries is { Count: > 0 } tries) lines.AddRange(TryBlock(f, tries, best, threats));
         lines.Add($"Reader: plays {you} — \"you\" is the reader, {(f.MoverWhite ? "Black" : "White")} is \"your opponent\".");
         return string.Join('\n', lines);
     }
@@ -216,9 +325,11 @@ internal static class MoveComparisonPrompts
     /// (Auswahl: <see cref="MoveComparisonBestMoveTries"/>). Je Antwort ihr Platz in der flachen Sicht, die Bewertung gegen
     /// die nach der besten Antwort, die Erwiderung des Lesers mit Engine-Linie und geprüfte Fakten: Gabel, Abzugsangriff
     /// (<see cref="ExplanationFacts.DiscoveredAttacks"/>), verlorene Figur (<see cref="ExplanationFacts.HangingCaptures"/>),
-    /// Materialbilanz ab der Stellung VOR dem besten Zug.
+    /// Materialbilanz ab der Stellung VOR dem besten Zug. Antworten, die eine Drohung des besten Zuges übergehen
+    /// (<see cref="IgnoresThreat"/>, seit 0.999.6), stehen nur noch mit einem Vermerk da.
     /// </summary>
-    private static List<string> TryBlock(PairFacts f, IReadOnlyList<MoveComparisonBestMoveTries.Try> tries, string best)
+    private static List<string> TryBlock(PairFacts f, IReadOnlyList<MoveComparisonBestMoveTries.Try> tries, string best,
+        IReadOnlyList<Threat> threats)
     {
         var main = f.BestReplies.Count > 0 ? Numbered(f.BestFen, [f.BestReplies[0].San]) : null;
         var lines = new List<string>
@@ -230,6 +341,11 @@ internal static class MoveComparisonPrompts
         foreach (var t in tries)
         {
             var reply = Numbered(f.BestFen, [t.San]);
+            if (IgnoresThreat(f, threats, t.San, t.Line, t.Eval))
+            {
+                lines.Add($"- {reply}: ignores the threat to {ThreatText(threats)} — not a real option, do not discuss.");
+                continue;
+            }
             var sight = $"{(t.Takes is null ? "" : t.Takes + "; ")}looks good at first sight: {t.FirstSight}";
             var against = main is null ? "" : $", against {f.BestEval ?? "?"} after the opponent's best answer {main}";
             var engine = t.Line.Count > 0 ? $" The reader's reply, with the engine line: {Numbered(t.FenAfter, t.Line)}." : "";
@@ -252,10 +368,11 @@ internal static class MoveComparisonPrompts
     /// <summary>Hält die andere Verteidigung etwa so gut wie die Hauptlinie (höchstens 0,3 Bauern schlechter)? Dann ist sie
     /// keine gescheiterte Verteidigung — die Engine-Linie des Kandidaten war an der Stelle nur eine von mehreren.</summary>
     private static bool HoldsAsWell(string? altEval, string? mainEval)
-    {
-        static double Score(ExplanationFacts.Eval e) => e.Mate is int m ? (m >= 0 ? 1000 - m : -1000 - m) : e.Pawns;
-        return ExplanationFacts.Parse(altEval) is { } a && ExplanationFacts.Parse(mainEval) is { } main && Score(a) >= Score(main) - 0.3;
-    }
+        => ScoreOf(altEval) is { } a && ScoreOf(mainEval) is { } main && a >= main - 0.3;
+
+    /// <summary>Bewertungstext als Rangwert (Matt ± 1000) zum Vergleichen; <c>null</c> = unlesbar.</summary>
+    private static double? ScoreOf(string? evalText)
+        => ExplanationFacts.Parse(evalText) is { } e ? (e.Mate is int m ? (m >= 0 ? 1000 - m : -1000 - m) : e.Pawns) : null;
 
     /// <summary>Die Figuren der Stellung in Worten („White: king g2, queen e3, rooks a1 c3, …“) — Modelle lesen eine FEN
     /// unzuverlässig (Befund Vereinspartie 245: „der Läufer steht in der c-Linie vor dem König“, der König stand auf b8).

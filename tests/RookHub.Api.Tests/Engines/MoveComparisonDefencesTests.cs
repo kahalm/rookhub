@@ -300,7 +300,7 @@ public class MoveComparisonDefencesTests : IDisposable
         Assert.Contains("sag zu JEDER in einem Halbsatz, woran sie scheitert", p);
         Assert.Contains("nie die ganze Engine-Linie herunterzählen", p);
         Assert.Contains("muss aus der\n  Figurenliste oder einem „Concretely“-Fakt folgen", p.Replace("\r", ""));
-        Assert.Contains("zusammen höchstens 200 Wörter", p);
+        Assert.Contains("zusammen höchstens 150 Wörter", p);
         // Der Schutz bleibt: nur Züge aus den Linien.
         Assert.Contains("Nenne nur Züge, die in den gegebenen Linien stehen.", p);
     }

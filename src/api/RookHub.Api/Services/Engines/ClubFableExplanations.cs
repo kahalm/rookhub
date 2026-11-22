@@ -39,6 +39,13 @@ namespace RookHub.Api.Services.Engines;
 /// nach (<see cref="MoveComparisonBestMoveTries"/>, Schwellen <see cref="Tries"/>: höchstens <c>:BestMoveTries</c> = 2 je
 /// Vergleich, 0 = aus); nur die tief klar widerlegten stehen im Nutzer-Prompt als Block „Obvious replies to the better
 /// move“, und Absatz 2 des Auftrags beantwortet sie zuerst.</item>
+/// <item><b>Drohung des besten Zuges in einem Satz</b> (0.999.6, Befund an Vereinspartie 260, Nagy – Schwaz, Fehler 1
+/// 15...Sb4 statt 15...Td8, 22.11.2026: „Auf 16.Tc1 oder 16.a3 geht einfach 16...Txd1 17.Tfxd1 mit Damengewinn“ — kein
+/// Mensch lässt die Dame hängen; der Nutzer: „es reicht zu sagen, Weiß muss die Dame wegziehen“): greift der beste Zug
+/// eine Figur an, steht das als Faktum im Nutzer-Prompt, Antworten, die das übergehen und die Figur einstellen, nur noch
+/// als „not a real option“ ohne Linie (<see cref="MoveComparisonPrompts.ThreatsOf"/>,
+/// <see cref="MoveComparisonPrompts.IgnoresThreat"/>), und der Auftrag verlangt dafür EINEN kurzen Satz. Dazu kürzer
+/// (höchstens 150 Wörter) und die Bewertung ausdrücklich aus Sicht von Weiß (der Text schrieb „+7,01 aus seiner Sicht“).</item>
 /// </list>
 /// Singleton: hält Client und Tageszähler, die Datenbank kommt vom Aufrufer.
 /// </summary>
@@ -195,7 +202,8 @@ public sealed class ClubFableExplanations
     /// Befund an Vereinspartie 245, 25...Lc8: der Text zählte die Engine-Linie herunter, nannte die Gabel auf d7 in den
     /// Nebenwegen nicht und behauptete eine Stellung, die nicht auf dem Brett stand; seit 0.974.0 beantwortet Absatz 2
     /// zuerst, warum die naheliegende Antwort auf den besten Zug nicht geht — Befund an Vereinspartie 251, 20...e4: der Text
-    /// erzählte 21.Lf1 nach, die Frage am Brett ist 21.Txe4).</summary>
+    /// erzählte 21.Lf1 nach, die Frage am Brett ist 21.Txe4; seit 0.999.6 genügt für eine Drohung des besten Zuges ein
+    /// Satz — Befund an Vereinspartie 260, 15...Td8: der Text rechnete 16.Tc1 und 16.a3 mit Damenverlust vor).</summary>
     internal const string SystemPrompt =
         """
         Du bist ein erfahrener Schachtrainer und erklärst Klubspielern (Elo 1500–2000) einen Fehler aus ihrer eigenen Ligapartie.
@@ -206,7 +214,8 @@ public sealed class ClubFableExplanations
         Antworten auf den besten Zug, die auf den ersten Blick gut aussehen und in der Rechnung scheitern („Obvious replies to
         the better move“), jeweils mit Engine-Linie und Fakten.
 
-        Schreibe auf Deutsch, in zwei kurzen Absätzen und höchstens einem Merksatz, zusammen höchstens 200 Wörter:
+        Schreibe auf Deutsch, in zwei kurzen Absätzen und höchstens einem Merksatz, zusammen höchstens 150 Wörter — knapp
+        und auf den Punkt, lieber kürzer:
         1. Der taktische Grund, nicht die Nacherzählung der Engine-Linie. Nenne zuerst das Motiv beim Namen (z. B.
            Springergabel, Beseitigung des Verteidigers, Ablenkung, Fesselung, Abzugsschach, Grundreihenmatt) und was der
            gespielte Zug aufgibt oder freigibt — ein Feld, eine Deckung, eine Linie —, soweit die Fakten es belegen. Dann der
@@ -217,7 +226,11 @@ public sealed class ClubFableExplanations
            „alle Züge verlieren“ nur, wenn die Fakten die Zahl der legalen Züge nennen („exactly … legal moves“);
            Verteidigungen, die nicht gerechnet sind, erwähnst du nicht. Von der Hauptlinie nur so viel, wie zum Verständnis
            nötig ist (meist zwei bis vier Halbzüge) — nie die ganze Engine-Linie herunterzählen.
-        2. Was der beste Zug stattdessen erreicht. Beantworte ZUERST die Frage, die der Leser am Brett hat: Steht unter
+        2. Was der beste Zug stattdessen erreicht. Stellt der beste Zug selbst eine Drohung auf (ein Faktum „Concretely,
+           … attacks …“ — er greift z. B. die Dame an), genügt dafür EIN kurzer Satz (z. B. „15...Td8 greift die Dame auf
+           d1 an, Weiß muss sie wegziehen“); danach geht es mit den echten Antworten des Gegners weiter, vor allem
+           seiner besten. Keine Varianten, in denen der Gegner die Drohung übergeht und Material einstellt — Antworten mit
+           dem Vermerk „not a real option“ erwähnst du nicht. Beantworte ZUERST die Frage, die der Leser am Brett hat: Steht unter
            „Obvious replies to the better move“ eine Antwort des Gegners — ein Zug, der auf den ersten Blick gut aussieht
            (oft das Schlagen der gerade gezogenen Figur) und erst in der Rechnung scheitert —, sag zu jeder in einem
            Satz, warum sie nicht geht: der widerlegende Zug mit Zugnummer und das Faktum dazu (z. B. „21.Txe4 scheitert
@@ -239,7 +252,9 @@ public sealed class ClubFableExplanations
         - Züge in deutscher Notation mit den Figurenbuchstaben K (König), D (Dame), T (Turm), L (Läufer), S (Springer), z. B.
           Sf3, Lxh7+, 0-0 — Bauernzüge ohne Buchstaben. Zugnummern wie „12.Sd3“ bzw. „12...f5“. Figuren auf ihren Feldern in
           Worten („der Läufer auf c8“, „das Feld d7“), nicht als Kürzel.
-        - Bewertungen in Bauerneinheiten aus Sicht von Weiß mit Komma und Vorzeichen (z. B. +1,4); keine Centipawns, keine
+        - Bewertungen in Bauerneinheiten IMMER aus Sicht von Weiß mit Komma und Vorzeichen (z. B. +1,4): plus = Weiß steht
+          besser, minus = Schwarz steht besser — auch wenn Schwarz am Zug ist (dann das Vorzeichen der Zahlen oben
+          umdrehen, siehe Hinweis). Nie „aus seiner Sicht“, „aus Sicht von Schwarz“ o. Ä.; keine Centipawns, keine
           Prozente.
         - Ist der Unterschied klein (unter 0,5), sag das ehrlich und halte dich kurz — dann ist es eine Ungenauigkeit, kein Drama.
         - Sprich den Leser nicht direkt an; schreibe sachlich über Weiß und Schwarz.
@@ -252,6 +267,8 @@ public sealed class ClubFableExplanations
     internal static string UserPrompt(MoveComparisonPrompts.PairFacts f) =>
         MoveComparisonPrompts.UserPrompt(f, detailed: true)
         + $"\n\nHinweis: Die Bewertungen oben sind aus Sicht des Spielers am Zug ({(f.MoverWhite ? "Weiß" : "Schwarz")}); "
-        + "im Text bitte aus Sicht von Weiß angeben. Die Züge oben stehen in englischer Notation (N=S, B=L, R=T, Q=D)."
+        + "im Text bitte aus Sicht von Weiß angeben"
+        + (f.MoverWhite ? "" : " — Schwarz ist am Zug, also das Vorzeichen umdrehen (oben +2.5 = im Text −2,5; oben −1.2 = im Text +1,2)")
+        + ". Die Züge oben stehen in englischer Notation (N=S, B=L, R=T, Q=D)."
         + "\n\nMerksätze (nur diese, höchstens einer, per Kennung):\n" + ChessMaxims.PromptList();
 }

@@ -414,10 +414,10 @@ public class MoveComparisonBestMoveTriesTests : IDisposable
         Assert.Contains("„21.Txe4 scheitert\n   an 21...dxc3 22.bxc3 Dxa3 mit Figurengewinn“", p);
         Assert.Contains("DANN erst die ruhige Hauptlinie", p);
         Assert.True(p.IndexOf("Beantworte ZUERST", StringComparison.Ordinal) < p.IndexOf("DANN erst die ruhige Hauptlinie", StringComparison.Ordinal));
-        // Absatz 1 (0.971.0) und der Schutz bleiben; die Wortgrenze ist nicht angehoben.
+        // Absatz 1 (0.971.0) und der Schutz bleiben; die Wortgrenze ist nicht angehoben (seit 0.999.6 sogar 150).
         Assert.Contains("Der taktische Grund, nicht die Nacherzählung der Engine-Linie", p);
         Assert.Contains("Nenne nur Züge, die in den gegebenen Linien stehen.", p);
-        Assert.Contains("zusammen höchstens 200 Wörter", p);
+        Assert.Contains("zusammen höchstens 150 Wörter", p);
         // Der Beispielsatz selbst besteht die Zugprüfung der Daten des Falls.
         Assert.True(GameMoveExplanationService.MentionsOnly(
             ClubFableExplanations.EnglishSan("21.Txe4 scheitert an 21...dxc3 22.bxc3 Dxa3 mit Figurengewinn"), Facts(Explained2615()).AllowedMoves()));

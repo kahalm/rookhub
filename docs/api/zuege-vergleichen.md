@@ -252,6 +252,24 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
     nicht geht (widerlegender Zug mit Zugnummer + Faktum, Beispiel „21.Txe4 scheitert an 21...dxc3 22.bxc3 Dxa3 mit
     Figurengewinn“), DANN die ruhige Hauptlinie. Wortgrenze unverändert 200.
   * **Bestand bleibt**; Vergleich neu erklären wie oben (Re-Explain).
+* **Drohung des besten Zuges in EINEM Satz** (0.999.6, Befund 2026-11-22 an Vereinspartie 260, Nagy – Schwaz, Fehler 1
+  15...Sb4 statt 15...Td8, Vergleich 2824, Stellung `r1b2rk1/1pq1bppp/pnn1p3/8/4N3/2N1B1P1/PP2PPBP/R2Q1RK1 b`): die
+  Antwort-Tests rechnen die besten Antworten auf den Fehlzug auch gegen den besten Zug — gegen 15...Td8 stellen 16.Tc1 und
+  16.a3 einfach die Dame auf d1 ein, und Fable schrieb „Auf 16.Tc1 oder 16.a3 geht einfach 16...Txd1 17.Tfxd1 mit
+  Damengewinn“. Nutzer: „es reicht zu sagen, Weiß muss die Dame wegziehen“.
+  * `MoveComparisonPrompts.ThreatsOf`: Figuren des Gegners (ohne Bauern/König), die die gezogene Figur nach dem besten Zug
+    angreift und die mehr wert sind als sie oder ungedeckt stehen (kein Schachgebot). Faktum im Nutzer-Prompt (beide Modelle):
+    „Concretely, 15...Rd8 attacks the queen on d1 — a direct threat: the opponent must react to it …“.
+  * `IgnoresThreat`: eine Antwort (Antwort-Test oder „Obvious reply“), die weder schlägt noch Schach gibt, nach der eine
+    bedrohte Figur noch auf ihrem Feld steht und deren Erwiderung sie sofort schlägt oder die ≥ 3 Bauern schlechter ausgeht
+    als die beste Antwort → nur noch „- 16.a3: ignores the threat to the queen on d1 — not a real option, do not discuss.“,
+    ohne Bewertung und Linie. Ihre Linien fallen aus `AllowedMoves` (der Befundtext würde verworfen); der Zug selbst bleibt
+    erlaubt, wenn er woanders steht (z. B. als Antwort auf den Fehlzug).
+  * Auftrag Fable (Absatz 2): für die Drohung EIN kurzer Satz („15...Td8 greift die Dame auf d1 an, Weiß muss sie
+    wegziehen“), dann die echten Antworten; Wortgrenze 150 statt 200; Bewertungen ausdrücklich aus Sicht von Weiß
+    (der Text schrieb „+7,01 aus seiner Sicht“), bei Schwarz am Zug sagt der Hinweis, dass das Vorzeichen umzudrehen ist.
+    Lokales Modell: derselbe Halbsatz-Auftrag im `SystemPrompt`.
+  * **Bestand bleibt**; Vergleich neu erklären wie oben (Re-Explain).
 * **Besitz und Sichtbarkeit**: Besitzer ist der Besitzer der Analyse (Haus-Engine-Konto). Alle Nutzerwege (`/api/move-comparisons`
   Liste/Lesen/Löschen, `MaxOpenPerUser`, `MaxKeptPerUser`) filtern `GameAnalysisId == null` — die Zeilen zählen nirgends mit.
   Lesen darf, wer die Vereinspartie sieht: `GET /api/league/club/games/{id}/comparisons` (alle, nach Halbzug: `{ ply,
