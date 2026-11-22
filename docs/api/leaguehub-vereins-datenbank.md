@@ -643,6 +643,16 @@ lassen: Kontingent (`GamesPerUserCap`, `PgnCharsPerUserCap`) oder Netzfehler ste
 (`ClubImportResult.mine`, `mineCopyText`). In der Kopie stehen die Namen aus dem PGN; ein in der Übersicht korrigierter Name
 ersetzt den des PGN (`withPlayers`). Vom Verein abgelehnte Partien der Liste gehen nicht mit. Bestand wird nicht nachgeholt.
 
+**Korrekturen ziehen in die Kopien** (verbunden über `SavedGame.LeagueClubGameId`): Züge seit 0.660.0
+(`ClubGameCorrectionService` → `SavedGameAnalysisLink.ApplyClubMovesAsync`), Namen/Ergebnis/Paarung (`PUT …/games/{id}`)
+seit 1.002.1 (`ClubGameWriter.UpdateAsync` → `SavedGameClubHeaders.ApplyAsync`; das PGN der Kopie wird nur an den Kopfzeilen
+und am Ende der Zugliste geändert, Kommentare/Varianten bleiben). Ergebnis: immer. Korrigierte Seite: neuer ÖFFENTLICHER Name
+samt Elo (und `[WhiteFideId]`, falls vorhanden); wird sie zu „Schwaz", nur wenn die Kopie bisher den Namen der Vereinspartie
+trug — ein eigener (echter) Name des Besitzers bleibt, `WhiteRealName` & Co. kommen nie in eine Kopie. Veranstaltung, Jahr
+(nur `JJJJ.??.??`/unbekannt) und Liga/Jahrgang nur, wo die Kopie den alten Wert der Vereinspartie trug. Einmaliger
+Start-Abgleich `ClubCopyResultRepair` (Marke `SavedGames.ClubCopyResultRepair`): Kopien mit `*`, deren Vereinspartie ein
+Ergebnis hat, bekommen es; ein ANDERES entschiedenes Ergebnis bleibt (die Kopie kann richtiger sein).
+
 Oberfläche (LeagueHub): Reiter „Prognosen · Vereinspartien · Partien hinzufügen" (`/`, `/verein`, `/verein/neu`,
 `/verein/formular/:id`); ohne Konto `/s/:token/hochladen` und `/s/:token/formular/:key` — der Teilen-Link zeigt die
 Aufforderung dazu ganz oben. Die Formular-Korrektur benutzt DIESELBE Sitzung wie RookHubs Korrekturseite

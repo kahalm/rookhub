@@ -260,6 +260,7 @@ internal sealed class ClubGameWriter
         var (built, reason) = Build(club, w, b, sans, g.Year, req.Result ?? g.Result, g.Event);
         if (built == null) return (null, reason);
         var before = new[] { g.WhiteFide, g.BlackFide };
+        var head = SavedGameClubHeaders.Head.Of(g);
         var remember = new List<(string Raw, LeagueNameAliases.Entry Target)>();
         if (req.White != null && g.WhiteFide == null && w.Identity is { } iw) remember.Add((g.White, iw));
         if (req.Black != null && g.BlackFide == null && b.Identity is { } ib) remember.Add((g.Black, ib));
@@ -286,6 +287,9 @@ internal sealed class ClubGameWriter
         await _db.SaveChangesAsync(ct);
         // Die Analyse der Partie trägt deren Namen — ein „Schwaz" muss auch dort ankommen.
         if (_analyses != null) await _analyses.SyncClubGameAsync(g, ct);
+        // Die Kopien in „Meine Partien" ziehen mit, wie bei der Zugkorrektur — nur mit öffentlichen Namen (1.002.1).
+        var copies = await SavedGameClubHeaders.ApplyAsync(_db, head, g, club.AnonName, ct);
+        if (copies > 0) _log.LogInformation("Vereins-Datenbank: Korrektur von Partie {Id} in {Copies} Kopien übernommen", g.Id, copies);
         await RefreshCardsAsync(before.Concat(new[] { g.WhiteFide, g.BlackFide }), ct);
         await RememberAsync(remember, ct);
         // Nachträglich einer Ligapaarung zugeordnet (oder umgehängt): wie eine neue Ligapartie.
