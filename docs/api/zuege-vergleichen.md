@@ -346,9 +346,11 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
   22...Ld7 „ausgeglichen“, weil der Antwort-Test 23.Sb3 Db6 bei ≈ 0 endete.
   * **Maia auf dem Server** (`Services/Engines/MaiaService.cs`, Kodierung `MaiaEncoding.cs`, Doku
     `docs/api/maia-sparring-im-analysebrett.md` „Maia auf dem Server“): Zugverteilung für einen Menschen der Stärke der Seite am
-    Zug. `MaiaNaturalMoves` nimmt die Züge ab `ClubMistakeComparisons:MaiaMinProbability` (Vorgabe 0,15). Stärke = Elo der Seite
+    Zug. `MaiaNaturalMoves` nimmt die Züge ab `ClubMistakeComparisons:MaiaMinProbability` (Vorgabe 0,25 seit 1.003.1, vorher 0,15). Stärke = Elo der Seite
     aus der Partie (`LeagueClubGames.WhiteElo/BlackElo`, sonst `SavedGames.WhiteElo/BlackElo` der Analyse, sonst
-    `[WhiteElo]`/`[BlackElo]` der PGN), sonst 1600; `elo_oppo` = die Elo der anderen Seite. Ohne Maia (aus, Modell fehlt, ORT
+    `[WhiteElo]`/`[BlackElo]` der PGN), sonst 1600; `elo_oppo` = die Elo der anderen Seite. An Maia gehen beide mit dem
+    Aufschlag `Maia:EloOffset` (Vorgabe 200, Lichess liegt rund 200 über der Vereins-Elo; auch auf den Rückfall 1600, der eine
+    Vereins-Elo vertritt), begrenzt auf 600–2600; der Vermerk im Faktenblock nennt die Vereins-Elo ohne Aufschlag (1.003.1). Ohne Maia (aus, Modell fehlt, ORT
     scheitert) sind die Listen leer, alles läuft wie vorher.
   * **Andere Verteidigungen** (`MoveComparisonDefences`): an jeder der zwei Entscheidungen zusätzlich die natürlichen Züge
     des Verteidigers (ohne den Zug der Linie). Reihenfolge: natürliche (nach Wahrscheinlichkeit) → die bisherigen (Schlagen
@@ -388,7 +390,8 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
     Engine nachgespielt): Verteidigungen je Fehler 0,86 → **2,95** (326 Züge allein durch Maia, nur 13 am Deckel 4
     abgeschnitten — der Deckel reicht), Antworten auf den besten Zug 1,08 → **1,57** (Deckel 3 nie erreicht); bei 140 von 150
     Vergleichen mindestens ein Maia-Zug. Bei Ø 95 s je Tiefe-30-Auftrag grob **+4 min Engine-Zeit je Fehler**. Stellschraube
-    `:MaiaMinProbability`: 0,25 → 2,04 / 1,37 je Fehler, 0,35 → 1,57 / 1,24.
+    `:MaiaMinProbability`: 0,25 → 2,04 / 1,37 je Fehler, 0,35 → 1,57 / 1,24. Seit 1.003.1 ist 0,25 die Vorgabe (Entscheidung
+    des Users 22.11.; die Messung lief noch ohne den Elo-Aufschlag).
   * Tests: `MaiaServiceTests` (Kodierung, Parität mit der JS-Fassung, nicht verfügbar), `MaiaNaturalMovesTests` (2839, 2832,
     Schwelle, Deckel, Rückfall, Elo), `MoveComparisonBestMoveTriesTests.Reexplain_MitMaia_…`.
 * **Besitz und Sichtbarkeit**: Besitzer ist der Besitzer der Analyse (Haus-Engine-Konto). Alle Nutzerwege (`/api/move-comparisons`

@@ -36,7 +36,7 @@ namespace RookHub.Api.Services.Engines;
 /// <para><b>Natürliche Züge und das Schlagen der gezogenen Figur</b> (1.003.0, Befunde Vereinspartie 259, Vergleich 2839: nach
 /// 44.g3 fehlte das natürliche 44...h3; Vereinspartie 260, Vergleich 2832: nach 22...Ld7 fehlte 23.Sxd7 — „mir fehlt Sxd7?“,
 /// es hält, Sxd7 Txd7 tauscht nur): vor den Zügen der flachen Sicht stehen die Antworten, die Maia-3 einem Menschen der Stärke
-/// des Gegners mit mindestens 15 % zutraut (<see cref="MaiaNaturalMoves"/>), dahinter die verlockenden der flachen Sicht und das
+/// des Gegners mit mindestens 25 % (<c>ClubMistakeComparisons:MaiaMinProbability</c>) zutraut (<see cref="MaiaNaturalMoves"/>), dahinter die verlockenden der flachen Sicht und das
 /// Schlagen der gerade gezogenen Figur (steht es in der flachen Sicht höchstens 2 × <see cref="Settings.WithinCp"/> zurück).
 /// Der Deckel <see cref="Settings.Max"/> (seit 1.003.0 Vorgabe 3) gilt für alle zusammen. In den Prompt kommen seither ALLE
 /// gerechneten — die, die scheitern, mit „this reply fails“, die anderen mit „about as good as the best answer“ bzw.

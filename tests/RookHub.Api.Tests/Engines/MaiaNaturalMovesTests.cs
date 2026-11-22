@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
@@ -326,9 +327,58 @@ public class MaiaNaturalMovesTests(ITestOutputHelper output) : IDisposable
         var none = await MaiaNaturalMoves.ForAsync(_db, maia, 0.15, new MoveComparison { GameAnalysisId = 991004, Fen = Fen2839 });
         Assert.Equal((MaiaNaturalMoves.DefaultElo, MaiaNaturalMoves.DefaultElo), (none.WhiteElo, none.BlackElo));
         Assert.Single(none.At(Fen2839));
-        Assert.Equal((1600, 1600), (maia.Calls[0].Self, maia.Calls[0].Oppo));
+        // Rückfall 1600 ist eine Vereins-Elo: an Maia geht sie mit dem Aufschlag 200.
+        Assert.Equal((1800, 1800), (maia.Calls[0].Self, maia.Calls[0].Oppo));
         // Ohne Maia (oder ohne Analyse): keine natürlichen Züge.
         Assert.Same(MaiaNaturalMoves.None, await MaiaNaturalMoves.ForAsync(_db, null, 0.15, new MoveComparison { GameAnalysisId = 991001 }));
         Assert.Same(MaiaNaturalMoves.None, await MaiaNaturalMoves.ForAsync(_db, maia, 0.15, new MoveComparison()));
+    }
+
+    // ── Aufschlag Vereins-Elo → Lichess, Begrenzung, Schwelle (1.003.1) ─────────────────────────────
+
+    [Fact]
+    public void Vorgaben_Schwelle025_Aufschlag200()
+    {
+        Assert.Equal(0.25, MaiaNaturalMoves.DefaultMinProbability);
+        Assert.Equal(200, new MaiaService(null, NullLogger<MaiaService>.Instance).EloOffset);
+        Assert.Equal(0.25, new ClubFableExplanations(null, null, NullLogger<ClubFableExplanations>.Instance).MaiaMinProbability);
+        var cfg = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Maia:EloOffset"] = "150",
+            ["ClubMistakeComparisons:MaiaMinProbability"] = "0.3",
+        }).Build();
+        Assert.Equal(150, new MaiaService(cfg, NullLogger<MaiaService>.Instance).EloOffset);
+        Assert.Equal(0.3, new ClubFableExplanations(null, cfg, NullLogger<ClubFableExplanations>.Instance).MaiaMinProbability);
+    }
+
+    [Fact]
+    public void Aufschlag_aufBeideSeiten_begrenzt_VermerkOhneAufschlag()
+    {
+        var calls = new List<(int Self, int Oppo)>();
+        var natural = new MaiaNaturalMoves((f, self, oppo) => { calls.Add((self, oppo)); return [new("h4h3", 0.763), new("h4g3", 0.226)]; },
+            whiteElo: 1600, blackElo: 1876, minProbability: MaiaNaturalMoves.DefaultMinProbability, eloOffset: 200);
+        var fen = Play(Fen2839, "g2g3");
+        var n = Assert.Single(natural.At(fen));                      // 0,226 liegt unter der Schwelle 0,25
+        Assert.Equal("h4h3", n.Uci);
+        Assert.Equal((2076, 1800), Assert.Single(calls));            // Schwarz am Zug: 1876 + 200 gegen 1600 + 200
+        Assert.Equal("a natural move for a ~1876 player (Maia: 76 %)", n.Note);   // die Vereins-Elo, die der Leser kennt
+
+        Assert.Equal(2600, MaiaNaturalMoves.MaiaElo(2550, 200));     // oben begrenzt
+        Assert.Equal(600, MaiaNaturalMoves.MaiaElo(300, 200));       // unten begrenzt
+        Assert.Equal(1400, MaiaNaturalMoves.MaiaElo(1200, 200));
+        Assert.Equal(1200, MaiaNaturalMoves.MaiaElo(1200, 0));
+    }
+
+    [Fact]
+    public async Task ForAsync_EloAusPartie_mitAufschlagDesDienstes()
+    {
+        _db.GameAnalyses.Add(new GameAnalysis { Id = 991011, UserId = 1, Pgn = "[WhiteElo \"2500\"]\n[BlackElo \"1450\"]\n1. e4 *", StartFen = "" });
+        await _db.SaveChangesAsync();
+        var maia = new FakeMaia(new() { [Fen2839] = [new("g2g3", 0.5)] });
+        var natural = await MaiaNaturalMoves.ForAsync(_db, maia, 0.25, new MoveComparison { GameAnalysisId = 991011, Fen = Fen2839 });
+        Assert.Equal((2500, 1450, 200), (natural.WhiteElo, natural.BlackElo, natural.EloOffset));
+        var n = Assert.Single(natural.At(Fen2839));                  // Weiß am Zug
+        Assert.Equal((2600, 1650), (maia.Calls[0].Self, maia.Calls[0].Oppo));   // 2700 → 2600 begrenzt
+        Assert.Equal(2500, n.Elo);
     }
 }

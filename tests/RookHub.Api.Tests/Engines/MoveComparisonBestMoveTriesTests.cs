@@ -808,7 +808,7 @@ public class MoveComparisonBestMoveTriesTests : IDisposable
         var tries = Of(c, MoveComparisonLineKind.BestMoveTry);
         Assert.Equal(3, tries.Count);
         Assert.Equal(MoveComparisonLineState.Pending, tries.Single(l => l.ReplyUci == "c4b3").State);
-        Assert.Contains(maia.Calls, k => k.Fen == After(Best) && k.Self == 1720 && k.Oppo == 1600);   // Weiß am Zug: 1720 gegen 1600
+        Assert.Contains(maia.Calls, k => k.Fen == After(Best) && k.Self == 1920 && k.Oppo == 1800);   // Weiß am Zug: 1720 gegen 1600, je +200 für Maia
 
         await FinishJobAsync(After(Best, "c4b3"), Bb3Json);
         await svc.PumpOneAsync(id);

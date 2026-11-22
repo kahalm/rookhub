@@ -41,6 +41,9 @@ public class MaiaService : IDisposable
 
     public bool Enabled { get; }
     public string ModelPath => _path;
+    /// <summary>Aufschlag auf die Vereins-/FIDE-Elo, bevor sie an Maia geht (<c>Maia:EloOffset</c>, Vorgabe
+    /// <see cref="MaiaNaturalMoves.DefaultEloOffset"/> = 200, −400..600): Maia kennt Lichess-Wertungen (1.003.1).</summary>
+    public int EloOffset { get; }
 
     /// <summary>Dauer des letzten Netz-Aufrufs (ohne Zwischenspeicher) — für die Messung in den Tests und im Log.</summary>
     public TimeSpan LastRun { get; private set; }
@@ -52,6 +55,7 @@ public class MaiaService : IDisposable
         var path = config?["Maia:ModelPath"] is { Length: > 0 } p ? p.Trim() : DefaultModelPath;
         _path = Path.IsPathRooted(path) ? path : Path.Combine(AppContext.BaseDirectory, path);
         _threads = Math.Clamp(config?.GetValue<int?>("Maia:Threads") ?? 1, 1, 4);
+        EloOffset = Math.Clamp(config?.GetValue<int?>("Maia:EloOffset") ?? MaiaNaturalMoves.DefaultEloOffset, -400, 600);
     }
 
     /// <summary>An und (soweit bekannt) brauchbar: eingeschaltet, Modell da, die Laufzeit ist nicht gescheitert.</summary>

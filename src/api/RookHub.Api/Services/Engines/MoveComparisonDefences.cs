@@ -24,7 +24,7 @@ namespace RookHub.Api.Services.Engines;
 /// bis der Deckel (<c>ClubMistakeComparisons:DefenceLines</c>, Vorgabe <see cref="DefaultMax"/>) erreicht ist — eine
 /// Entscheidung mit vielen Zügen verdrängt die andere nicht.</para>
 /// <para><b>Natürliche Züge</b> (1.003.0, Befund Vereinspartie 259): dazu die ruhigen Züge, die Maia-3 einem Menschen der Stärke
-/// des Verteidigers mit mindestens <c>ClubMistakeComparisons:MaiaMinProbability</c> (15 %) zutraut (<see cref="MaiaNaturalMoves"/>),
+/// des Verteidigers mit mindestens <c>ClubMistakeComparisons:MaiaMinProbability</c> (25 %) zutraut (<see cref="MaiaNaturalMoves"/>),
 /// ohne den Zug der Linie. Sie stehen vor den anderen (nach Wahrscheinlichkeit), offensichtliche Einsteller bleiben hinten;
 /// derselbe Deckel. Ohne Maia gilt die Auswahl wie vorher.</para>
 /// <para><b>Zeile</b>: <see cref="MoveComparisonLine.CandidateUci"/> = der schwächere Zug, <see cref="MoveComparisonLine.ReplyUci"/>

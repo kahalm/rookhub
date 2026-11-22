@@ -110,7 +110,7 @@ berücksichtigen, die ein MENSCH der passenden Stärke spielt, nicht nur Schläg
   `DeploymentConfigTests.Maia_ModelPin_AndDelivery_StayConsistent` hält Pin und Ablauf beider Skripte gleich, prüft die
   Reihenfolge im API-Dockerfile, `.dockerignore`/`.gitignore` und den exakten ORT-Pin.
 * **Schalter**: `Maia:Enabled` (Vorgabe an), `Maia:ModelPath`, `Maia:Threads`; die Schwelle der natürlichen Züge heißt
-  `ClubMistakeComparisons:MaiaMinProbability` (0,15). Fehlt das Modell oder scheitert ORT, ist der Dienst „nicht verfügbar“
+  `ClubMistakeComparisons:MaiaMinProbability` (0,25 seit 1.003.1, vorher 0,15), `Maia:EloOffset` (200, siehe „Stärke“). Fehlt das Modell oder scheitert ORT, ist der Dienst „nicht verfügbar“
   (eine Warnung im Log) und die Erklärungen laufen wie vorher.
 * **Falle ORT 1.31.0**: mit `GraphOptimizationLevel.ORT_ENABLE_ALL` (der Vorgabe) stürzt das LADEN dieses Modells mit einem
   Segfault ab — der ganze Prozess, kein catch hilft (22.11.2026 nachgestellt; 0/1/2 laufen). Der Dienst nutzt deshalb
@@ -118,5 +118,10 @@ berücksichtigen, die ein MENSCH der passenden Stärke spielt, nicht nur Schläg
 * **Tests ohne Modell**: die CI lädt es nicht; Kodierung und „nicht verfügbar“ laufen immer, Parität und die Messungen am echten
   Modell kehren ohne Datei still zurück (wie die Buch-Tests). Lokal: `sh src/frontend/app/maia-model/fetch.sh` (oder das
   API-Skript), oder `MAIA_MODEL_PATH`.
-* **Stärke**: Maia ist auf Lichess-Partien trainiert (dort liegt die Zahl rund 200 über der FIDE-Elo); der Server gibt die Elo
-  der Partie (Vereinspartien: national/FIDE) unverändert weiter.
+* **Stärke** (1.003.1, Entscheidung des Users 22.11.): Maia ist auf Lichess-Partien trainiert, dort liegt die Zahl rund 200 über
+  der FIDE-/Vereins-Elo. Der Server schlägt deshalb `Maia:EloOffset` (Vorgabe 200, −400..600) auf die Elo der Partie
+  (Vereinspartie, gespeicherte Partie, PGN-Kopfzeile) und auf den Rückfall 1600 und begrenzt danach auf 600–2600
+  (`MaiaNaturalMoves.MaiaElo`). Der Rückfall 1600 bekommt den Aufschlag mit, weil er im Code an der Stelle der fehlenden
+  Vereins-Elo steht und im Vermerk „~1600 player“ als Spielerstärke erscheint, also eine Vereins-Elo ist (Maia rechnet dann mit
+  1800). Der Vermerk im Faktenblock nennt die Vereins-Elo OHNE Aufschlag, damit der Leser seine Zahl wiedererkennt. Das
+  Analysebrett im Frontend (Regler 600–2600) bleibt unverändert: dort wählt der Nutzer die Maia-Stärke direkt.

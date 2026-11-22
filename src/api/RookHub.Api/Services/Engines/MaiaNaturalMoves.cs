@@ -14,16 +14,24 @@ namespace RookHub.Api.Services.Engines;
 /// (<see cref="MoveComparisonDefences"/>) und für die Antworten auf den besten Zug (<see cref="MoveComparisonBestMoveTries"/>).
 ///
 /// <para><b>Stärke</b> = die Elo der Seite aus der Partie (<see cref="ForAnalysisAsync"/>: Vereinspartie, sonst die gespeicherte
-/// Partie, sonst die PGN-Kopfzeilen), fehlt sie, <see cref="DefaultElo"/>; der Gegner entsprechend (<c>elo_oppo</c>).</para>
+/// Partie, sonst die PGN-Kopfzeilen), fehlt sie, <see cref="DefaultElo"/>; der Gegner entsprechend (<c>elo_oppo</c>).
+/// An Maia geht sie mit dem Aufschlag <see cref="EloOffset"/> (<c>Maia:EloOffset</c>, Vorgabe 200, 1.003.1): Maia ist auf
+/// Lichess-Wertungen trainiert, die rund 200 über der FIDE-/Vereins-Elo liegen; danach auf
+/// <see cref="MaiaService.MinElo"/>..<see cref="MaiaService.MaxElo"/> begrenzt (<see cref="MaiaElo"/>). Auch der Rückfall
+/// <see cref="DefaultElo"/> ist eine Vereins-Elo (er steht an ihrer Stelle und im Vermerk) und bekommt den Aufschlag. Der
+/// Vermerk im Faktenblock nennt die Vereins-Elo OHNE Aufschlag — die Zahl, die der Leser kennt.</para>
 /// <para>Ohne Maia (aus, Modell fehlt, Laufzeit scheitert) ist die Liste leer — dann gilt die Auswahl wie vorher.</para>
 /// </summary>
 internal sealed class MaiaNaturalMoves
 {
-    public const double DefaultMinProbability = 0.15;
+    public const double DefaultMinProbability = 0.25;
+    /// <summary>Vereins-Elo, wenn die Partie keine kennt (an Maia geht sie mit Aufschlag).</summary>
     public const int DefaultElo = 1600;
+    /// <summary>Lichess liegt rund so viel über der FIDE-/Vereins-Elo (<c>Maia:EloOffset</c>).</summary>
+    public const int DefaultEloOffset = 200;
 
     /// <summary>Nie ein natürlicher Zug (kein Maia).</summary>
-    public static readonly MaiaNaturalMoves None = new((_, _, _) => null, DefaultElo, DefaultElo, 1.0);
+    public static readonly MaiaNaturalMoves None = new((_, _, _) => null, DefaultElo, DefaultElo, 1.0, 0);
 
     private readonly Func<string, int, int, IReadOnlyList<MaiaMove>?> _predict;
     private readonly Dictionary<string, IReadOnlyList<Natural>> _seen = new();
@@ -31,15 +39,24 @@ internal sealed class MaiaNaturalMoves
     public int WhiteElo { get; }
     public int BlackElo { get; }
     public double MinProbability { get; }
+    /// <summary>Aufschlag Vereins-Elo → Lichess-Stärke für Maia.</summary>
+    public int EloOffset { get; }
 
-    /// <param name="predict">(FEN, Elo am Zug, Elo des Gegners) → Zugverteilung oder <c>null</c>.</param>
-    public MaiaNaturalMoves(Func<string, int, int, IReadOnlyList<MaiaMove>?> predict, int whiteElo, int blackElo, double minProbability)
+    /// <param name="predict">(FEN, Maia-Stärke am Zug, Maia-Stärke des Gegners) → Zugverteilung oder <c>null</c>.</param>
+    /// <param name="whiteElo">Vereins-Elo von Weiß (ohne Aufschlag), ebenso <paramref name="blackElo"/>.</param>
+    /// <param name="eloOffset">Aufschlag vor dem Aufruf von Maia (<see cref="MaiaElo"/>).</param>
+    public MaiaNaturalMoves(Func<string, int, int, IReadOnlyList<MaiaMove>?> predict, int whiteElo, int blackElo, double minProbability,
+        int eloOffset = 0)
     {
         _predict = predict;
         WhiteElo = whiteElo;
         BlackElo = blackElo;
         MinProbability = Math.Clamp(minProbability, 0.01, 1.0);
+        EloOffset = eloOffset;
     }
+
+    /// <summary>Die Stärke, die an Maia geht: Vereins-Elo + <paramref name="offset"/>, begrenzt auf den Bereich des Modells.</summary>
+    public static int MaiaElo(int clubElo, int offset) => Math.Clamp(clubElo + offset, MaiaService.MinElo, MaiaService.MaxElo);
 
     /// <summary>Ein natürlicher Zug: UCI, Wahrscheinlichkeit, Stärke der Seite am Zug.</summary>
     internal sealed record Natural(string Uci, double P, int Elo)
@@ -55,7 +72,7 @@ internal sealed class MaiaNaturalMoves
         if (_seen.TryGetValue(fen, out var known)) return known;
         var white = FenFields.WhiteToMove(fen);
         var self = white ? WhiteElo : BlackElo;
-        var policy = _predict(fen, self, white ? BlackElo : WhiteElo);
+        var policy = _predict(fen, MaiaElo(self, EloOffset), MaiaElo(white ? BlackElo : WhiteElo, EloOffset));
         var result = (policy ?? []).Where(m => m.P >= MinProbability).OrderByDescending(m => m.P)
             .Select(m => new Natural(m.Uci, m.P, self)).ToList();
         _seen[fen] = result;
@@ -66,12 +83,12 @@ internal sealed class MaiaNaturalMoves
     public Natural? Of(string fen, string uci) => At(fen).FirstOrDefault(n => string.Equals(n.Uci, uci, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Für den Vergleich einer Partie-Analyse: Stärken aus der Partie, Schwelle <c>ClubMistakeComparisons:MaiaMinProbability</c>
-    /// (Vorgabe 0,15). Ohne verfügbares Maia bzw. ohne Analyse → <see cref="None"/>.</summary>
+    /// (Vorgabe 0,25), Aufschlag <see cref="MaiaService.EloOffset"/>. Ohne verfügbares Maia bzw. ohne Analyse → <see cref="None"/>.</summary>
     public static async Task<MaiaNaturalMoves> ForAsync(AppDbContext db, MaiaService? maia, double minProbability, MoveComparison c, CancellationToken ct = default)
     {
         if (maia is not { Available: true } || c.GameAnalysisId is not int id) return None;
         var (white, black) = await ForAnalysisAsync(db, id, ct);
-        return new MaiaNaturalMoves(maia.Predict, white ?? DefaultElo, black ?? DefaultElo, minProbability);
+        return new MaiaNaturalMoves(maia.Predict, white ?? DefaultElo, black ?? DefaultElo, minProbability, maia.EloOffset);
     }
 
     private static readonly Regex EloHeader = new(@"\[(White|Black)Elo\s+""(\d{3,4})""\]", RegexOptions.Compiled);
