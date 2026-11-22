@@ -809,6 +809,10 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   (d4). Endlos am Handy mit demselben 1-rem-Seitenrand wie Standard/Buch.
 - **Tipp-Knopf** zählt die Stufe, die der Klick aufdeckt: „Tipp (1/3)“, danach „Nächster Tipp (2/3)“ (alle Löser und
   „Eigene Fehler“); das Vollbild-Abzeichen zählt die gezeigten Tipps und sagt es im `title` (d4).
+- **Browser-Wert neben Server-Werten** (1.000.0, „Eigene Fehler“): eine Zahl der Browser-Engine steht nie unbenannt
+  neben Werten der Server-Analyse — sie trägt den Zusatz „Schwache Analyse im Browser“ und ihre Tiefe („+1.20 (Tiefe 14)“),
+  im selben Format und in derselben Weiß-Sicht wie die übrigen Werte, als eigene Zeile in der Hinweisfarbe (`.cost`);
+  während der Suche „… rechnet …“, ohne Engine (kein Worker/WASM, Startfehler, auch E-Ink-Geräte) entfällt die Zeile ganz.
 - **Hinweiszeile unter dem Brett** (`.board-hint`, Zugrecht/Tipp): EINE Grundregel in `styles.scss`, 0,875 rem in allen
   Modi (vorher Standard 1em, Buch/Endlos 0,88em, d4).
 - **Woodpecker-Statistik = Fenster über dem Löser** (0.992.0, Nutzerwunsch 18.11.2026: „mach die Statistik als
@@ -1777,3 +1781,4 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-11-15 | 0.982.0 | RookHub, neue Seite Besucher-Herkunft `/visitors` (8.1): Flächenkarte in fünf Akzent-Stufen mit Skala, Kennzahlenreihe, Rangliste als Tabelle mit Balken, Kontinent-Wahl und Admin-Filter als Chips mit URL-Zustand, zweispaltig per Containerabfrage, E-Ink-Helligkeitstreppe | Erste Karte dieser Art — Stufen, Tastaturweg und „Farbe nie allein“ festgelegt | Wunsch User 15.11. (Vorlage „Vorschlag A“) |
 | 2026-11-17 | Trainerstunden teilen | RookHub, Stundenseite: Abschnitt „Teilen“ (Frist-Umschalter, Liste der aktiven Links mit Kopieren/Widerrufen) und Gast-Ansicht `/tl/:token` samt Seite „Link abgelaufen“ (8.1) | Einzelne Stunden zeitlich begrenzt ohne Konto zeigen; der Gast darf nicht in private Bereiche abbiegen | Wunsch User 17.11. |
 | 2026-11-17 | Nächster Sprecher | RookHub, Stundenseite der Trainerstunden (auch Gast): Sprecherleiste unter dem Video, Legende, „Zum Anfang des Redebeitrags“ und „Nächster Sprecher“ (8.1) | Im Video gezielt zum Trainer bzw. zur eigenen Frage springen | Wunsch User 17.11. |
+| 2026-11-22 | 1.000.0 | RookHub, Eigene Fehler nachspielen (5.12): Live-Zeile „Schwache Analyse im Browser: … (Tiefe n) · Antwort …“ unter „gehört nicht zu den n besten Zügen“ | Fehlversuch außerhalb der Kandidaten hatte nur eine Schranke, keinen Wert | Wunsch User 22.11. (Vereinspartie 260) |

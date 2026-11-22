@@ -13,6 +13,7 @@ import { MarkOrigin } from '../../shared/mark-position/marked-positions.service'
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { ClubMistakeComparison, MistakeComparisonComponent } from './mistake-comparison.component';
 import { LiveMove } from './live-engine-session';
+import { MistakeLiveEvalComponent } from './mistake-live-eval.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 
 /**
@@ -25,7 +26,7 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
   selector: 'app-mistakes-trainer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
-  imports: [IconLabelDirective, MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, TranslatePipe, MarkPositionButtonComponent, MistakeComparisonComponent],
+  imports: [IconLabelDirective, MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, TranslatePipe, MarkPositionButtonComponent, MistakeComparisonComponent, MistakeLiveEvalComponent],
   template: `
     <div class="top">
       <span class="title">{{ (title || 'games.mistakes.title') | translate: titleParams }}</span>
@@ -95,6 +96,9 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
         @if (session.triedRating(); as r) {
           @let line = triedLine(r);
           <p class="cost tried-eval">{{ line.key | translate: line.params }}
+            <!-- Nicht unter den Kandidaten (1.000.0): die Browser-Engine rechnet die Stellung nach dem Zug, live und
+                 als schwache Analyse benannt; ohne Engine bleibt die Zeile ohne Wert. -->
+            @if (r.kind === 'bound') { <app-mistake-live-eval class="live" [fen]="session.boardFen()" /> }
             <span class="eval-view">{{ (m.white ? 'games.mistakes.evalViewWhite' : 'games.mistakes.evalViewBlack') | translate }}
               @if (hasMate(r)) { {{ 'games.mistakes.evalViewMate' | translate }} }</span>
           </p>

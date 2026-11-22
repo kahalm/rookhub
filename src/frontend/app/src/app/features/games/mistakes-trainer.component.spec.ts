@@ -5,6 +5,9 @@ import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { MistakesTrainerComponent } from './mistakes-trainer.component';
 import { MistakesSession, UnlistedMoveJudge } from './mistakes-session';
 import { Mistake } from './mistakes.util';
+import { AnalysisEngineService } from '../analysis/analysis-engine.service';
+import { MISTAKE_LIVE_ENGINE } from './mistake-live-eval.component';
+import { fakeLiveEngine } from './mistake-live-eval.component.spec';
 
 describe('MistakesTrainerComponent', () => {
   const NACH_E4_E5 = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2';
@@ -15,10 +18,19 @@ describe('MistakesTrainerComponent', () => {
     candidates: [{ uci: 'g1f3', score: { cp: 30 } }, { uci: 'b1c3', score: { cp: -45 } }],
   };
 
+  /** Browser-Engines der Live-Bewertung, die der Trainer angelegt hat (je Anzeige eine). */
+  let liveEngines: ReturnType<typeof fakeLiveEngine>['engine'][] = [];
+
   function setup(t: Mistake = task, dismisser?: (m: Mistake) => void, judge?: UnlistedMoveJudge) {
+    liveEngines = [];
     TestBed.configureTestingModule({
       imports: [MistakesTrainerComponent],
-      providers: [provideNoopAnimations(), provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+      providers: [provideNoopAnimations(), provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: MISTAKE_LIVE_ENGINE, useValue: () => {
+          const { engine } = fakeLiveEngine();
+          liveEngines.push(engine);
+          return engine as unknown as AnalysisEngineService;
+        } }],
     });
     const tr = TestBed.inject(TranslateService);
     tr.setTranslation('en', {
@@ -29,7 +41,7 @@ describe('MistakesTrainerComponent', () => {
         triedBoundOne: '{{san}} is not the move of the analysis; its best move stands at {{best}}.',
         triedBrowser: 'Quick check by the browser engine: after {{san}} {{eval}}, after the best move {{best}}.',
         evalViewWhite: 'White view: for White, higher is better.', evalViewBlack: 'White view: for Black, lower is better.',
-        evalViewMate: '#3 = White mates in 3.' } },
+        evalViewMate: '#3 = White mates in 3.', liveEvalPending: 'Weak analysis in the browser is calculating …' } },
     });
     tr.use('en');
     const fixture = TestBed.createComponent(MistakesTrainerComponent);
@@ -90,7 +102,12 @@ describe('MistakesTrainerComponent', () => {
       s.fixture.detectChanges();
       return { ...s, session };
     }
-    const line = (el: HTMLElement) => el.querySelector('.tried-eval')!.textContent!.replace(/\s+/g, ' ').trim();
+    /** Die Zeile ohne die Live-Bewertung (die hat eigene Tests unten). */
+    const line = (el: HTMLElement) => {
+      const p = el.querySelector('.tried-eval')!.cloneNode(true) as HTMLElement;
+      p.querySelector('app-mistake-live-eval')?.remove();
+      return p.textContent!.replace(/\s+/g, ' ').trim();
+    };
 
     it('sicher schlechter: Schranke aus der Analyse statt einer Browser-Zahl, mit Lese-Hinweis für Schwarz', () => {
       const judge = jasmine.createSpy('judge');
@@ -101,6 +118,44 @@ describe('MistakesTrainerComponent', () => {
       expect(line(el)).toBe('a5 is not among the 5 best moves of the analysis: the weakest of those stands at +1.03, '
         + 'the best at +0.77. White view: for Black, lower is better.');
       expect(line(el)).not.toContain('After a5');
+    });
+
+    // 1.000.0 — Wunsch an Vereinspartie 260: „… am besten auch die aktuelle Position im Browser analysieren".
+    it('nicht unter den Kandidaten: die Browser-Engine rechnet die Stellung NACH dem Zug, live und benannt', () => {
+      const { fixture, session, el } = setupBlack(partie246);
+      session.onMove({ from: 'a7', to: 'a5', san: 'a5', fen: 'nach a5' });
+      fixture.detectChanges();
+      expect(liveEngines.length).toBe(1);
+      expect(liveEngines[0].analyzed).toEqual(['nach a5']);
+      expect(el.querySelector('.tried-eval app-mistake-live-eval')!.textContent).toContain('Weak analysis in the browser');
+    });
+
+    it('Live-Bewertung stoppt beim Wechsel: „Nochmal" und nächste Aufgabe beenden die Engine', () => {
+      const { fixture, session } = setupBlack(partie246);
+      session.onMove({ from: 'a7', to: 'a5', san: 'a5', fen: 'nach a5' });
+      fixture.detectChanges();
+      session.retry(); fixture.detectChanges();
+      expect(liveEngines[0].destroyed).toBe(1);
+      session.onMove({ from: 'h7', to: 'h6', san: 'h6', fen: 'nach h6' });
+      fixture.detectChanges();
+      expect(liveEngines.length).toBe(2);
+      session.next(); fixture.detectChanges();
+      expect(liveEngines[1].destroyed).toBe(1);
+    });
+
+    it('gelistet oder von der Browser-Engine geprüft: keine Live-Bewertung', async () => {
+      const { fixture, session, el } = setupBlack(partie246);
+      session.onMove({ from: 'f7', to: 'f6', san: 'f6', fen: 'nach f6' });
+      fixture.detectChanges();
+      expect(el.querySelector('app-mistake-live-eval')).toBeNull();
+      TestBed.resetTestingModule();
+
+      const judge: UnlistedMoveJudge = () => Promise.resolve({ equivalent: false, best: { cp: 62 }, tried: { cp: 95 } });
+      const b = setupBlack({ ...partie246, checkUnlisted: true }, judge);
+      b.session.onMove({ from: 'a7', to: 'a5', san: 'a5', fen: 'nach a5' });
+      await b.fixture.whenStable(); b.fixture.detectChanges();
+      expect(b.el.querySelector('app-mistake-live-eval')).toBeNull();
+      expect(liveEngines.length).toBe(0);
     });
 
     it('nur EIN Kandidat: kein „unter den 1 besten"', () => {

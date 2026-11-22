@@ -14,6 +14,17 @@
   in der Sammlung über mehrere Partien) — nicht in Eingabefeldern/Menüs/Dialogen (`isBoardHotkey`), nicht mit Fokus auf
   Knopf oder Link, nicht als Tastenwiederholung. Die Leertaste der Seite („nächste Aufgabe“, Phasen `right`/`shown`)
   bleibt in `SharedGameComponent.onKeyDown`; die Phasen schließen sich aus.
+- **Seit 1.000.0 — Live-Wert im Fall `bound`** (Wunsch an Vereinspartie 260: „hier sollte er am besten auch die aktuelle
+  Position im Browser analysieren und live die Bewertung anzeigen“): unter der Schranke `triedBound`/`triedBoundOne`
+  steht `app-mistake-live-eval` (`mistake-live-eval.component.ts`). Sie rechnet mit einer EIGENEN Instanz des
+  `AnalysisEngineService` (wie `LiveEngineSession`, Fabrik über das Token `MISTAKE_LIVE_ENGINE`) die Stellung NACH dem
+  Fehlversuch (`session.boardFen()`), eine Linie, Tiefe `DEPTH` = 14, spätestens nach `MAX_MS` = 10 s angehalten, und
+  zeigt mitlaufend `games.mistakes.liveEval` („Schwache Analyse im Browser: +1.20 (Tiefe 14)“, Weiß-Sicht, `formatEval`)
+  plus die erste Antwort (`liveEvalReply`); vor der ersten Zeile `liveEvalPending`. Sie hängt am `@if` der Phase `wrong`:
+  „Nochmal“, nächste Aufgabe, Schließen oder Verlassen der Seite zerstören sie samt Worker. Fälle `listed`/`browser`
+  zeigen sie nicht (dort gibt es schon Werte aus einer Rechnung). Ohne Engine (kein `Worker`/`WebAssembly`,
+  `engineFatalError$`) bleibt die Zeile weg, der Hinweis bleibt. LeagueHub führt den Trainer nicht selbst, sondern
+  verlinkt auf RookHubs Vereinspartie (`club-games/:id`, auch per Teilen-Link) — dort gilt dasselbe.
 - **Seit 0.972.1 — Zeile nach dem Fehlversuch: je Fall Zahlen aus EINER Rechnung** (`MistakesSession.triedRating`,
   Typ `TriedRating`; gemeldet an Vereinspartie 246: „a5 is not it. After a5: +0.72 (best move: +0.77)“ bei Schwarz am
   Zug — +0.72 kam aus dem Browser in Tiefe 16, +0.77 vom Server in Tiefe 30, und es las sich, als wäre der abgelehnte
