@@ -47,7 +47,8 @@ internal static class MoveComparisonPrompts
         /// verlockenden, tief widerlegten Antworten auf den besten Zug samt ihrer Linien.
         /// Seit 0.999.6 fehlen die Antworten, die die Drohung des besten Zuges übergehen (<see cref="IgnoresThreat"/>), samt
         /// ihrer Linien — der Text soll sie nicht besprechen (steht der Zug woanders, etwa als Antwort auf den schwächeren
-        /// Zug, bleibt er dort erlaubt).</summary>
+        /// Zug, bleibt er dort erlaubt). Seit 1.001.1 ebenso die anderen Verteidigungen, die offensichtlich Material einstellen
+        /// (<see cref="MoveComparisonDefences.Defence.ObviousLoss"/>, Befund Vereinspartie 261: 20...Lxf4 21.Lxf4).</summary>
         public IEnumerable<string> AllowedMoves()
         {
             var threats = Threats();
@@ -57,7 +58,7 @@ internal static class MoveComparisonPrompts
                 .Concat(BestReplies.SelectMany(p => p.Line)).Concat(WeakReplies.SelectMany(p => p.Line))
                 .Concat(tests.Select(t => t.ReplySan)).Concat(tests.SelectMany(t => t.Answer))
                 .Concat((Defences ?? []).SelectMany(d => d.Prefix.Append(d.MainSan)
-                    .Concat(d.Defences.SelectMany(x => x.Line.Prepend(x.San)))))
+                    .Concat(d.Defences.Where(x => x.ObviousLoss is null).SelectMany(x => x.Line.Prepend(x.San)))))
                 .Concat(tries.SelectMany(t => t.Line.Prepend(t.San)));
         }
 
@@ -143,6 +144,16 @@ internal static class MoveComparisonPrompts
         return x >= 0 && x + 3 <= san.Length ? san.Substring(x + 1, 2) : null;
     }
 
+    /// <summary>Zielfeld eines SAN-Zuges in der Stellung, <c>null</c>, wenn er dort nicht geht.</summary>
+    private static string? DestinationOf(string fen, string san)
+    {
+        try
+        {
+            return Array.Find(ChessBoard.LoadFromFen(fen).Moves(generateSan: true), m => m.San == san)?.NewPosition.ToString();
+        }
+        catch { return null; }
+    }
+
     private static int PieceValue(char piece) => char.ToLowerInvariant(piece) switch
     { 'p' => 1, 'n' => 3, 'b' => 3, 'r' => 5, 'q' => 9, 'k' => 100, _ => 0 };
 
@@ -200,7 +211,12 @@ internal static class MoveComparisonPrompts
         If the facts say the two moves are almost equal, say that first and keep it short.
         If a "Concretely" fact says the better move attacks a piece (a direct threat), say so in one short clause (e.g. it
         attacks the queen, your opponent must move it away) and go on with your opponent's best answer to the better move.
-        Never discuss answers marked "not a real option" — nobody leaves a piece hanging.
+        Never discuss answers marked "not a real option" — nobody leaves a piece hanging. Focus on the question a club
+        player really asks: explain the moves that are not obvious, never an obvious blunder where the opponent simply
+        recaptures. If a line ends with a pawn weakness a club player sees at once (a "pawn structure" fact: isolated,
+        doubled or backward pawn) and the evaluation stays about equal anyway, say in one sentence, from the facts, why it
+        does not matter (e.g. the pawn is passed, or the other side has counterplay with a majority). Never claim anything
+        about the pawn structure (isolated, passed, doubled, backward, majority) that no fact states.
         Call a piece undefended or hanging only if a fact says "defended by nothing". State who is ahead in material only
         from the "in pieces" fact, never from the evaluation.
         Never give the evaluation itself as the reason: "the engine rates it higher" or "it keeps the advantage" only
@@ -250,7 +266,8 @@ internal static class MoveComparisonPrompts
             var top = f.WeakReplies[0].Line;
             var facts = WithForks(detailed ? ExplanationFacts.CheckForks(f.WeakFen, top) : [],
                 ExplanationFacts.FirstMoveAttacks(f.WeakFen, top).Concat(ExplanationFacts.Coverage(f.WeakFen, top))
-                    .Concat(ExplanationFacts.LineEvents(f.Fen, top, gainerWhite: !f.MoverWhite, lead: f.WeakSan)));
+                    .Concat(ExplanationFacts.LineEvents(f.Fen, top, gainerWhite: !f.MoverWhite, lead: f.WeakSan))
+                    .Concat(PawnStructure.AtLineEnd(f.Fen, f.WeakFen, top) is { } weakPawns ? [weakPawns] : []));
             if (facts.Count > 0)
                 lines.Add($"Concretely, after {weak} and the opponent's best answer line: {string.Join("; ", facts)}.");
             if (detailed && f.Defences is { Count: > 0 } decisions) lines.AddRange(DefenceBlock(f, decisions, you, weak));
@@ -290,6 +307,9 @@ internal static class MoveComparisonPrompts
         {
             var p = f.BestReplies[0];
             lines.Add($"The opponent's best answer to {best} itself: {Numbered(f.BestFen, [p.San])} ({p.MoverEval(f.MoverWhite)}): {Numbered(f.BestFen, p.Line)}");
+            // 1.001.1 (Befund Vereinspartie 261, 21...h5): auffällige Bauernstruktur am Ende der Hauptlinie des besten Zuges.
+            if (PawnStructure.AtLineEnd(f.Fen, f.BestFen, p.Line) is { } bestPawns)
+                lines.Add($"Concretely, after {best} and that line: {bestPawns}.");
         }
         if (detailed && f.Tries is { Count: > 0 } tries) lines.AddRange(TryBlock(f, tries, best, threats));
         lines.Add($"Reader: plays {you} — \"you\" is the reader, {(f.MoverWhite ? "Black" : "White")} is \"your opponent\".");
@@ -300,7 +320,8 @@ internal static class MoveComparisonPrompts
     /// Der Block „Other defences in the refutation line“ (0.971.0): je Entscheidung des Verteidigers, was er dort an Zügen
     /// hat, und je gerechneter anderer Verteidigung Bewertung, Engine-Linie und geprüfte Fakten (Gabel, Feld, Materialbilanz
     /// ab der Stellung VOR dem Fehlzug). Ist eine Verteidigung etwa so gut wie die Hauptlinie, steht das dabei — dann
-    /// scheitert sie nicht.
+    /// scheitert sie nicht. Stellt sie offensichtlich Material ein (1.001.1, <see cref="MoveComparisonDefences.Defence.ObviousLoss"/>),
+    /// steht nur „obviously loses material (… simply recaptures) — do not discuss“ da, ohne Bewertung, Linie und Fakten.
     /// </summary>
     private static List<string> DefenceBlock(PairFacts f, IReadOnlyList<MoveComparisonDefences.Decision> decisions, string you, string weak)
     {
@@ -320,6 +341,13 @@ internal static class MoveComparisonPrompts
             foreach (var x in d.Defences)
             {
                 var alt = Numbered(d.FenBefore, [x.San]);
+                if (x.ObviousLoss is { } taker)
+                {
+                    // 1.001.1: einfacher Wiederschlag/Schlag — keine Frage, die sich ein Klubspieler stellt.
+                    var verb = CaptureSquare(taker) is { } sq && sq == DestinationOf(d.FenBefore, x.San) ? "recaptures" : "captures";
+                    lines.Add($"- {alt} instead of {main}: obviously loses material ({Numbered(x.FenAfter, [taker])} simply {verb}) — do not discuss.");
+                    continue;
+                }
                 var holds = HoldsAsWell(x.Eval, f.WeakEval) ? " — about as good as the main line, so this defence does NOT fail" : "";
                 var engine = x.Line.Count > 0 ? $" Engine line: {Numbered(x.FenAfter, x.Line)}." : "";
                 lines.Add($"- {alt} instead of {main}: evaluation from the reader's view {x.Eval}{Level(x.Eval)}{holds}.{engine}");

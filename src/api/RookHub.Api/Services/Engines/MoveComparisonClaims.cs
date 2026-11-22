@@ -12,7 +12,8 @@ namespace RookHub.Api.Services.Engines;
 /// jeder Stellung der gegebenen Linien. Steht dort eine solche Figur (Art, wenn der Text sie nennt) auf dem Feld und ist
 /// sie in KEINER dieser Stellungen ungedeckt, ist die Behauptung falsch — der Aufrufer fragt mit Hinweis neu an.
 /// Wohlwollend: ist sie irgendwo ungedeckt oder steht dort nie eine, gilt die Behauptung (sie lässt sich nicht
-/// eindeutig einer Stellung zuordnen).
+/// eindeutig einer Stellung zuordnen). Seit 1.001.1 ebenso „nur von X gedeckt“/„einzige Deckung“
+/// (<see cref="FalseSoleDefender"/>).
 /// </summary>
 internal static class MoveComparisonClaims
 {
@@ -82,6 +83,172 @@ internal static class MoveComparisonClaims
                 result.Add((sq.Groups[1].Value, type));
             }
         return result.Distinct().ToList();
+    }
+
+    // ── „nur von X gedeckt“ (1.001.1) ───────────────────────────────────────────────────────────────
+
+    /// <summary>„nur vom Läufer (selbst) gedeckt“, „defended only by the bishop (itself)“ — Gruppe <c>who</c> = die genannte
+    /// Figur, <c>self</c> = „selbst/itself“; das Feld steht davor.</summary>
+    private static readonly Regex OnlyBy = new(
+        @"\bnur\s+(?:von|vom|durch)\s+(?:(?:de[nmrs]|die|das|eine[nmrs]?|seine[nmrs]?|ihre[nmrs]?)\s+)?(?<who>\w+)(?<self>\s+selbst)?(?<rest>[^.;:!?]{0,40}?)\b(?:gedeckt|geschützt|verteidigt)"
+        + @"|\b(?:defended|covered|protected)\s+only\s+by\s+(?:(?:the|a|its)\s+)?(?<who>\w+)(?<self>\s+itself)?"
+        + @"|\bonly\s+(?:defended|covered|protected)\s+by\s+(?:(?:the|a|its)\s+)?(?<who>\w+)(?<self>\s+itself)?",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    /// <summary>„die einzige Deckung des Bauern f4 ist der Turm“, „the only defender of …“ — das Feld steht danach.</summary>
+    private static readonly Regex OnlyDefender = new(
+        @"\beinzige[nrs]?\s+(?:Deckung|Verteidiger\w*|Schutz)|\b(?:only|sole)\s+(?:defender|protector|protection)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// Die Felder, deren Figur der Text fälschlich „nur von X gedeckt“ (bzw. „einzige Deckung“, „defended only by“) nennt
+    /// (Befund Vereinspartie 261, 22.11.2026: „das Feld f4 wurde nach 19...Le5 nur vom Läufer selbst gedeckt“ — nach 20.f4
+    /// deckt der Läufer e3 den Bauern f4). Geprüft wird in denselben Stellungen wie bei <see cref="FalseUndefended"/>, wo auf
+    /// dem Feld eine Figur (kein König) steht: die Behauptung gilt dort, wenn genau EINE Figur ihrer Farbe sie deckt und diese
+    /// zur genannten Art (und zum genannten Feld) passt. „selbst/itself“ meint die Figur auf dem Feld — die deckt sich nie
+    /// selbst. Gilt sie in keiner Stellung, ist sie falsch; steht dort nie eine Figur, bleibt sie unbeanstandet.
+    /// </summary>
+    internal static List<string> FalseSoleDefender(string text, MoveComparisonPrompts.PairFacts f)
+    {
+        var claims = SoleDefenderClaims(text);
+        if (claims.Count == 0) return [];
+        var positions = Positions(f);
+        var wrong = new List<string>();
+        foreach (var (square, type, at, self) in claims)
+        {
+            var seen = false;
+            var holds = false;
+            foreach (var fen in positions)
+            {
+                if (BoardGeometry.FromFen(fen) is not { } geo) continue;
+                var piece = geo.PieceAt(square);
+                if (piece == '\0' || char.ToLowerInvariant(piece) == 'k') continue;
+                seen = true;
+                if (self) continue;
+                var defenders = geo.Attackers(square, char.IsUpper(piece));
+                if (defenders.Count == 1 && (type is not char t || char.ToLowerInvariant(defenders[0].Piece) == t)
+                    && (at is null || defenders[0].Square == at)) { holds = true; break; }
+            }
+            if (seen && !holds && !wrong.Contains(square)) wrong.Add(square);
+        }
+        return wrong;
+    }
+
+    /// <summary>Die „nur von X gedeckt“-Behauptungen eines Textes: Feld, Art und Feld der genannten deckenden Figur (falls
+    /// genannt), „selbst“. Hier zählt auch „Feld f4“ — der Satz handelt vom Feld.</summary>
+    internal static List<(string Square, char? Type, string? At, bool Self)> SoleDefenderClaims(string text)
+    {
+        var result = new List<(string, char?, string?, bool)>();
+        foreach (var sentence in Regex.Split(text, @"(?<=[.!?;:])\s+|\n"))
+        {
+            var squares = Square.Matches(sentence).ToList();
+            foreach (Match k in OnlyBy.Matches(sentence))
+            {
+                var sq = squares.Where(x => x.Index + x.Length <= k.Index && k.Index - (x.Index + x.Length) <= 60).OrderByDescending(x => x.Index).FirstOrDefault();
+                if (sq is null) continue;
+                var who = k.Groups["who"].Value;
+                var type = TypeOf(who);
+                // „nur vom Läufer auf e3 gedeckt“: das Feld der deckenden Figur direkt nach ihr.
+                var at = squares.FirstOrDefault(x => x.Index > k.Groups["who"].Index && x.Index - (k.Groups["who"].Index + who.Length) <= 8);
+                result.Add((sq.Groups[1].Value, type, at?.Groups[1].Value, k.Groups["self"].Success));
+            }
+            foreach (Match k in OnlyDefender.Matches(sentence))
+            {
+                var sq = squares.Where(x => x.Index >= k.Index + k.Length && x.Index - (k.Index + k.Length) <= 25).OrderBy(x => x.Index).FirstOrDefault();
+                if (sq is null) continue;
+                // Die deckende Figur: das erste Figurenwort nach dem Feld, ihr Feld direkt dahinter.
+                var tail = sentence[(sq.Index + sq.Length)..];
+                char? type = null;
+                string? at = null;
+                var first = PieceWords.SelectMany(p => p.Word.Matches(tail).Select(m => (m, p.Type))).OrderBy(x => x.m.Index).FirstOrDefault();
+                if (first.m is { } w)
+                {
+                    type = first.Type;
+                    var after = Square.Match(tail, w.Index + w.Length);
+                    if (after.Success && after.Index - (w.Index + w.Length) <= 8) at = after.Groups[1].Value;
+                }
+                result.Add((sq.Groups[1].Value, type, at, false));
+            }
+        }
+        return result.Distinct().ToList();
+    }
+
+    private static char? TypeOf(string word)
+    {
+        foreach (var (w, t) in PieceWords)
+            if (w.IsMatch(word)) return t;
+        return null;
+    }
+
+    // ── Bauernstruktur (1.001.1) ────────────────────────────────────────────────────────────────────
+
+    private static readonly (Regex Word, Func<PawnStructure.Flags, bool> Holds)[] PawnClaims =
+    [
+        (new(@"isoliert\w*|Isolani\w*|isolated", RegexOptions.Compiled | RegexOptions.IgnoreCase), x => x.Isolated),
+        (new(@"Freibauer\w*|passed\s+pawn\w*|\bpasser\w*|\bis\s+passed", RegexOptions.Compiled | RegexOptions.IgnoreCase), x => x.Passed),
+        (new(@"Doppelbauer\w*|doubled", RegexOptions.Compiled | RegexOptions.IgnoreCase), x => x.Doubled),
+        (new(@"rückständig\w*|backward", RegexOptions.Compiled | RegexOptions.IgnoreCase), x => x.Backward),
+    ];
+
+    private static readonly Regex Negation = new(@"(?:nicht|kein\w*|not|no|never)\s+(?:\w+\s+)?$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// Die Felder, deren Bauer der Text fälschlich „isoliert/Isolani“, „Freibauer“, „Doppelbauer“ oder „rückständig“ nennt
+    /// (Befund Vereinspartie 261: Strukturaussagen nur aus Fakten, <see cref="PawnStructure"/>). Feld wie bei
+    /// <see cref="ClaimedSquares"/> (nächstes danach, sonst davor); verneinte Aussagen („nicht isoliert“) zählen nicht.
+    /// Steht in den Stellungen der Linien dort ein Bauer, der die Eigenschaft NIE hat, ist die Aussage falsch; steht dort nie
+    /// ein Bauer, bleibt sie unbeanstandet.
+    /// </summary>
+    internal static List<string> FalsePawnClaims(string text, MoveComparisonPrompts.PairFacts f)
+    {
+        var claims = new List<(string Square, Func<PawnStructure.Flags, bool> Holds)>();
+        foreach (var sentence in Regex.Split(text, @"(?<=[.!?;:])\s+|\n"))
+        {
+            var squares = Square.Matches(sentence).Where(sq => !SquareWord.IsMatch(sentence[Math.Max(0, sq.Index - 30)..sq.Index])).ToList();
+            foreach (var (word, holds) in PawnClaims)
+                foreach (Match k in word.Matches(sentence))
+                {
+                    if (Negation.IsMatch(sentence[Math.Max(0, k.Index - 20)..k.Index])) continue;
+                    var sq = squares.Where(x => x.Index >= k.Index + k.Length && x.Index - (k.Index + k.Length) <= 25).OrderBy(x => x.Index).FirstOrDefault()
+                             ?? squares.Where(x => x.Index + x.Length <= k.Index && k.Index - (x.Index + x.Length) <= 40).OrderByDescending(x => x.Index).FirstOrDefault();
+                    if (sq is not null) claims.Add((sq.Groups[1].Value, holds));
+                }
+        }
+        if (claims.Count == 0) return [];
+        var geos = Positions(f).Select(BoardGeometry.FromFen).Where(g => g is not null).ToList();
+        var wrong = new List<string>();
+        foreach (var (square, holds) in claims)
+        {
+            var flags = geos.Select(g => PawnStructure.Of(g!, square)).Where(x => x is not null).ToList();
+            if (flags.Count > 0 && !flags.Any(x => holds(x!)) && !wrong.Contains(square)) wrong.Add(square);
+        }
+        return wrong;
+    }
+
+    /// <summary>Alle drei Prüfungen zusammen: (ungedeckt, nur einfach gedeckt, Bauernstruktur).</summary>
+    internal static (List<string> Undefended, List<string> Sole, List<string> Pawns) Check(string text, MoveComparisonPrompts.PairFacts f)
+        => (FalseUndefended(text, f), FalseSoleDefender(text, f), FalsePawnClaims(text, f));
+
+    /// <summary>Die Hinweiszeile für alle Prüfungen (ungedeckt, „nur von X gedeckt“, Bauernstruktur).</summary>
+    internal static string Hint(IReadOnlyList<string> undefended, IReadOnlyList<string> sole, bool german, IReadOnlyList<string>? pawns = null)
+    {
+        var parts = new List<string>();
+        if (pawns is { Count: > 0 })
+            parts.Add(german
+                ? $"WICHTIG: Deine letzte Antwort beschrieb den Bauern auf {ExplanationFacts.JoinAnd(pawns)} falsch (isoliert, Freibauer, "
+                  + "Doppelbauer oder rückständig) — das stimmt in den Stellungen der Linien nicht. Strukturaussagen nur aus einem "
+                  + "Faktum „pawn structure …“."
+                : $"IMPORTANT: your previous answer described the pawn on {ExplanationFacts.JoinAnd(pawns)} wrongly (isolated, passed, "
+                  + "doubled or backward). Describe the pawn structure only from a \"pawn structure\" fact.");
+        if (undefended.Count > 0) parts.Add(Hint(undefended, german));
+        if (sole.Count > 0)
+            parts.Add(german
+                ? $"WICHTIG: Deine letzte Antwort nannte die Figur auf {ExplanationFacts.JoinAnd(sole)} nur von einer Figur gedeckt — "
+                  + "das stimmt in den Stellungen der Linien nicht (siehe die Fakten „defended by …“ und die Figurenliste). "
+                  + "„Nur von … gedeckt“ oder „einzige Deckung“ nur, wenn ein Faktum genau diese eine Deckung nennt."
+                : $"IMPORTANT: your previous answer said the piece on {ExplanationFacts.JoinAnd(sole)} is defended by only one piece — "
+                  + "that is not true in the positions of the lines. Say \"defended only by\" only if a fact names exactly that defender.");
+        return string.Join(' ', parts);
     }
 
     /// <summary>Die Hinweiszeile für die neue Anfrage (Deutsch für Fable, Englisch für das lokale Modell).</summary>

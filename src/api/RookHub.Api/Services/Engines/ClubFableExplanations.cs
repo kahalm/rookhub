@@ -57,6 +57,16 @@ namespace RookHub.Api.Services.Engines;
 /// (<see cref="ExplanationFacts.Coverage"/>), Materialbilanz in Figuren („in pieces: Black is a knight up for a pawn“,
 /// <see cref="ExplanationFacts.InPieces"/>), Nachprüfung „ungedeckt/hängt“ am Brett mit neuer Anfrage
 /// (<see cref="MoveComparisonClaims"/>), und das Motiv aus Sicht der Seite, die den Fehler spielte.</item>
+/// <item><b>Nicht offensichtliche Verteidigungen statt Einsteller</b> (1.001.1, Befund an Vereinspartie 261, 19...Le5 statt
+/// 19...f4: der Text erklärte lang 20...Lxf4 21.Lxf4 — „nutzlos, absolut offensichtlich“ — und nichts zu 20...exf3 e.p.):
+/// En passant zählt als Schlagen der gezogenen Figur, offensichtliche Einsteller rücken in der Auswahl nach hinten und stehen
+/// im Faktenblock nur als „obviously loses material … — do not discuss“ (<see cref="MoveComparisonDefences"/>), und
+/// „nur von X gedeckt“ wird wie „ungedeckt“ am Brett nachgeprüft (<see cref="MoveComparisonClaims.FalseSoleDefender"/>).</item>
+/// <item><b>Bauernstruktur</b> (1.001.1, Befund an Vereinspartie 261, 21...exf3 statt 21...h5: „warum ist das kein Problem für
+/// Schwarz? Der Isolani schaut doch sehr schwach aus“ — e4 ist ein Freibauer, Weiß hat die Mehrheit am Damenflügel):
+/// geprüfte Strukturfakten am Ende der Hauptlinien beider Kandidaten (<see cref="PawnStructure"/>), ein Satz dazu, wenn die
+/// Bewertung trotz Schwäche gleich bleibt, und „isoliert/Freibauer/Doppelbauer/rückständig“ wird am Brett nachgeprüft
+/// (<see cref="MoveComparisonClaims.FalsePawnClaims"/>).</item>
 /// </list>
 /// Singleton: hält Client und Tageszähler, die Datenbank kommt vom Aufrufer.
 /// </summary>
@@ -182,10 +192,13 @@ public sealed class ClubFableExplanations
                 _logger.LogInformation("Fable-Begründung verworfen (nennt einen fremden Zug)");
                 continue;
             }
-            if (MoveComparisonClaims.FalseUndefended(english, facts) is { Count: > 0 } wrong)
+            // 1.000.1/1.001.1: Deckung („ungedeckt“, „nur von X gedeckt“) und Bauernstruktur am Brett nachgeprüft.
+            var (wrong, sole, pawns) = MoveComparisonClaims.Check(english, facts);
+            if (wrong.Count > 0 || sole.Count > 0 || pawns.Count > 0)
             {
-                _logger.LogInformation("Fable-Begründung verworfen (nennt die gedeckte Figur auf {Squares} ungedeckt)", string.Join(", ", wrong));
-                hint = MoveComparisonClaims.Hint(wrong, german: true);
+                _logger.LogInformation("Fable-Begründung verworfen (am Brett falsch: ungedeckt {Squares}, nur einfach gedeckt {Sole}, Bauernstruktur {Pawns})",
+                    string.Join(", ", wrong), string.Join(", ", sole), string.Join(", ", pawns));
+                hint = MoveComparisonClaims.Hint(wrong, sole, german: true, pawns);
                 continue;
             }
             return english;
@@ -226,7 +239,9 @@ public sealed class ClubFableExplanations
     /// Nebenwegen nicht und behauptete eine Stellung, die nicht auf dem Brett stand; seit 0.974.0 beantwortet Absatz 2
     /// zuerst, warum die naheliegende Antwort auf den besten Zug nicht geht — Befund an Vereinspartie 251, 20...e4: der Text
     /// erzählte 21.Lf1 nach, die Frage am Brett ist 21.Txe4; seit 0.999.6 genügt für eine Drohung des besten Zuges ein
-    /// Satz — Befund an Vereinspartie 260, 15...Td8: der Text rechnete 16.Tc1 und 16.a3 mit Damenverlust vor).</summary>
+    /// Satz — Befund an Vereinspartie 260, 15...Td8: der Text rechnete 16.Tc1 und 16.a3 mit Damenverlust vor; seit 1.001.1
+    /// der Fokus auf der Frage, die sich ein Klubspieler stellt: nicht offensichtliche Verteidigungen erklären, offensichtliche
+    /// Einsteller nicht — Befund an Vereinspartie 261, 19...Le5: der Text erklärte 20...Lxf4 21.Lxf4 statt 20...exf3 e.p.).</summary>
     internal const string SystemPrompt =
         """
         Du bist ein erfahrener Schachtrainer und erklärst Klubspielern (Elo 1500–2000) einen Fehler aus ihrer eigenen Ligapartie.
@@ -237,6 +252,10 @@ public sealed class ClubFableExplanations
         Antworten auf den besten Zug, die auf den ersten Blick gut aussehen und in der Rechnung scheitern („Obvious replies to
         the better move“), jeweils mit Engine-Linie und Fakten.
 
+        Pro Fehler liegt der Fokus auf der Frage, die sich ein Klubspieler am Brett wirklich stellt: Erkläre die nicht
+        offensichtlichen Verteidigungen und Antworten (z. B. ein Zwischenschlag, ein Schlag en passant, ein Gegenangriff),
+        nicht die offensichtlichen Einsteller, bei denen der Gegner einfach zurückschlägt — das sieht jeder selbst.
+
         Schreibe auf Deutsch, in zwei kurzen Absätzen und höchstens einem Merksatz, zusammen höchstens 150 Wörter — knapp
         und auf den Punkt, lieber kürzer:
         1. Der taktische Grund, nicht die Nacherzählung der Engine-Linie. Nenne zuerst das Motiv beim Namen (z. B.
@@ -246,7 +265,8 @@ public sealed class ClubFableExplanations
            oder aufgibt), und mischt nicht die Pläne beider Seiten — das Motiv des besten Zugs gehört in Absatz 2. Dann der
            Einstieg der Widerlegung mit Zugnummer. Stehen unter „Other defences in the refutation line“ andere
            Verteidigungen, sag zu JEDER in einem Halbsatz, woran sie scheitert: der widerlegende Zug mit Zugnummer und das
-           Faktum dazu (z. B. „auf 18...Txd5 folgt 19.Se7+ mit Gabel auf König und Dame“). Steht dort, dass eine Verteidigung
+           Faktum dazu (z. B. „auf 18...Txd5 folgt 19.Se7+ mit Gabel auf König und Dame“) — ausgenommen die mit dem
+           Vermerk „obviously loses material … — do not discuss“: die stellen einfach Material ein, die erwähnst du nicht. Steht dort, dass eine Verteidigung
            etwa so gut ist wie die Hauptlinie, dann sag das, statt ein Scheitern zu behaupten. „Einzige Verteidigung“ oder
            „alle Züge verlieren“ nur, wenn die Fakten die Zahl der legalen Züge nennen („exactly … legal moves“);
            Verteidigungen, die nicht gerechnet sind, erwähnst du nicht. Von der Hauptlinie nur so viel, wie zum Verständnis
@@ -281,6 +301,11 @@ public sealed class ClubFableExplanations
           dem König“ oder „in der Linie des Turms“ nie aus dem Gefühl. „Ungedeckt“, „hängt“ oder „ungeschützt“ nur, wenn
           ein Faktum „defended by nothing“ es sagt — sonst zählen die Fakten „attacked by …; defended by …“; der Text wird
           darauf am Brett nachgeprüft.
+        - Bauernstruktur: Entsteht in einer Linie eine auffällige Bauernschwäche, die ein Klubspieler sofort sieht (ein Faktum
+          „pawn structure at the end of this line“: isolierter, doppelter oder rückständiger Bauer), und die Bewertung bleibt
+          trotzdem etwa gleich, dann sag in EINEM Satz aus den Fakten, warum sie nicht zählt (z. B. „der isolierte Bauer e4
+          ist ein Freibauer, dafür hat Weiß die Mehrheit am Damenflügel“). „Isoliert“, „Isolani“, „Freibauer“, „Doppelbauer“,
+          „rückständig“ und Mehrheiten nur, wenn ein solches Faktum es nennt — der Text wird darauf am Brett nachgeprüft.
         - Materialaussagen (wer wie viel Material mehr hat) nur aus dem Faktum „in pieces: …“ am Ende der Linie (z. B.
           „Black is a knight up for a pawn“ = Schwarz hat eine Figur gegen einen Bauern mehr), nie aus der Bewertung
           ableiten: −6,4 heißt nicht „einen Bauern vorn“.

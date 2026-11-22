@@ -17,8 +17,10 @@ namespace RookHub.Api.Services.Engines;
 /// <para><b>Auswahl</b>: in der besten Antwort-Linie auf den schwächeren Zug an den ersten <see cref="Decisions"/> Zügen des
 /// Verteidigers (der Seite, die den Fehler gemacht hat — Halbzug 1 und 3 der Linie) die naheliegenden anderen Züge: steht
 /// er im Schach, alle anderen legalen Züge; sonst nur die Züge, die die gerade gezogene Figur des Gegners schlagen (ein
-/// Opfer annehmen, anders zurückschlagen). Reihenfolge je Entscheidung: Schlagen der gezogenen Figur, Königszüge, der Rest;
-/// darin die billigere Figur zuerst. Unterverwandlungen zählen nicht. Die Entscheidungen kommen abwechselnd an die Reihe,
+/// Opfer annehmen, anders zurückschlagen; seit 1.001.1 auch en passant). Reihenfolge je Entscheidung: zuerst die nicht
+/// offensichtlichen Züge (seit 1.001.1 rücken grobe Einsteller ohne Schach — <see cref="StaticNet"/> mindestens
+/// <see cref="ObviousLossPawns"/> unter dem Zug der Linie — nach hinten), darin Schlagen der gezogenen Figur, Königszüge,
+/// der Rest, jeweils die billigere Figur zuerst. Unterverwandlungen zählen nicht. Die Entscheidungen kommen abwechselnd an die Reihe,
 /// bis der Deckel (<c>ClubMistakeComparisons:DefenceLines</c>, Vorgabe <see cref="DefaultMax"/>) erreicht ist — eine
 /// Entscheidung mit vielen Zügen verdrängt die andere nicht.</para>
 /// <para><b>Zeile</b>: <see cref="MoveComparisonLine.CandidateUci"/> = der schwächere Zug, <see cref="MoveComparisonLine.ReplyUci"/>
@@ -38,11 +40,15 @@ internal static class MoveComparisonDefences
     /// <summary>Eine Entscheidung des Verteidigers in der Widerlegung: die Stellung davor, der Weg dorthin (SAN ab der Stellung
     /// nach dem schwächeren Zug), der Zug der Linie und die naheliegenden anderen in Rangfolge.</summary>
     private sealed record Spot(int Ply, string FenBefore, IReadOnlyList<string> Prefix, string MainSan, bool InCheck,
-        int LegalMoves, IReadOnlyList<Alternative> Alternatives);
+        int LegalMoves, IReadOnlyList<Alternative> Alternatives, IReadOnlyList<string> MainNext);
 
     /// <summary>Eine andere Verteidigung als Fakt: Zug, Stellung danach, Bewertung aus Sicht des Lesers, die Linie der Engine
     /// (wie der Gegner sie widerlegt) und geprüfte Aussagen über das Feld des ersten Zuges dieser Linie.</summary>
-    internal sealed record Defence(string San, string FenAfter, string Eval, IReadOnlyList<string> Line, IReadOnlyList<string> SquareFacts);
+    /// <param name="ObviousLoss">Seit 1.001.1: die Verteidigung stellt offensichtlich Material ein (<see cref="ObviousLossOf"/>) —
+    /// der erste Zug der Engine-Linie, der das tut (z. B. „Bxf4“), sonst <c>null</c>. Solche Verteidigungen erklärt der Text
+    /// nicht.</param>
+    internal sealed record Defence(string San, string FenAfter, string Eval, IReadOnlyList<string> Line, IReadOnlyList<string> SquareFacts,
+        string? ObviousLoss = null);
 
     /// <summary>Eine Entscheidung samt ihrer gerechneten anderen Verteidigungen. <see cref="Complete"/> = JEDER andere legale
     /// Zug ist gerechnet (dann darf der Text „hat nur diese Züge“ sagen).</summary>
@@ -93,8 +99,12 @@ internal static class MoveComparisonDefences
                 if (row is null || PlayUci(spot.FenBefore, alt.Uci) is not { } after || !MoveComparisonFromAnalysis.SameFen(after, row.Fen)) continue;
                 if (EvalOf(row.Fen, row.ResultJson) is not { } ev) continue;
                 var line = Pvs(row.Fen, row.ResultJson).FirstOrDefault()?.Line ?? [];
-                defences.Add(new Defence(alt.San, row.Fen, MoverText(ev, moverWhite), line, SquareFacts(c, weak, row.Fen, line)));
+                var obvious = ObviousLossOf(spot, alt.San, row.Fen, line, ev, weak);
+                defences.Add(new Defence(alt.San, row.Fen, MoverText(ev, moverWhite), line,
+                    obvious is null ? SquareFacts(c, weak, row.Fen, line, alt.Uci) : [], obvious));
             }
+            // Nicht offensichtliche Verteidigungen zuerst (die Auswahl ordnet nur nach Brettgeometrie, hier zählt die Linie).
+            defences = defences.OrderBy(x => x.ObviousLoss is null ? 0 : 1).ToList();
             if (defences.Count > 0)
                 result.Add(new Decision(spot.Prefix, spot.FenBefore, spot.MainSan, spot.InCheck, spot.LegalMoves,
                     defences.Count == spot.LegalMoves - 1, defences));
@@ -126,12 +136,14 @@ internal static class MoveComparisonDefences
                     var target = lastTo;
                     // Unterverwandlungen sind keine eigene Verteidigung.
                     var others = legal.Where(m => m.San is not null && GamePlies.ToUci(m) is var u && u != mainUci && !(u.Length == 5 && u[4] != 'q')).ToList();
+                    var mainNet = StaticNet(fen, main);
                     var near = (inCheck ? others : others.Where(m => Takes(m, target)))
-                        .OrderBy(m => Takes(m, target) ? 0 : PieceType(m) == 'k' ? 1 : 2)
+                        .OrderBy(m => !(m.San!.Contains('+') || m.San.Contains('#')) && StaticNet(fen, m) <= mainNet - ObviousLossPawns ? 1 : 0)
+                        .ThenBy(m => Takes(m, target) ? 0 : PieceType(m) == 'k' ? 1 : 2)
                         .ThenBy(m => PieceType(m) switch { 'k' => 0, 'p' => 1, 'n' or 'b' => 3, 'r' => 5, _ => 9 })
                         .ThenBy(m => GamePlies.ToUci(m), StringComparer.Ordinal)
                         .Select(m => new Alternative(GamePlies.ToUci(m), m.San!)).ToList();
-                    spots.Add(new Spot(i, fen, prefix.ToList(), main.San, inCheck, others.Count + 1, near));
+                    spots.Add(new Spot(i, fen, prefix.ToList(), main.San, inCheck, others.Count + 1, near, NextSans(board, main, pv, i)));
                 }
                 prefix.Add(main.San);
                 lastTo = main.NewPosition.ToString();
@@ -145,7 +157,136 @@ internal static class MoveComparisonDefences
         return spots;
     }
 
-    private static bool Takes(Move m, string? square) => square is not null && m.CapturedPiece is not null && m.NewPosition.ToString() == square;
+    /// <summary>Schlägt der Zug die Figur auf <paramref name="square"/>? Seit 1.001.1 auch en passant (Befund Vereinspartie 261,
+    /// 20.f4 exf3: Zielfeld f3, geschlagen wird der Bauer auf f4).</summary>
+    internal static bool Takes(Move m, string? square) => square is not null && m.CapturedPiece is not null && CapturedSquare(m) == square;
+
+    /// <summary>Das Feld der geschlagenen Figur — beim En-passant-Schlag die Linie des Ziels auf der Reihe des Ausgangsfelds.</summary>
+    private static string CapturedSquare(Move m)
+    {
+        var to = m.NewPosition.ToString();
+        return m.Parameter is MoveEnPassant ? $"{to[0]}{m.OriginalPosition.ToString()[1]}" : to;
+    }
+
+    /// <summary>Ab so vielen Bauern Material schlechter als die Hauptlinie gilt eine andere Verteidigung als offensichtlicher
+    /// Einsteller (Auswahl und Fakten, 1.001.1).</summary>
+    internal const double ObviousLossPawns = 2.0;
+
+    /// <summary>Die nächsten zwei Züge der Hauptlinie nach dem Zug des Verteidigers (SAN), zum Vergleich der Materialbilanz.</summary>
+    private static List<string> NextSans(ChessBoard board, Move main, IReadOnlyList<string> pv, int i)
+    {
+        var result = new List<string>();
+        try
+        {
+            var copy = ChessBoard.LoadFromFen(board.ToFen());
+            copy.Move(FindMove(copy.Moves(), GamePlies.ToUci(main))!);
+            for (var k = i + 1; k < pv.Count && k <= i + 2; k++)
+            {
+                var m = FindMove(copy.Moves(generateSan: true), pv[k]);
+                if (m?.San is null) break;
+                result.Add(m.San);
+                copy.Move(m);
+            }
+        }
+        catch
+        {
+            // Linie nicht nachzuspielen — dann ohne Fortsetzung.
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Grobe Brettrechnung für die Reihenfolge der Auswahl (1.001.1): was der Zug schlägt, abzüglich des besten einfachen
+    /// Schlags, den der Gegner danach hat (ungedeckte Figur voll, gedeckte nur, wenn sie mehr wert ist als der Schläger) —
+    /// in Bauern aus Sicht des Ziehenden. Fesselungen und Zwischenzüge bleiben außen vor; die Fakten prüfen später an der
+    /// Engine-Linie (<see cref="ObviousLossOf"/>).
+    /// </summary>
+    private static int StaticNet(string fen, Move m)
+    {
+        try
+        {
+            var board = ChessBoard.LoadFromFen(fen);
+            var move = FindMove(board.Moves(), GamePlies.ToUci(m));
+            if (move is null) return 0;
+            var gained = move.CapturedPiece is { } cp ? Value(cp.Type.AsChar) : 0;
+            board.Move(move);
+            if (BoardGeometry.FromFen(board.ToFen()) is not { } geo) return gained;
+            var best = 0;
+            foreach (var reply in board.Moves().Where(r => r.CapturedPiece is not null))
+            {
+                var victim = Value(reply.CapturedPiece!.Type.AsChar);
+                var sq = CapturedSquare(reply);
+                var defended = geo.Attackers(sq, char.IsUpper(geo.PieceAt(sq))).Count > 0;
+                best = Math.Max(best, defended ? victim - Value(reply.Piece.Type.AsChar) : victim);
+            }
+            return gained - best;
+        }
+        catch { return 0; }
+    }
+
+    private static int Value(char type) => char.ToLowerInvariant(type) switch
+    { 'p' => 1, 'n' or 'b' => 3, 'r' => 5, 'q' => 9, _ => 0 };
+
+    /// <summary>Material aus Sicht von Weiß (Bauerneinheiten) einer FEN.</summary>
+    private static int Material(string fen)
+    {
+        var sum = 0;
+        foreach (var ch in fen.Split(' ')[0])
+            if (char.IsLetter(ch)) sum += char.IsUpper(ch) ? Value(ch) : -Value(ch);
+        return sum;
+    }
+
+    /// <summary>Die Materialbilanz (Sicht von Weiß) nach jedem der ersten <paramref name="plies"/> Züge ab <paramref name="fen"/>.</summary>
+    private static List<int> MaterialAlong(string fen, IReadOnlyList<string> sans, int plies)
+    {
+        var result = new List<int>();
+        try
+        {
+            var board = ChessBoard.LoadFromFen(fen);
+            foreach (var san in sans.Take(plies))
+            {
+                var m = Array.Find(board.Moves(generateSan: true), x => x.San == san);
+                if (m is null) break;
+                board.Move(m);
+                result.Add(Material(board.ToFen()));
+            }
+        }
+        catch
+        {
+            // was bis hier gespielt ist, zählt
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Stellt die andere Verteidigung offensichtlich Material ein (1.001.1, Befund Vereinspartie 261, 19...Le5: 20...Lxf4
+    /// 21.Lxf4 — „nutzlos, absolut offensichtlich“)? Ja, wenn sie kein Schach gibt, der erste Zug der Engine-Linie schlägt,
+    /// die Materialbilanz des Verteidigers nach einem UND nach zwei Halbzügen der Linie mindestens
+    /// <see cref="ObviousLossPawns"/> Bauern unter der der Hauptlinie (Zug des Verteidigers + zwei Halbzüge) liegt und auch
+    /// die Bewertung mindestens so viel schlechter ist (eine Gegendrohung, die das Material zurückholt, bleibt eine echte
+    /// Wahl). Nicht betroffen sind Widerlegungen mit Schach oder Gabel wie 245/25...Lc8 (26...Txc8 27.Sd7+). → der
+    /// schlagende Zug (SAN) oder <c>null</c>.
+    /// </summary>
+    private static string? ObviousLossOf(Spot spot, string san, string fenAfter, IReadOnlyList<string> line, Ev ev, MoveComparisonLine weak)
+    {
+        if (san.Contains('+') || san.Contains('#') || line.Count == 0 || !line[0].Contains('x')) return null;
+        var defenderWhite = FenFields.WhiteToMove(spot.FenBefore);
+        int Own(int whiteMaterial) => defenderWhite ? whiteMaterial : -whiteMaterial;
+        if (MoveComparisonBoard.AfterMove(spot.FenBefore, spot.MainSan) is not { } mainFen) return null;
+        var main = MaterialAlong(mainFen, spot.MainNext, 2).Select(Own).Prepend(Own(Material(mainFen))).Max();
+        var alt = MaterialAlong(fenAfter, line, 2).Select(Own).ToList();
+        if (alt.Count == 0 || alt.Max() > main - ObviousLossPawns) return null;
+        // Die Bewertung muss es bestätigen (aus Sicht des Verteidigers; Matt zählt wie ±1000).
+        if (EvalOf(weak.Fen, weak.ResultJson) is not { } mainEv) return null;
+        if (OwnScore(mainEv, defenderWhite) - OwnScore(ev, defenderWhite) < ObviousLossPawns) return null;
+        return line[0];
+    }
+
+    private static double OwnScore(Ev e, bool white)
+    {
+        var w = Math.Clamp(e.Score / 100.0, -1000, 1000);
+        return white ? w : -w;
+    }
 
     private static char PieceType(Move m) => char.ToLowerInvariant(m.Piece.Type.AsChar);
 
@@ -155,7 +296,7 @@ internal static class MoveComparisonDefences
     /// (geschlagen oder weggelenkt), und jetzt deckt es der Verteidiger gar nicht mehr. Nur Brettgeometrie
     /// (<see cref="BoardGeometry"/>): „decken“ heißt bestreichen, Fesselungen bleiben außen vor.
     /// </summary>
-    private static List<string> SquareFacts(MoveComparison c, MoveComparisonLine weak, string fenAfter, IReadOnlyList<string> line)
+    private static List<string> SquareFacts(MoveComparison c, MoveComparisonLine weak, string fenAfter, IReadOnlyList<string> line, string defenceUci)
     {
         var facts = new List<string>();
         if (line.Count == 0 || weak.CandidateUci.Length < 4 || SanOf(c.Fen, weak.CandidateUci) is not { } weakSan) return facts;
@@ -173,7 +314,10 @@ internal static class MoveComparisonDefences
             if (BoardGeometry.FromFen(weak.Fen) is { } then && BoardGeometry.FromFen(board.ToFen()) is { } now)
             {
                 var covered = then.Attackers(square, defenderWhite);
-                if (covered.Count > 0 && covered.All(p => now.PieceAt(p.Square) != p.Piece) && now.Attackers(square, defenderWhite).Count == 0)
+                // Ist die deckende Figur selbst auf das Feld gezogen (20...Lxf4 21.Lxf4 in Partie 261), ist sie nicht „weggelenkt“ —
+                // der Satz „f4 war nur vom Läufer gedeckt“ führte den Text in die Irre (1.001.1).
+                var selfMoved = defenceUci.Length >= 4 && defenceUci[2..4] == square && covered.Any(p => p.Square == defenceUci[..2]);
+                if (!selfMoved && covered.Count > 0 && covered.All(p => now.PieceAt(p.Square) != p.Piece) && now.Attackers(square, defenderWhite).Count == 0)
                     facts.Add($"after {weakMove} the square {square} was covered only by "
                               + ExplanationFacts.JoinAnd(covered.Select(p => $"the {ExplanationFacts.PieceName(char.ToLowerInvariant(p.Piece))} on {p.Square}").ToList())
                               + $", which {(covered.Count == 1 ? "is" : "are")} no longer there");

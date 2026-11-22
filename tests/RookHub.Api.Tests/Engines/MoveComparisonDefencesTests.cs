@@ -547,6 +547,34 @@ public class MoveComparisonDefencesTests : IDisposable
         Assert.True((await ReadinessAsync()).Ready);
     }
 
+    /// <summary>1.001.1 (Vergleich 2854, Partie 261): ein Vergleich, der schon Verteidigungen hat, bekommt beim Neu-Erklären
+    /// die nach, die die Auswahl heute zusätzlich plant (dort 20...exf3 e.p.) — vorher plante die Pumpe nur bei NULL Zeilen.</summary>
+    [Fact]
+    public async Task Reexplain_TeilweiseVerteidigungen_fehlendeWerdenNachgeplant_vorhandeneNichtDoppelt()
+    {
+        SeedGame(new DateOnly(2026, 11, 8));
+        var old = Service(Fable(defenceLines: 1));
+        var id = await CandidatesDoneAsync(old);
+        var first = Assert.Single(Defences(await ReloadAsync(id)));
+        Assert.Equal("e7c8", first.ReplyUci);
+        foreach (var job in await _db.AnalysisJobs.Where(j => j.Status != AnalysisJobStatus.Done).ToListAsync())
+            await FinishJobAsync(job.Fen, ForkNxb6);
+        await old.PumpOneAsync(id);
+        await BackgroundRunsEndedAsync(id);
+        _fable.Answers.Enqueue(FableText);
+        await old.ExplainAsync(id, CancellationToken.None);
+        Assert.Equal(MoveComparisonStatus.Done, (await ReloadAsync(id)).Status);
+
+        var svc = Service(Fable());
+        Assert.True(await svc.ReexplainAsync(id));
+        await svc.PumpOneAsync(id);
+        var c = await ReloadAsync(id);
+        Assert.Equal(MoveComparisonStatus.Replies, c.Status);
+        Assert.Equal(["e7c8", "c8b8", "g8c8", "e7c6"], Defences(c).Select(l => l.ReplyUci));
+        Assert.Equal(MoveComparisonLineState.Done, Defences(c)[0].State);   // die vorhandene bleibt, wird nicht neu gerechnet
+        Assert.Equal(3, await _db.AnalysisJobs.CountAsync(j => j.Status != AnalysisJobStatus.Done));
+    }
+
     [Fact]
     public async Task Reexplain_FableLiefertNichts_alteBegruendungBleibt_lokalesModellErsetztSieNicht()
     {

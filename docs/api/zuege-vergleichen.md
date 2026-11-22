@@ -301,6 +301,42 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
   * Auftrag Fable: Motiv aus Sicht der Seite, die den Fehler spielte, ohne die Pläne beider Seiten zu mischen; „ungedeckt“
     nur mit „defended by nothing“; Materialaussagen nur aus „in pieces“, nie aus der Bewertung. Lokales Modell sinngemäß.
   * **Bestand bleibt**; Vergleich neu erklären wie oben (Re-Explain).
+* **Nicht offensichtliche Verteidigungen statt Einsteller, „nur von X gedeckt“ geprüft** (1.001.1, Befund 2026-11-22 an
+  Vereinspartie 261, Fehler 19...Le5 statt 19...f4, Vergleich 2854, Stellung `r4rk1/p5bp/2p1b1p1/5p2/2P1p3/1P2B3/P3BPPP/1R1R2K1 b`):
+  die Widerlegung 20.f4 greift den Läufer an; der Text erklärte lang 20...Lxf4 21.Lxf4 („nutzlos, absolut offensichtlich“),
+  nichts zu 20...exf3 e.p., und schrieb „das Feld f4 wurde nur vom Läufer selbst gedeckt“ (Le3 deckt f4).
+  * `MoveComparisonDefences`: ein En-passant-Schlag zählt als Schlagen der gezogenen Figur (Feld der geschlagenen Figur =
+    Linie des Ziels, Reihe des Ausgangsfelds) — vorher fiel 20...exf3 durchs Raster, gerechnet wurde nur 20...Lxf4.
+  * Auswahl: Züge, die nach grober Brettrechnung (eigener Schlag minus bester einfacher Schlag des Gegners, gedeckte Figur
+    nur bei Mehrwert) mindestens 2 Bauern schlechter stehen als der Zug der Linie und kein Schach geben, rücken nach hinten.
+  * Fakten: eine gerechnete Verteidigung gilt als offensichtlicher Einsteller (`Defence.ObviousLoss`), wenn sie kein Schach
+    gibt, der erste Zug der Engine-Linie schlägt, die Materialbilanz des Verteidigers nach einem UND zwei Halbzügen mindestens
+    2 Bauern unter der Hauptlinie (Zug + zwei Halbzüge) liegt und die Bewertung mindestens 2 Bauern schlechter ist. Dann
+    steht nur „- 20...Bxf4 instead of 20...Bc7: obviously loses material (21.Bxf4 simply recaptures) — do not discuss.“ da,
+    ohne Linie und Fakten, sie steht nach den anderen und fehlt in `AllowedMoves`. Widerlegungen mit Schach/Gabel wie
+    245/25...Lc8 (26...Txc8 27.Sd7+) bleiben erklärt.
+  * Feld-Faktum „… was covered only by …, which is no longer there“ entfällt, wenn die deckende Figur selbst auf das Feld zog.
+  * `MoveComparisonClaims.FalseSoleDefender`: „nur von/vom X (selbst) gedeckt“, „einzige Deckung/Verteidiger“, „defended
+    only by“, „only/sole defender“ — geprüft in denselben Stellungen; die Aussage gilt, wenn dort genau EINE Figur der
+    eigenen Farbe den Bauern/die Figur auf dem Feld deckt und zur genannten Art (und zum Feld) passt; „selbst“ gilt nie.
+  * Auftrag Fable (lokal sinngemäß): Fokus auf der Frage, die sich ein Klubspieler wirklich stellt — nicht offensichtliche
+    Verteidigungen erklären, offensichtliche Einsteller nicht.
+  * **Re-Explain plant fehlende Verteidigungen nach**: die Pumpe vergleicht die heutige Auswahl mit den vorhandenen
+    Zeilen (Kandidat, Zug, Halbzug) und reiht die fehlenden ein — vorher nur, wenn ein Vergleich GAR KEINE hatte. Für 2854
+    nach dem Deploy: `POST /api/admin/move-comparisons/2854/re-explain` → 20...exf3 wird gerechnet, dann neu erklärt.
+* **Bauernstruktur-Fakten** (1.001.1, Befund 2026-11-22 an Vereinspartie 261, Fehler 21...exf3 statt 21...h5, Stellung
+  `r1r3k1/p6p/2p1b1p1/2B1bp2/2P1p3/1P3P2/P3B1PP/1R1R2K1 b`): nach 21...h5 … 26.Txd1 fxe4 hat Schwarz einen isolierten
+  e-Bauern, der Text sagte nur „ausgeglichen“ — der Nutzer: „warum ist das kein Problem für Schwarz?“ (e4 ist Freibauer,
+  Weiß hat die Damenflügel-Mehrheit).
+  * `PawnStructure` (Games): isoliert, doppelt, rückständig, Freibauer („isolated but passed“), halboffene Linie und
+    Blockade beim Isolani/rückständigen Bauern, Mehrheiten je Flügel (a–d / e–h) — nur, wenn am Ende der Linie eine dieser
+    Eigenschaften gegenüber der Stellung vor dem Zug NEU ist. Steht am Ende der besten Antwort-Linie nach dem schwächeren
+    Zug (in „Concretely …“) und nach der besten Antwort auf den besten Zug („Concretely, after 21...h5 and that line: pawn
+    structure at the end of this line (after 26...fxe4): Black's pawn e4 is isolated but passed; White has a 3-vs-2
+    queenside majority; Black has a 3-vs-2 kingside majority.“) — für Fable und das lokale Modell.
+  * Auftrag: auffällige Schwäche bei etwa gleicher Bewertung → EIN Satz aus den Fakten, warum sie nicht zählt; keine
+    Strukturaussage ohne Faktum. `MoveComparisonClaims.FalsePawnClaims` prüft „isoliert/Isolani/Freibauer/Doppelbauer/
+    rückständig“ (en „isolated/passed pawn/doubled/backward“) am Brett, verneinte Aussagen ausgenommen.
 * **Besitz und Sichtbarkeit**: Besitzer ist der Besitzer der Analyse (Haus-Engine-Konto). Alle Nutzerwege (`/api/move-comparisons`
   Liste/Lesen/Löschen, `MaxOpenPerUser`, `MaxKeptPerUser`) filtern `GameAnalysisId == null` — die Zeilen zählen nirgends mit.
   Lesen darf, wer die Vereinspartie sieht: `GET /api/league/club/games/{id}/comparisons` (alle, nach Halbzug: `{ ply,

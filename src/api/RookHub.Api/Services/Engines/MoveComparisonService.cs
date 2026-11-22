@@ -412,7 +412,8 @@ public sealed class MoveComparisonService
     /// Gibt es etwas zu rechnen, geht der Vergleich zurück auf <see cref="MoveComparisonStatus.Replies"/> und kommt nach den
     /// Aufträgen von selbst wieder hier an. Jeder Weg in die Begründung führt durch <see cref="PumpOneAsync"/>, auch der
     /// direkt aus der Analyse (<see cref="MoveComparisonFromAnalysis"/>) und der neu angestoßene (<see cref="ReexplainAsync"/>
-    /// — ein Vergleich, der seine Verteidigungen schon hat, bekommt dort nur das Fehlende nach). Ein Auftrag, der sich nicht
+    /// — ein Vergleich, der seine Verteidigungen schon hat, bekommt dort nur das Fehlende nach, seit 1.001.1 auch einzelne
+    /// Verteidigungen, die die Auswahl inzwischen zusätzlich plant). Ein Auftrag, der sich nicht
     /// einreihen lässt, macht nur seine Zeile <c>Failed</c> — der Text entsteht dann ohne diese Linie (ohne flache Sicht ohne
     /// verlockende Antworten). → ob Zeilen dazukamen.
     /// </summary>
@@ -420,13 +421,19 @@ public sealed class MoveComparisonService
     {
         if (_fable is null || c.GameAnalysisId is null || _running.IsRunning(c.Id)) return false;
         var glance = c.Lines.FirstOrDefault(l => l.Kind == MoveComparisonLineKind.BestMoveGlance);
-        var defences = _fable.DefenceLines > 0 && !c.Lines.Any(l => l.Kind == MoveComparisonLineKind.Defence);
+        // Seit 1.001.1 je Zeile: was die Auswahl heute plant und noch fehlt (ein Vergleich von vor einer Änderung der Auswahl —
+        // etwa 2854 ohne 20...exf3 e.p. — bekommt beim Neu-Erklären genau die neuen Verteidigungen nachgerechnet).
+        var missingDefences = _fable.DefenceLines > 0
+            ? MoveComparisonDefences.Plan(c, _fable.DefenceLines).Where(p => !c.Lines.Any(l => l.Kind == MoveComparisonLineKind.Defence
+                && l.CandidateUci == p.CandidateUci && l.ReplyUci == p.ReplyUci && l.Ordinal == p.Ordinal)).ToList()
+            : [];
+        var defences = missingDefences.Count > 0;
         var shallow = _fable.Tries.Max > 0 && glance is null;
         var tries = _fable.Tries.Max > 0 && glance is { State: MoveComparisonLineState.Done }
             && !c.Lines.Any(l => l.Kind == MoveComparisonLineKind.BestMoveTry);
         if ((!defences && !shallow && !tries) || !await _fable.AppliesAsync(_db, c, ct)) return false;
         var lines = new List<MoveComparisonLine>();
-        if (defences) lines.AddRange(MoveComparisonDefences.Plan(c, _fable.DefenceLines));
+        if (defences) lines.AddRange(missingDefences);
         if (shallow && MoveComparisonBestMoveTries.PlanGlance(c) is { } look) lines.Add(look);
         if (tries) lines.AddRange(MoveComparisonBestMoveTries.Plan(c, _fable.Tries));
         if (lines.Count == 0) return false;

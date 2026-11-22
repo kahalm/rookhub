@@ -69,11 +69,13 @@ internal sealed class MoveComparisonExplainer(IClaudeJsonClient llm, ClubFableEx
                 logger.LogInformation("Zugvergleich: Begruendung verworfen (nennt einen fremden Zug): {Text}", text);
                 continue;
             }
-            // 1.000.1 (Befund Vereinspartie 260, Fehler 5): eine gedeckte Figur „ungedeckt“/„hängt“ genannt → neu anfragen.
-            if (MoveComparisonClaims.FalseUndefended(text, facts) is { Count: > 0 } wrong)
+            // 1.000.1/1.001.1: Deckung („ungedeckt“, „nur von X gedeckt“) und Bauernstruktur am Brett nachgeprüft.
+            var (wrong, sole, pawns) = MoveComparisonClaims.Check(text, facts);
+            if (wrong.Count > 0 || sole.Count > 0 || pawns.Count > 0)
             {
-                logger.LogInformation("Zugvergleich: Begruendung verworfen (gedeckte Figur auf {Squares} ungedeckt genannt)", string.Join(", ", wrong));
-                hint = MoveComparisonClaims.Hint(wrong, german: false);
+                logger.LogInformation("Zugvergleich: Begruendung verworfen (am Brett falsch: ungedeckt {Squares}, nur einfach gedeckt {Sole}, Bauernstruktur {Pawns})",
+                    string.Join(", ", wrong), string.Join(", ", sole), string.Join(", ", pawns));
+                hint = MoveComparisonClaims.Hint(wrong, sole, german: false, pawns);
                 continue;
             }
             return text;
