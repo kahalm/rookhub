@@ -1609,6 +1609,23 @@
       "copyLink": "Kopiraj poveznicu",
       "linkCopied": "Poveznica kopirana!",
       "copyFailed": "Kopiranje nije uspjelo"
+    },
+    "encounters": {
+      "points": "{{points}} iz {{games}} partija",
+      "none": "Za ovog igrača još nema susreta.",
+      "roundShort": "K{{round}}",
+      "homeVs": "Doma protiv",
+      "awayAt": "U gostima kod",
+      "bye": "Slobodan",
+      "notPlayed": "Nije u postavi",
+      "next": "Sljedeće kolo",
+      "planned": "planirano",
+      "teamOnlyHint": "chess-results ovdje navodi samo ekipne mečeve. Pojedinačne partije (ploča, protivnik, rezultat) nalaze se na stranici igrača.",
+      "fetch": "Dohvati pojedinačne partije",
+      "refetch": "Osvježi pojedinačne partije",
+      "fetching": "Dohvaća se s chess-results …",
+      "fetchSlow": "Još nije stiglo – chess-results je opterećen. Otvori igrača ponovno za minutu.",
+      "fetchFailed": "Stranicu igrača nije moguće zatražiti. Pokušaj ponovno kasnije."
     }
   },
   "puzzles": {

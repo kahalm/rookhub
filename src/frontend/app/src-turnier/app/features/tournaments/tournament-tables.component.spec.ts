@@ -327,6 +327,40 @@ describe('TournamentTablesComponent', () => {
     expect(favSpy).not.toHaveBeenCalled();
   });
 
+  // Wunsch 2026-11-22: Klick auf einen Spieler zeigt seine Begegnungen.
+  it('Spielername (Tabelle und Karte) meldet showPlayer; in der Karte ohne den Favoriten zu toggeln', () => {
+    const p = player();
+    component.players = component.displayedPlayers = [p];
+    const showSpy = jasmine.createSpy('showPlayer');
+    const favSpy = jasmine.createSpy('toggleFavorite');
+    component.showPlayer.subscribe(showSpy);
+    component.toggleFavorite.subscribe(favSpy);
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('td.mat-column-name button.player-link') as HTMLButtonElement).click();
+    expect(showSpy).toHaveBeenCalledWith(p);
+    (fixture.nativeElement.querySelector('.player-card button.player-name') as HTMLButtonElement).click();
+    expect(showSpy).toHaveBeenCalledTimes(2);
+    expect(favSpy).not.toHaveBeenCalled();
+  });
+
+  it('Einzelpaarungen: Namen aus der Startliste sind klickbar, unbekannte bleiben Text', () => {
+    const p = player({ name: 'Anna Muster' });
+    component.players = component.displayedPlayers = [p];
+    component.pairingColumns = ['board', 'white', 'result', 'black'];
+    component.displayedPairings = [{ board: 1, white: 'Anna Muster', black: 'Unbekannt, Udo', result: '1-0' }];
+    component.selectedTabIndex = 2;
+    const showSpy = jasmine.createSpy('showPlayer');
+    component.showPlayer.subscribe(showSpy);
+    fixture.detectChanges();
+
+    const white = fixture.nativeElement.querySelector('.pairing-card .pairing-team button.player-link') as HTMLButtonElement | null;
+    expect(white?.textContent?.trim()).toBe('Anna Muster');
+    expect(fixture.nativeElement.querySelectorAll('.pairing-card button.player-link').length).toBe(1);
+    white!.click();
+    expect(showSpy).toHaveBeenCalledWith(p);
+  });
+
   /** Ohne Mannschaftspaarungen (Einzelturnier mit Vereinsspalte) gibt es nichts zu oeffnen: Text bleibt Text. */
   it('zeigt den Verein ohne Mannschaftspaarungen als reinen Text', () => {
     component.players = component.displayedPlayers = [player()];

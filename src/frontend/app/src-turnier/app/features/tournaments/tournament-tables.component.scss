@@ -109,6 +109,15 @@
 
     .team-link { cursor: pointer; color: var(--rh-accent); text-decoration: underline; }
     .team-link:hover { color: color-mix(in srgb, var(--rh-accent) 75%, currentColor); }
+    /* Spielername als Knopf (Begegnungen): Akzentfarbe wie der Vereins-Link, aber ohne Unterstreichung — sonst waere
+       jede Zeile der Startliste doppelt unterstrichen (Name + Verein). Unterstrichen erst beim Darueberfahren. */
+    button.player-link {
+      background: none; border: 0; padding: 0; margin: 0; font: inherit; text-align: inherit; max-width: 100%;
+      cursor: pointer; color: var(--rh-accent);
+    }
+    button.player-link:hover { text-decoration: underline; }
+    button.player-link.player-name { font-weight: 500; }
+    button.player-link:focus-visible { outline: 2px solid var(--rh-accent); outline-offset: 2px; }
 
     /* Mobile card list for players */
     .mobile-only { display: none; }

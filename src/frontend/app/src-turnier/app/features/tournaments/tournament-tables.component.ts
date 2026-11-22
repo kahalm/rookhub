@@ -119,6 +119,21 @@ export class TournamentTablesComponent {
   @Output() toggleFavorite = new EventEmitter<TournamentPlayer>();
   @Output() toggleTeamFavorite = new EventEmitter<TournamentTeam>();
   @Output() showTeamPlayers = new EventEmitter<string>();
+  /** Klick auf einen Spielernamen (Startliste, Einzelpaarungen): seine Begegnungen zeigen (Wunsch 2026-11-22). */
+  @Output() showPlayer = new EventEmitter<TournamentPlayer>();
+
+  private byNameCache?: { source: TournamentPlayer[]; map: Map<string, TournamentPlayer> };
+
+  /** Der Spieler zu einem Namen aus den Paarungen (die nennen nur den Namen) — `null`, wenn er nicht in der Startliste steht. */
+  playerByName(name: string | null | undefined): TournamentPlayer | null {
+    if (!name) return null;
+    if (!this.byNameCache || this.byNameCache.source !== this.players) {
+      const map = new Map<string, TournamentPlayer>();
+      for (const p of this.players) map.set(p.name.trim().toLowerCase(), p);
+      this.byNameCache = { source: this.players, map };
+    }
+    return this.byNameCache.map.get(name.trim().toLowerCase()) ?? null;
+  }
 
   /**
    * Leere Paarungen (b1-t-paarungen-leer-ohne-weg): der Weg weiter steht im Leerzustand selbst. Die Detailseite gibt

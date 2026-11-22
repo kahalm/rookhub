@@ -1333,6 +1333,13 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Turnier-Detail und `/t/:id` in `min(--page-max-width, 96vw)` (Tabellenseite, 4.1; vorher fest 1 100 px). Niedrige
   Fenster (`max-width: 768px and max-height: 720px`, Boox 200 %): Kalender-Titel nur für Vorleser, sein ⓘ hinter der
   Trefferzahl; Detail-Kopfkarte mit 4-px-Polstern, 40-px-Knöpfen, Suchzeile kompakt wie am Laptop.
+- **Spielernamen sind Knöpfe** (1.006.0): in der Startliste (Tabelle und Handy-Karte), in den Einzelpaarungen und im
+  Mannschaftsfenster öffnet der Name die **Begegnungen** des Spielers (`player-encounters-dialog.component.ts`,
+  Inhalts-Dialog 560 px, `autoFocus: 'dialog'`). Aussehen: Akzentfarbe ohne Unterstreichung (erst bei Hover) — in der
+  Startliste stünde sonst neben dem unterstrichenen Verein ein zweiter Unterstrich je Zeile. In der Handy-Karte gehört
+  der Name dem Dialog, die übrige Karte schaltet weiter den Stern. Im Dialog je Runde eine Zeile Runde | Farbkästchen,
+  Brett, Gegner (klickbar, wechselt auf ihn), Wertung | Ergebnis rechts; die erste offene Runde ist getönt und trägt
+  den Chip „Nächste Runde“, weitere offene „geplant“.
 - Profil: erste Karte „Darstellung“ = RookHubs `app-theme-card` (`@rh/features/profile/theme-card.component`), auch
   beim Ladefehler. Spieltermine einer Liga mit „·“-Trenner in der Lücke (`overflow-x: clip`, wie ClubHub `.kid-meta`).
 
@@ -1577,6 +1584,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-22 | 1.006.0 · Turnierseite | Spielernamen öffnen die Begegnungen (8.2): Name als Knopf in Akzentfarbe ohne Unterstreichung, in der Handy-Karte eigenes Ziel neben dem Stern; Dialog mit einer Zeile je Runde, erste offene Runde getönt mit Chip „Nächste Runde“ | Wer einen Spieler anklickt, will seine Gegner und die nächste Paarung sehen; doppelte Unterstreichung je Zeile wäre unruhig | Nutzerwunsch 22.11. |
 | 2026-11-22 | 1.002.0 · Formular-Werkbank | „Partie hier beenden“ als zweiter roter Link vor „Zug löschen“ in der Zeile des Zugs (5.12); Rückfrage über `ConfirmService` mit Zug, SAN und Anzahl Halbzüge, Bestätigen „n Halbzüge löschen“ (Einzahl/Mehrzahl als Schlüsselpaar); Rückgängig in der bestehenden Zeile über dem Zug | Nach dem echten Ende stehen auf Formularen oft Kritzeleien oder Analysezüge, gekürzt wurde bisher per API (Partien 258, 262); die Rückfrage benennt genau, was wegfällt, weil der Name allein nicht sagt, dass Züge gelöscht werden | Nutzerwunsch 22.11. |
 | 2026-11-22 | 1.002.2 · Formular-Werkbank | „Partie hier beenden“ auch am Ende der Zugliste (roter Link unter dem Ende-Hinweis, nur solange Formular-Einträge übrig sind; Rückfrage mit Anzahl, Knopf „Rest verwerfen“); Ende-Hinweis „ohne Formular-Eintrag angehängt“ nach dem Beenden | Nicht zuordenbare Kritzeleien am Ende ließen sich sonst nicht loswerden, und nach dem Kürzen kamen sie beim Weiterspielen oder Neuladen zurück | Nutzerwunsch 22.11. |
 | 2026-11-22 | 1.001.0 · Kurs-Löser | „Warum diese Aufgabe:“ als leise Textzeile in der Kontext-Karte und in „Linien durchsehen“ (8.1), nur mit Vermerk | Im Kurs „Persönliche Taktiken“ war nicht zu sehen, warum eine Linie zur Partie gehört; die Zeile soll beim Start der Linie da sein, ohne die Bedienung zu verdrängen | Nutzerwunsch 22.11. („kannst du dort immer vermerken, warum du glaubst, dass die Linie relevant ist?“) |

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.006.0", date: "2026-11-22", changes: [
+    { en: "Tournament site: click a player (start list, individual pairings or a team’s line-up) to see their encounters in this tournament — per round the colour, opponent (with rating, clickable) and result, plus the next round once it is drawn. In team tournaments each round shows the team match (home/away, score) and the next fixture; the individual games come from the player’s chess-results page, which signed-in users can fetch with one click.",
+      de: "Turnierseite: Ein Klick auf einen Spieler (Startliste, Einzelpaarungen oder Mannschaftsaufstellung) zeigt seine Begegnungen in diesem Turnier — je Runde Farbe, Gegner (mit Wertung, anklickbar) und Ergebnis, dazu die nächste Runde, sobald sie ausgelost ist. In Mannschaftsturnieren steht je Runde der Mannschaftskampf (Heim/Auswärts, Ergebnis) und die nächste Begegnung; die Einzelpartien kommen von der chess-results-Spielerseite, die Angemeldete mit einem Klick holen können." },
+  ] },
   { version: "1.005.0", date: "2026-11-22", changes: [
     { en: "LeagueHub: a shared single league game (/partie/…) now opens the full game page in RookHub (/club-games/…) if you are signed in and can see that club game the normal way (league access and member of its club) — also after the link has expired. Everyone else sees the shared view as before; the shared match link (/s/…) stays as it is.",
       de: "LeagueHub: Eine geteilte einzelne Ligapartie (/partie/…) öffnet jetzt die volle Partieseite in RookHub (/club-games/…), wenn man angemeldet ist und diese Vereinspartie auf dem normalen Weg sieht (Liga-Zugang und Mitglied ihres Vereins) — auch nach Ablauf des Links. Alle anderen sehen die Teilen-Ansicht wie bisher; der geteilte Begegnungs-Link (/s/…) bleibt, wie er ist." },

@@ -17,6 +17,7 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { TeamPlayersDialogComponent } from './team-players-dialog.component';
+import { openPlayerEncounters } from './player-encounters-dialog.component';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
 import { TournamentTablesComponent } from './tournament-tables.component';
 import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription, CrawlerPairing } from '@rh/core/models';
@@ -345,13 +346,25 @@ export class PublicTournamentComponent implements OnInit {
 
   // --- Team detail dialog ---
 
+  /** Begegnungen eines Spielers (Klick auf den Namen in Startliste, Paarungen oder Mannschaftsaufstellung). */
+  showPlayer(player: TournamentPlayer): void {
+    // Aus der Mannschaftsaufstellung kommt der Spieler ohne alle Felder der Startliste — dort nachschlagen.
+    const full = this.players.find(p => p.snr === player.snr && p.name === player.name) ?? player;
+    openPlayerEncounters(this.dialog, {
+      tournamentId: this.id,
+      chessResultsId: this.tournament?.chessResultsId ?? null,
+      player: full,
+      players: this.players,
+    });
+  }
+
   showTeamPlayers(teamName: string): void {
     const team = this.teams.find(t => t.name === teamName);
     if (!team) return;
     this.tournaments.getTeam(this.id, team.snr).subscribe({
       next: (result) => {
         this.dialog.open(TeamPlayersDialogComponent, {
-          data: { teamName: result.name, players: result.players || [] },
+          data: { teamName: result.name, players: result.players || [], onPlayer: (pl: TournamentPlayer) => this.showPlayer(pl) },
           width: '500px',
           maxWidth: '95vw',
           autoFocus: 'dialog'   // d9-t-team-dialog-schliessen-gefuellt: sonst trägt „Schließen“ beim Öffnen die Fokus-Tonfläche

@@ -1609,6 +1609,23 @@
       "copyLink": "Copy link",
       "linkCopied": "Link copied!",
       "copyFailed": "Copy failed"
+    },
+    "encounters": {
+      "points": "{{points}} from {{games}} games",
+      "none": "No encounters for this player yet.",
+      "roundShort": "R{{round}}",
+      "homeVs": "Home vs",
+      "awayAt": "Away at",
+      "bye": "Bye",
+      "notPlayed": "Not in the line-up",
+      "next": "Next round",
+      "planned": "planned",
+      "teamOnlyHint": "chess-results only lists the team matches here. The individual games (board, opponent, result) are on the player page.",
+      "fetch": "Fetch individual games",
+      "refetch": "Update individual games",
+      "fetching": "Fetching from chess-results …",
+      "fetchSlow": "Not there yet — chess-results is busy. Open the player again in a minute.",
+      "fetchFailed": "Could not request the player page. Try again later."
     }
   },
   "puzzles": {

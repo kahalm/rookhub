@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Tournament, TournamentPlayer, TournamentTeam, Subscription, TournamentFavorite, TournamentMonitorStatus, CrawlJob, CrawlerPairing } from '@rh/core/models';
+import { PlayerRoundResult } from './player-encounters.util';
 
 /**
  * Kapselt alle HTTP-Endpunkte rund um die Turnier-Detailansicht
@@ -35,6 +36,18 @@ export class TournamentDetailService {
   // Response kann TeamPairingResponse[] oder TournamentPairing[] sein (vom Turniertyp abhängig)
   getPairings(id: string, round: number): Observable<CrawlerPairing[]> {
     return this.http.get<CrawlerPairing[]>(`/api/tournaments/${id}/pairings?round=${round}`);
+  }
+  /** Paarungen ALLER Runden auf einmal (ohne `round`) — fuer die Begegnungen eines Spielers. */
+  getAllPairings(id: string): Observable<CrawlerPairing[]> {
+    return this.http.get<CrawlerPairing[]>(`/api/tournaments/${id}/pairings`);
+  }
+  /** Einzelergebnisse eines Spielers aus seiner chess-results-Spielerseite (leer, solange sie nicht geholt wurde). */
+  getPlayerResults(id: string, snr: number): Observable<PlayerRoundResult[]> {
+    return this.http.get<PlayerRoundResult[]>(`/api/tournaments/${id}/players/${snr}/results`);
+  }
+  /** Spielerseiten (chess-results art=9) im Hintergrund holen lassen — braucht ein Konto. */
+  crawlPlayerDetails(chessResultsId: string, playerSnrs: number[]): Observable<unknown> {
+    return this.http.post('/api/tournaments/crawl/player-details', { chessResultsId, playerSnrs });
   }
   getTeamDetails(id: string, teamSnr: number): Observable<TournamentTeam> {
     return this.http.get<TournamentTeam>(`/api/tournaments/${id}/teams/${teamSnr}`);

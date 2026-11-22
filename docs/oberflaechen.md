@@ -67,6 +67,18 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   Warnung. Das Manifest verwies auf Symbole, die es nie gab, und die Turnierseite trug deshalb
   RookHubs Logo. `TurnierAssetTests` haelt jeden Verweis gegen die Dateien auf der Platte und
   prueft zusaetzlich, dass kein `icon.svg` verwiesen wird (es gibt keine Vektorfassung).
+- **Begegnungen eines Spielers** (1.006.0, Wunsch „Spieler anklicken → seine Begegnungen und ggf. die Auslosung der
+  nächsten Runde“): Klick auf einen Namen (Startliste, Einzelpaarungen, Mannschaftsfenster) auf `/tournaments/:id` und
+  `/t/:id` öffnet `player-encounters-dialog.component.ts`; die Zuordnung steckt rein in `player-encounters.util.ts`.
+  Kein neuer Endpunkt: `GET /api/tournaments/{id}/pairings` OHNE `round` liefert alle Runden auf einmal (eine Anfrage
+  statt einer je Runde — `anonymous-tournament` erlaubt 60/min je Adresse). **Einzelturnier**: Farbe, Gegner, Ergebnis
+  aus Spielersicht („+“/„−“ kampflos, Freilos ohne Gegner); ausgeloste Runde ohne Ergebnis = „Nächste Runde“.
+  **Mannschaftsturnier**: der Crawler hat KEINE Brettpaarungen, nur Mannschaftskämpfe (Heim/Auswärts, Ergebnis); die
+  erste Runde ohne Mannschaftsergebnis ist die nächste (Ligen mit vollem Spielplan zeigen alle Runden, z. B. 1. BL AUT).
+  Brett/Gegner/Ergebnis kommen erst aus der Spielerseite (chess-results art=9, `GET …/players/{snr}/results`), die nur
+  geholt ist, wenn jemand sie angestoßen hat — dafür „Einzelpartien holen“ (`POST /api/tournaments/crawl/player-details`,
+  braucht ein Konto, Gäste über `requireAccount`), danach 15 × 3 s Nachsehen. Partie-Links gibt es nicht: der Crawler
+  speichert keine Züge. Stand 22.11.: Turnier 12 (TMM 1. Klasse) hat Runden 1–4, Runde 5 ist noch nicht ausgelost.
 - **Turnierverlauf** (`src-turnier/app/features/tournament-history/`, Route
   `/tournaments/history`, Navbar): gespielte und kommende Turniere mit Platz, Punkten,
   Performance-Rating und Elo-Aenderung, umschaltbar auf Freunde (alle oder einzeln).

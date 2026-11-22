@@ -28,7 +28,14 @@ import { chessTitle } from './tournament-table.util';
         </ng-container>
         <ng-container matColumnDef="name">
           <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.name' | translate }}</th>
-          <td mat-cell *matCellDef="let p">{{ p.name }}</td>
+          <!-- Name klickbar (wenn der Aufrufer es anbietet): die Begegnungen des Spielers öffnen sich über diesem Fenster. -->
+          <td mat-cell *matCellDef="let p">
+            @if (data.onPlayer) {
+              <button type="button" class="player-link" (click)="data.onPlayer(p)">{{ p.name }}</button>
+            } @else {
+              {{ p.name }}
+            }
+          </td>
         </ng-container>
         <ng-container matColumnDef="elo">
           <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.elo' | translate }}</th>
@@ -47,13 +54,18 @@ import { chessTitle } from './tournament-table.util';
     /* d8-t-team-dialog-tabelle-kasten-dunkel: die Tabelle liegt ohne eigenen Grund auf der Dialogfläche — mat-table behielt
        sonst „surface“ (Seitenfarbe) und stand im Dunkeln als schwarzer Kasten auf dem helleren Dialog. */
     .full-width { width: 100%; --mat-table-background-color: transparent; }
+    .player-link {
+      background: none; border: 0; padding: 0; font: inherit; text-align: left; cursor: pointer;
+      color: var(--rh-accent); text-decoration: underline;
+    }
+    .player-link:focus-visible { outline: 2px solid var(--rh-accent); outline-offset: 2px; }
   `]
 })
 export class TeamPlayersDialogComponent {
   readonly chessTitle = chessTitle;
   /** Titel nur echte (GM, IM …): Rohcodes wie „Z56“ fallen weg, ohne echten Titel fehlt die Spalte (DESIGN 8.2, d7). */
   readonly columns: string[];
-  constructor(@Inject(MAT_DIALOG_DATA) public data: { teamName: string; players: TournamentPlayer[] }) {
+  constructor(@Inject(MAT_DIALOG_DATA) public data: { teamName: string; players: TournamentPlayer[]; onPlayer?: (player: TournamentPlayer) => void }) {
     const hasTitle = (data.players ?? []).some(p => chessTitle(p.title));
     this.columns = hasTitle ? ['boardNumber', 'title', 'name', 'elo'] : ['boardNumber', 'name', 'elo'];
   }

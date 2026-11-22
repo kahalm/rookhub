@@ -1312,6 +1312,23 @@
       "copyLink": "Link másolása",
       "linkCopied": "Link másolva!",
       "copyFailed": "Sikertelen másolás"
+    },
+    "encounters": {
+      "points": "{{points}} pont {{games}} játszmából",
+      "none": "Ennek a játékosnak még nincsenek párosításai.",
+      "roundShort": "{{round}}. f.",
+      "homeVs": "Otthon ellene:",
+      "awayAt": "Idegenben:",
+      "bye": "Szabadnap",
+      "notPlayed": "Nem szerepelt a csapatban",
+      "next": "Következő forduló",
+      "planned": "tervezett",
+      "teamOnlyHint": "A chess-results itt csak a csapatmérkőzéseket mutatja. Az egyéni játszmák (tábla, ellenfél, eredmény) a játékos oldalán vannak.",
+      "fetch": "Egyéni játszmák lekérése",
+      "refetch": "Egyéni játszmák frissítése",
+      "fetching": "Lekérés a chess-results oldalról …",
+      "fetchSlow": "Még nincs meg – a chess-results túlterhelt. Egy perc múlva nyisd meg újra a játékost.",
+      "fetchFailed": "A játékos oldalát nem sikerült lekérni. Próbáld újra később."
     }
   },
   "puzzles": {
