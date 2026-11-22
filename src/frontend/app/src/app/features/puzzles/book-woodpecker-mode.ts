@@ -1,12 +1,15 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { apiErrorText } from '../../core/api-error';
-import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from '../woodpecker/woodpecker.service';
+import { WoodpeckerDeadlinePrompt } from '../woodpecker/woodpecker-deadline-dialog.component';
+import { daysLeft, WoodpeckerCycle, WoodpeckerNext, WoodpeckerPlan, WoodpeckerService } from '../woodpecker/woodpecker.service';
 import { BookModeHost, BookModeStrategy } from './book-mode-host';
 
 /** Was der Woodpecker-Modus zusätzlich zum {@link BookModeHost} braucht. */
 export interface BookWoodpeckerHost extends BookModeHost {
   readonly inWoodpecker: boolean;
   readonly woodpeckerService: WoodpeckerService;
+  /** „Frist um – verlängern oder abschließen?“ (1.007.0); fehlt in schlanken Test-Hosts. */
+  readonly woodpeckerDeadline?: WoodpeckerDeadlinePrompt;
 }
 
 /**
@@ -78,13 +81,20 @@ export class BookWoodpeckerMode implements BookModeStrategy {
         this.missing = false;
         this.repeatHint = false;
         this.attemptRecorded = false;
-        if (!r.puzzle) { h.puzzle = null; h.state = 'COURSE_DONE'; return; }
-        h.gaveUp = false;
-        h.puzzle = r.puzzle;
-        h.afterLineLoaded(r.puzzle, lang);
-        h.setupPuzzle(r.puzzle);
-        // Versuch liegt noch in der Warteschlange: der zählt — Wiederholen ändert nichts mehr.
-        if (this.queuedIds.has(r.puzzle.id)) this.repeatHint = true;
+        // 1.007.0: Frist um, nicht alles bearbeitet → erst fragen, DANN die Aufgabe aufbauen (sonst liefe ihre Uhr
+        // hinter dem Fenster). Abgeschlossen → neu laden (keine Aufgabe mehr → Abschlussansicht); verlängert oder
+        // „Später“ → die schon geholte Aufgabe zeigen.
+        const prompt = h.woodpeckerDeadline;
+        if (r.puzzle && prompt?.shouldAsk(r.plan)) {
+          prompt.askIfDue(r.plan).subscribe(plan => {
+            if (epoch !== h.loadEpoch) return;
+            if (plan && plan.cycles[plan.cycles.length - 1]?.finishedAt) { this.loadNext(); return; }
+            if (plan) this.plan = plan;
+            this.show(r, lang);
+          });
+          return;
+        }
+        this.show(r, lang);
       },
       error: (e: HttpErrorResponse) => {
         if (epoch !== h.loadEpoch) return;
@@ -93,6 +103,18 @@ export class BookWoodpeckerMode implements BookModeStrategy {
         h.loadError = true;
       },
     });
+  }
+
+  /** Aufgabe aus `GET next` aufbauen (keine → Abschlussansicht). */
+  private show(r: WoodpeckerNext, lang: string | null): void {
+    const h = this.h;
+    if (!r.puzzle) { h.puzzle = null; h.state = 'COURSE_DONE'; return; }
+    h.gaveUp = false;
+    h.puzzle = r.puzzle;
+    h.afterLineLoaded(r.puzzle, lang);
+    h.setupPuzzle(r.puzzle);
+    // Versuch liegt noch in der Warteschlange: der zählt — Wiederholen ändert nichts mehr.
+    if (this.queuedIds.has(r.puzzle.id)) this.repeatHint = true;
   }
 
   next(): void {

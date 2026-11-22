@@ -13,7 +13,10 @@ export interface WoodpeckerCycle {
   number: number;
   targetDays: number;
   startedAt: string;
+  /** Gültige Frist — verlängert (`extendedUntil`) oder aus dem Buch (Beginn + `targetDays`). */
   deadline: string;
+  /** Verlängert bis (1.007.0); fehlt/`null` = Frist aus dem Buch. `targetDays` bleibt die Buchzahl. */
+  extendedUntil?: string | null;
   finishedAt: string | null;
   attempted: number;
   solved: number;
@@ -41,8 +44,16 @@ export interface WoodpeckerPlan {
   /** Heute (lokaler Kalendertag dieses Geräts, `utcOffsetMinutes`) im LAUFENDEN Zyklus bearbeitete Aufgaben (0.993.0) —
    *  Grundlage der Tagesziel-Anzeige (`woodpeckerDailyGoal`). Fehlt bei einem älteren Server: dann keine Anzeige. */
   todayAttempted?: number;
+  /** Frist des laufenden Zyklus um, aber nicht alles bearbeitet (1.007.0): die App fragt „verlängern oder
+   *  abschließen?“ (`WoodpeckerDeadlinePrompt`). Bis dahin läuft der Zyklus weiter (`status` bleibt `solving`). */
+  deadlinePassed?: boolean;
+  /** Vorgeschlagene Verlängerung in Tagen (aus dem Tempo des Zyklus), nur mit `deadlinePassed`. */
+  suggestedExtensionDays?: number | null;
   cycles: WoodpeckerCycle[];
 }
+
+/** Höchstens so viele Tage auf einmal verlängern (wie `WoodpeckerRules.MaxExtensionDays`). */
+export const WOODPECKER_MAX_EXTENSION_DAYS = 28;
 
 export interface WoodpeckerNext { puzzle: BookPuzzleDto | null; plan: WoodpeckerPlan; }
 
@@ -201,6 +212,16 @@ export class WoodpeckerService {
 
   finishSet(planId: number): Observable<WoodpeckerPlan> {
     return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/finish-set`, {}, this.tz());
+  }
+
+  /** Laufenden Zyklus verlängern: neue Frist = spätere von jetzt und bisheriger Frist + `days` (1–28). */
+  extendCycle(planId: number, days: number): Observable<WoodpeckerPlan> {
+    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/extend`, { days }, this.tz());
+  }
+
+  /** Laufenden Zyklus abschließen (ab Zyklus 2 erst nach der Frist); Offenes bleibt unbearbeitet. */
+  finishCycle(planId: number): Observable<WoodpeckerPlan> {
+    return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/finish-cycle`, {}, this.tz());
   }
 
   startNextCycle(planId: number): Observable<WoodpeckerPlan> {

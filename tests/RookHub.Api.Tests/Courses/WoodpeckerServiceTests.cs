@@ -244,7 +244,7 @@ public class WoodpeckerServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task FirstCycle_EndsAtDeadline_ThenBreakOfOneDay_ThenRandomFromSetOnly()
+    public async Task FirstCycle_DeadlineAsks_FinishEndsAtDeadline_ThenBreakOfOneDay_ThenRandomFromSetOnly()
     {
         var (bookId, ids) = await SeedBookAsync("WP", 10);
         var plan = await CreateAsync(bookId);
@@ -254,7 +254,13 @@ public class WoodpeckerServiceTests : IDisposable
 
         _clock.Now = _clock.Now.AddDays(28).AddHours(1);
         var dto = await _service.GetAsync(UserId, plan.Id);
-        Assert.Equal("break", dto.Status);                         // Frist um 1 h vorbei, Pause läuft noch
+        // Seit 1.007.0 endet Zyklus 1 nicht mehr still an der Frist — die App fragt.
+        Assert.Equal("solving", dto.Status);
+        Assert.True(dto.DeadlinePassed);
+        Assert.Null(dto.Cycles[0].FinishedAt);
+        dto = await _service.FinishCycleAsync(UserId, plan.Id);
+        Assert.False(dto.DeadlinePassed);
+        Assert.Equal("break", dto.Status);                         // Ende = Frist (1 h vorbei), Pause läuft noch
         Assert.Equal(dto.Cycles[0].Deadline, dto.Cycles[0].FinishedAt);
         await Assert.ThrowsAsync<ConflictException>(() => _service.StartNextCycleAsync(UserId, plan.Id));
 
@@ -298,6 +304,192 @@ public class WoodpeckerServiceTests : IDisposable
         Assert.Equal(3, dto.CurrentCycle);
         Assert.Equal(7, dto.Cycles[2].TargetDays);
     }
+
+    /// <summary>Zyklus 2 mit drei Aufgaben im Satz; nur eine davon bearbeitet. Uhr steht kurz nach Beginn von Zyklus 2.</summary>
+    private async Task<(int PlanId, List<int> Ids, DateTime Start2)> SecondCycleWithOneOfThreeAsync()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 3);
+        var plan = await CreateAsync(bookId);
+        foreach (var id in ids) await SolveAsync(plan.Id, id);   // Zyklus 1: alle drei → endet von selbst
+        _clock.Now = _clock.Now.AddDays(2);
+        var dto = await _service.StartNextCycleAsync(UserId, plan.Id);
+        Assert.Equal(2, dto.CurrentCycle);
+        _clock.Now = _clock.Now.AddDays(2);
+        await SolveAsync(plan.Id, ids[0]);
+        return (plan.Id, ids, dto.Cycles[1].StartedAt);
+    }
+
+    [Fact]
+    public async Task SecondCycle_DeadlinePassed_Unfinished_IsFlaggedWithSuggestion_AndStillSolvable()
+    {
+        var (planId, ids, start2) = await SecondCycleWithOneOfThreeAsync();
+        var dto = await _service.GetAsync(UserId, planId);
+        Assert.False(dto.DeadlinePassed);
+        Assert.Null(dto.SuggestedExtensionDays);
+
+        _clock.Now = start2.AddDays(14).AddHours(2);
+        dto = await _service.GetAsync(UserId, planId);
+        Assert.Equal("solving", dto.Status);
+        Assert.True(dto.DeadlinePassed);
+        // 1 Aufgabe in 14 Tagen → 2 offene brauchen 28 Tage (Obergrenze).
+        Assert.Equal(28, dto.SuggestedExtensionDays);
+
+        // Bis zur Entscheidung läuft der Zyklus weiter (Versuche aus der Offline-Warteschlange gehen nicht verloren).
+        dto = await SolveAsync(planId, ids[1]);
+        Assert.Equal(2, dto.Cycles[1].Attempted);
+        Assert.True(dto.DeadlinePassed);
+    }
+
+    [Fact]
+    public async Task ExtendCycle_AfterDeadline_CountsFromNow_ClearsQuestion_KeepsTargetDays()
+    {
+        var (planId, ids, start2) = await SecondCycleWithOneOfThreeAsync();
+        _clock.Now = start2.AddDays(16);
+        var dto = await _service.ExtendCycleAsync(UserId, planId, 3);
+        var c = dto.Cycles[1];
+        Assert.Equal(_clock.Now.AddDays(3), c.Deadline);
+        Assert.Equal(c.Deadline, c.ExtendedUntil);
+        Assert.Equal(14, c.TargetDays);                    // Buchzahl bleibt
+        Assert.False(dto.DeadlinePassed);
+        Assert.Equal(c.ExtendedUntil, (await _db.WoodpeckerCycles.SingleAsync(x => x.Number == 2)).ExtendedUntil);
+
+        // Vor der neuen Frist: abschließen geht nicht, noch einmal verlängern hängt an die Frist an.
+        await Assert.ThrowsAsync<ConflictException>(() => _service.FinishCycleAsync(UserId, planId));
+        dto = await _service.ExtendCycleAsync(UserId, planId, 2);
+        Assert.Equal(_clock.Now.AddDays(5), dto.Cycles[1].Deadline);
+
+        // Fertig in der Verlängerung → endet wie gewohnt, nächster Zyklus halbiert nach der Buchzahl (7 Tage).
+        await SolveAsync(planId, ids[1]);
+        dto = await SolveAsync(planId, ids[2]);
+        Assert.NotNull(dto.Cycles[1].FinishedAt);
+        _clock.Now = _clock.Now.AddDays(1).AddMinutes(1);
+        dto = await _service.StartNextCycleAsync(UserId, planId);
+        Assert.Equal(7, dto.Cycles[2].TargetDays);
+        Assert.Null(dto.Cycles[2].ExtendedUntil);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(29)]
+    public async Task ExtendCycle_DaysOutOfRange_Rejected(int days)
+    {
+        var (planId, _, _) = await SecondCycleWithOneOfThreeAsync();
+        await Assert.ThrowsAsync<DomainValidationException>(() => _service.ExtendCycleAsync(UserId, planId, days));
+    }
+
+    [Fact]
+    public async Task FinishCycle_AfterDeadline_EndsAtDeadline_OpenStayUnattempted_ThenBreak()
+    {
+        var (planId, _, start2) = await SecondCycleWithOneOfThreeAsync();
+        await Assert.ThrowsAsync<ConflictException>(() => _service.FinishCycleAsync(UserId, planId));   // Zeit noch nicht um
+
+        _clock.Now = start2.AddDays(20);                    // sechs Tage nach der Frist entschieden
+        var dto = await _service.FinishCycleAsync(UserId, planId);
+        var c = dto.Cycles[1];
+        Assert.Equal(start2.AddDays(14), c.FinishedAt);    // Dauer = Frist, nicht bis zur Entscheidung
+        Assert.Equal(1, c.Attempted);                       // offene Aufgaben bekommen keinen Versuch
+        Assert.Null(dto.CompletedAt);
+        Assert.False(dto.DeadlinePassed);
+        Assert.Equal("ready", dto.Status);                  // Pause (1 Tag ab Frist) ist längst vorbei
+        await Assert.ThrowsAsync<ConflictException>(() => _service.FinishCycleAsync(UserId, planId));
+        dto = await _service.StartNextCycleAsync(UserId, planId);
+        Assert.Equal(3, dto.CurrentCycle);
+    }
+
+    [Fact]
+    public async Task FinishCycle_AttemptAfterDeadline_EndsAtLastAttempt()
+    {
+        var (planId, ids, start2) = await SecondCycleWithOneOfThreeAsync();
+        _clock.Now = start2.AddDays(15);
+        await SolveAsync(planId, ids[1]);
+        var solvedAt = _clock.Now;
+        _clock.Now = start2.AddDays(17);
+        var dto = await _service.FinishCycleAsync(UserId, planId);
+        Assert.Equal(solvedAt, dto.Cycles[1].FinishedAt);
+        Assert.Equal("ready", dto.Status);
+    }
+
+    [Fact]
+    public async Task FinishCycle_SeventhCycle_CompletesMethod()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 2);
+        var plan = await CreateAsync(bookId);
+        await SolveAsync(plan.Id, ids[0]);
+        await _service.FinishSetAsync(UserId, plan.Id);
+        for (var n = 2; n <= 7; n++)
+        {
+            _clock.Now = _clock.Now.AddDays(2);
+            await _service.StartNextCycleAsync(UserId, plan.Id);
+            if (n < 7)
+            {
+                _clock.Now = _clock.Now.AddDays(2);
+                await SolveAsync(plan.Id, ids[0]);           // > 1 Tag → Methode läuft weiter
+            }
+        }
+        _clock.Now = _clock.Now.AddDays(2);                 // Zyklus 7 (1 Tag) abgelaufen, Aufgabe offen
+        var dto = await _service.GetAsync(UserId, plan.Id);
+        Assert.True(dto.DeadlinePassed);
+        dto = await _service.FinishCycleAsync(UserId, plan.Id);
+        Assert.Equal("completed", dto.Status);
+        Assert.NotNull(dto.CompletedAt);
+    }
+
+    [Fact]
+    public async Task FirstCycle_DeadlinePassed_WithoutSet_NotFlagged_ExtendPossible()
+    {
+        var (bookId, _) = await SeedBookAsync("WP", 3);
+        var plan = await CreateAsync(bookId);
+        _clock.Now = _clock.Now.AddDays(30);
+        var dto = await _service.GetAsync(UserId, plan.Id);
+        Assert.False(dto.DeadlinePassed);                   // nichts zum Abschließen
+        dto = await _service.ExtendCycleAsync(UserId, plan.Id, 7);
+        Assert.Equal(_clock.Now.AddDays(7), dto.Cycles[0].Deadline);
+    }
+
+    [Fact]
+    public async Task FirstCycle_Extended_ImportsCourseAttemptsUntilNewDeadline()
+    {
+        var (bookId, ids) = await SeedBookAsync("WP", 5);
+        var plan = await CreateAsync(bookId);
+        await SolveAsync(plan.Id, ids[0]);
+        var start = _clock.Now;
+        _clock.Now = start.AddDays(29);
+        var dto = await _service.GetAsync(UserId, plan.Id);
+        Assert.True(dto.DeadlinePassed);
+        Assert.Equal(28, dto.SuggestedExtensionDays);       // 4 offen bei 1 Aufgabe in 29 Tagen
+        await _service.ExtendCycleAsync(UserId, plan.Id, 5);
+        _db.CourseAttempts.Add(new CourseAttempt
+        {
+            UserId = UserId, BookId = bookId, BookPuzzleId = ids[1], Solved = true, TimeSeconds = 10,
+            AttemptedAt = start.AddDays(30),
+        });
+        await _db.SaveChangesAsync();
+        dto = await _service.GetAsync(UserId, plan.Id);
+        Assert.Equal(2, dto.SetSize);
+    }
+
+    [Fact]
+    public async Task ExtendAndFinishCycle_ArchivedOrForeign_Rejected()
+    {
+        var (planId, _, start2) = await SecondCycleWithOneOfThreeAsync();
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.ExtendCycleAsync(OtherUserId, planId, 3));
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.FinishCycleAsync(OtherUserId, planId));
+        _clock.Now = start2.AddDays(15);
+        await _service.ArchiveAsync(UserId, planId);
+        await Assert.ThrowsAsync<ConflictException>(() => _service.ExtendCycleAsync(UserId, planId, 3));
+        await Assert.ThrowsAsync<ConflictException>(() => _service.FinishCycleAsync(UserId, planId));
+        Assert.False((await _service.GetAsync(UserId, planId)).DeadlinePassed);   // archiviert fragt nicht
+    }
+
+    [Theory]
+    [InlineData(2, 10, 20, 10.0, 5)]     // 2/Tag, 10 offen → 5 Tage
+    [InlineData(2, 1, 20, 10.0, 1)]
+    [InlineData(2, 100, 1, 14.0, 28)]    // Obergrenze
+    [InlineData(3, 5, 0, 7.0, 7)]        // ohne Tempo: Zieldauer
+    [InlineData(2, 5, 5, 0.2, 1)]        // weniger als ein Tag gilt als ein Tag
+    [InlineData(2, 0, 5, 3.0, 1)]
+    public void SuggestExtensionDays_FromPace(int number, int open, int attempted, double elapsed, int expected) =>
+        Assert.Equal(expected, WoodpeckerRules.SuggestExtensionDays(number, open, attempted, elapsed));
 
     [Fact]
     public async Task FinishSet_WithoutAnyPuzzle_Rejected()

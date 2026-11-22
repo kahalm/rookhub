@@ -6774,6 +6774,27 @@
       "missedMark": "verfehlt",
       "view": "ansehen",
       "puzzleFallback": "Aufgabe"
+    },
+    "deadline": {
+      "title": "Zyklus {{n}}: Zeit ist um",
+      "intro": "Die Frist ist am {{at}} abgelaufen. Bearbeitet hast du {{done}} von {{total}} Aufgaben – {{open}} sind noch offen.",
+      "introSet": "Die vier Wochen des ersten Zyklus sind am {{at}} abgelaufen. Dein Satz hat {{n}} Aufgaben; {{open}} Aufgaben der Kurse waren noch nicht dran.",
+      "extendHead": "Verlängern",
+      "days": "Tage",
+      "newDeadline": "Neue Frist: {{at}}",
+      "daysRange": "1 bis {{max}} Tage",
+      "suggestion": "Vorschlag nach deinem bisherigen Tempo: {{days}} Tage.",
+      "finishHead": "Zyklus abschließen",
+      "finishHint": "Offene Aufgaben zählen als nicht bearbeitet. Nach mindestens einem Tag Pause beginnt Zyklus {{next}} mit {{days}} Tagen.",
+      "finishSet": "Dein Satz steht dann mit {{n}} Aufgaben fest. Nach mindestens einem Tag Pause beginnt Zyklus {{next}} mit {{days}} Tagen.",
+      "finishLast": "Offene Aufgaben zählen als nicht bearbeitet. Das war der letzte Zyklus – das Training ist damit abgeschlossen.",
+      "later": "Später",
+      "finish": "Zyklus abschließen",
+      "extend": "Um {{days}} Tage verlängern",
+      "decide": "Verlängern oder abschließen",
+      "extended": "Zyklus verlängert.",
+      "finished": "Zyklus abgeschlossen.",
+      "offline": "Du bist offline – die Entscheidung lässt sich nur mit Verbindung speichern. Bitte später noch einmal."
     }
   },
   "sheetEdit": {

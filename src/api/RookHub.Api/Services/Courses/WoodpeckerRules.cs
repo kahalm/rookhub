@@ -9,6 +9,8 @@ namespace RookHub.Api.Services.Courses;
 /// <item>Jeder weitere Zyklus löst denselben Satz in der halben Zeit (aufgerundet): 28 → 14 → 7 → 4 → 2 → 1 → 1 Tage.</item>
 /// <item>Fertig, sobald ein Zyklus an einem Tag geschafft ist — sonst nach dem 7. Zyklus.</item>
 /// </list>
+/// Nicht im Buch (Nutzerwunsch 22.11.2026, 1.007.0): Ist die Frist um und der Zyklus nicht fertig, fragt die App, ob er
+/// verlängert (<see cref="MaxExtensionDays"/>, <see cref="SuggestExtensionDays"/>) oder abgeschlossen wird.
 /// </summary>
 public static class WoodpeckerRules
 {
@@ -33,6 +35,26 @@ public static class WoodpeckerRules
     }
 
     public static DateTime Deadline(int number, DateTime startedAt) => startedAt.AddDays(TargetDays(number));
+
+    /// <summary>Gültige Frist eines Zyklus: die verlängerte (<paramref name="extendedUntil"/>, 1.007.0), sonst die aus dem Buch.</summary>
+    public static DateTime Deadline(int number, DateTime startedAt, DateTime? extendedUntil) =>
+        extendedUntil ?? Deadline(number, startedAt);
+
+    /// <summary>Höchstens so viele Tage auf einmal verlängern (eine Verlängerung = so lang wie Zyklus 1).</summary>
+    public const int MaxExtensionDays = FirstCycleDays;
+
+    /// <summary>
+    /// Vorschlag, um wie viele Tage ein abgelaufener, unfertiger Zyklus verlängert werden soll (1.007.0): die offenen
+    /// Aufgaben im bisherigen Tempo des Zyklus (bearbeitet ÷ verstrichene Tage, mindestens 1 Tag gerechnet), aufgerundet,
+    /// 1 … <see cref="MaxExtensionDays"/>. Ohne Versuch fehlt das Tempo → die Zieldauer des Zyklus.
+    /// </summary>
+    public static int SuggestExtensionDays(int number, int open, int attempted, double elapsedDays)
+    {
+        if (open <= 0) return 1;
+        if (attempted <= 0) return Math.Clamp(TargetDays(number), 1, MaxExtensionDays);
+        var perDay = attempted / Math.Max(1.0, elapsedDays);
+        return (int)Math.Clamp(Math.Ceiling(open / perDay), 1, MaxExtensionDays);
+    }
 
     /// <summary>Ist die Methode mit diesem beendeten Zyklus abgeschlossen?</summary>
     public static bool CompletesMethod(int number, DateTime startedAt, DateTime finishedAt) =>

@@ -59,6 +59,7 @@ import { BookHints } from './book-hints';
 import { BookWoodpeckerMode } from './book-woodpecker-mode';
 import { WoodpeckerService } from '../woodpecker/woodpecker.service';
 import { WoodpeckerStatsDialogComponent } from '../woodpecker/woodpecker-stats-dialog.component';
+import { WoodpeckerDeadlinePrompt } from '../woodpecker/woodpecker-deadline-dialog.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -97,6 +98,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
   protected override requestRender(): void { this.cdr?.markForCheck(); }
 
   readonly woodpeckerService = inject(WoodpeckerService);
+  /** „Frist um – verlängern oder abschließen?“ (1.007.0); optional, damit schlanke Test-Injektoren ohne ihn auskommen. */
+  readonly woodpeckerDeadline = inject(WoodpeckerDeadlinePrompt, { optional: true }) ?? undefined;
 
   /** Spielweise (Training/Einfach) für Kurs, Tagespuzzle und Buch-Puzzle — der Wochenpost hat seine eigene Abfrage. */
   readonly solveModes: BookSolveModeController;

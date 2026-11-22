@@ -6774,6 +6774,27 @@
       "missedMark": "missed",
       "view": "view",
       "puzzleFallback": "Puzzle"
+    },
+    "deadline": {
+      "title": "Cycle {{n}}: time is up",
+      "intro": "The deadline passed on {{at}}. You have worked through {{done}} of {{total}} puzzles — {{open}} are still open.",
+      "introSet": "The four weeks of the first cycle ended on {{at}}. Your set has {{n}} puzzles; {{open}} puzzles of the courses have not come up yet.",
+      "extendHead": "Extend",
+      "days": "Days",
+      "newDeadline": "New deadline: {{at}}",
+      "daysRange": "1 to {{max}} days",
+      "suggestion": "Suggested from your pace so far: {{days}} days.",
+      "finishHead": "Close the cycle",
+      "finishHint": "Open puzzles count as not done. After a break of at least one day, cycle {{next}} starts with {{days}} days.",
+      "finishSet": "Your set is then fixed at {{n}} puzzles. After a break of at least one day, cycle {{next}} starts with {{days}} days.",
+      "finishLast": "Open puzzles count as not done. This was the last cycle — the training is then complete.",
+      "later": "Later",
+      "finish": "Close cycle",
+      "extend": "Extend by {{days}} days",
+      "decide": "Extend or close cycle",
+      "extended": "Cycle extended.",
+      "finished": "Cycle closed.",
+      "offline": "You are offline — the choice can only be saved with a connection. Please try again later."
     }
   },
   "sheetEdit": {

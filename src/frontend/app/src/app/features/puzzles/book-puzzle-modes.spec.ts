@@ -1,6 +1,7 @@
 import { Injector, runInInjectionContext } from '@angular/core';
 import { WoodpeckerService } from '../woodpecker/woodpecker.service';
 import { WoodpeckerStatsDialogComponent } from '../woodpecker/woodpecker-stats-dialog.component';
+import { WoodpeckerDeadlinePrompt } from '../woodpecker/woodpecker-deadline-dialog.component';
 import { woodpeckerDailyGoal, woodpeckerSchedule } from '../woodpecker/woodpecker-stats.util';
 import { of, Subject, throwError } from 'rxjs';
 import { discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
@@ -18,7 +19,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 const FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const P = (id: number, extra: Record<string, unknown> = {}): any => ({ id, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b.pgn', ...extra });
 
-function makeComponent(opts: { loggedIn?: boolean; params?: Record<string, string>; woodpecker?: any } = {}): any {
+function makeComponent(opts: { loggedIn?: boolean; params?: Record<string, string>; woodpecker?: any; deadlinePrompt?: any } = {}): any {
   const prefs: any = { boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, visualization: 0 };
   const stockfish: any = { init: () => Promise.resolve(), getEval: () => Promise.resolve('') };
   const params = opts.params ?? {};
@@ -52,7 +53,8 @@ function makeComponent(opts: { loggedIn?: boolean; params?: Record<string, strin
   };
   const worksheets: any = { sendAndNotify: () => {} };
   const c: any = runInInjectionContext(
-    Injector.create({ providers: [{ provide: WoodpeckerService, useValue: opts.woodpecker ?? {} }] }),
+    Injector.create({ providers: [{ provide: WoodpeckerService, useValue: opts.woodpecker ?? {} },
+      ...(opts.deadlinePrompt ? [{ provide: WoodpeckerDeadlinePrompt, useValue: opts.deadlinePrompt }] : [])] }),
     () => new BookPuzzleComponent(
     puzzleService, stockfish, prefs, route, {} as any, courseService, weeklyService,
     router, translate, auth, snackbar, offlineQueue, challengeService, longSolve, favorites,
@@ -820,6 +822,60 @@ describe('BookPuzzle Modus Woodpecker (0.882.0: dieselbe Oberfläche wie im Kurs
       c.openWoodpeckerStats();
       expect(c.dialog.open).not.toHaveBeenCalled();
       expect(c.timerPaused).toBeFalse();
+      c.ngOnDestroy();
+    });
+  });
+
+  // 1.007.0: „wenn ein Woodpecker-Zyklus fertig ist, ich aber nicht alles gemacht habe, soll er fragen …“
+  describe('Frist um: erst fragen, dann die Aufgabe', () => {
+    function withPrompt(answer: Subject<any>) {
+      const due = plan({ deadlinePassed: true, suggestedExtensionDays: 5 });
+      const svc: any = {
+        next: jasmine.createSpy('next').and.returnValue(of({ puzzle: { ...WP }, plan: due })),
+        recordAttempt: jasmine.createSpy('recordAttempt'),
+      };
+      const prompt: any = {
+        shouldAsk: jasmine.createSpy('shouldAsk').and.callFake((p: any) => !!p?.deadlinePassed),
+        askIfDue: jasmine.createSpy('askIfDue').and.returnValue(answer),
+      };
+      const c = makeComponent({ params: { planId: '3' }, woodpecker: svc, deadlinePrompt: prompt });
+      c.stockfish.getBestMove = () => new Promise(() => {});
+      c.ngOnInit();
+      return { c, svc, prompt, due };
+    }
+
+    it('während das Fenster offen ist, steht keine Aufgabe (keine Uhr); verlängert → die geholte Aufgabe mit neuem Plan', () => {
+      const answer = new Subject<any>();
+      const { c, svc, prompt, due } = withPrompt(answer);
+      expect(prompt.askIfDue).toHaveBeenCalledOnceWith(due);
+      expect(c.puzzle).toBeFalsy();
+      expect(c.state).toBe('LOADING');
+      const extended = plan({ deadlinePassed: false });
+      answer.next(extended); answer.complete();
+      expect(c.puzzle.id).toBe(501);
+      expect(c.state).toBe('AWAITING_USER_MOVE');
+      expect(c.woodpecker.plan).toBe(extended);
+      expect(svc.next).toHaveBeenCalledTimes(1);
+      c.ngOnDestroy();
+    });
+
+    it('„Später“ → die Aufgabe kommt trotzdem (Zyklus läuft weiter)', () => {
+      const answer = new Subject<any>();
+      const { c } = withPrompt(answer);
+      answer.next(null); answer.complete();
+      expect(c.puzzle.id).toBe(501);
+      c.ngOnDestroy();
+    });
+
+    it('abgeschlossen → neu laden; ohne Aufgabe die Abschlussansicht', () => {
+      const answer = new Subject<any>();
+      const { c, svc } = withPrompt(answer);
+      const closed = plan({ status: 'break', cycles: [plan().cycles[0], { ...plan().cycles[1], finishedAt: new Date().toISOString() }] });
+      svc.next.and.returnValue(of({ puzzle: null, plan: closed }));
+      answer.next(closed); answer.complete();
+      expect(svc.next).toHaveBeenCalledTimes(2);
+      expect(c.state).toBe('COURSE_DONE');
+      expect(c.woodpecker.plan).toBe(closed);
       c.ngOnDestroy();
     });
   });

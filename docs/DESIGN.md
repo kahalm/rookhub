@@ -606,6 +606,12 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
   mit `autoFocus: 'dialog'`, damit das Feld nicht fokussiert ans Ende springt (d8).
 - **Lange Optionstexte im `mat-select`:** geschlossen per `<mat-select-trigger>` nur der Kurzname, die Liste zeigt den
   vollen Text (Token-Bereich, d7).
+- **Entscheidungsfrage beim Einstieg** (Woodpecker „Zeit ist um“, 1.007.0, `woodpecker-deadline-dialog.component.ts`):
+  440 px, Titel nennt den Anlass, darunter der Stand in einem Satz und je Weg ein Abschnitt (`h3`) mit höchstens einem
+  Feld und einem leisen Folgensatz; Knöpfe „Später“ (Text) · Nebenweg (stroked) · häufigerer Weg (Hauptknopf, nennt die
+  Wahl: „Um 8 Tage verlängern“). Nicht blockierend; „Später“ fragt in der Sitzung nicht noch einmal von selbst, die Stelle,
+  an der die Frage hängt, bietet sie als stroked-Knopf an. Gespeichert wird erst per Knopf, scheitert es (auch offline),
+  bleibt das Fenster offen (`warn`-Snackbar).
 - **Einstellung mit wenigen, sich ausschließenden Werten** (Reihenfolge im Repertoire-Training, 0.996.0,
   `features/repertoire/train-order-dialog.component.ts`): schmaler Dialog (440 px, `maxWidth: '94vw'`,
   `autoFocus: 'dialog'`), langer Name (Repertoire) als leise Zeile unter dem Titel; `mat-radio-group` mit `aria-label` =
@@ -1584,6 +1590,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-22 | 1.007.0 · Woodpecker | Entscheidungsfrage beim Einstieg „Zyklus N: Zeit ist um“ (5.6): schmaler Dialog (440 px), kurzer Stand, zwei Abschnitte „Verlängern“ (Tage-Feld mit Vorschlag und Vorschau der neuen Frist) und „Zyklus abschließen“ (ein leiser Satz zu den Folgen); Knöpfe „Später“ · „Zyklus abschließen“ (stroked) · „Um n Tage verlängern“ (Hauptknopf). Nicht blockierend: „Später“ fragt in dieser Sitzung nicht wieder, die Karte trägt dann „Verlängern oder abschließen“ (stroked) statt des Zeitbalkens. Im Löser kommt die Frage VOR dem Aufbau der Aufgabe (keine laufende Uhr dahinter) | Beide Wege sind sinnvoll, keiner ist rückgängig zu machen — deshalb ausdrücklich fragen statt still weiterlaufen oder beenden; Verlängern ist die häufigere Wahl und bekommt den Hauptknopf | Nutzerwunsch 22.11. |
 | 2026-11-22 | 1.006.0 · Turnierseite | Spielernamen öffnen die Begegnungen (8.2): Name als Knopf in Akzentfarbe ohne Unterstreichung, in der Handy-Karte eigenes Ziel neben dem Stern; Dialog mit einer Zeile je Runde, erste offene Runde getönt mit Chip „Nächste Runde“ | Wer einen Spieler anklickt, will seine Gegner und die nächste Paarung sehen; doppelte Unterstreichung je Zeile wäre unruhig | Nutzerwunsch 22.11. |
 | 2026-11-22 | 1.002.0 · Formular-Werkbank | „Partie hier beenden“ als zweiter roter Link vor „Zug löschen“ in der Zeile des Zugs (5.12); Rückfrage über `ConfirmService` mit Zug, SAN und Anzahl Halbzüge, Bestätigen „n Halbzüge löschen“ (Einzahl/Mehrzahl als Schlüsselpaar); Rückgängig in der bestehenden Zeile über dem Zug | Nach dem echten Ende stehen auf Formularen oft Kritzeleien oder Analysezüge, gekürzt wurde bisher per API (Partien 258, 262); die Rückfrage benennt genau, was wegfällt, weil der Name allein nicht sagt, dass Züge gelöscht werden | Nutzerwunsch 22.11. |
 | 2026-11-22 | 1.002.2 · Formular-Werkbank | „Partie hier beenden“ auch am Ende der Zugliste (roter Link unter dem Ende-Hinweis, nur solange Formular-Einträge übrig sind; Rückfrage mit Anzahl, Knopf „Rest verwerfen“); Ende-Hinweis „ohne Formular-Eintrag angehängt“ nach dem Beenden | Nicht zuordenbare Kritzeleien am Ende ließen sich sonst nicht loswerden, und nach dem Kürzen kamen sie beim Weiterspielen oder Neuladen zurück | Nutzerwunsch 22.11. |

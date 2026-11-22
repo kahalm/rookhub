@@ -23,6 +23,13 @@ public class UpdateWoodpeckerStartDto
     public DateTime StartedAt { get; set; }
 }
 
+/// <summary>Laufenden Zyklus verlängern (1.007.0): Frist = max(jetzt, bisherige Frist) + <see cref="Days"/>.</summary>
+public class ExtendWoodpeckerCycleDto
+{
+    [Range(1, 28)]
+    public int Days { get; set; }
+}
+
 public class RecordWoodpeckerAttemptDto
 {
     public int BookPuzzleId { get; set; }
@@ -45,7 +52,10 @@ public class WoodpeckerCycleDto
     public int Number { get; set; }
     public int TargetDays { get; set; }
     public DateTime StartedAt { get; set; }
+    /// <summary>Gültige Frist: die verlängerte (<see cref="ExtendedUntil"/>), sonst Beginn + <see cref="TargetDays"/>.</summary>
     public DateTime Deadline { get; set; }
+    /// <summary>Verlängert bis (1.007.0); <c>null</c> = Frist aus dem Buch. <see cref="TargetDays"/> bleibt die Buchzahl.</summary>
+    public DateTime? ExtendedUntil { get; set; }
     public DateTime? FinishedAt { get; set; }
     /// <summary>In diesem Zyklus bearbeitete Aufgaben.</summary>
     public int Attempted { get; set; }
@@ -82,6 +92,13 @@ public class WoodpeckerPlanDto
     /// Betrachters, <c>?utcOffsetMinutes=</c>; ohne Angabe der UTC-Tag) — Grundlage der Tagesziel-Anzeige auf
     /// Dashboard-Kachel und im Löser-Kopf (0.993.0), ohne den teuren <c>/stats</c>-Abruf.</summary>
     public int TodayAttempted { get; set; }
+    /// <summary>Frist des laufenden Zyklus um, Zyklus aber nicht fertig (1.007.0): die App fragt „verlängern
+    /// (<c>POST extend</c>) oder abschließen (<c>POST finish-cycle</c>)?“. Bis zur Entscheidung läuft der Zyklus weiter
+    /// (<see cref="Status"/> bleibt <c>solving</c>), Versuche zählen. Zyklus 1 erst mit mindestens einer Aufgabe im Satz.</summary>
+    public bool DeadlinePassed { get; set; }
+    /// <summary>Vorgeschlagene Verlängerung in Tagen (<c>WoodpeckerRules.SuggestExtensionDays</c>); nur bei
+    /// <see cref="DeadlinePassed"/>, sonst <c>null</c>.</summary>
+    public int? SuggestedExtensionDays { get; set; }
     public List<WoodpeckerCycleDto> Cycles { get; set; } = new();
 }
 

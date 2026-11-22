@@ -18,9 +18,25 @@ und dem (rückdatierbaren) Beginn — die Regeln stehen fest in `Services/Course
 | Wertung | je Zyklus zählt nur der **erste** Versuch an einer Aufgabe (Unique `(PlanId, Cycle, BookPuzzleId)`) |
 | Abgeschlossen | ein Zyklus ab 2 in ≤ 24 h erledigt, sonst nach Zyklus 7 |
 
-**Zyklus 1 endet** an der Frist (beim nächsten Lesen nachgezogen, `FinishedAt` = Frist), auf Knopfdruck
-(`finish-set`) oder sobald alle Aufgaben der Kurse im Satz sind. Ein leerer Satz endet nie von selbst. Ab Zyklus 2
-endet ein Zyklus, wenn jede Aufgabe des Satzes bearbeitet ist; eine überzogene Frist wird nur angezeigt.
+**Zyklus 1 endet** auf Knopfdruck (`finish-set`) oder sobald alle Aufgaben der Kurse im Satz sind. Ab Zyklus 2
+endet ein Zyklus, wenn jede Aufgabe des Satzes bearbeitet ist.
+
+**Frist um, Zyklus nicht fertig → fragen (1.007.0, Nutzerwunsch 22.11.2026).** Bis 1.006 endete Zyklus 1 still an der
+Frist (`FinishedAt` = Frist) und ab Zyklus 2 lief ein überzogener Zyklus unbegrenzt weiter. Jetzt meldet der Plan
+`deadlinePassed: true` (Status bleibt `solving`; Zyklus 1 nur mit mindestens einer Aufgabe im Satz) samt
+`suggestedExtensionDays` (`WoodpeckerRules.SuggestExtensionDays`: offene Aufgaben ÷ bisheriges Tempo des Zyklus
+= bearbeitet ÷ verstrichene Tage (mind. 1), aufgerundet, 1–28; ohne Versuch die Zieldauer; offen = Zyklus 1: Kursaufgaben
+außerhalb des Satzes, sonst Satz − bearbeitet). Die App fragt beim Öffnen der Übersicht und des Lösers (einmal je
+Sitzung, Plan und Frist; „Später“ → Knopf „Verlängern oder abschließen“ auf der Karte):
+- **Verlängern** (`extend`, `{ days }` 1–28): `WoodpeckerCycles.ExtendedUntil` = spätere von jetzt und bisheriger Frist +
+  Tage. `deadline` im DTO ist ab dann die verlängerte Frist (Tagesziel, Zeitplan, Balken rechnen damit), `targetDays`
+  bleibt die Buchzahl, der nächste Zyklus halbiert nach der Buchzahl. In Zyklus 1 reicht der Kurs-Import bis zur neuen Frist.
+- **Abschließen** (`finish-cycle`; Zyklus 1 wie `finish-set`, ab Zyklus 2 erst nach der Frist, sonst 409): offene Aufgaben
+  bekommen keinen Versuch. `FinishedAt` = Frist bzw. der letzte Versuch nach der Frist (nie später als jetzt) — die Tage
+  bis zur Entscheidung zählen nicht als Zyklusdauer, die Pause läuft ab dort. Zyklus 7 abgeschlossen → Methode fertig;
+  „an einem Tag geschafft“ gilt nur für vollständige Zyklen.
+Bis zur Entscheidung läuft der Zyklus weiter und Versuche zählen (auch aus der Offline-Warteschlange). Offline speichert
+das Fenster nichts (Hinweis, Fenster bleibt offen); die Entscheidung steht nur auf dem Server.
 
 **Kurs-Versuche zählen in Zyklus 1 mit** (`WoodpeckerService.ImportCourseAttemptsAsync`): bei jedem Lesen werden die
 `CourseAttempts` des Nutzers an den Plan-Kursen zwischen Beginn und Frist übernommen (je Aufgabe der erste, zeitlich
@@ -37,13 +53,15 @@ diese Aufgaben im Satz. Umgekehrt schreibt der Woodpecker-Löser KEINE `CourseAt
 | POST | `/api/woodpecker/{id}/unarchive` | wiederherstellen — nur ohne anderes nicht archiviertes Training, sonst 409 `woodpecker_active_exists` (0.958.0) |
 | PUT | `/api/woodpecker/{id}/start` | `{ startedAt }` — Beginn des laufenden Zyklus verschieben: nicht in die Zukunft, nicht hinter dessen ersten Versuch, nicht vor das Ende des vorigen. Die Oberfläche bietet es nur in Zyklus 1 an |
 | POST | `/api/woodpecker/{id}/finish-set` | Zyklus 1 vorzeitig beenden (Satz leer → 400) |
+| POST | `/api/woodpecker/{id}/extend` | `{ days }` (1–28, sonst 400) — laufenden Zyklus verlängern (1.007.0); Zyklus beendet/Training fertig → 409 |
+| POST | `/api/woodpecker/{id}/finish-cycle` | laufenden Zyklus abschließen, Offenes bleibt unbearbeitet (1.007.0); ab Zyklus 2 vor der Frist → 409, Zyklus 1 mit leerem Satz → 400 |
 | POST | `/api/woodpecker/{id}/next-cycle` | nächsten Zyklus beginnen (Pause < 24 h oder Zyklus läuft → 409) |
 | GET | `/api/woodpecker/{id}/next` | `{ puzzle: BookPuzzleDto \| null, plan }` — `null`, wenn der Zyklus erledigt ist; `?lang=` übersetzt die Kommentare wie `GET /api/courses/{id}/next` (0.882.0). Nur aus Kursen, auf die das Konto JETZT Zugriff hat (R3-003: ein Kurs ohne Zugang ruht, die übrigen laufen weiter); ein Kalkulationsbuch kommt ohne Lösung |
 | GET | `/api/woodpecker/{id}/stats` | ausführliche Statistik (`WoodpeckerStatsDto`, 0.957.0; `?utcOffsetMinutes=`), fremdes → 404 — siehe unten |
 | POST | `/api/woodpecker/{id}/attempts` | `{ bookPuzzleId, solved, timeSeconds, hintsUsed? }` → `plan` (`hintsUsed` 0–3, geklemmt über `AttemptRecording`, fehlt = 0; 0.956.0); Aufgabe nicht im Plan (Zyklus 1: nicht in den Kursen, ab 2: nicht im Satz) oder Kurs ohne Zugang (R3-003) → 404; zweiter Versuch im selben Zyklus ändert nichts |
 
 **Zeitzone des Betrachters (`?utcOffsetMinutes=`, 0.993.0):** JEDER Endpunkt, der einen Plan zurückgibt (Liste,
-Einzelplan, Anlegen, `archive`, `unarchive`, `start`, `finish-set`, `next-cycle`, `next`, `attempts`), nimmt wie `stats`
+Einzelplan, Anlegen, `archive`, `unarchive`, `start`, `finish-set`, `extend`, `finish-cycle`, `next-cycle`, `next`, `attempts`), nimmt wie `stats`
 `?utcOffsetMinutes=` — Minuten östlich von UTC (`-getTimezoneOffset()`), auf ±14 h geklemmt
 (`WoodpeckerStatsCalculator.ViewerOffset`). Damit zählt **`WoodpeckerPlanDto.todayAttempted`** die gewerteten Versuche des
 LAUFENDEN Zyklus seit der lokalen Mitternacht (`LocalDayStartUtc`; eine Zählabfrage in `BuildDtoAsync`, keine Migration);
@@ -193,13 +211,13 @@ egal ob laufend, in Pause, bereit oder abgeschlossen. Erzwungen im `WoodpeckerSe
 | `POST /api/woodpecker` mit vorhandenem nicht archiviertem Training | 409 `woodpecker_active_exists` |
 | dasselbe mit `archiveCurrent: true` | ALLE bisherigen nicht archivierten bekommen `ArchivedAt = jetzt`, das neue wird angelegt — Sperre auf die Nutzerzeile (`SELECT … FOR UPDATE`), Prüfen, Archivieren und Anlegen in EINER Transaktion in der Execution-Strategy |
 | `unarchive` neben einem aktiven | 409 `woodpecker_active_exists` |
-| `next`, `attempts`, `next-cycle`, `finish-set`, `start` auf ein archiviertes | 409 `woodpecker_archived` |
+| `next`, `attempts`, `next-cycle`, `finish-set`, `extend`, `finish-cycle`, `start` auf ein archiviertes | 409 `woodpecker_archived` |
 | `GET`, Liste, `DELETE`, `archive` auf ein archiviertes | wie bisher |
 
 Ein archiviertes Training ist eingefroren: `RefreshAsync` lässt es aus (keine Frist von Zyklus 1 wird nachgezogen, kein
 Kurs-Versuch mehr übernommen). Beim Archivieren wird vorher einmal nachgezogen — eingefroren ist der Stand von da.
-Wiederherstellen macht es wieder aktiv; danach gelten die Fristen wie zuvor (eine inzwischen abgelaufene Frist von
-Zyklus 1 beendet den Zyklus beim nächsten Lesen). **Altbestand** mit mehreren nicht archivierten je Nutzer (vor 0.958.0
+Wiederherstellen macht es wieder aktiv; danach gelten die Fristen wie zuvor (eine inzwischen abgelaufene Frist löst
+die Frage „verlängern oder abschließen?“ aus, seit 1.007.0). **Altbestand** mit mehreren nicht archivierten je Nutzer (vor 0.958.0
 möglich; Prod 10.11.: 3 Pläne bei 3 Nutzern, also keiner) bleibt lauffähig: die Liste zeigt alle, Anlegen ist bis zum
 Archivieren gesperrt (der Dialog archiviert alle mit), die Dashboard-Kachel nimmt `activeWoodpeckerPlan`. Die Migration
 `WoodpeckerPlanArchivedAt` legt nur die Spalte an und archiviert nichts.

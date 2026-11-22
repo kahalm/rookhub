@@ -9674,6 +9674,9 @@ namespace RookHub.Api.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("ExtendedUntil")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("datetime(6)");
 

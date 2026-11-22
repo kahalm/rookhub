@@ -19,6 +19,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CourseService } from '../courses/course.service';
 import { WoodpeckerCreateDialogComponent, WoodpeckerDialogData, isWoodpeckerCourse } from './woodpecker-create-dialog.component';
+import { WoodpeckerDeadlinePrompt } from './woodpecker-deadline-dialog.component';
 import { daysLeft, isArchivedWoodpeckerPlan, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './woodpecker.service';
 
 /**
@@ -109,7 +110,13 @@ import { daysLeft, isArchivedWoodpeckerPlan, WoodpeckerCycle, WoodpeckerPlan, Wo
                       {{ (overdue(c) ? 'woodpecker.overdue' : (left(c) === 1 ? 'woodpecker.daysLeftOne' : 'woodpecker.daysLeft')) | translate: { days: left(c) } }}
                       · {{ c.deadline | date: 'short' }}
                     </p>
-                    @if (c.number === 1) {
+                    @if (p.deadlinePassed) {
+                      <!-- 1.007.0: Frist um, nicht alles bearbeitet — die Frage („verlängern oder abschließen?“) kommt beim
+                           Öffnen von selbst; nach „Später“ hier wieder erreichbar. -->
+                      <button mat-stroked-button class="decide" [disabled]="busy() === p.id" (click)="decide(p)">
+                        <mat-icon>event_repeat</mat-icon>{{ 'woodpecker.deadline.decide' | translate }}
+                      </button>
+                    } @else if (c.number === 1) {
                       <mat-progress-bar class="time-bar" mode="determinate" [value]="timePercent(c)"
                         [attr.aria-label]="'woodpecker.timeBar' | translate: { used: elapsedDays(c), total: c.targetDays }" />
                     }
@@ -244,6 +251,7 @@ import { daysLeft, isArchivedWoodpeckerPlan, WoodpeckerCycle, WoodpeckerPlan, Wo
     .state p { margin: 4px 0; }
     .deadline { font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
     .time-bar { margin-bottom: 4px; }
+    .decide { align-self: flex-start; margin: 4px 0; }
     .deadline.over { color: var(--rh-warn); }
     .cycles-wrap { overflow-x: auto; }
     .cycles { width: 100%; border-collapse: collapse; font-size: .85rem; }
@@ -281,6 +289,7 @@ export class WoodpeckerListComponent implements OnInit {
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private courses = inject(CourseService);
+  private deadlinePrompt = inject(WoodpeckerDeadlinePrompt);
 
   readonly plans = signal<WoodpeckerPlan[]>([]);
   /** Nicht archivierte Trainings (seit 0.958.0 höchstens eins; Altbestand kann mehrere haben). */
@@ -305,6 +314,9 @@ export class WoodpeckerListComponent implements OnInit {
         this.plans.set(list);
         this.loading.set(false);
         if (this.active().length === 0) this.checkCourses();
+        // 1.007.0: Frist um, nicht alles bearbeitet → einmal je Sitzung von selbst fragen.
+        const due = this.active().find(p => this.deadlinePrompt.shouldAsk(p));
+        if (due) this.deadlinePrompt.askIfDue(due).subscribe(plan => { if (plan) this.replace(plan); });
       },
       error: () => { this.loading.set(false); this.loadFailed.set(true); },
     });
@@ -385,6 +397,11 @@ export class WoodpeckerListComponent implements OnInit {
     this.confirm.ask('woodpecker.finishSetConfirm', { n: p.setSize }).subscribe(ok => {
       if (ok) this.run(p, this.service.finishSet(p.id));
     });
+  }
+
+  /** „Verlängern oder abschließen?“ auf Knopfdruck (nach „Später“). */
+  decide(p: WoodpeckerPlan): void {
+    this.deadlinePrompt.open(p).subscribe(plan => { if (plan) this.replace(plan); });
   }
 
   startNext(p: WoodpeckerPlan): void { this.run(p, this.service.startNextCycle(p.id)); }

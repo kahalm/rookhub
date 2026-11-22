@@ -6774,6 +6774,27 @@
       "missedMark": "elrontva",
       "view": "megnézem",
       "puzzleFallback": "Feladat"
+    },
+    "deadline": {
+      "title": "{{n}}. ciklus: lejárt az idő",
+      "intro": "A határidő lejárt: {{at}}. Feldolgozva: {{done}} / {{total}} feladat – {{open}} még nyitott.",
+      "introSet": "Az első ciklus négy hete lejárt: {{at}}. A készleted {{n}} feladatból áll; a kurzusok {{open}} feladata még nem került sorra.",
+      "extendHead": "Meghosszabbítás",
+      "days": "Napok",
+      "newDeadline": "Új határidő: {{at}}",
+      "daysRange": "1–{{max}} nap",
+      "suggestion": "Javaslat az eddigi tempód alapján: {{days}} nap.",
+      "finishHead": "Ciklus lezárása",
+      "finishHint": "A nyitott feladatok megoldatlannak számítanak. Legalább egynapos szünet után a(z) {{next}}. ciklus {{days}} nappal indul.",
+      "finishSet": "A készleted ezzel {{n}} feladattal rögzül. Legalább egynapos szünet után a(z) {{next}}. ciklus {{days}} nappal indul.",
+      "finishLast": "A nyitott feladatok megoldatlannak számítanak. Ez volt az utolsó ciklus – az edzés ezzel befejeződött.",
+      "later": "Később",
+      "finish": "Ciklus lezárása",
+      "extend": "Meghosszabbítás {{days}} nappal",
+      "decide": "Meghosszabbítás vagy lezárás",
+      "extended": "Ciklus meghosszabbítva.",
+      "finished": "Ciklus lezárva.",
+      "offline": "Offline vagy – a döntés csak kapcsolattal menthető. Próbáld újra később."
     }
   },
   "sheetEdit": {

@@ -13,10 +13,14 @@ namespace RookHub.Api.Services.Courses;
 /// <para><b>Zyklus 1</b> geht die Kurse in Plan-Reihenfolge und je Kurs in Lesereihenfolge durch; jede bearbeitete
 /// Aufgabe kommt in den Satz. Er zählt auch, was der Nutzer seit dem (rückdatierbaren) Start im normalen Kurs-Löser
 /// an diesen Kursen gemacht hat (<see cref="ImportCourseAttemptsAsync"/>) — wer schon 250 Aufgaben im Kurs gelöst hat,
-/// datiert den Start zurück und hat sie im Satz. Zyklus 1 endet mit der Frist, auf Knopfdruck oder wenn alle Aufgaben
-/// der Kurse im Satz sind.</para>
+/// datiert den Start zurück und hat sie im Satz. Zyklus 1 endet auf Knopfdruck oder wenn alle Aufgaben der Kurse im
+/// Satz sind.</para>
 /// <para><b>Ab Zyklus 2</b> kommt der Satz in zufälliger Reihenfolge, je Aufgabe zählt der erste Versuch; der Zyklus
-/// endet, wenn alle Aufgaben bearbeitet sind. Zustandswechsel (Frist abgelaufen) werden beim Lesen nachgezogen.</para>
+/// endet, wenn alle Aufgaben bearbeitet sind.</para>
+/// <para><b>Frist um, Zyklus nicht fertig</b> (1.007.0, Nutzerwunsch 22.11.2026; bis dahin endete Zyklus 1 still an der
+/// Frist und ab Zyklus 2 lief er unbegrenzt weiter): der Plan meldet <see cref="WoodpeckerPlanDto.DeadlinePassed"/>, die
+/// App fragt — <see cref="ExtendCycleAsync"/> setzt eine neue Frist, <see cref="FinishCycleAsync"/> schließt ab (Offenes
+/// bleibt unbearbeitet). Bis dahin läuft der Zyklus weiter und Versuche zählen (Offline-Warteschlange!).</para>
 /// </summary>
 public class WoodpeckerService
 {
@@ -195,7 +199,7 @@ public class WoodpeckerService
         return await BuildDtoAsync(plan, utcOffsetMinutes, ct);
     }
 
-    /// <summary>Zyklus 1 vor der Frist beenden — der Satz steht dann fest.</summary>
+    /// <summary>Zyklus 1 beenden (vor oder nach der Frist) — der Satz steht dann fest.</summary>
     public async Task<WoodpeckerPlanDto> FinishSetAsync(int userId, int planId, CancellationToken ct = default, int utcOffsetMinutes = 0)
     {
         var plan = await LoadAsync(userId, planId, ct);
@@ -204,11 +208,75 @@ public class WoodpeckerService
         var current = Current(plan);
         if (current.Number != 1 || current.FinishedAt != null)
             throw new ConflictException("Only the first cycle can be ended early.");
-        if (await SetSizeAsync(planId, ct) == 0)
-            throw new DomainValidationException("Solve at least one puzzle first.");
-        current.FinishedAt = Now;
+        await CloseAsync(plan, current, ct);
+        return await BuildDtoAsync(plan, utcOffsetMinutes, ct);
+    }
+
+    /// <summary>
+    /// Laufenden Zyklus abschließen, obwohl nicht alles bearbeitet ist (1.007.0) — die Antwort „abschließen“ auf die
+    /// Frage nach Ablauf der Frist. Zyklus 1 wie <see cref="FinishSetAsync"/> (der Satz steht fest); ab Zyklus 2 erst nach
+    /// der Frist (vorher 409). Die offenen Aufgaben bekommen keinen Versuch (die Statistik zählt sie nicht), danach geht es
+    /// wie gewohnt weiter: Pause, nächster Zyklus in halber Zeit; nach Zyklus 7 ist die Methode abgeschlossen.
+    /// </summary>
+    public async Task<WoodpeckerPlanDto> FinishCycleAsync(int userId, int planId, CancellationToken ct = default, int utcOffsetMinutes = 0)
+    {
+        var plan = await LoadAsync(userId, planId, ct);
+        EnsureNotArchived(plan);
+        await RefreshAsync(plan, userId, ct);
+        if (plan.CompletedAt != null) throw new ConflictException("This Woodpecker training is already finished.");
+        var current = Current(plan);
+        if (current.FinishedAt != null) throw new ConflictException("This cycle is already finished.");
+        if (current.Number > 1 && Now < EffectiveDeadline(current))
+            throw new ConflictException("The cycle still has time left.");
+        await CloseAsync(plan, current, ct);
+        return await BuildDtoAsync(plan, utcOffsetMinutes, ct);
+    }
+
+    /// <summary>
+    /// Laufenden Zyklus verlängern (1.007.0) — die Antwort „verlängern“ auf die Frage nach Ablauf der Frist (geht auch
+    /// vorher). Neue Frist = spätere von jetzt und bisheriger Frist + <paramref name="days"/> (1 … 28). Die Zieldauer aus
+    /// dem Buch und damit die Halbierung für den nächsten Zyklus ändern sich nicht.
+    /// </summary>
+    public async Task<WoodpeckerPlanDto> ExtendCycleAsync(int userId, int planId, int days, CancellationToken ct = default,
+        int utcOffsetMinutes = 0)
+    {
+        if (days < 1 || days > WoodpeckerRules.MaxExtensionDays)
+            throw new DomainValidationException($"Extend by 1 to {WoodpeckerRules.MaxExtensionDays} days.");
+        var plan = await LoadAsync(userId, planId, ct);
+        EnsureNotArchived(plan);
+        await RefreshAsync(plan, userId, ct);
+        if (plan.CompletedAt != null) throw new ConflictException("This Woodpecker training is already finished.");
+        var current = Current(plan);
+        if (current.FinishedAt != null) throw new ConflictException("This cycle is already finished.");
+        var from = EffectiveDeadline(current);
+        if (from < Now) from = Now;
+        current.ExtendedUntil = from.AddDays(days);
         await _db.SaveChangesAsync(ct);
         return await BuildDtoAsync(plan, utcOffsetMinutes, ct);
+    }
+
+    /// <summary>
+    /// Gemeinsames Ende von <see cref="FinishSetAsync"/> und <see cref="FinishCycleAsync"/>. Ende = jetzt; nach Ablauf
+    /// der Frist aber die Frist bzw. der letzte Versuch danach — sonst zählten die Tage, an denen man nur nicht
+    /// entschieden hat, als Zyklusdauer (und die Pause begänne erst mit der Entscheidung). Zyklus 7 schließt die Methode.
+    /// </summary>
+    private async Task CloseAsync(WoodpeckerPlan plan, WoodpeckerCycle current, CancellationToken ct)
+    {
+        if (current.Number == 1 && await SetSizeAsync(plan.Id, ct) == 0)
+            throw new DomainValidationException("Solve at least one puzzle first.");
+        var now = Now;
+        var deadline = EffectiveDeadline(current);
+        var end = now;
+        if (now > deadline)
+        {
+            var last = await _db.WoodpeckerAttempts.Where(a => a.PlanId == plan.Id && a.Cycle == current.Number)
+                .MaxAsync(a => (DateTime?)a.AttemptedAt, ct);
+            end = last is { } l && l > deadline ? l : deadline;
+            if (end > now) end = now;
+        }
+        current.FinishedAt = end;
+        if (current.Number >= WoodpeckerRules.MaxCycles) plan.CompletedAt = end;
+        await _db.SaveChangesAsync(ct);
     }
 
     /// <summary>Nächsten Zyklus beginnen — erst nach der Pause von mindestens einem Tag.</summary>
@@ -353,6 +421,8 @@ public class WoodpeckerService
 
     private static WoodpeckerCycle Current(WoodpeckerPlan plan) => plan.Cycles.OrderBy(c => c.Number).Last();
 
+    private static DateTime EffectiveDeadline(WoodpeckerCycle c) => WoodpeckerRules.Deadline(c.Number, c.StartedAt, c.ExtendedUntil);
+
     private static DateTime NormalizeUtc(DateTime t) => t.Kind switch
     {
         DateTimeKind.Local => t.ToUniversalTime(),
@@ -366,33 +436,25 @@ public class WoodpeckerService
     private IQueryable<BookPuzzle> Solvable(IEnumerable<int> bookIds) =>
         _db.BookPuzzles.Where(bp => bp.BookId != null && bookIds.Contains(bp.BookId.Value) && !bp.IsInfoOnly);
 
-    /// <summary>Frist von Zyklus 1 abgelaufen → beenden (an der Frist); Kursversuche seit dem Start übernehmen.</summary>
+    /// <summary>Zyklus 1: Kursversuche seit dem Start übernehmen; sind damit alle Aufgaben im Satz, endet er. Die Frist
+    /// beendet ihn seit 1.007.0 NICHT mehr still — der Nutzer entscheidet (<see cref="WoodpeckerPlanDto.DeadlinePassed"/>).</summary>
     private async Task RefreshAsync(WoodpeckerPlan plan, int userId, CancellationToken ct)
     {
         var current = Current(plan);
-        // Archiviert: eingefroren — keine Frist, kein Kurs-Import (0.958.0).
+        // Archiviert: eingefroren — kein Kurs-Import (0.958.0).
         if (plan.ArchivedAt != null || plan.CompletedAt != null || current.FinishedAt != null || current.Number != 1) return;
         await ImportCourseAttemptsAsync(plan, userId, current, ct);
-        var deadline = WoodpeckerRules.Deadline(1, current.StartedAt);
-        if (Now >= deadline && await SetSizeAsync(plan.Id, ct) > 0)
-        {
-            current.FinishedAt = deadline;
-            await _db.SaveChangesAsync(ct);
-        }
-        else
-        {
-            await FinishIfCompleteAsync(plan, current, Now, ct);
-        }
+        await FinishIfCompleteAsync(plan, current, Now, ct);
     }
 
     /// <summary>Was der Nutzer in Zyklus 1 im normalen Kurs-Löser an den Plan-Kursen gemacht hat, zählt mit: je
-    /// Aufgabe der erste Versuch ab dem Start (bis zur Frist), in zeitlicher Reihenfolge.</summary>
+    /// Aufgabe der erste Versuch ab dem Start (bis zur gültigen, ggf. verlängerten Frist), in zeitlicher Reihenfolge.</summary>
     private async Task ImportCourseAttemptsAsync(WoodpeckerPlan plan, int userId, WoodpeckerCycle cycle1,
         CancellationToken ct)
     {
         var bookIds = plan.Books.Select(b => b.BookId).ToList();
         var from = cycle1.StartedAt;
-        var to = WoodpeckerRules.Deadline(1, from);
+        var to = EffectiveDeadline(cycle1);
         var attempts = await _db.CourseAttempts
             .Where(a => a.UserId == userId && bookIds.Contains(a.BookId) && a.AttemptedAt >= from && a.AttemptedAt < to)
             .Where(a => !_db.WoodpeckerSetItems.Any(i => i.PlanId == plan.Id && i.BookPuzzleId == a.BookPuzzleId))
@@ -502,6 +564,7 @@ public class WoodpeckerService
         var dayStart = WoodpeckerStatsCalculator.LocalDayStartUtc(Now, utcOffsetMinutes);
         var todayAttempted = await _db.WoodpeckerAttempts.CountAsync(
             a => a.PlanId == plan.Id && a.Cycle == current.Number && a.AttemptedAt >= dayStart, ct);
+        var setSize = await SetSizeAsync(plan.Id, ct);
         string status;
         DateTime? nextAt = null;
         if (plan.ArchivedAt != null) status = "archived";
@@ -511,6 +574,16 @@ public class WoodpeckerService
         {
             nextAt = current.FinishedAt.Value + WoodpeckerRules.MinBreak;
             status = Now < nextAt ? "break" : "ready";
+        }
+        // Frist um, Zyklus nicht fertig → die App fragt „verlängern oder abschließen?“ (1.007.0).
+        var deadlinePassed = status == "solving" && Now >= EffectiveDeadline(current) && (current.Number > 1 || setSize > 0);
+        int? suggestedDays = null;
+        if (deadlinePassed)
+        {
+            var attempted = stats.FirstOrDefault(x => x.Cycle == current.Number)?.Attempted ?? 0;
+            var open = current.Number == 1 ? counts.Sum(c => c.Count) - setSize : setSize - attempted;
+            suggestedDays = WoodpeckerRules.SuggestExtensionDays(current.Number, open, attempted,
+                (Now - current.StartedAt).TotalDays);
         }
 
         return new WoodpeckerPlanDto
@@ -530,13 +603,15 @@ public class WoodpeckerService
                     PuzzleCount = counts.FirstOrDefault(c => c.BookId == pb.BookId)?.Count ?? 0,
                 };
             }).ToList(),
-            SetSize = await SetSizeAsync(plan.Id, ct),
+            SetSize = setSize,
             AvailableCount = counts.Sum(c => c.Count),
             CurrentCycle = current.Number,
             MaxCycles = WoodpeckerRules.MaxCycles,
             Status = status,
             NextCycleAt = nextAt,
             TodayAttempted = todayAttempted,
+            DeadlinePassed = deadlinePassed,
+            SuggestedExtensionDays = suggestedDays,
             Cycles = cycles.Select(c =>
             {
                 var s = stats.FirstOrDefault(x => x.Cycle == c.Number);
@@ -545,7 +620,8 @@ public class WoodpeckerService
                     Number = c.Number,
                     TargetDays = WoodpeckerRules.TargetDays(c.Number),
                     StartedAt = c.StartedAt,
-                    Deadline = WoodpeckerRules.Deadline(c.Number, c.StartedAt),
+                    Deadline = EffectiveDeadline(c),
+                    ExtendedUntil = c.ExtendedUntil,
                     FinishedAt = c.FinishedAt,
                     Attempted = s?.Attempted ?? 0,
                     Solved = s?.Solved ?? 0,

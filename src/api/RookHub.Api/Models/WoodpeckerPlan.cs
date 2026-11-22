@@ -42,7 +42,8 @@ public class WoodpeckerPlanBook
     public int Position { get; set; }
 }
 
-/// <summary>Ein Zyklus (Nummer 1–7). Frist = <see cref="StartedAt"/> + Tage laut Buch (28, 14, 7, 4, 2, 1, 1).</summary>
+/// <summary>Ein Zyklus (Nummer 1–7). Frist = <see cref="StartedAt"/> + Tage laut Buch (28, 14, 7, 4, 2, 1, 1), außer verlängert
+/// (<see cref="ExtendedUntil"/>).</summary>
 public class WoodpeckerCycle
 {
     public int Id { get; set; }
@@ -51,6 +52,9 @@ public class WoodpeckerCycle
     public int Number { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
+    /// <summary>Verlängerte Frist (1.007.0): nach Ablauf fragt die App „verlängern oder abschließen?“; verlängert gilt
+    /// diese Frist statt der aus dem Buch. <c>null</c> = nie verlängert.</summary>
+    public DateTime? ExtendedUntil { get; set; }
 }
 
 /// <summary>Eine Aufgabe des Satzes — entsteht in Zyklus 1 mit dem ersten Versuch an ihr.

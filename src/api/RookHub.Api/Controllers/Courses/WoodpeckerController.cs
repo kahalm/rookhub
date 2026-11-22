@@ -71,6 +71,17 @@ public class WoodpeckerController : BaseApiController
     public async Task<IActionResult> FinishSet(int planId, [FromQuery] int utcOffsetMinutes = 0, CancellationToken ct = default) =>
         Ok(await _service.FinishSetAsync(GetUserId(), planId, ct, utcOffsetMinutes));
 
+    /// <summary>Laufenden Zyklus verlängern (1.007.0; vor allem nach Ablauf der Frist, wenn nicht alles bearbeitet ist).</summary>
+    [HttpPost("{planId:int}/extend")]
+    public async Task<IActionResult> Extend(int planId, [FromBody] ExtendWoodpeckerCycleDto dto,
+        [FromQuery] int utcOffsetMinutes = 0, CancellationToken ct = default) =>
+        Ok(await _service.ExtendCycleAsync(GetUserId(), planId, dto.Days, ct, utcOffsetMinutes));
+
+    /// <summary>Laufenden Zyklus abschließen (1.007.0): ab Zyklus 2 erst nach der Frist, Offenes bleibt unbearbeitet.</summary>
+    [HttpPost("{planId:int}/finish-cycle")]
+    public async Task<IActionResult> FinishCycle(int planId, [FromQuery] int utcOffsetMinutes = 0, CancellationToken ct = default) =>
+        Ok(await _service.FinishCycleAsync(GetUserId(), planId, ct, utcOffsetMinutes));
+
     /// <summary>Nächsten Zyklus beginnen (frühestens einen Tag nach dem Ende des vorigen).</summary>
     [HttpPost("{planId:int}/next-cycle")]
     public async Task<IActionResult> StartNextCycle(int planId, [FromQuery] int utcOffsetMinutes = 0, CancellationToken ct = default) =>

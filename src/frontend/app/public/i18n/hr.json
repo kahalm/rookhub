@@ -6774,6 +6774,27 @@
       "missedMark": "promašeno",
       "view": "pogledaj",
       "puzzleFallback": "Zadatak"
+    },
+    "deadline": {
+      "title": "Ciklus {{n}}: vrijeme je isteklo",
+      "intro": "Rok je istekao {{at}}. Riješio si {{done}} od {{total}} zadataka – {{open}} je još otvoreno.",
+      "introSet": "Četiri tjedna prvog ciklusa istekla su {{at}}. Tvoj set ima {{n}} zadataka; {{open}} zadataka iz tečajeva još nije došlo na red.",
+      "extendHead": "Produži",
+      "days": "Dani",
+      "newDeadline": "Novi rok: {{at}}",
+      "daysRange": "1 do {{max}} dana",
+      "suggestion": "Prijedlog prema tvom dosadašnjem tempu: {{days}} dana.",
+      "finishHead": "Zaključi ciklus",
+      "finishHint": "Otvoreni zadaci računaju se kao neriješeni. Nakon barem jednog dana pauze ciklus {{next}} počinje s {{days}} dana.",
+      "finishSet": "Tvoj set tada je fiksiran na {{n}} zadataka. Nakon barem jednog dana pauze ciklus {{next}} počinje s {{days}} dana.",
+      "finishLast": "Otvoreni zadaci računaju se kao neriješeni. Ovo je bio zadnji ciklus – trening je time završen.",
+      "later": "Kasnije",
+      "finish": "Zaključi ciklus",
+      "extend": "Produži za {{days}} dana",
+      "decide": "Produži ili zaključi ciklus",
+      "extended": "Ciklus produžen.",
+      "finished": "Ciklus zaključen.",
+      "offline": "Nisi na mreži – odluka se može spremiti samo s vezom. Pokušaj ponovo kasnije."
     }
   },
   "sheetEdit": {

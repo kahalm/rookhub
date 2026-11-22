@@ -47,6 +47,49 @@ describe('WoodpeckerListComponent', () => {
     return { fixture, c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
   }
 
+  // 1.007.0: Frist um, nicht alles bearbeitet → beim Öffnen fragen, danach Knopf auf der Karte.
+  it('Frist um: fragt beim Öffnen einmal, zeigt „Verlängern oder abschließen“ und übernimmt den neuen Plan', () => {
+    const due = plan({ currentCycle: 2, setSize: 388, deadlinePassed: true, suggestedExtensionDays: 8, cycles: [
+      cycle({ finishedAt: new Date().toISOString(), attempted: 388 }),
+      cycle({ number: 2, targetDays: 14, deadline: new Date(Date.now() - 3_600_000).toISOString(), attempted: 241 }),
+    ] });
+    const extended = { ...due, deadlinePassed: false, suggestedExtensionDays: null,
+      cycles: [due.cycles[0], { ...due.cycles[1], deadline: new Date(Date.now() + 8 * 86_400_000).toISOString() }] };
+    const open = jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(undefined) });
+    const { fixture, el } = renderWith([due], open);
+    expect(open).toHaveBeenCalledTimes(1);   // von selbst
+    const btn = el.querySelector<HTMLButtonElement>('.state button.decide');
+    expect(btn?.textContent).toContain('woodpecker.deadline.decide');
+    expect(el.querySelector('mat-progress-bar.time-bar')).toBeNull();
+    open.and.returnValue({ afterClosed: () => of(extended) });
+    btn!.click();
+    fixture.detectChanges();
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('.state button.decide')).toBeNull();
+    expect(el.querySelector('.deadline.over')).toBeNull();
+  });
+
+  /** Wie `render`, aber mit eigenem Dialog-Doppel (der Fragedienst öffnet darüber). */
+  function renderWith(plans: WoodpeckerPlan[], open: jasmine.Spy) {
+    service = jasmine.createSpyObj<WoodpeckerService>('WoodpeckerService', ['list']);
+    service.list.and.returnValue(of(plans));
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [WoodpeckerListComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: WoodpeckerService, useValue: service },
+        { provide: MatDialog, useValue: { open } },
+        { provide: SnackbarService, useValue: { warn: () => {}, success: () => {}, info: () => {} } },
+        { provide: ConfirmService, useValue: { ask: () => of(true) } },
+        { provide: CourseService, useValue: { getCourses: () => of([]) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(WoodpeckerListComponent);
+    fixture.detectChanges();
+    return { fixture, el: fixture.nativeElement as HTMLElement };
+  }
+
   it('ohne Training: Leerzustand mit genau einem Knopf zum Anlegen', () => {
     const { el } = render([]);
     expect(el.querySelector('.empty-state')).not.toBeNull();
