@@ -84,7 +84,7 @@
         }
         @if (s().busy()) { <p class="muted small">{{ 'sheetEdit.rereading' | translate }}</p> }
         @if (s().undoInfo(); as u) {
-          <p class="undo-line small">@if (u.kind === 'truncate') { {{ (u.count === 1 ? 'sheetEdit.truncatedOne' : 'sheetEdit.truncated') | translate: { count: u.count, ply: u.ply } }} } @else { {{ 'sheetEdit.deleted' | translate }} }
+          <p class="undo-line small">@if (u.kind === 'truncate') { {{ (u.count === 1 ? 'sheetEdit.truncatedOne' : 'sheetEdit.truncated') | translate: { count: u.count, ply: u.ply } }} } @else if (u.kind === 'rest') { {{ 'sheetEdit.restDiscarded' | translate: { count: u.count } }} } @else { {{ 'sheetEdit.deleted' | translate }} }
             <button type="button" class="btn-sec" [disabled]="s().busy()" (click)="s().undoRemove()">{{ 'common.undo' | translate }}</button></p>
         }
         @if (s().current(); as p) {
@@ -130,8 +130,14 @@
           <!-- „Ersetzen" ist die Vorgabe; nur der seltene Einfügen-Modus bekommt seine Zeile -->
           @if (s().mode() === 'insert') { <p class="muted small">{{ 'sheetEdit.insertHint' | translate }}</p> }
         } @else {
-          <p class="muted small">{{ 'sheetEdit.endHint' | translate }}</p>
+          <p class="muted small">{{ (s().sheetEndedHere() ? 'sheetEdit.sheetEndedHint' : 'sheetEdit.endHint') | translate }}</p>
           @if (s().unresolved().length) { <p class="small">{{ 'sheetEdit.nextWritten' | translate }} <b>{{ s().unresolved()[0] }}</b></p> }
+          <!-- „Partie hier beenden“ am Ende (2026-11-22): keine Züge weg, aber der Rest des Formulars (offene Einträge,
+               Kritzeleien) gehört nicht zur Partie und wird nicht mehr angeboten — nach Rückfrage, rückgängig bis zur nächsten Änderung. -->
+          @if (s().restInfo()) {
+            <p class="end-actions"><button type="button" class="btn-link truncate" [disabled]="s().busy()" [title]="'sheetEdit.restHint' | translate"
+                    (click)="askEndHere()">{{ 'sheetEdit.truncate' | translate }}</button></p>
+          }
           <ng-content select="[sheetEnd]" />
         }
       </div>

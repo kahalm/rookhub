@@ -47,6 +47,10 @@ public class GameUpdateDto
     /// bestätigt, unsicher, Lesarten) — damit die Seite beim nächsten Öffnen dort weitermacht. Für den Server
     /// Anzeige-Zustand; die Züge selbst kommen aus <see cref="Moves"/>.</summary>
     public List<ScoresheetPly>? ScoresheetPlies { get; set; }
+
+    /// <summary>„Partie hier beenden“ (2026-11-22): der erste Formular-Eintrag, der nicht mehr zur Partie gehört — er und alle
+    /// folgenden gelten als verworfen, nicht mehr als offen. <c>null</c> = unverändert (nichts beendet).</summary>
+    public int? SheetEnd { get; set; }
 }
 
 /// <summary>Wie weit ist eine Formular-Einlesung?</summary>
@@ -134,6 +138,9 @@ public class ScoresheetEditStateDto
     public List<string> Unresolved { get; set; } = new();
     /// <summary>Ab welchem Formular-Eintrag die unaufgelösten beginnen (<c>null</c> = keine).</summary>
     public int? UnresolvedFrom { get; set; }
+    /// <summary>„Partie hier beenden“: ab diesem Formular-Eintrag gehört nichts mehr zur Partie (<c>null</c> = das ganze
+    /// Formular). Die Korrekturseite liest dort nicht weiter.</summary>
+    public int? SheetEnd { get; set; }
 }
 
 /// <summary><c>POST /api/games/{id}/scoresheet/resolve</c> — den Rest ab einer festgelegten Stelle neu aufbereiten.</summary>

@@ -272,8 +272,8 @@ export class ClubClient {
   }
 
   /** Züge korrigieren — gilt auch für alle Kopien in „Meine Partien". */
-  correctMoves(id: number, moves: string[], plies: ScoresheetPly[] | null): Promise<ClubGame> {
-    return firstValueFrom(this.http.put<ClubGame>(`${this.base}/games/${id}/moves`, { moves, plies }));
+  correctMoves(id: number, moves: string[], plies: ScoresheetPly[] | null, sheetEnd: number | null = null): Promise<ClubGame> {
+    return firstValueFrom(this.http.put<ClubGame>(`${this.base}/games/${id}/moves`, { moves, plies, sheetEnd }));
   }
 
   discard(ref: string): Promise<unknown> {

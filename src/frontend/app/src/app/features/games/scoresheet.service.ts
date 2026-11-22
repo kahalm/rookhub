@@ -94,6 +94,8 @@ export interface ScoresheetEditState {
   plies: ScoresheetPly[];
   unresolved: string[];
   unresolvedFrom?: number | null;
+  /** „Partie hier beenden“ (2026-11-22): ab diesem Formular-Eintrag gehört nichts mehr zur Partie; fehlt = das ganze Formular. */
+  sheetEnd?: number | null;
 }
 
 export interface ScoresheetResolveResult {
@@ -121,6 +123,8 @@ export interface GameUpdate {
   /** Eigene Tags: die vollständige neue Liste; weglassen = unverändert. */
   tags?: string[];
   scoresheetPlies?: ScoresheetPly[] | null;
+  /** „Partie hier beenden“: ab diesem Formular-Eintrag verworfen; leer = unverändert. */
+  sheetEnd?: number | null;
 }
 
 /** „Partieformular einlesen" (0.529.0) und die Korrektur einer gespeicherten Partie. */

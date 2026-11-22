@@ -54,6 +54,7 @@ internal sealed class ScoresheetCorrection
             .FirstOrDefaultAsync();
         if (scan == null) return null;
         var stored = Deserialize(scan.ResolutionJson);
+        stored?.TrimToSheetEnd();
         var t = ScoresheetTranscription.Parse(scan.TranscriptionJson);
         return new ScoresheetEditStateDto
         {
@@ -66,6 +67,7 @@ internal sealed class ScoresheetCorrection
             Plies = stored?.Plies ?? new(),
             Unresolved = stored?.Unresolved ?? new(),
             UnresolvedFrom = stored?.UnresolvedFrom,
+            SheetEnd = stored?.SheetEnd,
         };
     }
 
@@ -141,6 +143,7 @@ internal sealed class ScoresheetCorrection
         var first = rows.FirstOrDefault(r => r.Page == 1);
         if (first == null) return null;
         var stored = Deserialize(first.ResolutionJson);
+        stored?.TrimToSheetEnd();
         var t = ScoresheetTranscription.Parse(first.TranscriptionJson);
         return new ScoresheetEditStateDto
         {
@@ -153,6 +156,7 @@ internal sealed class ScoresheetCorrection
             Plies = stored?.Plies ?? new(),
             Unresolved = stored?.Unresolved ?? new(),
             UnresolvedFrom = stored?.UnresolvedFrom,
+            SheetEnd = stored?.SheetEnd,
             ViewCounts = await ClubViewCountsAsync(clubGameId, Math.Max(1, rows.Count), ct),
         };
     }
@@ -185,30 +189,36 @@ internal sealed class ScoresheetCorrection
         return new ScoresheetResolveResultDto { Plies = r.Plies, Unresolved = r.Unresolved, UnresolvedFrom = r.StuckAt };
     }
 
-    /// <summary>Nach einer Korrektur den Stand je Halbzug und die PGN im Archiv nachziehen (die Lesung selbst bleibt).</summary>
-    public async Task SaveClubEditStateAsync(int clubGameId, List<ScoresheetPly>? plies, string finalPgn, CancellationToken ct = default)
+    /// <summary>Nach einer Korrektur den Stand je Halbzug und die PGN im Archiv nachziehen (die Lesung selbst bleibt).
+    /// <paramref name="sheetEnd"/>: „Partie hier beenden“ — Einträge ab hier sind verworfen (<see cref="StoredResolution.EndSheetAt"/>).</summary>
+    public async Task SaveClubEditStateAsync(int clubGameId, List<ScoresheetPly>? plies, string finalPgn, CancellationToken ct = default,
+        int? sheetEnd = null)
     {
         var a = await ClubPages(clubGameId).Where(x => x.Page == 1).FirstOrDefaultAsync(ct);
         if (a == null) return;
         a.FinalPgn = finalPgn;
-        if (plies != null)
+        if (plies != null || sheetEnd != null)
         {
             var stored = Deserialize(a.ResolutionJson) ?? new StoredResolution { Language = a.NotationLanguage };
-            stored.Plies = plies.Take(600).ToList();
+            if (plies != null) stored.Plies = plies.Take(600).ToList();
+            stored.EndSheetAt(sheetEnd);
             a.ResolutionJson = JsonSerializer.Serialize(stored, Json);
         }
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Nach dem Speichern der Korrekturseite: deren Stand je Halbzug ablegen (Anzeige-Zustand).</summary>
-    public async Task SaveEditStateAsync(int userId, int gameId, List<ScoresheetPly> plies)
+    /// <summary>Nach dem Speichern der Korrekturseite: deren Stand je Halbzug ablegen (Anzeige-Zustand).
+    /// <paramref name="sheetEnd"/> wie bei <see cref="SaveClubEditStateAsync"/>.</summary>
+    public async Task SaveEditStateAsync(int userId, int gameId, List<ScoresheetPly> plies, int? sheetEnd = null)
     {
         var scan = await _db.ScoresheetScans.FirstOrDefaultAsync(s => s.SavedGameId == gameId && s.UserId == userId);
         if (scan == null) return;
         var stored = Deserialize(scan.ResolutionJson) ?? new StoredResolution { Language = scan.NotationLanguage };
         stored.Plies = plies.Take(600).ToList();
         // Was nach dem letzten gespeicherten Zug noch offen ist, bestimmt die Seite nicht mehr — das Speichern
-        // übernimmt nur legale Züge; offene Einträge dahinter bleiben stehen, wie sie waren.
+        // übernimmt nur legale Züge; offene Einträge dahinter bleiben stehen, wie sie waren. Außer die Partie wurde
+        // ausdrücklich beendet („Partie hier beenden“, 2026-11-22): dann sind die Einträge ab dem Schnitt verworfen.
+        stored.EndSheetAt(sheetEnd);
         scan.ResolutionJson = JsonSerializer.Serialize(stored, Json);
         await _db.SaveChangesAsync();
     }

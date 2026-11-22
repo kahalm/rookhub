@@ -113,6 +113,16 @@ export class SheetWorkbenchComponent {
       });
   }
 
+  /** „Partie hier beenden“ am Ende der Zugliste: nach Rückfrage den Rest des Formulars verwerfen (keine Züge weg). */
+  askEndHere(): void {
+    const s = this.s();
+    const info = s.restInfo();
+    if (!info || s.busy()) return;
+    this.confirm.ask('sheetEdit.restConfirm', { count: info.count }, { confirm: this.translate.instant('sheetEdit.restConfirmBtn') })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(ok => { if (ok) s.endHere(); });
+  }
+
   @HostListener('document:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
     if (!isBoardHotkey(e)) return;

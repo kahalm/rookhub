@@ -149,9 +149,9 @@ public class GameCorrectionController : BaseApiController
         {
             var game = await _games.UpdateAsync(GetUserId(), id, dto);
             if (game == null) return NotFound();
-            if (dto.ScoresheetPlies != null) await _scans.SaveEditStateAsync(GetUserId(), id, dto.ScoresheetPlies);
+            if (dto.ScoresheetPlies != null) await _scans.SaveEditStateAsync(GetUserId(), id, dto.ScoresheetPlies, dto.SheetEnd);
             // Kopie einer Vereinspartie (0.660.0): die Korrektur geht dorthin und in alle Kopien — oder die Kopie löst sich
-            if (_clubCorrections != null) await _clubCorrections.FromCopyAsync(GetUserId(), IsAdmin, id, dto.ScoresheetPlies);
+            if (_clubCorrections != null) await _clubCorrections.FromCopyAsync(GetUserId(), IsAdmin, id, dto.ScoresheetPlies, dto.SheetEnd);
             return Ok(game);
         }
         catch (SavedGameQuotaException ex)

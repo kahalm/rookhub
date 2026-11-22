@@ -49,6 +49,29 @@ internal static class ScoresheetScanRows
         public List<ScoresheetPly> Plies { get; set; } = new();
         public List<string> Unresolved { get; set; } = new();
         public int? UnresolvedFrom { get; set; }
+        /// <summary>„Partie hier beenden“ (2026-11-22): der erste Formular-Eintrag, der NICHT mehr zur Partie gehört
+        /// (Kritzeleien, Analyse nach dem echten Ende). Ab hier ist nichts mehr offen; die Korrekturseite liest dort nicht
+        /// weiter. <c>null</c> = das ganze Formular zählt.</summary>
+        public int? SheetEnd { get; set; }
+
+        /// <summary>Das Signal der Korrekturseite beim Speichern übernehmen: Einträge ab <paramref name="end"/> sind verworfen.
+        /// <c>null</c> (älterer Client, nichts gekürzt) lässt den gespeicherten Stand, wie er ist.</summary>
+        internal void EndSheetAt(int? end)
+        {
+            if (end is not int e || e < 0) return;
+            SheetEnd = e;
+            TrimToSheetEnd();
+        }
+
+        /// <summary>Offene Einträge ab <see cref="SheetEnd"/> gelten als erledigt — sie stehen nicht mehr als
+        /// „ließen sich nicht zuordnen“ da (und RookHub hängt sie nicht als „Offen: …“ an den letzten Zug).</summary>
+        internal void TrimToSheetEnd()
+        {
+            if (SheetEnd is not int e || UnresolvedFrom is not int from) return;
+            var keep = Math.Clamp(e - from, 0, Unresolved.Count);
+            Unresolved = Unresolved.Take(keep).ToList();
+            if (keep == 0) UnresolvedFrom = null;
+        }
     }
 
     // ── Helfer ────────────────────────────────────────────────────────

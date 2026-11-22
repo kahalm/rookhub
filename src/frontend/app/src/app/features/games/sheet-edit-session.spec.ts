@@ -261,3 +261,141 @@ describe('SheetEditSession – Partie hier beenden', () => {
     expect(s.plies().map(p => p.san)).toEqual(['d4']);
   });
 });
+
+/**
+ * „Partie hier beenden“ beendet auch das FORMULAR (Folgefix 2026-11-22): danach las ein neuer Zug am Ende das Formular ab
+ * dem nächsten Eintrag wieder ein, und die gestrichenen Kritzeleien kamen zurück — auch nach dem Neuladen, weil der Server
+ * die offenen Einträge nie anpasste. Jetzt gilt `sheetEnd` (gespeichert, beim Laden wieder da).
+ */
+describe('SheetEditSession – nach „Partie hier beenden“ endet das Formular', () => {
+  const ply = (w: number | null, san: string, uci: string, extra: Partial<ScoresheetPly> = {}): ScoresheetPly =>
+    ({ w, written: san, san, uci, match: 'written', uncertain: false, ...extra });
+  const WRITTEN = ['e4', 'e5', 'Sf3', 'Sc6', 'Lb5', 'a6', 'Lxc6', '?'];
+
+  function scanned(extra: { sheetEnd?: number | null; unresolved?: string[]; unresolvedFrom?: number | null; plies?: number } = {}) {
+    let pending = new Subject<ScoresheetResolveResult>();
+    const host = {
+      resolve: jasmine.createSpy('resolve').and.callFake(() => { pending = new Subject(); return pending; }),
+      changed: jasmine.createSpy('changed'),
+    };
+    const s = new SheetEditSession(host);
+    const all = [ply(0, 'e4', 'e2e4'), ply(1, 'e5', 'e7e5'), ply(2, 'Nf3', 'g1f3'), ply(3, 'Nc6', 'b8c6'), ply(4, 'Bb5', 'f1b5'),
+      ply(5, 'a6', 'a7a6')];
+    s.loadSheet({
+      plies: all.slice(0, extra.plies ?? 6),
+      unresolved: extra.unresolved ?? ['Lxc6', '?'], unresolvedFrom: extra.unresolvedFrom === undefined ? 6 : extra.unresolvedFrom,
+      sheetEnd: extra.sheetEnd ?? null, written: WRITTEN,
+    });
+    return { s, host, respond: (r: ScoresheetResolveResult) => pending.next(r) };
+  }
+
+  it('Kürzen setzt das Ende auf den Eintrag des gestrichenen Halbzugs; ein Zug am Ende kommt ohne Formular-Eintrag', () => {
+    const { s, host } = scanned();
+    s.go(4);                                                            // 3. Bb5 (Eintrag 4)
+    s.truncate();
+    expect(s.sheetEnd()).toBe(4);
+    expect(s.sheetEndedHere()).toBeTrue();
+
+    s.play('Bc4');                                                      // statt der Kritzelei „Lb5“ ein eigener Zug
+    expect(host.resolve).not.toHaveBeenCalled();                        // nichts wird ab Eintrag 5 neu gelesen
+    expect(s.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4']);
+    expect(s.plies()[4]).toEqual(jasmine.objectContaining({ w: null, written: '', match: 'user', confirmed: true }));
+    expect(s.unresolved()).toEqual([]);
+    expect(s.crop()).toBeNull();                                        // kein Ausschnitt eines gestrichenen Eintrags
+    s.play('Nf6');
+    expect(s.plies().length).toBe(6);
+    expect(s.plies()[5].w).toBeNull();
+    expect(toServer(s.plies()).map(p => p.w)).toEqual([0, 1, 2, 3, null, null]);
+  });
+
+  it('Rückgängig nach dem Kürzen holt auch das Formular zurück: ein Zug am Ende liest wieder weiter', () => {
+    const { s, host } = scanned({ plies: 4, unresolved: [], unresolvedFrom: null });
+    s.go(3);
+    s.truncate();
+    expect(s.sheetEnd()).toBe(3);
+    s.undoRemove();
+    expect(s.sheetEnd()).toBeNull();
+    expect(s.plies().length).toBe(4);
+    s.go(4);
+    s.play('Bb5');
+    expect(host.resolve).toHaveBeenCalledWith(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], 5);
+  });
+
+  it('nach dem Neuladen (gespeichertes sheetEnd): kein Weiterlesen, keine offenen Einträge ab dem Ende', () => {
+    // Ein älterer Stand, in dem der Server die offenen Einträge noch führt — die Sitzung zeigt ab dem Ende keine.
+    const { s, host } = scanned({ plies: 4, sheetEnd: 4, unresolved: ['Lb5', 'a6', 'Lxc6', '?'], unresolvedFrom: 4 });
+    expect(s.unresolved()).toEqual([]);
+    expect(s.unresolvedFrom()).toBeNull();
+    expect(s.restInfo()).toBeNull();                                    // nichts mehr anzubieten
+    s.go(4);
+    expect(s.sheetEndedHere()).toBeTrue();
+    s.play('Bc4');
+    expect(host.resolve).not.toHaveBeenCalled();
+    expect(s.plies()[4].w).toBeNull();
+  });
+
+  it('ein Ersetzen in der Mitte liest neu, bringt aber nichts ab dem Ende zurück', () => {
+    const { s, host, respond } = scanned({ plies: 4, sheetEnd: 4, unresolved: [], unresolvedFrom: null });
+    s.go(3);
+    s.play('Nc6');                                                      // „Stimmt so“ per Brett: derselbe Zug
+    expect(host.resolve).toHaveBeenCalled();
+    // der Server liest das ganze Formular: Lb5, a6 aus Einträgen 4/5 und offen ab 6
+    respond({ plies: [], unresolved: [], unresolvedFrom: null });
+    s.go(2);
+    s.play('Nf3');
+    respond({
+      plies: [ply(3, 'Nc6', 'b8c6'), ply(null, 'h3', 'h2h3', { match: 'inserted' }), ply(4, 'Bb5', 'f1b5'), ply(5, 'a6', 'a7a6')],
+      unresolved: ['Lxc6', '?'], unresolvedFrom: 6,
+    });
+    expect(s.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6']);
+    expect(s.unresolved()).toEqual([]);
+    expect(s.unresolvedFrom()).toBeNull();
+  });
+
+  it('offene Einträge VOR dem Ende bleiben (der Server stockt früher), die danach fallen weg', () => {
+    const { s, respond } = scanned({ plies: 6, sheetEnd: 7, unresolved: ['Lxc6'], unresolvedFrom: 6 });
+    expect(s.unresolved()).toEqual(['Lxc6']);
+    s.go(5);
+    s.play('a6');
+    respond({ plies: [], unresolved: ['Lxc6', '?'], unresolvedFrom: 6 });
+    expect(s.unresolved()).toEqual(['Lxc6']);
+    expect(s.unresolvedFrom()).toBe(6);
+  });
+
+  it('am Ende der Zugliste: „Partie hier beenden“ verwirft den Rest des Formulars, ohne Züge zu streichen', () => {
+    const { s, host } = scanned();
+    s.go(6);
+    expect(s.truncateInfo()).toBeNull();
+    expect(s.restInfo()).toEqual({ count: 2 });
+    s.endHere();
+    expect(s.plies().length).toBe(6);
+    expect(s.sheetEnd()).toBe(6);
+    expect(s.unresolved()).toEqual([]);
+    expect(s.restInfo()).toBeNull();
+    expect(s.undoInfo()).toEqual({ kind: 'rest', count: 2, ply: '4.' });
+    expect(host.changed).toHaveBeenCalled();
+    s.play('Bxc6');
+    expect(host.resolve).not.toHaveBeenCalled();
+    expect(s.plies()[6].w).toBeNull();
+  });
+
+  it('am Ende: Rückgängig holt die offenen Einträge zurück; ohne Rest kein Angebot', () => {
+    const { s } = scanned();
+    s.go(6);
+    s.endHere();
+    s.undoRemove();
+    expect(s.unresolved()).toEqual(['Lxc6', '?']);
+    expect(s.sheetEnd()).toBeNull();
+    expect(s.restInfo()).toEqual({ count: 2 });
+    // alle Einträge verbraucht — nichts übrig
+    const full = new SheetEditSession({ resolve: jasmine.createSpy('resolve') });
+    full.loadSheet({ plies: [ply(0, 'e4', 'e2e4'), ply(1, 'e5', 'e7e5')], written: ['e4', 'e5'] });
+    full.go(2);
+    expect(full.restInfo()).toBeNull();
+    // eine gewöhnliche Partie hat kein Formular
+    const plain = new SheetEditSession({ resolve: jasmine.createSpy('resolve') });
+    plain.plies.set(fromServer([ply(0, 'd4', 'd2d4')]));
+    plain.go(1);
+    expect(plain.restInfo()).toBeNull();
+  });
+});

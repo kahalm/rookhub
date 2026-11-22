@@ -164,4 +164,33 @@ describe('SheetWorkbenchComponent', () => {
     expect(el.querySelector('.truncate')).toBeNull();
     expect(el.querySelector('.where-actions .del')).not.toBeNull();       // „Zug löschen“ bleibt
   });
+  // Folgefix 2026-11-22: am Ende der Zugliste beendet derselbe Link das Formular (keine Züge weg, der Rest wird verworfen).
+  it('„Partie hier beenden“ am Ende: nur mit übrigen Einträgen, fragt mit der Zahl nach, danach Ende-Hinweis ohne Formular', () => {
+    const { f, h, el } = setup();
+    h.s.go(3);
+    f.detectChanges();
+    expect(el.querySelector('.end-actions .truncate')).toBeNull();      // alle drei Einträge verbraucht
+    h.s.sheetEntries.set(['e4', 'e5', 'Sf3', 'Sc6', '?']);
+    h.s.unresolved.set(['Sc6', '?']);
+    h.s.unresolvedFrom.set(3);
+    f.detectChanges();
+    const btn = el.querySelector<HTMLButtonElement>('.end-actions .truncate')!;
+    expect(btn.textContent?.trim()).toBe('sheetEdit.truncate');
+    expect(el.textContent).toContain('sheetEdit.endHint');
+    btn.click();
+    expect(ask).toHaveBeenCalledWith('sheetEdit.restConfirm', { count: 2 }, { confirm: 'sheetEdit.restConfirmBtn' });
+    expect(h.s.unresolved().length).toBe(2);                            // erst nach dem Ja
+    answer.next(true);
+    f.detectChanges();
+    expect(h.s.unresolved()).toEqual([]);
+    expect(h.s.sheetEnd()).toBe(3);
+    expect(el.querySelector('.unresolved')).toBeNull();
+    expect(el.querySelector('.end-actions .truncate')).toBeNull();
+    expect(el.textContent).toContain('sheetEdit.sheetEndedHint');
+    expect(el.querySelector('.undo-line')!.textContent).toContain('sheetEdit.restDiscarded');
+    el.querySelector<HTMLButtonElement>('.undo-line button')!.click();
+    f.detectChanges();
+    expect(h.s.unresolved()).toEqual(['Sc6', '?']);
+    expect(h.s.sheetEnd()).toBeNull();
+  });
 });

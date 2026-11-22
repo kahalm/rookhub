@@ -4,8 +4,8 @@ import { Chess } from 'chess.js';
 import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
 import { ScoresheetOption, ScoresheetPly, ScoresheetResolveResult } from './scoresheet.service';
 import {
-  EditPly, START_FEN, cropView, fensOf, fromServer, keepDecisions, keepLocalEdits, nextUncertainFrom, resolveRequest, revalidate, stripSheetNotes, userPly,
-  writtenIndexAt,
+  EditPly, START_FEN, cropView, fensOf, fromServer, keepDecisions, keepLocalEdits, nextEntryAt, nextUncertainFrom, resolveRequest, revalidate,
+  stripSheetNotes, userPly, writtenIndexAt,
 } from './game-edit.util';
 
 /** Eine Zeile der Zugliste: Zugnummer + Index des weißen und des schwarzen Halbzugs. */
@@ -41,6 +41,13 @@ export class SheetEditSession {
   readonly mode = signal<'replace' | 'insert'>('replace');
   readonly unresolved = signal<string[]>([]);
   readonly unresolvedFrom = signal<number | null>(null);
+  /**
+   * „Partie hier beenden“ (2026-11-22): der erste Formular-Eintrag, der NICHT mehr zur Partie gehört (`null` = das ganze
+   * Formular). Ab hier liest die Sitzung nicht mehr weiter: ein Zug am Ende wird ohne Formular-Eintrag angehängt, und ein
+   * Neu-Aufbereiten in der Mitte bringt die gestrichenen Kritzeleien nicht zurück. Gespeichert als `sheetEnd` — so gilt es
+   * auch nach dem Neuladen.
+   */
+  readonly sheetEnd = signal<number | null>(null);
   /** Eingelesene Partie (Formular-Einträge da) — sonst eine gewöhnliche, dann wird nur nachgespielt. */
   readonly isScoresheet = signal(false);
   /** Je Formular-Eintrag der Kasten auf dem Foto (vom Modell; ältere Einlesungen haben keine). */
@@ -64,9 +71,10 @@ export class SheetEditSession {
    * Rückgängig sie still mit zurück. Nur ein Schritt.
    */
   private readonly beforeRemove = signal<{
-    plies: EditPly[]; unresolved: string[]; unresolvedFrom: number | null; cursor: number;
-    /** `truncate` = „Partie hier beenden“: `count` Halbzüge ab `cursor` gestrichen. */
-    kind: 'remove' | 'truncate'; count: number;
+    plies: EditPly[]; unresolved: string[]; unresolvedFrom: number | null; cursor: number; sheetEnd: number | null;
+    /** `truncate` = „Partie hier beenden“: `count` Halbzüge ab `cursor` gestrichen; `rest` = am Ende der Zugliste beendet,
+     *  `count` Formular-Einträge verworfen. */
+    kind: 'remove' | 'truncate' | 'rest'; count: number;
   } | null>(null);
   readonly canUndoRemove = computed(() => this.beforeRemove() !== null);
   /** Was das Rückgängig zurückholt — für die Zeile darüber („Zug gelöscht.“ / „5 Halbzüge ab 23… gelöscht.“). */
@@ -84,6 +92,23 @@ export class SheetEditSession {
     const list = this.plies();
     if (i <= 0 || i >= list.length) return null;
     return { ply: this.plyLabel(i), san: list[i].san, count: list.length - i };
+  });
+  /**
+   * „Partie hier beenden“ am ENDE der Zugliste (2026-11-22): es fällt kein Zug weg, aber auf dem Formular steht noch etwas
+   * (offene Einträge, Kritzeleien) — `count` = so viele Einträge gehören nicht mehr zur Partie. `null`, wenn nichts übrig ist
+   * oder die Partie keine eingelesene ist.
+   */
+  readonly restInfo = computed(() => {
+    const list = this.plies();
+    if (!this.isScoresheet() || list.length === 0 || this.cursor() !== list.length) return null;
+    const end = this.sheetEnd() ?? this.sheetEntries().length;
+    const count = end - nextEntryAt(list, list.length);
+    return count > 0 ? { count } : null;
+  });
+  /** Am Ende der Zugliste, und das Formular ist dort beendet: ein Zug am Brett bekommt keinen Formular-Eintrag. */
+  readonly sheetEndedHere = computed(() => {
+    const list = this.plies();
+    return this.cursor() === list.length && this.endedAt(list, list.length);
   });
 
   readonly legalCount = computed(() => {
@@ -173,14 +198,14 @@ export class SheetEditSession {
 
   /** Den Stand einer Einlesung übernehmen und auf die erste unsichere Stelle gehen. */
   loadSheet(state: {
-    plies: readonly ScoresheetPly[]; unresolved?: readonly string[]; unresolvedFrom?: number | null;
+    plies: readonly ScoresheetPly[]; unresolved?: readonly string[]; unresolvedFrom?: number | null; sheetEnd?: number | null;
     boxes?: readonly (number[] | null)[]; written?: readonly string[]; pages?: readonly number[];
   }, comments: readonly (string | null)[] = []): void {
     this.isScoresheet.set(true);
     this.beforeRemove.set(null);
     this.plies.set(fromServer(state.plies, comments));
-    this.unresolved.set([...(state.unresolved ?? [])]);
-    this.unresolvedFrom.set(state.unresolvedFrom ?? null);
+    this.sheetEnd.set(state.sheetEnd ?? null);
+    this.clipUnresolved(state.unresolved ?? [], state.unresolvedFrom ?? null);
     this.boxes.set([...(state.boxes ?? [])]);
     this.sheetEntries.set([...(state.written ?? [])]);
     this.entryPages.set([...(state.pages ?? [])]);
@@ -246,9 +271,15 @@ export class SheetEditSession {
     const comment = mode === 'replace' ? stripSheetNotes(old?.comment) : null;
     const uci = uciOf(san, this.cursorFen());
     if (!uci) return;
-    const mine = userPly(san, uci, w, written, comment);
     this.beforeRemove.set(null);
     this.host.changed?.();
+    if (this.isScoresheet() && i >= list.length && this.endedAt(list, i)) {
+      // Das Formular ist hier beendet: anhängen ohne Eintrag, nichts neu lesen (sonst kämen die gestrichenen Einträge zurück)
+      this.plies.set(revalidate([...list, userPly(san, uci, null, '', null)], this.startFen()));
+      this.go(i + 1);
+      return;
+    }
+    const mine = userPly(san, uci, w, written, comment);
 
     if (!this.isScoresheet()) {
       const tail = mode === 'insert' ? list.slice(i) : list.slice(i + 1);
@@ -267,7 +298,7 @@ export class SheetEditSession {
     const list = this.plies();
     if (i >= list.length || this.busy()) return;
     this.beforeRemove.set({ plies: list, unresolved: this.unresolved(), unresolvedFrom: this.unresolvedFrom(), cursor: i,
-      kind: 'remove', count: 1 });
+      sheetEnd: this.sheetEnd(), kind: 'remove', count: 1 });
     this.host.changed?.();
     if (!this.isScoresheet()) {
       this.plies.set(revalidate([...list.slice(0, i), ...list.slice(i + 1)], this.startFen()));
@@ -282,19 +313,65 @@ export class SheetEditSession {
    * Formular-Einträge dahinter gehören nicht mehr dazu (sonst hinge „Offen: …“ beim Speichern am letzten Zug). Die übrigen
    * Halbzüge behalten ihren Formular-Eintrag und damit Kasten und Ausschnitt; gelöschte zeigen nichts mehr. Das Ergebnis
    * bleibt, wie es ist (Kopfdaten der Seite). Rückgängig wie „Zug löschen“, bis zur nächsten Änderung.
+   * Das Formular endet am Eintrag des gestrichenen Halbzugs (`sheetEnd`): danach wird dort nicht mehr weitergelesen.
    */
   truncate(): void {
     const info = this.truncateInfo();
     if (!info || this.busy()) return;
     const i = this.cursor();
     const list = this.plies();
-    this.beforeRemove.set({ plies: list, unresolved: this.unresolved(), unresolvedFrom: this.unresolvedFrom(), cursor: i,
-      kind: 'truncate', count: info.count });
-    this.host.changed?.();
+    this.remember('truncate', info.count);
+    if (this.isScoresheet()) this.endSheet(writtenIndexAt(list, i));
     this.plies.set(list.slice(0, i));
-    this.unresolved.set([]);
-    this.unresolvedFrom.set(null);
     this.go(i);
+  }
+
+  /** „Partie hier beenden“ am Ende der Zugliste: keine Züge weg, die übrigen Formular-Einträge gehören nicht zur Partie. */
+  endHere(): void {
+    const info = this.restInfo();
+    if (!info || this.busy()) return;
+    const list = this.plies();
+    this.remember('rest', info.count);
+    this.endSheet(nextEntryAt(list, list.length));
+    this.go(list.length);
+  }
+
+  private remember(kind: 'truncate' | 'rest', count: number): void {
+    this.beforeRemove.set({ plies: this.plies(), unresolved: this.unresolved(), unresolvedFrom: this.unresolvedFrom(),
+      cursor: this.cursor(), sheetEnd: this.sheetEnd(), kind, count });
+    this.host.changed?.();
+  }
+
+  /** Das Formular endet bei Eintrag `at` (ein früheres Ende bleibt); offene Einträge ab dort fallen weg. */
+  private endSheet(at: number): void {
+    const prev = this.sheetEnd();
+    this.sheetEnd.set(prev == null ? at : Math.min(prev, at));
+    this.clipUnresolved(this.unresolved(), this.unresolvedFrom());
+  }
+
+  /** Ist das Formular vor dem Eintrag, den ein Halbzug an Stelle `i` bekäme, schon beendet? */
+  private endedAt(list: readonly EditPly[], i: number): boolean {
+    const end = this.sheetEnd();
+    return end != null && writtenIndexAt(list, i) >= end;
+  }
+
+  /** Offene Einträge nur bis vor `sheetEnd` übernehmen. */
+  private clipUnresolved(unresolved: readonly string[], from: number | null): void {
+    const end = this.sheetEnd();
+    const keep = end == null || from == null ? unresolved.length : Math.max(0, Math.min(unresolved.length, end - from));
+    this.unresolved.set(unresolved.slice(0, keep));
+    this.unresolvedFrom.set(keep > 0 ? from : null);
+  }
+
+  /** Der vom Server neu aufbereitete Rest, gekürzt auf das beendete Formular: Halbzüge aus Einträgen ab `sheetEnd` fallen
+   *  weg, ebenso eingefügte direkt davor (die gehörten zu ihnen). */
+  private clipTail(tail: EditPly[]): EditPly[] {
+    const end = this.sheetEnd();
+    if (end == null) return tail;
+    let cut = tail.findIndex(p => p.w != null && p.w >= end);
+    if (cut < 0) return tail;
+    while (cut > 0 && tail[cut - 1].w == null) cut--;
+    return tail.slice(0, cut);
   }
 
   /** Das letzte „Zug löschen" zurücknehmen: Züge, Lesarten, Bestätigungen und Cursor wie davor. Nicht während der Rest
@@ -306,6 +383,7 @@ export class SheetEditSession {
     this.plies.set(before.plies);
     this.unresolved.set(before.unresolved);
     this.unresolvedFrom.set(before.unresolvedFrom);
+    this.sheetEnd.set(before.sheetEnd);
     this.go(before.cursor);
   }
 
@@ -341,10 +419,9 @@ export class SheetEditSession {
     (this.host.bind ? this.host.bind(call) : call).subscribe({
       next: res => {
         // Bestätigungen und von Hand gesetzte Züge im Rest bleiben (gemeldet 2026-11-08)
-        const tail = keepDecisions(head, fallbackTail, fromServer(res.plies), this.startFen());
+        const tail = keepDecisions(head, fallbackTail, this.clipTail(fromServer(res.plies)), this.startFen());
         this.plies.set(revalidate(withLocal([...head, ...tail]), this.startFen()));
-        this.unresolved.set(res.unresolved);
-        this.unresolvedFrom.set(res.unresolvedFrom ?? null);
+        this.clipUnresolved(res.unresolved, res.unresolvedFrom ?? null);
         this.busy.set(false);
         this.go(thenNextUncertain ? nextUncertainFrom(this.plies(), nextCursor) ?? nextCursor : nextCursor);
       },

@@ -261,8 +261,8 @@ public class ScoresheetScanService
     public Task<ScoresheetResolveResultDto?> ResolveRestAsync(int userId, int gameId, IReadOnlyList<string> prefix,
         int writtenFrom) => _correction.ResolveRestAsync(userId, gameId, prefix, writtenFrom);
 
-    public Task SaveEditStateAsync(int userId, int gameId, List<ScoresheetPly> plies) =>
-        _correction.SaveEditStateAsync(userId, gameId, plies);
+    public Task SaveEditStateAsync(int userId, int gameId, List<ScoresheetPly> plies, int? sheetEnd = null) =>
+        _correction.SaveEditStateAsync(userId, gameId, plies, sheetEnd);
 
     public Task<bool> HasClubSheetAsync(int clubGameId, CancellationToken ct = default) =>
         _correction.HasClubSheetAsync(clubGameId, ct);
@@ -276,8 +276,9 @@ public class ScoresheetScanService
     public Task<ScoresheetResolveResultDto?> ResolveClubRestAsync(int clubGameId, IReadOnlyList<string> prefix, int writtenFrom,
         CancellationToken ct = default) => _correction.ResolveClubRestAsync(clubGameId, prefix, writtenFrom, ct);
 
-    public Task SaveClubEditStateAsync(int clubGameId, List<ScoresheetPly>? plies, string finalPgn, CancellationToken ct = default) =>
-        _correction.SaveClubEditStateAsync(clubGameId, plies, finalPgn, ct);
+    public Task SaveClubEditStateAsync(int clubGameId, List<ScoresheetPly>? plies, string finalPgn, CancellationToken ct = default,
+        int? sheetEnd = null) =>
+        _correction.SaveClubEditStateAsync(clubGameId, plies, finalPgn, ct, sheetEnd);
 
     // ── Vereins-Datenbank (LeagueScoresheetScans) ─────────────────────
 

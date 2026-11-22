@@ -122,9 +122,71 @@ describe('ClubScanPageComponent', () => {
     void c.save();
     flushMicrotasks();
     fixture.detectChanges();
-    expect(api.correctMoves).toHaveBeenCalledWith(12, ['d4', 'Nf6', 'c4', 'e6'], jasmine.any(Array));
+    expect(api.correctMoves).toHaveBeenCalledWith(12, ['d4', 'Nf6', 'c4', 'e6'], jasmine.any(Array), null);
     expect(api.addGame).not.toHaveBeenCalled();
     expect(el.textContent).toContain('Korrektur gespeichert.');
+  }));
+
+  // „Partie hier beenden“ (Folgefix 2026-11-22): das Ende geht als sheetEnd an PUT …/moves; nach dem Neuladen liest ein Zug am
+  // Ende nicht weiter. Dazu der Fall der Partien 258/262 (per API ohne plies gekürzt: gespeicherter Stand länger als die Partie).
+  const sp = (w: number, written: string, san: string, uci: string) => ({ w, written, san, uci, match: 'written', uncertain: false });
+  const SHEET_PLIES = [sp(0, 'e4', 'e4', 'e2e4'), sp(1, 'e5', 'e5', 'e7e5'), sp(2, 'Sf3', 'Nf3', 'g1f3'), sp(3, 'Sc6', 'Nc6', 'b8c6'),
+    sp(4, 'Lb5', 'Bb5', 'f1b5'), sp(5, 'a6', 'a6', 'a7a6')];
+  const SHEET_WRITTEN = ['e4', 'e5', 'Sf3', 'Sc6', 'Lb5', 'a6', 'Lxc6', '?'];
+  function korrigieren(pgnMoves: string, sheet: object) {
+    params = { id: '12' };
+    routeData = { game: true };
+    api.game.and.resolveTo({ id: 12, year: 2026, white: 'A', black: 'B', result: '1-0', canDelete: true, pgn: `${pgnMoves} 1-0\n` } as never);
+    api.clubSheet.and.resolveTo({ scanId: 3, notationLanguage: 'de', written: SHEET_WRITTEN, pageCount: 1, ...sheet } as never);
+    api.clubSheetPhoto.and.rejectWith(new Error('kein Foto'));
+    api.clubResolve.and.returnValue(of({ plies: [], unresolved: [], unresolvedFrom: null }));
+    api.correctMoves.and.resolveTo({} as never);
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    return { el, c: fixture.componentInstance };
+  }
+
+  it('Korrigieren + „Partie hier beenden“: Speichern schickt sheetEnd mit, die offenen Einträge sind weg', fakeAsync(() => {
+    const { el, c } = korrigieren('1. e4 e5 2. Nf3 Nc6 3. Bb5 a6', { plies: SHEET_PLIES, unresolved: ['Lxc6', '?'], unresolvedFrom: 6 });
+    expect(el.querySelector('.unresolved')).not.toBeNull();
+    c.s.go(4);
+    c.s.truncate();
+    fixture.detectChanges();
+    expect(el.querySelector('.unresolved')).toBeNull();
+    void c.save();
+    flushMicrotasks();
+    expect(api.correctMoves).toHaveBeenCalledWith(12, ['e4', 'e5', 'Nf3', 'Nc6'], jasmine.any(Array), 4);
+  }));
+
+  it('Korrigieren nach dem Neuladen (sheetEnd gespeichert): ein Zug am Ende ohne Formular-Eintrag, kein Weiterlesen', fakeAsync(() => {
+    const { el, c } = korrigieren('1. e4 e5 2. Nf3 Nc6', { plies: SHEET_PLIES.slice(0, 4), unresolved: [], unresolvedFrom: null, sheetEnd: 4 });
+    expect(el.querySelector('.unresolved')).toBeNull();
+    c.s.go(4);
+    fixture.detectChanges();
+    expect(el.querySelector('.end-actions .truncate')).toBeNull();          // nichts mehr zu beenden
+    c.s.play('Bc4');
+    expect(api.clubResolve).not.toHaveBeenCalled();
+    expect(c.s.plies()[4].w).toBeNull();
+    void c.save();
+    flushMicrotasks();
+    expect(api.correctMoves).toHaveBeenCalledWith(12, ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4'], jasmine.any(Array), 4);
+  }));
+
+  it('Partien 258/262: per API ohne plies gekürzt — am Ende „Partie hier beenden“ legt das Ende einmal ab', fakeAsync(() => {
+    // gespeicherter Stand (6 Halbzüge) länger als die Partie (4): der Abgleich zeigt die 4, der Rest des Formulars bleibt übrig
+    const { el, c } = korrigieren('1. e4 e5 2. Nf3 Nc6', { plies: SHEET_PLIES, unresolved: [], unresolvedFrom: null });
+    expect(c.s.plies().map(p => p.w)).toEqual([0, 1, 2, 3]);
+    c.s.go(4);
+    fixture.detectChanges();
+    expect(c.s.restInfo()).toEqual({ count: 4 });
+    expect(el.querySelector('.end-actions .truncate')).not.toBeNull();
+    c.s.endHere();
+    c.s.play('Bc4');
+    expect(api.clubResolve).not.toHaveBeenCalled();
+    void c.save();
+    flushMicrotasks();
+    expect(api.correctMoves).toHaveBeenCalledWith(12, ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4'], jasmine.any(Array), 4);
   }));
 
   it('Korrigieren (0.756.0): zeigt die Bewertungskurve der gespeicherten Partie, ein Klick springt zum Zug', fakeAsync(() => {

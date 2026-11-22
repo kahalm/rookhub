@@ -24,12 +24,12 @@ public sealed class ClubGameCorrectionService(AppDbContext db, LeagueClubService
 {
     /// <param name="leagueClub">Der Verein der Anfrage — eine Partie eines anderen Vereins ist „nicht gefunden".</param>
     public async Task<(LeagueClubGame? Game, string? Reason)> CorrectClubAsync(LeagueClub leagueClub, int userId, bool canManage, int clubGameId,
-        IReadOnlyList<string> moves, List<ScoresheetPly>? plies, int? exceptCopy = null, CancellationToken ct = default)
+        IReadOnlyList<string> moves, List<ScoresheetPly>? plies, int? exceptCopy = null, CancellationToken ct = default, int? sheetEnd = null)
     {
         var (game, sans, reason) = await club.CorrectMovesAsync(leagueClub, userId, canManage, clubGameId, moves, ct);
         if (game == null || sans == null) return (null, reason);
         var copies = await SavedGameService.ApplyClubMovesAsync(db, clubGameId, sans, exceptCopy, ct);
-        await scans.SaveClubEditStateAsync(clubGameId, plies, game.Pgn, ct);
+        await scans.SaveClubEditStateAsync(clubGameId, plies, game.Pgn, ct, sheetEnd);
         if (copies > 0) log.LogInformation("Vereinspartie {Id}: Korrektur in {Copies} Kopien übernommen", clubGameId, copies);
         return (game, null);
     }
@@ -37,7 +37,8 @@ public sealed class ClubGameCorrectionService(AppDbContext db, LeagueClubService
     /// <summary>Nach dem Speichern einer Kopie (<see cref="SavedGameService.UpdateAsync"/>). → <c>true</c> = in die
     /// Vereinspartie übernommen, <c>false</c> = nichts zu tun oder die Kopie hat sich gelöst. <paramref name="isAdmin"/>: Verwalter
     /// ist, wer im Verein DER PARTIE <c>league.manage</c> hat (<see cref="LeagueClubResolver.CanManageAsync"/>).</summary>
-    public async Task<bool> FromCopyAsync(int userId, bool isAdmin, int savedGameId, List<ScoresheetPly>? plies, CancellationToken ct = default)
+    public async Task<bool> FromCopyAsync(int userId, bool isAdmin, int savedGameId, List<ScoresheetPly>? plies, int? sheetEnd = null,
+        CancellationToken ct = default)
     {
         var g = await db.SavedGames.FirstOrDefaultAsync(x => x.Id == savedGameId && x.UserId == userId, ct);
         if (g?.LeagueClubGameId is not { } clubId) return false;
@@ -49,7 +50,9 @@ public sealed class ClubGameCorrectionService(AppDbContext db, LeagueClubService
             await db.SaveChangesAsync(ct);
             return false;
         }
-        if (LeagueClubService.HashOf(sans) == source.MovesHash) return false;   // Züge gleich — nur Kopfdaten geändert
+        // Züge gleich — nur Kopfdaten geändert. Außer „Partie hier beenden“ am Ende (keine Züge weg, nur die übrigen Formular-Einträge
+        // verworfen): das gehört ins Archiv der Vereinspartie.
+        if (LeagueClubService.HashOf(sans) == source.MovesHash && sheetEnd == null) return false;
         var leagueClub = await clubs.ByIdAsync(source.ClubId, ct);
         var canManage = await clubs.CanManageAsync(userId, isAdmin, source.ClubId, ct);
         if (leagueClub is null || !await club.CanCorrectAsync(leagueClub, userId, canManage, clubId, ct))
@@ -59,7 +62,7 @@ public sealed class ClubGameCorrectionService(AppDbContext db, LeagueClubService
             log.LogInformation("Kopie {Copy} von Vereinspartie {Club}: eigene Korrektur, Verbindung gelöst", savedGameId, clubId);
             return false;
         }
-        var (game, reason) = await CorrectClubAsync(leagueClub, userId, canManage, clubId, sans, plies, savedGameId, ct);
+        var (game, reason) = await CorrectClubAsync(leagueClub, userId, canManage, clubId, sans, plies, savedGameId, ct, sheetEnd);
         if (game == null) log.LogWarning("Kopie {Copy}: Korrektur ging nicht in Vereinspartie {Club} ({Reason})", savedGameId, clubId, reason);
         return game != null;
     }

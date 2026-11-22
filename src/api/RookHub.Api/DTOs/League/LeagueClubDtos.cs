@@ -119,6 +119,10 @@ public class LeagueClubGameRequest
     /// Archiv, damit „Korrigieren" ihn wie beim ersten Prüfen zeigt (vorher stand dort die erste Lesung, und nach einer
     /// Korrektur beim Übernehmen fehlte jede Zuordnung).</summary>
     public List<RookHub.Api.Services.Scoresheet.ScoresheetPly>? Plies { get; set; }
+
+    /// <summary>„Partie hier beenden“ (2026-11-22): der erste Formular-Eintrag, der nicht mehr zur Partie gehört — er und alle
+    /// folgenden gelten als verworfen, nicht mehr als offen. <c>null</c> = unverändert (nichts beendet).</summary>
+    public int? SheetEnd { get; set; }
 }
 
 public class LeagueClubPreviewSideDto

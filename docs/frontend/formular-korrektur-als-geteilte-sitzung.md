@@ -80,3 +80,20 @@ Aufteilung wie in LeagueHub).
 - RookHub verliert dabei den Partie-Rückblick (Kurve + gespeicherte Computer-Linien) auf der Korrekturseite; dafür die
   Kurve der Werkbank (Zickzack = falsch gelesener Zug) und die Live-Engine.
 
+
+## „Partie hier beenden“: das Formular endet (`sheetEnd`, 1.002.2)
+
+„Partie hier beenden“ streicht nicht nur Halbzüge, es beendet auch das FORMULAR: `SheetEditSession.sheetEnd` = der erste
+Formular-Eintrag, der nicht mehr zur Partie gehört (beim Kürzen der Eintrag des gestrichenen Halbzugs, am Ende der Zugliste
+der nächste offene — `endHere()`, sichtbar solange Einträge übrig sind: `restInfo`). Ab dort:
+
+- ein Zug am Ende wird OHNE Formular-Eintrag angehängt (`w = null`), nichts wird neu gelesen;
+- ein Neu-Aufbereiten in der Mitte (Ersetzen/Einfügen/Löschen) kürzt die Antwort des Servers auf Einträge vor `sheetEnd`
+  (`clipTail`, `clipUnresolved`) — die gestrichenen Kritzeleien kommen nicht zurück;
+- Rückgängig stellt auch `sheetEnd` wieder her.
+
+Gespeichert wird das Signal ausdrücklich (keine Heuristik): RookHub `PUT /api/games/{id}` mit `sheetEnd`, LeagueHub
+`PUT …/games/{id}/moves` und „Übernehmen“ (`POST …/games`) mit `sheetEnd`. Der Server legt es in der Auflösung ab
+(`StoredResolution.SheetEnd`) und streicht die offenen Einträge ab dort (`EndSheetAt`) — beim nächsten Laden steht weder
+„n Einträge ließen sich nicht zuordnen“ da, noch hängt RookHub sie als „Offen: …“ an den letzten Zug. Ohne `sheetEnd`
+(älterer Client) bleibt der gespeicherte Stand, wie er war; `GET …/scoresheet` bzw. `…/sheet` liefert `sheetEnd` mit.

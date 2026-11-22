@@ -69,7 +69,8 @@ public class LeagueClubController : BaseApiController
 
     // ── Korrigieren (0.660.0): Züge einer Vereinspartie nachbessern, mit dem aufbewahrten Formular, falls es noch da ist ──
 
-    public sealed record ClubMovesRequest(List<string>? Moves, List<ScoresheetPly>? Plies);
+    /// <param name="SheetEnd">„Partie hier beenden“: ab diesem Formular-Eintrag verworfen (<c>null</c> = unverändert).</param>
+    public sealed record ClubMovesRequest(List<string>? Moves, List<ScoresheetPly>? Plies, int? SheetEnd = null);
 
     private async Task<IActionResult?> CorrectableAsync(LeagueClub club, int id, CancellationToken ct) =>
         await _club.CanCorrectAsync(club, GetUserId(), await CanManageAsync(), id, ct) ? null : NotFound();
@@ -104,7 +105,7 @@ public class LeagueClubController : BaseApiController
         CancellationToken ct) => WithClubAsync(ct, async club =>
     {
         var manage = await CanManageAsync();
-        var (game, reason) = await corrections.CorrectClubAsync(club, GetUserId(), manage, id, req?.Moves ?? new(), req?.Plies, null, ct);
+        var (game, reason) = await corrections.CorrectClubAsync(club, GetUserId(), manage, id, req?.Moves ?? new(), req?.Plies, null, ct, req?.SheetEnd);
         return reason switch
         {
             null => Ok(LeagueClubService.ToDto(game!, GetUserId(), manage)),
@@ -243,7 +244,7 @@ public class LeagueClubController : BaseApiController
         var (game, reason, message) = await _club.AddGameAsync(club, GetUserId(), req, ct);
         if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
         if (req.ScanId is { } scanId) await _scans.CloseLeagueScanAsync(await MeAsync(club), scanId, game.Pgn, game.Id);
-        if (req.ScanId != null && req.Plies != null) await _scans.SaveClubEditStateAsync(game.Id, req.Plies, game.Pgn, ct);
+        if (req.ScanId != null && req.Plies != null) await _scans.SaveClubEditStateAsync(game.Id, req.Plies, game.Pgn, ct, req.SheetEnd);
         return Ok(new { id = game.Id, anonymized = game.Anonymized, replaced = game.Replaced });
     });
 
@@ -585,7 +586,7 @@ public class LeagueShareClubController : BaseApiController
         if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
         if (!string.IsNullOrWhiteSpace(scanKey))
             await _scans.CloseLeagueScanAsync(Actor.Anonymous(scanKey) with { ClubId = link.Club.Id }, null, game.Pgn, game.Id);
-        if (!string.IsNullOrWhiteSpace(scanKey) && req.Plies != null) await _scans.SaveClubEditStateAsync(game.Id, req.Plies, game.Pgn, ct);
+        if (!string.IsNullOrWhiteSpace(scanKey) && req.Plies != null) await _scans.SaveClubEditStateAsync(game.Id, req.Plies, game.Pgn, ct, req.SheetEnd);
         return Ok(new { id = game.Id, anonymized = game.Anonymized, claimKey, replaced = game.Replaced });
     }
 

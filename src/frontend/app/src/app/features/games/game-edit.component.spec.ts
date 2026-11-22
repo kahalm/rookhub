@@ -312,6 +312,62 @@ describe('GameEditComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/games', 5]);
   });
 
+  // „Partie hier beenden“ (Folgefix 2026-11-22): das Ende geht als sheetEnd mit — keine „Offen: …“-Notiz am letzten Zug, und
+  // nach dem Neuladen liest ein Zug am Ende das Formular nicht weiter.
+  const sheetPly = (w: number, written: string, san: string, uci: string) => ({ w, written, san, uci, match: 'written', uncertain: false });
+  const sheetPlies = [sheetPly(0, 'e4', 'e4', 'e2e4'), sheetPly(1, 'e5', 'e5', 'e7e5'), sheetPly(2, 'Sf3', 'Nf3', 'g1f3'),
+    sheetPly(3, 'Sc6', 'Nc6', 'b8c6'), sheetPly(4, 'Lb5', 'Bb5', 'f1b5')];
+  const written = ['e4', 'e5', 'Sf3', 'Sc6', 'Lb5', 'a6', '?'];
+
+  it('„Partie hier beenden“: saves sheetEnd, drops the open entries and adds no „open“ note', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9 }));
+    http.expectOne('/api/games/5/scoresheet').flush({ scanId: 9, notationLanguage: 'de', written, plies: sheetPlies,
+      unresolved: ['a6', '?'], unresolvedFrom: 5 });
+    http.match(r => r.url.startsWith('/api/games/5/photo')).forEach(r => r.flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' })));
+    await settle();
+    expect(c.unresolved()).toEqual(['a6', '?']);
+
+    c.go(4);                                                              // 3. Bb5 ist schon Kritzelei
+    c.session.truncate();
+    const router = TestBed.inject(Router);
+    spyOn(router, 'navigate').and.resolveTo(true);
+    c.save();
+    const body = http.expectOne({ method: 'PUT', url: '/api/games/5' }).request.body;
+    expect(body.moves.map((m: { san: string }) => m.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6']);
+    expect(body.moves[3].comment).toBeNull();                             // vorher „sheet, not resolved: a6 ?“
+    expect(body.scoresheetPlies.length).toBe(4);
+    expect(body.sheetEnd).toBe(4);
+  });
+
+  it('after reloading a game ended early: no open entries, a move at the end is appended without a sheet entry', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9,
+      pgn: '[Event "Klub"]\n[Result "*"]\n\n1. e4 e5 2. Nf3 Nc6 *' }));
+    http.expectOne('/api/games/5/scoresheet').flush({ scanId: 9, notationLanguage: 'de', written, plies: sheetPlies.slice(0, 4),
+      unresolved: [], unresolvedFrom: null, sheetEnd: 4 });
+    http.match(r => r.url.startsWith('/api/games/5/photo')).forEach(r => r.flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' })));
+    await settle();
+    fixture.detectChanges();
+    expect(c.unresolved()).toEqual([]);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.unresolved')).toBeNull();
+
+    c.go(4);
+    c.onBoardMove({ from: 'f1', to: 'c4', san: 'Bc4', fen: '' });
+    http.expectNone({ method: 'POST', url: '/api/games/5/scoresheet/resolve' });   // das Formular wird nicht weitergelesen
+    expect(c.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4']);
+
+    const router = TestBed.inject(Router);
+    spyOn(router, 'navigate').and.resolveTo(true);
+    c.save();
+    const body = http.expectOne({ method: 'PUT', url: '/api/games/5' }).request.body;
+    expect(body.scoresheetPlies.map((p: { w: number | null }) => p.w)).toEqual([0, 1, 2, 3, null]);
+    expect(body.moves[4].comment).toBeNull();
+    expect(body.sheetEnd).toBe(4);
+  });
+
   it('a scanned game whose edit state fails to load: shows the error and saves without scoresheetPlies (F2-020)', async () => {
     const { fixture, c, http } = await setup();
     fixture.detectChanges();

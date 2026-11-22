@@ -263,7 +263,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
       this.s.loadSheet(sheet);
     } else {
       this.s.loadSheet({ plies: sheet ? alignSheetPlies(sheet.plies, toServer(fromPgn)) : toServer(fromPgn), boxes: sheet?.boxes ?? [],
-        written: sheet?.written ?? [], pages: sheet?.pages ?? [] });
+        written: sheet?.written ?? [], pages: sheet?.pages ?? [], sheetEnd: sheet?.sheetEnd ?? null });
     }
     this.state.set({ scan: { id, status: 'done' } } as unknown as LeagueScanState);
     if (sheet) this.ph.viewCounts.set(sheet.viewCounts ?? []);   // das zweite Exemplar derselben Seite (0.756.0)
@@ -290,7 +290,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     this.saveError.set(null);
     if (this.gameId != null) {
       try {
-        await this.api.correctMoves(this.gameId, legal.map(p => p.san), toServer(legal));
+        await this.api.correctMoves(this.gameId, legal.map(p => p.san), toServer(legal), this.s.sheetEnd());
         this.saved.set(true);
       } catch (err) {
         const e = err instanceof HttpErrorResponse ? err : null;
@@ -320,6 +320,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
         date: this.f.sheetDate,
         // Der Stand je Zug (Zuordnung zum Formular, Lesarten) geht ins Archiv — „Korrigieren" zeigt ihn wie beim ersten Mal.
         plies: toServer(legal),
+        sheetEnd: this.s.sheetEnd(),
       }, this.scanRef);
       if (this.share) rememberAnonKey(this.share, this.scanRef, false);
       this.replacedOld.set(added?.replaced ?? 0);

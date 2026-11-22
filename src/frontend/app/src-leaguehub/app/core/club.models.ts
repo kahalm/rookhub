@@ -214,6 +214,8 @@ export interface ClubGameRequest {
   date?: string | null;
   /** Stand je Zug beim Übernehmen eines Formulars (0.693.4) — fürs Archiv. */
   plies?: ScoresheetPly[];
+  /** „Partie hier beenden“: ab diesem Formular-Eintrag gehört nichts mehr zur Partie (fehlt = nichts beendet). */
+  sheetEnd?: number | null;
 }
 
 /** `POST …/club/pairings` — Vorschläge für eine noch nicht gespeicherte Partie (Formular). */

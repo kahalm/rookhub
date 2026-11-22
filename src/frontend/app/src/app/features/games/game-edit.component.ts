@@ -428,6 +428,7 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
         this.session.boxes.set(state?.boxes ?? []);
         this.session.sheetEntries.set(state?.written ?? []);
         this.session.entryPages.set(state?.pages ?? []);
+        this.session.sheetEnd.set(state?.sheetEnd ?? null);
         this.session.goToFirstUncertain();
       }
       this.loading.set(false);
@@ -525,6 +526,7 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
       classifier2: this.header.classifier2.trim(),
       tags: this.tags(),
       scoresheetPlies: this.isScoresheet() && this.sheetStateError() == null ? toServer(legal) : null,
+      sheetEnd: this.isScoresheet() && this.sheetStateError() == null ? this.session.sheetEnd() : null,
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.saving.set(false);
