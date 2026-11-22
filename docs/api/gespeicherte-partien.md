@@ -405,10 +405,11 @@ sie an der `SavedGame`-Id hängen: festgelegte Seite, Teilen-Link, ausgeblendete
 
 ## Teilen-Link → volle Seite (2026-11-22)
 
-`GET /api/share-links/target?kind=g|ga|cg|s|tl|r&token=…&id=…` (`[Authorize]`, `ShareLinkTargetController` → `ShareLinkTargets`):
+`GET /api/share-links/target?kind=g|ga|cg|s|lp|tl|r&token=…&id=…` (`[Authorize]`, `ShareLinkTargetController` → `ShareLinkTargets`):
 sagt einem ANGEMELDETEN, wohin derselbe Inhalt auf dem normalen Weg führt → `{ path }` (z. B. `/club-games/241`, ohne Unterseite).
 Prüfungen wie auf der normalen Seite: `g`/`ga` nur der Besitzer (auch Admins nicht — `/games/{id}` zeigt nur eigene), `cg`/`s`
 `league.view` + Mitglied des Vereins der Partie (Admin jeder Verein; `s` = Liga-Link `/s/{token}/club-games/{id}`, die Id steht dort
-schon in der Adresse), `tl` Konto der Stunde oder Admin bei gültigem Link, `r` der Besitzer. Alles andere — unbekannter, widerrufener
+schon in der Adresse), `lp` (LeagueHub `/partie/{token}`, seit 2026-11-22) wie `s` für die Vereinspartie hinter der versiegelten Marke — auch nach Ablauf —, `tl` Konto der Stunde oder Admin, seit 2026-11-22
+auch bei abgelaufenem oder widerrufenem Link (normaler Zugriff; `TrainingLessonShares.LessonOfAnyAsync`, nur für diesen Weg), `r` der Besitzer. Alles andere — unbekannter, widerrufener
 oder abgelaufener Link, kein Zugriff, unbekannte Art — ist dasselbe 404 ohne Rumpf, also keine Id an Unberechtigte; Gäste 401.
 Oberfläche: `docs/frontend/routing.md`, Abschnitt „Teilen-Link → volle Seite“.

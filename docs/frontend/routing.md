@@ -73,9 +73,20 @@ Seite“) und leitet mit `RedirectCommand(…, { replaceUrl: true })` um — Unt
 | `/ga/:token/summary` | `/games/:id/summary` | Besitzer, Menüpunkt `games` |
 | `/cg/:token`, `/cg/:token/summary` | `/club-games/:id[/summary]` | `league.view` + Mitglied des Vereins der Partie (Admin: jeder) |
 | `/s/:token/club-games/:id[/summary]` | `/club-games/:id[/summary]` | wie `/cg` |
-| `/tl/:token`, `/tl/:token/drill` | `/training-videos/:id[/drill]` | Konto der Stunde oder Admin, Link gültig, Menüpunkt `training-videos` |
+| `/tl/:token`, `/tl/:token/drill` | `/training-videos/:id[/drill]` | Konto der Stunde oder Admin, Menüpunkt `training-videos` — seit 2026-11-22 auch bei abgelaufenem/widerrufenem Link (normaler Zugriff); alle anderen sehen weiter „abgelaufen“ |
 | `/r/:token` | `/reconstruct/:id` | Besitzer, Menüpunkt `reconstruct` |
 
 Gäste fragen nicht. Kein Zugriff, Fehler, Zeitüberschreitung (4 s), ausgeblendeter Menüpunkt des Ziels oder ein Ziel außerhalb dieser
 Liste → die Teilen-Ansicht wie bisher. Ohne Gegenstück und deshalb ohne Guard: `/l/:token` (eine Linie, nicht das ganze Repertoire),
 `/w/:token` (Löseseite ≠ Bearbeiten), `/t/:id` und die Kurs-Kurz-URLs (keine Token-Links). Link-Vorschau und Bots: unberührt (nginx).
+
+### LeagueHub `/partie/:token` → RookHub `/club-games/:id`: `partieRedirectGuard` (2026-11-22)
+
+`src-leaguehub/app/core/partie-redirect.guard.ts` an der LeagueHub-Route `partie/:token` (versiegelter Teilen-Link EINER Ligapartie mit
+Ablaufdatum, `LeagueGameShares`). Angemeldet → `GET /api/share-links/target?kind=lp&token=…`; der Server löst die Marke auf (auch nach
+Ablauf) und prüft wie bei `/cg/` `league.view` + Verein der Partie (Admin jeder). Das Ziel liegt in einer ANDEREN App auf einem anderen
+Host: der Guard springt mit `HandoffService.jumpToRookHub('club-games/{id}…')` (Einmal-Code, drüben angemeldet; RookHub-Adresse je
+Umgebung aus `partner-site.ts`, `leaguehub[-dev]` ↔ `rookhub[-dev]`) und gibt `false` zurück. Query und Fragment gehen mit, der
+Einmal-Code `h` nicht (die Seite hat keine Unterseiten). Gäste, kein Zugriff (404), Brett ohne Vereinspartie, Fehler, Zeitüberschreitung
+(`SHARE_REDIRECT_TIMEOUT_MS`) oder kein bekanntes RookHub (localhost) → die Teilen-Ansicht wie bisher. Die Begegnung `/s/:token` hat
+bewusst KEINEN solchen Sprung. Link-Vorschau/Bots: unberührt (nginx, siehe `docs/api/link-vorschau.md`).

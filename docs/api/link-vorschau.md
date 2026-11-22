@@ -12,7 +12,8 @@ passende info-vorschaubilder, glaub da fehlt noch einiges."
 
 | Teil | Datei | Aufgabe |
 |---|---|---|
-| OG-Weiche | `src/frontend/nginx.conf` (`location ~ ^/(g\|t\|puzzles\|tournaments/calendar\|l\|r\|w\|weekly\|s\|partie)(/\|$)\|^/analysis$`) | teilbare Pfade → `/api/og/render`, Header `X-Original-URI` + `X-Og-Site`; Fehler/429 → normale `index.html` |
+| OG-Weiche | `src/frontend/nginx.conf` (`location ~ ^/(g\|cg\|t\|puzzles\|tournaments/calendar\|l\|r\|w\|weekly\|s\|partie\|tl\|ga\|explorer/game/masters)(/\|$)\|^/analysis$`) | teilbare Pfade → `/api/og/render`, Header `X-Original-URI` + `X-Og-Site`; Fehler/429 → normale `index.html` |
+| Kurs-Weiche | `nginx.conf`: `map $rookhub_og_bot` (Vorschau-Abrufer per User-Agent) + `map $rookhub_og_course` + `location = /__og_course` (intern) | Kurs-Kurz-URLs `/{slug}[/{kapitel}]` haben keinen Präfix: NUR Vorschau-Abrufer auf RookHub gehen an den Renderer, mit `X-Og-Route: course` (seit 2026-11-22) |
 | Site-Schlüssel | `map $host $rookhub_og_site` | `""` RookHub · `turnier` Turnierseite · `leaguehub` LeagueHub (seit 2026-11-09) · `none` KidHub/ClubHub (eigene Shell, keine Vorschau, F8-012) |
 | Shell | `Services/Og/OgIndexHtmlProvider.cs` | holt je Site die index.html des RICHTIGEN Containers (60 s Cache); LeagueHub: `Frontend:LeagueHubInternalUrl` → `http://leaguehub:8080` → `rookhub-leaguehub` → `rookhub-leaguehub-dev` |
 | Pfad → (kind, id) | `OgMetaService.ParsePath(path, site)` | LeagueHub kennt nur `/s/…`, `/partie/…`; RookHub/Turnier nur die übrigen |
@@ -37,10 +38,10 @@ Basis-URL für `og:url`/`og:image`: `App:BaseUrl`; Turnierseite `App:TurnierBase
 | `/g/{token}?roast=id` | Partie + freigegebener Roast | Roast als Beschreibung | unverändert, Bild = Partiekarte |
 | `/cg/{token}` (+ `/summary`) | einzelne geteilte Vereinspartie (2026-11-09) | keine (Weiche kannte `cg` nicht) | seit 2026-11-22 Partiekarte wie `/g` (`cgame`); Name = Anonymisierungs-Name, ohne Event/Elo der ersetzten Seite |
 | `/cg/{token}?train=white\|black` | Fehler-Training der Vereinspartie | keine | Trainingskarte wie `/g` (`cgtrain`, `{side}-{token}`) |
-| `/s/{token}/club-games/{id}` | Vereinspartie über einen Liga-Link | keine | keine (offen, siehe unten) |
-| `/tl/{token}` (+ `/drill`) | Trainerstunden-Eintrag (läuft ab) | keine | keine (offen: nginx-Weiche kennt `tl` nicht) |
-| `/ga/{token}/summary` | anonyme Zusammenfassung einer eigenen Partie | keine | keine (bewusst ohne Namen; offen: allgemeine Karte ohne Spieler) |
-| `/explorer/game/masters/{id}` | Meisterpartie aus dem lokalen Explorer | keine | keine (offen) |
+| `/s/{token}/club-games/{id}` (+ `/summary`) | Vereinspartie über einen Liga-Link | keine | seit 2026-11-22 Partiekarte wie `/cg/` (`scgame`, Kennung `{token}~{id}`), gelesen über `LeagueShareClubGames` (Link gültig + Partie an einem Brett SEINER Begegnung); anonymisiert nur der Anonymisierungs-Name |
+| `/tl/{token}` (+ `/drill`) | Trainerstunden-Eintrag (läuft ab) | keine | seit 2026-11-22 Karte „Training session“/„Training drill“: erste besprochene Stellung, Datum, Umfang, ohne Namen; Beschreibung = Kurzfassung der Stunde (`lesson`/`ldrill`); nur GÜLTIGER Link |
+| `/ga/{token}/summary` | anonyme Zusammenfassung einer eigenen Partie | keine | seit 2026-11-22 allgemeine Karte „Game summary“: Endstellung, Ergebnis, Zuglänge — KEIN Spieler, keine Elo, kein Ereignis/Datum (`ganon`, über `AnonGameShares.ReadAsync`) |
+| `/explorer/game/masters/{id}` | Meisterpartie aus dem lokalen Explorer | keine | seit 2026-11-22 Partiekarte „Master game“ mit Namen/Elo/Ereignis (`master`; PGN über `LocalExplorerClient.CachedMasterPgnAsync`, derselbe Tages-Zwischenspeicher wie die Seite) |
 | `/l/{token}` | Repertoire-Linie/Kapitel (läuft ab) | keine | Karte: Endstellung der Linie, Titel, Repertoire, Zuglänge (`line`) |
 | `/r/{token}` | rekonstruierte Partie | keine | Karte: zuletzt bekannte Stellung, Spieler, „n plies known · g gaps" (`recon`) |
 | `/w/{token}` | Aufgabenblatt zum Lösen (Link liefert auch Lösungen!) | keine | Raster aus ≤ 6 Mini-Diagrammen, Name, Anzahl — ohne Text/Lösung (`worksheet`) |
@@ -52,7 +53,7 @@ Basis-URL für `og:url`/`og:image`: `App:BaseUrl`; Turnierseite `App:TurnierBase
 | `/analysis?fen=…&orientation=black` | Analysebrett mit Stellung (⋮ → „Stellung teilen") | keine | Diagramm + Zugrecht (`position`, Kennung `w-`/`b-` + FEN base64url) |
 | `/maxims` | Merksätze | keine | keine (offen: allgemeine Karte) |
 | `/ebooks`, `/ebooks/{id}` | Bibliothek (Datei nur mit Freigabe/Ausweis) | keine | keine (offen: Titelbild öffentlicher Bücher) |
-| `/{slug}`, `/{slug}/{kapitel}` | öffentlicher Kurs (Kurz-URL) | keine | keine (offen: beliebiger Pfad — die Weiche müsste jedes Einzelsegment an die API schicken) |
+| `/{slug}`, `/{slug}/{kapitel}` | öffentlicher Kurs (Kurz-URL) | keine | seit 2026-11-22 Karte „Chess course“/„Course chapter“: erste Aufgabe in Löser-Sicht, Name, Kapitel, Anzahl Stellungen (`course`, Kennung `{slug}` bzw. `{slug}~{kapitel base64url}`). Nur `IsPublic` + `PublicSlug`; die Weiche schickt nur Vorschau-Abrufer (siehe „Kurs-Kurz-URLs“) |
 | `/guess/{id}` | Punktepartie | keine | keine (offen) |
 | Kurs-/Repertoire-Freigaben, Puzzle-Challenges | an Personen (angemeldet) | — | keine Vorschau nötig (Ziel = Seite mit Anmeldung bzw. `/puzzles/{id}`) |
 
@@ -73,6 +74,24 @@ Basis-URL für `og:url`/`og:image`: `App:BaseUrl`; Turnierseite `App:TurnierBase
 | `/verein/uebersicht` | angemeldet, kein öffentlicher Link | keine |
 
 KidHub (`/stars/{n}/unlock` u. a.) und ClubHub (alles angemeldet) teilen nichts Öffentliches mit Inhalt — bleiben `none`.
+
+## Kurs-Kurz-URLs: warum nur Vorschau-Abrufer (2026-11-22)
+
+`/{slug}` und `/{slug}/{kapitel}` sind die letzten Routen der SPA vor `**`: JEDES unbekannte Einzelsegment ist ein Kandidat
+(`/mate1` genauso wie `/dashboard`). Alle Seitenaufrufe von Menschen über die API zu schicken, hieße einen zusätzlichen Sprung für jede
+Seite der App — deshalb markiert der nginx nur Abrufe mit einem bekannten Vorschau-User-Agent (`map $http_user_agent $rookhub_og_bot`:
+Discord, WhatsApp — auch Signal ruft so ab —, Telegram, Slack, X/Twitter, Facebook, LinkedIn, Teams/Skype, Mattermost, Mastodon,
+Bluesky …) auf RookHub (`X-Og-Site` leer), deren Pfad wie ein Kurzname aussieht (`[a-z0-9-]{1,40}`, optional ein Kapitel ohne Punkt —
+Dateien bleiben Dateien). `location /` schreibt sie auf die interne `location = /__og_course` um, die wie die OG-Weiche an
+`/api/og/render` geht, zusätzlich mit `X-Og-Route: course`. Die API löst dann NUR `OgMetaService.ParseCoursePath` auf und schlägt den
+Kurs nach (`IsPublic` + `PublicSlug`, Kapitel getrimmt ohne Groß/klein); unbekannt → die unveränderte Shell. Ein fehlender Abrufer
+bekommt nur keine Kurs-Vorschau. Menschen kommen nie dort an.
+
+## Bots werden nie umgeleitet
+
+Die Umleitungen „Teilen-Link → volle Seite“ (`shareRedirectGuard`, LeagueHubs `partieRedirectGuard`) laufen im BROWSER als Angular-Guard
+und nur für Angemeldete. Der Vorschau-Abrufer bekommt vom nginx bzw. `/api/og/render` immer 200 mit der Shell samt Tags — keine
+3xx-Antwort auf diesem Weg (`DeploymentConfigTests.OgPreview_CourseSlugs_*` prüft die Kurs-Location darauf).
 
 ## Gestaltung der Karten (1200×630, lesbar bei 600 px Breite)
 
@@ -95,7 +114,9 @@ KidHub (`/stars/{n}/unlock` u. a.) und ClubHub (alles angemeldet) teilen nichts 
 Nur Daten, die die Route OHNE Anmeldung ohnehin zeigt — gelesen über dieselben Dienste wie die Seite:
 `SavedGameService.GetSharedAsync`, `SharedLineService.GetByTokenAsync` (abgelaufen → null), `GameReconstructionService.GetSharedAsync`,
 `WorksheetService.GetSharedAsync` (Teilen aus → null), `WeeklyPostService` nur `ScheduledAt ≤ jetzt`,
-`LeagueService.PublicShareAsync` (abgelaufen/widerrufen → null), `ClubGameLinks.ReadAsync`/`EvalsAsync` (`/cg/`: widerrufen/archiviert → null;
+`LeagueService.PublicShareAsync` (abgelaufen/widerrufen → null), `LeagueShareClubGames.ReadAsync` (`/s/…/club-games/{id}`: Link gültig und Partie an
+einem Brett seiner Begegnung, sonst null; Projektion wie `/cg/`), `TrainingLessonShares.ResolveAsync` + `TrainingVideoService.GetForGuestAsync`
+(`/tl/`: nur gültig — abgelaufen/widerrufen → null; ohne Partie- und Kontonamen auf der Karte), `AnonGameShares.ReadAsync` (`/ga/`: keine Namen), `ClubGameLinks.ReadAsync`/`EvalsAsync` (`/cg/`: widerrufen/archiviert → null;
 anonymisiert: Anonymisierungs-Name, neu gebautes PGN ohne Event, ohne Elo der ersetzten Seite — `WhiteRealName`/`BlackRealName` nie), `LeagueGameShares.ReadAsync` (Marke kaputt/abgelaufen/Partie
 umgehängt → null; anonymisierte Vereinspartie ohne Brett und Mannschaften, Name = Anonymisierungs-Name). Ungültiger Link →
 keine Tags, Bild 404. Puzzles zeigen nie die Lösung; Aufgabenblätter nur die Stellungen (Überschrift, Begleittext und Lösung
@@ -106,10 +127,11 @@ liefert der Link mit, sie kommen trotzdem nicht aufs Bild).
 | Bild | `Cache-Control` | Grund |
 |---|---|---|
 | Partie, markierte Stellung, Puzzle, Buch-Puzzle, Tagespuzzle mit Datum, Stellung | `public, max-age=604800, immutable` | Inhalt fest je Adresse; neue Kurve → `?v=`, neue Gestaltung → `?c=` (`OgMetaService.CardVersion`) |
-| Repertoire-Linie, Ligapartie, Vereinspartie `/cg/` (Partie- und Trainingskarte), Wochenpost, Tagespuzzle `today` | `public, max-age=3600` | Link läuft ab/wird widerrufen bzw. Inhalt wechselt |
-| Rekonstruktion, Aufgabenblatt, Liga-Begegnung | `public, max-age=600` | bearbeitbar/neu gerechnet, widerrufbar |
+| Repertoire-Linie, Ligapartie, Vereinspartie `/cg/` (Partie- und Trainingskarte), anonyme Zusammenfassung `/ga/`, öffentlicher Kurs, Wochenpost, Tagespuzzle `today` | `public, max-age=3600` | Link läuft ab/wird widerrufen bzw. Inhalt wechselt |
+| Rekonstruktion, Aufgabenblatt, Liga-Begegnung, Vereinspartie über den Liga-Link, Trainerstunde `/tl/` | `public, max-age=600` | bearbeitbar/neu gerechnet, widerrufbar |
+| Meisterpartie | `public, max-age=604800, immutable` | veröffentlichte Partie, fest je Kennung |
 
-Die angereicherte `index.html` selbst: `no-cache, must-revalidate` aus der nginx-map (Pfade `r|w|s|partie`, seit 2026-11-22 `cg` dort ergänzt).
+Die angereicherte `index.html` selbst: `no-cache, must-revalidate` aus der nginx-map (Pfade `r|w|s|partie`, seit 2026-11-22 `cg`, `tl`, `ga`, `explorer` und `/__og_course` dort ergänzt).
 
 ## Deploy
 
@@ -125,6 +147,7 @@ Die angereicherte `index.html` selbst: `no-cache, must-revalidate` aus der nginx
 `tests/RookHub.Api.Tests/Og/`: `OgTests` (Bestand), `OgCardTests` (Rendering 1200×630, leere/kaputte Daten, Partie/Stellung
 nach ply, Linie/Rekonstruktion inkl. abgelaufen/unbekannt, Cache-Header), `OgPuzzleCardTests` (Löser-Sicht, Themen,
 `/analysis?fen=`, Wochenpost nur veröffentlicht), `OgWorksheetCardTests` (Raster, kein Text/Lösung, Widerruf),
-`OgClubGameTests` (`/cg/` Partie/Training, Anonymisierung: kein Klarname/FIDE/Event, Widerruf), `OgLeagueCardTests` (Pfade je Site, Begegnung offen/gespielt/leer, anonymisierte Partie, abgelaufene Links, Basis-URL,
-Escaping, Entfernen der Shell-Tags). nginx-Map und -Location: `DeploymentConfigTests.OgPreview_*`.
+`OgClubGameTests` (`/cg/` Partie/Training, Anonymisierung: kein Klarname/FIDE/Event, Widerruf), `OgShareLinkTests` (`/tl/` + drill gültig/abgelaufen/widerrufen,
+`/s/…/club-games/{id}` anonymisiert/abgelaufen/fremde Partie, `/ga/` ohne Namen + Widerruf, Meisterpartie, Kurs nur mit Markierung + nicht öffentlich), `OgLeagueCardTests` (Pfade je Site, Begegnung offen/gespielt/leer, anonymisierte Partie, abgelaufene Links, Basis-URL,
+Escaping, Entfernen der Shell-Tags). nginx-Map und -Location: `DeploymentConfigTests.OgPreview_*` (Kurs-Weiche: `OgPreview_CourseSlugs_OnlyForPreviewBotsOnRookHub`).
 Bilder ansehen: `OG_DUMP_DIR=/tmp/og dotnet test --filter "FullyQualifiedName~Og"` schreibt einige PNGs.

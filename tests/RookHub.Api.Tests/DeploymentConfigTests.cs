@@ -529,7 +529,8 @@ public class DeploymentConfigTests
         // /s/ und /partie/ und genau /analysis
         // (geteilte Stellung ?fen=) — Vorschaubilder, docs/api/link-vorschau.md.
         // Seit 2026-11-22 auch die geteilte Vereinspartie /cg/{token} (vorher GAR KEINE Vorschau, die Weiche kannte cg nicht).
-        Assert.Contains("location ~ ^/(g|cg|t|puzzles|tournaments/calendar|l|r|w|weekly|s|partie)(/|$)|^/analysis$ {", nginx);
+        // Seit 2026-11-22 auch Trainerstunde /tl/, anonyme Zusammenfassung /ga/ und Meisterpartie /explorer/game/masters/.
+        Assert.Contains("location ~ ^/(g|cg|t|puzzles|tournaments/calendar|l|r|w|weekly|s|partie|tl|ga|explorer/game/masters)(/|$)|^/analysis$ {", nginx);
 
         Assert.Contains("proxy_intercept_errors on;", body);
         var errorPage = Regex.Match(body, @"error_page ([0-9 ]+)= @og_fallback;");
@@ -584,8 +585,51 @@ public class DeploymentConfigTests
         Assert.True(cache.Success);
         Assert.Contains("~^/(g|cg|t|l|puzzles|", cache.Groups["body"].Value);
         // Teilen-Links mit Vorschau (2026-11-09) stehen ebenfalls auf no-cache, must-revalidate
-        Assert.Contains("|r|w|s|partie)(/|$)", cache.Groups["body"].Value);
+        Assert.Contains("|r|w|s|partie|tl|ga|explorer)(/|$)", cache.Groups["body"].Value);
         Assert.Contains("~^/(index\\.html|", cache.Groups["body"].Value);
+    }
+
+    /// <summary>
+    /// Link-Vorschau der Kurs-Kurz-URLs /{slug} und /{slug}/{kapitel} (2026-11-22): ohne festen Präfix, deshalb geht NUR ein
+    /// Vorschau-Abrufer auf RookHub an den OG-Renderer (markiert mit X-Og-Route: course); Menschen, Dateien, LeagueHub/KidHub
+    /// und mehrteilige Pfade bleiben bei try_files. Kein Bot wird umgeleitet (der Renderer liefert immer die Shell).
+    /// </summary>
+    [Fact]
+    public void OgPreview_CourseSlugs_OnlyForPreviewBotsOnRookHub()
+    {
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var botMap = Regex.Match(nginx, @"map \$http_user_agent \$rookhub_og_bot \{(?<body>[^}]*)\}");
+        Assert.True(botMap.Success, "map $rookhub_og_bot fehlt");
+        var botRe = new Regex(Regex.Match(botMap.Groups["body"].Value, @"""~\*(?<re>[^""]+)""\s+1;").Groups["re"].Value, RegexOptions.IgnoreCase);
+        foreach (var ua in new[] { "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)", "WhatsApp/2.23.20.0", "TelegramBot (like TwitterBot)",
+                     "Slackbot-LinkExpanding 1.0", "facebookexternalhit/1.1", "Mozilla/5.0 (compatible; SkypeUriPreview Preview/0.5)" })
+            Assert.Matches(botRe, ua);
+        foreach (var ua in new[] { "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0",
+                     "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36" })
+            Assert.DoesNotMatch(botRe, ua);
+
+        var courseMap = Regex.Match(nginx, @"map ""\$rookhub_og_site:\$rookhub_og_bot:\$uri"" \$rookhub_og_course \{(?<body>.*?)\n\}", RegexOptions.Singleline);
+        Assert.True(courseMap.Success, "map $rookhub_og_course fehlt");
+        Assert.Contains("1;", courseMap.Groups["body"].Value);
+        var courseRe = new Regex(Regex.Match(courseMap.Groups["body"].Value, @"""~(?<re>[^""]+)""\s+1;").Groups["re"].Value);
+        foreach (var key in new[] { ":1:/mate1", ":1:/noel/KW46", ":1:/noel/KW 46" }) Assert.Matches(courseRe, key);
+        foreach (var key in new[] { ":0:/mate1", "leaguehub:1:/mate1", "none:1:/mate1", ":1:/assets/x.png", ":1:/a/b/c", ":1:/Mate1", ":1:/favicon.ico" })
+            Assert.DoesNotMatch(courseRe, key);
+
+        var root = Regex.Match(nginx, @"\n    location / \{(?<body>.*?)\n    \}", RegexOptions.Singleline).Groups["body"].Value;
+        Assert.True(root.IndexOf("if ($rookhub_og_course) { rewrite ^ /__og_course last; }", StringComparison.Ordinal) is >= 0 and var i
+            && i < root.IndexOf("try_files", StringComparison.Ordinal), "location / markiert Kurs-Kandidaten nicht vor try_files");
+        var course = Regex.Match(nginx, @"location = /__og_course \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(course.Success, "location /__og_course fehlt");
+        var body = course.Groups["body"].Value;
+        Assert.Contains("internal;", body);
+        Assert.Contains("proxy_pass http://$rookhub_og_api/api/og/render;", body);
+        Assert.Contains("proxy_set_header X-Og-Route course;", body);
+        Assert.Contains("proxy_set_header X-Original-URI $request_uri;", body);
+        Assert.Contains("proxy_hide_header Cache-Control;", body);
+        Assert.Matches(@"error_page 429 500 502 503 504 = @og_fallback;", body);
+        Assert.DoesNotContain("return 30", body);
+        Assert.Contains("/__og_course  \"no-cache, must-revalidate\";", nginx);
     }
 
     [Fact]

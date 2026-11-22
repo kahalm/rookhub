@@ -501,11 +501,8 @@ public class LeagueShareClubController : BaseApiController
     /// <summary>Der Verein des Links, wenn die Vereinspartie <paramref name="id"/> an einem Brett SEINER Begegnung hängt
     /// (<see cref="LeagueFixtureGames.FixtureHasClubGameAsync"/>) — sonst <c>null</c> (404): der Link zeigt diese Partien
     /// ohnehin mit PGN, jede andere Vereinspartie bleibt ohne Anmeldung unsichtbar.</summary>
-    private async Task<LeagueClub?> ClubOfLinkedGameAsync(string token, int id, LeagueFixtureGames fixtures, CancellationToken ct)
-    {
-        if (await _league.ShareFixtureAsync(token, ct) is not { } s || await LinkAsync(token, ct) is not { } link) return null;
-        return await fixtures.FixtureHasClubGameAsync(link.Club, s.Tnr, s.Round, s.Team, id, ct) ? link.Club : null;
-    }
+    private Task<LeagueClub?> ClubOfLinkedGameAsync(string token, int id, LeagueFixtureGames fixtures, CancellationToken ct) =>
+        LeagueShareClubGames.ClubOfLinkedGameAsync(_league, fixtures, token, id, ct);   // dieselbe Regel wie die Link-Vorschau
 
     /// <summary>EINE Vereinspartie der geteilten Begegnung zum Nachspielen und für RookHubs Partieseite (0.838.3, Wunsch
     /// 2026-10-25: „Analyse auch über den Link, wie angemeldet — ohne Bearbeiten/Korrigieren"): dieselbe Antwort wie

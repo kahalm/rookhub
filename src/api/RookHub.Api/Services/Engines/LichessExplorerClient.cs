@@ -434,6 +434,21 @@ public class LocalExplorerClient
     /// der Explorer hat geantwortet und kennt die Partie nicht.</summary>
     public readonly record struct MasterPgnResult(bool Reachable, string? Pgn);
 
+    /// <summary>Eine Meisterpartie ändert sich nicht; ein Tag im Arbeitsspeicher hält wiederholte Aufrufe vom Explorer fern.</summary>
+    public static readonly TimeSpan MasterPgnMemoryTtl = TimeSpan.FromDays(1);
+
+    /// <summary><see cref="FetchMasterPgnAsync"/> mit einem Tag Arbeitsspeicher davor — EIN Weg für die Seite
+    /// (<c>GET /api/explorer/master-games/{id}</c>) und ihre Link-Vorschau (2026-11-22).</summary>
+    public async Task<MasterPgnResult> CachedMasterPgnAsync(Microsoft.Extensions.Caching.Memory.IMemoryCache memory, string id, CancellationToken ct)
+    {
+        var key = "explorer:master-game:" + id;
+        if (Microsoft.Extensions.Caching.Memory.CacheExtensions.TryGetValue<string>(memory, key, out var cached) && cached is not null)
+            return new MasterPgnResult(true, cached);
+        var result = await FetchMasterPgnAsync(id, ct);
+        if (result.Pgn is not null) Microsoft.Extensions.Caching.Memory.CacheExtensions.Set(memory, key, result.Pgn, MasterPgnMemoryTtl);
+        return result;
+    }
+
     /// <summary>
     /// Eine Meisterpartie des lokalen Bestands als PGN (<c>GET masters/pgn/{id}</c> des lila-openingexplorer). Die Kennung
     /// muss <see cref="IsGameId"/> erfüllen — sie geht in den Pfad der Anfrage. Teilt sich den Deckel

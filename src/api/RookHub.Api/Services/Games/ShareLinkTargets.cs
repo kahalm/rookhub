@@ -15,13 +15,18 @@ namespace RookHub.Api.Services.Games;
 /// <item><c>cg</c> (<c>/cg/{token}</c>) und <c>s</c> (<c>/s/{token}/club-games/{id}</c>) → <c>/club-games/{id}</c>:
 /// <see cref="Models.Permissions.LeagueView"/> (prüft der Aufrufer) und Mitglied des Vereins der Partie (Admin: jeder Verein) — wie
 /// <c>GET api/league/club/games/{id}</c> ohne <c>?club=</c>, das bei mehreren Vereinen den der Partie nimmt.</item>
-/// <item><c>tl</c> (<c>/tl/{token}</c>) → <c>/training-videos/{id}</c>: Konto der Stunde oder Admin, nur solange der Link gilt.</item>
+/// <item><c>lp</c> (LeagueHub <c>/partie/{token}</c>, versiegelte Marke <see cref="LeagueGameShares"/>) → <c>/club-games/{id}</c> der
+/// Vereinspartie an dem Brett, Regel wie <c>s</c> — auch nach Ablauf der Marke (normaler Zugriff, Wunsch 2026-11-22); ein Brett ohne
+/// Vereinspartie (Partie aus einer Spielerkarte) hat kein Gegenstück.</item>
+/// <item><c>tl</c> (<c>/tl/{token}</c>) → <c>/training-videos/{id}</c>: Konto der Stunde oder Admin — auch wenn der Link abgelaufen
+/// oder widerrufen ist (Wunsch 2026-11-22: sie haben normalen Zugriff); für alle anderen bleibt er abgelaufen.</item>
 /// <item><c>r</c> (<c>/r/{token}</c>) → <c>/reconstruct/{id}</c>: nur der Besitzer.</item>
 /// </list>
 /// <c>null</c> heißt immer dasselbe: unbekannter, widerrufener oder abgelaufener Link, kein Zugriff oder unbekannte Art — der Aufrufer
 /// erfährt dabei nichts, was die Teilen-Ansicht nicht auch zeigt (keine Id ohne Zugriff).
 /// </summary>
-public sealed class ShareLinkTargets(AppDbContext db, LeagueClubResolver clubs, TrainingLessonShares lessonShares)
+public sealed class ShareLinkTargets(AppDbContext db, LeagueClubResolver clubs, TrainingLessonShares lessonShares,
+    LeagueGameShares? leagueGames = null)
 {
     /// <summary>Der Weg der normalen Seite (ohne Unterseite und Query), z. B. <c>/club-games/241</c>; <c>null</c> = bleibt beim Teilen-Link.</summary>
     /// <param name="canViewLeague">Hat das Konto <see cref="Models.Permissions.LeagueView"/> (Live-Stand, Admin immer)?</param>
@@ -50,9 +55,14 @@ public sealed class ShareLinkTargets(AppDbContext db, LeagueClubResolver clubs, 
                 if (id is not int clubGameId || !canViewLeague) return null;
                 var clubId = await db.LeagueClubGames.AsNoTracking().Where(g => g.Id == clubGameId).Select(g => (int?)g.ClubId).FirstOrDefaultAsync(ct);
                 return clubId is int c && await clubs.IsMemberAsync(userId, isAdmin, c, ct) ? $"/club-games/{clubGameId}" : null;
+            case "lp":
+                // Die Marke ist versiegelt (nicht fälschbar); der Verein der Partie zählt, nicht der in der Marke.
+                if (string.IsNullOrWhiteSpace(token) || !canViewLeague || leagueGames?.ClubGameOf(token) is not { } sealedGame) return null;
+                var gameClub = await db.LeagueClubGames.AsNoTracking().Where(g => g.Id == sealedGame.ClubGameId).Select(g => (int?)g.ClubId).FirstOrDefaultAsync(ct);
+                return gameClub is int gc && await clubs.IsMemberAsync(userId, isAdmin, gc, ct) ? $"/club-games/{sealedGame.ClubGameId}" : null;
             case "tl":
-                var (state, lessonId) = await lessonShares.ResolveAsync(token, ct);
-                if (state != TrainingShareState.Valid) return null;
+                // Gültig ODER abgelaufen/widerrufen: wer die Stunde auf dem normalen Weg sieht, kommt hin; der Gast-Weg prüft weiter streng.
+                if (await lessonShares.LessonOfAnyAsync(token, ct) is not int lessonId) return null;
                 return await db.TrainingLessons.AsNoTracking().AnyAsync(l => l.Id == lessonId && (isAdmin || l.UserId == userId), ct)
                     ? $"/training-videos/{lessonId}" : null;
             case "r":

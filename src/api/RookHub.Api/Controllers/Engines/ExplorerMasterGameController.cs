@@ -23,22 +23,13 @@ namespace RookHub.Api.Controllers.Engines;
 [EnableRateLimiting("anonymous-tournament")]
 public class ExplorerMasterGameController(LocalExplorerClient local, IMemoryCache memory) : BaseApiController
 {
-    /// <summary>Eine Meisterpartie ändert sich nicht; ein Tag im Arbeitsspeicher hält wiederholte Aufrufe vom Explorer fern.</summary>
-    private static readonly TimeSpan MemoryTtl = TimeSpan.FromDays(1);
-
     [HttpGet("{id}")]
     public async Task<ActionResult<ExplorerMasterGameDto>> Get(string id, CancellationToken ct)
     {
         if (!LocalExplorerClient.IsGameId(id)) return BadRequest(new { message = "Keine gültige Partie-Kennung." });
-        var key = "explorer:master-game:" + id;
-        if (!memory.TryGetValue<string>(key, out var pgn) || pgn is null)
-        {
-            var result = await local.FetchMasterPgnAsync(id, ct);
-            if (!result.Reachable) return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Der Explorer ist gerade nicht erreichbar." });
-            if (result.Pgn is null) return NotFound();
-            pgn = result.Pgn;
-            memory.Set(key, pgn, MemoryTtl);
-        }
+        var result = await local.CachedMasterPgnAsync(memory, id, ct);
+        if (!result.Reachable) return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Der Explorer ist gerade nicht erreichbar." });
+        if (result.Pgn is not { } pgn) return NotFound();
         return Ok(new ExplorerMasterGameDto { Id = id, Pgn = pgn });
     }
 }

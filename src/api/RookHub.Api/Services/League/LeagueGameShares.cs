@@ -56,6 +56,13 @@ public sealed class LeagueGameShares(AppDbContext db, LeagueFixtureGames games, 
                 anon.Black, anon.Black == club.AnonName ? null : p.BlackElo, p.Result, p.Pgn!, expires);
     }
 
+    /// <summary>Die Vereinspartie, auf die eine ECHTE Marke zeigt (<c>null</c> = Marke kaputt/fremd oder das Brett hatte keine
+    /// Vereinspartie) — auch nach Ablauf. NUR für <see cref="Games.ShareLinkTargets"/> (Wunsch 2026-11-22: wer die Partie auf dem
+    /// normalen Weg sehen darf, springt von <c>/partie/{token}</c> nach RookHub <c>/club-games/{id}</c>); der prüft danach
+    /// <c>league.view</c> und die Mitgliedschaft im Verein der Partie. Die Gast-Ansicht bleibt bei <see cref="ReadAsync"/>.</summary>
+    public (int ClubId, int ClubGameId)? ClubGameOf(string token) =>
+        Open(token) is { ClubGameId: > 0 } t ? (t.ClubId, t.ClubGameId) : null;
+
     /// <summary>Das Brett, wie es die Ansicht der Begegnung ohne Anmeldung ausgibt — dort, wo es eine Partie gibt. Über die ganze
     /// Begegnung statt nur dieses Bretts, damit eine geratene Vereinspartie an demselben Brett landet wie in der Ansicht.</summary>
     private async Task<LeagueFixtureGames.Pairing?> PairingAsync(LeagueClub club, LeagueGame g, CancellationToken ct)

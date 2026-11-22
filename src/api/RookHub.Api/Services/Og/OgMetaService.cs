@@ -48,6 +48,12 @@ public partial class OgMetaService
     private readonly LeagueService? _league;
     private readonly LeagueGameShares? _leagueGames;
     private readonly ClubGameLinks? _clubGames;
+    private readonly LeagueShareClubGames? _leagueClubGames;
+    private readonly AnonGameShares? _anonGames;
+    private readonly TrainingVideos.TrainingLessonShares? _lessonShares;
+    private readonly TrainingVideos.TrainingVideoService? _lessons;
+    private readonly Engines.LocalExplorerClient? _explorer;
+    private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache? _memory;
 
     private const string StartFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -55,8 +61,17 @@ public partial class OgMetaService
         CrawlerProxyService crawler, AppDbContext db, ILogger<OgMetaService> logger,
         GameReconstructionService? reconstructions = null, SharedLineService? sharedLines = null,
         WeeklyPostService? weekly = null, WorksheetService? worksheets = null,
-        LeagueService? league = null, LeagueGameShares? leagueGames = null, ClubGameLinks? clubGames = null)
+        LeagueService? league = null, LeagueGameShares? leagueGames = null, ClubGameLinks? clubGames = null,
+        LeagueShareClubGames? leagueClubGames = null, AnonGameShares? anonGames = null,
+        TrainingVideos.TrainingLessonShares? lessonShares = null, TrainingVideos.TrainingVideoService? lessons = null,
+        Engines.LocalExplorerClient? explorer = null, Microsoft.Extensions.Caching.Memory.IMemoryCache? memory = null)
     {
+        _leagueClubGames = leagueClubGames;
+        _anonGames = anonGames;
+        _lessonShares = lessonShares;
+        _lessons = lessons;
+        _explorer = explorer;
+        _memory = memory;
         _clubGames = clubGames;
         _league = league;
         _leagueGames = leagueGames;
@@ -97,6 +112,9 @@ public partial class OgMetaService
                 .FirstOrDefault(p => p.Length == 2 && p[0] == "t")?[1];
             return string.IsNullOrWhiteSpace(t) ? null : ("calendar", Uri.UnescapeDataString(t));
         }
+
+        // Teilen-Links mit Vorschau seit 2026-11-22: /tl, /ga/…/summary, /s/…/club-games/{id}, /explorer/game/masters/{id}
+        if (ParseShareRoute(segments) is { } share) return share;
 
         switch (segments[0])
         {
@@ -154,9 +172,11 @@ public partial class OgMetaService
         return hit == null ? null : Uri.UnescapeDataString(hit[1]);
     }
 
-    public async Task<OgPage?> ResolvePageAsync(string? path, string baseUrl, CancellationToken ct = default, string? site = null)
+    /// <param name="course">Der nginx hat die Anfrage als Kurs-Kurz-URL markiert (<c>X-Og-Route: course</c>, nur RookHub, nur
+    /// Vorschau-Bots) — dann gilt NUR <see cref="ParseCoursePath"/>.</param>
+    public async Task<OgPage?> ResolvePageAsync(string? path, string baseUrl, CancellationToken ct = default, string? site = null, bool course = false)
     {
-        var parsed = ParsePath(path, site);
+        var parsed = course ? (string.IsNullOrEmpty(site) ? ParseCoursePath(path) : null) : ParsePath(path, site);
         if (parsed is null) return null;
         var (kind, id) = parsed.Value;
         var canonical = $"{baseUrl}{path}";
@@ -221,6 +241,13 @@ public partial class OgMetaService
                 }
                 case ClubGameKind:
                     return await ResolveClubGamePageAsync(id, path, baseUrl, img, canonical, ct);
+                case LessonKind:
+                case LessonDrillKind:
+                case LeagueClubGameKind:
+                case AnonSummaryKind:
+                case MasterGameKind:
+                case CourseKind:
+                    return await ResolveSharePageAsync(kind, id, path, img, canonical, ct);
                 case "recon":
                 case "line":
                     return await ResolveSharedPageAsync(kind, id, img, canonical, ct);
@@ -292,6 +319,13 @@ public partial class OgMetaService
                 case ClubGameKind:
                 case ClubTrainKind:
                     return await ResolveClubGameBoardAsync(kind, id, ct);
+                case LessonKind:
+                case LessonDrillKind:
+                case LeagueClubGameKind:
+                case AnonSummaryKind:
+                case MasterGameKind:
+                case CourseKind:
+                    return await ResolveShareBoardAsync(kind, id, ct);
                 case "recon":
                 case "line":
                     return await ResolveSharedBoardAsync(kind, id, ct);

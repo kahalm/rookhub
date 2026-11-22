@@ -49,7 +49,9 @@ public class OgController : ControllerBase
         if (string.IsNullOrEmpty(html))
             return StatusCode(StatusCodes.Status502BadGateway, "frontend unavailable");
 
-        var page = await _meta.ResolvePageAsync(path, BaseUrl(site), ct, site);
+        // Kurs-Kurz-URL (/{slug}, /{slug}/{kapitel}): der nginx markiert sie, weil sie keinen festen Präfix hat (nur Vorschau-Bots).
+        var course = string.Equals(Request.Headers["X-Og-Route"].ToString(), "course", StringComparison.Ordinal);
+        var page = await _meta.ResolvePageAsync(path, BaseUrl(site), ct, site, course);
         if (page is not null)
             html = Inject(html, page);
 

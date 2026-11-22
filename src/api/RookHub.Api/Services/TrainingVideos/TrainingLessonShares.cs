@@ -90,6 +90,15 @@ public sealed class TrainingLessonShares(AppDbContext db)
         return (TrainingShareState.Valid, row.LessonId);
     }
 
+    /// <summary>Der Eintrag hinter dem Token, AUCH wenn der Link abgelaufen oder widerrufen ist (Wunsch 2026-11-22: das Konto der
+    /// Stunde bzw. ein Admin landet über einen alten Link trotzdem auf <c>/training-videos/{id}</c>, er hat ja normalen Zugriff).
+    /// NUR für <see cref="Games.ShareLinkTargets"/>, der danach Besitz bzw. Admin prüft — nie für den Gast-Weg; <c>null</c> = unbekannt.</summary>
+    public async Task<int?> LessonOfAnyAsync(string? token, CancellationToken ct = default)
+    {
+        if (!LooksLikeToken(token)) return null;
+        return await db.TrainingLessonShares.AsNoTracking().Where(s => s.Token == token).Select(s => (int?)s.LessonId).FirstOrDefaultAsync(ct);
+    }
+
     /// <summary>Base64URL, 20–64 Zeichen.</summary>
     internal static bool LooksLikeToken(string? token) =>
         token is { Length: >= 20 and <= 64 } && token.All(c => c is (>= 'A' and <= 'Z') or (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-' or '_');

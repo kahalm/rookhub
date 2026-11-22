@@ -21,9 +21,11 @@ public class ShareLinkTargetsTests : IDisposable
     private readonly AppDbContext _db = new(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
     public void Dispose() => _db.Dispose();
 
-    private ShareLinkTargets Targets() => new(_db, new LeagueClubResolver(_db), new TrainingLessonShares(_db));
+    private readonly Microsoft.AspNetCore.DataProtection.IDataProtectionProvider _protection = new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider();
+    private LeagueGameShares LeagueGames() => new(_db, new LeagueFixtureGames(_db), _protection);
+    private ShareLinkTargets Targets() => new(_db, new LeagueClubResolver(_db), new TrainingLessonShares(_db), LeagueGames());
 
-    private async Task<(int Own, int Club, int ForeignClub, int Lesson, int Rec)> SeedAsync(bool lessonRevoked = false)
+    private async Task<(int Own, int Club, int ForeignClub, int Lesson, int Rec)> SeedAsync(bool lessonRevoked = false, bool lessonExpired = false)
     {
         await TestClubs.SeedAsync(_db);
         _db.Groups.Add(new Group { Id = 77, Name = "Testdorf" });
@@ -37,7 +39,7 @@ public class ShareLinkTargetsTests : IDisposable
         _db.AddRange(own, club, foreign, lesson, rec);
         await _db.SaveChangesAsync();
         _db.TrainingLessonShares.Add(new TrainingLessonShare { LessonId = lesson.Id, Token = LessonToken, CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddDays(7), RevokedAt = lessonRevoked ? DateTime.UtcNow : null });
+            ExpiresAt = lessonExpired ? DateTime.UtcNow.AddMinutes(-1) : DateTime.UtcNow.AddDays(7), RevokedAt = lessonRevoked ? DateTime.UtcNow : null });
         await _db.SaveChangesAsync();
         return (own.Id, club.Id, foreign.Id, lesson.Id, rec.Id);
     }
@@ -94,11 +96,50 @@ public class ShareLinkTargetsTests : IDisposable
         Assert.Null(await Targets().ResolveAsync(Stranger, false, false, "r", RecToken, null));
     }
 
-    [Fact]
-    public async Task Lesson_RevokedLink_NoRedirect_EvenForOwner()
+    /// <summary>Wunsch 2026-11-22: ein abgelaufener (bzw. widerrufener) Link führt das Konto der Stunde und Admins trotzdem auf die
+    /// Stunde — sie haben normalen Zugriff. Für alle anderen bleibt er abgelaufen.</summary>
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Lesson_ExpiredOrRevokedLink_OwnerAndAdminStillRedirected_OthersNot(bool expired, bool revoked)
     {
-        await SeedAsync(lessonRevoked: true);
-        Assert.Null(await Targets().ResolveAsync(Owner, false, false, "tl", LessonToken, null));
+        var (_, _, _, lesson, _) = await SeedAsync(lessonRevoked: revoked, lessonExpired: expired);
+        Assert.Equal($"/training-videos/{lesson}", await Targets().ResolveAsync(Owner, false, false, "tl", LessonToken, null));
+        Assert.Equal($"/training-videos/{lesson}", await Targets().ResolveAsync(Admin, true, false, "tl", LessonToken, null));
+        Assert.Null(await Targets().ResolveAsync(Stranger, false, false, "tl", LessonToken, null));
+        Assert.Null(await Targets().ResolveAsync(Owner, false, false, "tl", "unknownTokenAAAAAAAAAAAA", null));
+    }
+
+    /// <summary>LeagueHub <c>/partie/{token}</c> (versiegelte Marke, Wunsch 2026-11-22): wer die Vereinspartie normal sieht (<c>league.view</c>
+    /// + Verein der Partie, Admin jeder), springt nach <c>/club-games/{id}</c> — auch nach Ablauf; sonst nichts.</summary>
+    [Fact]
+    public async Task LeaguePartieLink_MemberWithLeagueView_GetsClubGame_EvenExpired_OthersNothing()
+    {
+        var (_, club, _, _, _) = await SeedAsync();
+        const int tnr = 4711, round = 2;
+        _db.LeagueRounds.Add(new LeagueRound { Tnr = tnr, Round = round, Date = new DateOnly(2026, 10, 11) });
+        var lg = new LeagueGame { Tnr = tnr, Round = round, MatchNo = 1, Board = 1, HomeTeam = "Testdorf", AwayTeam = "Bergheim",
+            HomePlayer = "A", AwayPlayer = "B", HomeColor = "w", Result = "1 - 0" };
+        _db.LeagueGames.Add(lg);
+        await _db.SaveChangesAsync();
+        var row = await _db.LeagueClubGames.SingleAsync(g => g.Id == club);
+        row.Pgn = "[White \"A\"]\n[Black \"B\"]\n[Result \"1-0\"]\n\n1. e4 e5 1-0";
+        LeagueGameLinks.Set(row, lg);
+        await _db.SaveChangesAsync();
+        var made = await LeagueGames().CreateAsync(TestClubs.Home, tnr, round, "Testdorf", 1, default);
+        Assert.NotNull(made);
+        var token = made!.Value.Token;
+
+        Assert.Equal($"/club-games/{club}", await Targets().ResolveAsync(Member, false, true, "lp", token, null));
+        Assert.Equal($"/club-games/{club}", await Targets().ResolveAsync(Admin, true, true, "lp", token, null));
+        Assert.Null(await Targets().ResolveAsync(Member, false, false, "lp", token, null));     // ohne league.view
+        Assert.Null(await Targets().ResolveAsync(Stranger, false, true, "lp", token, null));    // anderer Verein
+        Assert.Null(await Targets().ResolveAsync(Member, false, true, "lp", "x" + token[1..], null));
+        Assert.Null(await Targets().ResolveAsync(Member, false, true, "lp", "", null));
+
+        // Ein Brett ohne Vereinspartie (Partie aus einer Spielerkarte) hat kein Gegenstück — dieselbe Marke ohne Partie-Id.
+        Assert.Null(new LeagueGameShares(_db, new LeagueFixtureGames(_db), new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider())
+            .ClubGameOf(token));                                                                  // fremder Schlüsselbund: kaputt
     }
 
     [Theory]
@@ -124,6 +165,8 @@ public class ShareLinkTargetsTests : IDisposable
         Assert.IsType<NotFoundResult>(await new ShareLinkTargetController(Targets()).As(Member).Target("cg", ClubToken, null, default));
         Assert.IsType<NotFoundResult>(await new ShareLinkTargetController(Targets()).As(Stranger).WithLeagueView().Target("cg", ClubToken, null, default));
         Assert.IsType<NotFoundResult>(await new ShareLinkTargetController(Targets()).As(Member).WithLeagueView().Target("cg", "weg", null, default));
+        // lp (LeagueHub /partie) fragt league.view wie cg/s: ohne Claim 404 (auch bei kaputter Marke ohnehin)
+        Assert.IsType<NotFoundResult>(await new ShareLinkTargetController(Targets()).As(Member).Target("lp", "kaputt", null, default));
 
         // Gäste: [Authorize] an der Klasse, kein [AllowAnonymous] an der Aktion → 401 vor jeder Auskunft.
         Assert.NotNull(typeof(ShareLinkTargetController).GetCustomAttribute<AuthorizeAttribute>());

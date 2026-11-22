@@ -65,7 +65,14 @@ public sealed class ClubGameLinks(AppDbContext db, LeagueClubService club, ClubG
     /// <summary>Die Partie des Links; <c>null</c> = ungültig oder widerrufen.</summary>
     public async Task<SharedClubGame?> ReadAsync(string token, CancellationToken ct)
     {
-        if (await OpenAsync(token, ct) is not var (g, c)) return null;
+        return await OpenAsync(token, ct) is var (g, c) ? Project(g, c) : null;
+    }
+
+    /// <summary>Was ein Leser OHNE Konto von der Partie sieht — für <c>/cg/{token}</c> und die Link-Vorschau des Liga-Links
+    /// (<see cref="LeagueShareClubGames"/>): bei einer anonymisierten Partie der Anonymisierungs-Name, neu gebautes PGN, kein Event, keine
+    /// Elo der ersetzten Seite. <see cref="LeagueClubGame.WhiteRealName"/> und Co. bleiben drin.</summary>
+    internal static SharedClubGame Project(LeagueClubGame g, LeagueClub c)
+    {
         var own = ClubGameReader.OwnSideOf(c, g);
         if (!g.Anonymized) return new SharedClubGame(g.White, g.Black, g.Result, g.Pgn, g.WhiteElo, g.BlackElo, g.Year, g.Event, own);
         int? whiteElo = c.IsAnon(g.White, g.WhiteFide) ? null : g.WhiteElo, blackElo = c.IsAnon(g.Black, g.BlackFide) ? null : g.BlackElo;
