@@ -2097,7 +2097,50 @@
       "open": "Olvasás ablakban",
       "moveHint": "A szövegben egy lépésre kattintva bezárul az ablak, és a változat a táblán látható."
     },
-    "dailyChip": "Napi feladvány"
+    "dailyChip": "Napi feladvány",
+    "why": {
+      "label": "Miért ez a feladat:",
+      "white": "Világos",
+      "black": "Sötét",
+      "and": "és",
+      "reason": {
+        "missedTactic": "A játszma {{move}} lépéséhez tartozik: {{side}} ott elszalasztotta a(z) „{{theme}}” motívumot.",
+        "allowedTactic": "A játszma {{move}} lépéséhez tartozik: ez a lépés lehetővé tette {{side}} számára a(z) „{{theme}}” motívumot.",
+        "missedMate": "A játszma {{move}} lépéséhez tartozik: {{side}} ott elszalasztott egy {{n}}-lépéses mattot.",
+        "playedMate": "A játszma {{move}} lépéséhez tartozik: innen {{side}} mattot adott ({{n}} lépésben).",
+        "forcedMate": "A játszma {{move}} lépéséhez tartozik: a végén {{side}} számára {{n}}-lépéses matt volt a táblán.",
+        "mateThreat": "A játszma {{move}} lépéséhez tartozik: {{side}} ott mattfenyegetéssel rendelkezett ({{n}}-lépéses matt)."
+      },
+      "subject": {
+        "puzzle": "Ez a feladat",
+        "book": "Ez a könyvbeli diagram"
+      },
+      "match": {
+        "tactic": {
+          "strict": "{{subject}} ugyanazt a mintát mutatja (ugyanazok a bábok).",
+          "family": "{{subject}} ugyanazt a motívumot mutatja más bábokkal."
+        },
+        "mate": {
+          "strict": "{{subject}} ugyanazzal a mattképpel végződik.",
+          "family": "{{subject}} hasonló mattképpel végződik."
+        },
+        "theme": "{{subject}} csak a témában egyezik ({{theme}})."
+      },
+      "pattern": {
+        "fork": "{{subject}} ugyanazt a mintát mutatja: {{piece}} villát ad: {{targets}}.",
+        "pin": "{{subject}} ugyanazt a mintát mutatja: {{piece}} leköti: {{front}} – {{back}}.",
+        "skewer": "{{subject}} ugyanazt a mintát mutatja: {{piece}} nyárs: {{front}} és {{back}}."
+      },
+      "piece": {
+        "K": "király",
+        "Q": "vezér",
+        "R": "bástya",
+        "B": "futó",
+        "N": "huszár",
+        "P": "gyalog"
+      },
+      "also": "Ugyanez a kép ezeknél is előfordult: {{moves}}."
+    }
   },
   "admin": {
     "title": "Admin",

@@ -142,4 +142,12 @@ public class BookPuzzle
     /// </summary>
     [MaxLength(40)]
     public string? SourceGame { get; set; }
+
+    /// <summary>
+    /// Vermerk „Warum diese Aufgabe“ (1.001.0, nur Kurs „Persönliche Taktiken“): sprachneutrales JSON aus
+    /// <see cref="Services.Courses.PersonalTacticsWhy"/> — Motivstelle der Partie + Art des Treffers; das Frontend übersetzt.
+    /// <c>null</c> = kein Vermerk (andere Kurse, oder eine Bestandslinie, die sich nicht mehr zuordnen ließ).
+    /// </summary>
+    [MaxLength(600)]
+    public string? Why { get; set; }
 }

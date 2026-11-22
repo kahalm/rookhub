@@ -2549,7 +2549,50 @@
       "open": "Čitaj u prozoru",
       "moveHint": "Potez u tekstu zatvara prozor i prikazuje varijantu na ploči."
     },
-    "dailyChip": "Dnevna zagonetka"
+    "dailyChip": "Dnevna zagonetka",
+    "why": {
+      "label": "Zašto ovaj zadatak:",
+      "white": "Bijeli",
+      "black": "Crni",
+      "and": "i",
+      "reason": {
+        "missedTactic": "Odgovara potezu {{move}} u partiji: {{side}} je tamo propustio motiv „{{theme}}”.",
+        "allowedTactic": "Odgovara potezu {{move}} u partiji: taj je potez dopustio da {{side}} dobije motiv „{{theme}}”.",
+        "missedMate": "Odgovara potezu {{move}} u partiji: {{side}} je tamo propustio mat u {{n}}.",
+        "playedMate": "Odgovara potezu {{move}} u partiji: odatle je {{side}} matirao (mat u {{n}}).",
+        "forcedMate": "Odgovara potezu {{move}} u partiji: na kraju je {{side}} imao mat u {{n}} na ploči.",
+        "mateThreat": "Odgovara potezu {{move}} u partiji: {{side}} je tamo imao prijetnju matom (mat u {{n}})."
+      },
+      "subject": {
+        "puzzle": "Ovaj zadatak",
+        "book": "Ovaj dijagram iz knjige"
+      },
+      "match": {
+        "tactic": {
+          "strict": "{{subject}} ima isti uzorak (iste figure).",
+          "family": "{{subject}} ima isti motiv s drugim figurama."
+        },
+        "mate": {
+          "strict": "{{subject}} završava istom matnom slikom.",
+          "family": "{{subject}} završava sličnom matnom slikom."
+        },
+        "theme": "{{subject}} ima samo istu temu ({{theme}})."
+      },
+      "pattern": {
+        "fork": "{{subject}} ima isti uzorak: {{piece}} napada viljuškom {{targets}}.",
+        "pin": "{{subject}} ima isti uzorak: {{piece}} veže {{front}} za {{back}}.",
+        "skewer": "{{subject}} ima isti uzorak: {{piece}} probada {{front}} i {{back}}."
+      },
+      "piece": {
+        "K": "kralj",
+        "Q": "dama",
+        "R": "top",
+        "B": "lovac",
+        "N": "skakač",
+        "P": "pješak"
+      },
+      "also": "Ista se slika pojavila i kod {{moves}}."
+    }
   },
   "admin": {
     "title": "Administracija",

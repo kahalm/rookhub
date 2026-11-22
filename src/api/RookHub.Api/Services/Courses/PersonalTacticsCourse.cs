@@ -127,6 +127,7 @@ public sealed class PersonalTacticsCourse(AppDbContext db, GameExercises exercis
                 Title = PgnParser.Truncate(l.Title, 300), Chapter = chapter, Tags = l.Tags, BookRating = l.Rating,
                 Source = LineSource,
                 SourceGame = game.Linkable ? $"{game.SourceKind}:{game.Id.ToString(CultureInfo.InvariantCulture)}:{l.Ply.ToString(CultureInfo.InvariantCulture)}" : null,
+                Why = l.Why,
             });
         }
         book.UpdatedAt = DateTime.UtcNow;
@@ -154,14 +155,17 @@ public sealed class PersonalTacticsCourse(AppDbContext db, GameExercises exercis
         };
     }
 
-    private sealed record Line(int Ply, string Fen, string Moves, int StartPly, string Title, string? Tags, int? Rating);
+    /// <summary>Eine Linie des Kapitels; <paramref name="Why"/> = Vermerk „Warum diese Aufgabe“ (<see cref="PersonalTacticsWhy"/>).</summary>
+    internal sealed record Line(int Ply, string Fen, string Moves, int StartPly, string Title, string? Tags, int? Rating, string? Why);
+
+    /// <summary>Die Empfohlenen Übungen der Partie, wie der Abschnitt sie zeigt.</summary>
+    private Task<GameExercisesDto> ExercisesAsync(Game game, EbookViewer viewer, CancellationToken ct) =>
+        game.Kind == GameKind.Club ? exercises.ForClubGameAsync(game.Id, ct, viewer) : exercises.ForSavedGameAsync(game.Id, ct, viewer);
 
     /// <summary>Die lösbaren Aufgaben der Partie in der Reihenfolge des Abschnitts.</summary>
-    private async Task<List<Line>> LinesAsync(Game game, EbookViewer viewer, CancellationToken ct)
+    internal async Task<List<Line>> LinesAsync(Game game, EbookViewer viewer, CancellationToken ct)
     {
-        var dto = game.Kind == GameKind.Club
-            ? await exercises.ForClubGameAsync(game.Id, ct, viewer)
-            : await exercises.ForSavedGameAsync(game.Id, ct, viewer);
+        var dto = await ExercisesAsync(game, viewer, ct);
         var lichessIds = dto.Groups.SelectMany(g => g.Exercises).Where(e => e.Book is null).Select(e => e.Id).Distinct().ToList();
         var names = await db.Puzzles.AsNoTracking().Where(p => lichessIds.Contains(p.Id))
             .Select(p => new { p.Id, p.LichessId }).ToDictionaryAsync(p => p.Id, p => p.LichessId, ct);
@@ -179,14 +183,16 @@ public sealed class PersonalTacticsCourse(AppDbContext db, GameExercises exercis
                     // Nur mit bestätigter Buchlösung und bestimmter Löserseite (BookSolverLine); die Stellung ist das Diagramm.
                     if (!b.Solvable || e.Moves.Count < (b.OpponentFirst ? 2 : 1)) continue;
                     var where = b.PdfPage ? $", S. {b.Page.ToString(CultureInfo.InvariantCulture)}" : "";
-                    result.Add(new Line(g.Ply, e.Fen, string.Join(' ', e.Moves), b.OpponentFirst ? 0 : -1, $"{move} · {b.Title}{where}", tags, null));
+                    result.Add(new Line(g.Ply, e.Fen, string.Join(' ', e.Moves), b.OpponentFirst ? 0 : -1, $"{move} · {b.Title}{where}", tags, null,
+                        PersonalTacticsWhy.Serialize(PersonalTacticsWhy.Build(g, e))));
                 }
                 else
                 {
                     // Lichess-Form: erst der Gegnerzug, dann die Lösung — ohne Löserzug gibt es nichts zu lösen.
                     if (e.Moves.Count < 2) continue;
                     var id = names.TryGetValue(e.Id, out var lichess) && !string.IsNullOrEmpty(lichess) ? lichess : $"#{e.Id.ToString(CultureInfo.InvariantCulture)}";
-                    result.Add(new Line(g.Ply, e.Fen, string.Join(' ', e.Moves), 0, $"{move} · Lichess {id}", tags, e.Rating > 0 ? e.Rating : null));
+                    result.Add(new Line(g.Ply, e.Fen, string.Join(' ', e.Moves), 0, $"{move} · Lichess {id}", tags, e.Rating > 0 ? e.Rating : null,
+                        PersonalTacticsWhy.Serialize(PersonalTacticsWhy.Build(g, e))));
                 }
             }
         }

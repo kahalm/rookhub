@@ -694,6 +694,10 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
 
+                    b.Property<string>("Why")
+                        .HasMaxLength(600)
+                        .HasColumnType("varchar(600)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BookFileName");

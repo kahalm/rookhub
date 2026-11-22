@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import type { LineWhy } from './line-why.util';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ANON_PUZZLE_SESSION_KEY, getOrCreateAnonSessionId } from '../../core/anon-session';
@@ -102,6 +103,8 @@ export interface BookPuzzleDto {
   isInfoOnly?: boolean;
   /** Geerntete Taktik: die Partie, aus der sie stammt (`club` → /club-games/id, `own` → /games/id), `ply` = Halbzug. */
   sourceGame?: { kind: 'club' | 'own'; id: number; ply: number } | null;
+  /** „Warum diese Aufgabe“ (Kurs „Persönliche Taktiken“, 1.001.0): sprachneutraler Vermerk, Satz baut `lineWhyText`. */
+  why?: LineWhy | null;
 
   // --- Kurs-Übersetzung (0.547.0/0.549.0) — nur mit `?lang=` an den Kurs-/Buch-Endpunkten ---
   /** Übersetzter Linien-Titel; `null` = keine. `title` bleibt das Original — angezeigt wird

@@ -71,6 +71,8 @@
               <mat-icon>open_in_new</mat-icon> {{ 'book.sourceGame' | translate }}
             </a>
           }
+          <!-- Persönliche Taktiken (1.001.0): warum die Linie zu dieser Partie gehört — leise Zeile unter Titel/Partie-Link. -->
+          <app-line-why [why]="why()" />
           <!-- Abzeichen + „Tags anzeigen" in der Textspalte, fluchtend mit Titel/Kapitel neben dem Pfeil
                (b1-rk-loeser-tags-link-versatz) — nicht am Kartenrand unter dem Pfeil. -->
           @if (difficulty() || bookRating() || tags()) {

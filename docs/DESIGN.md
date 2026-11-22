@@ -786,6 +786,10 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   „Aufgeben“; die Spielweise wechselt man nur im ⋮ (der Wochenpost behält seinen Knopf). Lange Kommentare sind auf
   ~5 Zeilen gekürzt und scrollen dort (ganzer Text zusätzlich im Dialog), damit die Bedienung über der Falz bleibt
   und die Züge der unteren Zeilen anklickbar sind (0.881.2).
+- **„Warum diese Aufgabe:“** (1.001.0, persönliche Taktik-Kurse): `app-line-why` als leise Zeile in der Textspalte der Kontext-Karte
+  unter Titel/Kapitel/„Zur Partie“ (0,85 rem, on-surface-variant, nur das Etikett halbfett, umbricht statt abzuschneiden), in
+  „Linien durchsehen“ über dem Kommentar in Kommentarbreite. Ohne Vermerk keine Zeile, kein Platzhalter. Kein Kasten, kein Symbol —
+  Begründung, nicht Bedienung.
 - **Puzzle-Löser** (alle drei Modi): zweispaltig erst ab 900 px; 769–899 px einspaltig, Brett mittig bis Fensterhöhe
   (`min(100%, 100vh - 180px)`), Seitenkarten volle Breite darunter. In der Seitenspalte zuerst die Bedienung
   (Kontext-Card mit Fortschritt/„Überspringen“, Status-Card, Aktionsleiste), der ungekürzte Kurs-Kommentar als eigener
@@ -1569,6 +1573,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-22 | 1.001.0 · Kurs-Löser | „Warum diese Aufgabe:“ als leise Textzeile in der Kontext-Karte und in „Linien durchsehen“ (8.1), nur mit Vermerk | Im Kurs „Persönliche Taktiken“ war nicht zu sehen, warum eine Linie zur Partie gehört; die Zeile soll beim Start der Linie da sein, ohne die Bedienung zu verdrängen | Nutzerwunsch 22.11. („kannst du dort immer vermerken, warum du glaubst, dass die Linie relevant ist?“) |
 | 2026-11-19 | 0.999.3 · Repertoire-Trainer | Prep-Repertoire gegen den gespeicherten Gegner (8.1): Reihenfolge-Knopf auch dort, Dialog mit sechstem Wert „Nach dem Gegner“ (nur wo er gilt — sonst nicht in der Liste, 5.6); Leerzustand und Abschluss der aufs Fällige beschränkten Abfrage bieten „Alle Linien üben“ statt „Alle jetzt fällig machen“ bzw. „Von vorn“; Hinweis unter der Leiste nennt die geltende Regel | Abfragen brachte dort immer alle Linien; nur Fällige + Untrainierte heißt: es gibt jetzt einen Leerzustand, und „Von vorn“ hätte nach dem Fälligen ins Leere geführt | Nutzerwunsch 19.11. |
 | 2026-11-19 | 0.999.1 · Repertoire-Trainer | Kopfleiste bei 600–768 px zweizeilig: Name + Moduswahl oben, Reihenfolge-Knopf links und ⋮ rechts gemeinsam darunter (8.1) | In einer Zeile schrumpfte der Repertoirename dort auf „S…“ (gemessen 28 px bei 620 px; bestand schon mit dem gleich breiten Umschalter „Häufigste Linien zuerst“) | Sichtprüfung 0.996.0 im Browser |
 | 2026-11-19 | 0.999.0 · Turnierseite/ClubHub | „Ganze Kachel klickbar“ (5.2) auf den anderen Oberflächen: Turnierkarte in Liste, Karten-Popup und Kalenderfenster sowie Merkliste (8.2); ClubHub-Karteizeilen und -Gruppenkarten mit Fokusring/Tönung aus `--focus`/`--ink` (8.5). KidHub war schon so (Kacheln sind Links), LeagueHub hat keine Kachel mit einem Hauptziel | Die Regel gilt für alle fünf Oberflächen | Nutzerwunsch 19.11. („immer komplett klickbar“) |

@@ -2549,7 +2549,50 @@
       "open": "Im Fenster lesen",
       "moveHint": "Ein Zug im Text schließt das Fenster und zeigt die Variante am Brett."
     },
-    "dailyChip": "Tagespuzzle"
+    "dailyChip": "Tagespuzzle",
+    "why": {
+      "label": "Warum diese Aufgabe:",
+      "white": "Weiß",
+      "black": "Schwarz",
+      "and": "und",
+      "reason": {
+        "missedTactic": "Passt zu {{move}} in der Partie: {{side}} hat dort das Motiv „{{theme}}“ verpasst.",
+        "allowedTactic": "Passt zu {{move}} in der Partie: Dieser Zug ließ für {{side}} das Motiv „{{theme}}“ zu.",
+        "missedMate": "Passt zu {{move}} in der Partie: {{side}} hat dort ein Matt in {{n}} verpasst.",
+        "playedMate": "Passt zu {{move}} in der Partie: Ab dort setzte {{side}} matt (Matt in {{n}}).",
+        "forcedMate": "Passt zu {{move}} in der Partie: Am Ende stand für {{side}} ein Matt in {{n}} auf dem Brett.",
+        "mateThreat": "Passt zu {{move}} in der Partie: {{side}} hatte dort eine Mattdrohung (Matt in {{n}})."
+      },
+      "subject": {
+        "puzzle": "Diese Aufgabe",
+        "book": "Dieses Buchdiagramm"
+      },
+      "match": {
+        "tactic": {
+          "strict": "{{subject}} hat dasselbe Muster (gleiche Figuren).",
+          "family": "{{subject}} hat dasselbe Motiv mit anderen Figuren."
+        },
+        "mate": {
+          "strict": "{{subject}} endet mit demselben Mattbild.",
+          "family": "{{subject}} endet mit einem ähnlichen Mattbild."
+        },
+        "theme": "{{subject}} hat nur das gleiche Thema ({{theme}})."
+      },
+      "pattern": {
+        "fork": "{{subject}} hat dasselbe Muster: {{piece}} gabelt {{targets}}.",
+        "pin": "{{subject}} hat dasselbe Muster: {{piece}} fesselt {{front}} an {{back}}.",
+        "skewer": "{{subject}} hat dasselbe Muster: {{piece}} spießt {{front}} und {{back}} auf."
+      },
+      "piece": {
+        "K": "König",
+        "Q": "Dame",
+        "R": "Turm",
+        "B": "Läufer",
+        "N": "Springer",
+        "P": "Bauer"
+      },
+      "also": "Dasselbe Bild kam auch bei {{moves}} vor."
+    }
   },
   "admin": {
     "title": "Admin",

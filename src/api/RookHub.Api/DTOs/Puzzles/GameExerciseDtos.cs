@@ -11,10 +11,12 @@ public sealed record GameExercisesDto(List<GameExerciseGroupDto> Groups);
 /// endet ohne Matt, aber mit erzwungenem Matt auf dem Brett; Texte dazu gibt es seit 0.973.0 keine mehr, die Seite zeigt die Stellen
 /// nicht), <c>MateIn</c> (bei jedem Matt) bzw. <c>Theme</c> seine Parameter: das Lichess-Thema des Motivs (<c>fork</c>,
 /// <c>hangingPiece</c>, <c>backRankMate</c> für die Grundreihe …) oder, bei einem Matt mit benanntem Bild, <c>backRankMate</c> /
-/// <c>smotheredMate</c> (sonst <c>null</c>). <c>AlsoPlies</c>: weitere Stellen mit demselben Bild.
+/// <c>smotheredMate</c> (sonst <c>null</c>). <c>AlsoPlies</c>: weitere Stellen mit demselben Bild. Seit 1.001.0 für den Vermerk
+/// „Warum diese Aufgabe“: <c>Motif</c> = strenge Signatur des Motivs (<c>fork|N|KQ</c>, nur Taktik), <c>MoveSan</c> = der Partiezug an
+/// <c>Ply</c>, <c>PrevMoveSan</c> = der Zug davor (SAN englisch; <c>null</c> = keiner).
 /// </summary>
 public sealed record GameExerciseGroupDto(int Ply, bool White, string Reason, int? MateIn, List<int> AlsoPlies, List<GameExerciseDto> Exercises,
-    string? Theme = null);
+    string? Theme = null, string? Motif = null, string? MoveSan = null, string? PrevMoveSan = null);
 
 /// <summary>Eine Aufgabe im Format des Lösers. <c>Source = lichess</c>: <c>Fen</c> VOR dem Zug des Gegners, <c>Moves</c> = Gegnerzug, dann
 /// abwechselnd Löser/Gegner (UCI). <c>Source = book</c> (0.962.0): <c>Id</c> = Diagramm, <c>Fen</c> = Diagrammstellung,

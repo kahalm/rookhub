@@ -88,7 +88,7 @@ Partie ohne lösbare Aufgabe (dann entsteht auch kein Kurs).
 - **Ein Kurs je Konto**: das Buch heißt intern `personal-tactics-u{userId}.pgn` (`Book.FileName`, eindeutiger Index) — erkannt am
   Dateinamen, nie am Anzeigenamen; Umbenennen verdoppelt nichts. `OwnerUserId` = das Konto (nur für es sichtbar, wie jeder
   persönliche Kurs — teilen, umbenennen, löschen wie dort), `Kind = Puzzle`, `Themes = tactics`, `Tags = personal,tactics`, kein
-  Pool-Flag. Name beim ersten Anlegen aus `lang`: `de…` → „Persönliche Taktiken“, sonst „Personal tactics“. Kein neues Schema.
+  Pool-Flag. Name beim ersten Anlegen aus `lang`: `de…` → „Persönliche Taktiken“, sonst „Personal tactics“. Einziges eigenes Feld: `BookPuzzles.Why` (1.001.0, unten).
 - **Ein Kapitel je Partie**: die Linien tragen `LineId = {Datei}:{club|own}{PartieId}:{nn}` (eindeutiger Index). Gibt es Linien mit
   diesem Anfang, wird ihr Kapitel geöffnet (auch umbenannt) und NICHTS neu berechnet — das Kapitel hält fest, was beim ersten Klick
   empfohlen war, der Fortschritt bleibt. Gleichzeitige Klicks: der zweite stößt am Index an (`DbIdempotency`) und liest das Kapitel
@@ -121,6 +121,24 @@ Partie ohne lösbare Aufgabe (dann entsteht auch kein Kurs).
   nähme die Linie nur aus den Zufallstöpfen, erst `IsInfoOnly` aus Abfrage und Fortschritt); nichts wird gelöscht, andere Linien und
   alle Lernstände bleiben. Keine Migration, weil die Regel Schachlogik braucht (Linie nachspielen, Matt erkennen). Die Bewertung
   einer Linie ohne Matt wird am Buchdiagramm mit derselben Stellung und Linie nachgeschlagen.
+- **„Warum diese Aufgabe“** (1.001.0, Wunsch 2026-11-22: „kannst du dort immer vermerken, warum du glaubst, dass die Linie relevant
+  ist?“): jede Linie trägt in `BookPuzzles.Why` (varchar(600), Migration `AddBookPuzzleWhy`) einen SPRACHNEUTRALEN Vermerk als JSON,
+  gebaut von `Services/Courses/PersonalTacticsWhy.cs` rein aus der Gruppe der Empfohlenen Übungen und der Aufgabe — nichts erfunden:
+  Motivstelle (`ply`, `white` = Seite mit dem Motiv, `reason` = `missedTactic`/`allowedTactic`/`missedMate`/`playedMate`/`forcedMate`/
+  `mateThreat`, `theme`, `mateIn`), der Partiezug, den der Satz nennt (`movePly` + `moveSan`; bei `allowedTactic` der zulassende Fehler
+  DAVOR), die Art des Treffers (`match` = `strict`/`family`/`theme`, bei `theme` das aufgefüllte Thema `matchTheme`; `book` =
+  Buchdiagramm), bei gleicher strenger Signatur von Gabel/Fesselung/Spieß die Figuren (`piece`, `targets` aus `fork|N|KQ` bzw.
+  `pin|B|N>K`) und weitere Stellen mit demselben Bild (`also`, höchstens 8). Dafür trägt `GameExerciseGroupDto` seit 1.001.0 `Motif`
+  (strenge Signatur), `MoveSan` und `PrevMoveSan`. `BookPuzzleDto.why` liefert ihn an den Löser; der Satz entsteht im Frontend
+  (`features/puzzles/line-why.util.ts`, Schlüssel `book.why.*`, en/de/hr/hu), z. B. „Warum diese Aufgabe: Passt zu 21…Sb6 in der
+  Partie: Schwarz hat dort das Motiv „Gabel“ verpasst. Diese Aufgabe hat dasselbe Muster: Springer gabelt König und Dame.“ Seite als
+  Weiß/Schwarz, nicht „du“ (bei Vereinspartien ist der Nutzer oft keiner der beiden). Die Spielstärke steht nicht drin (das DTO trägt
+  das Ziel-Rating nicht).
+- **Bestand ohne Vermerk** (`PersonalTacticsWhyBackfill`, Hosted Service, einmalig, Marke `PersonalTactics.WhyBackfill`): je Partie aus
+  der `LineId` (Besitzer aus dem Dateinamen, `club|own` + Id) die Linien mit dem Buchzugriff des Besitzers neu rechnen
+  (`PersonalTacticsCourse.LinesAsync`, `ebooks.manage` über `PermissionResolver`) und einer vorhandenen Linie den Vermerk der Aufgabe mit
+  gleicher `Fen`, gleichen `Moves` und gleicher Zugnummer im `Title` geben. Keine oder mehrdeutige Zuordnung → kein Vermerk (nichts
+  raten); `StartPly` zählt nicht (die Löserseiten-Reparatur kann es umgestellt haben). Nur `Why` wird geschrieben, Lernstände bleiben.
 - **Auswahl**: beim Klick serverseitig neu aus `GameExercises` (je Partie und Stelle fest gesät, derselbe Betrachter wie beim Anzeigen)
   — sie stimmt mit dem Abschnitt überein, solange sich der Aufgabenbestand zwischen Laden und Klick nicht ändert. Seit 0.976.0 findet
   die Auswahl mehr Stellen (Mattdrohung, Matt am Schluss, Grundreihe, hängende Figur) und füllt jede auf sechs lösbare Aufgaben auf;

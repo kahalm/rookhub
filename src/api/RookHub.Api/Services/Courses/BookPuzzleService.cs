@@ -921,6 +921,7 @@ public class BookPuzzleService
         HintsFlagged = bp.HintsFlagged,
         IsInfoOnly = bp.IsInfoOnly,
         SourceGame = ParseSourceGame(bp.SourceGame),
+        Why = PersonalTacticsWhy.Parse(bp.Why),
     };
 
     /// <summary>Liest <see cref="BookPuzzle.SourceGame"/> (<c>kind:id:ply</c>); Defektes → <c>null</c>.</summary>

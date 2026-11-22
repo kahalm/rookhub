@@ -73,6 +73,7 @@ namespace RookHub.Api.Startup;
 /// TournamentGroupingBackfillService   immer (einmalig)                      Gruppenschlüssel im Altbestand
 /// RepertoireCleanupBackfillService    immer (einmalig)                      Repertoire-Bereinigung im Altbestand
 /// PersonalTacticsLineRepair           immer (einmalig)                      Löserseite der Buchdiagramm-Linien im Bestand (0.973.1)
+/// PersonalTacticsWhyBackfill          immer (einmalig)                      „Warum diese Aufgabe“ im Bestand nachtragen (1.001.0)
 /// KidsPuzzleSeeder                    immer (einmalig)                      Kinder-Leiter aufbauen
 /// PlayTimeSyncService                 immer                                 Spielzeit Lichess/chess.com
 /// VisitorOriginFlushWorker            intern: VisitorStats:Enabled          Besucher-Herkunft je Minute wegschreiben
@@ -198,6 +199,8 @@ public static class BackgroundServicesSetup
         services.AddHostedService<RepertoireCleanupBackfillService>();
         // Bestand „Persönliche Taktiken“: Buchdiagramm-Linien, in denen der Löser die mattgesetzte Seite spielte (einmalig).
         services.AddHostedService<PersonalTacticsLineRepair>();
+        // Bestand „Persönliche Taktiken“: Vermerk „Warum diese Aufgabe“ den vorhandenen Linien zuordnen (einmalig).
+        services.AddHostedService<PersonalTacticsWhyBackfill>();
         // Baut die Kinder-Leiter, wenn sie fehlt oder aus einem aelteren Lehrplan stammt.
         services.AddHostedService<KidsPuzzleSeeder>();
         // Externe Spielzeit (Lichess/chess.com) → Kategorie „Spielen" im Trainingsziele-Tracker.

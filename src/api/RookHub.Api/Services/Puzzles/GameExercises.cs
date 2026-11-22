@@ -325,8 +325,13 @@ public sealed class GameExercises(AppDbContext db, EbookSuggestions strength)
     {
         var empty = new GameExercisesDto(new List<GameExerciseGroupDto>());
         if (analysisId is not int id) return empty;
-        var positions = await db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == id)
-            .Select(p => new Position(p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson)).ToListAsync(ct);
+        var rawPositions = await db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == id)
+            .Select(p => new { p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.GameMoveSan }).ToListAsync(ct);
+        var positions = rawPositions.Select(p => new Position(p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson)).ToList();
+        // Partiezug je Halbzug (SAN) für den Vermerk „Warum diese Aufgabe“ im Kurs (1.001.0); die Endstellung hat keinen Zug.
+        var sanAt = new Dictionary<int, string>();
+        foreach (var p in rawPositions)
+            if (!string.IsNullOrEmpty(p.GameMoveUci) && !string.IsNullOrWhiteSpace(p.GameMoveSan)) sanAt[p.Ply] = p.GameMoveSan.Trim();
         // Nur Zusatzlinien mit Mattbewertung — der Rest der Vergleiche wird hier nicht gebraucht.
         var rows = await db.MoveComparisonLines.AsNoTracking()
             .Where(l => l.Comparison!.GameAnalysisId == id && l.State == MoveComparisonLineState.Done && l.ResultJson != null
@@ -349,7 +354,8 @@ public sealed class GameExercises(AppDbContext db, EbookSuggestions strength)
             var picked = viewer is { } v ? await _books.PickAsync(o, target, v, usedDiagrams, seed, ct) : [];
             await PickAsync(picked, o, target, used, seed, ct);
             if (picked.Count == 0) continue;
-            result.Add(new GameExerciseGroupDto(o.Ply, o.White, o.Reason, o.Motif is null ? o.MateIn : null, also, picked, o.Theme));
+            result.Add(new GameExerciseGroupDto(o.Ply, o.White, o.Reason, o.Motif is null ? o.MateIn : null, also, picked, o.Theme,
+                o.Motif?.Strict, sanAt.GetValueOrDefault(o.Ply), sanAt.GetValueOrDefault(o.Ply - 1)));
         }
         return new GameExercisesDto(result);
     }

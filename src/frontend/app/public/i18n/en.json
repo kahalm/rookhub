@@ -2549,7 +2549,50 @@
       "open": "Read in a window",
       "moveHint": "A move in the text closes the window and shows the line on the board."
     },
-    "dailyChip": "Daily puzzle"
+    "dailyChip": "Daily puzzle",
+    "why": {
+      "label": "Why this exercise:",
+      "white": "White",
+      "black": "Black",
+      "and": "and",
+      "reason": {
+        "missedTactic": "Matches {{move}} in the game: {{side}} missed the motif “{{theme}}” there.",
+        "allowedTactic": "Matches {{move}} in the game: this move allowed {{side}} the motif “{{theme}}”.",
+        "missedMate": "Matches {{move}} in the game: {{side}} missed a mate in {{n}} there.",
+        "playedMate": "Matches {{move}} in the game: from there {{side}} delivered mate (mate in {{n}}).",
+        "forcedMate": "Matches {{move}} in the game: at the end {{side}} had a mate in {{n}} on the board.",
+        "mateThreat": "Matches {{move}} in the game: {{side}} had a mating threat there (mate in {{n}})."
+      },
+      "subject": {
+        "puzzle": "This exercise",
+        "book": "This book diagram"
+      },
+      "match": {
+        "tactic": {
+          "strict": "{{subject}} has the same pattern (same pieces).",
+          "family": "{{subject}} has the same motif with other pieces."
+        },
+        "mate": {
+          "strict": "{{subject}} ends in the same mating picture.",
+          "family": "{{subject}} ends in a similar mating picture."
+        },
+        "theme": "{{subject}} only shares the theme ({{theme}})."
+      },
+      "pattern": {
+        "fork": "{{subject}} has the same pattern: {{piece}} forks {{targets}}.",
+        "pin": "{{subject}} has the same pattern: {{piece}} pins {{front}} to {{back}}.",
+        "skewer": "{{subject}} has the same pattern: {{piece}} skewers {{front}} and {{back}}."
+      },
+      "piece": {
+        "K": "king",
+        "Q": "queen",
+        "R": "rook",
+        "B": "bishop",
+        "N": "knight",
+        "P": "pawn"
+      },
+      "also": "The same picture also occurred at {{moves}}."
+    }
   },
   "admin": {
     "title": "Admin",

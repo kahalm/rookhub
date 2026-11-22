@@ -17,6 +17,8 @@ import { WoodpeckerScheduleComponent } from '../woodpecker/woodpecker-schedule.c
 import { woodpeckerDailyGoal, woodpeckerSchedule } from '../woodpecker/woodpecker-stats.util';
 import { BookPuzzleDto } from './puzzle.service';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
+import { LineWhyComponent } from './line-why.component';
+import { LineWhy } from './line-why.util';
 import { CourseStatsPanelComponent } from './course-stats-panel.component';
 import { dailyDateValue } from './book-daily-mode';
 
@@ -31,7 +33,7 @@ import { dailyDateValue } from './book-daily-mode';
   imports: [
     DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, MatTooltipModule,
     TranslatePipe, IconLabelDirective, CourseLangPickerComponent, PuzzleTagsComponent, CourseStatsPanelComponent,
-    WoodpeckerDailyGoalComponent, WoodpeckerScheduleComponent,
+    WoodpeckerDailyGoalComponent, WoodpeckerScheduleComponent, LineWhyComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './book-context-card.component.html',
@@ -54,6 +56,8 @@ export class BookContextCardComponent {
   readonly chapterDisplay = input<string | null>(null);
   readonly bookName = input('');
   readonly sourceGame = input<BookPuzzleDto['sourceGame']>(null);
+  /** „Warum diese Aufgabe“ (persönliche Taktik-Kurse); `null` = kein Vermerk. */
+  readonly why = input<LineWhy | null | undefined>(null);
   readonly difficulty = input<string | null | undefined>(null);
   readonly bookRating = input<number | null | undefined>(null);
   readonly tags = input<string | null | undefined>(null);

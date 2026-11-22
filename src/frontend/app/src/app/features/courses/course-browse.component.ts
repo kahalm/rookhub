@@ -28,6 +28,7 @@ import { AuthService } from '../../core/auth.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { SharePuzzleDialogComponent } from '../puzzles/share-puzzle-dialog.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { LineWhyComponent } from '../puzzles/line-why.component';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { groupByChapter } from '../../shared/lines/chapter-groups.util';
 import { MarkSet } from '../../shared/lines/mark-set';
@@ -67,6 +68,7 @@ interface ChapterGroup {
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, MatMenuModule, IconLabelDirective,
     MatDialogModule, TranslatePipe, PuzzleBoardComponent, ReviewNavComponent, LoadingSpinnerComponent,
     SendToWorksheetComponent, CourseLangPickerComponent, MachineNoteComponent, SanPipe, LoadErrorComponent,
+    LineWhyComponent,
   ],
   template: `
     <div class="browse-container">
@@ -246,6 +248,8 @@ interface ChapterGroup {
                 </div>
               }
 
+              <!-- Persönliche Taktiken (1.001.0): warum die Linie zu ihrer Partie gehört. -->
+              <app-line-why class="browse-why" [why]="selected?.why ?? null" />
               @if (comment) {
                 <mat-card class="comment-card">
                   <mat-card-content>
@@ -381,6 +385,7 @@ interface ChapterGroup {
     .san:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
     .san.current { background: color-mix(in srgb, var(--mat-sys-primary, #1565c0) 22%, transparent); font-weight: 700; }
     .comment-card { width: 100%; max-width: 560px; }
+    .browse-why { width: 100%; max-width: 560px; }
     .comment-card p { margin: 0 0 6px; }
     .comment-card p:last-child { margin-bottom: 0; }
     .comment-card p.cmt-heading { font-weight: 700; margin-bottom: 2px; }
@@ -403,6 +408,7 @@ interface ChapterGroup {
     @media (min-width: 2400px) {
       .browse-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
       .board-wrap, .move-strip, .comment-card { max-width: min(60vw, calc(100vh - 300px)); }
+      .browse-why { max-width: min(60vw, calc(100vh - 300px)); }
     }
 
     /* Einspaltig bis 899.98 px (DESIGN 4.2/5.12, b1-rk-browse-tablet-eng): am Tablet stand sonst eine 300-px-Liste mit

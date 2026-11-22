@@ -213,6 +213,9 @@ public class BookPuzzleDto
     /// <summary>Die Partie, aus der die Aufgabe geerntet wurde (siehe <c>BookPuzzle.SourceGame</c>); <c>null</c> = keine.</summary>
     public BookPuzzleSourceGameDto? SourceGame { get; set; }
 
+    /// <summary>„Warum diese Aufgabe“ (persönliche Taktik-Kurse, siehe <c>BookPuzzle.Why</c>); <c>null</c> = kein Vermerk.</summary>
+    public BookPuzzleWhyDto? Why { get; set; }
+
     // --- Kurs-Übersetzung (0.547.0, nur mit ?lang= an den Kurs-Endpunkten, siehe CourseCommentLocalizer) ---
 
     /// <summary>Übersetzter Linien-Titel; <c>null</c> = keine (aktuelle) Übersetzung. <see cref="Title"/> bleibt
@@ -238,6 +241,41 @@ public class BookPuzzleSourceGameDto
     public string Kind { get; set; } = string.Empty;
     public int Id { get; set; }
     public int Ply { get; set; }
+}
+
+/// <summary>
+/// Sprachneutraler Vermerk „Warum diese Aufgabe“ einer Linie des Kurses „Persönliche Taktiken“ (1.001.0, Wunsch 2026-11-22):
+/// die Motivstelle der Partie und die Art des Treffers — das Frontend baut daraus den Satz in der UI-Sprache
+/// (<c>book.why.*</c>). Gespeichert als JSON in <c>BookPuzzle.Why</c>, gebaut von <c>PersonalTacticsWhy</c>.
+/// </summary>
+public sealed class BookPuzzleWhyDto
+{
+    /// <summary>Halbzug der Motivstelle (Stellung VOR dem Zug, 0-basiert wie die Analyse).</summary>
+    public int Ply { get; set; }
+    /// <summary>Die Seite, die das Motiv hatte.</summary>
+    public bool White { get; set; }
+    /// <summary><c>missedTactic</c>, <c>allowedTactic</c>, <c>missedMate</c>, <c>playedMate</c>, <c>forcedMate</c>, <c>mateThreat</c>.</summary>
+    public string Reason { get; set; } = string.Empty;
+    /// <summary>Halbzug des Partiezugs, auf den sich der Satz bezieht (bei <c>allowedTactic</c> der zulassende Zug davor).</summary>
+    public int MovePly { get; set; }
+    /// <summary>Dieser Zug in SAN (englisch, das Frontend lokalisiert); <c>null</c> = kein Zug dort (Endstellung) bzw. unbekannt.</summary>
+    public string? MoveSan { get; set; }
+    /// <summary>Lichess-Thema der Stelle (<c>fork</c>, <c>backRankMate</c> …); <c>null</c> = Matt ohne Namen.</summary>
+    public string? Theme { get; set; }
+    /// <summary>Mattlänge (nur bei Matt-Stellen).</summary>
+    public int? MateIn { get; set; }
+    /// <summary><c>strict</c> (gleiches Muster/Mattbild), <c>family</c> (gleiches Motiv bzw. ähnliches Mattbild), <c>theme</c> (nur gleiches Thema).</summary>
+    public string Match { get; set; } = string.Empty;
+    /// <summary>Das Thema, über das bei <c>Match = theme</c> aufgefüllt wurde (<c>fork</c>, <c>mateIn2</c> …).</summary>
+    public string? MatchTheme { get; set; }
+    /// <summary>Buchdiagramm statt Lichess-Aufgabe.</summary>
+    public bool Book { get; set; }
+    /// <summary>Ziehende Figur des Motivs (<c>N</c>, <c>B</c> …) — nur Gabel/Fesselung/Spieß.</summary>
+    public string? Piece { get; set; }
+    /// <summary>Zielfiguren: Gabel alle (<c>KQ</c>), Fesselung/Spieß vorn, dann hinten (<c>NK</c>).</summary>
+    public string? Targets { get; set; }
+    /// <summary>Weitere Stellen der Partie mit demselben Bild (Halbzüge).</summary>
+    public List<int>? Also { get; set; }
 }
 
 /// <summary>Body für das Admin-Tipp-Flag (POST /api/admin/book-puzzles/{id}/flag-hints).</summary>
