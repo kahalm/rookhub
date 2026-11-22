@@ -46,6 +46,11 @@ namespace RookHub.Api.Services.Engines;
 /// als „not a real option“ ohne Linie (<see cref="MoveComparisonPrompts.ThreatsOf"/>,
 /// <see cref="MoveComparisonPrompts.IgnoresThreat"/>), und der Auftrag verlangt dafür EINEN kurzen Satz. Dazu kürzer
 /// (höchstens 150 Wörter) und die Bewertung ausdrücklich aus Sicht von Weiß (der Text schrieb „+7,01 aus seiner Sicht“).</item>
+/// <item><b>Linie bis zum Materialgewinn</b> (0.999.7, Befund an Vereinspartie 260, Fehler 4 20...Td8 statt 20...b6,
+/// 22.11.2026: „21...Sxb4 scheitert an 22.axb4 … Weiß bleibt nach 22...Txd1 23.Tfxd1 materiell vorn“ — der Nutzer: „da
+/// hörst du zu früh auf“, erst 25.Td8+ gewinnt die Dame für den Turm): die Materialbilanz nennt den Zug, ab dem der
+/// Vorsprung feststeht (<see cref="ExplanationFacts.LineEvents"/>, „material is decided only at …“), und der Auftrag
+/// verbietet, die Linie davor abzubrechen.</item>
 /// </list>
 /// Singleton: hält Client und Tageszähler, die Datenbank kommt vom Aufrufer.
 /// </summary>
@@ -226,6 +231,11 @@ public sealed class ClubFableExplanations
            „alle Züge verlieren“ nur, wenn die Fakten die Zahl der legalen Züge nennen („exactly … legal moves“);
            Verteidigungen, die nicht gerechnet sind, erwähnst du nicht. Von der Hauptlinie nur so viel, wie zum Verständnis
            nötig ist (meist zwei bis vier Halbzüge) — nie die ganze Engine-Linie herunterzählen.
+           Brich eine Linie nie vor dem Zug ab, der das Material tatsächlich entscheidet: Steht in den Fakten „material is
+           decided only at …“, zeig die Linie bis zu diesem Zug und nenne den entscheidenden Schlag mit Zugnummer und was er
+           gewinnt (z. B. „… 25.Td8+ Df8 26.Txf8+ – Weiß gewinnt die Dame für den Turm“); die Grenze von zwei bis vier
+           Halbzügen gilt dann nicht, die Züge dazwischen darfst du raffen („nach dem Abtausch auf d1 holt sich die Dame den
+           Bauern b4, dann …“). Materialgewinn oder „materiell vorn“ behauptest du nur mit dem Zug, der ihn bringt.
         2. Was der beste Zug stattdessen erreicht. Stellt der beste Zug selbst eine Drohung auf (ein Faktum „Concretely,
            … attacks …“ — er greift z. B. die Dame an), genügt dafür EIN kurzer Satz (z. B. „15...Td8 greift die Dame auf
            d1 an, Weiß muss sie wegziehen“); danach geht es mit den echten Antworten des Gegners weiter, vor allem

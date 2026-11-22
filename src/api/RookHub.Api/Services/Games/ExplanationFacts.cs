@@ -114,12 +114,19 @@ public static class ExplanationFacts
     /// took a rook)", und das Modell schrieb „du gewinnst sofort einen Turm" (0.585.1).</param>
     /// <param name="leads">Wie <paramref name="lead"/>, aber mehrere Züge (nach diesem) — der Weg bis zu einer anderen
     /// Verteidigung in der Widerlegung: Fehlzug, Widerlegung bis dorthin, die andere Verteidigung (0.971.0).</param>
+    /// <remarks>Seit 0.999.7 steht hinter der Materialbilanz, BEI WELCHEM ZUG der Vorsprung entsteht, wenn das erst ab dem
+    /// vierten Halbzug der Linie geschieht (<see cref="DecidedAt"/>) — Befund Vereinspartie 260, Fehler 4 (20...Td8 statt
+    /// 20...b6, 22.11.2026): der Text brach „21...Sxb4 22.axb4 Txd1 23.Tfxd1“ ab und nannte Weiß „materiell vorn“, das
+    /// Material entscheiden aber erst 25.Td8+ Df8 26.Txf8+ (Dame gegen Turm).</remarks>
     public static List<string> LineEvents(string fen, IReadOnlyList<string> sans, bool? gainerWhite = null, string? lead = null,
         IReadOnlyList<string>? leads = null)
     {
         var events = new List<string>();
         if (sans.Count == 0) return events;
         var gained = new Dictionary<bool, List<char>> { [true] = [], [false] = [] };
+        // Je gespielten Halbzug (ab fen, Vorzüge eingeschlossen): Zug, Materialstand Weiß minus Schwarz danach, Geschlagenes.
+        var plies = new List<(string San, int Net, char? Captured, bool White)>();
+        var offsetPlies = 0;
         try
         {
             var board = ChessBoard.LoadFromFen(fen);
@@ -127,6 +134,7 @@ public static class ExplanationFacts
             if (leads is not null) before.AddRange(leads);
             IReadOnlyList<string> moves = before.Count == 0 ? sans : [.. before, .. sans];
             var offset = before.Count;
+            offsetPlies = offset;
             for (var j = 0; j < moves.Count; j++)
             {
                 var san = moves[j];
@@ -135,6 +143,8 @@ public static class ExplanationFacts
                 if (move is null) break;
                 var white = move.Piece?.Color == PieceColor.White;
                 if (move.CapturedPiece is { } captured) gained[white].Add(char.ToLowerInvariant(captured.Type.AsChar));
+                plies.Add((san, gained[true].Sum(Value) - gained[false].Sum(Value),
+                    move.CapturedPiece is { } c ? char.ToLowerInvariant(c.Type.AsChar) : null, white));
                 if (i < 0)
                 {
                     board.Move(move);
@@ -152,9 +162,50 @@ public static class ExplanationFacts
         }
         var net = gained[true].Sum(Value) - gained[false].Sum(Value);
         if (net != 0 && (gainerWhite is null || gainerWhite == net > 0))
+        {
             events.Add($"{(net > 0 ? "White" : "Black")} ends up ahead in material by {Math.Abs(net)} "
                        + $"(White took {Taken(gained[true])}, Black took {Taken(gained[false])})");
+            if (DecidedAt(fen, plies, offsetPlies, net > 0) is { } decided) events.Add(decided);
+        }
         return events;
+    }
+
+    /// <summary>
+    /// Ab welchem Halbzug liegt die Seite, die am Ende vorne ist, FÜR IMMER vorne (jeder spätere Materialstand zu ihren
+    /// Gunsten)? Liegt der erst ab dem vierten Halbzug der Linie, ein Faktum mit dem Weg dorthin und dem Tausch an der
+    /// Stelle: „material is decided only at 26.Rxf8+ — the line must be shown up to there: 24...Qxb4 25.Rd8+ Qf8 26.Rxf8+
+    /// Kxf8 (in this exchange White takes queen, Black takes rook); before that White is not ahead for good“. Sonst
+    /// <c>null</c> — dann reicht die übliche kurze Linie.
+    /// </summary>
+    private static string? DecidedAt(string fen, List<(string San, int Net, char? Captured, bool White)> plies, int offset, bool gainerWhite)
+    {
+        int Lead(int n) => gainerWhite ? n : -n;
+        var k = plies.Count;
+        while (k > 0 && Lead(plies[k - 1].Net) > 0) k--;
+        if (k >= plies.Count || k - offset < 3) return null;
+        // Der Tausch an der Stelle: die zusammenhängenden Schlagzüge ab k.
+        var taken = new Dictionary<bool, List<char>> { [true] = [], [false] = [] };
+        var end = k;
+        while (end < plies.Count && plies[end].Captured is { } c) { taken[plies[end].White].Add(c); end++; }
+        var from = Math.Max(offset, k - 2);
+        var shown = string.Join(' ', Enumerable.Range(from, Math.Max(end, k + 1) - from).Select(j => Label(fen, j, plies[j].San, j == from)));
+        var side = gainerWhite ? "White" : "Black";
+        var exchange = taken[true].Count + taken[false].Count > 0
+            ? $" (in this exchange White takes {Taken(taken[true])}, Black takes {Taken(taken[false])})" : "";
+        return $"material is decided only at {Label(fen, k, plies[k].San, true)} — the line must be shown up to there: "
+               + $"{shown}{exchange}; before that {side} is not ahead for good";
+    }
+
+    /// <summary>„25.Rd8+“ bzw. „24...Qxb4“ für den Halbzug <paramref name="ply"/> ab <paramref name="fen"/>; ohne
+    /// <paramref name="first"/> steht vor einem Zug von Schwarz keine Nummer.</summary>
+    private static string Label(string fen, int ply, string san, bool first)
+    {
+        var parts = fen.Split(' ');
+        var whiteToMove = parts.Length < 2 || parts[1] != "b";
+        var start = parts.Length >= 6 && int.TryParse(parts[5], out var n) ? n : 1;
+        var p = ply + (whiteToMove ? 0 : 1);
+        var number = start + p / 2;
+        return p % 2 == 0 ? $"{number}.{san}" : first ? $"{number}...{san}" : san;
     }
 
     /// <summary>

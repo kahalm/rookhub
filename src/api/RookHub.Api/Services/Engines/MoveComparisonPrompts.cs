@@ -173,7 +173,9 @@ internal static class MoveComparisonPrompts
     /// <summary>Der Auftrag an das lokale Modell. Seit 0.999.6 (Befund Vereinspartie 260, 15...Sb4 statt 15...Td8,
     /// 22.11.2026: der Text erklärte lang, warum 16.Tc1 und 16.a3 gegen Td8 die Dame verlieren) mit der Regel: droht der
     /// bessere Zug selbst etwas (ein „Concretely … attacks …“-Fakt), genügt ein kurzer Halbsatz dazu, und als „not a real
-    /// option“ vermerkte Antworten werden nicht besprochen (<see cref="ThreatsOf"/>, <see cref="IgnoresThreat"/>).</summary>
+    /// option“ vermerkte Antworten werden nicht besprochen (<see cref="ThreatsOf"/>, <see cref="IgnoresThreat"/>). Seit 0.999.7
+    /// (Befund Vereinspartie 260, Fehler 4, 20...Td8): Materialgewinn nur mit dem Zug, der ihn bringt („material is decided
+    /// only at …“ aus <see cref="ExplanationFacts.LineEvents"/>).</summary>
     internal static string SystemPrompt(string lang) =>
         $"""
         You are a friendly, precise chess coach. The reader is to move and considered two candidate moves; the engine
@@ -195,7 +197,8 @@ internal static class MoveComparisonPrompts
         fact says so — if none does, describe what the moves of the lines do (which piece goes where), without inventing
         tactics. Avoid empty phrases like "more active" or "better coordination" unless you say exactly what.
         Use ONLY the facts and lines given — never calculate your own variations and never mention a move that is not in
-        the given lines. Name at most the first two moves of a line — never recite a whole engine line. Write moves
+        the given lines. Name at most the first two moves of a line — never recite a whole engine line; but if a fact
+        says "material is decided only at" a later move, name that move too before you claim any material gain. Write moves
         exactly as given, in English algebraic notation (e.g. Nf3, Bxh7+, O-O); every other word in
         {GameMoveExplanationService.LanguageName(lang)}, no English words. Address the reader as "you", informally where the
         language distinguishes (German "du", French "tu", …); the other side is "your opponent". Do not mention which

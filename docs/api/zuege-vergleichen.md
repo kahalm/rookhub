@@ -270,6 +270,17 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
     (der Text schrieb „+7,01 aus seiner Sicht“), bei Schwarz am Zug sagt der Hinweis, dass das Vorzeichen umzudrehen ist.
     Lokales Modell: derselbe Halbsatz-Auftrag im `SystemPrompt`.
   * **Bestand bleibt**; Vergleich neu erklären wie oben (Re-Explain).
+* **Linie bis zum Materialgewinn** (0.999.7, Befund 2026-11-22 an Vereinspartie 260, Fehler 4 20...Td8 statt 20...b6,
+  Vergleich 2828): der Text schrieb „21...Sxb4 scheitert an 22.axb4 … Weiß bleibt nach 22...Txd1 23.Tfxd1 materiell vorn“
+  — nach 23.Tfxd1 ist das Material nicht entschieden, erst 25.Td8+ Df8 26.Txf8+ gewinnt die Dame für den Turm.
+  * `ExplanationFacts.LineEvents`: hinter der Materialbilanz, falls der Vorsprung erst ab dem vierten Halbzug der Linie
+    dauerhaft besteht, „material is decided only at 26.Rxf8+ — the line must be shown up to there: 25.Rd8+ Qf8 26.Rxf8+
+    Kxf8 (in this exchange White takes queen, Black takes rook); before that White is not ahead for good“ (gilt in allen
+    Blöcken, die die Materialbilanz tragen).
+  * Auftrag Fable (Absatz 1): Linie nie vor dem materialentscheidenden Zug abbrechen, die Grenze von zwei bis vier
+    Halbzügen gilt dann nicht, Zwischenzüge raffen; Materialgewinn nur mit dem Zug, der ihn bringt. Lokales Modell: den
+    Zug aus dem Faktum zusätzlich nennen.
+  * **Bestand bleibt**; Vergleich neu erklären wie oben (Re-Explain).
 * **Besitz und Sichtbarkeit**: Besitzer ist der Besitzer der Analyse (Haus-Engine-Konto). Alle Nutzerwege (`/api/move-comparisons`
   Liste/Lesen/Löschen, `MaxOpenPerUser`, `MaxKeptPerUser`) filtern `GameAnalysisId == null` — die Zeilen zählen nirgends mit.
   Lesen darf, wer die Vereinspartie sieht: `GET /api/league/club/games/{id}/comparisons` (alle, nach Halbzug: `{ ply,
