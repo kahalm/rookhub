@@ -44,6 +44,9 @@ public static partial class DomainServicesSetup
         // MoveComparisonService.ExplanationsAvailable: heute nur Modelle auf eigener Hardware).
         // Seit 0.911.0 schreibt Claude Fable die Begründungen der Vereinspartien ab dem Stichtag (ClubFableExplanations, eigener
         // Anthropic-Client mit dem Konto-Schlüssel — ausdrücklich erlaubt), Rückfall aufs lokale Modell.
+        // Maia-3 auf dem Server (1.003.0): natürliche Züge für die Fehler-Erklärungen; Modell im API-Image, `Maia:Enabled`,
+        // `Maia:ModelPath`, `Maia:Threads` — fehlt das Modell, ist er nicht verfügbar und alles läuft wie vorher.
+        services.AddSingleton(sp => new MaiaService(configuration, sp.GetRequiredService<ILogger<MaiaService>>()));
         services.AddSingleton(sp => new ClubFableExplanations(
             ClubFableExplanations.CreateClient(configuration, sp.GetRequiredService<ILoggerFactory>().CreateLogger<AnthropicJsonClient>()),
             configuration, sp.GetRequiredService<ILogger<ClubFableExplanations>>()));
@@ -51,7 +54,8 @@ public static partial class DomainServicesSetup
             sp.GetRequiredService<AppDbContext>(), sp.GetRequiredService<AnalysisJobService>(),
             sp.GetRequiredService<IClaudeJsonClient>(),
             sp.GetRequiredService<MoveComparisonExplainJobs>(), sp.GetRequiredService<IServiceScopeFactory>(),
-            sp.GetRequiredService<ILogger<MoveComparisonService>>(), sp.GetRequiredService<ClubFableExplanations>()));
+            sp.GetRequiredService<ILogger<MoveComparisonService>>(), sp.GetRequiredService<ClubFableExplanations>(),
+            sp.GetRequiredService<MaiaService>()));
         services.AddScoped<ClubMistakeComparisons>();   // Zugvergleiche zu den Fehlern der Vereinspartien (0.908.0)
         // Tipp-Generierung für Buch-Puzzles (LLM + Stockfish, nur Import-/Reprocess-Pfad).
         services.AddSingleton<StockfishAnalyzer>();

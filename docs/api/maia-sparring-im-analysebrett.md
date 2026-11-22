@@ -85,3 +85,38 @@ wirkt sofort (`refresh()`). Regeln, die nicht kippen dürfen:
   „Nochmal", „Seite wechseln", neuem Baum und „Analysieren" weg, NICHT bei Navigation. **„Analysieren"** beendet das Sparring
   wie „Beenden" (die Partie bleibt für „Partie analysieren"), schaltet die Engine EIN — nur für diese Sitzung, nicht in
   localStorage — und springt auf die Stellung VOR dem Zug; der Zug steht dort als Fortsetzung, die Linien zeigen, was besser war.
+
+## Maia auf dem Server (1.003.0)
+
+Wunsch 2026-11-22 („bau maia ein“): die Fehler-Erklärungen der Vereinspartien sollen an den Entscheidungsstellen die Züge
+berücksichtigen, die ein MENSCH der passenden Stärke spielt, nicht nur Schläge der gezogenen Figur — wie und wo, steht in
+`docs/api/zuege-vergleichen.md` („Natürliche Züge laut Maia …“). Hier nur der Dienst selbst.
+
+* **`MaiaService`** (`Services/Engines/MaiaService.cs`, Singleton) mit `Microsoft.ML.OnnxRuntime` (dieselbe exakt gepinnte
+  Version wie die Brett-Erkennung der E-Books, CPU). Ein Aufruf gleichzeitig (Sperre), `Maia:Threads` (Vorgabe 1, höchstens 4)
+  — der Host teilt sich die CPU mit Jellyfin und den Engine-Providern. Geladen wird beim ersten Aufruf; die letzten 512
+  Antworten je (Stellung, Stärken) bleiben im Speicher. Gemessen auf dem Host (1 Thread, belegte CPU): **65–90 ms je Aufruf**,
+  Laden ~1 s; ein Vergleich fragt höchstens drei Stellungen.
+* **Kodierung** (`MaiaEncoding.cs`) Zeile für Zeile nach `maia-encoding.ts`: Brett bei Schwarz spiegeln, 64 × 12 Tokens,
+  `elo_self` (Seite am Zug) / `elo_oppo` als rohe Elo (auf 600–2600 begrenzt), 4352 Zug-Indizes nach Formel, Softmax nur über
+  die legalen Züge (Gera.Chess; Rochade als Königszug e1g1). **Parität**: `tools/maia-parity/generate.mjs` lässt zehn feste
+  Stellungen (Spiegeln, Rochade, en passant, Umwandlung beider Farben, Matt) durch die echte TS-Kodierung und onnxruntime-web
+  laufen und schreibt `tests/RookHub.Api.Tests/Fixtures/maia-parity.json`; `MaiaServiceTests.Paritaet_…` vergleicht. Das Netz
+  rechnet intern in fp16 — die Logits beider Laufzeiten liegen auf einem 1/64-Raster und weichen um ein, zwei Schritte ab
+  (gemessen höchstens 0,023), daher die Toleranz max(0,002; 4 % von p).
+* **Modell im API-Image**: `src/api/RookHub.Api/maia-model/fetch.sh` (Kopie des Frontend-Skripts — der Build-Kontext der API
+  ist `src/api/RookHub.Api`), im Build-Abschnitt VOR `COPY . .` (Layer-Cache), im Laufzeit-Image als eigene Schicht unter
+  `/app/maia/maia3_simplified.onnx` (= Vorgabe von `Maia:ModelPath`) vor der Anwendung. Image +45,7 MB.
+  `DeploymentConfigTests.Maia_ModelPin_AndDelivery_StayConsistent` hält Pin und Ablauf beider Skripte gleich, prüft die
+  Reihenfolge im API-Dockerfile, `.dockerignore`/`.gitignore` und den exakten ORT-Pin.
+* **Schalter**: `Maia:Enabled` (Vorgabe an), `Maia:ModelPath`, `Maia:Threads`; die Schwelle der natürlichen Züge heißt
+  `ClubMistakeComparisons:MaiaMinProbability` (0,15). Fehlt das Modell oder scheitert ORT, ist der Dienst „nicht verfügbar“
+  (eine Warnung im Log) und die Erklärungen laufen wie vorher.
+* **Falle ORT 1.31.0**: mit `GraphOptimizationLevel.ORT_ENABLE_ALL` (der Vorgabe) stürzt das LADEN dieses Modells mit einem
+  Segfault ab — der ganze Prozess, kein catch hilft (22.11.2026 nachgestellt; 0/1/2 laufen). Der Dienst nutzt deshalb
+  `ORT_ENABLE_BASIC`; bei einem ORT-Update erst mit dem Paritätstest prüfen.
+* **Tests ohne Modell**: die CI lädt es nicht; Kodierung und „nicht verfügbar“ laufen immer, Parität und die Messungen am echten
+  Modell kehren ohne Datei still zurück (wie die Buch-Tests). Lokal: `sh src/frontend/app/maia-model/fetch.sh` (oder das
+  API-Skript), oder `MAIA_MODEL_PATH`.
+* **Stärke**: Maia ist auf Lichess-Partien trainiert (dort liegt die Zahl rund 200 über der FIDE-Elo); der Server gibt die Elo
+  der Partie (Vereinspartien: national/FIDE) unverändert weiter.

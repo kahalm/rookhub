@@ -1,2 +1,5 @@
 bin/
 obj/
+# Maia-Modell: der Build holt es selbst (Dockerfile, maia-model/fetch.sh) — eine lokal geholte Kopie gehört nicht in den Kontext.
+maia-model/*.onnx
+maia-model/*.part

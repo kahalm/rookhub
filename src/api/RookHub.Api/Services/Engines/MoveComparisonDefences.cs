@@ -23,6 +23,10 @@ namespace RookHub.Api.Services.Engines;
 /// der Rest, jeweils die billigere Figur zuerst. Unterverwandlungen zählen nicht. Die Entscheidungen kommen abwechselnd an die Reihe,
 /// bis der Deckel (<c>ClubMistakeComparisons:DefenceLines</c>, Vorgabe <see cref="DefaultMax"/>) erreicht ist — eine
 /// Entscheidung mit vielen Zügen verdrängt die andere nicht.</para>
+/// <para><b>Natürliche Züge</b> (1.003.0, Befund Vereinspartie 259): dazu die ruhigen Züge, die Maia-3 einem Menschen der Stärke
+/// des Verteidigers mit mindestens <c>ClubMistakeComparisons:MaiaMinProbability</c> (15 %) zutraut (<see cref="MaiaNaturalMoves"/>),
+/// ohne den Zug der Linie. Sie stehen vor den anderen (nach Wahrscheinlichkeit), offensichtliche Einsteller bleiben hinten;
+/// derselbe Deckel. Ohne Maia gilt die Auswahl wie vorher.</para>
 /// <para><b>Zeile</b>: <see cref="MoveComparisonLine.CandidateUci"/> = der schwächere Zug, <see cref="MoveComparisonLine.ReplyUci"/>
 /// = die andere Verteidigung, <see cref="MoveComparisonLine.Ordinal"/> = ihr Halbzug in der Linie, <see cref="MoveComparisonLine.Fen"/>
 /// = die Stellung danach. Der Weg dorthin steht nicht in der Zeile: er ist der Anfang der Antwort-Linie des schwächeren
@@ -35,7 +39,9 @@ internal static class MoveComparisonDefences
     /// <summary>So viele Entscheidungen des Verteidigers in der Widerlegung werden angesehen.</summary>
     public const int Decisions = 2;
 
-    private sealed record Alternative(string Uci, string San);
+    /// <param name="Natural">Seit 1.003.0: Maia traut den Zug einem Menschen der Stärke des Verteidigers zu
+    /// (<see cref="MaiaNaturalMoves"/>), sonst <c>null</c>.</param>
+    private sealed record Alternative(string Uci, string San, MaiaNaturalMoves.Natural? Natural = null);
 
     /// <summary>Eine Entscheidung des Verteidigers in der Widerlegung: die Stellung davor, der Weg dorthin (SAN ab der Stellung
     /// nach dem schwächeren Zug), der Zug der Linie und die naheliegenden anderen in Rangfolge.</summary>
@@ -47,8 +53,10 @@ internal static class MoveComparisonDefences
     /// <param name="ObviousLoss">Seit 1.001.1: die Verteidigung stellt offensichtlich Material ein (<see cref="ObviousLossOf"/>) —
     /// der erste Zug der Engine-Linie, der das tut (z. B. „Bxf4“), sonst <c>null</c>. Solche Verteidigungen erklärt der Text
     /// nicht.</param>
+    /// <param name="Natural">Seit 1.003.0: ein natürlicher Zug laut Maia (<see cref="MaiaNaturalMoves"/>) — der Faktenblock
+    /// vermerkt „a natural move for a ~1600 player (Maia: 38 %)“.</param>
     internal sealed record Defence(string San, string FenAfter, string Eval, IReadOnlyList<string> Line, IReadOnlyList<string> SquareFacts,
-        string? ObviousLoss = null);
+        string? ObviousLoss = null, MaiaNaturalMoves.Natural? Natural = null);
 
     /// <summary>Eine Entscheidung samt ihrer gerechneten anderen Verteidigungen. <see cref="Complete"/> = JEDER andere legale
     /// Zug ist gerechnet (dann darf der Text „hat nur diese Züge“ sagen).</summary>
@@ -57,12 +65,13 @@ internal static class MoveComparisonDefences
 
     /// <summary>Die Zusatzzeilen eines Vergleichs, höchstens <paramref name="max"/> — offen, oder gleich erledigt, wenn die
     /// Stellung danach zu Ende ist. Leer, wenn die Widerlegung keine naheliegende andere Verteidigung hat.</summary>
-    internal static List<MoveComparisonLine> Plan(MoveComparison c, int max)
+    /// <param name="natural">Seit 1.003.0 die natürlichen Züge laut Maia (<see cref="MaiaNaturalMoves"/>); <c>null</c> = keine.</param>
+    internal static List<MoveComparisonLine> Plan(MoveComparison c, int max, MaiaNaturalMoves? natural = null)
     {
         var lines = new List<MoveComparisonLine>();
         foreach (var weak in MoveComparisonSteps.WeakerCandidates(c).OrderBy(l => l.Ordinal))
         {
-            var spots = Spots(weak);
+            var spots = Spots(weak, natural);
             for (var k = 0; lines.Count < max && spots.Any(s => s.Alternatives.Count > k); k++)
                 foreach (var spot in spots)
                 {
@@ -83,17 +92,22 @@ internal static class MoveComparisonDefences
 
     /// <summary>Die gerechneten anderen Verteidigungen zum schwächeren Kandidaten als Fakten, je Entscheidung in der
     /// Reihenfolge der Auswahl. Gescheiterte und nicht (mehr) zur Linie passende Zeilen fehlen einfach.</summary>
-    internal static List<Decision> Of(MoveComparison c, MoveComparisonLine weak)
+    /// <param name="natural">Wie bei <see cref="Plan"/>. Zeilen, die zur Linie passen, aber (ohne Maia, mit anderer Schwelle)
+    /// nicht mehr in der Auswahl stehen, zählen seit 1.003.0 trotzdem — nur ohne Maia-Vermerk.</param>
+    internal static List<Decision> Of(MoveComparison c, MoveComparisonLine weak, MaiaNaturalMoves? natural = null)
     {
         var result = new List<Decision>();
         var rows = c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Defence && l.CandidateUci == weak.CandidateUci
             && l.State == MoveComparisonLineState.Done).ToList();
         if (rows.Count == 0) return result;
         var moverWhite = FenFields.WhiteToMove(c.Fen);
-        foreach (var spot in Spots(weak))
+        foreach (var spot in Spots(weak, natural))
         {
             var defences = new List<Defence>();
-            foreach (var alt in spot.Alternatives)
+            var extra = rows.Where(r => r.Ordinal == spot.Ply && r.ReplyUci is { Length: >= 4 } u && spot.Alternatives.All(a => a.Uci != u)
+                    && SanOf(spot.FenBefore, u) is not null)
+                .Select(r => new Alternative(r.ReplyUci!, SanOf(spot.FenBefore, r.ReplyUci!)!)).ToList();
+            foreach (var alt in spot.Alternatives.Concat(extra))
             {
                 var row = rows.FirstOrDefault(r => r.Ordinal == spot.Ply && r.ReplyUci == alt.Uci);
                 if (row is null || PlayUci(spot.FenBefore, alt.Uci) is not { } after || !MoveComparisonFromAnalysis.SameFen(after, row.Fen)) continue;
@@ -101,7 +115,7 @@ internal static class MoveComparisonDefences
                 var line = Pvs(row.Fen, row.ResultJson).FirstOrDefault()?.Line ?? [];
                 var obvious = ObviousLossOf(spot, alt.San, row.Fen, line, ev, weak);
                 defences.Add(new Defence(alt.San, row.Fen, MoverText(ev, moverWhite), line,
-                    obvious is null ? SquareFacts(c, weak, row.Fen, line, alt.Uci) : [], obvious));
+                    obvious is null ? SquareFacts(c, weak, row.Fen, line, alt.Uci) : [], obvious, alt.Natural));
             }
             // Nicht offensichtliche Verteidigungen zuerst (die Auswahl ordnet nur nach Brettgeometrie, hier zählt die Linie).
             defences = defences.OrderBy(x => x.ObviousLoss is null ? 0 : 1).ToList();
@@ -113,7 +127,7 @@ internal static class MoveComparisonDefences
     }
 
     /// <summary>Die Entscheidungen des Verteidigers in der besten Antwort-Linie auf den schwächeren Zug.</summary>
-    private static List<Spot> Spots(MoveComparisonLine weak)
+    private static List<Spot> Spots(MoveComparisonLine weak, MaiaNaturalMoves? natural)
     {
         var spots = new List<Spot>();
         if (string.IsNullOrEmpty(weak.Fen) || BrokerCandidates.Parse(weak.ResultJson, weak.Fen) is not { Count: > 0 } cands) return spots;
@@ -137,12 +151,17 @@ internal static class MoveComparisonDefences
                     // Unterverwandlungen sind keine eigene Verteidigung.
                     var others = legal.Where(m => m.San is not null && GamePlies.ToUci(m) is var u && u != mainUci && !(u.Length == 5 && u[4] != 'q')).ToList();
                     var mainNet = StaticNet(fen, main);
-                    var near = (inCheck ? others : others.Where(m => Takes(m, target)))
+                    // 1.003.0: dazu die natürlichen Züge laut Maia (Befund Vereinspartie 259) — vor den anderen, nach
+                    // Wahrscheinlichkeit; offensichtliche Einsteller bleiben hinten.
+                    var nat = natural?.At(fen) ?? [];
+                    MaiaNaturalMoves.Natural? N(Move m) => nat.FirstOrDefault(n => n.Uci == GamePlies.ToUci(m));
+                    var near = (inCheck ? others : others.Where(m => Takes(m, target) || N(m) is not null))
                         .OrderBy(m => !(m.San!.Contains('+') || m.San.Contains('#')) && StaticNet(fen, m) <= mainNet - ObviousLossPawns ? 1 : 0)
+                        .ThenBy(m => N(m) is { } n ? -n.P : 0)
                         .ThenBy(m => Takes(m, target) ? 0 : PieceType(m) == 'k' ? 1 : 2)
                         .ThenBy(m => PieceType(m) switch { 'k' => 0, 'p' => 1, 'n' or 'b' => 3, 'r' => 5, _ => 9 })
                         .ThenBy(m => GamePlies.ToUci(m), StringComparer.Ordinal)
-                        .Select(m => new Alternative(GamePlies.ToUci(m), m.San!)).ToList();
+                        .Select(m => new Alternative(GamePlies.ToUci(m), m.San!, N(m))).ToList();
                     spots.Add(new Spot(i, fen, prefix.ToList(), main.San, inCheck, others.Count + 1, near, NextSans(board, main, pv, i)));
                 }
                 prefix.Add(main.San);

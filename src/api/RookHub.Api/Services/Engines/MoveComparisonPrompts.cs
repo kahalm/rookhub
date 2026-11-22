@@ -162,7 +162,9 @@ internal static class MoveComparisonPrompts
 
     /// <param name="tries">Schwellen für die verlockenden Antworten auf den besten Zug
     /// (<see cref="MoveComparisonBestMoveTries"/>); <c>null</c> = die Vorgaben.</param>
-    internal static PairFacts? PairFactsOf(MoveComparison c, MoveComparisonLine weak, MoveComparisonBestMoveTries.Settings? tries = null)
+    /// <param name="natural">Seit 1.003.0 die natürlichen Züge laut Maia (<see cref="MaiaNaturalMoves"/>); <c>null</c> = keine.</param>
+    internal static PairFacts? PairFactsOf(MoveComparison c, MoveComparisonLine weak, MoveComparisonBestMoveTries.Settings? tries = null,
+        MaiaNaturalMoves? natural = null)
     {
         var best = c.Lines.FirstOrDefault(l => l.Kind == MoveComparisonLineKind.Candidate && l.CandidateUci == c.BestUci);
         if (best is null) return null;
@@ -186,8 +188,8 @@ internal static class MoveComparisonPrompts
         return new PairFacts(c.Fen, moverWhite, c.Depth,
             bestSan, best.Fen, EvalOf(best.Fen, best.ResultJson) is { } be ? MoverText(be, moverWhite) : null, Pvs(best.Fen, best.ResultJson),
             weakSan, weak.Fen, EvalOf(weak.Fen, weak.ResultJson) is { } we ? MoverText(we, moverWhite) : null, weakReplies,
-            tests, MoveComparisonDefences.Of(c, weak),
-            MoveComparisonBestMoveTries.Of(c, weak, tries ?? MoveComparisonBestMoveTries.Settings.Default));
+            tests, MoveComparisonDefences.Of(c, weak, natural),
+            MoveComparisonBestMoveTries.Of(c, weak, tries ?? MoveComparisonBestMoveTries.Settings.Default, natural));
     }
 
     /// <summary>Der Auftrag an das lokale Modell. Seit 0.999.6 (Befund Vereinspartie 260, 15...Sb4 statt 15...Td8,
@@ -209,6 +211,8 @@ internal static class MoveComparisonPrompts
            only leads to an equal position). You may add the evaluations in pawns with a decimal POINT and one decimal, in
            every language (e.g. +0.8 against -0.4).
         If the facts say the two moves are almost equal, say that first and keep it short.
+        The evaluation of each move is the one after the opponent's BEST answer; a line marked "WEAKER answer" never changes
+        it — never call the better move equal because such a line ends equal.
         If a "Concretely" fact says the better move attacks a piece (a direct threat), say so in one short clause (e.g. it
         attacks the queen, your opponent must move it away) and go on with your opponent's best answer to the better move.
         Never discuss answers marked "not a real option" — nobody leaves a piece hanging. Focus on the question a club
@@ -251,6 +255,7 @@ internal static class MoveComparisonPrompts
         lines.AddRange(
         [
             $"The reader plays {you} and is to move. The engine compared the reader's candidate moves at depth {f.Depth}.",
+            "Each evaluation of a candidate is the one after the opponent's BEST answer — lines with weaker answers further down do not change it.",
             $"Better move: {best} — evaluation from the reader's view afterwards: {f.BestEval ?? "?"}{Level(f.BestEval)}.",
             $"Weaker move: {weak} — evaluation from the reader's view afterwards: {f.WeakEval ?? "?"}{Level(f.WeakEval)}.",
         ]);
@@ -267,7 +272,8 @@ internal static class MoveComparisonPrompts
             var facts = WithForks(detailed ? ExplanationFacts.CheckForks(f.WeakFen, top) : [],
                 ExplanationFacts.FirstMoveAttacks(f.WeakFen, top).Concat(ExplanationFacts.Coverage(f.WeakFen, top))
                     .Concat(ExplanationFacts.LineEvents(f.Fen, top, gainerWhite: !f.MoverWhite, lead: f.WeakSan))
-                    .Concat(PawnStructure.AtLineEnd(f.Fen, f.WeakFen, top) is { } weakPawns ? [weakPawns] : []));
+                    .Concat(PawnStructure.AtLineEnd(f.Fen, f.WeakFen, top) is { } weakPawns ? [weakPawns] : [])
+                    .Concat(detailed ? ExplanationFacts.Pins(f.WeakFen, top) : []));
             if (facts.Count > 0)
                 lines.Add($"Concretely, after {weak} and the opponent's best answer line: {string.Join("; ", facts)}.");
             if (detailed && f.Defences is { Count: > 0 } decisions) lines.AddRange(DefenceBlock(f, decisions, you, weak));
@@ -294,7 +300,12 @@ internal static class MoveComparisonPrompts
                 }
                 var answer = t.Answer.Count > 0 && AfterMove(f.BestFen, t.ReplySan) is { } afterReply
                     ? $" The reader's best reply, with the engine line: {Numbered(afterReply, t.Answer)}." : "";
-                lines.Add($"- {reply}: evaluation from the reader's view {t.Eval}{Level(t.Eval)}.{answer}");
+                // 1.003.0 (Befund Vereinspartie 260, Vergleich 2832: 23.Sb3 Db6 ≈ 0 machte 22...Ld7 im Text „ausgeglichen“, nach der
+                // besten Antwort 23.b4 steht es −1,25): eine schwächere Antwort des Gegners sagt nichts über den Wert des besten Zuges.
+                var weaker = ScoreOf(t.Eval) is { } te && ScoreOf(f.BestEval) is { } be && te - be >= 0.3
+                    ? $" This is a WEAKER answer for the opponent: after his best answer the better move stands at {f.BestEval}{Level(f.BestEval)}"
+                      + " — never describe the better move by this line's evaluation." : "";
+                lines.Add($"- {reply}: evaluation from the reader's view {t.Eval}{Level(t.Eval)}.{weaker}{answer}");
                 if (t.Answer.Count > 0 && AfterMove(f.BestFen, t.ReplySan) is { } fenAfter)
                 {
                     var facts = ExplanationFacts.FirstMoveAttacks(fenAfter, t.Answer).Concat(ExplanationFacts.Coverage(fenAfter, t.Answer))
@@ -350,11 +361,14 @@ internal static class MoveComparisonPrompts
                 }
                 var holds = HoldsAsWell(x.Eval, f.WeakEval) ? " — about as good as the main line, so this defence does NOT fail" : "";
                 var engine = x.Line.Count > 0 ? $" Engine line: {Numbered(x.FenAfter, x.Line)}." : "";
-                lines.Add($"- {alt} instead of {main}: evaluation from the reader's view {x.Eval}{Level(x.Eval)}{holds}.{engine}");
+                // 1.003.0: ein Zug, den Maia einem Menschen dieser Stärke zutraut — die Frage, die der Leser hat.
+                var nat = x.Natural is { } n ? $" ({n.Note})" : "";
+                lines.Add($"- {alt}{nat} instead of {main}: evaluation from the reader's view {x.Eval}{Level(x.Eval)}{holds}.{engine}");
                 if (x.Line.Count == 0) continue;
                 var facts = WithForks(ExplanationFacts.CheckForks(x.FenAfter, x.Line),
                     x.SquareFacts.Concat(ExplanationFacts.FirstMoveAttacks(x.FenAfter, x.Line).Concat(ExplanationFacts.Coverage(x.FenAfter, x.Line)))
-                        .Concat(ExplanationFacts.LineEvents(f.Fen, x.Line, gainerWhite: !f.MoverWhite, lead: f.WeakSan, leads: [.. d.Prefix, x.San])));
+                        .Concat(ExplanationFacts.LineEvents(f.Fen, x.Line, gainerWhite: !f.MoverWhite, lead: f.WeakSan, leads: [.. d.Prefix, x.San]))
+                        .Concat(ExplanationFacts.Pins(d.FenBefore, [x.San, .. x.Line])));
                 if (facts.Count > 0) lines.Add($"  Concretely, after {alt}: {string.Join("; ", facts)}.");
             }
         }
@@ -376,8 +390,9 @@ internal static class MoveComparisonPrompts
         var main = f.BestReplies.Count > 0 ? Numbered(f.BestFen, [f.BestReplies[0].San]) : null;
         var lines = new List<string>
         {
-            $"Obvious replies to the better move {best} and why they fail — moves that look good at first sight but lose when "
-            + $"calculated to depth {f.Depth}, the first thing the reader asks at the board; evaluation from the reader's view, "
+            $"Obvious replies to the better move {best} — the first thing the reader asks at the board: natural moves a human of "
+            + "the opponent's strength would play (Maia), taking the piece that just moved, and moves that look good at first sight; "
+            + $"each calculated to depth {f.Depth}, with whether it fails or holds; evaluation from the reader's view, "
             + "the reader's reply with the engine line, checked facts:",
         };
         foreach (var t in tries)
@@ -388,16 +403,35 @@ internal static class MoveComparisonPrompts
                 lines.Add($"- {reply}: ignores the threat to {ThreatText(threats)} — not a real option, do not discuss.");
                 continue;
             }
-            var sight = $"{(t.Takes is null ? "" : t.Takes + "; ")}looks good at first sight: {t.FirstSight}";
+            var notes = new List<string>();
+            if (t.Natural is { } n) notes.Add(n.Note);
+            if (t.Takes is not null) notes.Add(t.TakesMoved ? t.Takes + ", the piece that just moved" : t.Takes);
+            if (t.FirstSight.Length > 0) notes.Add($"looks good at first sight: {t.FirstSight}");
+            var sight = notes.Count > 0 ? $" ({string.Join("; ", notes)})" : "";
             var against = main is null ? "" : $", against {f.BestEval ?? "?"} after the opponent's best answer {main}";
+            // 1.003.0 (Befund Vereinspartie 260, 23.Sxd7 Txd7: „löst die Fesselung nicht, auf 24.e4 rettet 24...Tc7“): greift die
+            // Linie danach eine gefesselte Figur an, ist es mehr als ein Tausch.
+            var pins = ExplanationFacts.Pins(f.BestFen, [t.San, .. t.Line]);
+            var pinFight = pins.Any(p => p.Contains(" attacks the pinned ", StringComparison.Ordinal));
+            var verdict = t.Verdict switch
+            {
+                MoveComparisonBestMoveTries.Verdict.Holds when pinFight =>
+                    " — about as good as the best answer, so it does NOT fail, but it is more than a trade: say in one sentence from the pin facts below what stays pinned, what attacks the pinned piece and which reply saves it",
+                MoveComparisonBestMoveTries.Verdict.Fails => " — this reply fails",
+                MoveComparisonBestMoveTries.Verdict.Weaker => " — weaker for the opponent than the best answer, but it does not lose; say in half a sentence what it costs",
+                _ => t.TakesMoved || t.Takes is not null
+                    ? " — about as good as the best answer, so it does NOT fail: just a trade, say so in half a sentence"
+                    : " — about as good as the best answer, so it does NOT fail: it holds, say so in half a sentence",
+            };
             var engine = t.Line.Count > 0 ? $" The reader's reply, with the engine line: {Numbered(t.FenAfter, t.Line)}." : "";
-            lines.Add($"- {reply} ({sight}): evaluation from the reader's view {t.Eval}{Level(t.Eval)}{against} — this reply fails.{engine}");
+            lines.Add($"- {reply}{sight}: evaluation from the reader's view {t.Eval}{Level(t.Eval)}{against}{verdict}.{engine}");
             if (t.Line.Count == 0) continue;
             var facts = WithForks(ExplanationFacts.CheckForks(t.FenAfter, t.Line),
                 ExplanationFacts.DiscoveredAttacks(t.FenAfter, t.Line)
                     .Concat(ExplanationFacts.FirstMoveAttacks(t.FenAfter, t.Line).Concat(ExplanationFacts.Coverage(t.FenAfter, t.Line)))
                     .Concat(ExplanationFacts.HangingCaptures(f.BestFen, t.Line, leads: [t.San]))
-                    .Concat(ExplanationFacts.LineEvents(f.Fen, t.Line, gainerWhite: f.MoverWhite, lead: f.BestSan, leads: [t.San])));
+                    .Concat(ExplanationFacts.LineEvents(f.Fen, t.Line, gainerWhite: f.MoverWhite, lead: f.BestSan, leads: [t.San]))
+                    .Concat(pins));
             if (facts.Count > 0) lines.Add($"  Concretely, after {best} {reply}: {string.Join("; ", facts)}.");
         }
         return lines;

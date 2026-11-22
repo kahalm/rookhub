@@ -11,7 +11,9 @@ namespace RookHub.Api.Services.Engines;
 /// 2026-11-09): je schwächerem Kandidaten zwei bis fünf Sätze, Vereinspartien ab dem Stichtag über Fable, sonst lokal.
 /// Protokolliert unter der Kategorie des Dienstes.</summary>
 /// <param name="fable">Begründungen der Vereinspartien ab dem Stichtag über Claude Fable (0.911.0); <c>null</c> = nur lokal.</param>
-internal sealed class MoveComparisonExplainer(IClaudeJsonClient llm, ClubFableExplanations? fable, ILogger<MoveComparisonService> logger)
+/// <param name="maia">Seit 1.003.0: natürliche Züge für die Fakten (<see cref="MaiaNaturalMoves"/>); <c>null</c> = keine.</param>
+internal sealed class MoveComparisonExplainer(IClaudeJsonClient llm, ClubFableExplanations? fable, ILogger<MoveComparisonService> logger,
+    MaiaService? maia = null)
 {
     /// <summary>Begründungen nur mit einem Modell auf eigener Hardware (über Claude kostete jeder Vergleich Geld).</summary>
     public bool LocalAvailable => llm.IsConfigured && llm.IsLocal;
@@ -22,7 +24,8 @@ internal sealed class MoveComparisonExplainer(IClaudeJsonClient llm, ClubFableEx
     {
         var id = c.Id;
         var system = SystemPrompt(c.Language);
-        var pairs = WeakerCandidates(c).Select(w => (Line: w, Facts: PairFactsOf(c, w, fable?.Tries))).Where(p => p.Facts is not null).ToList();
+        var natural = fable is null ? null : await MaiaNaturalMoves.ForAsync(db, maia, fable.MaiaMinProbability, c, ct);
+        var pairs = WeakerCandidates(c).Select(w => (Line: w, Facts: PairFactsOf(c, w, fable?.Tries, natural))).Where(p => p.Facts is not null).ToList();
         // Vereinspartie ab dem Stichtag: erst Fable (eigener Kontext — der Abfrage-Kontext läuft nicht parallel), Rückfall lokal.
         var useFable = fable != null && await fable.AppliesAsync(db, c, ct);
         var fableTexts = new string?[pairs.Count];

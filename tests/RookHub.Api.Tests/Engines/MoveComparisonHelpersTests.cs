@@ -107,8 +107,10 @@ public class MoveComparisonHelpersTests
         var lines = text.Split('\n');
         Assert.Equal($"Position (FEN): {fen}", lines[0]);
         Assert.Equal("The reader plays White and is to move. The engine compared the reader's candidate moves at depth 22.", lines[1]);
-        Assert.StartsWith("Better move: 1.e4 — evaluation from the reader's view afterwards: +0.30", lines[2]);
-        Assert.StartsWith("Weaker move: 1.Nf3 — evaluation from the reader's view afterwards: +0.20", lines[3]);
+        // 1.003.0 (Befund Vereinspartie 260, Vergleich 2832): die Bewertung gilt nach der BESTEN Antwort.
+        Assert.Equal("Each evaluation of a candidate is the one after the opponent's BEST answer — lines with weaker answers further down do not change it.", lines[2]);
+        Assert.StartsWith("Better move: 1.e4 — evaluation from the reader's view afterwards: +0.30", lines[3]);
+        Assert.StartsWith("Weaker move: 1.Nf3 — evaluation from the reader's view afterwards: +0.20", lines[4]);
         Assert.Contains("The two moves are almost equal (difference 0.1 pawns).", lines);
         Assert.Contains("After 1.Nf3, the opponent's best answers (evaluation from the reader's view, engine line):", lines);
         Assert.Contains("The same answers against 1.e4:", lines);

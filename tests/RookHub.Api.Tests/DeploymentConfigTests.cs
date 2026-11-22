@@ -821,6 +821,26 @@ public class DeploymentConfigTests
         Assert.True(runs[0].Index < copyAll.Index, "Das Modell kommt vor `COPY app/ .` (Layer-Cache bei Quelltext-Aenderungen)");
         Assert.Contains("COPY app/maia-model/fetch.sh maia-model/fetch.sh", docker);
         Assert.Contains("app/maia-model/*.onnx", ReadRepoFile("src/frontend/.dockerignore"));
+
+        // 1.003.0: dasselbe Modell im API-Image (MaiaService). Der Build-Kontext der API reicht nicht ins Frontend — ihr
+        // fetch.sh ist eine Kopie, deren Pin (COMMIT/SHA256/BYTES/NAME/URL) und Ablauf gleich bleiben müssen.
+        var apiFetch = ReadRepoFile("src/api/RookHub.Api/maia-model/fetch.sh");
+        static string Body(string script) => script[script.IndexOf("set -eu", StringComparison.Ordinal)..].Replace("\r", "");
+        Assert.Equal(Body(fetch), Body(apiFetch));
+        var api = ReadRepoFile("src/api/RookHub.Api/Dockerfile");
+        var apiRun = Regex.Match(api, @"(?m)^RUN sh maia-model/fetch\.sh\s*$");
+        var apiCopyAll = Regex.Match(api, @"(?m)^COPY \. \.\s*$");
+        Assert.True(apiRun.Success, "`RUN sh maia-model/fetch.sh` fehlt im API-Dockerfile");
+        Assert.True(apiRun.Index < apiCopyAll.Index, "Das Modell kommt vor `COPY . .` (Layer-Cache)");
+        Assert.Contains("COPY maia-model/fetch.sh maia-model/fetch.sh", api);
+        var modelCopy = api.IndexOf("COPY --from=build /src/maia-model/maia3_simplified.onnx /app/" + Services.Engines.MaiaService.DefaultModelPath, StringComparison.Ordinal);
+        Assert.True(modelCopy >= 0, "Das Modell muss unter Maia:ModelPath (Vorgabe) im Image liegen");
+        Assert.True(modelCopy < api.IndexOf("COPY --from=build /app .", StringComparison.Ordinal), "Modell-Schicht vor der Anwendung");
+        Assert.Contains("maia-model/*.onnx", ReadRepoFile("src/api/RookHub.Api/.dockerignore"));
+        Assert.Contains("*.onnx", ReadRepoFile("src/api/RookHub.Api/maia-model/.gitignore"));
+        // Die ONNX-Laufzeit der API ist exakt gepinnt (eine Floating-Range zöge Laufzeit-Änderungen ohne Commit).
+        Assert.Matches(@"<PackageReference Include=""Microsoft\.ML\.OnnxRuntime"" Version=""\d+\.\d+\.\d+"" />",
+            ReadRepoFile("src/api/RookHub.Api/RookHub.Api.csproj"));
     }
 
     /// <summary>

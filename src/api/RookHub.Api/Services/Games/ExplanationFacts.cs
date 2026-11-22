@@ -199,7 +199,7 @@ public static class ExplanationFacts
 
     /// <summary>„25.Rd8+“ bzw. „24...Qxb4“ für den Halbzug <paramref name="ply"/> ab <paramref name="fen"/>; ohne
     /// <paramref name="first"/> steht vor einem Zug von Schwarz keine Nummer.</summary>
-    private static string Label(string fen, int ply, string san, bool first)
+    internal static string Label(string fen, int ply, string san, bool first)
     {
         var parts = fen.Split(' ');
         var whiteToMove = FenFields.WhiteToMove(fen);
@@ -390,6 +390,93 @@ public static class ExplanationFacts
         }
         return result;
     }
+
+    /// <summary>
+    /// Geprüfte Fesselungs-Fakten einer Linie (1.003.0, Befund Vereinspartie 260, Vergleich 2832: „der Tausch 23.Sxd7 Txd7 löst
+    /// die Fesselung nicht, aber auf 24.e4 rettet 24...Tc7“): (1) die Fesselungen zu Beginn ab <paramref name="fen"/> (ohne
+    /// Bauern) — „the knight on d5 is pinned to the rook on d8 by the rook on d1“; (2) der erste Zug der Linie, der eine
+    /// gefesselte Figur neu angreift — „24.e4 attacks the pinned knight on d5“ — und, was der nächste Zug darauf an
+    /// wertvolleren Figuren neu angreift — „24...Rc7 answers with an attack on the queen on c2“; (3) ob jede Fesselung vom Anfang
+    /// bis zu diesem Angriff (sonst nach den ersten zwei Halbzügen) noch besteht — „after 23.Nxd7 Rxd7 the knight on d5 is still
+    /// pinned (to the rook on d7 by the rook on d1)“ bzw. „… the pin on the knight on d5 is gone“ — und welche bis dahin neu
+    /// entstanden ist („after 23.Nxd7 Rxd7 the knight on d5 is pinned to the rook on d7 by the rook on d1“). Reine Brettgeometrie
+    /// (<see cref="BoardGeometry.Pins"/>); nur die ersten <paramref name="maxPlies"/> Halbzüge.
+    /// </summary>
+    public static List<string> Pins(string fen, IReadOnlyList<string> sans, int maxPlies = 6)
+    {
+        var result = new List<string>();
+        if (BoardGeometry.FromFen(fen) is not { } start) return result;
+        static string P(char c) => PieceName(char.ToLowerInvariant(c));
+        static string Text(BoardGeometry.Pin p) => $"the {P(p.Piece)} on {p.Square} is pinned to the {P(p.BehindPiece)} on {p.BehindSquare} by the {P(p.ByPiece)} on {p.BySquare}";
+        var initial = start.Pins(true).Concat(start.Pins(false)).Where(p => char.ToLowerInvariant(p.Piece) != 'p').ToList();
+        foreach (var p in initial) result.Add(Text(p));
+        var played = new List<string>();
+        var states = new List<BoardGeometry> { start };
+        int? attackAt = null;
+        try
+        {
+            var board = ChessBoard.LoadFromFen(fen);
+            for (var i = 0; i < sans.Count && i < maxPlies; i++)
+            {
+                var move = Array.Find(board.Moves(generateSan: true), m => m.San == sans[i]);
+                if (move is null) break;
+                var before = states[^1];
+                board.Move(move);
+                if (BoardGeometry.FromFen(board.ToFen()) is not { } after) break;
+                states.Add(after);
+                played.Add(sans[i]);
+                if (attackAt is not null) break;
+                var to = move.NewPosition.ToString();
+                var white = move.Piece.Color == PieceColor.White;
+                var seen = before.PieceAt(to) == after.PieceAt(to) ? before.AttackedFrom(to) : [];
+                var hit = after.Pins(!white).Where(p => char.ToLowerInvariant(p.Piece) != 'p' && after.AttackedFrom(to).Contains(p.Square) && !seen.Contains(p.Square)).ToList();
+                if (hit.Count == 0) continue;
+                attackAt = i;
+                result.Add($"{Label(fen, i, sans[i], true)} attacks the pinned {JoinAnd(hit.Select(h => $"{P(h.Piece)} on {h.Square}").ToList())}");
+                if (i + 1 >= sans.Count || i + 1 >= maxPlies) break;
+                var reply = Array.Find(board.Moves(generateSan: true), m => m.San == sans[i + 1]);
+                if (reply is null) break;
+                board.Move(reply);
+                if (BoardGeometry.FromFen(board.ToFen()) is not { } next) break;
+                var rTo = reply.NewPosition.ToString();
+                var rWhite = reply.Piece.Color == PieceColor.White;
+                var value = PieceValueOf(after.PieceAt(reply.OriginalPosition.ToString()));
+                var targets = next.AttackedFrom(rTo).Where(sq => next.PieceAt(sq) is var t && t != ' ' && char.IsUpper(t) != rWhite
+                        && char.ToLowerInvariant(t) != 'k' && (PieceValueOf(t) > value || char.ToLowerInvariant(t) == 'q')
+                        && !(after.PieceAt(rTo) == next.PieceAt(rTo) && after.AttackedFrom(rTo).Contains(sq)))
+                    .Select(sq => $"the {P(next.PieceAt(sq))} on {sq}").ToList();
+                if (targets.Count > 0) result.Add($"{Label(fen, i + 1, sans[i + 1], true)} answers with an attack on {JoinAnd(targets)}");
+                break;
+            }
+        }
+        catch
+        {
+            // Linie nicht nachzuspielen — was bis hierher gefunden ist, stimmt.
+        }
+        var checkAt = attackAt ?? Math.Min(2, states.Count - 1);
+        if (checkAt <= 0 || checkAt >= states.Count) return result;
+        var then = states[checkAt];
+        var prefix = GameRecapService.Numbered(fen, played.Take(checkAt));
+        var now = then.Pins(true).Concat(then.Pins(false)).Where(p => char.ToLowerInvariant(p.Piece) != 'p').ToList();
+        var status = new List<string>();
+        foreach (var p in initial)
+        {
+            if (then.PieceAt(p.Square) != p.Piece) continue;   // gezogen oder geschlagen: das zeigt die Linie selbst
+            var still = now.FirstOrDefault(q => q.Square == p.Square);
+            status.Add(still is null
+                ? $"after {prefix} the pin on the {P(p.Piece)} on {p.Square} is gone"
+                : $"after {prefix} the {P(p.Piece)} on {p.Square} is still pinned (to the {P(still.BehindPiece)} on {still.BehindSquare} by the {P(still.ByPiece)} on {still.BySquare})");
+        }
+        // Neu entstanden (Befund 2832: erst nach 23.Sxd7 Txd7 steht der Turm hinter dem Springer).
+        foreach (var p in now.Where(q => initial.All(i => i.Square != q.Square)))
+            status.Add($"after {prefix} {Text(p)}");
+        // Der Zustand vor dem Angriff gehört vor die Angriffs-Fakten.
+        var at = attackAt is null ? result.Count : result.FindIndex(r => r.Contains(" attacks the pinned ", StringComparison.Ordinal));
+        result.InsertRange(at < 0 ? result.Count : at, status);
+        return result;
+    }
+
+    private static int PieceValueOf(char p) => char.ToLowerInvariant(p) switch { 'p' => 1, 'n' or 'b' => 3, 'r' => 5, 'q' => 9, 'k' => 100, _ => 0 };
 
     private static string LineName(string a, string b)
         => a[0] == b[0] ? $"{a[0]}-file" : a[1] == b[1] ? $"{a[1]}{(a[1] switch { '1' => "st", '2' => "nd", '3' => "rd", _ => "th" })} rank" : "diagonal";

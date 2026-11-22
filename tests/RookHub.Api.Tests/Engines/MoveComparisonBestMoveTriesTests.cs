@@ -210,7 +210,8 @@ public class MoveComparisonBestMoveTriesTests : IDisposable
 
         // Auf dem warmen Hash der tiefen Rechnung ist Txe4 nur Vierter: nicht unter den besten drei → nicht verlockend.
         // (Deshalb rechnet die flache Sicht in einer eigenen Sitzung, also auf leerem Hash.)
-        Assert.Equal(["g5f4", "c4b3"], MoveComparisonBestMoveTries.Plan(Comparison2615(WarmGlanceJson), Defaults).Select(l => l.ReplyUci));
+        // Seit 1.003.0 kommt es als Schlagen der gerade gezogenen Figur trotzdem dazu (0,57 zurück, unter 2 × 0,5).
+        Assert.Equal(["g5f4", "c4b3", "e1e4"], MoveComparisonBestMoveTries.Plan(Comparison2615(WarmGlanceJson), Defaults).Select(l => l.ReplyUci));
     }
 
     [Fact]
@@ -228,12 +229,14 @@ public class MoveComparisonBestMoveTriesTests : IDisposable
     [Fact]
     public void Plan_Schwellen_TopUndAbstand()
     {
-        Assert.Equal(["g5f4"], MoveComparisonBestMoveTries.Plan(Comparison2615(), Defaults with { Top = 1 }).Select(l => l.ReplyUci));
-        Assert.Equal(["g5f4"], MoveComparisonBestMoveTries.Plan(Comparison2615(), Defaults with { WithinCp = 39 }).Select(l => l.ReplyUci));
+        // Txe4 schlägt den gerade gezogenen Bauern: seit 1.003.0 kommt es auch außerhalb von Top/Abstand dazu (bis 2 × Abstand).
+        Assert.Equal(["g5f4", "e1e4"], MoveComparisonBestMoveTries.Plan(Comparison2615(), Defaults with { Top = 1 }).Select(l => l.ReplyUci));
+        Assert.Equal(["g5f4", "e1e4"], MoveComparisonBestMoveTries.Plan(Comparison2615(), Defaults with { WithinCp = 39 }).Select(l => l.ReplyUci));
+        Assert.Equal(["g5f4"], MoveComparisonBestMoveTries.Plan(Comparison2615(), Defaults with { WithinCp = 19 }).Select(l => l.ReplyUci));
         Assert.Equal(["g5f4", "e1e4"], MoveComparisonBestMoveTries.Plan(Comparison2615(), Defaults with { WithinCp = 40 }).Select(l => l.ReplyUci));
-        // Top 5 und 0,8 Bauern: Lb3 (0,56) und cxd4 (0,75) kämen dazu — der Deckel hält es bei zwei tiefen Rechnungen.
+        // Top 5 und 0,8 Bauern: Lb3 (0,56) und cxd4 (0,75) kämen dazu — der Deckel (Vorgabe 3) hält es bei drei tiefen Rechnungen.
         var wide = Defaults with { Top = 5, WithinCp = 80 };
-        Assert.Equal(["g5f4", "e1e4"], MoveComparisonBestMoveTries.Plan(Comparison2615(), wide).Select(l => l.ReplyUci));
+        Assert.Equal(["g5f4", "e1e4", "c4b3"], MoveComparisonBestMoveTries.Plan(Comparison2615(), wide).Select(l => l.ReplyUci));
         Assert.Equal(["g5f4", "e1e4", "c4b3", "c3d4"], MoveComparisonBestMoveTries.Plan(Comparison2615(), wide with { Max = 4 }).Select(l => l.ReplyUci));
     }
 
@@ -249,9 +252,10 @@ public class MoveComparisonBestMoveTriesTests : IDisposable
         var tries = MoveComparisonBestMoveTries.Of(c, c.Lines.Single(l => l.Kind == MoveComparisonLineKind.Candidate && l.CandidateUci == Weak), Defaults);
         Assert.Equal("Rxe4", Assert.Single(tries).San);
 
-        // Als weitere Linie des besten Kandidaten: 21.Lf4 ist dort nur 0,30 schlechter — tief in Ordnung, keine Rechnung.
+        // Als weitere Linie des besten Kandidaten: 21.Lf4 ist dort nur 0,30 schlechter — seit 1.003.0 trotzdem gerechnet, denn
+        // auch eine haltende Antwort steht im Prompt und braucht ihre eigene Zeile.
         const string twoLines = """{"depth":30,"pvs":[{"moves":["c4f1","e4e3","f2e3","d4c3"],"cp":-360},{"moves":["g5f4","d6e7","c3d4"],"cp":-390}]}""";
-        Assert.Equal(["e1e4"], MoveComparisonBestMoveTries.Plan(Comparison2615(bestJson: twoLines), Defaults).Select(l => l.ReplyUci));
+        Assert.Equal(["g5f4", "e1e4"], MoveComparisonBestMoveTries.Plan(Comparison2615(bestJson: twoLines), Defaults).Select(l => l.ReplyUci));
         // … wäre er dort klar schlechter, wird er wie jeder andere gerechnet (die Zeile braucht ihre eigene Linie).
         const string twoLinesBad = """{"depth":30,"pvs":[{"moves":["c4f1","e4e3","f2e3","d4c3"],"cp":-360},{"moves":["g5f4","d6e7","c3d4"],"cp":-520}]}""";
         Assert.Equal(["g5f4", "e1e4"], MoveComparisonBestMoveTries.Plan(Comparison2615(bestJson: twoLinesBad), Defaults).Select(l => l.ReplyUci));
@@ -260,7 +264,7 @@ public class MoveComparisonBestMoveTriesTests : IDisposable
     [Fact]
     public void Settings_AusDerKonfiguration_mitVorgabenUndGrenzen()
     {
-        Assert.Equal(new MoveComparisonBestMoveTries.Settings(2, 1, 3, 50, 100), MoveComparisonBestMoveTries.Settings.From(null));
+        Assert.Equal(new MoveComparisonBestMoveTries.Settings(3, 1, 3, 50, 100), MoveComparisonBestMoveTries.Settings.From(null));
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ClubMistakeComparisons:BestMoveTries"] = "1",
@@ -314,11 +318,14 @@ public class MoveComparisonBestMoveTriesTests : IDisposable
     private static MoveComparisonPrompts.PairFacts Facts(MoveComparison c, MoveComparisonBestMoveTries.Settings? settings = null) =>
         MoveComparisonPrompts.PairFactsOf(c, c.Lines.Single(l => l.Kind == MoveComparisonLineKind.Candidate && l.CandidateUci == Weak), settings)!;
 
+    private const string Block2615Head =
+        "Obvious replies to the better move 20...e4 — the first thing the reader asks at the board: natural moves a human of the "
+        + "opponent's strength would play (Maia), taking the piece that just moved, and moves that look good at first sight; each "
+        + "calculated to depth 30, with whether it fails or holds; evaluation from the reader's view, the reader's reply with the "
+        + "engine line, checked facts:\n";
+
     private const string Block2615 =
-        "Obvious replies to the better move 20...e4 and why they fail — moves that look good at first sight but lose when calculated "
-        + "to depth 30, the first thing the reader asks at the board; evaluation from the reader's view, the reader's reply with the "
-        + "engine line, checked facts:\n"
-        + "- 21.Rxe4 (takes the pawn on e4; looks good at first sight: the shallow search (depth 1) ranks it 2nd of 51 legal moves, "
+        "- 21.Rxe4 (takes the pawn on e4, the piece that just moved; looks good at first sight: the shallow search (depth 1) ranks it 2nd of 51 legal moves, "
         + "0.40 pawns behind its first choice): evaluation from the reader's view +5.28 (winning), against +3.60 after the opponent's "
         + "best answer 21.Bf1 — this reply fails. The reader's reply, with the engine line: 21...dxc3 22.bxc3 Qxa3 23.Rb1 Rab8 24.Bb3 "
         + "Qc5 25.Rc4 Qa5 26.Ra4.\n"
@@ -332,32 +339,44 @@ public class MoveComparisonBestMoveTriesTests : IDisposable
     {
         var prompt = ClubFableExplanations.UserPrompt(Facts(Explained2615()));
 
+        Assert.Contains(Block2615Head, prompt.Replace("\r", ""));
         Assert.Contains(Block2615, prompt.Replace("\r", ""));
         // Der Block steht hinter der besten Antwort auf den besten Zug und vor dem Leser-Hinweis.
         Assert.True(prompt.IndexOf("The opponent's best answer to 20...e4 itself: 21.Bf1", StringComparison.Ordinal)
                     < prompt.IndexOf("Obvious replies to the better move", StringComparison.Ordinal));
         Assert.True(prompt.IndexOf("Obvious replies to the better move", StringComparison.Ordinal)
                     < prompt.IndexOf("Reader: plays Black", StringComparison.Ordinal));
-        // 21.Lf4 war auf den ersten Blick sogar Erster, ist aber tief nur 0,37 schlechter als 21.Lf1: fällt still weg.
-        Assert.DoesNotContain("21.Bf4", prompt);
-        Assert.DoesNotContain("as good as", prompt);
+        // 21.Lf4 war auf den ersten Blick sogar Erster und ist tief nur 0,37 schlechter als 21.Lf1: seit 1.003.0 steht er mit
+        // Vermerk da (Befund Vereinspartie 260, 23.Sxd7: auch eine haltende Antwort ist die Frage des Lesers).
+        Assert.Contains("- 21.Bf4 (looks good at first sight: the shallow search (depth 1) ranks it 1st of 51 legal moves): evaluation "
+            + "from the reader's view +3.97 (winning), against +3.60 after the opponent's best answer 21.Bf1 — weaker for the opponent "
+            + "than the best answer, but it does not lose; say in half a sentence what it costs.", prompt);
+        Assert.True(prompt.IndexOf("- 21.Bf4", StringComparison.Ordinal) < prompt.IndexOf("- 21.Rxe4", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void VerlockendAberAuchTiefInOrdnung_faelltStillWeg()
+    public void VerlockendAberAuchTiefInOrdnung_stehtMitVermerkDa()
     {
-        // 21.Txe4 wäre tief nur 0,60 schlechter als die beste Antwort (Schwelle 1,0): kein Block, kein erlaubter Zug.
+        // 21.Txe4 wäre tief nur 0,60 schlechter als die beste Antwort (Schwelle 1,0): seit 1.003.0 kein stilles Wegfallen mehr,
+        // sondern „weaker, but it does not lose“ (Befund Vereinspartie 260, 23.Sxd7).
         const string fine = """{"depth":30,"pvs":[{"moves":["d4c3","b2c3","d6a3","a1b1"],"cp":-420}]}""";
         var facts = Facts(Explained2615(takesJson: fine));
 
-        Assert.Empty(facts.Tries!);
-        Assert.DoesNotContain("Obvious replies", ClubFableExplanations.UserPrompt(facts));
-        Assert.DoesNotContain("Rxe4", facts.AllowedMoves());
+        var rxe4 = facts.Tries!.Single(t => t.San == "Rxe4");
+        Assert.Equal(MoveComparisonBestMoveTries.Verdict.Weaker, rxe4.Verdict);
+        Assert.Contains("Rxe4", facts.AllowedMoves());
 
-        // Genau an der Schwelle zählt er, mit einer strengeren Schwelle nicht mehr.
+        // Genau an der Schwelle scheitert er, mit einer strengeren Schwelle nicht mehr.
         const string exactly = """{"depth":30,"pvs":[{"moves":["d4c3","b2c3","d6a3","a1b1"],"cp":-460}]}""";
-        Assert.Single(Facts(Explained2615(takesJson: exactly)).Tries!);
-        Assert.Empty(Facts(Explained2615(takesJson: exactly), Defaults with { LossCp = 150 }).Tries!);
+        Assert.Equal(MoveComparisonBestMoveTries.Verdict.Fails, Facts(Explained2615(takesJson: exactly)).Tries!.Single(t => t.San == "Rxe4").Verdict);
+        Assert.Equal(MoveComparisonBestMoveTries.Verdict.Weaker,
+            Facts(Explained2615(takesJson: exactly), Defaults with { LossCp = 150 }).Tries!.Single(t => t.San == "Rxe4").Verdict);
+        // Kaum schlechter als die beste Antwort: hält — als Schlag „just a trade“.
+        const string same = """{"depth":30,"pvs":[{"moves":["d4c3","b2c3","d6a3","a1b1"],"cp":-370}]}""";
+        var holds = Facts(Explained2615(takesJson: same));
+        Assert.Equal(MoveComparisonBestMoveTries.Verdict.Holds, holds.Tries!.Single(t => t.San == "Rxe4").Verdict);
+        Assert.Contains("about as good as the best answer, so it does NOT fail: just a trade, say so in half a sentence",
+            ClubFableExplanations.UserPrompt(holds));
         // Abgeschaltet: auch gerechnete Zeilen stehen nicht im Prompt.
         Assert.Empty(Facts(Explained2615(), Defaults with { Max = 0 }).Tries!);
     }
@@ -374,16 +393,18 @@ public class MoveComparisonBestMoveTriesTests : IDisposable
         Assert.True(GameMoveExplanationService.MentionsOnly(ClubFableExplanations.EnglishSan(text), allowed));
         // Ohne die Zusatzlinie fiele genau dieser Text durch die Prüfung — deshalb konnte das Modell den Grund nicht sagen.
         Assert.False(GameMoveExplanationService.MentionsOnly(ClubFableExplanations.EnglishSan(text), Facts(Comparison2615()).AllowedMoves()));
-        // Die Linie des verlockenden, aber tief in Ordnung befundenen 21.Lf4 (21...De7) bleibt verboten.
-        Assert.DoesNotContain("Qe7", allowed);
-        Assert.False(GameMoveExplanationService.MentionsOnly("21.Bf4 Qe7 hält auch.", allowed));
+        // Seit 1.003.0 steht auch das verlockende, tief haltende 21.Lf4 samt Linie (21...De7) im Prompt — der Text darf es nennen.
+        Assert.Contains("Qe7", allowed);
+        Assert.True(GameMoveExplanationService.MentionsOnly("21.Bf4 Qe7 hält auch.", allowed));
     }
 
     [Fact]
     public void GescheiterteZusatzlinie_fehltImPrompt_dieAndereBleibt()
     {
-        Assert.Contains("- 21.Rxe4 (takes the pawn on e4;", ClubFableExplanations.UserPrompt(Facts(Explained2615(failed: "g5f4"))));
-        Assert.DoesNotContain("Obvious replies", ClubFableExplanations.UserPrompt(Facts(Explained2615(failed: "e1e4"))));
+        Assert.Contains("- 21.Rxe4 (takes the pawn on e4, the piece that just moved;", ClubFableExplanations.UserPrompt(Facts(Explained2615(failed: "g5f4"))));
+        var withoutRxe4 = ClubFableExplanations.UserPrompt(Facts(Explained2615(failed: "e1e4")));
+        Assert.DoesNotContain("- 21.Rxe4", withoutRxe4);
+        Assert.Contains("- 21.Bf4", withoutRxe4);
     }
 
     [Fact]
@@ -436,13 +457,13 @@ public class MoveComparisonBestMoveTriesTests : IDisposable
     /// <summary>Die Lauf-Marken aller Dienste dieses Tests (<see cref="BackgroundRunsEndedAsync"/>).</summary>
     private readonly List<MoveComparisonExplainJobs> _running = [];
 
-    private MoveComparisonService Service(ClubFableExplanations? fable)
+    private MoveComparisonService Service(ClubFableExplanations? fable, MaiaService? maia = null)
     {
         var running = new MoveComparisonExplainJobs();
         _running.Add(running);
         return new(_db, _jobs, _local, running,
             new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<MoveComparisonService>.Instance, fable);
+            NullLogger<MoveComparisonService>.Instance, fable, maia);
     }
 
     /// <summary>Wartet, bis kein Hintergrundlauf der Begründung mehr markiert ist: die Pumpe stößt ihn per <c>Task.Run</c> an,
@@ -707,7 +728,7 @@ public class MoveComparisonBestMoveTriesTests : IDisposable
         Assert.Equal(MoveComparisonStatus.Done, c.Status);
         Assert.Contains("weil 21.Rxe4 an 21...dxc3 22.bxc3 Qxa3 mit Figurengewinn scheitert", Explanation(c));
         Assert.Contains(Block2615, _fable.Prompts[^1].Replace("\r", ""));
-        Assert.DoesNotContain("21.Bf4", _fable.Prompts[^1]);
+        Assert.Contains("- 21.Bf4 (looks good at first sight", _fable.Prompts[^1]);   // seit 1.003.0 auch haltende Antworten
         Assert.True((await ReadinessAsync()).Ready);
     }
 
@@ -752,5 +773,48 @@ public class MoveComparisonBestMoveTriesTests : IDisposable
         Assert.All(dto.Candidates, k => Assert.DoesNotContain(k.Tests, t => t.ReplyUci is "e1e4" or "g5f4" or ""));
         Assert.Equal(2, dto.Pending);   // der Fortschritt der Seite zählt sie mit
         Assert.Equal(8, dto.Total);     // 2 Kandidaten, 3 Antworten, flache Sicht, 2 verlockende Antworten
+    }
+
+    /// <summary>1.003.0: Neu erklären plant auch die natürlichen Züge laut Maia nach (hier 21.Lb3 — in der flachen Sicht nur
+    /// Vierter, also vorher nie gerechnet), ohne die vorhandenen Zeilen doppelt zu rechnen; die Stärken kommen aus der Partie.</summary>
+    [Fact]
+    public async Task Reexplain_MitMaia_plantDenNatuerlichenZugNach_vorhandeneNichtDoppelt()
+    {
+        SeedGame(new DateOnly(2026, 11, 8));
+        var game = await _db.LeagueClubGames.SingleAsync(g => g.Id == ClubGame);
+        game.WhiteElo = 1720;
+        await _db.SaveChangesAsync();
+        var old = Service(Fable());
+        var id = await RepliesDoneAsync(old);
+        await FinishJobAsync(After(Best), GlanceJson, depth: 1);
+        await old.PumpOneAsync(id);
+        await FinishJobAsync(After(Best, "g5f4"), Bf4Json);
+        await FinishJobAsync(After(Best, "e1e4"), TakesJson);
+        await old.PumpOneAsync(id);
+        await BackgroundRunsEndedAsync(id);
+        _fable.Answers.Enqueue("""{"explanation":"20...dxc3 erlaubt 21.Dxd6."}""");
+        await old.ExplainAsync(id, CancellationToken.None);
+        var before = await ReloadAsync(id);
+        Assert.Equal(MoveComparisonStatus.Done, before.Status);
+        Assert.Equal(["g5f4", "e1e4"], Of(before, MoveComparisonLineKind.BestMoveTry).Select(l => l.ReplyUci).Order().Reverse());
+
+        var maia = new FakeMaia(new() { [After(Best)] = [new("c4b3", 0.41), new("c4f1", 0.30), new("g5f4", 0.2)] });
+        var svc = Service(Fable(), maia);
+        Assert.True(await svc.ReexplainAsync(id));
+        await svc.PumpOneAsync(id);
+        var c = await ReloadAsync(id);
+        Assert.Equal(MoveComparisonStatus.Replies, c.Status);
+        // Lf1 ist die beste Antwort (zählt nicht), Lf4 ist schon gerechnet; neu nur Lb3.
+        var tries = Of(c, MoveComparisonLineKind.BestMoveTry);
+        Assert.Equal(3, tries.Count);
+        Assert.Equal(MoveComparisonLineState.Pending, tries.Single(l => l.ReplyUci == "c4b3").State);
+        Assert.Contains(maia.Calls, k => k.Fen == After(Best) && k.Self == 1720 && k.Oppo == 1600);   // Weiß am Zug: 1720 gegen 1600
+
+        await FinishJobAsync(After(Best, "c4b3"), Bb3Json);
+        await svc.PumpOneAsync(id);
+        await BackgroundRunsEndedAsync(id);
+        _fable.Answers.Enqueue("""{"explanation":"20...dxc3 erlaubt 21.Dxd6."}""");
+        await svc.ExplainAsync(id, CancellationToken.None);
+        Assert.Contains("- 21.Bb3 (a natural move for a ~1720 player (Maia: 41 %); looks good at first sight: the shallow search (depth 1) ranks it 4th", _fable.Prompts[^1]);
     }
 }

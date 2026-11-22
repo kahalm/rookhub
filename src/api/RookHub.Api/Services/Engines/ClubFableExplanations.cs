@@ -97,6 +97,9 @@ public sealed class ClubFableExplanations
     /// der tiefen Rechnungen je Vergleich, Vorgabe 2, 0 = aus; <c>:BestMoveTryShallowDepth</c> 1, <c>:BestMoveTryTop</c> 3,
     /// <c>:BestMoveTryWithinPawns</c> 0,5, <c>:BestMoveTryLossPawns</c> 1,0).</summary>
     internal MoveComparisonBestMoveTries.Settings Tries { get; }
+    /// <summary>Ab dieser Wahrscheinlichkeit laut Maia gilt ein Zug als natürlich (<c>ClubMistakeComparisons:MaiaMinProbability</c>,
+    /// Vorgabe <see cref="MaiaNaturalMoves.DefaultMinProbability"/>, 1.003.0).</summary>
+    public double MaiaMinProbability { get; }
 
     public ClubFableExplanations(IClaudeJsonClient? client, IConfiguration? config, ILogger<ClubFableExplanations> logger,
         Func<DateTime>? utcNow = null)
@@ -111,6 +114,7 @@ public sealed class ClubFableExplanations
         Model = ModelOf(config);
         DefenceLines = Math.Clamp(config?.GetValue<int?>("ClubMistakeComparisons:DefenceLines") ?? MoveComparisonDefences.DefaultMax, 0, 8);
         Tries = MoveComparisonBestMoveTries.Settings.From(config);
+        MaiaMinProbability = Math.Clamp(config?.GetValue<double?>("ClubMistakeComparisons:MaiaMinProbability") ?? MaiaNaturalMoves.DefaultMinProbability, 0.01, 1.0);
     }
 
     /// <summary>Der Anthropic-Client nach Konfiguration (Schlüssel <c>:AnthropicApiKey</c>, sonst <c>Anthropic:ApiKey</c>).</summary>
@@ -241,7 +245,10 @@ public sealed class ClubFableExplanations
     /// erzählte 21.Lf1 nach, die Frage am Brett ist 21.Txe4; seit 0.999.6 genügt für eine Drohung des besten Zuges ein
     /// Satz — Befund an Vereinspartie 260, 15...Td8: der Text rechnete 16.Tc1 und 16.a3 mit Damenverlust vor; seit 1.001.1
     /// der Fokus auf der Frage, die sich ein Klubspieler stellt: nicht offensichtliche Verteidigungen erklären, offensichtliche
-    /// Einsteller nicht — Befund an Vereinspartie 261, 19...Le5: der Text erklärte 20...Lxf4 21.Lxf4 statt 20...exf3 e.p.).</summary>
+    /// Einsteller nicht — Befund an Vereinspartie 261, 19...Le5: der Text erklärte 20...Lxf4 21.Lxf4 statt 20...exf3 e.p.; seit
+    /// 1.003.0 die natürlichen Züge laut Maia als Fragen des Lesers und haltende Antworten in einem Halbsatz — Befunde an
+    /// Vereinspartie 259, 44...h3, und 260, 23.Sxd7 —, dazu die Bewertung des besten Zuges nur nach der besten Antwort —
+    /// 22...Ld7 hieß „ausgeglichen“ wegen 23.Sb3 Db6).</summary>
     internal const string SystemPrompt =
         """
         Du bist ein erfahrener Schachtrainer und erklärst Klubspielern (Elo 1500–2000) einen Fehler aus ihrer eigenen Ligapartie.
@@ -284,14 +291,24 @@ public sealed class ClubFableExplanations
            „Obvious replies to the better move“ eine Antwort des Gegners — ein Zug, der auf den ersten Blick gut aussieht
            (oft das Schlagen der gerade gezogenen Figur) und erst in der Rechnung scheitert —, sag zu jeder in einem
            Satz, warum sie nicht geht: der widerlegende Zug mit Zugnummer und das Faktum dazu (z. B. „21.Txe4 scheitert
-           an 21...dxc3 22.bxc3 Dxa3 mit Figurengewinn“). DANN erst die ruhige Hauptlinie: der Grund (welches Feld,
+           an 21...dxc3 22.bxc3 Dxa3 mit Figurengewinn“). Steht dort „about as good as the best answer … just a trade“
+           bzw. „it holds“, sag das in einem Halbsatz (z. B. „23.Sxd7 Txd7 tauscht nur, Weiß behält etwa +1,2“) statt ein
+           Scheitern zu behaupten; bei „weaker … but it does not lose“ in einem Halbsatz, was die Antwort kostet. DANN erst die ruhige Hauptlinie: der Grund (welches Feld,
            welche Figur der beste Zug deckt oder welche Drohung er nimmt, soweit belegt), mit einer kurzen Linie aus den
            Daten, und warum die Widerlegung dort nicht (so) funktioniert.
         3. Passt einer der Merksätze aus der Liste im Auftrag wirklich zu diesem Fehler, eine letzte Zeile
            „Merksatz: <Kennung>“ mit seiner Kennung (z. B. „Merksatz: raum-und-tausch“). Passt keiner genau, lass die Zeile
            weg. Erfinde nie einen eigenen Merksatz und schreibe den Wortlaut nicht selbst — er wird nach der Kennung eingesetzt.
 
+        Natürliche Züge: Ein Zug mit dem Vermerk „a natural move for a ~1600 player (Maia: 38 %)“ ist ein Zug, den ein Mensch
+        dieser Stärke laut Maia (einem auf menschliche Partien trainierten Netz) wirklich spielt — er ist die Frage, die der
+        Leser hat. Erkläre ihn immer: warum er scheitert, bzw. dass und warum er hält. Die Prozentzahl und den Namen Maia
+        nennst du nicht.
+
         Regeln:
+        - Die Bewertung eines Zuges ist die nach der BESTEN Antwort des Gegners („evaluation … afterwards“ bei „Better move“
+          und „Weaker move“). Eine Linie mit einer schwächeren Antwort (Vermerk „WEAKER answer“) ändert daran nichts: Steht
+          der beste Zug nach der besten Antwort bei −1,25, nennst du ihn nie „ausgeglichen“, nur weil eine Testlinie bei 0 endet.
         - Nur, was die Linien, Fakten und Bewertungen hergeben: keine eigenen Varianten, keine erfundenen Drohungen, Schläge oder
           Materialgewinne. Nenne nur Züge, die in den gegebenen Linien stehen.
         - Über die Stellung nur, was auf dem Brett steht: Jede Aussage darüber, wo eine Figur steht, ob sie gedeckt oder
@@ -301,6 +318,10 @@ public sealed class ClubFableExplanations
           dem König“ oder „in der Linie des Turms“ nie aus dem Gefühl. „Ungedeckt“, „hängt“ oder „ungeschützt“ nur, wenn
           ein Faktum „defended by nothing“ es sagt — sonst zählen die Fakten „attacked by …; defended by …“; der Text wird
           darauf am Brett nachgeprüft.
+        - Fesselungen nur aus den Fakten „… is pinned to … by …“, „still pinned“, „the pin … is gone“, „attacks the pinned …“ und
+          „answers with an attack on …“. Steht bei einer haltenden Antwort „more than a trade“, reicht „tauscht nur“ nicht: sag in
+          einem Satz, dass die Fesselung bleibt, welcher Zug die gefesselte Figur angreift und welche Antwort sie rettet (z. B.
+          „23.Sxd7 Txd7 löst die Fesselung nicht; auf 24.e4 rettet 24...Tc7 mit Angriff auf die Dame“).
         - Bauernstruktur: Entsteht in einer Linie eine auffällige Bauernschwäche, die ein Klubspieler sofort sieht (ein Faktum
           „pawn structure at the end of this line“: isolierter, doppelter oder rückständiger Bauer), und die Bewertung bleibt
           trotzdem etwa gleich, dann sag in EINEM Satz aus den Fakten, warum sie nicht zählt (z. B. „der isolierte Bauer e4

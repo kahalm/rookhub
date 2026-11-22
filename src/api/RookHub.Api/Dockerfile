@@ -1,5 +1,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
+# Maia-3 (45 MB, 1.003.0) für die natürlichen Züge der Fehler-Erklärungen (MaiaService): gepinnt und per sha256 geprüft,
+# derselbe Pin wie im Frontend. VOR allem anderen, damit die Schicht bei Quelltext-Änderungen aus dem Cache kommt.
+COPY maia-model/fetch.sh maia-model/fetch.sh
+RUN sh maia-model/fetch.sh
 COPY RookHub.Api.csproj .
 RUN dotnet restore
 COPY . .
@@ -19,6 +23,8 @@ RUN apt-get update \
 RUN useradd --no-create-home appuser
 
 WORKDIR /app
+# Das Modell vor der Anwendung: eigene Schicht, ändert sich nur mit dem Pin (Pfad = Maia:ModelPath-Vorgabe).
+COPY --from=build /src/maia-model/maia3_simplified.onnx /app/maia/maia3_simplified.onnx
 COPY --from=build /app .
 EXPOSE 8080
 

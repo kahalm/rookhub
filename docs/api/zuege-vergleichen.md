@@ -337,6 +337,60 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
   * Auftrag: auffällige Schwäche bei etwa gleicher Bewertung → EIN Satz aus den Fakten, warum sie nicht zählt; keine
     Strukturaussage ohne Faktum. `MoveComparisonClaims.FalsePawnClaims` prüft „isoliert/Isolani/Freibauer/Doppelbauer/
     rückständig“ (en „isolated/passed pawn/doubled/backward“) am Brett, verneinte Aussagen ausgenommen.
+* **Natürliche Züge laut Maia, haltende Antworten, Fesselungen** (1.003.0, Nutzer 2026-11-22: „bau maia ein“). Befunde:
+  Vereinspartie 259, Vergleich 2839 (44.Se5+ statt 44.g3, Stellung danach `8/1b6/p5kb/8/2NB2pp/P5P1/1P6/5K2 b`): nur 44...hxg3
+  stand da, das natürliche 44...h3 fehlte (SF Tiefe 30, Weiß-Sicht: hxg3 −1,5, h3 −0,85, Le4 −0,3) — h3 war sogar gerechnet,
+  fiel aber still weg, weil es nicht um 1,0 scheitert. Vereinspartie 260, Vergleich 2832 (22...b6 statt 22...Ld7): „mir fehlt
+  Sxd7?“ — 23.Sxd7 (Schlag der gerade gezogenen Figur, flache Sicht Platz 3, 0,52 zurück) kam nie dran; es hält (Sxd7 Txd7
+  ≈ +1,2 gegen +1,25 nach 23.b4), aber „der Tausch löst die Fesselung nicht, auf 24.e4 rettet 24...Tc7“. Und der Text nannte
+  22...Ld7 „ausgeglichen“, weil der Antwort-Test 23.Sb3 Db6 bei ≈ 0 endete.
+  * **Maia auf dem Server** (`Services/Engines/MaiaService.cs`, Kodierung `MaiaEncoding.cs`, Doku
+    `docs/api/maia-sparring-im-analysebrett.md` „Maia auf dem Server“): Zugverteilung für einen Menschen der Stärke der Seite am
+    Zug. `MaiaNaturalMoves` nimmt die Züge ab `ClubMistakeComparisons:MaiaMinProbability` (Vorgabe 0,15). Stärke = Elo der Seite
+    aus der Partie (`LeagueClubGames.WhiteElo/BlackElo`, sonst `SavedGames.WhiteElo/BlackElo` der Analyse, sonst
+    `[WhiteElo]`/`[BlackElo]` der PGN), sonst 1600; `elo_oppo` = die Elo der anderen Seite. Ohne Maia (aus, Modell fehlt, ORT
+    scheitert) sind die Listen leer, alles läuft wie vorher.
+  * **Andere Verteidigungen** (`MoveComparisonDefences`): an jeder der zwei Entscheidungen zusätzlich die natürlichen Züge
+    des Verteidigers (ohne den Zug der Linie). Reihenfolge: natürliche (nach Wahrscheinlichkeit) → die bisherigen (Schlagen
+    der gezogenen Figur, Königszüge, Rest) → offensichtliche Einsteller. Deckel `:DefenceLines` bleibt 4 (abwechselnd je
+    Entscheidung, also meist zwei je Stelle); Faktenblock „- 45.Kg1 (a natural move for a ~1600 player (Maia: 38 %)) instead
+    of …“. Gerechnete Zeilen, die beim Erklären nicht mehr in der Auswahl stehen (Maia inzwischen aus, andere Schwelle), zählen
+    weiter — ohne Vermerk.
+  * **Antworten auf den besten Zug** (`MoveComparisonBestMoveTries`): Kandidaten in dieser Reihenfolge — die natürlichen laut
+    Maia (Stärke des Gegners), die verlockenden der flachen Sicht (wie bisher), das Schlagen der gerade gezogenen Figur, wenn
+    die flache Sicht es unter ihren fünf Linien höchstens 2 × `:BestMoveTryWithinPawns` (1,0) zurück hat. Deckel
+    `:BestMoveTries` jetzt **3** (0–6). Die flache Sicht bleibt der Rückfall; ist sie gescheitert, planen nur die Maia-Züge.
+    In den Prompt kommen ALLE gerechneten (`Try.Verdict`): „this reply fails“ (≥ `:BestMoveTryLossPawns` 1,0 schlechter für den
+    Gegner), „weaker for the opponent than the best answer, but it does not lose; say in half a sentence what it costs“
+    (0,3–1,0), „about as good as the best answer, so it does NOT fail: just a trade / it holds, say so in half a sentence“
+    (< 0,3). Die frühere Abkürzung „eine weitere Linie des besten Kandidaten zeigt ihn tief in Ordnung → keine Rechnung“
+    entfällt (die Zeile braucht ihre eigene Linie für den Prompt).
+  * **Fesselungen** (`BoardGeometry.Pins`, `ExplanationFacts.Pins`, im Block der Verteidigungen, der Antworten auf den besten
+    Zug und an der Hauptlinie nach dem schwächeren Zug, nur für Fable): „the knight on d5 is pinned to the rook on d8 by the rook
+    on d1“, Stand vor dem ersten Angriff auf eine gefesselte Figur („after 23.Nxd7 Rxd7 the knight on d5 is pinned to the rook
+    on d7 by the rook on d1“ / „… is still pinned“ / „the pin … is gone“), „24.e4 attacks the pinned knight on d5“ und „24...Rc7
+    answers with an attack on the queen on c2“. Gefesselt = Langschrittfigur, davor eine Figur (kein Bauer, kein König),
+    dahinter eine wertvollere Figur oder der König — reine Geometrie. Greift die Linie einer haltenden Antwort eine gefesselte
+    Figur an, heißt es statt „just a trade“: „more than a trade: say in one sentence from the pin facts below …“.
+  * **Bewertung nach der BESTEN Antwort**: neue Zeile im Nutzer-Prompt („Each evaluation of a candidate is the one after the
+    opponent's BEST answer …“); ein Antwort-Test, der für den Leser mindestens 0,3 besser ausgeht als der beste Zug, trägt
+    „This is a WEAKER answer for the opponent: after his best answer the better move stands at −1.25 … — never describe the
+    better move by this line's evaluation.“ Auftrag Fable und lokal ergänzt.
+  * **Auftrag Fable**: natürliche Züge sind die Fragen des Lesers — immer erklären, warum sie scheitern bzw. dass und warum
+    sie halten (Prozent und „Maia“ nicht nennen); haltende Antworten in einem Halbsatz („23.Sxd7 Txd7 tauscht nur, Weiß behält
+    etwa +1,2“), mit Fesselung in einem Satz („23.Sxd7 Txd7 löst die Fesselung nicht; auf 24.e4 rettet 24...Tc7 mit Angriff auf
+    die Dame“); Fesselungen nur aus den Fakten.
+  * **Re-Explain** (`POST /api/admin/move-comparisons/{id}/re-explain`): die Pumpe plant je Zeile, was die heutige Auswahl
+    vorsieht und fehlt — Verteidigungen (Kandidat, Zug, Halbzug) wie seit 1.001.1 und jetzt auch die Antworten auf den besten
+    Zug (Kandidat, Zug; vorher nur, wenn es GAR KEINE gab). Nach dem Deploy für die Befunde: 2832 (Partie 260); 2839 gibt es
+    auf Prod nicht mehr (die Partie wurde neu analysiert), die neuen Vergleiche der Partie 259 bekommen es beim ersten Lauf.
+  * **Mehrarbeit** (gemessen 22.11. am echten Modell über die letzten 150 von Fable erklärten Prod-Vergleiche, Auswahl ohne
+    Engine nachgespielt): Verteidigungen je Fehler 0,86 → **2,95** (326 Züge allein durch Maia, nur 13 am Deckel 4
+    abgeschnitten — der Deckel reicht), Antworten auf den besten Zug 1,08 → **1,57** (Deckel 3 nie erreicht); bei 140 von 150
+    Vergleichen mindestens ein Maia-Zug. Bei Ø 95 s je Tiefe-30-Auftrag grob **+4 min Engine-Zeit je Fehler**. Stellschraube
+    `:MaiaMinProbability`: 0,25 → 2,04 / 1,37 je Fehler, 0,35 → 1,57 / 1,24.
+  * Tests: `MaiaServiceTests` (Kodierung, Parität mit der JS-Fassung, nicht verfügbar), `MaiaNaturalMovesTests` (2839, 2832,
+    Schwelle, Deckel, Rückfall, Elo), `MoveComparisonBestMoveTriesTests.Reexplain_MitMaia_…`.
 * **Besitz und Sichtbarkeit**: Besitzer ist der Besitzer der Analyse (Haus-Engine-Konto). Alle Nutzerwege (`/api/move-comparisons`
   Liste/Lesen/Löschen, `MaxOpenPerUser`, `MaxKeptPerUser`) filtern `GameAnalysisId == null` — die Zeilen zählen nirgends mit.
   Lesen darf, wer die Vereinspartie sieht: `GET /api/league/club/games/{id}/comparisons` (alle, nach Halbzug: `{ ply,

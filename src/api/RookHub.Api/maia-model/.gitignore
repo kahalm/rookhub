@@ -1,0 +1,4 @@
+# Das Modell (45 MB) liegt nicht im Repo — fetch.sh holt es per gepinntem Commit + Pruefsumme.
+*.onnx
+# Zwischenstand eines laufenden Downloads (fetch.sh raeumt ihn selbst weg).
+*.part

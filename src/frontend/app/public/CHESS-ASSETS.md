@@ -31,3 +31,5 @@ Closed-Source/SaaS müssten diese Texturen ersetzt werden.)
 - **Laufzeit** `onnxruntime-web` (Microsoft) — **MIT**; drei Dateien aus `node_modules/onnxruntime-web/dist`
   werden als Assets unter `/assets/ort/` ausgeliefert.
 - Das Modell liegt NICHT im Repo: der Build holt es (`maia-model/fetch.sh`, Pin per Commit + sha256).
+- Seit 1.003.0 dasselbe Modell (gleicher Commit) auch im API-Image für die Fehler-Erklärungen (`MaiaService`, Kodierung
+  nach C# portiert in `Services/Engines/MaiaEncoding.cs`, Laufzeit `Microsoft.ML.OnnxRuntime` — **MIT**).

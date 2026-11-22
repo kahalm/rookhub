@@ -58,18 +58,20 @@ public sealed class MoveComparisonService
     private readonly IServiceScopeFactory _scopes;
     private readonly ILogger<MoveComparisonService> _logger;
     private readonly ClubFableExplanations? _fable;
+    private readonly MaiaService? _maia;
     private readonly MoveComparisonExplainer _explainer;
 
     /// <param name="fable">Begründungen der Vereinspartien ab dem Stichtag über Claude Fable (0.911.0); <c>null</c> = nur lokal.</param>
     public MoveComparisonService(AppDbContext db, AnalysisJobService jobs, IClaudeJsonClient llm,
         MoveComparisonExplainJobs running, IServiceScopeFactory scopes, ILogger<MoveComparisonService> logger,
-        ClubFableExplanations? fable = null)
+        ClubFableExplanations? fable = null, MaiaService? maia = null)
     {
         _fable = fable;
+        _maia = maia;
         _db = db;
         _jobs = jobs;
         _llm = llm;
-        _explainer = new MoveComparisonExplainer(llm, fable, logger);
+        _explainer = new MoveComparisonExplainer(llm, fable, logger, maia);
         _running = running;
         _scopes = scopes;
         _logger = logger;
@@ -421,21 +423,26 @@ public sealed class MoveComparisonService
     {
         if (_fable is null || c.GameAnalysisId is null || _running.IsRunning(c.Id)) return false;
         var glance = c.Lines.FirstOrDefault(l => l.Kind == MoveComparisonLineKind.BestMoveGlance);
+        var shallow = _fable.Tries.Max > 0 && glance is null;
+        var triesDue = _fable.Tries.Max > 0 && glance is { State: MoveComparisonLineState.Done or MoveComparisonLineState.Failed };
+        if ((_fable.DefenceLines <= 0 && !shallow && !triesDue) || !await _fable.AppliesAsync(_db, c, ct)) return false;
+        // 1.003.0: natürliche Züge laut Maia (Stärke aus der Partie) — ohne Maia leer, dann wie vorher.
+        var natural = await MaiaNaturalMoves.ForAsync(_db, _maia, _fable.MaiaMinProbability, c, ct);
         // Seit 1.001.1 je Zeile: was die Auswahl heute plant und noch fehlt (ein Vergleich von vor einer Änderung der Auswahl —
-        // etwa 2854 ohne 20...exf3 e.p. — bekommt beim Neu-Erklären genau die neuen Verteidigungen nachgerechnet).
+        // etwa 2854 ohne 20...exf3 e.p. — bekommt beim Neu-Erklären genau die neuen Verteidigungen nachgerechnet; seit 1.003.0
+        // ebenso die natürlichen Züge und die Antworten auf den besten Zug).
         var missingDefences = _fable.DefenceLines > 0
-            ? MoveComparisonDefences.Plan(c, _fable.DefenceLines).Where(p => !c.Lines.Any(l => l.Kind == MoveComparisonLineKind.Defence
+            ? MoveComparisonDefences.Plan(c, _fable.DefenceLines, natural).Where(p => !c.Lines.Any(l => l.Kind == MoveComparisonLineKind.Defence
                 && l.CandidateUci == p.CandidateUci && l.ReplyUci == p.ReplyUci && l.Ordinal == p.Ordinal)).ToList()
             : [];
-        var defences = missingDefences.Count > 0;
-        var shallow = _fable.Tries.Max > 0 && glance is null;
-        var tries = _fable.Tries.Max > 0 && glance is { State: MoveComparisonLineState.Done }
-            && !c.Lines.Any(l => l.Kind == MoveComparisonLineKind.BestMoveTry);
-        if ((!defences && !shallow && !tries) || !await _fable.AppliesAsync(_db, c, ct)) return false;
+        var missingTries = triesDue
+            ? MoveComparisonBestMoveTries.Plan(c, _fable.Tries, natural).Where(p => !c.Lines.Any(l => l.Kind == MoveComparisonLineKind.BestMoveTry
+                && l.CandidateUci == p.CandidateUci && l.ReplyUci == p.ReplyUci)).ToList()
+            : [];
         var lines = new List<MoveComparisonLine>();
-        if (defences) lines.AddRange(missingDefences);
+        lines.AddRange(missingDefences);
         if (shallow && MoveComparisonBestMoveTries.PlanGlance(c) is { } look) lines.Add(look);
-        if (tries) lines.AddRange(MoveComparisonBestMoveTries.Plan(c, _fable.Tries));
+        lines.AddRange(missingTries);
         if (lines.Count == 0) return false;
         foreach (var line in lines) c.Lines.Add(line);
         foreach (var line in lines.Where(l => l.State == MoveComparisonLineState.Pending))
