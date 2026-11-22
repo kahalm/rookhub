@@ -57,14 +57,26 @@ internal sealed class MoveComparisonExplainer(IClaudeJsonClient llm, ClubFableEx
     private async Task<string?> ExplainPairAsync(PairFacts facts, string system, CancellationToken ct)
     {
         var prompt = UserPrompt(facts);
+        var hint = "IMPORTANT: your previous answer mentioned a move that is not in the lines above. Mention ONLY moves that appear in the lines above.";
         for (var attempt = 0; attempt < 2; attempt++)
         {
             var json = await llm.CompleteJsonAsync("move-comparison", system,
-                attempt == 0 ? prompt : prompt + "\n\nIMPORTANT: your previous answer mentioned a move that is not in the lines above. Mention ONLY moves that appear in the lines above.",
-                Schema, 1500, ct);
+                attempt == 0 ? prompt : prompt + "\n\n" + hint, Schema, 1500, ct);
             var text = TextOf(json);
-            if (text != null && GameMoveExplanationService.MentionsOnly(text, facts.AllowedMoves())) return text;
-            if (text != null) logger.LogInformation("Zugvergleich: Begruendung verworfen (nennt einen fremden Zug): {Text}", text);
+            if (text is null) continue;
+            if (!GameMoveExplanationService.MentionsOnly(text, facts.AllowedMoves()))
+            {
+                logger.LogInformation("Zugvergleich: Begruendung verworfen (nennt einen fremden Zug): {Text}", text);
+                continue;
+            }
+            // 1.000.1 (Befund Vereinspartie 260, Fehler 5): eine gedeckte Figur „ungedeckt“/„hängt“ genannt → neu anfragen.
+            if (MoveComparisonClaims.FalseUndefended(text, facts) is { Count: > 0 } wrong)
+            {
+                logger.LogInformation("Zugvergleich: Begruendung verworfen (gedeckte Figur auf {Squares} ungedeckt genannt)", string.Join(", ", wrong));
+                hint = MoveComparisonClaims.Hint(wrong, german: false);
+                continue;
+            }
+            return text;
         }
         return null;
     }

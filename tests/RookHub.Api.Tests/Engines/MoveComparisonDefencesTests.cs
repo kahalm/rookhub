@@ -219,7 +219,7 @@ public class MoveComparisonDefencesTests : IDisposable
         const string square = "d7 is the square the bishop left with 25...Bc8; "
             + "after 25...Bc8 the square d7 was covered only by the bishop on c8, which is no longer there";
         Assert.Contains($"  Concretely, after 26...Rxc8: {fork}; {square}; "
-            + "White ends up ahead in material by 4 (White took bishop, queen, Black took rook, knight).", prompt);
+            + "White ends up ahead in material by 4 (White took bishop, queen, Black took rook, knight); in pieces: White is a queen up for a rook.", prompt);
         Assert.Contains($"  Concretely, after 27...Kb8: {fork}; {square}; White ends up ahead in material by 4", prompt);
         Assert.DoesNotContain("Nd7+ gives check;", prompt);   // das Schach steht schon in der Gabel
 

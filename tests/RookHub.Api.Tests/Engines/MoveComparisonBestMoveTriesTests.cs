@@ -325,7 +325,7 @@ public class MoveComparisonBestMoveTriesTests : IDisposable
         + "  Concretely, after 20...e4 21.Rxe4: dxc3 opens the d-file for the queen on d6, which now attacks the queen on d1 (a "
         + "discovered attack); Qxa3 takes the knight on a3 and the queen on a3 cannot be recaptured (at the start of this line the "
         + "knight was defended only by the pawn on b2, which is no longer there); Black ends up ahead in material by 2 (White took 2 "
-        + "pawns, Black took pawn, knight).\n";
+        + "pawns, Black took pawn, knight); in pieces: Black is a knight up for a pawn.\n";
 
     [Fact]
     public void UserPrompt_Fall2615_nenntTxE4_undDenFigurengewinn()

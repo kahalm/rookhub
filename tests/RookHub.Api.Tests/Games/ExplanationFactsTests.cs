@@ -109,7 +109,7 @@ public class ExplanationFactsTests
     [Fact]
     public void LineEvents_MaterialBalance_OnlyWhenSomeoneEndsAhead()
     {
-        Assert.Equal(["White ends up ahead in material by 1 (White took pawn, Black took nothing)"],
+        Assert.Equal(["White ends up ahead in material by 1 (White took pawn, Black took nothing); in pieces: White is a pawn up"],
             ExplanationFacts.LineEvents(AfterE4D5, ["exd5"]));
         Assert.Empty(ExplanationFacts.LineEvents(AfterE4D5, ["exd5", "Qxd5"]));   // Abtausch = nichts gewonnen
         Assert.Empty(ExplanationFacts.LineEvents(AfterE4D5, []));
@@ -137,7 +137,7 @@ public class ExplanationFactsTests
         Assert.Empty(ExplanationFacts.LineEvents(AfterE4D5, ["Qxd5"], lead: "exd5"));                       // Tausch
         Assert.Empty(ExplanationFacts.LineEvents(AfterE4D5, ["Nf6"], gainerWhite: false, lead: "exd5"));  // Schwarz holt nichts
         // Der Vorzug gibt Schach — das ist kein Ereignis der Antwort-Linie; die Bilanz zählt ihn aber mit.
-        Assert.Equal(["Black ends up ahead in material by 2 (White took pawn, Black took bishop)"],
+        Assert.Equal(["Black ends up ahead in material by 2 (White took pawn, Black took bishop); in pieces: Black is a bishop up for a pawn"],
             ExplanationFacts.LineEvents("r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 3", ["Kxf7"], lead: "Bxf7+"));
     }
 
@@ -153,16 +153,16 @@ public class ExplanationFactsTests
     public void LineEvents_MateAndFirstMoveCheck()
     {
         const string beforeNf6 = "r1bqkbnr/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 3 3";
-        Assert.Equal(["the line ends in checkmate (Qxf7#)", "White ends up ahead in material by 1 (White took pawn, Black took nothing)"],
+        Assert.Equal(["the line ends in checkmate (Qxf7#)", "White ends up ahead in material by 1 (White took pawn, Black took nothing); in pieces: White is a pawn up"],
             ExplanationFacts.LineEvents(beforeNf6, ["Nf6", "Qxf7#"]));
-        Assert.Equal(["Bxf7+ gives check", "White ends up ahead in material by 1 (White took pawn, Black took nothing)"],
+        Assert.Equal(["Bxf7+ gives check", "White ends up ahead in material by 1 (White took pawn, Black took nothing); in pieces: White is a pawn up"],
             ExplanationFacts.LineEvents("r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 3", ["Bxf7+"]));
     }
 
     [Fact]
     public void LineEvents_StopsAtAnUnplayableMove_AndNeverThrows()
     {
-        Assert.Equal(["White ends up ahead in material by 1 (White took pawn, Black took nothing)"],
+        Assert.Equal(["White ends up ahead in material by 1 (White took pawn, Black took nothing); in pieces: White is a pawn up"],
             ExplanationFacts.LineEvents(AfterE4D5, ["exd5", "Zz9", "Qxd5"]));
         Assert.Empty(ExplanationFacts.LineEvents("kein fen", ["e4"]));
     }
@@ -233,7 +233,7 @@ public class ExplanationFactsTests
         // 25...Lc8 26.Txc8+ Txc8 | 27.Sd7+ Ka8 28.Sxb6+ axb6: Weiß nahm Läufer und Dame, Schwarz Turm und Springer.
         var events = ExplanationFacts.LineEvents("1k4r1/pp1bn3/1q2pb1r/1P1pN1p1/3P2P1/P1RBQ3/4NPK1/R7 b - - 2 25",
             ["Nd7+", "Ka8", "Nxb6+", "axb6"], gainerWhite: true, lead: "Bc8", leads: ["Rxc8+", "Rxc8"]);
-        Assert.Equal(["Nd7+ gives check", "White ends up ahead in material by 4 (White took bishop, queen, Black took rook, knight)"], events);
+        Assert.Equal(["Nd7+ gives check", "White ends up ahead in material by 4 (White took bishop, queen, Black took rook, knight); in pieces: White is a queen up for a rook"], events);
     }
 
     // ── Brettgeometrie ───────────────────────────────────────────────────────────────────────────────────────────────

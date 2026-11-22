@@ -281,6 +281,26 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
     Halbzügen gilt dann nicht, Zwischenzüge raffen; Materialgewinn nur mit dem Zug, der ihn bringt. Lokales Modell: den
     Zug aus dem Faktum zusätzlich nennen.
   * **Bestand bleibt**; Vergleich neu erklären wie oben (Re-Explain).
+* **Deckung geprüft, Material in Figuren, Motiv aus einer Sicht** (1.000.1, Befund 2026-11-22 an Vereinspartie 260,
+  Fehler 5 21...Tb8 statt 21...b6, Vergleich 2830, Stellung `r1br2k1/1p3ppp/p3p3/q1Nn4/8/P5P1/1PQ1PPBP/2R2RK1 b`): der Text
+  schrieb „Angriff auf das ungedeckte Pferd auf d5“ (d5 war durch e6 und Td8 gedeckt, auch nach 22.Db3), „Schwarz netto
+  einen Bauern vorn (−6,43)“ (Schwarz war eine Figur vorn) und besprach 22.Db3/22.Tfd1, die nach 22...bxc5 den Springer
+  einstellen.
+  * Drohung (0.999.6) gilt auch für Bauernangriffe auf Leichtfiguren (21...b6 → „attacks the knight on c5“); eine Antwort,
+    deren Erwiderung die bedrohte Figur schlägt, gilt erst ab 2 Bauern Verlust als Einsteller (sonst 3) — 22.e4 (Gegenangriff,
+    nach 22...Dxc5 Ausgleich) bleibt eine Linie.
+  * `ExplanationFacts.Coverage`: je Figur, die der erste Zug einer Linie angreift, „the knight on d5: attacked by the bishop on
+    g2 and the queen on b3; defended by the pawn on e6 and the rook on d8“ (bzw. „defended by nothing — undefended“); überall,
+    wo `FirstMoveAttacks` steht.
+  * Materialbilanz in Figuren (`ExplanationFacts.InPieces`, angehängt an „… ends up ahead in material by N (…)“): „; in
+    pieces: Black is a minor piece up for 2 pawns“ — gleiche Arten heben sich auf, Läufer/Springer als Leichtfiguren.
+  * `MoveComparisonClaims.FalseUndefended`: nennt der Text eine Figur auf einem Feld „ungedeckt/ungeschützt/hängt“ (en
+    „undefended/unprotected/hanging/loose“), wird in der Stellung vor dem Zug, nach beiden Kandidaten und in jeder Stellung
+    der Linien nachgesehen; ist die Figur dort nirgends ungedeckt, fragt Fable (bzw. das lokale Modell) mit Hinweis neu an
+    (zählt zum Tagesdeckel; zweiter Fehlschlag → wie bisher Rückfall).
+  * Auftrag Fable: Motiv aus Sicht der Seite, die den Fehler spielte, ohne die Pläne beider Seiten zu mischen; „ungedeckt“
+    nur mit „defended by nothing“; Materialaussagen nur aus „in pieces“, nie aus der Bewertung. Lokales Modell sinngemäß.
+  * **Bestand bleibt**; Vergleich neu erklären wie oben (Re-Explain).
 * **Besitz und Sichtbarkeit**: Besitzer ist der Besitzer der Analyse (Haus-Engine-Konto). Alle Nutzerwege (`/api/move-comparisons`
   Liste/Lesen/Löschen, `MaxOpenPerUser`, `MaxKeptPerUser`) filtern `GameAnalysisId == null` — die Zeilen zählen nirgends mit.
   Lesen darf, wer die Vereinspartie sieht: `GET /api/league/club/games/{id}/comparisons` (alle, nach Halbzug: `{ ply,

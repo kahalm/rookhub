@@ -51,6 +51,12 @@ namespace RookHub.Api.Services.Engines;
 /// hörst du zu früh auf“, erst 25.Td8+ gewinnt die Dame für den Turm): die Materialbilanz nennt den Zug, ab dem der
 /// Vorsprung feststeht (<see cref="ExplanationFacts.LineEvents"/>, „material is decided only at …“), und der Auftrag
 /// verbietet, die Linie davor abzubrechen.</item>
+/// <item><b>Deckung geprüft, Material in Figuren</b> (1.000.1, Befund an Vereinspartie 260, Fehler 5 21...Tb8 statt 21...b6:
+/// „Angriff auf das ungedeckte Pferd auf d5“ — d5 war durch e6 und Td8 gedeckt — und „Schwarz netto einen Bauern vorn
+/// (−6,43)“ — Schwarz war eine Figur vorn): Deckungs-Fakten zu den angegriffenen Figuren
+/// (<see cref="ExplanationFacts.Coverage"/>), Materialbilanz in Figuren („in pieces: Black is a knight up for a pawn“,
+/// <see cref="ExplanationFacts.InPieces"/>), Nachprüfung „ungedeckt/hängt“ am Brett mit neuer Anfrage
+/// (<see cref="MoveComparisonClaims"/>), und das Motiv aus Sicht der Seite, die den Fehler spielte.</item>
 /// </list>
 /// Singleton: hält Client und Tageszähler, die Datenbank kommt vom Aufrufer.
 /// </summary>
@@ -153,6 +159,8 @@ public sealed class ClubFableExplanations
         var start = _utcNow().Date;
         var doneToday = await db.MoveComparisons.AsNoTracking().CountAsync(c => c.Model == Model && c.FinishedAt >= start, ct);
         var prompt = UserPrompt(facts);
+        // Hinweis für die zweite Anfrage: fremder Zug, oder (1.000.1) eine gedeckte Figur „ungedeckt“ genannt.
+        var hint = "WICHTIG: Deine letzte Antwort nannte einen Zug, der in keiner der Linien oben steht. Nenne NUR Züge aus den Linien oben.";
         for (var attempt = 0; attempt < 2; attempt++)
         {
             if (!TryTakeBudget(doneToday))
@@ -161,7 +169,7 @@ public sealed class ClubFableExplanations
                 return null;
             }
             var json = await _client!.CompleteJsonAsync("club-mistake-fable", SystemPrompt,
-                attempt == 0 ? prompt : prompt + "\n\nWICHTIG: Deine letzte Antwort nannte einen Zug, der in keiner der Linien oben steht. Nenne NUR Züge aus den Linien oben.",
+                attempt == 0 ? prompt : prompt + "\n\n" + hint,
                 Schema, MaxTokens, ct);
             var text = TextOf(json);
             if (text is null) return null;   // Fehler/Ablehnung/Deckel der Tokens: nicht noch einmal bezahlen
@@ -169,8 +177,18 @@ public sealed class ClubFableExplanations
             // Merksatz (0.917.0): nur aus der kuratierten Liste, im festen Wortlaut — eine Kennung wird zum Satz, Erfundenes fällt weg.
             var english = ChessMaxims.Canonicalize(EnglishSan(text));
             if (english.Length > MaxTextLength) return null;   // mit eingesetztem Merksatz länger als die Spalte
-            if (GameMoveExplanationService.MentionsOnly(english, facts.AllowedMoves())) return english;
-            _logger.LogInformation("Fable-Begründung verworfen (nennt einen fremden Zug)");
+            if (!GameMoveExplanationService.MentionsOnly(english, facts.AllowedMoves()))
+            {
+                _logger.LogInformation("Fable-Begründung verworfen (nennt einen fremden Zug)");
+                continue;
+            }
+            if (MoveComparisonClaims.FalseUndefended(english, facts) is { Count: > 0 } wrong)
+            {
+                _logger.LogInformation("Fable-Begründung verworfen (nennt die gedeckte Figur auf {Squares} ungedeckt)", string.Join(", ", wrong));
+                hint = MoveComparisonClaims.Hint(wrong, german: true);
+                continue;
+            }
+            return english;
         }
         return null;
     }
@@ -223,7 +241,9 @@ public sealed class ClubFableExplanations
         und auf den Punkt, lieber kürzer:
         1. Der taktische Grund, nicht die Nacherzählung der Engine-Linie. Nenne zuerst das Motiv beim Namen (z. B.
            Springergabel, Beseitigung des Verteidigers, Ablenkung, Fesselung, Abzugsschach, Grundreihenmatt) und was der
-           gespielte Zug aufgibt oder freigibt — ein Feld, eine Deckung, eine Linie —, soweit die Fakten es belegen. Dann der
+           gespielte Zug aufgibt oder freigibt — ein Feld, eine Deckung, eine Linie —, soweit die Fakten es belegen. Das
+           Motiv benennt den Fehler des gespielten Zugs aus Sicht der Seite, die ihn spielte (was er versäumt, zulässt
+           oder aufgibt), und mischt nicht die Pläne beider Seiten — das Motiv des besten Zugs gehört in Absatz 2. Dann der
            Einstieg der Widerlegung mit Zugnummer. Stehen unter „Other defences in the refutation line“ andere
            Verteidigungen, sag zu JEDER in einem Halbsatz, woran sie scheitert: der widerlegende Zug mit Zugnummer und das
            Faktum dazu (z. B. „auf 18...Txd5 folgt 19.Se7+ mit Gabel auf König und Dame“). Steht dort, dass eine Verteidigung
@@ -258,7 +278,12 @@ public sealed class ClubFableExplanations
           ungedeckt ist, was angegriffen oder gefesselt ist und wer eine Linie, Reihe oder Diagonale besetzt, muss aus der
           Figurenliste oder einem „Concretely“-Fakt folgen. Prüfe sie vor dem Schreiben Feld für Feld gegen die Figurenliste
           (nach den Zügen der Linie weitergedacht); was du nicht belegen kannst, lass weg. „Ungedeckt“, „hängt“, „steht vor
-          dem König“ oder „in der Linie des Turms“ nie aus dem Gefühl.
+          dem König“ oder „in der Linie des Turms“ nie aus dem Gefühl. „Ungedeckt“, „hängt“ oder „ungeschützt“ nur, wenn
+          ein Faktum „defended by nothing“ es sagt — sonst zählen die Fakten „attacked by …; defended by …“; der Text wird
+          darauf am Brett nachgeprüft.
+        - Materialaussagen (wer wie viel Material mehr hat) nur aus dem Faktum „in pieces: …“ am Ende der Linie (z. B.
+          „Black is a knight up for a pawn“ = Schwarz hat eine Figur gegen einen Bauern mehr), nie aus der Bewertung
+          ableiten: −6,4 heißt nicht „einen Bauern vorn“.
         - Züge in deutscher Notation mit den Figurenbuchstaben K (König), D (Dame), T (Turm), L (Läufer), S (Springer), z. B.
           Sf3, Lxh7+, 0-0 — Bauernzüge ohne Buchstaben. Zugnummern wie „12.Sd3“ bzw. „12...f5“. Figuren auf ihren Feldern in
           Worten („der Läufer auf c8“, „das Feld d7“), nicht als Kürzel.

@@ -109,9 +109,12 @@ internal static class MoveComparisonPrompts
 
     /// <summary>
     /// Übergeht eine Antwort des Gegners auf den besten Zug dessen Drohung (<see cref="ThreatsOf"/>)? Ja, wenn sie weder
-    /// schlägt noch Schach gibt, danach noch eine bedrohte Figur auf ihrem Feld steht und entweder der erste Zug der
-    /// Erwiderung des Lesers sie schlägt oder die Antwort mindestens <see cref="IgnoredThreatPawns"/> Bauern schlechter
-    /// ausgeht als die beste Antwort des Gegners auf den besten Zug. Solche Antworten sind keine echte Wahl und erscheinen
+    /// schlägt noch Schach gibt, danach noch eine bedrohte Figur auf ihrem Feld steht und die Antwort mindestens
+    /// <see cref="IgnoredThreatPawns"/> Bauern schlechter ausgeht als die beste Antwort des Gegners auf den besten Zug —
+    /// bzw. <see cref="IgnoredThreatTakenPawns"/>, wenn der erste Zug der Erwiderung des Lesers die Figur schlägt (seit
+    /// 1.000.1: eine Gegendrohung, nach der das Schlagen nur ausgleicht, bleibt eine echte Wahl). Fälle: Partie 260,
+    /// Fehler 1 (15...Td8 greift die Dame an, 16.Tc1/16.a3) und Fehler 5 (21...b6 greift den Springer c5 an,
+    /// 22.Db3/22.Tfd1 stellen ihn nach 22...bxc5 ein). Solche Antworten sind keine echte Wahl und erscheinen
     /// nicht als Linie (Befund Vereinspartie 260, siehe <see cref="ThreatsOf"/>).
     /// </summary>
     internal static bool IgnoresThreat(PairFacts f, IReadOnlyList<Threat> threats, string replySan, IReadOnlyList<string> answer, string? eval)
@@ -120,13 +123,19 @@ internal static class MoveComparisonPrompts
         if (AfterMove(f.BestFen, replySan) is not { } after) return false;
         var still = threats.Where(t => PieceAt(after, t.Square) == t.Piece).ToList();
         if (still.Count == 0) return false;
-        if (answer.Count > 0 && CaptureSquare(answer[0]) is { } sq && still.Any(t => t.Square == sq)) return true;
-        return ScoreOf(eval) is { } e && ScoreOf(f.BestEval) is { } b && e - b >= IgnoredThreatPawns;
+        if (ScoreOf(eval) is not { } e || ScoreOf(f.BestEval) is not { } b) return false;
+        // Schlägt die Erwiderung die bedrohte Figur, genügt ein klarer Verlust (Gegendrohung wie 22.e4 Dxc5 mit Ausgleich
+        // in Partie 260, Fehler 5, bleibt eine echte Wahl); sonst muss die Antwort deutlich Material kosten.
+        var takes = answer.Count > 0 && CaptureSquare(answer[0]) is { } sq && still.Any(t => t.Square == sq);
+        return e - b >= (takes ? IgnoredThreatTakenPawns : IgnoredThreatPawns);
     }
 
     /// <summary>Ab so vielen Bauern über der Bewertung nach der besten Antwort gilt eine Antwort, die die Drohung übergeht,
     /// als Einsteller.</summary>
     internal const double IgnoredThreatPawns = 3.0;
+
+    /// <summary>Wie <see cref="IgnoredThreatPawns"/>, wenn die Erwiderung die bedrohte Figur gleich schlägt.</summary>
+    internal const double IgnoredThreatTakenPawns = 2.0;
 
     private static string? CaptureSquare(string san)
     {
@@ -192,6 +201,8 @@ internal static class MoveComparisonPrompts
         If a "Concretely" fact says the better move attacks a piece (a direct threat), say so in one short clause (e.g. it
         attacks the queen, your opponent must move it away) and go on with your opponent's best answer to the better move.
         Never discuss answers marked "not a real option" — nobody leaves a piece hanging.
+        Call a piece undefended or hanging only if a fact says "defended by nothing". State who is ahead in material only
+        from the "in pieces" fact, never from the evaluation.
         Never give the evaluation itself as the reason: "the engine rates it higher" or "it keeps the advantage" only
         restate THAT it is better, not WHY. Claim an attack, a threat, a capture or a material gain ONLY if a "Concretely"
         fact says so — if none does, describe what the moves of the lines do (which piece goes where), without inventing
@@ -238,7 +249,7 @@ internal static class MoveComparisonPrompts
                 lines.Add($"- {Numbered(f.WeakFen, [p.San])} ({p.MoverEval(f.MoverWhite)}): {Numbered(f.WeakFen, p.Line)}");
             var top = f.WeakReplies[0].Line;
             var facts = WithForks(detailed ? ExplanationFacts.CheckForks(f.WeakFen, top) : [],
-                ExplanationFacts.FirstMoveAttacks(f.WeakFen, top)
+                ExplanationFacts.FirstMoveAttacks(f.WeakFen, top).Concat(ExplanationFacts.Coverage(f.WeakFen, top))
                     .Concat(ExplanationFacts.LineEvents(f.Fen, top, gainerWhite: !f.MoverWhite, lead: f.WeakSan)));
             if (facts.Count > 0)
                 lines.Add($"Concretely, after {weak} and the opponent's best answer line: {string.Join("; ", facts)}.");
@@ -269,7 +280,7 @@ internal static class MoveComparisonPrompts
                 lines.Add($"- {reply}: evaluation from the reader's view {t.Eval}{Level(t.Eval)}.{answer}");
                 if (t.Answer.Count > 0 && AfterMove(f.BestFen, t.ReplySan) is { } fenAfter)
                 {
-                    var facts = ExplanationFacts.FirstMoveAttacks(fenAfter, t.Answer)
+                    var facts = ExplanationFacts.FirstMoveAttacks(fenAfter, t.Answer).Concat(ExplanationFacts.Coverage(fenAfter, t.Answer))
                         .Concat(ExplanationFacts.LineEvents(f.BestFen, t.Answer, gainerWhite: f.MoverWhite, lead: t.ReplySan)).ToList();
                     if (facts.Count > 0) lines.Add($"  Concretely, after {best} {t.ReplySan} and the reader's reply line: {string.Join("; ", facts)}.");
                 }
@@ -314,7 +325,7 @@ internal static class MoveComparisonPrompts
                 lines.Add($"- {alt} instead of {main}: evaluation from the reader's view {x.Eval}{Level(x.Eval)}{holds}.{engine}");
                 if (x.Line.Count == 0) continue;
                 var facts = WithForks(ExplanationFacts.CheckForks(x.FenAfter, x.Line),
-                    x.SquareFacts.Concat(ExplanationFacts.FirstMoveAttacks(x.FenAfter, x.Line))
+                    x.SquareFacts.Concat(ExplanationFacts.FirstMoveAttacks(x.FenAfter, x.Line).Concat(ExplanationFacts.Coverage(x.FenAfter, x.Line)))
                         .Concat(ExplanationFacts.LineEvents(f.Fen, x.Line, gainerWhite: !f.MoverWhite, lead: f.WeakSan, leads: [.. d.Prefix, x.San])));
                 if (facts.Count > 0) lines.Add($"  Concretely, after {alt}: {string.Join("; ", facts)}.");
             }
@@ -356,7 +367,7 @@ internal static class MoveComparisonPrompts
             if (t.Line.Count == 0) continue;
             var facts = WithForks(ExplanationFacts.CheckForks(t.FenAfter, t.Line),
                 ExplanationFacts.DiscoveredAttacks(t.FenAfter, t.Line)
-                    .Concat(ExplanationFacts.FirstMoveAttacks(t.FenAfter, t.Line))
+                    .Concat(ExplanationFacts.FirstMoveAttacks(t.FenAfter, t.Line).Concat(ExplanationFacts.Coverage(t.FenAfter, t.Line)))
                     .Concat(ExplanationFacts.HangingCaptures(f.BestFen, t.Line, leads: [t.San]))
                     .Concat(ExplanationFacts.LineEvents(f.Fen, t.Line, gainerWhite: f.MoverWhite, lead: f.BestSan, leads: [t.San])));
             if (facts.Count > 0) lines.Add($"  Concretely, after {best} {reply}: {string.Join("; ", facts)}.");

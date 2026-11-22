@@ -164,7 +164,8 @@ public static class ExplanationFacts
         if (net != 0 && (gainerWhite is null || gainerWhite == net > 0))
         {
             events.Add($"{(net > 0 ? "White" : "Black")} ends up ahead in material by {Math.Abs(net)} "
-                       + $"(White took {Taken(gained[true])}, Black took {Taken(gained[false])})");
+                       + $"(White took {Taken(gained[true])}, Black took {Taken(gained[false])}); in pieces: "
+                       + InPieces(gained[true], gained[false]));
             if (DecidedAt(fen, plies, offsetPlies, net > 0) is { } decided) events.Add(decided);
         }
         return events;
@@ -201,7 +202,7 @@ public static class ExplanationFacts
     private static string Label(string fen, int ply, string san, bool first)
     {
         var parts = fen.Split(' ');
-        var whiteToMove = parts.Length < 2 || parts[1] != "b";
+        var whiteToMove = FenFields.WhiteToMove(fen);
         var start = parts.Length >= 6 && int.TryParse(parts[5], out var n) ? n : 1;
         var p = ply + (whiteToMove ? 0 : 1);
         var number = start + p / 2;
@@ -242,6 +243,57 @@ public static class ExplanationFacts
             // Stellung mit getauschtem Zugrecht ungültig — dann eben ohne.
         }
         return result;
+    }
+
+    /// <summary>
+    /// Deckung der Figuren, die der ERSTE Zug einer Linie angreift (1.000.1, Befund Vereinspartie 260, Fehler 5, 21...Tb8:
+    /// „nach 22.Db3 greift die Dame den ungedeckten Springer auf d5 an“ — d5 war durch e6 und Td8 gedeckt): je Ziel aus
+    /// <see cref="FirstMoveAttacks"/> die Angreifer und Verteidiger in der Stellung nach dem Zug — „the knight on d5:
+    /// attacked by the bishop on g2 and the queen on b3; defended by the pawn on e6 and the rook on d8“. Leer bei einem
+    /// Schachgebot oder unlesbarer Stellung; reine Geometrie (Fesselungen und Röntgen zählen nicht).
+    /// </summary>
+    public static List<string> Coverage(string fen, IReadOnlyList<string> sans)
+    {
+        var result = new List<string>();
+        if (sans.Count == 0) return result;
+        try
+        {
+            var board = ChessBoard.LoadFromFen(fen);
+            var move = Array.Find(board.Moves(generateSan: true), m => m.San == sans[0]);
+            if (move is null || move.IsCheck) return result;
+            board.Move(move);
+            if (BoardGeometry.FromFen(board.ToFen()) is not { } geo) return result;
+            var from = move.NewPosition.ToString();
+            var mover = geo.PieceAt(from);
+            if (mover == '\0') return result;
+            var white = char.IsUpper(mover);
+            foreach (var square in geo.AttackedFrom(from))
+            {
+                var target = geo.PieceAt(square);
+                if (target == '\0' || char.IsUpper(target) == white || char.ToLowerInvariant(target) is 'p' or 'k') continue;
+                result.Add(CoverageOf(geo, square));
+            }
+        }
+        catch
+        {
+            // Stellung nicht lesbar — dann eben ohne.
+        }
+        return result;
+    }
+
+    /// <summary>„the knight on d5: attacked by …; defended by …“ (bzw. „defended by nothing — undefended“) für die Figur auf
+    /// <paramref name="square"/>.</summary>
+    internal static string CoverageOf(BoardGeometry geo, string square)
+    {
+        var piece = geo.PieceAt(square);
+        var white = char.IsUpper(piece);
+        static string Names(List<(char Piece, string Square)> ps) => JoinAnd(ps
+            .OrderBy(p => Value(char.ToLowerInvariant(p.Piece))).ThenBy(p => p.Square, StringComparer.Ordinal)
+            .Select(p => $"the {PieceName(char.ToLowerInvariant(p.Piece))} on {p.Square}").ToList());
+        var attackers = geo.Attackers(square, !white);
+        var defenders = geo.Attackers(square, white);
+        return $"the {PieceName(char.ToLowerInvariant(piece))} on {square}: attacked by {(attackers.Count == 0 ? "nothing" : Names(attackers))}; "
+               + (defenders.Count == 0 ? "defended by nothing — undefended" : $"defended by {Names(defenders)}");
     }
 
     /// <summary>
@@ -417,6 +469,34 @@ public static class ExplanationFacts
     {
         'p' => "pawn", 'n' => "knight", 'b' => "bishop", 'r' => "rook", 'q' => "queen", 'k' => "king", _ => "piece",
     };
+
+    /// <summary>
+    /// Die Materialbilanz in Figuren statt Bauerneinheiten (1.000.1, Befund Vereinspartie 260, Fehler 5, 21...Tb8: bei
+    /// −6,43 schrieb der Text „Schwarz netto einen Bauern vorn“ — Schwarz war eine Figur vorn): gleiche Figurenarten heben
+    /// sich auf, Läufer und Springer als Leichtfiguren gegeneinander — „Black is a knight up for a pawn“, „White is a queen
+    /// up for a rook“, „White is a pawn up“.
+    /// </summary>
+    internal static string InPieces(List<char> whiteTook, List<char> blackTook)
+    {
+        static char Class(char t) => t is 'n' or 'b' ? 'm' : t;
+        var classes = new[] { 'q', 'r', 'm', 'p' };
+        int Count(List<char> l, char c) => l.Count(t => Class(t) == c);
+        string Extras(List<char> mine, List<char> theirs) => JoinAnd(classes
+            .Select(c => (Class: c, N: Count(mine, c) - Count(theirs, c)))
+            .Where(x => x.N > 0)
+            .Select(x =>
+            {
+                var types = mine.Where(t => Class(t) == x.Class).Distinct().ToList();
+                var name = x.Class == 'm' ? (types.Count == 1 ? PieceName(types[0]) : "minor piece") : PieceName(x.Class);
+                return x.N == 1 ? $"{(name.StartsWith('a') || name.StartsWith('e') ? "an" : "a")} {name}" : $"{x.N} {name}s";
+            }).ToList());
+        var white = Extras(whiteTook, blackTook);
+        var black = Extras(blackTook, whiteTook);
+        var whiteAhead = whiteTook.Sum(Value) >= blackTook.Sum(Value);
+        var (side, up, down) = whiteAhead ? ("White", white, black) : ("Black", black, white);
+        if (up.Length == 0) return "material is level";
+        return $"{side} is {up} up{(down.Length > 0 ? $" for {down}" : "")}";
+    }
 
     private static string Taken(List<char> pieces) => pieces.Count == 0 ? "nothing"
         : string.Join(", ", pieces.GroupBy(p => p).Select(g => g.Count() == 1 ? PieceName(g.Key) : $"{g.Count()} {PieceName(g.Key)}s"));
