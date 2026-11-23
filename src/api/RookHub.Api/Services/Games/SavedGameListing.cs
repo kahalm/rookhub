@@ -13,8 +13,13 @@ namespace RookHub.Api.Services.Games;
 internal sealed class SavedGameListing
 {
     private readonly AppDbContext _db;
+    private readonly PlayerTitles _titles;
 
-    internal SavedGameListing(AppDbContext db) => _db = db;
+    internal SavedGameListing(AppDbContext db, PlayerTitles? titles = null)
+    {
+        _db = db;
+        _titles = titles ?? new PlayerTitles(db);
+    }
 
     /// <summary>
     /// Welche dieser Plattform-Partien liegen schon bei RookHub? Fuer die Uebersicht auf chess.com/lichess:
@@ -101,6 +106,12 @@ internal sealed class SavedGameListing
         var events = await EventsAsync(rows.Where(r => r.PgnHead != null)
             .Select(r => (r.Id, r.LeagueClubGameId, r.PgnHead)).ToList());
 
+        var titles = await TitlesAsync(rows.Where(r => r.PgnHead != null)
+            .Select(r => (r.Id, r.White, r.Black,
+                r.WhiteElo ?? (elos.TryGetValue(r.Id, out var we) ? we.White : null),
+                r.BlackElo ?? (elos.TryGetValue(r.Id, out var be) ? be.Black : null),
+                r.LeagueClubGameId, r.PgnHead)).ToList());
+
         var healed = new Dictionary<int, int>();
         foreach (var r in rows)
             if (r.MoveCount == null && r.PgnIfUncounted != null)
@@ -135,6 +146,8 @@ internal sealed class SavedGameListing
             WhiteElo = r.WhiteElo ?? (elos.TryGetValue(r.Id, out var e) ? e.White : null),
             BlackElo = r.BlackElo ?? (elos.TryGetValue(r.Id, out var e2) ? e2.Black : null),
             TimeControl = r.TimeControl,
+            WhiteTitle = titles.TryGetValue(r.Id, out var t) ? t.White : null,
+            BlackTitle = titles.TryGetValue(r.Id, out var t2) ? t2.Black : null,
             Analysis = r.GameAnalysisId is int aid && analyses.TryGetValue(aid, out var state) ? state : null,
             ScanId = r.ScanId,
             ClubGameId = r.LeagueClubGameId,
@@ -145,6 +158,32 @@ internal sealed class SavedGameListing
             Classifier2Set = GameClassifier.Clean(r.Classifier2),
             Tags = GameTags.Parse(r.Tags),
         }).ToList();
+    }
+
+    /// <summary>FIDE-Titel je Partie (<see cref="PlayerTitles"/>, 1.009.0) aus dem schon geladenen PGN-Kopf; eine Abfrage für
+    /// die FIDE-IDs der Vereinspartien, eine für die Gegenprobe im Megabase-Verzeichnis. Online-Partien tragen keinen Kopf hier.</summary>
+    private async Task<Dictionary<int, (string? White, string? Black)>> TitlesAsync(
+        List<(int Id, string? White, string? Black, int? WhiteElo, int? BlackElo, int? ClubGameId, string? PgnHead)> rows)
+    {
+        var result = new Dictionary<int, (string? White, string? Black)>();
+        if (rows.Count == 0) return result;
+        var clubIds = rows.Where(r => r.ClubGameId != null).Select(r => r.ClubGameId!.Value).Distinct().ToList();
+        var clubs = clubIds.Count == 0 ? new()
+            : await _db.LeagueClubGames.AsNoTracking().Where(c => clubIds.Contains(c.Id))
+                .Select(c => new { c.Id, W = c.WhiteFide ?? c.WhiteRealFide, B = c.BlackFide ?? c.BlackRealFide })
+                .ToDictionaryAsync(c => c.Id, c => (c.W, c.B));
+        var sides = new List<PlayerTitles.Side>(rows.Count * 2);
+        foreach (var r in rows)
+        {
+            var club = r.ClubGameId is int cid && clubs.TryGetValue(cid, out var c) ? c : (null, null);
+            var (w, b) = PlayerTitles.SidesOf(r.White, r.Black, r.WhiteElo, r.BlackElo, r.PgnHead, club);
+            sides.Add(w);
+            sides.Add(b);
+        }
+        var titles = await _titles.ResolveAsync(sides);
+        for (var i = 0; i < rows.Count; i++)
+            if (titles[2 * i] != null || titles[2 * i + 1] != null) result[rows[i].Id] = (titles[2 * i], titles[2 * i + 1]);
+        return result;
     }
 
     /// <summary>Turnier je Partie (<see cref="SavedGameEventLabel"/>): zwei Abfragen für die ganze Seite (Vereinspartien, Ligen).</summary>

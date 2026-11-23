@@ -254,8 +254,8 @@ export type AnalysisState = 'none' | 'running' | 'done';
               </div>
               <!-- Die Namen führen auf die Partie-SEITE (/games/:id) — kein Dialog mehr (gemeldet 2026-09-23). -->
               <a class="players" [routerLink]="['/games', g.id]">
-                <span class="p"><i class="dot white"></i><span class="name">{{ g.white || '?' }}</span>@if (g.whiteElo) { <span class="elo">({{ g.whiteElo }})</span> }</span>
-                <span class="p"><i class="dot black"></i><span class="name">{{ g.black || '?' }}</span>@if (g.blackElo) { <span class="elo">({{ g.blackElo }})</span> }</span>
+                <span class="p"><i class="dot white"></i><span class="name">@if (g.whiteTitle) {<span class="ptitle">{{ g.whiteTitle }}</span> }{{ g.white || '?' }}</span>@if (g.whiteElo) { <span class="elo">({{ g.whiteElo }})</span> }</span>
+                <span class="p"><i class="dot black"></i><span class="name">@if (g.blackTitle) {<span class="ptitle">{{ g.blackTitle }}</span> }{{ g.black || '?' }}</span>@if (g.blackElo) { <span class="elo">({{ g.blackElo }})</span> }</span>
                 <!-- Turnier (0.954.0): Liga der Vereinspartie oder PGN-Kopf, vom Server; gekürzt, voller Name im Tooltip. -->
                 @if (g.event) {
                   <span class="event" [matTooltip]="g.event">{{ g.event }}</span>
@@ -482,6 +482,8 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .p { display: flex; align-items: center; gap: 6px; min-width: 0; line-height: 1.45; }
     .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .elo { font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); }
+    /* FIDE-Titel vor dem Namen (1.009.0, DESIGN 5.13): klein, fett, Akzentfarbe. */
+    .ptitle { font-weight: 700; font-size: 0.85em; letter-spacing: 0.03em; color: var(--rh-accent); }
     /* Farbmarke wie in chess.coms Zeile — ein Rahmen, damit Weiss auf hellem Grund sichtbar bleibt. */
     .dot { width: 9px; height: 9px; flex-shrink: 0; border: 1px solid color-mix(in srgb, currentColor 45%, transparent); }
     .dot.white { background: #fff; }

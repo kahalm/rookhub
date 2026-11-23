@@ -767,6 +767,19 @@ describe('SharedGameComponent', () => {
     expect(getComputedStyle(pls[1].querySelector('.elo')!).whiteSpace).toBe('nowrap');
   });
 
+  // 1.009.0: FIDE-Titel vom Server vor dem Namen, abgesetzt, mit geschütztem Leerzeichen gebunden; ohne Titel kein Abzeichen.
+  it('shows the FIDE title before the name', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/shared/tok').flush({ ...sharedGame('white'), white: 'Oberschmid, Patrik', whiteElo: 1867,
+      black: 'Grötz, Harald', blackElo: 2249, whiteTitle: null, blackTitle: 'IM' });
+    fixture.detectChanges();
+    const pls = Array.from(fixture.nativeElement.querySelectorAll('.players > .pl')) as HTMLElement[];
+    expect(pls.map(p => p.textContent!.trim())).toEqual(['Oberschmid, Patrik (Elo 1867)', 'IM\u00a0Grötz, Harald (Elo 2249)']);
+    expect(pls[0].querySelector('.ptitle')).toBeNull();
+    expect(pls[1].querySelector('.ptitle')!.textContent).toBe('IM');
+  });
+
   // a1-rk-brettleiste-plus: die Leiste unter dem Brett ragt nicht über das Brett hinaus (angemeldet, mit „+") — geprüft
   // am kleinsten Brett (360 px, die Untergrenze des clamp), wo es am engsten wird.
   it('keeps the button bar below the board within the board width', async () => {

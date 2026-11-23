@@ -190,8 +190,9 @@ public partial class OgMetaService
                 {
                     var g = await _games.GetSharedAsync(id);
                     if (g is null) return null;
-                    var white = string.IsNullOrWhiteSpace(g.White) ? "?" : g.White!;
-                    var black = string.IsNullOrWhiteSpace(g.Black) ? "?" : g.Black!;
+                    // Titel vor dem Namen (1.009.0): „Oberschmid, Patrik – IM Grötz, Harald“
+                    var white = PlayerTitles.WithTitle(g.WhiteTitle, string.IsNullOrWhiteSpace(g.White) ? "?" : g.White!);
+                    var black = PlayerTitles.WithTitle(g.BlackTitle, string.IsNullOrWhiteSpace(g.Black) ? "?" : g.Black!);
                     // Elo im Namen (0.737.0): „Mitteregger, Gottfried (Elo 1826) – Erlacher, Herbert (Elo 1712)"
                     var title = GameTitle(white, g.WhiteElo, black, g.BlackElo);
                     var descParts = new List<string>();

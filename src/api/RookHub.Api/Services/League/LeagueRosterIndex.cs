@@ -166,6 +166,22 @@ public sealed class LeagueRosterIndex
         return None;
     }
 
+    /// <summary>
+    /// Nur die strengste Stufe von <see cref="Match"/>: ALLE Namensteile gleich (Reihenfolge, Komma, Groß/klein, Akzente,
+    /// akademische und Schach-Titel egal, Umlaute in beiden Schreibweisen), mindestens zwei Namensteile, und genau EIN
+    /// Ligaspieler trägt diesen Namen. Für Angaben, die nicht raten dürfen (Spielertitel an gespeicherten Partien, 1.009.0) —
+    /// „Grötz, H." oder „Grötz" allein ergeben hier nichts.
+    /// </summary>
+    public Person? MatchFullName(string? name)
+    {
+        var (last, first, _) = Parts(name ?? string.Empty, false);
+        if (last.Count + first.Count < 2) return null;
+        var found = QueryKeys(name!).First()
+            .SelectMany(k => _byName.TryGetValue(k, out var s) ? s : Enumerable.Empty<Person>())
+            .Distinct().ToList();
+        return found.Count == 1 ? found[0] : null;
+    }
+
     /// <summary>Vorschläge beim Eintippen („like", Wunsch 2026-09-28): jedes getippte Wort muss IRGENDWO im Namen stehen
     /// („bert rud" findet „Bertl, Rudolf", „ertl" auch „Bertl"), in jeder Umlaut-Schreibweise (<see cref="Spellings"/>);
     /// wer alle Wörter als Wortanfang trägt, steht vorn. Eine reine Zahl ist eine FIDE-ID.</summary>

@@ -80,7 +80,8 @@ public partial class OgMetaService
         {
             Boards = [new OgDiagram(fen, g.OwnerSide == "black", last)],
             Kicker = at != null ? $"Position after {at}" : "Chess game",
-            Players = [new OgPlayer(true, Player(g.White), g.WhiteElo), new OgPlayer(false, Player(g.Black), g.BlackElo)],
+            Players = [new OgPlayer(true, PlayerTitles.WithTitle(g.WhiteTitle, Player(g.White)), g.WhiteElo),
+                new OgPlayer(false, PlayerTitles.WithTitle(g.BlackTitle, Player(g.Black)), g.BlackElo)],
             Result = string.IsNullOrWhiteSpace(g.Result) || g.Result == "*" ? null : g.Result,
             Lines = lines,
             Curve = curve,

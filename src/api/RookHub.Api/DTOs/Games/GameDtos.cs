@@ -78,6 +78,13 @@ public class SavedGameDto
     /// <inheritdoc cref="WhiteElo"/>
     public int? BlackElo { get; set; }
 
+    /// <summary>FIDE-Titel der Seiten (1.009.0, <see cref="Services.Games.PlayerTitles"/>: „GM“, „IM“, „FM“ …); <c>null</c> =
+    /// keiner sicher bekannt. Beim Lesen ermittelt, nie gespeichert.</summary>
+    public string? WhiteTitle { get; set; }
+
+    /// <inheritdoc cref="WhiteTitle"/>
+    public string? BlackTitle { get; set; }
+
     /// <summary>Bedenkzeit in PGN-Schreibweise (<c>180+2</c>); <c>null</c> = unbekannt.</summary>
     public string? TimeControl { get; set; }
 
@@ -207,6 +214,12 @@ public class SharedGameDto
 
     /// <summary>Elo/Rating des Schwarzspielers (aus dem PGN-Header <c>BlackElo</c> gelesen).</summary>
     public int? BlackElo { get; set; }
+
+    /// <inheritdoc cref="SavedGameDto.WhiteTitle"/>
+    public string? WhiteTitle { get; set; }
+
+    /// <inheritdoc cref="SavedGameDto.WhiteTitle"/>
+    public string? BlackTitle { get; set; }
 
     /// <summary>"white"/"black", wenn der TEILENDE Besitzer über seinen hinterlegten Plattform-
     /// Username (lichess bzw. chess.com, je nach Quelle) einer Seite zuordenbar ist; sonst null.

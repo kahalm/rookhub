@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.009.0", date: "2026-11-23", changes: [
+    { en: "Games: FIDE titles (GM, IM, FM, CM and the women’s titles) now appear before the player’s name — on the game page, the share link and its preview, and in the game list, e.g. “Oberschmid, Patrik – IM Grötz, Harald”. The title comes from the PGN header, otherwise from the FIDE ID (PGN or linked club game) in the league rosters, otherwise from a name that matches exactly one titled league player (academic titles, comma and order ignored). If in doubt, no title is shown; national titles are not shown.",
+      de: "Partien: FIDE-Titel (GM, IM, FM, CM und die Frauentitel) stehen jetzt vor dem Namen — auf der Partieseite, am Teilen-Link samt Vorschau und in der Partienliste, z. B. „Oberschmid, Patrik – IM Grötz, Harald“. Der Titel kommt aus dem PGN-Kopf, sonst über die FIDE-ID (PGN oder verbundene Vereinspartie) aus den Liga-Meldelisten, sonst über einen Namen, der genau einem betitelten Ligaspieler gehört (akademische Titel, Komma und Reihenfolge egal). Im Zweifel steht kein Titel da; nationale Titel erscheinen nicht." },
+  ] },
   { version: "1.008.0", date: "2026-11-23", changes: [
     { en: "Training goals: time spent in Woodpecker training now counts toward your daily goal — as its own source “Woodpecker” in today’s progress, the tracker, the period breakdown and the daily history table. It always counts as tactics and, like a puzzle, at most 30 minutes per attempt. Course attempts that cycle 1 takes over from the normal course solver are counted only once (as course time), not a second time as Woodpecker time.",
       de: "Trainingsziele: Zeit im Woodpecker-Training zählt jetzt aufs Tagesziel — als eigene Quelle „Woodpecker“ im Heute-Fortschritt, im Tracker, in der Perioden-Aufschlüsselung und in der Tagesliste. Sie gilt immer als Taktik und zählt wie ein Puzzle höchstens 30 Minuten je Versuch. Kursversuche, die Zyklus 1 aus dem normalen Kurs-Löser übernimmt, zählen nur einmal (als Kurszeit) und nicht noch einmal als Woodpecker-Zeit." },

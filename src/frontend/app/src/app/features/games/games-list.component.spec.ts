@@ -214,6 +214,16 @@ describe('GamesListComponent', () => {
     expect(el.querySelector('.tc')!.textContent).toContain('games.tc.plus');
   });
 
+  // 1.009.0: FIDE-Titel vor dem Namen, nur wo der Server einen liefert.
+  it('zeigt den FIDE-Titel vor dem Namen', async () => {
+    const { fixture } = await setupMitPartien([{ ...partie(1), white: 'Oberschmid, Patrik', black: 'Grötz, Harald', blackTitle: 'IM' }]);
+    const el = fixture.nativeElement as HTMLElement;
+
+    const names = Array.from(el.querySelectorAll('.players .name')).map(e => e.textContent!.trim());
+    expect(names).toEqual(['Oberschmid, Patrik', 'IM\u00a0Grötz, Harald']);
+    expect(el.querySelectorAll('.ptitle').length).toBe(1);
+  });
+
   it('ohne Wertung und ohne Bedenkzeit bleiben die Stellen leer', async () => {
     const { fixture } = await setupMitPartien([{ ...partie(1), result: '*' }]);
     const el = fixture.nativeElement as HTMLElement;

@@ -932,6 +932,11 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   `.rh-dots--center` (Kinder wachsen, allein in einer Zeile füllen sie die Box, ihr Punkt fällt damit weg). Nutzer:
   Aufgabenblatt-Liste, Brett-Kopf des E-Book-Lesers (0.808.x, d4-rk-brett-kopf-punkt-umbruch). Leerzeichen zwischen Interpolation und `@if` fest ins Markup schreiben —
   Angular entfernt sie sonst („Spielennoch offen“, 0.751.2).
+- **Spielertitel** (RookHub, 1.009.0): FIDE-Titel (GM, IM, WGM, FM, WIM, CM, WFM, WCM) stehen VOR dem Namen, mit U+00A0
+  daran gebunden, als eigenes Element `.ptitle`: 0,85 em, fett (700), Laufweite 0,03 em, `--rh-accent` — abgehoben vom
+  Namen, ohne Pille oder Rahmen (Partieseite/Teilen-Link `/games/:id`, `/g/:token`, Partienliste `/games`). In Text ohne
+  Auszeichnung (Link-Vorschau) einfach „IM Grötz, Harald“. Nationale Titel (MK, NM …) erscheinen nicht. LeagueHub zeigt
+  Titel bisher als reinen Text vor dem Namen (8.4).
 - Ländernamen ausgeschrieben, nicht als Code (LeagueHub, 0.751.0).
 - **Ergänzungsstrich** („Fortschritt und -Statistiken“) nie allein am Zeilenende: vor dem Strich U+00A0, danach
   Wortverbinder U+2060 („und -⁠Statistiken“, 0.763.0, `i18n-parity.spec`). Vor einem Schrägstrich ebenso:
@@ -1590,6 +1595,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-23 | 1.009.0 · Partien | Spielertitel vor dem Namen (5.13): `.ptitle` 0,85 em, fett, `--rh-accent`, mit U+00A0 an den Namen gebunden, auf Partieseite, Teilen-Link und Partienliste; Link-Vorschau als Text | Titel wie auf Schachseiten üblich vorn und abgehoben, aber ohne Abzeichen, damit die Kopfzeile ruhig bleibt; nicht geregelt, Vorschlag nach Wunsch des Nutzers | Nutzerwunsch 23.11. (Partie 186 „IM Grötz, Harald“) |
 | 2026-11-22 | 1.007.0 · Woodpecker | Entscheidungsfrage beim Einstieg „Zyklus N: Zeit ist um“ (5.6): schmaler Dialog (440 px), kurzer Stand, zwei Abschnitte „Verlängern“ (Tage-Feld mit Vorschlag und Vorschau der neuen Frist) und „Zyklus abschließen“ (ein leiser Satz zu den Folgen); Knöpfe „Später“ · „Zyklus abschließen“ (stroked) · „Um n Tage verlängern“ (Hauptknopf). Nicht blockierend: „Später“ fragt in dieser Sitzung nicht wieder, die Karte trägt dann „Verlängern oder abschließen“ (stroked) statt des Zeitbalkens. Im Löser kommt die Frage VOR dem Aufbau der Aufgabe (keine laufende Uhr dahinter) | Beide Wege sind sinnvoll, keiner ist rückgängig zu machen — deshalb ausdrücklich fragen statt still weiterlaufen oder beenden; Verlängern ist die häufigere Wahl und bekommt den Hauptknopf | Nutzerwunsch 22.11. |
 | 2026-11-22 | 1.006.0 · Turnierseite | Spielernamen öffnen die Begegnungen (8.2): Name als Knopf in Akzentfarbe ohne Unterstreichung, in der Handy-Karte eigenes Ziel neben dem Stern; Dialog mit einer Zeile je Runde, erste offene Runde getönt mit Chip „Nächste Runde“ | Wer einen Spieler anklickt, will seine Gegner und die nächste Paarung sehen; doppelte Unterstreichung je Zeile wäre unruhig | Nutzerwunsch 22.11. |
 | 2026-11-22 | 1.002.0 · Formular-Werkbank | „Partie hier beenden“ als zweiter roter Link vor „Zug löschen“ in der Zeile des Zugs (5.12); Rückfrage über `ConfirmService` mit Zug, SAN und Anzahl Halbzüge, Bestätigen „n Halbzüge löschen“ (Einzahl/Mehrzahl als Schlüsselpaar); Rückgängig in der bestehenden Zeile über dem Zug | Nach dem echten Ende stehen auf Formularen oft Kritzeleien oder Analysezüge, gekürzt wurde bisher per API (Partien 258, 262); die Rückfrage benennt genau, was wegfällt, weil der Name allein nicht sagt, dass Züge gelöscht werden | Nutzerwunsch 22.11. |

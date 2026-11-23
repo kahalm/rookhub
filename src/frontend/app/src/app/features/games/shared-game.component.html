@@ -29,10 +29,11 @@
         }
         <div class="header-main">
           <span class="players">
-            <!-- Name + Elo je Spieler zusammen (a1-rk-elo-verwaist): „(Elo 1689)" brach sonst allein oder in sich um. -->
-            <span class="pl"><strong>{{ game.white || '?' }}</strong>@if (game.whiteElo) { <span class="elo"> (Elo {{ game.whiteElo }})</span> }</span>
+            <!-- Name + Elo je Spieler zusammen (a1-rk-elo-verwaist): „(Elo 1689)" brach sonst allein oder in sich um. FIDE-Titel (1.009.0)
+                 vom Server vor dem Namen, mit geschütztem Leerzeichen daran gebunden. -->
+            <span class="pl"><strong>@if (game.whiteTitle) {<span class="ptitle">{{ game.whiteTitle }}</span> }{{ game.white || '?' }}</strong>@if (game.whiteElo) { <span class="elo"> (Elo {{ game.whiteElo }})</span> }</span>
             –
-            <span class="pl"><strong>{{ game.black || '?' }}</strong>@if (game.blackElo) { <span class="elo"> (Elo {{ game.blackElo }})</span> }</span>
+            <span class="pl"><strong>@if (game.blackTitle) {<span class="ptitle">{{ game.blackTitle }}</span> }{{ game.black || '?' }}</strong>@if (game.blackElo) { <span class="elo"> (Elo {{ game.blackElo }})</span> }</span>
           </span>
           <span class="meta">
             @if (game.result && game.result !== '*') { <span class="result">{{ game.result }}</span> }

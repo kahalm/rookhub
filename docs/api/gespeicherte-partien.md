@@ -111,6 +111,29 @@ ebenso. Fehlt einer Kopie mit `LeagueClubGameId` die Wertung (PGN-Kopf), liefert
 LESEN aus `LeaguePlayers` (FIDE der Seite, bei „Schwaz" die interne; Liga der zugeordneten Paarung zuerst, sonst jüngste
 Meldeliste, `EloI ?? EloN`) — nichts wird gespeichert, ein späteres Aktualisieren der Meldeliste wirkt sofort.
 
+**Spielertitel** (1.009.0, Wunsch 2026-11-23: „Oberschmid, Patrik – IM Grötz, Harald“ im Kopf von Partie 186,
+`Services/Games/PlayerTitles.cs`). Detail (`GET /api/games/{id}`), Teilen-Link (`GET /api/games/shared/{token}`) und Liste
+(`GET /api/games`) tragen `whiteTitle`/`blackTitle` (`GM`, `IM`, `WGM`, `FM`, `WIM`, `CM`, `WFM`, `WCM` oder `null`), die
+Link-Vorschau von `/g/` stellt ihn im og:title und auf der Karte vor den Namen. Ermittelt beim LESEN, nichts wird gespeichert,
+Namen bleiben, wie sie sind. Je Seite der Reihe nach:
+1. PGN-Kopf `[WhiteTitle]`/`[BlackTitle]` mit einem FIDE-Titel (nur der Kopf bis zur ersten Zugzeile, höchstens 2 000 Zeichen).
+2. Bekannte FIDE-ID — `[WhiteFideId]`/`[BlackFideId]`, sonst die der verbundenen Vereinspartie (`WhiteFide ?? WhiteRealFide`)
+   — und der Titel der Liga-Meldelisten (`LeaguePlayers.Title`) dieser ID (über die Saisonen der höchste: FM, später IM → IM).
+   Eine bekannte ID ist verbindlich: ohne Titel dazu bleibt die Seite ohne, auch wenn ein Namensvetter einen trägt.
+3. Sonst der Name (`LeagueRosterIndex.MatchFullName`): ALLE Namensteile gleich — Reihenfolge, Komma, akademische Titel
+   („Mag.“, „Dr.“, „DI“ …), Schachtitel im Namen, Akzente und Umlaut-Schreibweisen egal, mindestens zwei Namensteile — und
+   genau EIN Ligaspieler (mit FIDE-ID) trägt ihn. Gegenprobe im Megabase-Verzeichnis: kennt es denselben Namen unter einer
+   ANDEREN FIDE-ID, gilt der Treffer nicht. Steht eine Elo im PGN, darf sie höchstens 300 neben der Spanne der Meldelisten liegen.
+   „Grötz, H.“ oder nur „Grötz“ ergeben nichts.
+Nur FIDE-Titel: nationale (`MK`, `WMK`, `NM`), Arena- (`AGM` …) und Plattform-Titel (`LM`, `BOT`) nie. Steht der Titel schon im
+Namen („FM Humer, Wolfgang“), kommt er nicht noch einmal. Online-Partien (chess.com/lichess) bekommen keinen (Kontonamen). Der
+Index der Meldelisten wird im `IMemoryCache` gehalten (Schlüssel Anzahl + höchste Id von `LeaguePlayers`, 10 min), je Seite
+der Liste eine Abfrage für die Vereinspartien und eine für die Megabase-Gegenprobe. `LeagueGames.HomeTitle/AwayTitle` bringen
+keine zusätzlichen Titel (Prod 23.11.: jede betitelte ID dort steht auch in `LeaguePlayers`), die Spielervorbereitung hat
+keine Titel. Stand Prod 23.11.2026 (nachgerechnet gegen die Lesedaten): 33 der 236 Partien bekommen einen Titel (37 Seiten),
+Partie 186 „IM“ bei Grötz (FIDE 1605607 über die Vereinspartie 48, ebenso eindeutig über den Namen). Vereinspartien
+(`/club-games/:id`) zeigen noch keinen Titel.
+
 **Deckel je Konto** (Codereview 2026-09-29, A6-007): höchstens `SavedGameService.MaxGamesPerUser` (5 000) Partien
 und `MaxPgnCharsPerUser` (100 Mio. Zeichen PGN, Summe) je Konto, alle Quellen zusammen. `POST /api/games/import`
 meldet jede neue Partie darüber in `failed` mit `reason: "quota"` (HTTP 200); `PUT /api/games/{id}` antwortet bei

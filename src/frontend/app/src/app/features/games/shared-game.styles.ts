@@ -44,6 +44,8 @@ export const SHARED_GAME_STYLES = `
     /* a1-rk-elo-verwaist: Name und Elo brechen nur gemeinsam um, „(Elo 1689)" nie in sich (DESIGN 5.13). */
     .players .pl { display: inline-block; max-width: 100%; }
     .players .elo { font-weight: 400; font-size: 0.8em; white-space: nowrap; color: color-mix(in srgb, currentColor 60%, transparent); }
+    /* FIDE-Titel vor dem Namen (1.009.0, DESIGN 5.13): klein, fett, Akzentfarbe — wie in der Partienliste. */
+    .players .ptitle { font-size: 0.85em; letter-spacing: 0.03em; color: var(--rh-accent); }
     .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.82rem; }
     /* nowrap: „1-0" und das Datum brachen am Tablet in sich um (a1-rk-partie-kopf-tablet). */
     .meta > span {

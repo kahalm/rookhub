@@ -32,7 +32,7 @@ Basis-URL für `og:url`/`og:image`: `App:BaseUrl`; Turnierseite `App:TurnierBase
 
 | Route | Was die Seite ohne Anmeldung zeigt | vorher | nachher (`kind`) |
 |---|---|---|---|
-| `/g/{token}` (+ `/summary`) | geteilte Partie | Titel/Beschreibung (Recap), Bild = Endstellung TEXTFREI (+ Kurve) | Karte: Endstellung mit Zugmarke, Spieler mit Elo, Ergebnis, Ereignis/Datum, Kurve (`game`, `?c=2`) |
+| `/g/{token}` (+ `/summary`) | geteilte Partie | Titel/Beschreibung (Recap), Bild = Endstellung TEXTFREI (+ Kurve) | Karte: Endstellung mit Zugmarke, Spieler mit Titel (1.009.0, „IM Grötz, Harald“, auch im og:title) und Elo, Ergebnis, Ereignis/Datum, Kurve (`game`, `?c=2`) |
 | `/g/{token}?ply=n` | Partie auf Halbzug n (geerntete Aufgabe) | wie `/g` (Endstellung) | Stellung nach n Halbzügen, „Position after 12. Nf5" (`gameply`) |
 | `/g/{token}?train=white\|black` | Fehler-Training | Trainingskarte | unverändert (`train`) |
 | `/g/{token}?roast=id` | Partie + freigegebener Roast | Roast als Beschreibung | unverändert, Bild = Partiekarte |

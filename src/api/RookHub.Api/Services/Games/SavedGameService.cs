@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
@@ -37,17 +38,19 @@ public class SavedGameService
     private readonly SavedGameCorrection _correction;
     private readonly SavedGameImport _import;
     private readonly SavedGameListing _listing;
+    private readonly PlayerTitles _titles;
 
     public SavedGameService(AppDbContext db, GameAnalysisService analyses, RepertoireAnalyzeService repertoires,
-        ILogger<SavedGameService>? logger = null)
+        ILogger<SavedGameService>? logger = null, IMemoryCache? cache = null)
     {
         _db = db;
         var log = logger ?? NullLogger<SavedGameService>.Instance;
-        _sharing = new SavedGameSharing(db);
+        _titles = new PlayerTitles(db, cache);
+        _sharing = new SavedGameSharing(db, _titles);
         _link = new SavedGameAnalysisLink(db, analyses, repertoires);
         _correction = new SavedGameCorrection(db, this);
         _import = new SavedGameImport(db, this, _link, _correction, log);
-        _listing = new SavedGameListing(db);
+        _listing = new SavedGameListing(db, _titles);
     }
 
     // ── Deckel je Konto (A6-007) ─────
@@ -137,6 +140,7 @@ public class SavedGameService
         dto.ScanId = await _db.ScoresheetScans.Where(sc => sc.SavedGameId == g.Id).Select(sc => (int?)sc.Id).FirstOrDefaultAsync();
         dto.ClubGameId = g.LeagueClubGameId;
         (dto.WhiteElo, dto.BlackElo) = await _sharing.WithLeagueEloAsync(g.LeagueClubGameId, dto.WhiteElo, dto.BlackElo);
+        (dto.WhiteTitle, dto.BlackTitle) = await _sharing.TitlesAsync(g, dto.WhiteElo, dto.BlackElo);
         if (dto.ScanId == null && g.LeagueClubGameId is { } clubId)
         {
             var now = DateTime.UtcNow;

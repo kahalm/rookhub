@@ -21,6 +21,9 @@ export interface SavedGame {
   /** Wertung der Seiten (0.526.0, eigene Spalten); `null` = keine bekannt. */
   whiteElo?: number | null;
   blackElo?: number | null;
+  /** FIDE-Titel der Seiten (1.009.0, „GM“, „IM“ …), vom Server beim Lesen ermittelt; `null` = keiner sicher bekannt. */
+  whiteTitle?: string | null;
+  blackTitle?: string | null;
   /** Bedenkzeit in PGN-Schreibweise („180+2"); `null` = unbekannt (Altbestand). */
   timeControl?: string | null;
   /** Stand der verknüpften Analyse (0.515.0); `null` = keine — die Liste zeigt dann den Analysieren-Knopf. */
@@ -112,6 +115,9 @@ export interface SharedGame {
   createdAt: string;
   whiteElo?: number | null;
   blackElo?: number | null;
+  /** FIDE-Titel der Seiten (1.009.0); `null` = keiner bekannt (Vereinspartien liefern ihn noch nicht). */
+  whiteTitle?: string | null;
+  blackTitle?: string | null;
   /** "white"/"black", wenn der Teilende einer Seite zuordenbar ist — initiale Brett-Orientierung. */
   ownerSide?: 'white' | 'black' | null;
   /** Nur Vereinspartie (0.660.0): Id und ob der Betrachter sie korrigieren darf (Hochladender/Verwalter). */

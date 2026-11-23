@@ -22,8 +22,13 @@ namespace RookHub.Api.Services.Games;
 internal sealed class SavedGameSharing
 {
     private readonly AppDbContext _db;
+    private readonly PlayerTitles _titles;
 
-    internal SavedGameSharing(AppDbContext db) => _db = db;
+    internal SavedGameSharing(AppDbContext db, PlayerTitles? titles = null)
+    {
+        _db = db;
+        _titles = titles ?? new PlayerTitles(db);
+    }
 
     /// <summary>Öffentliche Sicht über das ShareToken; null wenn unbekannt.</summary>
     /// <param name="callerUserId">Angemeldeter Aufrufer (oder <c>null</c>): ist er der Besitzer, traegt die Antwort
@@ -38,6 +43,7 @@ internal sealed class SavedGameSharing
             .FirstOrDefaultAsync(p => p.UserId == g.UserId);
         var (whiteElo, blackElo) = await WithLeagueEloAsync(g.LeagueClubGameId,
             ParseEloHeader(g.Pgn, "WhiteElo"), ParseEloHeader(g.Pgn, "BlackElo"));
+        var (whiteTitle, blackTitle) = await TitlesAsync(g, whiteElo, blackElo);
         return new SharedGameDto
         {
             Source = g.Source,
@@ -50,10 +56,28 @@ internal sealed class SavedGameSharing
             CreatedAt = g.CreatedAt,
             WhiteElo = whiteElo,
             BlackElo = blackElo,
+            WhiteTitle = whiteTitle,
+            BlackTitle = blackTitle,
             OwnerSide = DetermineOwnerSide(g, profile),
             OwnGameId = callerUserId is int caller && caller == g.UserId ? g.Id : null,
             Recap = (await GameRecapService.CurrentAsync(_db, g.Id, g.ReviewLanguage))?.Text,
         };
+    }
+
+    /// <summary>FIDE-Titel beider Seiten (<see cref="PlayerTitles"/>, 1.009.0): PGN-Kopf, FIDE-ID aus Kopf oder verbundener
+    /// Vereinspartie (bei „Schwaz“ die interne — die Kopie trägt ohnehin den echten Namen), sonst eindeutiger Name. Online-Partien
+    /// bekommen keinen.</summary>
+    internal async Task<(string? White, string? Black)> TitlesAsync(SavedGame g, int? whiteElo, int? blackElo)
+    {
+        if (SavedGameKinds.OnlineSources.Contains(g.Source)) return (null, null);
+        (string? W, string? B) club = (null, null);
+        if (g.LeagueClubGameId is int id
+            && await _db.LeagueClubGames.AsNoTracking().Where(x => x.Id == id)
+                .Select(x => new { W = x.WhiteFide ?? x.WhiteRealFide, B = x.BlackFide ?? x.BlackRealFide }).FirstOrDefaultAsync() is { } c)
+            club = (c.W, c.B);
+        var (w, b) = PlayerTitles.SidesOf(g.White, g.Black, whiteElo, blackElo, g.Pgn, club);
+        var titles = await _titles.ResolveAsync([w, b]);
+        return (titles[0], titles[1]);
     }
 
     /// <summary>Welche Seite spielte der Besitzer? Vergleich der Spielernamen mit seinem
