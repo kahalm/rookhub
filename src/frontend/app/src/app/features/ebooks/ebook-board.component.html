@@ -135,14 +135,20 @@
     <!-- Statuszeile: Zustand + „Nochmal“ + Lösung zeigen in EINER Zeile; der Hinweis „jeder Zug, der das Ergebnis hält“
          steht als Tooltip/Beschreibung daran statt als eigene Zeile. -->
     @if (solveState() !== 'idle' || !engineLineBusy()) {
-    <div class="eb-solve" role="status" [class.eb-solve--done]="solveState() === 'solved'"
+    <div class="eb-solve" role="status" [class.eb-solve--done]="solveState() === 'solved'" [class.eb-solve--wrong]="wrongAt() != null"
          [class.eb-solve--idle]="solveState() === 'idle'" [attr.title]="solveState() === 'running' ? ('ebooks.board.anyMoveHint' | translate) : null">
       @switch (solveState()) {
         @case ('running') {
+          @if (wrongAt() != null) {
+          <!-- Fehlzug (1.010.0, wie in den Puzzle-Modi): er bleibt stehen, Stockfish widerlegt ihn; zurück geht es hier. -->
+          <mat-icon class="eb-wrong-icon">close</mat-icon><span class="eb-solve-text">{{ 'ebooks.board.wrongMove' | translate }}</span>
+          <button mat-button type="button" class="eb-take-back" (click)="takeBackWrong()"><mat-icon>undo</mat-icon>{{ 'ebooks.reader.undo' | translate }}</button>
+          } @else {
           <mat-icon>{{ checking() ? 'hourglass_top' : 'psychology' }}</mat-icon>
           <!-- „Gegner zuerst“ (0.975.0): erst „Gegner zieht“, dann mit der Farbe, die man spielt — sonst der gewohnte Satz. -->
           <span class="eb-solve-text">{{ (checking() ? 'ebooks.board.checking' : leadPending ? 'ebooks.board.opponentMovesFirst'
             : !diagram.opponentFirst ? 'ebooks.reader.yourMove' : userColor === 'w' ? 'ebooks.board.yourMoveWhite' : 'ebooks.board.yourMoveBlack') | translate }}<span class="sr-only"> {{ 'ebooks.board.anyMoveHint' | translate }}</span></span>
+          }
         }
         @case ('solved') {
           <mat-icon>check_circle</mat-icon><span class="eb-solve-text">{{ (mistake() ? 'ebooks.board.solvedWithMistake' : 'ebooks.reader.solved') | translate }}</span>

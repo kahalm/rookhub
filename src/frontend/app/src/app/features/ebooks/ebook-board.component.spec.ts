@@ -273,7 +273,7 @@ describe('EbookBoardComponent', () => {
     expect(c.mode()).toBe('view');
   });
 
-  it('Lösen einfach: falscher Zug wird zurückgenommen, Buchzug angenommen, Antwort kommt von selbst', fakeAsync(() => {
+  it('Lösen einfach: falscher Zug bleibt bis „Zug zurücknehmen“ (Engine weg: ohne Antwort), Buchzug angenommen, Antwort kommt von selbst', fakeAsync(() => {
     const c = make().componentInstance;
     c.setSolveStyle('easy');
     c.setMode('solve');
@@ -281,7 +281,11 @@ describe('EbookBoardComponent', () => {
     expect(c.solutionText).toBe('17… Rxh2+ 18. Kxh2 Rh8+');
     c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
     expect(c.played().length).toBe(1);
-    tick(700);
+    tick(700); flushMicrotasks();
+    expect(c.played().length).toBe(1);
+    expect(c.wrongAt()).toBe(0);
+    expect(c.mistake()).toBeFalse();   // „einfach“ merkt sich keinen Fehler
+    c.takeBackWrong();
     expect(c.played().length).toBe(0);
     c.onBoardMove({ from: 'h8', to: 'h2', san: 'Rxh2+', fen: AFTER_RXH2 });
     tick(500);
@@ -341,20 +345,140 @@ describe('EbookBoardComponent', () => {
     expect(EbookBoardComponent.scoreCp({ mate: -3 }, D.fen)).toBe(-9997);
   });
 
-  it('Lösen Training: ein falscher Zug sagt nur „falsch“, wird zurückgenommen, man sucht weiter; gelöst „mit Fehler“', fakeAsync(() => {
-    const c = make().componentInstance;
-    c.setMode('solve');
-    c.setSolveStyle('training');
-    // Stockfish hält Sh3 für deutlich schlechter als Txh2+ → falsch.
+  /** Stockfish-Attrappe: die ersten zwei Aufrufe bewerten Sh3 deutlich schlechter als Txh2+ (→ falsch), danach antwortet
+   *  sie mit `replies` der Reihe nach (Widerlegung bzw. Antworten abseits der Lösung). */
+  function wrongThenReplies(replies: string[]): void {
     let n = 0;
-    stockfish.getBestMove.and.callFake(() => Promise.resolve({ move: 'a1a2', eval: '0', score: { cp: n++ === 0 ? 0 : -900 } } as never));
+    stockfish.getBestMove.and.callFake(() => {
+      const k = n++;
+      return Promise.resolve((k < 2 ? { move: 'e1e2', eval: '0', score: { cp: k === 0 ? 0 : -900 } }
+        : { move: replies[k - 2] ?? '', eval: '0', score: { cp: 0 } }) as never);
+    });
+  }
+  const fenAfter = (fen: string, ...ucis: string[]) => {
+    const ch = new Chess(fen);
+    for (const u of ucis) ch.move({ from: u.slice(0, 2), to: u.slice(2, 4) });
+    return ch.fen();
+  };
+
+  it('Lösen Training (1.010.0, wie im Puzzle-Löser): ein falscher Zug bleibt stehen, Stockfish widerlegt ihn; „Zug zurücknehmen“ nimmt beide Halbzüge zurück; gelöst „mit Fehler“', fakeAsync(() => {
+    const fixture = make();
+    const c = fixture.componentInstance;
+    const el: HTMLElement = fixture.nativeElement;
+    expect(c.solveStyle()).toBe('training');
+    wrongThenReplies(['e1e2']);
     c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
     flushMicrotasks();
-    tick(700);
-    expect(c.solveState()).toBe('running');           // keine Lösung vorgespielt
-    expect(c.played()).toEqual([]);                    // falscher Zug zurückgenommen
+    expect(c.wrongAt()).toBe(0);
     expect(c.mistake()).toBeTrue();
     expect(TestBed.inject(SnackbarService).quick).toHaveBeenCalledWith('ebooks.board.wrongMove');
+    expect(c.played().map(m => m.san)).toEqual(['Nh3']);   // nicht mehr automatisch zurückgenommen
+    expect(c.playable()).toBeFalse();                       // Widerlegung läuft
+    tick(500); flushMicrotasks();
+    expect(stockfish.getBestMove.calls.count()).toBe(3);
+    expect(stockfish.getBestMove.calls.mostRecent().args).toEqual([WRONG, EbookBoardComponent.CHECK_DEPTH]);
+    expect(c.played().map(m => m.uci)).toEqual(['f4h3', 'e1e2']);   // Gegenzug gespielt
+    expect(c.solveState()).toBe('running');                        // keine Lösung vorgespielt
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-solve--wrong')).not.toBeNull();
+    const back = el.querySelector<HTMLButtonElement>('.eb-take-back')!;
+    expect(back.textContent).toContain('ebooks.reader.undo');
+    back.click();
+    expect(c.played()).toEqual([]);
+    expect(c.wrongAt()).toBeNull();
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-take-back')).toBeNull();
+    // Jetzt die Lösung: gilt, aber „mit Fehler“.
+    c.onBoardMove({ from: 'h8', to: 'h2', san: 'Rxh2+', fen: AFTER_RXH2 });
+    tick(500);
+    c.onBoardMove({ from: 'a8', to: 'h8', san: 'Rh8+', fen: fenAfter(AFTER_KXH2, 'a8h8') });
+    expect(c.solveState()).toBe('solved');
+    expect(c.mistake()).toBeTrue();
+    tick(EbookBoardComponent.AUTO_NEXT_DELAY_MS);
+  }));
+
+  it('Lösen nach Fehlzug: abseits der Lösung weiterspielen (Stockfish antwortet); Zurücknehmen geht paarweise bis vor den Fehlzug', fakeAsync(() => {
+    const c = make().componentInstance;
+    wrongThenReplies(['e1e2', 'e2e1']);
+    c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
+    flushMicrotasks(); tick(500); flushMicrotasks();
+    const off = fenAfter(WRONG, 'e1e2', 'a8a7');
+    c.onBoardMove({ from: 'a8', to: 'a7', san: 'Ra7', fen: off });
+    expect(c.played().length).toBe(3);
+    tick(500); flushMicrotasks();
+    expect(c.played().map(m => m.uci)).toEqual(['f4h3', 'e1e2', 'a8a7', 'e2e1']);
+    expect(c.solveState()).toBe('running');
+    c.takeBackWrong();
+    expect(c.played().map(m => m.uci)).toEqual(['f4h3', 'e1e2']);
+    expect(c.wrongAt()).toBe(0);    // Fehlzug steht noch
+    c.takeBackWrong();
+    expect(c.played()).toEqual([]);
+    expect(c.wrongAt()).toBeNull();
+  }));
+
+  it('Lösen nach Fehlzug: Zurücknehmen während Stockfish noch rechnet nimmt nur den Zug zurück, die späte Antwort wird verworfen', fakeAsync(() => {
+    const c = make().componentInstance;
+    let release!: (v: unknown) => void;
+    let n = 0;
+    stockfish.getBestMove.and.callFake(() => n++ < 2
+      ? Promise.resolve({ move: 'e1e2', eval: '0', score: { cp: n === 1 ? 0 : -900 } } as never)
+      : new Promise(r => { release = r; }) as never);
+    c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
+    flushMicrotasks(); tick(500);
+    c.takeBackWrong();
+    expect(c.played()).toEqual([]);
+    release({ move: 'e1e2', eval: '0' });
+    flushMicrotasks();
+    expect(c.played()).toEqual([]);
+    expect(c.playable()).toBeTrue();
+  }));
+
+  it('Lösen nach Fehlzug: Diagrammwechsel während der Widerlegung — die Antwort landet nicht auf dem neuen Diagramm', fakeAsync(() => {
+    const fixture = make();
+    const c = fixture.componentInstance;
+    let release!: (v: unknown) => void;
+    let n = 0;
+    stockfish.getBestMove.and.callFake(() => n++ < 2
+      ? Promise.resolve({ move: 'e1e2', eval: '0', score: { cp: n === 1 ? 0 : -900 } } as never)
+      : new Promise(r => { release = r; }) as never);
+    c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
+    flushMicrotasks(); tick(500);
+    fixture.componentRef.setInput('diagram', { ...D, id: 12 });
+    fixture.detectChanges();
+    expect(c.wrongAt()).toBeNull();
+    release({ move: 'e1e2', eval: '0' });
+    flushMicrotasks();
+    expect(c.played()).toEqual([]);
+    expect(c.solveState()).toBe('running');
+  }));
+
+  it('Lösen: ein abweichender Zug, der selbst mattsetzt, ist richtig — auch ohne Engine', fakeAsync(() => {
+    const Q: EbookDiagram = { ...D, id: 13, fen: '7k/8/6K1/8/8/8/8/Q7 w - - 0 1', solutionUci: 'a1a8', solutionSan: 'Qa8#', solutionText: '1.Qa8#' };
+    const c = make(Q).componentInstance;
+    c.toggleAutoNext();
+    stockfish.getBestMove.and.rejectWith(new Error('weg'));
+    c.onBoardMove({ from: 'a1', to: 'g7', san: 'Qg7#', fen: fenAfter(Q.fen, 'a1g7') });
+    flushMicrotasks();
+    expect(c.solveState()).toBe('solved');
+    expect(c.wrongAt()).toBeNull();
+    expect(c.mistake()).toBeFalse();
+    c.toggleAutoNext();
+  }));
+
+  it('Lösen: ein Fehlzug, der die Partie beendet (Patt), bekommt keine Antwort — nur zurücknehmen', fakeAsync(() => {
+    const P: EbookDiagram = { ...D, id: 14, fen: '7k/8/5K2/8/8/8/8/6Q1 w - - 0 1', solutionUci: 'g1g7', solutionSan: 'Qg7#', solutionText: '1.Qg7#' };
+    const c = make(P).componentInstance;
+    let n = 0;
+    stockfish.getBestMove.and.callFake(() => Promise.resolve({ move: '', eval: '0', score: n++ === 0 ? { cp: 0 } : { mate: 1 } } as never));
+    const stale = fenAfter(P.fen, 'g1g6');
+    expect(new Chess(stale).isStalemate()).toBeTrue();
+    c.onBoardMove({ from: 'g1', to: 'g6', san: 'Qg6', fen: stale });
+    flushMicrotasks(); tick(500); flushMicrotasks();
+    expect(c.wrongAt()).toBe(0);
+    expect(stockfish.getBestMove.calls.count()).toBe(2);   // nur die Prüfung, keine Widerlegung
+    expect(c.played().length).toBe(1);
+    c.takeBackWrong();
+    expect(c.played()).toEqual([]);
   }));
 
   it('Training (0.825.0, „wie beim Kurs“): beim Lösen und Kalkulieren bleibt die Buchstellung stehen, Züge gehen über das Viz-Brett', fakeAsync(() => {
@@ -480,7 +604,7 @@ describe('EbookBoardComponent', () => {
       tick(EbookBoardComponent.AUTO_NEXT_DELAY_MS);
     }));
 
-    it('Gegner zuerst: ein falscher Löserzug wird zurückgenommen, der Gegnerzug bleibt stehen; Training zählt den Fehler', fakeAsync(() => {
+    it('Gegner zuerst: ein falscher Löserzug lässt sich zurücknehmen, der Gegnerzug bleibt stehen; Training zählt den Fehler', fakeAsync(() => {
       const fixture = make(A);
       const c = fixture.componentInstance;
       expect(c.solveStyle()).toBe('training');
@@ -489,9 +613,12 @@ describe('EbookBoardComponent', () => {
       const wrong = after('d8a8', 'c6c7').move;
       c.onBoardMove(wrong as never);
       flushMicrotasks();
-      tick(700);
-      expect(c.played().map(m => m.san)).toEqual(['Ra8']);
+      tick(700); flushMicrotasks();
+      // Die Widerlegung „a1a2“ passt nicht zur Stellung → keine Antwort; der Fehlzug steht, bis man ihn zurücknimmt.
+      expect(c.played().map(m => m.san)).toEqual(['Ra8', 'Rc7']);
       expect(c.mistake()).toBeTrue();
+      c.takeBackWrong();
+      expect(c.played().map(m => m.san)).toEqual(['Ra8']);
       expect(c.playable()).toBeTrue();
     }));
 

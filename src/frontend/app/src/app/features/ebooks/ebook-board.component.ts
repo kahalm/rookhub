@@ -46,8 +46,9 @@ export interface EbookGameLine {
   sans: string[];
   fens: string[];
 }
-/** Lösen: in beiden Arten wird ein falscher Zug zurückgenommen und man sucht weiter (Nutzerwunsch 20.10.2026: keine Lösung
- *  vorspielen); „Training“ merkt sich den Fehler und meldet am Ende „gelöst mit Fehler“. Seit 0.825.0 bleibt im „Training“
+/** Lösen: in beiden Arten bleibt ein falscher Zug stehen, Stockfish spielt die Widerlegung, „Zug zurücknehmen“ führt zurück
+ *  und man sucht weiter (wie in den Puzzle-Modi, 1.010.0; keine Lösung vorspielen, Nutzerwunsch 20.10.2026); „Training“
+ *  merkt sich den Fehler und meldet am Ende „gelöst mit Fehler“. Seit 0.825.0 bleibt im „Training“
  *  beim Lösen und Kalkulieren außerdem die Buchstellung stehen — die Züge stehen nur als Text da, wie im Kurs-Training. */
 export type EbookSolveStyle = 'easy' | 'training';
 /** Gegen welche Lösung gelöst wird: die gespeicherte (Buch bzw. bei der Prüfung gespeicherte Engine-Linie) oder Stockfish jetzt. */
@@ -63,7 +64,7 @@ export const ENGINE_SOLUTION_PLIES = 7;
  * - **Kalkulieren** — wie der Kalkulations-Modus der Kurse: Varianten werden als Baum notiert (je Diagramm auf diesem Gerät
  *   gemerkt), jede Linie lässt sich später im Analysebrett prüfen; die Engine-Leiste rechnet die gerade gewählte Stellung.
  * - **Lösen** — gegen die gespeicherte Lösung (Buch bzw. Engine-Linie der Prüfung) oder eine jetzt im Browser gerechnete
- *   Stockfish-Lösung; ein falscher Zug wird zurückgenommen, „Training“ merkt sich den Fehler. WER löst, sagt der Server je
+ *   Stockfish-Lösung; ein falscher Zug bleibt stehen und wird widerlegt (zurücknehmen, weitersuchen), „Training“ merkt sich den Fehler. WER löst, sagt der Server je
  *   Diagramm (0.975.0, `solvable`/`opponentFirst` aus `BookSolverLine.ForReader` — die Regel wird hier NICHT nachgebaut):
  *   bei `opponentFirst` wird der erste Zug der Linie vorgespielt und der Löser hat die andere Farbe; bei `solvable: false`
  *   gibt es den Modus für dieses Diagramm nicht (die Buchlinie lässt sich unter „Ansehen“ aufklappen).
@@ -173,6 +174,11 @@ export class EbookBoardComponent implements OnChanges {
   readonly checking = signal(false);
   /** Vom Buch (bzw. der gespeicherten Linie) abgewichen, aber gleichwertig — Antworten kommen jetzt von Stockfish. */
   readonly deviated = signal(false);
+  /** Falscher Zug steht auf dem Brett (1.010.0, wie im Puzzle-Löser): Index des Fehlzugs in {@link played}, sonst `null`.
+   *  Stockfish spielt die Widerlegung, man darf abseits der Lösung weiterspielen; gelöst wird erst nach „Zug zurücknehmen“. */
+  readonly wrongAt = signal<number | null>(null);
+  /** Zählt bei jedem Neubeginn/Zurücknehmen hoch — eine danach eintreffende Stockfish-Widerlegung wird verworfen. */
+  private refuteEpoch = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
   /** Pause, bevor der Gegnerzug einer „Gegner zuerst“-Aufgabe vorgespielt wird (wie die Antwortzüge in {@link advance}). */
   static readonly LEAD_DELAY_MS = 450;
@@ -302,6 +308,8 @@ export class EbookBoardComponent implements OnChanges {
     else if (this.solveSkipped && this.mode() === 'view') this.mode.set('solve');
     this.solveSkipped = false;
     this.played.set([]);
+    this.wrongAt.set(null);
+    this.refuteEpoch++;
     this.engineLine.set(null);
     this.showSolution.set(false);
     this.peek.set(false);
@@ -330,6 +338,8 @@ export class EbookBoardComponent implements OnChanges {
     this.solveState.set('idle');
     this.maiaThinking.set(false);
     this.solveSkipped = false;
+    this.wrongAt.set(null);
+    this.refuteEpoch++;
     this.mode.set(m);
     // „Gegner zuerst“: beim Lösen aus Sicht des Lösers, sonst wie das Buch (Seite am Zug unten).
     if (this.diagram?.opponentFirst) this.flipped.set(this.userColor === 'b');
@@ -510,6 +520,8 @@ export class EbookBoardComponent implements OnChanges {
   startSolving(): void {
     this.clearTimer();
     this.played.set([]);
+    this.wrongAt.set(null);
+    this.refuteEpoch++;
     this.mistake.set(false);
     this.deviated.set(false);
     this.checking.set(false);
@@ -560,6 +572,7 @@ export class EbookBoardComponent implements OnChanges {
   }
 
   private solveMove(m: UserBoardMove, uci: string): void {
+    if (this.wrongAt() != null) { this.offPathMove(m, uci); return; }
     const line = this.solutionLine;
     const idx = this.played().length;
     if (idx >= line.length || idx < this.lead.length || this.solveState() !== 'running' || this.checking()) return;
@@ -589,8 +602,12 @@ export class EbookBoardComponent implements OnChanges {
         this.deviated.set(true);
         this.snackbar.quick(this.translate.instant('ebooks.board.alternativeOk'));
         this.advance();
+      } else if (EbookBoardComponent.isMate(m.fen)) {
+        // Ein abweichender Zug, der selbst mattsetzt, ist richtig — auch wenn die Bewertung (Engine weg) nichts sagt.
+        this.deviated.set(true);
+        this.markSolved();
       } else {
-        this.rejectMove();
+        this.rejectMove(idx);
       }
       this.cdr.markForCheck();
     });
@@ -603,12 +620,53 @@ export class EbookBoardComponent implements OnChanges {
     return this.solveSource() === 'stored' && this.diagram?.solutionCheck !== 'doubtful';
   }
 
-  /** Falscher Zug: nur „falsch“ sagen und zurücknehmen — weitersuchen; „Training“ merkt sich den Fehler. */
-  private rejectMove(): void {
+  /** Falscher Zug (1.010.0, wie in den Puzzle-Modi): „falsch“ sagen, der Zug bleibt stehen, Stockfish widerlegt ihn;
+   *  zurück geht es über {@link takeBackWrong}. „Training“ merkt sich den Fehler. */
+  private rejectMove(idx: number): void {
     if (this.solveStyle() === 'training') this.mistake.set(true);
     this.snackbar.quick(this.translate.instant('ebooks.board.wrongMove'));
-    this.timer = setTimeout(() => { this.played.update(l => l.slice(0, -1)); this.cdr.markForCheck(); }, 600);
+    this.wrongAt.set(idx);
+    this.refute();
   }
+
+  /** Abseits der Lösung weiterspielen: der Zug bleibt, Stockfish antwortet (Partieende: keine Antwort mehr). */
+  private offPathMove(m: UserBoardMove, uci: string): void {
+    if (this.solveState() !== 'running') return;
+    this.played.update(l => [...l, { san: m.san, fen: m.fen, uci }]);
+    this.refute();
+  }
+
+  /** Stockfish spielt den besten Gegenzug zur aktuellen Stellung — verworfen, wenn inzwischen zurückgenommen, neu begonnen
+   *  oder das Diagramm gewechselt wurde. Steht die Partie (Matt/Patt), gibt es nichts zu antworten. */
+  private refute(): void {
+    if (EbookBoardComponent.isOver(this.boardFen())) return;
+    const epoch = this.refuteEpoch;
+    const id = this.diagram.id;
+    this.clearTimer();
+    this.timer = setTimeout(async () => {
+      let u: string | null;
+      try { u = (await this.stockfish.getBestMove(this.boardFen(), EbookBoardComponent.CHECK_DEPTH)).move || null; } catch { u = null; }
+      if (epoch !== this.refuteEpoch || this.diagram.id !== id || this.mode() !== 'solve' || this.wrongAt() == null) return;
+      if (u && !this.isUserTurn()) this.pushUci(u);
+      this.cdr.markForCheck();
+    }, 450);
+  }
+
+  /** „Zug zurücknehmen“ nach einem Fehlzug: den letzten eigenen Zug samt Antwort (läuft die Antwort noch: nur den Zug).
+   *  Wie im Puzzle-Löser geht nur das letzte Paar zurück; erst wenn der Fehlzug selbst weg ist, sucht man wieder die Lösung. */
+  takeBackWrong(): void {
+    const at = this.wrongAt();
+    if (at == null) return;
+    this.refuteEpoch++;
+    this.clearTimer();
+    const n = this.isUserTurn() ? 2 : 1;
+    this.played.update(l => l.slice(0, Math.max(at, l.length - n)));
+    if (this.played().length <= at) this.wrongAt.set(null);
+    this.cdr.markForCheck();
+  }
+
+  private static isMate(fen: string): boolean { try { return new Chess(fen).isCheckmate(); } catch { return false; } }
+  private static isOver(fen: string): boolean { try { return new Chess(fen).isGameOver(); } catch { return true; } }
 
   /**
    * Hält der gespielte Zug das Ergebnis? Stockfish bewertet die Stellung nach dem Zug und die Vergleichsstellung (nach dem

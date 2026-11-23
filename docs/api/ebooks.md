@@ -267,7 +267,8 @@ erste muss legal sein, sonst KEINE Lösung. Gespeichert: `SolutionUci`, `Solutio
 `SolutionPage`; die FEN bekommt Zugrecht + Zugnummer der Lösung. Migration setzt erkannte Bücher zurück auf Pending.
 Gemessen 14.10.: Woodpecker 1 117 von 1 128 mit Lösung, erster Zug = Kurs 88 bei 1 113; Grooten 824 von 995 (Weg 2).
 **Leser**: „Lösen“ (Hauptaktion, wenn eine Lösung da ist) — Züge gegen die Linie geprüft, Antworten nach 450 ms, falscher Zug
-600 ms sichtbar, dann zurück; „Lösung zeigen“ mit Linie, Absatz und Sprung zur Lösungsseite.
+bleibt stehen und Stockfish spielt die Widerlegung (seit 1.010.0, wie die Puzzle-Modi; vorher 600 ms sichtbar, dann zurück),
+„Zug zurücknehmen“ in der Statuszeile nimmt Zug + Antwort zurück, Weiterspielen abseits der Lösung möglich; „Lösung zeigen“ mit Linie, Absatz und Sprung zur Lösungsseite.
 
 ## Stockfish-Prüfung + Engine-Lösungen (0.772.0)
 
@@ -549,8 +550,9 @@ gesperrt (Scope-Zaun).
 Die Brett-Leiste ist eine eigene Komponente (`features/ebooks/ebook-board.component.*`, `app-ebook-board`, Eingabe das
 gewählte Diagramm). Modi: **Ansehen**; **Ziehen** (Figuren frei, Liste mit Zurücknehmen); **Kalkulieren** (Variantenbaum wie
 der Kalkulations-Modus der Kurse — `calc-tree.util` + `app-calc-lines`, je Diagramm in `localStorage` `rh.ebooks.calc.<id>`,
-eine Linie öffnet `/analysis?fen=&moves=`); **Lösen** — Art „Einfach“ (falscher Zug wird zurückgenommen) oder „Training“
-(erster Fehler = nicht gelöst, das Brett spielt die Lösung vor), Quelle „gespeichert“ (Buch- bzw. Engine-Linie der
+eine Linie öffnet `/analysis?fen=&moves=`); **Lösen** — Art „Einfach“ oder „Training“ (merkt sich den Fehler: „gelöst mit
+Fehler“; Buchstellung bleibt stehen, Züge auf dem Viz-Brett) — in beiden bleibt ein falscher Zug stehen, Stockfish widerlegt
+ihn (`CHECK_DEPTH`), „Zug zurücknehmen“ führt paarweise zurück (`wrongAt`/`takeBackWrong`, 1.010.0), Quelle „gespeichert“ (Buch- bzw. Engine-Linie der
 Prüfung) oder „Stockfish jetzt“ (7 Halbzüge, `StockfishService.getBestMove` Tiefe 16 im Browser; ohne gespeicherte Lösung
 voreingestellt); **Maia** (man spielt die Seite am Zug, Maia antwortet über `MaiaEngineService.chooseMove` in wählbarer
 Stärke; Modell wird erst auf Knopfdruck geladen, ~46 MB). Engine-Knopf: `LiveEngineSession` + `app-live-engine-panel`

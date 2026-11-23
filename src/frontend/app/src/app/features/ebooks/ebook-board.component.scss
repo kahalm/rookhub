@@ -27,9 +27,10 @@
   > mat-icon { flex: none; font-size: 20px; width: 20px; height: 20px; }
 }
 .eb-solve--idle { background: transparent; color: var(--mat-sys-on-surface-variant); }
-.eb-sol-toggle, .eb-again, .eb-peek { flex: none; margin-left: auto; }
-.eb-again + .eb-sol-toggle, .eb-again + .eb-peek, .eb-peek + .eb-sol-toggle { margin-left: 0; }
+.eb-sol-toggle, .eb-again, .eb-take-back, .eb-peek { flex: none; margin-left: auto; }
+.eb-again + .eb-sol-toggle, .eb-again + .eb-peek, .eb-take-back + .eb-sol-toggle, .eb-take-back + .eb-peek, .eb-peek + .eb-sol-toggle { margin-left: 0; }
 .eb-maia-state { color: var(--mat-sys-on-surface-variant); margin-right: 6px; }
+.eb-solve--wrong { background: color-mix(in srgb, var(--rh-error) 14%, transparent); > mat-icon { color: var(--rh-error); } }
 .eb-solve--done { background: color-mix(in srgb, var(--rh-success) 18%, transparent); mat-icon { color: var(--rh-success); } }
 .eb-solution { padding: 6px 10px; border-left: 3px solid var(--mat-sys-primary); }
 .eb-solution-line { margin: 0 0 4px; font-weight: 500; }
