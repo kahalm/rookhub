@@ -53,7 +53,7 @@ describe('formatDuration', () => {
 describe('orderHistory', () => {
   const day = (date: string): TrackerDay => ({
     date, totalSeconds: 0,
-    bySource: { randomPuzzleSeconds: 0, courseBookSeconds: 0, chessableSeconds: 0 },
+    bySource: { randomPuzzleSeconds: 0, courseBookSeconds: 0, chessableSeconds: 0, woodpeckerSeconds: 0 },
     byTheme: { openingSeconds: 0, middlegameSeconds: 0, endgameSeconds: 0, tacticsSeconds: 0, otherSeconds: 0 },
     playGames: 0, status: 'none', hasManual: false,
   });
@@ -110,15 +110,23 @@ describe('buildGoalTracker', () => {
   });
 });
 
+describe('SOURCE_KEYS', () => {
+  // Spiegel von SourceBreakdownDto (API) — Gegenstück: WoodpeckerProgressTests.SourceBreakdownDto_FieldsAreTheFourSources.
+  it('lists the four sources in display order', () => {
+    expect(SOURCE_KEYS.map(k => k.key)).toEqual(['randomPuzzleSeconds', 'courseBookSeconds', 'chessableSeconds', 'woodpeckerSeconds']);
+  });
+});
+
 describe('breakdownRows', () => {
   it('returns only non-zero buckets with share-of-total percent, in key order', () => {
     const rows = breakdownRows(
-      { randomPuzzleSeconds: 300, courseBookSeconds: 0, chessableSeconds: 100 },
+      { randomPuzzleSeconds: 300, courseBookSeconds: 0, chessableSeconds: 50, woodpeckerSeconds: 50 },
       SOURCE_KEYS);
-    expect(rows.map(r => r.label)).toEqual(['randomPuzzle', 'chessable']); // courseBook (0) gefiltert
+    expect(rows.map(r => r.label)).toEqual(['randomPuzzle', 'chessable', 'woodpecker']); // courseBook (0) gefiltert
     expect(rows[0].seconds).toBe(300);
     expect(rows[0].pct).toBe(75);   // 300 / 400
-    expect(rows[1].pct).toBe(25);
+    expect(rows[1].pct).toBe(13);   // 50 / 400, gerundet
+    expect(rows[2].pct).toBe(13);
   });
 
   it('returns an empty list when everything is zero', () => {
@@ -190,7 +198,7 @@ describe('shiftAnchor', () => {
 describe('sumBreakdown', () => {
   const day = (date: string, rp: number, op: number): TrackerDay => ({
     date, totalSeconds: rp,
-    bySource: { randomPuzzleSeconds: rp, courseBookSeconds: 0, chessableSeconds: 0 },
+    bySource: { randomPuzzleSeconds: rp, courseBookSeconds: 0, chessableSeconds: 0, woodpeckerSeconds: 0 },
     byTheme: { openingSeconds: op, middlegameSeconds: 0, endgameSeconds: 0, tacticsSeconds: 0, otherSeconds: 0 },
     playGames: 0, status: 'none', hasManual: false,
   });

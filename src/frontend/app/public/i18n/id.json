@@ -3943,14 +3943,15 @@
     "history": "Riwayat harian",
     "dateCol": "Tanggal",
     "dailyGoal": "Waktu latihan",
-    "dailyHint": "Tetapkan satu target waktu latihan harian — puzzle, kursus, dan Chessable semuanya dihitung bersama.",
+    "dailyHint": "Tetapkan satu target waktu latihan harian — puzzle, kursus, Woodpecker, dan Chessable semuanya dihitung bersama.",
     "total": "Total",
     "breakdownBySource": "Menurut sumber",
     "breakdownByTheme": "Menurut tema",
     "source": {
       "randomPuzzle": "Puzzle",
       "courseBook": "Kursus / buku",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Kursus Chessable",

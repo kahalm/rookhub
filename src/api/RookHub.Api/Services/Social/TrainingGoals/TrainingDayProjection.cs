@@ -23,8 +23,8 @@ internal static class TrainingDayProjection
 
     public static TrackerResponseDto Tracker(TrainingGoalDto goal, Dictionary<DateOnly, DayBuckets> agg)
     {
-        var bySource = new int[3];
-        var byTheme = new int[5];
+        var bySource = new int[TrainingBuckets.SourceCount];
+        var byTheme = new int[TrainingBuckets.ThemeCount];
         var days = agg
             .OrderBy(kv => kv.Key)
             .Select(kv =>
@@ -111,6 +111,7 @@ internal static class TrainingDayProjection
         RandomPuzzleSeconds = s[(int)TrainingSource.RandomPuzzle],
         CourseBookSeconds = s[(int)TrainingSource.CourseBook],
         ChessableSeconds = s[(int)TrainingSource.Chessable],
+        WoodpeckerSeconds = s[(int)TrainingSource.Woodpecker],
     };
 
     private static ThemeBreakdownDto ThemeDto(int[] t) => new()

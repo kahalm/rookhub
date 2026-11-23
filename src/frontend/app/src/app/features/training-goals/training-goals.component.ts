@@ -289,6 +289,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                               <th>{{ 'trainingGoals.source.randomPuzzle' | translate }}</th>
                               <th>{{ 'trainingGoals.source.courseBook' | translate }}</th>
                               <th>{{ 'trainingGoals.source.chessable' | translate }}</th>
+                              <th>{{ 'trainingGoals.source.woodpecker' | translate }}</th>
                               <th>{{ 'trainingGoals.cat.play' | translate }}</th>
                             </tr>
                           </thead>
@@ -300,6 +301,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                                 <td>{{ durValue(d.bySource.randomPuzzleSeconds) }} <span class="unit">{{ durUnit(d.bySource.randomPuzzleSeconds) | translate }}</span></td>
                                 <td>{{ durValue(d.bySource.courseBookSeconds) }} <span class="unit">{{ durUnit(d.bySource.courseBookSeconds) | translate }}</span></td>
                                 <td>{{ durValue(d.bySource.chessableSeconds) }} <span class="unit">{{ durUnit(d.bySource.chessableSeconds) | translate }}</span></td>
+                                <td>{{ durValue(d.bySource.woodpeckerSeconds) }} <span class="unit">{{ durUnit(d.bySource.woodpeckerSeconds) | translate }}</span></td>
                                 <td>{{ d.playGames }} <span class="unit">{{ 'trainingGoals.games' | translate }}</span></td>
                               </tr>
                             }

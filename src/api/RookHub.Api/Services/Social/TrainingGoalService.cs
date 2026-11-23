@@ -20,7 +20,8 @@ namespace RookHub.Api.Services.Social;
 ///
 /// Die verbrachte Zeit wird zusätzlich nach <b>Quelle</b> und <b>Thema</b> aufgezeichnet:
 ///  • Quelle: randomPuzzle (Standard-/Endlos-/Tages-/Einzel-Puzzle + manuelles Offline-Puzzle),
-///    courseBook (alle Kurs-Versuche + manuelles Offline-Studium/Coaching), chessable (RepCheck-Zeit).
+///    courseBook (alle Kurs-Versuche + manuelles Offline-Studium/Coaching), chessable (RepCheck-Zeit),
+///    woodpecker (Woodpecker-Versuche, fest Taktik; aus Kursen übernommene Zyklus-1-Versuche nicht doppelt).
 ///  • Thema: Eröffnung/Mittelspiel/Endspiel/Taktik aus dem jeweils verfügbaren Signal (Lichess-Themes,
 ///    BookPuzzle-Tags/Chapter, Chessable-CourseKind); nicht klassifizierbare Zeit → „other".
 ///
@@ -120,7 +121,7 @@ public class TrainingGoalService
     /// client-seitig berechnen kann.</summary>
     public async Task<DailySeriesDto> GetDailySeriesAsync(int userId)
     {
-        // Kurz-Cache je User: die Serie aggregiert die KOMPLETTE Historie über 8 Tabellen pro Request.
+        // Kurz-Cache je User: die Serie aggregiert die KOMPLETTE Historie über 10 Tabellen pro Request.
         // Gemessene Zeit (Puzzles, Kurse, Partien) ist praktisch append-only — 60 s Staleness ist dafür
         // unerheblich, spart aber die volle Aggregation bei jedem Seitenwechsel/Perioden-Umschalten.
         // Was der User auf der Seite SELBST ändert (Einträge, Timer, Ziel, Kurs-Thema), verwirft den

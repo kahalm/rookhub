@@ -3943,14 +3943,15 @@
     "history": "Histórico diário",
     "dateCol": "Data",
     "dailyGoal": "Tempo de treino",
-    "dailyHint": "Defina um objetivo diário de tempo de treino — puzzles, cursos e Chessable contam todos em conjunto.",
+    "dailyHint": "Defina um objetivo diário de tempo de treino — puzzles, cursos, Woodpecker e Chessable contam todos em conjunto.",
     "total": "Total",
     "breakdownBySource": "Por origem",
     "breakdownByTheme": "Por tema",
     "source": {
       "randomPuzzle": "Puzzles",
       "courseBook": "Cursos / livros",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Cursos Chessable",

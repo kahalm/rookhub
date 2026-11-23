@@ -3943,14 +3943,15 @@
     "history": "일별 기록",
     "dateCol": "날짜",
     "dailyGoal": "훈련 시간",
-    "dailyHint": "하루 훈련 시간 목표를 하나 정하세요 — 퍼즐, 코스, Chessable이 모두 합산됩니다.",
+    "dailyHint": "하루 훈련 시간 목표를 하나 정하세요 — 퍼즐, 코스, Woodpecker, Chessable이 모두 합산됩니다.",
     "total": "합계",
     "breakdownBySource": "출처별",
     "breakdownByTheme": "테마별",
     "source": {
       "randomPuzzle": "퍼즐",
       "courseBook": "코스 / 교재",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Chessable 코스",

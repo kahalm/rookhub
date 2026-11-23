@@ -3943,14 +3943,15 @@
     "history": "Ημερήσιο ιστορικό",
     "dateCol": "Ημερομηνία",
     "dailyGoal": "Χρόνος προπόνησης",
-    "dailyHint": "Ορίστε έναν ημερήσιο στόχο χρόνου προπόνησης — ασκήσεις, μαθήματα και Chessable μετρούν όλα μαζί.",
+    "dailyHint": "Ορίστε έναν ημερήσιο στόχο χρόνου προπόνησης — ασκήσεις, μαθήματα, Woodpecker και Chessable μετρούν όλα μαζί.",
     "total": "Σύνολο",
     "breakdownBySource": "Ανά πηγή",
     "breakdownByTheme": "Ανά θέμα",
     "source": {
       "randomPuzzle": "Ασκήσεις",
       "courseBook": "Μαθήματα / βιβλία",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Μαθήματα Chessable",

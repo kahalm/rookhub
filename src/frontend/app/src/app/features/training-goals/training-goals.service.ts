@@ -27,6 +27,8 @@ export interface SourceBreakdown {
   randomPuzzleSeconds: number;
   courseBookSeconds: number;
   chessableSeconds: number;
+  /** Woodpecker-Training (eigene Versuche; aus Kursen übernommene Zyklus-1-Versuche zählen unter courseBookSeconds). */
+  woodpeckerSeconds: number;
 }
 
 /** Aufschlüsselung von Trainingssekunden nach Thema (Rest → otherSeconds). */
@@ -43,6 +45,7 @@ export const SOURCE_KEYS: { key: keyof SourceBreakdown; label: string }[] = [
   { key: 'randomPuzzleSeconds', label: 'randomPuzzle' },
   { key: 'courseBookSeconds', label: 'courseBook' },
   { key: 'chessableSeconds', label: 'chessable' },
+  { key: 'woodpeckerSeconds', label: 'woodpecker' },
 ];
 
 /** Schlüssel der Themen-Aufschlüsselung (für Template-Iteration mit i18n). */

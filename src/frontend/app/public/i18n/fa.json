@@ -3943,14 +3943,15 @@
     "history": "تاریخچه‌ی روزانه",
     "dateCol": "تاریخ",
     "dailyGoal": "زمان تمرین",
-    "dailyHint": "یک هدف روزانه برای زمان تمرین تعیین کنید — تاکتیک‌ها، دوره‌ها و Chessable همه با هم در آن حساب می‌شوند.",
+    "dailyHint": "یک هدف روزانه برای زمان تمرین تعیین کنید — تاکتیک‌ها، دوره‌ها، Woodpecker و Chessable همه با هم در آن حساب می‌شوند.",
     "total": "مجموع",
     "breakdownBySource": "بر اساس منبع",
     "breakdownByTheme": "بر اساس موضوع",
     "source": {
       "randomPuzzle": "تاکتیک‌ها",
       "courseBook": "دوره‌ها / کتاب‌ها",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "دوره‌های Chessable",

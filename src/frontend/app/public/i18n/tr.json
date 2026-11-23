@@ -3943,14 +3943,15 @@
     "history": "Günlük geçmiş",
     "dateCol": "Tarih",
     "dailyGoal": "Antrenman süresi",
-    "dailyHint": "Tek bir günlük antrenman süresi hedefi belirleyin — problemler, kurslar ve Chessable birlikte bu hedefe sayılır.",
+    "dailyHint": "Tek bir günlük antrenman süresi hedefi belirleyin — problemler, kurslar, Woodpecker ve Chessable birlikte bu hedefe sayılır.",
     "total": "Toplam",
     "breakdownBySource": "Kaynağa göre",
     "breakdownByTheme": "Temaya göre",
     "source": {
       "randomPuzzle": "Problemler",
       "courseBook": "Kurslar / kitaplar",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Chessable kursları",

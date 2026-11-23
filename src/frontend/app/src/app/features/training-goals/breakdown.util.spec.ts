@@ -1,10 +1,10 @@
 import { ymd, parseYmd, periodBounds, shiftAnchor, sumBreakdown, breakdownRows } from './breakdown.util';
 import { TrackerDay } from './training-goals.service';
 
-function day(date: string, rnd = 0, course = 0, chess = 0): TrackerDay {
+function day(date: string, rnd = 0, course = 0, chess = 0, wp = 0): TrackerDay {
   return {
     date,
-    bySource: { randomPuzzleSeconds: rnd, courseBookSeconds: course, chessableSeconds: chess },
+    bySource: { randomPuzzleSeconds: rnd, courseBookSeconds: course, chessableSeconds: chess, woodpeckerSeconds: wp },
     byTheme: { openingSeconds: 0, middlegameSeconds: 0, endgameSeconds: 0, tacticsSeconds: 0, otherSeconds: 0 },
   } as TrackerDay;
 }
@@ -52,6 +52,12 @@ describe('breakdown.util', () => {
     const days = [day('2026-07-05', 10), day('2026-07-08', 20), day('2026-07-20', 100)];
     const { bySource } = sumBreakdown(days, '2026-07-06', '2026-07-12');
     expect(bySource.randomPuzzleSeconds).toBe(20);
+  });
+
+  it('sumBreakdown sums every source incl. Woodpecker', () => {
+    const days = [day('2026-07-06', 1, 2, 3, 40), day('2026-07-07', 0, 0, 0, 60)];
+    const { bySource } = sumBreakdown(days, '2026-07-06', '2026-07-12');
+    expect(bySource).toEqual({ randomPuzzleSeconds: 1, courseBookSeconds: 2, chessableSeconds: 3, woodpeckerSeconds: 100 });
   });
 
   it('breakdownRows filters empty buckets + computes percentage of the bucket total', () => {

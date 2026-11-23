@@ -3943,14 +3943,15 @@
     "history": "Lịch sử hàng ngày",
     "dateCol": "Ngày",
     "dailyGoal": "Thời gian luyện tập",
-    "dailyHint": "Đặt một mục tiêu thời gian luyện tập hàng ngày — bài tập, khóa học và Chessable đều được tính chung.",
+    "dailyHint": "Đặt một mục tiêu thời gian luyện tập hàng ngày — bài tập, khóa học, Woodpecker và Chessable đều được tính chung.",
     "total": "Tổng",
     "breakdownBySource": "Theo nguồn",
     "breakdownByTheme": "Theo chủ đề",
     "source": {
       "randomPuzzle": "Bài tập",
       "courseBook": "Khóa học / sách",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Khóa học Chessable",

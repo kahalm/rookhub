@@ -471,7 +471,7 @@ public class TrainingGoalServiceTests : IDisposable
 
         var res = await _service.GetTrackerAsync(u.Id, 1);
         var day = Assert.Single(res.Days);
-        int srcSum = day.BySource.RandomPuzzleSeconds + day.BySource.CourseBookSeconds + day.BySource.ChessableSeconds;
+        int srcSum = day.BySource.RandomPuzzleSeconds + day.BySource.CourseBookSeconds + day.BySource.ChessableSeconds + day.BySource.WoodpeckerSeconds;
         int themeSum = day.ByTheme.OpeningSeconds + day.ByTheme.MiddlegameSeconds + day.ByTheme.EndgameSeconds
                        + day.ByTheme.TacticsSeconds + day.ByTheme.OtherSeconds;
         Assert.Equal(day.TotalSeconds, srcSum);

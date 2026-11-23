@@ -3943,14 +3943,15 @@
     "history": "Denní historie",
     "dateCol": "Datum",
     "dailyGoal": "Tréninkový čas",
-    "dailyHint": "Nastavte jeden denní cíl tréninkového času — úlohy, kurzy a Chessable se do něj počítají společně.",
+    "dailyHint": "Nastavte jeden denní cíl tréninkového času — úlohy, kurzy, Woodpecker a Chessable se do něj počítají společně.",
     "total": "Celkem",
     "breakdownBySource": "Podle zdroje",
     "breakdownByTheme": "Podle motivu",
     "source": {
       "randomPuzzle": "Úlohy",
       "courseBook": "Kurzy / knihy",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Kurzy Chessable",

@@ -3943,14 +3943,15 @@
     "history": "Dagelijkse geschiedenis",
     "dateCol": "Datum",
     "dailyGoal": "Trainingstijd",
-    "dailyHint": "Stel één dagelijks doel voor trainingstijd in — puzzels, cursussen en Chessable tellen allemaal samen mee.",
+    "dailyHint": "Stel één dagelijks doel voor trainingstijd in — puzzels, cursussen, Woodpecker en Chessable tellen allemaal samen mee.",
     "total": "Totaal",
     "breakdownBySource": "Per bron",
     "breakdownByTheme": "Per thema",
     "source": {
       "randomPuzzle": "Puzzels",
       "courseBook": "Cursussen / boeken",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Chessable-cursussen",

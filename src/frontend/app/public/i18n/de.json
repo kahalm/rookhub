@@ -4103,14 +4103,15 @@
     "history": "Verlauf nach Tagen",
     "dateCol": "Datum",
     "dailyGoal": "Trainingszeit",
-    "dailyHint": "Lege ein einziges tägliches Trainingszeit-Ziel fest — Puzzles, Kurse und Chessable werden gemeinsam darauf angerechnet.",
+    "dailyHint": "Lege ein einziges tägliches Trainingszeit-Ziel fest — Puzzles, Kurse, Woodpecker und Chessable werden gemeinsam darauf angerechnet.",
     "total": "Gesamt",
     "breakdownBySource": "Nach Quelle",
     "breakdownByTheme": "Nach Thema",
     "source": {
       "randomPuzzle": "Puzzles",
       "courseBook": "Kurse / Bücher",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Chessable-Kurse",

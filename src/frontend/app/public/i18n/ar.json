@@ -3943,14 +3943,15 @@
     "history": "السجل اليومي",
     "dateCol": "التاريخ",
     "dailyGoal": "وقت التدريب",
-    "dailyHint": "حدّد هدفاً يومياً واحداً لوقت التدريب — الألغاز والدورات وChessable تُحتسب كلها معاً.",
+    "dailyHint": "حدّد هدفاً يومياً واحداً لوقت التدريب — الألغاز والدورات وWoodpecker وChessable تُحتسب كلها معاً.",
     "total": "المجموع",
     "breakdownBySource": "حسب المصدر",
     "breakdownByTheme": "حسب الموضوع",
     "source": {
       "randomPuzzle": "الألغاز",
       "courseBook": "الدورات / الكتب",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "دورات Chessable",

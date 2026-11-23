@@ -14,7 +14,7 @@ function day(date: string): any {
   return {
     date,
     status: 'full',
-    bySource: { randomPuzzleSeconds: 600, courseBookSeconds: 0, chessableSeconds: 0 },
+    bySource: { randomPuzzleSeconds: 600, courseBookSeconds: 0, chessableSeconds: 0, woodpeckerSeconds: 0 },
     byTheme: { openingSeconds: 600, middlegameSeconds: 0, endgameSeconds: 0, tacticsSeconds: 0, otherSeconds: 0 },
   };
 }

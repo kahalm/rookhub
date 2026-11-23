@@ -3943,14 +3943,15 @@
     "history": "दैनिक इतिहास",
     "dateCol": "तिथि",
     "dailyGoal": "प्रशिक्षण समय",
-    "dailyHint": "एक दैनिक प्रशिक्षण-समय लक्ष्य सेट करें — पहेलियाँ, पाठ्यक्रम और Chessable सब मिलकर इसमें गिने जाते हैं।",
+    "dailyHint": "एक दैनिक प्रशिक्षण-समय लक्ष्य सेट करें — पहेलियाँ, पाठ्यक्रम, Woodpecker और Chessable सब मिलकर इसमें गिने जाते हैं।",
     "total": "कुल",
     "breakdownBySource": "स्रोत के अनुसार",
     "breakdownByTheme": "थीम के अनुसार",
     "source": {
       "randomPuzzle": "पहेलियाँ",
       "courseBook": "पाठ्यक्रम / पुस्तकें",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Chessable पाठ्यक्रम",

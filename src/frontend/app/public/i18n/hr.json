@@ -4103,14 +4103,15 @@
     "history": "Dnevna povijest",
     "dateCol": "Datum",
     "dailyGoal": "Vrijeme treninga",
-    "dailyHint": "Jedan dnevni cilj vremena treninga — zagonetke, tečajevi i Chessable zajedno se zbrajaju.",
+    "dailyHint": "Jedan dnevni cilj vremena treninga — zagonetke, tečajevi, Woodpecker i Chessable zajedno se zbrajaju.",
     "total": "Ukupno",
     "breakdownBySource": "Po izvoru",
     "breakdownByTheme": "Po temi",
     "source": {
       "randomPuzzle": "Zagonetke",
       "courseBook": "Tečajevi / knjige",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Chessable tečajevi",

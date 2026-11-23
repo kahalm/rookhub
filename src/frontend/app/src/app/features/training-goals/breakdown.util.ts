@@ -2,7 +2,7 @@
 // damit sowohl TrainingGoalsComponent als auch die ausgegliederten Karten (PeriodBreakdownCardComponent)
 // sie importieren können, OHNE einen Modul-Zyklus Parent ↔ Kind zu erzeugen. Alles frei von Angular/DOM.
 
-import { TrackerDay, SourceBreakdown, ThemeBreakdown } from './training-goals.service';
+import { TrackerDay, SourceBreakdown, ThemeBreakdown, SOURCE_KEYS } from './training-goals.service';
 
 /** Eine Zeile einer Aufschlüsselung (Quelle/Thema): i18n-Label + Sekunden + Balkenanteil. */
 export interface BreakRow { label: string; seconds: number; pct: number; }
@@ -55,13 +55,12 @@ export function shiftAnchor(period: BreakdownPeriod, anchor: string, dir: number
 
 /** Summiert bySource+byTheme über alle Tage im [start,end]-Fenster (yyyy-MM-dd lexikografisch = chronologisch). */
 export function sumBreakdown(days: TrackerDay[], start: string, end: string): { bySource: SourceBreakdown; byTheme: ThemeBreakdown } {
-  const bySource: SourceBreakdown = { randomPuzzleSeconds: 0, courseBookSeconds: 0, chessableSeconds: 0 };
+  // Quellen aus SOURCE_KEYS statt Feld für Feld: eine neue Quelle (wie Woodpecker) fehlt sonst still in der Summe.
+  const bySource = Object.fromEntries(SOURCE_KEYS.map(k => [k.key, 0])) as unknown as SourceBreakdown;
   const byTheme: ThemeBreakdown = { openingSeconds: 0, middlegameSeconds: 0, endgameSeconds: 0, tacticsSeconds: 0, otherSeconds: 0 };
   for (const day of days) {
     if (day.date < start || day.date > end) continue;
-    bySource.randomPuzzleSeconds += day.bySource.randomPuzzleSeconds;
-    bySource.courseBookSeconds += day.bySource.courseBookSeconds;
-    bySource.chessableSeconds += day.bySource.chessableSeconds;
+    for (const { key } of SOURCE_KEYS) bySource[key] += day.bySource[key] ?? 0;
     byTheme.openingSeconds += day.byTheme.openingSeconds;
     byTheme.middlegameSeconds += day.byTheme.middlegameSeconds;
     byTheme.endgameSeconds += day.byTheme.endgameSeconds;

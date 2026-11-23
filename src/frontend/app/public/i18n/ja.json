@@ -3943,14 +3943,15 @@
     "history": "日別の履歴",
     "dateCol": "日付",
     "dailyGoal": "トレーニング時間",
-    "dailyHint": "1日のトレーニング時間目標を1つ設定します。パズル、コース、Chessable がすべて合算されます。",
+    "dailyHint": "1日のトレーニング時間目標を1つ設定します。パズル、コース、Woodpecker、Chessable がすべて合算されます。",
     "total": "合計",
     "breakdownBySource": "ソース別",
     "breakdownByTheme": "テーマ別",
     "source": {
       "randomPuzzle": "パズル",
       "courseBook": "コース / ブック",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Chessable コース",

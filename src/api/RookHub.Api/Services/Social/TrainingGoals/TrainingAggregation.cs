@@ -15,6 +15,7 @@ internal static class TrainingAggregation
         await PuzzleProgress.AddAsync(db, userId, windowStartUtc, days);
         await CourseProgress.AddAsync(db, userId, windowStartUtc, days);
         await ChessableProgress.AddAsync(db, userId, windowStartUtc, days);
+        await WoodpeckerProgress.AddAsync(db, userId, windowStartUtc, days);
         await PlayProgress.AddAsync(db, userId, windowStartUtc, days);
         await ManualProgress.AddAsync(db, userId, windowStartUtc, days);
         return days.Days;

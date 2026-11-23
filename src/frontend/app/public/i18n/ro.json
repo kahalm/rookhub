@@ -3943,14 +3943,15 @@
     "history": "Istoric zilnic",
     "dateCol": "Dată",
     "dailyGoal": "Timp de antrenament",
-    "dailyHint": "Setează un obiectiv zilnic de timp de antrenament — problemele, cursurile și Chessable contează împreună.",
+    "dailyHint": "Setează un obiectiv zilnic de timp de antrenament — problemele, cursurile, Woodpecker și Chessable contează împreună.",
     "total": "Total",
     "breakdownBySource": "După sursă",
     "breakdownByTheme": "După temă",
     "source": {
       "randomPuzzle": "Probleme",
       "courseBook": "Cursuri / cărți",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Cursuri Chessable",

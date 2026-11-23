@@ -177,6 +177,9 @@ public class SourceBreakdownDto
     public int CourseBookSeconds { get; set; }
     /// <summary>Chessable-Training (von der RepCheck-Extension gemeldet).</summary>
     public int ChessableSeconds { get; set; }
+    /// <summary>Woodpecker-Training (eigene Versuche; aus Kurs-Versuchen übernommene Zyklus-1-Versuche zählen unter
+    /// <see cref="CourseBookSeconds"/>, nicht doppelt).</summary>
+    public int WoodpeckerSeconds { get; set; }
 }
 
 /// <summary>Aufschlüsselung von Trainingssekunden nach <b>Thema</b> (Phase/Taktik, best-effort;

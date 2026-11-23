@@ -1,17 +1,24 @@
 namespace RookHub.Api.Services.Social.TrainingGoals;
 
 /// <summary>Aufzeichnungs-Quelle einer Zeit-Scheibe (Index in <see cref="DayBuckets.Source"/>).</summary>
-internal enum TrainingSource { RandomPuzzle = 0, CourseBook = 1, Chessable = 2 }
+internal enum TrainingSource { RandomPuzzle = 0, CourseBook = 1, Chessable = 2, Woodpecker = 3 }
 
 /// <summary>Thema einer Zeit-Scheibe (Index in <see cref="DayBuckets.Theme"/>).</summary>
 internal enum TrainingTheme { Opening = 0, Middlegame = 1, Endgame = 2, Tactics = 3, Other = 4 }
+
+/// <summary>Anzahl der Eimer je Achse — EINE Stelle für Tages-Eimer und Perioden-Summen (vorher je ein <c>new int[3]</c>).</summary>
+internal static class TrainingBuckets
+{
+    public static readonly int SourceCount = Enum.GetValues<TrainingSource>().Length;
+    public static readonly int ThemeCount = Enum.GetValues<TrainingTheme>().Length;
+}
 
 /// <summary>Tages-Eimer: Gesamtsekunden + Sekunden je Quelle/Thema + Partien + Manuell-Marker.</summary>
 internal sealed class DayBuckets
 {
     public int Total;
-    public readonly int[] Source = new int[3];
-    public readonly int[] Theme = new int[5];
+    public readonly int[] Source = new int[TrainingBuckets.SourceCount];
+    public readonly int[] Theme = new int[TrainingBuckets.ThemeCount];
     public int PlayGames;
     public bool HasManual;
 }

@@ -3943,14 +3943,15 @@
     "history": "Daglig historik",
     "dateCol": "Datum",
     "dailyGoal": "Träningstid",
-    "dailyHint": "Ange ett dagligt mål för träningstid — uppgifter, kurser och Chessable räknas alla in tillsammans.",
+    "dailyHint": "Ange ett dagligt mål för träningstid — uppgifter, kurser, Woodpecker och Chessable räknas alla in tillsammans.",
     "total": "Totalt",
     "breakdownBySource": "Per källa",
     "breakdownByTheme": "Per tema",
     "source": {
       "randomPuzzle": "Uppgifter",
       "courseBook": "Kurser / böcker",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Chessable-kurser",

@@ -3943,14 +3943,15 @@
     "history": "每日记录",
     "dateCol": "日期",
     "dailyGoal": "训练时间",
-    "dailyHint": "设定一个每日训练时间目标——战术题、课程和 Chessable 都会一起计入。",
+    "dailyHint": "设定一个每日训练时间目标——战术题、课程、Woodpecker 和 Chessable 都会一起计入。",
     "total": "合计",
     "breakdownBySource": "按来源",
     "breakdownByTheme": "按主题",
     "source": {
       "randomPuzzle": "战术题",
       "courseBook": "课程 / 书",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Chessable 课程",

@@ -3071,14 +3071,15 @@
     "history": "Daily history",
     "dateCol": "Date",
     "dailyGoal": "Edzésidő",
-    "dailyHint": "Egyetlen napi edzésidő-célt állíts be – a feladványok, a tanfolyamok és a Chessable együtt számítanak bele.",
+    "dailyHint": "Egyetlen napi edzésidő-célt állíts be – a feladványok, a tanfolyamok, a Woodpecker és a Chessable együtt számítanak bele.",
     "total": "Total",
     "breakdownBySource": "By source",
     "breakdownByTheme": "By theme",
     "source": {
       "randomPuzzle": "Puzzles",
       "courseBook": "Courses / books",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "theme": {
       "opening": "Opening",

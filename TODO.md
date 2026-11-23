@@ -6,6 +6,27 @@ _Legende: `[ ]` offen · `[~]` Hauptteil erledigt, Rest bewusst geparkt (Begrün
 `[x]` erledigt, bleibt als Beleg stehen. Erledigte Einzelfunde ohne weiteren Wert stehen unten
 im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
+## [ ] Trainingsziele: Trainingszeit, die (noch) nicht einfließt — Lückensuche zu 1.008.0 (2026-11-23)
+
+Woodpecker zählt seit 1.008.0 als eigene Quelle. Durchgesehen wurden alle DbSets mit Versuch/Sitzung/Dauer. Schon drin:
+Standard-Puzzle, Tages-/Einzel-Buchpuzzle (`BookPuzzleAttempts`), Endlos, Wochenpost, alle Kurs-Versuche, Chessable,
+Woodpecker, manuelle Einträge/Timer, Partien. Puzzle-Challenges laufen über die Versuchstabellen (keine Lücke). Offen:
+
+- **Punktepartie (`/guess`)**: `GuessMove.SecondsSpent` + `CreatedAt` je Zug liegen vor — technisch klein einzubauen,
+  aber Quelle (eigene? „Puzzles“?) und Thema (Mittelspiel? Sonstiges?) sind Geschmackssache → Nutzer fragen.
+- **Kalkulations-Modus**: `CalculationTree.SecondsSpent` ist nur die Summe je Stellung, ohne Tag — nicht tageweise
+  zuordenbar. Bräuchte ein Zeit-Log je Delta (neue Tabelle + Migration).
+- **Ohne Zeitmessung** (nur Zustand/Zähler, kein Tag mit Sekunden): Fehler-Training (`GameMistakeProgress`),
+  Repertoire-Wiederholung (`RepertoireCardState`), Linien-Studien, E-Book-Lesen (`EbookProgress`), Trainingsvideos
+  (`TrainingSegmentProgress`), KidHub (`KidsLevelProgress`/`KidsCourseLine`), Lernkarten-Markierungen. Einbau hieße
+  erst messen (Client) und loggen.
+- **Zeitzone**: Server rechnet UTC-Tage (auch „heute“ und den Wochenanfang), das Frontend legt Heatmap und
+  Perioden-Karte nach LOKALEM Datum an — rund um Mitternacht landet Zeit für Nutzer außerhalb UTC am Nachbartag bzw.
+  „heute“ ist leer. Woodpecker kennt `utcOffsetMinutes` schon; für die Trainingsziele bräuchten alle drei Endpunkte den
+  Versatz (Tag-Schlüssel, Fenster, Montag). Größerer Umbau, eigene Aufgabe.
+- **Tagesreihe 60 s gecacht**: neue Versuche (alle Quellen, auch Woodpecker) erscheinen in der Perioden-Karte bis zu 60 s
+  später als im Tracker — bewusst so (Kommentar in `TrainingGoalService.GetDailySeriesAsync`).
+
 ## [~] Ganze Kachel klickbar (`rh-tile`) — gebaut in 0.997.0–0.999.0, Reste (2026-11-19)
 
 Gebaut: Baustein `rh-tile` / `rh-tile-target` (`src/frontend/app/src/_tile.scss`), Regel `docs/DESIGN.md` 5.2, Anleitung

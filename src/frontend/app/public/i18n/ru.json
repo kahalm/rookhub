@@ -3943,14 +3943,15 @@
     "history": "История по дням",
     "dateCol": "Дата",
     "dailyGoal": "Время тренировки",
-    "dailyHint": "Задайте одну ежедневную цель по времени тренировки — задачи, курсы и Chessable засчитываются вместе.",
+    "dailyHint": "Задайте одну ежедневную цель по времени тренировки — задачи, курсы, Woodpecker и Chessable засчитываются вместе.",
     "total": "Итого",
     "breakdownBySource": "По источнику",
     "breakdownByTheme": "По теме",
     "source": {
       "randomPuzzle": "Задачи",
       "courseBook": "Курсы / книги",
-      "chessable": "Chessable"
+      "chessable": "Chessable",
+      "woodpecker": "Woodpecker"
     },
     "chessable": {
       "title": "Курсы Chessable",

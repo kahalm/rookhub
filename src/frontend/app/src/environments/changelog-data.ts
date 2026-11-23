@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.008.0", date: "2026-11-23", changes: [
+    { en: "Training goals: time spent in Woodpecker training now counts toward your daily goal — as its own source “Woodpecker” in today’s progress, the tracker, the period breakdown and the daily history table. It always counts as tactics and, like a puzzle, at most 30 minutes per attempt. Course attempts that cycle 1 takes over from the normal course solver are counted only once (as course time), not a second time as Woodpecker time.",
+      de: "Trainingsziele: Zeit im Woodpecker-Training zählt jetzt aufs Tagesziel — als eigene Quelle „Woodpecker“ im Heute-Fortschritt, im Tracker, in der Perioden-Aufschlüsselung und in der Tagesliste. Sie gilt immer als Taktik und zählt wie ein Puzzle höchstens 30 Minuten je Versuch. Kursversuche, die Zyklus 1 aus dem normalen Kurs-Löser übernimmt, zählen nur einmal (als Kurszeit) und nicht noch einmal als Woodpecker-Zeit." },
+  ] },
   { version: "1.007.8", date: "2026-11-23", changes: [
     { en: "Build fix: the puzzle status card now takes its “Correct (kind of)” flag as a signal input, so the frontend lint ratchet passes again and versions 1.007.4–1.007.7 can actually be deployed. No visible change.",
       de: "Build-Reparatur: Die Puzzle-Statuskarte bekommt das Kennzeichen für „Geschafft (mehr oder weniger)“ jetzt als Signal-Input, damit die Lint-Ratsche im Frontend wieder grün ist und die Versionen 1.007.4–1.007.7 überhaupt ausgeliefert werden können. Keine sichtbare Änderung." },
