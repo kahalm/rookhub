@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, input } from '@angular/core';
 import { formatPuzzleTime } from './puzzle-format.util';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
@@ -232,7 +232,7 @@ const CK = {
             @case ('FAILED') {
               <!-- „Geschafft (mehr oder weniger)“ (Wunsch 2026-11-23): selbst zu Ende gespielt, aber mit allen drei Tipps
                    zu einem Zug — gewertet als nicht gelöst, dargestellt wie „Korrekt“. „Lösung zeigen“ bleibt „Incorrect“. -->
-              @let kindOf = kindOfSolved && !gaveUp;
+              @let kindOf = kindOfSolved() && !gaveUp;
               <div class="psc-center" [class.psc-failed]="!kindOf" [class.psc-solved]="kindOf" [class.psc-kind-of]="kindOf">
                 <mat-icon class="psc-result-icon" [class.psc-gave-up-icon]="gaveUp">
                   {{ gaveUp ? 'flag' : kindOf ? 'check_circle' : 'cancel' }}
@@ -348,7 +348,7 @@ export class PuzzleStatusCardComponent {
   @Output() showSolutionClicked = new EventEmitter<void>();
   /** FAILED, aber die Lösung steht zu Ende auf dem Brett (alle drei Tipps zu einem Zug geholt, nicht „Lösung zeigen“): Darstellung wie
    *  „Korrekt“ mit „Correct (kind of)“ — die Wertung bleibt „nicht gelöst“ ({@link BasePuzzleSolver.kindOfSolved}). */
-  @Input() kindOfSolved = false;
+  readonly kindOfSolved = input(false);
   @Output() nextClicked = new EventEmitter<void>();
   @Output() failedNextClicked = new EventEmitter<void>();
   @Output() analyzeClicked = new EventEmitter<void>();
