@@ -23,6 +23,10 @@ public class HintGenerationService
 
     private static readonly string[] Languages = { "de", "en", "hr" };
 
+    /// <summary>Versuche je Sprache: ein verworfener Satz (Feldangabe in Stufe 1/2 oder erfundene Figur) löst einen
+    /// neuen Versuch mit Rückmeldung aus.</summary>
+    internal const int MaxAttempts = 3;
+
     // Konkrete Felder/Rochade — in Stufe 1 + 2 NICHT erlaubt (Anti-Leak).
     private static readonly Regex CoordinatePattern = new(@"[a-h][1-8]|O-O", RegexOptions.Compiled);
 
@@ -117,13 +121,29 @@ public class HintGenerationService
 
         var engine = await _stockfish.AnalyzeAsync(bp.Fen, setup, ct);
 
+        var board = HintBoardCheck.FromPuzzle(bp.Fen, setup, solution);
+        if (board is null)
+            _logger.LogInformation("Tipp-Generierung: Vorspiel von Puzzle {Id} nicht nachspielbar — ohne Brettprüfung.", bp.Id);
+        var userPrompt = BuildUserPrompt(bp, setup, solution, engine, board);
+
         var result = new Dictionary<string, List<string>>();
         foreach (var lang in Languages)
         {
             if (ct.IsCancellationRequested) break;
-            var json = await _claude.GenerateHintsJsonAsync(
-                SystemPrompt(lang), BuildUserPrompt(bp, setup, solution, engine), ct);
-            var hints = ParseAndValidate(json);
+            List<string>? hints = null;
+            var prompt = userPrompt;
+            for (var attempt = 1; attempt <= MaxAttempts && hints is null && !ct.IsCancellationRequested; attempt++)
+            {
+                var json = await _claude.GenerateHintsJsonAsync(SystemPrompt(lang), prompt, ct);
+                hints = ParseAndValidate(json, lang, board, out var rejection);
+                if (hints is null && rejection is not null)
+                {
+                    _logger.LogInformation("Tipp-Generierung: Puzzle {Id} ({Lang}) Versuch {Attempt} verworfen: {Reason}",
+                        bp.Id, lang, attempt, rejection);
+                    prompt = userPrompt + Environment.NewLine + $"Your previous answer was rejected: {rejection}. "
+                        + "Write the three hints again and mention only pieces from the list above.";
+                }
+            }
             if (hints != null) result[lang] = hints;
             else _logger.LogWarning("Tipp-Generierung: keine validen Tipps ({Lang}) für Puzzle {Id}.", lang, bp.Id);
         }
@@ -159,7 +179,29 @@ public class HintGenerationService
     // ---- Validierung (Anti-Leak) ------------------------------------------------------------------
     /// <summary>Parst <c>{hint1,hint2,hint3}</c> und prüft: alle vorhanden+nichtleer; Stufe 1 &amp; 2
     /// enthalten KEINE konkreten Felder/Rochade (sonst verworfen → kein Leak ausspielen).</summary>
-    internal static List<string>? ParseAndValidate(string? json)
+    internal static List<string>? ParseAndValidate(string? json) => ParseAndValidate(json, null, null, out _);
+
+    /// <summary>Wie <see cref="ParseAndValidate(string?)"/>, prüft zusätzlich alle drei Tipps gegen das Brett
+    /// (<see cref="HintBoardCheck.FindInventedPiece"/>): eine Figur, die es dort nicht gibt, verwirft den Satz.
+    /// <paramref name="rejection"/> nennt dann den Grund (englisch, geht als Rückmeldung in den nächsten Versuch).
+    /// Ohne <paramref name="board"/> (Vorspiel nicht nachspielbar) bleibt es bei der Anti-Leak-Prüfung.</summary>
+    internal static List<string>? ParseAndValidate(string? json, string? lang, HintBoard? board, out string? rejection)
+    {
+        rejection = null;
+        var hints = ParseHints(json);
+        if (hints is null || board is null || lang is null) return hints;
+        foreach (var hint in hints)
+        {
+            if (HintBoardCheck.FindInventedPiece(hint, lang, board) is { } bad)
+            {
+                rejection = $"the hint \"{hint}\" mentions \"{bad.Word}\", but {bad.Reason}";
+                return null;
+            }
+        }
+        return hints;
+    }
+
+    private static List<string>? ParseHints(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return null;
         try
@@ -187,18 +229,29 @@ public class HintGenerationService
             - hint1: the motif / idea only (e.g. "back-rank weakness"). NO concrete square, file, rank, piece move, or coordinate.
             - hint2: which piece or area delivers it, and why it works. Still NO concrete square or move (no coordinates like e4, no O-O).
             - hint3: the first move or key idea, may name the move (e.g. "Queen to h8"). Do NOT give the full variation.
+            Only mention pieces that are actually on the board in the given position (see the piece list); never
+            invent a piece, e.g. do not mention a queen if the list has none.
             Keep each hint short (one sentence, encouraging). Write all three hints in {{language}}.
             Return only the JSON object {hint1,hint2,hint3}.
             """;
     }
 
-    private string BuildUserPrompt(BookPuzzle bp, string setup, string[] solution, EngineHint? engine)
+    /// <summary>Nutzer-Prompt. Mit nachgespieltem <paramref name="board"/> steht dort die Stellung des Lösers (FEN nach
+    /// dem Vorspiel, Seite am Zug, Figurenliste je Seite, Anweisung „nur diese Figuren“) statt Start-FEN + Vorspiel —
+    /// das Modell rechnet ein Vorspiel nicht nach (Buch 32: Grundstellung + 30 Halbzüge → längst getauschte Damen).</summary>
+    internal static string BuildUserPrompt(BookPuzzle bp, string setup, string[] solution, EngineHint? engine, HintBoard? board)
     {
         var sb = new StringBuilder();
-        var sideToMove = SideToMoveAfterSetup(bp.Fen, setup);
-        sb.AppendLine($"Start FEN: {bp.Fen}");
-        if (!string.IsNullOrEmpty(setup)) sb.AppendLine($"Setup moves already played (UCI): {setup}");
-        sb.AppendLine($"Side to move in the puzzle: {sideToMove}");
+        if (board is not null)
+        {
+            sb.Append(HintBoardCheck.DescribeForPrompt(board));
+        }
+        else
+        {
+            sb.AppendLine($"Start FEN: {bp.Fen}");
+            if (!string.IsNullOrEmpty(setup)) sb.AppendLine($"Setup moves already played (UCI): {setup}");
+            sb.AppendLine($"Side to move in the puzzle: {SideToMoveAfterSetup(bp.Fen, setup)}");
+        }
         sb.AppendLine($"Verified solution from this position (UCI): {string.Join(' ', solution)}");
         if (engine != null)
         {

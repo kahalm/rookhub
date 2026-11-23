@@ -47,6 +47,20 @@ Bot-Lookup per LineId. Bewusst NICHT identisch mit `CourseService.CanAccessAsync
 Einzel-Puzzles/Zufallsziehungen, nicht den strukturierten Kurs (Kapitel/Fortschritt/Offline-Export). Folge für
 den schach-bot: sein `/kurs`-Katalog (`/books` + `?bookId=`) enthält nur noch Pool-/öffentliche Bücher.
 
+## Tipps gegen das Brett prüfen (1.007.7)
+
+`HintGenerationService` gibt dem Modell nicht mehr Start-FEN + Vorspiel, sondern die Stellung des Lösers
+(`Services/Puzzles/HintBoardCheck.cs`: Vorspiel bis `StartPly` nachgespielt, FEN, Seite am Zug, Figurenliste je Seite,
+fehlende Figurenarten, Anweisung „nur diese Figuren nennen“). Befund 23.11.2026: 43 von 6035 Buch-Puzzles nannten
+Figuren, die nicht auf dem Brett stehen (Buch 32: Grundstellung + 30 Halbzüge, das Modell sah getauschte Damen).
+Jeder erzeugte Satz (alle drei Stufen, de/en/hr) wird danach geprüft: nennt ein Tipp eine Figurenart, die keine Seite
+hat, oder eine Figur mit klarer Seitenangabe („deine“, „gegnerische“, „weiße“, „your“, „opponent's“, „tvoja“ …), die
+diese Seite nicht hat, wird er verworfen und mit Rückmeldung neu angefragt (`MaxAttempts` = 3 je Sprache, gilt auch
+für Feldangaben in Stufe 1/2). Ausnahmen wie im Analyse-Skript: Umwandlung („zur Dame“, „promote to a queen“,
+Umwandlungen in der Lösung), Rand-/Turm-/Springerbauer, Damenflügel/„queenside“. Ist das Vorspiel nicht
+nachspielbar (illegale Buch-FEN), bleibt es beim alten Prompt ohne Brettprüfung. `CurrentHintsVersion` ist bewusst
+NICHT erhöht — ein Neuerzeugen der Bestandstipps entscheidet der User.
+
 ## Tageswertung mit Serverzeit (A2-014, Entscheidung 25.10.2026)
 
 Bis 0.839 rankte die Monatswertung nach der Zeit, die der Browser meldete — `timeSeconds: 0` per Hand gab jeden Tag 🥇.

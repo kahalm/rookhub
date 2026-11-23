@@ -30,10 +30,14 @@ public class HintGenerationServiceTests : IDisposable
         public string? Json { get; set; } =
             """{"hint1":"Achte auf die Schwäche am Rand","hint2":"Deine Dame entscheidet","hint3":"Beginne mit Dame nach h8"}""";
         public int Calls { get; private set; }
+        /// <summary>Antworten der Reihe nach; leer → <see cref="Json"/>.</summary>
+        public Queue<string?> Responses { get; } = new();
+        public List<string> Prompts { get; } = new();
         public Task<string?> GenerateHintsJsonAsync(string system, string userPrompt, CancellationToken ct = default)
         {
             Calls++;
-            return Task.FromResult(Json);
+            Prompts.Add(userPrompt);
+            return Task.FromResult(Responses.Count > 0 ? Responses.Dequeue() : Json);
         }
 
         public Task<string?> TranslateCommentsJsonAsync(string system, string userPrompt, CancellationToken ct = default)
@@ -148,5 +152,48 @@ public class HintGenerationServiceTests : IDisposable
         Assert.False(await svc.GenerateForPuzzleAsync(bp.Id));
         var reloaded = await _db.BookPuzzles.FindAsync(bp.Id);
         Assert.Null(reloaded!.HintsJson);
+    }
+
+    // ---- Brettprüfung mit erneutem Versuch (Muster Buch 32: Damen im Vorspiel getauscht) ----
+
+    private const string Book32Moves =
+        "e2e4 e7e5 g1f3 b8c6 d2d4 e5d4 f3d4 c6d4 d1d4 d8f6 d4f6 g8f6 b1c3 f8b4 c1d2 e8g8 e1c1 d7d6 f2f3 c8e6 "
+        + "a2a3 b4c5 g2g4 f8e8 h2h4 h7h6 d2e3 c5e3 c1b1 e3f4 g4g5 h6g5";
+
+    [Fact]
+    public async Task GenerateForPuzzle_InventedQueen_RetriesWithFeedback()
+    {
+        var bp = await SeedPuzzleAsync(Book32Moves, 29);
+        const string invented = """{"hint1":"Ein Angriff auf den König","hint2":"Deine Dame entscheidet","hint3":"Bauer nach g5"}""";
+        const string clean = """{"hint1":"Ein Angriff auf den König","hint2":"Dein Bauer öffnet die Linie","hint3":"Bauer nach g5"}""";
+        var fake = new FakeClaude { Json = clean };
+        fake.Responses.Enqueue(invented);       // de, Versuch 1 → verworfen
+        var svc = Build(fake);
+
+        Assert.True(await svc.GenerateForPuzzleAsync(bp.Id));
+        Assert.Equal(4, fake.Calls);            // de zweimal, en + hr je einmal
+        Assert.Contains("r3r1k1/ppp2pp1/3pbn1p/8/4PbPP/P1N2P2/1PP5/1K1R1B1R", fake.Prompts[0]);
+        Assert.Contains("Your previous answer was rejected", fake.Prompts[1]);
+        Assert.Contains("Deine Dame entscheidet", fake.Prompts[1]);
+        var map = JsonSerializer.Deserialize<Dictionary<string, List<string>>>((await _db.BookPuzzles.FindAsync(bp.Id))!.HintsJson!)!;
+        Assert.Equal("Dein Bauer öffnet die Linie", map["de"][1]);
+    }
+
+    [Fact]
+    public async Task GenerateForPuzzle_InventedQueenEveryTime_DropsLanguage()
+    {
+        var bp = await SeedPuzzleAsync(Book32Moves, 29);
+        var fake = new FakeClaude
+        {
+            // Ein Text, der in jeder Prüfsprache eine Dame nennt (de/en/hr).
+            Json = """{"hint1":"Angriff","hint2":"Deine Dame / your queen / tvoja dama","hint3":"Pawn to g5"}""",
+        };
+        var svc = Build(fake);
+
+        var ok = await svc.GenerateForPuzzleAsync(bp.Id);
+        Assert.Null((await _db.BookPuzzles.FindAsync(bp.Id))!.HintsJson);
+        Assert.False(ok);
+        Assert.Equal(3 * HintGenerationService.MaxAttempts, fake.Calls);
+        Assert.Null((await _db.BookPuzzles.FindAsync(bp.Id))!.HintsJson);
     }
 }
