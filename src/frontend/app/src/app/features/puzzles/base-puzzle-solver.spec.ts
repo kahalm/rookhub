@@ -2,6 +2,8 @@ import { fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { Key } from 'chessground/types';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { StockfishService } from './stockfish.service';
+import { Chess } from 'chess.js';
+import { canReset } from './solver-actions.util';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -752,5 +754,51 @@ describe('BasePuzzleSolver onFirstWrongMove (P-1)', () => {
     s.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key });
     tick();
     expect(s.hookCalls).toBe(2);
+  }));
+});
+
+// Meldung 2026-11-23 (Woodpecker-Löser): nach dem Mausrutscher fehlten „Zurücksetzen“ und der Tipp-Knopf. Ursache: nach
+// mehreren Off-Path-Zügen nahm der Mausrutscher nur das letzte Zugpaar zurück, der Fehlzug blieb stehen, der Löser hielt
+// sich aber wieder für „auf dem Pfad“ (erwarteter Zug unspielbar → keine Tipps) und das Log war leer (kein Reset).
+describe('BasePuzzleSolver Mausrutscher nach mehreren Off-Path-Zügen', () => {
+  class HintSolver extends TestSolver {
+    override get availableHints(): string[] { return this.currentMoveHint ? ['t1', 't2', 't3'] : []; }
+  }
+  const pawnReply = { getBestMove: (fen: string) => {
+    const m = new Chess(fen).moves({ verbose: true }).find(x => x.piece === 'p')!;
+    return Promise.resolve({ move: m.from + m.to, eval: '0.3' });
+  } } as unknown as StockfishService;
+
+  it('nimmt alles bis zur Abzweigung zurück; Tipp und Zurücksetzen bleiben', fakeAsync(() => {
+    const solver = new HintSolver(pawnReply);
+    solver.setup(START, 'e2e4 e7e5 g1f3 b8c6');   // e4 auto; Löserzug 1 = e7e5
+    tick(600);
+    const atDeviation = solver.fen;
+    solver.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key }); tick(); tick(500);   // Fehlzug + Antwort
+    solver.onMoveMade({ orig: 'b7' as Key, dest: 'b6' as Key }); tick(); tick(500);   // weiter off-path
+    expect(solver.state).toBe('PLAYING');
+
+    solver.mouseslip();
+    expect(solver.fen).toBe(atDeviation);
+    expect(solver.onSolutionPath).toBeTrue();
+    expect(solver.state).toBe('AWAITING_USER_MOVE');
+    expect(solver.hasHints && solver.canShowMoreHints).toBeTrue();
+    expect(canReset(solver.state, solver.hasMadeFirstMove)).toBeTrue();
+    // Der erwartete Lösungszug geht wieder.
+    solver.onMoveMade({ orig: 'e7' as Key, dest: 'e5' as Key });
+    expect(solver.moveIdx).toBe(2);
+    discardPeriodicTasks();
+  }));
+
+  it('nach einem einzelnen Fehlzug als erstem Zug: Zurücksetzen bleibt sichtbar', fakeAsync(() => {
+    const solver = new HintSolver(pawnReply);
+    solver.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    tick(600);
+    solver.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key }); tick(); tick(500);
+    solver.mouseslip();
+    expect(solver.hasMadeFirstMove).toBeTrue();
+    expect(canReset(solver.state, solver.hasMadeFirstMove)).toBeTrue();
+    expect(solver.hasHints && solver.canShowMoreHints).toBeTrue();
+    discardPeriodicTasks();
   }));
 });

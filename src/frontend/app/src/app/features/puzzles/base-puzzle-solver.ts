@@ -56,6 +56,8 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
 
   /** Ob seit dem letzten Fehlzug wirklich ein Gegnerzug gespielt wurde (fuer Mouseslip-Undo). */
   protected lastOpponentReplied = false;
+  /** Länge der Zughistorie vor dem ersten Fehlzug (Abzweigung vom Lösungsweg); null auf dem Pfad. */
+  protected offPathStartPlies: number | null = null;
 
   // ===== Hooks (von den Komponenten überschrieben) =====
   /** Puzzle gelöst — Komponente setzt Endzustand + Mode-Logik (Elo/Leben/Review/…). */
@@ -78,7 +80,9 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
    */
   protected onFirstWrongMove(): void { /* Basis: nichts melden — die Komponenten überschreiben */ }
 
-  get hasMadeFirstMove(): boolean { return this.moveLog.length > 0; }
+  /** Ein Zug wurde gemacht — auch nach dem Mausrutscher, der ihn aus dem Log nimmt: „Zurücksetzen“ bleibt dann
+   *  sichtbar (holt u. a. den Mausrutscher zurück; Meldung 2026-11-23: nach dem Mausrutscher fehlte der Knopf). */
+  get hasMadeFirstMove(): boolean { return this.moveLog.length > 0 || this.mouseslipUsed; }
 
   /**
    * Die Zugfolge passt nicht zur FEN: chess.js warf beim Vorspiel- bzw. Setup-Zug `Invalid move` (TODO 2026-09-13 —
@@ -119,6 +123,7 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
     this.onSolutionPath = true;
     this.aborted = false;
     this.mouseslipUsed = false;
+    this.offPathStartPlies = null;
     this.wrongMoveCount = 0;
     this.alternativeSolve = false;
     this.resetOffPathTracking();
@@ -225,7 +230,9 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
         this.handleAlternativeMove(event, userUci);
       } else {
         this.moveLog.push({ i: this.moveIndex, uci: userUci, exp: expectedUci, ms: thinkMs, ok: false });
+        const pliesBefore = this.chess.history().length;
         if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
+        this.offPathStartPlies = pliesBefore;   // Abzweigung: bis hierher nimmt der Mausrutscher zurück
         this.onSolutionPath = false;
         this.wrongMoveCount++;     // Fehlzug (Abweichung vom Lösungszug)
         this.offPath.userPlies++;   // erster Abweich-Zug
@@ -404,7 +411,13 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
     // Loesungszug mit weg.
     // Hat Stockfish schon geantwortet, auch wenn der Zustand noch THINKING ist (400 ms bis PLAYING, der Knopf steht
     // nach dem ersten Zug schon da — E2E seit 26.10. rot), müssen BEIDE Plies weg, sonst bleibt der Fehlzug stehen.
-    const undoCount = this.lastOpponentReplied ? 2 : 1;
+    // Mehrere Off-Path-Züge (Fehlzug, Antwort, weitergespielt …): ALLES bis zur Abzweigung zurück — vorher nur das letzte
+    // Zugpaar; der Fehlzug blieb stehen, der Löser glaubte sich aber wieder auf dem Pfad: der erwartete Zug passte nicht
+    // zur Stellung (kein Tipp mehr) und das Log war leer (kein „Zurücksetzen“, Meldung 2026-11-23).
+    const undoCount = this.offPathStartPlies != null
+      ? Math.max(0, this.chess.history().length - this.offPathStartPlies)
+      : (this.lastOpponentReplied ? 2 : 1);
+    this.offPathStartPlies = null;
     for (let i = 0; i < undoCount; i++) this.chess.undo();
     // Visualisierungs-Modus: Brett bleibt eingefroren → die zurückgenommenen Züge auch aus der
     // SAN-Zugliste entfernen, sonst „passiert" sichtbar nichts und die Liste ist inkonsistent.

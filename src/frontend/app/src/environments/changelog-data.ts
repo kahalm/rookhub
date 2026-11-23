@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.007.2", date: "2026-11-23", changes: [
+    { en: "Puzzle solvers (Woodpecker, courses, book, daily and standard puzzles): after a mouse slip, “Reset” and the hint button stay available. If you had already played on after the wrong move, the mouse slip now takes everything back to where you left the solution — previously only the last move pair went back, the wrong move stayed on the board, and the hint and “Reset” disappeared.",
+      de: "Puzzle-Löser (Woodpecker, Kurse, Buch, Tages- und Standard-Puzzles): Nach einem Mausrutscher bleiben „Zurücksetzen“ und der Tipp-Knopf da. Hast du nach dem Fehlzug schon weitergespielt, nimmt der Mausrutscher jetzt alles bis zur Abzweigung vom Lösungsweg zurück — bisher ging nur das letzte Zugpaar zurück, der Fehlzug blieb stehen, und Tipp und „Zurücksetzen“ verschwanden." },
+  ] },
   { version: "1.007.1", date: "2026-11-23", changes: [
     { en: "Woodpecker solver on phones and narrow windows (board on top): the puzzle’s exercise, chapter and book now come directly under the board, followed by the training progress (plan, cycle, done, days left, today’s goal, schedule, “Statistics”). The two-column desktop layout is unchanged.",
       de: "Woodpecker-Löser am Handy und in schmalen Fenstern (Brett oben): Aufgabe, Kapitel und Buch stehen jetzt direkt unter dem Brett, danach der Trainingsfortschritt (Plan, Zyklus, erledigt, Resttage, Tagesziel, Zeitplan, „Statistik“). Das zweispaltige Desktop-Layout bleibt unverändert." },
