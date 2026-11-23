@@ -56,7 +56,8 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
 
   /** Ob seit dem letzten Fehlzug wirklich ein Gegnerzug gespielt wurde (fuer Mouseslip-Undo). */
   protected lastOpponentReplied = false;
-  /** Länge der Zughistorie vor dem ersten Fehlzug (Abzweigung vom Lösungsweg); null auf dem Pfad. */
+  /** Länge der Zughistorie vor dem ersten Fehlzug (Abzweigung vom Lösungsweg); null auf dem Pfad. Der Mausrutscher
+   *  erkennt daran, ob nach dem Zurücknehmen noch ein Fehlzug auf dem Brett steht. */
   protected offPathStartPlies: number | null = null;
 
   // ===== Hooks (von den Komponenten überschrieben) =====
@@ -232,7 +233,7 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
         this.moveLog.push({ i: this.moveIndex, uci: userUci, exp: expectedUci, ms: thinkMs, ok: false });
         const pliesBefore = this.chess.history().length;
         if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
-        this.offPathStartPlies = pliesBefore;   // Abzweigung: bis hierher nimmt der Mausrutscher zurück
+        this.offPathStartPlies = pliesBefore;   // Abzweigung merken (Mausrutscher: noch off-path?)
         this.onSolutionPath = false;
         this.wrongMoveCount++;     // Fehlzug (Abweichung vom Lösungszug)
         this.offPath.userPlies++;   // erster Abweich-Zug
@@ -411,26 +412,30 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
     // Loesungszug mit weg.
     // Hat Stockfish schon geantwortet, auch wenn der Zustand noch THINKING ist (400 ms bis PLAYING, der Knopf steht
     // nach dem ersten Zug schon da — E2E seit 26.10. rot), müssen BEIDE Plies weg, sonst bleibt der Fehlzug stehen.
-    // Mehrere Off-Path-Züge (Fehlzug, Antwort, weitergespielt …): ALLES bis zur Abzweigung zurück — vorher nur das letzte
-    // Zugpaar; der Fehlzug blieb stehen, der Löser glaubte sich aber wieder auf dem Pfad: der erwartete Zug passte nicht
-    // zur Stellung (kein Tipp mehr) und das Log war leer (kein „Zurücksetzen“, Meldung 2026-11-23).
-    const undoCount = this.offPathStartPlies != null
-      ? Math.max(0, this.chess.history().length - this.offPathStartPlies)
-      : (this.lastOpponentReplied ? 2 : 1);
-    this.offPathStartPlies = null;
+    const undoCount = this.lastOpponentReplied ? 2 : 1;
     for (let i = 0; i < undoCount; i++) this.chess.undo();
     // Visualisierungs-Modus: Brett bleibt eingefroren → die zurückgenommenen Züge auch aus der
     // SAN-Zugliste entfernen, sonst „passiert" sichtbar nichts und die Liste ist inkonsistent.
     if (this.visualizationMode) this.vizMoves.splice(-undoCount);
-    // Fehlzug aus dem Log streichen (war als ok:false eingetragen).
-    if (this.moveLog.length > 0 && !this.moveLog[this.moveLog.length - 1].ok) this.moveLog.pop();
-    // Zurück auf den Lösungspfad — sonst ginge der nächste User-Zug wieder in handleOffPathMove.
-    this.onSolutionPath = true;
-    this.resetOffPathTracking();
+    // Nur das letzte Zugpaar geht zurück (Wunsch 2026-11-23). Steht danach noch ein Fehlzug auf dem Brett (nach dem
+    // Fehlzug weitergespielt), bleibt der Löser off-path: freies Spiel weiter, der Tipp-Knopf deckt die
+    // „falsch abgebogen“-Hinweise auf (Stufe 3 nennt den Zug). Vorher hielt er sich wieder für „auf dem Pfad“ —
+    // der erwartete Zug passte nicht zur Stellung, und der Tipp verschwand.
+    const stillOffPath = this.offPathStartPlies != null && this.chess.history().length > this.offPathStartPlies;
+    if (stillOffPath) {
+      this.offPath.userPlies = Math.max(1, this.offPath.userPlies - 1);
+    } else {
+      // Fehlzug aus dem Log streichen (war als ok:false eingetragen).
+      if (this.moveLog.length > 0 && !this.moveLog[this.moveLog.length - 1].ok) this.moveLog.pop();
+      // Zurück auf den Lösungspfad — sonst ginge der nächste User-Zug wieder in handleOffPathMove.
+      this.onSolutionPath = true;
+      this.offPathStartPlies = null;
+      this.resetOffPathTracking();
+    }
     const before = this.chess.history({ verbose: true }).at(-1);   // „Letzter Zug“ nicht auf dem zurückgenommenen stehen lassen
     this.lastMove = before ? [before.from as Key, before.to as Key] : undefined;
     this.aborted = false;
-    this.state = 'AWAITING_USER_MOVE';
+    this.state = stillOffPath ? 'PLAYING' : 'AWAITING_USER_MOVE';
     this.moveStartTime = Date.now();
     this.updateBoard();
     this.refreshEvalIfShown();   // Eval auf die zurückgenommene Stellung nachziehen

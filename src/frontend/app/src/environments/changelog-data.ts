@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.007.3", date: "2026-11-23", changes: [
+    { en: "Puzzle solvers: the mouse slip again takes back only the last move pair (1.007.2 went back to before the first wrong move). If a wrong move is still on the board afterwards, the solver stays off the solution: you keep playing freely, and the hint button reveals the “you went wrong” hints (the third names the move where you left the solution). “Reset” stays available.",
+      de: "Puzzle-Löser: Der Mausrutscher nimmt wieder nur das letzte Zugpaar zurück (1.007.2 ging bis vor den ersten Fehlzug). Steht danach noch ein Fehlzug auf dem Brett, bleibt der Löser abseits der Lösung: Du spielst frei weiter, und der Tipp-Knopf deckt die „falsch abgebogen“-Hinweise auf (der dritte nennt den Zug, bei dem du die Lösung verlassen hast). „Zurücksetzen“ bleibt da." },
+  ] },
   { version: "1.007.2", date: "2026-11-23", changes: [
     { en: "Puzzle solvers (Woodpecker, courses, book, daily and standard puzzles): after a mouse slip, “Reset” and the hint button stay available. If you had already played on after the wrong move, the mouse slip now takes everything back to where you left the solution — previously only the last move pair went back, the wrong move stayed on the board, and the hint and “Reset” disappeared.",
       de: "Puzzle-Löser (Woodpecker, Kurse, Buch, Tages- und Standard-Puzzles): Nach einem Mausrutscher bleiben „Zurücksetzen“ und der Tipp-Knopf da. Hast du nach dem Fehlzug schon weitergespielt, nimmt der Mausrutscher jetzt alles bis zur Abzweigung vom Lösungsweg zurück — bisher ging nur das letzte Zugpaar zurück, der Fehlzug blieb stehen, und Tipp und „Zurücksetzen“ verschwanden." },

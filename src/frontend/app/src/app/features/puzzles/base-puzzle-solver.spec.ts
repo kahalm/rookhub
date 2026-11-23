@@ -757,9 +757,9 @@ describe('BasePuzzleSolver onFirstWrongMove (P-1)', () => {
   }));
 });
 
-// Meldung 2026-11-23 (Woodpecker-Löser): nach dem Mausrutscher fehlten „Zurücksetzen“ und der Tipp-Knopf. Ursache: nach
-// mehreren Off-Path-Zügen nahm der Mausrutscher nur das letzte Zugpaar zurück, der Fehlzug blieb stehen, der Löser hielt
-// sich aber wieder für „auf dem Pfad“ (erwarteter Zug unspielbar → keine Tipps) und das Log war leer (kein Reset).
+// Meldung 2026-11-23 (Woodpecker-Löser): nach dem Mausrutscher fehlten „Zurücksetzen“ und der Tipp-Knopf. Der Mausrutscher
+// nimmt nur das letzte Zugpaar zurück; steht danach noch ein Fehlzug auf dem Brett, bleibt der Löser off-path (vorher hielt
+// er sich für „auf dem Pfad“: erwarteter Zug unspielbar → kein Tipp) und das Log behält den Fehlzug (Reset bleibt).
 describe('BasePuzzleSolver Mausrutscher nach mehreren Off-Path-Zügen', () => {
   class HintSolver extends TestSolver {
     override get availableHints(): string[] { return this.currentMoveHint ? ['t1', 't2', 't3'] : []; }
@@ -769,24 +769,28 @@ describe('BasePuzzleSolver Mausrutscher nach mehreren Off-Path-Zügen', () => {
     return Promise.resolve({ move: m.from + m.to, eval: '0.3' });
   } } as unknown as StockfishService;
 
-  it('nimmt alles bis zur Abzweigung zurück; Tipp und Zurücksetzen bleiben', fakeAsync(() => {
+  it('nimmt nur das letzte Zugpaar zurück; bleibt off-path mit „falsch abgebogen“-Tipps und Zurücksetzen', fakeAsync(() => {
     const solver = new HintSolver(pawnReply);
     solver.setup(START, 'e2e4 e7e5 g1f3 b8c6');   // e4 auto; Löserzug 1 = e7e5
     tick(600);
-    const atDeviation = solver.fen;
     solver.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key }); tick(); tick(500);   // Fehlzug + Antwort
+    const afterFirstPair = solver.fen;
     solver.onMoveMade({ orig: 'b7' as Key, dest: 'b6' as Key }); tick(); tick(500);   // weiter off-path
     expect(solver.state).toBe('PLAYING');
 
     solver.mouseslip();
-    expect(solver.fen).toBe(atDeviation);
-    expect(solver.onSolutionPath).toBeTrue();
-    expect(solver.state).toBe('AWAITING_USER_MOVE');
+    expect(solver.fen).toBe(afterFirstPair);          // nur b6 + Antwort zurück, a6 steht noch
+    expect(solver.onSolutionPath).toBeFalse();
+    expect(solver.state).toBe('PLAYING');
     expect(solver.hasHints && solver.canShowMoreHints).toBeTrue();
+    solver.showNextHint(); solver.showNextHint(); solver.showNextHint();
+    expect(solver.shownHints).toEqual(['off1', 'off2', 'wrong-1']);   // Stufe 3: Abzweigung beim 1. Zug
     expect(canReset(solver.state, solver.hasMadeFirstMove)).toBeTrue();
-    // Der erwartete Lösungszug geht wieder.
-    solver.onMoveMade({ orig: 'e7' as Key, dest: 'e5' as Key });
-    expect(solver.moveIdx).toBe(2);
+    // Weiterspielen bleibt freies Spiel (kein Lösungsvergleich gegen e7e5).
+    solver.onMoveMade({ orig: 'h7' as Key, dest: 'h6' as Key });
+    expect(solver.onSolutionPath).toBeFalse();
+    expect(solver.moveIdx).toBe(1);
+    tick(); tick(500);
     discardPeriodicTasks();
   }));
 
