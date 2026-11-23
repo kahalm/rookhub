@@ -73,6 +73,9 @@ export interface CommentBranch {
   /** Der erste Zug ist die ausdrückliche Alternative zum LETZTEN Zug des Zweigs davor („… Ke8 or 2...Nd5 …"):
    *  er steht an der Stellung, aus der jener gespielt wurde — siehe {@link resolveInSubline}, `first`. */
   altOfPrev?: boolean;
+  /** Je Zug (parallel zu `sans`): steht zwischen ihm und dem Zug davor nur Leerraum, Satzzeichen oder ein
+   *  Bewertungszeichen — keine Prosa („3.Qd1 3...Ref8", „Rf8-+ 20...f3+"). Siehe {@link resumeOuterVariation}. */
+  tight?: boolean[];
 }
 
 // Deutsche → englische Figurenbuchstaben (für übersetzte Kurse). K bleibt K.
@@ -96,6 +99,9 @@ const ALT_WORD = /\b(?:or|oder|bzw\.?|beziehungsweise|resp\.?|respectively)\b|\/
 // den Zug davor, die Folge läuft weiter (Buch-Aufgabe 35167).
 const NEG_WORD = '(?<![\\p{L}\\d])(?:not|nicht|statt|anstatt|instead\\s+of|rather\\s+than)(?![\\p{L}\\d])';
 const NEG_BEFORE = new RegExp(`${NEG_WORD}[\\s(:,]*$`, 'iu');
+
+/** Zwischenraum ohne Prosa: Leerraum, Satzzeichen, Bewertungs- und Kommentarzeichen. */
+const TIGHT_GAP = /^[\s.,;:()[\]+\-=/±∓!?□∞#⩲⩱]*$/u;
 
 /** Steht im Zwischenraum vor einem Zug ein Alternativ-Signal (Alternativ-Wort irgendwo oder Verneinung direkt davor)? */
 function isAltSignal(gap: string): boolean {
@@ -312,6 +318,7 @@ export function branches(text: string): CommentBranch[] {
   let cur: string[] = [];
   let curPlies: (number | undefined)[] = [];
   let curSoft: { at: number; exact: boolean }[] = [];
+  let curTight: boolean[] = [];
   let curStartPly: number | undefined;
   let curAltOfPrev = false;          // der Zweig beginnt als ausdrückliche Alternative zum Zug davor
   let lastPly = -Infinity;
@@ -319,7 +326,7 @@ export function branches(text: string): CommentBranch[] {
   let listSince = false;             // Feld-Aufzählung im Text dieses Zweigs seit der letzten Zugnummer, siehe (c)
   let prevEnd = 0;
   const push = () => out.push({
-    sans: cur, startPly: curStartPly, plies: curPlies,
+    sans: cur, startPly: curStartPly, plies: curPlies, tight: curTight,
     ...(curSoft.length ? { soft: curSoft } : {}), ...(curAltOfPrev ? { altOfPrev: true } : {}),
   });
 
@@ -345,6 +352,7 @@ export function branches(text: string): CommentBranch[] {
       cur = [];
       curPlies = [];
       curSoft = [];
+      curTight = [];
       curStartPly = undefined;
       curAltOfPrev = !!t.altOfPrev;
       lastPly = -Infinity;
@@ -356,6 +364,7 @@ export function branches(text: string): CommentBranch[] {
       listSince = false;
       if (!cur.length) curStartPly = t.ply;
     } else if (nextPly !== undefined) nextPly++;
+    curTight.push(cur.length > 0 && TIGHT_GAP.test(gaps.slice(prevEnd, t.start)));
     cur.push(t.san);
     curPlies.push(t.ply);
     prevEnd = t.end;
@@ -661,6 +670,7 @@ function resolveBranch(
     rest.forEach((step, j) => { out[k + j] = step; });
     k += rest.length;
   }
+  resumeOuterVariation(b, out, priorFens);
   // Ausgeschlagener Rahmen bleibt für den nächsten Zweig stehen, wie er war (auf erratene Züge baut keiner auf).
   if (unframed) return { out, ctx, guessed };
   const searched = b.startPly !== undefined ? !usedFen && searchedFen !== undefined : !!ctx?.searched;
@@ -671,6 +681,41 @@ function resolveBranch(
     next.contPly = continuationPly(plies, b.sans.length) ?? (basePly === undefined ? undefined : basePly + b.sans.length);
   }
   return { out, ctx: next, guessed };
+}
+
+/**
+ * Aus dem PGN geklopfte Schachtelung MITTEN in einem Zweig: „2.Bxd4+ Rf6 … A. 3.Qb5 B. 3.Qd3 and C. 3.Qd1 3...Ref8
+ * 4.Qg5+-" (Woodpecker, Aufgabe 245, gemeldet 2026-11-23) ist `3.Qb5 (3.Qd3) (3.Qd1) 3...Ref8 4.Qg5` — die überflüssige
+ * Zugnummer „3..." direkt hinter „3.Qd1" markiert die Rückkehr in die äußere Variante. Wörtlich gelesen setzt
+ * „3...Ref8" den Zweig 3.Qd1 fort, und 4.Qg5 geht von d1 nicht: der letzte Zug blieb Text.
+ *
+ * <p>Bleibt im Zweig ein Zug unaufgelöst, wird die Folge ab einem Zug davor (vom spätesten an) noch einmal versucht,
+ * dessen Zugnummer genau die Fortsetzung ist (die Nummer war also überflüssig) und der ohne Prosa direkt hinter dem
+ * Zug davor steht — an den Stellungen der bisher aufgelösten Kommentar-Züge mit derselben Ply (Zweig-Enden zuerst,
+ * jüngste zuerst; nicht der eigene Zweig). Sie gilt nur, wenn dort MEHR Züge aufgehen als im Zweig selbst — sonst
+ * bleibt alles, wie es war. Mit Prosa dazwischen („3.Rc3 … prevents 3...b5") ist die Nummer Erzählung, kein Rücksprung.</p>
+ */
+function resumeOuterVariation(b: CommentBranch, out: (VariationStep | null)[], prior: PriorFen[]): void {
+  const plies = b.plies ?? [];
+  const miss = out.findIndex(x => x === null);
+  if (miss <= 0 || !prior.length) return;
+  for (let j = miss; j >= 1; j--) {
+    const ply = plies[j];
+    if (ply === undefined || ply !== continuationPly(plies, j) || !out[j - 1] || !b.tight?.[j]) continue;
+    const own = out[j - 1]!.fen;
+    let held = 0;
+    while (j + held < out.length && out[j + held]) held++;
+    let best: VariationStep[] = [];
+    for (const wantEnd of [true, false]) {
+      for (let i = prior.length - 1; i >= 0; i--) {
+        const { fen, end } = prior[i];
+        if (end !== wantEnd || fen === own || baseStartPly(fen) !== ply) continue;
+        const steps = playPrefix(fen, b.sans.slice(j));
+        if (steps.length > best.length) best = steps;
+      }
+    }
+    if (best.length > held) { best.forEach((step, n) => { out[j + n] = step; }); return; }
+  }
 }
 
 /** Hauptlinien-Stellung, an der der Halbzug `ply` dran ist; `undefined` außerhalb der Linie. */
@@ -728,7 +773,8 @@ function resolveInto(startFen: string, ucis: string[], b: CommentBranch, state: 
 /** Teil eines Zweigs als eigener Zweig (ohne Trennstellen). */
 function sliceBranch(b: CommentBranch, from: number, to: number): CommentBranch {
   const plies = (b.plies ?? []).slice(from, to);
-  return { sans: b.sans.slice(from, to), startPly: plies[0], plies, ...(from === 0 && b.altOfPrev ? { altOfPrev: true } : {}) };
+  return { sans: b.sans.slice(from, to), startPly: plies[0], plies, tight: b.tight?.slice(from, to).map((x, k) => k > 0 && x),
+    ...(from === 0 && b.altOfPrev ? { altOfPrev: true } : {}) };
 }
 
 /**

@@ -20,6 +20,36 @@ describe('comment-variation.util', () => {
     expect(segs.map(x => x.move ?? x.text).join('')).toBe('Danach 2.Nf3+- klar.');
   });
 
+  it('Bewertungszeichen direkt am Zug (+-, -+, +=, =+, ±, ∓, !?, ?!) bleiben Text, der Zug wird erkannt', () => {
+    for (const sym of ['+-', '-+', '+=', '=+', '±', '∓', '!?', '?!', '+/-', '-/+']) {
+      expect(extractSanTokens(`2.Nf3${sym} und 3.Qg5`)).withContext(sym).toEqual(['Nf3', 'Qg5']);
+      const segs = buildCommentSegments(`Danach 2.Nf3${sym}`, START, ['e2e4', 'e7e5']);
+      expect(segs.find(x => x.move)?.move).withContext(sym).toBe('2.Nf3');
+    }
+    // Schach plus Bewertung ohne führendes -/=/ bleibt Schach („+-+“ o. Ä. ist mehrdeutig und wird als Bewertung gelesen).
+    for (const sym of ['±', '∓', '!?', '?!', '!', '??']) {
+      expect(extractSanTokens(`3.Qg5+${sym}`)).withContext(sym).toEqual(['Qg5+']);
+    }
+  });
+
+  // Woodpecker Exercise 245 (Buch-Puzzle 35104, gemeldet 2026-11-23): „3...Ref8 4.Qg5+-“ ist die äußere Variante
+  // hinter 3.Qb5 (PGN: 3.Qb5 (3.Qd3) (3.Qd1) 3...Ref8 4.Qg5) — 4.Qg5 geht von d1 nicht und blieb Text.
+  it('Rückkehr in die äußere Variante nach eingeschobenen Alternativen („C. 3.Qd1 3...Ref8 4.Qg5+-“)', () => {
+    const fen = '4rr1k/1ppb3p/2q1n1p1/p7/3b4/1BP1B3/PP3PP1/2KR1Q1R w - - 0 1';
+    const line = 'd1d4 e6d4 h1h7 h8h7 f1h1 h7g7 e3h6 g7f6 h1h4 f6e5 h4d4'.split(' ');
+    const text = 'Forcing mate, but not obligatory to see since the alternative is easy enough: 2.Bxd4+ Rf6 and White is '
+      + 'winning if the queen hurries towards h6 with a threat along the way. There are three ways: A. 3.Qb5 B. 3.Qd3 and '
+      + 'C. 3.Qd1 3...Ref8 4.Qg5+-';
+    const segs = buildCommentSegments(text, fen, line);
+    const moves = segs.filter(x => x.move);
+    expect(moves.map(x => x.move)).toEqual(['2.Bxd4+', 'Rf6', '3.Qb5', '3.Qd3', '3.Qd1', '3...Ref8', '4.Qg5']);
+    const qg5 = moves[moves.length - 1];
+    expect(qg5.from).toBe('b5');
+    expect(qg5.to).toBe('g5');
+    expect(qg5.fen?.split(' ')[0]).toBe('5r1k/1ppb3p/2q2rp1/p5Q1/3B4/1BP5/PP3PP1/2K4R');
+    expect(segs.map(x => x.move ?? x.text).join('')).toBe(text);
+  });
+
   it('resolveVariation: findet die Hauptlinien-Stellung, aus der die Folge legal ist', () => {
     // Hauptlinie 1.e4 e5 → nach e5 (Weiß am Zug, Vollzug 2) sind Nf3 (Weiß) + Nc6 (Schwarz) legal.
     const steps = resolveVariation(START, ['e2e4', 'e7e5'], ['Nf3', 'Nc6']);

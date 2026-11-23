@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.007.6", date: "2026-11-23", changes: [
+    { en: "Book, course and Woodpecker comments: moves after a list of side variations are clickable again, e.g. “A. 3.Qb5 B. 3.Qd3 and C. 3.Qd1 3...Ref8 4.Qg5+-” (Woodpecker exercise 245). A repeated move number right after a move (“3.Qd1 3...Ref8”) marks the return to the outer line; the moves after it are now shown in the position where they are legal (here after 3.Qb5) instead of staying plain text. Evaluation signs directly after a move (+-, -+, +=, =+, ±, ∓, !?, ?!) were already handled and are now covered by tests.",
+      de: "Buch-, Kurs- und Woodpecker-Kommentare: Züge hinter einer Reihe von Nebenvarianten sind wieder anklickbar, z. B. „A. 3.Qb5 B. 3.Qd3 and C. 3.Qd1 3...Ref8 4.Qg5+-“ (Woodpecker-Aufgabe 245). Eine wiederholte Zugnummer direkt hinter einem Zug („3.Qd1 3...Ref8“) markiert die Rückkehr in die äußere Variante; die Züge danach erscheinen jetzt in der Stellung, in der sie legal sind (hier nach 3.Qb5), statt Text zu bleiben. Bewertungszeichen direkt am Zug (+-, -+, +=, =+, ±, ∓, !?, ?!) wurden schon erkannt und sind jetzt mit Tests abgesichert." },
+  ] },
   { version: "1.007.5", date: "2026-11-23", changes: [
     { en: "Puzzle solvers: “Correct (kind of)” now appears only when you played the puzzle to the end after taking all three hints for a move. After “Show solution” (following a mate against you) the card reads “Incorrect” again, as before 1.007.4.",
       de: "Puzzle-Löser: „Geschafft (mehr oder weniger)“ erscheint jetzt nur noch, wenn du die Aufgabe zu Ende gespielt hast, nachdem du zu einem Zug alle drei Tipps geholt hattest. Nach „Lösung zeigen“ (nach einem Matt gegen dich) steht wieder „Falsch“ wie vor 1.007.4." },
