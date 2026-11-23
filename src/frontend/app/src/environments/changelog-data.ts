@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.007.5", date: "2026-11-23", changes: [
+    { en: "Puzzle solvers: “Correct (kind of)” now appears only when you played the puzzle to the end after taking all three hints for a move. After “Show solution” (following a mate against you) the card reads “Incorrect” again, as before 1.007.4.",
+      de: "Puzzle-Löser: „Geschafft (mehr oder weniger)“ erscheint jetzt nur noch, wenn du die Aufgabe zu Ende gespielt hast, nachdem du zu einem Zug alle drei Tipps geholt hattest. Nach „Lösung zeigen“ (nach einem Matt gegen dich) steht wieder „Falsch“ wie vor 1.007.4." },
+  ] },
   { version: "1.007.4", date: "2026-11-23", changes: [
     { en: "Puzzle solvers (Woodpecker, courses, book, daily, weekly, standard and endless puzzles): if you play a puzzle to the end after taking all three hints for a move, or press “Show solution” after being mated, the result card now looks like “Correct” (green tick) and reads “Correct (kind of)” instead of “Incorrect”. It still counts as not solved — statistics, rating and the Woodpecker count are unchanged.",
       de: "Puzzle-Löser (Woodpecker, Kurse, Buch, Tages-, Wochen-, Standard- und Endlos-Puzzles): Spielst du eine Aufgabe zu Ende, nachdem du zu einem Zug alle drei Tipps geholt hast, oder drückst du nach einem Matt „Lösung zeigen“, sieht die Ergebniskarte jetzt aus wie bei „Richtig“ (grünes Häkchen) und sagt „Geschafft (mehr oder weniger)“ statt „Falsch“. Gewertet wird weiterhin als nicht geschafft — Statistik, Wertung und Woodpecker-Zählung bleiben gleich." },

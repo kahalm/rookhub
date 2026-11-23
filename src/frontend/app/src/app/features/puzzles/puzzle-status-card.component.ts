@@ -230,8 +230,8 @@ const CK = {
               </div>
             }
             @case ('FAILED') {
-              <!-- „Geschafft (mehr oder weniger)“ (Wunsch 2026-11-23): selbst zu Ende gespielt, aber mit allen drei Tipps,
-                   oder nach dem Matt „Lösung zeigen“ — gewertet als nicht gelöst, dargestellt wie „Korrekt“. -->
+              <!-- „Geschafft (mehr oder weniger)“ (Wunsch 2026-11-23): selbst zu Ende gespielt, aber mit allen drei Tipps
+                   zu einem Zug — gewertet als nicht gelöst, dargestellt wie „Korrekt“. „Lösung zeigen“ bleibt „Incorrect“. -->
               @let kindOf = kindOfSolved && !gaveUp;
               <div class="psc-center" [class.psc-failed]="!kindOf" [class.psc-solved]="kindOf" [class.psc-kind-of]="kindOf">
                 <mat-icon class="psc-result-icon" [class.psc-gave-up-icon]="gaveUp">
@@ -346,7 +346,7 @@ export class PuzzleStatusCardComponent {
   /** Fehlgeschlagen, aber die Lösung ist noch nicht gezeigt (Matt nach Fehlzug): statt der Lösungs-Navigation „Lösung zeigen“. */
   @Input() solutionHidden = false;
   @Output() showSolutionClicked = new EventEmitter<void>();
-  /** FAILED, aber die Lösung steht zu Ende auf dem Brett (alle drei Tipps geholt bzw. „Lösung zeigen“): Darstellung wie
+  /** FAILED, aber die Lösung steht zu Ende auf dem Brett (alle drei Tipps zu einem Zug geholt, nicht „Lösung zeigen“): Darstellung wie
    *  „Korrekt“ mit „Correct (kind of)“ — die Wertung bleibt „nicht gelöst“ ({@link BasePuzzleSolver.kindOfSolved}). */
   @Input() kindOfSolved = false;
   @Output() nextClicked = new EventEmitter<void>();

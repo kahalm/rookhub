@@ -89,8 +89,6 @@ export abstract class SolverReviewBase<S extends string = never> extends SolverA
    * Die Komponenten prüfen in ihrem `handleFailed` {@link userIsMated} statt sofort `enterSolutionReview()`.
    */
   solutionHidden = false;
-  /** „Lösung zeigen“ wurde nach dem Matt gedrückt (je Puzzle, `setupSolver` setzt zurück). */
-  solutionRevealed = false;
 
   /** Steht der Spieler auf dem Brett matt (die Antwort auf seinen Fehlzug)? */
   protected get userIsMated(): boolean {
@@ -106,7 +104,6 @@ export abstract class SolverReviewBase<S extends string = never> extends SolverA
   /** „Lösung zeigen“ nach einem Matt gegen den Spieler: Lösung wie beim Aufgeben vorspielen (ohne erneuten Versuch). */
   revealSolution(): void {
     this.solutionHidden = false;
-    this.solutionRevealed = true;   // Statuskarte: „Correct (kind of)“ statt „Incorrect“ (Wertung bleibt)
     this.playSolutionFromStart();
   }
 

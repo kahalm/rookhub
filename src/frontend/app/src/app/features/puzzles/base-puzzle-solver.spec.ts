@@ -352,17 +352,13 @@ describe('BasePuzzleSolver drei Tipps zu einem Zug = nicht gelöst', () => {
     expect(s.kindOfSolved).toBeFalse();
   }));
 
-  it('ein Fehlzug ohne alle Tipps ist kein „kind of“; „Lösung zeigen“ schon', fakeAsync(() => {
+  it('„Lösung zeigen“ ist kein „kind of“ — dort bleibt „Incorrect“ (2026-11-23)', fakeAsync(() => {
     const s = new ThreeHintSolver(noStock);
     s.setup(START, 'e2e4 e7e5');
     tick(600);
     expect(s.kindOfSolved).toBeFalse();
     s.revealSolution();
-    expect(s.solutionRevealed).toBeTrue();
-    expect(s.kindOfSolved).toBeTrue();
-    s.setup(START, 'e2e4 e7e5');
-    tick(600);
-    expect(s.solutionRevealed).toBeFalse();
+    expect(s.kindOfSolved).toBeFalse();
     discardPeriodicTasks();
   }));
 

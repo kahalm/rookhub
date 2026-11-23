@@ -131,7 +131,6 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
     this.wrongMoveCount = 0;
     this.alternativeSolve = false;
     this.solvedWithAllHints = false;
-    this.solutionRevealed = false;
     this.resetOffPathTracking();
     this.offPath.startEvalPawns = null;
     this.moveLog = [];
@@ -375,9 +374,10 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
     this.handleSolved(alternative);
   }
 
-  /** Statuskarte: FAILED-Ende, bei dem die Lösung trotzdem auf dem Brett steht — mit allen Tipps selbst zu Ende
-   *  gespielt oder nach dem Matt „Lösung zeigen“. Nur die Anzeige („Correct (kind of)“), die Wertung bleibt. */
-  get kindOfSolved(): boolean { return this.solvedWithAllHints || this.solutionRevealed; }
+  /** Statuskarte: FAILED-Ende, bei dem der Spieler die Lösung selbst zu Ende gespielt hat, aber zu einem Zug alle drei
+   *  Tipps geholt hatte. Nur die Anzeige („Correct (kind of)“), die Wertung bleibt. „Lösung zeigen“ nach einem Matt
+   *  zählt NICHT dazu (Nutzerentscheidung 2026-11-23, dort bleibt „Incorrect“). */
+  get kindOfSolved(): boolean { return this.solvedWithAllHints; }
 
   mouseslip(): void {
     if (this.mouseslipUsed) return;
