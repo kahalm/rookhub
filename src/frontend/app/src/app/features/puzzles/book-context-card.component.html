@@ -21,11 +21,13 @@
           }
           <!-- Woodpecker: Plan als Chip, darunter Zyklus · Satz bzw. Fortschritt · Resttage (Trenner über .rh-dots, DESIGN
                5.13; d3-rk-wp-loeser-im-satz-beschriftung: Zyklus 1 mit demselben Wortlaut wie die Übersichtskarte). -->
+          <!-- Einspaltig (< 900 px, Brett oben) stehen Aufgabe/Kapitel/Buch zuerst, der Fortschritt (.wp-progress) per CSS
+               order dahinter (Wunsch 2026-11-23); ab 900 px bleibt die Reihenfolge wie hier. -->
           @if (inWoodpecker() && woodpeckerPlan(); as p) {
-            <div class="weekly-chip-row">
+            <div class="weekly-chip-row wp-progress wp-chip-row">
               <span class="weekly-chip wp-chip">{{ p.name }}</span>
             </div>
-            <div class="wp-meta rh-dots">
+            <div class="wp-meta rh-dots wp-progress">
               <span>{{ 'woodpecker.cycleOf' | translate: { n: p.currentCycle, max: p.maxCycles } }}</span>
               @if (p.currentCycle === 1) {
                 <span>{{ (p.setSize === 1 ? 'woodpecker.setGrowingOne' : 'woodpecker.setGrowing') | translate: { n: p.setSize, total: p.availableCount } }}</span>
@@ -47,7 +49,7 @@
             <!-- Statistik als Fenster (Wunsch 2026-11-18, DESIGN 5.12): kleiner Rahmenknopf in eigener Zeile unter der
                  Zyklus-Zeile (0.958.1: ein Textlink am Zeilenende wurde nicht gefunden). Der Löser öffnet das Fenster
                  und hält die Aufgabe so lange an; die Karte selbst zeigt keine Statistik mehr. -->
-            <div class="wp-stats-actions">
+            <div class="wp-stats-actions wp-progress">
               <button mat-stroked-button type="button" class="wp-stats-open" aria-haspopup="dialog" (click)="woodpeckerStats.emit()">
                 <mat-icon aria-hidden="true">bar_chart</mat-icon>
                 {{ 'woodpecker.statistics' | translate }}

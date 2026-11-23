@@ -73,6 +73,22 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
     expect(back).toBe(1);
   });
 
+  // Wunsch 2026-11-23: einspaltig (< 900 px) stehen Aufgabe · Kapitel · Buch direkt unter dem Brett, der Fortschritt
+  // danach — per CSS order auf .wp-progress (ein Template). Hier: genau die drei Fortschrittszeilen tragen die Klasse.
+  it('Woodpecker: nur Plan-Chip, Zyklus-Zeile und „Statistik“ sind .wp-progress — Titel, Kapitel, Buch nicht', () => {
+    const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true, woodpeckerPlan: wpPlan(),
+      titleDisplay: 'Exercise 373', chapterDisplay: '5.3) Intermediate Exercises I', bookName: 'The Woodpecker Method' });
+    const text = el.querySelector('.ctx-text')!;
+    const tagged = Array.from(text.querySelectorAll(':scope > .wp-progress'));
+    expect(tagged.length).toBe(3);
+    expect(tagged[0].querySelector('.wp-chip')).not.toBeNull();
+    expect(tagged[1].classList).toContain('wp-meta');
+    expect(tagged[2].classList).toContain('wp-stats-actions');
+    for (const sel of ['.meta-title', '.meta-chapter', '.book-name']) {
+      expect(text.querySelector(`:scope > ${sel}`)?.classList.contains('wp-progress')).toBeFalse();
+    }
+  });
+
   it('Woodpecker Zyklus 1 (d3-rk-wp-loeser-im-satz-beschriftung): spricht vom wachsenden Satz, ohne Balken', () => {
     const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true,
       woodpeckerPlan: wpPlan({ currentCycle: 1, setSize: 12 }), woodpeckerRepeatHint: true });

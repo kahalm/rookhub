@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.007.1", date: "2026-11-23", changes: [
+    { en: "Woodpecker solver on phones and narrow windows (board on top): the puzzle’s exercise, chapter and book now come directly under the board, followed by the training progress (plan, cycle, done, days left, today’s goal, schedule, “Statistics”). The two-column desktop layout is unchanged.",
+      de: "Woodpecker-Löser am Handy und in schmalen Fenstern (Brett oben): Aufgabe, Kapitel und Buch stehen jetzt direkt unter dem Brett, danach der Trainingsfortschritt (Plan, Zyklus, erledigt, Resttage, Tagesziel, Zeitplan, „Statistik“). Das zweispaltige Desktop-Layout bleibt unverändert." },
+  ] },
   { version: "1.007.0", date: "2026-11-22", changes: [
     { en: "Woodpecker: when a cycle’s time is up but not every puzzle is done, the app now asks whether to extend the cycle (by a number of days, suggested from your pace so far) or to close it (open puzzles count as not done; break, then the next cycle in half the time). The question appears on the Woodpecker page and in the solver; after “Later” the card offers “Extend or close cycle”. The choice is saved on the server. Until then the cycle keeps running — previously cycle 1 ended silently at the deadline and later cycles ran on without limit.",
       de: "Woodpecker: Ist die Zeit eines Zyklus um, aber nicht alles bearbeitet, fragt die App jetzt, ob der Zyklus verlängert (um eine Anzahl Tage, vorgeschlagen nach deinem bisherigen Tempo) oder abgeschlossen werden soll (offene Aufgaben zählen als nicht bearbeitet; danach Pause und der nächste Zyklus in halber Zeit). Die Frage kommt in der Woodpecker-Übersicht und im Löser; nach „Später“ bietet die Karte „Verlängern oder abschließen“ an. Die Wahl wird auf dem Server gespeichert. Bis dahin läuft der Zyklus weiter — bisher endete Zyklus 1 still an der Frist und spätere Zyklen liefen unbegrenzt weiter." },

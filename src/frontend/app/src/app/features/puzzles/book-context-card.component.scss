@@ -69,3 +69,11 @@
 @media (pointer: coarse) {
   .context-card .wp-stats-actions .mat-mdc-button-base { height: 44px; }
 }
+
+/* Einspaltig (Brett oben, Karten darunter; Stufe 900 px, DESIGN 4.2): Aufgabe · Kapitel · Buch direkt unter dem Brett,
+   der Woodpecker-Fortschritt (Plan-Chip, Zyklus-Zeile, „Statistik“) danach (Wunsch 2026-11-23). Nur Reihenfolge, kein
+   zweites Template; ab 900 px unverändert. */
+@media (max-width: 899.98px) {
+  .context-card .ctx-text > .wp-progress { order: 1; }
+  .context-card .ctx-text > .wp-chip-row { margin-top: 0.5rem; }
+}
