@@ -6490,6 +6490,7 @@
       "watchOpponent": "Observez le coup de l'adversaire…",
       "invalidPuzzle": "Ce puzzle ne peut pas être joué : ses coups ne correspondent pas à la position.",
       "correct": "Correct !",
+      "correctKindOf": "Correct (en quelque sorte)",
       "checkmate": "Échec et mat !",
       "altSolution": "Solution alternative — le puzzle avait une séquence de coups prévue différente.",
       "incorrect": "Incorrect",

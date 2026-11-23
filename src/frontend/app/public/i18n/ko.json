@@ -6490,6 +6490,7 @@
       "watchOpponent": "상대방의 수를 보세요…",
       "invalidPuzzle": "이 퍼즐은 플레이할 수 없습니다: 수가 포지션과 맞지 않습니다.",
       "correct": "정답!",
+      "correctKindOf": "정답 (어느 정도는)",
       "checkmate": "체크메이트!",
       "altSolution": "대안 해답 — 퍼즐의 의도한 수순과 다릅니다.",
       "incorrect": "오답",

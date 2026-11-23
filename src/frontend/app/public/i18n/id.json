@@ -6490,6 +6490,7 @@
       "watchOpponent": "Perhatikan langkah lawan…",
       "invalidPuzzle": "Puzzle ini tidak bisa dimainkan: langkahnya tidak sesuai dengan posisi.",
       "correct": "Benar!",
+      "correctKindOf": "Benar (kurang lebih)",
       "checkmate": "Skakmat!",
       "altSolution": "Solusi alternatif — puzzle memiliki urutan langkah yang berbeda dari yang dimaksud.",
       "incorrect": "Salah",

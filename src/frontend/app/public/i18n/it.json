@@ -6490,6 +6490,7 @@
       "watchOpponent": "Osserva la mossa dell'avversario…",
       "invalidPuzzle": "Questo puzzle non è giocabile: le mosse non corrispondono alla posizione.",
       "correct": "Corretto!",
+      "correctKindOf": "Corretto (più o meno)",
       "checkmate": "Scacco matto!",
       "altSolution": "Soluzione alternativa — il puzzle aveva una sequenza di mosse diversa.",
       "incorrect": "Errato",

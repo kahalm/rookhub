@@ -6490,6 +6490,7 @@
       "watchOpponent": "Rakibin hamlesini izleyin…",
       "invalidPuzzle": "Bu problem oynanamıyor: hamleler konuma uymuyor.",
       "correct": "Doğru!",
+      "correctKindOf": "Doğru (sayılır)",
       "checkmate": "Mat!",
       "altSolution": "Alternatif çözüm — problemin farklı bir amaçlanan hamle sırası vardı.",
       "incorrect": "Yanlış",

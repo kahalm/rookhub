@@ -6490,6 +6490,7 @@
       "watchOpponent": "Urmărește mutarea adversarului…",
       "invalidPuzzle": "Această problemă nu poate fi jucată: mutările nu se potrivesc cu poziția.",
       "correct": "Corect!",
+      "correctKindOf": "Corect (cam așa)",
       "checkmate": "Șah mat!",
       "altSolution": "Soluție alternativă — problema avea o altă secvență de mutări intenționată.",
       "incorrect": "Incorect",

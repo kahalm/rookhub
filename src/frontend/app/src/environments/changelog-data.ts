@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.007.4", date: "2026-11-23", changes: [
+    { en: "Puzzle solvers (Woodpecker, courses, book, daily, weekly, standard and endless puzzles): if you play a puzzle to the end after taking all three hints for a move, or press “Show solution” after being mated, the result card now looks like “Correct” (green tick) and reads “Correct (kind of)” instead of “Incorrect”. It still counts as not solved — statistics, rating and the Woodpecker count are unchanged.",
+      de: "Puzzle-Löser (Woodpecker, Kurse, Buch, Tages-, Wochen-, Standard- und Endlos-Puzzles): Spielst du eine Aufgabe zu Ende, nachdem du zu einem Zug alle drei Tipps geholt hast, oder drückst du nach einem Matt „Lösung zeigen“, sieht die Ergebniskarte jetzt aus wie bei „Richtig“ (grünes Häkchen) und sagt „Geschafft (mehr oder weniger)“ statt „Falsch“. Gewertet wird weiterhin als nicht geschafft — Statistik, Wertung und Woodpecker-Zählung bleiben gleich." },
+  ] },
   { version: "1.007.3", date: "2026-11-23", changes: [
     { en: "Puzzle solvers: the mouse slip again takes back only the last move pair (1.007.2 went back to before the first wrong move). If a wrong move is still on the board afterwards, the solver stays off the solution: you keep playing freely, and the hint button reveals the “you went wrong” hints (the third names the move where you left the solution). “Reset” stays available.",
       de: "Puzzle-Löser: Der Mausrutscher nimmt wieder nur das letzte Zugpaar zurück (1.007.2 ging bis vor den ersten Fehlzug). Steht danach noch ein Fehlzug auf dem Brett, bleibt der Löser abseits der Lösung: Du spielst frei weiter, und der Tipp-Knopf deckt die „falsch abgebogen“-Hinweise auf (der dritte nennt den Zug, bei dem du die Lösung verlassen hast). „Zurücksetzen“ bleibt da." },

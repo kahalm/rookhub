@@ -6881,6 +6881,7 @@
       "watchOpponent": "Beobachte den Zug des Gegners…",
       "invalidPuzzle": "Diese Aufgabe ist nicht spielbar: Die Züge passen nicht zur Stellung.",
       "correct": "Richtig!",
+      "correctKindOf": "Geschafft (mehr oder weniger)",
       "checkmate": "Schachmatt!",
       "altSolution": "Alternative Lösung — das Puzzle hatte eine andere beabsichtigte Zugfolge.",
       "incorrect": "Falsch",

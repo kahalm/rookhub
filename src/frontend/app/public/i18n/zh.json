@@ -6490,6 +6490,7 @@
       "watchOpponent": "观察对手的走法…",
       "invalidPuzzle": "此战术题无法进行：着法与局面不符。",
       "correct": "正确！",
+      "correctKindOf": "正确（算是吧）",
       "checkmate": "将死！",
       "altSolution": "替代解法——本题有不同的预期走法序列。",
       "incorrect": "错误",

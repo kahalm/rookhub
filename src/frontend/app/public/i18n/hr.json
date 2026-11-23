@@ -6881,6 +6881,7 @@
       "watchOpponent": "Prati protivnikov potez…",
       "invalidPuzzle": "Ovaj zadatak nije moguće igrati: potezi ne odgovaraju poziciji.",
       "correct": "Točno!",
+      "correctKindOf": "Točno (otprilike)",
       "checkmate": "Šah-mat!",
       "altSolution": "Alternativno rješenje — zagonetka je imala drugačiji predviđeni slijed poteza.",
       "incorrect": "Netočno",

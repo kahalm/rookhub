@@ -6881,6 +6881,7 @@
       "watchOpponent": "Watch the opponent's move…",
       "invalidPuzzle": "This puzzle can't be played: its moves don't fit the position.",
       "correct": "Correct!",
+      "correctKindOf": "Correct (kind of)",
       "checkmate": "Checkmate!",
       "altSolution": "Alternative solution — the puzzle had a different intended move sequence.",
       "incorrect": "Incorrect",

@@ -6490,6 +6490,7 @@
       "watchOpponent": "Observe o lance do adversário…",
       "invalidPuzzle": "Este puzzle não pode ser jogado: os lances não correspondem à posição.",
       "correct": "Correto!",
+      "correctKindOf": "Correto (mais ou menos)",
       "checkmate": "Xeque-mate!",
       "altSolution": "Solução alternativa — o puzzle tinha uma sequência de lances pretendida diferente.",
       "incorrect": "Incorreto",

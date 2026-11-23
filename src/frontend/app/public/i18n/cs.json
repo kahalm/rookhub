@@ -6490,6 +6490,7 @@
       "watchOpponent": "Sledujte tah soupeře…",
       "invalidPuzzle": "Tuto úlohu nelze hrát: tahy neodpovídají pozici.",
       "correct": "Správně!",
+      "correctKindOf": "Správně (tak trochu)",
       "checkmate": "Mat!",
       "altSolution": "Alternativní řešení – úloha měla jinou zamýšlenou sekvenci tahů.",
       "incorrect": "Nesprávně",

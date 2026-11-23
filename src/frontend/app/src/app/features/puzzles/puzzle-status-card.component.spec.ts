@@ -62,6 +62,30 @@ describe('PuzzleStatusCardComponent', () => {
     expect(n).toBe(1);
   });
 
+  it('FAILED + kindOfSolved: wie „Korrekt“ (grünes Häkchen) mit „Correct (kind of)“, Aufgeben bleibt Aufgeben (2026-11-23)', async () => {
+    const fixture = await setup();
+    fixture.componentRef.setInput('mode', 'book');
+    fixture.componentRef.setInput('state', 'FAILED');
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.psc-failed')).not.toBeNull();
+    expect(el.textContent).toContain('solver.status.incorrect');
+
+    fixture.componentRef.setInput('kindOfSolved', true);
+    fixture.detectChanges();
+    expect(el.querySelector('.psc-failed')).toBeNull();
+    expect(el.querySelector('.psc-solved.psc-kind-of')).not.toBeNull();
+    expect(el.querySelector('.psc-result-icon')?.textContent?.trim()).toBe('check_circle');
+    expect(el.textContent).toContain('solver.status.correctKindOf');
+    expect(el.textContent).not.toContain('solver.status.incorrect');
+    expect((el.querySelector('.psc-card') as HTMLElement).getAttribute('data-state')).toBe('FAILED');
+
+    fixture.componentRef.setInput('gaveUp', true);
+    fixture.detectChanges();
+    expect(el.querySelector('.psc-kind-of')).toBeNull();
+    expect(el.textContent).toContain('book.status.gaveUpSolution');
+  });
+
   it('creates (template AOT-compiles + DI resolves)', async () => {
     const fixture = await setup();
     expect(fixture.componentInstance).toBeTruthy();
@@ -120,6 +144,15 @@ describe('PuzzleStatusCardComponent Herz-Knopf-Texte', () => {
     }
     throw new Error(lang + '.json nicht ladbar');
   }
+
+  it('„Correct (kind of)“ / „Geschafft (mehr oder weniger)“ in allen Sprachen', async () => {
+    const langs = ['ar', 'cs', 'de', 'el', 'en', 'es', 'fa', 'fr', 'hi', 'hr', 'hu', 'id', 'it', 'ja', 'ko', 'nl', 'pl',
+      'pt', 'ro', 'ru', 'sv', 'tr', 'uk', 'vi', 'zh'];
+    const all = await Promise.all(langs.map(l => load(l))) as unknown as { solver: { status: Record<string, string> } }[];
+    expect(all[langs.indexOf('en')].solver.status['correctKindOf']).toBe('Correct (kind of)');
+    expect(all[langs.indexOf('de')].solver.status['correctKindOf']).toBe('Geschafft (mehr oder weniger)');
+    for (const d of all) expect(d.solver.status['correctKindOf']).toBeTruthy();
+  });
 
   it('de: „Merken“/„Gemerkt“, Leerzustand nennt die Favoriten; en ohne “Love”', async () => {
     const [de, en] = await Promise.all([load('de'), load('en')]);

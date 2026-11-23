@@ -6881,6 +6881,7 @@
       "watchOpponent": "Figyeld az ellenfél lépését…",
       "invalidPuzzle": "Ez a feladat nem játszható: a lépések nem illenek az álláshoz.",
       "correct": "Helyes!",
+      "correctKindOf": "Helyes (úgy-ahogy)",
       "checkmate": "Matt!",
       "altSolution": "Alternatív megoldás – a feladványnak más volt a szándékolt lépéssorozata.",
       "incorrect": "Helytelen",

@@ -6490,6 +6490,7 @@
       "watchOpponent": "相手の手を確認してください…",
       "invalidPuzzle": "このパズルはプレイできません：手が局面と一致しません。",
       "correct": "正解！",
+      "correctKindOf": "正解（いちおう）",
       "checkmate": "チェックメイト！",
       "altSolution": "別の解答 — このパズルには異なる想定手順がありました。",
       "incorrect": "不正解",

@@ -6490,6 +6490,7 @@
       "watchOpponent": "Observa la jugada del rival…",
       "invalidPuzzle": "Este ejercicio no se puede jugar: sus jugadas no encajan con la posición.",
       "correct": "¡Correcto!",
+      "correctKindOf": "Correcto (más o menos)",
       "checkmate": "¡Jaque mate!",
       "altSolution": "Solución alternativa — el ejercicio tenía una secuencia de jugadas prevista diferente.",
       "incorrect": "Incorrecto",

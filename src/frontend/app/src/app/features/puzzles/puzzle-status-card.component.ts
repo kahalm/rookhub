@@ -15,6 +15,7 @@ const CK = {
     loading: 'solver.status.loading',
     setup: 'solver.status.watchOpponent',
     correct: 'solver.status.correct',
+    correctKindOf: 'solver.status.correctKindOf',
     checkmate: 'solver.status.checkmate',
     altSolution: 'solver.status.altSolution',
     incorrect: 'solver.status.incorrect',
@@ -29,6 +30,7 @@ const CK = {
     loading: 'solver.status.loading',
     setup: 'solver.status.watchOpponent',
     correct: 'solver.status.correct',
+    correctKindOf: 'solver.status.correctKindOf',
     checkmate: 'solver.status.checkmate',
     altSolution: 'solver.status.altSolution',
     incorrect: 'solver.status.incorrect',
@@ -43,6 +45,7 @@ const CK = {
     loading: 'solver.status.loading',
     setup: 'solver.status.watchOpponent',
     correct: 'solver.status.correct',
+    correctKindOf: 'solver.status.correctKindOf',
     checkmate: 'solver.status.checkmate',
     altSolution: 'solver.status.altSolution',
     incorrect: 'solver.status.incorrect',
@@ -227,11 +230,14 @@ const CK = {
               </div>
             }
             @case ('FAILED') {
-              <div class="psc-center psc-failed">
+              <!-- „Geschafft (mehr oder weniger)“ (Wunsch 2026-11-23): selbst zu Ende gespielt, aber mit allen drei Tipps,
+                   oder nach dem Matt „Lösung zeigen“ — gewertet als nicht gelöst, dargestellt wie „Korrekt“. -->
+              @let kindOf = kindOfSolved && !gaveUp;
+              <div class="psc-center" [class.psc-failed]="!kindOf" [class.psc-solved]="kindOf" [class.psc-kind-of]="kindOf">
                 <mat-icon class="psc-result-icon" [class.psc-gave-up-icon]="gaveUp">
-                  {{ gaveUp ? 'flag' : 'cancel' }}
+                  {{ gaveUp ? 'flag' : kindOf ? 'check_circle' : 'cancel' }}
                 </mat-icon>
-                <p class="psc-text">{{ (gaveUp ? ck.gaveUp : ck.incorrect) | translate }}</p>
+                <p class="psc-text">{{ (gaveUp ? ck.gaveUp : kindOf ? ck.correctKindOf : ck.incorrect) | translate }}</p>
                 @if (gaveUp && ck.gaveUpSubtext) {
                   <p class="psc-hint">{{ ck.gaveUpSubtext | translate }}</p>
                 }
@@ -340,6 +346,9 @@ export class PuzzleStatusCardComponent {
   /** Fehlgeschlagen, aber die Lösung ist noch nicht gezeigt (Matt nach Fehlzug): statt der Lösungs-Navigation „Lösung zeigen“. */
   @Input() solutionHidden = false;
   @Output() showSolutionClicked = new EventEmitter<void>();
+  /** FAILED, aber die Lösung steht zu Ende auf dem Brett (alle drei Tipps geholt bzw. „Lösung zeigen“): Darstellung wie
+   *  „Korrekt“ mit „Correct (kind of)“ — die Wertung bleibt „nicht gelöst“ ({@link BasePuzzleSolver.kindOfSolved}). */
+  @Input() kindOfSolved = false;
   @Output() nextClicked = new EventEmitter<void>();
   @Output() failedNextClicked = new EventEmitter<void>();
   @Output() analyzeClicked = new EventEmitter<void>();

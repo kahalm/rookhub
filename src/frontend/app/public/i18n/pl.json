@@ -6490,6 +6490,7 @@
       "watchOpponent": "Obserwuj ruch przeciwnika…",
       "invalidPuzzle": "Tego zadania nie można rozegrać: ruchy nie pasują do pozycji.",
       "correct": "Poprawnie!",
+      "correctKindOf": "Poprawnie (mniej więcej)",
       "checkmate": "Mat!",
       "altSolution": "Alternatywne rozwiązanie — zadanie miało inną zamierzoną sekwencję ruchów.",
       "incorrect": "Niepoprawnie",

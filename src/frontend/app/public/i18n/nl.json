@@ -6490,6 +6490,7 @@
       "watchOpponent": "Kijk de zet van de tegenstander…",
       "invalidPuzzle": "Deze puzzel kan niet gespeeld worden: de zetten passen niet bij de stelling.",
       "correct": "Goed!",
+      "correctKindOf": "Goed (min of meer)",
       "checkmate": "Schaakmat!",
       "altSolution": "Alternatieve oplossing — de puzzel had een andere bedoelde zetvolgorde.",
       "incorrect": "Onjuist",

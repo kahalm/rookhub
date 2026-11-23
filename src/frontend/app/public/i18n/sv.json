@@ -6490,6 +6490,7 @@
       "watchOpponent": "Se motståndarens drag…",
       "invalidPuzzle": "Den här uppgiften kan inte spelas: dragen passar inte ställningen.",
       "correct": "Rätt!",
+      "correctKindOf": "Rätt (typ)",
       "checkmate": "Schackmatt!",
       "altSolution": "Alternativ lösning — uppgiften hade en annan avsedd dragföljd.",
       "incorrect": "Fel",

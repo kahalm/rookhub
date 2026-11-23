@@ -344,6 +344,26 @@ describe('BasePuzzleSolver drei Tipps zu einem Zug = nicht gelöst', () => {
     s.onMoveMade({ orig: 'e7' as Key, dest: 'e5' as Key });
     tick(600);
     expect(s.state).toBe('FAILED');
+    // Anzeige „Correct (kind of)“ (Wunsch 2026-11-23) — die Wertung bleibt FAILED; ein neues Puzzle setzt zurück.
+    expect(s.solvedWithAllHints).toBeTrue();
+    expect(s.kindOfSolved).toBeTrue();
+    s.setup(START, 'e2e4 e7e5');
+    tick(600);
+    expect(s.kindOfSolved).toBeFalse();
+  }));
+
+  it('ein Fehlzug ohne alle Tipps ist kein „kind of“; „Lösung zeigen“ schon', fakeAsync(() => {
+    const s = new ThreeHintSolver(noStock);
+    s.setup(START, 'e2e4 e7e5');
+    tick(600);
+    expect(s.kindOfSolved).toBeFalse();
+    s.revealSolution();
+    expect(s.solutionRevealed).toBeTrue();
+    expect(s.kindOfSolved).toBeTrue();
+    s.setup(START, 'e2e4 e7e5');
+    tick(600);
+    expect(s.solutionRevealed).toBeFalse();
+    discardPeriodicTasks();
   }));
 
   it('zwei Tipps lassen das Rätsel gelöst', fakeAsync(() => {
@@ -354,6 +374,7 @@ describe('BasePuzzleSolver drei Tipps zu einem Zug = nicht gelöst', () => {
     s.onMoveMade({ orig: 'e7' as Key, dest: 'e5' as Key });
     tick(600);
     expect(s.state).toBe('SOLVED');
+    expect(s.kindOfSolved).toBeFalse();
   }));
 });
 

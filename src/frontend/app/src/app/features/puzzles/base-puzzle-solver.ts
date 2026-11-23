@@ -32,6 +32,9 @@ const ALT_HOLD_MS = 1400;
  */
 export abstract class BasePuzzleSolver<S extends string = never> extends SolverReviewBase<S> {
   alternativeSolve = false;
+  /** Selbst zu Ende gelöst, aber zu einem Zug alle drei Tipps geholt ({@link HintLadder.failsSolve}): gewertet als
+   *  nicht gelöst (FAILED), die Statuskarte zeigt trotzdem „Correct (kind of)“ (Wunsch 2026-11-23). */
+  solvedWithAllHints = false;
   mouseslipUsed = false;
   /** Anzahl Fehlzüge (Züge, die weder der erwartete Lösungszug noch eine geduldete Alternative waren)
    *  in diesem Puzzle. Für die Wochenpost-Aufzeichnung (Fehlversuche); über alle Modi verfügbar. */
@@ -127,6 +130,8 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
     this.offPathStartPlies = null;
     this.wrongMoveCount = 0;
     this.alternativeSolve = false;
+    this.solvedWithAllHints = false;
+    this.solutionRevealed = false;
     this.resetOffPathTracking();
     this.offPath.startEvalPawns = null;
     this.moveLog = [];
@@ -366,9 +371,13 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
   private solvedInternal(alternative: boolean): void {
     this.alternativeSolve = alternative;
     // Zu einem Zug alle drei Tipps geholt: der Zug war vorgesagt — gewertet wie ein Fehlversuch (Lösung zeigen, nicht gelöst).
-    if (this.hintLadder.failsSolve) { this.handleFailed(); return; }
+    if (this.hintLadder.failsSolve) { this.solvedWithAllHints = true; this.handleFailed(); return; }
     this.handleSolved(alternative);
   }
+
+  /** Statuskarte: FAILED-Ende, bei dem die Lösung trotzdem auf dem Brett steht — mit allen Tipps selbst zu Ende
+   *  gespielt oder nach dem Matt „Lösung zeigen“. Nur die Anzeige („Correct (kind of)“), die Wertung bleibt. */
+  get kindOfSolved(): boolean { return this.solvedWithAllHints || this.solutionRevealed; }
 
   mouseslip(): void {
     if (this.mouseslipUsed) return;

@@ -6490,6 +6490,7 @@
       "watchOpponent": "Xem nước đi của đối thủ…",
       "invalidPuzzle": "Không thể chơi bài tập này: các nước đi không khớp với thế cờ.",
       "correct": "Đúng rồi!",
+      "correctKindOf": "Đúng (tạm được)",
       "checkmate": "Chiếu hết!",
       "altSolution": "Lời giải thay thế — bài tập có chuỗi nước đi dự kiến khác.",
       "incorrect": "Sai rồi",
