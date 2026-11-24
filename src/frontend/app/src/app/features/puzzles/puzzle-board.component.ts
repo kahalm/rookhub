@@ -1,6 +1,6 @@
 import {
   Component, ElementRef, EventEmitter, HostListener, Input, OnChanges,
-  OnDestroy, AfterViewInit, Output, SimpleChanges, ViewChild, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+  OnDestroy, AfterViewInit, Output, SimpleChanges, ViewChild, ChangeDetectionStrategy, ChangeDetectorRef, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
@@ -148,7 +148,7 @@ interface KeyboardFeedback { key: string; params?: Record<string, string>; }
 export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy {
   /** Eingaben, die Stellung oder Zug-Interaktion bestimmen — nur sie lösen in ngOnChanges ein `ground.set` aus. */
   static readonly PositionInputs = ['fen', 'orientation', 'turnColor', 'dests', 'lastMove', 'viewOnly', 'check', 'premovable',
-    'visualization'] as const;
+    'visualization', 'moveColor'] as const;
 
   @Input() fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   @Input() orientation: Color = 'white';
@@ -158,6 +158,10 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() viewOnly = false;
   @Input() check = false;
   @Input() premovable = false;
+  /** Welche Seite ziehen darf (auch vorziehen); ohne Angabe die Seite der Brett-Ausrichtung. Das E-Book-Brett dreht
+   *  sein Brett auf Wunsch, ohne die Farbe des Lösers zu tauschen (1.011.0). */
+  readonly moveColor = input<Color | undefined>(undefined);
+  private get mover(): Color { return this.moveColor() ?? this.orientation; }
   @Input() boardTheme = 'brown';
   @Input() pieceSet = 'cburnett';
   /** Crazy-Figuren-Modus: 'piece' (je Figur) oder 'square' (Feld bestimmt den Stil, `?anarchy=max+1`). */
@@ -507,7 +511,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     const viz = this.visualization > 0;
     const fen = viz ? (this.actualFen ?? this.fen) : this.fen;
     const sideToMove: Color = whiteToMove(fen) ? 'white' : 'black';
-    const myTurn = !this.viewOnly && (viz || this.turnColor === this.orientation);
+    const myTurn = !this.viewOnly && (viz || this.turnColor === this.mover);
     if (!myTurn) {
       this.kbdFeedback = { key: 'puzzles.keyboardMove.notYourTurn' };
       return false;
@@ -609,7 +613,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         // Im Viz-Modus chessgrounds eigene Interaktion abschalten — unser
         // pointerdown-Capture übernimmt die Klicks. Sonst frisst chessground
         // den Tap auf dem Handy und unsere Selection wird wieder geleert.
-        color: (this.viewOnly || this.visualization > 0) ? undefined : this.orientation,
+        color: (this.viewOnly || this.visualization > 0) ? undefined : this.mover,
         dests: (this.viewOnly || this.visualization > 0) ? undefined : this.dests,
         showDests: true
       },
@@ -742,7 +746,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         lastMove: this.lastMove as Key[] | undefined,
         movable: {
           free: false,
-          color: interactionDisabled ? undefined : this.orientation,
+          color: interactionDisabled ? undefined : this.mover,
           dests: interactionDisabled ? undefined : this.dests,
           showDests: true
         },
@@ -832,7 +836,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         check: this.check,
         movable: {
           free: false,
-          color: this.viewOnly ? undefined : this.orientation,
+          color: this.viewOnly ? undefined : this.mover,
           dests: this.viewOnly ? undefined : this.dests,
           showDests: true
         }

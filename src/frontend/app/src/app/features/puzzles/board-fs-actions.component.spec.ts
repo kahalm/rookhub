@@ -1,8 +1,10 @@
+import { TestBed } from '@angular/core/testing';
+import { provideTranslateService } from '@ngx-translate/core';
 import { BoardFsActionsComponent } from './board-fs-actions.component';
 
 describe('BoardFsActionsComponent', () => {
   function make(): BoardFsActionsComponent {
-    const c = new BoardFsActionsComponent();
+    const c = TestBed.runInInjectionContext(() => new BoardFsActionsComponent());
     c.state = 'AWAITING_USER_MOVE';
     return c;
   }
@@ -105,5 +107,17 @@ describe('BoardFsActionsComponent Tipp-Abzeichen (d4)', () => {
     const badge = (f.nativeElement as HTMLElement).querySelector('.bfa-badge')!;
     expect(badge.textContent!.trim()).toBe('1/3');
     expect(badge.getAttribute('title')).toBe('puzzles.hints.shownOf');
+  });
+
+  it('„Aufgeben“ lässt sich ausblenden (E-Book-Brett: keine Lösung am Brett, 1.011.0)', () => {
+    TestBed.configureTestingModule({ imports: [BoardFsActionsComponent], providers: [provideTranslateService({ fallbackLang: 'en' })] });
+    const f = TestBed.createComponent(BoardFsActionsComponent);
+    f.componentRef.setInput('state', 'AWAITING_USER_MOVE');
+    f.detectChanges();
+    const el: HTMLElement = f.nativeElement;
+    expect(el.querySelector('.bfa-btn--warn')).not.toBeNull();
+    f.componentRef.setInput('showGiveUp', false);
+    f.detectChanges();
+    expect(el.querySelector('.bfa-btn--warn')).toBeNull();
   });
 });

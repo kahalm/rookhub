@@ -10,7 +10,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
-import { Key } from 'chessground/types';
+import { Color, Key } from 'chessground/types';
+import { DrawShape } from 'chessground/draw';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
@@ -26,7 +27,12 @@ import { MaiaEngineService } from '../analysis/maia/maia-engine.service';
 import { MAIA_DEFAULT_ELO, MAIA_ELO_OPTIONS } from '../analysis/maia/maia-model';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
-import { tryFreeMove, tryLoadFen } from '../../shared/chess/puzzle-move.util';
+import { applyUci, calcDests, tryFreeMove, tryLoadFen } from '../../shared/chess/puzzle-move.util';
+import { BoardFsActionsComponent } from '../puzzles/board-fs-actions.component';
+import { HintLadder } from '../puzzles/hint-ladder';
+import { buildStagedHints, classifyMoveFromFen } from '../puzzles/puzzle-hints.util';
+import { offPathHintTexts } from '../puzzles/solver-texts';
+import { SecondsCountdown, realClock } from '../puzzles/solver-timer';
 import { EbookDiagram, EbookGame, EbookService } from './ebook.service';
 import { cardDate, cardLang } from '../../shared/player-card/card-lang';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
@@ -43,9 +49,8 @@ export { ebookResultLabel, type EbookGameLine } from './ebook-board.util';
 /** Was das Brett gerade tut (0.777.0). */
 export type EbookBoardMode = 'view' | 'free' | 'calc' | 'solve' | 'maia' | 'game' | 'tree';
 
-/** Lösen: in beiden Arten bleibt ein falscher Zug stehen, Stockfish spielt die Widerlegung, „Zug zurücknehmen“ führt zurück
- *  und man sucht weiter (wie in den Puzzle-Modi, 1.010.0; keine Lösung vorspielen, Nutzerwunsch 20.10.2026); „Training“
- *  merkt sich den Fehler und meldet am Ende „gelöst mit Fehler“. Seit 0.825.0 bleibt im „Training“
+/** Lösen: beide Arten verhalten sich wie der Puzzle-Löser (1.011.0: Fehlzug ohne „falsch“, Stockfish antwortet, Fehler
+ *  gemerkt, Mausrutscher, Tipps; keine Lösung vorspielen, Nutzerwunsch 20.10.2026). Seit 0.825.0 bleibt im „Training“
  *  beim Lösen und Kalkulieren außerdem die Buchstellung stehen — die Züge stehen nur als Text da, wie im Kurs-Training. */
 export type EbookSolveStyle = 'easy' | 'training';
 /** Gegen welche Lösung gelöst wird: die gespeicherte (Buch bzw. bei der Prüfung gespeicherte Engine-Linie) oder Stockfish jetzt. */
@@ -61,7 +66,7 @@ export const ENGINE_SOLUTION_PLIES = 7;
  * - **Kalkulieren** — wie der Kalkulations-Modus der Kurse: Varianten werden als Baum notiert (je Diagramm auf diesem Gerät
  *   gemerkt), jede Linie lässt sich später im Analysebrett prüfen; die Engine-Leiste rechnet die gerade gewählte Stellung.
  * - **Lösen** — gegen die gespeicherte Lösung (Buch bzw. Engine-Linie der Prüfung) oder eine jetzt im Browser gerechnete
- *   Stockfish-Lösung; ein falscher Zug bleibt stehen und wird widerlegt (zurücknehmen, weitersuchen), „Training“ merkt sich den Fehler. WER löst, sagt der Server je
+ *   Stockfish-Lösung; wie der Puzzle-Löser (Fehlzug → gegen Stockfish weiter, Mausrutscher, Tipps, Countdown). WER löst, sagt der Server je
  *   Diagramm (0.975.0, `solvable`/`opponentFirst` aus `BookSolverLine.ForReader` — die Regel wird hier NICHT nachgebaut):
  *   bei `opponentFirst` wird der erste Zug der Linie vorgespielt und der Löser hat die andere Farbe; bei `solvable: false`
  *   gibt es den Modus für dieses Diagramm nicht (die Buchlinie lässt sich unter „Ansehen“ aufklappen).
@@ -79,7 +84,7 @@ export const ENGINE_SOLUTION_PLIES = 7;
   standalone: true,
   imports: [RouterLink, NgTemplateOutlet, MatButtonModule, MatIconModule, MatMenuModule, MatProgressBarModule,
     TranslatePipe, IconLabelDirective, ChessBoardComponent, PuzzleBoardComponent, CalcLinesComponent, LiveEnginePanelComponent, HelpHintComponent,
-    EbookTreePanelComponent, SanPipe],
+    EbookTreePanelComponent, SanPipe, BoardFsActionsComponent],
   templateUrl: './ebook-board.component.html',
   styleUrls: ['./ebook-board.component.scss'],
 })
@@ -149,12 +154,22 @@ export class EbookBoardComponent implements OnChanges {
   static readonly AUTO_NEXT_KEY = 'rh.ebooks.autoNext';
   /** Nach dem Lösen automatisch zum nächsten Diagramm (0.787.1), auf dem Gerät gemerkt; Standard an (Nutzerwunsch 20.10.2026). */
   readonly autoNext = signal(readRaw(localStore(), EbookBoardComponent.AUTO_NEXT_KEY) !== '0');
-  /** Pause vor dem Weiterspringen — Zeit, die eigene Lösung noch anzusehen. */
-  static readonly AUTO_NEXT_DELAY_MS = 3000;
-  /** Training: in diesem Lösen schon ein falscher Zug gespielt. */
+  /** Sekunden bis zum Weiterspringen (sichtbar am Knopf „Nächstes Diagramm“, 1.011.0) — Zeit, die eigene Lösung anzusehen. */
+  static readonly AUTO_NEXT_SECONDS = 3;
+  /** Countdown zum nächsten Diagramm (der des Puzzle-Lösers); jeder Takt zeichnet neu. */
+  private readonly nextTicker = new SecondsCountdown({
+    ...realClock, setInterval: (fn, ms) => realClock.setInterval(() => { fn(); this.cdr.markForCheck(); }, ms),
+  });
+  get autoNextCountdown(): number { return this.nextTicker.remaining; }
+  /** Gibt es ein nächstes Diagramm? Sonst kein „Weiter“ und kein Countdown. */
+  readonly hasNext = input(true);
+  /** In diesem Diagramm schon ein falscher Zug gespielt — in beiden Arten (1.011.0, wie im Puzzle-Löser); der
+   *  Mausrutscher und „Zurücksetzen“ während des Lösens wischen ihn nicht weg, erst ein neuer Versuch nach dem Ende. */
   readonly mistake = signal(false);
+  /** Abseits der Lösung selbst mattgesetzt (eigene Lösung, wie im Puzzle-Löser). */
+  readonly alternative = signal(false);
   readonly solveSource = signal<EbookSolveSource>('stored');
-  readonly solveState = signal<'idle' | 'running' | 'solved'>('idle');
+  readonly solveState = signal<'idle' | 'running' | 'solved' | 'failed'>('idle');
   /** Stockfish-Lösung (UCI), sobald gerechnet; `null` = noch nicht / läuft. */
   readonly engineLine = signal<string[] | null>(null);
   readonly engineLineBusy = signal(false);
@@ -162,18 +177,26 @@ export class EbookBoardComponent implements OnChanges {
   /** Training: das eingefrorene Brett kurz auf die aktuelle Stellung umschalten (Auge, Nutzerwunsch 25.10.2026) —
    *  die Lösung hat dafür die Glühbirne. Nur Ansehen; gezogen wird weiter auf dem Viz-Brett. */
   readonly peek = signal(false);
-  /** Stockfish prüft gerade einen abweichenden Zug. */
+  /** Stockfish rechnet für den Löser (prüft einen abweichenden Zug oder sucht die Antwort) — Status „Stockfish denkt…“. */
   readonly checking = signal(false);
   /** Vom Buch (bzw. der gespeicherten Linie) abgewichen, aber gleichwertig — Antworten kommen jetzt von Stockfish. */
   readonly deviated = signal(false);
-  /** Falscher Zug steht auf dem Brett (1.010.0, wie im Puzzle-Löser): Index des Fehlzugs in {@link played}, sonst `null`.
-   *  Stockfish spielt die Widerlegung, man darf abseits der Lösung weiterspielen; gelöst wird erst nach „Zug zurücknehmen“. */
+  /** Ab welchem Halbzug {@link deviated} gilt (der Mausrutscher kann davor zurück). */
+  private deviatedAt: number | null = null;
+  /** Falscher Zug steht auf dem Brett (wie im Puzzle-Löser): Index des Fehlzugs in {@link played}, sonst `null`.
+   *  Kein „falsch“ — Stockfish antwortet, man spielt gegen Stockfish weiter. */
   readonly wrongAt = signal<number | null>(null);
-  /** Zählt bei jedem Neubeginn/Zurücknehmen hoch — eine danach eintreffende Stockfish-Widerlegung wird verworfen. */
-  private refuteEpoch = 0;
+  /** Einmal je Versuch: das letzte Zugpaar zurück (Mausrutscher wie im Puzzle-Löser). */
+  readonly mouseslipUsed = signal(false);
+  /** Gestufte Tipps je Zug (die des Puzzle-Lösers); alle drei zu einem Zug → „mehr oder weniger“ gelöst. */
+  readonly hintLadder = new HintLadder();
+  /** Zählt bei jedem Neubeginn/Mausrutscher hoch — eine danach eintreffende Stockfish-Antwort wird verworfen. */
+  private epoch = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
-  /** Pause, bevor der Gegnerzug einer „Gegner zuerst“-Aufgabe vorgespielt wird (wie die Antwortzüge in {@link advance}). */
-  static readonly LEAD_DELAY_MS = 450;
+  /** Pause, bevor der Gegnerzug einer „Gegner zuerst“-Aufgabe vorgespielt wird (wie der Setup-Zug im Puzzle-Löser). */
+  static readonly LEAD_DELAY_MS = 600;
+  /** Pause vor der Antwort aus der Lösungslinie (wie im Puzzle-Löser). */
+  static readonly REPLY_DELAY_MS = 400;
   /** „Lösen“ war gewählt, das Diagramm bietet es aber nicht an → „Ansehen“; beim nächsten Diagramm wieder „Lösen“. */
   private solveSkipped = false;
 
@@ -271,6 +294,30 @@ export class EbookBoardComponent implements OnChanges {
     }
   });
 
+  /** Brett des Lösens „Einfach“ (1.011.0): dasselbe Brett wie im Puzzle-Löser — Zugziele, Vorziehen, letzter Zug,
+   *  Brett-Thema und Figurensatz aus den Einstellungen, Vollbild mit der Aktionsleiste. */
+  readonly solveDests = computed(() => {
+    if (!this.playable() || this.peek()) return this.noDests;
+    const c = tryLoadFen(this.boardFen());
+    return c ? calcDests(c) : this.noDests;
+  });
+  /** Vorziehen, während Stockfish bzw. die Linie antwortet (wie im Puzzle-Löser, nicht vor dem vorgespielten Gegnerzug). */
+  readonly premovable = computed(() => this.mode() === 'solve' && this.solveState() === 'running' && !this.peek()
+    && this.played().length >= this.lead.length && !this.isUserTurn());
+  /** Der letzte Zug (Hervorhebung), solange Züge ab der Buchstellung gespielt sind. */
+  readonly lastMoveKeys = computed<[Key, Key] | undefined>(() => {
+    const u = this.mode() === 'calc' || this.mode() === 'tree' ? undefined : this.played().at(-1)?.uci;
+    return u ? [u.slice(0, 2) as Key, u.slice(2, 4) as Key] : undefined;
+  });
+  get boardOrientation(): Color { return this.flipped() ? 'black' : 'white'; }
+  get solverColor(): Color { return this.userColor === 'w' ? 'white' : 'black'; }
+  get boardTurn(): Color { return whiteToMove(this.boardFen()) ? 'white' : 'black'; }
+  get boardCheck(): boolean { return !!tryLoadFen(this.boardFen())?.isCheck(); }
+  /** Pfeile der zugeschalteten Engine auf dem Puzzle-Brett. */
+  readonly engineShapes = computed<DrawShape[]>(() => (this.engine()?.arrows() ?? []).map(a => ({
+    orig: a.from as Key, dest: a.to as Key, brush: a.brush ?? 'green', ...(a.lineWidth != null ? { modifiers: { lineWidth: a.lineWidth } } : {}),
+  })));
+
   constructor() {
     // Engine rechnet jede neue Brettstellung (neuer Index = neue Stellung, keine eigene Nebenvariante).
     // `sync` liest und schreibt Signale der Sitzung (baseIndex …) — OHNE untracked hinge der Effekt an ihnen, jeder
@@ -301,7 +348,7 @@ export class EbookBoardComponent implements OnChanges {
     this.solveSkipped = false;
     this.played.set([]);
     this.wrongAt.set(null);
-    this.refuteEpoch++;
+    this.epoch++;
     this.engineLine.set(null);
     this.showSolution.set(false);
     this.peek.set(false);
@@ -331,7 +378,7 @@ export class EbookBoardComponent implements OnChanges {
     this.maiaThinking.set(false);
     this.solveSkipped = false;
     this.wrongAt.set(null);
-    this.refuteEpoch++;
+    this.epoch++;
     this.mode.set(m);
     // „Gegner zuerst“: beim Lösen aus Sicht des Lösers, sonst wie das Buch (Seite am Zug unten).
     if (this.diagram?.opponentFirst) this.flipped.set(this.userColor === 'b');
@@ -413,7 +460,8 @@ export class EbookBoardComponent implements OnChanges {
     this.played.set([]);
     this.maiaThinking.set(false);
     this.peek.set(false);
-    if (this.mode() === 'solve') this.startSolving();
+    // Mitten im Lösen zählen Fehler und Tipps weiter (wie „Zurücksetzen“ im Puzzle-Löser); „Nochmal“ danach ist ein neuer Versuch.
+    if (this.mode() === 'solve') this.startSolving(this.solveState() !== 'running');
   }
 
   // ---------------------------------------------------------------- Kalkulieren
@@ -492,30 +540,25 @@ export class EbookBoardComponent implements OnChanges {
     writeRaw(localStore(), EbookBoardComponent.AUTO_NEXT_KEY, on ? '1' : '0');   // nur Bequemlichkeit
   }
 
-  /** Gelöst; mit „Automatisch weiter“ nach kurzer Pause zum nächsten Diagramm (der Haken bleibt kurz sichtbar). */
-  private markSolved(): void {
-    this.solveState.set('solved');
-    if (!this.autoNext()) return;
-    const id = this.diagram.id;
-    this.clearTimer();
-    this.timer = setTimeout(() => {
-      if (this.diagram.id === id && this.solveState() === 'solved') this.solvedNext.emit();
-    }, EbookBoardComponent.AUTO_NEXT_DELAY_MS);
-  }
-
   setSolveStyle(s: EbookSolveStyle): void {
     this.solveStyle.set(s);
     writeRaw(localStore(), EbookBoardComponent.SOLVE_STYLE_KEY, s);   // nur Bequemlichkeit — scheitert still
     if (this.mode() === 'solve') this.startSolving();
   }
 
-  startSolving(): void {
+  /** Neuer Lösungsversuch. `fresh` (Start, neues Diagramm, „Nochmal“ nach dem Ende) vergisst auch Fehler und Tipps;
+   *  „Zurücksetzen“ mitten im Lösen nicht — wie im Puzzle-Löser zählt ein Fehlzug bis zum nächsten Diagramm. */
+  startSolving(fresh = true): void {
     this.clearTimer();
     this.played.set([]);
     this.wrongAt.set(null);
-    this.refuteEpoch++;
-    this.mistake.set(false);
+    this.epoch++;
+    if (fresh) { this.mistake.set(false); this.hintLadder.maxLevel = 0; }
+    this.hintLadder.level = 0;
+    this.alternative.set(false);
+    this.mouseslipUsed.set(false);
     this.deviated.set(false);
+    this.deviatedAt = null;
     this.checking.set(false);
     if (this.solveSource() === 'engine' && this.engineLine() == null) {
       this.solveState.set('idle');
@@ -528,10 +571,10 @@ export class EbookBoardComponent implements OnChanges {
 
   /** „Gegner zuerst“ (wie eine Lichess-Aufgabe): nach kurzer Pause den Gegnerzug ausführen, dann ist der Löser am Zug. */
   private playLead(): void {
-    const id = this.diagram.id;
+    const epoch = this.epoch;
     const u = this.lead[0];
     this.timer = setTimeout(() => {
-      if (this.diagram.id !== id || this.mode() !== 'solve' || this.played().length > 0) return;
+      if (epoch !== this.epoch || this.mode() !== 'solve' || this.played().length > 0) return;
       if (!this.pushUci(u)) this.solveState.set('idle');   // sollte nicht vorkommen: der Server hat die Linie nachgespielt
       this.cdr.markForCheck();
     }, EbookBoardComponent.LEAD_DELAY_MS);
@@ -563,43 +606,42 @@ export class EbookBoardComponent implements OnChanges {
     }
   }
 
+  /** Suchtiefe der Antworten und der Prüfung — die Buch-Einstellung des Puzzle-Lösers (1.011.0, vorher fest 14). */
+  get depth(): number { return this.prefs.bookStockfishDepth; }
+
   private solveMove(m: UserBoardMove, uci: string): void {
-    if (this.wrongAt() != null) { this.offPathMove(m, uci); return; }
-    const line = this.solutionLine;
+    if (this.solveState() !== 'running' || this.checking()) return;
     const idx = this.played().length;
-    if (idx >= line.length || idx < this.lead.length || this.solveState() !== 'running' || this.checking()) return;
+    const line = this.solutionLine;
+    if (idx < this.lead.length || (this.wrongAt() == null && idx >= line.length)) return;
     const before = this.boardFen();
-    const onBook = !this.deviated() && (uci === line[idx] || (line[idx].length === 4 && uci.startsWith(line[idx])));
     this.played.update(l => [...l, { san: m.san, fen: m.fen, uci }]);
+    if (this.wrongAt() != null) { this.reply(); return; }   // abseits der Lösung: Stockfish antwortet
+    const onBook = !this.deviated() && (uci === line[idx] || (line[idx].length === 4 && uci.startsWith(line[idx])));
     if (onBook) { this.advance(); return; }
+    // Ein abweichender Zug, der selbst mattsetzt, ist eine Lösung (wie im Puzzle-Löser) — ohne Prüfung, auch ohne Engine.
+    if (EbookBoardComponent.isMate(m.fen)) { this.finish('solved', true); return; }
     // Abweichung (0.780.3): zählt, wenn der Zug das Ergebnis hält — Remis bleibt Remis, Gewinn bleibt Gewinn. Viele
     // Buchstellungen haben mehrere richtige Züge (z. B. ein Remis, das das Buch nur mit einer Linie belegt).
     const reference = this.deviated() ? null : (() => {
-      try {
-        const c = new Chess(before); const u = line[idx];
-        c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u.length > 4 ? u[4] : undefined });
-        return c.fen();
-      } catch { return null; }
+      try { const c = new Chess(before); applyUci(c, line[idx]); return c.fen(); } catch { return null; }
     })();
-    const id = this.diagram.id;
+    const epoch = this.epoch;
     this.checking.set(true);
-    void this.holdsResult(before, m.fen, reference).then(ok => {
-      if (this.diagram.id !== id || this.mode() !== 'solve') return;
+    void this.holdsResult(before, m.fen, reference).then(r => {
+      if (epoch !== this.epoch || this.mode() !== 'solve') return;
       this.checking.set(false);
-      if (ok && this.findBookMove) {
+      if (r.ok && this.findBookMove) {
         // Auch gut, aber weiter den Buchzug suchen lassen (Nutzerwunsch 29.10.2026) — kein Fehler, nur zurücknehmen.
         this.snackbar.quick(this.translate.instant('ebooks.board.alternativeFindBook'));
         this.timer = setTimeout(() => { this.played.update(l => l.slice(0, -1)); this.cdr.markForCheck(); }, 600);
-      } else if (ok) {
+      } else if (r.ok) {
         this.deviated.set(true);
+        this.deviatedAt = idx;
         this.snackbar.quick(this.translate.instant('ebooks.board.alternativeOk'));
         this.advance();
-      } else if (EbookBoardComponent.isMate(m.fen)) {
-        // Ein abweichender Zug, der selbst mattsetzt, ist richtig — auch wenn die Bewertung (Engine weg) nichts sagt.
-        this.deviated.set(true);
-        this.markSolved();
       } else {
-        this.rejectMove(idx);
+        this.wrongMove(idx, r.reply);
       }
       this.cdr.markForCheck();
     });
@@ -612,49 +654,147 @@ export class EbookBoardComponent implements OnChanges {
     return this.solveSource() === 'stored' && this.diagram?.solutionCheck !== 'doubtful';
   }
 
-  /** Falscher Zug (1.010.0, wie in den Puzzle-Modi): „falsch“ sagen, der Zug bleibt stehen, Stockfish widerlegt ihn;
-   *  zurück geht es über {@link takeBackWrong}. „Training“ merkt sich den Fehler. */
-  private rejectMove(idx: number): void {
-    if (this.solveStyle() === 'training') this.mistake.set(true);
-    this.snackbar.quick(this.translate.instant('ebooks.board.wrongMove'));
+  /** Falscher Zug (1.011.0, wie im Puzzle-Löser): kein „falsch“ — der Zug bleibt, der Fehler wird gemerkt, Stockfish
+   *  antwortet (die beste Antwort kam schon aus der Prüfung mit), und man spielt gegen Stockfish weiter. */
+  private wrongMove(idx: number, reply: string | null): void {
+    this.mistake.set(true);
     this.wrongAt.set(idx);
-    this.refute();
+    this.hintLadder.level = 0;   // die „falsch abgebogen“-Tipps beginnen bei Stufe 1
+    if (EbookBoardComponent.isOver(this.boardFen())) { this.gameOver(); return; }
+    if (reply && this.pushUci(reply)) { this.afterReply(); return; }
+    this.reply();
   }
 
-  /** Abseits der Lösung weiterspielen: der Zug bleibt, Stockfish antwortet (Partieende: keine Antwort mehr). */
-  private offPathMove(m: UserBoardMove, uci: string): void {
-    if (this.solveState() !== 'running') return;
-    this.played.update(l => [...l, { san: m.san, fen: m.fen, uci }]);
-    this.refute();
-  }
-
-  /** Stockfish spielt den besten Gegenzug zur aktuellen Stellung — verworfen, wenn inzwischen zurückgenommen, neu begonnen
-   *  oder das Diagramm gewechselt wurde. Steht die Partie (Matt/Patt), gibt es nichts zu antworten. */
-  private refute(): void {
-    if (EbookBoardComponent.isOver(this.boardFen())) return;
-    const epoch = this.refuteEpoch;
-    const id = this.diagram.id;
-    this.clearTimer();
-    this.timer = setTimeout(async () => {
-      let u: string | null;
-      try { u = (await this.stockfish.getBestMove(this.boardFen(), EbookBoardComponent.CHECK_DEPTH)).move || null; } catch { u = null; }
-      if (epoch !== this.refuteEpoch || this.diagram.id !== id || this.mode() !== 'solve' || this.wrongAt() == null) return;
-      if (u && !this.isUserTurn()) this.pushUci(u);
+  /** Abseits der Lösung: Stockfish spielt den besten Gegenzug — verworfen, wenn inzwischen zurückgenommen, neu begonnen
+   *  oder das Diagramm gewechselt wurde. Steht die Partie (Matt/Patt), ist der Versuch zu Ende. */
+  private reply(): void {
+    if (EbookBoardComponent.isOver(this.boardFen())) { this.gameOver(); return; }
+    const epoch = this.epoch;
+    this.checking.set(true);
+    void this.stockfish.getBestMove(this.boardFen(), this.depth).then(r => r.move || null, () => null).then(u => {
+      if (epoch !== this.epoch || this.mode() !== 'solve') return;
+      this.checking.set(false);
+      // Engine weg: keine Antwort — wie im Puzzle-Löser bleiben Mausrutscher und Zurücksetzen.
+      if (u && !this.isUserTurn() && this.pushUci(u)) this.afterReply();
       this.cdr.markForCheck();
-    }, 450);
+    });
   }
 
-  /** „Zug zurücknehmen“ nach einem Fehlzug: den letzten eigenen Zug samt Antwort (läuft die Antwort noch: nur den Zug).
-   *  Wie im Puzzle-Löser geht nur das letzte Paar zurück; erst wenn der Fehlzug selbst weg ist, sucht man wieder die Lösung. */
-  takeBackWrong(): void {
-    const at = this.wrongAt();
-    if (at == null) return;
-    this.refuteEpoch++;
+  private afterReply(): void {
+    if (EbookBoardComponent.isOver(this.boardFen())) this.gameOver();
+  }
+
+  /** Partieende abseits der Lösung (wie `handleGameOver` im Puzzle-Löser): selbst mattgesetzt → gelöst (eigene Lösung),
+   *  selbst matt → nicht gelöst, das Matt bleibt stehen; Patt/Remis → nicht gelöst (nach einer gleichwertigen Abweichung:
+   *  gelöst, das Remis war das Ziel). */
+  private gameOver(): void {
+    const c = tryLoadFen(this.boardFen());
+    if (c?.isCheckmate()) { this.finish(c.turn() === this.userColor ? 'failed' : 'solved', c.turn() !== this.userColor); return; }
+    this.finish(this.wrongAt() == null ? 'solved' : 'failed');
+  }
+
+  /** Ende des Versuchs. Gelöst auf der Linie und „Automatisch weiter“ an: Countdown zum nächsten Diagramm (wie im
+   *  Puzzle-Löser nicht nach einer eigenen Lösung und nicht, wenn zu einem Zug alle drei Tipps geholt wurden). */
+  private finish(result: 'solved' | 'failed', alternative = false): void {
     this.clearTimer();
-    const n = this.isUserTurn() ? 2 : 1;
-    this.played.update(l => l.slice(0, Math.max(at, l.length - n)));
-    if (this.played().length <= at) this.wrongAt.set(null);
-    this.cdr.markForCheck();
+    this.epoch++;
+    this.checking.set(false);
+    this.alternative.set(alternative);
+    this.solveState.set(result);
+    if (result === 'solved' && !alternative && !this.hintLadder.failsSolve && this.autoNext() && this.hasNext()) {
+      const id = this.diagram.id;
+      this.nextTicker.start(EbookBoardComponent.AUTO_NEXT_SECONDS, () => {
+        if (this.diagram.id === id && this.solveState() === 'solved') this.solvedNext.emit();
+      });
+    }
+  }
+
+  /** „Nächstes Diagramm“ (Knopf, Leertaste/Enter) — sofort, ohne den Countdown abzuwarten. */
+  goNext(): void {
+    this.nextTicker.stop();
+    this.solvedNext.emit();
+  }
+
+  /** Ergebnis-Text wie in der Statuskarte des Puzzle-Lösers. Mit Fehler oder allen drei Tipps zu einem Zug „mehr oder
+   *  weniger“ (die Lösung steht trotzdem selbst gespielt auf dem Brett). */
+  get resultKey(): string {
+    if (this.solveState() === 'failed') return 'solver.status.incorrect';
+    if (this.mistake() || this.hintLadder.failsSolve) return 'solver.status.correctKindOf';
+    return this.alternative() ? 'solver.status.checkmate' : 'solver.status.correct';
+  }
+
+  /** Statuszeile während des Lösens — die Sätze des Puzzle-Lösers; auf dem Lösungsweg der des Buchs (mit der Farbe, die
+   *  man spielt, bei „Gegner zuerst“). */
+  get statusKey(): string {
+    if (this.leadPending) return 'solver.status.watchOpponent';
+    if (this.checking()) return 'solver.status.stockfishThinking';
+    if (this.wrongAt() != null) return 'book.status.yourMoveVsStockfish';
+    if (!this.diagram.opponentFirst) return 'ebooks.reader.yourMove';
+    return this.userColor === 'w' ? 'ebooks.board.yourMoveWhite' : 'ebooks.board.yourMoveBlack';
+  }
+
+  /** Nicht gelöst, weil der Löser matt steht — das Matt bleibt auf dem Brett (wie im Puzzle-Löser). */
+  get userMated(): boolean {
+    const c = this.solveState() === 'failed' ? tryLoadFen(this.boardFen()) : null;
+    return !!c && c.isCheckmate() && c.turn() === this.userColor;
+  }
+
+  /** Mausrutscher (wie im Puzzle-Löser): einmal je Versuch das letzte Zugpaar zurück (rechnet die Antwort noch: nur den
+   *  eigenen Zug) — auf dem Lösungsweg wie danach; ein Fehlzug bleibt gezählt. Der vorgespielte Gegnerzug bleibt. */
+  get canMouseslip(): boolean {
+    return this.mode() === 'solve' && this.solveState() === 'running' && !this.mouseslipUsed() && this.played().length > this.lead.length;
+  }
+
+  mouseslip(): void {
+    if (!this.canMouseslip) return;
+    this.epoch++;
+    this.clearTimer();
+    this.checking.set(false);
+    const keep = Math.max(this.lead.length, this.played().length - (this.isUserTurn() ? 2 : 1));
+    this.played.update(l => l.slice(0, keep));
+    const at = this.wrongAt();
+    if (at != null && keep <= at) this.wrongAt.set(null);
+    if (this.deviatedAt != null && keep <= this.deviatedAt) { this.deviated.set(false); this.deviatedAt = null; }
+    this.mouseslipUsed.set(true);
+    this.hintLadder.level = 0;
+  }
+
+  /** „Zurücksetzen“ während des Lösens (wie im Puzzle-Löser) — Fehler und Tipps bleiben gezählt. */
+  get canResetSolve(): boolean { return this.solveState() === 'running' && this.played().length > this.lead.length; }
+
+  // ---- Tipps (die gestuften des Puzzle-Lösers: Zugart → Figur → Zug; abseits der Lösung „falsch abgebogen“) ----
+  private readonly tr = (k: string, p?: object) => this.translate.instant(k, p) as string;
+
+  /** Die Tipp-Stufen zum gerade erwarteten Zug; leer, solange Stockfish rechnet oder nach einer gleichwertigen Abweichung
+   *  (dort gibt es keinen Buchzug mehr). */
+  get hintTexts(): string[] {
+    if (this.mode() !== 'solve' || this.solveState() !== 'running' || this.checking() || this.leadPending) return [];
+    const at = this.wrongAt();
+    if (at != null) return offPathHintTexts(this.tr, Math.floor((at - this.lead.length) / 2) + 1);
+    if (this.deviated() || !this.isUserTurn()) return [];
+    const u = this.solutionLine[this.played().length];
+    return u ? buildStagedHints(classifyMoveFromFen(this.boardFen(), u), this.tr) : [];
+  }
+  get shownHints(): string[] { return this.hintLadder.shown(this.hintTexts); }
+  get canShowMoreHints(): boolean { return this.hintLadder.canReveal(this.hintTexts.length); }
+  showNextHint(): void { this.hintLadder.reveal(this.hintTexts.length, this.wrongAt() == null); }
+
+  /** Zustand für die Vollbild-Leiste des Puzzle-Lösers ({@link BoardFsActionsComponent}). */
+  get fsState(): string {
+    if (this.solveState() !== 'running') return 'SOLVED';
+    if (this.checking() || !this.isUserTurn()) return 'THINKING';
+    return this.wrongAt() != null ? 'PLAYING' : 'AWAITING_USER_MOVE';
+  }
+
+  /** Leertaste/Enter = „Nächstes Diagramm“, sobald der Versuch zu Ende ist (wie im Puzzle-Löser). Die Pfeile bleiben beim
+   *  Leser (Blättern); ein fokussierter Knopf oder Link behält seine Taste. */
+  @HostListener('document:keydown', ['$event'])
+  onNextKey(e: KeyboardEvent): void {
+    if (this.mode() !== 'solve' || (this.solveState() !== 'solved' && this.solveState() !== 'failed') || !this.hasNext()) return;
+    if ((e.key !== ' ' && e.key !== 'Spacebar' && e.key !== 'Enter') || !isBoardHotkey(e)) return;
+    if ((e.target as HTMLElement | null)?.closest?.('button, a, [role="button"], [role^="menuitem"]')) return;
+    e.preventDefault();
+    this.goNext();
   }
 
   private static isMate(fen: string): boolean { try { return new Chess(fen).isCheckmate(); } catch { return false; } }
@@ -664,42 +804,53 @@ export class EbookBoardComponent implements OnChanges {
    * Hält der gespielte Zug das Ergebnis? Stockfish bewertet die Stellung nach dem Zug und die Vergleichsstellung (nach dem
    * Buchzug; nach einer Abweichung die Stellung davor mit bestem Spiel) — jeweils aus Sicht des Ziehenden. Gilt, wenn er
    * höchstens 50 cp schlechter ist, ein Remis ein Remis bleibt (beide ±80 cp) oder ein Gewinn ein Gewinn (beide ≥ 300).
+   * `reply` ist die beste Antwort auf den Zug (aus derselben Suche) — die Widerlegung, falls er nicht hält.
    */
-  private async holdsResult(before: string, after: string, reference: string | null): Promise<boolean> {
+  private async holdsResult(before: string, after: string, reference: string | null): Promise<{ ok: boolean; reply: string | null }> {
     const mover = whiteToMove(before) ? 1 : -1;
+    let reply: string | null = null;
     try {
-      const mine = await this.stockfish.getBestMove(after, EbookBoardComponent.CHECK_DEPTH);
-      const ref = await this.stockfish.getBestMove(reference ?? before, EbookBoardComponent.CHECK_DEPTH);
+      const mine = await this.stockfish.getBestMove(after, this.depth);
+      reply = mine.move || null;
+      const ref = await this.stockfish.getBestMove(reference ?? before, this.depth);
       const a = scoreCp(mine.score, after) * mover;
       const b = scoreCp(ref.score, reference ?? before) * mover;
-      return sameResult(b, a);
+      return { ok: sameResult(b, a), reply };
     } catch {
-      return false;   // Engine nicht verfügbar: wie bisher nur der Buchzug
+      return { ok: false, reply };   // Engine nicht verfügbar: wie bisher nur der Buchzug
     }
   }
-
-  static readonly CHECK_DEPTH = 14;
 
   /** Nach einem richtigen Zug: Antwort nachziehen (aus der Linie, nach einer Abweichung von Stockfish), am Ende „gelöst“. */
   private advance(): void {
     const line = this.solutionLine;
-    if (this.played().length >= line.length) { this.markSolved(); return; }
-    const id = this.diagram.id;
+    if (this.played().length >= line.length || EbookBoardComponent.isOver(this.boardFen())) { this.lineEnd(); return; }
+    const epoch = this.epoch;
     this.timer = setTimeout(async () => {
       let u: string | null = line[this.played().length];
       if (this.deviated()) {
-        try { u = (await this.stockfish.getBestMove(this.boardFen(), EbookBoardComponent.CHECK_DEPTH)).move || null; } catch { u = null; }
+        this.checking.set(true);
+        try { u = (await this.stockfish.getBestMove(this.boardFen(), this.depth)).move || null; } catch { u = null; }
       }
-      if (this.diagram.id !== id || this.mode() !== 'solve') return;
-      if (!u || !this.pushUci(u) || this.played().length >= line.length) this.markSolved();
+      if (epoch !== this.epoch || this.mode() !== 'solve') return;
+      this.checking.set(false);
+      if (!u || !this.pushUci(u) || this.played().length >= line.length || EbookBoardComponent.isOver(this.boardFen())) this.lineEnd();
+      else this.hintLadder.level = 0;   // Tipps gelten je Zug
       this.cdr.markForCheck();
-    }, 450);
+    }, EbookBoardComponent.REPLY_DELAY_MS);
+  }
+
+  /** Linie zu Ende (oder Stockfish hat nach einer Abweichung nichts mehr): gelöst — außer der Löser steht matt. */
+  private lineEnd(): void {
+    const c = tryLoadFen(this.boardFen());
+    this.finish(c?.isCheckmate() && c.turn() === this.userColor ? 'failed' : 'solved');
   }
 
   private pushUci(u: string): boolean {
     try {
       const chess = new Chess(this.boardFen());
-      const mv = chess.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u.length > 4 ? u[4] : undefined });
+      const mv = applyUci(chess, u);
+      if (!mv) return false;
       this.played.update(l => [...l, { san: mv.san, fen: chess.fen(), uci: u }]);
       return true;
     } catch {
@@ -950,5 +1101,6 @@ export class EbookBoardComponent implements OnChanges {
 
   private clearTimer(): void {
     if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+    this.nextTicker.stop();
   }
 }

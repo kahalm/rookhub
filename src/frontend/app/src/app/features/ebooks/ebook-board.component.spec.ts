@@ -12,10 +12,11 @@ import { StockfishService } from '../puzzles/stockfish.service';
 import { By } from '@angular/platform-browser';
 import { Chess } from 'chess.js';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
-import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { EbookBoardComponent, EbookBoardMode, ebookResultLabel } from './ebook-board.component';
 import { EbookDiagram } from './ebook.service';
 import { replayGame, sameResult, scoreCp } from './ebook-board.util';
+import { PreferencesService } from '../../core/preferences.service';
+import { BoardFsActionsComponent } from '../puzzles/board-fs-actions.component';
 
 /** Woodpecker Nr. 1 (Hamppe – Steinitz): Schwarz am Zug, Lösung 17… Txh2+ 18. Kxh2 Th8+. */
 const D: EbookDiagram = {
@@ -59,6 +60,9 @@ describe('EbookBoardComponent', () => {
     return fixture;
   }
 
+  /** Versuch beenden (wie am Ende der Linie). */
+  const finish = (c: EbookBoardComponent, r: 'solved' | 'failed'): void => (c as unknown as { finish(r: string): void }).finish(r);
+
   beforeEach(() => { try { localStorage.removeItem('rh.ebooks.calc.11'); localStorage.removeItem(EbookBoardComponent.SOLVE_STYLE_KEY); } catch { /* egal */ } });
   afterEach(() => { try { localStorage.removeItem(EbookBoardComponent.SOLVE_STYLE_KEY); } catch { /* egal */ } });
 
@@ -73,25 +77,67 @@ describe('EbookBoardComponent', () => {
     expect(EbookBoardComponent.loadSolveStyle()).toBe('training');
   });
 
-  it('„Automatisch weiter“: Standard an; nach dem Lösen 3 s warten, dann solvedNext; aus wird auf dem Gerät gemerkt', fakeAsync(() => {
+  it('„Automatisch weiter“: Standard an; nach dem Lösen sichtbarer Countdown am Knopf „Nächstes Diagramm“, dann solvedNext; aus wird auf dem Gerät gemerkt', fakeAsync(() => {
     try { localStorage.removeItem(EbookBoardComponent.AUTO_NEXT_KEY); } catch { /* egal */ }
-    const c = make().componentInstance;
+    const fixture = make();
+    const c = fixture.componentInstance;
+    const el: HTMLElement = fixture.nativeElement;
     const next = jasmine.createSpy('next');
     c.solvedNext.subscribe(next);
     expect(c.autoNext()).toBeTrue();
-    expect(EbookBoardComponent.AUTO_NEXT_DELAY_MS).toBe(3000);
-    (c as unknown as { markSolved(): void }).markSolved();
-    tick(EbookBoardComponent.AUTO_NEXT_DELAY_MS - 100);
+    expect(EbookBoardComponent.AUTO_NEXT_SECONDS).toBe(3);
+    finish(c, 'solved');
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-next')!.textContent).toContain('ebooks.reader.nextDiagram (3)');
+    tick(1000);
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-next')!.textContent).toContain('(2)');
+    tick(1900);
     expect(next).not.toHaveBeenCalled();             // die eigene Lösung bleibt kurz sichtbar
     tick(200);
     expect(next).toHaveBeenCalledTimes(1);
 
     c.toggleAutoNext();
     expect(localStorage.getItem(EbookBoardComponent.AUTO_NEXT_KEY)).toBe('0');
-    (c as unknown as { markSolved(): void }).markSolved();
-    tick(EbookBoardComponent.AUTO_NEXT_DELAY_MS + 50);
+    finish(c, 'solved');
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-next')!.textContent!.trim()).toBe('ebooks.reader.nextDiagram');   // ohne Countdown
+    tick(4000);
     expect(next).toHaveBeenCalledTimes(1);
+    el.querySelector<HTMLButtonElement>('.eb-next')!.click();                                       // Weiter von Hand
+    expect(next).toHaveBeenCalledTimes(2);
     try { localStorage.removeItem(EbookBoardComponent.AUTO_NEXT_KEY); } catch { /* egal */ }
+  }));
+
+  it('Weiter mit Leertaste/Enter nach dem Ende (wie im Puzzle-Löser) — nicht auf einem fokussierten Knopf, nicht während des Lösens, Pfeile bleiben beim Leser', fakeAsync(() => {
+    const fixture = make();
+    const c = fixture.componentInstance;
+    const next = jasmine.createSpy('next');
+    c.solvedNext.subscribe(next);
+    const key = (k: string, target: EventTarget = document.body): KeyboardEvent => {
+      const e = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+      target.dispatchEvent(e);
+      return e;
+    };
+    expect(key(' ').defaultPrevented).toBeFalse();   // läuft noch
+    finish(c, 'solved');
+    expect(key('ArrowRight').defaultPrevented).toBeFalse();
+    const btn = document.createElement('button');
+    document.body.appendChild(btn);
+    key('Enter', btn);
+    btn.remove();
+    expect(next).not.toHaveBeenCalled();
+    expect(key(' ').defaultPrevented).toBeTrue();
+    expect(next).toHaveBeenCalledTimes(1);
+    // Letztes Diagramm: kein Weiter, kein Countdown.
+    fixture.componentRef.setInput('hasNext', false);
+    finish(c, 'solved');
+    fixture.detectChanges();
+    expect(c.autoNextCountdown).toBe(0);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.eb-next')).toBeNull();
+    expect(key('Enter').defaultPrevented).toBeFalse();
+    tick(4000);
+    expect(next).toHaveBeenCalledTimes(1);
   }));
 
   it('kompakte Brett-Leiste: fünf Modi als Symbolknöpfe (Name im aria-label, gewählter mit aria-pressed), ⚙ nur bei Lösen/Kalkulieren/Maia', () => {
@@ -206,16 +252,16 @@ describe('EbookBoardComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.eb-sol-toggle mat-icon')!.textContent!.trim()).toBe('lightbulb');
     c.onFrozenMove({ orig: 'h8' as never, dest: 'h2' as never });
-    tick(500);
+    tick(EbookBoardComponent.REPLY_DELAY_MS);
     fixture.detectChanges();
     const eye = el.querySelector<HTMLButtonElement>('.eb-solve .eb-peek')!;
     expect(eye.querySelector('mat-icon')!.textContent!.trim()).toBe('visibility');
     eye.click();
     fixture.detectChanges();
     expect(el.querySelector('app-puzzle-board.eb-frozen')).toBeNull();
-    const board = fixture.debugElement.query(By.directive(ChessBoardComponent)).componentInstance as ChessBoardComponent;
+    const board = fixture.debugElement.query(By.directive(PuzzleBoardComponent)).componentInstance as PuzzleBoardComponent;
     expect(board.fen).toBe(AFTER_KXH2);         // aktuelle Stellung
-    expect(board.playable).toBeFalse();         // nur ansehen
+    expect(board.viewOnly).toBeTrue();          // nur ansehen
     expect(el.querySelector('.eb-solution')).toBeNull();   // Lösung bleibt verdeckt
     eye.click();
     fixture.detectChanges();
@@ -274,28 +320,68 @@ describe('EbookBoardComponent', () => {
     expect(c.mode()).toBe('view');
   });
 
-  it('Lösen einfach: falscher Zug bleibt bis „Zug zurücknehmen“ (Engine weg: ohne Antwort), Buchzug angenommen, Antwort kommt von selbst', fakeAsync(() => {
-    const c = make().componentInstance;
+  it('Lösen einfach (1.011.0): ein falscher Zug zählt auch hier als Fehler — kein „falsch“, Mausrutscher einmal, Buchzug angenommen, Ende „mehr oder weniger“', fakeAsync(() => {
+    const fixture = make();
+    const c = fixture.componentInstance;
+    const el: HTMLElement = fixture.nativeElement;
     c.setSolveStyle('easy');
     c.setMode('solve');
     expect(c.solveState()).toBe('running');
     expect(c.solutionText).toBe('17… Rxh2+ 18. Kxh2 Rh8+');
+    stockfish.getBestMove.and.rejectWith(new Error('weg'));
     c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
-    expect(c.played().length).toBe(1);
-    tick(700); flushMicrotasks();
-    expect(c.played().length).toBe(1);
+    expect(c.statusKey).toBe('solver.status.stockfishThinking');
+    flushMicrotasks(); tick(700); flushMicrotasks();
+    expect(c.played().length).toBe(1);   // Engine weg: keine Antwort
     expect(c.wrongAt()).toBe(0);
-    expect(c.mistake()).toBeFalse();   // „einfach“ merkt sich keinen Fehler
-    c.takeBackWrong();
+    expect(c.mistake()).toBeTrue();      // auch „Einfach“ merkt sich den Fehler
+    expect(TestBed.inject(SnackbarService).quick).not.toHaveBeenCalled();   // kein „Falsch — such weiter“
+    expect(c.statusKey).toBe('book.status.yourMoveVsStockfish');
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-solve .eb-solve-text')!.textContent).toContain('book.status.yourMoveVsStockfish');
+    expect(el.querySelector('.eb-solve mat-icon')!.textContent!.trim()).not.toBe('close');
+    expect(c.canMouseslip).toBeTrue();
+    c.mouseslip();
     expect(c.played().length).toBe(0);
+    expect(c.wrongAt()).toBeNull();
+    expect(c.canMouseslip).toBeFalse();  // einmal je Versuch
     c.onBoardMove({ from: 'h8', to: 'h2', san: 'Rxh2+', fen: AFTER_RXH2 });
-    tick(500);
+    tick(EbookBoardComponent.REPLY_DELAY_MS);
     expect(c.played().map(m => m.san)).toEqual(['Rxh2+', 'Kxh2']);
     expect(c.playable()).toBeTrue();
+    c.mouseslip();                       // verbraucht: bleibt stehen
+    expect(c.played().length).toBe(2);
     c.onBoardMove({ from: 'a8', to: 'h8', san: 'Rh8+', fen: '7r/1pp3k1/1b6/p2P1p2/P1N1pn2/2P2PP1/BP5K/4RR2 w - - 1 19' });
     expect(c.solveState()).toBe('solved');
-    c.reset();
+    expect(c.resultKey).toBe('solver.status.correctKindOf');
+    c.toggleAutoNext();
+    c.reset();                           // „Nochmal“ nach dem Ende: neuer Versuch
     expect(c.solveState()).toBe('running');
+    expect(c.mistake()).toBeFalse();
+    expect(c.mouseslipUsed()).toBeFalse();
+    c.toggleAutoNext();
+  }));
+
+  it('Lösen: Zurücksetzen mitten im Lösen wie im Puzzle-Löser — der Fehler bleibt gezählt, der Mausrutscher kommt zurück', fakeAsync(() => {
+    const fixture = make();
+    const c = fixture.componentInstance;
+    const el: HTMLElement = fixture.nativeElement;
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-reset')).toBeNull();   // noch nichts zurückzusetzen
+    wrongThenReplies(['e1e2']);
+    c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
+    flushMicrotasks();
+    c.mouseslip();
+    c.onBoardMove({ from: 'h8', to: 'h2', san: 'Rxh2+', fen: AFTER_RXH2 });
+    fixture.detectChanges();
+    const reset = el.querySelector<HTMLButtonElement>('.eb-reset')!;
+    expect(reset.textContent).toContain('solver.actions.reset');
+    reset.click();
+    expect(c.played()).toEqual([]);
+    expect(c.solveState()).toBe('running');
+    expect(c.mistake()).toBeTrue();
+    expect(c.mouseslipUsed()).toBeFalse();
+    tick(1000);
   }));
 
   it('Lösen: ein gleichwertiger Zug ist „auch gut“, wird aber zurückgenommen — man sucht den Buchzug weiter (kein Fehler)', fakeAsync(() => {
@@ -346,14 +432,14 @@ describe('EbookBoardComponent', () => {
     expect(scoreCp({ mate: -3 }, D.fen)).toBe(-9997);
   });
 
-  /** Stockfish-Attrappe: die ersten zwei Aufrufe bewerten Sh3 deutlich schlechter als Txh2+ (→ falsch), danach antwortet
-   *  sie mit `replies` der Reihe nach (Widerlegung bzw. Antworten abseits der Lösung). */
+  /** Stockfish-Attrappe: die ersten zwei Aufrufe (Prüfung) bewerten Sh3 deutlich schlechter als Txh2+ (→ falsch); die
+   *  beste Antwort der ersten Suche ist die Widerlegung `replies[0]`, danach antwortet sie mit den übrigen der Reihe nach. */
   function wrongThenReplies(replies: string[]): void {
     let n = 0;
     stockfish.getBestMove.and.callFake(() => {
       const k = n++;
-      return Promise.resolve((k < 2 ? { move: 'e1e2', eval: '0', score: { cp: k === 0 ? 0 : -900 } }
-        : { move: replies[k - 2] ?? '', eval: '0', score: { cp: 0 } }) as never);
+      return Promise.resolve((k < 2 ? { move: k === 0 ? replies[0] : 'e1e2', eval: '0', score: { cp: k === 0 ? 0 : -900 } }
+        : { move: replies[k - 1] ?? '', eval: '0', score: { cp: 0 } }) as never);
     });
   }
   const fenAfter = (fen: string, ...ucis: string[]) => {
@@ -362,113 +448,265 @@ describe('EbookBoardComponent', () => {
     return ch.fen();
   };
 
-  it('Lösen Training (1.010.0, wie im Puzzle-Löser): ein falscher Zug bleibt stehen, Stockfish widerlegt ihn; „Zug zurücknehmen“ nimmt beide Halbzüge zurück; gelöst „mit Fehler“', fakeAsync(() => {
+  it('Lösen Training (1.011.0, wie im Puzzle-Löser): ein falscher Zug bleibt stehen, Stockfish antwortet sofort (Tiefe aus den Einstellungen), kein „falsch“; Mausrutscher nimmt beide Halbzüge zurück; Ende „mehr oder weniger“', fakeAsync(() => {
     const fixture = make();
     const c = fixture.componentInstance;
     const el: HTMLElement = fixture.nativeElement;
     expect(c.solveStyle()).toBe('training');
+    TestBed.inject(PreferencesService).bookStockfishDepth = 12;
     wrongThenReplies(['e1e2']);
     c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
+    expect(c.playable()).toBeFalse();                       // Stockfish rechnet
     flushMicrotasks();
     expect(c.wrongAt()).toBe(0);
     expect(c.mistake()).toBeTrue();
-    expect(TestBed.inject(SnackbarService).quick).toHaveBeenCalledWith('ebooks.board.wrongMove');
-    expect(c.played().map(m => m.san)).toEqual(['Nh3']);   // nicht mehr automatisch zurückgenommen
-    expect(c.playable()).toBeFalse();                       // Widerlegung läuft
-    tick(500); flushMicrotasks();
-    expect(stockfish.getBestMove.calls.count()).toBe(3);
-    expect(stockfish.getBestMove.calls.mostRecent().args).toEqual([WRONG, EbookBoardComponent.CHECK_DEPTH]);
+    expect(TestBed.inject(SnackbarService).quick).not.toHaveBeenCalled();
+    expect(stockfish.getBestMove.calls.count()).toBe(2);   // Prüfung — deren beste Antwort ist die Widerlegung
+    expect(stockfish.getBestMove.calls.first().args).toEqual([WRONG, 12]);
     expect(c.played().map(m => m.uci)).toEqual(['f4h3', 'e1e2']);   // Gegenzug gespielt
     expect(c.solveState()).toBe('running');                        // keine Lösung vorgespielt
     fixture.detectChanges();
-    expect(el.querySelector('.eb-solve--wrong')).not.toBeNull();
-    const back = el.querySelector<HTMLButtonElement>('.eb-take-back')!;
-    expect(back.textContent).toContain('ebooks.reader.undo');
-    back.click();
+    expect(el.querySelector('.eb-solve .eb-solve-text')!.textContent).toContain('book.status.yourMoveVsStockfish');
+    expect(el.querySelector('.eb-solve--failed')).toBeNull();
+    const slip = el.querySelector<HTMLButtonElement>('.eb-mouseslip')!;
+    expect(slip.textContent).toContain('solver.actions.mouseslip');
+    slip.click();
     expect(c.played()).toEqual([]);
     expect(c.wrongAt()).toBeNull();
     fixture.detectChanges();
-    expect(el.querySelector('.eb-take-back')).toBeNull();
-    // Jetzt die Lösung: gilt, aber „mit Fehler“.
+    expect(el.querySelector('.eb-mouseslip')).toBeNull();          // einmal je Versuch
+    // Jetzt die Lösung: gilt, aber „mehr oder weniger“.
     c.onBoardMove({ from: 'h8', to: 'h2', san: 'Rxh2+', fen: AFTER_RXH2 });
-    tick(500);
+    tick(EbookBoardComponent.REPLY_DELAY_MS);
     c.onBoardMove({ from: 'a8', to: 'h8', san: 'Rh8+', fen: fenAfter(AFTER_KXH2, 'a8h8') });
     expect(c.solveState()).toBe('solved');
     expect(c.mistake()).toBeTrue();
-    tick(EbookBoardComponent.AUTO_NEXT_DELAY_MS);
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-solve--done .eb-solve-text')!.textContent).toContain('solver.status.correctKindOf');
+    expect(el.querySelector('.eb-again')!.textContent).toContain('common.retry');
+    tick(EbookBoardComponent.AUTO_NEXT_SECONDS * 1000);
   }));
 
-  it('Lösen nach Fehlzug: abseits der Lösung weiterspielen (Stockfish antwortet); Zurücknehmen geht paarweise bis vor den Fehlzug', fakeAsync(() => {
+  it('Lösen nach Fehlzug: abseits der Lösung weiterspielen (Stockfish antwortet); der Mausrutscher nimmt nur das letzte Paar zurück, der Fehlzug bleibt', fakeAsync(() => {
     const c = make().componentInstance;
     wrongThenReplies(['e1e2', 'e2e1']);
     c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
-    flushMicrotasks(); tick(500); flushMicrotasks();
+    flushMicrotasks();
     const off = fenAfter(WRONG, 'e1e2', 'a8a7');
     c.onBoardMove({ from: 'a8', to: 'a7', san: 'Ra7', fen: off });
     expect(c.played().length).toBe(3);
-    tick(500); flushMicrotasks();
+    flushMicrotasks();
     expect(c.played().map(m => m.uci)).toEqual(['f4h3', 'e1e2', 'a8a7', 'e2e1']);
     expect(c.solveState()).toBe('running');
-    c.takeBackWrong();
+    expect(c.shownHints).toEqual([]);
+    c.showNextHint();                                    // abseits: die „falsch abgebogen“-Tipps
+    expect(c.shownHints).toEqual(['puzzles.offPath.h1']);
+    c.mouseslip();
     expect(c.played().map(m => m.uci)).toEqual(['f4h3', 'e1e2']);
     expect(c.wrongAt()).toBe(0);    // Fehlzug steht noch
-    c.takeBackWrong();
-    expect(c.played()).toEqual([]);
-    expect(c.wrongAt()).toBeNull();
+    c.mouseslip();
+    expect(c.played().length).toBe(2);
+    expect(c.hintLadder.maxLevel).toBe(0);              // Tipps abseits zählen nicht
   }));
 
-  it('Lösen nach Fehlzug: Zurücknehmen während Stockfish noch rechnet nimmt nur den Zug zurück, die späte Antwort wird verworfen', fakeAsync(() => {
+  it('Mausrutscher, während Stockfish noch rechnet: nimmt nur den Zug zurück, die späte Antwort wird verworfen', fakeAsync(() => {
     const c = make().componentInstance;
     let release!: (v: unknown) => void;
-    let n = 0;
-    stockfish.getBestMove.and.callFake(() => n++ < 2
-      ? Promise.resolve({ move: 'e1e2', eval: '0', score: { cp: n === 1 ? 0 : -900 } } as never)
-      : new Promise(r => { release = r; }) as never);
+    stockfish.getBestMove.and.callFake(() => new Promise(r => { release = r; }) as never);
     c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
-    flushMicrotasks(); tick(500);
-    c.takeBackWrong();
+    expect(c.canMouseslip).toBeTrue();
+    c.mouseslip();
     expect(c.played()).toEqual([]);
-    release({ move: 'e1e2', eval: '0' });
+    expect(c.checking()).toBeFalse();
+    release({ move: 'e1e2', eval: '0', score: { cp: 0 } });
     flushMicrotasks();
     expect(c.played()).toEqual([]);
     expect(c.playable()).toBeTrue();
   }));
 
-  it('Lösen nach Fehlzug: Diagrammwechsel während der Widerlegung — die Antwort landet nicht auf dem neuen Diagramm', fakeAsync(() => {
+  it('Lösen nach Fehlzug: Diagrammwechsel, während Stockfish rechnet — die Antwort landet nicht auf dem neuen Diagramm', fakeAsync(() => {
     const fixture = make();
     const c = fixture.componentInstance;
+    const offPath = fenAfter(WRONG, 'e1e2', 'a8a7');
     let release!: (v: unknown) => void;
     let n = 0;
     stockfish.getBestMove.and.callFake(() => n++ < 2
       ? Promise.resolve({ move: 'e1e2', eval: '0', score: { cp: n === 1 ? 0 : -900 } } as never)
       : new Promise(r => { release = r; }) as never);
     c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
-    flushMicrotasks(); tick(500);
+    flushMicrotasks();
+    c.onBoardMove({ from: 'a8', to: 'a7', san: 'Ra7', fen: offPath });
     fixture.componentRef.setInput('diagram', { ...D, id: 12 });
     fixture.detectChanges();
     expect(c.wrongAt()).toBeNull();
-    release({ move: 'e1e2', eval: '0' });
+    expect(c.mistake()).toBeFalse();
+    release({ move: 'e2e1', eval: '0' });
     flushMicrotasks();
     expect(c.played()).toEqual([]);
     expect(c.solveState()).toBe('running');
   }));
 
-  it('Lösen: ein abweichender Zug, der selbst mattsetzt, ist richtig — auch ohne Engine', fakeAsync(() => {
+  it('Lösen: ein abweichender Zug, der selbst mattsetzt, ist eine eigene Lösung — auch ohne Engine („Schachmatt!“, kein Auto-Weiter)', fakeAsync(() => {
     const Q: EbookDiagram = { ...D, id: 13, fen: '7k/8/6K1/8/8/8/8/Q7 w - - 0 1', solutionUci: 'a1a8', solutionSan: 'Qa8#', solutionText: '1.Qa8#' };
-    const c = make(Q).componentInstance;
-    c.toggleAutoNext();
+    const fixture = make(Q);
+    const c = fixture.componentInstance;
     stockfish.getBestMove.and.rejectWith(new Error('weg'));
     c.onBoardMove({ from: 'a1', to: 'g7', san: 'Qg7#', fen: fenAfter(Q.fen, 'a1g7') });
     flushMicrotasks();
     expect(c.solveState()).toBe('solved');
+    expect(c.alternative()).toBeTrue();
     expect(c.wrongAt()).toBeNull();
     expect(c.mistake()).toBeFalse();
-    c.toggleAutoNext();
+    expect(c.resultKey).toBe('solver.status.checkmate');
+    expect(c.autoNextCountdown).toBe(0);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.eb-solve-sub')!.textContent).toContain('solver.status.altSolution');
   }));
 
-  it('Lösen: ein Fehlzug, der die Partie beendet (Patt), bekommt keine Antwort — nur zurücknehmen', fakeAsync(() => {
+  describe('Matt abseits der Lösung (1.011.0, wie im Puzzle-Löser)', () => {
+    /** Stockfish-Attrappe: die Prüfung bewertet den Zug als falsch (0 gegen +900 aus Sicht von Weiß), ihre beste Antwort
+     *  ist `reply`; danach antwortet sie mit `more` der Reihe nach. */
+    function wrongFor(reply: string, more: string[] = []): void {
+      let n = 0;
+      stockfish.getBestMove.and.callFake(() => {
+        const k = n++;
+        return Promise.resolve((k === 0 ? { move: reply, eval: '0', score: { cp: 0 } }
+          : k === 1 ? { move: 'a1a2', eval: '0', score: { cp: 900 } } : { move: more[k - 2] ?? '', eval: '0', score: { cp: 0 } }) as never);
+      });
+    }
+
+    it('nach einem Fehlzug selbst mattgesetzt → gelöst als eigene Lösung, wegen des Fehlers „mehr oder weniger“, kein Auto-Weiter', fakeAsync(() => {
+      // Weiß Kg6, Tb1, Bh2 — Schwarz Kh8. Buchlinie 1.h3 Kg8 2.Tb8#.
+      const W: EbookDiagram = { ...D, id: 15, fen: '7k/8/6K1/8/8/8/7P/1R6 w - - 0 1', solutionUci: 'h2h3 h8g8 b1b8', solutionSan: 'h3 Kg8 Rb8#', solutionText: '' };
+      const fixture = make(W);
+      const c = fixture.componentInstance;
+      wrongFor('h8g8');
+      c.onBoardMove({ from: 'h2', to: 'h4', san: 'h4', fen: fenAfter(W.fen, 'h2h4') });
+      flushMicrotasks();
+      expect(c.played().map(m => m.uci)).toEqual(['h2h4', 'h8g8']);
+      expect(c.mistake()).toBeTrue();
+      c.onBoardMove({ from: 'b1', to: 'b8', san: 'Rb8#', fen: fenAfter(W.fen, 'h2h4', 'h8g8', 'b1b8') });
+      expect(c.solveState()).toBe('solved');
+      expect(c.alternative()).toBeTrue();
+      expect(c.resultKey).toBe('solver.status.correctKindOf');
+      expect(c.autoNextCountdown).toBe(0);
+      expect(c.boardFen()).toBe(fenAfter(W.fen, 'h2h4', 'h8g8', 'b1b8'));
+    }));
+
+    it('nach einem Fehlzug selbst mattgesetzt worden → nicht gelöst, das Matt bleibt auf dem Brett', fakeAsync(() => {
+      // Grundreihe: Weiß Kg1, Ta4, Bf2/g2/h2 — Schwarz Kg8, Te8, Bf7/g7/h7. Buchlinie 1.h3 Kf8 2.Ta8.
+      const B: EbookDiagram = { ...D, id: 16, fen: '4r1k1/5ppp/8/8/R7/8/5PPP/6K1 w - - 0 1', solutionUci: 'h2h3 g8f8 a4a8', solutionSan: 'h3 Kf8 Ra8', solutionText: '' };
+      const fixture = make(B);
+      const c = fixture.componentInstance;
+      wrongFor('e8e1');
+      c.onBoardMove({ from: 'a4', to: 'b4', san: 'Rb4', fen: fenAfter(B.fen, 'a4b4') });
+      flushMicrotasks();
+      const mated = fenAfter(B.fen, 'a4b4', 'e8e1');
+      expect(new Chess(mated).isCheckmate()).toBeTrue();
+      expect(c.solveState()).toBe('failed');
+      expect(c.userMated).toBeTrue();
+      expect(c.boardFen()).toBe(mated);                 // das Matt bleibt stehen
+      expect(c.resultKey).toBe('solver.status.incorrect');
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('.eb-solve--failed .eb-solve-sub')!.textContent).toContain('puzzles.result.matedHint');
+      expect(el.querySelector('.eb-again')).not.toBeNull();
+      expect(el.querySelector('.eb-mouseslip')).toBeNull();
+    }));
+  });
+
+  it('Tipps wie im Puzzle-Löser: drei Stufen je Zug (Zugart → Figur → Zug), neu für jeden Zug; alle drei geholt → „mehr oder weniger“, kein Auto-Weiter', fakeAsync(() => {
+    const fixture = make();
+    const c = fixture.componentInstance;
+    const el: HTMLElement = fixture.nativeElement;
+    fixture.detectChanges();
+    const hintBtn = (): HTMLButtonElement | null => el.querySelector<HTMLButtonElement>('.eb-hint');
+    expect(hintBtn()!.textContent).toContain('solver.hints.show');
+    hintBtn()!.click();
+    fixture.detectChanges();
+    expect(c.shownHints).toEqual(['puzzles.hints.t1Check']);
+    expect(hintBtn()!.textContent).toContain('solver.hints.next');
+    expect(el.querySelectorAll('.eb-hints li').length).toBe(1);
+    c.showNextHint();
+    c.showNextHint();
+    expect(c.shownHints).toEqual(['puzzles.hints.t1Check', 'puzzles.hints.t2Piece', 'puzzles.hints.t3Move']);
+    fixture.detectChanges();
+    expect(hintBtn()).toBeNull();                                    // nichts mehr aufzudecken
+    c.onFrozenMove({ orig: 'h8' as never, dest: 'h2' as never });
+    tick(EbookBoardComponent.REPLY_DELAY_MS);
+    expect(c.hintLadder.level).toBe(0);                              // neuer Zug, Tipps wieder verdeckt
+    expect(c.hintTexts.length).toBe(3);
+    c.onFrozenMove({ orig: 'a8' as never, dest: 'h8' as never });
+    expect(c.solveState()).toBe('solved');
+    expect(c.hintLadder.failsSolve).toBeTrue();
+    expect(c.resultKey).toBe('solver.status.correctKindOf');
+    expect(c.autoNextCountdown).toBe(0);
+  }));
+
+  it('Zeiten wie im Puzzle-Löser: Antwort aus der Linie nach 400 ms, vorgespielter Gegnerzug nach 600 ms', fakeAsync(() => {
+    expect(EbookBoardComponent.REPLY_DELAY_MS).toBe(400);
+    expect(EbookBoardComponent.LEAD_DELAY_MS).toBe(600);
+    const c = make().componentInstance;
+    c.onBoardMove({ from: 'h8', to: 'h2', san: 'Rxh2+', fen: AFTER_RXH2 });
+    tick(399);
+    expect(c.played().length).toBe(1);
+    expect(c.premovable()).toBeTrue();                               // vorziehen, solange die Antwort aussteht
+    tick(1);
+    expect(c.played().length).toBe(2);
+    expect(c.premovable()).toBeFalse();
+  }));
+
+  it('Einfach: Brett des Puzzle-Lösers — Thema/Figuren aus den Einstellungen, letzter Zug, Zugziele nur am Zug, gedreht zieht weiter die Farbe des Lösers; Vollbild mit Aktionsleiste ohne Aufgeben', fakeAsync(() => {
+    try { localStorage.setItem(EbookBoardComponent.SOLVE_STYLE_KEY, 'easy'); } catch { /* egal */ }
+    const fixture = make();
+    const c = fixture.componentInstance;
+    const prefs = TestBed.inject(PreferencesService);
+    prefs.boardTheme = 'blue';
+    prefs.pieceSet = 'merida';
+    fixture.detectChanges();
+    const board = (): PuzzleBoardComponent => fixture.debugElement.query(By.css('app-puzzle-board.eb-solve-board')).componentInstance as PuzzleBoardComponent;
+    expect(board().boardTheme).toBe('blue');
+    expect(board().pieceSet).toBe('merida');
+    expect(board().allowFullscreen).toBeTrue();
+    expect(board().orientation).toBe('black');
+    expect(board().moveColor()).toBe('black');
+    expect(board().dests.size).toBeGreaterThan(0);
+    expect(board().lastMove).toBeUndefined();
+    c.onFrozenMove({ orig: 'h8' as never, dest: 'h2' as never });
+    fixture.detectChanges();
+    expect(board().lastMove).toEqual(['h8' as never, 'h2' as never]);
+    expect(board().dests.size).toBe(0);
+    expect(board().premovable).toBeTrue();
+    tick(EbookBoardComponent.REPLY_DELAY_MS);
+    fixture.detectChanges();
+    expect(board().lastMove).toEqual(['h1' as never, 'h2' as never]);
+    c.flipped.set(false);                                            // gedreht: Weiß unten, gezogen wird weiter Schwarz
+    fixture.detectChanges();
+    expect(board().orientation).toBe('white');
+    expect(board().moveColor()).toBe('black');
+    const fs = fixture.debugElement.query(By.directive(BoardFsActionsComponent));
+    expect(fs).not.toBeNull();
+    expect(board().fen).toBe(AFTER_KXH2);
+    const actions = fs.componentInstance as BoardFsActionsComponent;
+    expect(actions.showGiveUp()).toBeFalse();
+    expect(actions.showMouseslip).toBeTrue();
+    expect(actions.state).toBe('AWAITING_USER_MOVE');
+    try { localStorage.removeItem(EbookBoardComponent.SOLVE_STYLE_KEY); } catch { /* egal */ }
+    prefs.boardTheme = 'brown';
+    prefs.pieceSet = 'cburnett';
+  }));
+
+  it('Training: das stehende Brett hat jetzt Vollbild mit der Aktionsleiste des Puzzle-Lösers', () => {
+    const fixture = make();
+    const frozen = fixture.debugElement.query(By.css('app-puzzle-board.eb-frozen'));
+    expect((frozen.componentInstance as PuzzleBoardComponent).allowFullscreen).toBeTrue();
+    expect(frozen.query(By.directive(BoardFsActionsComponent))).not.toBeNull();
+  });
+
+  it('Lösen: ein Fehlzug, der die Partie beendet (Patt), ist das Ende — nicht gelöst (wie im Puzzle-Löser)', fakeAsync(() => {
     const P: EbookDiagram = { ...D, id: 14, fen: '7k/8/5K2/8/8/8/8/6Q1 w - - 0 1', solutionUci: 'g1g7', solutionSan: 'Qg7#', solutionText: '1.Qg7#' };
-    const c = make(P).componentInstance;
+    const fixture = make(P);
+    const c = fixture.componentInstance;
     let n = 0;
     stockfish.getBestMove.and.callFake(() => Promise.resolve({ move: '', eval: '0', score: n++ === 0 ? { cp: 0 } : { mate: 1 } } as never));
     const stale = fenAfter(P.fen, 'g1g6');
@@ -476,10 +714,13 @@ describe('EbookBoardComponent', () => {
     c.onBoardMove({ from: 'g1', to: 'g6', san: 'Qg6', fen: stale });
     flushMicrotasks(); tick(500); flushMicrotasks();
     expect(c.wrongAt()).toBe(0);
-    expect(stockfish.getBestMove.calls.count()).toBe(2);   // nur die Prüfung, keine Widerlegung
-    expect(c.played().length).toBe(1);
-    c.takeBackWrong();
-    expect(c.played()).toEqual([]);
+    expect(stockfish.getBestMove.calls.count()).toBe(2);   // nur die Prüfung, keine Antwort
+    expect(c.solveState()).toBe('failed');
+    expect(c.resultKey).toBe('solver.status.incorrect');
+    expect(c.userMated).toBeFalse();
+    expect(c.canMouseslip).toBeFalse();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.eb-solve--failed .eb-solve-text')!.textContent).toContain('solver.status.incorrect');
   }));
 
   it('Training (0.825.0, „wie beim Kurs“): beim Lösen und Kalkulieren bleibt die Buchstellung stehen, Züge gehen über das Viz-Brett', fakeAsync(() => {
@@ -568,7 +809,7 @@ describe('EbookBoardComponent', () => {
       expect(c.flipped()).toBeFalse();             // Weiß unten
       expect(c.playable()).toBeFalse();            // erst zieht der Gegner
       expect(c.played().length).toBe(0);
-      expect(statusText(fixture)).toBe('ebooks.board.opponentMovesFirst');
+      expect(statusText(fixture)).toBe('solver.status.watchOpponent');
       // Ein Zug vor dem Gegnerzug zählt nicht.
       c.onBoardMove(after('d8a8', 'c6b6').move as never);
       expect(c.played().length).toBe(0);
@@ -576,10 +817,11 @@ describe('EbookBoardComponent', () => {
       tick(EbookBoardComponent.LEAD_DELAY_MS);
       expect(c.played().map(m => m.san)).toEqual(['Ra8']);
       expect(c.boardFen()).toBe(after('d8a8').fen);
-      const board = fixture.debugElement.query(By.directive(ChessBoardComponent));
       fixture.detectChanges();
-      expect((board.componentInstance as ChessBoardComponent).fen).toBe(after('d8a8').fen);   // der Zug steht auf dem Brett
-      expect((board.componentInstance as ChessBoardComponent).flipped).toBeFalse();
+      const board = fixture.debugElement.query(By.directive(PuzzleBoardComponent));
+      expect((board.componentInstance as PuzzleBoardComponent).fen).toBe(after('d8a8').fen);   // der Zug steht auf dem Brett
+      expect((board.componentInstance as PuzzleBoardComponent).orientation).toBe('white');
+      expect((board.componentInstance as PuzzleBoardComponent).lastMove).toEqual(['d8' as never, 'a8' as never]);
       expect(c.playable()).toBeTrue();
       expect(statusText(fixture)).toBe('ebooks.board.yourMoveWhite');   // der Leser sagt, welche Farbe man spielt
       expect(c.movesText).toBe('30… Ra8');
@@ -602,10 +844,10 @@ describe('EbookBoardComponent', () => {
       tick(EbookBoardComponent.LEAD_DELAY_MS);
       expect(c.played().map(m => m.san)).toEqual(['Ra8']);
       c.toggleAutoNext();
-      tick(EbookBoardComponent.AUTO_NEXT_DELAY_MS);
+      tick(EbookBoardComponent.AUTO_NEXT_SECONDS * 1000);
     }));
 
-    it('Gegner zuerst: ein falscher Löserzug lässt sich zurücknehmen, der Gegnerzug bleibt stehen; Training zählt den Fehler', fakeAsync(() => {
+    it('Gegner zuerst: der Mausrutscher nimmt einen falschen Löserzug zurück, der Gegnerzug bleibt stehen; der Fehler zählt', fakeAsync(() => {
       const fixture = make(A);
       const c = fixture.componentInstance;
       expect(c.solveStyle()).toBe('training');
@@ -618,7 +860,9 @@ describe('EbookBoardComponent', () => {
       // Die Widerlegung „a1a2“ passt nicht zur Stellung → keine Antwort; der Fehlzug steht, bis man ihn zurücknimmt.
       expect(c.played().map(m => m.san)).toEqual(['Ra8', 'Rc7']);
       expect(c.mistake()).toBeTrue();
-      c.takeBackWrong();
+      c.mouseslip();
+      expect(c.played().map(m => m.san)).toEqual(['Ra8']);   // der vorgespielte Gegnerzug bleibt
+      c.mouseslip();
       expect(c.played().map(m => m.san)).toEqual(['Ra8']);
       expect(c.playable()).toBeTrue();
     }));

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, input } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
 import {
@@ -50,10 +50,12 @@ import {
           <mat-icon>mouse</mat-icon>
         </button>
       }
-      <button type="button" class="bfa-btn bfa-btn--warn" (click)="giveUpClicked.emit()"
-              [attr.title]="keys.giveUp | translate" [attr.aria-label]="keys.giveUp | translate">
-        <mat-icon>flag</mat-icon>
-      </button>
+      @if (showGiveUp()) {
+        <button type="button" class="bfa-btn bfa-btn--warn" (click)="giveUpClicked.emit()"
+                [attr.title]="keys.giveUp | translate" [attr.aria-label]="keys.giveUp | translate">
+          <mat-icon>flag</mat-icon>
+        </button>
+      }
     }
   `,
   styles: [`
@@ -132,6 +134,8 @@ export class BoardFsActionsComponent {
   /** Endless zeigt den Mausrutscher auch im THINKING-State. */
   @Input() showMouseslipInThinking = false;
   @Input() hasMadeFirstMove = false;
+  /** „Aufgeben“ anbieten. Das E-Book-Brett spielt keine Lösung vor (die steht dort als Text), es blendet ihn aus. */
+  readonly showGiveUp = input(true);
 
   @Output() hintClicked = new EventEmitter<void>();
   @Output() resetClicked = new EventEmitter<void>();

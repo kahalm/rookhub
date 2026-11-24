@@ -79,13 +79,27 @@
 
 <div class="eb-board">
   @if (frozen() && !peek()) {
-    <!-- Training (0.825.0): Buchstellung bleibt stehen, Züge nur im Kopf — dasselbe Viz-Brett wie Kurs-Training/Kalkulieren. -->
+    <!-- Training (0.825.0): Buchstellung bleibt stehen, Züge nur im Kopf — dasselbe Viz-Brett wie Kurs-Training/Kalkulieren.
+         Seit 1.011.0 mit Vollbild und der Aktionsleiste des Puzzle-Lösers. -->
     <app-puzzle-board class="eb-frozen" [fen]="frozenFen()" [actualFen]="boardFen()" [visualization]="1"
-                      [orientation]="flipped() ? 'black' : 'white'" [turnColor]="flipped() ? 'black' : 'white'" [dests]="noDests"
-                      [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet" [allowFullscreen]="false"
-                      [vizOpponentArrow]="opponentArrow()" (moveMade)="onFrozenMove($event)" />
+                      [orientation]="boardOrientation" [turnColor]="boardOrientation" [dests]="noDests"
+                      [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet"
+                      [vizOpponentArrow]="opponentArrow()" (moveMade)="onFrozenMove($event)">
+      @if (mode() === 'solve') { <ng-container [ngTemplateOutlet]="fsActions" /> }
+    </app-puzzle-board>
+  } @else if (mode() === 'solve' && legal()) {
+    <!-- Lösen „Einfach“ (1.011.0): das Brett des Puzzle-Lösers — letzter Zug, Vorziehen, Thema/Figuren aus den
+         Einstellungen, Vollbild mit Aktionsleiste. Gezogen wird mit der Farbe des Lösers, auch wenn das Brett gedreht ist. -->
+    <app-puzzle-board class="eb-solve-board" [fen]="boardFen()" [orientation]="boardOrientation" [moveColor]="solverColor"
+                      [turnColor]="boardTurn" [dests]="solveDests()" [lastMove]="lastMoveKeys()" [check]="boardCheck"
+                      [viewOnly]="peek() || solveState() !== 'running'" [premovable]="premovable()"
+                      [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet" [reviewShapes]="engineShapes()"
+                      (moveMade)="onFrozenMove($event)">
+      <ng-container [ngTemplateOutlet]="fsActions" />
+    </app-puzzle-board>
   } @else {
     <app-chess-board [fen]="boardFen()" [flipped]="flipped()" [playable]="playable() && !peek()" [arrows]="engine()?.arrows() ?? []"
+                     [lastMove]="lastMoveKeys()" [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet"
                      (userMove)="onBoardMove($event)" />
   }
 </div>
@@ -132,30 +146,26 @@
     @if (engineLineBusy()) {
       <div class="eb-busy"><mat-progress-bar mode="indeterminate" /><span>{{ 'ebooks.board.engineComputing' | translate }}</span></div>
     }
-    <!-- Statuszeile: Zustand + „Nochmal“ + Lösung zeigen in EINER Zeile; der Hinweis „jeder Zug, der das Ergebnis hält“
-         steht als Tooltip/Beschreibung daran statt als eigene Zeile. -->
+    <!-- Statuszeile: Zustand + Lösung zeigen in EINER Zeile; der Hinweis „jeder Zug, der das Ergebnis hält“ steht als
+         Tooltip/Beschreibung daran. Texte und Aktionen seit 1.011.0 die des Puzzle-Lösers: kein „falsch“ — nach einem
+         Fehlzug „Dein Zug gegen Stockfish“, am Ende „Richtig!“ / „Geschafft (mehr oder weniger)“ / „Falsch“. -->
     @if (solveState() !== 'idle' || !engineLineBusy()) {
-    <div class="eb-solve" role="status" [class.eb-solve--done]="solveState() === 'solved'" [class.eb-solve--wrong]="wrongAt() != null"
+    <div class="eb-solve" role="status" [class.eb-solve--done]="solveState() === 'solved'" [class.eb-solve--failed]="solveState() === 'failed'"
          [class.eb-solve--idle]="solveState() === 'idle'" [attr.title]="solveState() === 'running' ? ('ebooks.board.anyMoveHint' | translate) : null">
       @switch (solveState()) {
         @case ('running') {
-          @if (wrongAt() != null) {
-          <!-- Fehlzug (1.010.0, wie in den Puzzle-Modi): er bleibt stehen, Stockfish widerlegt ihn; zurück geht es hier. -->
-          <mat-icon class="eb-wrong-icon">close</mat-icon><span class="eb-solve-text">{{ 'ebooks.board.wrongMove' | translate }}</span>
-          <button mat-button type="button" class="eb-take-back" (click)="takeBackWrong()"><mat-icon>undo</mat-icon>{{ 'ebooks.reader.undo' | translate }}</button>
-          } @else {
           <mat-icon>{{ checking() ? 'hourglass_top' : 'psychology' }}</mat-icon>
-          <!-- „Gegner zuerst“ (0.975.0): erst „Gegner zieht“, dann mit der Farbe, die man spielt — sonst der gewohnte Satz. -->
-          <span class="eb-solve-text">{{ (checking() ? 'ebooks.board.checking' : leadPending ? 'ebooks.board.opponentMovesFirst'
-            : !diagram.opponentFirst ? 'ebooks.reader.yourMove' : userColor === 'w' ? 'ebooks.board.yourMoveWhite' : 'ebooks.board.yourMoveBlack') | translate }}<span class="sr-only"> {{ 'ebooks.board.anyMoveHint' | translate }}</span></span>
-          }
+          <span class="eb-solve-text">{{ statusKey | translate }}<span class="sr-only"> {{ 'ebooks.board.anyMoveHint' | translate }}</span></span>
         }
-        @case ('solved') {
-          <mat-icon>check_circle</mat-icon><span class="eb-solve-text">{{ (mistake() ? 'ebooks.board.solvedWithMistake' : 'ebooks.reader.solved') | translate }}</span>
-          <button mat-button type="button" class="eb-again" (click)="reset()">{{ 'ebooks.reader.again' | translate }}</button>
+        @case ('idle') {
+          @if (solutionLine.length === 0) { <span class="eb-solve-text">{{ 'ebooks.board.noSolution' | translate }}</span> }
         }
         @default {
-          @if (solutionLine.length === 0) { <span class="eb-solve-text">{{ 'ebooks.board.noSolution' | translate }}</span> }
+          <mat-icon>{{ solveState() === 'failed' ? 'cancel' : 'check_circle' }}</mat-icon>
+          <span class="eb-solve-text">{{ resultKey | translate }}
+            @if (alternative()) { <span class="eb-solve-sub">{{ 'solver.status.altSolution' | translate }}</span> }
+            @if (userMated) { <span class="eb-solve-sub">{{ 'puzzles.result.matedHint' | translate }}</span> }
+          </span>
         }
       }
       @if (frozen()) { <ng-container [ngTemplateOutlet]="peekToggle" /> }
@@ -163,6 +173,36 @@
         <ng-container [ngTemplateOutlet]="solutionToggle" />
       }
     </div>
+    }
+    <!-- Aktionen wie im Puzzle-Löser (Tipp, Zurücksetzen, Mausrutscher; am Ende Wiederholen und Weiter mit Countdown).
+         Kein Aufgeben: die Lösung wird nicht vorgespielt, sie steht unter der Glühbirne als Text. -->
+    @if (solveState() === 'running' && ((hintTexts.length > 0 && canShowMoreHints) || canResetSolve || canMouseslip)) {
+      <div class="eb-solve-actions">
+        @if (hintTexts.length > 0 && canShowMoreHints) {
+          <button mat-button type="button" class="eb-hint" (click)="showNextHint()">
+            <mat-icon>tips_and_updates</mat-icon>{{ (hintLadder.level === 0 ? 'solver.hints.show' : 'solver.hints.next') | translate }}
+            @if (hintLadder.level > 0) { <span class="eb-hint-count" [attr.title]="'puzzles.hints.shownOf' | translate: { n: hintLadder.level, total: hintTexts.length }">{{ hintLadder.level }}/{{ hintTexts.length }}</span> }
+          </button>
+        }
+        @if (canResetSolve) {
+          <button mat-button type="button" class="eb-reset" (click)="reset()"><mat-icon>replay</mat-icon>{{ 'solver.actions.reset' | translate }}</button>
+        }
+        @if (canMouseslip) {
+          <button mat-button type="button" class="eb-mouseslip" (click)="mouseslip()"><mat-icon>mouse</mat-icon>{{ 'solver.actions.mouseslip' | translate }}</button>
+        }
+      </div>
+    } @else if (solveState() === 'solved' || solveState() === 'failed') {
+      <div class="eb-solve-actions">
+        <button mat-button type="button" class="eb-again" (click)="reset()">{{ 'common.retry' | translate }}</button>
+        @if (hasNext()) {
+          <button mat-flat-button color="primary" type="button" class="eb-next" (click)="goNext()">
+            {{ 'ebooks.reader.nextDiagram' | translate }}@if (autoNextCountdown > 0) { ({{ autoNextCountdown }})}
+          </button>
+        }
+      </div>
+    }
+    @if (shownHints.length) {
+      <ol class="eb-hints">@for (h of shownHints; track $index) { <li>{{ h }}</li> }</ol>
     }
     @if (movesText) { <p class="eb-moves-text">{{ movesText | san:'text' }}</p> }
     @if (solutionLine.length > 0) {
@@ -269,6 +309,19 @@
   <app-live-engine-panel class="eb-engine" [session]="s" [gameFen]="boardFen()" [steps]="false" (closed)="toggleEngine()" />
 }
 
+
+<!-- Vollbild (1.011.0): die Icon-Leiste des Puzzle-Lösers im schwarzen Balken (ohne Aufgeben) und die aufgedeckten Tipps. -->
+<ng-template #fsActions>
+  <app-board-fs-actions mode="book" [state]="fsState" [hasHints]="hintTexts.length > 0" [canShowMoreHints]="canShowMoreHints"
+                        [hintLevel]="hintLadder.level" [totalHints]="hintTexts.length" [showMouseslip]="canMouseslip"
+                        [hasMadeFirstMove]="canResetSolve" [showGiveUp]="false"
+                        (hintClicked)="showNextHint()" (resetClicked)="reset()" (mouseslipClicked)="mouseslip()" />
+  @if (shownHints.length) {
+    <div class="eb-hint-fs" data-fs-only>
+      @for (h of shownHints; track $index) { <div>{{ $index + 1 }}. {{ h }}</div> }
+    </div>
+  }
+</ng-template>
 
 <!-- Training: Auge schaltet das eingefrorene Brett auf die aktuelle Stellung und zurück. -->
 <ng-template #peekToggle>

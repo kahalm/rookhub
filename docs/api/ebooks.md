@@ -266,9 +266,9 @@ ein angezweifelter Startzug (`?`, `?!`) wird übersprungen und nur dieselbe Zugn
 erste muss legal sein, sonst KEINE Lösung. Gespeichert: `SolutionUci`, `SolutionSan`, `SolutionText` (Absatz, ≤3000),
 `SolutionPage`; die FEN bekommt Zugrecht + Zugnummer der Lösung. Migration setzt erkannte Bücher zurück auf Pending.
 Gemessen 14.10.: Woodpecker 1 117 von 1 128 mit Lösung, erster Zug = Kurs 88 bei 1 113; Grooten 824 von 995 (Weg 2).
-**Leser**: „Lösen“ (Hauptaktion, wenn eine Lösung da ist) — Züge gegen die Linie geprüft, Antworten nach 450 ms, falscher Zug
-bleibt stehen und Stockfish spielt die Widerlegung (seit 1.010.0, wie die Puzzle-Modi; vorher 600 ms sichtbar, dann zurück),
-„Zug zurücknehmen“ in der Statuszeile nimmt Zug + Antwort zurück, Weiterspielen abseits der Lösung möglich; „Lösung zeigen“ mit Linie, Absatz und Sprung zur Lösungsseite.
+**Leser**: „Lösen“ (Hauptaktion, wenn eine Lösung da ist) — Züge gegen die Linie geprüft, Antworten nach 400 ms; ein falscher
+Zug verhält sich seit 1.011.0 wie im Puzzle-Löser (kein „falsch“, Stockfish antwortet, man spielt gegen Stockfish weiter,
+Mausrutscher einmal je Versuch) — Einzelheiten unter „Lösen wie im Puzzle-Löser“; „Lösung zeigen“ mit Linie, Absatz und Sprung zur Lösungsseite.
 
 ## Stockfish-Prüfung + Engine-Lösungen (0.772.0)
 
@@ -550,9 +550,8 @@ gesperrt (Scope-Zaun).
 Die Brett-Leiste ist eine eigene Komponente (`features/ebooks/ebook-board.component.*`, `app-ebook-board`, Eingabe das
 gewählte Diagramm). Modi: **Ansehen**; **Ziehen** (Figuren frei, Liste mit Zurücknehmen); **Kalkulieren** (Variantenbaum wie
 der Kalkulations-Modus der Kurse — `calc-tree.util` + `app-calc-lines`, je Diagramm in `localStorage` `rh.ebooks.calc.<id>`,
-eine Linie öffnet `/analysis?fen=&moves=`); **Lösen** — Art „Einfach“ oder „Training“ (merkt sich den Fehler: „gelöst mit
-Fehler“; Buchstellung bleibt stehen, Züge auf dem Viz-Brett) — in beiden bleibt ein falscher Zug stehen, Stockfish widerlegt
-ihn (`CHECK_DEPTH`), „Zug zurücknehmen“ führt paarweise zurück (`wrongAt`/`takeBackWrong`, 1.010.0), Quelle „gespeichert“ (Buch- bzw. Engine-Linie der
+eine Linie öffnet `/analysis?fen=&moves=`); **Lösen** — Art „Einfach“ (Brett des Puzzle-Lösers) oder „Training“ (Buchstellung bleibt stehen,
+Züge auf dem Viz-Brett); beide verhalten sich wie der Puzzle-Löser (Abschnitt „Lösen wie im Puzzle-Löser“, 1.011.0), Quelle „gespeichert“ (Buch- bzw. Engine-Linie der
 Prüfung) oder „Stockfish jetzt“ (7 Halbzüge, `StockfishService.getBestMove` Tiefe 16 im Browser; ohne gespeicherte Lösung
 voreingestellt); **Maia** (man spielt die Seite am Zug, Maia antwortet über `MaiaEngineService.chooseMove` in wählbarer
 Stärke; Modell wird erst auf Knopfdruck geladen, ~46 MB). Engine-Knopf: `LiveEngineSession` + `app-live-engine-panel`
@@ -578,7 +577,7 @@ sich eine Partie). Gelöscht wird mit dem Buch.
   ◀, ▶, Ende, „Diagramm“), Zugliste je Vollzug (aktueller Zug getönt, Diagrammzug unterstrichen, Klick springt). Ein
   Brettzug, der dem nächsten Partiezug entspricht, geht in der Partie weiter; jeder andere beginnt eine Nebenlinie
   (Zurücknehmen, „Zurück zur Partie“). Die Engine-Leiste ist wie in allen Modi über ⋮ zuschaltbar. Eine unspielbare
-  Zugfolge wird beim ersten falschen Zug abgeschnitten (`EbookBoardComponent.replay`).
+  Zugfolge wird beim ersten falschen Zug abgeschnitten (`replayGame` in `ebook-board.util.ts`).
 
 ## Eröffnungsbaum: Modus „Baum“ (0.881.0)
 
@@ -658,10 +657,40 @@ im Kapitel-iframe, dessen Ereignisse den Host nicht erreichen). Raddrehung wird 
 100 px, Firefox 3 Zeilen ≈ 48 px), danach 350 ms Pause gegen Doppelblättern bei Touchpads.
 
 **Lösen: gleichwertige Züge zählen** (0.780.3): Weicht der Zug von der Linie ab, bewertet Stockfish im Browser
-(`StockfishService`, Tiefe 14) die Stellung danach gegen die nach dem Buchzug (nach einer Abweichung: gegen die Stellung
+(`StockfishService`, Tiefe der Buch-Einstellung `prefs.bookStockfishDepth`, seit 1.011.0; vorher fest 14) die Stellung danach gegen die nach dem Buchzug (nach einer Abweichung: gegen die Stellung
 davor) aus Sicht des Ziehenden. Angenommen, wenn höchstens 50 cp schlechter, Remis bleibt Remis (beide ±80 cp) oder Gewinn
-bleibt Gewinn (beide ≥ 300) — `EbookBoardComponent.sameResult`. Danach antwortet Stockfish statt der Buchlinie (auch beim
+bleibt Gewinn (beide ≥ 300) — `sameResult` in `ebook-board.util.ts`. Danach antwortet Stockfish statt der Buchlinie (auch beim
 Vorspielen im Training). Die Lösungsanzeige nennt eine Remisstellung (`engineEval` ±80) als „nur ein Weg“.
+
+**Lösen wie im Puzzle-Löser** (1.011.0, Nutzerentscheidung 24.11.2026). Gebaut aus den Teilen des Puzzle-Lösers, ohne
+dessen Speicherung: kein Versuch auf dem Server, keine Uhr, keine Statistik, kein Elo (Diagramme sind keine Puzzles).
+- **Falscher Zug**: kein „falsch“, kein ✕, keine Meldung. Der Zug bleibt, Stockfish antwortet (die beste Antwort kommt aus der
+  ersten Suche der Prüfung „hält das Ergebnis?“ mit, Tiefe `prefs.bookStockfishDepth`), man spielt gegen Stockfish weiter
+  („Dein Zug gegen Stockfish…“, während der Suche „Stockfish denkt…“). Der Fehler wird in BEIDEN Arten gemerkt (`mistake`);
+  „Zurücksetzen“ mitten im Lösen und der Mausrutscher wischen ihn nicht weg, erst „Wiederholen“ nach dem Ende oder ein neues
+  Diagramm. „Auch gut“ (gleichwertiger Zug, Buchzug weiter suchen) und „auch richtig“ (Buchzug fraglich / Stockfish-Linie)
+  bleiben wie in 0.780.3.
+- **Ende**: Linie zu Ende gespielt → „Richtig!“; mit Fehler oder allen drei Tipps zu einem Zug „Geschafft (mehr oder
+  weniger)“. Abseits der Linie selbst mattgesetzt → gelöst als eigene Lösung („Schachmatt!“ + „Alternative Lösung …“, mit
+  Fehler „mehr oder weniger“); selbst matt → „Falsch“, das Matt bleibt auf dem Brett („Matt — versuch es nochmal …“); Patt/Remis
+  abseits der Linie → „Falsch“. Ein abweichender Zug, der selbst mattsetzt, ist sofort eine eigene Lösung (ohne Prüfung).
+- **Aktionen** (Zeile unter der Statuszeile, Schlüssel `solver.*`): Tipp (die drei Stufen von `HintLadder` +
+  `buildStagedHints` je erwartetem Zug, abseits der Linie `offPathHintTexts`; Symbol `tips_and_updates`, weil die Glühbirne
+  die Lösung zeigt), Zurücksetzen, Mausrutscher (einmal je Versuch, das letzte Zugpaar — rechnet die Antwort noch, nur der
+  eigene Zug; auch auf dem Lösungsweg; der vorgespielte Gegnerzug bleibt). Kein Aufgeben: die Lösung wird nie auf dem Brett
+  vorgespielt, sie steht unter der Glühbirne als Text (mit Sprung zur Lösungsseite). Am Ende „Wiederholen“ und „Nächstes
+  Diagramm“ mit sichtbarem Countdown (3 s, `AUTO_NEXT_SECONDS`, `SecondsCountdown` des Puzzle-Lösers; nur nach „Richtig!“ /
+  „mehr oder weniger“ durch Fehler, nicht nach eigener Lösung, „Falsch“ oder allen drei Tipps — wie im Puzzle-Löser; der
+  Geräteschalter „Automatisch weiter“ bleibt). Leertaste/Enter = „Nächstes Diagramm“ nach dem Ende (nicht auf einem
+  fokussierten Knopf), die Pfeile blättern weiter das Buch. Ohne nächstes Diagramm (`hasNext`, vom Leser) kein Weiter.
+- **Bretter**: „Einfach“ nutzt jetzt `app-puzzle-board` wie der Puzzle-Löser (letzter Zug, Vorziehen während der Antwort,
+  Brett-Thema und Figurensatz aus den Einstellungen, Engine-Pfeile als `reviewShapes`; `moveColor` = Farbe des Lösers, damit
+  das gedrehte Brett weiter ziehbar bleibt). Beide Bretter (auch das stehende „Training“-Brett) haben Vollbild mit
+  `app-board-fs-actions` (Tipp, Zurücksetzen, Mausrutscher; `showGiveUp=false`) und den aufgedeckten Tipps. Die übrigen Modi
+  bleiben auf `app-chess-board`, jetzt ebenfalls mit Thema/Figuren aus den Einstellungen und dem letzten Zug.
+- **Zeiten**: vorgespielter Gegnerzug 600 ms (`LEAD_DELAY_MS`), Antworten aus der Linie 400 ms (`REPLY_DELAY_MS`), Antworten
+  von Stockfish sofort nach der Suche.
+- Unverändert: die Live-Engine (⋮) bleibt beim Lösen zuschaltbar; keine Schritt-für-Schritt-Durchsicht der Lösung am Brett.
 
 **Lösen: wer löst** (0.975.0, Meldung 2026-11-14 — „Alekhine: Move by Move“, S. 154: Schwarz am Zug, Buchlinie 30…Ta8 31.Tb6
 Txa7 32.Tb8#, der Leser ließ Schwarz lösen). Der Löser spielt nie die Seite, die in der Linie mattgesetzt wird bzw. klar
@@ -687,9 +716,9 @@ Verliererseite hätte. Kein Umdrehen bei ≤ −200 ohne Matt: die Antwort des G
   Diagramm (auf belastetem Rechner), mittleres Buch (283 Diagramme) ≈ 15 ms, 1 000 Diagramme ≈ 50 ms, das größte Buch
   (11 875) ≈ 0,6 s. Dafür prüft `TacticsBoard.IsLegal` nur den einen Zug statt aller legalen (vorher ≈ 260 µs; Ergebnis über
   190 000 Prod-Linien identisch mit der alten Fassung).
-- **Leser** (`ebook-board.component`): bei `opponentFirst` führt „Lösen“ den ersten Zug der Linie nach 450 ms selbst aus
-  (`LEAD_DELAY_MS`, wie die Antwortzüge), das Brett steht aus Sicht des Lösers, die Statuszeile sagt erst „Der Gegner zieht
-  zuerst …“, dann „Du spielst Weiß/Schwarz und bist am Zug“. Im „Training“ zeigt das stehende Brett die Stellung NACH dem
+- **Leser** (`ebook-board.component`): bei `opponentFirst` führt „Lösen“ den ersten Zug der Linie nach 600 ms selbst aus
+  (`LEAD_DELAY_MS`, wie der Setup-Zug im Puzzle-Löser), das Brett steht aus Sicht des Lösers, die Statuszeile sagt erst „Beobachte
+  den Zug des Gegners…“ (`solver.status.watchOpponent`), dann „Du spielst Weiß/Schwarz und bist am Zug“. Im „Training“ zeigt das stehende Brett die Stellung NACH dem
   Gegnerzug (das ist die Aufgabe), der Zug selbst ist der Pfeil. Zugliste, „Lösung zeigen“ und Erfolgsmeldung zählen ab der
   Buchstellung (30… Ta8 31. Tb6 …). „Stockfish jetzt“ rechnet ab der Stellung nach dem Gegnerzug. Außerhalb von „Lösen“
   steht das Brett wie im Buch; gegen Maia spielt man weiter die Seite am Zug. Bei `solvable: false` fehlt der Modus-Knopf

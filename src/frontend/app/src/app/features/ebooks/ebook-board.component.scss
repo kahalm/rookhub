@@ -27,10 +27,10 @@
   > mat-icon { flex: none; font-size: 20px; width: 20px; height: 20px; }
 }
 .eb-solve--idle { background: transparent; color: var(--mat-sys-on-surface-variant); }
-.eb-sol-toggle, .eb-again, .eb-take-back, .eb-peek { flex: none; margin-left: auto; }
-.eb-again + .eb-sol-toggle, .eb-again + .eb-peek, .eb-take-back + .eb-sol-toggle, .eb-take-back + .eb-peek, .eb-peek + .eb-sol-toggle { margin-left: 0; }
+.eb-sol-toggle, .eb-peek { flex: none; margin-left: auto; }
+.eb-peek + .eb-sol-toggle { margin-left: 0; }
 .eb-maia-state { color: var(--mat-sys-on-surface-variant); margin-right: 6px; }
-.eb-solve--wrong { background: color-mix(in srgb, var(--rh-error) 14%, transparent); > mat-icon { color: var(--rh-error); } }
+.eb-solve--failed { background: color-mix(in srgb, var(--rh-error) 14%, transparent); > mat-icon { color: var(--rh-error); } }
 .eb-solve--done { background: color-mix(in srgb, var(--rh-success) 18%, transparent); mat-icon { color: var(--rh-success); } }
 .eb-solution { padding: 6px 10px; border-left: 3px solid var(--mat-sys-primary); }
 .eb-solution-line { margin: 0 0 4px; font-weight: 500; }
@@ -74,3 +74,22 @@
 .eb-gm--on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent); font-weight: 600; }
 .eb-gm-result { font-size: .9rem; font-weight: 600; padding: 2px 4px; }
 .eb-game-side { border-left: 3px solid var(--mat-sys-primary); padding-left: 6px; }
+
+/* Zusatzzeile am Ergebnis (eigene Lösung, Matt) — leiser, eigene Zeile. */
+.eb-solve-sub { display: block; font-size: .8rem; color: var(--mat-sys-on-surface-variant); }
+/* Aktionen des Puzzle-Lösers unter der Statuszeile (1.011.0): Textknöpfe, umbrechend; „Weiter“ rechts. */
+.eb-solve-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.eb-next { margin-left: auto; }
+.eb-hint-count { margin-left: 4px; font-size: .75rem; color: var(--mat-sys-on-surface-variant); }
+.eb-hints { margin: 0; padding-left: 1.4em; font-size: .88rem; }
+/* Vollbild: aufgedeckte Tipps im schwarzen Balken (wie im Puzzle-Löser; nur im Vollbild sichtbar über [data-fs-only]). */
+.eb-hint-fs {
+  position: absolute; z-index: 70; flex-direction: column; gap: 2px; padding: 8px 12px; border-radius: 8px;
+  color: white; background: rgba(0, 0, 0, 0.55); max-width: min(90vw, 340px); max-height: 80vh; overflow: auto; font-size: .9rem;
+}
+@media (min-aspect-ratio: 1/1) {
+  .eb-hint-fs { right: 8px; top: 50%; transform: translateY(-50%); max-width: max(140px, calc((100vw - 100vh) / 2 - 16px)); }
+}
+@media (max-aspect-ratio: 1/1) {
+  .eb-hint-fs { top: 8px; left: 50%; transform: translateX(-50%); }
+}

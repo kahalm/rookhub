@@ -201,7 +201,7 @@
               }
               <app-ebook-board [diagram]="d" [ebookId]="ebook.id" [defaultMode]="ebook.defaultBoardMode" (solutionPage)="goToSolutionPage($event)"
                                [hasTree]="!!ebook.hasTree" [bookTitle]="ebook.title" [canSaveRepertoire]="loggedIn"
-                               [reportable]="loggedIn" (report)="toggleReport(d)" (solvedNext)="autoNextDiagram()"
+                               [reportable]="loggedIn" (report)="toggleReport(d)" (solvedNext)="autoNextDiagram()" [hasNext]="pickedIndex < diagrams().length"
                                [correctable]="loggedIn && ebook.canManage" (correct)="correctPosition(d)" />
             } @else {
               <div class="empty-state rd-panel-empty">
