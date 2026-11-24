@@ -15,6 +15,7 @@ import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { EbookBoardComponent, EbookBoardMode, ebookResultLabel } from './ebook-board.component';
 import { EbookDiagram } from './ebook.service';
+import { replayGame, sameResult, scoreCp } from './ebook-board.util';
 
 /** Woodpecker Nr. 1 (Hamppe – Steinitz): Schwarz am Zug, Lösung 17… Txh2+ 18. Kxh2 Th8+. */
 const D: EbookDiagram = {
@@ -336,13 +337,13 @@ describe('EbookBoardComponent', () => {
   }));
 
   it('gleiches Ergebnis: Remis bleibt Remis, Gewinn bleibt Gewinn, sonst höchstens 50 cp schlechter', () => {
-    expect(EbookBoardComponent.sameResult(0, -60)).toBeTrue();     // beides Remis
-    expect(EbookBoardComponent.sameResult(0, -120)).toBeFalse();   // Remis verspielt
-    expect(EbookBoardComponent.sameResult(900, 350)).toBeTrue();   // gewinnt weiter
-    expect(EbookBoardComponent.sameResult(900, 150)).toBeFalse();
-    expect(EbookBoardComponent.sameResult(150, 110)).toBeTrue();   // 40 cp schlechter
-    expect(EbookBoardComponent.scoreCp({ mate: 2 }, D.fen)).toBe(9998);
-    expect(EbookBoardComponent.scoreCp({ mate: -3 }, D.fen)).toBe(-9997);
+    expect(sameResult(0, -60)).toBeTrue();     // beides Remis
+    expect(sameResult(0, -120)).toBeFalse();   // Remis verspielt
+    expect(sameResult(900, 350)).toBeTrue();   // gewinnt weiter
+    expect(sameResult(900, 150)).toBeFalse();
+    expect(sameResult(150, 110)).toBeTrue();   // 40 cp schlechter
+    expect(scoreCp({ mate: 2 }, D.fen)).toBe(9998);
+    expect(scoreCp({ mate: -3 }, D.fen)).toBe(-9997);
   });
 
   /** Stockfish-Attrappe: die ersten zwei Aufrufe bewerten Sh3 deutlich schlechter als Txh2+ (→ falsch), danach antwortet
@@ -1003,7 +1004,7 @@ describe('EbookBoardComponent', () => {
   });
 
   it('Partie: eine unspielbare Zugfolge wird beim ersten falschen Zug abgeschnitten', () => {
-    const line = EbookBoardComponent.replay({ ...GAME, moves: ['e4', 'e5', 'Qxf7', 'Nc6'] });
+    const line = replayGame({ ...GAME, moves: ['e4', 'e5', 'Qxf7', 'Nc6'] });
     expect(line.sans).toEqual(['e4', 'e5']);
     expect(line.fens.length).toBe(3);
   });

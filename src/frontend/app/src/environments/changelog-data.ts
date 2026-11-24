@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.010.1", date: "2026-11-24", changes: [
+    { en: "E-book board: pure helpers (move numbering, game replay, result label, Stockfish score comparison) moved out of the board component into their own file before the solver rework. No visible change.",
+      de: "E-Book-Brett: reine Helfer (Zugnummern, Partie nachspielen, Ergebnisanzeige, Vergleich der Stockfish-Bewertung) vor dem Umbau des Lösens aus der Brett-Komponente in eine eigene Datei gezogen. Keine sichtbare Änderung." },
+  ] },
   { version: "1.010.0", date: "2026-11-23", changes: [
     { en: "E-book board, “Solve” mode: a wrong move is now handled like in the other puzzle modes. It stays on the board, the status line says “Wrong”, and Stockfish plays the best reply (the refutation) instead of the move simply being taken back. “Take back move” in the status line takes back your move together with the reply, and you keep looking for the solution. You may also play on away from the solution — Stockfish answers each move; taking back then goes one move pair at a time until the wrong move is gone. In “Training” the mistake is still remembered (“solved with a mistake”). A different move that checkmates counts as a solution; after a wrong move that ends the game (stalemate) there is no reply, only taking back.",
       de: "E-Book-Brett, Modus „Lösen“: Ein falscher Zug wird jetzt wie in den übrigen Puzzle-Modi behandelt. Er bleibt auf dem Brett stehen, die Statuszeile sagt „Falsch“, und Stockfish spielt den besten Gegenzug (die Widerlegung), statt den Zug einfach zurückzunehmen. „Zug zurücknehmen“ in der Statuszeile nimmt den eigenen Zug samt Antwort zurück, und man sucht die Lösung weiter. Man darf auch abseits der Lösung weiterspielen — Stockfish antwortet auf jeden Zug; zurückgenommen wird dann paarweise, bis der Fehlzug weg ist. Im „Training“ wird der Fehler weiter gemerkt („gelöst mit Fehler“). Ein anderer Zug, der mattsetzt, gilt als Lösung; nach einem Fehlzug, der die Partie beendet (Patt), gibt es keine Antwort, nur das Zurücknehmen." },

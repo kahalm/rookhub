@@ -36,16 +36,13 @@ import { sideToMove, whiteToMove } from '../../shared/chess/fen-side';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { EbookOpeningTree } from './ebook-tree.util';
 import { EbookTreePanelComponent } from './ebook-tree-panel.component';
+import { EbookGameLine, ebookResultLabel, numberedSans, replayGame, sameResult, scoreCp } from './ebook-board.util';
+
+export { ebookResultLabel, type EbookGameLine } from './ebook-board.util';
 
 /** Was das Brett gerade tut (0.777.0). */
 export type EbookBoardMode = 'view' | 'free' | 'calc' | 'solve' | 'maia' | 'game' | 'tree';
 
-/** Partie im Modus „Partie“ (0.831.0): Kopf, Hauptlinie und die Stellung nach jedem Halbzug (Index 0 = Grundstellung). */
-export interface EbookGameLine {
-  game: EbookGame;
-  sans: string[];
-  fens: string[];
-}
 /** Lösen: in beiden Arten bleibt ein falscher Zug stehen, Stockfish spielt die Widerlegung, „Zug zurücknehmen“ führt zurück
  *  und man sucht weiter (wie in den Puzzle-Modi, 1.010.0; keine Lösung vorspielen, Nutzerwunsch 20.10.2026); „Training“
  *  merkt sich den Fehler und meldet am Ende „gelöst mit Fehler“. Seit 0.825.0 bleibt im „Training“
@@ -75,11 +72,6 @@ export const ENGINE_SOLUTION_PLIES = 7;
  *   Brettzüge, die im Buch stehen, gehen weiter, andere werden mit „nicht im Buch“ zurückgenommen. Nur mit Baum.
  * Die Engine (Stockfish im Browser, {@link LiveEngineSession}) ist in jedem Modus zuschaltbar.
  */
-/** UI-Sweep 2026-11-10 (d10-rk-ebook-partiekopf-pgn-rohwerte): PGN-Ergebnis zum Anzeigen (wie game-replay), „*“ ohne Anzeige. */
-export function ebookResultLabel(r: string | null | undefined): string {
-  if (!r || r === '*') return '';
-  return r === '1/2-1/2' ? '½–½' : r.replace('-', '–');
-}
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -678,34 +670,15 @@ export class EbookBoardComponent implements OnChanges {
     try {
       const mine = await this.stockfish.getBestMove(after, EbookBoardComponent.CHECK_DEPTH);
       const ref = await this.stockfish.getBestMove(reference ?? before, EbookBoardComponent.CHECK_DEPTH);
-      const a = EbookBoardComponent.scoreCp(mine.score, after) * mover;
-      const b = EbookBoardComponent.scoreCp(ref.score, reference ?? before) * mover;
-      return EbookBoardComponent.sameResult(b, a);
+      const a = scoreCp(mine.score, after) * mover;
+      const b = scoreCp(ref.score, reference ?? before) * mover;
+      return sameResult(b, a);
     } catch {
       return false;   // Engine nicht verfügbar: wie bisher nur der Buchzug
     }
   }
 
   static readonly CHECK_DEPTH = 14;
-
-  /** Weiß-Sicht in Centipawns; Matt in n = ±(10000 − n). Ohne Bewertung (Partieende): Matt/Patt aus der Stellung. */
-  static scoreCp(score: { cp?: number; mate?: number } | undefined, fen: string): number {
-    if (score?.mate != null) return score.mate > 0 ? 10000 - score.mate : -10000 - score.mate;
-    if (score?.cp != null) return score.cp;
-    try {
-      const c = new Chess(fen);
-      if (c.isCheckmate()) return c.turn() === 'w' ? -10000 : 10000;
-    } catch { /* unten */ }
-    return 0;   // Patt, Remis, unbekannt
-  }
-
-  /** Gleiches Ergebnis aus Sicht des Ziehenden (Vergleich `reference`, eigener Zug `mine`). */
-  static sameResult(reference: number, mine: number): boolean {
-    if (mine >= reference - 50) return true;
-    if (Math.abs(reference) <= 80 && mine >= -80) return true;   // Remis bleibt Remis
-    if (reference >= 300 && mine >= 300) return true;            // Gewinn bleibt Gewinn
-    return false;
-  }
 
   /** Nach einem richtigen Zug: Antwort nachziehen (aus der Linie, nach einer Abweichung von Stockfish), am Ende „gelöst“. */
   private advance(): void {
@@ -748,7 +721,7 @@ export class EbookBoardComponent implements OnChanges {
       next: g => {
         if (req !== this.gameRequest) return;
         // Gleiche Partie wie beim vorigen Diagramm: nur zum neuen Halbzug springen.
-        const line = cur && cur.game.id === g.id ? { ...cur, game: g } : EbookBoardComponent.replay(g);
+        const line = cur && cur.game.id === g.id ? { ...cur, game: g } : replayGame(g);
         this.gameLine.set(line);
         this.gamePly.set(Math.min(g.ply, line.sans.length));
         this.gameState.set('ready');
@@ -761,17 +734,6 @@ export class EbookBoardComponent implements OnChanges {
         this.cdr.markForCheck();
       },
     });
-  }
-
-  /** Hauptlinie nachspielen; ab einem unspielbaren Zug wird abgeschnitten (kaputte Quelle soll den Leser nicht sprengen). */
-  static replay(game: EbookGame): EbookGameLine {
-    const chess = new Chess();
-    const sans: string[] = [];
-    const fens = [chess.fen()];
-    for (const san of game.moves) {
-      try { sans.push(chess.move(san).san); fens.push(chess.fen()); } catch { break; }
-    }
-    return { game, sans, fens };
   }
 
   /** Brettzug in der Partie: ist es der nächste Partiezug, geht es in der Partie weiter, sonst beginnt (bzw. wächst) die Nebenlinie. */
@@ -828,7 +790,7 @@ export class EbookBoardComponent implements OnChanges {
     const fen = g.fens[this.gamePly()];
     const parts = fen.split(' ');
     parts[5] = String(Math.floor(this.gamePly() / 2) + 1);
-    return EbookBoardComponent.numbered(parts.join(' '), this.played().map(p => p.san));
+    return numberedSans(parts.join(' '), this.played().map(p => p.san));
   }
 
   // ---------------------------------------------------------------- Baum
@@ -940,23 +902,8 @@ export class EbookBoardComponent implements OnChanges {
 
   // ---------------------------------------------------------------- Anzeige
 
-  /** Zugnummern ab einer Stellung vor eine SAN-Folge setzen („17… Txh2+ 18. Kxh2“). */
-  static numbered(fen: string, sans: readonly string[]): string {
-    if (sans.length === 0) return '';
-    const parts = fen.split(' ');
-    let n = Number(parts[5]) || 1;
-    let white = whiteToMove(fen);
-    const out: string[] = [];
-    sans.forEach((san, i) => {
-      if (white) out.push(`${n}. ${san}`);
-      else { out.push(i === 0 ? `${n}… ${san}` : san); n++; }
-      white = !white;
-    });
-    return out.join(' ');
-  }
-
   get movesText(): string {
-    return this.diagram ? EbookBoardComponent.numbered(this.diagram.fen, this.played().map(m => m.san)) : '';
+    return this.diagram ? numberedSans(this.diagram.fen, this.played().map(m => m.san)) : '';
   }
 
   /** Remisstellung laut Stockfish-Prüfung (±80 cp) — dann ist die gezeigte Linie nur eine von mehreren (0.780.3). */
@@ -975,7 +922,7 @@ export class EbookBoardComponent implements OnChanges {
         const c = new Chess(d.fen);
         for (const u of this.solutionLine) sans.push(c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u.length > 4 ? u[4] : undefined }).san);
       } catch { /* Linie passt nicht mehr — was da ist, zeigen */ }
-      return EbookBoardComponent.numbered(d.fen, sans);
+      return numberedSans(d.fen, sans);
     }
     return this.storedSolutionText;
   }
@@ -983,7 +930,7 @@ export class EbookBoardComponent implements OnChanges {
   /** Die gespeicherte Linie zum Lesen (auch ohne „Lösen“, unter „Ansehen“). */
   get storedSolutionText(): string {
     const d = this.diagram;
-    return d ? EbookBoardComponent.numbered(d.fen, (d.solutionSan ?? '').split(' ').filter(Boolean)) : '';
+    return d ? numberedSans(d.fen, (d.solutionSan ?? '').split(' ').filter(Boolean)) : '';
   }
 
   analysisParams(): Record<string, string> {
