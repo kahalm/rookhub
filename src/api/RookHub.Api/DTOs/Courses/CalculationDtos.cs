@@ -261,3 +261,14 @@ public class CalcPublicBookDto
     /// <summary>Stellungen in Lesereihenfolge (Round → Id).</summary>
     public List<CalcPublicPositionDto> Positions { get; set; } = new();
 }
+
+/// <summary>Eine ohne Anmeldung gerechnete Stellung (<c>POST /api/calculations/claim-local</c>, 1.020.3).</summary>
+public class ClaimCalcEntryDto
+{
+    public int BookPuzzleId { get; set; }
+    public string? TreeJson { get; set; }
+    public string? ChosenSan { get; set; }
+    public string? ChosenUci { get; set; }
+    public int SecondsSpent { get; set; }
+    public int? Grade { get; set; }
+}

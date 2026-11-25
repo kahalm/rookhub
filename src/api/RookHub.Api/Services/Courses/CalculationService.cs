@@ -309,6 +309,46 @@ public class CalculationService
     /// Trainings-Werte dürfen im selben Aufruf mitkommen (siehe <see cref="ICalcMetaInput"/>).</summary>
     /// <exception cref="DomainValidationException">Baum ist kein gültiges JSON oder zu groß, oder die
     /// Festlegung ist keine plausible Zugangabe (→ 400).</exception>
+    public const int MaxClaimEntries = 500;
+
+    /// <summary>
+    /// Ohne Anmeldung gerechnete Stellungen ins Konto übernehmen (1.020.3; der Browser hielt sie in
+    /// <c>rookhub_calc_local_&lt;bookId&gt;</c>, beim Anmelden gingen sie verloren). Nur Stellungen OHNE eigenen Stand im
+    /// Konto (der Konto-Stand gewinnt); unzugängliche oder ungültige Einträge fallen still weg. → Zahl der übernommenen.
+    /// </summary>
+    public async Task<int> ClaimLocalAsync(int userId, IReadOnlyList<ClaimCalcEntryDto> entries, bool isAdmin, CancellationToken ct = default)
+    {
+        if (entries.Count > MaxClaimEntries) throw new DomainValidationException($"At most {MaxClaimEntries} positions.");
+        var ids = entries.Select(e => e.BookPuzzleId).Distinct().ToList();
+        var existing = (await _db.CalculationTrees.Where(t => t.UserId == userId && ids.Contains(t.BookPuzzleId))
+            .Select(t => t.BookPuzzleId).ToListAsync(ct)).ToHashSet();
+        var n = 0;
+        foreach (var e in entries)
+        {
+            if (!existing.Add(e.BookPuzzleId)) continue;
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(e.TreeJson))
+                    await SaveTreeAsync(userId, e.BookPuzzleId, new SaveCalcTreeDto
+                    {
+                        TreeJson = e.TreeJson, AddSeconds = e.SecondsSpent > 0 ? e.SecondsSpent : null, Grade = e.Grade,
+                        ChosenSan = e.ChosenSan, ChosenUci = e.ChosenUci,
+                    }, isAdmin, ct);
+                else
+                    await PatchMetaAsync(userId, e.BookPuzzleId, new PatchCalcMetaDto
+                    {
+                        AddSeconds = e.SecondsSpent > 0 ? e.SecondsSpent : null, Grade = e.Grade, ChosenSan = e.ChosenSan, ChosenUci = e.ChosenUci,
+                    }, isAdmin, ct);
+                n++;
+            }
+            catch (Exception ex) when (ex is NotFoundException or DomainValidationException or UnauthorizedAccessException)
+            {
+                _db.ChangeTracker.Clear();   // ein kaputter Eintrag hält die übrigen nicht auf
+            }
+        }
+        return n;
+    }
+
     public async Task<CalcPositionStateDto> SaveTreeAsync(int userId, int bookPuzzleId, SaveCalcTreeDto dto,
         bool isAdmin, CancellationToken ct = default)
     {

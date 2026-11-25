@@ -323,6 +323,9 @@ public class CourseService
         _solver.GetNextAsync(userId, bookId, mode, after, exclude, isAdmin, chapterIndex);
 
     /// <inheritdoc cref="CourseSolverService.RecordResultAsync"/>
+    public Task<int> ClaimLocalSolvedAsync(int userId, int bookId, IReadOnlyCollection<int> ids, bool isAdmin) =>
+        _solver.ClaimLocalSolvedAsync(userId, bookId, ids, isAdmin);
+
     public Task<CourseProgressDto> RecordResultAsync(int userId, int bookId, RecordCourseResultDto dto, bool isAdmin) =>
         _solver.RecordResultAsync(userId, bookId, dto, isAdmin);
 

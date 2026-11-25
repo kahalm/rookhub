@@ -281,6 +281,35 @@ public class CourseSolverService
         return await BuildProgressAsync(userId, bookId, dto.ChapterIndex, ChapterOrder.NormalizeChapter(puzzleChapter), true);
     }
 
+    public const int MaxClaimLines = 10_000;
+
+    /// <summary>
+    /// Ohne Anmeldung gelöste Linien ins Konto übernehmen (1.020.3; der Browser hielt sie in
+    /// <c>rookhub_course_local_solved_&lt;bookId&gt;</c>, beim Anmelden gingen sie verloren). Nur Quiz-Linien DIESES Buchs,
+    /// idempotent; es entsteht KEIN Versuch (anonyme Lösungen zählen bewusst nicht in Bestenlisten/Trainingsziele), nur
+    /// die Markierung „gelöst“ — Zeit 0. → Zahl der neu markierten.
+    /// </summary>
+    public async Task<int> ClaimLocalSolvedAsync(int userId, int bookId, IReadOnlyCollection<int> bookPuzzleIds, bool isAdmin)
+    {
+        if (bookPuzzleIds.Count > MaxClaimLines) throw new DomainValidationException($"At most {MaxClaimLines} lines.");
+        await EnsureAccessAsync(userId, bookId, isAdmin);
+        var ids = bookPuzzleIds.Distinct().ToList();
+        var quiz = await _db.BookPuzzles.Where(bp => bp.BookId == bookId && !bp.IsInfoOnly && ids.Contains(bp.Id))
+            .Select(bp => bp.Id).ToListAsync();
+        var already = await _db.CoursePuzzleResults.Where(r => r.UserId == userId && quiz.Contains(r.BookPuzzleId))
+            .Select(r => r.BookPuzzleId).ToListAsync();
+        var core = AttemptRecording.From(true, 0, 0, null);
+        var added = 0;
+        foreach (var id in quiz.Except(already))
+        {
+            await MarkSolvedAsync(userId, bookId, id, core);
+            added++;
+        }
+        if (added > 0) await UpsertProgressAsync(userId, bookId, null);
+        await _db.SaveIgnoringUniqueRaceAsync(_logger);
+        return added;
+    }
+
     /// <summary>Das (rohe) Kapitel einer QUIZ-Linie dieses Buchs; fremde Linie oder Info-Linie → 404.</summary>
     private async Task<string?> LoadQuizLineChapterAsync(int bookId, int bookPuzzleId)
     {

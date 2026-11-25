@@ -320,6 +320,12 @@ public class CourseController : BaseApiController
         return Ok(next);
     }
 
+    /// <summary>Ohne Anmeldung gelöste Linien übernehmen <c>{ ids: [...] }</c> (1.020.3, beim Anmelden) → <c>{ claimed }</c>.
+    /// Nur Quiz-Linien des Buchs, kein Versuch (keine Bestenliste), idempotent.</summary>
+    [HttpPost("{bookId}/claim-local-solved")]
+    public async Task<IActionResult> ClaimLocalSolved(int bookId, [FromBody] ClaimLocalSolvedDto dto)
+        => Ok(new { claimed = await _service.ClaimLocalSolvedAsync(GetUserId(), bookId, dto.Ids ?? [], IsAdmin) });
+
     /// <summary>Zeichnet einen Lösungsversuch auf. Bei Solved wird das Puzzle (idempotent) als gelöst markiert.</summary>
     [HttpPost("{bookId}/results")]
     public async Task<IActionResult> RecordResult(int bookId, [FromBody] RecordCourseResultDto dto)

@@ -348,3 +348,9 @@ public class PublicSlugChapterDto
     /// </summary>
     public int? ChapterIndex { get; set; }
 }
+
+/// <summary>Ohne Anmeldung gelöste Linien eines Kurses (<c>POST /api/courses/{bookId}/claim-local-solved</c>).</summary>
+public class ClaimLocalSolvedDto
+{
+    public List<int>? Ids { get; set; }
+}

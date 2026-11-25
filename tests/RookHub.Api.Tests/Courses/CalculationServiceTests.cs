@@ -949,4 +949,29 @@ public class CalculationServiceTests : IDisposable
         var pos = await SeedPositionAsync(book);
         return (user, book, pos);
     }
+
+    [Fact]
+    public async Task ClaimLocal_TakesGuestWork_AccountWins_SkipsForeign()
+    {
+        var (user, book, pos) = await SeedOwnPositionAsync();
+        var pos2 = await SeedPositionAsync(book, round: "2");
+        var other = await CreateUserAsync("o1");
+        var foreignBook = await SeedBookAsync(ownerUserId: other.Id);
+        var foreignPos = await SeedPositionAsync(foreignBook);
+        await _svc.SaveTreeAsync(user.Id, pos2.Id, new SaveCalcTreeDto { TreeJson = "{\"konto\":1}" }, false);
+
+        var n = await _svc.ClaimLocalAsync(user.Id, [
+            new ClaimCalcEntryDto { BookPuzzleId = pos.Id, TreeJson = "{\"gast\":1}", SecondsSpent = 30 },
+            new ClaimCalcEntryDto { BookPuzzleId = pos2.Id, TreeJson = "{\"gast\":2}" },
+            new ClaimCalcEntryDto { BookPuzzleId = foreignPos.Id, TreeJson = "{\"x\":1}" },
+        ], false);
+
+        Assert.Equal(1, n);
+        var trees = await _db.CalculationTrees.Where(t => t.UserId == user.Id).ToDictionaryAsync(t => t.BookPuzzleId);
+        Assert.Contains("gast", trees[pos.Id].TreeJson);
+        Assert.Equal(30, trees[pos.Id].SecondsSpent);
+        Assert.Contains("konto", trees[pos2.Id].TreeJson);   // Konto-Stand gewinnt
+        Assert.False(await _db.CalculationTrees.AnyAsync(t => t.BookPuzzleId == foreignPos.Id));
+    }
 }
+

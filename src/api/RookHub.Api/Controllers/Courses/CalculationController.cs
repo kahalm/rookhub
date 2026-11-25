@@ -67,6 +67,12 @@ public class CalculationController : BaseApiController
         return Ok(book);
     }
 
+    /// <summary>Ohne Anmeldung gerechnete Stellungen übernehmen (1.020.3, beim Anmelden) → <c>{ claimed }</c>; Stellungen mit
+    /// eigenem Konto-Stand bleiben unberührt.</summary>
+    [HttpPost("claim-local")]
+    public async Task<IActionResult> ClaimLocal([FromBody] List<ClaimCalcEntryDto> entries, CancellationToken ct)
+        => Ok(new { claimed = await _service.ClaimLocalAsync(GetUserId(), entries ?? [], IsAdmin, ct) });
+
     /// <summary>Kapitel-Uhr des Buchs (1.020.1) → <c>{ Kapitel: Sekunden }</c>.</summary>
     [HttpGet("books/{bookId}/chapter-times")]
     public async Task<ActionResult<Dictionary<string, int>>> GetChapterTimes(int bookId, [FromServices] CalcChapterTimeService times, CancellationToken ct)

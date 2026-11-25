@@ -166,4 +166,21 @@ public class CourseServiceGiveUpTests : IDisposable
         Assert.Equal(2, bk.HelpedCount);
         Assert.Equal(1, bk.GaveUpCount);
     }
+
+    [Fact]
+    public async Task ClaimLocalSolved_MarksSolvedWithoutAttempt_Idempotent_IgnoresForeignLines()
+    {
+        var (book, p1, p2) = await SeedAsync();
+        var otherBook = new Book { FileName = "o.pgn", DisplayName = "O", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
+        _db.Books.Add(otherBook);
+        await _db.SaveChangesAsync();
+        var foreign = await AddPuzzleAsync(otherBook, "f1", "001");
+
+        Assert.Equal(2, await _svc.ClaimLocalSolvedAsync(UserId, book.Id, [p1.Id, p2.Id, foreign.Id], false));
+        Assert.Equal(0, await _svc.ClaimLocalSolvedAsync(UserId, book.Id, [p1.Id], false));   // schon übernommen
+        Assert.Equal(2, await _db.CoursePuzzleResults.CountAsync(r => r.UserId == UserId && r.BookId == book.Id));
+        Assert.False(await _db.CoursePuzzleResults.AnyAsync(r => r.BookPuzzleId == foreign.Id));
+        Assert.False(await _db.CourseAttempts.AnyAsync(a => a.UserId == UserId));   // kein Versuch (keine Bestenliste)
+    }
 }
+

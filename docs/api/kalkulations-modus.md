@@ -127,3 +127,11 @@ Stellungen, sonst 404). Der PUT behält je Kapitel den HÖHEREN Wert (zwei Gerä
 zählt weiter lokal (`rookhub_calc_timer_<bookId>`, Konto-Spur), arbeitet beim Öffnen den Konto-Stand ein
 (`mergeRemote`, je Kapitel das Maximum, Höheres vom Gerät geht hoch) und schickt alle 30 s, beim Anhalten und beim
 Kapitelwechsel (`flushRemote`). Anonym bleibt alles am Gerät. Bei der Kontolöschung weg (`AnalysisDataEraser`).
+
+**Gast-Arbeit beim Anmelden übernehmen** (1.020.3): `POST /api/calculations/claim-local` `[{ bookPuzzleId, treeJson?, chosenSan?,
+chosenUci?, secondsSpent, grade? }]` (≤ 500) → `{ claimed }` — übernimmt ohne Anmeldung gerechnete Stellungen
+(`rookhub_calc_local_<bookId>`) nur dort, wo das Konto noch keinen Stand hat; Unzugängliches/Ungültiges fällt still weg.
+Ebenso `POST /api/courses/{bookId}/claim-local-solved` `{ ids }` für ohne Anmeldung gelöste Kurs-Linien
+(`rookhub_course_local_solved_<bookId>`): nur die Markierung „gelöst“ (Zeit 0), KEIN Versuch — anonyme Lösungen zählen
+bewusst nicht in Bestenlisten. Client: `features/courses/guest-work-claim.ts`, aufgerufen von
+`LoginFollowUpService.afterLogin` (Anmelden/Registrieren); der Gerätestand wird erst nach Erfolg geräumt.

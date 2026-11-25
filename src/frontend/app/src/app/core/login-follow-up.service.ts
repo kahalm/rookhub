@@ -1,5 +1,6 @@
 import { DestroyRef, Injectable, Injector, inject } from '@angular/core';
-import { localStore, readRaw } from './local-json-store';
+import { HttpClient } from '@angular/common/http';
+import { keysWithPrefix, localStore, readRaw } from './local-json-store';
 import { ANON_PUZZLE_SESSION_KEY, readAnonSessionId } from './anon-session';
 
 /**
@@ -59,6 +60,7 @@ export class LoginFollowUpService {
   /** Nachlauf nach Anmelden/Registrieren über die Maske — Reihenfolge wie vorher in `AuthService.storeUser`. */
   afterLogin(): void {
     this.claimAnonymousPuzzleSession();
+    this.claimGuestCourseWork();
     this.consumeStashedDiscordLink();
     // Sync user preferences from server (overwrites localStorage)
     this.loadPreferences();
@@ -72,6 +74,13 @@ export class LoginFollowUpService {
   private consumeStashedDiscordLink(): void {
     import('./discord-link.service').then(m =>
       this.withService(() => this.injector.get(m.DiscordLinkService), d => d.consumeStashed()));
+  }
+
+  /** Ohne Anmeldung gelöste Kurs-Linien und Kalkulations-Stellungen ins Konto (1.020.3, `guest-work-claim.ts`). */
+  private claimGuestCourseWork(): void {
+    if (!hasGuestCourseWork()) return;
+    import('../features/courses/guest-work-claim').then(m =>
+      this.withService(() => this.injector.get(HttpClient), http => m.claimGuestCourseWork(http).subscribe()));
   }
 
   private claimAnonymousPuzzleSession(): void {
@@ -102,3 +111,10 @@ export class LoginFollowUpService {
       this.withService(() => this.injector.get(m.EbookService), ebooks => ebooks.claimSession(sessionId).subscribe()));
   }
 }
+
+/** Liegt ohne Anmeldung Erarbeitetes aus Kursen am Gerät? (billig, ohne den Kurs-Code zu laden) */
+function hasGuestCourseWork(): boolean {
+  const store = localStore();
+  return keysWithPrefix(store, 'rookhub_course_local_solved_').length > 0 || keysWithPrefix(store, 'rookhub_calc_local_').length > 0;
+}
+

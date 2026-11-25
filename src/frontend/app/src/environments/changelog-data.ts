@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.020.3", date: "2026-11-25", changes: [
+    { en: "Courses without an account: lines you solved and positions you calculated before logging in or registering are now taken over into your account instead of being lost at the next logout.",
+      de: "Kurse ohne Konto: Linien, die du vor dem Anmelden oder Registrieren gelöst, und Stellungen, die du kalkuliert hast, werden jetzt ins Konto übernommen, statt beim nächsten Abmelden verloren zu gehen." },
+  ] },
   { version: "1.020.2", date: "2026-11-25", changes: [
     { en: "Repertoires: the training colour you set for a chapter (White or Black) is now saved in your account. After logging out or on another device the trainer no longer falls back to the automatic guess.",
       de: "Repertoires: Die Trainingsfarbe, die du für ein Kapitel festgelegt hast (Weiß oder Schwarz), liegt jetzt im Konto. Nach dem Abmelden oder auf einem anderen Gerät fällt der Trainer nicht mehr auf die automatische Erkennung zurück." },
