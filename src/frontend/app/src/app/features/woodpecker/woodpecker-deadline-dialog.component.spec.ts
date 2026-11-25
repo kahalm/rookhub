@@ -144,6 +144,14 @@ describe('WoodpeckerDeadlinePrompt', () => {
   });
 
   it('von selbst nur einmal je Plan und Frist; „Später“ → null; neue Frist fragt wieder', () => {
+    // Feste Uhr: die Fristen der Testpläne hängen an Date.now() — sprang die Millisekunde zwischen zwei duePlan(),
+    // war es eine „neue Frist“, und die CI fragte doppelt (rot auf addcdedf8).
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date('2026-11-25T12:00:00Z'));
+    try { deadlineOnce(); } finally { jasmine.clock().uninstall(); }
+  });
+
+  function deadlineOnce(): void {
     let result: WoodpeckerPlan | null | undefined;
     prompt.askIfDue(duePlan()).subscribe(p => result = p);
     expect(open).toHaveBeenCalledTimes(1);
@@ -156,7 +164,7 @@ describe('WoodpeckerDeadlinePrompt', () => {
     expect(open).toHaveBeenCalledTimes(2);
     prompt.open(later).subscribe();   // Knopf auf der Karte öffnet immer
     expect(open).toHaveBeenCalledTimes(3);
-  });
+  }
 
   it('gibt den neuen Plan nach einer Entscheidung weiter', () => {
     const after = duePlan({ deadlinePassed: false });

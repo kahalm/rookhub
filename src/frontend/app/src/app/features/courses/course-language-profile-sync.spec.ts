@@ -1,3 +1,4 @@
+import { clearSyncedUiPrefsForTest } from '../../core/ui-prefs-sync';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -37,7 +38,7 @@ describe('CourseLanguageService — Wahl im Profil', () => {
     return http.match(r => r.method === 'PUT' && r.url === '/api/profile').map(r => { const b = r.request.body; r.flush({}); return b; });
   }
 
-  beforeEach(() => localStorage.removeItem(COURSE_LANG_KEY));
+  beforeEach(() => { clearSyncedUiPrefsForTest(); localStorage.removeItem(COURSE_LANG_KEY); });
   afterEach(() => { localStorage.removeItem(COURSE_LANG_KEY); http.verify(); });
 
   it('Profil gewinnt — bei Konflikt der jüngere; nur Neueres geht hoch', () => {

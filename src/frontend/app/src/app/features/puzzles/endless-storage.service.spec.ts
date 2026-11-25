@@ -42,6 +42,7 @@ describe('EndlessStorageService highscore sync', () => {
 
     const put = http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress'));
     expect(put.request.body.highscore).toBe(1500);
+    expect(typeof put.request.body.worstTags).toBe('boolean');   // 1.019.1: geht mit ins Konto
     put.flush({});
   });
 });
@@ -273,6 +274,20 @@ describe('EndlessStorageService mergeServerData', () => {
     expect(res.config.stockfishDepth).toBe(12);
     expect(res.config.worstTags).toBeTrue();
     expect(svc.loadConfig({ startElo: 700, themes: '', stockfishDepth: 16 }).worstTags).toBeTrue();
+  });
+
+  it('worstTags aus dem Konto (1.019.1) gewinnt, wenn der Server ihn kennt — auch nach dem Abmelden auf neuem Gerät', () => {
+    const local: EndlessConfig = { startElo: 1200, themes: '', stockfishDepth: 16 };
+    const res = svc.mergeServerData(local, 0, [], {
+      progress: { startElo: 1200, themes: '', stockfishDepth: 16, worstTags: true, highscore: 0, updatedAt: '' },
+      sessions: [],
+    });
+    expect(res.config.worstTags).toBeTrue();
+    const off = svc.mergeServerData({ ...local, worstTags: true }, 0, [], {
+      progress: { startElo: 1200, themes: '', stockfishDepth: 16, worstTags: false, highscore: 0, updatedAt: '' },
+      sessions: [],
+    });
+    expect(off.config.worstTags).toBeFalse();
   });
 });
 

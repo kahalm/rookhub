@@ -3226,6 +3226,9 @@ namespace RookHub.Api.Migrations
                     b.Property<int?>("UserId")
                         .HasColumnType("int");
 
+                    b.Property<bool?>("WorstTags")
+                        .HasColumnType("tinyint(1)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AnonymousSessionId")

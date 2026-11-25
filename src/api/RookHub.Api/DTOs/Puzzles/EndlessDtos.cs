@@ -17,6 +17,8 @@ public class EndlessProgressDto
     public int? FasttrackThreshold1 { get; set; }
     public int? FasttrackThreshold2 { get; set; }
     public int StockfishDepth { get; set; }
+    /// <summary>„Schwächste Themen trainieren“; <c>null</c> = nie gesetzt (älterer Client).</summary>
+    public bool? WorstTags { get; set; }
     public int Highscore { get; set; }
     public string? ActiveGameState { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -59,6 +61,9 @@ public class SaveEndlessProgressDto
 
     [Range(1, 24)]
     public int StockfishDepth { get; set; } = 16;
+
+    /// <summary><c>null</c> = unverändert lassen (älterer Client schickt das Feld nicht).</summary>
+    public bool? WorstTags { get; set; }
 
     [Range(0, 100000)]
     public int Highscore { get; set; }

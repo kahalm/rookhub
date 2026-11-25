@@ -52,6 +52,8 @@ export interface EndlessProgressDto {
   fasttrackThreshold1?: number;
   fasttrackThreshold2?: number;
   stockfishDepth: number;
+  /** Seit 1.019.1; `null` = nie gesetzt (Stand von davor). */
+  worstTags?: boolean | null;
   highscore: number;
   activeGameState?: string;
   updatedAt: string;
@@ -307,6 +309,8 @@ export class EndlessStorageService {
       fasttrackThreshold1: config.fasttrackThreshold1 ?? null,
       fasttrackThreshold2: config.fasttrackThreshold2 ?? null,
       stockfishDepth: config.stockfishDepth,
+      // „Schwächste Themen“ (1.019.1): jetzt im Konto — vorher nur am Gerät und nach dem Abmelden aus.
+      worstTags: config.worstTags ?? false,
       highscore: safeHighscore,
       activeGameState: activeGameState ? JSON.stringify(activeGameState) : null
     };
@@ -454,15 +458,16 @@ export class EndlessStorageService {
 
     if (serverData.progress) {
       const sp = serverData.progress;
-      // Server wins if it has data — aber nur für die Felder, die er kennt. Rein lokale Felder
-      // (worstTags) bleiben erhalten, sonst wäre „schwächste Themen" nach jedem Besuch aus.
+      // Server wins if it has data — aber nur für die Felder, die er kennt. `worstTags` kennt er seit 1.019.1; ein
+      // Stand von davor (null) lässt den lokalen Wert stehen, sonst wäre „schwächste Themen" nach jedem Besuch aus.
       config = {
         ...localConfig,
         startElo: sp.startElo,
         themes: sp.themes,
         fasttrackThreshold1: sp.fasttrackThreshold1 ?? undefined,
         fasttrackThreshold2: sp.fasttrackThreshold2 ?? undefined,
-        stockfishDepth: sp.stockfishDepth
+        stockfishDepth: sp.stockfishDepth,
+        ...(typeof sp.worstTags === 'boolean' ? { worstTags: sp.worstTags } : {}),
       };
       highscore = Math.max(localHighscore, sp.highscore);
     }

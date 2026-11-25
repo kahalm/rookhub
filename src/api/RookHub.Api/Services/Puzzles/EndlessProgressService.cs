@@ -321,6 +321,7 @@ public class EndlessProgressService
                     FasttrackThreshold1 = anonProgress.FasttrackThreshold1,
                     FasttrackThreshold2 = anonProgress.FasttrackThreshold2,
                     StockfishDepth = anonProgress.StockfishDepth,
+                    WorstTags = anonProgress.WorstTags,
                     Highscore = anonProgress.Highscore,
                     ActiveGameState = anonProgress.ActiveGameState,
                     UpdatedAt = DateTime.UtcNow
@@ -487,6 +488,7 @@ public class EndlessProgressService
         progress.FasttrackThreshold1 = dto.FasttrackThreshold1;
         progress.FasttrackThreshold2 = dto.FasttrackThreshold2;
         progress.StockfishDepth = dto.StockfishDepth;
+        if (dto.WorstTags != null) progress.WorstTags = dto.WorstTags;
         progress.Highscore = dto.Highscore;
         progress.ActiveGameState = dto.ActiveGameState;
         progress.UpdatedAt = DateTime.UtcNow;
@@ -499,6 +501,7 @@ public class EndlessProgressService
         FasttrackThreshold1 = p.FasttrackThreshold1,
         FasttrackThreshold2 = p.FasttrackThreshold2,
         StockfishDepth = p.StockfishDepth,
+        WorstTags = p.WorstTags,
         Highscore = p.Highscore,
         ActiveGameState = p.ActiveGameState,
         UpdatedAt = p.UpdatedAt

@@ -816,4 +816,21 @@ public class EndlessProgressServiceTests : IDisposable
         Assert.Equal(42, ueberAdapter.Progress!.Highscore);
         Assert.Equal(ueberAdapter.Progress!.Highscore, ueberOwner.Progress!.Highscore);
     }
+
+    [Fact]
+    public async Task SaveProgress_WorstTags_RoundTrips_NullKeepsStored()
+    {
+        var userId = await CreateUserAsync();
+        var dto = MakeProgressDto(highscore: 10);
+        dto.WorstTags = true;
+        await _service.SaveProgressAsync(userId, dto);
+        var older = MakeProgressDto(highscore: 10);   // älterer Client ohne das Feld
+        await _service.SaveProgressAsync(userId, older);
+        var sync = await _service.GetSyncDataAsync(EndlessOwner.ForUser(userId));
+        Assert.True(sync.Progress!.WorstTags);
+        var off = MakeProgressDto(highscore: 10);
+        off.WorstTags = false;
+        await _service.SaveProgressAsync(userId, off);
+        Assert.False((await _service.GetSyncDataAsync(EndlessOwner.ForUser(userId))).Progress!.WorstTags);
+    }
 }

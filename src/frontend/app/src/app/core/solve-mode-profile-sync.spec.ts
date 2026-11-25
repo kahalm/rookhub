@@ -1,3 +1,4 @@
+import { clearSyncedUiPrefsForTest } from './ui-prefs-sync';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -48,7 +49,7 @@ describe('SolveModeService — Wahl im Profil', () => {
     });
   }
 
-  beforeEach(() => localStorage.removeItem(KEY));
+  beforeEach(() => { clearSyncedUiPrefsForTest(); localStorage.removeItem(KEY); });
   afterEach(() => { localStorage.removeItem(KEY); http.verify(); });
 
   it('Profil gewinnt — bei Konflikt der jüngere Eintrag', () => {

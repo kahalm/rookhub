@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.019.1", date: "2026-11-25", changes: [
+    { en: "Endless puzzles: the option “train your 5 weakest themes” is now saved in your account and no longer switches off after logging out or on another device.",
+      de: "Endlos-Puzzles: Die Einstellung „5 schwächste Themen trainieren“ liegt jetzt im Konto und ist nach dem Abmelden oder auf einem anderen Gerät nicht mehr aus." },
+    { en: "Internal: two automatic tests no longer depend on timing or on leftovers of other tests.",
+      de: "Intern: Zwei automatische Tests hängen nicht mehr vom Zeitpunkt bzw. von Resten anderer Tests ab." },
+  ] },
   { version: "1.019.0", date: "2026-11-25", changes: [
     { en: "E-books: your own analysis in “Calculate” mode is now saved in your account instead of only on this device. It no longer disappears when you log out, and you find it on every device. Changes made without a connection are uploaded later — at the latest when you log out.",
       de: "E-Books: Deine eigene Analyse im Modus „Kalkulieren“ wird jetzt im Konto gespeichert statt nur auf diesem Gerät. Sie verschwindet nicht mehr beim Abmelden, und du findest sie auf jedem Gerät. Änderungen ohne Verbindung werden nachgereicht — spätestens beim Abmelden." },

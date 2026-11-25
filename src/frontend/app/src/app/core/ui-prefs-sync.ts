@@ -109,3 +109,11 @@ export function mergeUiPrefsFromProfile(server: Record<string, UiPrefEntry> | nu
 
 /** Fenster-Ereignis nach dem Einarbeiten: `detail` = die Schlüssel, deren Wert aus dem Profil kam. */
 export const UI_PREFS_APPLIED_EVENT = 'rh-ui-prefs-applied';
+
+/** Für Specs: alle synchronisierten Schlüssel samt Abbild vom Gerät — sonst lädt ein Profil-Abruf Reste anderer Specs
+ *  hoch (zusätzlicher PUT, je nach Reihenfolge der Specs). */
+export function clearSyncedUiPrefsForTest(): void {
+  for (const k of [...SYNCED_UI_PREF_KEYS, SNAPSHOT_KEY]) {
+    try { localStorage.removeItem(k); } catch { /* ohne Speicher */ }
+  }
+}

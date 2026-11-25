@@ -22,6 +22,9 @@ public class EndlessProgress
     public int? FasttrackThreshold2 { get; set; }
     public int StockfishDepth { get; set; } = 16;
 
+    /// <summary>„Schwächste Themen trainieren“ (1.019.1) — vorher nur am Gerät, nach dem Abmelden aus.</summary>
+    public bool? WorstTags { get; set; }
+
     public int Highscore { get; set; }
 
     [Column(TypeName = "LONGTEXT")]
