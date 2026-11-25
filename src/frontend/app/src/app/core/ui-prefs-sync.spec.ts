@@ -7,8 +7,9 @@ import { PreferencesService } from './preferences.service';
 import { STORAGE_KEYS } from './local-storage-keys';
 import {
   SNAPSHOT_KEY, SYNCED_UI_PREF_KEYS, UI_PREFS_APPLIED_EVENT, collectUiPrefChanges, commitUiPrefChanges,
-  flushUiPrefsBeforeLogout, mergeUiPrefsFromProfile,
+  mergeUiPrefsFromProfile,
 } from './ui-prefs-sync';
+import { flushBeforeLogout } from './logout-flush';
 
 /** Anzeige-Vorlieben im Profil (1.018.0) — vorher nur am Gerät, konto-gebundene gingen beim Abmelden verloren. */
 describe('ui-prefs-sync', () => {
@@ -99,7 +100,7 @@ describe('ui-prefs-sync', () => {
       prefs.loadFromServer();
       http.expectOne('/api/profile').flush({ uiPrefs: { 'lh-club': { v: '2', at: 5 } } });
       localStorage.setItem('lh-club', '8');
-      flushUiPrefsBeforeLogout('tok-alt');
+      flushBeforeLogout('tok-alt');
       const put = http.expectOne(r => r.method === 'PUT' && r.url === '/api/profile');
       expect(put.request.headers.get('Authorization')).toBe('Bearer tok-alt');
       expect((put.request.body as { uiPrefs: Record<string, { v: string }> }).uiPrefs['lh-club'].v).toBe('8');

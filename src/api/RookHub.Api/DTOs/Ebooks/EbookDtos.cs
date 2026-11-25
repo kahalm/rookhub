@@ -507,3 +507,17 @@ public class EbookTreeDto
 {
     public List<List<System.Text.Json.JsonElement>>? Nodes { get; set; }
 }
+
+/// <summary>Eigene Kalkulation an einem Diagramm (<c>GET/PUT /api/ebooks/{id}/diagrams/{diagramId}/calc</c>).</summary>
+public class EbookCalcDto
+{
+    public string Tree { get; set; } = string.Empty;
+    /// <summary>Stand des Geräts in ms seit 1970.</summary>
+    public long At { get; set; }
+}
+
+/// <summary>Ein Eintrag für <c>POST /api/ebooks/calc/bulk</c> (ungesicherte Stände vor dem Abmelden).</summary>
+public class EbookCalcBulkItemDto : EbookCalcDto
+{
+    public int DiagramId { get; set; }
+}

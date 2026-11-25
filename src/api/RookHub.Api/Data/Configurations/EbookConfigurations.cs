@@ -225,3 +225,15 @@ internal sealed class BoardCutJobConfiguration : IEntityTypeConfiguration<BoardC
          .OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class EbookDiagramCalcConfiguration : IEntityTypeConfiguration<EbookDiagramCalc>
+{
+    public void Configure(EntityTypeBuilder<EbookDiagramCalc> e)
+    {
+        e.HasKey(c => new { c.UserId, c.DiagramId });
+        e.HasOne(c => c.User).WithMany().HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Cascade);
+        e.HasOne(c => c.Diagram).WithMany().HasForeignKey(c => c.DiagramId).OnDelete(DeleteBehavior.Cascade);
+        e.Property(c => c.Tree).HasColumnType("mediumtext");
+        e.HasIndex(c => c.DiagramId);
+    }
+}

@@ -85,15 +85,6 @@ export function commitUiPrefChanges(changes: Record<string, UiPrefEntry>): void 
   if (Object.keys(changes).length) writeJson(localStore(), SNAPSHOT_KEY, { ...readSnapshot(), ...changes });
 }
 
-/** Wer beim Abmelden noch hochlädt (der `PreferencesService` meldet sich an) — `AuthService` kennt ihn nicht direkt
- *  (Modul-Kreis), ruft aber {@link flushUiPrefsBeforeLogout} mit dem Token der endenden Sitzung. */
-let flushSink: ((token: string) => void) | null = null;
-export function setUiPrefFlushSink(sink: ((token: string) => void) | null): void { flushSink = sink; }
-export function flushUiPrefsBeforeLogout(token: string | null | undefined): void {
-  if (!token || !flushSink) return;
-  try { flushSink(token); } catch { /* ein Abmelden darf an nichts hängen */ }
-}
-
 /**
  * Profil ⇄ Gerät: gewinnt das Profil, wird der Wert in den localStorage geschrieben (die Seite liest ihn beim nächsten
  * Öffnen). Liefert, was hochzuladen ist, und ob sich am Gerät etwas geändert hat.

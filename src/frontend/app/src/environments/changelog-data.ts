@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.019.0", date: "2026-11-25", changes: [
+    { en: "E-books: your own analysis in “Calculate” mode is now saved in your account instead of only on this device. It no longer disappears when you log out, and you find it on every device. Changes made without a connection are uploaded later — at the latest when you log out.",
+      de: "E-Books: Deine eigene Analyse im Modus „Kalkulieren“ wird jetzt im Konto gespeichert statt nur auf diesem Gerät. Sie verschwindet nicht mehr beim Abmelden, und du findest sie auf jedem Gerät. Änderungen ohne Verbindung werden nachgereicht — spätestens beim Abmelden." },
+  ] },
   { version: "1.018.0", date: "2026-11-25", changes: [
     { en: "Your display settings now follow your account instead of staying on one device: visualization level, arrows, puzzle and analysis settings, dashboard layout, hidden notification types, game review and repertoire trainer options, e-book solving style, the live engine bar of the tournament site and the LeagueHub filters. They are saved in your profile, so a new device starts with your settings, and settings you had already made on a device are taken over automatically.",
       de: "Deine Anzeige-Einstellungen gehören jetzt zum Konto statt zu einem Gerät: Visualisierungsstufe, Pfeile, Puzzle- und Analyse-Einstellungen, Anordnung des Dashboards, ausgeblendete Benachrichtigungsarten, Optionen von Partie-Rückblick und Repertoire-Trainer, Lösestil der E-Books, der Engine-Balken der Live-Bretter und die LeagueHub-Filter. Sie liegen im Profil — ein neues Gerät beginnt mit deinen Einstellungen, und was du auf einem Gerät schon eingestellt hattest, wird automatisch übernommen." },

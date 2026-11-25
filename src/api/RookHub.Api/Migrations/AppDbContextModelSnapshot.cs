@@ -2656,6 +2656,31 @@ namespace RookHub.Api.Migrations
                     b.ToTable("EbookDiagrams");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.EbookDiagramCalc", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DiagramId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("ClientAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Tree")
+                        .IsRequired()
+                        .HasColumnType("mediumtext");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("UserId", "DiagramId");
+
+                    b.HasIndex("DiagramId");
+
+                    b.ToTable("EbookDiagramCalcs");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.EbookDiagramCorrection", b =>
                 {
                     b.Property<int>("Id")
@@ -10760,6 +10785,25 @@ namespace RookHub.Api.Migrations
                     b.Navigation("Ebook");
 
                     b.Navigation("Game");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookDiagramCalc", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.EbookDiagram", "Diagram")
+                        .WithMany()
+                        .HasForeignKey("DiagramId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Diagram");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookDiagramCorrection", b =>

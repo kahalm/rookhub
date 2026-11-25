@@ -556,3 +556,25 @@ public class EbookTree
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
+
+/// <summary>
+/// Eigene Kalkulation eines Nutzers an einem E-Book-Diagramm (Brett-Modus „Kalkulieren“, 1.019.0): der Analysebaum, so
+/// wie ihn der Leser serialisiert. Vorher nur im localStorage (<c>rh.ebooks.calc.&lt;id&gt;</c>) — als Konto-Spur beim
+/// Abmelden geräumt, die Arbeit war weg. Ein Eintrag je Nutzer und Diagramm (<see cref="Services.Ebooks.EbookCalcService"/>).
+/// </summary>
+public class EbookDiagramCalc
+{
+    public int UserId { get; set; }
+    public AppUser? User { get; set; }
+
+    public int DiagramId { get; set; }
+    public EbookDiagram? Diagram { get; set; }
+
+    /// <summary>Serialisierter Baum des Lesers (höchstens <see cref="Services.Ebooks.EbookCalcService.MaxTreeLength"/> Zeichen).</summary>
+    [Required] public string Tree { get; set; } = string.Empty;
+
+    /// <summary>Stand des Geräts (ms seit 1970) — ein älterer Stand überschreibt keinen jüngeren.</summary>
+    public long ClientAt { get; set; }
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}

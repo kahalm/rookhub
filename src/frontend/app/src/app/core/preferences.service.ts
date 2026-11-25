@@ -1,12 +1,13 @@
-import { Injectable } from '@angular/core';
+import { DestroyRef, Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from './auth.service';
 import { Observable, Subject, catchError, of, shareReplay, tap } from 'rxjs';
 
 import { ThemeMode } from './theme-mode';
 import {
-  UiPrefEntry, collectUiPrefChanges, commitUiPrefChanges, mergeUiPrefsFromProfile, setUiPrefFlushSink,
+  UiPrefEntry, collectUiPrefChanges, commitUiPrefChanges, mergeUiPrefsFromProfile,
 } from './ui-prefs-sync';
+import { registerLogoutFlush } from './logout-flush';
 
 const BOARD_THEME_KEY = 'rookhub_board_theme';
 const PIECE_SET_KEY = 'rookhub_piece_set';
@@ -76,9 +77,12 @@ export class PreferencesService {
     // Anzeige-Vorlieben: geänderte hochladen, wenn der Tab in den Hintergrund geht (Gerätewechsel, App zu) und beim
     // Abmelden (mit dem Token der endenden Sitzung, vor dem Räumen).
     if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') this.flushUiPrefs(); });
+      const onHide = () => { if (document.visibilityState === 'hidden') this.flushUiPrefs(); };
+      document.addEventListener('visibilitychange', onHide);
+      inject(DestroyRef).onDestroy(() => document.removeEventListener('visibilitychange', onHide));
     }
-    setUiPrefFlushSink(token => this.flushUiPrefs(token));
+    const unregister = registerLogoutFlush(token => this.flushUiPrefs(token));
+    inject(DestroyRef).onDestroy(unregister);
   }
 
   /** Geänderte Anzeige-Vorlieben ins Profil (nur angemeldet bzw. mit dem übergebenen Token). */

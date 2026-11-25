@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace RookHub.Api.Services.Accounts.Erasure;
 
-/// <summary>Kontolöschung, Bereich E-Books: Lesestand und Meldungen; die Bücher bleiben besitzerlos.</summary>
+/// <summary>Kontolöschung, Bereich E-Books: Lesestand, eigene Kalkulationen und Meldungen; die Bücher bleiben besitzerlos.</summary>
 internal static class EbookDataEraser
 {
     /// <summary>Lesestand, Diagramm-Meldungen und -Korrekturen; Besitz der Bücher lösen.</summary>
@@ -13,6 +13,7 @@ internal static class EbookDataEraser
         // Verwalter pflegen sie) — ein Admin, der die 800-Bücher-Bibliothek eingelesen hat, nimmt sie beim Löschen seines
         // Kontos nicht mit, und ein für die Gruppe freigegebenes Buch verschwindet nicht aus deren Regal.
         db.EbookProgresses.RemoveRange(await db.EbookProgresses.Where(p => p.UserId == userId).ToListAsync());
+        db.EbookDiagramCalcs.RemoveRange(await db.EbookDiagramCalcs.Where(c => c.UserId == userId).ToListAsync());
         db.EbookDiagramReports.RemoveRange(await db.EbookDiagramReports.Where(r => r.UserId == userId).ToListAsync());
         db.EbookMissedDiagrams.RemoveRange(await db.EbookMissedDiagrams.Where(m => m.UserId == userId).ToListAsync());
         db.EbookDiagramCorrections.RemoveRange(await db.EbookDiagramCorrections.Where(c => c.UserId == userId).ToListAsync());

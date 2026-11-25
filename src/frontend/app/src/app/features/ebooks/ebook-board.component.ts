@@ -33,6 +33,7 @@ import { HintLadder } from '../puzzles/hint-ladder';
 import { buildStagedHints, classifyMoveFromFen } from '../puzzles/puzzle-hints.util';
 import { offPathHintTexts } from '../puzzles/solver-texts';
 import { SecondsCountdown, realClock } from '../puzzles/solver-timer';
+import { EbookCalcSyncService } from './ebook-calc-sync.service';
 import { EbookDiagram, EbookGame, EbookService } from './ebook.service';
 import { cardDate, cardLang } from '../../shared/player-card/card-lang';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
@@ -133,6 +134,7 @@ export class EbookBoardComponent implements OnChanges {
   /** Modus braucht eine regelgerechte Buchstellung — „Ansehen“ und „Baum“ (eigene Stellungen ab der Grundstellung) nicht. */
   needsLegal(m: EbookBoardMode): boolean { return m !== 'view' && m !== 'tree'; }
   private readonly ebooks = inject(EbookService);
+  private readonly calcSync = inject(EbookCalcSyncService);
 
   readonly mode = signal<EbookBoardMode>('solve');
   readonly flipped = signal(false);
@@ -466,20 +468,27 @@ export class EbookBoardComponent implements OnChanges {
 
   // ---------------------------------------------------------------- Kalkulieren
 
-  private calcKey(): string { return `rh.ebooks.calc.${this.diagram.id}`; }
-
+  /** Lokal sofort, angemeldet danach der Stand aus dem Konto (1.019.0, `EbookCalcSyncService`; Server gewinnt). */
   private loadCalc(): void {
-    const store = localStore();
-    const tree = store ? deserializeTree(readRaw(store, this.calcKey()), this.diagram.fen) : null;
-    this.calcTree = tree ?? createTree(this.diagram.fen);
+    const diagram = this.diagram;
+    const tree = deserializeTree(this.calcSync.local(diagram.id), diagram.fen);
+    this.calcTree = tree ?? createTree(diagram.fen);
     this.calcCursor.set(rootNode(this.calcTree).id);
     this.calcRevision.update(v => v + 1);
+    this.calcSync.fetch(this.ebookId, diagram.id).subscribe(serverTree => {
+      if (!serverTree || this.diagram !== diagram) return;
+      const fromServer = deserializeTree(serverTree, diagram.fen);
+      if (!fromServer) return;
+      this.calcTree = fromServer;
+      this.calcCursor.set(rootNode(fromServer).id);
+      this.calcRevision.update(v => v + 1);
+      this.cdr.markForCheck();
+    });
   }
 
   private saveCalc(): void {
-    const store = localStore();
-    if (!store || !this.calcTree) return;
-    if (!writeRaw(store, this.calcKey(), serializeTree(this.calcTree))) {
+    if (!this.calcTree) return;
+    if (!this.calcSync.save(this.ebookId, this.diagram.id, serializeTree(this.calcTree))) {
       this.snackbar.warn(this.translate.instant('ebooks.board.calcSaveFailed'));
     }
   }

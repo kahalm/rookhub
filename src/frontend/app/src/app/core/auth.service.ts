@@ -9,7 +9,7 @@ import { ImpersonationService } from './impersonation.service';
 import { LoginFollowUpService } from './login-follow-up.service';
 import { localStore, removeKey } from './local-json-store';
 import { PushService } from './push.service';
-import { flushUiPrefsBeforeLogout } from './ui-prefs-sync';
+import { flushBeforeLogout } from './logout-flush';
 
 export type { AuthResponse } from './auth-response';
 
@@ -127,7 +127,7 @@ export class AuthService {
     // Push-Abo des Geräts am VORIGEN Konto abmelden (sein Token gilt noch) — Codereview F3-001.
     const previous = this.session.value;
     if (previous && previous.userId !== user.userId) {
-      flushUiPrefsBeforeLogout(previous.token);
+      flushBeforeLogout(previous.token);
       this.dropPushSubscription(previous.token);
     }
     this.session.clearLocalTraces();
@@ -227,9 +227,9 @@ export class AuthService {
   }
 
   logout(): void {
-    // Geänderte Anzeige-Vorlieben noch mit dem Token dieser Sitzung ins Profil — gleich danach räumt das Abmelden
-    // die konto-gebundenen unter ihnen vom Gerät (ui-prefs-sync.ts).
-    flushUiPrefsBeforeLogout(this.token);
+    // Ungesicherte Stände (Anzeige-Vorlieben, E-Book-Kalkulationen) noch mit dem Token dieser Sitzung zum Server —
+    // gleich danach räumt das Abmelden die konto-gebundenen vom Gerät (core/logout-flush.ts).
+    flushBeforeLogout(this.token);
     this.dropPushSubscription(this.token);
     removeKey(localStore(), SessionStore.UserKey);
     this.session.clearLocalTraces();
@@ -315,7 +315,7 @@ export class AuthService {
     const previous = this.session.validUser();
     if (previous && previous.userId !== user.userId) {
       // Push-Abo des Geräts gehörte dem vorigen Konto: mit dessen Token abmelden (Codereview F3-001).
-      flushUiPrefsBeforeLogout(previous.token);
+      flushBeforeLogout(previous.token);
       this.dropPushSubscription(previous.token);
       this.session.clearLocalTraces();
     }

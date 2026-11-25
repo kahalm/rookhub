@@ -210,6 +210,24 @@ public class EbooksController : BaseApiController
     public async Task<IActionResult> WithdrawDiagramReport(int id, int diagramId, CancellationToken ct)
         => Ok(new { reported = await _service.ReportDiagramAsync(GetUserId(), await ManageAllAsync(), id, diagramId, false, null, ct) });
 
+    /// <summary>Eigene Kalkulation am Diagramm (nur angemeldet, 1.019.0) → <c>{ tree, at }</c> bzw. 204 ohne Stand.</summary>
+    [HttpGet("{id:int}/diagrams/{diagramId:int}/calc")]
+    public async Task<IActionResult> GetCalc(int id, int diagramId, [FromServices] EbookCalcService calc, CancellationToken ct)
+    {
+        var dto = await calc.GetAsync(GetUserId(), await ManageAllAsync(), id, diagramId, ct);
+        return dto == null ? NoContent() : Ok(dto);
+    }
+
+    /// <summary>Eigene Kalkulation speichern <c>{ tree, at }</c> → der danach gültige Stand (ein älterer überschreibt nicht).</summary>
+    [HttpPut("{id:int}/diagrams/{diagramId:int}/calc")]
+    public async Task<ActionResult<EbookCalcDto>> SetCalc(int id, int diagramId, [FromBody] EbookCalcDto dto, [FromServices] EbookCalcService calc, CancellationToken ct)
+        => Ok(await calc.SetAsync(GetUserId(), await ManageAllAsync(), id, diagramId, dto, ct));
+
+    /// <summary>Ungesicherte Kalkulationen auf einmal (vor dem Abmelden) → <c>{ saved }</c>.</summary>
+    [HttpPost("calc/bulk")]
+    public async Task<IActionResult> SetCalcBulk([FromBody] List<EbookCalcBulkItemDto> items, [FromServices] EbookCalcService calc, CancellationToken ct)
+        => Ok(new { saved = await calc.SetManyAsync(GetUserId(), await ManageAllAsync(), items ?? [], ct) });
+
     [HttpGet("{id:int}/progress")]
     [AllowAnonymous]
     public async Task<ActionResult<EbookProgressDto?>> GetProgress(int id, CancellationToken ct)
