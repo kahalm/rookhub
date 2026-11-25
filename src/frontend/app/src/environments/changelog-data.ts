@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.019.2", date: "2026-11-25", changes: [
+    { en: "LeagueHub: if your chosen club arrives from your profile only after the page has already loaded the data of another club (first login on a new device), the page now reloads with your club instead of showing the other club’s data.",
+      de: "LeagueHub: Kommt dein gewählter Verein erst aus dem Profil, nachdem die Seite schon die Daten eines anderen Vereins geladen hat (erstes Anmelden auf einem neuen Gerät), lädt die Seite jetzt mit deinem Verein neu, statt die Daten des anderen Vereins zu zeigen." },
+  ] },
   { version: "1.019.1", date: "2026-11-25", changes: [
     { en: "Endless puzzles: the option “train your 5 weakest themes” is now saved in your account and no longer switches off after logging out or on another device.",
       de: "Endlos-Puzzles: Die Einstellung „5 schwächste Themen trainieren“ liegt jetzt im Konto und ist nach dem Abmelden oder auf einem anderen Gerät nicht mehr aus." },

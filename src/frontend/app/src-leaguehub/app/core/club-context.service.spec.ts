@@ -88,16 +88,21 @@ describe('club-context (Vereine als Mandanten, 0.698.0)', () => {
       expect(ctx.current()?.name).toBe('SK Weiler');
     });
 
-    it('der Verein kommt erst nach den Vereinen aus dem Profil (uiPrefs, 1.018.0): zieht nach', async () => {
+    it('der Verein kommt erst nach den Vereinen aus dem Profil (uiPrefs, 1.018.0): zieht nach und lädt neu (1.019.2)', async () => {
       const ctx = TestBed.inject(ClubContextService);
       const id = firstValueFrom(ctx.ensure());
       http.expectOne('/api/league/me').flush({ clubs: [SCHWAZ, WEILER], current: 2 } satisfies LeagueMe);
       expect(await id).toBe(2);
+      const reload = spyOn(ctx, 'reloadPage');
       localStorage.setItem(CLUB_STORAGE_KEY, '1');
       window.dispatchEvent(new CustomEvent(UI_PREFS_APPLIED_EVENT, { detail: ['rookhub_visualization'] }));
       expect(ctx.current()?.id).toBe(2);                              // fremder Schlüssel: nichts
+      expect(reload).not.toHaveBeenCalled();
       window.dispatchEvent(new CustomEvent(UI_PREFS_APPLIED_EVENT, { detail: [CLUB_STORAGE_KEY] }));
       expect(ctx.current()?.id).toBe(1);
+      expect(reload).toHaveBeenCalledTimes(1);                        // Daten des Vorgabevereins verwerfen
+      window.dispatchEvent(new CustomEvent(UI_PREFS_APPLIED_EVENT, { detail: [CLUB_STORAGE_KEY] }));
+      expect(reload).toHaveBeenCalledTimes(1);                        // schon der richtige: kein zweites Mal
     });
 
     it('reload: fragt /me erneut, kennt den neuen Verein und behält den gewählten (0.700.0)', async () => {

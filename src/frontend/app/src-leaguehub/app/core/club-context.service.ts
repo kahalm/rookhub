@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpInterceptorFn } from '@angular/common/http';
 import { NavigationEnd, Router } from '@angular/router';
 import { Observable, catchError, map, of, shareReplay, switchMap } from 'rxjs';
@@ -92,13 +92,25 @@ export class ClubContextService {
     // Der gewählte Verein wandert im Profil mit (uiPrefs, 1.018.0): kommt er erst nach dem Laden der Vereine (direkt nach
     // dem Anmelden auf einem neuen Gerät oder nach dem Abmelden), hier nachziehen statt bei der Vorgabe zu bleiben.
     if (typeof window !== 'undefined') {
-      window.addEventListener(UI_PREFS_APPLIED_EVENT, e => {
+      const onApplied = (e: Event) => {
         if (!(e as CustomEvent<string[]>).detail?.includes(CLUB_STORAGE_KEY)) return;
         const id = readRemembered();
         const club = id != null ? this.clubs().find(c => c.id === id) : undefined;
-        if (club && club.id !== this.current()?.id) this.current.set(club);
-      });
+        if (!club || club.id === this.current()?.id) return;
+        this.current.set(club);
+        // Die Seite hat schon die Daten des Vorgabevereins geladen (Listen, Entwürfe, Formulare) — wie beim
+        // Vereinswechsel im Menü neu laden, sonst sähe man den falschen Verein. Kein Kreislauf: nach dem Neuladen
+        // steht der Verein schon am Gerät, und ein neuer Profil-Abgleich kommt erst mit dem nächsten Anmelden.
+        this.reloadPage();
+      };
+      window.addEventListener(UI_PREFS_APPLIED_EVENT, onApplied);
+      inject(DestroyRef).onDestroy(() => window.removeEventListener(UI_PREFS_APPLIED_EVENT, onApplied));
     }
+  }
+
+  /** Eigene Methode, damit die Specs sie ersetzen können. */
+  reloadPage(): void {
+    window.location.reload();
   }
 
   /** Die Vereine des Kontos laden (einmal je Konto) → die Id des gewählten Vereins, ohne Anmeldung/Verein `null`. */
