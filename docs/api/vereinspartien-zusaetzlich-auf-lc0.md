@@ -21,3 +21,8 @@ den noch lebenden Registrierungen). Der Takt und `DeepAnalysisService.StartLc0Ga
 Partie auf Lc0") vergleichen `EngineName == ClubSecondEngine:EngineName` ODER `EngineId == aktuelle Kennung` — räumt die
 Wartung die Registrierung nach 7 Tagen ohne Meldung weg und meldet sich der Provider neu (neue `rhe_`-Kennung), werden
 die schon gerechneten Vereinspartien nicht noch einmal eingereiht.
+
+**Übertragene Ligapartien (1.017.0):** Partien der eigenen Mannschaft aus einer Lichess-Übertragung
+(`ClubBroadcastGames`, siehe `leaguehub-vereins-datenbank.md` → „Lichess-Übertragungen“) sind gewöhnliche `LeagueClubGame`-Zeilen
+und kommen deshalb ohne eigenen Weg dran — als neueste Vereinspartie sogar zuerst. Test:
+`LeagueBroadcastClubGamesTests.Import_Lc0AuftragEntstehtUeberDenNormalenWeg`.

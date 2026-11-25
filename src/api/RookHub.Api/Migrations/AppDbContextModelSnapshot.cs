@@ -4725,6 +4725,9 @@ namespace RookHub.Api.Migrations
                     b.Property<DateTime?>("ImportedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<DateTime?>("LiveUntil")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("Location")
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
@@ -4736,6 +4739,9 @@ namespace RookHub.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
+
+                    b.Property<DateTime?>("NextRoundAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<DateTime?>("StartsAt")
                         .HasColumnType("datetime(6)");
@@ -4930,6 +4936,9 @@ namespace RookHub.Api.Migrations
                         .IsRequired()
                         .HasColumnType("LONGTEXT");
 
+                    b.Property<DateOnly?>("PlayedOn")
+                        .HasColumnType("date");
+
                     b.Property<int>("Plies")
                         .HasColumnType("int");
 
@@ -4944,6 +4953,18 @@ namespace RookHub.Api.Migrations
                     b.Property<string>("ShareToken")
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<string>("SourceRound")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
 
                     b.Property<string>("UploadShareHash")
                         .HasMaxLength(64)
@@ -4993,6 +5014,9 @@ namespace RookHub.Api.Migrations
                     b.HasIndex("UploadShareHash");
 
                     b.HasIndex("WhiteFide");
+
+                    b.HasIndex("ClubId", "SourceUrl")
+                        .IsUnique();
 
                     b.HasIndex("ClubId", "Year");
 

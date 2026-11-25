@@ -275,6 +275,12 @@ public class LeagueBroadcast
     /// <summary>Partien mit Ligaspielern beim letzten Einspielen.</summary>
     public int Games { get; set; }
     public string? Error { get; set; }
+    /// <summary>Beginn der nächsten noch nicht fertigen Runde laut Lichess (1.017.0) — ab da prüft der schnelle Takt
+    /// (<c>LeagueBroadcastLiveScheduler</c>) alle 10 min; <c>null</c> = keine mehr bekannt.</summary>
+    public DateTime? NextRoundAt { get; set; }
+    /// <summary>Bis wann eine Runde als laufend gilt (1.017.0): eine Runde läuft laut Lichess, oder sie hat begonnen und ist noch nicht
+    /// fertig — höchstens <c>LeagueBroadcastImport.LiveWindow</c> nach ihrem Beginn. <c>null</c> = gerade keine.</summary>
+    public DateTime? LiveUntil { get; set; }
 }
 
 /// <summary>
@@ -451,6 +457,18 @@ public class LeagueClubGame
 
     /// <summary>Jahrgang der Partie („2026/27"), wie <see cref="Classifier1"/>.</summary>
     public string? Classifier2 { get; set; }
+
+    /// <summary>Herkunft (1.017.0): <c>null</c> = hochgeladen (PGN, ChessBase, Partieformular); „Lichess-Übertragung" = von selbst
+    /// aus einer öffentlich übertragenen Ligapartie mit der eigenen Mannschaft (<see cref="Services.League.ClubBroadcastGames"/>) —
+    /// dann mit echten Namen, FIDE-ID und Elo auch für die eigenen Spieler (die Partie ist ohnehin öffentlich).</summary>
+    public string? Source { get; set; }
+    /// <summary>Die Partie bei Lichess (<c>GameURL</c> der Übertragung) — der Schlüssel, an dem ein erneutes Einspielen dieselbe
+    /// Partie erkennt (eindeutig je Verein, auch über archivierte hinweg).</summary>
+    public string? SourceUrl { get; set; }
+    /// <summary>Der volle Spieltag — nur bei übertragenen Partien (hochgeladene tragen bewusst nur das <see cref="Year"/>).</summary>
+    public DateOnly? PlayedOn { get; set; }
+    /// <summary>Die Runde, wie die Übertragung sie nennt („3.2" = Runde 3, Brett 2) — nur bei übertragenen Partien.</summary>
+    public string? SourceRound { get; set; }
 }
 
 /// <summary>

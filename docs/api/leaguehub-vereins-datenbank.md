@@ -603,6 +603,39 @@ da; der Gewinn ist vor allem, dass die Partien schon WÄHREND des Turniers da si
 * **Takt**: im `LeagueOnlineSyncScheduler` nach Abruf und Konto-Suche, je Runde höchstens 5 min; `LeagueBroadcasts:Enabled=false`
   schaltet es ab. Oberfläche: Reiter „Übertragungen" (`/uebertragungen`, `features/broadcasts/`, nur Verwalter) mit Liste und
   „Hinzufügen und einspielen".
+* **Schneller Takt für laufende Runden** (1.017.0, Wunsch 2026-11-25: „laufende Übertragungen alle ~10 min statt alle 6 h“):
+  jedes Einspielen merkt sich aus den Runden laut Lichess (`LeagueBroadcastImport.LiveOf`) `LeagueBroadcasts.LiveUntil` — eine Runde
+  ist `ongoing` (jetzt + 1 h, jedes Einlesen verlängert) oder hat vor weniger als 12 h begonnen und ist nicht `finished` (Beginn +
+  12 h) — und `NextRoundAt` (Beginn der nächsten künftigen Runde). `LeagueBroadcastLiveScheduler` (`PeriodicWorker`, alle 10 min,
+  erster Lauf 4 min nach dem Start) spielt jede nicht fertige Übertragung ein, deren `LiveUntil` noch nicht vorbei oder deren
+  `NextRoundAt` erreicht ist und die vor mindestens 10 min zuletzt eingespielt wurde (`RunLiveAsync`); alle übrigen bleiben beim
+  6-Stunden-Takt. Lichess-schonend: zwei Abrufe je Übertragung (Stand + PGN), derselbe benannte Client (gleicher User-Agent,
+  `LeagueRateGateHandler`), pausiert das Tor nach einem 429, fällt der Takt aus; ein 429 mitten im Lauf bricht ihn ab. Nur EIN
+  Einspielen zugleich (`LeagueBroadcastGate`, Singleton — schneller Takt, 6-Stunden-Takt und „per Link“). Abschalten nur des schnellen
+  Takts: `LeagueBroadcasts:Live=false`. **Nach dem Deploy**: Zeilen von vorher haben beide Felder leer, sie werden erst beim nächsten
+  regulären Einspielen (spätestens 6 h) gesetzt; „Hinzufügen und einspielen“ mit dem Link setzt sie sofort.
+* **Partien der eigenen Mannschaft in die Vereins-Datenbank** (1.017.0, `Services/League/ClubBroadcastGames.cs`, Fassade
+  `LeagueClubService.ImportBroadcastGamesAsync`): nach den Karten bekommt jeder Verein (`LeagueClubs`) die fertigen Partien, an denen
+  eine seiner Mannschaften beteiligt ist — `WhiteTeam`/`BlackTeam` der Übertragung über `LeagueClub.OwnsTeam` (Vorsilbe „Schwaz“,
+  „Schwaz 2“; in Tirol der kanonische Verein über `LeagueNames.Club`, also auch „Schachklub Schwaz“ der Bundesliga und „SK Schwaz“).
+  Ohne Mannschaftsangabe (Einzelturniere) nie. Nur mit Ergebnis, vollem Spieltag ab dem 1. Juli der laufenden Saison und `GameURL`.
+  **Echte Namen**: die Partie ist öffentlich übertragen, deshalb wird hier NIEMAND durch „Schwaz“ ersetzt — Name (aus der Meldeliste,
+  sonst wie übertragen), FIDE-ID und Elo wie bei Gegnern, `Anonymized = false`, keine internen `*RealName`; die Ersetzungsregel der
+  Uploads bleibt unverändert. Eine Seite, die weder Meldeliste noch Megabase kennt (Frauenbundesliga), gilt trotzdem als bekannt.
+  Herkunft in neuen Spalten (Migration `BroadcastClubGames`): `Source` = „Lichess-Übertragung“ (sonst `null` = hochgeladen),
+  `SourceUrl` = `GameURL` (eindeutiger Index `(ClubId, SourceUrl)`), `PlayedOn` = voller Tag, `SourceRound` = Lichess-Runde („1.2“);
+  das gespeicherte PGN trägt `Date` und `Round` daraus (`ClubPgnText.PgnOf`, nur wenn gesetzt — hochgeladene weiter nur das Jahr),
+  `Event` = Veranstaltung der Übertragung, `CreatedAt` gesetzt, kein Hochladender. Danach der normale Weg jeder Vereinspartie:
+  Ligapaarung (`ApplyPairingsAsync`), `SaveAsync` (Karten, normale automatische Zusammenfassung), `RebalanceAsync`; die Analyse legt
+  der `MasterAnalysisScheduler` an (Vereinspartien vor dem Bestand), Lc0 der `ClubSecondEngineScheduler`; dazu die Zusammenfassung
+  für JEDE übertragene Partie (`ClubGameAutoSummary.RequestBroadcastAsync`, siehe `partie-zusammenfassung.md`).
+  **Idempotent**: dieselbe `GameURL` im Verein (auch archiviert) wird nie wieder angelegt; der Index fängt zwei gleichzeitige Läufe.
+  **Doppelt gegen Uploads** (`ClubBroadcastGames.CoveredByAsync`), in BEIDE Richtungen: steht die Partie schon hochgeladen da (gleiche
+  Züge im gleichen Jahr wie beim Import, oder dieselben Spieler — FIDE-ID auch hinter „Schwaz“ — mit denselben ersten 16 Halbzügen,
+  `SameVersion`), legt die Übertragung nichts an; kommt dieselbe Partie später als Formular, PGN oder ChessBase, ist sie `duplicate`
+  (auch in der Übersicht) — ein Formular archiviert die übertragene Fassung also nicht und bekommt keine zweite Zusammenfassung.
+  Ein Fehler in diesem Schritt (Warnung im Log) lässt das Einspielen in die Karten nicht scheitern; beim nächsten Takt wieder.
+  Die Liste der Verwaltung trägt dazu `nextRoundAt`/`liveUntil`. Tests: `LeagueBroadcastClubGamesTests`.
 
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|

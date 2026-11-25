@@ -46,6 +46,7 @@ namespace RookHub.Api.Startup;
 /// LineStudyWorker                     immer                                 Linien „ohne Engine" rechnen
 /// TrainingPrewarmScheduler            intern: Prep:TrainingPrewarm+LocalUrl Trainingslinien-Schätzung nachts vorrechnen
 /// LeagueOnlineSyncScheduler           intern: LeagueOnline:Enabled          Online-Partien der Ligaspieler
+/// LeagueBroadcastLiveScheduler        intern: LeagueBroadcasts:Live         Laufende Lichess-Übertragungen alle 10 min
 /// AnonymousDataRetentionService       immer (auch ohne Chessable)           Aufbewahrungsfristen (anonyme Senken, Retention:*)
 /// NotificationRetentionScheduler      immer                                 Benachrichtigungen 180 Tage
 /// EngineBrokerMaintenanceService      immer                                 Engine-Lebenszeichen in die DB
@@ -116,6 +117,8 @@ public static class BackgroundServicesSetup
         // Trainingslinien nachts vorrechnen (0.884.0): Explorer-Stellungen aller markierten Repertoires in den dauerhaften Speicher.
         services.AddHostedService<RookHub.Api.Services.Prep.TrainingPrewarmScheduler>();
         services.AddHostedService<LeagueOnlineSyncScheduler>();
+        // Laufende Lichess-Übertragungen alle 10 min (1.017.0) — Partien der eigenen Mannschaft auch in die Vereins-Datenbank.
+        services.AddHostedService<LeagueBroadcastLiveScheduler>();
         // Retention der anonymen Endless-Spielstände (offener Pfad, frei wählbare Session-Id → sonst
         // unbegrenztes Wachstum mit je bis zu 1 MB Spielstand) und der anonymen getReview-Senke der Extension
         // (90 bzw. 14 Tage). IMMER registriert, unabhängig von `Chessable:Enabled`: der Extension-Endpunkt nimmt

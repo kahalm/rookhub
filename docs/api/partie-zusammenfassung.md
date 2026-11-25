@@ -174,6 +174,18 @@ fertigen Zusammenfassung.
 Übrige Einstellungen der Zusammenfassungen: `OwnGameSummaries:DailyPerUser` (unten), `ClubMistakeComparisons:Enabled` (oben).
 Tests: `ClubGameAutoSummaryTests`.
 
+### Übertragene Partien der eigenen Mannschaft (1.017.0)
+
+Wunsch 2026-11-25: „für jede solche Partie automatisch eine Zusammenfassung“. Kommt eine Partie aus einer Lichess-Übertragung in die
+Vereins-Datenbank (`ClubBroadcastGames`, `Source` = „Lichess-Übertragung“), fordert `ClubGameAutoSummary.RequestBroadcastAsync`
+direkt nach dem Anlegen an — zusätzlich zum normalen Weg oben, der für eine schon zugeordnete Bundesligapartie ebenfalls greift; es
+bleibt bei EINER Zeile, denn beide Wege fragen zuerst, ob es schon eine gibt (egal welcher Status). Abweichend von oben: **keine
+Ligapaarung nötig** (die Frauenbundesliga steht in keinem Spielplan), **keine 30-Tage-Grenze, sondern die laufende Saison** (Spieltag
+ab dem 1. Juli; ältere Partien werden nie angefordert) und **kein Tagesdeckel** (je Runde nur die Bretter der eigenen Mannschaften;
+gezählt werden sie trotzdem über `AutoRequestedAt`). Anforderer `null`. Neueinlesen und eine spätere Formular-Fassung derselben
+Partie (dann `duplicate`) fordern nichts zweites an. Abschalten nur dieses Wegs: `ClubGameSummaries:Auto:Broadcasts=false`
+(`ClubGameSummaries:Auto:Enabled=false` schaltet beide ab). Tests: `LeagueBroadcastClubGamesTests`.
+
 ## Eigene Partien (0.923.0)
 
 Der Besitzer fordert auf `/games/:id` an (`POST /api/games/{id}/summary`, `{ lang }`), gelesen wird auf

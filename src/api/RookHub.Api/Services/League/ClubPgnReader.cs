@@ -90,9 +90,10 @@ internal sealed class ClubPgnReader
             dto.Games.Add(g);
         }
         var stored = await StoredByHashAsync(club, candidates.Select(c => c.Game), ct);
+        var broadcast = await ClubBroadcastGames.CoveredByAsync(_db, club, candidates.Select(c => c.Game), uploadsOnly: false, ct);
         foreach (var (g, built) in candidates)
         {
-            g.Duplicate = IsDuplicate(built, pending, stored);
+            g.Duplicate = IsDuplicate(built, pending, stored) || broadcast.Contains(built);
             pending.Add(built);
         }
         // Brettpaarungen (0.678.0): EINE Abfrage für die ganze Übersicht
@@ -191,10 +192,12 @@ internal sealed class ClubPgnReader
             choices[index] = decision?.LeagueGameId;
         }
         var stored = await StoredByHashAsync(club, built.Where(x => x.Game != null).Select(x => x.Game!), ct);
+        // Schon als übertragene Partie da (1.017.0): keine zweite Fassung, keine zweite Zusammenfassung.
+        var broadcast = await ClubBroadcastGames.CoveredByAsync(_db, club, built.Where(x => x.Game != null).Select(x => x.Game!), uploadsOnly: false, ct);
         foreach (var (index, p, game, reason) in built)
         {
             if (game == null) { result.Failed.Add(FailureOf(index, p, reason!)); continue; }
-            if (IsDuplicate(game, pending, stored)) { result.Duplicates++; continue; }
+            if (IsDuplicate(game, pending, stored) || broadcast.Contains(game)) { result.Duplicates++; continue; }
             if (pending.Count >= budget) { result.Failed.Add(FailureOf(index, p, ShareLimitReason)); continue; }
             ClubGameWriter.Stamp(game, userId, now, shareHash, claimHash);
             pending.Add(game);
@@ -280,6 +283,9 @@ internal sealed class ClubPgnReader
         // Notierte Restzeiten aus der Formular-Korrektur (1.015.0) ins PGN.
         if (ClocksOf(req.Plies, sans.Count) is { } clocks) game.Pgn = PgnOf(game, sans, clocks);
         if (IsDuplicate(game, new(), await StoredByHashAsync(club, new[] { game }, ct))) return (null, "duplicate", null);
+        // Dieselbe Partie steht schon aus der Lichess-Übertragung da (1.017.0) — auch mit abweichend abgeschriebenem Ende: das
+        // Formular archiviert sie nicht und wird keine zweite Fassung (keine zweite Zusammenfassung).
+        if ((await ClubBroadcastGames.CoveredByAsync(_db, club, new[] { game }, uploadsOnly: false, ct)).Count > 0) return (null, "duplicate", null);
         using var lease = shareHash is null ? null : _shareQuota.Reserve(shareHash, 1);
         if (lease is { Granted: 0 })
         {

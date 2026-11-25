@@ -63,7 +63,11 @@ public static partial class DomainServicesSetup
         services.AddScoped(sp => new RookHub.Api.Services.League.LeagueBroadcastImport(
             sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(RookHub.Api.Services.League.LeagueOnlineSync.ClientName),
-            sp.GetRequiredService<ILogger<RookHub.Api.Services.League.LeagueBroadcastImport>>(), sp.GetRequiredService<IConfiguration>()));
+            sp.GetRequiredService<ILogger<RookHub.Api.Services.League.LeagueBroadcastImport>>(), sp.GetRequiredService<IConfiguration>(),
+            sp.GetRequiredService<RookHub.Api.Services.League.LeagueClubService>(),
+            sp.GetRequiredService<RookHub.Api.Services.League.LeagueBroadcastGate>()));
+        // Nur ein Einspielen einer Übertragung zugleich (1.017.0: schneller Takt + 6-Stunden-Takt + „per Link“).
+        services.AddSingleton<RookHub.Api.Services.League.LeagueBroadcastGate>();
         services.AddScoped(sp => new RookHub.Api.Services.League.LeagueAccountChecks(
             sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(RookHub.Api.Services.League.LeagueOnlineSync.ClientName),

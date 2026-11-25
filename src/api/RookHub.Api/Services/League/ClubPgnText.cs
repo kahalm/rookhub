@@ -114,8 +114,10 @@ internal static class ClubPgnText
         var sb = new StringBuilder();
         sb.Append(PgnWriter.Tag("Event", g.Event ?? "?"));
         sb.Append(PgnWriter.Tag("Site", "?"));
-        sb.Append(PgnWriter.Tag("Date", g.Year is { } y ? $"{y}.??.??" : "????.??.??"));
-        sb.Append(PgnWriter.Tag("Round", "?"));
+        // Den vollen Tag und die Runde trägt nur eine übertragene Partie (1.017.0); hochgeladene nur das Jahr.
+        sb.Append(PgnWriter.Tag("Date", g.PlayedOn is { } d ? d.ToString("yyyy.MM.dd", System.Globalization.CultureInfo.InvariantCulture)
+            : g.Year is { } y ? $"{y}.??.??" : "????.??.??"));
+        sb.Append(PgnWriter.Tag("Round", string.IsNullOrWhiteSpace(g.SourceRound) ? "?" : g.SourceRound));
         sb.Append(PgnWriter.Tag("White", g.White));
         sb.Append(PgnWriter.Tag("Black", g.Black));
         sb.Append(PgnWriter.Tag("Result", g.Result));

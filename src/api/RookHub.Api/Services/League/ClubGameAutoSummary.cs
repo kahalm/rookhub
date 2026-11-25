@@ -58,6 +58,46 @@ internal sealed class ClubGameAutoSummary(AppDbContext db, ILogger log, Func<Dat
         }
     }
 
+    /// <summary>
+    /// Übertragene Ligapartien der eigenen Mannschaft (1.017.0, Wunsch 2026-11-25: „für jede solche Partie automatisch eine
+    /// Zusammenfassung“): angefordert für JEDE Partie mit Herkunft <see cref="LeagueBroadcastImport.Source"/>, die noch keine
+    /// Zusammenfassungs-Zeile hat und ab <paramref name="since"/> (Beginn der laufenden Saison) gespielt wurde — ohne Ligapaarung
+    /// (die Frauenbundesliga steht in keinem Spielplan), ohne 30-Tage-Grenze und ohne Tagesdeckel: es sind je Runde nur die Bretter
+    /// der eigenen Mannschaft. Gezählt werden sie trotzdem (<see cref="ClubGameSummary.AutoRequestedAt"/>). Schalter wie oben, dazu
+    /// <c>ClubGameSummaries:Auto:Broadcasts</c> (Vorgabe an). Eine schon vorhandene Zeile (egal welcher Status) bleibt — nie eine zweite.
+    /// </summary>
+    public async Task<int> RequestBroadcastAsync(IReadOnlyCollection<LeagueClubGame> games, DateOnly since, CancellationToken ct)
+    {
+        if (!Enabled || !(config?.GetValue<bool?>("ClubGameSummaries:Auto:Broadcasts") ?? true)) return 0;
+        try
+        {
+            var cands = games.Where(g => g.Id > 0 && g.ArchivedAt == null && g.Source == LeagueBroadcastImport.Source
+                && g.PlayedOn is { } d && d >= since).DistinctBy(g => g.Id).ToList();
+            if (cands.Count == 0) return 0;
+            var ids = cands.Select(g => g.Id).ToList();
+            var have = (await db.ClubGameSummaries.AsNoTracking().Where(s => ids.Contains(s.ClubGameId)).Select(s => s.ClubGameId)
+                .ToListAsync(ct)).ToHashSet();
+            var fresh = cands.Where(g => !have.Contains(g.Id)).ToList();
+            if (fresh.Count == 0) return 0;
+            var at = now();
+            foreach (var g in fresh)
+                db.ClubGameSummaries.Add(new ClubGameSummary
+                {
+                    ClubGameId = g.Id, Status = ClubGameSummaryStatus.Requested, RequestedAt = at, RequestedByUserId = null, AutoRequestedAt = at,
+                });
+            await db.SaveChangesAsync(ct);
+            log.LogInformation("Zusammenfassung: automatisch angefordert für übertragene Vereinspartie(n) {Ids}", string.Join(",", fresh.Select(g => g.Id)));
+            return fresh.Count;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            foreach (var e in db.ChangeTracker.Entries<ClubGameSummary>().Where(e => e.State == EntityState.Added).ToList())
+                e.State = EntityState.Detached;
+            log.LogWarning(ex, "Zusammenfassung: automatisches Anfordern für übertragene Partien gescheitert — die Partien bleiben angelegt");
+            return 0;
+        }
+    }
+
     private async Task<int> RequestCoreAsync(IReadOnlyCollection<LeagueClubGame> games, int? userId,
         Func<LeagueClubGame, DateOnly?>? dateOf, CancellationToken ct)
     {

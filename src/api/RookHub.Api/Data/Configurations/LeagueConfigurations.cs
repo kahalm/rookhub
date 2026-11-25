@@ -354,6 +354,11 @@ internal sealed class LeagueClubGameConfiguration : IEntityTypeConfiguration<Lea
         e.HasIndex(g => g.ArchivedAt);
         e.Property(g => g.ShareToken).HasMaxLength(32);
         e.HasIndex(g => g.ShareToken).IsUnique();
+        // Übertragene Partien (1.017.0): je Verein jede Lichess-Partie höchstens einmal — auch gegen zwei gleichzeitige Läufe.
+        e.Property(g => g.Source).HasMaxLength(40);
+        e.Property(g => g.SourceUrl).HasMaxLength(300);
+        e.Property(g => g.SourceRound).HasMaxLength(20);
+        e.HasIndex(g => new { g.ClubId, g.SourceUrl }).IsUnique();
         // Archivierte Fassungen (ersetzt durch ein neueres Formular) sind überall unsichtbar.
         e.HasQueryFilter(g => g.ArchivedAt == null);
         // Der Verein (Mandanten-Schritt 2026-10-07) bekommt BEWUSST keinen zweiten globalen Filter: EF Core kennt je Typ nur

@@ -67,6 +67,7 @@ public sealed class LeagueClubService
     private readonly ClubGameReader _reader;
     private readonly ClubGameWriter _writer;
     private readonly ClubPgnReader _pgn;
+    private readonly ClubBroadcastGames _broadcasts;
 
     /// <param name="analyses">Die Analysen des Stapels (<see cref="GameAnalysisOrigin.Club"/>) ziehen beim Korrigieren
     /// und Löschen einer Partie nach; ohne (Tests) bleibt es bei der Partie.</param>
@@ -85,6 +86,7 @@ public sealed class LeagueClubService
         _reader = new ClubGameReader(db, log, cache, pairings);
         _writer = new ClubGameWriter(db, log, clock, analyses, pairings, _reader, config);
         _pgn = new ClubPgnReader(db, log, clock, shareQuota ?? new LeagueShareUploadQuota(), pairings, _reader, _writer);
+        _broadcasts = new ClubBroadcastGames(db, log, clock, _reader, _writer);
     }
 
     // ── Reine Bausteine (für andere Dienste und Tests) ──────────────
@@ -136,6 +138,10 @@ public sealed class LeagueClubService
     public Task<LeagueClubImportResultDto> ImportViaShareAsync(LeagueClub club, string shareToken, string pgn,
         IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct = default) =>
         _pgn.ImportViaShareAsync(club, shareToken, pgn, decisions, ct);
+
+    /// <inheritdoc cref="ClubBroadcastGames.ImportAsync"/>
+    public Task<List<LeagueClubGame>> ImportBroadcastGamesAsync(LeagueClub club, IReadOnlyList<LeagueBroadcastGame> games,
+        CancellationToken ct = default) => _broadcasts.ImportAsync(club, games, ct);
 
     /// <inheritdoc cref="ClubPgnReader.AddGameAsync"/>
     public Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddGameAsync(LeagueClub club, int? userId, LeagueClubGameRequest req,

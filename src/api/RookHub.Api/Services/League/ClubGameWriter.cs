@@ -151,6 +151,11 @@ internal sealed class ClubGameWriter
         await _autoSummary.RequestAsync(games, uploaderUserId, ct, dateOf);
     }
 
+    /// <summary>Übertragene Partien der eigenen Mannschaft (1.017.0): je Partie genau eine Zusammenfassung —
+    /// <see cref="ClubGameAutoSummary.RequestBroadcastAsync"/>.</summary>
+    internal Task<int> RequestBroadcastSummariesAsync(IReadOnlyCollection<LeagueClubGame> games, DateOnly since, CancellationToken ct) =>
+        _autoSummary.RequestBroadcastAsync(games, since, ct);
+
     /// <summary>Glocke „Analyse fertig" vormerken — Beiwerk: ein Fehler dabei lässt den Upload nicht scheitern.</summary>
     private async Task WatchAsync(int userId, IEnumerable<int> clubGameIds, CancellationToken ct)
     {

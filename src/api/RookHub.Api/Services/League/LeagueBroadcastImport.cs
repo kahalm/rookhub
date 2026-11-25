@@ -23,7 +23,11 @@ namespace RookHub.Api.Services.League;
 /// <item>Einspielen: nur fertige Partien (kein „*"), Standardschach ab der Grundstellung, Datum mit Punkten; Kommentare,
 ///   Bewertungen und Uhrzeiten der Übertragung fallen weg (<see cref="CleanPgn"/>). Dieselbe Partie aus einer anderen Quelle
 ///   wird auch bei abweichendem Datum erkannt (<c>skipSameMoves</c>).</item>
-/// <item>Laufende Turniere alle <see cref="RefreshOngoing"/> neu, fertige (alle Runden vorbei) nie wieder.</item>
+/// <item>Laufende Turniere alle <see cref="RefreshOngoing"/> neu, fertige (alle Runden vorbei) nie wieder. Seit 1.017.0 prüft
+///   ein eigener Takt (<see cref="LeagueBroadcastLiveScheduler"/>, <see cref="RunLiveAsync"/>) Übertragungen mit einer LAUFENDEN
+///   Runde (<see cref="LiveOf"/>) alle <see cref="LiveEvery"/> — jede Partie ist so wenige Minuten nach ihrem Ergebnis da.</item>
+/// <item>Seit 1.017.0 zusätzlich: fertige Partien der EIGENEN Mannschaft eines Vereins (<c>WhiteTeam</c>/<c>BlackTeam</c>) gehen
+///   mit echten Namen in dessen Vereins-Datenbank (<see cref="ClubBroadcastGames"/>) — samt Analyse, Lc0 und Zusammenfassung.</item>
 /// </list>
 /// </summary>
 public sealed partial class LeagueBroadcastImport
@@ -38,6 +42,13 @@ public sealed partial class LeagueBroadcastImport
     public static readonly TimeSpan RefreshOngoing = TimeSpan.FromHours(6);
     /// <summary>So lange nach dem letzten Tag gilt ein Turnier als fertig, wenn die Runden-Angaben fehlen.</summary>
     public static readonly TimeSpan FinishedAfter = TimeSpan.FromDays(3);
+    /// <summary>Takt für Übertragungen mit laufender Runde (1.017.0, Wunsch „alle ~10 min statt alle 6 h“).</summary>
+    public static readonly TimeSpan LiveEvery = TimeSpan.FromMinutes(10);
+    /// <summary>So lange nach ihrem Beginn gilt eine begonnene, noch nicht fertige Runde höchstens als laufend (eine Ligarunde dauert
+    /// 5–7 h; danach fragt wieder nur der 6-Stunden-Takt — eine Runde, die Lichess nie abschließt, kostet nicht ewig Anfragen).</summary>
+    public static readonly TimeSpan LiveWindow = TimeSpan.FromHours(12);
+    /// <summary>Meldet Lichess eine Runde als laufend: so lange ab dem Einlesen gilt sie als laufend (jedes Einlesen verlängert).</summary>
+    public static readonly TimeSpan OngoingGrace = TimeSpan.FromHours(1);
 
     /// <summary>Die Kopfzeilen, die aus der Übertragung übernommen werden.</summary>
     private static readonly string[] KeepHeaders =
@@ -52,12 +63,19 @@ public sealed partial class LeagueBroadcastImport
     private readonly ILogger<LeagueBroadcastImport> _logger;
     private readonly string _lichess;
     private readonly string[] _queries;
+    private readonly LeagueClubService _clubs;
+    private readonly LeagueBroadcastGate _gate;
 
-    public LeagueBroadcastImport(AppDbContext db, HttpClient http, ILogger<LeagueBroadcastImport> logger, IConfiguration? config = null)
+    /// <param name="clubs">Die Vereins-Datenbank (1.017.0); ohne (Tests) eine eigene ohne Analysen.</param>
+    /// <param name="gate">Nur ein Einspielen zugleich — in der App ein Singleton; ohne ein eigenes.</param>
+    public LeagueBroadcastImport(AppDbContext db, HttpClient http, ILogger<LeagueBroadcastImport> logger, IConfiguration? config = null,
+        LeagueClubService? clubs = null, LeagueBroadcastGate? gate = null)
     {
         _db = db;
         _http = http;
         _logger = logger;
+        _clubs = clubs ?? new LeagueClubService(db, Microsoft.Extensions.Logging.Abstractions.NullLogger<LeagueClubService>.Instance, config: config);
+        _gate = gate ?? new LeagueBroadcastGate();
         _lichess = (config?["Lichess:SiteUrl"] ?? "https://lichess.org").TrimEnd('/');
         var q = config?["LeagueBroadcasts:Queries"];
         _queries = string.IsNullOrWhiteSpace(q) ? DefaultQueries
@@ -78,8 +96,16 @@ public sealed partial class LeagueBroadcastImport
     /// </summary>
     public static (string Pgn, int Games) CleanPgn(string pgn)
     {
+        var (clean, games) = CleanGames(pgn);
+        return (clean, games.Count);
+    }
+
+    /// <summary>Wie <see cref="CleanPgn"/>, dazu jede übernommene Partie einzeln (Kopfzeilen der Übertragung samt
+    /// <c>WhiteTeam</c>/<c>BlackTeam</c>, Datum schon mit Punkten; Hauptvariante als SAN) — für die Vereins-Datenbank.</summary>
+    public static (string Pgn, List<LeagueBroadcastGame> Games) CleanGames(string pgn)
+    {
         var sb = new StringBuilder();
-        var n = 0;
+        var list = new List<LeagueBroadcastGame>();
         foreach (var b in PgnParser.SplitGameBlocks(pgn))
         {
             var h = new Dictionary<string, string>(b.Headers, StringComparer.OrdinalIgnoreCase);
@@ -95,9 +121,32 @@ public sealed partial class LeagueBroadcastImport
             foreach (var k in KeepHeaders)
                 if (h.TryGetValue(k, out var val) && !string.IsNullOrWhiteSpace(val)) sb.Append(PgnWriter.Tag(k, val.Trim()));
             sb.Append('\n').Append(PgnWriter.MoveText(sans, null, null, result)).Append("\n\n");
-            n++;
+            list.Add(new LeagueBroadcastGame(h, sans));
         }
-        return (sb.ToString(), n);
+        return (sb.ToString(), list);
+    }
+
+    /// <summary>
+    /// Wann die Übertragung wieder schnell geprüft werden soll (1.017.0), aus den Runden laut Lichess: <c>LiveUntil</c> = eine Runde
+    /// läuft (Lichess <c>ongoing</c>: <paramref name="now"/> + <see cref="OngoingGrace"/>) oder hat vor weniger als
+    /// <see cref="LiveWindow"/> begonnen und ist nicht fertig (ihr Beginn + <see cref="LiveWindow"/>); <c>NextRoundAt</c> = Beginn
+    /// der nächsten künftigen, nicht fertigen Runde.
+    /// </summary>
+    public static (DateTime? NextRoundAt, DateTime? LiveUntil) LiveOf(IReadOnlyList<LichessBroadcasts.Round> rounds, DateTime now)
+    {
+        DateTime? next = null, live = null;
+        foreach (var r in rounds.Where(r => !r.Finished))
+        {
+            DateTime? until = null;
+            if (r.Ongoing) until = now + OngoingGrace;
+            if (r.StartsAt is { } s)
+            {
+                if (s > now) next = next is { } n && n <= s ? n : s;
+                else if (s + LiveWindow > now && (until is null || s + LiveWindow > until)) until = s + LiveWindow;
+            }
+            if (until is { } u && (live is null || u > live)) live = until;
+        }
+        return (next, live);
     }
 
     /// <summary>„2024-08-24" / „2024.08.24" → „2024.08.24"; Unvollständiges (mit „?") → <c>null</c>.</summary>
@@ -160,6 +209,12 @@ public sealed partial class LeagueBroadcastImport
     /// <summary>Eine Übertragung (neu) einspielen: Stand, PGN, Partien mit Ligaspielern in die Karten.</summary>
     public async Task ImportAsync(LeagueBroadcast b, CancellationToken ct)
     {
+        using var _ = await _gate.EnterAsync(ct);
+        await ImportCoreAsync(b, ct);
+    }
+
+    private async Task ImportCoreAsync(LeagueBroadcast b, CancellationToken ct)
+    {
         var detail = await GetAsync($"{_lichess}/api/broadcast/{Uri.EscapeDataString(b.TourId)}", ct);
         await Wait(ct);
         if (detail is null)
@@ -182,14 +237,35 @@ public sealed partial class LeagueBroadcastImport
         }
         var pgn = await GetAsync($"{_lichess}/api/broadcast/{Uri.EscapeDataString(b.TourId)}.pgn", ct) ?? "";
         await Wait(ct);
-        var (clean, _) = CleanPgn(pgn);
+        var (clean, cleanGames) = CleanGames(pgn);
         var (games, _) = clean.Length == 0 ? (0, 0)
             : await new LeagueProfileStore(_db).ImportGamesAsync(clean, Source, ct, skipSameMoves: true);
+        await ClubGamesAsync(b, cleanGames, ct);
         b.Games = games;
         b.Error = null;
         b.ImportedAt = DateTime.UtcNow;
+        (b.NextRoundAt, b.LiveUntil) = parsed is null ? (null, null) : LiveOf(parsed.Rounds, b.ImportedAt.Value);
         b.Finished = allFinished || b.EndsAt is { } end && end < DateTime.UtcNow - FinishedAfter;
         await SaveAsync(b, ct);
+    }
+
+    /// <summary>Die Partien mit der eigenen Mannschaft in die Vereins-Datenbank jedes Vereins (<see cref="ClubBroadcastGames"/>). Beiwerk:
+    /// ein Fehler hier lässt das Einspielen in die Karten nicht scheitern (beim nächsten Takt wieder — schon Übernommenes zählt nicht doppelt).</summary>
+    private async Task ClubGamesAsync(LeagueBroadcast b, List<LeagueBroadcastGame> games, CancellationToken ct)
+    {
+        if (games.Count == 0 || !games.Any(g => g.H("WhiteTeam") != null || g.H("BlackTeam") != null)) return;
+        foreach (var club in await _db.LeagueClubs.AsNoTracking().OrderBy(c => c.Id).ToListAsync(ct))
+        {
+            try
+            {
+                await _clubs.ImportBroadcastGamesAsync(club, games, ct);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                _logger.LogWarning(e, "LeagueHub: übertragene Partien von {Tour} nicht in die Vereins-Datenbank {Club} übernommen", b.TourId, club.Id);
+                _db.ChangeTracker.Clear();
+            }
+        }
     }
 
     /// <summary>Den Stand der Übertragung schreiben — ausdrücklich: das Einspielen in die Karten leert den ChangeTracker
@@ -261,6 +337,44 @@ public sealed partial class LeagueBroadcastImport
         }
     }
 
+    /// <summary>
+    /// Der schnelle Takt (1.017.0, <see cref="LeagueBroadcastLiveScheduler"/>): jede nicht fertige Übertragung mit laufender Runde
+    /// (<see cref="LeagueBroadcast.LiveUntil"/> noch nicht vorbei) oder einer Runde, die inzwischen begonnen haben sollte
+    /// (<see cref="LeagueBroadcast.NextRoundAt"/> erreicht), die vor mindestens <see cref="LiveEvery"/> zuletzt eingespielt wurde.
+    /// Alle anderen bleiben beim 6-Stunden-Takt. Ein 429 bricht ab (das Tor pausiert dann alle Lichess-Aufrufe). → wie viele eingespielt.
+    /// </summary>
+    public async Task<int> RunLiveAsync(CancellationToken ct, DateTime? nowUtc = null)
+    {
+        var now = nowUtc ?? DateTime.UtcNow;
+        var since = now - LiveEvery + TimeSpan.FromSeconds(30);   // Takt und Laufzeit verschieben sich — nicht erst beim übernächsten
+        var due = await _db.LeagueBroadcasts
+            .Where(b => !b.Finished && (b.ImportedAt == null || b.ImportedAt < since)
+                && (b.LiveUntil != null && b.LiveUntil > now || b.NextRoundAt != null && b.NextRoundAt <= now))
+            .OrderBy(b => b.ImportedAt).ToListAsync(ct);
+        var done = 0;
+        foreach (var b in due)
+        {
+            try
+            {
+                await ImportAsync(b, ct);
+                done++;
+            }
+            catch (LeagueOnlineSync.RateLimitedException e)
+            {
+                _logger.LogDebug("LeagueHub: {Message} — schneller Takt der Übertragungen pausiert", e.Message);
+                break;
+            }
+            catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException && !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(e, "LeagueHub: laufende Übertragung {Tour} nicht eingespielt", b.TourId);
+                b.Error = Cut(e.Message, 300);
+                b.ImportedAt = DateTime.UtcNow;
+                await SaveAsync(b, ct);
+            }
+        }
+        return done;
+    }
+
     /// <summary>Alle vorgemerkten Übertragungen (jüngste zuerst) als JSON für die Verwaltung.</summary>
     public async Task<List<object>> ListAsync(CancellationToken ct) =>
         (await _db.LeagueBroadcasts.AsNoTracking().OrderByDescending(b => b.StartsAt).ToListAsync(ct))
@@ -270,5 +384,7 @@ public sealed partial class LeagueBroadcastImport
             startsAt = b.StartsAt?.ToString("yyyy-MM-dd"), endsAt = b.EndsAt?.ToString("yyyy-MM-dd"), manual = b.Manual,
             importedAt = b.ImportedAt is { } t ? DateTime.SpecifyKind(t, DateTimeKind.Utc).ToString("O") : null,
             finished = b.Finished, games = b.Games, error = b.Error,
+            nextRoundAt = b.NextRoundAt is { } n ? DateTime.SpecifyKind(n, DateTimeKind.Utc).ToString("O") : null,
+            liveUntil = b.LiveUntil is { } l ? DateTime.SpecifyKind(l, DateTimeKind.Utc).ToString("O") : null,
         }).ToList();
 }
