@@ -450,36 +450,48 @@ public sealed class CommentTranslator
         _ => "English piece letters: K Q R B N",
     };
 
-    private static string UserPrompt(List<(int Key, string Text)> chunk)
+    internal static string UserPrompt(List<(int Key, string Text)> chunk)
     {
         var sb = new StringBuilder();
         sb.AppendLine("{\"items\":[");
         for (var i = 0; i < chunk.Count; i++)
         {
             sb.Append("  {\"ply\":").Append(chunk[i].Key).Append(",\"text\":")
-              .Append(JsonSerializer.Serialize(chunk[i].Text)).Append('}');
+              .Append(JsonSerializer.Serialize(Utf16Text.ReplaceLoneSurrogates(chunk[i].Text))).Append('}');
             sb.AppendLine(i + 1 < chunk.Count ? "," : "");
         }
         sb.AppendLine("]}");
         return sb.ToString();
     }
 
-    private static List<(int Ply, string Text)> Parse(string json)
+    internal static List<(int Ply, string Text)> Parse(string json)
     {
         List<(int, string)> result = [];
         try
         {
-            using var doc = JsonDocument.Parse(json);
+            // Einzelne Surrogate als Escape (\udc4b ohne obere Hälfte, Buch-Übersetzung 911) erst reparieren: Parse lässt
+            // sie durch, GetString wirft dann eine InvalidOperationException — die riss vorher den ganzen Buchlauf mit.
+            using var doc = JsonDocument.Parse(Utf16Text.SanitizeJsonEscapes(json));
             if (!doc.RootElement.TryGetProperty("items", out var items)) return result;
             foreach (var item in items.EnumerateArray())
             {
                 if (!item.TryGetProperty("ply", out var ply) || !item.TryGetProperty("text", out var text))
                     continue;
-                var value = text.GetString();
-                if (!string.IsNullOrWhiteSpace(value)) result.Add((ply.GetInt32(), value));
+                string? value;
+                int key;
+                try
+                {
+                    value = text.GetString();
+                    key = ply.GetInt32();
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+                {
+                    continue;   // ein unlesbarer Eintrag fehlt — wie ein unbeantworteter
+                }
+                if (!string.IsNullOrWhiteSpace(value)) result.Add((key, Utf16Text.ReplaceLoneSurrogates(value)));
             }
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
             // Ein unlesbares Ergebnis ist dasselbe wie keines — der Aufrufer bricht ab.
         }

@@ -443,7 +443,7 @@ public class EbookTranslationService
             for (var i = 0; i < list.Count; i++)
             {
                 var title = answer != null && answer.TryGetValue(i, out var t) && !string.IsNullOrWhiteSpace(t) ? t.Trim() : list[i].Title;
-                list[i].Row.Title = title.Length > 300 ? title[..300] : title;
+                list[i].Row.Title = Utf16Text.Truncate(Utf16Text.ReplaceLoneSurrogates(title), 300);
                 set++;
             }
             await _db.SaveChangesAsync(ct);
@@ -547,13 +547,24 @@ public class EbookTranslationService
     {
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
         var items = texts.Select((t, i) => (i, t)).ToList();
-        var answer = await _translator.TranslateAsync(items, from, to, TranslationSubject.EbookText, ebookId, ct);
+        Dictionary<int, string>? answer;
+        try
+        {
+            answer = await _translator.TranslateAsync(items, from, to, TranslationSubject.EbookText, ebookId, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException and not EbookTranslationUnreachableException)
+        {
+            // Ein kaputter Text (z. B. ein einzelnes Surrogat in der Antwort, Übersetzung 911) ist EIN gescheiterter Text, kein
+            // gescheitertes Buch (1.011.1): vorher riss die Ausnahme Parallel.ForEachAsync und damit den ganzen Lauf mit.
+            _logger.LogWarning(ex, "E-Book {EbookId} → {Lang}: Fuhre mit {Count} Text(en) gescheitert", ebookId, to, texts.Count);
+            answer = null;
+        }
         if (answer == null && _translator.IsUnreachable) throw new EbookTranslationUnreachableException();
         var retry = new List<string>();
         for (var i = 0; i < texts.Count; i++)
         {
             if (answer != null && answer.TryGetValue(i, out var t) && EbookTextSegmenter.SamePlaceholders(texts[i], t))
-                result[texts[i]] = t.Trim();
+                result[texts[i]] = Utf16Text.ReplaceLoneSurrogates(t.Trim());
             else retry.Add(texts[i]);
         }
         if (retry.Count == 0) return result;
@@ -753,5 +764,5 @@ public class EbookTranslationService
         CompletedAt = t.CompletedAt,
     };
 
-    private static string Clip(string s, int max) => s.Length <= max ? s : s[..max];
+    private static string Clip(string s, int max) => Utf16Text.Truncate(Utf16Text.ReplaceLoneSurrogates(s), max);
 }

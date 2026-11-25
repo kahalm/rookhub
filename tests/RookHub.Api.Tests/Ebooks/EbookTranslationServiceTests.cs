@@ -31,6 +31,10 @@ public sealed class FakeBookTranslator : IClaudeJsonClient
     public (int Call, CancellationTokenSource Cts)? CancelAt { get; set; }
     /// <summary>Texte, die dieses Wort enthalten, kommen OHNE Platzhalter zurück (Modell vergisst sie).</summary>
     public string? DropPlaceholdersFor { get; set; }
+    /// <summary>Texte mit diesem Wort bekommen ein einzelnes Surrogat als Escape (<c>\udc4b</c>) in die Antwort — wie Prod 911.</summary>
+    public string? LoneSurrogateEscapeFor { get; set; }
+    /// <summary>Fuhren mit einem Text, der dieses Wort enthält, werfen (wie <c>GetString</c> auf ein einzelnes Surrogat).</summary>
+    public string? ThrowFor { get; set; }
 
     public IEnumerable<string> AllTexts { get { lock (_gate) return Calls.SelectMany(c => c).ToList(); } }
 
@@ -44,8 +48,15 @@ public sealed class FakeBookTranslator : IClaudeJsonClient
         int n;
         lock (_gate) { Calls.Add(items.Select(i => i.Text).ToList()); n = Calls.Count; }
         if (CancelAt is { } c && c.Call == n) c.Cts.Cancel();
-        var answer = items.Select(i => new { ply = i.Ply, text = Translate(i.Text) }).ToList();
-        return Task.FromResult<string?>(JsonSerializer.Serialize(new { items = answer }));
+        if (ThrowFor != null && items.Any(i => i.Text.Contains(ThrowFor)))
+            throw new InvalidOperationException("Cannot read invalid UTF-16 JSON text as string. Invalid surrogate value: '0xDC4B'.");
+        const string mark = "QQSURROGATEQQ";
+        var answer = items.Select(i => new
+        {
+            ply = i.Ply,
+            text = Translate(i.Text) + (LoneSurrogateEscapeFor != null && i.Text.Contains(LoneSurrogateEscapeFor) ? mark : ""),
+        }).ToList();
+        return Task.FromResult<string?>(JsonSerializer.Serialize(new { items = answer }).Replace(mark, "\\udc4b"));
     }
 
     private string Translate(string text)
@@ -308,6 +319,49 @@ public class EbookTranslationServiceTests : IDisposable
         Assert.Equal(2, _llm.AllTexts.Count(t => t.Contains("deutlich")));
         var ch1 = Entry(_kit.Storage.ResolvePath(EbookSource.Upload, row.RelativePath!), "OEBPS/Text/ch1.xhtml");
         Assert.Contains("steht Weiß <b>deutlich</b> besser ±.", ch1);
+    }
+
+    /// <summary>Prod 911: die Antwort trug <c>\udc4b</c> ohne obere Hälfte — der Text wird mit U+FFFD übernommen, das Buch läuft durch.</summary>
+    [Fact]
+    public async Task Run_LoneSurrogateEscapeInResponse_TranslatedWithReplacementChar_BookDone()
+    {
+        var book = await BookAsync("Buch", "de");
+        WriteFile(book, GermanEpub());
+        _llm.LoneSurrogateEscapeFor = "deutlich";
+        var svc = Service();
+        var id = (await svc.ClaimNextAsync(CancellationToken.None))!.Value;
+
+        Assert.Equal(EbookTranslationOutcome.Done, await svc.RunAsync(id, CancellationToken.None));
+
+        var row = await _kit.Db.EbookTranslations.AsNoTracking().SingleAsync(t => t.Id == id);
+        Assert.Equal(EbookTranslationState.Done, row.State);
+        Assert.Equal(0, row.SegmentsFailed);
+        Assert.Equal(row.SegmentsTotal, row.SegmentsDone);
+        var ch1 = Entry(_kit.Storage.ResolvePath(EbookSource.Upload, row.RelativePath!), "OEBPS/Text/ch1.xhtml");
+        Assert.Contains("\uFFFD", ch1);
+    }
+
+    /// <summary>Wirft eine Fuhre unerwartet, ist das EIN gescheiterter Text (einzeln wiederholt, dann im Original) — nicht
+    /// das ganze Buch (vorher: State=Failed bei 3236 von 4143).</summary>
+    [Fact]
+    public async Task Run_ChunkThrows_OnlyThatTextFails_BookStillDone()
+    {
+        var book = await BookAsync("Buch", "de");
+        WriteFile(book, GermanEpub(paragraphs: 5));
+        _llm.ThrowFor = "deutlich";
+        var svc = Service();
+        var id = (await svc.ClaimNextAsync(CancellationToken.None))!.Value;
+
+        Assert.Equal(EbookTranslationOutcome.Done, await svc.RunAsync(id, CancellationToken.None));
+
+        var row = await _kit.Db.EbookTranslations.AsNoTracking().SingleAsync(t => t.Id == id);
+        Assert.Equal(EbookTranslationState.Done, row.State);
+        Assert.Null(row.Error);
+        Assert.Equal(1, row.SegmentsFailed);
+        Assert.Equal(row.SegmentsTotal - 1, row.SegmentsDone);
+        var ch1 = Entry(_kit.Storage.ResolvePath(EbookSource.Upload, row.RelativePath!), "OEBPS/Text/ch1.xhtml");
+        Assert.Contains("steht Weiß <b>deutlich</b> besser ±.", ch1);
+        Assert.DoesNotContain("Absatz Nummer", ch1);   // der Rest ist übersetzt
     }
 
     [Fact]

@@ -285,7 +285,7 @@ internal static class OpenAiChat
             var content = choice.TryGetProperty("message", out var message) ? ContentOf(message) : null;
             return new(status, content, finish, input, output, null);
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
             return new(status, null, null, 0, 0, "no JSON: " + Snippet(text));
         }
@@ -296,13 +296,26 @@ internal static class OpenAiChat
     private static string? ContentOf(JsonElement message)
     {
         if (!message.TryGetProperty("content", out var content)) return null;
-        if (content.ValueKind == JsonValueKind.String) return content.GetString();
+        if (content.ValueKind == JsonValueKind.String) return TextOf(content);
         if (content.ValueKind != JsonValueKind.Array) return null;
         var sb = new StringBuilder();
         foreach (var part in content.EnumerateArray())
             if (part.ValueKind == JsonValueKind.Object && part.TryGetProperty("text", out var t) && t.ValueKind == JsonValueKind.String)
-                sb.Append(t.GetString());
+                sb.Append(TextOf(t));
         return sb.ToString();
+    }
+
+    /// <summary>Ein JSON-String als Text — auch wenn er ein einzelnes Surrogat als Escape trägt (<c>"\udc4b"</c>): dann
+    /// wird es U+FFFD, statt dass <c>GetString</c> eine <see cref="InvalidOperationException"/> wirft (1.011.1; im Strom
+    /// zählte das sonst als Transportfehler und konnte die Spark als „nicht erreichbar“ melden).</summary>
+    internal static string? TextOf(JsonElement value)
+    {
+        try { return value.GetString(); }
+        catch (InvalidOperationException) when (value.ValueKind == JsonValueKind.String)
+        {
+            using var doc = JsonDocument.Parse(Utf16Text.SanitizeJsonEscapes(value.GetRawText()));
+            return doc.RootElement.GetString();
+        }
     }
 
     private static readonly Regex ThinkBlock = new(@"<think>.*?</think>", RegexOptions.Singleline | RegexOptions.Compiled);

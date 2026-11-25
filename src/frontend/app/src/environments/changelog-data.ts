@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.011.1", date: "2026-11-25", changes: [
+    { en: "Book translation: a single broken character in the model’s answer (half of an emoji pair, “invalid surrogate”) no longer aborts the whole book. Such halves are replaced by “�” in the source before sending and in the answer before it is read, length cuts never split a character pair, and a text that still cannot be read counts as one failed text (kept in the original) while the rest of the book is translated.",
+      de: "Buch-Übersetzung: ein einzelnes kaputtes Zeichen in der Antwort des Modells (die Hälfte eines Emoji-Paars, „invalid surrogate“) bricht nicht mehr das ganze Buch ab. Solche Hälften werden in der Quelle vor dem Senden und in der Antwort vor dem Lesen durch „�“ ersetzt, Kürzungen nach Länge zerschneiden kein Zeichenpaar mehr, und ein Text, der trotzdem nicht lesbar ist, zählt als ein gescheiterter Text (bleibt im Original), während der Rest des Buchs übersetzt wird." },
+  ] },
   { version: "1.011.0", date: "2026-11-24", changes: [
     { en: "E-book board, “Solve” mode, now behaves like the puzzle solver in both styles. A wrong move no longer says “Wrong”: it stays on the board, Stockfish replies straight away and you play on against Stockfish (“Your move against Stockfish…”). The mistake is remembered in “Easy” as well as in “Training”, and the end then reads “Correct (kind of)” instead of “Solved”. Moves that keep the result are still recognised (“also good” / “also correct”).",
       de: "E-Book-Brett, Modus „Lösen“: verhält sich jetzt in beiden Arten wie der Puzzle-Löser. Ein falscher Zug sagt nicht mehr „Falsch“: Er bleibt stehen, Stockfish antwortet sofort, und man spielt gegen Stockfish weiter („Dein Zug gegen Stockfish…“). Der Fehler wird in „Einfach“ wie in „Training“ gemerkt; am Ende steht dann „Geschafft (mehr oder weniger)“ statt „Gelöst“. Gleichwertige Züge werden weiter erkannt („auch gut“ / „auch richtig“)." },
