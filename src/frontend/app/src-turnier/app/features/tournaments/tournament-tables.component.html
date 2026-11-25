@@ -310,6 +310,12 @@
       @if (hasFavorites) {
         <mat-slide-toggle [checked]="showFavoritesOnly" (change)="favoritesToggle.emit($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
       }
+      @if (liveLink(); as live) {
+        <!-- Live-Bretter (1.014.0): die Bretter der gewählten Runde aus der verknüpften Lichess-Übertragung. -->
+        <a mat-stroked-button class="live-round" [routerLink]="live" [queryParams]="{ round: selectedRound }">
+          <mat-icon>live_tv</mat-icon> {{ 'tournaments.live.roundLive' | translate }}
+        </a>
+      }
     </div>
   }
   @if (pairingsLoading) {

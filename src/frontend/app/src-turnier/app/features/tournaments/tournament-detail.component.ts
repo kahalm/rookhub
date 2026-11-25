@@ -30,6 +30,8 @@ import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, toDisplayPairings } from
 import { TournamentDetailService } from './tournament-detail.service';
 import { displayedTables } from './tournament-favorites.util';
 import { LatestRequest } from '@rh/shared/latest-request.util';
+import { LiveBoardsService } from './live/live-boards.service';
+import { LiveStatus } from './live/live-boards.models';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -110,6 +112,22 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   private readonly opener = inject(OpenTournamentService);
   private readonly auth = inject(AuthService);
+  private readonly liveApi = inject(LiveBoardsService);
+
+  /**
+   * Live-Bretter (1.014.0): ist eine Lichess-Übertragung verknüpft (oder findet der Server eine), zeigt die Seite den Knopf
+   * „Live-Bretter“; sonst nur den ⋮-Eintrag „Übertragung verknüpfen“. Fehler: kein Knopf (still, Hintergrund-Abfrage).
+   */
+  liveStatus: LiveStatus | null = null;
+  get liveLinked(): boolean { return !!this.liveStatus?.linked; }
+  get liveLink(): string[] { return ['/tournaments', this.id, 'live']; }
+
+  private loadLive(): void {
+    this.liveApi.status(this.id).subscribe({
+      next: s => { this.liveStatus = s; },
+      error: () => { this.liveStatus = null; },
+    });
+  }
 
   /**
    * Angemeldet? Seit 0.643.0 ist die Seite ohne Konto offen: Teilnehmer, Paarungen, Tabelle, Aktualisieren und
@@ -175,6 +193,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.loadPlayers();
         this.loadTeams();
         if (this.pairingsShown) this.loadPairings();
+        this.loadLive();
       },
       error: (err: unknown) => {
         this.loading = false;
@@ -600,6 +619,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       chessResultsId: this.tournament?.chessResultsId ?? null,
       player: full,
       players: this.players,
+      live: this.liveLinked && !this.hasTeamPairings ? { link: this.liveLink, query: { player: full.name } } : undefined,
     });
   }
 
@@ -609,7 +629,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.api.getTeamDetails(this.id, team.snr).subscribe({
       next: (result) => {
         this.dialog.open(TeamPlayersDialogComponent, {
-          data: { teamName: result.name, players: result.players || [], onPlayer: (pl: TournamentPlayer) => this.showPlayer(pl) },
+          data: {
+            teamName: result.name, players: result.players || [], onPlayer: (pl: TournamentPlayer) => this.showPlayer(pl),
+            live: this.liveStatus ? { linked: this.liveLinked, link: this.liveLink,
+              query: { team: result.name, ...(this.pairingsShown ? { round: this.selectedRound } : {}) } } : undefined,
+          },
           width: '500px',
           maxWidth: '95vw',
           autoFocus: 'dialog'   // d9-t-team-dialog-schliessen-gefuellt: sonst trägt „Schließen“ beim Öffnen die Fokus-Tonfläche

@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "Partai ini belum dianalisis dan analisis tidak dapat dimulai.",
     "summary_unsupported_start": "Ringkasan hanya tersedia untuk partai dari posisi awal.",
     "background_list_full": "Daftar latar belakang penuh: paling banyak 64 mesin latar belakang. Hapus satu dulu.",
-    "engine_not_found": "Mesin ini bukan milik akun itu atau sudah tidak terdaftar."
+    "engine_not_found": "Mesin ini bukan milik akun itu atau sudah tidak terdaftar.",
+    "live_invalid_url": "Ini bukan tautan siaran Lichess.",
+    "live_broadcast_not_found": "Lichess tidak mengenal siaran ini.",
+    "live_tournament_not_found": "Turnamen ini belum diambil."
   },
   "common": {
     "optional": "Opsional",
@@ -1564,6 +1567,39 @@
       "copyLink": "Salin tautan",
       "linkCopied": "Tautan disalin!",
       "copyFailed": "Gagal menyalin"
+    },
+    "live": {
+      "title": "Papan langsung",
+      "back": "Kembali ke turnamen",
+      "notLinked": "Tidak ada siaran Lichess yang ditautkan ke turnamen ini.",
+      "linkLabel": "Tautan siaran Lichess",
+      "linkHint": "Tautan ke turnamen atau babak di lichess.org/broadcast",
+      "link": "Tautkan siaran",
+      "loginToLink": "Masuk untuk menautkan siaran",
+      "linked": "Siaran ditautkan.",
+      "linkFailed": "Siaran tidak dapat ditautkan.",
+      "ongoing": "berlangsung",
+      "team": "Tim",
+      "allMatches": "Semua pertandingan",
+      "engineBar": "Bilah evaluasi",
+      "onlyPlayer": "Hanya papan {{name}}",
+      "showAll": "Tampilkan semua papan",
+      "noBoards": "Tidak ada papan dari pertandingan ini yang disiarkan.",
+      "noGames": "Belum ada partai dari babak ini yang disiarkan.",
+      "notBroadcast": "Papan tanpa siaran: {{count}}",
+      "otherGames": "Partai siaran lainnya",
+      "boardN": "Papan {{board}}",
+      "noEval": "Tidak ada evaluasi",
+      "evalLabel": "Evaluasi {{value}}",
+      "roundLive": "Papan langsung babak ini",
+      "noBroadcastShort": "Tidak ada siaran langsung yang ditautkan",
+      "state": {
+        "connecting": "Menghubungkan…",
+        "live": "Langsung",
+        "reconnecting": "Menghubungkan ulang…",
+        "finished": "Babak selesai",
+        "offline": "Koneksi terputus — mencoba lagi"
+      }
     }
   },
   "puzzles": {

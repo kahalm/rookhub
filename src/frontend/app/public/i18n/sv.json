@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "Det här partiet har ingen analys än och ingen kunde startas.",
     "summary_unsupported_start": "Sammanfattningar finns bara för partier från utgångsställningen.",
     "background_list_full": "Bakgrundslistan är full: högst 64 bakgrundsmotorer. Ta bort en först.",
-    "engine_not_found": "Den här motorn tillhör inte det kontot eller är inte längre registrerad."
+    "engine_not_found": "Den här motorn tillhör inte det kontot eller är inte längre registrerad.",
+    "live_invalid_url": "Det här är ingen länk till en Lichess-sändning.",
+    "live_broadcast_not_found": "Lichess känner inte till den här sändningen.",
+    "live_tournament_not_found": "Den här turneringen har inte hämtats än."
   },
   "common": {
     "optional": "Valfritt",
@@ -1564,6 +1567,39 @@
       "copyLink": "Kopiera länk",
       "linkCopied": "Länk kopierad!",
       "copyFailed": "Kopieringen misslyckades"
+    },
+    "live": {
+      "title": "Brädor live",
+      "back": "Tillbaka till turneringen",
+      "notLinked": "Ingen Lichess-sändning är kopplad till den här turneringen.",
+      "linkLabel": "Länk till Lichess-sändningen",
+      "linkHint": "Länk till turneringen eller en rond på lichess.org/broadcast",
+      "link": "Koppla sändning",
+      "loginToLink": "Logga in för att koppla en sändning",
+      "linked": "Sändning kopplad.",
+      "linkFailed": "Sändningen kunde inte kopplas.",
+      "ongoing": "pågår",
+      "team": "Lag",
+      "allMatches": "Alla matcher",
+      "engineBar": "Värderingsstapel",
+      "onlyPlayer": "Bara brädet för {{name}}",
+      "showAll": "Visa alla brädor",
+      "noBoards": "Inget bräde i den här matchen sänds.",
+      "noGames": "Inga partier från den här ronden sänds ännu.",
+      "notBroadcast": "Brädor utan sändning: {{count}}",
+      "otherGames": "Andra sända partier",
+      "boardN": "Bräde {{board}}",
+      "noEval": "Ingen värdering",
+      "evalLabel": "Värdering {{value}}",
+      "roundLive": "Brädor live i den här ronden",
+      "noBroadcastShort": "Ingen livesändning kopplad",
+      "state": {
+        "connecting": "Ansluter…",
+        "live": "Live",
+        "reconnecting": "Ansluter igen…",
+        "finished": "Ronden avslutad",
+        "offline": "Anslutningen bröts — nytt försök"
+      }
     }
   },
   "puzzles": {

@@ -24,6 +24,12 @@
               <a mat-menu-item [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank" rel="noopener noreferrer">
                 <mat-icon>open_in_new</mat-icon><span>{{ 'tournamentDirectory.openChessResults' | translate }}</span>
               </a>
+              @if (liveStatus && !liveLinked) {
+                <!-- Live-Bretter (1.014.0): ohne verknüpfte Übertragung nur hier, leise — die Seite erklärt und verknüpft. -->
+                <a mat-menu-item [routerLink]="liveLink">
+                  <mat-icon>live_tv</mat-icon><span>{{ 'tournaments.live.link' | translate }}</span>
+                </a>
+              }
             </mat-menu>
             <!-- Ab 769 px stehen Titel und Knopfreihe in EINER Zeile (DESIGN 5.1, d2-t-detail-vorlauf: zwei Zeilen kosteten
                  am Laptop ~50 px Vorlauf vor der Spielerliste); am Handy bricht die Reihe unter den Titel. -->
@@ -51,6 +57,12 @@
                         [appIconLabel]="'tournaments.actions.monitor' | translate">
                   <mat-icon>notifications_active</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitor' | translate }}</span>
                 </button>
+              }
+              @if (liveLinked) {
+                <a mat-stroked-button class="keep-label live-btn" [routerLink]="liveLink"
+                   [appIconLabel]="'tournaments.live.title' | translate">
+                  <mat-icon>live_tv</mat-icon><span class="btn-label"> {{ 'tournaments.live.title' | translate }}</span>
+                </a>
               }
               <button mat-stroked-button class="wide-only" (click)="refresh()" [disabled]="refreshing"
                       [appIconLabel]="'tournaments.actions.refresh' | translate">
@@ -135,6 +147,7 @@
           (showPlayer)="showPlayer($event)"
           [clubsBusy]="clubsBusy"
           (fillClubs)="fillClubs()"
+          [liveLink]="liveLinked ? liveLink : null"
           [canRefresh]="true"
           [refreshing]="refreshing"
           (refresh)="refresh()">

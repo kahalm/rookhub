@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -24,6 +24,8 @@ export interface PlayerEncountersData {
   player: TournamentPlayer;
   /** Alle Spieler des Turniers — Gegner werden darueber klickbar und bekommen ihre Wertung. */
   players: TournamentPlayer[];
+  /** Live-Bretter (1.014.0, Einzelturnier mit verknüpfter Übertragung): Weg zum Brett des Spielers. */
+  live?: { link: (string | number)[]; query: Record<string, string | number> };
 }
 
 /** Oeffnet die Begegnungen eines Spielers (Inhalts-Dialog, DESIGN 5.6: bis 760 px, hier 560 px). */
@@ -44,7 +46,7 @@ const POLL_MS = 3000;
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-player-encounters-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatButtonModule, MatIconModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, LocalScorePipe],
+  imports: [MatDialogModule, RouterLink, MatButtonModule, MatIconModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, LocalScorePipe],
   template: `
     <h2 mat-dialog-title class="enc-title">
       @if (chessTitle(player().title); as t) { <span class="enc-ptitle">{{ t }}</span> }
@@ -131,6 +133,11 @@ const POLL_MS = 3000;
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
+      @if (data.live; as live) {
+        <a mat-stroked-button class="enc-live" [routerLink]="live.link" [queryParams]="live.query" mat-dialog-close>
+          <mat-icon>live_tv</mat-icon> {{ 'tournaments.live.title' | translate }}
+        </a>
+      }
       <button mat-button mat-dialog-close>{{ 'common.close' | translate }}</button>
     </mat-dialog-actions>
   `,

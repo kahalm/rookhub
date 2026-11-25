@@ -8221,6 +8221,43 @@ namespace RookHub.Api.Migrations
                     b.ToTable("Tags");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.TournamentBroadcastLink", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CrawlerTournamentId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("LinkedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("Manual")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("TourId")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)");
+
+                    b.Property<string>("TourName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CrawlerTournamentId")
+                        .IsUnique();
+
+                    b.ToTable("TournamentBroadcastLinks");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.TournamentDirectoryEntry", b =>
                 {
                     b.Property<int>("Id")

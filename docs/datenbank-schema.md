@@ -29,6 +29,7 @@
 | TournamentSubscriptions | Turnier-Abo | UserId + CrawlerTournamentId (unique pair), TournamentName, EventDate (`DateOnly?`, Turniertermin — steuert Refresh-Crawl + Bot-Turnier-Einordnung) |
 | TournamentFavorites | Markierte Turniere | UserId + CrawlerTournamentId |
 | TournamentUserSettings | Per-Turnier-User-Einstellungen | UserId + TournamentId, Highlights/Notes/Pinning |
+| TournamentBroadcastLinks | Live-Bretter (1.014.0): Lichess-Übertragung je geholtem Turnier | CrawlerTournamentId (≤50, **UNIQUE**), TourId (≤12, Lichess-Kennung), TourName (≤200), Manual (von Hand verknüpft statt automatisch gefunden), LinkedAt; ohne Nutzer-Bezug (wer verknüpft hat, steht nur im Log). Nur Runden einer hier verknüpften Übertragung werden gestreamt (`docs/api/live-bretter.md`) |
 | TournamentMonitors | Runden-Monitor | TournamentId, RoundsCount, LastSeenRound, AutoSubscribed; `RoundMonitorService` checkt periodisch |
 | Puzzles + PuzzleAttempts | Standard-Puzzle-Pool + Versuche | klassische Lichess-Puzzles + Pro-User-Versuche (UserId Cascade) |
 | KidsLevelProgresses | KidHub-Fortschritt eines angemeldeten Kindes je Stufe (0.563.0) | UserId (Cascade), Level, Stars (0–3, beste), RunIndex/RunMistakes (laufender Durchgang), RunAt (Zeit laut Gerät — der jüngere gewinnt), UpdatedAt; **UNIQUE (UserId, Level)** |

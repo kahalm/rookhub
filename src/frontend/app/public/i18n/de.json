@@ -150,7 +150,10 @@
     "summary_analysis_unavailable": "Für diese Partie gibt es keine Analyse und es ließ sich keine starten.",
     "summary_unsupported_start": "Zusammenfassungen gibt es nur für Partien ab der Grundstellung.",
     "background_list_full": "Die Hintergrund-Liste ist voll: höchstens 64 Hintergrund-Engines. Nimm zuerst eine heraus.",
-    "engine_not_found": "Diese Engine gehört nicht zu diesem Konto oder ist nicht mehr registriert."
+    "engine_not_found": "Diese Engine gehört nicht zu diesem Konto oder ist nicht mehr registriert.",
+    "live_invalid_url": "Das ist kein Link einer Lichess-Übertragung.",
+    "live_broadcast_not_found": "Diese Übertragung kennt Lichess nicht.",
+    "live_tournament_not_found": "Dieses Turnier ist noch nicht geholt."
   },
   "common": {
     "optional": "Optional",
@@ -1626,6 +1629,39 @@
       "fetching": "Wird von chess-results geholt …",
       "fetchSlow": "Noch nicht da – chess-results ist ausgelastet. Den Spieler in einer Minute noch einmal öffnen.",
       "fetchFailed": "Die Spielerseite konnte nicht angefordert werden. Später noch einmal versuchen."
+    },
+    "live": {
+      "title": "Live-Bretter",
+      "back": "Zurück zum Turnier",
+      "notLinked": "Mit diesem Turnier ist keine Lichess-Übertragung verknüpft.",
+      "linkLabel": "Link der Lichess-Übertragung",
+      "linkHint": "Link zum Turnier oder zu einer Runde auf lichess.org/broadcast",
+      "link": "Übertragung verknüpfen",
+      "loginToLink": "Anmelden, um eine Übertragung zu verknüpfen",
+      "linked": "Übertragung verknüpft.",
+      "linkFailed": "Die Übertragung konnte nicht verknüpft werden.",
+      "ongoing": "läuft",
+      "team": "Mannschaft",
+      "allMatches": "Alle Begegnungen",
+      "engineBar": "Engine-Balken",
+      "onlyPlayer": "Nur das Brett von {{name}}",
+      "showAll": "Alle Bretter zeigen",
+      "noBoards": "Kein Brett dieser Begegnung wird übertragen.",
+      "noGames": "Aus dieser Runde wird noch keine Partie übertragen.",
+      "notBroadcast": "Bretter ohne Übertragung: {{count}}",
+      "otherGames": "Weitere übertragene Partien",
+      "boardN": "Brett {{board}}",
+      "noEval": "Keine Bewertung",
+      "evalLabel": "Bewertung {{value}}",
+      "roundLive": "Live-Bretter dieser Runde",
+      "noBroadcastShort": "Keine Live-Übertragung verknüpft",
+      "state": {
+        "connecting": "Verbinde …",
+        "live": "Live",
+        "reconnecting": "Verbinde neu …",
+        "finished": "Runde beendet",
+        "offline": "Verbindung unterbrochen — neuer Versuch"
+      }
     }
   },
   "puzzles": {

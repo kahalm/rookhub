@@ -150,7 +150,10 @@
     "summary_analysis_unavailable": "This game has no analysis yet and none could be started.",
     "summary_unsupported_start": "Summaries are only available for games from the starting position.",
     "background_list_full": "The background list is full: at most 64 background engines. Remove one from the list first.",
-    "engine_not_found": "This engine does not belong to that account or is no longer registered."
+    "engine_not_found": "This engine does not belong to that account or is no longer registered.",
+    "live_invalid_url": "This is not a Lichess broadcast link.",
+    "live_broadcast_not_found": "Lichess does not know this broadcast.",
+    "live_tournament_not_found": "This tournament has not been fetched yet."
   },
   "common": {
     "optional": "Optional",
@@ -1626,6 +1629,39 @@
       "fetching": "Fetching from chess-results …",
       "fetchSlow": "Not there yet — chess-results is busy. Open the player again in a minute.",
       "fetchFailed": "Could not request the player page. Try again later."
+    },
+    "live": {
+      "title": "Live boards",
+      "back": "Back to the tournament",
+      "notLinked": "No Lichess broadcast is linked to this tournament.",
+      "linkLabel": "Lichess broadcast link",
+      "linkHint": "Link to the tournament or a round on lichess.org/broadcast",
+      "link": "Link broadcast",
+      "loginToLink": "Sign in to link a broadcast",
+      "linked": "Broadcast linked.",
+      "linkFailed": "Could not link the broadcast.",
+      "ongoing": "in progress",
+      "team": "Team",
+      "allMatches": "All matches",
+      "engineBar": "Engine bar",
+      "onlyPlayer": "Only the board of {{name}}",
+      "showAll": "Show all boards",
+      "noBoards": "No board of this match is broadcast.",
+      "noGames": "No games of this round are broadcast yet.",
+      "notBroadcast": "Boards without broadcast: {{count}}",
+      "otherGames": "Other broadcast games",
+      "boardN": "Board {{board}}",
+      "noEval": "No evaluation",
+      "evalLabel": "Evaluation {{value}}",
+      "roundLive": "Live boards of this round",
+      "noBroadcastShort": "No live broadcast linked",
+      "state": {
+        "connecting": "Connecting…",
+        "live": "Live",
+        "reconnecting": "Reconnecting…",
+        "finished": "Round finished",
+        "offline": "Connection lost — retrying"
+      }
     }
   },
   "puzzles": {

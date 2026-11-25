@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "لا يوجد تحليل لهذه المباراة بعد، وتعذّر بدء تحليل.",
     "summary_unsupported_start": "الملخصات متاحة فقط للمباريات التي تبدأ من وضعية البداية.",
     "background_list_full": "قائمة الخلفية ممتلئة: 64 محرك خلفية كحد أقصى. أزل واحدًا أولًا.",
-    "engine_not_found": "هذا المحرك لا يخص ذلك الحساب أو لم يعد مسجلًا."
+    "engine_not_found": "هذا المحرك لا يخص ذلك الحساب أو لم يعد مسجلًا.",
+    "live_invalid_url": "هذا ليس رابط بث من Lichess.",
+    "live_broadcast_not_found": "لا يعرف Lichess هذا البث.",
+    "live_tournament_not_found": "لم يتم جلب هذه البطولة بعد."
   },
   "common": {
     "optional": "اختياري",
@@ -1564,6 +1567,39 @@
       "copyLink": "نسخ الرابط",
       "linkCopied": "تم نسخ الرابط!",
       "copyFailed": "فشل النسخ"
+    },
+    "live": {
+      "title": "الرقع المباشرة",
+      "back": "العودة إلى البطولة",
+      "notLinked": "لا يوجد بث من Lichess مرتبط بهذه البطولة.",
+      "linkLabel": "رابط بث Lichess",
+      "linkHint": "رابط إلى البطولة أو جولة على lichess.org/broadcast",
+      "link": "ربط البث",
+      "loginToLink": "سجّل الدخول لربط بث",
+      "linked": "تم ربط البث.",
+      "linkFailed": "تعذّر ربط البث.",
+      "ongoing": "جارية",
+      "team": "الفريق",
+      "allMatches": "كل المباريات",
+      "engineBar": "شريط التقييم",
+      "onlyPlayer": "رقعة {{name}} فقط",
+      "showAll": "عرض كل الرقع",
+      "noBoards": "لا تُبث أي رقعة من هذه المباراة.",
+      "noGames": "لا تُبث أي مباراة من هذه الجولة بعد.",
+      "notBroadcast": "رقع بلا بث: {{count}}",
+      "otherGames": "مباريات أخرى مبثوثة",
+      "boardN": "الرقعة {{board}}",
+      "noEval": "لا يوجد تقييم",
+      "evalLabel": "التقييم {{value}}",
+      "roundLive": "الرقع المباشرة لهذه الجولة",
+      "noBroadcastShort": "لا يوجد بث مباشر مرتبط",
+      "state": {
+        "connecting": "جارٍ الاتصال…",
+        "live": "مباشر",
+        "reconnecting": "جارٍ إعادة الاتصال…",
+        "finished": "انتهت الجولة",
+        "offline": "انقطع الاتصال — إعادة المحاولة"
+      }
     }
   },
   "puzzles": {

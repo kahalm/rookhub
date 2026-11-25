@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "この対局にはまだ解析がなく、開始することもできませんでした。",
     "summary_unsupported_start": "要約は初期局面からの対局でのみ利用できます。",
     "background_list_full": "バックグラウンドリストがいっぱいです（最大 64 エンジン）。先に1つ外してください。",
-    "engine_not_found": "このエンジンはそのアカウントのものではないか、登録が解除されています。"
+    "engine_not_found": "このエンジンはそのアカウントのものではないか、登録が解除されています。",
+    "live_invalid_url": "Lichess 中継のリンクではありません。",
+    "live_broadcast_not_found": "Lichess はこの中継を知りません。",
+    "live_tournament_not_found": "この大会はまだ取得されていません。"
   },
   "common": {
     "optional": "任意",
@@ -1564,6 +1567,39 @@
       "copyLink": "リンクをコピー",
       "linkCopied": "リンクをコピーしました！",
       "copyFailed": "コピーに失敗しました"
+    },
+    "live": {
+      "title": "ライブ盤面",
+      "back": "大会に戻る",
+      "notLinked": "この大会には Lichess の中継が紐付けられていません。",
+      "linkLabel": "Lichess 中継のリンク",
+      "linkHint": "lichess.org/broadcast の大会またはラウンドへのリンク",
+      "link": "中継を紐付け",
+      "loginToLink": "中継を紐付けるにはログインしてください",
+      "linked": "中継を紐付けました。",
+      "linkFailed": "中継を紐付けられませんでした。",
+      "ongoing": "進行中",
+      "team": "チーム",
+      "allMatches": "すべての対戦",
+      "engineBar": "評価バー",
+      "onlyPlayer": "{{name}} の盤面のみ",
+      "showAll": "すべての盤面を表示",
+      "noBoards": "この対戦の盤面は中継されていません。",
+      "noGames": "このラウンドの対局はまだ中継されていません。",
+      "notBroadcast": "中継のない盤面: {{count}}",
+      "otherGames": "その他の中継対局",
+      "boardN": "第{{board}}盤",
+      "noEval": "評価なし",
+      "evalLabel": "評価 {{value}}",
+      "roundLive": "このラウンドのライブ盤面",
+      "noBroadcastShort": "ライブ中継は未設定",
+      "state": {
+        "connecting": "接続中…",
+        "live": "ライブ",
+        "reconnecting": "再接続中…",
+        "finished": "ラウンド終了",
+        "offline": "接続が切れました — 再試行中"
+      }
     }
   },
   "puzzles": {

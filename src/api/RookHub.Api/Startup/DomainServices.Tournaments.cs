@@ -1,5 +1,6 @@
 using RookHub.Api.Services.TournamentDirectory;
 using RookHub.Api.Services.Tournaments;
+using RookHub.Api.Services.Tournaments.Live;
 
 namespace RookHub.Api.Startup;
 
@@ -13,6 +14,19 @@ public static partial class DomainServicesSetup
         services.AddScoped<TournamentHistoryService>();
         services.AddScoped<PlayerSearchService>();
         services.AddScoped<AutoSubscriptionService>();
+        // Live-Bretter (1.014.0): EIN Lichess-Strom je Runde mit Zuschauern (Hub), Cloud-Eval, Suche der Übertragung —
+        // Singletons mit Zustand im Speicher; je Anfrage nur die Verknüpfung (DB) und die Crawler-Daten.
+        services.AddSingleton<ILichessLiveSource>(sp => new HttpLichessLiveSource(
+            sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<IConfiguration>()));
+        services.AddSingleton<LichessCloudEval>();
+        services.AddSingleton<BroadcastFinder>();
+        services.AddSingleton(sp => new BroadcastLiveHub(sp.GetRequiredService<ILichessLiveSource>(),
+            sp.GetRequiredService<LichessCloudEval>(), sp.GetRequiredService<ILogger<BroadcastLiveHub>>()));
+        services.AddSingleton(_ => new SseConnectionLimiter(
+            Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxStreamsPerIp") ?? 6, 1, 100),
+            Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxStreams") ?? 2000, 1, 100000)));
+        services.AddScoped<ILiveTournamentData, CrawlerLiveTournamentData>();
+        services.AddScoped<TournamentLiveService>();
     }
 
     /// <summary>Turnierverzeichnis: Sweeps je Quelle, Umkreis-Auflösung, Abfrage.</summary>

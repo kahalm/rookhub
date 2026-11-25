@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "Esta partida ainda não tem análise e não foi possível iniciar nenhuma.",
     "summary_unsupported_start": "Os resumos só estão disponíveis para partidas a partir da posição inicial.",
     "background_list_full": "A lista de segundo plano está cheia: no máximo 64 motores. Remove primeiro um.",
-    "engine_not_found": "Este motor não pertence a essa conta ou já não está registado."
+    "engine_not_found": "Este motor não pertence a essa conta ou já não está registado.",
+    "live_invalid_url": "Isto não é um link de transmissão do Lichess.",
+    "live_broadcast_not_found": "O Lichess não conhece esta transmissão.",
+    "live_tournament_not_found": "Este torneio ainda não foi obtido."
   },
   "common": {
     "optional": "Opcional",
@@ -1564,6 +1567,39 @@
       "copyLink": "Copiar link",
       "linkCopied": "Link copiado!",
       "copyFailed": "Falha ao copiar"
+    },
+    "live": {
+      "title": "Tabuleiros ao vivo",
+      "back": "Voltar ao torneio",
+      "notLinked": "Nenhuma transmissão do Lichess está ligada a este torneio.",
+      "linkLabel": "Link da transmissão do Lichess",
+      "linkHint": "Link para o torneio ou uma ronda em lichess.org/broadcast",
+      "link": "Ligar transmissão",
+      "loginToLink": "Inicie sessão para ligar uma transmissão",
+      "linked": "Transmissão ligada.",
+      "linkFailed": "Não foi possível ligar a transmissão.",
+      "ongoing": "a decorrer",
+      "team": "Equipa",
+      "allMatches": "Todos os encontros",
+      "engineBar": "Barra de avaliação",
+      "onlyPlayer": "Apenas o tabuleiro de {{name}}",
+      "showAll": "Mostrar todos os tabuleiros",
+      "noBoards": "Nenhum tabuleiro deste encontro é transmitido.",
+      "noGames": "Ainda nenhuma partida desta ronda é transmitida.",
+      "notBroadcast": "Tabuleiros sem transmissão: {{count}}",
+      "otherGames": "Outras partidas transmitidas",
+      "boardN": "Tabuleiro {{board}}",
+      "noEval": "Sem avaliação",
+      "evalLabel": "Avaliação {{value}}",
+      "roundLive": "Tabuleiros ao vivo desta ronda",
+      "noBroadcastShort": "Nenhuma transmissão ao vivo ligada",
+      "state": {
+        "connecting": "A ligar…",
+        "live": "Ao vivo",
+        "reconnecting": "A religar…",
+        "finished": "Ronda terminada",
+        "offline": "Ligação perdida — nova tentativa"
+      }
     }
   },
   "puzzles": {

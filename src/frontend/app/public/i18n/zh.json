@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "这盘对局还没有分析，也无法启动分析。",
     "summary_unsupported_start": "总结只适用于从初始局面开始的对局。",
     "background_list_full": "后台列表已满：最多 64 个后台引擎。请先移除一个。",
-    "engine_not_found": "此引擎不属于该账户，或已不再注册。"
+    "engine_not_found": "此引擎不属于该账户，或已不再注册。",
+    "live_invalid_url": "这不是 Lichess 直播链接。",
+    "live_broadcast_not_found": "Lichess 没有这个直播。",
+    "live_tournament_not_found": "此比赛尚未获取。"
   },
   "common": {
     "optional": "可选",
@@ -1564,6 +1567,39 @@
       "copyLink": "复制链接",
       "linkCopied": "链接已复制！",
       "copyFailed": "复制失败"
+    },
+    "live": {
+      "title": "实时棋盘",
+      "back": "返回比赛",
+      "notLinked": "此比赛尚未关联 Lichess 直播。",
+      "linkLabel": "Lichess 直播链接",
+      "linkHint": "lichess.org/broadcast 上比赛或轮次的链接",
+      "link": "关联直播",
+      "loginToLink": "登录后可关联直播",
+      "linked": "已关联直播。",
+      "linkFailed": "无法关联直播。",
+      "ongoing": "进行中",
+      "team": "队伍",
+      "allMatches": "所有对抗",
+      "engineBar": "评估条",
+      "onlyPlayer": "仅 {{name}} 的棋盘",
+      "showAll": "显示所有棋盘",
+      "noBoards": "此对抗没有棋盘在直播。",
+      "noGames": "本轮尚无对局直播。",
+      "notBroadcast": "无直播的棋盘：{{count}}",
+      "otherGames": "其他直播对局",
+      "boardN": "第 {{board}} 台",
+      "noEval": "无评估",
+      "evalLabel": "评估 {{value}}",
+      "roundLive": "本轮实时棋盘",
+      "noBroadcastShort": "未关联实时直播",
+      "state": {
+        "connecting": "正在连接…",
+        "live": "直播中",
+        "reconnecting": "正在重新连接…",
+        "finished": "本轮已结束",
+        "offline": "连接中断 — 正在重试"
+      }
     }
   },
   "puzzles": {

@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "Questa partita non ha ancora un'analisi e non è stato possibile avviarne una.",
     "summary_unsupported_start": "I riassunti sono disponibili solo per partite dalla posizione iniziale.",
     "background_list_full": "La lista in background è piena: al massimo 64 motori. Rimuovine prima uno.",
-    "engine_not_found": "Questo motore non appartiene a quell’account o non è più registrato."
+    "engine_not_found": "Questo motore non appartiene a quell’account o non è più registrato.",
+    "live_invalid_url": "Questo non è un link di trasmissione Lichess.",
+    "live_broadcast_not_found": "Lichess non conosce questa trasmissione.",
+    "live_tournament_not_found": "Questo torneo non è ancora stato scaricato."
   },
   "common": {
     "optional": "Facoltativo",
@@ -1564,6 +1567,39 @@
       "copyLink": "Copia link",
       "linkCopied": "Link copiato!",
       "copyFailed": "Copia non riuscita"
+    },
+    "live": {
+      "title": "Scacchiere in diretta",
+      "back": "Torna al torneo",
+      "notLinked": "A questo torneo non è collegata alcuna trasmissione Lichess.",
+      "linkLabel": "Link della trasmissione Lichess",
+      "linkHint": "Link al torneo o a un turno su lichess.org/broadcast",
+      "link": "Collega trasmissione",
+      "loginToLink": "Accedi per collegare una trasmissione",
+      "linked": "Trasmissione collegata.",
+      "linkFailed": "Impossibile collegare la trasmissione.",
+      "ongoing": "in corso",
+      "team": "Squadra",
+      "allMatches": "Tutti gli incontri",
+      "engineBar": "Barra di valutazione",
+      "onlyPlayer": "Solo la scacchiera di {{name}}",
+      "showAll": "Mostra tutte le scacchiere",
+      "noBoards": "Nessuna scacchiera di questo incontro è trasmessa.",
+      "noGames": "Nessuna partita di questo turno è ancora trasmessa.",
+      "notBroadcast": "Scacchiere senza trasmissione: {{count}}",
+      "otherGames": "Altre partite trasmesse",
+      "boardN": "Scacchiera {{board}}",
+      "noEval": "Nessuna valutazione",
+      "evalLabel": "Valutazione {{value}}",
+      "roundLive": "Scacchiere in diretta di questo turno",
+      "noBroadcastShort": "Nessuna trasmissione in diretta collegata",
+      "state": {
+        "connecting": "Connessione…",
+        "live": "In diretta",
+        "reconnecting": "Riconnessione…",
+        "finished": "Turno concluso",
+        "offline": "Connessione persa — nuovo tentativo"
+      }
     }
   },
   "puzzles": {

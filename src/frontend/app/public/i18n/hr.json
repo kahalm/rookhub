@@ -150,7 +150,10 @@
     "summary_analysis_unavailable": "Ova partija nema analizu i nije ju bilo moguće pokrenuti.",
     "summary_unsupported_start": "Sažeci su dostupni samo za partije iz početne pozicije.",
     "background_list_full": "Pozadinski popis je pun: najviše 64 pozadinska enginea. Najprije ukloni jedan.",
-    "engine_not_found": "Ovaj engine ne pripada tom računu ili više nije registriran."
+    "engine_not_found": "Ovaj engine ne pripada tom računu ili više nije registriran.",
+    "live_invalid_url": "Ovo nije poveznica Lichess prijenosa.",
+    "live_broadcast_not_found": "Lichess ne poznaje ovaj prijenos.",
+    "live_tournament_not_found": "Ovaj turnir još nije preuzet."
   },
   "common": {
     "optional": "Neobavezno",
@@ -1626,6 +1629,39 @@
       "fetching": "Dohvaća se s chess-results …",
       "fetchSlow": "Još nije stiglo – chess-results je opterećen. Otvori igrača ponovno za minutu.",
       "fetchFailed": "Stranicu igrača nije moguće zatražiti. Pokušaj ponovno kasnije."
+    },
+    "live": {
+      "title": "Ploče uživo",
+      "back": "Natrag na turnir",
+      "notLinked": "Uz ovaj turnir nije povezan nijedan Lichess prijenos.",
+      "linkLabel": "Poveznica Lichess prijenosa",
+      "linkHint": "Poveznica na turnir ili kolo na lichess.org/broadcast",
+      "link": "Poveži prijenos",
+      "loginToLink": "Prijavite se za povezivanje prijenosa",
+      "linked": "Prijenos povezan.",
+      "linkFailed": "Prijenos nije moguće povezati.",
+      "ongoing": "u tijeku",
+      "team": "Ekipa",
+      "allMatches": "Svi mečevi",
+      "engineBar": "Traka procjene",
+      "onlyPlayer": "Samo ploča igrača {{name}}",
+      "showAll": "Prikaži sve ploče",
+      "noBoards": "Nijedna ploča ovog meča se ne prenosi.",
+      "noGames": "Iz ovog kola još se ne prenosi nijedna partija.",
+      "notBroadcast": "Ploče bez prijenosa: {{count}}",
+      "otherGames": "Ostale prenošene partije",
+      "boardN": "Ploča {{board}}",
+      "noEval": "Nema procjene",
+      "evalLabel": "Procjena {{value}}",
+      "roundLive": "Ploče uživo ovog kola",
+      "noBroadcastShort": "Nije povezan prijenos uživo",
+      "state": {
+        "connecting": "Povezivanje…",
+        "live": "Uživo",
+        "reconnecting": "Ponovno povezivanje…",
+        "finished": "Kolo završeno",
+        "offline": "Veza prekinuta — novi pokušaj"
+      }
     }
   },
   "puzzles": {

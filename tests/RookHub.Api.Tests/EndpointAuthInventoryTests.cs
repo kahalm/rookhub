@@ -72,6 +72,9 @@ public class EndpointAuthInventoryTests
         // KidHub, die Kinderseite (0.554.0): ganz ohne Konto — Stufen aus markierten Lichess-Puzzles und
         // die Aufgaben der Kurse, die ein Admin mit Book.ForKids freigegeben hat (nie Kalkulationsbuecher).
         // Lesend am "kids-read"-Rate-Limiter (Endlos-Modus: "anonymous-read"). Der Neuaufbau (POST /api/admin/kids/rebuild) bleibt Admin.
+        // Live-Bretter der Turnierseite (1.014.0): Stand + SSE-Strom einer Runde, nur verknüpfte Übertragungen, Verbindungen je IP gedeckelt.
+        "GET /api/live-boards/{id}",                                 // LiveBoardsController.Status
+        "GET /api/live-boards/{id}/rounds/{round:int}/stream",       // LiveBoardsController.Stream
         "GET /api/kids/courses",                                     // KidsController.GetCourses
         "GET /api/kids/courses/{bookId:int}/puzzles",                // KidsController.GetCoursePuzzles
         "GET /api/kids/language-hint",                               // KidsController.GetLanguageHint (Land der IP, lokal nachgeschlagen)

@@ -1354,6 +1354,19 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   der Name dem Dialog, die übrige Karte schaltet weiter den Stern. Im Dialog je Runde eine Zeile Runde | Farbkästchen,
   Brett, Gegner (klickbar, wechselt auf ihn), Wertung | Ergebnis rechts; die erste offene Runde ist getönt und trägt
   den Chip „Nächste Runde“, weitere offene „geplant“.
+- **Live-Bretter** (1.014.0, `/tournaments/:id/live`, `features/tournaments/live/`): Seite in `--page-max-width`
+  (ab 2400 px die breite Stufe), Kopf mit Zurück-Pfeil, Titel und Quelle („Name · lichess.org“ mit `open_in_new`), darunter
+  EINE umbrechende Werkzeugzeile: Runde (`mat-select`, laufende mit „· läuft“), Mannschaft (nur Mannschaftsturnier),
+  Schalter „Engine-Balken“, Zustand als Symbol + Text (live in `--rh-success`, sonst on-surface-variant — nie nur Farbe).
+  Bretter im Raster `auto-fill, minmax(260px, 1fr)`, unter 600 px eine Spalte; je Brett eine umrandete Karte (Radius 8)
+  mit „Brett n“ und Ergebnis-Chip oben, Spielerzeile oben (Gegenseite) und unten (eigene Seite): Titel in `--rh-accent`,
+  Name mit „…“, Elo leise, Uhr `tabular-nums` — die Seite am Zug fett mit Akzentrahmen (E-Ink: Rahmen schwarz). Das Brett ist
+  `app-chess-board` (5.12) ohne eigene Bedienung; Engine-Balken 10 px links am Brett, Weißanteil weiß auf dunkel, ohne
+  Bewertung gestrichelter leerer Rahmen, Wert als leise Zeile darunter. Mannschaft: je Begegnung eine `h2`-Zeile
+  „Heim  2,5 : 3,5  Gast“ (Stand fett, `localScore`), Bretter aus Sicht der gewählten Mannschaft (sonst der Heimmannschaft)
+  unten. Ohne Übertragung kein Leerraster, sondern ein leiser Hinweis (5.11, Symbol `live_tv`) mit Feld + Knopf
+  „Übertragung verknüpfen“ (Gast: „Anmelden, um …“). Die laufende Uhr tickt nicht im E-Ink-Modus (3.6). Auf der Detailseite
+  ist „Live-Bretter“ ein Rahmenknopf mit `live_tv` (`.keep-label`), nur wenn verknüpft; sonst ⋮-Eintrag.
 - Profil: erste Karte „Darstellung“ = RookHubs `app-theme-card` (`@rh/features/profile/theme-card.component`), auch
   beim Ladefehler. Spieltermine einer Liga mit „·“-Trenner in der Lücke (`overflow-x: clip`, wie ClubHub `.kid-meta`).
 
@@ -1601,6 +1614,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-25 | 1.014.0 · Turnierseite | Live-Bretter `/tournaments/:id/live` (8.2): Bretterraster je Begegnung bzw. Runde, Karte je Brett (Spieler oben/unten, Uhr am Zug fett mit Akzentrahmen, Ergebnis-Chip), Engine-Balken links am Brett schaltbar, Mannschaftsstand als Kopfzeile, Hinweis + Verknüpfen statt Leerzustand; Knopf „Live-Bretter“ auf der Detailseite nur mit Übertragung | Wer einer Mannschaft folgt, will alle ihre Bretter auf einen Blick, auf Handy (eine Spalte) wie am PC (Raster) und am Boox (keine tickende Uhr) | Nutzerwunsch 25.11. |
 | 2026-11-25 | 1.013.1 · Tagespuzzle | „Nächstes Puzzle“ nach Lösen und Fehlversuch führt zu den Zufallspuzzles (`/puzzles`); kein Auto-Weiter-Countdown, auch nicht im Brett-Vollbild (5.12) | Der Knopf tat beim Tagespuzzle nichts, ein Countdown lief ins Leere; wegspringen soll man erst auf Wunsch, damit man die Lösung des Tages ansehen kann | Nutzerwunsch 25.11. |
 | 2026-11-24 | 1.011.0 · E-Book-Brett Lösen | Lösen wie der Puzzle-Löser: Statuszeile behält Zustand + Auge + Glühbirne (Lösung), die Aktionen stehen als Textknöpfe in einer eigenen, umbrechenden Zeile darunter (Tipp mit `tips_and_updates` + „n/3“, Zurücksetzen, Mausrutscher; am Ende „Wiederholen“ und gefüllter Knopf „Nächstes Diagramm (n)“ rechts); Tipps als nummerierte Liste darunter; kein ✕/Rot nach einem Fehlzug, rot nur das Ergebnis „Falsch“; Vollbild auch im Training mit der Icon-Leiste des Puzzle-Lösers ohne Aufgeben | Puzzle-Modi konsistent halten; die Glühbirne bleibt der Lösung, darum ein anderes Tipp-Symbol; fünf Knöpfe passen in der 300-px-Leiste nicht in die Statuszeile | Nutzerentscheidung 24.11. |
 | 2026-11-23 | 1.009.0 · Partien | Spielertitel vor dem Namen (5.13): `.ptitle` 0,85 em, fett, `--rh-accent`, mit U+00A0 an den Namen gebunden, auf Partieseite, Teilen-Link und Partienliste; Link-Vorschau als Text | Titel wie auf Schachseiten üblich vorn und abgehoben, aber ohne Abzeichen, damit die Kopfzeile ruhig bleibt; nicht geregelt, Vorschlag nach Wunsch des Nutzers | Nutzerwunsch 23.11. (Partie 186 „IM Grötz, Harald“) |

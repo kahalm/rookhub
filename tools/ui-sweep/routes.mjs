@@ -265,6 +265,8 @@ export const ROUTES = [
   r('turnier', '/tournaments/calendar/{directoryId}', 'any', { main: ['mat-card.detail-card', 'mat-card.load-failed'],
     expectedFailures: [/^GET \/api\/tournaments\/\d+ → 404$/] }),
   r('turnier', '/tournaments/{tournamentId}', 'any', { main: ['app-tournament-tables tr.mat-mdc-row', 'app-tournament-tables .player-card', 'app-tournament-tables p.empty-state', 'mat-card.load-failed'] }),
+  // Live-Bretter (1.014.0): ohne verknüpfte Übertragung der Hinweis, sonst die Bretter (SSE-Strom bleibt offen).
+  r('turnier', '/tournaments/{tournamentId}/live', 'any', { main: ['app-live-board-card', 'section.live-hint', 'app-load-error', 'p.muted'] }),
   r('turnier', '/t/{tournamentId}', 'any', { main: ['app-tournament-tables tr.mat-mdc-row', 'app-tournament-tables .player-card', 'app-tournament-tables p.empty-state', '.detail-container mat-card'] }),
   r('turnier', '/tournaments', 'user', { main: ['.rows mat-card.row', 'mat-card.card.empty-state', 'mat-card.card.failed'] }),
   r('turnier', '/tournaments/history', 'user', { main: ['.rows button.row', 'mat-card.player-card', 'p.empty-state', 'p.hint.warn'] }),

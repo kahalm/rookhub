@@ -245,3 +245,14 @@ internal sealed class GeoPlaceConfiguration : IEntityTypeConfiguration<GeoPlace>
         e.HasIndex(g => g.NameTranscribed);
     }
 }
+
+internal sealed class TournamentBroadcastLinkConfiguration : IEntityTypeConfiguration<TournamentBroadcastLink>
+{
+    public void Configure(EntityTypeBuilder<TournamentBroadcastLink> e)
+    {
+        e.Property(l => l.CrawlerTournamentId).HasMaxLength(50).IsRequired();
+        e.Property(l => l.TourId).HasMaxLength(12).IsRequired();
+        e.Property(l => l.TourName).HasMaxLength(200).IsRequired();
+        e.HasIndex(l => l.CrawlerTournamentId).IsUnique();
+    }
+}

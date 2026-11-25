@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "Tato partie zatím nemá analýzu a žádnou se nepodařilo spustit.",
     "summary_unsupported_start": "Shrnutí jsou k dispozici jen pro partie z výchozí pozice.",
     "background_list_full": "Seznam na pozadí je plný: nejvýše 64 motorů na pozadí. Nejdřív jeden odeber.",
-    "engine_not_found": "Tento motor nepatří k tomuto účtu nebo už není registrován."
+    "engine_not_found": "Tento motor nepatří k tomuto účtu nebo už není registrován.",
+    "live_invalid_url": "Toto není odkaz na přenos Lichess.",
+    "live_broadcast_not_found": "Lichess tento přenos nezná.",
+    "live_tournament_not_found": "Tento turnaj zatím nebyl stažen."
   },
   "common": {
     "optional": "Volitelné",
@@ -1564,6 +1567,39 @@
       "copyLink": "Kopírovat odkaz",
       "linkCopied": "Odkaz zkopírován!",
       "copyFailed": "Kopírování selhalo"
+    },
+    "live": {
+      "title": "Šachovnice živě",
+      "back": "Zpět na turnaj",
+      "notLinked": "K tomuto turnaji není připojen žádný přenos Lichess.",
+      "linkLabel": "Odkaz na přenos Lichess",
+      "linkHint": "Odkaz na turnaj nebo kolo na lichess.org/broadcast",
+      "link": "Připojit přenos",
+      "loginToLink": "Přihlaste se pro připojení přenosu",
+      "linked": "Přenos připojen.",
+      "linkFailed": "Přenos se nepodařilo připojit.",
+      "ongoing": "probíhá",
+      "team": "Družstvo",
+      "allMatches": "Všechny zápasy",
+      "engineBar": "Lišta hodnocení",
+      "onlyPlayer": "Jen šachovnice hráče {{name}}",
+      "showAll": "Zobrazit všechny šachovnice",
+      "noBoards": "Žádná šachovnice tohoto zápasu se nepřenáší.",
+      "noGames": "Z tohoto kola se zatím nepřenáší žádná partie.",
+      "notBroadcast": "Šachovnice bez přenosu: {{count}}",
+      "otherGames": "Další přenášené partie",
+      "boardN": "Šachovnice {{board}}",
+      "noEval": "Bez hodnocení",
+      "evalLabel": "Hodnocení {{value}}",
+      "roundLive": "Šachovnice tohoto kola živě",
+      "noBroadcastShort": "Žádný živý přenos není připojen",
+      "state": {
+        "connecting": "Připojování…",
+        "live": "Živě",
+        "reconnecting": "Znovu se připojuji…",
+        "finished": "Kolo skončilo",
+        "offline": "Spojení přerušeno — nový pokus"
+      }
     }
   },
   "puzzles": {

@@ -46,6 +46,14 @@ public static class HttpClientsSetup
             client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub-LeagueHub/1.0 (+https://rookhub.oberschmid.homes)");
         }).AddHttpMessageHandler(sp => new RookHub.Api.Services.League.LeagueRateGateHandler(
             sp.GetRequiredService<RookHub.Api.Services.League.LeagueRateGate>(), lichessHost));
+        // Live-Bretter der Turnierseite (1.014.0): Lichess-Übertragungen + Strom einer Runde. Kein Gesamt-Timeout (der Strom
+        // bleibt stundenlang offen); die Einzelabrufe setzen ihren eigenen (HttpLichessLiveSource). User-Agent wie der übrige
+        // Lichess-Code, ohne persönliche Daten.
+        services.AddHttpClient(RookHub.Api.Services.Tournaments.Live.HttpLichessLiveSource.ClientName, client =>
+        {
+            client.Timeout = Timeout.InfiniteTimeSpan;
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub/1.0 (+https://rookhub.oberschmid.homes)");
+        });
         // Zweite Liga-Quelle: SBV-Ligamanager (Bayern, 2026-10-07) — direkt, höflich, ohne Crawler/VPN.
         services.AddHttpClient(RookHub.Api.Services.League.LigamanagerSource.ClientName, client =>
         {

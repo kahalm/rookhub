@@ -38,7 +38,10 @@
     "summary_analysis_unavailable": "Ehhez a játszmához nincs elemzés, és nem sikerült elindítani.",
     "summary_unsupported_start": "Összefoglaló csak az alapállásból induló játszmákhoz érhető el.",
     "background_list_full": "A háttérlista megtelt: legfeljebb 64 háttérmotor lehet. Előbb távolíts el egyet.",
-    "engine_not_found": "Ez a motor nem ehhez a fiókhoz tartozik, vagy már nincs regisztrálva."
+    "engine_not_found": "Ez a motor nem ehhez a fiókhoz tartozik, vagy már nincs regisztrálva.",
+    "live_invalid_url": "Ez nem Lichess-közvetítés linkje.",
+    "live_broadcast_not_found": "Ezt a közvetítést a Lichess nem ismeri.",
+    "live_tournament_not_found": "Ez a verseny még nincs letöltve."
   },
   "common": {
     "optional": "Nem kötelező",
@@ -1329,6 +1332,39 @@
       "fetching": "Lekérés a chess-results oldalról …",
       "fetchSlow": "Még nincs meg – a chess-results túlterhelt. Egy perc múlva nyisd meg újra a játékost.",
       "fetchFailed": "A játékos oldalát nem sikerült lekérni. Próbáld újra később."
+    },
+    "live": {
+      "title": "Élő táblák",
+      "back": "Vissza a versenyhez",
+      "notLinked": "Ehhez a versenyhez nincs Lichess-közvetítés kapcsolva.",
+      "linkLabel": "Lichess-közvetítés linkje",
+      "linkHint": "Link a versenyhez vagy egy fordulóhoz a lichess.org/broadcast oldalon",
+      "link": "Közvetítés kapcsolása",
+      "loginToLink": "Jelentkezz be a közvetítés kapcsolásához",
+      "linked": "Közvetítés kapcsolva.",
+      "linkFailed": "A közvetítést nem sikerült kapcsolni.",
+      "ongoing": "folyamatban",
+      "team": "Csapat",
+      "allMatches": "Minden mérkőzés",
+      "engineBar": "Értékelősáv",
+      "onlyPlayer": "Csak {{name}} táblája",
+      "showAll": "Összes tábla",
+      "noBoards": "Ennek a mérkőzésnek egyik tábláját sem közvetítik.",
+      "noGames": "Ebből a fordulóból még nem közvetítenek játszmát.",
+      "notBroadcast": "Közvetítés nélküli táblák: {{count}}",
+      "otherGames": "További közvetített játszmák",
+      "boardN": "{{board}}. tábla",
+      "noEval": "Nincs értékelés",
+      "evalLabel": "Értékelés: {{value}}",
+      "roundLive": "A forduló élő táblái",
+      "noBroadcastShort": "Nincs élő közvetítés kapcsolva",
+      "state": {
+        "connecting": "Kapcsolódás…",
+        "live": "Élő",
+        "reconnecting": "Újrakapcsolódás…",
+        "finished": "A forduló véget ért",
+        "offline": "A kapcsolat megszakadt — újrapróbálás"
+      }
     }
   },
   "puzzles": {

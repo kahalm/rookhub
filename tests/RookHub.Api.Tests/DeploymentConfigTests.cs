@@ -1082,6 +1082,28 @@ public class DeploymentConfigTests
     }
 
     [Fact]
+    public void LiveBoardsLocation_ServerSentEventsUnbuffered_LongTimeout_PassesAccelHeader()
+    {
+        // Live-Bretter (1.014.0): SSE-Strom je Runde. Gepuffert käme ein Zug erst an, wenn der Proxy-Puffer voll ist;
+        // die 60-s-Vorgabe von proxy_read_timeout risse die Verbindung zwischen zwei Lebenszeichen nicht, aber zwischen
+        // zwei Zügen ohne Lebenszeichen. X-Accel-Buffering muss zum Nginx Proxy Manager davor durch (sonst puffert der).
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var loc = Regex.Match(nginx, @"location \^~ /api/live-boards/ \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(loc.Success, "location ^~ /api/live-boards/ fehlt in nginx.conf");
+        var body = loc.Groups["body"].Value;
+        Assert.Contains("proxy_buffering off;", body);
+        Assert.Contains("proxy_cache off;", body);
+        Assert.Contains("proxy_read_timeout 3600s;", body);
+        Assert.Contains("proxy_pass_header X-Accel-Buffering;", body);
+        Assert.Contains("set $rookhub_live_api api:8080;", body);
+        Assert.DoesNotContain("add_header", body);
+        Assert.True(nginx.IndexOf("location ^~ /api/live-boards/", StringComparison.Ordinal)
+            < nginx.IndexOf("location ^~ /api/ {", StringComparison.Ordinal), "eigene Location vor der generischen /api/-Regel");
+        // Die API selbst darf den Strom nicht komprimieren (puffert) — text/event-stream steht nicht in den Vorgabe-Typen.
+        Assert.DoesNotContain("text/event-stream", Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults.MimeTypes);
+    }
+
+    [Fact]
     public void TrainingVideosLocation_StreamsUnbuffered_AndPassesRange()
     {
         // Trainingsvideos: das mp4 kommt in Bereichsanfragen; gepuffert schriebe nginx jedes Stück erst in seine Puffer

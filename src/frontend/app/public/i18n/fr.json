@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "Cette partie n'a pas encore d'analyse et aucune n'a pu être lancée.",
     "summary_unsupported_start": "Les résumés ne sont disponibles que pour les parties depuis la position initiale.",
     "background_list_full": "La liste d’arrière-plan est pleine : 64 moteurs d’arrière-plan au maximum. Retire d’abord un moteur.",
-    "engine_not_found": "Ce moteur n’appartient pas à ce compte ou n’est plus enregistré."
+    "engine_not_found": "Ce moteur n’appartient pas à ce compte ou n’est plus enregistré.",
+    "live_invalid_url": "Ce n’est pas un lien de retransmission Lichess.",
+    "live_broadcast_not_found": "Lichess ne connaît pas cette retransmission.",
+    "live_tournament_not_found": "Ce tournoi n’a pas encore été récupéré."
   },
   "common": {
     "optional": "Facultatif",
@@ -1564,6 +1567,39 @@
       "copyLink": "Copier le lien",
       "linkCopied": "Lien copié !",
       "copyFailed": "Échec de la copie"
+    },
+    "live": {
+      "title": "Échiquiers en direct",
+      "back": "Retour au tournoi",
+      "notLinked": "Aucune retransmission Lichess n’est liée à ce tournoi.",
+      "linkLabel": "Lien de la retransmission Lichess",
+      "linkHint": "Lien vers le tournoi ou une ronde sur lichess.org/broadcast",
+      "link": "Lier la retransmission",
+      "loginToLink": "Connectez-vous pour lier une retransmission",
+      "linked": "Retransmission liée.",
+      "linkFailed": "Impossible de lier la retransmission.",
+      "ongoing": "en cours",
+      "team": "Équipe",
+      "allMatches": "Tous les matchs",
+      "engineBar": "Barre d’évaluation",
+      "onlyPlayer": "Seulement l’échiquier de {{name}}",
+      "showAll": "Afficher tous les échiquiers",
+      "noBoards": "Aucun échiquier de ce match n’est retransmis.",
+      "noGames": "Aucune partie de cette ronde n’est encore retransmise.",
+      "notBroadcast": "Échiquiers sans retransmission : {{count}}",
+      "otherGames": "Autres parties retransmises",
+      "boardN": "Échiquier {{board}}",
+      "noEval": "Pas d’évaluation",
+      "evalLabel": "Évaluation {{value}}",
+      "roundLive": "Échiquiers en direct de cette ronde",
+      "noBroadcastShort": "Aucune retransmission en direct liée",
+      "state": {
+        "connecting": "Connexion…",
+        "live": "En direct",
+        "reconnecting": "Reconnexion…",
+        "finished": "Ronde terminée",
+        "offline": "Connexion perdue — nouvel essai"
+      }
     }
   },
   "puzzles": {

@@ -98,6 +98,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
 - Link-Vorschau (Open Graph) — Vorschaubilder je geteilter Route aller Oberflächen, OG-Weiche im nginx → `docs/api/link-vorschau.md`
 - Turnier-Proxy (leitet an Crawler weiter; lesen und Turnier holen ohne Anmeldung) → `docs/api/turnier-proxy.md`
 - Chessable-Integration (auth, leitet an piratechess-API weiter) → `docs/api/chessable-integration.md`
+- Live-Bretter der Turnierseite (lesen/zuschauen ohne Anmeldung, verknüpfen mit Konto, 1.014.0) — Lichess-Übertragung je Turnier, EIN Strom je Runde, Server-Sent Events → `docs/api/live-bretter.md`
 - Turnierverlauf (auth) → `docs/api/turnierverlauf.md`
 - Turnier-Abos + Favoriten + Monitor (auth) → `docs/api/turnier-abos-favoriten-monitor.md`
 - Turnierverzeichnis / Turnierkalender (lesen ohne Anmeldung, schreiben mit Konto) → `docs/api/turnierverzeichnis-turnierkalender.md`

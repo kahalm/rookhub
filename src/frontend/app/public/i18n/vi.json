@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "Ván cờ này chưa có phân tích và không thể bắt đầu phân tích.",
     "summary_unsupported_start": "Tóm tắt chỉ có cho các ván từ thế ban đầu.",
     "background_list_full": "Danh sách nền đã đầy: tối đa 64 engine nền. Hãy gỡ bớt một engine trước.",
-    "engine_not_found": "Engine này không thuộc tài khoản đó hoặc không còn được đăng ký."
+    "engine_not_found": "Engine này không thuộc tài khoản đó hoặc không còn được đăng ký.",
+    "live_invalid_url": "Đây không phải liên kết buổi phát Lichess.",
+    "live_broadcast_not_found": "Lichess không biết buổi phát này.",
+    "live_tournament_not_found": "Giải đấu này chưa được tải về."
   },
   "common": {
     "optional": "Tùy chọn",
@@ -1564,6 +1567,39 @@
       "copyLink": "Sao chép liên kết",
       "linkCopied": "Đã sao chép liên kết!",
       "copyFailed": "Sao chép thất bại"
+    },
+    "live": {
+      "title": "Bàn cờ trực tiếp",
+      "back": "Quay lại giải đấu",
+      "notLinked": "Giải đấu này chưa được liên kết với buổi phát Lichess nào.",
+      "linkLabel": "Liên kết buổi phát Lichess",
+      "linkHint": "Liên kết tới giải đấu hoặc một vòng trên lichess.org/broadcast",
+      "link": "Liên kết buổi phát",
+      "loginToLink": "Đăng nhập để liên kết buổi phát",
+      "linked": "Đã liên kết buổi phát.",
+      "linkFailed": "Không thể liên kết buổi phát.",
+      "ongoing": "đang diễn ra",
+      "team": "Đội",
+      "allMatches": "Tất cả trận đấu",
+      "engineBar": "Thanh đánh giá",
+      "onlyPlayer": "Chỉ bàn của {{name}}",
+      "showAll": "Hiện tất cả bàn",
+      "noBoards": "Không bàn nào của trận này được phát.",
+      "noGames": "Chưa có ván nào của vòng này được phát.",
+      "notBroadcast": "Bàn không được phát: {{count}}",
+      "otherGames": "Các ván được phát khác",
+      "boardN": "Bàn {{board}}",
+      "noEval": "Không có đánh giá",
+      "evalLabel": "Đánh giá {{value}}",
+      "roundLive": "Bàn cờ trực tiếp của vòng này",
+      "noBroadcastShort": "Chưa liên kết buổi phát trực tiếp",
+      "state": {
+        "connecting": "Đang kết nối…",
+        "live": "Trực tiếp",
+        "reconnecting": "Đang kết nối lại…",
+        "finished": "Vòng đã kết thúc",
+        "offline": "Mất kết nối — đang thử lại"
+      }
     }
   },
   "puzzles": {

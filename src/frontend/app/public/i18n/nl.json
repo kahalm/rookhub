@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "Deze partij heeft nog geen analyse en er kon er geen worden gestart.",
     "summary_unsupported_start": "Samenvattingen zijn alleen beschikbaar voor partijen vanaf de beginstelling.",
     "background_list_full": "De achtergrondlijst is vol: hoogstens 64 achtergrond-engines. Haal er eerst een uit.",
-    "engine_not_found": "Deze engine hoort niet bij dat account of is niet meer geregistreerd."
+    "engine_not_found": "Deze engine hoort niet bij dat account of is niet meer geregistreerd.",
+    "live_invalid_url": "Dit is geen link van een Lichess-uitzending.",
+    "live_broadcast_not_found": "Lichess kent deze uitzending niet.",
+    "live_tournament_not_found": "Dit toernooi is nog niet opgehaald."
   },
   "common": {
     "optional": "Optioneel",
@@ -1564,6 +1567,39 @@
       "copyLink": "Link kopiëren",
       "linkCopied": "Link gekopieerd!",
       "copyFailed": "Kopiëren mislukt"
+    },
+    "live": {
+      "title": "Live borden",
+      "back": "Terug naar het toernooi",
+      "notLinked": "Er is geen Lichess-uitzending aan dit toernooi gekoppeld.",
+      "linkLabel": "Link van de Lichess-uitzending",
+      "linkHint": "Link naar het toernooi of een ronde op lichess.org/broadcast",
+      "link": "Uitzending koppelen",
+      "loginToLink": "Log in om een uitzending te koppelen",
+      "linked": "Uitzending gekoppeld.",
+      "linkFailed": "De uitzending kon niet worden gekoppeld.",
+      "ongoing": "bezig",
+      "team": "Team",
+      "allMatches": "Alle wedstrijden",
+      "engineBar": "Evaluatiebalk",
+      "onlyPlayer": "Alleen het bord van {{name}}",
+      "showAll": "Alle borden tonen",
+      "noBoards": "Geen bord van deze wedstrijd wordt uitgezonden.",
+      "noGames": "Uit deze ronde wordt nog geen partij uitgezonden.",
+      "notBroadcast": "Borden zonder uitzending: {{count}}",
+      "otherGames": "Andere uitgezonden partijen",
+      "boardN": "Bord {{board}}",
+      "noEval": "Geen evaluatie",
+      "evalLabel": "Evaluatie {{value}}",
+      "roundLive": "Live borden van deze ronde",
+      "noBroadcastShort": "Geen live-uitzending gekoppeld",
+      "state": {
+        "connecting": "Verbinden…",
+        "live": "Live",
+        "reconnecting": "Opnieuw verbinden…",
+        "finished": "Ronde afgelopen",
+        "offline": "Verbinding verbroken — nieuwe poging"
+      }
     }
   },
   "puzzles": {

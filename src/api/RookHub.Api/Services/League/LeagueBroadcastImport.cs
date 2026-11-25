@@ -16,6 +16,8 @@ namespace RookHub.Api.Services.League;
 /// mit Ligaspielern in neun Übertragungen fehlten 43 im Bestand (vor allem Bundesliga); der Rest steht schon über
 /// chess-results da — der Gewinn ist vor allem, dass die Partien schon WÄHREND des Turniers da sind.
 /// <list type="bullet">
+/// <item>Lesen der Lichess-Antworten: gemeinsamer Baustein <see cref="LichessBroadcasts"/> (auch für die Live-Bretter der
+///   Turnierseite).</item>
 /// <item>Finden: Lichess-Suche nach <c>LeagueBroadcasts:Queries</c> (Vorgabe <see cref="DefaultQueries"/>), höchstens
 ///   <see cref="MaxYears"/> Jahre zurück, einmal je <see cref="DiscoverEvery"/>. Weitere per Link (<see cref="AddAsync"/>).</item>
 /// <item>Einspielen: nur fertige Partien (kein „*"), Standardschach ab der Grundstellung, Datum mit Punkten; Kommentare,
@@ -44,7 +46,6 @@ public sealed partial class LeagueBroadcastImport
         "WhiteFideId", "BlackFideId", "TimeControl", "ECO", "Opening", "GameURL",
     };
 
-    public sealed record Tour(string Id, string Name, string? Location, DateTime? Start, DateTime? End);
 
     private readonly AppDbContext _db;
     private readonly HttpClient _http;
@@ -69,69 +70,6 @@ public sealed partial class LeagueBroadcastImport
     public TimeSpan Pause { get; init; } = TimeSpan.FromSeconds(1);
 
     // ── Lesen (rein, getestet) ──────────────────────────────────────────────────────────────────
-
-    /// <summary><c>GET /api/broadcast/search</c> → die Turniere einer Seite und die nächste Seite (oder <c>null</c>).</summary>
-    public static (List<Tour> Tours, int? NextPage) ParseSearch(string json)
-    {
-        using var doc = JsonDocument.Parse(json);
-        var r = doc.RootElement;
-        var list = new List<Tour>();
-        if (r.TryGetProperty("currentPageResults", out var arr) && arr.ValueKind == JsonValueKind.Array)
-            foreach (var x in arr.EnumerateArray())
-                if (x.TryGetProperty("tour", out var t) && ParseTour(t) is { } tour) list.Add(tour);
-        int? next = r.TryGetProperty("nextPage", out var n) && n.ValueKind == JsonValueKind.Number ? n.GetInt32() : null;
-        return (list, next);
-    }
-
-    /// <summary><c>GET /api/broadcast/{id}</c> bzw. <c>/api/broadcast/-/-/{roundId}</c> → das Turnier und ob alle Runden vorbei sind.</summary>
-    public static (Tour? Tour, bool AllFinished) ParseTourDetail(string json)
-    {
-        using var doc = JsonDocument.Parse(json);
-        var r = doc.RootElement;
-        var tour = r.TryGetProperty("tour", out var t) ? ParseTour(t) : null;
-        var rounds = r.TryGetProperty("rounds", out var rs) && rs.ValueKind == JsonValueKind.Array ? rs.EnumerateArray().ToList() : new();
-        var all = rounds.Count > 0 && rounds.All(x => x.TryGetProperty("finished", out var f) && f.ValueKind == JsonValueKind.True);
-        return (tour, all);
-    }
-
-    private static Tour? ParseTour(JsonElement t)
-    {
-        var id = Str(t, "id");
-        if (id is null) return null;
-        DateTime? start = null, end = null;
-        if (t.TryGetProperty("dates", out var d) && d.ValueKind == JsonValueKind.Array)
-        {
-            var ms = d.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Number).Select(x => x.GetInt64()).ToList();
-            if (ms.Count > 0) start = DateTimeOffset.FromUnixTimeMilliseconds(ms[0]).UtcDateTime;
-            if (ms.Count > 1) end = DateTimeOffset.FromUnixTimeMilliseconds(ms[^1]).UtcDateTime;
-        }
-        var loc = t.TryGetProperty("info", out var info) && info.ValueKind == JsonValueKind.Object ? Str(info, "location") : null;
-        return new Tour(id, Str(t, "name") ?? id, loc, start, end ?? start);
-    }
-
-    /// <summary>
-    /// Aus einem Link die Kennung: Turnier-Link <c>/broadcast/{slug}/{tourId}</c> → (tourId, null), Runden-Link
-    /// <c>/broadcast/{slug}/{runde}/{roundId}</c> → (null, roundId); eine nackte Kennung gilt als Turnier. <c>null</c> = kein Link.
-    /// </summary>
-    public static (string? TourId, string? RoundId)? IdsOf(string? input)
-    {
-        var s = (input ?? "").Trim();
-        if (IdRe().IsMatch(s)) return (s, null);
-        var m = LinkRe().Match(s);
-        if (!m.Success) return null;
-        var parts = m.Groups[1].Value.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length switch
-        {
-            2 when IdRe().IsMatch(parts[1]) => (parts[1], null),
-            3 when IdRe().IsMatch(parts[2]) => (null, parts[2]),
-            _ => null,
-        };
-    }
-
-    [GeneratedRegex("^[A-Za-z0-9]{8}$")]
-    private static partial Regex IdRe();
-    [GeneratedRegex(@"lichess\.org/broadcast/([^?#\s]+)", RegexOptions.IgnoreCase)]
-    private static partial Regex LinkRe();
 
     /// <summary>
     /// Die Übertragung als sauberes PGN: nur fertige Partien (1-0, 0-1, ½) im Standardschach ab der Grundstellung mit
@@ -172,9 +110,6 @@ public sealed partial class LeagueBroadcastImport
     [GeneratedRegex(@"^\d{4}\.\d{2}\.\d{2}$")]
     private static partial Regex DateRe();
 
-    private static string? Str(JsonElement e, string name) =>
-        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
-
     // ── Abrufen ─────────────────────────────────────────────────────────────────────────────────
 
     private async Task<string?> GetAsync(string url, CancellationToken ct)
@@ -202,7 +137,7 @@ public sealed partial class LeagueBroadcastImport
                 var json = await GetAsync($"{_lichess}/api/broadcast/search?q={Uri.EscapeDataString(q)}&page={p}", ct);
                 await Wait(ct);
                 if (json is null) break;
-                var (tours, next) = ParseSearch(json);
+                var (tours, next) = LichessBroadcasts.ParseSearch(json);
                 foreach (var t in tours)
                 {
                     if ((t.End ?? t.Start) is { } last && last < horizon || !known.Add(t.Id)) continue;
@@ -216,7 +151,7 @@ public sealed partial class LeagueBroadcastImport
         return added;
     }
 
-    private static LeagueBroadcast Row(Tour t, bool manual) => new()
+    private static LeagueBroadcast Row(LichessBroadcasts.Tour t, bool manual) => new()
     {
         TourId = t.Id, Name = Cut(t.Name, 200)!, Location = Cut(t.Location, 200), StartsAt = t.Start, EndsAt = t.End, Manual = manual,
         FoundAt = DateTime.UtcNow,
@@ -235,7 +170,9 @@ public sealed partial class LeagueBroadcastImport
             await SaveAsync(b, ct);
             return;
         }
-        var (tour, allFinished) = ParseTourDetail(detail);
+        var parsed = LichessBroadcasts.ParseTourDetail(detail);
+        var tour = parsed?.Tour;
+        var allFinished = parsed?.AllFinished ?? false;
         if (tour is not null)
         {
             b.Name = Cut(tour.Name, 200)!;
@@ -269,9 +206,9 @@ public sealed partial class LeagueBroadcastImport
     /// </summary>
     public async Task<(LeagueBroadcast? Broadcast, string? Reason)> AddAsync(string? input, CancellationToken ct)
     {
-        if (IdsOf(input) is not { } ids) return (null, "invalidUrl");
+        if (LichessBroadcasts.IdsOf(input) is not { } ids) return (null, "invalidUrl");
         var detail = await GetAsync(ids.TourId is { } t ? $"{_lichess}/api/broadcast/{t}" : $"{_lichess}/api/broadcast/-/-/{ids.RoundId}", ct);
-        if (detail is null || ParseTourDetail(detail).Tour is not { } tour) return (null, "notFound");
+        if (detail is null || LichessBroadcasts.ParseTourDetail(detail)?.Tour is not { } tour) return (null, "notFound");
         var b = await _db.LeagueBroadcasts.FirstOrDefaultAsync(x => x.TourId == tour.Id, ct);
         if (b is null) _db.LeagueBroadcasts.Add(b = Row(tour, manual: true));
         b.Finished = false;                                                   // ausdrücklich gewünscht: neu holen

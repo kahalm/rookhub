@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "Bu oyunun henüz analizi yok ve başlatılamadı.",
     "summary_unsupported_start": "Özetler yalnızca başlangıç pozisyonundan başlayan oyunlar için kullanılabilir.",
     "background_list_full": "Arka plan listesi dolu: en fazla 64 arka plan motoru. Önce birini çıkar.",
-    "engine_not_found": "Bu motor o hesaba ait değil ya da artık kayıtlı değil."
+    "engine_not_found": "Bu motor o hesaba ait değil ya da artık kayıtlı değil.",
+    "live_invalid_url": "Bu bir Lichess yayın bağlantısı değil.",
+    "live_broadcast_not_found": "Lichess bu yayını tanımıyor.",
+    "live_tournament_not_found": "Bu turnuva henüz alınmadı."
   },
   "common": {
     "optional": "İsteğe bağlı",
@@ -1564,6 +1567,39 @@
       "copyLink": "Bağlantıyı kopyala",
       "linkCopied": "Bağlantı kopyalandı!",
       "copyFailed": "Kopyalama başarısız"
+    },
+    "live": {
+      "title": "Canlı tahtalar",
+      "back": "Turnuvaya dön",
+      "notLinked": "Bu turnuvaya bağlı bir Lichess yayını yok.",
+      "linkLabel": "Lichess yayın bağlantısı",
+      "linkHint": "lichess.org/broadcast üzerinde turnuvaya veya bir tura bağlantı",
+      "link": "Yayını bağla",
+      "loginToLink": "Yayın bağlamak için giriş yapın",
+      "linked": "Yayın bağlandı.",
+      "linkFailed": "Yayın bağlanamadı.",
+      "ongoing": "sürüyor",
+      "team": "Takım",
+      "allMatches": "Tüm maçlar",
+      "engineBar": "Değerlendirme çubuğu",
+      "onlyPlayer": "Yalnızca {{name}} tahtası",
+      "showAll": "Tüm tahtaları göster",
+      "noBoards": "Bu maçın hiçbir tahtası yayınlanmıyor.",
+      "noGames": "Bu turdan henüz hiçbir oyun yayınlanmıyor.",
+      "notBroadcast": "Yayınsız tahtalar: {{count}}",
+      "otherGames": "Diğer yayınlanan oyunlar",
+      "boardN": "Tahta {{board}}",
+      "noEval": "Değerlendirme yok",
+      "evalLabel": "Değerlendirme {{value}}",
+      "roundLive": "Bu turun canlı tahtaları",
+      "noBroadcastShort": "Bağlı canlı yayın yok",
+      "state": {
+        "connecting": "Bağlanıyor…",
+        "live": "Canlı",
+        "reconnecting": "Yeniden bağlanıyor…",
+        "finished": "Tur bitti",
+        "offline": "Bağlantı koptu — yeniden deneniyor"
+      }
     }
   },
   "puzzles": {

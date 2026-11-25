@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "Esta partida aún no tiene análisis y no se pudo iniciar ninguno.",
     "summary_unsupported_start": "Los resúmenes solo están disponibles para partidas desde la posición inicial.",
     "background_list_full": "La lista de segundo plano está llena: como máximo 64 motores. Quita primero uno.",
-    "engine_not_found": "Este motor no pertenece a esa cuenta o ya no está registrado."
+    "engine_not_found": "Este motor no pertenece a esa cuenta o ya no está registrado.",
+    "live_invalid_url": "No es un enlace de retransmisión de Lichess.",
+    "live_broadcast_not_found": "Lichess no conoce esta retransmisión.",
+    "live_tournament_not_found": "Este torneo aún no se ha descargado."
   },
   "common": {
     "optional": "Opcional",
@@ -1564,6 +1567,39 @@
       "copyLink": "Copiar enlace",
       "linkCopied": "¡Enlace copiado!",
       "copyFailed": "Error al copiar"
+    },
+    "live": {
+      "title": "Tableros en directo",
+      "back": "Volver al torneo",
+      "notLinked": "No hay ninguna retransmisión de Lichess vinculada a este torneo.",
+      "linkLabel": "Enlace de la retransmisión de Lichess",
+      "linkHint": "Enlace al torneo o a una ronda en lichess.org/broadcast",
+      "link": "Vincular retransmisión",
+      "loginToLink": "Inicia sesión para vincular una retransmisión",
+      "linked": "Retransmisión vinculada.",
+      "linkFailed": "No se pudo vincular la retransmisión.",
+      "ongoing": "en curso",
+      "team": "Equipo",
+      "allMatches": "Todos los encuentros",
+      "engineBar": "Barra de evaluación",
+      "onlyPlayer": "Solo el tablero de {{name}}",
+      "showAll": "Mostrar todos los tableros",
+      "noBoards": "No se retransmite ningún tablero de este encuentro.",
+      "noGames": "Aún no se retransmite ninguna partida de esta ronda.",
+      "notBroadcast": "Tableros sin retransmisión: {{count}}",
+      "otherGames": "Otras partidas retransmitidas",
+      "boardN": "Tablero {{board}}",
+      "noEval": "Sin evaluación",
+      "evalLabel": "Evaluación {{value}}",
+      "roundLive": "Tableros en directo de esta ronda",
+      "noBroadcastShort": "Ninguna retransmisión en directo vinculada",
+      "state": {
+        "connecting": "Conectando…",
+        "live": "En directo",
+        "reconnecting": "Reconectando…",
+        "finished": "Ronda terminada",
+        "offline": "Conexión perdida — reintentando"
+      }
     }
   },
   "puzzles": {

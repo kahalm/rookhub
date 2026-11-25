@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "Ta partia nie ma jeszcze analizy i nie udało się jej uruchomić.",
     "summary_unsupported_start": "Podsumowania są dostępne tylko dla partii od pozycji wyjściowej.",
     "background_list_full": "Lista w tle jest pełna: najwyżej 64 silniki w tle. Najpierw usuń jeden.",
-    "engine_not_found": "Ten silnik nie należy do tego konta lub nie jest już zarejestrowany."
+    "engine_not_found": "Ten silnik nie należy do tego konta lub nie jest już zarejestrowany.",
+    "live_invalid_url": "To nie jest link do transmisji Lichess.",
+    "live_broadcast_not_found": "Lichess nie zna tej transmisji.",
+    "live_tournament_not_found": "Ten turniej nie został jeszcze pobrany."
   },
   "common": {
     "optional": "Opcjonalnie",
@@ -1564,6 +1567,39 @@
       "copyLink": "Kopiuj link",
       "linkCopied": "Link skopiowany!",
       "copyFailed": "Kopiowanie nie powiodło się"
+    },
+    "live": {
+      "title": "Szachownice na żywo",
+      "back": "Powrót do turnieju",
+      "notLinked": "Do tego turnieju nie podłączono transmisji Lichess.",
+      "linkLabel": "Link do transmisji Lichess",
+      "linkHint": "Link do turnieju lub rundy na lichess.org/broadcast",
+      "link": "Podłącz transmisję",
+      "loginToLink": "Zaloguj się, aby podłączyć transmisję",
+      "linked": "Transmisja podłączona.",
+      "linkFailed": "Nie udało się podłączyć transmisji.",
+      "ongoing": "w toku",
+      "team": "Drużyna",
+      "allMatches": "Wszystkie mecze",
+      "engineBar": "Pasek oceny",
+      "onlyPlayer": "Tylko szachownica: {{name}}",
+      "showAll": "Pokaż wszystkie szachownice",
+      "noBoards": "Żadna szachownica tego meczu nie jest transmitowana.",
+      "noGames": "Z tej rundy nie transmituje się jeszcze żadnej partii.",
+      "notBroadcast": "Szachownice bez transmisji: {{count}}",
+      "otherGames": "Inne transmitowane partie",
+      "boardN": "Szachownica {{board}}",
+      "noEval": "Brak oceny",
+      "evalLabel": "Ocena {{value}}",
+      "roundLive": "Szachownice na żywo tej rundy",
+      "noBroadcastShort": "Brak podłączonej transmisji na żywo",
+      "state": {
+        "connecting": "Łączenie…",
+        "live": "Na żywo",
+        "reconnecting": "Ponowne łączenie…",
+        "finished": "Runda zakończona",
+        "offline": "Utracono połączenie — ponowna próba"
+      }
     }
   },
   "puzzles": {

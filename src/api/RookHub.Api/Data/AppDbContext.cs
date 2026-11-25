@@ -27,6 +27,7 @@ public partial class AppDbContext : DbContext
     public DbSet<TournamentFavoriteDismissal> TournamentFavoriteDismissals => Set<TournamentFavoriteDismissal>();
     public DbSet<TournamentUserSetting> TournamentUserSettings => Set<TournamentUserSetting>();
     public DbSet<TournamentMonitor> TournamentMonitors => Set<TournamentMonitor>();
+    public DbSet<TournamentBroadcastLink> TournamentBroadcastLinks => Set<TournamentBroadcastLink>();
     public DbSet<TournamentDirectoryEntry> TournamentDirectoryEntries => Set<TournamentDirectoryEntry>();
     public DbSet<TournamentSearchProfile> TournamentSearchProfiles => Set<TournamentSearchProfile>();
     public DbSet<TournamentDirectorySweep> TournamentDirectorySweeps => Set<TournamentDirectorySweep>();

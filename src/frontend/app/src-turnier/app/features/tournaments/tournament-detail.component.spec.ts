@@ -14,6 +14,11 @@ import { Subscription, TournamentGroup, TournamentPlayer, TournamentTeam } from 
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { OpenTournamentService } from '../../core/open-tournament.service';
 
+/** Live-Bretter (1.014.0): die Detailseite fragt nach dem Turnier, ob eine Übertragung verknüpft ist — hier: keine. */
+function flushLive(http: HttpTestingController): void {
+  for (const r of http.match(req => req.url.startsWith('/api/live-boards/'))) r.flush({ linked: false, manual: false, rounds: [], currentRound: null });
+}
+
 describe('TournamentDetailComponent', () => {
   /** Angemeldet? Gast-Tests setzen das vor dem Aufbau auf false (Turnierseite seit 0.643.0 ohne Konto offen). */
   let signedIn = true;
@@ -62,6 +67,7 @@ describe('TournamentDetailComponent', () => {
     });
     http.expectOne('/api/tournaments/4711/players').flush([{ id: 1, snr: 7, title: null, name: 'Anna', fideId: null, elo: 1900, country: 'AUT', teamName: null, boardNumber: null }]);
     http.expectOne('/api/tournaments/4711/teams').flush([]);
+    flushLive(http);
     http.verify();   // keine Favoriten, keine Merkliste, keine Beobachtung
 
     const component = fixture.componentInstance;
@@ -71,8 +77,37 @@ describe('TournamentDetailComponent', () => {
     const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
     component.subscribe();
     expect(String(navigate.calls.mostRecent().args[0])).toContain('/login?returnUrl=');
+    flushLive(http);
     http.verify();
     localStorage.removeItem('public_fav_players_4711');
+  });
+
+  /** Live-Bretter (1.014.0): mit verknüpfter Übertragung ein Knopf „Live-Bretter“ auf /tournaments/:id/live, sonst keiner. */
+  it('zeigt „Live-Bretter“ nur mit verknüpfter Übertragung', async () => {
+    signedIn = false;
+    await TestBed.configureTestingModule({
+      imports: [TournamentDetailComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '4711' }), queryParams: {} } } },
+      ],
+    }).compileComponents();
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
+    const fixture = TestBed.createComponent(TournamentDetailComponent);
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne('/api/tournaments/4711').flush({
+      id: 1, name: 'Bundesliga', chessResultsId: '4711', location: null, date: null, totalRounds: 0, knownRounds: 0, createdAt: '', updatedAt: '',
+    });
+    http.expectOne('/api/tournaments/4711/players').flush([]);
+    http.expectOne('/api/tournaments/4711/teams').flush([]);
+    http.expectOne('/api/live-boards/4711').flush({ linked: true, manual: false, tourId: 'IjDgZVUR', tourName: 'BL', url: null, rounds: [], currentRound: 1 });
+    fixture.detectChanges();
+    const btn = (fixture.nativeElement as HTMLElement).querySelector('a.live-btn');
+    expect(btn).not.toBeNull();
+    expect(btn!.getAttribute('href')).toBe('/tournaments/4711/live');
+    http.verify();
   });
 
   /** Rendert die Detailseite bis zur Aktionsleiste; alle Start-Requests werden mit Leerdaten beantwortet. */
@@ -357,6 +392,7 @@ describe('TournamentDetailComponent', () => {
     expect(c.selectedRound).toBe(7);
     expect(c.pairings.map(p => p.white)).toEqual(['Runde7-W']);
     expect(c.pairingsLoading).toBeFalse();
+    flushLive(http);
     http.verify();
   });
 
@@ -381,6 +417,7 @@ describe('TournamentDetailComponent', () => {
     expect(c.refreshing).toBeFalse();
     expect(info).toHaveBeenCalledWith('tournaments.detail.refreshAlreadyRunning');
     expect(info).not.toHaveBeenCalledWith('tournaments.detail.refreshStartFailed');
+    flushLive(http);
     http.verify();
   });
 
@@ -405,6 +442,7 @@ describe('TournamentDetailComponent', () => {
       c.ngOnDestroy();
       jasmine.clock().uninstall();
     }
+    flushLive(http);
     http.verify();
   });
 
@@ -433,6 +471,7 @@ describe('TournamentDetailComponent', () => {
       c.ngOnDestroy();
       jasmine.clock().uninstall();
     }
+    flushLive(http);
     http.verify();
   });
 
@@ -448,6 +487,7 @@ describe('TournamentDetailComponent', () => {
 
     expect(c.refreshing).toBeFalse();
     expect(info).toHaveBeenCalledWith('tournaments.detail.refreshStartFailed');
+    flushLive(http);
     http.verify();
   });
 
@@ -641,6 +681,7 @@ describe('TournamentDetailComponent', () => {
     expect(fixture.componentInstance.loadFailure).toBeNull();
     expect(page.querySelector('.load-failed')).toBeNull();
     expect(page.textContent).toContain('Schach Tirol Open');
+    flushLive(http);
     http.verify();
   });
 
@@ -725,6 +766,7 @@ describe('TournamentDetailComponent', () => {
     const { fixture, http } = await openAt(true);
     http.expectOne(r => r.url.startsWith('/api/tournaments/4711/pairings')).flush([]);
     fixture.detectChanges();
+    flushLive(http);
     http.verify();
     expect(fixture.componentInstance.split()).toBeTrue();
     expect((fixture.nativeElement as HTMLElement).querySelector('.split-tables .split-pairings')).not.toBeNull();
@@ -733,6 +775,7 @@ describe('TournamentDetailComponent', () => {
   it('schmal: Paarungen erst beim Reiter, keine geteilte Ansicht', async () => {
     const { fixture, http } = await openAt(false);
     fixture.detectChanges();
+    flushLive(http);
     http.verify();
     expect((fixture.nativeElement as HTMLElement).querySelector('.split-tables')).toBeNull();
   });

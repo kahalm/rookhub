@@ -106,6 +106,7 @@ export const STORAGE_KEYS: readonly StorageKeyEntry[] = [
   d('rookhub_notifications_hidden_categories', 'ausgeblendete Benachrichtigungs-Arten'),
   d('rookhub_analysis_', 'Analyse: Engine, Tiefe, Linien, Vergleich, Maia, Explorer offen', true),
   d('rookhub_explorer_settings', 'Eröffnungs-Explorer'),
+  d('rookhub_live_eval', 'Live-Bretter der Turnierseite: Engine-Balken an/aus'),
   d('rookhub_game_', 'Partie-Rückblick: Pfeil, Symbole, Linien, Engine-Ansicht', true),
   d('rookhub_guess_accept', 'Punktepartie: angenommene Züge'),
   d('rookhub_guess_comment_lang', 'Punktepartie: Kommentarsprache'),

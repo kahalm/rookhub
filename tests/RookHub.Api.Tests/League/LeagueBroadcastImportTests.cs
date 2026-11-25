@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
 using RookHub.Api.Services.League;
 
 namespace RookHub.Api.Tests.League;
@@ -34,13 +35,13 @@ public class LeagueBroadcastImportTests : IDisposable
     [Fact]
     public void IdsOf_TourLink_RoundLink_BareId()
     {
-        Assert.Equal(("FX5cToFp", (string?)null), LeagueBroadcastImport.IdsOf("https://lichess.org/broadcast/schach-tirol-open-2026/FX5cToFp"));
+        Assert.Equal(("FX5cToFp", (string?)null), LichessBroadcasts.IdsOf("https://lichess.org/broadcast/schach-tirol-open-2026/FX5cToFp"));
         Assert.Equal(((string?)null, "CuCY3Ob7"),
-            LeagueBroadcastImport.IdsOf("https://lichess.org/broadcast/100-jahre-schachklub-kufstein/round-1/CuCY3Ob7?x=1"));
-        Assert.Equal(("favpBItT", (string?)null), LeagueBroadcastImport.IdsOf(" favpBItT "));
-        Assert.Null(LeagueBroadcastImport.IdsOf("https://lichess.org/@/MaxMuster"));
-        Assert.Null(LeagueBroadcastImport.IdsOf("https://lichess.org/broadcast/nur-slug"));
-        Assert.Null(LeagueBroadcastImport.IdsOf(""));
+            LichessBroadcasts.IdsOf("https://lichess.org/broadcast/100-jahre-schachklub-kufstein/round-1/CuCY3Ob7?x=1"));
+        Assert.Equal(("favpBItT", (string?)null), LichessBroadcasts.IdsOf(" favpBItT "));
+        Assert.Null(LichessBroadcasts.IdsOf("https://lichess.org/@/MaxMuster"));
+        Assert.Null(LichessBroadcasts.IdsOf("https://lichess.org/broadcast/nur-slug"));
+        Assert.Null(LichessBroadcasts.IdsOf(""));
     }
 
     [Fact]
@@ -55,7 +56,7 @@ public class LeagueBroadcastImportTests : IDisposable
     [Fact]
     public void ParseSearch_And_TourDetail()
     {
-        var (tours, next) = LeagueBroadcastImport.ParseSearch("""
+        var (tours, next) = LichessBroadcasts.ParseSearch("""
             {"currentPage":1,"nextPage":2,"currentPageResults":[
               {"tour":{"id":"FX5cToFp","name":"Schach Tirol Open 2026","info":{"location":"Innsbruck, Austria"},"dates":[1787407200000,1787990400000]}},
               {"tour":{"id":"k8IPiRCv","name":"Chess Festival Innsbruck"}}]}
@@ -65,15 +66,15 @@ public class LeagueBroadcastImportTests : IDisposable
         Assert.Equal(new DateTime(2026, 8, 22), tours[0].Start!.Value.Date);
         Assert.Equal(new DateTime(2026, 8, 29), tours[0].End!.Value.Date);
         Assert.Null(tours[1].Start);
-        Assert.Null(LeagueBroadcastImport.ParseSearch("""{"currentPageResults":[],"nextPage":null}""").NextPage);
+        Assert.Null(LichessBroadcasts.ParseSearch("""{"currentPageResults":[],"nextPage":null}""").NextPage);
 
-        var (tour, all) = LeagueBroadcastImport.ParseTourDetail("""
+        var detail = LichessBroadcasts.ParseTourDetail("""
             {"tour":{"id":"favpBItT","name":"Kufstein Open","dates":[1785510000000,1785679200000]},
              "rounds":[{"id":"a","finished":true},{"id":"b","finished":true}]}
             """);
-        Assert.Equal(("favpBItT", true), (tour!.Id, all));
-        Assert.False(LeagueBroadcastImport.ParseTourDetail("""{"tour":{"id":"x1234567"},"rounds":[{"finished":true},{"ongoing":true}]}""").AllFinished);
-        Assert.False(LeagueBroadcastImport.ParseTourDetail("""{"tour":{"id":"x1234567"},"rounds":[]}""").AllFinished);
+        Assert.Equal(("favpBItT", true), (detail!.Tour.Id, detail.AllFinished));
+        Assert.False(LichessBroadcasts.ParseTourDetail("""{"tour":{"id":"x1234567"},"rounds":[{"id":"r1","finished":true},{"id":"r2","ongoing":true}]}""")!.AllFinished);
+        Assert.False(LichessBroadcasts.ParseTourDetail("""{"tour":{"id":"x1234567"},"rounds":[]}""")!.AllFinished);
     }
 
     [Fact]

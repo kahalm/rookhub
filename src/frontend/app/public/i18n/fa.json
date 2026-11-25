@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "این بازی هنوز تحلیلی ندارد و شروع تحلیل هم ممکن نشد.",
     "summary_unsupported_start": "خلاصه‌ها فقط برای بازی‌هایی از موقعیت شروع در دسترس هستند.",
     "background_list_full": "فهرست پس‌زمینه پر است: حداکثر 64 موتور پس‌زمینه. اول یکی را حذف کن.",
-    "engine_not_found": "این موتور متعلق به آن حساب نیست یا دیگر ثبت نشده است."
+    "engine_not_found": "این موتور متعلق به آن حساب نیست یا دیگر ثبت نشده است.",
+    "live_invalid_url": "این پیوند پخش Lichess نیست.",
+    "live_broadcast_not_found": "Lichess این پخش را نمی‌شناسد.",
+    "live_tournament_not_found": "این مسابقه هنوز دریافت نشده است."
   },
   "common": {
     "optional": "اختیاری",
@@ -1564,6 +1567,39 @@
       "copyLink": "کپی لینک",
       "linkCopied": "لینک کپی شد!",
       "copyFailed": "کپی ناموفق بود"
+    },
+    "live": {
+      "title": "صفحه‌های زنده",
+      "back": "بازگشت به مسابقه",
+      "notLinked": "هیچ پخش Lichess به این مسابقه پیوند داده نشده است.",
+      "linkLabel": "پیوند پخش Lichess",
+      "linkHint": "پیوند به مسابقه یا یک دور در lichess.org/broadcast",
+      "link": "پیوند دادن پخش",
+      "loginToLink": "برای پیوند دادن پخش وارد شوید",
+      "linked": "پخش پیوند داده شد.",
+      "linkFailed": "پیوند دادن پخش ممکن نشد.",
+      "ongoing": "در جریان",
+      "team": "تیم",
+      "allMatches": "همه مسابقه‌ها",
+      "engineBar": "نوار ارزیابی",
+      "onlyPlayer": "فقط صفحهٔ {{name}}",
+      "showAll": "نمایش همهٔ صفحه‌ها",
+      "noBoards": "هیچ صفحه‌ای از این مسابقه پخش نمی‌شود.",
+      "noGames": "هنوز هیچ بازی‌ای از این دور پخش نمی‌شود.",
+      "notBroadcast": "صفحه‌های بدون پخش: {{count}}",
+      "otherGames": "بازی‌های پخش‌شدهٔ دیگر",
+      "boardN": "صفحهٔ {{board}}",
+      "noEval": "بدون ارزیابی",
+      "evalLabel": "ارزیابی {{value}}",
+      "roundLive": "صفحه‌های زندهٔ این دور",
+      "noBroadcastShort": "پخش زنده‌ای پیوند داده نشده",
+      "state": {
+        "connecting": "در حال اتصال…",
+        "live": "زنده",
+        "reconnecting": "اتصال دوباره…",
+        "finished": "دور به پایان رسید",
+        "offline": "اتصال قطع شد — تلاش دوباره"
+      }
     }
   },
   "puzzles": {

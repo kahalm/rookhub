@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
@@ -144,6 +144,8 @@ export class TournamentTablesComponent {
   @Input() refreshing = false;
   @Output() refresh = new EventEmitter<void>();
   @Input() fullViewLink: (string | number)[] | null = null;
+  /** Live-Bretter: Weg zur Live-Ansicht, wenn eine Lichess-Übertragung verknüpft ist (sonst kein Knopf). */
+  readonly liveLink = input<(string | number)[] | null>(null);
 
   /** Laeuft „Vereine nachtragen" gerade? Sperrt den Knopf und zeigt es an. */
   @Input() clubsBusy = false;

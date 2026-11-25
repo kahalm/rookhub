@@ -142,7 +142,10 @@
     "summary_analysis_unavailable": "Această partidă nu are încă analiză și nu s-a putut porni niciuna.",
     "summary_unsupported_start": "Rezumatele sunt disponibile doar pentru partide din poziția inițială.",
     "background_list_full": "Lista de fundal este plină: cel mult 64 de motoare de fundal. Scoate mai întâi unul.",
-    "engine_not_found": "Acest motor nu aparține acelui cont sau nu mai este înregistrat."
+    "engine_not_found": "Acest motor nu aparține acelui cont sau nu mai este înregistrat.",
+    "live_invalid_url": "Acesta nu este un link de transmisie Lichess.",
+    "live_broadcast_not_found": "Lichess nu cunoaște această transmisie.",
+    "live_tournament_not_found": "Acest turneu nu a fost încă preluat."
   },
   "common": {
     "optional": "Opțional",
@@ -1564,6 +1567,39 @@
       "copyLink": "Copiază link",
       "linkCopied": "Link copiat!",
       "copyFailed": "Copierea a eșuat"
+    },
+    "live": {
+      "title": "Table în direct",
+      "back": "Înapoi la turneu",
+      "notLinked": "Niciun transmis Lichess nu este legat de acest turneu.",
+      "linkLabel": "Linkul transmisiei Lichess",
+      "linkHint": "Link către turneu sau o rundă pe lichess.org/broadcast",
+      "link": "Leagă transmisia",
+      "loginToLink": "Autentifică-te pentru a lega o transmisie",
+      "linked": "Transmisie legată.",
+      "linkFailed": "Transmisia nu a putut fi legată.",
+      "ongoing": "în desfășurare",
+      "team": "Echipă",
+      "allMatches": "Toate meciurile",
+      "engineBar": "Bară de evaluare",
+      "onlyPlayer": "Doar tabla lui {{name}}",
+      "showAll": "Arată toate tablele",
+      "noBoards": "Nicio tablă a acestui meci nu este transmisă.",
+      "noGames": "Nicio partidă din această rundă nu este încă transmisă.",
+      "notBroadcast": "Table fără transmisie: {{count}}",
+      "otherGames": "Alte partide transmise",
+      "boardN": "Tabla {{board}}",
+      "noEval": "Fără evaluare",
+      "evalLabel": "Evaluare {{value}}",
+      "roundLive": "Tablele în direct ale rundei",
+      "noBroadcastShort": "Nicio transmisie în direct legată",
+      "state": {
+        "connecting": "Conectare…",
+        "live": "În direct",
+        "reconnecting": "Reconectare…",
+        "finished": "Runda s-a încheiat",
+        "offline": "Conexiune pierdută — reîncercare"
+      }
     }
   },
   "puzzles": {
