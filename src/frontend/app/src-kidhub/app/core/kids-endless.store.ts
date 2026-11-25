@@ -12,9 +12,9 @@ const STORAGE_KEY = 'rh-kids-endless-v1';
 export const ENDLESS_KEEP_RUNS = 20;
 
 /**
- * Die Laeufe des Endlos-Modus auf diesem Geraet (localStorage) — Grundlage der adaptiven Kurve und des Rekords.
- * Bewusst (noch) nicht im Konto: der Abgleich (`KidsProgressSync`) kennt nur Stufen und Kurse — beim Abmelden leert er
- * ihn aber mit (F7-013).
+ * Die Laeufe des Endlos-Modus (localStorage) — Grundlage der adaptiven Kurve und des Rekords. Seit 1.020.0 auch im
+ * Konto: `KidsProgressSync` schickt sie mit und übernimmt die vereinigte Antwort ({@link adopt}); beim Abmelden leert er
+ * das Gerät (F7-013), nach dem Anmelden kommen sie aus dem Konto zurück.
  */
 @Injectable({ providedIn: 'root' })
 export class KidsEndlessStore {
@@ -33,6 +33,22 @@ export class KidsEndlessStore {
     });
     this.save();
     return isBest;
+  }
+
+  /** Für den Abgleich mit dem Konto. */
+  toDto(): StoredEndless { return { runs: [...this.state().runs], best: this.state().best }; }
+
+  /** Vereinigten Stand aus dem Konto übernehmen (`null` = Server kennt ihn nicht → nichts ändern). */
+  adopt(d: StoredEndless | null | undefined): void {
+    if (!d || !Array.isArray(d.runs)) return;
+    // Vereinigen statt ersetzen: ein Lauf, der während der Anfrage dazukam, steht noch nicht in der Antwort.
+    const byAt = new Map<number, EndlessRun>();
+    for (const r of [...d.runs, ...this.state().runs]) if (!byAt.has(r.at)) byAt.set(r.at, r);
+    const runs = [...byAt.values()].sort((a, b) => a.at - b.at).slice(-ENDLESS_KEEP_RUNS);
+    const next = { runs, best: Math.max(Number(d.best) || 0, this.state().best, ...runs.map(r => r.solved)) };
+    if (JSON.stringify(next) === JSON.stringify(this.state())) return;
+    this.state.set(next);
+    this.save();
   }
 
   /** Abmelden (F7-013): Laeufe und Rekord gehoerten dem Kind, das angemeldet war — das naechste am geteilten Tablet

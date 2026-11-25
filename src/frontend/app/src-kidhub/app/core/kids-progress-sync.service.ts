@@ -45,6 +45,8 @@ export class KidsProgressSync {
     this.auth.currentUser$.pipe(takeUntilDestroyed(destroyRef)).subscribe(user => this.onUser(user?.userId ?? null));
     effect(() => {
       this.store.revision();
+      this.endless.runs();
+      this.stars.revision();
       untracked(() => this.schedule());
     });
     const wake = () => { if (document.visibilityState !== 'hidden') this.push(); };
@@ -96,11 +98,14 @@ export class KidsProgressSync {
     clearTimeout(this.timer);
     this.inFlight = true;
     this.state.set('saving');
-    this.api.syncProgress(this.store.toDto()).subscribe({
+    // Endlos und Sternenjagd seit 1.020.0 mit im Konto (der Server vereinigt, hier wird die Antwort übernommen).
+    this.api.syncProgress({ ...this.store.toDto(), endless: this.endless.toDto(), stars: this.stars.toDto() }).subscribe({
       next: merged => {
         // Inzwischen abgemeldet oder ein anderes Konto: die Antwort gehoert nicht mehr hierher.
         if (this.userId === id) {
           this.store.adopt(merged, id);
+          this.endless.adopt(merged.endless);
+          this.stars.adopt(merged.stars);
           this.state.set('saved');
         }
         this.done();

@@ -280,3 +280,12 @@ internal sealed class DailyPuzzleConfiguration : IEntityTypeConfiguration<DailyP
          .OnDelete(DeleteBehavior.Restrict); // Buch-Loeschung soll Historie nicht killen
     }
 }
+
+internal sealed class KidsExtraProgressConfiguration : IEntityTypeConfiguration<KidsExtraProgress>
+{
+    public void Configure(EntityTypeBuilder<KidsExtraProgress> e)
+    {
+        e.HasKey(p => p.UserId);
+        e.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

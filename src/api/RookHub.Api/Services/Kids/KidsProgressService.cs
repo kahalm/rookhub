@@ -39,8 +39,14 @@ public class KidsProgressService
         _utcNow = utcNow;
     }
 
-    public async Task<KidsProgressDto> GetAsync(int userId, CancellationToken ct = default) =>
-        (await LoadAsync(userId, ct)).Dto;
+    public async Task<KidsProgressDto> GetAsync(int userId, CancellationToken ct = default)
+    {
+        var dto = (await LoadAsync(userId, ct)).Dto;
+        var extra = await _db.KidsExtraProgresses.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId, ct);
+        dto.Endless = KidsExtraMerge.ReadEndless(extra?.EndlessJson);
+        dto.Stars = KidsExtraMerge.ReadStars(extra?.StarsJson);
+        return dto;
+    }
 
     /// <summary>Stand des Browsers mit dem im Konto zusammenführen, speichern, Ergebnis zurück.
     /// <see cref="DomainValidationException"/> (→ 400) bei einer Anfrage über den Deckeln.</summary>
@@ -123,6 +129,25 @@ public class KidsProgressService
         foreach (var l in stored.Lines.Where(l => !mergedBooks.Contains(l.BookId)))
             _db.KidsCourseLines.Remove(l);
 
+        // Endlos-Läufe + Sternenjagd (1.020.0): eigene Zeile, vereinigt (KidsExtraMerge).
+        var extra = await _db.KidsExtraProgresses.FirstOrDefaultAsync(x => x.UserId == userId, ct);
+        var endless = KidsExtraMerge.MergeEndless(KidsExtraMerge.ReadEndless(extra?.EndlessJson), clean.Endless);
+        var stars = KidsExtraMerge.MergeStars(KidsExtraMerge.ReadStars(extra?.StarsJson), clean.Stars);
+        if (endless is not null || stars is not null)
+        {
+            if (extra is null) { extra = new KidsExtraProgress { UserId = userId }; _db.KidsExtraProgresses.Add(extra); }
+            var ej = endless is null ? null : KidsExtraMerge.Write(endless);
+            var sj = stars is null ? null : KidsExtraMerge.Write(stars);
+            if (ej != extra.EndlessJson || sj != extra.StarsJson)
+            {
+                extra.EndlessJson = ej;
+                extra.StarsJson = sj;
+                extra.UpdatedAt = now;
+            }
+        }
+        merged.Endless = endless;
+        merged.Stars = stars;
+
         await _db.SaveChangesAsync(ct);
         return merged;
     }
@@ -165,7 +190,7 @@ public class KidsProgressService
     /// </summary>
     private async Task<KidsProgressDto> KeepKnownCoursesAsync(KidsProgressDto clean, CancellationToken ct)
     {
-        if (clean.Courses.Count == 0) return clean;
+        if (clean.Courses.Count == 0) return clean;   // trägt Endless/Stars mit
         var bookIds = clean.Courses.Select(c => c.BookId).ToList();
         var kidsBooks = await _db.Books.AsNoTracking()
             .Where(b => bookIds.Contains(b.Id) && b.ForKids && !b.IsCalculation)
@@ -175,7 +200,7 @@ public class KidsProgressService
                 .Select(p => new { p.Id, BookId = p.BookId!.Value }).ToListAsync(ct))
             .ToLookup(p => p.BookId, p => p.Id);
 
-        var result = new KidsProgressDto { Levels = clean.Levels };
+        var result = new KidsProgressDto { Levels = clean.Levels, Endless = clean.Endless, Stars = clean.Stars };
         foreach (var c in clean.Courses.Where(c => kidsBooks.Contains(c.BookId)))
         {
             var known = lines[c.BookId].ToHashSet();
@@ -221,7 +246,10 @@ public class KidsProgressService
             });
         }
         // Doppelte Stufen/Kurse/Linien in EINER Anfrage fasst dieselbe Regel zusammen wie zwei Geräte.
-        return KidsProgressMerge.Merge(new KidsProgressDto(), result);
+        var normalized = KidsProgressMerge.Merge(new KidsProgressDto(), result);
+        normalized.Endless = KidsExtraMerge.NormalizeEndless(incoming.Endless, maxAt);
+        normalized.Stars = KidsExtraMerge.NormalizeStars(incoming.Stars);
+        return normalized;
     }
 
     internal static long ToMs(DateTime at) => (long)Math.Round((at - DateTime.UnixEpoch).TotalMilliseconds);

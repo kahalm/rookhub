@@ -4,8 +4,7 @@ import { STAR_STAGES } from './kids-stars';
 const STORAGE_KEY = 'rh-kids-stars-v1';
 
 /**
- * Geschaffte Stufen der Sternenjagd auf diesem Geraet (localStorage). Wie der Endlos-Modus bewusst (noch) nicht im
- * Konto: der Abgleich (`KidsProgressSync`) kennt nur die Puzzle-Stufen und Kurse.
+ * Geschaffte Stufen der Sternenjagd (localStorage). Seit 1.020.0 auch im Konto (`KidsProgressSync`, {@link adopt}).
  */
 @Injectable({ providedIn: 'root' })
 export class KidsStarsStore {
@@ -41,6 +40,26 @@ export class KidsStarsStore {
       this.save();
     }
     return true;
+  }
+
+  /** Änderungszähler für den Abgleich. */
+  readonly revision = computed(() => this.state().size + this.unlocked().size * 1000);
+
+  toDto(): { done: number[]; unlocked: number[] } {
+    const sorted = (set: ReadonlySet<number>) => [...set].sort((a, b) => a - b);
+    return { done: sorted(this.state()), unlocked: sorted(this.unlocked()) };
+  }
+
+  /** Vereinigten Stand aus dem Konto übernehmen (`null` = nichts ändern). */
+  adopt(d: { done?: number[]; unlocked?: number[] } | null | undefined): void {
+    if (!d) return;
+    const ok = (l: unknown) => (Array.isArray(l) ? l : []).filter((n): n is number => Number.isInteger(n) && n >= 1);
+    const done = new Set([...this.state(), ...ok(d.done)]);
+    const unlocked = new Set([...this.unlocked(), ...ok(d.unlocked)]);
+    if (done.size === this.state().size && unlocked.size === this.unlocked().size) return;
+    this.state.set(done);
+    this.unlocked.set(unlocked);
+    this.save();
   }
 
   /** Abmelden (F7-013): geschaffte und per Link freigeschaltete Stufen gehoerten dem angemeldeten Kind. */

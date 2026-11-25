@@ -11,6 +11,7 @@ internal static class KidsDataEraser
         var (db, userId) = (ctx.Db, ctx.UserId);
         // KidHub-Fortschritt: Spielstand des Kindes, keine Statistik fuer andere — geht mit dem Konto.
         db.KidsLevelProgresses.RemoveRange(await db.KidsLevelProgresses.Where(p => p.UserId == userId).ToListAsync());
+        db.KidsExtraProgresses.RemoveRange(await db.KidsExtraProgresses.Where(p => p.UserId == userId).ToListAsync());
         db.KidsCourseProgresses.RemoveRange(await db.KidsCourseProgresses.Where(p => p.UserId == userId).ToListAsync());
         db.KidsCourseLines.RemoveRange(await db.KidsCourseLines.Where(l => l.UserId == userId).ToListAsync());
     }

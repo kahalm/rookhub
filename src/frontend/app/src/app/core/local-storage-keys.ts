@@ -82,8 +82,8 @@ export const STORAGE_KEYS: readonly StorageKeyEntry[] = [
   u('lh-anon-scans', 'LeagueHub: Schlüssel anonymer Formular-Uploads je Teilen-Link'),
   u('lh-anon-drafts', 'LeagueHub: Schlüssel anonymer Partielisten je Teilen-Link'),
   u('rh-kids-progress-v1', 'KidHub: Stufen/Kurse (KidsProgressSync räumt ihn mit)'),
-  u('rh-kids-endless-v1', 'KidHub: Endlos-Läufe und Rekord (F7-013)'),
-  u('rh-kids-stars-v1', 'KidHub: geschaffte Stufen der Sternenjagd'),
+  u('rh-kids-endless-v1', 'KidHub: Endlos-Läufe und Rekord (F7-013) — seit 1.020.0 im Konto, kommen nach dem Login zurück'),
+  u('rh-kids-stars-v1', 'KidHub: geschaffte Stufen der Sternenjagd — seit 1.020.0 im Konto'),
 
   // --- Gerätevorlieben ----------------------------------------------------------------------------------------------
   d('rookhub_lang', 'Sprache'),

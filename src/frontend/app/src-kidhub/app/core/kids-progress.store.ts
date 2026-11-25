@@ -1,3 +1,4 @@
+import { EndlessRun } from './kids-endless';
 import { Injectable, computed, signal } from '@angular/core';
 
 /** Stand einer Stufe. */
@@ -32,6 +33,10 @@ interface StoredProgress {
 export interface KidsProgressDto {
   levels: { level: number; stars: number; runIndex: number; runMistakes: number; runAt: number }[];
   courses: { bookId: number; resetAt: number; solved: { id: number; at: number }[] }[];
+  /** Endlos-Läufe + Rekord im Konto (1.020.0); der Server vereinigt, der Browser übernimmt seine Antwort. */
+  endless?: { runs: EndlessRun[]; best: number } | null;
+  /** Sternenjagd im Konto (1.020.0). */
+  stars?: { done: number[]; unlocked: number[] } | null;
 }
 
 const STORAGE_KEY = 'rh-kids-progress-v1';

@@ -60,6 +60,35 @@ describe('KidsProgressSync', () => {
     expect(sync.state()).toBe('saved');
   }));
 
+  it('Endlos-Läufe und Sternenjagd gehen ins Konto und kommen nach dem Abmelden zurück (1.020.0)', fakeAsync(() => {
+    const endless = TestBed.inject(KidsEndlessStore);
+    const stars = TestBed.inject(KidsStarsStore);
+    endless.record({ at: 100, solved: 6, maxRating: 900, firstMistakeRating: 950 });
+    stars.complete(1);
+    start();
+    user.next(lena);
+    const [req] = progressCalls();
+    expect(req.request.body.endless.runs.length).toBe(1);
+    expect(req.request.body.stars.done).toEqual([1]);
+    req.flush({ ...empty, endless: { runs: [{ at: 50, solved: 9, maxRating: 1000, firstMistakeRating: null },
+      { at: 100, solved: 6, maxRating: 900, firstMistakeRating: 950 }], best: 9 }, stars: { done: [1, 2], unlocked: [] } });
+    expect(endless.runs().length).toBe(2);
+    expect(endless.best()).toBe(9);
+    expect(stars.isDone(2)).toBeTrue();
+    // Abmelden räumt das Tablet …
+    user.next(null);
+    expect(endless.runs().length).toBe(0);
+    expect(stars.isDone(1)).toBeFalse();
+    // … wieder anmelden: aus dem Konto zurück.
+    user.next(lena);
+    progressCalls()[0].flush({ ...empty, endless: { runs: [{ at: 50, solved: 9, maxRating: 1000, firstMistakeRating: null }], best: 9 },
+      stars: { done: [1, 2], unlocked: [] } });
+    expect(endless.best()).toBe(9);
+    expect(stars.isDone(1)).toBeTrue();
+    tick(SYNC_DEBOUNCE_MS * 2);
+    progressCalls().forEach(r => r.flush(empty));
+  }));
+
   it('Aenderungen gehen gebuendelt hinauf', fakeAsync(() => {
     start();
     user.next(lena);
@@ -94,7 +123,8 @@ describe('KidsProgressSync', () => {
     progressCalls()[0].flush({ levels: [{ level: 1, stars: 3, runIndex: 0, runMistakes: 0, runAt: 1 }], courses: [] });
     user.next(tom);
     const [req] = progressCalls();
-    expect(req.request.body).toEqual(empty);
+    // Leer — auch Endlos und Sternenjagd (seit 1.020.0 im Rumpf) sind die von Tom, nicht Lenas.
+    expect(req.request.body).toEqual({ ...empty, endless: { runs: [], best: 0 }, stars: { done: [], unlocked: [] } });
     req.flush(empty);
     expect(store.owner()).toBe(8);
   }));

@@ -4454,6 +4454,25 @@ namespace RookHub.Api.Migrations
                     b.ToTable("KidsCourseProgresses");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.KidsExtraProgress", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EndlessJson")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("StarsJson")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("KidsExtraProgresses");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.KidsLevelProgress", b =>
                 {
                     b.Property<int>("Id")
@@ -11287,6 +11306,17 @@ namespace RookHub.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Book");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.KidsExtraProgress", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

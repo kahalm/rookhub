@@ -97,6 +97,7 @@ public partial class AppDbContext : DbContext
     public DbSet<ClubNote> ClubNotes => Set<ClubNote>();
     /// <summary>KidHub-Fortschritt angemeldeter Kinder: Stufen, Kurse, geloeste Kurs-Linien.</summary>
     public DbSet<KidsLevelProgress> KidsLevelProgresses => Set<KidsLevelProgress>();
+    public DbSet<KidsExtraProgress> KidsExtraProgresses => Set<KidsExtraProgress>();
     public DbSet<KidsCourseProgress> KidsCourseProgresses => Set<KidsCourseProgress>();
     public DbSet<KidsCourseLine> KidsCourseLines => Set<KidsCourseLine>();
     public DbSet<BookPuzzle> BookPuzzles => Set<BookPuzzle>();

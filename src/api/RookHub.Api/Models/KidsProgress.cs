@@ -63,3 +63,22 @@ public class KidsCourseLine
 
     public DateTime SolvedAt { get; set; }
 }
+
+/// <summary>
+/// KidHub-Stände, die vorher nur am Gerät lagen (1.020.0): Endlos-Läufe samt Rekord und die Sternenjagd. Eine Zeile je
+/// Konto, als JSON (<see cref="Services.Kids.KidsExtraMerge"/>). Beim Abmelden räumt das Tablet sie weiterhin — jetzt
+/// kommen sie nach dem Anmelden aus dem Konto zurück.
+/// </summary>
+public class KidsExtraProgress
+{
+    public int UserId { get; set; }
+    public AppUser? User { get; set; }
+
+    /// <summary><c>{ runs: [{ at, solved, maxRating, firstMistakeRating }], best }</c>.</summary>
+    public string? EndlessJson { get; set; }
+
+    /// <summary><c>{ done: number[], unlocked: number[] }</c>.</summary>
+    public string? StarsJson { get; set; }
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}

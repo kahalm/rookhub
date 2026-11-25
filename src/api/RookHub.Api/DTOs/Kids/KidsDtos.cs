@@ -60,6 +60,30 @@ public class KidsProgressDto
 {
     public List<KidsLevelProgressDto> Levels { get; set; } = new();
     public List<KidsCourseProgressDto> Courses { get; set; } = new();
+    /// <summary>Endlos-Läufe + Rekord (1.020.0); <c>null</c> = der Browser kennt das Feld noch nicht.</summary>
+    public KidsEndlessDto? Endless { get; set; }
+    /// <summary>Sternenjagd (1.020.0); <c>null</c> wie oben.</summary>
+    public KidsStarsDto? Stars { get; set; }
+}
+
+public class KidsEndlessDto
+{
+    public List<KidsEndlessRunDto> Runs { get; set; } = new();
+    public int Best { get; set; }
+}
+
+public class KidsEndlessRunDto
+{
+    public long At { get; set; }
+    public int Solved { get; set; }
+    public int MaxRating { get; set; }
+    public int? FirstMistakeRating { get; set; }
+}
+
+public class KidsStarsDto
+{
+    public List<int> Done { get; set; } = new();
+    public List<int> Unlocked { get; set; } = new();
 }
 
 public class KidsLevelProgressDto

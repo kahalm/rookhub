@@ -280,4 +280,42 @@ public class KidsProgressTests : IDisposable
             .Single(a => a.AttributeType == typeof(RequestSizeLimitAttribute));
         Assert.Equal((long)KidsProgressService.MaxRequestBytes, Convert.ToInt64(limit.ConstructorArguments[0].Value));
     }
+
+    private static KidsEndlessRunDto Run(long at, int solved) => new() { At = at, Solved = solved, MaxRating = 800 };
+
+    [Fact]
+    public async Task Sync_EndlessAndStars_GoIntoAccount_UnionAcrossDevices()
+    {
+        await _service.SyncAsync(1, new KidsProgressDto
+        {
+            Endless = new KidsEndlessDto { Runs = { Run(100, 5), Run(200, 9) }, Best = 9 },
+            Stars = new KidsStarsDto { Done = { 1, 2 } },
+        });
+        var tablet = await _service.SyncAsync(1, new KidsProgressDto
+        {
+            Endless = new KidsEndlessDto { Runs = { Run(200, 9), Run(300, 4) }, Best = 4 },
+            Stars = new KidsStarsDto { Done = { 3 }, Unlocked = { 7 } },
+        });
+        Assert.Equal(new long[] { 100, 200, 300 }, tablet.Endless!.Runs.Select(r => r.At));
+        Assert.Equal(9, tablet.Endless.Best);
+        Assert.Equal(new[] { 1, 2, 3 }, tablet.Stars!.Done);
+        Assert.Equal(new[] { 7 }, tablet.Stars.Unlocked);
+        // Neues Gerät nach dem Abmelden: GET bringt alles zurück; ein alter Browser ohne die Felder löscht nichts.
+        await _service.SyncAsync(1, new KidsProgressDto { Levels = { L(1, 1, 0, 0, 1) } });
+        var fresh = await _service.GetAsync(1);
+        Assert.Equal(3, fresh.Endless!.Runs.Count);
+        Assert.Equal(3, fresh.Stars!.Done.Count);
+    }
+
+    [Fact]
+    public async Task Sync_Endless_KeepsNewest20_AndRejectsTooMany()
+    {
+        var many = new KidsEndlessDto { Runs = Enumerable.Range(1, 30).Select(i => Run(i * 10, i)).ToList(), Best = 0 };
+        var r = await _service.SyncAsync(1, new KidsProgressDto { Endless = many });
+        Assert.Equal(KidsExtraMerge.KeepRuns, r.Endless!.Runs.Count);
+        Assert.Equal(110, r.Endless.Runs[0].At);
+        Assert.Equal(30, r.Endless.Best);
+        var tooMany = new KidsEndlessDto { Runs = Enumerable.Range(1, KidsExtraMerge.MaxRunsPerRequest + 1).Select(i => Run(i, 1)).ToList() };
+        await Assert.ThrowsAsync<RookHub.Api.Exceptions.DomainValidationException>(() => _service.SyncAsync(1, new KidsProgressDto { Endless = tooMany }));
+    }
 }

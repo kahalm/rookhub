@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.020.0", date: "2026-11-25", changes: [
+    { en: "KidHub: the endless mode runs with their record and the stages of the star hunt are now saved in the child’s account. After logging out they no longer start from zero, and they also appear on another tablet.",
+      de: "KidHub: Die Läufe im Endlos-Modus samt Rekord und die Stufen der Sternenjagd liegen jetzt im Konto des Kindes. Nach dem Abmelden fängt es damit nicht mehr bei null an, und auf einem anderen Tablet ist alles wieder da." },
+  ] },
   { version: "1.019.3", date: "2026-11-25", changes: [
     { en: "LeagueHub: in the Austrian Bundesliga every board pairing showed “FED” (or nothing) as the away team — chess-results lists each player’s federation in an extra column, which was read as the team. Columns are now assigned by the header row; after the next import the away players find their registration list again (FIDE ID, board, rating), and the pairings of a club show up under its round.",
       de: "LeagueHub: In der österreichischen Bundesliga stand bei jeder Brettpaarung als Gastmannschaft „FED“ (oder nichts) — chess-results zeigt die Föderation der Spieler in einer eigenen Spalte, und die wurde als Mannschaft gelesen. Die Spalten werden jetzt über die Kopfzeile zugeordnet; nach dem nächsten Import finden die Gastspieler ihre Meldeliste wieder (FIDE-ID, Brett, Elo), und die Paarungen eines Vereins erscheinen unter seiner Runde." },
