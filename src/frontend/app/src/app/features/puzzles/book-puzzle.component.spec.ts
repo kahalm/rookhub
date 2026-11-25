@@ -1077,6 +1077,33 @@ describe('BookPuzzleComponent Abschlusskommentar nach der Lösung', () => {
   it('finalizeSolve springt im BRETT-Vollbild trotz Abschlusstext weiter (dort gibt es kein „Weiter")', () => {
     expect(finalizeWithTrailingCommentIn(document.createElement('div'))).toHaveBeenCalled();
   });
+
+  /** Tagespuzzle (Wunsch 25.11.2026): kein Countdown, auch nicht im Brett-Vollbild — die Lösung bleibt stehen,
+   *  „Nächstes Puzzle“ (ohne Zahl) führt erst auf Klick zu den Zufallspuzzles. */
+  function finalizeDailyIn(fsElement: Element | null): { countdown: jasmine.Spy; c: any } {
+    const c = makeComponent();
+    const countdown = spyOn(c as any, 'startSolvedCountdown');
+    spyOn(c.course as any, 'recordAttempt');
+    spyOn(c.weekly as any, 'recordAttempt');
+    spyOn(c.book as any, 'recordAttempt');
+    spyOn(c.book as any, 'recordTrack');
+    spyOnProperty(document, 'fullscreenElement', 'get').and.returnValue(fsElement);
+    c.daily.date = '20260714';
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b' };
+    (c as any).finalizeSolve();
+    return { countdown, c };
+  }
+
+  it('finalizeSolve startet beim Tagespuzzle keinen Countdown und verlässt die Seite nicht', () => {
+    const { countdown, c } = finalizeDailyIn(null);
+    expect(countdown).not.toHaveBeenCalled();
+    expect(c.router.navigate).not.toHaveBeenCalled();
+    expect(c.solvedCountdown).toBe(0);
+  });
+
+  it('finalizeSolve startet beim Tagespuzzle auch im BRETT-Vollbild keinen Countdown', () => {
+    expect(finalizeDailyIn(document.createElement('div')).countdown).not.toHaveBeenCalled();
+  });
 });
 
 /**

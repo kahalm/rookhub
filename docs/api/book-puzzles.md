@@ -47,6 +47,13 @@ Bot-Lookup per LineId. Bewusst NICHT identisch mit `CourseService.CanAccessAsync
 Einzel-Puzzles/Zufallsziehungen, nicht den strukturierten Kurs (Kapitel/Fortschritt/Offline-Export). Folge für
 den schach-bot: sein `/kurs`-Katalog (`/books` + `?bookId=`) enthält nur noch Pool-/öffentliche Bücher.
 
+## Tagespuzzle im Löser (`/puzzles/daily/:date`)
+
+Der Buch-Löser im Modus `BookDailyMode`: Datumsleiste (zurück/vor, keine Zukunft) statt Buch-Navigation. Nach Lösen oder
+Fehlversuch läuft KEIN Auto-Weiter-Countdown (auch nicht im Brett-Vollbild) — die Lösung bleibt stehen. Der Knopf
+„Nächstes Puzzle“ der Status-Karte führt auf Klick zu den Zufallspuzzles (`/puzzles`, wie „Puzzles lösen“ auf der
+Startseite; 1.013.1). Enter/Leertaste lösen beim Tagespuzzle bewusst nichts aus (kein versehentliches Verlassen).
+
 ## Tipps gegen das Brett prüfen (1.007.7)
 
 `HintGenerationService` gibt dem Modell nicht mehr Start-FEN + Vorspiel, sondern die Stellung des Lösers

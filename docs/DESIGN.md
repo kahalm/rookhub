@@ -905,6 +905,9 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   bleibt er nach der Frist stehen („Zeitplan: noch 40 bis 100 %“) und braucht `todayAttempted` nicht. Kein zweiter
   Fortschrittsbalken und keine Markierung im Zyklus-Balken.
 - **Tagespuzzle** nennt sich: Chip „Tagespuzzle“ + Datum (`mediumDate`, UTC) in der Kontext-Card wie der Wochenpost-Chip (d4).
+- **Tagespuzzle hat kein „nächstes“**: nach Lösen/Fehlversuch bleibt die Lösung stehen, kein Countdown (auch nicht im
+  Brett-Vollbild). Der Hauptknopf „Nächstes Puzzle“ (ohne Zahl) bleibt und startet auf Klick die Zufallspuzzles
+  (`/puzzles`, wie „Puzzles lösen“ auf der Startseite); Tage blättert weiter die Datumsleiste (1.013.1).
 - Gleiche Erweiterung in allen drei Puzzle-Modi prüfen (Standard, Endless, Buch/Kurs; `rookhub/CLAUDE.md`).
 
 ### 5.13 Zahlen, Mehrzahl, Datum
@@ -1598,6 +1601,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-25 | 1.013.1 · Tagespuzzle | „Nächstes Puzzle“ nach Lösen und Fehlversuch führt zu den Zufallspuzzles (`/puzzles`); kein Auto-Weiter-Countdown, auch nicht im Brett-Vollbild (5.12) | Der Knopf tat beim Tagespuzzle nichts, ein Countdown lief ins Leere; wegspringen soll man erst auf Wunsch, damit man die Lösung des Tages ansehen kann | Nutzerwunsch 25.11. |
 | 2026-11-24 | 1.011.0 · E-Book-Brett Lösen | Lösen wie der Puzzle-Löser: Statuszeile behält Zustand + Auge + Glühbirne (Lösung), die Aktionen stehen als Textknöpfe in einer eigenen, umbrechenden Zeile darunter (Tipp mit `tips_and_updates` + „n/3“, Zurücksetzen, Mausrutscher; am Ende „Wiederholen“ und gefüllter Knopf „Nächstes Diagramm (n)“ rechts); Tipps als nummerierte Liste darunter; kein ✕/Rot nach einem Fehlzug, rot nur das Ergebnis „Falsch“; Vollbild auch im Training mit der Icon-Leiste des Puzzle-Lösers ohne Aufgeben | Puzzle-Modi konsistent halten; die Glühbirne bleibt der Lösung, darum ein anderes Tipp-Symbol; fünf Knöpfe passen in der 300-px-Leiste nicht in die Statuszeile | Nutzerentscheidung 24.11. |
 | 2026-11-23 | 1.009.0 · Partien | Spielertitel vor dem Namen (5.13): `.ptitle` 0,85 em, fett, `--rh-accent`, mit U+00A0 an den Namen gebunden, auf Partieseite, Teilen-Link und Partienliste; Link-Vorschau als Text | Titel wie auf Schachseiten üblich vorn und abgehoben, aber ohne Abzeichen, damit die Kopfzeile ruhig bleibt; nicht geregelt, Vorschlag nach Wunsch des Nutzers | Nutzerwunsch 23.11. (Partie 186 „IM Grötz, Harald“) |
 | 2026-11-22 | 1.007.0 · Woodpecker | Entscheidungsfrage beim Einstieg „Zyklus N: Zeit ist um“ (5.6): schmaler Dialog (440 px), kurzer Stand, zwei Abschnitte „Verlängern“ (Tage-Feld mit Vorschlag und Vorschau der neuen Frist) und „Zyklus abschließen“ (ein leiser Satz zu den Folgen); Knöpfe „Später“ · „Zyklus abschließen“ (stroked) · „Um n Tage verlängern“ (Hauptknopf). Nicht blockierend: „Später“ fragt in dieser Sitzung nicht wieder, die Karte trägt dann „Verlängern oder abschließen“ (stroked) statt des Zeitbalkens. Im Löser kommt die Frage VOR dem Aufbau der Aufgabe (keine laufende Uhr dahinter) | Beide Wege sind sinnvoll, keiner ist rückgängig zu machen — deshalb ausdrücklich fragen statt still weiterlaufen oder beenden; Verlängern ist die häufigere Wahl und bekommt den Hauptknopf | Nutzerwunsch 22.11. |

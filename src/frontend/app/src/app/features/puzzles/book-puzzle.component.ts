@@ -353,6 +353,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
     // Direkt geteiltes Einzel-Puzzle: am Ende stehen bleiben, kein Auto-Advance (auch im Vollbild —
     // es gibt kein „nächstes").
     if (this.singlePuzzle) return;
+    // Tagespuzzle: kein Countdown (auch im Vollbild) — die Lösung bleibt stehen; „Nächstes Puzzle“ führt auf
+    // Klick zu den Zufallspuzzles (/puzzles, wie „Puzzles lösen“ auf der Startseite), Wunsch 25.11.2026.
+    if (this.isDaily) return;
     // Steht nach dem letzten Lösungszug noch ein Abschlusstext (Kommentar NACH dem Zug), NICHT
     // automatisch weiterspringen — der Spieler soll ihn lesen und selbst „Weiter" klicken. Der
     // Kommentar wird über comments.display angezeigt (enterSolutionReview springt ans Ende + setzt ihn).
@@ -373,7 +376,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
   solvedAutoNextPublic(): void { this.solvedAutoNext(); }
   private solvedAutoNext(): void {
     if (this.singlePuzzle) return;       // Direkt geteiltes Einzel-Puzzle: stehen bleiben
-    if (this.isDaily) return;            // Tagespuzzle: kein Auto-Advance, Navigation via Datum
+    if (this.isDaily) { this.goToRandomPuzzles(); return; }   // Tagespuzzle: weiter mit Zufallspuzzles
     this.modeStrategy.next();
   }
 
@@ -667,8 +670,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
 
   failedNext(): void {
     this.stopCountdown();
-    if (this.isDaily) return;
+    if (this.isDaily) { this.goToRandomPuzzles(); return; }
     this.modeStrategy.next();
+  }
+
+  /** Tagespuzzle hat kein „nächstes“ (Tage blättert die Datumsleiste) — „Nächstes Puzzle“ startet die
+   *  Zufallspuzzles wie der Einstieg „Puzzles lösen“ auf der Startseite. */
+  private goToRandomPuzzles(): void {
+    this.router.navigate(['/puzzles']);
   }
 
   showSolution(): void {

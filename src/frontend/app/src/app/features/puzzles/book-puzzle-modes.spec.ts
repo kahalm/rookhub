@@ -419,11 +419,13 @@ describe('BookPuzzle Weiter-Ziel je Modus (Charakterisierung Z18)', () => {
   }
   const calls = (c: any) => [c.course.next.calls.count(), c.weekly.next.calls.count(), c.book.next.calls.count()];
 
-  it('failedNext: Kurs → courseNext, Wochenpost → weeklyNext, Buch → nextInBook, Tagespuzzle → nichts', () => {
+  it('failedNext: Kurs → courseNext, Wochenpost → weeklyNext, Buch → nextInBook, Tagespuzzle → Zufallspuzzles', () => {
     let c = spied(); c.inCourse = true; c.failedNext(); expect(calls(c)).toEqual([1, 0, 0]);
     c = spied(); c.inWeekly = true; c.failedNext(); expect(calls(c)).toEqual([0, 1, 0]);
     c = spied(); c.failedNext(); expect(calls(c)).toEqual([0, 0, 1]);
+    expect(c.router.navigate).not.toHaveBeenCalledWith(['/puzzles']);
     c = spied(); c.daily.date = '20260714'; c.failedNext(); expect(calls(c)).toEqual([0, 0, 0]);
+    expect(c.router.navigate).toHaveBeenCalledWith(['/puzzles']);
   });
 
   it('solvedAutoNextPublic: wie failedNext, geteiltes Einzel-Puzzle bleibt stehen', () => {
@@ -432,6 +434,8 @@ describe('BookPuzzle Weiter-Ziel je Modus (Charakterisierung Z18)', () => {
     c = spied(); c.solvedAutoNextPublic(); expect(calls(c)).toEqual([0, 0, 1]);
     c = spied(); c.singlePuzzle = true; c.solvedAutoNextPublic(); expect(calls(c)).toEqual([0, 0, 0]);
     c = spied(); c.daily.date = '20260714'; c.solvedAutoNextPublic(); expect(calls(c)).toEqual([0, 0, 0]);
+    // Tagespuzzle: „Nächstes Puzzle“ startet die Zufallspuzzles wie „Puzzles lösen“ auf der Startseite.
+    expect(c.router.navigate).toHaveBeenCalledWith(['/puzzles']);
   });
 
   it('Enter nach dem Lösen: Wochenpost/Kurs/Buch-Blättern; Tagespuzzle tut nichts', () => {

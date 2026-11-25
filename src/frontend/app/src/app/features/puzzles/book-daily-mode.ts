@@ -10,7 +10,8 @@ export function dailyDateValue(date: string | null | undefined): Date | null {
 
 /**
  * Tagespuzzle-Modus des Buch-Lösers (/puzzles/daily/:date, Zerlegung Z18): Datums-Navigation (zurück/vor) statt
- * Buch-Navigation, kein Auto-Weiter. Gemeldet wird wie beim einzelnen Buch-Puzzle (`BookStandaloneMode`).
+ * Buch-Navigation, kein Auto-Weiter; „Nächstes Puzzle“ führt auf Klick zu den Zufallspuzzles (/puzzles).
+ * Gemeldet wird wie beim einzelnen Buch-Puzzle (`BookStandaloneMode`).
  */
 export class BookDailyMode {
   /** Datum „YYYYMMDD“ des angezeigten Tagespuzzles; null = kein Tagespuzzle. */

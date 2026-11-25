@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.013.1", date: "2026-11-25", changes: [
+    { en: "Daily puzzle: “Next puzzle” after solving or failing did nothing. It now takes you to random puzzles, the same as “Solve puzzles” on the start page. There is no automatic countdown on the daily puzzle (not in board fullscreen either), so you can look at the solution of the day as long as you like; the arrows for the previous and next day stay as they were.",
+      de: "Tagespuzzle: „Nächstes Puzzle“ nach dem Lösen oder einem Fehlversuch tat nichts. Jetzt geht es damit zu den Zufallspuzzles, wie mit „Puzzles lösen“ auf der Startseite. Beim Tagespuzzle läuft kein automatischer Countdown (auch nicht im Brett-Vollbild), die Lösung des Tages bleibt also stehen, solange man will; die Pfeile zum vorigen und nächsten Tag bleiben wie bisher." },
+  ] },
   { version: "1.013.0", date: "2026-11-25", changes: [
     { en: "Woodpecker, from cycle 2 on: the order of the puzzles is now fixed when the cycle starts. It is still shuffled, and differently in every cycle, but reloading the page, continuing later or switching to another device now brings back the same puzzle instead of a new random one. Only a recorded attempt moves on to the next puzzle in that order. Cycles that are already running keep going in a fixed order from now on. If a puzzle drops out of the set (for example a course you currently cannot access), the others keep their order.",
       de: "Woodpecker ab Zyklus 2: Die Reihenfolge der Aufgaben steht jetzt ab dem Start des Zyklus fest. Sie ist weiter gemischt, und zwar in jedem Zyklus anders, aber Neu laden, später Weitermachen oder ein anderes Gerät bringen jetzt dieselbe Aufgabe statt einer neuen zufälligen. Erst ein gemeldeter Versuch führt zur nächsten Aufgabe dieser Reihenfolge. Bereits laufende Zyklen gehen ab jetzt ebenfalls in fester Reihenfolge weiter. Fällt eine Aufgabe aus dem Satz (etwa aus einem Kurs ohne aktuellen Zugang), behalten die übrigen ihre Reihenfolge." },
