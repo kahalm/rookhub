@@ -94,7 +94,7 @@ public class AnonGameSharesTests : IDisposable
         Assert.Equal("done", dto!.Status);
         Assert.Equal("# Weiß – Schwarz (1-0)\n\nSpanisch, 2 Züge (Weiß Elo 2061).\n\n## Die Partie\n\n1.e4 e5 Weiß steht gut, der Bauer e4 auch.", dto.Markdown);
         Assert.Equal("m", dto.Model);
-        Assert.Equal(new[] { "DoneAt", "Markdown", "Model", "Stale", "Status" },
+        Assert.Equal(new[] { "DoneAt", "Markdown", "Model", "RedThread", "Stale", "Status" },   // RedThread: aus Markdown (1.021.0)
             typeof(SharedOwnGameSummaryDto).GetProperties().Select(p => p.Name).Order().ToArray());
     }
 

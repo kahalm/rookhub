@@ -58,8 +58,11 @@ public partial class OgMetaService
             return new OgPage(TrainTitle, TrainDescription(white, black, side, TrainMarks(evals, side == "white").Count),
                 version == null ? $"{trainImg}?l=en" : $"{trainImg}?v={version}&l=en", canonical, "article");
         }
-        var desc = string.Join(" · ", new[] { g.Result is { Length: > 0 } r && r != "*" ? r : null, g.Event, "Partie auf RookHub nachspielen" }
-            .Where(x => !string.IsNullOrWhiteSpace(x)));
+        // Roter Faden der Zusammenfassung (Wunsch 2026-11-25) — auf /cg/{token} und /cg/{token}/summary: derselbe Link liest den Text
+        // ohnehin, und ClubGameLinks.SummaryAsync liefert ihn schon gefiltert (interner Name → kein Text, „Runde/Brett N“ entfernt).
+        var desc = RedThreadDescription((await _clubGames.SummaryAsync(token, ct))?.RedThread)
+            ?? string.Join(" · ", new[] { g.Result is { Length: > 0 } r && r != "*" ? r : null, g.Event, "Partie auf RookHub nachspielen" }
+                .Where(x => !string.IsNullOrWhiteSpace(x)));
         return new OgPage(GameTitle(white, g.WhiteElo, black, g.BlackElo), desc,
             $"{img}?c={CardVersion}{(version == null ? "" : $"&v={version}")}", canonical, "article");
     }

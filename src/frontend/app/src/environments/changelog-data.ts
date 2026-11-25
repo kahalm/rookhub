@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.021.0", date: "2026-11-25", changes: [
+    { en: "Game summaries: the common thread of the game („Der rote Faden …“) now stands right at the top, below the title, set off as the key statement — and no longer a second time at the end of „The game“. Applies to old and new summaries, signed in and via share links.",
+      de: "Partie-Zusammenfassungen: Der rote Faden der Partie steht jetzt ganz oben unter dem Titel, abgesetzt als Kernaussage — und nicht mehr ein zweites Mal am Ende von „Die Partie“. Gilt für alte und neue Zusammenfassungen, angemeldet und über Teilen-Links." },
+    { en: "Link previews: a shared summary or club game (/cg/, LeagueHub link /s/…/club-games/…, /g/…/summary, anonymous /ga/) now shows the common thread as its description. Anonymised games only get it if no internal name appears in it.",
+      de: "Link-Vorschau: Eine geteilte Zusammenfassung bzw. Vereinspartie (/cg/, LeagueHub-Link /s/…/club-games/…, /g/…/summary, anonym /ga/) zeigt jetzt den roten Faden als Beschreibung. Anonymisierte Partien nur, wenn darin kein interner Name steht." },
+  ] },
   { version: "1.020.4", date: "2026-11-25", changes: [
     { en: "LeagueHub: a match whose boards chess-results has already filled in but not yet scored now shows its boards with the club games right away (e.g. Bundesliga round 1) instead of nothing; a note says the results follow.",
       de: "LeagueHub: Eine Begegnung, deren Bretter chess-results schon besetzt, aber noch nicht gewertet hat, zeigt jetzt gleich die Bretter mit den Vereinspartien (z. B. Bundesliga Runde 1) statt nichts; ein Hinweis sagt, dass die Ergebnisse folgen." },

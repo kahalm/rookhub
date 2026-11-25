@@ -75,6 +75,27 @@ Basis-URL für `og:url`/`og:image`: `App:BaseUrl`; Turnierseite `App:TurnierBase
 
 KidHub (`/stars/{n}/unlock` u. a.) und ClubHub (alles angemeldet) teilen nichts Öffentliches mit Inhalt — bleiben `none`.
 
+## Roter Faden als Beschreibung (1.021.0)
+
+Wunsch 2026-11-25: der rote Faden der Partie-Zusammenfassung „in der Vorschau vom Link“. Ausgezogen an EINER Stelle
+(`SummaryRedThread.Extract`, `docs/api/partie-zusammenfassung.md` „Roter Faden ganz oben“), als Text ohne Markdown, auf übliche Länge
+gekürzt (`SummaryRedThread.Plain`, ≤ 200 Zeichen am Wortende mit „…“; `OgMetaService.Summaries.cs`). Titel und Bild bleiben wie bisher.
+Gelesen wird immer über denselben Dienst wie die Seite des Links — also mit dessen Filter. Ohne Zusammenfassung oder ohne roten Faden
+bleibt die bisherige Beschreibung.
+
+| Route | roter Faden als `og:description` | Grund |
+|---|---|---|
+| `/cg/{token}/summary`, `/cg/{token}` | ja (nicht bei `?train=`) | der Link liest den Text ohnehin; `ClubGameLinks.SummaryAsync` filtert anonymisierte Partien (interner Name/FIDE-ID irgendwo im Text → kein Text, „Runde/Brett N“ entfernt) |
+| `/s/{token}/club-games/{id}/summary`, `/s/{token}/club-games/{id}` | ja | die Zusammenfassung hängt am selben Liga-Link (⋮ „Zusammenfassung“); bei einer anonymisierten Partie geht der Absatz zusätzlich durch `ClubGameLinks.SafeSummary` (`LeagueShareClubGames.RedThreadAsync`) — die Vorschau verrät nicht mehr als Karte und Titel |
+| `/g/{token}/summary` | ja | `OwnGameSummaries.GetSharedAsync`, derselbe Text wie die Seite |
+| `/g/{token}` | nur ohne „Kurz erzählt“ (die Nacherzählung bleibt vorn); `?roast=` und `?ply=` wie bisher | dito |
+| `/ga/{token}/summary` | ja | `AnonGameShares.SummaryAsync`: Namen ersetzt bzw. Text gesperrt — kein Name in der Vorschau |
+| `/club-games/{id}/summary`, `/games/{id}/summary` (angemeldet) | nein, keine Vorschau | nur mit Konto lesbar; die OG-Weiche kennt diese Pfade nicht, ein Abrufer bekommt die allgemeine Shell — nichts Privates nach außen |
+| LeagueHub `/partie/{token}` (`lgame`) | nein | die Seite des Links zeigt keine Zusammenfassung; die Vorschau zeigt nur, was die Route ohne Anmeldung zeigt („Rechte“) — und bei anonymisierten Partien verbirgt der Link Brett und Mannschaften, ein freier Text könnte mehr sagen |
+| LeagueHub `/s/{token}` (Begegnung) | nein | mehrere Partien, kein einzelner roter Faden |
+
+Tests: `OgRedThreadTests` (je Route, Anonymisierung mit Klarname im Text, Kürzen, Trainingslink unverändert).
+
 ## Kurs-Kurz-URLs: warum nur Vorschau-Abrufer (2026-11-22)
 
 `/{slug}` und `/{slug}/{kapitel}` sind die letzten Routen der SPA vor `**`: JEDES unbekannte Einzelsegment ist ein Kandidat
@@ -147,7 +168,7 @@ Die angereicherte `index.html` selbst: `no-cache, must-revalidate` aus der nginx
 `tests/RookHub.Api.Tests/Og/`: `OgTests` (Bestand), `OgCardTests` (Rendering 1200×630, leere/kaputte Daten, Partie/Stellung
 nach ply, Linie/Rekonstruktion inkl. abgelaufen/unbekannt, Cache-Header), `OgPuzzleCardTests` (Löser-Sicht, Themen,
 `/analysis?fen=`, Wochenpost nur veröffentlicht), `OgWorksheetCardTests` (Raster, kein Text/Lösung, Widerruf),
-`OgClubGameTests` (`/cg/` Partie/Training, Anonymisierung: kein Klarname/FIDE/Event, Widerruf), `OgShareLinkTests` (`/tl/` + drill gültig/abgelaufen/widerrufen,
+`OgRedThreadTests` (roter Faden als Beschreibung), `OgClubGameTests` (`/cg/` Partie/Training, Anonymisierung: kein Klarname/FIDE/Event, Widerruf), `OgShareLinkTests` (`/tl/` + drill gültig/abgelaufen/widerrufen,
 `/s/…/club-games/{id}` anonymisiert/abgelaufen/fremde Partie, `/ga/` ohne Namen + Widerruf, Meisterpartie, Kurs nur mit Markierung + nicht öffentlich), `OgLeagueCardTests` (Pfade je Site, Begegnung offen/gespielt/leer, anonymisierte Partie, abgelaufene Links, Basis-URL,
 Escaping, Entfernen der Shell-Tags). nginx-Map und -Location: `DeploymentConfigTests.OgPreview_*` (Kurs-Weiche: `OgPreview_CourseSlugs_OnlyForPreviewBotsOnRookHub`).
 Bilder ansehen: `OG_DUMP_DIR=/tmp/og dotnet test --filter "FullyQualifiedName~Og"` schreibt einige PNGs.

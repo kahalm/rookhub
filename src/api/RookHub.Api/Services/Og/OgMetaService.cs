@@ -54,6 +54,7 @@ public partial class OgMetaService
     private readonly TrainingVideos.TrainingVideoService? _lessons;
     private readonly Engines.LocalExplorerClient? _explorer;
     private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache? _memory;
+    private readonly OwnGameSummaries? _ownSummaries;
 
     private const string StartFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -64,8 +65,10 @@ public partial class OgMetaService
         LeagueService? league = null, LeagueGameShares? leagueGames = null, ClubGameLinks? clubGames = null,
         LeagueShareClubGames? leagueClubGames = null, AnonGameShares? anonGames = null,
         TrainingVideos.TrainingLessonShares? lessonShares = null, TrainingVideos.TrainingVideoService? lessons = null,
-        Engines.LocalExplorerClient? explorer = null, Microsoft.Extensions.Caching.Memory.IMemoryCache? memory = null)
+        Engines.LocalExplorerClient? explorer = null, Microsoft.Extensions.Caching.Memory.IMemoryCache? memory = null,
+        OwnGameSummaries? ownSummaries = null)
     {
+        _ownSummaries = ownSummaries;
         _leagueClubGames = leagueClubGames;
         _anonGames = anonGames;
         _lessonShares = lessonShares;
@@ -201,6 +204,12 @@ public partial class OgMetaService
                     descParts.Add("Partie auf RookHub nachspielen");
                     // „Kurz erzählt" (0.541.0) statt der dürren Kopfzeile, sobald es die Nacherzählung gibt.
                     var description = string.IsNullOrWhiteSpace(g.Recap) ? string.Join(" · ", descParts) : g.Recap!;
+                    // Roter Faden der Zusammenfassung (Wunsch 2026-11-25): auf /g/{token}/summary die Beschreibung, auf /g/{token}
+                    // nur ohne „Kurz erzählt“. Derselbe Text, den der Link unter /summary zeigt (OwnGameSummaries.GetSharedAsync).
+                    var summaryPath = IsSummaryPath(path);
+                    if ((summaryPath || string.IsNullOrWhiteSpace(g.Recap)) && _ownSummaries is not null
+                        && RedThreadDescription((await _ownSummaries.GetSharedAsync(id, ct))?.RedThread) is { } ownThread)
+                        description = ownThread;
                     // Mit Roast geteilt (0.742.0, /g/{token}?roast={id}): der freigegebene Roast-Text ist die Beschreibung.
                     if (int.TryParse(QueryParam(path, "roast"), out var roastId))
                     {

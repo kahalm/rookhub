@@ -8,7 +8,12 @@ namespace RookHub.Api.Services.League;
 /// <c>running</c> | <c>done</c> | <c>failed</c>; <c>Markdown</c> ist auch während einer neuen Anforderung die letzte fertige
 /// Fassung. <c>Stale</c> = die Partie wurde nach dem Schreiben korrigiert.</summary>
 public sealed record ClubGameSummaryDto(string Status, string? Markdown, DateTime? DoneAt, DateTime? RequestedAt, bool Stale,
-    string? Model, string? Error, ClubGameSummaryReadiness? Readiness = null, int? RunningSeconds = null);
+    string? Model, string? Error, ClubGameSummaryReadiness? Readiness = null, int? RunningSeconds = null)
+{
+    /// <summary>Der rote Faden (Wunsch 2026-11-25: „ganz oben toll"), aus <see cref="Markdown"/> gezogen (<see cref="SummaryRedThread"/>) —
+    /// bei Teilen-Links aus dem schon gefilterten Text. Die Seite stellt ihn nach oben und lässt ihn an der alten Stelle weg.</summary>
+    public string? RedThread => SummaryRedThread.Extract(Markdown);
+}
 
 /// <summary>Was die Hintergrund-Rechnung schon hat (0.914.0, Wunsch 2026-11-08: „wenn die Backgrounddinger noch nicht fertig
 /// sind, darauf hinweisen — die Summary kommt erst, wenn die durch sind"). <c>Ready</c> = Claude darf schreiben: Analyse fertig,

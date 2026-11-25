@@ -29,6 +29,22 @@ public sealed class LeagueShareClubGames(AppDbContext db, LeagueService league, 
         return g is null ? null : ClubGameLinks.Project(g, c);
     }
 
+    /// <summary>
+    /// Der rote Faden der Zusammenfassung derselben Partie für die Link-Vorschau (<see cref="SummaryRedThread"/>, Wunsch 2026-11-25); <c>null</c>
+    /// = Link ungültig, keine Zusammenfassung, kein roter Faden. Der Text ist derselbe, den <c>…/s/{token}/club/games/{id}/summary</c> zeigt;
+    /// bei einer ANONYMISIERTEN Partie geht der Absatz zusätzlich durch <see cref="ClubGameLinks.SafeSummary"/> (interner Name oder FIDE-ID
+    /// darin → <c>null</c>, „Runde N"/„Brett N" entfernt) — die Vorschau soll nicht mehr verraten als Karte und Titel.
+    /// </summary>
+    public async Task<string?> RedThreadAsync(string token, int id, CancellationToken ct)
+    {
+        if (await ClubOfLinkedGameAsync(league, fixtures, token, id, ct) is not { } c) return null;
+        var g = await ClubGameReader.GamesOf(db, c).AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (g is null) return null;
+        var markdown = await db.ClubGameSummaries.AsNoTracking().Where(s => s.ClubGameId == id).Select(s => s.Markdown).FirstOrDefaultAsync(ct);
+        var thread = SummaryRedThread.Extract(markdown);
+        return thread is null || !g.Anonymized ? thread : ClubGameLinks.SafeSummary(thread, g);
+    }
+
     /// <summary>Bewertungen derselben Partie (Kurve); <c>null</c> wie <see cref="ReadAsync"/>.</summary>
     public async Task<GameEvalsDto?> EvalsAsync(string token, int id, CancellationToken ct) =>
         await ClubOfLinkedGameAsync(league, fixtures, token, id, ct) is { } c ? await club.EvalsAsync(c, id, ct) : null;

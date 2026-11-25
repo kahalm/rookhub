@@ -28,7 +28,7 @@ import { SummaryBoardSheetComponent } from './summary-board-sheet.component';
 import { SanPipe } from '../../../shared/chess/san.pipe';
 import { MarkOrigin } from '../../../shared/mark-position/marked-positions.service';
 import { GameTextPart, mergeGameSection } from './summary-game-text.util';
-import { DiagramSpec, InlinePart, MASTER_GAME_PATH, SummaryBlock, gameMovePairs, moveLabel, linkSummaryMoves, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock } from './summary-markdown.util';
+import { DiagramSpec, InlinePart, MASTER_GAME_PATH, SummaryBlock, gameMovePairs, moveLabel, linkSummaryMoves, parseInline, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock, withoutRedThread } from './summary-markdown.util';
 
 /** Ein fertig aufgelöstes Diagramm: Stellung, letzter Zug, Pfeile, Blickrichtung. */
 interface ResolvedDiagram {
@@ -140,6 +140,8 @@ interface ResolvedDiagram {
             </div>
           } @else {
             <article class="summary-text">
+              <!-- Roter Faden (Wunsch 2026-11-25): ganz oben — hinter dem Titel des Texts (# Weiß – Schwarz), sonst als Erstes. -->
+              @if (!redThreadAfterTitle()) { <ng-container *ngTemplateOutlet="redThreadBox" /> }
               @for (b of visibleBlocks(); track $index) {
                 @switch (b.kind) {
                   @case ('heading') {
@@ -219,6 +221,7 @@ interface ResolvedDiagram {
                     }
                   }
                 }
+                @if ($index === 0 && redThreadAfterTitle()) { <ng-container *ngTemplateOutlet="redThreadBox" /> }
               }
             </article>
             <!-- „Taktiken trainieren“ (Wunsch 2026-11-14): die Aufgaben dieser Partie als Kapitel im Kurs „Persönliche Taktiken“ — nur
@@ -239,6 +242,14 @@ interface ResolvedDiagram {
         </div>
       }
     </div>
+
+    <!-- Der rote Faden als abgesetzter Kernsatz (DESIGN 8.1, Partie-Zusammenfassung): Akzentleiste links, leicht getönte Fläche,
+         etwas größere Schrift. Der Text beginnt selbst mit „Der rote Faden …“ — deshalb keine eigene Überschrift. -->
+    <ng-template #redThreadBox>
+      @if (redThreadParts(); as parts) {
+        <aside class="red-thread"><p><ng-container *ngTemplateOutlet="inline; context: { $implicit: parts }" /></p></aside>
+      }
+    </ng-template>
 
     <!-- Text ohne Leerraum drumherum: Leerzeichen um die Interpolation im Template machten „( 45.Ta1“ und „61.Kxg5 .“ (Partie 243). -->
     <ng-template #inline let-parts>
@@ -306,6 +317,10 @@ interface ResolvedDiagram {
     .summary-text blockquote { margin: 12px 0; padding: 4px 12px; border-left: 3px solid var(--rh-accent);
       background: color-mix(in srgb, var(--rh-accent) 8%, transparent); }
     .summary-text code { font-family: monospace; font-size: 0.9em; }
+    .red-thread { margin: 8px 0 16px; padding: 10px 16px; border-left: 4px solid var(--rh-accent); border-radius: 0 8px 8px 0;
+      background: color-mix(in srgb, var(--rh-accent) 10%, transparent); max-width: 75ch; }
+    .red-thread p { margin: 0; font-size: 1.05rem; line-height: 1.6; }
+    @media (max-width: 599.98px) { .red-thread { padding: 8px 12px; } }
     .table-scroll { overflow-x: auto; margin: 12px 0; }
     .table-scroll table { border-collapse: collapse; min-width: 100%; }
     .table-scroll th, .table-scroll td { border-bottom: 1px solid var(--mat-sys-outline-variant); padding: 4px 8px;
@@ -409,7 +424,13 @@ export class ClubGameSummaryComponent implements OnInit {
   }
   readonly game = signal<SharedGame | null>(null);
   readonly summary = signal<ClubGameSummary | null>(null);
-  readonly blocks = computed<SummaryBlock[]>(() => parseSummary(this.summary()?.markdown ?? ''));
+  /** Text ohne den Absatz mit dem roten Faden — der steht oben ({@link redThreadParts}), an der alten Stelle nicht doppelt. */
+  readonly blocks = computed<SummaryBlock[]>(() => parseSummary(withoutRedThread(this.summary()?.markdown ?? '', this.redThread())));
+  /** Roter Faden (Wunsch 2026-11-25: „ganz oben toll“) — welcher Absatz es ist, sagt der Server (`redThread`); nur mit Text. */
+  private readonly redThread = computed(() => this.summary()?.markdown ? (this.summary()?.redThread ?? null) : null);
+  readonly redThreadParts = computed<InlinePart[] | null>(() => { const t = this.redThread(); return t ? parseInline(t.replace(/\n/g, ' ')) : null; });
+  /** Steht vorn der Titel des Texts (`# Weiß – Schwarz`), kommt der rote Faden direkt darunter, sonst als Erstes. */
+  readonly redThreadAfterTitle = computed(() => { const b = this.visibleBlocks()[0]; return b?.kind === 'heading' && b.level === 1; });
   /** „Empfohlene Literatur“ (Wunsch 2026-11-09): nur Bücher, die der Server kennt und dieser Leser nicht gesperrt hat. */
   readonly books = signal<ReadonlyMap<number, EbookSuggestionInfo>>(new Map());
   /** In dieser Sitzung gesperrt — die Zeile bleibt mit „Rückgängig“ stehen. */

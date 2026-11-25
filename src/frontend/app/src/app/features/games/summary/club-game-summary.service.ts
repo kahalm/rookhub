@@ -7,6 +7,11 @@ export interface ClubGameSummary {
   status: 'none' | 'requested' | 'running' | 'done' | 'failed';
   /** Letzte fertige Fassung — bleibt stehen, während eine neue angefordert ist. */
   markdown: string | null;
+  /**
+   * Der rote Faden (Wunsch 2026-11-25), vom Server aus `markdown` gezogen (`SummaryRedThread`): genau die Zeilen des Absatzes, ohne
+   * Leerraum an den Enden, mit `\n` verbunden. Die Seite stellt ihn oben hin und lässt ihn an der alten Stelle weg (`withoutRedThread` in summary-markdown.util.ts).
+   */
+  redThread?: string | null;
   doneAt: string | null;
   requestedAt: string | null;
   /** Solange Claude schreibt: seit wie vielen Sekunden (vom Server gerechnet). */
@@ -128,13 +133,13 @@ export class ClubGameSummaryService {
 
   /** Eigene Partie über ihren Teilen-Link `/g/{token}`, nur lesend (Wunsch 2026-11-09): nur der fertige Text. */
   getSharedOwn(token: string): Observable<ClubGameSummary> {
-    return this.http.get<Pick<ClubGameSummary, 'status' | 'markdown' | 'doneAt' | 'stale' | 'model'>>(`/api/games/shared/${encodeURIComponent(token)}/summary`)
+    return this.http.get<Pick<ClubGameSummary, 'status' | 'markdown' | 'redThread' | 'doneAt' | 'stale' | 'model'>>(`/api/games/shared/${encodeURIComponent(token)}/summary`)
       .pipe(map(s => ({ ...s, requestedAt: null, error: null })));
   }
 
   /** Eigene Partie über den ANONYMEN Link `/ga/{token}/summary`: der fertige Text ohne Spielernamen (der Server ersetzt bzw. sperrt). */
   getAnonOwn(token: string): Observable<ClubGameSummary> {
-    return this.http.get<Pick<ClubGameSummary, 'status' | 'markdown' | 'doneAt' | 'stale' | 'model'>>(`/api/games/anon/${encodeURIComponent(token)}/summary`)
+    return this.http.get<Pick<ClubGameSummary, 'status' | 'markdown' | 'redThread' | 'doneAt' | 'stale' | 'model'>>(`/api/games/anon/${encodeURIComponent(token)}/summary`)
       .pipe(map(s => ({ ...s, requestedAt: null, error: null })));
   }
 

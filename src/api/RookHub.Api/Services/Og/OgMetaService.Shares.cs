@@ -159,8 +159,11 @@ public partial class OgMetaService
                 if (SplitTokenId(id) is not var (token, gameId) || _leagueClubGames is null
                     || await _leagueClubGames.ReadAsync(token, gameId, ct) is not { } g) return null;
                 var version = CurveVersion(await _leagueClubGames.EvalsAsync(token, gameId, ct));
-                var desc = string.Join(" · ", new[] { g.Result is { Length: > 0 } r && r != "*" ? r : null, g.Event, "Partie auf RookHub nachspielen" }
-                    .Where(x => !string.IsNullOrWhiteSpace(x)));
+                // Roter Faden (Wunsch 2026-11-25): die Zusammenfassung hängt am selben Liga-Link (⋮ „Zusammenfassung“); anonymisiert
+                // geht der Absatz zusätzlich durch SafeSummary (LeagueShareClubGames.RedThreadAsync).
+                var desc = RedThreadDescription(await _leagueClubGames.RedThreadAsync(token, gameId, ct))
+                    ?? string.Join(" · ", new[] { g.Result is { Length: > 0 } r && r != "*" ? r : null, g.Event, "Partie auf RookHub nachspielen" }
+                        .Where(x => !string.IsNullOrWhiteSpace(x)));
                 return new OgPage(GameTitle(Player(g.White), g.WhiteElo, Player(g.Black), g.BlackElo), desc,
                     $"{img}?c={CardVersion}{(version == null ? "" : $"&v={version}")}", canonical, "article");
             }
@@ -168,8 +171,11 @@ public partial class OgMetaService
             {
                 if (_anonGames is null || await _anonGames.ReadAsync(id, ct) is not { } a) return null;
                 var card = AnonSummaryCard(a);
-                return new OgPage("Game summary", string.Join(" · ", card.Lines.Prepend(card.Result).Where(x => !string.IsNullOrWhiteSpace(x))
-                    .Append("an anonymous game summary on RookHub")), $"{img}?c={CardVersion}", canonical, "article");
+                // Roter Faden aus dem Text, den der anonyme Link zeigt (AnonGameShares.SummaryAsync: Namen ersetzt bzw. Text gesperrt).
+                var desc = RedThreadDescription((await _anonGames.SummaryAsync(id, ct))?.RedThread)
+                    ?? string.Join(" · ", card.Lines.Prepend(card.Result).Where(x => !string.IsNullOrWhiteSpace(x))
+                        .Append("an anonymous game summary on RookHub"));
+                return new OgPage("Game summary", desc, $"{img}?c={CardVersion}", canonical, "article");
             }
             case MasterGameKind:
             {

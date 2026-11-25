@@ -304,7 +304,7 @@ public class OwnGameSummariesTests : IDisposable
         _db.SaveChanges();
         var dto = await Svc().GetSharedAsync("tok-done");
         Assert.Equal(new SharedOwnGameSummaryDto("done", "# Text", done, false, "m"), dto);
-        Assert.Equal(new[] { "DoneAt", "Markdown", "Model", "Stale", "Status" },
+        Assert.Equal(new[] { "DoneAt", "Markdown", "Model", "RedThread", "Stale", "Status" },   // RedThread: aus Markdown (1.021.0)
             typeof(SharedOwnGameSummaryDto).GetProperties().Select(p => p.Name).Order().ToArray());
     }
 

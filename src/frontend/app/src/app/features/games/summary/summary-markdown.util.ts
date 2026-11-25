@@ -146,6 +146,27 @@ function splitRow(line: string): string[] {
   return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
 }
 
+/**
+ * Den Absatz mit dem roten Faden aus dem Text nehmen (Wunsch 2026-11-25: „ganz oben toll“) — die Seite zeigt ihn oben, an der alten
+ * Stelle (letzter Absatz von „## Die Partie“) soll er nicht doppelt stehen. Welcher Absatz es ist, entscheidet allein der Server
+ * (`SummaryRedThread`, Feld `redThread`); hier wird nur genau diese Zeilenfolge gesucht: ein ganzer Absatz (davor und danach Leerzeile,
+ * Überschrift oder Textrand), jede Zeile ohne Leerraum an den Enden verglichen. Kein Treffer → Text unverändert.
+ */
+export function withoutRedThread(markdown: string, redThread: string | null | undefined): string {
+  const want = (redThread ?? '').split('\n').map(l => l.trim()).filter(l => l !== '');
+  if (!markdown || !want.length) return markdown ?? '';
+  const lines = markdown.replace(/\r\n?/g, '\n').split('\n');
+  const boundary = (i: number) => i < 0 || i >= lines.length || lines[i].trim() === '' || /^#{1,6}\s/.test(lines[i].trim());
+  for (let i = lines.length - want.length; i >= 0; i--) {
+    if (!want.every((w, k) => lines[i + k].trim() === w)) continue;
+    if (!boundary(i - 1) || !boundary(i + want.length)) continue;
+    // Mit der Leerzeile davor weg, damit keine doppelte stehen bleibt.
+    const from = i > 0 && lines[i - 1].trim() === '' ? i - 1 : i;
+    return [...lines.slice(0, from), ...lines.slice(i + want.length)].join('\n');
+  }
+  return markdown;
+}
+
 export function parseSummary(markdown: string): SummaryBlock[] {
   const lines = (markdown ?? '').replace(/\r\n?/g, '\n').split('\n');
   const blocks: SummaryBlock[] = [];

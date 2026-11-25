@@ -24,7 +24,7 @@ public class ArchitectureGuardTests
         "LichessBroadcasts.cs", "LimitedReadStream.cs", "LogThrottle.cs", "OpenAiJsonClient.cs", "Paging.cs", "PeriodicWorker.cs",
         "PermissiveSan.cs", "PgnClock.cs", "PgnMoveTree.cs", "PgnParser.cs", "PgnTokens.cs", "PgnWriter.cs", "PieceLetters.cs",
         "QuietHours.cs", "RateLimitPartitions.cs", "RequestBodies.cs", "RetentionDelete.cs", "RetentionOptions.cs", "RateLimitRejectionHandler.cs", "RateLimitScale.cs",
-        "SecretConfigCheck.cs", "StaleContentRule.cs", "Utf16Text.cs", "WindowAndConcurrencyLimiter.cs",
+        "SecretConfigCheck.cs", "StaleContentRule.cs", "SummaryRedThread.cs", "Utf16Text.cs", "WindowAndConcurrencyLimiter.cs",
     ];
 
     /// <summary>Direkt in <c>Controllers/</c> bzw. <c>DTOs/</c>: die Basisklasse und die Infrastruktur-Endpunkte,

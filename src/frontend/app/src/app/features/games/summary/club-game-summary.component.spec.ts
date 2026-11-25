@@ -746,3 +746,78 @@ describe('ClubGameSummaryComponent — Teilen-Menü', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.empty-state.not-found p')?.textContent).toContain('games.shared.notFound');
   });
 });
+
+/**
+ * Wunsch 2026-11-25: „der rote Faden in der Summary wäre ganz oben toll“. Welcher Absatz es ist, sagt der Server (`redThread`); die
+ * Seite stellt ihn unter den Titel des Texts und lässt ihn am Ende von „Die Partie“ weg — angemeldet wie über den Teilen-Link.
+ */
+describe('ClubGameSummaryComponent — roter Faden oben', () => {
+  const thread = 'Der rote Faden ist das **Läuferpaar**. Schwarz bekam es\nim siebten Zug.';
+  const md = [
+    '# A – B', '', '## Die Partie', '',
+    'Die Partie begann spanisch: 1.e4 e5 2.Sf3 Sc6 3.Lb5 a6 und Schluss.', '',
+    'Der rote Faden ist das **Läuferpaar**. Schwarz bekam es', 'im siebten Zug.', '',
+    '## Was man mitnehmen kann', '', '- Läufer brauchen Linien.',
+  ].join('\n');
+
+  function render(mode: string | undefined, params: Record<string, string>, summary: object) {
+    const game = () => of({ pgn: '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 1-0', ownerSide: 'white', result: '1-0' });
+    const text = () => of(summary);
+    TestBed.configureTestingModule({
+      imports: [ClubGameSummaryComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params), data: mode ? { mode } : {} } } },
+        { provide: GamesService, useValue: { clubGame: game, sharedClubGame: game, linkedClubGame: game, getShared: game, get: game } },
+        { provide: ClubGameSummaryService, useValue: { get: text, getShared: text, getLinked: text, getSharedOwn: text, getOwn: text,
+          suggestions: () => of([]), exercises: () => of([]) } },
+        { provide: AuthService, useValue: { isLoggedIn: false, currentUser$: of(null) } },
+        { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ClubGameSummaryComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  const ways: { name: string; mode: string | undefined; params: Record<string, string> }[] = [
+    { name: 'angemeldet /club-games/:id', mode: undefined, params: { id: '264' } },
+    { name: 'Teilen-Link /s/:token/club-games/:id', mode: 'club-share', params: { token: 'abc', id: '264' } },
+    { name: 'Link der Vereinspartie /cg/:token', mode: 'club-link', params: { token: 'abc' } },
+  ];
+  for (const way of ways) {
+    it(`${way.name}: direkt unter dem Titel, abgesetzt, und nicht mehr am Ende von „Die Partie“`, () => {
+      const el = render(way.mode, way.params, { status: 'done', markdown: md, redThread: thread });
+      const article = el.querySelector('article.summary-text')!;
+      const children = Array.from(article.children);
+      expect(children[0].tagName).toBe('H1');
+      expect(children[1].matches('aside.red-thread')).toBeTrue();
+      const box = children[1];
+      expect(box.textContent!.trim()).toBe('Der rote Faden ist das Läuferpaar. Schwarz bekam es im siebten Zug.');
+      expect(box.querySelector('strong')!.textContent).toBe('Läuferpaar');
+      expect(article.querySelectorAll('aside.red-thread').length).toBe(1);
+      // an der alten Stelle weg: in „Die Partie“ steht nur noch der Zugtext
+      expect(Array.from(article.querySelectorAll('p')).filter(p => p.textContent!.includes('rote Faden')).length).toBe(1);
+      expect(el.querySelector('p.game-text')!.textContent).toContain('Die Partie begann spanisch');
+      expect(Array.from(el.querySelectorAll('h2')).map(h => h.textContent)).toEqual(['Die Partie', 'Was man mitnehmen kann']);
+    });
+  }
+
+  it('ohne Titel im Text: als Erstes', () => {
+    const el = render(undefined, { id: '264' }, { status: 'done', markdown: md.replace('# A – B\n\n', ''), redThread: thread });
+    expect(el.querySelector('article.summary-text')!.firstElementChild!.matches('aside.red-thread')).toBeTrue();
+  });
+
+  it('alter Text ohne roten Faden (redThread fehlt): keine Box, Text unverändert', () => {
+    const el = render(undefined, { id: '264' }, { status: 'done', markdown: md });
+    expect(el.querySelector('aside.red-thread')).toBeNull();
+    expect(Array.from(el.querySelectorAll('article p')).some(p => p.textContent!.includes('Der rote Faden ist das Läuferpaar'))).toBeTrue();
+  });
+
+  it('redThread ohne passenden Absatz im Text: Box oben, der Text bleibt ganz (nichts geht verloren)', () => {
+    const el = render(undefined, { id: '264' }, { status: 'done', markdown: md, redThread: 'Der rote Faden ist etwas anderes.' });
+    expect(el.querySelector('aside.red-thread')!.textContent!.trim()).toBe('Der rote Faden ist etwas anderes.');
+    expect(Array.from(el.querySelectorAll('article p')).some(p => p.textContent!.includes('Läuferpaar'))).toBeTrue();
+  });
+});

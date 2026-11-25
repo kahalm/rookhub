@@ -37,11 +37,45 @@ mit Vereinspartie 236 (Fable-Erklärungen der Fehler-Vergleiche, 0.908.0).
 | `PUT api/admin/club-game-summaries/{id}/fail` | Admin | `{ error }` |
 | `GET api/league/s/{token}/club/games/{id}/summary` | anonym über den Teilen-Link (Partie muss zum Link gehören, sonst 404) | nur der fertige Text: `{ status: done, markdown, doneAt, stale }` bzw. `{ status: none }` — ohne Warte-Stand, Modell und Fehler |
 
+Alle Antworten tragen seit 1.021.0 zusätzlich `redThread` (roter Faden aus `markdown`, siehe „Roter Faden ganz oben“).
+
 `stale` = die Partie wurde nach dem Schreiben korrigiert (`MovesHash` weicht ab). Die Zeile geht mit der Partie (Cascade).
 Seit 09.11. gibt es die FERTIGE Zusammenfassung auch über den Teilen-Link (`LeagueClubController` unter
 `api/league/s/{token}/club`, Route der App `s/:token/club-games/:id/summary`, `ClubGameSummaryComponent` im
 `shareToken`-Modus): lesend, ohne Anfordern; Warte-Stand, Modell und Fehlertext bleiben den Vereinsmitgliedern vorbehalten.
 Wer den Link hat, liest also den Text der Zusammenfassung.
+
+## Roter Faden ganz oben (1.021.0)
+
+Wunsch 2026-11-25: „Der rote Faden in der Summary wäre ganz oben toll — und in der Vorschau vom Link.“ Der Watcher schreibt ihn
+seit jeher als letzten Absatz von `## Die Partie` (ältere Texte: von `## Zusammenfassung`); ab jetzt ist er dort Pflicht (unten).
+
+- **EINE Stelle**: `Services/SummaryRedThread.cs` (`Extract`, gemeinsamer Baustein) zieht den Absatz aus dem Markdown. Treffer nur,
+  wenn er (1) der LETZTE Absatz eines Hauptabschnitts der Partie ist (`## Die Partie`, `## Partieverlauf`, `## Zusammenfassung`,
+  englisch `## The game`/`## Summary`; ein Diagramm, eine Liste oder `###` dahinter → nicht mehr der letzte), (2) keinen Partiezug mit
+  Zugnummer enthält (`12.Sd3`, `12...b6`, `12…b6`, `12. Sd3`; Felder wie „(b5, c4)“ und `...Lf8` ohne Nummer sind erlaubt) und (3) im
+  ERSTEN Satz den roten Faden nennt: „rote(r/n) Faden/Fäden“, „Fäden ziehen sich …“, „… ziehen sich durch die Partie“, „Durch die
+  ganze Partie zieht sich …“, englisch „common/red thread“. „Der zweite rote Faden …“ / „einen zweiten roten Faden“ allein ist KEIN
+  Treffer (gehört zu einem Absatz davor). Kein Treffer → nichts, die Seite bleibt wie bisher. Auf Prod (25.11.: 143 fertige Texte,
+  Vereins- und eigene Partien) trifft das 45 — jeden Text mit `## Die Partie` bis auf einen ohne roten Faden; die alten Texte, deren
+  roter Faden Züge nennt oder mitten im Text steht, bleiben unverändert. Tests mit diesen Fassungen: `SummaryRedThreadTests`.
+- **Feld `redThread`** in jeder Antwort der Zusammenfassung — `ClubGameSummaryDto`, `OwnGameSummaryDto`, `SharedOwnGameSummaryDto`
+  (berechnete Eigenschaft aus `Markdown`), also auf allen sieben Lesewegen: angemeldet `GET …/club/games/{id}/summary` und
+  `GET api/games/{id}/summary`, über den LeagueHub-Link `…/s/{token}/club/games/{id}/summary`, `/cg/` (`s-club-game/{token}/summary`),
+  `/g/` (`games/shared/{token}/summary`) und `/ga/` (`games/anon/{token}/summary`). Weil das Feld aus dem Text DIESER Antwort kommt,
+  ist es bei den anonymisierenden Links schon gefiltert (Namen ersetzt bzw. Text gesperrt → `null`). Wert: genau die Zeilen des
+  Absatzes, jede ohne Leerraum an den Enden, mit `\n` verbunden; `null` ohne Text oder ohne Treffer.
+- **Seite** (`ClubGameSummaryComponent`, alle fünf Wege): der Absatz steht als `aside.red-thread` ganz oben im Text — direkt unter dem
+  Titel des Texts (`# Weiß – Schwarz`), ohne Titel als Erstes — und fehlt an der alten Stelle (`withoutRedThread` in
+  `summary-markdown.util.ts` nimmt genau diese Zeilenfolge als ganzen Absatz heraus; findet sie sie nicht, bleibt der Text ganz). Die
+  Seite sucht den Absatz nicht selbst. Gestaltung: DESIGN 8.1 „Zusammenfassung → roter Faden“. Tests:
+  `club-game-summary.component.spec.ts` („roter Faden oben“, je Weg), `summary-markdown.util.spec.ts` („withoutRedThread“).
+- **Link-Vorschau**: `og:description` der geteilten Zusammenfassungen und Partien — welche Routen und warum: `docs/api/link-vorschau.md`,
+  „Roter Faden als Beschreibung“.
+- **Watcher** (`~/claude/formulare-bot`, außerhalb des Repos): `instructions-summary.md` macht den Absatz zur Pflicht — letzter Absatz
+  von `## Die Partie`, beginnt wörtlich mit „Der rote Faden“ (bzw. „Die roten Fäden“), 2–4 Sätze, ohne Züge mit Zugnummer, ohne Namen,
+  für sich verständlich. `check-summary` (`lib/game_text.py`, `check_red_thread`) weist ab: fehlt, anderer Anfang, Zug mit Zugnummer,
+  weniger als 2 oder mehr als 4 Sätze. Tests: `python3 -m unittest discover -s tests` dort (Klasse `RedThread`).
 
 ## „Zusammenfassung“ neben den Ligapartien in LeagueHub (0.967.0)
 

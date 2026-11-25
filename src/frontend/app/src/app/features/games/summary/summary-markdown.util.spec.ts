@@ -1,4 +1,4 @@
-import { InlinePart, SummaryBlock, summaryLink, gameBlockIndex, gameMovePairs, linkSummaryMoves, moveLabel, parseInline, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock } from './summary-markdown.util';
+import { InlinePart, SummaryBlock, summaryLink, gameBlockIndex, gameMovePairs, linkSummaryMoves, moveLabel, parseInline, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock, withoutRedThread } from './summary-markdown.util';
 
 describe('summary-markdown.util (Partie-Zusammenfassung, 0.913.0)', () => {
   it('zerlegt Überschriften, Absätze, Listen, Zitat, Trennlinie und Tabelle', () => {
@@ -253,5 +253,32 @@ describe('summary-markdown.util — Block „Die Partie“', () => {
   it('leeres oder kaputtes PGN: keine Züge', () => {
     expect(gameMovePairs(positionsOf(''))).toEqual([]);
     expect(gameMovePairs(positionsOf('1. e4 e5 2. Ke9 ???'))).toEqual([]);
+  });
+});
+
+/** Roter Faden (Wunsch 2026-11-25): die Seite nimmt genau den Absatz heraus, den der Server als `redThread` nennt. */
+describe('withoutRedThread', () => {
+  const md = ['# A – B', '', '## Die Partie', '', 'Erst 1.e4 e5.', '', 'Der rote Faden ist das Läuferpaar.  ', 'Schwarz bekam es früh.', '',
+    '## Fazit', '', 'x'].join('\n');
+
+  it('nimmt den ganzen Absatz samt Leerzeile davor heraus (Zeilen ohne Leerraum an den Enden verglichen)', () => {
+    expect(withoutRedThread(md, 'Der rote Faden ist das Läuferpaar.\nSchwarz bekam es früh.'))
+      .toBe(['# A – B', '', '## Die Partie', '', 'Erst 1.e4 e5.', '', '## Fazit', '', 'x'].join('\n'));
+  });
+
+  it('auch mit CRLF und direkt vor einer Überschrift', () => {
+    const crlf = '## Die Partie\r\n\r\nErst 1.e4 e5.\r\n\r\nDer rote Faden ist X.\r\n## Fazit';
+    expect(withoutRedThread(crlf, 'Der rote Faden ist X.')).toBe('## Die Partie\n\nErst 1.e4 e5.\n## Fazit');
+  });
+
+  it('nur ein ganzer Absatz: ein Teil eines längeren Absatzes bleibt stehen', () => {
+    expect(withoutRedThread(md, 'Der rote Faden ist das Läuferpaar.')).toBe(md);
+  });
+
+  it('ohne redThread oder ohne Treffer: unverändert', () => {
+    expect(withoutRedThread(md, null)).toBe(md);
+    expect(withoutRedThread(md, '')).toBe(md);
+    expect(withoutRedThread(md, 'Gibt es nicht.')).toBe(md);
+    expect(withoutRedThread('', 'x')).toBe('');
   });
 });

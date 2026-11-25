@@ -15,11 +15,19 @@ namespace RookHub.Api.Services.Games;
 /// <c>/club-games/{id}/summary</c>); sonst <c>null</c>.</summary>
 public sealed record OwnGameSummaryDto(string Status, string? Markdown, DateTime? DoneAt, DateTime? RequestedAt, bool Stale,
     string? Model, string? Error, ClubGameSummaryReadiness? Readiness, string Source, int? QuotaLeft, int QuotaLimit, int? RunningSeconds = null,
-    int? ClubGameId = null);
+    int? ClubGameId = null)
+{
+    /// <summary>Der rote Faden (Wunsch 2026-11-25), aus <see cref="Markdown"/> gezogen (<see cref="SummaryRedThread"/>); die Seite stellt ihn nach oben.</summary>
+    public string? RedThread => SummaryRedThread.Extract(Markdown);
+}
 
 /// <summary>Offener Auftrag für den Watcher.</summary>
 /// <summary>Zusammenfassung über den Teilen-Link <c>/g/{token}</c>: nur der fertige Text, nichts zur Anforderung, zum Besitzer oder zum Kontingent.</summary>
-public sealed record SharedOwnGameSummaryDto(string Status, string? Markdown, DateTime? DoneAt, bool Stale, string? Model);
+public sealed record SharedOwnGameSummaryDto(string Status, string? Markdown, DateTime? DoneAt, bool Stale, string? Model)
+{
+    /// <summary>Der rote Faden des (über den Link gezeigten) Texts, <see cref="SummaryRedThread"/>.</summary>
+    public string? RedThread => SummaryRedThread.Extract(Markdown);
+}
 
 public sealed record OwnGameSummaryJob(int SavedGameId, int UserId, DateTime RequestedAt);
 
