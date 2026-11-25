@@ -128,6 +128,7 @@ export const STORAGE_KEYS: readonly StorageKeyEntry[] = [
   d('lh-all-leagues', 'LeagueHub: alle Ligen zeigen'),
   d('lh-scan-engine', 'Formular-Werkbank: Engine'),
   d('lh-tree-filter', 'Spielerkarte: Baum-Filter'),
+  d('lh-training-lines-take', 'Spielerkarte: Anzahl der Trainingslinien'),
   d('leaguehub', 'LeagueHub: gewählte Liga/Mannschaft (auch Oberflächen-Kennung)'),
   d('public_fav_', 'Turnierseite ohne Anmeldung: Favoriten/Filter je Turnier (nur abgemeldet benutzt)', true),
 

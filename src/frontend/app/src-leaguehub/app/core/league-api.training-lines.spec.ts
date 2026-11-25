@@ -29,12 +29,12 @@ describe('LeagueApiService.trainingLines (2026-10-07)', () => {
   });
 
   it('legt das Trainings-Repertoire per POST an — Auswahl und Filter im Rumpf', async () => {
-    const p = api.trainingRepertoire('1606921', { repertoire: 3, color: 'w', chapterColors: { K: 'b' },
+    const p = api.trainingRepertoire('1606921', { repertoire: 3, color: 'w', chapterColors: { K: 'b' }, take: 100,
       filter: { source: 'board', speeds: [], years: 5, withUnsure: false } });
     const req = http.expectOne('/api/league/player/1606921/training-repertoire');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ repertoire: 3, color: 'w', chapterColors: { K: 'b' }, source: 'board', speeds: null, years: 5, unsure: null,
-      replace: false });
+      take: 100, replace: false });
     req.flush({ id: 9, name: 'Prep: X 2026', lines: 12, replaced: true });
     expect((await p).replaced).toBeTrue();
   });

@@ -57,6 +57,12 @@
   springt in den Trainer von `line.repertoireId`. „Alle in dieser Reihenfolge trainieren" (`.tl-all`) nur bei
   Einzelwahl, sonst der Hinweis `.tl-all-hint` auf „Trainings-Repertoire anlegen". Eigene Kapitelfarben gehen je
   Repertoire mit (beim ersten Laden über alle markierten einmal nachgeladen, weil die Ids erst dann bekannt sind).
+- Linienzahl (Wunsch 2026-11-25, „einstellbar wieviel lines man bekommt"): in `.tl-pick` hinter dem Repertoire-Menü das
+  Auswahlfeld `select.tl-take` „Linien" mit 10 / 25 / 50 / 100 / 250 / Alle (`TRAINING_LINES_STEPS`, „Alle" =
+  `TRAINING_LINES_ALL` = 5000, die Obergrenze des Servers), Vorgabe 50. Je Gerät gemerkt in `lh-training-lines-take`
+  (`device`); geht als `take` an die Abfrage UND an „Trainings-Repertoire anlegen" (Hinweis „bis zu n"). Unter der Liste
+  steht bei `more` > 0 neben „… und n weitere Linien" der Knopf `.tl-more-btn` zur nächsten Stufe („100 Linien zeigen",
+  reicht sie für alle: „Alle n zeigen"). Gilt in LeagueHub und Spielervorbereitung (geteilte Komponente).
 - Schätzung (0.715.0): Kopfzeile `.tl-estimate` („Von Huber nur 3 passende Partien — Lücken mit Lichess-Partien der Stufe
   … geschätzt", ohne Partien bzw. bei vielen andere Fassung), `.tl-incomplete` bei `explorerIncomplete`; je Linie
   `.tl-tag` „geschätzt" (nur Lichess) bzw. „ab 2…d5 geschätzt (Lichess …)" (`plyLabel` aus `lichessFrom`) oder

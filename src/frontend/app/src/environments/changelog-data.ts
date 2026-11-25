@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.012.0", date: "2026-11-25", changes: [
+    { en: "Player card (LeagueHub and player preparation), “Training lines”: you can now choose how many lines you get — 10, 25, 50, 100, 250 or all (default 50). The choice is remembered on this device. Below the list, “… and n more lines” now has a button that shows the next step (“Show 100 lines”, or “Show all n” when that covers them all). “Create training repertoire” takes the same number of lines instead of a fixed 50.",
+      de: "Spielerkarte (LeagueHub und Spielervorbereitung), „Trainingslinien“: wie viele Linien man bekommt, ist jetzt einstellbar — 10, 25, 50, 100, 250 oder alle (Vorgabe 50). Die Wahl merkt sich das Gerät. Unter der Liste hat „… und n weitere Linien“ jetzt einen Knopf zur nächsten Stufe („100 Linien zeigen“, bzw. „Alle n zeigen“, wenn sie für alle reicht). „Trainings-Repertoire anlegen“ übernimmt dieselbe Linienzahl statt fest 50." },
+  ] },
   { version: "1.011.1", date: "2026-11-25", changes: [
     { en: "Book translation: a single broken character in the model’s answer (half of an emoji pair, “invalid surrogate”) no longer aborts the whole book. Such halves are replaced by “�” in the source before sending and in the answer before it is read, length cuts never split a character pair, and a text that still cannot be read counts as one failed text (kept in the original) while the rest of the book is translated.",
       de: "Buch-Übersetzung: ein einzelnes kaputtes Zeichen in der Antwort des Modells (die Hälfte eines Emoji-Paars, „invalid surrogate“) bricht nicht mehr das ganze Buch ab. Solche Hälften werden in der Quelle vor dem Senden und in der Antwort vor dem Lesen durch „�“ ersetzt, Kürzungen nach Länge zerschneiden kein Zeichenpaar mehr, und ein Text, der trotzdem nicht lesbar ist, zählt als ein gescheiterter Text (bleibt im Original), während der Rest des Buchs übersetzt wird." },

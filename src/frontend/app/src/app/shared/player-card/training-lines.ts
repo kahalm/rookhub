@@ -61,7 +61,8 @@ export interface TrainingLine {
 /** Antwort von `POST …/training-repertoire` („Show me lines to train"). */
 export interface TrainingRepertoireResult { id: number; name: string; lines: number; replaced: boolean }
 
-/** Höchstens so viele Linien kommen in ein Trainings-Repertoire (fest am Server). */
+/** So viele Linien kommen in ein Trainings-Repertoire, wenn die Anfrage keine Zahl nennt (Vorgabe am Server). Die Karte schickt
+ *  seit dem Wunsch 2026-11-25 die gewählte Linienzahl mit (`take`). */
 export const TRAINING_REPERTOIRE_MAX = 50;
 
 /** Name des Trainings-Repertoires wie am Server: „Prep: Huber, Franz 2026". */
@@ -76,7 +77,7 @@ export function trainingRepertoireBody(q: TrainingLinesQuery, extra: Record<stri
     repertoire: q.repertoire, color: q.color,
     chapterColors: q.chapterColors && Object.keys(q.chapterColors).length ? q.chapterColors : null,
     source: f['source'] ?? null, speeds: f['speeds'] ?? null, years: f['years'] ? Number(f['years']) : null,
-    unsure: f['unsure'] === 'true' ? true : null, ...extra,
+    unsure: f['unsure'] === 'true' ? true : null, take: q.take ?? null, ...extra,
   };
 }
 
@@ -175,6 +176,26 @@ export interface TrainingLinesQuery {
 
 /** So viele Linien holt „Alle in dieser Reihenfolge trainieren" im Trainer (die Obergrenze des Servers). */
 export const TRAINING_LINES_ALL = 5000;
+
+/** Wählbare Linienzahl der Karte (Wunsch 2026-11-25); die letzte ist „Alle“ (= die Obergrenze des Servers). */
+export const TRAINING_LINES_STEPS: readonly number[] = [10, 25, 50, 100, 250, TRAINING_LINES_ALL];
+
+/** Vorgabe der Linienzahl (wie `DefaultTake` am Server). */
+export const TRAINING_LINES_DEFAULT = 50;
+
+/** Gemerkte Linienzahl — je Gerät, für alle Gegner (eine Gerätevorliebe: am E-Ink-Leser lieber wenige). */
+export const TRAINING_LINES_TAKE_KEY = 'lh-training-lines-take';
+
+/** Gemerkter Wert → eine der Stufen; alles andere (fehlt, kaputt, alte Zahl) → Vorgabe. */
+export function trainingLinesTake(raw: unknown): number {
+  const n = Number(raw);
+  return TRAINING_LINES_STEPS.includes(n) ? n : TRAINING_LINES_DEFAULT;
+}
+
+/** „Mehr zeigen“: die nächste Stufe über `take`; `null` = es gibt keine größere. */
+export function nextTrainingLinesStep(take: number): number | null {
+  return TRAINING_LINES_STEPS.find(n => n > take) ?? null;
+}
 
 /** Gemerkte Auswahl (Repertoire, Farbe) — je Gerät, für alle Gegner. */
 export const TRAINING_LINES_KEY = 'lh-training-lines';

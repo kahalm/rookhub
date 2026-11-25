@@ -1428,6 +1428,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Knöpfe 5.4; Segmentschalter `.seg` (`aria-pressed`); Spielerkarte als natives `<dialog class="card">` mit
   klebendem Kopf.
 - Auswahlfelder wie `.pick select` (Fläche, 1 px Rahmen, Radius 6), auch der Vereinswechsel (r2-l-club-select).
+- Spielerkarte, Trainingslinien: Linienzahl als kleines natives Auswahlfeld „Linien“ (10 / 25 / 50 / 100 / 250 / Alle) in der
+  Auswahlzeile hinter dem Repertoire-Menü, kein Segmentschalter (sechs Stufen brächen am Handy um); „… und n weitere Linien“ mit
+  umrandetem Knopf `.btn-sec` zur nächsten Stufe in derselben Zeile (1.012.0).
 - Fußzeile immer unten: `lh-root` ist eine Flex-Spalte über `100dvh`, `main.wrap` wächst (wie ClubHub; u1-l-fuss-schwebt).
 - Breitbild ≥ 2400 px: `.wrap.mid` und `.wrap.wide` (Formular prüfen/korrigieren, Brett ≤ `min(100vh - 240px, 960px)`) auf
   `--page-max-width-wide`, Prognose-Bretter vierspaltig, bei 6 (bzw. 3) Brettern dreispaltig (u1-l-prognose-bretter,
@@ -1815,3 +1818,4 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-11-17 | Trainerstunden teilen | RookHub, Stundenseite: Abschnitt „Teilen“ (Frist-Umschalter, Liste der aktiven Links mit Kopieren/Widerrufen) und Gast-Ansicht `/tl/:token` samt Seite „Link abgelaufen“ (8.1) | Einzelne Stunden zeitlich begrenzt ohne Konto zeigen; der Gast darf nicht in private Bereiche abbiegen | Wunsch User 17.11. |
 | 2026-11-17 | Nächster Sprecher | RookHub, Stundenseite der Trainerstunden (auch Gast): Sprecherleiste unter dem Video, Legende, „Zum Anfang des Redebeitrags“ und „Nächster Sprecher“ (8.1) | Im Video gezielt zum Trainer bzw. zur eigenen Frage springen | Wunsch User 17.11. |
 | 2026-11-22 | 1.000.0 | RookHub, Eigene Fehler nachspielen (5.12): Live-Zeile „Schwache Analyse im Browser: … (Tiefe n) · Antwort …“ unter „gehört nicht zu den n besten Zügen“ | Fehlversuch außerhalb der Kandidaten hatte nur eine Schranke, keinen Wert | Wunsch User 22.11. (Vereinspartie 260) |
+| 2026-11-25 | 1.012.0 | LeagueHub + Spielervorbereitung, Trainingslinien: Linienzahl als natives Auswahlfeld „Linien“ hinter dem Repertoire-Menü (8.4), „… und n weitere“ mit umrandetem Knopf zur nächsten Stufe | Wie viele Linien man bekommt, war fest 50 | Wunsch User 25.11. |

@@ -181,7 +181,7 @@ public class PrepController : BaseApiController
         return r is null ? NotFound(new { reason = "repertoire" }) : Ok(r);
     }
 
-    /// <summary>„Show me lines to train": legt ein eigenes Repertoire „Prep: &lt;Spieler&gt; &lt;Jahr&gt;" mit den höchstens 50 wichtigsten
+    /// <summary>„Show me lines to train": legt ein eigenes Repertoire „Prep: &lt;Spieler&gt; &lt;Jahr&gt;" mit den wichtigsten (Rumpf `take`, sonst höchstens 50)
     /// Linien gegen diesen Spieler an (gleichnamiges wird ersetzt) → <c>{ id, name, lines, replaced }</c>. Rumpf wie die Abfrage
     /// (<see cref="TrainingLinesService.CreateRequest"/>); fremdes Repertoire 404, keine Linien 400.</summary>
     [HttpPost("player/{id:int}/training-repertoire")]

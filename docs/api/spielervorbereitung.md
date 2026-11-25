@@ -136,7 +136,8 @@ Nutzers, jüngste zuerst, je Gegner eine, höchstens 50 (`MaxItems`; angesehen w
   abweichende. `POST /api/prep/player/{id}/training-repertoire` (prep.view) und `POST /api/league/player/{fide}/
   training-repertoire` (`LeagueTrainingController`, league.view, kein Teilen-Link), Rumpf wie die Abfrage
   (`TrainingLinesService.CreateRequest`) → `{ id, name, lines, replaced }`: eigenes Repertoire „Prep: <Gegner> <Jahr>"
-  mit höchstens 50 Linien (min(`Prep:TrainingLines`, 50)) in der gereihten Reihenfolge, je Linie der UNVERÄNDERTE
+  mit `take` Linien (Rumpf, 1…5000 — die auf der Karte gewählte Linienzahl, 2026-11-25; ohne `take` min(`Prep:TrainingLines`, 50))
+  in der gereihten Reihenfolge, je Linie der UNVERÄNDERTE
   PGN-Abschnitt der Quelle; `UseForExtension=false`, `Kind` wie die Quelle. Gleichnamiges eigenes wird ersetzt
   (gleiche Id; Dateien über `RepertoireService.DeleteFileAsync`, neue per `UploadFileAsync` — SR-Stand je lineKey bleibt).
 - Alle markierten statt Auswahl (0.709.0, Wunsch: „nicht ein repertoir auswählen sondern die markierten verwenden"): ohne

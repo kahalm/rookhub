@@ -1,4 +1,5 @@
-import { deviationLabel, lineText, percent, plyLabel, trainingFilterParams, trainingLinesParams, trainingLinesUrl } from './training-lines';
+import { TRAINING_LINES_ALL, deviationLabel, lineText, nextTrainingLinesStep, percent, plyLabel, trainingFilterParams, trainingLinesParams, trainingLinesTake,
+  trainingLinesUrl, trainingRepertoireBody } from './training-lines';
 
 describe('training-lines (Hilfen)', () => {
   it('percent: ganze Prozente ab 10, sonst eine Stelle mit Komma, winzig als „<0,1 %"', () => {
@@ -56,5 +57,18 @@ describe('training-lines (Hilfen)', () => {
   it('deviationLabel: sein Zug an der Stelle des Widerspruchs', () => {
     expect(deviationLabel({ moves: ['e4', 'e5', 'Nf3'], start: null, deviationPly: 1, deviationSan: 'c5' })).toBe('1…c5');
     expect(deviationLabel({ moves: ['e4'], start: null })).toBe('');
+  });
+
+  it('Linienzahl: nur die Stufen, sonst 50; nächste Stufe bis „Alle"; Trainings-Repertoire bekommt take', () => {
+    expect(trainingLinesTake('25')).toBe(25);
+    expect(trainingLinesTake(String(TRAINING_LINES_ALL))).toBe(TRAINING_LINES_ALL);
+    expect(trainingLinesTake(null)).toBe(50);
+    expect(trainingLinesTake('7')).toBe(50);
+    expect(trainingLinesTake('x')).toBe(50);
+    expect(nextTrainingLinesStep(50)).toBe(100);
+    expect(nextTrainingLinesStep(250)).toBe(TRAINING_LINES_ALL);
+    expect(nextTrainingLinesStep(TRAINING_LINES_ALL)).toBeNull();
+    expect(trainingRepertoireBody({ repertoire: 7, color: 'w', take: 25 })['take']).toBe(25);
+    expect(trainingRepertoireBody({ repertoire: 7, color: 'w' })['take']).toBeNull();
   });
 });

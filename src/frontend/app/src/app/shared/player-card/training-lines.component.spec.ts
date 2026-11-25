@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { HandoffService } from '@rh/core/handoff.service';
 import { PLAYER_CARD_API } from './player-card-api';
-import { Deviations, TRAINING_LINES_KEY, TrainingLines } from './training-lines';
+import { Deviations, TRAINING_LINES_ALL, TRAINING_LINES_KEY, TRAINING_LINES_TAKE_KEY, TrainingLines } from './training-lines';
 import { TrainingLinesComponent } from './training-lines.component';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { TranslateService } from '@ngx-translate/core';
@@ -79,10 +79,12 @@ describe('TrainingLinesComponent', () => {
 
   beforeEach(() => {
     lang = undefined;
+    localStorage.removeItem(TRAINING_LINES_TAKE_KEY);
     localStorage.removeItem(TRAINING_LINES_KEY);
     localStorage.removeItem('rookhub_rep_train_chaptercolor_9');
   });
   afterEach(() => {
+    localStorage.removeItem(TRAINING_LINES_TAKE_KEY);
     localStorage.removeItem(TRAINING_LINES_KEY);
     localStorage.removeItem('rookhub_rep_train_chaptercolor_9');
   });
@@ -153,6 +155,84 @@ describe('TrainingLinesComponent', () => {
     expect(links[1].textContent!.trim()).toBe('Chessable');
     expect(links[1].title).toContain('noch nicht trainiert');
     expect(el().querySelector('.tl-skipped')!.textContent).toContain('3 ungelernte Chessable-Alternativen ausgelassen.');
+  });
+
+  describe('Linienzahl wählen (Wunsch 2026-11-25)', () => {
+    const take = () => el().querySelector<HTMLSelectElement>('select.tl-take')!;
+
+    it('Vorgabe 50, Stufen 10 … 250 und „Alle"; die Abfrage schickt take', async () => {
+      build();
+      await openSection();
+      expect(trainingLines.calls.first().args[1].take).toBe(50);
+      expect(Array.from(take().options).map(o => o.textContent!.trim())).toEqual(['10', '25', '50', '100', '250', 'Alle']);
+      expect(take().value).toBe('50');
+      expect(take().closest('label')!.textContent).toContain('Linien');
+    });
+
+    it('wählen lädt mit derselben Auswahl neu und merkt es sich je Gerät', async () => {
+      build();
+      await openSection();
+      take().value = '10';
+      take().dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+      expect(trainingLines.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ repertoire: 7, color: 'w', take: 10 }));
+      expect(localStorage.getItem(TRAINING_LINES_TAKE_KEY)).toBe('10');
+      take().value = String(TRAINING_LINES_ALL);
+      take().dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+      expect(trainingLines.calls.mostRecent().args[1].take).toBe(TRAINING_LINES_ALL);
+    });
+
+    it('gemerkte Zahl gilt beim nächsten Gegner; kaputter Wert → Vorgabe', async () => {
+      localStorage.setItem(TRAINING_LINES_TAKE_KEY, '250');
+      build();
+      await openSection();
+      expect(trainingLines.calls.first().args[1].take).toBe(250);
+      expect(take().value).toBe('250');
+      TestBed.resetTestingModule();
+      localStorage.setItem(TRAINING_LINES_TAKE_KEY, '7');
+      build();
+      await openSection();
+      expect(trainingLines.calls.first().args[1].take).toBe(50);
+    });
+
+    it('„… und n weitere": Knopf zur nächsten Stufe; reicht die für alle, heißt er „Alle n zeigen"', async () => {
+      build();
+      trainingLines.and.resolveTo({ ...DATA, more: 300 });
+      await openSection();
+      const more = () => el().querySelector<HTMLButtonElement>('button.tl-more-btn');
+      expect(el().querySelector('.tl-more')!.textContent).toContain('… und 300 weitere Linien.');
+      expect(more()!.textContent).toContain('100 Linien zeigen');
+      more()!.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(trainingLines.calls.mostRecent().args[1].take).toBe(100);
+      expect(take().value).toBe('100');
+      trainingLines.and.resolveTo({ ...DATA, more: 1 });
+      take().value = '100';
+      take().dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(more()!.textContent).toContain('Alle 5 zeigen');
+      // bei „Alle" kein Knopf mehr
+      take().value = String(TRAINING_LINES_ALL);
+      take().dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(more()).toBeNull();
+    });
+
+    it('das Trainings-Repertoire bekommt dieselbe Zahl (Hinweis nennt sie)', async () => {
+      localStorage.setItem(TRAINING_LINES_TAKE_KEY, '25');
+      build();
+      trainingLines.and.resolveTo({ ...DATA, total: 300 });
+      await openSection();
+      const btn = el().querySelector<HTMLButtonElement>('button.tl-create')!;
+      expect(btn.title).toContain('(bis zu 25)');
+      btn.click();
+      await fixture.whenStable();
+      expect(trainingRepertoire.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ take: 25 }));
+    });
   });
 
   it('ohne freigegebenes Repertoire: sagt, wo man es einschaltet', async () => {

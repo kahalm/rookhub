@@ -5,13 +5,13 @@ import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.compone
 import { Router } from '@angular/router';
 import { TreeFilter } from '@lh/core/league.models';
 import { HandoffService } from '@rh/core/handoff.service';
-import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
+import { localStore, readJson, readRaw, writeJson, writeRaw } from '@rh/core/local-json-store';
 import { readChapterColorOverrides } from '@rh/shared/repertoire/repertoire-color.util';
 import { PLAYER_CARD_API } from './player-card-api';
 import { cardDate, cardLang } from './card-lang';
 import { Deviations, deviationText } from './training-lines';
-import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, TrainingRepertoireResult, chessableInfo, deviationLabel, plyLabel, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
-  trainingRepertoireName } from './training-lines';
+import { ChapterColorOverrides, TRAINING_LINES_ALL, TRAINING_LINES_KEY, TRAINING_LINES_STEPS, TRAINING_LINES_TAKE_KEY, TrainingLine, TrainingRepertoireResult, chessableInfo, deviationLabel, plyLabel, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
+  nextTrainingLinesStep, trainingLinesTake, trainingRepertoireName } from './training-lines';
 
 /** Was eine Abfrage will: Repertoire (null = alle markierten) und MEINE Farbe (null = der Server wählt die mit den meisten Linien). */
 interface Want { repertoire: number | null; color: 'w' | 'b' | null }
@@ -53,6 +53,12 @@ interface Want { repertoire: number | null; color: 'w' | 'b' | null }
                 <select class="tl-rep" (change)="pickRepertoire($any($event.target).value)" [disabled]="loading()">
                   <option value="" [selected]="d.repertoire === null">{{ t('allMarked') }}</option>
                   @for (r of d.repertoires; track r.id) { <option [value]="r.id" [selected]="r.id === d.repertoire">{{ r.name }}</option> }
+                </select>
+              </label>
+              <!-- Wunsch 2026-11-25: wie viele Linien man bekommt (je Gerät gemerkt); gilt auch fürs Trainings-Repertoire -->
+              <label>{{ t('playerCard.lines.count') }}
+                <select class="tl-take" (change)="pickTake($any($event.target).value)" [disabled]="loading()">
+                  @for (n of steps; track n) { <option [value]="n" [selected]="n === take()">{{ stepLabel(n) }}</option> }
                 </select>
               </label>
             </div>
@@ -163,7 +169,14 @@ interface Want { repertoire: number | null; color: 'w' | 'b' | null }
                   </li>
                 }
               </ol>
-              @if (d.more) { <p class="muted small">{{ t(d.more === 1 ? 'playerCard.lines.moreOne' : 'playerCard.lines.more', { n: d.more }) }}</p> }
+              @if (d.more) {
+                <p class="muted small tl-more">{{ t(d.more === 1 ? 'playerCard.lines.moreOne' : 'playerCard.lines.more', { n: d.more }) }}
+                  @if (nextStep(); as n) {
+                    <button type="button" class="btn-sec tl-more-btn" [disabled]="loading()" (click)="pickTake(n)">
+                      {{ n >= d.lines.length + d.more ? t('playerCard.lines.showAll', { n: d.lines.length + d.more }) : t('playerCard.lines.showMore', { n }) }}</button>
+                  }
+                </p>
+              }
             } @else if (!loading()) {
               <p class="muted small">{{ t('playerCard.lines.noLines') }}</p>
             }
@@ -180,6 +193,7 @@ interface Want { repertoire: number | null; color: 'w' | 'b' | null }
     .tl-pick label { display: flex; gap: .5rem; align-items: center; min-width: 0; max-width: 100%; }
     .tl-pick select { min-width: 0; max-width: min(28rem, 100%); font: inherit; padding: .3rem .4rem; }
     .tl-basis { margin: .4rem 0; }
+    .tl-more { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .75rem; margin: .5rem 0 0; }
     .tl-actions { margin: .4rem 0 .6rem; }
     .tl-list { list-style: none; margin: 0; padding: 0; }
     .tl-list li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .25rem 1rem;
@@ -233,6 +247,15 @@ export class TrainingLinesComponent {
   readonly who = computed(() => (this.name() || '').split(',')[0].trim() || this.t('playerCard.lines.thisOpponent'));
   private seq = 0;
   private loadedFor = '';
+
+  /** Wählbare Linienzahlen; die letzte = „Alle“. */
+  readonly steps = TRAINING_LINES_STEPS;
+  readonly all = TRAINING_LINES_ALL;
+  /** Gewählte Linienzahl (je Gerät gemerkt, Vorgabe 50) — geht als `take` an Abfrage und Trainings-Repertoire. */
+  readonly take = signal(trainingLinesTake(readRaw(localStore(), TRAINING_LINES_TAKE_KEY)));
+  /** Nächste Stufe für „Mehr zeigen“ (`null` = schon alle). */
+  readonly nextStep = computed(() => nextTrainingLinesStep(this.take()));
+  readonly stepLabel = (n: number) => n === TRAINING_LINES_ALL ? this.t('playerCard.lines.countAll') : String(n);
 
   /** Sprache für Züge und Prozent: die der Oberfläche, LeagueHub/ohne Sprache deutsch (e1-rk-prep-card-german). */
   private get lang(): string { return cardLang(this.translate); }
@@ -310,7 +333,9 @@ export class TrainingLinesComponent {
    *  Ein Schlüssel ohne Punkt gehört zu `prep.trainingRepertoire.*` (Knopf „Show me lines to train"), sonst voller Schlüssel. */
   t(key: string, params: Record<string, unknown> = {}): string {
     const name = trainingRepertoireName(this.name());
-    const all = { name, max: TRAINING_REPERTOIRE_MAX, ...params };
+    // „(bis zu n) Linien“ im Hinweis des Anlegen-Knopfs: die gewählte Zahl, bei „Alle“ bzw. weniger Linien so viele, wie es gibt
+    const total = this.data()?.total;
+    const all = { name, max: total != null ? Math.min(this.take(), total) : this.take(), ...params };
     const full = key.includes('.') ? key : `prep.trainingRepertoire.${key}`;
     if (this.translate?.getCurrentLang()) {
       const v = this.translate.instant(full, all);
@@ -332,7 +357,7 @@ export class TrainingLinesComponent {
     this.creating.set(true);
     this.createNote.set(null);
     const query = {
-      repertoire: d.repertoire, color: d.color, filter: this.filter(),
+      repertoire: d.repertoire, color: d.color, filter: this.filter(), take: this.take(),
       chapterColors: this.overrides(d.repertoire, d.repertoires.map(r => r.id)),
     };
     try {
@@ -408,6 +433,16 @@ export class TrainingLinesComponent {
     void this.load({ repertoire: id, color: this.data()?.color ?? null });
   }
 
+  /** Linienzahl wählen (Auswahl oder „Mehr zeigen“): merken (nur Bequemlichkeit, scheitert still) und mit der Auswahl neu laden. */
+  pickTake(value: string | number): void {
+    const n = trainingLinesTake(value);
+    this.take.set(n);
+    writeRaw(localStore(), TRAINING_LINES_TAKE_KEY, String(n));
+    this.clearAuto();
+    this.pendingStart.set(0);
+    void this.load({ repertoire: this.data()?.repertoire ?? null, color: this.data()?.color ?? null });
+  }
+
   pickColor(c: 'w' | 'b'): void {
     this.clearAuto();
     this.pendingStart.set(0);
@@ -430,7 +465,7 @@ export class TrainingLinesComponent {
     const key = this.key(), filter = this.filter();
     try {
       const d = await fetch.call(this.api, key, {
-        repertoire: want.repertoire, color: want.color, filter,
+        repertoire: want.repertoire, color: want.color, filter, take: this.take(),
         chapterColors: this.overrides(want.repertoire, this.data()?.repertoires.map(r => r.id) ?? []),
       });
       if (my !== this.seq) return;
@@ -565,6 +600,10 @@ const GERMAN: Record<string, string> = {
   'playerCard.lines.sub': '— deine Linien, wahrscheinlichste zuerst',
   'playerCard.lines.noRepertoire': 'Kein Repertoire ist für die Vorbereitung freigegeben. In RookHub unter „Repertoires“ → Bearbeiten „Für Extension und Vorbereitung verwenden“ anhaken.',
   'playerCard.lines.repertoire': 'Repertoire',
+  'playerCard.lines.count': 'Linien',
+  'playerCard.lines.countAll': 'Alle',
+  'playerCard.lines.showMore': '{{n}} Linien zeigen',
+  'playerCard.lines.showAll': 'Alle {{n}} zeigen',
   'playerCard.lines.basisWhite': 'Du mit Weiß — gezählt: {{n}} Partien von {{who}} mit Schwarz.',
   'playerCard.lines.basisWhiteOne': 'Du mit Weiß — gezählt: {{n}} Partie von {{who}} mit Schwarz.',
   'playerCard.lines.basisBlack': 'Du mit Schwarz — gezählt: {{n}} Partien von {{who}} mit Weiß.',

@@ -361,6 +361,31 @@ public class OpponentTrainingLinesTests
         Assert.Equal(53, cfg["more"]!.GetValue<int>());
     }
 
+    [Fact]
+    public async Task CreateRepertoire_TakesTheChosenLineCount_WithoutTakeAtMost50()
+    {
+        using var db = new Db();
+        // Wunsch 2026-11-25: die auf der Karte gewählte Linienzahl gilt auch fürs Trainings-Repertoire
+        var firsts = new[] { "a6", "a5", "b6", "b5", "c6", "c5", "d6", "d5", "e6", "e5", "f6", "f5", "g6", "g5", "h6", "h5", "Na6", "Nc6", "Nf6", "Nh6" };
+        var seconds = new[] { "Nf3", "d4", "Nc3" };
+        var pgn = string.Concat(firsts.SelectMany(a => seconds.Select(b => Section("Weiß", $"1. e4 {a} 2. {b}"))));
+        var id = await db.RepertoireAsync(1, "Viel", pgn);
+        var svc = db.Service();
+        TrainingLinesService.Query Take(int? n) => new(id, "w", TrainingLinesService.ChapterOverrides.None, n);
+
+        Assert.Equal(50, (await svc.CreateRepertoireAsync(1, "Huber", Take(null), NoGames, default))!.Lines);
+        Assert.Equal(10, (await svc.CreateRepertoireAsync(1, "Huber", Take(10), NoGames, default, replace: true))!.Lines);
+        // „Alle": alle 60 (über der alten festen 50)
+        Assert.Equal(60, (await svc.CreateRepertoireAsync(1, "Huber", Take(TrainingLinesService.MaxTake), NoGames, default, replace: true))!.Lines);
+        // der Rumpf reicht take durch
+        var req = new TrainingLinesService.CreateRequest(id, "w", null, null, null, null, null, null, null, Take: 25);
+        Assert.Equal(25, req.ToQuery().Take);
+        Assert.Equal(25, (await svc.CreateRepertoireAsync(1, "Huber", req.ToQuery(), NoGames, default, replace: true))!.Lines);
+        // geklemmt wie die Liste
+        Assert.Equal(1, svc.RepertoireTake(0));
+        Assert.Equal(TrainingLinesService.MaxTake, svc.RepertoireTake(999_999));
+    }
+
     private static TrainingLinesService.Query Q(int? rep, string? color = null) =>
         new(rep, color, TrainingLinesService.ChapterOverrides.None, null);
 

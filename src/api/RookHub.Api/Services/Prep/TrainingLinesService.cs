@@ -101,9 +101,10 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// <param name="Replace">Ein vorhandenes gleichnamiges eigenes Repertoire ersetzen; ohne → <see cref="RepertoireExistsException"/>
     /// (409 <c>exists</c>), damit die Seite erst nachfragt.</param>
     public sealed record CreateRequest(int? Repertoire, string? Color, JsonObject? ChapterColors, string? Source,
-        string? Speeds, int? Years, bool? Unsure, bool? All, bool? Twin, bool? Replace = null)
+        string? Speeds, int? Years, bool? Unsure, bool? All, bool? Twin, bool? Replace = null, int? Take = null)
     {
-        public Query ToQuery() => new(Repertoire, Color, ParseOverrides(ChapterColors?.ToJsonString()), null);
+        /// <summary><see cref="Take"/> = die auf der Karte gewählte Linienzahl (Wunsch 2026-11-25); ohne die feste Vorgabe.</summary>
+        public Query ToQuery() => new(Repertoire, Color, ParseOverrides(ChapterColors?.ToJsonString()), Take);
 
         /// <summary>Der Gegner, den das angelegte Repertoire behält (<see cref="RookHub.Api.Models.Repertoire.OpponentJson"/>):
         /// <paramref name="key"/> wie <c>?opponent=</c> des Trainers, Anzeigename = Teil vor dem ersten Komma (wie die Karte),
@@ -554,8 +555,13 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
 
     // ── Trainings-Repertoire anlegen ─────────────────────────────────────────────────────────────
 
-    /// <summary>So viele Linien kommen höchstens in ein Trainings-Repertoire — fest, auch wenn die Liste mehr zeigen darf.</summary>
+    /// <summary>So viele Linien kommen in ein Trainings-Repertoire, wenn die Anfrage kein <c>take</c> nennt. Nennt sie eins (die auf
+    /// der Karte gewählte Linienzahl, Wunsch 2026-11-25), gilt dieses — geklemmt auf 1…<see cref="MaxTake"/> wie die Liste.</summary>
     public const int MaxRepertoireLines = 50;
+
+    /// <summary>Linienzahl des Trainings-Repertoires: <paramref name="take"/> (1…<see cref="MaxTake"/>), sonst die Vorgabe.</summary>
+    internal int RepertoireTake(int? take) =>
+        take is { } t ? Math.Clamp(t, 1, MaxTake) : Math.Min(DefaultTakeFromConfig, MaxRepertoireLines);
 
     public sealed record Created(int Id, string Name, int Lines, bool Replaced);
 
@@ -613,8 +619,8 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
 
     /// <summary>
     /// „Show me lines to train" (Wunsch 2026-10-07): legt dem Nutzer ein Repertoire „Prep: &lt;Gegner&gt; &lt;Jahr&gt;" an — die
-    /// gereihten Linien aller markierten Repertoires der Farbe (bzw. des gewählten), höchstens <see cref="MaxRepertoireLines"/>
-    /// quer über alle, in dieser Reihenfolge, je Linie der UNVERÄNDERTE PGN-Abschnitt aus ihrem Repertoire. Ein markiertes
+    /// gereihten Linien aller markierten Repertoires der Farbe (bzw. des gewählten), höchstens <c>q.Take</c> (ohne:
+    /// <see cref="MaxRepertoireLines"/>) quer über alle, in dieser Reihenfolge, je Linie der UNVERÄNDERTE PGN-Abschnitt aus ihrem Repertoire. Ein markiertes
     /// Repertoire mit dem Zielnamen (ein früher erzeugtes „Prep: …", angehakt) wird als Quelle ausgenommen; ist es die einzige,
     /// <see cref="SameRepertoireException"/>. Gibt es schon ein eigenes mit dem Namen, wird dessen Inhalt ersetzt (Id, Häkchen und
     /// Trainingsstand je Linien-Schlüssel bleiben). Angelegt und befüllt über <see cref="RepertoireService"/>.
@@ -633,7 +639,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         if (c.Sources.Count == 0) throw new DomainValidationException("Kein Repertoire ist für die Vorbereitung freigegeben.");
         if (c.Ranked is not { Lines.Count: > 0 } ranked) throw new DomainValidationException("Die markierten Repertoires haben für diese Farbe keine Linien.");
 
-        var n = Math.Min(DefaultTakeFromConfig, MaxRepertoireLines);
+        var n = RepertoireTake(q.Take);
         var picked = ranked.Lines.Take(n).ToList();
         // je Linie der Chessable-Stand (zuletzt trainiert, Stufe, Fehler je Zug, Link) — Züge und Schlüssel bleiben unverändert
         var chessable = await ChessableStatusAsync(userId, c, picked.Select(l => l.Index), ct);
