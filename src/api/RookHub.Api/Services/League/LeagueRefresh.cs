@@ -194,8 +194,12 @@ public sealed class LeagueRefresh
                 Tnr = tnr, Round = m.Round, MatchNo = m.MatchNo, Home = m.Home, Away = m.Away, HomePts = m.HomePts, AwayPts = m.AwayPts,
                 Date = m.Date, Time = m.Time, Venue = m.Venue is { Length: > 300 } v ? v[..300] : m.Venue,
             });
-        foreach (var g in p.Games)
+        var fixedTeams = 0;
+        var knownTeams = KnownTeams(p);
+        foreach (var g0 in p.Games)
         {
+            var g = WithMatchTeams(g0, knownTeams, p.Matches);
+            if (!ReferenceEquals(g, g0)) fixedTeams++;
             string? hp = Empty.Contains(g.HomePlayer) ? null : g.HomePlayer;
             string? ap = Empty.Contains(g.AwayPlayer) ? null : g.AwayPlayer;
             var hr = hp is null ? null : roster.GetValueOrDefault((g.HomeTeam, LeagueNames.NameKey(hp)));
@@ -211,6 +215,9 @@ public sealed class LeagueRefresh
                 AwayElo = ar is null ? null : ar.EloI is > 0 ? ar.EloI : ar.EloN,
             });
         }
+        if (fixedTeams > 0)
+            log?.LogWarning("LeagueHub: Liga {Tnr} — {Count} Brettpaarungen mit unbekannter Mannschaft (z. B. \"FED\"), aus den "
+                + "Mannschaftspaarungen (art=2) übernommen; Crawler-Parser prüfen", tnr, fixedTeams);
         LeagueGameLinks.Merge(db, existingGames, incomingGames);
         var t = await db.LeagueTournaments.FindAsync(new object[] { tnr }, ct);
         if (t is not null) t.UpdatedAt = now;
@@ -219,6 +226,28 @@ public sealed class LeagueRefresh
         // vorläufige Zuordnungen der laufenden Runde bestätigen, umhängen oder lösen (0.832.0).
         await LeagueGameLinks.RelinkAsync(db, tnr, ct, log);
     }
+
+    /// <summary>
+    /// Sicherheitsnetz gegen verrutschte Spalten in art=3 (gemeldet 25.11.2026: in sechs Bundesliga-Ligen stand als Gast jeder
+    /// Brettpaarung „FED" bzw. nichts — der Crawler las die Föderations-Spalte als Mannschaft; damit fand keine Partie ihre
+    /// Meldeliste, AwayFide blieb leer). Ist eine Mannschaft der Brettpaarung weder in den Mannschaftspaarungen noch in der
+    /// Meldeliste bekannt, gilt die der Mannschaftspaarung derselben Runde und Begegnung (art=2). Bekannte Namen bleiben
+    /// unangetastet; ohne passende Begegnung auch. Gibt <paramref name="g"/> selbst zurück, wenn nichts zu ändern war.
+    /// </summary>
+    internal static GameRow WithMatchTeams(GameRow g, IReadOnlySet<string> known, IReadOnlyList<MatchRow> matches)
+    {
+        bool Known(string team) => team.Length > 0 && known.Contains(team);
+        if (Known(g.HomeTeam) && Known(g.AwayTeam)) return g;
+        var m = matches.FirstOrDefault(x => x.Round == g.Round && x.MatchNo == g.MatchNo);
+        if (m is null) return g;
+        var home = Known(g.HomeTeam) ? g.HomeTeam : m.Home;
+        var away = Known(g.AwayTeam) ? g.AwayTeam : m.Away;
+        return home == g.HomeTeam && away == g.AwayTeam ? g : g with { HomeTeam = home, AwayTeam = away };
+    }
+
+    /// <summary>Alle Mannschaftsnamen der Liga aus Mannschaftspaarungen (art=2) und Meldeliste (art=16).</summary>
+    internal static HashSet<string> KnownTeams(Pages p) =>
+        p.Matches.SelectMany(m => new[] { m.Home, m.Away }).Concat(p.Roster.Select(r => r.Team)).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>FIDE-IDs der wahrscheinlichen Gegner in offenen Runden, deren chess-results-Partien veraltet sind —
     /// Gegner der eigenen Vereine zuerst (stale_players.py: „Gegner von Schwaz zuerst"; seit dem Mandanten-Schritt

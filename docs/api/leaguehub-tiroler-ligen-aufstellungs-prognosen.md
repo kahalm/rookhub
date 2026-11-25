@@ -493,8 +493,16 @@ Rollenverwaltung an).
   Veranstalter ÖSB): 1. BL 2026/27 **1404438**, 2025/26 1163837, 2024/25 929746; 2. BL West 1410724 / 1221888 / 966389; Mitte
   1409864 / 1174791 / 936680; Ost 1418722 / 1179184 / 956466 (2026/27 / 2025/26 / 2024/25). **Was der Crawler liefert** (08.10.2026):
   12 Teams (West 2025/26: 11 + spielfrei), 6 Bretter, 11 Runden, Meldelisten 208–232 Spieler ALLE mit FIDE-ID (Ost 2026/27: 229/230),
-  Heim an ungeraden Brettern Weiß, Statistik (art=20) erst nach Saisonstart, ungespielte Runden mit Gast „FED" und „Brett nicht
-  besetzt". Gegen Prod 08.10.: 1 013 FIDE-IDs der zwölf Ligen haben keine Spielerkarte (je Liga 119–224) — Lumbra/Megabase nachfiltern
+  Heim an ungeraden Brettern Weiß, Statistik (art=20) erst nach Saisonstart, ungespielte Runden mit „Brett nicht besetzt".
+  **Gast „FED" war ein Parserfehler** (gemeldet 25.11.2026, 1.019.3): art=3 der ÖSB-Bundesliga hat je Seite eine
+  Föderations-Spalte hinter der Elo (`Br. | snr | Heim | Elo | FED | - | snr | Gast | Elo | FED | 0 : 0 [| PGN]`, 2025/26 2. BL
+  Mitte ohne Beschriftung); der Crawler nahm die ersten zwei Kopfzellen mit Klasse „CR" als Mannschaften → Gast „FED" bzw. leer
+  in ALLEN Brettpaarungen von 929746, 1163837, 1174791, 1404438, 1409864, 1410724 (AwayFide/AwayRb/AwayElo leer, weil der Gast
+  seine Meldeliste nicht fand; Spieler, Ergebnisse, Mannschaftspaarungen, Meldelisten und Statistik waren richtig). Seitdem
+  liest der Crawler die Spalten über die Kopfzeile (`LeaguePagesParser.GameColumns`), und `LeagueRefresh.WithMatchTeams`
+  nimmt eine unbekannte Mannschaft einer Brettpaarung aus der Mannschaftspaarung derselben Runde/Begegnung (Warnung im Log).
+  Reparatur je Liga = erneuter `admin/chessresults/import` (die Ids der Brettpaarungen bleiben, `LeagueClubGames.LeagueGameId`
+  zeigt weiter auf dieselbe Zeile). Gegen Prod 08.10.: 1 013 FIDE-IDs der zwölf Ligen haben keine Spielerkarte (je Liga 119–224) — Lumbra/Megabase nachfiltern
   ist ein eigener Datenjob. **Reihenfolge** egal (keine FIDE-Nachfüllung wie in Bayern, alle Meldelisten tragen IDs); danach
   `admin/rebuild` bzw. „Daten aktualisieren". `LeagueAnalysisQueue.BuildAsync` nimmt seit 0.720.0 die jüngste Saison JE REGION
   (vorher global — eine Region ohne neue Saison fiel heraus).

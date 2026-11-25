@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.019.3", date: "2026-11-25", changes: [
+    { en: "LeagueHub: in the Austrian Bundesliga every board pairing showed “FED” (or nothing) as the away team — chess-results lists each player’s federation in an extra column, which was read as the team. Columns are now assigned by the header row; after the next import the away players find their registration list again (FIDE ID, board, rating), and the pairings of a club show up under its round.",
+      de: "LeagueHub: In der österreichischen Bundesliga stand bei jeder Brettpaarung als Gastmannschaft „FED“ (oder nichts) — chess-results zeigt die Föderation der Spieler in einer eigenen Spalte, und die wurde als Mannschaft gelesen. Die Spalten werden jetzt über die Kopfzeile zugeordnet; nach dem nächsten Import finden die Gastspieler ihre Meldeliste wieder (FIDE-ID, Brett, Elo), und die Paarungen eines Vereins erscheinen unter seiner Runde." },
+  ] },
   { version: "1.019.2", date: "2026-11-25", changes: [
     { en: "LeagueHub: if your chosen club arrives from your profile only after the page has already loaded the data of another club (first login on a new device), the page now reloads with your club instead of showing the other club’s data.",
       de: "LeagueHub: Kommt dein gewählter Verein erst aus dem Profil, nachdem die Seite schon die Daten eines anderen Vereins geladen hat (erstes Anmelden auf einem neuen Gerät), lädt die Seite jetzt mit deinem Verein neu, statt die Daten des anderen Vereins zu zeigen." },

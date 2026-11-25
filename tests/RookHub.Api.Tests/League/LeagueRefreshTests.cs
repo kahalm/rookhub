@@ -64,6 +64,44 @@ public class LeagueRefreshTests : IDisposable
         Assert.Equal(Now, _db.LeagueTournaments.Find(7)!.UpdatedAt);
     }
 
+    [Fact]
+    public async Task Replace_GuestFedFromShiftedColumn_TakesTeamFromMatch_AndKeepsIdsAndLinks()
+    {
+        // Prod 25.11.2026: ein Crawler ohne Kopfzeilen-Zuordnung meldete in der Bundesliga als Gast „FED" (FED-Spalte).
+        // Bestand mit „FED" + Vereinspartie an Brett 2 (wie Prod-Id 265 → 23961); der Neu-Import korrigiert in place.
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2025/26", Level = 1, League = "1. Bundesliga" });
+        var old = new LeagueGame { Tnr = 7, Round = 1, MatchNo = 1, Board = 2, HomeTeam = "Schwaz", AwayTeam = "FED" };
+        _db.LeagueGames.Add(old);
+        await _db.SaveChangesAsync();
+        var club = new LeagueClubGame { Pgn = "", LeagueGameId = old.Id, LeagueTnr = 7, LeagueRound = 1, LeagueMatchNo = 1, LeagueBoard = 2 };
+        _db.LeagueClubGames.Add(club);
+        await _db.SaveChangesAsync();
+
+        var p = SamplePages();
+        p = p with { Games = p.Games.Select(g => g with { AwayTeam = "FED" }).ToList() };
+        await Refresh().ReplaceAsync(p, default);
+
+        var games = _db.LeagueGames.Where(g => g.Tnr == 7).OrderBy(g => g.Board).ToList();
+        Assert.All(games, g => Assert.Equal(("Schwaz", "Absam"), (g.HomeTeam, g.AwayTeam)));
+        Assert.Equal("222", games[0].AwayFide);                  // Gast findet seine Meldeliste wieder
+        Assert.Equal("333", games[1].AwayFide);
+        Assert.Equal(old.Id, games[1].Id);                       // Brett 2 behält seine Id …
+        Assert.Equal(old.Id, _db.LeagueClubGames.Single().LeagueGameId);   // … und die Vereinspartie zeigt weiter darauf
+    }
+
+    [Fact]
+    public void WithMatchTeams_KnownNamesStay_UnknownComeFromTheMatch()
+    {
+        var p = SamplePages();
+        var known = LeagueRefresh.KnownTeams(p);
+        var ok = p.Games[0];
+        Assert.Same(ok, LeagueRefresh.WithMatchTeams(ok, known, p.Matches));
+        Assert.Equal("Absam", LeagueRefresh.WithMatchTeams(ok with { AwayTeam = "" }, known, p.Matches).AwayTeam);
+        Assert.Equal("Schwaz", LeagueRefresh.WithMatchTeams(ok with { HomeTeam = "FED" }, known, p.Matches).HomeTeam);
+        var noMatch = ok with { Round = 5, AwayTeam = "FED" };      // keine Begegnung dazu → unverändert
+        Assert.Same(noMatch, LeagueRefresh.WithMatchTeams(noMatch, known, p.Matches));
+    }
+
     private const string Lumbra = "[Event \"Tirol Open\"]\n[Date \"2024.05.01\"]\n[White \"Binder, Moriz\"]\n[Black \"X, Y\"]\n[Result \"1-0\"]\n[WhiteFideId \"111\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 cxd4 1-0";
     private const string ChessResults = "[Event \"Tirol Open\"]\n[Date \"2024.05.01\"]\n[White \"Binder, Moriz\"]\n[Black \"X, Y\"]\n[Result \"1-0\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 cxd4 1-0\n\n"
         + "[Event \"TMM\"]\n[Date \"2026.09.26\"]\n[White \"Z, Z\"]\n[Black \"Binder Moriz\"]\n[Result \"0-1\"]\n\n1. d4 Nf6 2. c4 g6 0-1";
