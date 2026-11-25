@@ -9409,6 +9409,9 @@ namespace RookHub.Api.Migrations
                     b.Property<int?>("StockfishDepth")
                         .HasColumnType("int");
 
+                    b.Property<string>("UiPrefsJson")
+                        .HasColumnType("longtext");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 

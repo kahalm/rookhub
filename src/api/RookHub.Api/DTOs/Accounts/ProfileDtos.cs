@@ -31,6 +31,16 @@ public class ProfileDto
 
     /// <summary>Sprachwahl der Kurs-Kommentare je Kurs (<c>b12</c> → Sprachkürzel).</summary>
     public Dictionary<string, CourseLanguageEntryDto>? CourseLanguages { get; set; }
+
+    /// <summary>Anzeige-Vorlieben (Speicher-Schlüssel der Oberfläche → roher Wert), nur Schlüssel aus <c>UiPrefKeys</c>.</summary>
+    public Dictionary<string, UiPrefEntryDto>? UiPrefs { get; set; }
+}
+
+public class UiPrefEntryDto : IStampedChoice
+{
+    /// <summary>Der Wert, wie er im localStorage steht (Zeichenkette, oft JSON), höchstens 2 000 Zeichen.</summary>
+    public string V { get; set; } = string.Empty;
+    public long At { get; set; }
 }
 
 /// <summary>Eine gemerkte Wahl mit Zeitstempel (ms seit 1970, vom Gerät) — bei Konflikt gewinnt der jüngere.</summary>
@@ -113,6 +123,9 @@ public class UpdateProfileDto
 
     /// <summary>Geänderte Kurs-Sprachen (null = unverändert), zusammengeführt wie <see cref="SolveModes"/>.</summary>
     public Dictionary<string, CourseLanguageEntryDto>? CourseLanguages { get; set; }
+
+    /// <summary>Geänderte Anzeige-Vorlieben (null = unverändert), zusammengeführt wie <see cref="SolveModes"/>.</summary>
+    public Dictionary<string, UiPrefEntryDto>? UiPrefs { get; set; }
 }
 
 public class LinkDiscordDto

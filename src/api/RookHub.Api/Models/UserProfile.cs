@@ -59,6 +59,10 @@ public class UserProfile
     /// <summary>Sprachwahl der Kurs-Kommentare je Kurs (<c>b&lt;bookId&gt;</c> → {lang, at}) als JSON, über alle Geräte.</summary>
     public string? CourseLanguagesJson { get; set; }
 
+    /// <summary>Anzeige-Vorlieben der Oberflächen (Whitelist <see cref="Services.Accounts.UiPrefKeys"/>, Schlüssel →
+    /// {v: roher Speicherwert, at}) als JSON — vorher nur im localStorage, beim Abmelden bzw. Gerätewechsel verloren (1.018.0).</summary>
+    public string? UiPrefsJson { get; set; }
+
     /// <summary>Zeitpunkt der Bestätigung des Chessable-Haftungsausschlusses (null = noch nicht bestätigt).</summary>
     public DateTime? ChessableDisclaimerAcceptedAt { get; set; }
 }

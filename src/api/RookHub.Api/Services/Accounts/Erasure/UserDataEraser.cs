@@ -120,7 +120,7 @@ internal sealed class UserDataEraser
                 p.FirstName = p.LastName = p.DisplayName = null;
                 p.FideId = p.ChessResultsId = p.ChessComUsername = p.LichessUsername = null;
                 p.DiscordId = p.DiscordUsername = null;
-                p.SolveModesJson = p.CourseLanguagesJson = null;   // verrät die Kurse des Kontos
+                p.SolveModesJson = p.CourseLanguagesJson = p.UiPrefsJson = null;   // verrät die Kurse des Kontos
             }
 
             try

@@ -73,6 +73,15 @@ public static class ProfileChoiceMaps
             return new CourseLanguageEntryDto { Lang = lang, At = e.At };
         });
 
+    /// <summary>Anzeige-Vorlieben: nur Schlüssel der Whitelist, Wert eine Zeichenkette bis <see cref="UiPrefKeys.MaxValueLength"/>.</summary>
+    public static string MergeUiPrefs(string? storedJson, IReadOnlyDictionary<string, UiPrefEntryDto> incoming, long nowMs)
+        => Merge(storedJson, incoming, nowMs, (key, e) =>
+        {
+            if (!UiPrefKeys.Allowed.Contains(key)) throw new ArgumentException($"Unknown UI preference '{Trim(key)}'.");
+            if (e.V is null || e.V.Length > UiPrefKeys.MaxValueLength) throw new ArgumentException("UI preference value too long.");
+            return new UiPrefEntryDto { V = e.V, At = e.At };
+        });
+
     private static string Merge<T>(string? storedJson, IReadOnlyDictionary<string, T> incoming, long nowMs,
         Func<string, T, T> validate) where T : class, IStampedChoice
     {

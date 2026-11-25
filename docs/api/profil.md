@@ -25,6 +25,16 @@ Anfrage, ungültige Schlüssel/Werte → 400, `at` in der Zukunft (> 1 Tag) wird
 `CourseLanguageService` führen beim Laden des Profils zusammen (Profil gewinnt, jüngerer gewinnt, Gerätestand einmal
 hochladen) und warten vor dem Dialog bzw. vor dem Laden einer Kursseite (`courseLanguageReadyGuard`) auf das Profil.
 
+**Anzeige-Vorlieben im Profil** (1.018.0): `uiPrefs` an `GET/PUT /api/profile` = `{ "<Speicher-Schlüssel>": { v: "<roher
+localStorage-Wert>", at } }`, nur Schlüssel aus der Whitelist `Services/Accounts/UiPrefKeys.cs` (handgespiegelt von
+`SYNCED_UI_PREF_KEYS` in `core/ui-prefs-sync.ts`, beide Seiten mit Literal-Test), Wert ≤ 2 000 Zeichen, sonst 400;
+zusammengeführt wie `solveModes`, Spalte `UserProfiles.UiPrefsJson`, bei der Kontolöschung geleert. Die Seiten schreiben
+ihren Schlüssel unverändert selbst; `ui-prefs-sync.ts` hält ein Abgleich-Abbild (`rookhub_ui_prefs_sync`, Konto-Spur) und
+gleicht ab beim Laden des Profils (Anmelden, Kontowechsel, Handoff), wenn der Tab in den Hintergrund geht, und beim
+Abmelden bzw. Kontowechsel noch mit dem Token der endenden Sitzung (`flushUiPrefsBeforeLogout`). Konto-gebundene
+Schlüssel (`lh-club`, `lh-training-lines`, `rh.turnier.historyView`) bleiben `user` im Gerätespeicher und kommen nach dem
+Anmelden aus dem Profil zurück; der LeagueHub-Verein zieht über das Ereignis `rh-ui-prefs-applied` nach.
+
 **Nutzerverwaltung durch Admins** (Codereview 2026-09-29): `DELETE /api/admin/users/{id}` anonymisiert jetzt wie die
 Selbstlöschung (`ProfileService.EraseUserAsync`, kein 409 durch Restrict-FKs mehr), `GET /api/admin/users` listet keine
 gelöschten Konten (A9-004). Der Löschkern selbst liegt in `Services/Accounts/Erasure/` (Zerlegung Z15): `UserDataEraser.Steps` ist die

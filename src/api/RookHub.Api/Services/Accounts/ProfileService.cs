@@ -134,6 +134,8 @@ public class ProfileService
             profile.SolveModesJson = ProfileChoiceMaps.MergeSolveModes(profile.SolveModesJson, dto.SolveModes, nowMs);
         if (dto.CourseLanguages != null)
             profile.CourseLanguagesJson = ProfileChoiceMaps.MergeCourseLanguages(profile.CourseLanguagesJson, dto.CourseLanguages, nowMs);
+        if (dto.UiPrefs != null)
+            profile.UiPrefsJson = ProfileChoiceMaps.MergeUiPrefs(profile.UiPrefsJson, dto.UiPrefs, nowMs);
 
         await ResetPlayTimeOnUsernameChangeAsync(userId, PlayTimeService.Lichess, oldLichessUsername, profile.LichessUsername);
         await ResetPlayTimeOnUsernameChangeAsync(userId, PlayTimeService.ChessCom, oldChessComUsername, profile.ChessComUsername);
@@ -393,6 +395,7 @@ public class ProfileService
         PuzzleDifficulty = user.Profile?.PuzzleDifficulty,
         BookStockfishDepth = user.Profile?.BookStockfishDepth,
         SolveModes = ProfileChoiceMaps.Read<SolveModeEntryDto>(user.Profile?.SolveModesJson),
-        CourseLanguages = ProfileChoiceMaps.Read<CourseLanguageEntryDto>(user.Profile?.CourseLanguagesJson)
+        CourseLanguages = ProfileChoiceMaps.Read<CourseLanguageEntryDto>(user.Profile?.CourseLanguagesJson),
+        UiPrefs = ProfileChoiceMaps.Read<UiPrefEntryDto>(user.Profile?.UiPrefsJson)
     };
 }

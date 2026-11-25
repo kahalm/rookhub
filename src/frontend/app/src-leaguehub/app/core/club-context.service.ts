@@ -3,6 +3,7 @@ import { HttpClient, HttpInterceptorFn } from '@angular/common/http';
 import { NavigationEnd, Router } from '@angular/router';
 import { Observable, catchError, map, of, shareReplay, switchMap } from 'rxjs';
 import { AuthService } from '@rh/core/auth.service';
+import { UI_PREFS_APPLIED_EVENT } from '@rh/core/ui-prefs-sync';
 
 /**
  * LeagueHub für mehrere Vereine (0.698.0): der Verein, in dem das Konto gerade arbeitet. Der Server kennt ihn über `?club=`
@@ -88,6 +89,16 @@ export class ClubContextService {
     inject(Router, { optional: true })?.events.subscribe(e => {
       if (e instanceof NavigationEnd && !/^\/s\//.test(e.urlAfterRedirects)) this.leaveShare();
     });
+    // Der gewählte Verein wandert im Profil mit (uiPrefs, 1.018.0): kommt er erst nach dem Laden der Vereine (direkt nach
+    // dem Anmelden auf einem neuen Gerät oder nach dem Abmelden), hier nachziehen statt bei der Vorgabe zu bleiben.
+    if (typeof window !== 'undefined') {
+      window.addEventListener(UI_PREFS_APPLIED_EVENT, e => {
+        if (!(e as CustomEvent<string[]>).detail?.includes(CLUB_STORAGE_KEY)) return;
+        const id = readRemembered();
+        const club = id != null ? this.clubs().find(c => c.id === id) : undefined;
+        if (club && club.id !== this.current()?.id) this.current.set(club);
+      });
+    }
   }
 
   /** Die Vereine des Kontos laden (einmal je Konto) → die Id des gewählten Vereins, ohne Anmeldung/Verein `null`. */

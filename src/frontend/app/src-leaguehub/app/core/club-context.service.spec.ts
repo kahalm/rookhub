@@ -1,3 +1,4 @@
+import { UI_PREFS_APPLIED_EVENT } from '@rh/core/ui-prefs-sync';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -85,6 +86,18 @@ describe('club-context (Vereine als Mandanten, 0.698.0)', () => {
       ctx.select(2);
       expect(localStorage.getItem(CLUB_STORAGE_KEY)).toBe('2');
       expect(ctx.current()?.name).toBe('SK Weiler');
+    });
+
+    it('der Verein kommt erst nach den Vereinen aus dem Profil (uiPrefs, 1.018.0): zieht nach', async () => {
+      const ctx = TestBed.inject(ClubContextService);
+      const id = firstValueFrom(ctx.ensure());
+      http.expectOne('/api/league/me').flush({ clubs: [SCHWAZ, WEILER], current: 2 } satisfies LeagueMe);
+      expect(await id).toBe(2);
+      localStorage.setItem(CLUB_STORAGE_KEY, '1');
+      window.dispatchEvent(new CustomEvent(UI_PREFS_APPLIED_EVENT, { detail: ['rookhub_visualization'] }));
+      expect(ctx.current()?.id).toBe(2);                              // fremder Schlüssel: nichts
+      window.dispatchEvent(new CustomEvent(UI_PREFS_APPLIED_EVENT, { detail: [CLUB_STORAGE_KEY] }));
+      expect(ctx.current()?.id).toBe(1);
     });
 
     it('reload: fragt /me erneut, kennt den neuen Verein und behält den gewählten (0.700.0)', async () => {

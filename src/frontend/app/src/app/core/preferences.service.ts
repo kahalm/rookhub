@@ -1,9 +1,12 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from './auth.service';
 import { Observable, Subject, catchError, of, shareReplay, tap } from 'rxjs';
 
 import { ThemeMode } from './theme-mode';
+import {
+  UiPrefEntry, collectUiPrefChanges, commitUiPrefChanges, mergeUiPrefsFromProfile, setUiPrefFlushSink,
+} from './ui-prefs-sync';
 
 const BOARD_THEME_KEY = 'rookhub_board_theme';
 const PIECE_SET_KEY = 'rookhub_piece_set';
@@ -29,6 +32,8 @@ export interface ProfilePreferences {
   solveModes?: Record<string, SolveModeChoice> | null;
   /** Sprachwahl je Kurs (`CourseLanguageService`, Schlüssel `b<bookId>`). Beim PUT: nur die geänderten. */
   courseLanguages?: Record<string, CourseLanguageChoice> | null;
+  /** Anzeige-Vorlieben der Oberflächen (`ui-prefs-sync.ts`): Speicher-Schlüssel → roher Wert. */
+  uiPrefs?: Record<string, UiPrefEntry> | null;
 }
 
 /** Ein geladenes Profil samt Konto, zu dem es gehört. */
@@ -68,6 +73,29 @@ export class PreferencesService {
 
   constructor(private http: HttpClient, private authService: AuthService) {
     this.loadFromLocalStorage();
+    // Anzeige-Vorlieben: geänderte hochladen, wenn der Tab in den Hintergrund geht (Gerätewechsel, App zu) und beim
+    // Abmelden (mit dem Token der endenden Sitzung, vor dem Räumen).
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') this.flushUiPrefs(); });
+    }
+    setUiPrefFlushSink(token => this.flushUiPrefs(token));
+  }
+
+  /** Geänderte Anzeige-Vorlieben ins Profil (nur angemeldet bzw. mit dem übergebenen Token). */
+  flushUiPrefs(token?: string): void {
+    if (!token && !this.authService.isLoggedIn) return;
+    const changes = collectUiPrefChanges();
+    if (!Object.keys(changes).length) return;
+    const options = token ? { headers: new HttpHeaders({ Authorization: `Bearer ${token}` }) } : {};
+    this.http.put('/api/profile', { uiPrefs: changes }, options).pipe(catchError(() => of(null)))
+      .subscribe(r => { if (r !== null) commitUiPrefChanges(changes); });
+  }
+
+  /** Anzeige-Vorlieben aus dem Profil einarbeiten (Profil gewinnt, jüngerer gewinnt), Fehlendes hochladen. */
+  private mergeUiPrefs(profile: ProfilePreferences): void {
+    const { upload, changed } = mergeUiPrefsFromProfile(profile.uiPrefs);
+    if (changed) this.loadFromLocalStorage();
+    if (Object.keys(upload).length) this.saveToServer({ uiPrefs: upload });
   }
 
   /** Read all preferences from localStorage (synchronous, instant). */
@@ -154,7 +182,10 @@ export class PreferencesService {
     const profile$ = this.http.get<ProfilePreferences>('/api/profile').pipe(
       catchError(() => of(null)),
       tap(profile => {
-        if (profile) this.profileLoaded$.next({ userId, profile });
+        if (profile) {
+          this.mergeUiPrefs(profile);
+          this.profileLoaded$.next({ userId, profile });
+        }
         else if (this.profileCache?.profile$ === profile$) this.profileCache = null;
       }),
       shareReplay({ bufferSize: 1, refCount: false }),

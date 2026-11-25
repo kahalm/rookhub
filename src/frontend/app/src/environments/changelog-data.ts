@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.018.0", date: "2026-11-25", changes: [
+    { en: "Your display settings now follow your account instead of staying on one device: visualization level, arrows, puzzle and analysis settings, dashboard layout, hidden notification types, game review and repertoire trainer options, e-book solving style, the live engine bar of the tournament site and the LeagueHub filters. They are saved in your profile, so a new device starts with your settings, and settings you had already made on a device are taken over automatically.",
+      de: "Deine Anzeige-Einstellungen gehören jetzt zum Konto statt zu einem Gerät: Visualisierungsstufe, Pfeile, Puzzle- und Analyse-Einstellungen, Anordnung des Dashboards, ausgeblendete Benachrichtigungsarten, Optionen von Partie-Rückblick und Repertoire-Trainer, Lösestil der E-Books, der Engine-Balken der Live-Bretter und die LeagueHub-Filter. Sie liegen im Profil — ein neues Gerät beginnt mit deinen Einstellungen, und was du auf einem Gerät schon eingestellt hattest, wird automatisch übernommen." },
+    { en: "No more starting over after logging out: the chosen LeagueHub club, the training repertoire of the player card and the selected tab of the tournament history come back from your profile after logging in again (also when switching between the sites).",
+      de: "Kein Neuanfang mehr nach dem Abmelden: Der gewählte Verein im LeagueHub, das Trainings-Repertoire der Spielerkarte und der gewählte Reiter des Turnierverlaufs kommen nach dem Anmelden aus dem Profil zurück (auch beim Wechsel zwischen den Seiten)." },
+  ] },
   { version: "1.017.2", date: "2026-11-25", changes: [
     { en: "LeagueHub: after an update, broadcasts that were already known are now picked up by the 10-minute check on their own. The first run fetches only their round schedule from Lichess (not the games) — nobody has to add a broadcast again by hand.",
       de: "LeagueHub: Nach einem Update werden schon bekannte Übertragungen jetzt von selbst in die 10-Minuten-Prüfung aufgenommen. Der erste Lauf holt bei Lichess nur ihren Rundenplan (nicht die Partien) — niemand muss eine Übertragung von Hand neu hinzufügen." },
