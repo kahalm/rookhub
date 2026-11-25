@@ -15,8 +15,9 @@ namespace RookHub.Api.Services.Courses;
 /// an diesen Kursen gemacht hat (<see cref="ImportCourseAttemptsAsync"/>) — wer schon 250 Aufgaben im Kurs gelöst hat,
 /// datiert den Start zurück und hat sie im Satz. Zyklus 1 endet auf Knopfdruck oder wenn alle Aufgaben der Kurse im
 /// Satz sind.</para>
-/// <para><b>Ab Zyklus 2</b> kommt der Satz in zufälliger Reihenfolge, je Aufgabe zählt der erste Versuch; der Zyklus
-/// endet, wenn alle Aufgaben bearbeitet sind.</para>
+/// <para><b>Ab Zyklus 2</b> kommt der Satz in einer je Zyklus gemischten, aber von Beginn an festen Reihenfolge
+/// (<see cref="WoodpeckerRules.ShuffleKey"/>: Neu laden bringt dieselbe Aufgabe), je Aufgabe zählt der erste Versuch;
+/// der Zyklus endet, wenn alle Aufgaben bearbeitet sind.</para>
 /// <para><b>Frist um, Zyklus nicht fertig</b> (1.007.0, Nutzerwunsch 22.11.2026; bis dahin endete Zyklus 1 still an der
 /// Frist und ab Zyklus 2 lief er unbegrenzt weiter): der Plan meldet <see cref="WoodpeckerPlanDto.DeadlinePassed"/>, die
 /// App fragt — <see cref="ExtendCycleAsync"/> setzt eine neue Frist, <see cref="FinishCycleAsync"/> schließt ab (Offenes
@@ -311,7 +312,7 @@ public class WoodpeckerService
             var open = await AccessibleBookIdsAsync(plan, userId, isAdmin, ct);
             puzzleId = current.Number == 1
                 ? await NextInSetOrderAsync(plan, open, ct)
-                : await RandomRemainingAsync(plan.Id, current.Number, open, ct);
+                : await FixedOrderRemainingAsync(plan.Id, current.Number, open, ct);
         }
 
         BookPuzzleDto? puzzle = null;
@@ -525,8 +526,11 @@ public class WoodpeckerService
         return null;
     }
 
-    /// <summary>Ab Zyklus 2: zufällige Aufgabe des Satzes, die in diesem Zyklus noch nicht dran war — nur aus zugänglichen Kursen.</summary>
-    private async Task<int?> RandomRemainingAsync(int planId, int cycle, HashSet<int> open, CancellationToken ct)
+    /// <summary>Ab Zyklus 2: die erste Aufgabe des Satzes in der festen, gemischten Reihenfolge des Zyklus
+    /// (<see cref="WoodpeckerRules.ShuffleKey"/>), die in diesem Zyklus noch nicht dran war — nur aus zugänglichen Kursen.
+    /// Seit 1.013.0 fest (Wunsch 25.11.2026): Neu laden, später weitermachen oder ein anderes Gerät bringen
+    /// dieselbe Aufgabe; vorher zog jeder Abruf neu (<c>Random.Shared</c>).</summary>
+    private async Task<int?> FixedOrderRemainingAsync(int planId, int cycle, HashSet<int> open, CancellationToken ct)
     {
         var openIds = open.ToList();
         var remaining = await _db.WoodpeckerSetItems
@@ -534,7 +538,9 @@ public class WoodpeckerService
             .Where(i => !_db.WoodpeckerAttempts.Any(a => a.PlanId == planId && a.Cycle == cycle && a.BookPuzzleId == i.BookPuzzleId))
             .Select(i => i.BookPuzzleId)
             .ToListAsync(ct);
-        return remaining.Count == 0 ? null : remaining[Random.Shared.Next(remaining.Count)];
+        return remaining.Count == 0
+            ? null
+            : remaining.OrderBy(id => WoodpeckerRules.ShuffleKey(planId, cycle, id)).ThenBy(id => id).First();
     }
 
     private async Task<WoodpeckerPlanDto> BuildDtoAsync(WoodpeckerPlan plan, int utcOffsetMinutes, CancellationToken ct)

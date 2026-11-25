@@ -14,12 +14,24 @@ und dem (rückdatierbaren) Beginn — die Regeln stehen fest in `Services/Course
 | Zyklus 1 | 28 Tage; jede bearbeitete Aufgabe kommt in den **Satz** |
 | Pause zwischen Zyklen | mindestens 24 h nach Ende des vorigen (`next-cycle` vorher → 409) |
 | Zieltage je Zyklus | halbiert, aufgerundet: 28, 14, 7, 4, 2, 1, 1 |
-| Reihenfolge | Zyklus 1: Kurse in Plan-Reihenfolge, je Kurs Lesereihenfolge (`ChapterOrder.InReadingOrder`); ab Zyklus 2 zufällig aus dem Satz |
+| Reihenfolge | Zyklus 1: Kurse in Plan-Reihenfolge, je Kurs Lesereihenfolge (`ChapterOrder.InReadingOrder`); ab Zyklus 2 je Zyklus gemischt, aber vom Start an **fest** (siehe unten) |
 | Wertung | je Zyklus zählt nur der **erste** Versuch an einer Aufgabe (Unique `(PlanId, Cycle, BookPuzzleId)`) |
 | Abgeschlossen | ein Zyklus ab 2 in ≤ 24 h erledigt, sonst nach Zyklus 7 |
 
 **Zyklus 1 endet** auf Knopfdruck (`finish-set`) oder sobald alle Aufgaben der Kurse im Satz sind. Ab Zyklus 2
 endet ein Zyklus, wenn jede Aufgabe des Satzes bearbeitet ist.
+
+**Feste Reihenfolge ab Zyklus 2 (1.013.0, Wunsch 25.11.2026).** Bis 1.012 zog jedes `GET next` zufällig neu
+(`Random.Shared`) — Neu laden, später weitermachen oder ein anderes Gerät brachten jedes Mal eine andere Aufgabe. Jetzt
+bekommt jede Aufgabe des Satzes je Zyklus einen Sortierschlüssel `WoodpeckerRules.ShuffleKey(planId, zyklus, bookPuzzleId)`
+(eigenes SplitMix64, unabhängig von der .NET-Version); `next` = die offene Aufgabe (zugänglicher Kurs, in diesem Zyklus
+ohne Versuch) mit dem kleinsten Schlüssel, bei Gleichstand die kleinere Id. Folgen:
+- dieselbe Aufgabe, bis ein Versuch gemeldet ist; danach die nächste der festen Reihenfolge;
+- jeder Zyklus ist anders gemischt; nichts wird gespeichert (keine Migration), auch vor 1.013.0 begonnene Zyklen laufen
+  ab dem Update in fester Reihenfolge weiter (die eine gerade angezeigte Aufgabe kann dabei einmal wechseln);
+- fällt eine Aufgabe weg (Kurs gerade nicht zugänglich, Satz geändert) oder kommt eine dazu, behalten die übrigen ihre
+  Reihenfolge — der Schlüssel hängt nur an der Aufgabe selbst, nicht an ihrer Stelle in einer Liste.
+Der Schlüssel darf sich nie ändern, sonst springt jeder laufende Zyklus um (Test mit literalen Werten).
 
 **Frist um, Zyklus nicht fertig → fragen (1.007.0, Nutzerwunsch 22.11.2026).** Bis 1.006 endete Zyklus 1 still an der
 Frist (`FinishedAt` = Frist) und ab Zyklus 2 lief ein überzogener Zyklus unbegrenzt weiter. Jetzt meldet der Plan

@@ -93,7 +93,7 @@ public class WoodpeckerController : BaseApiController
     public async Task<IActionResult> Stats(int planId, [FromQuery] int utcOffsetMinutes = 0, CancellationToken ct = default) =>
         Ok(await _service.GetStatsAsync(GetUserId(), planId, utcOffsetMinutes, ct));
 
-    /// <summary>Nächste Aufgabe: Zyklus 1 in Kursreihenfolge, danach zufällig aus dem Satz. <c>?lang=</c> liefert die
+    /// <summary>Nächste Aufgabe: Zyklus 1 in Kursreihenfolge, danach in der je Zyklus gemischten, festen Reihenfolge des Satzes (gleiche Antwort bis zum nächsten Versuch). <c>?lang=</c> liefert die
     /// Kommentare übersetzt, wo der Kurs aktuelle Übersetzungen hat (seit 0.882.0 läuft Woodpecker im Kurs-Löser).</summary>
     [HttpGet("{planId:int}/next")]
     public async Task<IActionResult> Next(int planId, [FromQuery] string? lang = null, [FromQuery] int utcOffsetMinutes = 0,

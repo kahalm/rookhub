@@ -16,7 +16,7 @@ export interface BookWoodpeckerHost extends BookModeHost {
  * Woodpecker-Modus des Buch-Lösers (/woodpecker/:planId/solve, Wunsch 2026-11-02: „egal ob über Woodpecker oder
  * Kurs — die UI soll die gleiche sein“). Bis 0.881 hatte Woodpecker einen eigenen, schlankeren Löser; jetzt läuft er
  * im Kurs-Löser mit Kommentaren, Tipps, Spielweise und Aktionszeile, nur Laden und Melden gehen an `/api/woodpecker`.
- * Der Server bestimmt die Aufgabe (Zyklus 1 in Kursreihenfolge, danach zufällig aus dem Satz) und wertet je Zyklus
+ * Der Server bestimmt die Aufgabe (Zyklus 1 in Kursreihenfolge, danach je Zyklus gemischt, aber fest — Neu laden bringt dieselbe Aufgabe) und wertet je Zyklus
  * nur den ersten Versuch — Wiederholen nach einem Fehler ist erlaubt, ändert aber nichts mehr.
  */
 export class BookWoodpeckerMode implements BookModeStrategy {
