@@ -25,9 +25,9 @@ public class LiveBoardAssemblerTests
             [new CrMatch(1, "Pinggau-Friedberg", "SK Schwaz", null, null), new CrMatch(2, "SK Absam", "SK Wörgl", null, null)]);
         var games = new[]
         {
-            // Lichess-Reihenfolge absichtlich umgedreht: Brett 2 (Vaibhav, Schwarz) kommt zuerst.
-            G("b2", "Schmider, Niklas", "Vaibhav, Suri", "12993778", "5045185", "1-0", round: "1.1"),
-            G("b1", "Aditya Mittal", "Hagner, Bennet", "35042025", "16224477", "1/2-1/2", round: "1.2"),
+            // Ohne Round-Tag (Rückfall Meldeliste); Brett 2 (Vaibhav, Schwarz) kommt in der Liste zuerst.
+            G("b2", "Schmider, Niklas", "Vaibhav, Suri", "12993778", "5045185", "1-0", round: ""),
+            G("b1", "Aditya Mittal", "Hagner, Bennet", "35042025", "16224477", "1/2-1/2", round: ""),
             G("x", "Fremd, Eins", "Fremd, Zwei", "990098", "990099"),
         };
         var layout = LiveBoardAssembler.Assemble(round, games);
@@ -39,6 +39,48 @@ public class LiveBoardAssemblerTests
         Assert.Equal((0.5m, 1.5m), (m.LiveHome, m.LiveAway));
         Assert.Empty(layout.Matches.Single(x => x.MatchNumber == 2).Boards);
         Assert.Equal(["x"], layout.Unassigned);
+    }
+
+    /// <summary>
+    /// Echtes Muster der 1. BL 2026/27, Runde 1 (Lichess-Runde L3MX2oE3): „1.1"–„1.6" = Begegnung 1, „1.7"–„1.12" =
+    /// Begegnung 2, je Block in Brettreihenfolge mit abwechselnden Farben. Die Meldelisten-Positionen stehen absichtlich
+    /// quer (Ersatzspieler, Brett 1 der Meldeliste spielt nicht) — die Tags gewinnen.
+    /// </summary>
+    [Fact]
+    public void Team_LichessRoundTagsBlockwise_OrderBoards_RosterOnlyFallback()
+    {
+        var players = new List<CrPlayer>();
+        var games = new List<LiveGame>();
+        for (var match = 0; match < 2; match++)
+        {
+            var home = match == 0 ? "Heim A" : "Heim B";
+            var away = match == 0 ? "Gast A" : "Gast B";
+            for (var b = 1; b <= 6; b++)
+            {
+                var hf = $"99{match}1{b:00}";
+                var af = $"99{match}2{b:00}";
+                // Meldeliste quer zur Brettfolge: 7 − b (Brett 1 hat die höchste Meldenummer).
+                players.Add(new CrPlayer($"H{match}{b}, X", hf, 2400, home, 7 - b));
+                players.Add(new CrPlayer($"A{match}{b}, Y", af, 2400, away, 7 - b));
+                var homeWhite = b % 2 == 1;
+                var tag = $"1.{match * 6 + b}";
+                games.Add(homeWhite
+                    ? G($"m{match}b{b}", $"H{match}{b}, X", $"A{match}{b}, Y", hf, af, round: tag)
+                    : G($"m{match}b{b}", $"A{match}{b}, Y", $"H{match}{b}, X", af, hf, round: tag));
+            }
+        }
+        games.Reverse();                                               // Eingangsreihenfolge egal
+        var round = new CrRound(true, players, [],
+            [new CrMatch(1, "Heim A", "Gast A", null, null), new CrMatch(2, "Heim B", "Gast B", null, null)]);
+        var layout = LiveBoardAssembler.Assemble(round, games);
+        for (var match = 0; match < 2; match++)
+        {
+            var m = layout.Matches[match];
+            Assert.Equal(Enumerable.Range(1, 6).Select(b => $"m{match}b{b}"), m.Boards.Select(x => x.GameId));
+            Assert.Equal([1, 2, 3, 4, 5, 6], m.Boards.Select(x => x.Board));
+            Assert.Equal([true, false, true, false, true, false], m.Boards.Select(x => x.HomeIsWhite));
+        }
+        Assert.Empty(layout.Unassigned);
     }
 
     [Fact]

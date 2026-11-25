@@ -69,25 +69,37 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
 
     /// <summary>Zuschauen. <paramref name="finished"/> = Lichess meldet die Runde fertig (dann kein Strom).
     /// Abmelden über <see cref="RoundSubscription.DisposeAsync"/>.</summary>
+    /// <remarks>Finden/Anlegen des Feeds UND das Anmelden daran laufen unter dem Hub-Lock — Schließen (<see cref="TryCloseIdle"/>)
+    /// nimmt denselben Lock, ein Zuschauer kann also nie an einen Feed geraten, der gerade geschlossen wird (Sperrreihenfolge
+    /// immer Hub → Feed).</remarks>
     public RoundSubscription Subscribe(string roundId, bool finished, bool wantsEval)
     {
-        Feed feed;
+        RoundSubscription sub;
         lock (_lock)
         {
-            if (!_feeds.TryGetValue(roundId, out feed!))
+            if (!_feeds.TryGetValue(roundId, out var feed) || feed.IsClosed)
             {
                 feed = new Feed(this, roundId, finished);
                 if (_finished.TryGetValue(roundId, out var kept) && kept.Until > DateTime.UtcNow) feed.Preload(kept.Games);
                 _feeds[roundId] = feed;
             }
+            sub = feed.Add(wantsEval);
         }
-        return feed.Add(wantsEval);
+        sub.AfterAdd();
+        return sub;
     }
 
-    private void Closed(Feed feed)
+    /// <summary>Testhaken: läuft, nachdem der Leerlauf-Timer abgelaufen ist und BEVOR geschlossen wird (dort lag früher das
+    /// Fenster, in dem ein neuer Zuschauer an den sterbenden Feed geriet).</summary>
+    internal Func<Task>? BeforeIdleClose { get; set; }
+
+    /// <summary>Leerlauf abgelaufen: atomar unter Hub- und Feed-Lock prüfen, ob noch niemand schaut, dann Feed schließen und
+    /// aus der Liste nehmen. Kam inzwischen ein Zuschauer (oder ein neuerer Timer), bleibt alles, wie es ist.</summary>
+    private void TryCloseIdle(Feed feed, CancellationTokenSource idle)
     {
         lock (_lock)
         {
+            if (!feed.CloseIfIdle(idle)) return;
             if (_feeds.TryGetValue(feed.RoundId, out var f) && ReferenceEquals(f, feed)) _feeds.Remove(feed.RoundId);
             if (feed.IsFinished) _finished[feed.RoundId] = (feed.Games(), DateTime.UtcNow + _options.FinishedKeep);
             foreach (var k in _finished.Where(x => x.Value.Until <= DateTime.UtcNow).Select(x => x.Key).ToList()) _finished.Remove(k);
@@ -123,6 +135,12 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
 
         public ChannelReader<LiveEvent> Events => Channel.Reader;
 
+        /// <summary>Nach dem Anmelden außerhalb der Locks: offene Bewertungen anstoßen.</summary>
+        internal void AfterAdd()
+        {
+            if (WantsEval) _feed.QueueAllEvals();
+        }
+
         /// <summary>Engine-Balken dieses Zuschauers an/aus.</summary>
         public void SetEval(bool on)
         {
@@ -152,6 +170,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         private bool _lichessFinished;
         private string _state = "connecting";
         private bool _evalLoopStarted;
+        private bool _closed;
 
         public Feed(BroadcastLiveHub hub, string roundId, bool finished)
         {
@@ -163,6 +182,8 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         public string RoundId { get; }
         public bool IsFinished { get { lock (_lock) return _state == "finished"; } }
         public int ViewerCount { get { lock (_lock) return _subs.Count; } }
+        /// <summary>Geschlossen (Leerlauf) — nimmt keine Zuschauer mehr an; <see cref="Subscribe"/> legt dann einen neuen an.</summary>
+        public bool IsClosed { get { lock (_lock) return _closed; } }
 
         public List<LiveGame> Games()
         {
@@ -184,6 +205,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
             var sub = new RoundSubscription(this, wantsEval, _hub._options.QueueLimit);
             lock (_lock)
             {
+                if (_closed) throw new InvalidOperationException("Feed ist geschlossen");   // kann unter dem Hub-Lock nicht passieren
                 _subs.Add(sub);
                 _idle?.Cancel();
                 _idle = null;
@@ -195,7 +217,6 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
                     _ = Task.Run(() => RunAsync(token), CancellationToken.None);
                 }
             }
-            if (wantsEval) QueueAllEvals();
             return sub;
         }
 
@@ -208,18 +229,29 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
                 if (_subs.Count > 0) return;
                 _idle?.Cancel();
                 var idle = _idle = CancellationTokenSource.CreateLinkedTokenSource(_hub._shutdown.Token);
-                _ = Task.Delay(_hub._options.IdleClose, idle.Token).ContinueWith(t =>
-                {
-                    if (t.IsCanceled) return;
-                    lock (_lock)
-                    {
-                        if (_subs.Count > 0 || !ReferenceEquals(_idle, idle)) return;
-                        _run?.Cancel();
-                        _run = null;
-                        _evalQueue.Writer.TryComplete();
-                    }
-                    _hub.Closed(this);
-                }, TaskScheduler.Default);
+                _ = IdleAsync(idle);
+            }
+        }
+
+        private async Task IdleAsync(CancellationTokenSource idle)
+        {
+            try { await Task.Delay(_hub._options.IdleClose, idle.Token); }
+            catch (OperationCanceledException) { return; }
+            if (_hub.BeforeIdleClose is { } hook) await hook();
+            _hub.TryCloseIdle(this, idle);
+        }
+
+        /// <summary>Schließen, falls noch leer und dieser Timer der aktuelle ist (Aufrufer hält den Hub-Lock). → geschlossen?</summary>
+        public bool CloseIfIdle(CancellationTokenSource idle)
+        {
+            lock (_lock)
+            {
+                if (_closed || _subs.Count > 0 || !ReferenceEquals(_idle, idle)) return false;
+                _closed = true;
+                _run?.Cancel();
+                _run = null;
+                _evalQueue.Writer.TryComplete();
+                return true;
             }
         }
 

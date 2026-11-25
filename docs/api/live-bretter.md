@@ -48,15 +48,18 @@ Partien ohne Brett.
   `GET /api/stream/broadcast/round/{id}.pgn`. Erster Zuschauer → einmal `/api/broadcast/round/{id}.pgn` (Vollstand), dann
   der Strom; Lichess schickt nach dem Verbinden alle Partien noch einmal — Unverändertes (gleicher Hash) geht nicht hinaus.
   Abriss → neu verbinden, Pause 2 s … 60 s, nach 429 90 s für alle Abrufe. Letzter Zuschauer weg → Strom nach 90 s zu (ein
-  Neuladen reißt ihn nicht ab). Fertige Runden (Lichess `finished` oder alle Partien mit Ergebnis): kein Strom, die
+  Neuladen reißt ihn nicht ab). Schließen und Entfernen des Feeds geschehen atomar unter dem Hub-Lock, Anmelden
+  ebenso (Sperrreihenfolge Hub → Feed) — ein Zuschauer gerät nie an einen sterbenden Feed (1.014.1). Fertige Runden (Lichess `finished` oder alle Partien mit Ergebnis): kein Strom, die
   Endstellungen bleiben 30 min im Speicher.
 - **Zerlegen** (`BroadcastPgnSplitter`, `LiveGameParser`): Partien aus beliebigen Stücken, fertig beim Ergebnis-Token; je
   Partie FEN (Gera.Chess), letzter Zug (UCI), Uhren aus `[%clk]` (letzter Wert je Seite), `[%eval]`, Namen/Elo/Titel/FIDE-ID/
   Mannschaft aus den Kopfzeilen.
 - **Zuordnung** (`LiveBoardAssembler`): FIDE-ID (Startliste ↔ `WhiteFideId`/`BlackFideId`), Rückfall Name (Wörter sortiert,
   ohne Akzente). Einzel: Paarung der Runde (Namen → Startliste). Mannschaft: der Crawler kennt je Runde nur die Begegnungen —
-  die Partie gehört zur Begegnung der beiden Mannschaften der Spieler (Startliste, sonst `WhiteTeam`/`BlackTeam`), Bretter
-  nach der Meldelisten-Nummer geordnet. Brettreihenfolge = chess-results, nie Lichess.
+  die Partie gehört zur Begegnung der beiden Mannschaften der Spieler (Startliste, sonst `WhiteTeam`/`BlackTeam`). Innerhalb
+  der Begegnung ordnet der Lichess-Tag `Round "1.n"`: die Übertragung nummeriert blockweise je Begegnung in Brettreihenfolge
+  (1. BL R1: „1.1"–„1.6" Pinggau–Schwaz, „1.7"–„1.12" nächste Begegnung …, Farben abwechselnd); nur ohne Tag die
+  Meldelisten-Nummer (1.014.1). Brettnummer = Position in dieser Ordnung. Einzelturnier: Brettnummer = chess-results.
 - **Engine-Balken**: der Bundesliga-Strom bringt KEIN `[%eval]` (gemessen 25.11.2026, nur `[%clk]`). Dann fragt der Hub —
   nur solange ein Zuschauer der Runde den Balken an hat (`?eval=1`) — das Lichess Cloud-Eval (`LichessCloudEval`: je Stellung
   gecacht, Treffer 6 h, Fehltreffer 15 min, ein Abruf je Sekunde, nach 429 Pause). Nicht im Cloud-Speicher → Balken leer.

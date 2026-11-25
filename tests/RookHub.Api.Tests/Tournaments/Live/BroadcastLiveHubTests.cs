@@ -83,6 +83,71 @@ public class BroadcastLiveHubTests
         await b.DisposeAsync();
     }
 
+    /// <summary>
+    /// Das Fenster zwischen „Leerlauf-Timer abgelaufen“ und „Feed entfernt“: früher landete ein Zuschauer darin am sterbenden
+    /// Feed (neuer Strom, tote Bewertungs-Schlange), und der nächste legte einen ZWEITEN Feed mit zweitem Lichess-Strom an.
+    /// Der Haken hält den Hub genau dort an; der Zuschauer, der jetzt kommt, rettet den Feed.
+    /// </summary>
+    [Fact]
+    public async Task ViewerArrivesWhileIdleCloseFires_KeepsSameFeed_OneStream_EvalAlive()
+    {
+        var src = new FakeLichessLiveSource();
+        src.RoundPgn[Round] = Game1;
+        var fen = LiveGameParser.Parse(Game1)!.Fen;
+        src.CloudEvals[fen] = """{"depth":30,"pvs":[{"cp":25}]}""";
+        var cloud = new LichessCloudEval(src, new MemoryCache(new MemoryCacheOptions()), NullLogger<LichessCloudEval>.Instance) { Spacing = TimeSpan.Zero };
+        await using var hub = Hub(src, cloud);
+        var fired = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        hub.BeforeIdleClose = async () => { fired.TrySetResult(); await release.Task; };
+
+        var a = hub.Subscribe(Round, false, false);
+        await Next<LiveSnapshot>(a);
+        await Until(() => src.StreamsOpened == 1);
+        await a.DisposeAsync();
+        await fired.Task.WaitAsync(TimeSpan.FromSeconds(5));          // Timer abgelaufen, Schließen steht bevor
+
+        var b = hub.Subscribe(Round, false, wantsEval: false);        // genau ins Fenster
+        await Next<LiveSnapshot>(b);
+        hub.BeforeIdleClose = null;
+        release.SetResult();
+        await Task.Delay(150);                                         // Schließversuch ist durch
+
+        Assert.Equal(1, hub.OpenFeeds);
+        Assert.Equal(1, hub.Viewers(Round));
+        var c = hub.Subscribe(Round, false, false);                    // nächster Zuschauer: derselbe Feed
+        await Next<LiveSnapshot>(c);
+        Assert.Equal(2, hub.Viewers(Round));
+        Assert.Equal(1, src.StreamsOpened);                            // kein zweiter Lichess-Strom
+        Assert.Equal(0, src.StreamsClosed);
+
+        await src.StreamOf(Round).Writer.WriteAsync(LivePgn.Game("g1", "A", "B", "1. e4 { [%clk 1:30:00] } 1... c5"));
+        Assert.Equal(2, (await Next<LiveGameChanged>(b)).Game.Plies); // der Strom lebt
+        src.CloudEvals[LiveGameParser.Parse(LivePgn.Game("g1", "A", "B", "1. e4 { [%clk 1:30:00] } 1... c5"))!.Fen] = """{"depth":30,"pvs":[{"cp":25}]}""";
+        b.SetEval(true);
+        Assert.NotNull((await Next<LiveGameChanged>(b)).Game.Eval);    // die Bewertungs-Schlange lebt
+        await b.DisposeAsync();
+        await c.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task IdleCloseCompleted_NextViewerGetsFreshFeed()
+    {
+        var src = new FakeLichessLiveSource();
+        src.RoundPgn[Round] = Game1;
+        await using var hub = Hub(src);
+        var a = hub.Subscribe(Round, false, false);
+        await Next<LiveSnapshot>(a);
+        await Until(() => src.StreamsOpened == 1);
+        await a.DisposeAsync();
+        await Until(() => hub.OpenFeeds == 0 && src.StreamsClosed == 1);
+        var b = hub.Subscribe(Round, false, false);
+        await Next<LiveSnapshot>(b);
+        await Until(() => src.StreamsOpened == 2);
+        Assert.Equal(1, hub.OpenFeeds);
+        await b.DisposeAsync();
+    }
+
     [Fact]
     public async Task FinishedRound_NoStream_KeptForNextViewer()
     {

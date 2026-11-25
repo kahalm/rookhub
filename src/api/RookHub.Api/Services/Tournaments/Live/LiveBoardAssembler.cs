@@ -33,8 +33,8 @@ public sealed record LiveRoundLayout(bool Team, IReadOnlyList<LiveMatchSlot> Mat
 /// <item>Einzelturnier: die Paarung der Runde nennt Brett, Weiß, Schwarz (Namen) → Startliste → FIDE-ID → Partie.</item>
 /// <item>Mannschaftsturnier: der Crawler kennt je Runde nur die Begegnungen, nicht die Brettpaarungen. Die Partie gehört
 ///   zu der Begegnung, deren beide Mannschaften die zwei Spieler stellen (Mannschaft aus der Startliste, sonst
-///   <c>WhiteTeam</c>/<c>BlackTeam</c>); die Bretter sind nach der Aufstellungsnummer (Brett in der Meldeliste) geordnet —
-///   die Ligaordnung verlangt, dass eine Mannschaft in Reihenfolge der Meldeliste aufstellt.</item>
+///   <c>WhiteTeam</c>/<c>BlackTeam</c>); die Bretter sind nach dem Lichess-<c>Round</c>-Tag geordnet („1.7"–„1.12" =
+///   Bretter 1–6 der zweiten Begegnung, blockweise in Brettreihenfolge) — fehlt er, nach der Meldelisten-Nummer.</item>
 /// </list>
 /// </summary>
 public static class LiveBoardAssembler
@@ -106,14 +106,17 @@ public static class LiveBoardAssembler
             var homeWhite = wt == match.Home || (wt is null && bt == match.Away);
             var homePlayer = homeWhite ? wp : bp;
             var awayPlayer = homeWhite ? bp : wp;
-            var order = homePlayer?.Board ?? awayPlayer?.Board ?? 1000 + BoardTagOrder(g.BoardTag);
+            // Lichess nummeriert die Partien einer Runde blockweise je Begegnung in Brettreihenfolge („1.1"–„1.6" erste
+            // Begegnung, „1.7"–„1.12" zweite …, gesehen bei der 1. BL 2026/27) — das ist die Ordnung. Ohne Tag: Meldeliste.
+            var tag = BoardTagOrder(g.BoardTag);
+            var order = tag < NoTag ? tag : NoTag + (homePlayer?.Board ?? awayPlayer?.Board ?? NoTag);
             perMatch[match.MatchNumber].Add((g, homeWhite, order));
         }
 
         var matches = new List<LiveMatchSlot>();
         foreach (var m in round.Matches.OrderBy(x => x.MatchNumber))
         {
-            var list = perMatch[m.MatchNumber].OrderBy(x => x.Order).ThenBy(x => BoardTagOrder(x.G.BoardTag)).ToList();
+            var list = perMatch[m.MatchNumber].OrderBy(x => x.Order).ThenBy(x => x.G.Id, StringComparer.Ordinal).ToList();
             decimal home = 0, away = 0;
             var boards = new List<LiveBoardSlot>();
             for (var i = 0; i < list.Count; i++)
@@ -144,11 +147,15 @@ public static class LiveBoardAssembler
         _ => (0m, 0m),
     };
 
-    /// <summary>„1.12" → 1012 (Runde.Partie), für eine stabile Ordnung der Rückfälle.</summary>
+    /// <summary>Kein lesbarer Tag (siehe <see cref="BoardTagOrder"/>).</summary>
+    private const int NoTag = 100_000;
+
+    /// <summary>„1.12" → 12 (Partie innerhalb der Runde), „12" → 12; ohne lesbaren Tag <see cref="NoTag"/>.</summary>
     private static int BoardTagOrder(string? tag)
     {
         var parts = (tag ?? "").Split('.');
-        return parts.Length == 2 && int.TryParse(parts[1], out var b) ? b : int.TryParse(tag, out var n) ? n : 999;
+        return parts.Length == 2 && int.TryParse(parts[1], out var b) && b < NoTag ? b
+            : int.TryParse(tag, out var n) && n < NoTag ? n : NoTag;
     }
 
     /// <summary>Name als Vergleichsschlüssel: Kleinbuchstaben ohne Akzente, Satzzeichen weg, Wörter sortiert.</summary>
