@@ -7572,6 +7572,9 @@ namespace RookHub.Api.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ChapterColorsJson")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("LineOrder")
                         .IsRequired()
                         .HasMaxLength(20)

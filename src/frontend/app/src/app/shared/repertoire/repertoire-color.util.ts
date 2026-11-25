@@ -78,7 +78,32 @@ export function autoChapterColors(samples: ChapterColorSample[]): Map<string, Tr
 
 const OVR_KEY = (id: number) => `rookhub_rep_train_chaptercolor_${id}`;
 
-/** Manuelle Farb-Overrides je Kapitel aus dem localStorage (pro Gerät, pro Repertoire). */
+/**
+ * Wohin eine neue Festlegung außerdem geht (1.020.2): ins Konto (`PUT …/training/chapter-colors`). Der
+ * `RepertoireTrainingService` meldet sich an — dieses Modul bleibt ohne Angular und ohne HTTP.
+ */
+let colorSink: ((repId: number, colors: Record<string, TrainColor>) => void) | null = null;
+export function setChapterColorSink(sink: typeof colorSink): void { colorSink = sink; }
+
+/**
+ * Festlegungen aus dem Konto einarbeiten (1.020.2): je Kapitel gewinnt das Konto; was nur das Gerät kennt (vor 1.020.2
+ * gesetzt), geht hoch. → ob sich am Gerät etwas geändert hat.
+ */
+export function mergeChapterColorsFromServer(repId: number, server: Record<string, string> | null | undefined): boolean {
+  const local = readChapterColorOverrides(repId);
+  const next: Record<string, TrainColor> = { ...local };
+  let changed = false;
+  for (const [k, v] of Object.entries(server ?? {})) {
+    if ((v === 'w' || v === 'b') && next[k] !== v) { next[k] = v; changed = true; }
+  }
+  const upload: Record<string, TrainColor> = {};
+  for (const [k, v] of Object.entries(local)) if (!server || !(k in server)) upload[k] = v;
+  if (changed) writeJson(localStore(), OVR_KEY(repId), next);
+  if (Object.keys(upload).length) colorSink?.(repId, upload);
+  return changed;
+}
+
+/** Manuelle Farb-Overrides je Kapitel aus dem localStorage (Zwischenspeicher; seit 1.020.2 auch im Konto). */
 export function readChapterColorOverrides(repId: number): Record<string, TrainColor> {
   const obj = readJson<Record<string, unknown>>(localStore(), OVR_KEY(repId));
   const out: Record<string, TrainColor> = {};
@@ -94,6 +119,7 @@ export function setChapterColorOverride(repId: number, chapter: string, color: T
   const cur = readChapterColorOverrides(repId);
   cur[chapter] = color;
   writeJson(localStore(), OVR_KEY(repId), cur);   // Storage voll/blockiert → gilt nur für diese Sitzung
+  colorSink?.(repId, { [chapter]: color });
 }
 
 /** Effektive Farb-Map je Kapitel = Auto-Erkennung, von den manuellen Overrides überschrieben. */

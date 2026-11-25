@@ -20,7 +20,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { RepertoireTrainingService, LineStateDto, RepertoireMeta, RepertoireOpponent, SrConfigDto } from './repertoire-training.service';
 import { TrainerSrSync } from './repertoire-trainer-sr-sync';
 import { buildRepertoireGraph } from './repertoire-tree.util';
-import { chapterColorsOf, TrainColor } from '../../shared/repertoire/repertoire-color.util';
+import { chapterColorsOf, mergeChapterColorsFromServer, TrainColor } from '../../shared/repertoire/repertoire-color.util';
 import { SrConfigDialogComponent } from './sr-config-dialog.component';
 import { ParsedGame, exceedsSyncLimits, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
 import { parsePgnTextParallel } from '../../shared/pgn-viewer/pgn-parse-pool';
@@ -427,6 +427,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       return {};
     }
     this.lineOrder = effectiveLineOrder(config.lineOrder, readLegacyFrequencyOrder(), this.storedOpponentSession);
+    // Kapitelfarben aus dem Konto (1.020.2): nach dem Abmelden bzw. auf einem neuen Gerät sonst wieder die Auto-Erkennung.
+    if (mergeChapterColorsFromServer(this.repertoireId, config.chapterColors) && this.allLines.length)
+      this.chapterColors = chapterColorsOf(this.repertoireId, this.allLines);
     return { ...this.useLevels(config), lineOrder: config.lineOrder ?? null };
   }
 

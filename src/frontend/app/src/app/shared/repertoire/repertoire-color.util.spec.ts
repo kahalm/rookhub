@@ -1,6 +1,6 @@
 import {
   autoChapterColors, chapterColorsOf, readChapterColorOverrides, resolveChapterColors, rootSideOf,
-  setChapterColorOverride, sideOfLastMove,
+  mergeChapterColorsFromServer, setChapterColorOverride, setChapterColorSink, sideOfLastMove,
 } from './repertoire-color.util';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -97,5 +97,30 @@ describe('repertoire-color.util', () => {
       expect(map.get('French')).toBe('w');     // Override
       expect(map.get('Pirc')).toBe('b');       // Heuristik (letzter Halbzug Schwarz)
     });
+  });
+});
+
+describe('Kapitelfarben im Konto (1.020.2)', () => {
+  const KEY = 'rookhub_rep_train_chaptercolor_77';
+  let sent: { repId: number; colors: Record<string, string> }[];
+  beforeEach(() => { localStorage.removeItem(KEY); sent = []; setChapterColorSink((repId, colors) => sent.push({ repId, colors })); });
+  afterEach(() => { localStorage.removeItem(KEY); setChapterColorSink(null); });
+
+  it('eine Festlegung geht auch ins Konto', () => {
+    setChapterColorOverride(77, 'Sizilianisch', 'b');
+    expect(sent).toEqual([{ repId: 77, colors: { Sizilianisch: 'b' } }]);
+  });
+
+  it('Konto gewinnt je Kapitel; nur am Gerät Bekanntes geht hoch; nach dem Abmelden kommt alles zurück', () => {
+    localStorage.setItem(KEY, JSON.stringify({ A: 'w', B: 'w' }));
+    expect(mergeChapterColorsFromServer(77, { A: 'b' })).toBeTrue();
+    expect(readChapterColorOverrides(77)).toEqual({ A: 'b', B: 'w' });
+    expect(sent).toEqual([{ repId: 77, colors: { B: 'w' } }]);
+    localStorage.removeItem(KEY);   // Abmelden räumt das Gerät
+    sent = [];
+    expect(mergeChapterColorsFromServer(77, { A: 'b', B: 'w' })).toBeTrue();
+    expect(readChapterColorOverrides(77)).toEqual({ A: 'b', B: 'w' });
+    expect(sent).toEqual([]);
+    expect(mergeChapterColorsFromServer(77, { A: 'b', B: 'w' })).toBeFalse();   // nichts Neues
   });
 });

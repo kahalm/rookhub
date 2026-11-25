@@ -18,9 +18,14 @@ public class RepertoireTrainingPref
     public int RepertoireId { get; set; }
     public Repertoire? Repertoire { get; set; }
 
-    /// <summary>Einer der Werte aus <see cref="Services.Repertoires.RepertoireLineOrders.All"/>.</summary>
+    /// <summary>Einer der Werte aus <see cref="Services.Repertoires.RepertoireLineOrders.All"/>; <c>""</c> = nichts gewählt
+    /// (die Zeile entstand nur für die Kapitelfarben).</summary>
     [Required, MaxLength(20)]
     public string LineOrder { get; set; } = string.Empty;
+
+    /// <summary>Eigene Trainingsfarbe je Kapitel als JSON (<c>{ "Kapitel": "w" | "b" }</c>, 1.020.2) — vorher nur im
+    /// localStorage (<c>rookhub_rep_train_chaptercolor_&lt;id&gt;</c>), beim Abmelden geräumt.</summary>
+    public string? ChapterColorsJson { get; set; }
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

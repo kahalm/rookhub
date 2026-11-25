@@ -79,16 +79,55 @@ public class RepertoireTrainingService
         var effective = repLevels ?? userLevels ?? DefaultLevels;
         var source = repLevels != null ? "repertoire" : userLevels != null ? "user" : "default";
         // Ein Wert, den die Liste nicht (mehr) kennt, gilt als „nichts gewählt“ — das Frontend fällt auf die Vorgabe.
-        var lineOrder = await _db.RepertoireTrainingPrefs
+        var pref = await _db.RepertoireTrainingPrefs.AsNoTracking()
             .Where(p => p.UserId == userId && p.RepertoireId == repertoireId)
-            .Select(p => p.LineOrder).FirstOrDefaultAsync(ct);
+            .Select(p => new { p.LineOrder, p.ChapterColorsJson }).FirstOrDefaultAsync(ct);
+        var lineOrder = pref?.LineOrder;
         return new SrConfigDto(effective, userLevels ?? DefaultLevels, repLevels, source)
         {
             // Ein gespeichertes „opponent“ bleibt stehen, auch wenn der Gegner später fehlt — das Frontend fällt dann
             // auf die Vorgabe (HasOpponent sagt ihm, ob der Wert gilt).
             LineOrder = RepertoireLineOrders.IsValid(lineOrder) ? lineOrder : null,
             HasOpponent = RepertoireOpponentDto.Parse(rep.OpponentJson) is not null,
+            ChapterColors = ReadChapterColors(pref?.ChapterColorsJson),
         };
+    }
+
+    public const int MaxChapterColors = 1000;
+    public const int MaxChapterNameLength = 200;
+
+    /// <summary>Eigene Kapitelfarben setzen (1.020.2): übergebene Kapitel überschreiben, die übrigen bleiben. null =
+    /// kein Lesezugriff (404), false = ungültig (Farbe nicht w/b, Name zu lang, zu viele).</summary>
+    public async Task<bool?> SetChapterColorsAsync(int userId, int repertoireId, IReadOnlyDictionary<string, string> colors, CancellationToken ct = default)
+    {
+        if (!await CanTrainAsync(userId, repertoireId, ct)) return null;
+        if (colors.Count > MaxChapterColors
+            || colors.Any(kv => kv.Key is null || kv.Key.Length > MaxChapterNameLength || kv.Value is not ("w" or "b")))
+            return false;
+        for (var attempt = 0; ; attempt++)
+        {
+            var pref = await _db.RepertoireTrainingPrefs.FirstOrDefaultAsync(p => p.UserId == userId && p.RepertoireId == repertoireId, ct);
+            var merged = ReadChapterColors(pref?.ChapterColorsJson) ?? new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var (k, v) in colors) merged[k] = v;
+            if (merged.Count > MaxChapterColors) return false;
+            var json = System.Text.Json.JsonSerializer.Serialize(merged);
+            if (pref == null)
+                _db.RepertoireTrainingPrefs.Add(new RepertoireTrainingPref { UserId = userId, RepertoireId = repertoireId, ChapterColorsJson = json });
+            else { pref.ChapterColorsJson = json; pref.UpdatedAt = DateTime.UtcNow; }
+            try { await _db.SaveChangesAsync(ct); return true; }
+            catch (DbUpdateException ex) when (pref == null && attempt == 0 && AuthService.IsUniqueViolation(ex)) { _db.ChangeTracker.Clear(); }
+        }
+    }
+
+    private static Dictionary<string, string>? ReadChapterColors(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            var d = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+            return d?.Where(kv => kv.Value is "w" or "b").ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+        }
+        catch (System.Text.Json.JsonException) { return null; }
     }
 
     /// <summary>Reihenfolge der Linien im Trainer für DIESEN Nutzer und dieses Repertoire setzen (0.996.0) — erlaubt für

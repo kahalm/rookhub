@@ -541,4 +541,32 @@ public class RepertoireTrainingServiceTests : IDisposable
         Assert.Equal((4, "h"), (erste.Value, erste.Unit));
         Assert.Equal((6, "mo"), (letzte.Value, letzte.Unit));
     }
+
+    [Fact]
+    public async Task ChapterColors_SavedPerUser_MergedAndReadWithConfig_LineOrderStaysUnset()
+    {
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+        Assert.Null((await _service.GetConfigAsync(user, repId))!.ChapterColors);
+        Assert.True(await _service.SetChapterColorsAsync(user, repId, new Dictionary<string, string> { ["Sizilianisch"] = "b", ["Londoner"] = "w" }));
+        Assert.True(await _service.SetChapterColorsAsync(user, repId, new Dictionary<string, string> { ["Londoner"] = "b" }));
+        var cfg = (await _service.GetConfigAsync(user, repId))!;
+        Assert.Equal("b", cfg.ChapterColors!["Sizilianisch"]);
+        Assert.Equal("b", cfg.ChapterColors["Londoner"]);
+        Assert.Null(cfg.LineOrder);   // die Zeile entstand nur für die Farben
+        Assert.True(await _service.SetLineOrderAsync(user, repId, "random"));
+        Assert.Equal(2, (await _service.GetConfigAsync(user, repId))!.ChapterColors!.Count);   // Reihenfolge lässt die Farben stehen
+    }
+
+    [Fact]
+    public async Task ChapterColors_InvalidOrForeign()
+    {
+        var user = await CreateUserAsync();
+        var other = await CreateUserAsync("other");
+        var repId = await CreateRepertoireAsync(user);
+        Assert.False(await _service.SetChapterColorsAsync(user, repId, new Dictionary<string, string> { ["A"] = "x" }));
+        Assert.False(await _service.SetChapterColorsAsync(user, repId, new Dictionary<string, string> { [new string('k', 201)] = "w" }));
+        Assert.Null(await _service.SetChapterColorsAsync(other, repId, new Dictionary<string, string> { ["A"] = "w" }));
+    }
 }
+

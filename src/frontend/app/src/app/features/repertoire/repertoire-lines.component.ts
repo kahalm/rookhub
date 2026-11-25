@@ -13,7 +13,7 @@ import { MoveListComponent, MoveListCommentSegment } from '../../shared/pgn-view
 import { buildCommentSegments } from '../puzzles/comment-variation.util';
 import { RepertoireLine } from './repertoire-viewer.service';
 import { RepertoireTrainingService, LineStateDto } from './repertoire-training.service';
-import { autoChapterColors, readChapterColorOverrides, rootSideOf, setChapterColorOverride, TrainColor } from '../../shared/repertoire/repertoire-color.util';
+import { autoChapterColors, mergeChapterColorsFromServer, readChapterColorOverrides, rootSideOf, setChapterColorOverride, TrainColor } from '../../shared/repertoire/repertoire-color.util';
 import { groupByChapter } from '../../shared/lines/chapter-groups.util';
 import { MarkSet } from '../../shared/lines/mark-set';
 import { SanPipe } from '../../shared/chess/san.pipe';
@@ -367,7 +367,21 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
   ngOnInit(): void {
     this.loadStates();
     this.ensureMarksLoaded();
-    if (this.repertoireId != null) this.colorOverrides.set(readChapterColorOverrides(this.repertoireId));
+    if (this.repertoireId != null) {
+      const repId = this.repertoireId;
+      this.colorOverrides.set(readChapterColorOverrides(repId));
+      // Kapitelfarben aus dem Konto (1.020.2) — nach dem Abmelden/auf neuem Gerät sonst wieder die Auto-Erkennung.
+      // `?.`: Test-Doubles ohne die Methode; ein Fehler lässt den Gerätestand stehen.
+      this.training.getConfig?.(repId)?.subscribe({
+        next: cfg => {
+          if (mergeChapterColorsFromServer(repId, cfg?.chapterColors)) {
+            this.colorOverrides.set(readChapterColorOverrides(repId));
+            this.chapterColorChanged.emit();
+          }
+        },
+        error: () => { /* Gerätestand */ },
+      });
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {

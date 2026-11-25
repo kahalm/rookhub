@@ -101,6 +101,18 @@ public record SrConfigDto(
     /// <summary>Das Repertoire hat einen gespeicherten Gegner („Prep: …“, <c>Repertoire.OpponentJson</c>) — nur dann bietet
     /// die Auswahl der Reihenfolge den Wert <c>opponent</c> („Nach dem Gegner“) an (0.999.3).</summary>
     public bool HasOpponent { get; init; }
+
+    /// <summary>Eigene Trainingsfarbe je Kapitel (Kapitelname → <c>w</c>/<c>b</c>), die DIESER Nutzer gesetzt hat
+    /// (1.020.2) — schlägt die Auto-Erkennung. Vorher nur im localStorage des Geräts.</summary>
+    public Dictionary<string, string>? ChapterColors { get; init; }
+}
+
+/// <summary>Eigene Trainingsfarben je Kapitel setzen (zusammengeführt mit den gespeicherten: übergebene Kapitel
+/// überschreiben, die übrigen bleiben).</summary>
+public class SetChapterColorsRequest
+{
+    [Required]
+    public Dictionary<string, string> Colors { get; set; } = new();
 }
 
 /// <summary>Setzt die Reihenfolge der Linien im Trainer für den anfragenden Nutzer und dieses Repertoire.</summary>

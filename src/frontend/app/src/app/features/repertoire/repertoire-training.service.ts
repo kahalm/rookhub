@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { RepertoireService } from '../../core/repertoire.service';
 import type { LineOrder } from './repertoire-line-order';
+import { setChapterColorSink } from '../../shared/repertoire/repertoire-color.util';
 
 /** Ein Intervall-Eintrag der 9-Stufen-Leiter. */
 export interface SrLevel {
@@ -34,6 +35,8 @@ export interface SrConfigDto {
   lineOrder?: string | null;
   /** Das Repertoire hat einen gespeicherten Gegner („Prep: …") — nur dann steht „Nach dem Gegner" (`opponent`) zur Wahl. */
   hasOpponent?: boolean;
+  /** Eigene Trainingsfarben je Kapitel im Konto (1.020.2); `null` = keine. */
+  chapterColors?: Record<string, string> | null;
 }
 
 export interface LineReviewRequest {
@@ -62,7 +65,15 @@ export interface RepertoireMeta {
 export class RepertoireTrainingService {
   private readonly repertoires = inject(RepertoireService);
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    // Kapitelfarben (1.020.2): jede Festlegung am Gerät geht still auch ins Konto.
+    setChapterColorSink((repId, colors) => this.setChapterColors(repId, colors).subscribe({ error: () => { /* nächstes Öffnen lädt hoch */ } }));
+  }
+
+  /** Eigene Trainingsfarben je Kapitel ins Konto (zusammengeführt mit den gespeicherten). */
+  setChapterColors(repertoireId: number, colors: Record<string, 'w' | 'b'>): Observable<void> {
+    return this.http.put<void>(`/api/repertoires/${repertoireId}/training/chapter-colors`, { colors });
+  }
 
   /** Kombiniertes Repertoire-PGN (alle Dateien) — derselbe Abruf wie `RepertoireService.getPgnText` (Codereview F3-024). */
   getPgn(repertoireId: number): Observable<string> {

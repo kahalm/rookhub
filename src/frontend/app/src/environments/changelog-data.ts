@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.020.2", date: "2026-11-25", changes: [
+    { en: "Repertoires: the training colour you set for a chapter (White or Black) is now saved in your account. After logging out or on another device the trainer no longer falls back to the automatic guess.",
+      de: "Repertoires: Die Trainingsfarbe, die du für ein Kapitel festgelegt hast (Weiß oder Schwarz), liegt jetzt im Konto. Nach dem Abmelden oder auf einem anderen Gerät fällt der Trainer nicht mehr auf die automatische Erkennung zurück." },
+  ] },
   { version: "1.020.1", date: "2026-11-25", changes: [
     { en: "Calculation mode: the chapter clock (your summed-up thinking time per chapter) is now saved in your account. It no longer starts from zero after logging out or on another device.",
       de: "Kalkulations-Modus: Die Kapitel-Uhr (deine aufsummierte Rechenzeit je Kapitel) liegt jetzt im Konto. Sie beginnt nach dem Abmelden oder auf einem anderen Gerät nicht mehr bei null." },

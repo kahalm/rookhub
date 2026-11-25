@@ -246,6 +246,16 @@ public class RepertoireController : BaseApiController
         return res is null ? RepertoireNotFound() : res.Value ? NoContent() : BadRequest(new { message = "Line order is not available for this repertoire." });
     }
 
+    /// <summary>Eigene Trainingsfarben je Kapitel (1.020.2) <c>{ colors: { Kapitel: "w"|"b" } }</c> — je Nutzer und Repertoire
+    /// (Besitzer ODER Freigabe-Empfänger), zusammengeführt; gelesen mit <c>GET …/training/config</c> (<c>chapterColors</c>).
+    /// 404 ohne Lesezugriff, 400 ungültig.</summary>
+    [HttpPut("{id:int}/training/chapter-colors")]
+    public async Task<IActionResult> SetChapterColors(int id, [FromBody] SetChapterColorsRequest req, CancellationToken ct)
+    {
+        var res = await _training.SetChapterColorsAsync(GetUserId(), id, req.Colors, ct);
+        return res is null ? RepertoireNotFound() : res.Value ? NoContent() : BadRequest(new { message = "Invalid chapter colors." });
+    }
+
     /// <summary>Pausiert/aktiviert Linien (Kapitel = alle seine Linien-Schlüssel) — pausierte Linien
     /// fallen NICHT in den Übungspool. 404 nicht eigenes Repertoire.</summary>
     [HttpPost("{id:int}/training/pause")]

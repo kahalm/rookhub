@@ -74,7 +74,7 @@ export const STORAGE_KEYS: readonly StorageKeyEntry[] = [
   // --- neu eingeordnet (F1-010 / F7-013, 2026-10-26) ----------------------------------------------------------------
   u('rookhub_daily_elapsed', 'laufende Lösezeit des Tagespuzzles (fremde Wertung)'),
   u('rookhub_solve_elapsed', 'laufende Lösezeit je Puzzle'),
-  u('rookhub_rep_train_chaptercolor_', 'Kapitelfarben je Repertoire-Id (verrät die Repertoires)', true),
+  u('rookhub_rep_train_chaptercolor_', 'Kapitelfarben je Repertoire-Id (verrät die Repertoires) — seit 1.020.2 im Konto, kommen zurück', true),
   u('rh.ebooks.calc.', 'Kalkulations-Stand je E-Book-Diagramm', true),
   u('lh-club', 'LeagueHub: gewählter Verein des Kontos — kommt nach dem Login aus dem Profil (uiPrefs) zurück'),
   u('lh-training-lines', 'gewähltes Trainings-Repertoire des Kontos — kommt nach dem Login aus dem Profil (uiPrefs) zurück'),
