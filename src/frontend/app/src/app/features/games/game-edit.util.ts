@@ -1,5 +1,6 @@
 import { Chess } from 'chess.js';
 import { ScoresheetOption, ScoresheetPly } from './scoresheet.service';
+import { clockOf, formatClock, secondsOf, stripClock, withClock } from '../../shared/pgn-viewer/clock.util';
 
 /**
  * Ein Halbzug auf der Korrekturseite (`/games/:id/edit`). Bei einer aus einem Formular eingelesenen Partie
@@ -20,6 +21,9 @@ export interface EditPly {
   /** Befund der Engine-Prüfung beim Einlesen (0.646.0): `replaced` = die Lesung ergab ein anhaltendes Zickzack in der
    *  Bewertung und wurde ersetzt (die alte steht als Lesart da), `suggested` = eine andere Lesart passt besser. */
   check?: string | null;
+  /** Restzeit auf der Uhr nach dem Zug als `h:mm:ss` (1.015.0): beim Einlesen die notierte, von Hand änderbar; im PGN als
+   *  `[%clk]`. Gehört zum Formular-Eintrag, nicht zum Zug — wer einen Zug ersetzt, behält die Uhr. `null` = keine. */
+  clock?: string | null;
   /** Nicht legal in der Stellung davor — entsteht, wenn ein früherer Zug geändert wurde und der Rest nicht
    *  neu aufbereitet werden kann (gewöhnliche Partie). Wird beim Speichern verworfen. */
   illegal: boolean;
@@ -89,6 +93,8 @@ export function keepDecisions(head: readonly EditPly[], oldTail: readonly EditPl
     } else if (old && old.match === 'user' && restLegal(chess.fen(), old.san, newTail.slice(k + 1))) {
       next = { ...old, w: p.w, written: p.written, illegal: false };
     }
+    // Die Uhr gehört zum Formular-Eintrag: eine von Hand korrigierte bleibt, auch wenn der Zug neu gelesen wurde (1.015.0).
+    if (old) next = { ...next, clock: old.clock ?? null };
     try { chess.move(next.san); } catch { return [...out, ...newTail.slice(k)]; }
     out.push(next);
   }
@@ -112,7 +118,8 @@ export function keepLocalEdits(before: readonly EditPly[], current: readonly Edi
     else if (c.w != null) at = out.findIndex((p, j) => j >= stableHead && p.w === c.w && p.uci === c.uci);
     if (at < 0) return;
     const p = out[at];
-    out[at] = { ...p, confirmed: p.confirmed || !!c.confirmed, uncertain: p.uncertain && !c.confirmed, comment: c.comment };
+    out[at] = { ...p, confirmed: p.confirmed || !!c.confirmed, uncertain: p.uncertain && !c.confirmed, comment: c.comment,
+      clock: c.clock ?? null };
   });
   return out;
 }
@@ -139,8 +146,9 @@ export function nextEntryAt(plies: readonly EditPly[], i: number): number {
 }
 
 /** Ein Halbzug, den der Nutzer selbst eingegeben (oder gewählt) hat — gilt als bestätigt. */
-export function userPly(san: string, uci: string, w: number | null, written: string, comment: string | null = null): EditPly {
-  return { san, uci, w, written, match: 'user', uncertain: false, confirmed: true, options: null, comment, illegal: false };
+export function userPly(san: string, uci: string, w: number | null, written: string, comment: string | null = null,
+  clock: string | null = null): EditPly {
+  return { san, uci, w, written, match: 'user', uncertain: false, confirmed: true, options: null, comment, clock, illegal: false };
 }
 
 /** Halbzüge des Servers (Auflösung) in die Form der Korrekturseite bringen. */
@@ -156,6 +164,7 @@ export function fromServer(plies: readonly ScoresheetPly[], comments: readonly (
     options: p.options ?? null,
     comment: comments[i] ?? null,
     check: p.check ?? null,
+    clock: p.clock ?? null,
     illegal: false,
   }));
 }
@@ -165,6 +174,7 @@ export function toServer(plies: readonly EditPly[]): ScoresheetPly[] {
   return plies.filter(p => !p.illegal).map(p => ({
     w: p.w, written: p.written, san: p.san, uci: p.uci, match: p.match,
     uncertain: p.uncertain && !p.confirmed, confirmed: p.confirmed, options: p.options, check: p.check ?? null,
+    clock: p.clock ?? null,
   }));
 }
 
@@ -218,10 +228,15 @@ export function pliesOfPgn(pgn: string): EditPly[] {
   const chess = new Chess();
   try { chess.loadPgn(pgn); } catch { return []; }
   const comments = commentsOf(pgn, chess.history().length);
-  return chess.history({ verbose: true }).map((m, i) => ({
-    san: m.san, uci: m.from + m.to + (m.promotion ?? ''), w: null, written: '', match: 'user',
-    uncertain: false, confirmed: false, options: null, comment: comments[i], illegal: false,
-  }));
+  // Die Uhr ([%clk], 1.015.0) steht als eigenes Feld da, nicht im Kommentar — sie hat ein eigenes Eingabefeld.
+  return chess.history({ verbose: true }).map((m, i) => {
+    const seconds = clockOf(comments[i]);
+    return {
+      san: m.san, uci: m.from + m.to + (m.promotion ?? ''), w: null, written: '', match: 'user',
+      uncertain: false, confirmed: false, options: null, comment: stripClock(comments[i]),
+      clock: seconds == null ? null : formatClock(seconds), illegal: false,
+    };
+  });
 }
 
 /** Kopfdaten einer PGN (Header-Werte, „?" = leer). */
@@ -274,7 +289,12 @@ export function commentsForSave(plies: readonly EditPly[], unresolved: readonly 
     const last = out.length - 1;
     out[last] = out[last] ? `${out[last]} | ${note}` : note;
   }
-  return out;
+  return out.map((c, i) => commentWithClock(c, legal[i].clock));
+}
+
+/** Der Kommentar zum Speichern samt Uhr vorn (`[%clk 1:12:00] …`, 1.015.0) — auch für Partien ohne Formular. */
+export function commentWithClock(comment: string | null | undefined, clock: string | null | undefined): string | null {
+  return withClock(comment?.trim() || null, secondsOf(clock));
 }
 
 /** Ein Ausschnitt des Formular-Fotos als CSS-Werte: das Foto liegt im Rahmen, verschoben und vergrößert, und die

@@ -259,6 +259,8 @@ internal sealed class ClubGameWriter
         var sans = PgnParser.ExtractMainlineSans(moveText);
         var (built, reason) = Build(club, w, b, sans, g.Year, req.Result ?? g.Result, g.Event);
         if (built == null) return (null, reason);
+        // Notierte Restzeiten ([%clk], 1.015.0) gehören zu den Zügen, nicht zu den Namen — sie bleiben.
+        built.Pgn = PgnOf(built, sans, ClocksOf(g.Pgn));
         var before = new[] { g.WhiteFide, g.BlackFide };
         var head = SavedGameClubHeaders.Head.Of(g);
         var remember = new List<(string Raw, LeagueNameAliases.Entry Target)>();
@@ -306,8 +308,10 @@ internal sealed class ClubGameWriter
     /// zieht der Aufrufer nach (<c>ClubGameCorrectionService</c>). → (Partie, neue SAN) oder ein Grund: <c>notFound</c>,
     /// <c>forbidden</c>, <c>noMoves</c>, <c>tooLong</c>, <c>illegal</c>.
     /// </summary>
+    /// <param name="clocks">Restzeit je Halbzug aus der Formular-Korrektur (1.015.0, Sekunden, <c>null</c> = keine); fehlt die
+    /// Liste, bleiben die Uhren der unveränderten Züge von vorn. Ändern sich NUR die Uhren, wird nur das PGN neu geschrieben.</param>
     public async Task<(LeagueClubGame? Game, IReadOnlyList<string>? Sans, string? Reason)> CorrectMovesAsync(LeagueClub club, int userId,
-        bool canManage, int id, IReadOnlyList<string> moves, CancellationToken ct = default)
+        bool canManage, int id, IReadOnlyList<string> moves, CancellationToken ct = default, IReadOnlyList<int?>? clocks = null)
     {
         var g = await Games(club).FirstOrDefaultAsync(x => x.Id == id, ct);
         if (g == null) return (null, null, "notFound");
@@ -319,8 +323,17 @@ internal sealed class ClubGameWriter
         try { sans = SavedGameService.LegalSans(clean); }
         catch (ArgumentException) { return (null, null, "illegal"); }
         var old = PgnParser.ExtractMainlineSans(PgnParser.SplitGames(g.Pgn).Select(x => x.MoveText).FirstOrDefault() ?? string.Empty);
-        if (old.SequenceEqual(sans)) return (g, sans, null);
-        g.Pgn = PgnOf(g, sans);
+        if (old.SequenceEqual(sans))
+        {
+            if (clocks != null && !Padded(ClocksOf(g.Pgn), sans.Count).SequenceEqual(Padded(clocks, sans.Count)))
+            {
+                g.Pgn = PgnOf(g, sans, clocks);
+                await _db.SaveChangesAsync(ct);
+                _log.LogInformation("Vereins-Datenbank: Uhren von Partie {Id} korrigiert", g.Id);
+            }
+            return (g, sans, null);
+        }
+        g.Pgn = PgnOf(g, sans, clocks);
         g.Plies = sans.Count;
         g.MovesHash = HashOf(sans);
         await _db.SaveChangesAsync(ct);
@@ -331,6 +344,9 @@ internal sealed class ClubGameWriter
         _log.LogInformation("Vereins-Datenbank: Züge von Partie {Id} korrigiert ({Old} → {New} Halbzüge)", g.Id, old.Count, sans.Count);
         return (g, sans, null);
     }
+
+    private static List<int?> Padded(IReadOnlyList<int?> list, int n) =>
+        Enumerable.Range(0, n).Select(i => i < list.Count ? list[i] : null).ToList();
 
     /// <summary>Eigene Partien darf man bearbeiten und löschen — seit 0.656.0 auch eine „Schwaz"-Partie, wenn sie einem selbst
     /// gehört: einen Hochladenden trägt eine solche nur nach der Zuordnung mit Zustimmung (<see cref="ClaimAsync"/>).</summary>

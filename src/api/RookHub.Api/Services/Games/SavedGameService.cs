@@ -239,7 +239,8 @@ public class SavedGameService
 
     /// <summary>Eine korrigierte Vereinspartie in alle verbundenen Kopien tragen (<see cref="SavedGameAnalysisLink.ApplyClubMovesAsync"/>).</summary>
     public static Task<int> ApplyClubMovesAsync(AppDbContext db, int clubGameId, IReadOnlyList<string> sans, int? except,
-        CancellationToken ct = default) => SavedGameAnalysisLink.ApplyClubMovesAsync(db, clubGameId, sans, except, ct);
+        CancellationToken ct = default, IReadOnlyList<int?>? clocks = null)
+        => SavedGameAnalysisLink.ApplyClubMovesAsync(db, clubGameId, sans, except, ct, clocks);
 
     public Task<int> LinkClubCopiesAsync(int take = 500, CancellationToken ct = default) => _link.LinkClubCopiesAsync(take, ct);
 

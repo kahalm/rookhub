@@ -361,7 +361,7 @@
         } @else {
           <div class="moves-section">
             @if (service.currentGame; as g) {
-              <app-move-list [moves]="g.moves" [currentMoveIndex]="service.currentMoveIndex" [comments]="g.comments" [marks]="moveMarks()" (moveClicked)="service.goToMove($event)" />
+              <app-move-list [moves]="g.moves" [currentMoveIndex]="service.currentMoveIndex" [comments]="g.comments" [marks]="moveMarks()" [clocks]="g.clocks ?? null" (moveClicked)="service.goToMove($event)" />
             }
           </div>
         }
@@ -381,6 +381,12 @@
                              (statusChange)="reviewStatus.set($event)"
                              (mistakesChange)="mistakes.set($event)"
                              (storedChange)="reviewStored.set($event)" />
+            @if (!training()) {
+              <!-- Zeitverbrauch (1.015.0): Restzeit je Seite aus den [%clk] der Partie (auch notierte Zeiten eines
+                   Formulars), erst ab genug Uhrenständen; Klick springt zum Zug. -->
+              <app-clock-chart class="clock-slot" [clocks]="g.clocks" [plies]="g.moves.length" [firstColor]="g.moves[0]?.color === 'b' ? 'b' : 'w'"
+                               [currentIndex]="service.currentMoveIndex" (moveClicked)="service.goToMove($event)" />
+            }
           }
           @if (!training()) {
             @if (own && gameId && trainingVideos() && service.currentGame; as g) {

@@ -7,6 +7,7 @@ import {
   EditPly, START_FEN, cropView, fensOf, fromServer, keepDecisions, keepLocalEdits, nextEntryAt, nextUncertainFrom, resolveRequest, revalidate,
   stripSheetNotes, userPly, writtenIndexAt,
 } from './game-edit.util';
+import { formatClock, parseClockInput } from '../../shared/pgn-viewer/clock.util';
 
 /** Eine Zeile der Zugliste: Zugnummer + Index des weißen und des schwarzen Halbzugs. */
 export interface MoveRow { no: number; white: number; black: number | null; }
@@ -269,6 +270,8 @@ export class SheetEditSession {
     // Ein Halbzug ohne Eintrag (eingefügt) bleibt ohne; nur Anhängen am Ende verbraucht den nächsten offenen.
     const w = mode === 'insert' ? null : i < list.length ? list[i].w : writtenIndexAt(list, i);
     const comment = mode === 'replace' ? stripSheetNotes(old?.comment) : null;
+    // Die Uhr gehört zum Formular-Eintrag: beim Ersetzen bleibt sie (1.015.0)
+    const clock = mode === 'replace' ? old?.clock ?? null : null;
     const uci = uciOf(san, this.cursorFen());
     if (!uci) return;
     this.beforeRemove.set(null);
@@ -279,7 +282,7 @@ export class SheetEditSession {
       this.go(i + 1);
       return;
     }
-    const mine = userPly(san, uci, w, written, comment);
+    const mine = userPly(san, uci, w, written, comment, clock);
 
     if (!this.isScoresheet()) {
       const tail = mode === 'insert' ? list.slice(i) : list.slice(i + 1);
@@ -402,6 +405,24 @@ export class SheetEditSession {
     this.beforeRemove.set(null);
     this.plies.update(list => list.map((p, k) => k === i ? { ...p, comment: text.trim() ? text : null } : p));
     this.host.changed?.();
+  }
+
+  /**
+   * Die Restzeit nach dem Zug am Cursor setzen (1.015.0): eine notierte Form („1:12", „72'", „0:05:30") oder leer = keine.
+   * `false`, wenn sich der Text nicht als Uhrzeit lesen lässt — dann bleibt der bisherige Wert.
+   */
+  setClock(text: string): boolean {
+    const i = this.cursor();
+    const p = this.plies()[i];
+    if (!p) return false;
+    const seconds = parseClockInput(text);
+    if (seconds == null && text.trim()) return false;
+    const clock = seconds == null ? null : formatClock(seconds);
+    if ((p.clock ?? null) === clock) return true;
+    this.beforeRemove.set(null);
+    this.plies.update(list => list.map((x, k) => k === i ? { ...x, clock } : x));
+    this.host.changed?.();
+    return true;
   }
 
   /**

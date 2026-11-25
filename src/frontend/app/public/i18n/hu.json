@@ -410,6 +410,12 @@
       "next": "Következő lépés",
       "last": "Utolsó lépés",
       "flip": "Tábla megfordítása"
+    },
+    "clockChart": {
+      "title": "Időfelhasználás",
+      "white": "Világos",
+      "black": "Sötét",
+      "aria": "Hátralévő idő oldalanként, {{count}} bejegyzés"
     }
   },
   "profile": {
@@ -5732,7 +5738,8 @@
     "n": "Átváltozás huszárrá"
   },
   "moveList": {
-    "label": "Lépések"
+    "label": "Lépések",
+    "clock": "Óra {{time}}"
   },
   "playerCard": {
     "games": "{{n}} parti",
@@ -6914,7 +6921,10 @@
       "sinceDaysOne": "1 napja",
       "sinceDaysHours": "{{days}} nap {{hours}} órája",
       "sinceDaysHoursOne": "1 nap {{hours}} órája"
-    }
+    },
+    "clock": "Óra a lépés után",
+    "clockHint": "Hátralévő idő, pl. 1:12 vagy 72' — üres = nincs",
+    "clockInvalid": "Nem időpont — pl. 1:12, 72' vagy 0:05:30"
   },
   "solver": {
     "status": {

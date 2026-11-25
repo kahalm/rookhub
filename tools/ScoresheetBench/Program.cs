@@ -13,6 +13,9 @@ using RookHub.Api.Services.Scoresheet;
 // ScoresheetBench — Testinterface für „Partieformular einlesen".
 //
 //   dotnet run --project tools/ScoresheetBench -- <testset-ordner> [Optionen]
+//   dotnet run --project tools/ScoresheetBench -- --single <foto> [--lang de] [--out DIR] [--max-usd 2] [--answer answer.json]
+//                         EIN Foto ohne Soll-Partie: Lesung, notierte Restzeiten (clocks.tsv) und game.pgn mit [%clk];
+//                         --answer löst eine gespeicherte Antwort neu auf (kein Modell-Aufruf)
 //
 //   --out <ordner>        Ausgabe (results.json, report.md, NN.answer.json); Vorgabe ./scoresheet-bench-out
 //   --only 01,05          nur diese Belege
@@ -91,6 +94,13 @@ if (argv.Contains("--list-models"))
     if (ids == null) return 4;
     foreach (var id in ids) Console.WriteLine(id);
     return 0;
+}
+if (argv.Contains("--single"))
+{
+    // EIN Foto ohne Soll-Partie (1.015.0): lesen wie RookHub, die notierten Restzeiten prüfen und die fertige PGN mit
+    // [%clk] schreiben. --answer <json> löst eine gespeicherte Antwort neu auf (kein Modell-Aufruf, kostenlos).
+    return await Single(argv, Opt, http, provider, endpoint, localKey, localMaxTokens, promptKind, useSchema, noThinking,
+        effortOpt, prices, edge);
 }
 if (argv.Count == 0 || argv[0].StartsWith("--"))
 {
@@ -323,6 +333,108 @@ Console.WriteLine($"→ {Path.Combine(outDir, "report.md")}" + (resolverOnly ? "
 return 0;
 
 // ── Hilfen ───────────────────────────────────────────────────────────────────────────────────────
+
+/// <summary>
+/// <c>--single &lt;foto&gt;</c>: ein Formular lesen (Claude, oder openai/dots wie oben) bzw. mit <c>--answer</c> eine gespeicherte
+/// Antwort neu auflösen, dann wie RookHub die Restzeiten anhängen (<see cref="ScoresheetClock.Attach"/>) und ausgeben:
+/// <c>answer.json</c>, <c>clocks.tsv</c> (je Halbzug: Zug, Eintrag, notierte Zeit, gelesen, behalten) und <c>game.pgn</c>.
+/// </summary>
+static async Task<int> Single(List<string> argv, Func<string, string, string> opt, HttpClient http, string provider, string endpoint,
+    string? localKey, int localMaxTokens, string promptKind, bool useSchema, bool noThinking, string effort, string prices, int edge)
+{
+    var photo = opt("--single", "");
+    var answerPath = opt("--answer", "");
+    var outDir = opt("--out", Path.Combine(Directory.GetCurrentDirectory(), "scoresheet-single-out"));
+    var lang = opt("--lang", "auto");
+    var model = opt("--model", provider == "claude" ? "claude-opus-5-5" : "");
+    var maxUsd = decimal.Parse(opt("--max-usd", "2"), CultureInfo.InvariantCulture);
+    Directory.CreateDirectory(outDir);
+
+    ScoresheetTranscription? t;
+    ScoresheetResolution? r;
+    string? language;
+    if (answerPath.Length > 0)
+    {
+        var json0 = File.ReadAllText(answerPath);
+        t = ScoresheetTranscription.Parse(json0);
+        if (t == null) { Console.Error.WriteLine("Antwort nicht lesbar."); return 5; }
+        language = ScoresheetReader.EffectiveLanguage(lang, t.NotationLanguage);
+        r = ScoresheetResolver.Resolve(t.Scanned(), new ScoresheetResolver.Options(ScoresheetNotation.Find(language)));
+        File.WriteAllText(Path.Combine(outDir, "answer.json"), json0);
+    }
+    else
+    {
+        if (!File.Exists(photo)) { Console.Error.WriteLine($"Foto {photo} fehlt."); return 2; }
+        IScoresheetVisionClient vision;
+        if (provider == "claude")
+        {
+            var key = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+            if (string.IsNullOrWhiteSpace(key)) { Console.Error.WriteLine("ANTHROPIC_API_KEY fehlt (oder --answer nutzen)."); return 3; }
+            vision = new ClaudeScoresheetVisionClient(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Anthropic:ApiKey"] = key, ["Anthropic:ScoresheetModel"] = model, ["Anthropic:ScoresheetEffort"] = effort,
+            }).Build(), NullLogger<ClaudeScoresheetVisionClient>.Instance);
+        }
+        else if (provider == "dots")
+            vision = new DotsOcrScoresheetVisionClient(http, new DotsOcrScoresheetVisionClient.Settings(endpoint, model, localKey, localMaxTokens), NullLogger.Instance);
+        else
+            vision = new OpenAiScoresheetVisionClient(http, new OpenAiScoresheetVisionClient.Settings(endpoint, model, localKey,
+                promptKind == "full" ? ScoresheetPrompt.System : ScoresheetPrompt.TranscribeSystem, useSchema, MaxTokensCap: localMaxTokens), NullLogger.Instance);
+        var jpeg = ScoresheetImage.Prepare(File.ReadAllBytes(photo), edge);
+        if (jpeg == null) { Console.Error.WriteLine("Bild nicht lesbar."); return 5; }
+        if (prices.Length == 0)
+            prices = model.StartsWith("claude-opus-5-5", StringComparison.OrdinalIgnoreCase) ? "4,20"
+                : model.StartsWith("claude-sonnet", StringComparison.OrdinalIgnoreCase) ? "2,10"
+                : model.StartsWith("claude-haiku", StringComparison.OrdinalIgnoreCase) ? "1,5" : "5,25";
+        var pp = prices.Split(',', StringSplitOptions.TrimEntries);
+        var budget = new ScoresheetBudget(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Scoresheet:InputUsdPerMTok"] = pp[0], ["Scoresheet:OutputUsdPerMTok"] = pp.Length > 1 ? pp[1] : pp[0],
+        }).Build());
+        long spent = 0, max = (long)(maxUsd * 1_000_000m);
+        var local = provider != "claude";
+        var outcome = await new ScoresheetReader(vision).ReadAsync(jpeg, lang, CancellationToken.None,
+            beforeCall: _ =>
+            {
+                if (local) return Task.FromResult(new CallAllowance(localMaxTokens, null));
+                var left = max - spent - budget.WorstCaseMicroUsd(0);
+                var tokens = (int)Math.Min(ScoresheetBudget.MaxOutputTokens, Math.Max(0, left / budget.OutputUsdPerMTok));
+                return Task.FromResult(tokens < ScoresheetBudget.MinOutputTokens ? new CallAllowance(0, "benchBudget") : new CallAllowance(tokens, null));
+            },
+            afterCall: (i, o, _) => { if (!local) spent += budget.CostMicroUsd(i, o); return Task.CompletedTask; },
+            maxRounds: provider == "dots" ? 1 : ScoresheetReader.MaxRounds,
+            startMode: noThinking ? ScoresheetReadMode.Transcribe : ScoresheetReadMode.Full);
+        if (outcome.Json != null) File.WriteAllText(Path.Combine(outDir, "answer.json"), outcome.Json);
+        Console.WriteLine($"Lesung: {outcome.Rounds} Durchgang/Durchgänge, Kosten {spent / 1_000_000m:0.000} $" + (outcome.Error is { } e ? $", Fehler {e}" : ""));
+        t = outcome.Transcription;
+        r = outcome.Resolution;
+        language = outcome.Language;
+        if (t == null || r == null) return 4;
+    }
+
+    ScoresheetClock.Attach(r, t);
+    var tsv = new StringBuilder("halbzug\tzug\teintrag\tnotiert\tgelesen\tbehalten\n");
+    for (var i = 0; i < r.Plies.Count; i++)
+    {
+        var p = r.Plies[i];
+        var rawClock = p.W is int w && w < t.Moves.Count ? t.Moves[w].Clock : null;
+        var read = ScoresheetClock.Normalize(rawClock);
+        tsv.Append($"{i / 2 + 1}{(i % 2 == 0 ? "." : "...")}\t{p.San}\t{p.Written}\t{rawClock}\t{read}\t{p.Clock}\n");
+    }
+    File.WriteAllText(Path.Combine(outDir, "clocks.tsv"), tsv.ToString());
+    var comments = ScoresheetComments.For(r);
+    var pgn = new StringBuilder();
+    foreach (var (k, v) in new[] { ("Event", t.Event), ("Site", t.Site), ("Date", (t.DateIso ?? t.Date)?.Replace('-', '.')), ("Round", t.Round), ("White", t.White), ("Black", t.Black), ("Result", t.Result ?? "*") })
+        pgn.Append(PgnWriter.Tag(k, string.IsNullOrWhiteSpace(v) ? "?" : v));
+    pgn.Append('\n').Append(PgnWriter.MoveText(r.Plies.Select(p => p.San).ToList(), comments: comments,
+        result: t.Result is "1-0" or "0-1" or "1/2-1/2" ? t.Result : "*")).Append('\n');
+    File.WriteAllText(Path.Combine(outDir, "game.pgn"), pgn.ToString());
+    var noted = r.Plies.Count(p => p.W is int w && w < t.Moves.Count && !string.IsNullOrWhiteSpace(t.Moves[w].Clock));
+    Console.WriteLine($"{r.Plies.Count} Halbzüge ({language}), {r.Plies.Count(p => p.Uncertain)} unsicher, {r.Unresolved.Count} offen; " +
+                      $"Uhren: {noted} notiert, {r.Plies.Count(p => p.Clock != null)} im PGN");
+    Console.WriteLine($"→ {Path.Combine(outDir, "game.pgn")}, {Path.Combine(outDir, "clocks.tsv")}");
+    return 0;
+}
 
 /// <summary>Die Modelle eines OpenAI-kompatiblen Servers (<c>GET /models</c>), oder <c>null</c> mit Meldung.</summary>
 static async Task<List<string>?> ModelIds(HttpClient http, string endpoint, string? key)

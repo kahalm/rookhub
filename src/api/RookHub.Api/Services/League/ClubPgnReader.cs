@@ -183,6 +183,10 @@ internal sealed class ClubPgnReader
                 }
             }
             var (game, reason) = Build(club, w, b, p.Sans, YearOf(p.H("Date"), now), p.H("Result"), p.H("Event"));
+            // Uhren der Vorlage ([%clk], z. B. aus Lichess/einer Übertragung) bleiben in der gespeicherten Fassung (1.015.0).
+            if (game != null && p.MoveText.Contains("[%clk", StringComparison.Ordinal)
+                && PgnClock.Aligned(p.MoveText, p.Sans!.Count) is { } clocks)
+                game.Pgn = PgnOf(game, p.Sans, clocks);
             built.Add((index, p, game, reason));
             choices[index] = decision?.LeagueGameId;
         }
@@ -273,6 +277,8 @@ internal sealed class ClubPgnReader
         var b = Decided(new LeagueClubSideDecision { Name = req.Black, Fide = req.BlackFide, Replace = req.BlackReplace }, req.Black, null, req.BlackElo, lk);
         var (game, reason) = Build(club, w, b, sans, year, req.Result, req.Event);
         if (game == null) return (null, reason, null);
+        // Notierte Restzeiten aus der Formular-Korrektur (1.015.0) ins PGN.
+        if (ClocksOf(req.Plies, sans.Count) is { } clocks) game.Pgn = PgnOf(game, sans, clocks);
         if (IsDuplicate(game, new(), await StoredByHashAsync(club, new[] { game }, ct))) return (null, "duplicate", null);
         using var lease = shareHash is null ? null : _shareQuota.Reserve(shareHash, 1);
         if (lease is { Granted: 0 })

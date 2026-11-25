@@ -102,8 +102,15 @@ internal static class ClubPgnText
     internal static string HashOf(IReadOnlyList<string> sans) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join(' ', sans)))).ToLowerInvariant();
 
-    internal static string PgnOf(LeagueClubGame g, IReadOnlyList<string> sans)
+    /// <param name="clocks">Restzeit je Halbzug (Sekunden, <c>null</c> = keine) aus einem Partieformular (1.015.0), als
+    /// <c>[%clk]</c> geschrieben. Fehlt die Liste, bleiben die Uhren des bisherigen PGN (<paramref name="g"/>), soweit die Züge
+    /// von vorn gleich sind — Namen, Ergebnis oder Jahr neu zu schreiben darf sie nicht verlieren.</param>
+    internal static string PgnOf(LeagueClubGame g, IReadOnlyList<string> sans, IReadOnlyList<int?>? clocks = null)
     {
+        clocks ??= KeptClocks(g.Pgn, sans);
+        Dictionary<int, string>? comments = null;
+        for (var i = 0; i < Math.Min(sans.Count, clocks.Count); i++)
+            if (clocks[i] is int s) (comments ??= new())[i] = PgnClock.Tag(s);
         var sb = new StringBuilder();
         sb.Append(PgnWriter.Tag("Event", g.Event ?? "?"));
         sb.Append(PgnWriter.Tag("Site", "?"));
@@ -118,8 +125,28 @@ internal static class ClubPgnText
         if (g.WhiteFide != null) sb.Append(PgnWriter.Tag("WhiteFideId", g.WhiteFide));
         if (g.BlackFide != null) sb.Append(PgnWriter.Tag("BlackFideId", g.BlackFide));
         // Mit Schach- und Mattzeichen, auch wenn die Züge aus ExtractMainlineSans kommen (Namen/Ergebnis korrigieren, Teilen-Link).
-        sb.Append('\n').Append(PgnWriter.MoveText(SavedGamePgn.WithCheckMarks(sans), null, null, g.Result)).Append('\n');
+        sb.Append('\n').Append(PgnWriter.MoveText(SavedGamePgn.WithCheckMarks(sans), null, comments, g.Result)).Append('\n');
         return sb.ToString();
+    }
+
+    /// <summary>Die Uhren je Halbzug eines gespeicherten PGN (<c>[%clk]</c>), leer ohne PGN.</summary>
+    internal static List<int?> ClocksOf(string? pgn) =>
+        string.IsNullOrWhiteSpace(pgn) ? new() : PgnClock.Mainline(PgnParser.SplitGames(pgn).FirstOrDefault().MoveText);
+
+    /// <summary>Die Uhren aus dem Stand je Halbzug der Formular-Korrektur — nur, wenn er zu den Zügen passt (gleich lang).</summary>
+    internal static List<int?>? ClocksOf(IReadOnlyList<Scoresheet.ScoresheetPly>? plies, int plyCount) =>
+        plies is { Count: > 0 } p && p.Count == plyCount ? p.Select(x => Scoresheet.ScoresheetClock.Parse(x.Clock)).ToList() : null;
+
+    /// <summary>Die Uhren des bisherigen PGN für die neuen Züge, soweit diese von vorn gleich sind (ohne Schach-/Mattzeichen).</summary>
+    private static List<int?> KeptClocks(string? oldPgn, IReadOnlyList<string> sans)
+    {
+        if (string.IsNullOrWhiteSpace(oldPgn) || !oldPgn.Contains("[%clk", StringComparison.Ordinal)) return new();
+        var moveText = PgnParser.SplitGames(oldPgn).FirstOrDefault().MoveText ?? string.Empty;
+        var (oldSans, clocks, _) = Tournaments.Live.LiveGameParser.Scan(moveText);
+        static string K(string s) => s.TrimEnd('+', '#', '!', '?');
+        var same = 0;
+        while (same < Math.Min(oldSans.Count, sans.Count) && K(oldSans[same]) == K(sans[same])) same++;
+        return clocks.Take(same).ToList();
     }
 
     /// <summary>Jahr aus einem PGN-Datum („2024.05.12", „2024.??.??"); unplausibel = unbekannt.</summary>

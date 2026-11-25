@@ -26,9 +26,11 @@ public sealed class ClubGameCorrectionService(AppDbContext db, LeagueClubService
     public async Task<(LeagueClubGame? Game, string? Reason)> CorrectClubAsync(LeagueClub leagueClub, int userId, bool canManage, int clubGameId,
         IReadOnlyList<string> moves, List<ScoresheetPly>? plies, int? exceptCopy = null, CancellationToken ct = default, int? sheetEnd = null)
     {
-        var (game, sans, reason) = await club.CorrectMovesAsync(leagueClub, userId, canManage, clubGameId, moves, ct);
+        // Notierte Restzeiten (1.015.0) kommen mit dem Stand je Halbzug der Formular-Korrektur.
+        var clocks = ClubPgnText.ClocksOf(plies, moves.Count(m => !string.IsNullOrWhiteSpace(m)));
+        var (game, sans, reason) = await club.CorrectMovesAsync(leagueClub, userId, canManage, clubGameId, moves, ct, clocks);
         if (game == null || sans == null) return (null, reason);
-        var copies = await SavedGameService.ApplyClubMovesAsync(db, clubGameId, sans, exceptCopy, ct);
+        var copies = await SavedGameService.ApplyClubMovesAsync(db, clubGameId, sans, exceptCopy, ct, ClubPgnText.ClocksOf(game.Pgn));
         await scans.SaveClubEditStateAsync(clubGameId, plies, game.Pgn, ct, sheetEnd);
         if (copies > 0) log.LogInformation("Vereinspartie {Id}: Korrektur in {Copies} Kopien übernommen", clubGameId, copies);
         return (game, null);
@@ -52,7 +54,10 @@ public sealed class ClubGameCorrectionService(AppDbContext db, LeagueClubService
         }
         // Züge gleich — nur Kopfdaten geändert. Außer „Partie hier beenden“ am Ende (keine Züge weg, nur die übrigen Formular-Einträge
         // verworfen): das gehört ins Archiv der Vereinspartie.
-        if (LeagueClubService.HashOf(sans) == source.MovesHash && sheetEnd == null) return false;
+        // Ebenso eine geänderte Uhr ([%clk], 1.015.0).
+        if (LeagueClubService.HashOf(sans) == source.MovesHash && sheetEnd == null
+            && PgnClock.Mainline(PgnParser.SplitGames(g.Pgn).FirstOrDefault().MoveText).SequenceEqual(ClubPgnText.ClocksOf(source.Pgn)))
+            return false;
         var leagueClub = await clubs.ByIdAsync(source.ClubId, ct);
         var canManage = await clubs.CanManageAsync(userId, isAdmin, source.ClubId, ct);
         if (leagueClub is null || !await club.CanCorrectAsync(leagueClub, userId, canManage, clubId, ct))

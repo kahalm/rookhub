@@ -1,5 +1,5 @@
 import {
-  EditPly, alignSheetPlies, SHEET_EXTRA, SHEET_MISSING, SHEET_NOTE, SHEET_OPEN, START_FEN, commentsForSave, commentsOf, cropView, fensOf, nextUncertainFrom, fromServer, headersOf, isoDateOf, pliesOfPgn,
+  EditPly, alignSheetPlies, SHEET_EXTRA, SHEET_MISSING, SHEET_NOTE, SHEET_OPEN, START_FEN, commentWithClock, commentsForSave, keepDecisions, commentsOf, cropView, fensOf, nextUncertainFrom, fromServer, headersOf, isoDateOf, pliesOfPgn,
   resolveRequest, revalidate, startFenOf, stripSheetNotes, toServer, userPly, writtenIndexAt,
 } from './game-edit.util';
 import { ScoresheetPly } from './scoresheet.service';
@@ -188,5 +188,37 @@ describe('alignSheetPlies (Formular-Stand auf korrigierte Züge legen, 0.693.4)'
     expect(alignSheetPlies(sheet, game).map(x => x.w)).toEqual([0, 1, 2, null]);
     expect(alignSheetPlies([p(0, 'e4', 'e2e4'), p(1, 'd5', 'd7d5'), p(2, 'Sf3', 'g1f3')], [p(null, 'e4', 'e2e4'), p(null, 'Nf3', 'g1f3')])
       .map(x => x.w)).toEqual([0, 2]);
+  });
+});
+
+/** Restzeiten auf der Uhr (1.015.0): eigenes Feld je Halbzug, im PGN als [%clk] vorn im Kommentar. */
+describe('game-edit.util – Uhr', () => {
+  it('löst die Uhr aus dem PGN-Kommentar, der Kommentar bleibt ohne sie', () => {
+    const plies = pliesOfPgn('[White "a"]\n[Black "b"]\n\n1. e4 {[%clk 1:29:00] sheet: e6} e5 {[%clk 1:28:30]} 2. Nf3 *');
+    expect(plies.map(p => p.clock)).toEqual(['1:29:00', '1:28:30', null]);
+    expect(plies[0].comment).toBe('sheet: e6');
+    expect(plies[1].comment).toBeNull();
+  });
+
+  it('schreibt die Uhr beim Speichern vorn in den Kommentar — auch ohne Kommentar', () => {
+    const plies = [
+      ply('e4', 0, { clock: '1:29:00', comment: 'Idee' }),
+      ply('e5', 1, { clock: null }),
+      ply('Nf3', 2, { clock: '0:04:00', match: 'fuzzy', written: 'Sf4' }),
+    ];
+    expect(commentsForSave(plies, [])).toEqual(['[%clk 1:29:00] Idee', null, '[%clk 0:04:00] sheet: Sf4']);
+    expect(commentWithClock(null, '1:12:00')).toBe('[%clk 1:12:00]');
+  });
+
+  it('die Uhr geht über Server-Form und Neu-Aufbereiten mit — sie gehört zum Formular-Eintrag', () => {
+    const server: ScoresheetPly[] = [{ w: 0, written: 'e4', san: 'e4', uci: 'e2e4', match: 'exact', uncertain: false, clock: '1:30:00' }];
+    const edit = fromServer(server);
+    expect(edit[0].clock).toBe('1:30:00');
+    expect(toServer(edit)[0].clock).toBe('1:30:00');
+
+    const head = [ply('e4', 0, { uci: 'e2e4' })];
+    const oldTail = [ply('e5', 1, { uci: 'e7e5', clock: '1:27:00' })];          // von Hand korrigiert
+    const newTail = [ply('c5', 1, { uci: 'c7c5', clock: '0:12:00' })];          // neu gelesen, anderer Zug
+    expect(keepDecisions(head, oldTail, newTail)[0].clock).toBe('1:27:00');
   });
 });

@@ -77,6 +77,8 @@ export interface ScoresheetPly {
   options?: ScoresheetOption[] | null;
   /** Befund der Engine-Prüfung: `replaced` | `suggested` | fehlt (0.646.0). */
   check?: string | null;
+  /** Restzeit auf der Uhr nach dem Zug als `h:mm:ss`, wie neben dem Zug notiert (1.015.0); fehlt/`null` = keine. */
+  clock?: string | null;
 }
 
 export interface ScoresheetEditState {

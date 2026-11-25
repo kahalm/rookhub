@@ -140,7 +140,8 @@ public class ScoresheetScanServiceTests : IDisposable
     };
 
     /// <summary>Eine Antwort, wie das Modell sie schickt: nur die Einträge, ohne SAN-Lesart (die schwerste Form).</summary>
-    private static string Answer(IEnumerable<string> written, string? white = "Didi", string? black = "Patrick")
+    private static string Answer(IEnumerable<string> written, string? white = "Didi", string? black = "Patrick",
+        IReadOnlyDictionary<int, string>? clocks = null)
         => JsonSerializer.Serialize(new
         {
             notationLanguage = "de", @event = "Simultan 2026", site = "Schwaz", date = "5.6.26", dateIso = "2026-06-05",
@@ -148,10 +149,32 @@ public class ScoresheetScanServiceTests : IDisposable
             moves = written.Select((w, i) => new
             {
                 moveNumber = i / 2 + 1, color = i % 2 == 0 ? "w" : "b", written = w, san = "", alternatives = Array.Empty<string>(),
-                confidence = "high", note = "",
+                confidence = "high", note = "", clock = clocks?.GetValueOrDefault(i) ?? "",
             }),
             remarks = "",
         });
+
+    [Fact]
+    public async Task Process_WrittenClockTimes_BecomeClkComments_ImplausibleOneDropped()
+    {
+        var u = await UserAsync();
+        // Weiß notiert nach Zug 1, 2 und 3 seine Restzeit, Schwarz nach Zug 1; „9" nach 1:20 wäre ein verlesener Wert
+        // (gleich danach wieder 1:15 — der Sprung nach oben passt nicht).
+        var clocks = new Dictionary<int, string> { [0] = "1:29", [1] = "88'", [2] = "1.20", [4] = "9", [6] = "1:15", [8] = "1:14" };
+        _vision.Answers.Enqueue(new(Answer(Written, clocks: clocks), null));
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        Assert.Equal("done", scan.Status);
+        var game = await _db.SavedGames.SingleAsync(g => g.Id == scan.SavedGameId);
+        Assert.Contains("1. Nf3 {[%clk 1:29:00]} d5 {[%clk 1:28:00]} 2. g3 {[%clk 1:20:00]} Nf6 3. Bg2 e6 4. O-O {[%clk 1:15:00]}", game.Pgn);
+        Assert.DoesNotContain("[%clk 0:09:00]", game.Pgn);
+        // Der Stand je Halbzug für die Korrekturseite trägt die Uhren mit.
+        var state = await _service.EditStateAsync(u.Id, game.Id);
+        Assert.Equal("1:29:00", state!.Plies[0].Clock);
+        Assert.Null(state.Plies[4].Clock);
+        Assert.Equal("1:14:00", state.Plies[8].Clock);
+    }
 
     private async Task<ScoresheetScanDto> UploadAndProcessAsync(int userId)
     {

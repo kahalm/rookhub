@@ -22,7 +22,7 @@ public class ArchitectureGuardTests
         "AnthropicJsonClient.cs", "ApiErrorResponses.cs", "BackgroundPause.cs", "BackgroundTaskQueue.cs", "ClaudeJsonClient.cs", "DbIdempotency.cs", "DbIpLiteList.cs", "ExternalProcess.cs", "FenFields.cs",
         "FenListParser.cs", "Figurines.cs", "GithubActionsService.cs", "HeartbeatService.cs", "IpAsnService.cs", "IpBucket.cs", "IpCountryService.cs",
         "LichessBroadcasts.cs", "LimitedReadStream.cs", "LogThrottle.cs", "OpenAiJsonClient.cs", "Paging.cs", "PeriodicWorker.cs",
-        "PermissiveSan.cs", "PgnMoveTree.cs", "PgnParser.cs", "PgnTokens.cs", "PgnWriter.cs", "PieceLetters.cs",
+        "PermissiveSan.cs", "PgnClock.cs", "PgnMoveTree.cs", "PgnParser.cs", "PgnTokens.cs", "PgnWriter.cs", "PieceLetters.cs",
         "QuietHours.cs", "RateLimitPartitions.cs", "RequestBodies.cs", "RetentionDelete.cs", "RetentionOptions.cs", "RateLimitRejectionHandler.cs", "RateLimitScale.cs",
         "SecretConfigCheck.cs", "StaleContentRule.cs", "Utf16Text.cs", "WindowAndConcurrencyLimiter.cs",
     ];

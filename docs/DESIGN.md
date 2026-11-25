@@ -457,6 +457,11 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
   scrollen, der mindestens so hoch ist wie Brett + Leiste darunter, mit Weiterscroll-Schatten am unteren Rand (nur
   sichtbar, solange noch etwas kommt); einspaltig läuft sie mit der Seite — kein Kasten im Kasten.
 - **Zuglisten** stehen als eine Zeile je Vollzug: Nr. | Weiß + Bewertung | Schwarz + Bewertung
+- **Uhr an den Zügen** (1.015.0): trägt die Partie `[%clk]`, steht die Restzeit nach dem Zug klein rechts im Zug
+  (`.clk`, 11 px, Schriftfarbe 62 %, Kurzform `1:12`). Ab vier Uhrenständen zeigt die Partieseite in der Auswertungsspalte
+  unter dem Rückblick die Karte „Zeitverbrauch“ (`app-clock-chart`): 90 px hoch, Weiß volle Linie in `--rh-accent`,
+  Schwarz gestrichelt in der Schriftfarbe (auch ohne Farbe unterscheidbar), Legende mit demselben Muster, größte Restzeit
+  oben links als Achsenwert, Cursor-Linie am aktuellen Zug, Punkte mit Tooltip „12. 1:12“, Klick springt zum Zug.
   (`2.6em 1fr 1fr`, Bewertung rechtsbündig mit ≥ 5ch), nie als Raster aus Halbzügen, das Weiß und Schwarz in wechselnde
   Spalten wirft (Zugbaum im Analysebrett, Partie-Analyse; b1-rk-analyse-zugliste-halbzuege).
   **Zug-Klassen** der Engine-Auswertung stehen als kleines Schild direkt hinter dem Zug (Radius 8 px, 11 px fett,
@@ -752,7 +757,10 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   unter dem Ende-Hinweis, solange auf dem Formular noch Einträge übrig sind (Rückfrage nennt die Zahl, Knopf „Rest
   verwerfen“); nach dem Beenden sagt der Ende-Hinweis, dass ein Zug am Brett ohne Formular-Eintrag angehängt wird. Kurve + Engine unter dem Brett. Gestaltung im LeagueHub-Stil mit Token-Rückfall auf
   RookHub (`--sw-*`). Seiten ergänzen nur über Inhaltsplätze (`sheetPhotoTools`, `sheetPlyExtra`, `sheetEnd`) — nie eine
-  zweite Fassung der Korrektur bauen.
+  zweite Fassung der Korrektur bauen. **Uhr nach dem Zug** (1.015.0): unter der Zeile des Zugs ein kurzes Textfeld
+  (`.clock-row`, natives Feld, 6,5 em, Rahmen `--sw-line`, ungültig `--sw-red`) mit Hinweis rechts („Restzeit, z. B. 1:12
+  oder 72'“), bei unlesbarer Eingabe ersetzt die Fehlerzeile den Hinweis; in der Zugliste steht die Zeit klein unter dem
+  Zug (`.ply .clk`, 11 px, `--sw-muted`).
 - Analysebrett: Zusatzkarten unter der Zugliste starten zugeklappt — der Eröffnungs-Explorer zeigt nur die Kopfzeile
   (Titel + Aufklapp-Pfeil) und fragt erst aufgeklappt; ein auf dem Gerät gemerkter Zustand gilt weiter (0.760.0).
 - Analysebrett: Kopfzeile rechts `.header-actions` — „Ohne Engine“/„Mit Engine“ (`mat-stroked-button`, Symbol
@@ -1614,6 +1622,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-25 | 1.015.0 · Partien + Formular-Korrektur | Restzeit an den Zügen (5.3) und Karte „Zeitverbrauch“ (zwei Linien, Weiß voll/Akzent, Schwarz gestrichelt) in der Auswertungsspalte; in der Formular-Werkbank (5.12) ein Feld „Uhr nach dem Zug“ unter dem Zug und die Zeit klein in der Zugliste | Notierte Restzeiten werden jetzt mitgelesen; sie sollen sichtbar und korrigierbar sein, kompakt und ohne zweite Farbe für die Seite | Wunsch 2026-11-25 |
 | 2026-11-25 | 1.014.0 · Turnierseite | Live-Bretter `/tournaments/:id/live` (8.2): Bretterraster je Begegnung bzw. Runde, Karte je Brett (Spieler oben/unten, Uhr am Zug fett mit Akzentrahmen, Ergebnis-Chip), Engine-Balken links am Brett schaltbar, Mannschaftsstand als Kopfzeile, Hinweis + Verknüpfen statt Leerzustand; Knopf „Live-Bretter“ auf der Detailseite nur mit Übertragung | Wer einer Mannschaft folgt, will alle ihre Bretter auf einen Blick, auf Handy (eine Spalte) wie am PC (Raster) und am Boox (keine tickende Uhr) | Nutzerwunsch 25.11. |
 | 2026-11-25 | 1.013.1 · Tagespuzzle | „Nächstes Puzzle“ nach Lösen und Fehlversuch führt zu den Zufallspuzzles (`/puzzles`); kein Auto-Weiter-Countdown, auch nicht im Brett-Vollbild (5.12) | Der Knopf tat beim Tagespuzzle nichts, ein Countdown lief ins Leere; wegspringen soll man erst auf Wunsch, damit man die Lösung des Tages ansehen kann | Nutzerwunsch 25.11. |
 | 2026-11-24 | 1.011.0 · E-Book-Brett Lösen | Lösen wie der Puzzle-Löser: Statuszeile behält Zustand + Auge + Glühbirne (Lösung), die Aktionen stehen als Textknöpfe in einer eigenen, umbrechenden Zeile darunter (Tipp mit `tips_and_updates` + „n/3“, Zurücksetzen, Mausrutscher; am Ende „Wiederholen“ und gefüllter Knopf „Nächstes Diagramm (n)“ rechts); Tipps als nummerierte Liste darunter; kein ✕/Rot nach einem Fehlzug, rot nur das Ergebnis „Falsch“; Vollbild auch im Training mit der Icon-Leiste des Puzzle-Lösers ohne Aufgeben | Puzzle-Modi konsistent halten; die Glühbirne bleibt der Lösung, darum ein anderes Tipp-Symbol; fünf Knöpfe passen in der 300-px-Leiste nicht in die Statuszeile | Nutzerentscheidung 24.11. |

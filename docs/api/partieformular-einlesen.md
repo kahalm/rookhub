@@ -367,6 +367,32 @@ Stand je Halbzug (bestätigt, Lesarten) geht als `scoresheetPlies` mit und liegt
 | POST | `/api/admin/scoresheets/{id}/start` | messages.admin: der Leser fängt an — wartend → läuft, die Seite zeigt „wird gelesen“ (0.721.2) → 204 |
 | POST | `/api/admin/scoresheets/{id}/fail` | messages.admin: als gescheitert schließen `{ reason }` (unreadable/noMoves/failed, Glocke wie sonst) → 204 |
 
+## Notierte Restzeiten (1.015.0)
+
+Viele Spieler notieren neben dem Zug die Restzeit auf ihrer Uhr („81'“, „1:12“, „72“, „0:05:30“), meist nur an einigen
+Zügen, bei Weiß und Schwarz. Seit 1.015.0 liest das Modell sie mit: das Schema verlangt je Eintrag `clock` (wie notiert,
+leer = keine; beide Aufträge `System`/`TranscribeSystem` sagen das statt „Ignore clock times“). Hat das Modell die Zeit
+trotzdem in den Zug geschrieben („Sf3 81'“), trennt `ScoresheetTranscription.Parse` sie ab.
+
+- **Lesen** (`ScoresheetClock.Parse`): `h:mm` bei höchstens 9 vorn (`1:12`, `1.12`, `1,12`, `1h12`), sonst `mm:ss`
+  (`45:30`); `h:mm:ss`; bloße Zahl / `72'` / `72min` = Minuten; `72'30` = Minuten und Sekunden; über 6 h = keine Uhr.
+  Gedeutet als Restzeit NACH dem Zug.
+- **Prüfen** (`ScoresheetClock.Plausible`): je Seite bleibt die längste Folge, in der kein Wert mehr als 35 min über dem
+  vorigen liegt (Zuschlag + Zeitkontrolle) — ein verlesener Ausreißer fällt, die guten Werte danach bleiben.
+- **Anhängen** (`ScoresheetClock.Attach`): nach der Engine-Prüfung bekommt jeder Halbzug `clock` (`h:mm:ss`) seines
+  Eintrags (`ScoresheetPly.Clock`), ebenso beim Neu-Aufbereiten ab einer Stelle (alle drei `resolve`-Wege).
+- **PGN**: `[%clk h:mm:ss]` vorn im Kommentar des Zugs (`ScoresheetComments.For`, `PgnClock`), z. B.
+  `{[%clk 1:21:00] sheet: Sf3}`. Vereinspartien schreiben sie aus dem Stand je Halbzug (`plies[].clock`) beim Übernehmen
+  und Korrigieren (`ClubPgnText.PgnOf(…, clocks)`), behalten sie beim Neuschreiben von Namen/Ergebnis/Jahr und beim
+  Teilen-Link mit „Schwaz“, tragen sie in die Kopien („Meine Partien“) und übernehmen sie aus importierten PGN-Dateien.
+  Eine reine Uhr-Korrektur schreibt nur das PGN neu (keine neue Analyse).
+- **Korrektur**: Feld „Uhr nach dem Zug“ in der Werkbank; RookHub schreibt die Uhr beim Speichern selbst in den Kommentar
+  (`commentsForSave`/`commentWithClock`), LeagueHub schickt sie im Stand je Halbzug mit.
+- **Anzeige**: Zugliste der Partieseite zeigt die Restzeit am Zug, ab vier Uhrenständen die Karte „Zeitverbrauch“.
+- **Werkzeug**: `dotnet run --project tools/ScoresheetBench -- --single <foto> --lang de --out <dir>` liest EIN Foto (ohne
+  Soll-Partie) und schreibt `answer.json`, `clocks.tsv` (notiert/gelesen/behalten je Halbzug) und `game.pgn`;
+  `--answer <answer.json>` löst eine gespeicherte Antwort kostenlos neu auf.
+
 ## Fristen der Fotos (A6-016, 2026-10-25)
 
 Der tägliche Aufräumlauf (`AnonymousDataRetentionService` → `ScoresheetPhotoRetention`) leert — wie `DELETE` — Foto(s) und

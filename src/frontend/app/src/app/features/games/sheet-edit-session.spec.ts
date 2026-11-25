@@ -399,3 +399,23 @@ describe('SheetEditSession – nach „Partie hier beenden“ endet das Formular
     expect(plain.restInfo()).toBeNull();
   });
 });
+
+describe('SheetEditSession – Uhr nach dem Zug (1.015.0)', () => {
+  const ply = (w: number, san: string, uci: string, extra: Partial<ScoresheetPly> = {}): ScoresheetPly =>
+    ({ w, written: san, san, uci, match: 'written', uncertain: false, ...extra });
+
+  it('setzt, normalisiert und löscht die Uhr; Unlesbares ändert nichts', () => {
+    const host = { resolve: jasmine.createSpy('resolve'), changed: jasmine.createSpy('changed') };
+    const s = new SheetEditSession(host);
+    s.loadSheet({ plies: [ply(0, 'e4', 'e2e4', { clock: '1:30:00' }), ply(1, 'e5', 'e7e5')], unresolved: [] });
+    s.go(1);
+    expect(s.setClock("81'")).toBeTrue();
+    expect(s.plies()[1].clock).toBe('1:21:00');
+    expect(host.changed).toHaveBeenCalled();
+    expect(s.setClock('Sf3')).toBeFalse();
+    expect(s.plies()[1].clock).toBe('1:21:00');
+    expect(s.setClock('')).toBeTrue();
+    expect(s.plies()[1].clock).toBeNull();
+    expect(toServer(s.plies())[0].clock).toBe('1:30:00');
+  });
+});

@@ -94,8 +94,8 @@ internal sealed class ScoresheetCorrection
 
         var legalPrefix = SavedGameService.LegalSans(prefix);
         var from = Math.Clamp(writtenFrom, 0, scanned.Count);
-        var r = ScoresheetResolver.Resolve(scanned, new ScoresheetResolver.Options(ScoresheetNotation.Find(language)),
-            legalPrefix, from);
+        var r = ScoresheetClock.Attach(ScoresheetResolver.Resolve(scanned, new ScoresheetResolver.Options(ScoresheetNotation.Find(language)),
+            legalPrefix, from), t);
         return new ScoresheetResolveResultDto { Plies = r.Plies, Unresolved = r.Unresolved, UnresolvedFrom = r.StuckAt };
     }
 
@@ -184,8 +184,8 @@ internal sealed class ScoresheetCorrection
         if (a == null || t == null) return null;
         var scanned = t.Scanned();
         var language = Deserialize(a.ResolutionJson)?.Language ?? a.NotationLanguage;
-        var r = ScoresheetResolver.Resolve(scanned, new ScoresheetResolver.Options(ScoresheetNotation.Find(language)),
-            SavedGameService.LegalSans(prefix), Math.Clamp(writtenFrom, 0, scanned.Count));
+        var r = ScoresheetClock.Attach(ScoresheetResolver.Resolve(scanned, new ScoresheetResolver.Options(ScoresheetNotation.Find(language)),
+            SavedGameService.LegalSans(prefix), Math.Clamp(writtenFrom, 0, scanned.Count)), t);
         return new ScoresheetResolveResultDto { Plies = r.Plies, Unresolved = r.Unresolved, UnresolvedFrom = r.StuckAt };
     }
 

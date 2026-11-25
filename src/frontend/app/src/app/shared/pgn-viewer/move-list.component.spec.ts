@@ -363,3 +363,17 @@ describe('MoveListComponent Zeichen', () => {
     expect(fixture.nativeElement.querySelectorAll('.mark').length).toBe(0);
   });
 });
+
+describe('MoveListComponent Uhr (1.015.0)', () => {
+  it('zeigt die Restzeit nach dem Zug klein am Zug', () => {
+    TestBed.configureTestingModule({ imports: [MoveListComponent] });
+    const fixture = TestBed.createComponent(MoveListComponent);
+    const chess = new Chess();
+    ['e4', 'e5', 'Nf3'].forEach(s => chess.move(s));
+    fixture.componentRef.setInput('moves', chess.history({ verbose: true }));
+    fixture.componentRef.setInput('clocks', { 0: 5340, 2: 4860 });
+    fixture.detectChanges();
+    const clk = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.move .clk')).map(e => e.textContent!.trim());
+    expect(clk).toEqual(['1:29', '1:21']);
+  });
+});

@@ -707,6 +707,12 @@
       "next": "Sljedeći potez",
       "last": "Posljednji potez",
       "flip": "Okreni ploču"
+    },
+    "clockChart": {
+      "title": "Potrošnja vremena",
+      "white": "Bijeli",
+      "black": "Crni",
+      "aria": "Preostalo vrijeme na satu po strani, {{count}} unosa"
     }
   },
   "profile": {
@@ -5732,7 +5738,8 @@
     "n": "Promoviraj u skakača"
   },
   "moveList": {
-    "label": "Potezi"
+    "label": "Potezi",
+    "clock": "Sat {{time}}"
   },
   "playerCard": {
     "games": "{{n}} partija",
@@ -6914,7 +6921,10 @@
       "sinceDaysOne": "već 1 dan",
       "sinceDaysHours": "već {{days}} dana {{hours}} h",
       "sinceDaysHoursOne": "već 1 dan {{hours}} h"
-    }
+    },
+    "clock": "Sat nakon poteza",
+    "clockHint": "Preostalo vrijeme, npr. 1:12 ili 72' — prazno = nema",
+    "clockInvalid": "Nije vrijeme — npr. 1:12, 72' ili 0:05:30"
   },
   "solver": {
     "status": {

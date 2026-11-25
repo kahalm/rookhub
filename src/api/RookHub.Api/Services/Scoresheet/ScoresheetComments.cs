@@ -4,14 +4,14 @@ namespace RookHub.Api.Services.Scoresheet;
 /// Die PGN-Kommentare einer gelesenen Partie (zweite Zerlegungsrunde W7b aus <see cref="ScoresheetProcessor"/>). Rein:
 /// keine Datenbank, kein Modell.
 /// </summary>
-internal static class ScoresheetComments
+public static class ScoresheetComments
 {
     /// <summary>
     /// Kommentare im PGN: wo der Zug vom Formular abweicht (Lesefehler repariert, Eintrag erschlossen), steht,
     /// was DASTAND — dieselbe Auskunft, die man beim Nachspielen braucht, um dem Zug zu misstrauen. Die nicht
     /// aufgelösten Einträge hängen am letzten Zug.
     /// </summary>
-    internal static Dictionary<int, string> For(ScoresheetResolution r)
+    public static Dictionary<int, string> For(ScoresheetResolution r)
     {
         var comments = new Dictionary<int, string>();
         for (var i = 0; i < r.Plies.Count; i++)
@@ -36,6 +36,10 @@ internal static class ScoresheetComments
             var last = r.Plies.Count - 1;
             comments[last] = comments.TryGetValue(last, out var c) ? c + " | " + text : text;
         }
+        // Notierte Restzeit (1.015.0) vorn im Kommentar, wie Lichess sie schreibt: {[%clk 1:12:00] sheet: Sf3}.
+        for (var i = 0; i < r.Plies.Count; i++)
+            if (PgnClock.Combine(ScoresheetClock.Parse(r.Plies[i].Clock), comments.GetValueOrDefault(i)) is { } withClock)
+                comments[i] = withClock;
         return comments;
     }
 }

@@ -12,6 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { BoardArrow, ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { MoveListComponent, MoveListMark } from '../../shared/pgn-viewer/move-list.component';
+import { ClockChartComponent } from '../../shared/pgn-viewer/clock-chart.component';
 import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { HandoffService } from '../../core/handoff.service';
@@ -68,7 +69,7 @@ const TAP_MAX_MS = 500;
   standalone: true,
   imports: [IconLabelDirective,
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
-    TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
+    TranslatePipe, ChessBoardComponent, MoveListComponent, ClockChartComponent, PositionRepertoiresComponent, GameReviewComponent,
     MistakesTrainerComponent, LiveEnginePanelComponent, PositionMenuComponent, MarkPositionButtonComponent, MatMenuModule, MatDialogModule,
     SimilarGamesComponent, GameRecapComponent, LoadErrorComponent, ClubSummaryLinkComponent, TrainerCommentsComponent,
   ],

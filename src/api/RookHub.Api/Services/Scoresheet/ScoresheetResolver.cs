@@ -43,6 +43,9 @@ public sealed class ScoresheetPly
     /// anhaltendes Zickzack und wurde durch eine fast gleich gut lesbare ersetzt (die alte steht als zweite Lesart da),
     /// <c>suggested</c> = eine andere Lesart wäre plausibler (steht als zweite Lesart da), sonst <c>null</c>.</summary>
     public string? Check { get; set; }
+    /// <summary>Restzeit auf der Uhr NACH diesem Zug als <c>h:mm:ss</c>, wie neben dem Zug notiert (1.015.0,
+    /// <see cref="ScoresheetClock"/>); auf der Korrekturseite änderbar, im PGN als <c>[%clk]</c>. <c>null</c> = keine.</summary>
+    public string? Clock { get; set; }
 }
 
 /// <summary>Ergebnis einer Auflösung.</summary>

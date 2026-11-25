@@ -11,6 +11,7 @@ import { GameEvals } from '../game-review.util';
 import { SheetEditSession } from '../sheet-edit-session';
 import { correctionCurve } from './correction-curve';
 import { ScanPhotos } from './scan-photos';
+import { secondsOf, shortClock } from '../../../shared/pgn-viewer/clock.util';
 import { SheetEngineComponent } from './sheet-engine.component';
 
 /**
@@ -69,6 +70,7 @@ export class SheetWorkbenchComponent {
   });
 
   constructor() {
+    effect(() => { this.s().cursor(); untracked(() => this.clockError.set(false)); });
     // Der gewählte Zug steht auf einer anderen Seite des Formulars: dorthin blättern (von Hand blättern bleibt, bis er wechselt).
     effect(() => {
       const page = this.s().currentPage();
@@ -87,6 +89,23 @@ export class SheetWorkbenchComponent {
     const img = e.target as HTMLImageElement;
     if (ph.shownPage() === 1) this.s().onPhotoLoad(e);
     else this.s().setPageSize(ph.shownPage(), img.naturalWidth, img.naturalHeight);
+  }
+
+  /** Eine eingegebene Restzeit ließ sich nicht lesen (bleibt bis zur nächsten Eingabe oder zum nächsten Zug stehen). */
+  readonly clockError = signal(false);
+
+  /** Restzeit eines Halbzugs in Kurzform („1:12"), leer = keine. */
+  clockText(clock: string | null | undefined): string {
+    const s = secondsOf(clock);
+    return s == null ? '' : shortClock(s);
+  }
+
+  /** Restzeit nach dem gewählten Zug übernehmen (1.015.0); unlesbar → Fehlerzeile, der alte Wert bleibt. */
+  onClock(e: Event): void {
+    const input = e.target as HTMLInputElement;
+    const ok = this.s().setClock(input.value);
+    this.clockError.set(!ok);
+    if (ok) input.value = this.clockText(this.s().current()?.clock);
   }
 
   onBoardMove(m: UserBoardMove): void {

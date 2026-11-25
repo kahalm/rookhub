@@ -316,6 +316,8 @@ internal sealed class ScoresheetProcessor
         var r = outcome.Resolution!;
         if (r.Plies.Count == 0) { await FailAsync(scan, "noMoves", ct, outcome.Json); return; }
         r = await CheckWithEngineAsync(scan.Id, t, r, outcome.Language, ct);
+        // Notierte Restzeiten (1.015.0) an die endgültigen Halbzüge — nach der Engine-Prüfung, die Halbzüge neu baut.
+        ScoresheetClock.Attach(r, t);
 
         if (scan.Purpose == ScoresheetScan.PurposeLeague)
         {

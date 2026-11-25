@@ -243,7 +243,11 @@ public static class ScoresheetPrompt
           to another cell, a move written in the opponent's column, skipped rows, rows written twice. The
           numbers printed on the form can therefore be off — number the moves as they were actually played,
           starting at 1.
-        - Ignore clock times, minutes and other marks next to the moves, and signatures.
+        - Many players write the time REMAINING on their clock next to a move — White and Black alike, usually only on
+          some moves: often minutes with an apostrophe right after the move ("81'" = 81 minutes left), or "1:12",
+          "1.12", "72", "0:05:30". Report it in "clock" exactly as written for the move it stands next to (empty when
+          there is none) and keep it out of "written" and "san". Never mistake it for a move or a move number. Ignore
+          other marks and signatures.
         - Stop at the last move that is actually written. Do not invent moves. If the last entry is partly
           illegible, give your best guess with low confidence and alternatives.
         - Never leave out written moves: read EVERY column block to its end, also when the numbering or the order
@@ -279,7 +283,10 @@ public static class ScoresheetPrompt
           Pawns have no letter. Castling may be 0-0 or O-O.
         - "san" is the same move with the piece letter translated to English (K Q R B N). Change nothing else:
           do not move squares or add captures to make a move legal.
-        - Ignore clock times, minutes, signatures and other marks. For a crossed-out entry use the replacement.
+        - "clock": the remaining clock time a player wrote next to the move, exactly as written — often minutes with an
+          apostrophe right after the move ("81'"), or "1:12", "72", "0:05:30"; for White and Black, usually only on some
+          moves; empty when there is none. Keep it out of "written" and "san"; it is never a move. Ignore signatures and
+          other marks. For a crossed-out entry use the replacement.
         - Stop at the last written move. Never invent moves.
         - confidence: "high" = clearly legible, "medium" = probably right, "low" = hard to read. For anything
           that is not clearly legible give up to three alternative readings, most likely first.
@@ -391,8 +398,13 @@ public static class ScoresheetPrompt
                 items = new { type = "integer" },
                 description = "[x0, y0, x1, y1] around the handwriting of this entry, in pixels of the photo, origin top-left",
             },
+            clock = new
+            {
+                type = "string",
+                description = "remaining clock time written next to this move, exactly as written (e.g. 1:12, 72, 72'); empty if none",
+            },
         })!.AsObject();
-        var moveRequired = new List<string> { "moveNumber", "color", "written", "san", "alternatives", "confidence", "note", "box" };
+        var moveRequired = new List<string> { "moveNumber", "color", "written", "san", "alternatives", "confidence", "note", "box", "clock" };
         if (multiPage)
         {
             moveProperties["page"] = JsonSerializer.SerializeToNode(new

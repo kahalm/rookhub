@@ -236,9 +236,13 @@ internal sealed class SavedGameAnalysisLink
     /// bleiben, Kommentare zu Zügen gehen — sie gehörten zur alten Zugfolge), und wie bei jeder Zugänderung fallen Analyse,
     /// Fehler-Training und Nacherzählung. <paramref name="except"/> = die Kopie, von der die Korrektur kam. → Zahl der Kopien.
     /// </summary>
+    /// <param name="clocks">Restzeit je Halbzug der Vereinspartie (<c>[%clk]</c>, 1.015.0) — die Kopien bekommen sie mit.</param>
     public static async Task<int> ApplyClubMovesAsync(AppDbContext db, int clubGameId, IReadOnlyList<string> sans, int? except,
-        CancellationToken ct = default)
+        CancellationToken ct = default, IReadOnlyList<int?>? clocks = null)
     {
+        Dictionary<int, string>? comments = null;
+        for (var i = 0; clocks != null && i < Math.Min(clocks.Count, sans.Count); i++)
+            if (clocks[i] is int s) (comments ??= new())[i] = PgnClock.Tag(s);
         var copies = await db.SavedGames.Where(g => g.LeagueClubGameId == clubGameId && g.Id != except).ToListAsync(ct);
         // Der Umbau behält die Analyse der Vereinspartie (gleiche Id) — der Eintrag zeigt weiter auf sie (0.924.0).
         var mainId = await MainAnalysisIdAsync(db, clubGameId, ct);
@@ -249,7 +253,7 @@ internal sealed class SavedGameAnalysisLink
             string? T(string k) => tags.TryGetValue(k, out var v) && !string.IsNullOrWhiteSpace(v) && !v.StartsWith('?') ? v : null;
             var result = T("Result") ?? g.Result ?? "*";
             var pgn = BuildHeaderedPgn(tags, new GameHeaderInput(T("Event"), T("Site"), null, T("Round"),
-                T("White") ?? g.White, T("Black") ?? g.Black, result), result, sans, null, null);
+                T("White") ?? g.White, T("Black") ?? g.Black, result), result, sans, null, comments);
             // Das Datum bleibt, wie es war (auch nur das Jahr, „2026.??.??") — der Kopfdaten-Weg kennt nur ganze Daten.
             if (tags.TryGetValue("Date", out var date) && !string.IsNullOrWhiteSpace(date))
                 pgn = pgn.Replace("[Date \"????.??.??\"]", $"[Date \"{date.Replace("\"", "")}\"]");

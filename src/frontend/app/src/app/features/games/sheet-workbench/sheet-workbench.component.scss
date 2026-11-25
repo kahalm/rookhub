@@ -126,6 +126,15 @@
 .chip.warn { color: var(--sw-warn); }
 .chip.ok { color: var(--sw-ok); }
 .chip.bad { color: var(--sw-red); }
+// Restzeit nach dem Zug (1.015.0): ein kurzes Feld in der Zeile unter dem Zug, Hinweis bzw. Fehler daneben.
+.clock-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 6px 0; }
+.clock-input {
+  width: 6.5em; font: 500 16px/1.2 var(--sw-body); color: var(--sw-ink); background: var(--sw-paper);
+  border: 1.5px solid var(--sw-line); border-radius: 6px; padding: 6px 8px;
+}
+.clock-input:focus-visible { outline: 2px solid var(--sw-ink); outline-offset: 1px; }
+.clock-input[aria-invalid="true"] { border-color: var(--sw-red); }
+.ply .clk { display: block; font-size: 11px; line-height: 1.1; color: var(--sw-muted); font-weight: 400; font-style: normal; }
 .options { display: grid; gap: 6px; }
 .option {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; text-align: left; font: inherit; color: var(--sw-ink); background: var(--sw-paper);

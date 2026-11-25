@@ -129,6 +129,9 @@ public sealed class ScoresheetTranscription
         public List<int>? Box { get; set; }
         /// <summary>Auf welchem Foto der Eintrag steht (1 = erstes) — nur bei einem Formular über mehrere Fotos.</summary>
         public int? Page { get; set; }
+        /// <summary>Die neben dem Zug notierte Restzeit, WIE SIE DASTEHT („1:12", „72'"), leer = keine (1.015.0). Gelesen und
+        /// geprüft wird sie von <see cref="ScoresheetClock"/>; fehlt bei Einlesungen davor.</summary>
+        public string? Clock { get; set; }
 
         /// <summary>Pixel eines <paramref name="width"/>×<paramref name="height"/>-Bildes → 0..1000; ein Kasten, der
         /// deutlich (über 3 %) aus dem Bild ragt, stammt nicht aus diesem Bild → <c>null</c>.</summary>
@@ -157,6 +160,21 @@ public sealed class ScoresheetTranscription
             return x1 - x0 < 2 || y1 - y0 < 2 ? null : new[] { x0, y0, x1, y1 };
         }
 
+        /// <summary>Hat das Modell die notierte Restzeit mit in den Zug geschrieben („Sf3 81'"), obwohl <see cref="Clock"/>
+        /// leer ist: abtrennen und als Uhr nehmen — sonst scheiterte der Zug am Auflöser.</summary>
+        internal void SplitTrailingClock()
+        {
+            if (!string.IsNullOrWhiteSpace(Clock)) return;
+            var m = TrailingClock.Match(Written ?? string.Empty);
+            if (!m.Success || ScoresheetClock.Parse(m.Groups[2].Value) is null) return;
+            Written = m.Groups[1].Value;
+            Clock = m.Groups[2].Value;
+            if (San is { } san && TrailingClock.Match(san) is { Success: true } s) San = s.Groups[1].Value;
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex TrailingClock =
+            new(@"^(\S.*?)\s+(\d{1,3}['’′]|\d{1,2}[:.]\d{2}(?:[:.]\d{2})?)$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
         public ScannedPly ToScanned() => new(Written ?? string.Empty, string.IsNullOrWhiteSpace(San) ? null : San,
             Alternatives?.Where(a => !string.IsNullOrWhiteSpace(a)).Take(3).ToList(), Confidence);
     }
@@ -172,6 +190,7 @@ public sealed class ScoresheetTranscription
             var t = JsonSerializer.Deserialize<ScoresheetTranscription>(json, ScoresheetScanService.Json);
             if (t == null) return null;
             t.Moves = t.Moves.Take(600).ToList();
+            foreach (var m in t.Moves) m.SplitTrailingClock();
             return t;
         }
         catch (JsonException) { return null; }

@@ -214,8 +214,8 @@ public sealed class LeagueClubService
 
     /// <inheritdoc cref="ClubGameWriter.CorrectMovesAsync"/>
     public Task<(LeagueClubGame? Game, IReadOnlyList<string>? Sans, string? Reason)> CorrectMovesAsync(LeagueClub club, int userId,
-        bool canManage, int id, IReadOnlyList<string> moves, CancellationToken ct = default) =>
-        _writer.CorrectMovesAsync(club, userId, canManage, id, moves, ct);
+        bool canManage, int id, IReadOnlyList<string> moves, CancellationToken ct = default, IReadOnlyList<int?>? clocks = null) =>
+        _writer.CorrectMovesAsync(club, userId, canManage, id, moves, ct, clocks);
 
     /// <inheritdoc cref="ClubGameWriter.ClaimPreviewAsync"/>
     public Task<(int Games, int Anonymized)> ClaimPreviewAsync(IEnumerable<string>? keys, CancellationToken ct = default) =>

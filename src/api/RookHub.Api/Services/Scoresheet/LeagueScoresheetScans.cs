@@ -155,8 +155,8 @@ internal sealed class LeagueScoresheetScans
         if (scan == null || t == null) return null;
         var scanned = t.Scanned();
         var language = Deserialize(scan.ResolutionJson)?.Language ?? scan.NotationLanguage;
-        var r = ScoresheetResolver.Resolve(scanned, new ScoresheetResolver.Options(ScoresheetNotation.Find(language)),
-            SavedGameService.LegalSans(prefix), Math.Clamp(writtenFrom, 0, scanned.Count));
+        var r = ScoresheetClock.Attach(ScoresheetResolver.Resolve(scanned, new ScoresheetResolver.Options(ScoresheetNotation.Find(language)),
+            SavedGameService.LegalSans(prefix), Math.Clamp(writtenFrom, 0, scanned.Count)), t);
         return new ScoresheetResolveResultDto { Plies = r.Plies, Unresolved = r.Unresolved, UnresolvedFrom = r.StuckAt };
     }
 

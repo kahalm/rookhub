@@ -6,6 +6,7 @@ import { Move } from 'chess.js';
 import { TranslateService } from '@ngx-translate/core';
 import { SanPipe } from '../chess/san.pipe';
 import { contrastText } from '../contrast-text.util';
+import { shortClock } from './clock.util';
 
 /** Ein Stück Kommentartext; mit `move` ein anklickbarer Zug, dessen Stellung `fen` ist. */
 export interface MoveListCommentSegment { text?: string; move?: string; fen?: string; from?: string; to?: string; }
@@ -38,6 +39,12 @@ export interface MoveListMark {
         <span class="mark" [style.background]="m.color" [style.color]="markText(m.color)" [attr.title]="m.label ?? null">{{ m.symbol }}</span>
       }
     </ng-template>
+    <ng-template #clkTpl let-i>
+      @if (clocks()?.[i]; as c) {
+        <!-- Restzeit nach dem Zug ([%clk], 1.015.0) — klein rechts im Zug, Vorleser hören „Uhr 1:12" -->
+        <span class="clk" [attr.aria-label]="clockLabel(c)">{{ clockText(c) }}</span>
+      }
+    </ng-template>
     <!-- F8-018: Liste mit EINER Tab-Station (roving tabindex) — Pfeiltasten wandern von Zug zu Zug, Enter/Leertaste wählt. -->
     <div class="move-list" #moveListEl role="listbox" [attr.aria-label]="label()" (keydown)="onKeydown($event)">
       @if (comments[-1]) {
@@ -53,7 +60,7 @@ export interface MoveListMark {
                     [attr.data-index]="pair.whiteIndex" [attr.tabindex]="pair.whiteIndex === tabStop() ? 0 : -1"
                     [attr.aria-selected]="pair.whiteIndex === currentMoveIndex"
                     [attr.aria-current]="pair.whiteIndex === currentMoveIndex ? 'true' : null"
-                    (click)="onMoveClick(pair.whiteIndex, $event)">{{ pair.white | san }}<ng-container *ngTemplateOutlet="markTpl; context: { $implicit: pair.whiteIndex }"></ng-container></button>
+                    (click)="onMoveClick(pair.whiteIndex, $event)">{{ pair.white | san }}<ng-container *ngTemplateOutlet="markTpl; context: { $implicit: pair.whiteIndex }"></ng-container><ng-container *ngTemplateOutlet="clkTpl; context: { $implicit: pair.whiteIndex }"></ng-container></button>
           } @else {
             <span class="move-empty" role="none"></span>
           }
@@ -62,7 +69,7 @@ export interface MoveListMark {
                     [attr.data-index]="pair.blackIndex" [attr.tabindex]="pair.blackIndex === tabStop() ? 0 : -1"
                     [attr.aria-selected]="pair.blackIndex === currentMoveIndex"
                     [attr.aria-current]="pair.blackIndex === currentMoveIndex ? 'true' : null"
-                    (click)="onMoveClick(pair.blackIndex!, $event)">{{ pair.black | san }}<ng-container *ngTemplateOutlet="markTpl; context: { $implicit: pair.blackIndex }"></ng-container></button>
+                    (click)="onMoveClick(pair.blackIndex!, $event)">{{ pair.black | san }}<ng-container *ngTemplateOutlet="markTpl; context: { $implicit: pair.blackIndex }"></ng-container><ng-container *ngTemplateOutlet="clkTpl; context: { $implicit: pair.blackIndex }"></ng-container></button>
           } @else {
             <span class="move-empty" role="none"></span>
           }
@@ -123,6 +130,11 @@ export interface MoveListMark {
       display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 8px;
       font-size: 11px; font-weight: 700; line-height: 16px; vertical-align: 1px;
     }
+    /* Restzeit nach dem Zug (1.015.0): rechts im Zug, klein, in der Schriftfarbe abgeschwächt (auf dem aktiven Zug hell). */
+    .clk {
+      float: right; margin-left: 6px; font-size: 11px; font-weight: 400; line-height: 21px;
+      color: color-mix(in srgb, currentColor 62%, transparent);
+    }
     .comment-intro { padding: 6px; }
     .cmt-move {
       font: inherit; font-style: normal; font-weight: 600; cursor: pointer;
@@ -151,6 +163,8 @@ export class MoveListComponent implements OnChanges {
   @Input() commentSegments: { [moveIndex: number]: MoveListCommentSegment[] } | null = null;
   /** Optional (0.836.0): Zeichen der Engine-Auswertung je Zug („??", „!" …), Schlüssel = Zugindex. */
   readonly marks = input<Readonly<Record<number, MoveListMark>> | null>(null);
+  /** Optional (1.015.0): Restzeit auf der Uhr nach dem Zug in Sekunden (`[%clk]`), Schlüssel = Zugindex. */
+  readonly clocks = input<Readonly<Record<number, number>> | null>(null);
   @Output() moveClicked = new EventEmitter<number>();
   /** Ein anklickbarer Zug in einem Kommentar wurde gewählt (Vorschau seiner Stellung). */
   @Output() commentMoveClicked = new EventEmitter<MoveListCommentSegment>();
@@ -198,6 +212,11 @@ export class MoveListComponent implements OnChanges {
   }
 
   movePairs: { number: number; white?: string; whiteIndex: number; black?: string; blackIndex?: number }[] = [];
+
+  clockText(seconds: number): string { return shortClock(seconds); }
+  clockLabel(seconds: number): string | null {
+    return this.translate?.instant('moveList.clock', { time: shortClock(seconds) }) ?? null;
+  }
 
   /** Schrift fürs Zeichen-Schild: Schwarz oder Weiß, was auf `color` (#rrggbb) mehr Kontrast hat (Gelb → Schwarz). */
   markText(color: string): string { return contrastText(color); }

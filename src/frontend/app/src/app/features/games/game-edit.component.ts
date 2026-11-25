@@ -28,7 +28,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
 import { distinctClassifiers, seasonOf } from './classifier.util';
 import { addTag, distinctTags, MAX_TAG_LENGTH, MAX_TAGS } from './tags.util';
-import { commentsForSave, headersOf, isoDateOf, pliesOfPgn, startFenOf, stripSheetNotes, toServer } from './game-edit.util';
+import { commentWithClock, commentsForSave, headersOf, isoDateOf, pliesOfPgn, startFenOf, stripSheetNotes, toServer } from './game-edit.util';
 import { SheetEditSession } from './sheet-edit-session';
 import { LeaveConfirm } from '../../core/unsaved-changes.guard';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
@@ -510,7 +510,7 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
     const legal = this.plies().filter(p => !p.illegal);
     const comments = this.isScoresheet()
       ? commentsForSave(legal, this.unresolved())
-      : legal.map(p => p.comment?.trim() || null);
+      : legal.map(p => commentWithClock(p.comment, p.clock));
     this.saving.set(true);
     this.sheets.update(this.gameId, {
       moves: legal.map((p, i) => ({ san: p.san, comment: comments[i] })),

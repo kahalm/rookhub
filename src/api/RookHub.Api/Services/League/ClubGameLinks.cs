@@ -77,7 +77,7 @@ public sealed class ClubGameLinks(AppDbContext db, LeagueClubService club, ClubG
         if (!g.Anonymized) return new SharedClubGame(g.White, g.Black, g.Result, g.Pgn, g.WhiteElo, g.BlackElo, g.Year, g.Event, own);
         int? whiteElo = c.IsAnon(g.White, g.WhiteFide) ? null : g.WhiteElo, blackElo = c.IsAnon(g.Black, g.BlackFide) ? null : g.BlackElo;
         var pgn = ClubPgnText.PgnOf(new LeagueClubGame { White = g.White, Black = g.Black, Result = g.Result, Year = g.Year, WhiteElo = whiteElo,
-            BlackElo = blackElo, WhiteFide = g.WhiteFide, BlackFide = g.BlackFide }, ClubPgnText.SansOf(g.Pgn));
+            BlackElo = blackElo, WhiteFide = g.WhiteFide, BlackFide = g.BlackFide, Pgn = g.Pgn }, ClubPgnText.SansOf(g.Pgn));   // Pgn: die Uhren bleiben
         return new SharedClubGame(g.White, g.Black, g.Result, pgn, whiteElo, blackElo, g.Year, null, own);
     }
 

@@ -274,6 +274,8 @@ internal static class SavedGamePgn
     {
         var idx = pgn.IndexOf("\n\n", StringComparison.Ordinal);
         var movetext = idx >= 0 ? pgn[(idx + 2)..] : pgn;
+        // Kommentare zählen nicht mit — „{[%clk 1:12:00] sheet: Sf3}" waren sonst drei „Halbzüge" (1.015.0).
+        movetext = Regex.Replace(movetext, @"\{[^}]*\}", " ");
         var count = 0;
         foreach (var token in movetext.Split(' ', StringSplitOptions.RemoveEmptyEntries))
         {

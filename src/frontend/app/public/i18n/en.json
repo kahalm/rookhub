@@ -707,6 +707,12 @@
       "next": "Next move",
       "last": "Last move",
       "flip": "Flip board"
+    },
+    "clockChart": {
+      "title": "Time usage",
+      "white": "White",
+      "black": "Black",
+      "aria": "Remaining clock time per side, {{count}} entries"
     }
   },
   "profile": {
@@ -5732,7 +5738,8 @@
     "n": "Promote to knight"
   },
   "moveList": {
-    "label": "Moves"
+    "label": "Moves",
+    "clock": "Clock {{time}}"
   },
   "playerCard": {
     "games": "{{n}} games",
@@ -6914,7 +6921,10 @@
       "sinceDaysOne": "for 1 day",
       "sinceDaysHours": "for {{days}} days {{hours}} h",
       "sinceDaysHoursOne": "for 1 day {{hours}} h"
-    }
+    },
+    "clock": "Clock after the move",
+    "clockHint": "Remaining time, e.g. 1:12 or 72' — empty = none",
+    "clockInvalid": "Not a time — e.g. 1:12, 72' or 0:05:30"
   },
   "solver": {
     "status": {

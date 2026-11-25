@@ -707,6 +707,12 @@
       "next": "Nächster Zug",
       "last": "Letzter Zug",
       "flip": "Brett drehen"
+    },
+    "clockChart": {
+      "title": "Zeitverbrauch",
+      "white": "Weiß",
+      "black": "Schwarz",
+      "aria": "Restzeit auf der Uhr je Seite, {{count}} Einträge"
     }
   },
   "profile": {
@@ -5732,7 +5738,8 @@
     "n": "In einen Springer umwandeln"
   },
   "moveList": {
-    "label": "Züge"
+    "label": "Züge",
+    "clock": "Uhr {{time}}"
   },
   "playerCard": {
     "games": "{{n}} Partien",
@@ -6914,7 +6921,10 @@
       "sinceDaysOne": "seit 1 Tag",
       "sinceDaysHours": "seit {{days}} Tagen {{hours}} Std.",
       "sinceDaysHoursOne": "seit 1 Tag {{hours}} Std."
-    }
+    },
+    "clock": "Uhr nach dem Zug",
+    "clockHint": "Restzeit, z. B. 1:12 oder 72' — leer = keine",
+    "clockInvalid": "Keine Uhrzeit — z. B. 1:12, 72' oder 0:05:30"
   },
   "solver": {
     "status": {
