@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.017.2", date: "2026-11-25", changes: [
+    { en: "LeagueHub: after an update, broadcasts that were already known are now picked up by the 10-minute check on their own. The first run fetches only their round schedule from Lichess (not the games) — nobody has to add a broadcast again by hand.",
+      de: "LeagueHub: Nach einem Update werden schon bekannte Übertragungen jetzt von selbst in die 10-Minuten-Prüfung aufgenommen. Der erste Lauf holt bei Lichess nur ihren Rundenplan (nicht die Partien) — niemand muss eine Übertragung von Hand neu hinzufügen." },
+  ] },
   { version: "1.017.1", date: "2026-11-25", changes: [
     { en: "Internal clean-up of the course language memory (no visible change); repairs the code check of the previous version.",
       de: "Interner Umbau am Merken der Kurs-Sprache (keine sichtbare Änderung); behebt die Code-Prüfung der vorigen Version." },

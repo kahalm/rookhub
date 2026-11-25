@@ -375,6 +375,40 @@ public sealed partial class LeagueBroadcastImport
         return done;
     }
 
+    /// <summary>
+    /// Nachtrag nach dem Deploy (1.017.2): nicht fertige Übertragungen, deren <see cref="LeagueBroadcast.LiveUntil"/> UND
+    /// <see cref="LeagueBroadcast.NextRoundAt"/> leer sind (Zeilen von vorher), holen einmal NUR den Stand mit den Runden
+    /// (<c>/api/broadcast/{id}</c>, kein PGN) und setzen daraus beide Felder (<see cref="LiveOf"/>) — danach greift der schnelle
+    /// Takt, ohne dass jemand die Übertragung neu hinzufügen muss. <see cref="LeagueBroadcast.ImportedAt"/> bleibt, wie es ist.
+    /// Ein 429 wirft (<see cref="LeagueOnlineSync.RateLimitedException"/>) — der Aufrufer versucht es beim nächsten Takt wieder.
+    /// → wie viele aufgefrischt.
+    /// </summary>
+    public async Task<int> RefreshUnknownRoundsAsync(CancellationToken ct, DateTime? nowUtc = null)
+    {
+        var now = nowUtc ?? DateTime.UtcNow;
+        var rows = await _db.LeagueBroadcasts.Where(b => !b.Finished && b.LiveUntil == null && b.NextRoundAt == null)
+            .OrderBy(b => b.TourId).ToListAsync(ct);
+        var done = 0;
+        foreach (var b in rows)
+        {
+            using var _ = await _gate.EnterAsync(ct);
+            try
+            {
+                var detail = await GetAsync($"{_lichess}/api/broadcast/{Uri.EscapeDataString(b.TourId)}", ct);
+                await Wait(ct);
+                if (detail is null || LichessBroadcasts.ParseTourDetail(detail) is not { } parsed) continue;
+                (b.NextRoundAt, b.LiveUntil) = LiveOf(parsed.Rounds, now);
+                await SaveAsync(b, ct);
+                done++;
+            }
+            catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException && !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(e, "LeagueHub: Runden der Übertragung {Tour} nicht nachgetragen", b.TourId);
+            }
+        }
+        return done;
+    }
+
     /// <summary>Alle vorgemerkten Übertragungen (jüngste zuerst) als JSON für die Verwaltung.</summary>
     public async Task<List<object>> ListAsync(CancellationToken ct) =>
         (await _db.LeagueBroadcasts.AsNoTracking().OrderByDescending(b => b.StartsAt).ToListAsync(ct))

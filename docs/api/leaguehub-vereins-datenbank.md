@@ -612,8 +612,9 @@ da; der Gewinn ist vor allem, dass die Partien schon WÄHREND des Turniers da si
   6-Stunden-Takt. Lichess-schonend: zwei Abrufe je Übertragung (Stand + PGN), derselbe benannte Client (gleicher User-Agent,
   `LeagueRateGateHandler`), pausiert das Tor nach einem 429, fällt der Takt aus; ein 429 mitten im Lauf bricht ihn ab. Nur EIN
   Einspielen zugleich (`LeagueBroadcastGate`, Singleton — schneller Takt, 6-Stunden-Takt und „per Link“). Abschalten nur des schnellen
-  Takts: `LeagueBroadcasts:Live=false`. **Nach dem Deploy**: Zeilen von vorher haben beide Felder leer, sie werden erst beim nächsten
-  regulären Einspielen (spätestens 6 h) gesetzt; „Hinzufügen und einspielen“ mit dem Link setzt sie sofort.
+  Takts: `LeagueBroadcasts:Live=false`. **Nach dem Deploy** (1.017.2): Zeilen ohne beide Felder (von vorher) frischt der schnelle Takt
+  beim ersten Lauf je Prozess selbst auf — nur der Stand mit den Runden (`/api/broadcast/{id}`, kein PGN,
+  `RefreshUnknownRoundsAsync`), `ImportedAt` bleibt; danach greift der 10-Minuten-Takt. Nach einem 429 beim nächsten Takt.
 * **Partien der eigenen Mannschaft in die Vereins-Datenbank** (1.017.0, `Services/League/ClubBroadcastGames.cs`, Fassade
   `LeagueClubService.ImportBroadcastGamesAsync`): nach den Karten bekommt jeder Verein (`LeagueClubs`) die fertigen Partien, an denen
   eine seiner Mannschaften beteiligt ist — `WhiteTeam`/`BlackTeam` der Übertragung über `LeagueClub.OwnsTeam` (Vorsilbe „Schwaz“,

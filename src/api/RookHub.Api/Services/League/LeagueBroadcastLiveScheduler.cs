@@ -17,10 +17,29 @@ public sealed class LeagueBroadcastLiveScheduler(IServiceScopeFactory scopes, IC
     protected override WorkerStart Start => WorkerStart.After(TimeSpan.FromMinutes(4));
     protected override void LogFailure(Exception ex) => logger.LogError(ex, "LeagueHub: schneller Takt der Lichess-Übertragungen fehlgeschlagen");
 
+    /// <summary>Der einmalige Nachtrag der Rundeninfos (<see cref="LeagueBroadcastImport.RefreshUnknownRoundsAsync"/>) ist durch —
+    /// je Prozess einmal, beim ersten Takt (nach einem 429 beim nächsten).</summary>
+    private bool _roundsBackfilled;
+
     protected override async Task StepAsync(IServiceProvider services, CancellationToken ct)
     {
         if (gate.IsPaused(LeagueRateGate.Lichess)) return;
-        var n = await services.GetRequiredService<LeagueBroadcastImport>().RunLiveAsync(ct);
+        var import = services.GetRequiredService<LeagueBroadcastImport>();
+        if (!_roundsBackfilled)
+        {
+            try
+            {
+                var filled = await import.RefreshUnknownRoundsAsync(ct);
+                if (filled > 0) logger.LogInformation("LeagueHub: Runden von {Count} Lichess-Übertragung(en) nachgetragen", filled);
+                _roundsBackfilled = true;
+            }
+            catch (LeagueOnlineSync.RateLimitedException e)
+            {
+                logger.LogDebug("LeagueHub: {Message} — Nachtrag der Runden beim nächsten Takt", e.Message);
+                return;
+            }
+        }
+        var n = await import.RunLiveAsync(ct);
         if (n > 0) logger.LogInformation("LeagueHub: {Count} laufende Lichess-Übertragung(en) eingespielt", n);
     }
 }

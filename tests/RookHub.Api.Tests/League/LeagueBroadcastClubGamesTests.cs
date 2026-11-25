@@ -142,6 +142,62 @@ public class LeagueBroadcastClubGamesTests : IDisposable
         Assert.Equal(2, http.Urls.Count(u => u.EndsWith(".pgn")));
     }
 
+    [Fact]
+    public async Task ErsterTakt_frischtUebertragungenOhneRundeninfoEinmalAuf_nurTourJson_danachGreiftDerSchnelleTakt()
+    {
+        long Ms(DateTime d) => new DateTimeOffset(d).ToUnixTimeMilliseconds();
+        var now = DateTime.UtcNow;
+        var dbName = Guid.NewGuid().ToString();
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddScoped(services,
+            _ => new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(dbName).Options));
+        var http = new FakeHttp(u => u.EndsWith(".pgn") ? Ok("")
+            : u.EndsWith("/vor00001") ? Ok(Detail("[{\"id\":\"r1\",\"name\":\"Round 1\",\"ongoing\":true}]"))   // Runde läuft
+            : Ok(Detail("[{\"id\":\"r1\",\"name\":\"Round 1\",\"startsAt\":" + Ms(now.AddDays(-3)) + "}]")));  // alt, nie abgeschlossen
+        Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddScoped(services, sp =>
+            new LeagueBroadcastImport(Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<AppDbContext>(sp),
+                new HttpClient(http), NullLogger<LeagueBroadcastImport>.Instance) { Pause = TimeSpan.Zero });
+        using var provider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(services);
+        var imported = now.AddMinutes(-5);   // eben erst eingespielt (6-h-Takt) — trotzdem ohne Rundeninfo aus der Zeit vor dem Deploy
+        using (var scope = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.CreateScope(provider))
+        {
+            var db = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<AppDbContext>(scope.ServiceProvider);
+            db.LeagueBroadcasts.AddRange(
+                new LeagueBroadcast { TourId = "vor00001", Name = "a", FoundAt = now.AddDays(-9), ImportedAt = imported },
+                new LeagueBroadcast { TourId = "alt00001", Name = "b", FoundAt = now.AddDays(-9), ImportedAt = imported },
+                new LeagueBroadcast { TourId = "neu00001", Name = "c", FoundAt = now, ImportedAt = imported, NextRoundAt = now.AddDays(2) },
+                new LeagueBroadcast { TourId = "fer00001", Name = "d", FoundAt = now.AddDays(-9), ImportedAt = imported, Finished = true });
+            await db.SaveChangesAsync();
+        }
+        var scheduler = new LeagueBroadcastLiveScheduler(
+            Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>(provider),
+            new ConfigurationBuilder().Build(), new LeagueRateGate(NullLogger<LeagueRateGate>.Instance), NullLogger<LeagueBroadcastLiveScheduler>.Instance);
+
+        Assert.True(await scheduler.RunStepAsync(default));
+
+        // Nur die beiden ohne Rundeninfo, nur das Tour-JSON — kein PGN (die laufende ist eben erst eingespielt).
+        Assert.Equal(new[] { "alt00001", "vor00001" }, http.Urls.Select(u => u[(u.LastIndexOf('/') + 1)..]).OrderBy(x => x));
+        using (var scope = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.CreateScope(provider))
+        {
+            var db = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<AppDbContext>(scope.ServiceProvider);
+            var vor = await db.LeagueBroadcasts.AsNoTracking().SingleAsync(b => b.TourId == "vor00001");
+            Assert.NotNull(vor.LiveUntil);
+            Assert.Equal(imported, vor.ImportedAt);                                  // Stand der Partien unverändert
+            var alt = await db.LeagueBroadcasts.AsNoTracking().SingleAsync(b => b.TourId == "alt00001");
+            Assert.Equal(((DateTime?)null, (DateTime?)null), (alt.LiveUntil, alt.NextRoundAt));
+            // 11 min später: die laufende fällt unter den schnellen Takt (Stand + PGN).
+            var row = await db.LeagueBroadcasts.SingleAsync(b => b.TourId == "vor00001");
+            row.ImportedAt = now.AddMinutes(-11);
+            await db.SaveChangesAsync();
+        }
+        http.Urls.Clear();
+
+        Assert.True(await scheduler.RunStepAsync(default));
+
+        // Der Nachtrag lief nur einmal: „alt00001“ bleibt ohne Rundeninfo und wird nicht alle 10 min wieder gefragt.
+        Assert.Equal(new[] { "vor00001", "vor00001.pgn" }, http.Urls.Select(u => u[(u.LastIndexOf('/') + 1)..]).OrderBy(x => x));
+    }
+
     // ── Vereins-Datenbank ─────────────────────────────────────────────────────────────────────
 
     [Fact]
