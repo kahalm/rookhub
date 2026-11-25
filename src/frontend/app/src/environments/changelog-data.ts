@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.015.1", date: "2026-11-25", changes: [
+    { en: "The question whether you want to play puzzles in training or easy mode now comes only once per account — also on new devices and after logging out. Your choice is saved in your profile; choices already made on this device are taken over automatically.",
+      de: "Die Frage nach der Spielweise (Trainings- oder Einfachmodus) kommt nur noch einmal je Konto — auch auf neuen Geräten und nach dem Abmelden. Die Wahl liegt jetzt im Profil; was du auf diesem Gerät schon gewählt hattest, wird automatisch übernommen." },
+    { en: "Courses remember the chosen comment language across logout and devices: it is saved in your profile, and course pages wait a moment for it instead of opening in the default language first.",
+      de: "Kurse merken sich die gewählte Kommentarsprache auch über das Abmelden und andere Geräte hinweg: Sie liegt jetzt im Profil, und Kursseiten warten kurz darauf, statt zuerst in der Vorgabesprache zu öffnen." },
+  ] },
   { version: "1.015.0", date: "2026-11-25", changes: [
     { en: "Live boards: the engine bar is now filled for almost every position. If the broadcast brings no evaluation and the Lichess cloud does not know the position (usual in the middlegame), RookHub’s own engine calculates it briefly — one position at a time, always the newest position of each board in turn, and only while someone has the bar switched on. The source (broadcast, Lichess cloud or RookHub engine) shows as a tooltip, the depth next to the value.",
       de: "Live-Bretter: Der Engine-Balken ist jetzt fast immer gefüllt. Bringt die Übertragung keine Bewertung mit und kennt die Lichess-Cloud die Stellung nicht (im Mittelspiel der Normalfall), rechnet die eigene RookHub-Engine kurz nach — eine Stellung nach der anderen, je Brett immer die neueste, reihum, und nur solange jemand den Balken eingeschaltet hat. Die Quelle (Übertragung, Lichess-Cloud oder RookHub-Engine) steht im Tooltip, die Tiefe neben dem Wert." },

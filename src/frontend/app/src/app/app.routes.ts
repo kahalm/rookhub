@@ -10,6 +10,7 @@ import { menuGuard } from './core/menu.guard';
 import { shareRedirectGuard } from './core/share-redirect.guard';
 import { permissionGuard } from './core/permission.guard';
 import { unsavedChangesGuard } from './core/unsaved-changes.guard';
+import { courseLanguageReadyGuard } from './features/courses/course-language-ready.guard';
 
 export const routes: Routes = [
   // Startadresse (UX-025): angemeldet das Dashboard, Gäste ein OFFENER Bereich. Vorher führte „/“ (und das Logo)
@@ -36,7 +37,7 @@ export const routes: Routes = [
   { path: 'repertoires/:id', loadComponent: () => import('./features/repertoire/repertoire-detail.component').then(m => m.RepertoireDetailComponent), canActivate: [authGuard, menuGuard('repertoires')] },
   { path: 'puzzles/endless/history', loadComponent: () => import('./features/puzzles/endless-history.component').then(m => m.EndlessHistoryComponent), canActivate: [authGuard] },
   { path: 'puzzles/endless', loadComponent: () => import('./features/puzzles/endless-puzzle.component').then(m => m.EndlessPuzzleComponent) },
-  { path: 'puzzles/book/:id', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent) },
+  { path: 'puzzles/book/:id', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [courseLanguageReadyGuard] },
   { path: 'puzzles/daily/:date', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent) },
   { path: 'puzzles/:id', loadComponent: () => import('./features/puzzles/puzzle.component').then(m => m.PuzzleComponent) },
   { path: 'puzzles', loadComponent: () => import('./features/puzzles/puzzle.component').then(m => m.PuzzleComponent), canActivate: [menuGuard('puzzles')] },
@@ -100,7 +101,7 @@ export const routes: Routes = [
   // sichern die Endpunkte (404). authGuard statt des frueheren courseAccessGuard (F1-017): gleiche Bedingung, aber
   // Gaeste behalten Ruecksprungziel und Anmelde-Hinweis.
   { path: 'woodpecker', loadComponent: () => import('./features/woodpecker/woodpecker-list.component').then(m => m.WoodpeckerListComponent), canActivate: [authGuard, menuGuard('woodpecker')] },
-  { path: 'woodpecker/:planId/solve', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [authGuard, menuGuard('woodpecker')] },
+  { path: 'woodpecker/:planId/solve', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [authGuard, menuGuard('woodpecker'), courseLanguageReadyGuard] },
   // Trainerstunden (privat je Konto, docs/frontend/trainerstunden.md): literale Wege vor :id.
   { path: 'training-videos', loadComponent: () => import('./features/training-videos/training-videos-list.component').then(m => m.TrainingVideosListComponent), canActivate: [authGuard, menuGuard('training-videos')] },
   { path: 'training-videos/questions', loadComponent: () => import('./features/training-videos/training-drill.component').then(m => m.TrainingDrillComponent), canActivate: [authGuard, menuGuard('training-videos')], data: { source: 'questions' } },
@@ -113,14 +114,14 @@ export const routes: Routes = [
   { path: 'tl/:token', loadComponent: () => import('./features/training-videos/training-lesson.component').then(m => m.TrainingLessonComponent), data: { mode: 'share' }, canActivate: [shareRedirectGuard('tl')] },
   { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent), canActivate: [authGuard, menuGuard('courses')] },
   { path: 'catalog', loadComponent: () => import('./features/catalog/catalog.component').then(m => m.CatalogComponent), canActivate: [authGuard, menuGuard('catalog')] },
-  { path: 'courses/:bookId/chapter/:chapterIndex/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [authGuard, menuGuard('courses')] },
-  { path: 'courses/:bookId/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [authGuard, menuGuard('courses')] },
-  { path: 'courses/:bookId', loadComponent: () => import('./features/courses/course-detail.component').then(m => m.CourseDetailComponent), canActivate: [authGuard, menuGuard('courses')] },
+  { path: 'courses/:bookId/chapter/:chapterIndex/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [authGuard, menuGuard('courses'), courseLanguageReadyGuard] },
+  { path: 'courses/:bookId/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [authGuard, menuGuard('courses'), courseLanguageReadyGuard] },
+  { path: 'courses/:bookId', loadComponent: () => import('./features/courses/course-detail.component').then(m => m.CourseDetailComponent), canActivate: [authGuard, menuGuard('courses'), courseLanguageReadyGuard] },
   // MUSS vor der :mode-Route stehen, sonst landet „calc" im Buch-Puzzle-Solver.
-  { path: 'courses/:bookId/flashcards', loadComponent: () => import('./features/courses/flashcards/flashcards.component').then(m => m.FlashcardsComponent), canActivate: [authGuard, menuGuard('courses')] },
-  { path: 'courses/:bookId/calc', loadComponent: () => import('./features/courses/calc/calculation.component').then(m => m.CalculationComponent), canActivate: [coursePlayGuard] },
-  { path: 'courses/:bookId/chapter/:chapterIndex/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard] },
-  { path: 'courses/:bookId/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard] },
+  { path: 'courses/:bookId/flashcards', loadComponent: () => import('./features/courses/flashcards/flashcards.component').then(m => m.FlashcardsComponent), canActivate: [authGuard, menuGuard('courses'), courseLanguageReadyGuard] },
+  { path: 'courses/:bookId/calc', loadComponent: () => import('./features/courses/calc/calculation.component').then(m => m.CalculationComponent), canActivate: [coursePlayGuard, courseLanguageReadyGuard] },
+  { path: 'courses/:bookId/chapter/:chapterIndex/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard, courseLanguageReadyGuard] },
+  { path: 'courses/:bookId/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard, courseLanguageReadyGuard] },
   { path: 'chessable', loadComponent: () => import('./features/chessable/chessable.component').then(m => m.ChessableComponent), canActivate: [authGuard, menuGuard('chessable')] },
   { path: 'admin', loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent), canActivate: [adminAreaGuard] },
   // Meisterpartie aus dem lokalen Explorer (0.980.0): Linkziel der Beispielpartien in der Partie-Zusammenfassung — ohne Anmeldung,

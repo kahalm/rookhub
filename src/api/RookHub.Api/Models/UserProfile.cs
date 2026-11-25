@@ -51,6 +51,14 @@ public class UserProfile
 
     public int? BookStockfishDepth { get; set; }
 
+    /// <summary>Spielweise je Puzzle-Bereich (Bereich → {mode, at}) als JSON, über alle Geräte (1.015.1). Vorher nur im
+    /// localStorage des Geräts — der wurde beim Abmelden geräumt, und die Frage kam wieder. Lesen/Zusammenführen:
+    /// <see cref="Services.Accounts.ProfileChoiceMaps"/>.</summary>
+    public string? SolveModesJson { get; set; }
+
+    /// <summary>Sprachwahl der Kurs-Kommentare je Kurs (<c>b&lt;bookId&gt;</c> → {lang, at}) als JSON, über alle Geräte.</summary>
+    public string? CourseLanguagesJson { get; set; }
+
     /// <summary>Zeitpunkt der Bestätigung des Chessable-Haftungsausschlusses (null = noch nicht bestätigt).</summary>
     public DateTime? ChessableDisclaimerAcceptedAt { get; set; }
 }

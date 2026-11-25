@@ -128,6 +128,12 @@ public class ProfileService
         if (dto.StockfishDepth != null) profile.StockfishDepth = Math.Clamp(dto.StockfishDepth.Value, 1, 24);
         if (dto.PuzzleDifficulty != null) profile.PuzzleDifficulty = dto.PuzzleDifficulty;
         if (dto.BookStockfishDepth != null) profile.BookStockfishDepth = Math.Clamp(dto.BookStockfishDepth.Value, 1, 24);
+        // Spielweise / Kurs-Sprache: je Schlüssel zusammenführen statt ersetzen (wirft ArgumentException → 400).
+        var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        if (dto.SolveModes != null)
+            profile.SolveModesJson = ProfileChoiceMaps.MergeSolveModes(profile.SolveModesJson, dto.SolveModes, nowMs);
+        if (dto.CourseLanguages != null)
+            profile.CourseLanguagesJson = ProfileChoiceMaps.MergeCourseLanguages(profile.CourseLanguagesJson, dto.CourseLanguages, nowMs);
 
         await ResetPlayTimeOnUsernameChangeAsync(userId, PlayTimeService.Lichess, oldLichessUsername, profile.LichessUsername);
         await ResetPlayTimeOnUsernameChangeAsync(userId, PlayTimeService.ChessCom, oldChessComUsername, profile.ChessComUsername);
@@ -385,6 +391,8 @@ public class ProfileService
         PieceSet = user.Profile?.PieceSet,
         StockfishDepth = user.Profile?.StockfishDepth,
         PuzzleDifficulty = user.Profile?.PuzzleDifficulty,
-        BookStockfishDepth = user.Profile?.BookStockfishDepth
+        BookStockfishDepth = user.Profile?.BookStockfishDepth,
+        SolveModes = ProfileChoiceMaps.Read<SolveModeEntryDto>(user.Profile?.SolveModesJson),
+        CourseLanguages = ProfileChoiceMaps.Read<CourseLanguageEntryDto>(user.Profile?.CourseLanguagesJson)
     };
 }

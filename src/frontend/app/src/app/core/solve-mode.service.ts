@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { Observable, of } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { PreferencesService } from './preferences.service';
+import { catchError, map, switchMap, take, timeout } from 'rxjs/operators';
+import { LoadedProfile, PreferencesService, ProfilePreferences } from './preferences.service';
+import { mergeStamped } from './stamped-choices';
 import { SolveModeDialogComponent, SolveModeDialogData, SolveModeDialogResult } from '../shared/solve-mode/solve-mode-dialog.component';
 
 /** Die beiden Spielweisen. Die Zeichenketten sind der Vertrag zum Server (Spalte `Mode`
@@ -36,6 +37,9 @@ const KURS_GRUNDWAHL = 'course:*';
 
 interface Eintrag { mode: SolveMode; at: number; }
 
+/** So lange wartet `ensure` höchstens auf das Profil, bevor es mit dem Gerätestand entscheidet (Server träge/weg). */
+export const PROFILE_WAIT_MS = 5000;
+
 /**
  * Spielweise je Bereich: „Einfachmodus" (Figuren normal ziehbar) oder „Trainingsmodus"
  * (Brett eingefroren bzw. die vom Nutzer eingestellte Visualisierungsstufe).
@@ -47,15 +51,29 @@ interface Eintrag { mode: SolveMode; at: number; }
  * (voreingestellt, UX-004): dann wird die Wahl zur geräteweiten Grundwahl, und Puzzles,
  * Tagespuzzle, Buch-Puzzles und Endless fragen nicht noch einmal einzeln.
  *
- * Die Wahl liegt im localStorage, nicht auf dem Server: sie steht in einer Reihe mit den
- * übrigen Anzeige-Einstellungen (Brett-Thema, Figurensatz, Visualisierungsstufe), gilt wie
- * diese je Gerät und funktioniert auch für anonyme Besucher — die lösen Tagespuzzles und
- * geteilte Puzzles, hätten serverseitig aber kein Konto, an dem die Wahl hängen könnte.
+ * Die Wahl liegt im localStorage UND — für Angemeldete — im Profil (`GET/PUT /api/profile`, Feld `solveModes`;
+ * 1.015.1). Vorher nur am Gerät: der Schlüssel war seit F1-010 als Konto-Spur eingestuft und wurde beim Abmelden,
+ * beim Ablauf der Sitzung und beim Wechsel der Anmeldung zwischen den Hubs geräumt — die Frage kam immer wieder, und
+ * jedes Gerät fragte einzeln. Jetzt:
+ * - das Profil gewinnt, bei Konflikt je Bereich der jüngere Eintrag (`at`);
+ * - eine neue Wahl geht lokal UND ins Profil (der Server führt je Bereich zusammen);
+ * - hat das Profil noch nichts, das Gerät aber schon, wird beim ersten Laden hochgeladen — niemand wird neu gefragt;
+ * - `ensure` fragt erst, wenn das Profil geladen ist (höchstens {@link PROFILE_WAIT_MS}), sonst käme der Dialog direkt
+ *   nach dem Anmelden auf einem neuen Gerät doch;
+ * - Gäste (Tagespuzzle, geteilte Puzzles) bleiben beim Gerätestand.
+ * Der lokale Schlüssel ist wieder eine Gerätevorliebe (`local-storage-keys.ts`, wie das Brett-Thema).
  */
 @Injectable({ providedIn: 'root' })
 export class SolveModeService {
   private readonly dialog = inject(MatDialog);
   private readonly prefs = inject(PreferencesService);
+  /** Zuletzt eingearbeitetes Profil (je Konto) — dasselbe Objekt wird nicht zweimal zusammengeführt/hochgeladen. */
+  private merged: { userId: number; profile: ProfilePreferences } | null = null;
+
+  constructor() {
+    // Optional: Specs ersetzen den PreferencesService oft durch ein schlichtes Objekt.
+    this.prefs.profileLoaded$?.subscribe(p => this.mergeProfile(p));
+  }
 
   /** Bereichs-Schlüssel. Kurse/Bücher bekommen ihre Id angehängt. */
   static scopeCourse(bookId: number): string { return `course:${bookId}`; }
@@ -81,12 +99,21 @@ export class SolveModeService {
   }
 
   set(scope: string, mode: SolveMode): void {
-    const alle = this.lesen();
-    alle[scope] = { mode, at: Date.now() };
-    this.schreiben(alle);
+    this.setMany({ [scope]: mode });
   }
 
-  /** Wahl für einen Bereich vergessen — der nächste Einstieg fragt wieder (bzw. nimmt die Grundwahl). */
+  /** Mehrere Wahlen auf einmal (Dialog mit „für alle übernehmen“) — lokal und in EINEM PUT ins Profil. */
+  private setMany(wahl: Record<string, SolveMode>): void {
+    const alle = this.lesen();
+    const neu: Record<string, Eintrag> = {};
+    const at = Date.now();
+    for (const [scope, mode] of Object.entries(wahl)) neu[scope] = alle[scope] = { mode, at };
+    this.schreiben(alle);
+    this.hochladen(neu);
+  }
+
+  /** Wahl für einen Bereich vergessen — der nächste Einstieg fragt wieder (bzw. nimmt die Grundwahl).
+   *  Nur am Gerät: das Profil kennt kein Löschen und bringt die Wahl beim nächsten Laden zurück. */
   clear(scope: string): void {
     const alle = this.lesen();
     if (!(scope in alle)) return;
@@ -111,6 +138,33 @@ export class SolveModeService {
   ensure(scope: string, data: SolveModeDialogData = {}): Observable<SolveMode> {
     const gemerkt = this.get(scope);
     if (gemerkt) return of(gemerkt);
+    // Angemeldet, Profil noch nicht eingearbeitet: erst das Profil abwarten — es kennt die Wahl vielleicht schon.
+    if (this.profilAusstehend()) {
+      return this.prefs.serverProfile().pipe(
+        take(1),
+        timeout({ first: PROFILE_WAIT_MS, with: () => of(null) }),
+        catchError(() => of(null)),
+        switchMap(profile => {
+          const userId = this.prefs.accountId();
+          if (profile && userId != null) this.mergeProfile({ userId, profile });
+          return this.fragen(scope, data);
+        }),
+      );
+    }
+    return this.fragen(scope, data);
+  }
+
+  /** Muss `ensure` noch auf das Profil warten? Nur angemeldet und solange dieses Konto nicht eingearbeitet ist. */
+  private profilAusstehend(): boolean {
+    if (typeof this.prefs.serverProfile !== 'function' || typeof this.prefs.accountId !== 'function') return false;
+    const userId = this.prefs.accountId();
+    return userId != null && this.merged?.userId !== userId;
+  }
+
+  /** Gemerkte Wahl oder — erst jetzt — der Dialog. */
+  private fragen(scope: string, data: SolveModeDialogData): Observable<SolveMode> {
+    const gemerkt = this.get(scope);
+    if (gemerkt) return of(gemerkt);
     const shared = SolveModeService.isShared(scope);
     const course = SolveModeService.isCourse(scope);
     return this.openDialog({ ...data, offerApplyAll: shared || course })
@@ -119,9 +173,10 @@ export class SolveModeService {
         // das bisherige Verhalten. Gemerkt wird nur eine echte Wahl.
         const mode: SolveMode = r?.mode === 'easy' ? 'easy' : 'training';
         if (r) {
-          this.set(scope, mode);
-          if ((shared || course) && r.applyAll) this.set(GRUNDWAHL, mode);
-          if (course && r.applyAll) this.set(KURS_GRUNDWAHL, mode);
+          const wahl: Record<string, SolveMode> = { [scope]: mode };
+          if ((shared || course) && r.applyAll) wahl[GRUNDWAHL] = mode;
+          if (course && r.applyAll) wahl[KURS_GRUNDWAHL] = mode;
+          this.setMany(wahl);
         }
         return mode;
       }));
@@ -163,6 +218,26 @@ export class SolveModeService {
    *  Stufe direkt über die Einstellungen ändert und die gemerkte Wahl mitziehen soll. */
   modeForLevel(level: number): SolveMode {
     return level > 0 ? 'training' : 'easy';
+  }
+
+  /**
+   * Geladenes Profil mit dem Gerät zusammenführen: Profil gewinnt, bei Konflikt der jüngere Eintrag. Was das Profil
+   * nicht (oder nur älter) hat, wird hochgeladen — beim ersten Laden nach dieser Änderung der ganze Gerätestand.
+   */
+  private mergeProfile({ userId, profile }: LoadedProfile): void {
+    if (this.merged?.userId === userId && this.merged.profile === profile) return;
+    this.merged = { userId, profile };
+    const { merged, upload, changed } = mergeStamped<Eintrag>(this.lesen(), profile.solveModes as Record<string, Eintrag> | null,
+      (_k, e) => !!modeOf(e));
+    if (changed) this.schreiben(merged);
+    this.hochladen(upload);
+  }
+
+  /** Einträge ins Profil (nur angemeldet; der Server führt je Bereich zusammen). */
+  private hochladen(eintraege: Record<string, Eintrag>): void {
+    if (!Object.keys(eintraege).length || typeof this.prefs.saveToServer !== 'function') return;
+    if (typeof this.prefs.accountId === 'function' && this.prefs.accountId() == null) return;
+    this.prefs.saveToServer({ solveModes: eintraege });
   }
 
   private lesen(): Record<string, Eintrag> {

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from './auth.service';
-import { catchError, of } from 'rxjs';
+import { Observable, Subject, catchError, of, shareReplay, tap } from 'rxjs';
 
 import { ThemeMode } from './theme-mode';
 
@@ -15,13 +15,24 @@ const VIZ_ARROW_KEY = 'rookhub_viz_arrow';
 const OFFPATH_WARN_KEY = 'rookhub_offpath_warn_moves';
 const EN_PASSANT_FORCED_KEY = 'rookhub_en_passant_forced';
 
-interface ProfilePreferences {
+/** Gemerkte Wahl mit Zeitstempel (ms) — Server und Gerät führen je Schlüssel zusammen, der jüngere gewinnt. */
+export interface SolveModeChoice { mode: 'training' | 'easy'; at: number; }
+export interface CourseLanguageChoice { lang: string; at: number; }
+
+export interface ProfilePreferences {
   boardTheme: string | null;
   pieceSet: string | null;
   stockfishDepth: number | null;
   puzzleDifficulty: string | null;
   bookStockfishDepth: number | null;
+  /** Spielweise je Puzzle-Bereich (`SolveModeService`). Beim PUT: nur die geänderten Einträge. */
+  solveModes?: Record<string, SolveModeChoice> | null;
+  /** Sprachwahl je Kurs (`CourseLanguageService`, Schlüssel `b<bookId>`). Beim PUT: nur die geänderten. */
+  courseLanguages?: Record<string, CourseLanguageChoice> | null;
 }
+
+/** Ein geladenes Profil samt Konto, zu dem es gehört. */
+export interface LoadedProfile { userId: number; profile: ProfilePreferences; }
 
 @Injectable({ providedIn: 'root' })
 export class PreferencesService {
@@ -45,6 +56,15 @@ export class PreferencesService {
   /** Anarchy/Crazy-Brett: „en passant forciert" (wenn möglich, ist e.p. Pflicht). Default an;
    *  in den Einstellungen abwählbar. Nur lokal (geräteabhängig). */
   enPassantForced = true;
+
+  /**
+   * Profil des Kontos geladen (nach dem Anmelden, Kontowechsel, Impersonation …). Daran hängen sich die Dienste,
+   * deren Wahl im Profil liegt (Spielweise, Kurs-Sprache), und führen ihren Gerätestand damit zusammen.
+   */
+  readonly profileLoaded$ = new Subject<LoadedProfile>();
+
+  /** Eine Anfrage je Konto, geteilt — auch die gerade laufende (siehe {@link serverProfile}). */
+  private profileCache: { userId: number; profile$: Observable<ProfilePreferences | null> } | null = null;
 
   constructor(private http: HttpClient, private authService: AuthService) {
     this.loadFromLocalStorage();
@@ -117,12 +137,36 @@ export class PreferencesService {
     try { localStorage.setItem(VIZ_ARROW_KEY, String(val)); } catch {}
   }
 
+  /** Konto-Id der angemeldeten Sitzung (`null` = Gast). */
+  accountId(): number | null {
+    return this.authService.currentUser?.userId ?? null;
+  }
+
+  /**
+   * Das Profil des angemeldeten Kontos, je Konto höchstens EINMAL geholt und geteilt (eine laufende Anfrage
+   * eingeschlossen) — so warten mehrere Dienste auf dieselbe Antwort. `force` holt neu (nach dem Anmelden).
+   * `null` = Gast oder Fehler; ein Fehler wird nicht gemerkt, der nächste Aufruf versucht es wieder.
+   */
+  serverProfile(force = false): Observable<ProfilePreferences | null> {
+    if (!this.authService.isLoggedIn) return of(null);
+    const userId = this.accountId() ?? 0;
+    if (!force && this.profileCache?.userId === userId) return this.profileCache.profile$;
+    const profile$ = this.http.get<ProfilePreferences>('/api/profile').pipe(
+      catchError(() => of(null)),
+      tap(profile => {
+        if (profile) this.profileLoaded$.next({ userId, profile });
+        else if (this.profileCache?.profile$ === profile$) this.profileCache = null;
+      }),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    this.profileCache = { userId, profile$ };
+    return profile$;
+  }
+
   /** Fetch preferences from server profile and overwrite localStorage. Called after login. */
   loadFromServer(): void {
     if (!this.authService.isLoggedIn) return;
-    this.http.get<ProfilePreferences>('/api/profile').pipe(
-      catchError(() => of(null))
-    ).subscribe(profile => {
+    this.serverProfile(true).subscribe(profile => {
       if (!profile) return;
       if (profile.boardTheme) {
         this.boardTheme = profile.boardTheme;
@@ -211,8 +255,9 @@ export class PreferencesService {
     } catch {}
   }
 
-  /** Fire-and-forget PUT to server (only when logged in). */
-  private saveToServer(partial: Partial<ProfilePreferences>): void {
+  /** Fire-and-forget PUT to server (only when logged in). Auch für die Dienste mit Wahl im Profil (Spielweise,
+   *  Kurs-Sprache) — der Server führt deren Einträge je Schlüssel zusammen. */
+  saveToServer(partial: Partial<ProfilePreferences>): void {
     if (!this.authService.isLoggedIn) return;
     this.http.put('/api/profile', partial).pipe(
       catchError(() => of(null))

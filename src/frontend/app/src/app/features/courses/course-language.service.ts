@@ -1,7 +1,10 @@
 import { Injectable, signal } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError, map, take, timeout } from 'rxjs/operators';
 import { localStore, readJson, writeJson } from '../../core/local-json-store';
+import { CourseLanguageChoice, LoadedProfile, PreferencesService, ProfilePreferences } from '../../core/preferences.service';
+import { mergeStamped } from '../../core/stamped-choices';
 import {
   LanguageOverview, effectiveLanguage, languagesFromLines, languagesFromOverview, mergeLanguages, normLang,
 } from './course-language.util';
@@ -28,7 +31,15 @@ interface Stored {
   c: Record<string, string>;
   /** Dateiname → bookId (damit das Einzel-Puzzle die Wahl des Kurses findet). */
   f: Record<string, number>;
+  /** Zeitpunkt der Wahl je Kurs-Schlüssel (ms) — für den Abgleich mit dem Profil; fehlt bei Wahlen von vor 1.015.1. */
+  t?: Record<string, number>;
 }
+
+/** So lange wartet {@link CourseLanguageService.ready} höchstens auf das Profil. */
+export const COURSE_LANG_PROFILE_WAIT_MS = 4000;
+
+/** Nur Kurs-Schlüssel mit Id gehen ins Profil; `f<Dateiname>` ist eine vorläufige Gerätespur. */
+const PROFILE_KEY = /^b\d{1,10}$/;
 
 /**
  * Sprachwahl der Kurs-Kommentare JE KURS, gemerkt je Gerät (Stufe C der Kurs-Übersetzung, 0.549.0).
@@ -41,6 +52,13 @@ interface Stored {
  * Anzeige mitlaufen): aus der Übersetzungs-Übersicht und aus den `commentLanguages` der Linien, die
  * eine Seite ohnehin lädt. Die Übersicht wird je Kurs und Sitzung höchstens EINMAL angefragt.</p>
  *
+ * <p>Für Angemeldete liegt die Wahl zusätzlich im Profil (`GET/PUT /api/profile`, Feld `courseLanguages`, 1.015.1):
+ * der lokale Schlüssel bleibt eine Konto-Spur (`user` in `local-storage-keys.ts` — er verrät die Kurse) und wird beim
+ * Abmelden geräumt; nach dem Anmelden kommt die Wahl aus dem Profil zurück. Profil gewinnt, bei Konflikt der jüngere
+ * Eintrag; was nur das Gerät kennt, wird beim ersten Laden hochgeladen. Die Kursseiten warten über
+ * `courseLanguageReadyGuard` auf das Profil ({@link ready}), damit sie nicht erst in der Vorgabesprache laden.
+ * Gäste bleiben lokal.</p>
+ *
  * <p>Die Übersicht holt {@link ensureLanguages} über den Kurs-Dienst (oder einen hereingereichten
  * Abruf). Fehler sind still: sie kosten höchstens die Auswahl, nie die Seite. Ohne Kurs-Dienst (Tests,
  * die den Dienst mit `new` bauen) passiert dort einfach nichts.</p>
@@ -50,14 +68,82 @@ export class CourseLanguageService {
   private readonly choices = signal<Record<string, string>>({});
   private readonly known = signal<Record<string, string[]>>({});
   private files: Record<string, number> = {};
+  private stamps: Record<string, number> = {};
   private readonly overviewAsked = new Set<number>();
+  /** Zuletzt eingearbeitetes Profil (je Konto). */
+  private merged: { userId: number; profile: ProfilePreferences } | null = null;
 
-  constructor(private translate: TranslateService, private courses?: CourseService) {
+  constructor(private translate: TranslateService, private courses?: CourseService, private prefs?: PreferencesService) {
+    this.loadLocal();
+    // Optional: Specs bauen den Dienst mit `new` bzw. ersetzen den PreferencesService durch ein schlichtes Objekt.
+    this.prefs?.profileLoaded$?.subscribe(p => this.mergeProfile(p));
+  }
+
+  private loadLocal(): void {
     const stored = readJson<Partial<Stored>>(localStore(), COURSE_LANG_KEY);
     const c = stored?.c && typeof stored.c === 'object' ? stored.c : {};
     const f = stored?.f && typeof stored.f === 'object' ? stored.f : {};
+    const t = stored?.t && typeof stored.t === 'object' ? stored.t : {};
     this.choices.set({ ...c });
     this.files = { ...f };
+    this.stamps = { ...t };
+  }
+
+  /**
+   * Fertig zum Laden in der gewählten Sprache: sofort für Gäste und sobald das Profil dieses Kontos eingearbeitet
+   * ist; sonst nach dem Laden des Profils (höchstens {@link COURSE_LANG_PROFILE_WAIT_MS}, Fehler zählen als fertig).
+   * Ohne das lüde eine Kursseite direkt nach dem Anmelden erst in der Oberflächensprache.
+   */
+  ready(): Observable<void> {
+    const prefs = this.prefs;
+    if (!prefs || typeof prefs.serverProfile !== 'function' || typeof prefs.accountId !== 'function') return of(undefined);
+    const userId = prefs.accountId();
+    if (userId == null || this.merged?.userId === userId) return of(undefined);
+    return prefs.serverProfile().pipe(
+      take(1),
+      timeout({ first: COURSE_LANG_PROFILE_WAIT_MS, with: () => of(null) }),
+      catchError(() => of(null)),
+      map(profile => {
+        const now = prefs.accountId();
+        if (profile && now != null) this.mergeProfile({ userId: now, profile });
+      }),
+    );
+  }
+
+  /** Profil ⇄ Gerät zusammenführen (Profil gewinnt, bei Konflikt der jüngere) und Fehlendes hochladen. */
+  private mergeProfile({ userId, profile }: LoadedProfile): void {
+    if (this.merged?.userId === userId && this.merged.profile === profile) return;
+    // Nach Abmelden/Kontowechsel ist der lokale Schlüssel geräumt — den Speicher neu lesen, nicht den alten Signalstand.
+    if (this.merged && this.merged.userId !== userId) this.loadLocal();
+    this.merged = { userId, profile };
+    const c = this.choices();
+    const local: Record<string, CourseLanguageChoice> = {};
+    for (const [k, lang] of Object.entries(c)) {
+      if (PROFILE_KEY.test(k) && normLang(lang)) local[k] = { lang, at: this.stamps[k] || 1 };
+    }
+    const { merged, upload, changed } = mergeStamped(local, profile.courseLanguages,
+      (k, e) => PROFILE_KEY.test(k) && !!normLang(e.lang));
+    if (changed) {
+      const next = { ...c };
+      for (const [k, e] of Object.entries(merged)) { next[k] = normLang(e.lang)!; this.stamps[k] = e.at; }
+      this.choices.set(next);
+      this.persist();
+    }
+    this.upload(upload);
+  }
+
+  private upload(entries: Record<string, CourseLanguageChoice>): void {
+    const prefs = this.prefs;
+    if (!prefs || !Object.keys(entries).length || typeof prefs.saveToServer !== 'function') return;
+    if (typeof prefs.accountId === 'function' && prefs.accountId() == null) return;
+    prefs.saveToServer({ courseLanguages: entries });
+  }
+
+  /** Wahl eines Kurs-Schlüssels jetzt gestempelt — ins Profil, wenn es einer mit Id ist. */
+  private stampAndUpload(k: string, lang: string): void {
+    const at = Date.now();
+    this.stamps[k] = at;
+    if (PROFILE_KEY.test(k)) this.upload({ [k]: { lang, at } });
   }
 
   /** Sprache der Oberfläche (Signal in ngx-translate 18 — Templates laufen damit mit). */
@@ -107,12 +193,13 @@ export class CourseLanguageService {
     return effectiveLanguage(this.requestLang(ref), this.languages(ref));
   }
 
-  /** Wahl merken (je Gerät). „Original" = das Kürzel der Quelle. */
+  /** Wahl merken (am Gerät, angemeldet auch im Profil). „Original" = das Kürzel der Quelle. */
   setChoice(ref: CourseRef | null | undefined, lang: string): void {
     const k = this.key(ref);
     const l = normLang(lang);
     if (!k || !l) return;
     this.choices.update(c => ({ ...c, [k]: l }));
+    this.stampAndUpload(k, l);
     this.persist();
   }
 
@@ -180,8 +267,9 @@ export class CourseLanguageService {
       const c = this.choices();
       if (c[fileKey]) {
         const next = { ...c };
-        if (!next[bookKey]) next[bookKey] = next[fileKey];
+        if (!next[bookKey]) { next[bookKey] = next[fileKey]; this.stampAndUpload(bookKey, next[bookKey]); }
         delete next[fileKey];
+        delete this.stamps[fileKey];
         this.choices.set(next);
         changed = true;
       }
@@ -193,7 +281,7 @@ export class CourseLanguageService {
 
   private persist(): void {
     // Quota/gesperrt: dann gilt die Wahl nur in dieser Sitzung — sie ist eine Bequemlichkeit.
-    writeJson(localStore(), COURSE_LANG_KEY, { c: this.choices(), f: this.files } satisfies Stored);
+    writeJson(localStore(), COURSE_LANG_KEY, { c: this.choices(), f: this.files, t: this.stamps } satisfies Stored);
   }
 }
 

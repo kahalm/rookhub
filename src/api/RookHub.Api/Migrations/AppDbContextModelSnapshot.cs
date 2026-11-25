@@ -9340,6 +9340,9 @@ namespace RookHub.Api.Migrations
                     b.Property<DateTime?>("ChessableDisclaimerAcceptedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("CourseLanguagesJson")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("DiscordId")
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
@@ -9375,6 +9378,9 @@ namespace RookHub.Api.Migrations
                     b.Property<string>("PuzzleDifficulty")
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
+
+                    b.Property<string>("SolveModesJson")
+                        .HasColumnType("longtext");
 
                     b.Property<int?>("StockfishDepth")
                         .HasColumnType("int");

@@ -14,6 +14,17 @@
 | POST | `/api/profile/tokens` | Neuen Token anlegen `{ name, expiresInDays?, scope? }` — `scope` ∈ `extension` (Vorgabe, nur `/api/extension/*`) / `engine` (nur `/api/external-engine/*`, der Engine-Provider, seit 0.537.0) / `diagrams` (nur `/api/diagram-worker/*`, externe Diagramm-Worker, 0.870.0 — anlegen nur mit `ebooks.manage`, sonst 403); Raw-Token nur einmalig im Response. Höchstens 20 Tokens je Konto — abgelaufene zählen nicht mit (Codereview S1-007). `expiresInDays` fehlt/`null` oder > `Auth:PatMaxDays` (Vorgabe 365) → genau diese Höchstdauer; kein Token läuft mehr nie ab (P-14, siehe `auth.md`) |
 | DELETE | `/api/profile/tokens/{id}` | Token widerrufen |
 
+**Gemerkte Wahlen im Profil** (1.015.1): `GET/PUT /api/profile` tragen zusätzlich `solveModes` (Spielweise je
+Puzzle-Bereich: `{ "<bereich>": { mode: "training"|"easy", at: <ms> } }`, Bereiche `*`, `course:*`, `puzzles`, `daily`,
+`book`, `endless`, `course:<id>`, `weekly:<id>`, `woodpecker:<id>`) und `courseLanguages` (Sprache der Kurs-Kommentare
+je Kurs: `{ "b<bookId>": { lang, at } }`, `lang` eine der 25 Oberflächensprachen oder die Quellsprache in Kürzel-Form).
+Ein PUT schickt nur geänderte Einträge; der Server führt je Schlüssel zusammen, der jüngere `at` gewinnt
+(`Services/Accounts/ProfileChoiceMaps.cs`). Deckel 200 Einträge (älteste fliegen, `*`/`course:*` nie), höchstens 250 je
+Anfrage, ungültige Schlüssel/Werte → 400, `at` in der Zukunft (> 1 Tag) wird auf jetzt gesetzt. Gespeichert als JSON in
+`UserProfiles.SolveModesJson` / `CourseLanguagesJson`, bei der Kontolöschung geleert. Client: `SolveModeService` und
+`CourseLanguageService` führen beim Laden des Profils zusammen (Profil gewinnt, jüngerer gewinnt, Gerätestand einmal
+hochladen) und warten vor dem Dialog bzw. vor dem Laden einer Kursseite (`courseLanguageReadyGuard`) auf das Profil.
+
 **Nutzerverwaltung durch Admins** (Codereview 2026-09-29): `DELETE /api/admin/users/{id}` anonymisiert jetzt wie die
 Selbstlöschung (`ProfileService.EraseUserAsync`, kein 409 durch Restrict-FKs mehr), `GET /api/admin/users` listet keine
 gelöschten Konten (A9-004). Der Löschkern selbst liegt in `Services/Accounts/Erasure/` (Zerlegung Z15): `UserDataEraser.Steps` ist die

@@ -25,6 +25,32 @@ public class ProfileDto
     public int? StockfishDepth { get; set; }
     public string? PuzzleDifficulty { get; set; }
     public int? BookStockfishDepth { get; set; }
+
+    /// <summary>Spielweise je Puzzle-Bereich (Grundwahl <c>*</c>, Kurs-Grundwahl <c>course:*</c>, <c>course:12</c> …).</summary>
+    public Dictionary<string, SolveModeEntryDto>? SolveModes { get; set; }
+
+    /// <summary>Sprachwahl der Kurs-Kommentare je Kurs (<c>b12</c> → Sprachkürzel).</summary>
+    public Dictionary<string, CourseLanguageEntryDto>? CourseLanguages { get; set; }
+}
+
+/// <summary>Eine gemerkte Wahl mit Zeitstempel (ms seit 1970, vom Gerät) — bei Konflikt gewinnt der jüngere.</summary>
+public interface IStampedChoice
+{
+    long At { get; set; }
+}
+
+public class SolveModeEntryDto : IStampedChoice
+{
+    /// <summary><c>training</c> oder <c>easy</c>.</summary>
+    public string Mode { get; set; } = string.Empty;
+    public long At { get; set; }
+}
+
+public class CourseLanguageEntryDto : IStampedChoice
+{
+    /// <summary>Sprachkürzel (auch die Quellsprache eines Kurses = „Original“).</summary>
+    public string Lang { get; set; } = string.Empty;
+    public long At { get; set; }
 }
 
 public class UpdateProfileDto
@@ -80,6 +106,13 @@ public class UpdateProfileDto
 
     [Range(1, 24)]
     public int? BookStockfishDepth { get; set; }
+
+    /// <summary>Geänderte Spielweisen (null = unverändert). Wird je Bereich mit dem Gespeicherten ZUSAMMENGEFÜHRT,
+    /// der jüngere Eintrag gewinnt — ein Gerät überschreibt so nie die neuere Wahl eines anderen.</summary>
+    public Dictionary<string, SolveModeEntryDto>? SolveModes { get; set; }
+
+    /// <summary>Geänderte Kurs-Sprachen (null = unverändert), zusammengeführt wie <see cref="SolveModes"/>.</summary>
+    public Dictionary<string, CourseLanguageEntryDto>? CourseLanguages { get; set; }
 }
 
 public class LinkDiscordDto

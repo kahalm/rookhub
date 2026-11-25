@@ -85,7 +85,9 @@ describe('OfflineService', () => {
     localStorage.setItem('rookhub_calc_local_7', '{"tree":""}');
     localStorage.setItem('rookhub_course_local_solved_3', '[1,2]');
     localStorage.setItem('rookhub_menu_keys', '["dashboard"]');
-    localStorage.setItem('rookhub_solve_modes', '{"puzzles":"easy"}');
+    localStorage.setItem('rookhub_course_lang', '{"c":{"b3":"en"},"f":{}}');
+    // Spielweise: Gerätevorliebe (1.015.1) — bleibt, sonst kam die Frage nach jedem Abmelden wieder.
+    localStorage.setItem('rookhub_solve_modes', '{"puzzles":{"mode":"easy","at":1}}');
     // Fremder Schlüssel: bleibt (die App räumt nur ihre eigenen Spuren ab).
     localStorage.setItem('irgendwas_anderes', 'x');
 
@@ -93,10 +95,12 @@ describe('OfflineService', () => {
 
     for (const k of ['rookhub_puzzle_offline_pool', 'rookhub_endless_history', 'rookhub_endless_highscore',
                      'rookhub_calc_local_7', 'rookhub_course_local_solved_3', 'rookhub_menu_keys',
-                     'rookhub_solve_modes']) {
+                     'rookhub_course_lang']) {
       expect(localStorage.getItem(k)).toBeNull();
     }
+    expect(localStorage.getItem('rookhub_solve_modes')).not.toBeNull();
     expect(localStorage.getItem('irgendwas_anderes')).toBe('x');
+    localStorage.removeItem('rookhub_solve_modes');
   });
 
   it('clearOnLogout räumt die gemerkten Ansichten der Turnierseite ab (Ort/Koordinaten)', () => {
