@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.020.4", date: "2026-11-25", changes: [
+    { en: "LeagueHub: a match whose boards chess-results has already filled in but not yet scored now shows its boards with the club games right away (e.g. Bundesliga round 1) instead of nothing; a note says the results follow.",
+      de: "LeagueHub: Eine Begegnung, deren Bretter chess-results schon besetzt, aber noch nicht gewertet hat, zeigt jetzt gleich die Bretter mit den Vereinspartien (z. B. Bundesliga Runde 1) statt nichts; ein Hinweis sagt, dass die Ergebnisse folgen." },
+  ] },
   { version: "1.020.3", date: "2026-11-25", changes: [
     { en: "Courses without an account: lines you solved and positions you calculated before logging in or registering are now taken over into your account instead of being lost at the next logout.",
       de: "Kurse ohne Konto: Linien, die du vor dem Anmelden oder Registrieren gelöst, und Stellungen, die du kalkuliert hast, werden jetzt ins Konto übernommen, statt beim nächsten Abmelden verloren zu gehen." },

@@ -306,6 +306,21 @@ describe('FixtureViewComponent', () => {
     expect(el.querySelector('.pairings')!.textContent).toContain('offen');
   });
 
+  // 1.020.4 (gemeldet 25.11.): chess-results hat die Bretter besetzt, aber noch kein Ergebnis — weder gespielt noch vorläufig.
+  // Die zugeordneten Vereinspartien müssen trotzdem erscheinen.
+  it('offene Runde, Bretter besetzt ohne Ergebnis, mit Vereinspartien: Paarungen werden gezeigt', async () => {
+    fixture.componentRef.setInput('leagueTnr', 1404438);
+    api.fixtureGames.and.resolveTo([
+      { board: 6, white: 'Fuchs, Georg', whiteElo: 2144, black: 'Ivanisevic, Ivan', blackElo: 2493, result: '', forfeit: false,
+        pgn: '1. e4 *', source: 'club', clubGameId: 264, provisional: false },
+    ]);
+    const el = render(OPEN);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.querySelector('.pairings tbody tr')?.textContent).toContain('Fuchs, Georg');
+    expect(el.querySelector('.provisional-note')?.textContent).toContain('Ergebnisse folgen');
+  });
+
   // 0.838.2, Wunsch 2026-10-25: „seh ich die Paarungen von Runde 3 nicht im shared link" — die vorläufige Aufstellung
   // einer offenen Runde kommt auch über den Teilen-Link (Server anonymisiert die eigene Seite), ohne Analyse-Wege.
   it('offene Runde über den Teilen-Link: vorläufige Aufstellung wird geladen und gezeigt', async () => {

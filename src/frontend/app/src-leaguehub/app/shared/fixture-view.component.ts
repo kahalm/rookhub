@@ -52,10 +52,14 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
         <p class="when">Runde {{ round() }}@if (e.date) { · {{ e.date }}}</p>
         @if (e.venue) { <p class="venue"><span aria-hidden="true">📍 </span>{{ e.venue }}</p> }
         <!-- 0.673.0, Wunsch 2026-10-05: bei gespielten Runden die Paarungen gleich unter dem Ergebnis, mit Partie, wo es eine gibt. -->
-        @if (pairings().length && (e.status === 'played' || provisional())) {
-          @if (e.status !== 'played') {
+        <!-- 1.020.4 (gemeldet 25.11.: BL-Runde 1 „keine Partien"): chess-results hat die Bretter schon besetzt, aber noch kein
+             Ergebnis — dann ist die Begegnung weder gespielt noch vorläufig. Liegt an einem Brett eine Vereinspartie, trotzdem zeigen. -->
+        @if (pairings().length && (e.status === 'played' || provisional() || hasClubGame())) {
+          @if (e.status !== 'played' && provisional()) {
             <!-- 0.739.0, Wunsch 2026-10-10: die laufende Runde aus den zugeordneten Vereinspartien -->
             <p class="muted small provisional-note">Aufstellung laut {{ shareToken() ? 'den hochgeladenen' : 'euren' }} Partien — vorläufig, bis chess-results die Runde bringt.</p>
+          } @else if (e.status !== 'played') {
+            <p class="muted small provisional-note">Ergebnisse folgen, sobald chess-results sie bringt.</p>
           }
           <!-- 0.869.5 (UI-Sweep 28.10.): eigener Container — schmal (< 480 px) brechen die Namen um, Elo in die zweite
                Zeile, Abzeichen/Analyse/⋮ stehen gestapelt in einer 44-px-Spalte; nichts ragt über das Handy hinaus -->
@@ -442,6 +446,8 @@ export class FixtureViewComponent {
   readonly openBoard = signal<number | null>(null);
   /** Mindestens ein Brett kommt aus einer zugeordneten Vereinspartie (laufende Runde, 0.739.0). */
   readonly provisional = computed(() => this.pairings().some(p => p.provisional));
+  /** Mindestens ein Brett trägt eine Vereinspartie — dann zeigen, auch ohne Ergebnis von chess-results (1.020.4). */
+  readonly hasClubGame = computed(() => this.pairings().some(p => p.source === 'club' && !!p.pgn));
   private pairingsFor = '';
   private readonly lineups = inject(LineupsApiService);
   private readonly dialog = inject(MatDialog);
