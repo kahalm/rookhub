@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.020.1", date: "2026-11-25", changes: [
+    { en: "Calculation mode: the chapter clock (your summed-up thinking time per chapter) is now saved in your account. It no longer starts from zero after logging out or on another device.",
+      de: "Kalkulations-Modus: Die Kapitel-Uhr (deine aufsummierte Rechenzeit je Kapitel) liegt jetzt im Konto. Sie beginnt nach dem Abmelden oder auf einem anderen Gerät nicht mehr bei null." },
+  ] },
   { version: "1.020.0", date: "2026-11-25", changes: [
     { en: "KidHub: the endless mode runs with their record and the stages of the star hunt are now saved in the child’s account. After logging out they no longer start from zero, and they also appear on another tablet.",
       de: "KidHub: Die Läufe im Endlos-Modus samt Rekord und die Stufen der Sternenjagd liegen jetzt im Konto des Kindes. Nach dem Abmelden fängt es damit nicht mehr bei null an, und auf einem anderen Tablet ist alles wieder da." },

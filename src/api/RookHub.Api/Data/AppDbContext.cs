@@ -227,6 +227,7 @@ public partial class AppDbContext : DbContext
     public DbSet<UserPushSubscription> UserPushSubscriptions => Set<UserPushSubscription>();
     public DbSet<NotificationPushSetting> NotificationPushSettings => Set<NotificationPushSetting>();
     public DbSet<CalculationTree> CalculationTrees => Set<CalculationTree>();
+    public DbSet<CalcChapterTime> CalcChapterTimes => Set<CalcChapterTime>();
     public DbSet<CalcEdition> CalcEditions => Set<CalcEdition>();
     public DbSet<CalcSeriesMember> CalcSeriesMembers => Set<CalcSeriesMember>();
     public DbSet<CalcEditionView> CalcEditionViews => Set<CalcEditionView>();

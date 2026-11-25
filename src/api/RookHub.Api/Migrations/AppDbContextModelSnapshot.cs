@@ -778,6 +778,31 @@ namespace RookHub.Api.Migrations
                     b.ToTable("Books", (string)null);
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.CalcChapterTime", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Chapter")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<int>("Seconds")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("UserId", "BookId", "Chapter");
+
+                    b.HasIndex("BookId");
+
+                    b.ToTable("CalcChapterTimes");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.CalcEdition", b =>
                 {
                     b.Property<int>("Id")
@@ -10151,6 +10176,25 @@ namespace RookHub.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Book");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.CalcChapterTime", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Book", "Book")
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.CalcEdition", b =>

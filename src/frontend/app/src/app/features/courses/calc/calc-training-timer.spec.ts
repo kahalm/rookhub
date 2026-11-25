@@ -82,4 +82,48 @@ describe('CalcTrainingTimer', () => {
     expect(failures).toBe(2);
     timer.stop();
   });
+
+  describe('im Konto (1.020.1)', () => {
+    function makeRemote() {
+      const clock = fakeClock();
+      const sent: Record<string, number>[] = [];
+      const timer = new CalcTrainingTimer({
+        storageKey: () => KEY, userId: () => user, onPersistFailed: () => failures++, clock,
+        remoteSave: t => sent.push(t),
+      });
+      return { timer, clock, sent };
+    }
+
+    it('Konto-Stand nach dem Abmelden: je Kapitel der höhere Wert, auch im laufenden Zähler', () => {
+      localStorage.setItem(KEY, JSON.stringify({ A: 5, B: 100 }));
+      const { timer, sent } = makeRemote();
+      timer.syncChapter('A');
+      timer.mergeRemote({ A: 40, C: 7 });
+      expect(timer.seconds).toBe(40);
+      expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ A: 40, B: 100, C: 7 });
+      expect(sent).toEqual([{ B: 100 }]);   // nur, was das Gerät höher hat
+    });
+
+    it('schickt gesammelt alle 30 s, beim Anhalten und beim Kapitelwechsel; anonym nie', () => {
+      const { timer, clock, sent } = makeRemote();
+      timer.syncChapter('A');
+      timer.mergeRemote({});
+      timer.start();
+      clock.advance(29);
+      expect(sent.length).toBe(0);
+      clock.advance(1);
+      expect(sent).toEqual([{ A: 30 }]);
+      clock.advance(2);
+      timer.syncChapter('B');
+      expect(sent[1]).toEqual({ A: 32 });
+      timer.stop();
+      user = null;
+      const anon = makeRemote();
+      anon.timer.syncChapter('A');
+      anon.timer.start();
+      anon.clock.advance(40);
+      anon.timer.stop();
+      expect(anon.sent.length).toBe(0);
+    });
+  });
 });

@@ -183,6 +183,11 @@ export class CalculationComponent implements OnInit, OnDestroy {
     // Anonym meldet die Warnung „kann gerade nichts speichern" die Zeit ausdrücklich mit; zurückgenommen wird sie
     // hier nicht — das bleibt dem Baum-Speicher.
     onPersistFailed: () => this.setLocalSaveFailed(this.localOnly),
+    // Angemeldet: Kapitel-Uhr auch im Konto (1.020.1) — still, ein Fehlschlag kostet höchstens die Gerätegrenze.
+    remoteSave: times => {
+      if (!this.auth?.isLoggedIn || this.localOnly) return;
+      this.api.setChapterTimes(this.bookId, times).subscribe({ error: () => { /* nächster Abgleich holt es nach */ } });
+    },
   }, {
     positionLoaded: () => !this.loadError && this.position !== null,
     currentPositionId: () => this.position?.id ?? null,
@@ -315,6 +320,12 @@ export class CalculationComponent implements OnInit, OnDestroy {
     const requested = Number(this.route.snapshot.queryParamMap.get('pos')) || null;
     this.loadBook(requested);
     this.training.startLiveTicker();
+    if (this.auth?.isLoggedIn && !this.localOnly) {
+      this.api.getChapterTimes(this.bookId).subscribe({
+        next: times => this.timer.mergeRemote(times),
+        error: () => { /* bleibt bei der Gerätezeit */ },
+      });
+    }
   }
 
   /** `<body>`-Klasse, Navbar-Breite und Vollbild-Ziel — siehe {@link CalcPageMode}. */

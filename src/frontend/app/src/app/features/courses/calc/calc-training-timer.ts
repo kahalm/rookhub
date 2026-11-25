@@ -21,7 +21,13 @@ export interface CalcTrainingTimerOptions {
   /** Der Schreibversuch ist gerade (erstmals nach Erfolg) gescheitert. */
   onPersistFailed: () => void;
   clock?: CalcTimerClock;
+  /** Angemeldet (1.020.1): Kapitelzeiten ins Konto — gesammelt alle {@link REMOTE_EVERY_S} s, beim Anhalten und beim
+   *  Kapitelwechsel. Fehlt (anonym), bleibt die Zeit am Gerät. */
+  remoteSave?: (times: Record<string, number>) => void;
 }
+
+/** So oft geht die laufende Kapitel-Uhr ins Konto. */
+export const REMOTE_EVERY_S = 30;
 
 /**
  * Kapitel-Uhr des Kalkulations-Modus (Zerlegung Z20, aus `CalculationComponent`): kumuliert die Rechenzeit JE
@@ -43,6 +49,9 @@ export class CalcTrainingTimer {
   private owner: number | null = null;
   private handle: unknown;
   private readonly clock: CalcTimerClock;
+  /** Zuletzt ins Konto geschickter Stand je Kapitel. */
+  private uploaded: Record<string, number> = {};
+  private ticksSinceUpload = 0;
 
   constructor(private readonly options: CalcTrainingTimerOptions) {
     this.clock = options.clock ?? SYSTEM_TIMER_CLOCK;
@@ -61,6 +70,7 @@ export class CalcTrainingTimer {
     this.handle = this.clock.setInterval(() => {
       this.seconds++;
       this.persist();
+      if (++this.ticksSinceUpload >= REMOTE_EVERY_S) this.flushRemote();
     }, 1000);
   }
 
@@ -70,12 +80,45 @@ export class CalcTrainingTimer {
     this.running = false;
     if (this.handle !== undefined) { this.clock.clearInterval(this.handle); this.handle = undefined; }
     this.persist();
+    this.flushRemote();
   }
 
   /** Von Hand nachgetragene Kapitelzeit übernehmen und sichern. */
   setSeconds(seconds: number): void {
     this.seconds = seconds;
     this.persist();
+    this.flushRemote();
+  }
+
+  /**
+   * Stand aus dem Konto einarbeiten: je Kapitel der höhere Wert (am Gerät und im laufenden Zähler). Was das Gerät höher
+   * hat, geht gleich hinauf — so landet auch die Zeit von vor 1.020.1 im Konto.
+   */
+  mergeRemote(server: Record<string, number> | null | undefined): void {
+    if (this.options.userId() !== this.owner && this.chapterKey !== null) return;
+    const remote = server && typeof server === 'object' ? server : {};
+    const store = this.readStore();
+    let changed = false;
+    for (const [k, v] of Object.entries(remote)) {
+      if (typeof v === 'number' && v > (store[k] ?? 0)) { store[k] = v; changed = true; }
+    }
+    this.uploaded = { ...remote };
+    if (changed) writeJson(localStore(), this.options.storageKey(), store);
+    if (this.chapterKey !== null && (store[this.chapterKey] ?? 0) > this.seconds) this.seconds = store[this.chapterKey];
+    this.flushRemote();
+  }
+
+  /** Kapitelzeiten, die höher sind als zuletzt ins Konto geschickt, hinaufschicken. */
+  flushRemote(): void {
+    this.ticksSinceUpload = 0;
+    const save = this.options.remoteSave;
+    if (!save || this.options.userId() === null || this.options.userId() !== this.owner) return;
+    const store = this.readStore();
+    const changes: Record<string, number> = {};
+    for (const [k, v] of Object.entries(store)) if (v > (this.uploaded[k] ?? 0)) changes[k] = v;
+    if (!Object.keys(changes).length) return;
+    this.uploaded = { ...this.uploaded, ...changes };
+    save(changes);
   }
 
   /**
@@ -85,7 +128,7 @@ export class CalcTrainingTimer {
   syncChapter(chapter: string | null): void {
     const key = chapter ?? '';
     if (key === this.chapterKey) return;
-    if (this.chapterKey !== null) this.persist();
+    if (this.chapterKey !== null) { this.persist(); this.flushRemote(); }
     this.chapterKey = key;
     // Besitzer VOR dem Lesen festhalten: die Abfrage kann einen Sitzungsablauf auslösen, der den
     // Speicher räumt — gelesen wird dann schon der geräumte Stand.

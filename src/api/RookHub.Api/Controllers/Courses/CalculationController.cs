@@ -67,6 +67,17 @@ public class CalculationController : BaseApiController
         return Ok(book);
     }
 
+    /// <summary>Kapitel-Uhr des Buchs (1.020.1) → <c>{ Kapitel: Sekunden }</c>.</summary>
+    [HttpGet("books/{bookId}/chapter-times")]
+    public async Task<ActionResult<Dictionary<string, int>>> GetChapterTimes(int bookId, [FromServices] CalcChapterTimeService times, CancellationToken ct)
+        => Ok(await times.GetAsync(GetUserId(), bookId, IsAdmin, ct));
+
+    /// <summary>Kapitelzeiten übernehmen <c>{ Kapitel: Sekunden }</c> (je Kapitel der höhere Wert) → gültiger Stand.</summary>
+    [HttpPut("books/{bookId}/chapter-times")]
+    public async Task<ActionResult<Dictionary<string, int>>> SetChapterTimes(int bookId, [FromBody] Dictionary<string, int> body,
+        [FromServices] CalcChapterTimeService times, CancellationToken ct)
+        => Ok(await times.SetAsync(GetUserId(), bookId, IsAdmin, body ?? new(), ct));
+
     /// <summary>Eine Stellung inkl. eigenem Analysebaum.</summary>
     [HttpGet("positions/{bookPuzzleId}")]
     public async Task<ActionResult<CalcPositionDto>> GetPosition(int bookPuzzleId, CancellationToken ct,

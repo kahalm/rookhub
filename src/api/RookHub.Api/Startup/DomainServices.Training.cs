@@ -50,6 +50,7 @@ public static partial class DomainServicesSetup
         // Kurs „Persönliche Taktiken“: Empfohlene Übungen einer Partie als Kapitel (ein Kurs je Konto).
         services.AddScoped<PersonalTacticsCourse>();
         services.AddScoped<CalculationService>();
+        services.AddScoped<CalcChapterTimeService>();
         services.AddScoped<CalcEditionService>();
         services.AddScoped<CalcSeriesAnnounceService>();
         // Kurs-Kommentare mehrsprachig (0.547.0): Übersetzen je Linie + Ausliefern über ?lang=.

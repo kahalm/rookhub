@@ -84,3 +84,14 @@ internal sealed class CalcEditionViewConfiguration : IEntityTypeConfiguration<Ca
         e.HasIndex(x => new { x.CalcEditionId, x.UserId }).IsUnique();
     }
 }
+
+internal sealed class CalcChapterTimeConfiguration : IEntityTypeConfiguration<CalcChapterTime>
+{
+    public void Configure(EntityTypeBuilder<CalcChapterTime> e)
+    {
+        e.HasKey(t => new { t.UserId, t.BookId, t.Chapter });
+        e.HasOne(t => t.User).WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
+        e.HasOne(t => t.Book).WithMany().HasForeignKey(t => t.BookId).OnDelete(DeleteBehavior.Cascade);
+        e.HasIndex(t => t.BookId);
+    }
+}

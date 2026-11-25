@@ -118,3 +118,12 @@ Beschriftungen und Dialoge):
 | `calc-labels.ts` | Anzeige-Texte: Kapitel-/Stellungsnamen, Punkte, Zeiten, Tooltips (Template liest `labels.*`) |
 | `calc-dialogs.ts` | Ergebnis-Dialog (nur echte Stufe/`null`), Kapitelzeit-Dialog, Einstellungen |
 | `calc-result-card` / `calc-annotate-card` / `calc-status-panel` (`.component.*`) | OnPush-Darstellung: Ergebnisfeld, Editor-Leiste (Symbole + Kommentar), Kapitelende + Fußzeile + Geräte-Hinweis |
+
+
+**Kapitel-Uhr im Konto** (1.020.1): `GET/PUT /api/calculations/books/{bookId}/chapter-times` — `{ Kapitel: Sekunden }`
+(`""` = ohne Kapitel), je Nutzer+Buch+Kapitel in `CalcChapterTimes` (`CalcChapterTimeService`; Zugriff wie die
+Stellungen, sonst 404). Der PUT behält je Kapitel den HÖHEREN Wert (zwei Geräte zählen nicht gegeneinander zurück);
+≤ 500 Kapitel je Anfrage, Name ≤ 200 Zeichen, negative Werte → 400, gekappt bei 1000 h. Client: `CalcTrainingTimer`
+zählt weiter lokal (`rookhub_calc_timer_<bookId>`, Konto-Spur), arbeitet beim Öffnen den Konto-Stand ein
+(`mergeRemote`, je Kapitel das Maximum, Höheres vom Gerät geht hoch) und schickt alle 30 s, beim Anhalten und beim
+Kapitelwechsel (`flushRemote`). Anonym bleibt alles am Gerät. Bei der Kontolöschung weg (`AnalysisDataEraser`).

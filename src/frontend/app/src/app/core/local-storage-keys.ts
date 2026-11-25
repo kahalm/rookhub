@@ -59,7 +59,7 @@ export const STORAGE_KEYS: readonly StorageKeyEntry[] = [
   // --- Nutzer-Spuren (früher OfflineService.LocalTracePrefixes) ---------------------------------------------------
   u('rookhub_endless_', 'Endlos: Konfiguration, Historie, Highscore, laufender Lauf (würde ins nächste Konto übertragen)', true),
   u('rookhub_calc_local_', 'Analysebäume/Bewertungen der Kalkulation', true),
-  u('rookhub_calc_timer_', 'Kapitel-Uhr der Kalkulation je Kurs', true),
+  u('rookhub_calc_timer_', 'Kapitel-Uhr der Kalkulation je Kurs — angemeldet seit 1.020.1 auch im Konto', true),
   u('rookhub_calc_note_off_', 'weggeklickter Kalkulations-Hinweis je Kurs', true),
   u('rookhub_course_local_solved_', 'lokal gelöste Kurs-Linien', true),
   u('rookhub_course_lang', 'Sprachwahl je Kurs (verrät die Kurse) — Angemeldete bekommen sie nach dem Login aus dem Profil zurück', true),

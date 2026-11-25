@@ -87,6 +87,9 @@ function make(
     saveTree: (id: number, json: string) => { saved.push({ id, json }); return of({ bookPuzzleId: id, updatedAt: '2026-07-28T10:00:00Z' }); },
     deleteTree: (id: number) => { deleted.push(id); return of(undefined); },
     saveReview: (id: number, patch: CalcReviewPatch) => { reviews.push({ id, patch }); return of(reviewServer(id, patch)); },
+    // Kapitel-Uhr im Konto (1.020.1)
+    getChapterTimes: () => of({}),
+    setChapterTimes: () => of({}),
     ...api,
   };
   const queryParams: Record<string, string | null> = { pos: route.pos ?? null, chapter: route.chapter ?? null };
@@ -2313,6 +2316,8 @@ describe('CalculationComponent Hinweis „nur auf diesem Gerät"', () => {
               bookId: 1, displayName: 'B', isCalculation: true, positions: [item(7, { chapter: 'A' })],
             }),
             getPosition: () => of(position({ id: 7, chapter: 'A' })),
+            getChapterTimes: () => of({}),
+            setChapterTimes: () => of({}),
           },
         },
       ],

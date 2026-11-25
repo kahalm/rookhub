@@ -33,6 +33,7 @@ internal static class AnalysisDataEraser
         var (db, userId) = (ctx.Db, ctx.UserId);
         // Eigene Analysebäume des Kalkulations-Modus: Nutzerarbeit mit Freitext, kein Aggregat.
         db.CalculationTrees.RemoveRange(await db.CalculationTrees.Where(x => x.UserId == userId).ToListAsync());
+        db.CalcChapterTimes.RemoveRange(await db.CalcChapterTimes.Where(x => x.UserId == userId).ToListAsync());
         // Punktepartie-Durchläufe samt geratenen Zügen: reine Nutzerarbeit an konkreten Partien.
         // MUSS vor den Partie-Analysen stehen — die Sitzung zeigt per Restrict auf die Analyse.
         var guessSessions = await db.GuessSessions.Where(g => g.UserId == userId).Select(g => g.Id).ToListAsync();

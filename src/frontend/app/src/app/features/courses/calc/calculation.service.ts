@@ -172,6 +172,16 @@ export class CalculationService implements CalcBackend {
     return this.http.get<CalcBook>(`/api/calculations/books/${bookId}`, { params: langParams(lang) });
   }
 
+  /** Kapitel-Uhr im Konto (1.020.1): `{ Kapitel: Sekunden }`. */
+  getChapterTimes(bookId: number): Observable<Record<string, number>> {
+    return this.http.get<Record<string, number>>(`/api/calculations/books/${bookId}/chapter-times`);
+  }
+
+  /** Kapitelzeiten übernehmen (der Server behält je Kapitel den höheren Wert). */
+  setChapterTimes(bookId: number, times: Record<string, number>): Observable<Record<string, number>> {
+    return this.http.put<Record<string, number>>(`/api/calculations/books/${bookId}/chapter-times`, times);
+  }
+
   getPosition(bookPuzzleId: number, lang?: string | null): Observable<CalcPosition> {
     return this.http.get<CalcPosition>(`/api/calculations/positions/${bookPuzzleId}`, { params: langParams(lang) });
   }
