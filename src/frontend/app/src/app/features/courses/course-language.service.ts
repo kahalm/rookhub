@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { Observable, of } from 'rxjs';
 import { catchError, map, take, timeout } from 'rxjs/operators';
@@ -73,7 +73,10 @@ export class CourseLanguageService {
   /** Zuletzt eingearbeitetes Profil (je Konto). */
   private merged: { userId: number; profile: ProfilePreferences } | null = null;
 
-  constructor(private translate: TranslateService, private courses?: CourseService, private prefs?: PreferencesService) {
+  /** Optional und außerhalb eines Injektors (Specs bauen den Dienst mit `new`) einfach nicht da. */
+  private readonly prefs: PreferencesService | null = tryInject(PreferencesService);
+
+  constructor(private translate: TranslateService, private courses?: CourseService) {
     this.loadLocal();
     // Optional: Specs bauen den Dienst mit `new` bzw. ersetzen den PreferencesService durch ein schlichtes Objekt.
     this.prefs?.profileLoaded$?.subscribe(p => this.mergeProfile(p));
@@ -283,6 +286,10 @@ export class CourseLanguageService {
     // Quota/gesperrt: dann gilt die Wahl nur in dieser Sitzung — sie ist eine Bequemlichkeit.
     writeJson(localStore(), COURSE_LANG_KEY, { c: this.choices(), f: this.files, t: this.stamps } satisfies Stored);
   }
+}
+
+function tryInject<T>(token: new (...args: never[]) => T): T | null {
+  try { return inject(token, { optional: true }); } catch { return null; }
 }
 
 function sameList(a: readonly string[] | undefined, b: readonly string[]): boolean {

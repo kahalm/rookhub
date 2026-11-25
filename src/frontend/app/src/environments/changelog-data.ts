@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.017.1", date: "2026-11-25", changes: [
+    { en: "Internal clean-up of the course language memory (no visible change); repairs the code check of the previous version.",
+      de: "Interner Umbau am Merken der Kurs-Sprache (keine sichtbare Änderung); behebt die Code-Prüfung der vorigen Version." },
+  ] },
   { version: "1.017.0", date: "2026-11-25", changes: [
     { en: "LeagueHub: live-broadcast league games now arrive within minutes. While a round of a Lichess broadcast is running (for example the Austrian Bundesliga or the women’s Bundesliga), RookHub checks it every 10 minutes instead of every 6 hours and takes over every game as soon as it has a result — into the player cards as before, and into the analysis queue of all league games. Lichess is treated politely: same identification as before, and after a “too many requests” answer everything waits.",
       de: "LeagueHub: Live übertragene Ligapartien sind jetzt nach wenigen Minuten da. Solange eine Runde einer Lichess-Übertragung läuft (etwa die österreichische Bundesliga oder Frauenbundesliga), schaut RookHub alle 10 Minuten statt alle 6 Stunden nach und übernimmt jede Partie, sobald sie ein Ergebnis hat — wie bisher in die Spielerkarten und in die Analyse-Warteschlange aller Ligapartien. Lichess wird geschont: gleiche Kennung wie bisher, und nach einem „zu viele Anfragen“ wartet alles." },

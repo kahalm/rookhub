@@ -95,7 +95,7 @@ describe('CourseLanguageService — Wahl im Profil', () => {
     TestBed.inject(OfflineService).clearOnLogout();   // der lokale Schlüssel bleibt eine Konto-Spur
     expect(localStorage.getItem(COURSE_LANG_KEY)).toBeNull();
     // Neuer Seitenaufruf nach dem Anmelden: am Gerät nichts mehr.
-    const fresh = new CourseLanguageService(TestBed.inject(TranslateService), undefined, prefs);
+    const fresh = TestBed.runInInjectionContext(() => new CourseLanguageService(TestBed.inject(TranslateService)));
     expect(fresh.requestLang({ bookId: 4 })).toBe('de');
     prefs.loadFromServer();
     http.expectOne('/api/profile').flush({ courseLanguages: { b4: entry } });
