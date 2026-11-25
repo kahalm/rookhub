@@ -1599,7 +1599,13 @@
         "reconnecting": "Znovu se připojuji…",
         "finished": "Kolo skončilo",
         "offline": "Spojení přerušeno — nový pokus"
-      }
+      },
+      "evalSource": {
+        "broadcast": "Z přenosu",
+        "cloud": "Cloudové hodnocení Lichess",
+        "engine": "Motor RookHub"
+      },
+      "depth": "hloubka {{depth}}"
     }
   },
   "puzzles": {

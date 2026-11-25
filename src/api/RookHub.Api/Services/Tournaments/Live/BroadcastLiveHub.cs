@@ -43,6 +43,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
 
     private readonly ILichessLiveSource _source;
     private readonly LichessCloudEval? _cloud;
+    private readonly LiveEngineQueue? _engine;
     private readonly ILogger<BroadcastLiveHub> _logger;
     private readonly HubOptions _options;
     private readonly Dictionary<string, Feed> _feeds = new(StringComparer.Ordinal);
@@ -50,10 +51,12 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
     private readonly Lock _lock = new();
     private readonly CancellationTokenSource _shutdown = new();
 
-    public BroadcastLiveHub(ILichessLiveSource source, LichessCloudEval? cloud, ILogger<BroadcastLiveHub> logger, HubOptions? options = null)
+    public BroadcastLiveHub(ILichessLiveSource source, LichessCloudEval? cloud, ILogger<BroadcastLiveHub> logger, HubOptions? options = null,
+        LiveEngineQueue? engine = null)
     {
         _source = source;
         _cloud = cloud;
+        _engine = engine;
         _logger = logger;
         _options = options ?? new HubOptions();
     }
@@ -295,7 +298,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
                 if (_games.TryGetValue(g.Id, out var old))
                 {
                     if (old.Hash == g.Hash) return null;
-                    if (g.Eval is null && old.Eval is { Source: "cloud" } && old.Fen == g.Fen) g = g with { Eval = old.Eval };
+                    if (g.Eval is null && old.Eval is { Source: "cloud" or "engine" } && old.Fen == g.Fen) g = g with { Eval = old.Eval };
                 }
                 _games[g.Id] = g;
             }
@@ -397,7 +400,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
 
         public void QueueAllEvals()
         {
-            if (_hub._cloud is null || !AnyWantsEval()) return;
+            if (!CanEval || !AnyWantsEval()) return;
             List<string> ids;
             lock (_lock) ids = _games.Values.Where(g => g.Eval is null).Select(g => g.Id).ToList();
             foreach (var id in ids) QueueEval(id);
@@ -405,10 +408,10 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
 
         private void QueueEval(string id)
         {
-            if (_hub._cloud is null || !AnyWantsEval()) return;
+            if (!CanEval || !AnyWantsEval()) return;
             lock (_lock)
             {
-                if (!_evalQueued.Add(id)) return;
+                if (_closed || !_evalQueued.Add(id)) return;
                 if (!_evalLoopStarted)
                 {
                     _evalLoopStarted = true;
@@ -417,6 +420,27 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
                 }
             }
             _evalQueue.Writer.TryWrite(id);
+        }
+
+        private bool CanEval => _hub._cloud is not null || _hub._engine is not null;
+
+        /// <summary>Wird diese Stellung noch gebraucht? Zuschauer mit Balken da, Feed offen, Partie steht noch dort, ohne Bewertung.</summary>
+        private bool StillWanted(string id, string fen)
+        {
+            lock (_lock)
+                return !_closed && _subs.Any(s => s.WantsEval)
+                       && _games.TryGetValue(id, out var g) && g.Fen == fen && g.Eval is null;
+        }
+
+        private void ApplyEval(string id, string fen, LiveEval ev)
+        {
+            LiveGame? updated = null;
+            lock (_lock)
+            {
+                if (_games.TryGetValue(id, out var now) && now.Fen == fen && now.Eval is null)
+                    _games[id] = updated = now with { Eval = ev };
+            }
+            if (updated is not null) Broadcast(new LiveGameChanged(updated));
         }
 
         /// <summary>Eine Bewertung nach der anderen (die Drossel sitzt in <see cref="LichessCloudEval"/>); hört auf zu fragen,
@@ -432,15 +456,12 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
                     LiveGame? g;
                     lock (_lock) _games.TryGetValue(id, out g);
                     if (g is null || g.Eval is not null) continue;
-                    var ev = await _hub._cloud!.GetAsync(g.Fen, ct);
-                    if (ev is null) continue;
-                    LiveGame? updated = null;
-                    lock (_lock)
-                    {
-                        if (_games.TryGetValue(id, out var now) && now.Fen == g.Fen && now.Eval is null)
-                            _games[id] = updated = now with { Eval = ev };
-                    }
-                    if (updated is not null) Broadcast(new LiveGameChanged(updated));
+                    var ev = _hub._cloud is null ? null : await _hub._cloud.GetAsync(g.Fen, ct);
+                    if (ev is not null) { ApplyEval(id, g.Fen, ev); continue; }
+                    // Nicht im Cloud-Speicher (bei Mittelspielstellungen der Normalfall): eigene Engine — über die EINE
+                    // globale Schlange (höchstens eine Rechnung, je Brett nur die neueste Stellung, reihum).
+                    var gameId = id;
+                    _hub._engine?.Enqueue($"{RoundId}/{gameId}", g.Fen, fen => StillWanted(gameId, fen), (fen, e) => ApplyEval(gameId, fen, e));
                 }
             }
             catch (OperationCanceledException) { /* Herunterfahren */ }

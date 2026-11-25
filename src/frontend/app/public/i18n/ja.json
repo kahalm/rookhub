@@ -1599,7 +1599,13 @@
         "reconnecting": "再接続中…",
         "finished": "ラウンド終了",
         "offline": "接続が切れました — 再試行中"
-      }
+      },
+      "evalSource": {
+        "broadcast": "中継より",
+        "cloud": "Lichess クラウド評価",
+        "engine": "RookHub エンジン"
+      },
+      "depth": "深さ {{depth}}"
     }
   },
   "puzzles": {

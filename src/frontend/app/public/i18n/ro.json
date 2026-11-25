@@ -1599,7 +1599,13 @@
         "reconnecting": "Reconectare…",
         "finished": "Runda s-a încheiat",
         "offline": "Conexiune pierdută — reîncercare"
-      }
+      },
+      "evalSource": {
+        "broadcast": "Din transmisie",
+        "cloud": "Evaluare cloud Lichess",
+        "engine": "Motor RookHub"
+      },
+      "depth": "adâncime {{depth}}"
     }
   },
   "puzzles": {

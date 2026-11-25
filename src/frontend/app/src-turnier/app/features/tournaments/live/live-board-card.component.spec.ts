@@ -1,0 +1,28 @@
+import { TestBed } from '@angular/core/testing';
+import { provideTranslateService } from '@ngx-translate/core';
+import { LiveBoardCardComponent } from './live-board-card.component';
+import { LiveGame } from './live-boards.models';
+
+const GAME: LiveGame = {
+  id: 'g1', boardTag: '1.1', fen: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1', lastMove: 'e2e4', plies: 1,
+  result: '*', finished: false, whiteToMove: false, eval: { cp: 42, mate: null, source: 'engine', depth: 18 },
+  white: { name: 'Weiß, Wilma', title: 'GM', elo: 2600, fideId: null, team: null, clockSeconds: 5400 },
+  black: { name: 'Schwarz, Sepp', title: null, elo: 2500, fideId: null, team: null, clockSeconds: 5300 },
+};
+
+describe('LiveBoardCardComponent', () => {
+  it('kennzeichnet die Quelle der Bewertung dezent (Tooltip) und zeigt die Tiefe', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LiveBoardCardComponent);
+    fixture.componentRef.setInput('game', GAME);
+    fixture.componentRef.setInput('board', 1);
+    fixture.componentRef.setInput('showEval', true);
+    fixture.detectChanges();
+    const line = (fixture.nativeElement as HTMLElement).querySelector('.lb-evaltext')!;
+    expect(line.getAttribute('title')).toBe('tournaments.live.evalSource.engine');
+    expect(line.textContent).toContain('+0.4');
+    expect(line.textContent).toContain('tournaments.live.depth');
+  });
+});

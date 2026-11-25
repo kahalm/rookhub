@@ -1599,7 +1599,13 @@
         "reconnecting": "Επανασύνδεση…",
         "finished": "Ο γύρος τελείωσε",
         "offline": "Η σύνδεση χάθηκε — νέα προσπάθεια"
-      }
+      },
+      "evalSource": {
+        "broadcast": "Από τη μετάδοση",
+        "cloud": "Αξιολόγηση cloud του Lichess",
+        "engine": "Μηχανή RookHub"
+      },
+      "depth": "βάθος {{depth}}"
     }
   },
   "puzzles": {

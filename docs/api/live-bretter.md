@@ -60,10 +60,35 @@ Partien ohne Brett.
   der Begegnung ordnet der Lichess-Tag `Round "1.n"`: die Übertragung nummeriert blockweise je Begegnung in Brettreihenfolge
   (1. BL R1: „1.1"–„1.6" Pinggau–Schwaz, „1.7"–„1.12" nächste Begegnung …, Farben abwechselnd); nur ohne Tag die
   Meldelisten-Nummer (1.014.1). Brettnummer = Position in dieser Ordnung. Einzelturnier: Brettnummer = chess-results.
-- **Engine-Balken**: der Bundesliga-Strom bringt KEIN `[%eval]` (gemessen 25.11.2026, nur `[%clk]`). Dann fragt der Hub —
-  nur solange ein Zuschauer der Runde den Balken an hat (`?eval=1`) — das Lichess Cloud-Eval (`LichessCloudEval`: je Stellung
-  gecacht, Treffer 6 h, Fehltreffer 15 min, ein Abruf je Sekunde, nach 429 Pause). Nicht im Cloud-Speicher → Balken leer.
-  Keine eigenen Engines, kein Engine-Broker.
+- **Engine-Balken** — Rückfallkette je Stellung, nur solange ein Zuschauer der Runde ihn an hat (`?eval=1`):
+  1. `[%eval]` aus dem Strom (die Bundesliga schickt KEINS, gemessen 25.11.2026, nur `[%clk]`);
+  2. Lichess Cloud-Eval (`LichessCloudEval`: je Stellung gecacht, Treffer 6 h, Fehltreffer 15 min, ein Abruf je Sekunde,
+     nach 429 Pause) — kennt Mittelspielstellungen meist nicht;
+  3. **eigene Engine** (1.015.0, Freigabe des Users) über den vorhandenen `IEngineBroker` — kein neuer Engine-Weg
+     (`LiveEngineEval.cs`). `LiveEngineQueue` (Singleton, über ALLE Runden): höchstens EINE Rechnung gleichzeitig, je Brett
+     nur die neueste Stellung (ein neuer Zug ersetzt den wartenden Wunsch an seinem Platz), reihum über die Bretter; vor dem
+     Rechnen und vor dem Übernehmen wird geprüft, ob die Stellung noch gebraucht wird (Zuschauer mit Balken, Partie steht
+     noch dort, Feed offen). `BrokerLiveEngineEvaluator`: 1 Linie, `movetime` 1,5 s, 2 Threads, 64 MB, harte Grenze 6 s,
+     Sitzung `rh-live-boards`; meldet sich beim `EngineActivityTracker` als Live-Rechnung an (ein Hintergrund-Auftrag auf
+     DERSELBEN Engine pausiert, andere laufen weiter); Ergebnis je Stellung 6 h gecacht, UCI-Wert (Seite am Zug) in
+     Weiß-Sicht gedreht. Ist keine Engine konfiguriert/online → still leer (Auswahl 60 s gecacht, 503 wählt neu).
+  Quelle im Eval: `source` = `broadcast` | `cloud` | `engine`, dazu `depth`; die Karte zeigt „+0.4 · Tiefe 18“ und die
+  Quelle als Tooltip.
+
+  **Welche Engine** (`LiveBoards:Engine:*`, `RegistryLiveEngineSelector`):
+
+  | Schlüssel | Vorgabe | Bedeutung |
+  |---|---|---|
+  | `Enabled` | `true` | aus = nur Strom + Cloud |
+  | `OwnerUserName` | erstes Admin-Konto (kleinste Id) | wessen Engines |
+  | `EngineId` | leer | feste Engine (`rhe_…`, auch `eei_…`); leer = erste ONLINE eigene `rhe_`-Engine des Kontos, die NICHT in seiner Hintergrund-Liste steht (= seine Live-Engine) — die Hintergrund-Engines der Analyseaufträge bleiben ungestört |
+  | `MovetimeMs` | 1500 | Rechenzeit je Stellung (200–10000) |
+  | `Depth` | 0 | statt der Zeit eine feste Tiefe (z. B. 18); `MaxSeconds` bricht trotzdem ab |
+  | `MaxSeconds` | 6 | harte Grenze je Stellung |
+  | `Threads` / `HashMb` | 2 / 64 | gedeckelt auf das, was die Engine anbietet |
+
+  Prod: ohne Einstellung rechnet die Live-Engine des ersten Admin-Kontos, sobald ihr Provider online ist. Teilt sich der
+  Admin diese Engine mit seinem eigenen Analysebrett, stellt der Broker die Suchen hintereinander (eine Suche je Prozess).
 - Lichess-Abrufe mit dem User-Agent des übrigen Lichess-Codes (`HttpClientsSetup`, Client `lichess-live`, ohne
   Gesamt-Timeout für den Strom), ohne persönliche Daten.
 

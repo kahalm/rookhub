@@ -52,7 +52,10 @@ import { evalText, lastMovePair, shownClock, whiteShare } from './live-boards.ut
         @if (clock(!flipped()); as c) { <span class="lb-clock" role="timer">{{ c }}</span> }
       </div>
       @if (showEval() && evalLabel()) {
-        <div class="lb-evaltext">{{ evalLabel() }}</div>
+        <!-- Quelle dezent (1.015.0): Tooltip „Übertragung / Lichess-Cloud / RookHub-Engine“, Tiefe in der Zeile. -->
+        <div class="lb-evaltext" [title]="('tournaments.live.evalSource.' + game().eval!.source) | translate">
+          {{ evalLabel() }}@if (game().eval!.depth; as d) { · {{ 'tournaments.live.depth' | translate:{ depth: d } }} }
+        </div>
       }
     </article>
   `,

@@ -1599,7 +1599,13 @@
         "reconnecting": "Menghubungkan ulang…",
         "finished": "Babak selesai",
         "offline": "Koneksi terputus — mencoba lagi"
-      }
+      },
+      "evalSource": {
+        "broadcast": "Dari siaran",
+        "cloud": "Evaluasi cloud Lichess",
+        "engine": "Mesin RookHub"
+      },
+      "depth": "kedalaman {{depth}}"
     }
   },
   "puzzles": {

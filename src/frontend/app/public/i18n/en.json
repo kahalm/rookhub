@@ -1661,7 +1661,13 @@
         "reconnecting": "Reconnecting…",
         "finished": "Round finished",
         "offline": "Connection lost — retrying"
-      }
+      },
+      "evalSource": {
+        "broadcast": "From the broadcast",
+        "cloud": "Lichess cloud evaluation",
+        "engine": "RookHub engine"
+      },
+      "depth": "depth {{depth}}"
     }
   },
   "puzzles": {

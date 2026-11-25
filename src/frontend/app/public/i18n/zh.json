@@ -1599,7 +1599,13 @@
         "reconnecting": "正在重新连接…",
         "finished": "本轮已结束",
         "offline": "连接中断 — 正在重试"
-      }
+      },
+      "evalSource": {
+        "broadcast": "来自直播",
+        "cloud": "Lichess 云端评估",
+        "engine": "RookHub 引擎"
+      },
+      "depth": "深度 {{depth}}"
     }
   },
   "puzzles": {

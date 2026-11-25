@@ -1599,7 +1599,13 @@
         "reconnecting": "फिर से कनेक्ट हो रहा है…",
         "finished": "राउंड समाप्त",
         "offline": "कनेक्शन टूटा — फिर कोशिश"
-      }
+      },
+      "evalSource": {
+        "broadcast": "प्रसारण से",
+        "cloud": "Lichess क्लाउड मूल्यांकन",
+        "engine": "RookHub इंजन"
+      },
+      "depth": "गहराई {{depth}}"
     }
   },
   "puzzles": {

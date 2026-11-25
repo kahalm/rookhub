@@ -1599,7 +1599,13 @@
         "reconnecting": "Повторне підключення…",
         "finished": "Тур завершено",
         "offline": "Зв’язок втрачено — нова спроба"
-      }
+      },
+      "evalSource": {
+        "broadcast": "З трансляції",
+        "cloud": "Хмарна оцінка Lichess",
+        "engine": "Рушій RookHub"
+      },
+      "depth": "глибина {{depth}}"
     }
   },
   "puzzles": {

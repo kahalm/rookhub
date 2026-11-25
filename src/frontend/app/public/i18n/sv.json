@@ -1599,7 +1599,13 @@
         "reconnecting": "Ansluter igen…",
         "finished": "Ronden avslutad",
         "offline": "Anslutningen bröts — nytt försök"
-      }
+      },
+      "evalSource": {
+        "broadcast": "Från sändningen",
+        "cloud": "Lichess molnvärdering",
+        "engine": "RookHub-motor"
+      },
+      "depth": "djup {{depth}}"
     }
   },
   "puzzles": {

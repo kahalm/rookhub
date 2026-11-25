@@ -1599,7 +1599,13 @@
         "reconnecting": "Opnieuw verbinden…",
         "finished": "Ronde afgelopen",
         "offline": "Verbinding verbroken — nieuwe poging"
-      }
+      },
+      "evalSource": {
+        "broadcast": "Uit de uitzending",
+        "cloud": "Lichess-cloudevaluatie",
+        "engine": "RookHub-engine"
+      },
+      "depth": "diepte {{depth}}"
     }
   },
   "puzzles": {

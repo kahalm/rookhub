@@ -1599,7 +1599,13 @@
         "reconnecting": "Đang kết nối lại…",
         "finished": "Vòng đã kết thúc",
         "offline": "Mất kết nối — đang thử lại"
-      }
+      },
+      "evalSource": {
+        "broadcast": "Từ buổi phát",
+        "cloud": "Đánh giá đám mây của Lichess",
+        "engine": "Engine RookHub"
+      },
+      "depth": "độ sâu {{depth}}"
     }
   },
   "puzzles": {

@@ -1599,7 +1599,13 @@
         "reconnecting": "Reconnexion…",
         "finished": "Ronde terminée",
         "offline": "Connexion perdue — nouvel essai"
-      }
+      },
+      "evalSource": {
+        "broadcast": "Issue de la retransmission",
+        "cloud": "Évaluation cloud Lichess",
+        "engine": "Moteur RookHub"
+      },
+      "depth": "profondeur {{depth}}"
     }
   },
   "puzzles": {

@@ -1599,7 +1599,13 @@
         "reconnecting": "Yeniden bağlanıyor…",
         "finished": "Tur bitti",
         "offline": "Bağlantı koptu — yeniden deneniyor"
-      }
+      },
+      "evalSource": {
+        "broadcast": "Yayından",
+        "cloud": "Lichess bulut değerlendirmesi",
+        "engine": "RookHub motoru"
+      },
+      "depth": "derinlik {{depth}}"
     }
   },
   "puzzles": {

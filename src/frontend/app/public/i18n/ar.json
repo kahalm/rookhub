@@ -1599,7 +1599,13 @@
         "reconnecting": "جارٍ إعادة الاتصال…",
         "finished": "انتهت الجولة",
         "offline": "انقطع الاتصال — إعادة المحاولة"
-      }
+      },
+      "evalSource": {
+        "broadcast": "من البث",
+        "cloud": "تقييم Lichess السحابي",
+        "engine": "محرك RookHub"
+      },
+      "depth": "العمق {{depth}}"
     }
   },
   "puzzles": {

@@ -1661,7 +1661,13 @@
         "reconnecting": "Ponovno povezivanje…",
         "finished": "Kolo završeno",
         "offline": "Veza prekinuta — novi pokušaj"
-      }
+      },
+      "evalSource": {
+        "broadcast": "Iz prijenosa",
+        "cloud": "Lichess procjena iz oblaka",
+        "engine": "RookHub engine"
+      },
+      "depth": "dubina {{depth}}"
     }
   },
   "puzzles": {

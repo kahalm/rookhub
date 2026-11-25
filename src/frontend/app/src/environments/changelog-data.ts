@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.015.0", date: "2026-11-25", changes: [
+    { en: "Live boards: the engine bar is now filled for almost every position. If the broadcast brings no evaluation and the Lichess cloud does not know the position (usual in the middlegame), RookHub’s own engine calculates it briefly — one position at a time, always the newest position of each board in turn, and only while someone has the bar switched on. The source (broadcast, Lichess cloud or RookHub engine) shows as a tooltip, the depth next to the value.",
+      de: "Live-Bretter: Der Engine-Balken ist jetzt fast immer gefüllt. Bringt die Übertragung keine Bewertung mit und kennt die Lichess-Cloud die Stellung nicht (im Mittelspiel der Normalfall), rechnet die eigene RookHub-Engine kurz nach — eine Stellung nach der anderen, je Brett immer die neueste, reihum, und nur solange jemand den Balken eingeschaltet hat. Die Quelle (Übertragung, Lichess-Cloud oder RookHub-Engine) steht im Tooltip, die Tiefe neben dem Wert." },
+  ] },
   { version: "1.014.1", date: "2026-11-25", changes: [
     { en: "Live boards: in team competitions the boards of a match are now in the order of the Lichess broadcast (board 1 to 6 of each match, as on the scoresheet), not in the order of the team’s registration list — substitutes no longer shift the boards. Also fixed a rare case where a viewer joining exactly when the last one had left could end up without engine bar and cause a second connection to Lichess.",
       de: "Live-Bretter: Im Mannschaftsturnier stehen die Bretter einer Begegnung jetzt in der Reihenfolge der Lichess-Übertragung (Brett 1 bis 6 je Begegnung, wie am Spielbericht), nicht in der Reihenfolge der Meldeliste — Ersatzspieler verschieben die Bretter nicht mehr. Außerdem behoben: Wer genau in dem Moment zuschaute, in dem der letzte Zuschauer gegangen war, konnte ohne Engine-Balken bleiben und eine zweite Verbindung zu Lichess auslösen." },

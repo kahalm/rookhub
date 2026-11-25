@@ -1364,7 +1364,13 @@
         "reconnecting": "Újrakapcsolódás…",
         "finished": "A forduló véget ért",
         "offline": "A kapcsolat megszakadt — újrapróbálás"
-      }
+      },
+      "evalSource": {
+        "broadcast": "A közvetítésből",
+        "cloud": "Lichess felhőértékelés",
+        "engine": "RookHub-motor"
+      },
+      "depth": "mélység: {{depth}}"
     }
   },
   "puzzles": {

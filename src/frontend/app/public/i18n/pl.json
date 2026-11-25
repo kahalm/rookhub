@@ -1599,7 +1599,13 @@
         "reconnecting": "Ponowne łączenie…",
         "finished": "Runda zakończona",
         "offline": "Utracono połączenie — ponowna próba"
-      }
+      },
+      "evalSource": {
+        "broadcast": "Z transmisji",
+        "cloud": "Ocena w chmurze Lichess",
+        "engine": "Silnik RookHub"
+      },
+      "depth": "głębokość {{depth}}"
     }
   },
   "puzzles": {

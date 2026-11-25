@@ -20,8 +20,17 @@ public static partial class DomainServicesSetup
             sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<IConfiguration>()));
         services.AddSingleton<LichessCloudEval>();
         services.AddSingleton<BroadcastFinder>();
+        // Engine-Balken ohne Cloud-Bewertung: eigene Engine über den vorhandenen IEngineBroker (1.015.0), Vorgabe die
+        // Live-Engine des ersten Admin-Kontos (LiveBoards:Engine:*), höchstens eine Rechnung gleichzeitig.
+        services.AddSingleton(_ => LiveEngineOptions.From(configuration));
+        services.AddScoped<ILiveEngineSelector, RegistryLiveEngineSelector>();
+        services.AddSingleton<ILiveEngineEvaluator>(sp => new BrokerLiveEngineEvaluator(sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<LiveEngineOptions>(),
+            sp.GetRequiredService<ILogger<BrokerLiveEngineEvaluator>>(), sp.GetRequiredService<RookHub.Api.Services.Engines.EngineActivityTracker>()));
+        services.AddSingleton<LiveEngineQueue>();
         services.AddSingleton(sp => new BroadcastLiveHub(sp.GetRequiredService<ILichessLiveSource>(),
-            sp.GetRequiredService<LichessCloudEval>(), sp.GetRequiredService<ILogger<BroadcastLiveHub>>()));
+            sp.GetRequiredService<LichessCloudEval>(), sp.GetRequiredService<ILogger<BroadcastLiveHub>>(),
+            engine: sp.GetRequiredService<LiveEngineQueue>()));
         services.AddSingleton(_ => new SseConnectionLimiter(
             Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxStreamsPerIp") ?? 6, 1, 100),
             Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxStreams") ?? 2000, 1, 100000)));

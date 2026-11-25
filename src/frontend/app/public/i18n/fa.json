@@ -1599,7 +1599,13 @@
         "reconnecting": "اتصال دوباره…",
         "finished": "دور به پایان رسید",
         "offline": "اتصال قطع شد — تلاش دوباره"
-      }
+      },
+      "evalSource": {
+        "broadcast": "از پخش",
+        "cloud": "ارزیابی ابری Lichess",
+        "engine": "موتور RookHub"
+      },
+      "depth": "عمق {{depth}}"
     }
   },
   "puzzles": {

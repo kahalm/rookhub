@@ -1599,7 +1599,13 @@
         "reconnecting": "Переподключение…",
         "finished": "Тур завершён",
         "offline": "Связь потеряна — повторная попытка"
-      }
+      },
+      "evalSource": {
+        "broadcast": "Из трансляции",
+        "cloud": "Облачная оценка Lichess",
+        "engine": "Движок RookHub"
+      },
+      "depth": "глубина {{depth}}"
     }
   },
   "puzzles": {

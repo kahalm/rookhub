@@ -1661,7 +1661,13 @@
         "reconnecting": "Verbinde neu …",
         "finished": "Runde beendet",
         "offline": "Verbindung unterbrochen — neuer Versuch"
-      }
+      },
+      "evalSource": {
+        "broadcast": "Aus der Übertragung",
+        "cloud": "Lichess-Cloud-Bewertung",
+        "engine": "RookHub-Engine"
+      },
+      "depth": "Tiefe {{depth}}"
     }
   },
   "puzzles": {
