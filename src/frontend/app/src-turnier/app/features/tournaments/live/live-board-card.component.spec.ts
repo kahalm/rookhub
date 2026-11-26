@@ -84,7 +84,8 @@ describe('LiveBoardCardComponent', () => {
     expect(move()).toBe('Zug 34');                                             // Schwarz am Zug im 34.
     fixture.componentRef.setInput('game', { ...GAME, plies: 81, finished: true, result: '1-0' });
     fixture.detectChanges();
-    expect(move()).toBe('Zug 41');                                             // fertig: letzter gespielter Zug
+    expect(move()).toBeNull();                                                 // fertig: nur das Ergebnis (26.11.) …
+    expect(el.querySelector('.lb-result')!.getAttribute('title')).toBe('Zug 41');    // … die Zugzahl im Tooltip
     fixture.componentRef.setInput('game', { ...GAME, plies: 0 });
     fixture.detectChanges();
     expect(move()).toBeNull();
@@ -111,5 +112,26 @@ describe('LiveBoardCardComponent', () => {
     expect(Math.abs(bar.height - board.height)).toBeLessThanOrEqual(1);
     expect(Math.abs((bar.top + bar.height / 2) - (board.top + board.height / 2))).toBeLessThanOrEqual(1);
     el.remove();
+  });
+  it('fertige Partie: Ergebnis einzeilig in schmaler Karte, keine Zugzahl daneben (26.11.: „½–½“ brach um)', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LiveBoardCardComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.width = '250px';
+    document.body.appendChild(host);
+    fixture.componentRef.setInput('game', { ...GAME, plies: 27, result: '1/2-1/2', finished: true });
+    fixture.componentRef.setInput('board', 1);
+    fixture.componentRef.setInput('caption', 'FIDE World Chess Championship 2026 · Game 3');
+    fixture.componentRef.setInput('analysisUrl', 'https://rookhub.oberschmid.homes/analysis?live=a.b');
+    fixture.componentRef.setInput('removable', true);
+    fixture.detectChanges();
+    const res = host.querySelector('.lb-result') as HTMLElement;
+    expect(res.textContent!.trim()).toBe('½–½');
+    const lh = parseFloat(getComputedStyle(res).lineHeight);
+    expect(res.getBoundingClientRect().height).toBeLessThan(lh * 1.6 + 2);   // eine Zeile (+ Rahmen)
+    expect(host.querySelector('.lb-move')).toBeNull();
+    host.remove();
   });
 });

@@ -24,12 +24,13 @@ import { evalText, lastMovePair, liveMoveNumber, shownClock, whiteShare } from '
     <article class="lb-card" [attr.aria-label]="('tournaments.live.boardN' | translate:{ board: board() }) + ': ' + game().white.name + ' – ' + game().black.name">
       <div class="lb-top">
         <span class="lb-board">{{ 'tournaments.live.boardN' | translate:{ board: board() } }}@if (caption(); as c) { <span class="lb-caption">· {{ c }}</span> }</span>
-        @if (moveNo(); as n) {
+        @if (!game().finished && moveNo(); as n) {
           <!-- Zuganzahl (Wunsch 2026-11-26): laufend der Zug, der gerade gespielt wird, fertig der letzte -->
           <span class="lb-move" [title]="(game().finished ? 'tournaments.live.moveTipEnd' : (game().whiteToMove ? 'common.whiteToMove' : 'common.blackToMove')) | translate">{{ 'tournaments.live.moveN' | translate:{ move: n } }}</span>
         }
         @if (game().finished) {
-          <span class="lb-result">{{ resultText() }}</span>
+          <!-- Fertig: nur das Ergebnis, die Zugzahl steht im Tooltip (schmale Karte, 26.11.: „½–½“ brach in zwei Zeilen um) -->
+          <span class="lb-result" [title]="moveNo() ? ('tournaments.live.moveN' | translate:{ move: moveNo() }) : null">{{ resultText() }}</span>
         }
         @if (analysisUrl(); as url) {
           <!-- Partie samt Zügen, Kopfzeilen und Uhren auf RookHubs Analysebrett, neuer Tab (1.026.0) -->
@@ -95,8 +96,8 @@ import { evalText, lastMovePair, liveMoveNumber, shownClock, whiteShare } from '
     /* Klein im Kopf der Karte, Tippziel bleibt 40 px (die Karte ist kein Formular) */
     .lb-icon { flex: 0 0 auto; width: 40px; height: 40px; padding: 8px; margin: -8px -4px -8px 0; }
     .lb-icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    .lb-result { font-weight: 700; color: var(--mat-sys-on-surface); padding: 0 8px; border-radius: 999px;
-      border: 1px solid var(--mat-sys-outline); font-variant-numeric: tabular-nums; }
+    .lb-result { flex: 0 0 auto; white-space: nowrap; line-height: 1.5; font-weight: 700; color: var(--mat-sys-on-surface);
+      padding: 0 8px; border-radius: 999px; border: 1px solid var(--mat-sys-outline); font-variant-numeric: tabular-nums; }
     .lb-player { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
     .lb-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .lb-title { font-weight: 700; font-size: 0.85em; color: var(--rh-accent); margin-right: 0.25em; }

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.029.1", date: "2026-11-26", changes: [
+    { en: "Live boards: a finished game shows its result as a tidy one-line chip in the card header (it wrapped into two lines in narrow cards); the move count moves into its tooltip.",
+      de: "Live-Bretter: Eine beendete Partie zeigt ihr Ergebnis als ordentlichen einzeiligen Chip im Kartenkopf (in schmalen Karten brach es in zwei Zeilen um); die Zugzahl steht dann im Tooltip." },
+  ] },
   { version: "1.029.0", date: "2026-11-26", changes: [
     { en: "Live boards: „Share link“ now shares a short live link (/live/…) instead of the long address — when you add or remove boards or switch round, team or engine bar, everyone with the link sees it right away without reloading. Works without an account too; others who change something get their own view. Old long links keep working.",
       de: "Live-Bretter: „Link teilen“ teilt jetzt einen kurzen, lebenden Link (/live/…) statt der langen Adresse — fügst du Bretter hinzu, nimmst sie heraus oder stellst Runde, Mannschaft oder Engine-Balken um, sehen das alle mit dem Link sofort, ohne neu zu laden. Geht auch ohne Konto; wer als Zuschauer etwas ändert, bekommt seine eigene Ansicht. Alte lange Links gelten weiter." },
