@@ -31,7 +31,8 @@ namespace RookHub.Api.Services.Puzzles;
 /// <para>Und gelesene Admin-/Direktnachrichten nach <c>Retention:MessagesDays</c> (<see cref="Social.AdminMessageRetention"/>),
 /// Formular-Fotos (<see cref="Scoresheet.ScoresheetPhotoRetention"/>: gescheiterte nach 30, offene ohne Konto nach 14 Tagen,
 /// Archiv nach Ablauf), erledigte Passwort-Reset- und Übergabe-Codes nach 7 Tagen (<see cref="Accounts.OneTimeCodeRetention"/>),
-/// Tageszeilen der Besucher-Herkunft nach <c>Retention:VisitorDays</c> (<see cref="Accounts.VisitorOriginRetention"/>).</para>
+/// Tageszeilen der Besucher-Herkunft nach <c>Retention:VisitorDays</c> (<see cref="Accounts.VisitorOriginRetention"/>),
+/// geteilte Live-Ansichten ohne Aufruf nach <c>Retention:LiveViewDays</c> (<see cref="Tournaments.Live.SharedLiveViews.PruneAsync"/>).</para>
 ///
 /// Läuft täglich (PeriodicWorker, erster Lauf kurz nach dem Start, nicht pausierbar: Aufbewahrungsfristen); jede Senke hat
 /// ihren eigenen Versuch — ein Fehler der einen lässt die andere nicht aus und beendet den Dienst nicht (nur Logzeile).
@@ -137,6 +138,14 @@ public class AnonymousDataRetentionService : PeriodicWorker
                 RetentionOptions.From(sp.GetService<IConfiguration>()), ct: ct);
             if (pruned > 0)
                 _logger.LogInformation("Besucher-Herkunft-Retention: {Count} Tageszeilen gelöscht", pruned);
+            return pruned;
+        }, ct);
+        removed += await TryAsync("Live-Ansichten-Retention fehlgeschlagen", async sp =>
+        {
+            var pruned = await Tournaments.Live.SharedLiveViews.PruneAsync(sp.GetRequiredService<AppDbContext>(), now,
+                RetentionOptions.From(sp.GetService<IConfiguration>()), ct: ct);
+            if (pruned > 0)
+                _logger.LogInformation("Live-Ansichten-Retention: {Count} geteilte Ansichten gelöscht", pruned);
             return pruned;
         }, ct);
         return removed;

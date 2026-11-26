@@ -1633,7 +1633,11 @@
       },
       "openAnalysis": "Abrir no tabuleiro de análise (novo separador)",
       "moveN": "Lance {{move}}",
-      "moveTipEnd": "Último lance da partida"
+      "moveTipEnd": "Último lance da partida",
+      "sharedOwner": "Vista partilhada — todos com o link veem as suas alterações.",
+      "sharedViewer": "Vista partilhada — vê o que o criador configura. Se alterar algo, passa a ser a sua própria vista.",
+      "viewNotFound": "Esta vista partilhada já não existe.",
+      "viewSaveFailed": "Não foi possível guardar a vista partilhada."
     }
   },
   "puzzles": {

@@ -22,9 +22,10 @@ import { LoadErrorComponent } from '@rh/shared/load-error/load-error.component';
 import { requireAccount } from '../../../core/require-account';
 import { LocalScorePipe } from '../tournament-table.util';
 import { LiveBoardCardComponent } from './live-board-card.component';
-import { LiveBoardSlot, LiveGame, LiveMatchSlot, LiveRoundLayout, LiveState, LiveStatus } from './live-boards.models';
+import { LiveBoardSlot, LiveGame, LiveMatchSlot, LiveRoundLayout, LiveState, LiveStatus, LiveStreamEvent, LiveViewState } from './live-boards.models';
 import { LiveBoardsService } from './live-boards.service';
-import { LIVE_LOST_GRACE_MS, joinParam, parseAddParam, parseExtParam, points, readLiveEval, samePlayer, scoreText, writeLiveEval } from './live-boards.util';
+import { LIVE_LOST_GRACE_MS, LIVE_VIEW_SAVE_MS, joinParam, parseAddParam, parseExtParam, points, readLiveEval, readViewKey, samePlayer, scoreText, writeLiveEval,
+  writeViewKey } from './live-boards.util';
 import { AddBoardDialogData, AddBoardDialogResult, AddBoardRow, LiveAddBoardDialogComponent } from './live-add-board-dialog.component';
 
 /** Ein Brett, wie es gezeichnet wird. `addKey` = Schlüssel in `?add=`/`?ext=` (nur hinzugefügte Bretter), `caption` = Zusatzzeile. */
@@ -78,7 +79,12 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
         </button>
       </div>
 
-      @if (loading()) {
+      @if (viewMissing()) {
+        <section class="live-hint" role="note">
+          <mat-icon aria-hidden="true">link_off</mat-icon>
+          <div class="live-hint-body"><p>{{ 'tournaments.live.viewNotFound' | translate }}</p></div>
+        </section>
+      } @else if (loading()) {
         <app-loading-spinner />
       } @else if (loadFailed()) {
         <app-load-error (retry)="load()" />
@@ -136,6 +142,13 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
             <mat-icon aria-hidden="true">{{ stateIcon() }}</mat-icon>{{ ('tournaments.live.state.' + state()) | translate }}
           </span>
         </div>
+        @if (viewToken()) {
+          <!-- Geteilte Ansicht (1.029.0): Besitzer weiß, dass alle mitsehen; Zuschauer, dass eine Änderung seine eigene Ansicht wird -->
+          <p class="view-note" role="note">
+            <mat-icon aria-hidden="true">{{ canEdit() ? 'group' : 'visibility' }}</mat-icon>
+            {{ (canEdit() ? 'tournaments.live.sharedOwner' : 'tournaments.live.sharedViewer') | translate }}
+          </p>
+        }
         @if (player(); as p) {
           <p class="filter-line">
             {{ 'tournaments.live.onlyPlayer' | translate:{ name: p } }}
@@ -231,6 +244,8 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
     .live-state { display: inline-flex; align-items: center; gap: 4px; color: var(--mat-sys-on-surface-variant); font-size: 0.9rem; }
     .live-state mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .live-state.is-live { color: var(--rh-success); font-weight: 500; }
+    .view-note { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 0.85rem; color: var(--mat-sys-on-surface-variant); }
+    .view-note mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .filter-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0 0 8px; }
     /* Kompakte Kopfzeilen über dem Raster: je Begegnung eine Zeile „Heim Ø  2,5 : 3,5  Gast Ø“, umbrechend nebeneinander */
     .match-strip { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 0 0 8px; }
@@ -280,6 +295,15 @@ export class LiveBoardsComponent implements OnInit {
   readonly received = signal<Record<string, number>>({});
   readonly now = signal(Date.now());
   readonly linkUrl = signal('');
+  /** Geteilte Ansicht (`/live/:token`, 1.029.0): Kennung, darf dieser Browser/dieses Konto ändern, gibt es sie (noch)? */
+  readonly viewToken = signal<string | null>(null);
+  readonly canEdit = signal(false);
+  readonly viewMissing = signal(false);
+  /** Eigener Balken-Schalter eines Zuschauers der geteilten Ansicht (`null` = wie die Ansicht). */
+  private evalOverride: boolean | null = null;
+  /** Besitzer: Änderung wartet aufs Speichern — `view`-Ereignisse überschreiben sie bis dahin nicht. */
+  private savePending = false;
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
   readonly linking = signal(false);
 
   private streamSub: Subscription | null = null;
@@ -450,12 +474,16 @@ export class LiveBoardsComponent implements OnInit {
   } as Record<LiveState, string>)[this.state()] ?? 'sync');
 
   ngOnInit(): void {
-    this.destroyRef.onDestroy(() => { this.stopStream(); this.clearLostTimer(); });
+    this.destroyRef.onDestroy(() => { this.stopStream(); this.clearLostTimer(); if (this.saveTimer) clearTimeout(this.saveTimer); });
     this.route.paramMap.subscribe(p => {
+      // Kurzer, lebender Link /live/:token (1.029.0): die Ansicht kommt vom Server, nicht aus der Adresse.
+      const token = p.get('token');
+      if (token) { if (token !== this.viewToken()) this.loadView(token); return; }
       const id = p.get('id') ?? '';
       if (id !== this.id) { this.id = id; this.load(); }
     });
     this.route.queryParamMap.subscribe(q => {
+      if (this.viewToken()) return;
       const r = Number(q.get('round'));
       this.team.set(q.get('team'));
       this.player.set(q.get('player'));
@@ -484,9 +512,75 @@ export class LiveBoardsComponent implements OnInit {
     });
   }
 
+  /** Geteilte Ansicht laden: Kennung, Bearbeitungsrecht (Schlüssel dieses Browsers bzw. Konto), dann das Turnier. */
+  private loadView(token: string): void {
+    this.viewToken.set(token);
+    this.loading.set(true);
+    this.loadFailed.set(false);
+    this.viewMissing.set(false);
+    this.api.getView(token, readViewKey(token)).subscribe({
+      next: r => {
+        this.canEdit.set(r.canEdit);
+        this.id = r.tournamentId;
+        this.applyView(r.view);
+        this.load();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.loading.set(false);
+        if (err.status === 404) this.viewMissing.set(true); else this.loadFailed.set(true);
+      },
+    });
+  }
+
+  /** Die Ansicht, wie sie gerade eingestellt ist (für Anlegen/Ändern der geteilten Ansicht). */
+  currentView(): LiveViewState {
+    return { round: this.round(), team: this.team(), player: this.player(), add: this.added(), ext: this.ext(), eval: this.evalOn() };
+  }
+
+  /** Stand einer geteilten Ansicht übernehmen (vom Server oder als eigene Änderung des Besitzers). Neue Runde → Bretter leeren. */
+  private applyView(v: LiveViewState): void {
+    const round = v.round ?? this.status()?.currentRound ?? null;
+    if (round !== this.round()) { this.layout.set(null); this.games.set({}); }
+    this.round.set(round);
+    this.team.set(v.team);
+    this.player.set(v.player);
+    this.added.set(parseAddParam(v.add.join(',')));
+    this.ext.set(parseExtParam(v.ext.join(',')));
+    // Der eigene Balken-Schalter eines Zuschauers bleibt bei ihm (gilt nur für seinen Strom).
+    if (this.evalOverride === null) this.evalOn.set(v.eval);
+  }
+
+  /**
+   * Änderung an einer geteilten Ansicht. Besitzer: sofort hier zeigen und entprellt speichern — alle Zuschauer folgen über
+   * ihren Strom. Zuschauer: die Änderung macht daraus seine EIGENE Ansicht (lange Adresse), die geteilte bleibt, wie sie ist.
+   */
+  private changeView(patch: Partial<LiveViewState>): void {
+    const next = { ...this.currentView(), ...patch };
+    if (!this.canEdit()) {
+      const tree = this.router.createUrlTree(['/tournaments', this.id, 'live'], { queryParams: this.longParams(next) });
+      void this.router.navigateByUrl(tree);
+      return;
+    }
+    this.applyView(next);
+    this.savePending = true;
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      const token = this.viewToken()!;
+      this.api.updateView(token, this.currentView(), readViewKey(token)).subscribe({
+        next: () => { if (!this.saveTimer) this.savePending = false; },
+        error: () => {
+          if (!this.saveTimer) this.savePending = false;
+          this.snackbar.warn(this.translate.instant('tournaments.live.viewSaveFailed'));
+        },
+      });
+    }, LIVE_VIEW_SAVE_MS);
+  }
+
   /** (Neu) verbinden, wenn sich Runde oder Balken geändert haben. */
   private connect(): void {
     const s = this.status();
+    if (this.viewToken()) { this.connectView(); return; }
     const round = this.round();
     if (!s?.linked || round === null) { this.stopStream(); return; }
     // Filter der Ansicht gehört zum Strom (der Server bewertet nur Sichtbares, 1.027.0) — ein Wechsel verbindet neu, still.
@@ -498,48 +592,70 @@ export class LiveBoardsComponent implements OnInit {
     this.streamKey = key;
     if (!sameRound) { this.layout.set(null); this.games.set({}); }
     this.setState('connecting');
-    this.streamSub = this.api.stream(this.id, round, this.evalOn(), this.ext(), view).subscribe(e => {
-      const now = Date.now();
-      switch (e.type) {
-        case 'snapshot': {
-          const map: Record<string, LiveGame> = {};
-          const rec: Record<string, number> = {};
-          for (const g of e.games) { map[g.id] = g; rec[g.id] = now; }
-          this.games.set(map);
-          this.received.set(rec);
-          this.layout.set(e.layout);
-          this.setState(e.state);
-          break;
-        }
-        case 'layout': this.layout.set(e.layout); break;
-        case 'game':
-          this.games.update(m => ({ ...m, [e.game.id]: e.game }));
-          this.received.update(m => ({ ...m, [e.game.id]: now }));
-          break;
-        case 'state': this.setState(e.state); break;
-        case 'ext-snapshot': {
-          const map: Record<string, LiveGame> = {};
-          for (const g of e.games) map[g.id] = g;
-          this.extState.update(m => ({ ...m, [e.round]: { tourName: e.tourName, roundName: e.roundName, url: e.url, state: e.state, games: map, error: null } }));
-          this.received.update(m => ({ ...m, ...Object.fromEntries(e.games.map(g => [g.id, now])) }));
-          break;
-        }
-        case 'ext-game':
-          this.extState.update(m => m[e.round] ? { ...m, [e.round]: { ...m[e.round], games: { ...m[e.round].games, [e.game.id]: e.game } } } : m);
-          this.received.update(m => ({ ...m, [e.game.id]: now }));
-          break;
-        case 'ext-state':
-          this.extState.update(m => m[e.round] ? { ...m, [e.round]: { ...m[e.round], state: e.state } } : m);
-          break;
-        case 'ext-error': {
-          const text = this.translate.instant(`tournaments.live.extError.${e.code === 'live_ext_limit' ? 'limit' : 'notFound'}`);
-          const empty: ExtRound = { tourName: '', roundName: '', url: '', state: 'offline', games: {}, error: null };
-          this.extState.update(m => ({ ...m, [e.round]: { ...(m[e.round] ?? empty), error: text } }));
-          break;
-        }
-      }
-    });
+    this.streamSub = this.api.stream(this.id, round, this.evalOn(), this.ext(), view).subscribe(e => this.onEvent(e));
     this.startTicker();
+  }
+
+  /** Strom einer geteilten Ansicht: EINE Verbindung, der Server hängt bei Änderungen selbst um. Neu nur bei eigenem Balken. */
+  private connectView(): void {
+    if (!this.status()?.linked) { this.stopStream(); return; }
+    const key = `view|${this.viewToken()}|${this.evalOverride}`;
+    if (key === this.streamKey && this.streamSub) return;
+    this.stopStream();
+    this.streamKey = key;
+    this.setState('connecting');
+    this.streamSub = this.api.viewStream(this.viewToken()!, this.evalOverride).subscribe(e => this.onEvent(e));
+    this.startTicker();
+  }
+
+  private onEvent(e: LiveStreamEvent): void {
+    const now = Date.now();
+    switch (e.type) {
+      case 'view':
+        // Eigene, noch nicht gespeicherte Änderung des Besitzers geht vor (sonst sprängen die Bretter kurz zurück).
+        if (!this.savePending) this.applyView(e.view);
+        break;
+      case 'view-gone':
+        this.viewMissing.set(true);
+        this.stopStream();
+        break;
+      case 'snapshot': {
+        const map: Record<string, LiveGame> = {};
+        const rec: Record<string, number> = {};
+        for (const g of e.games) { map[g.id] = g; rec[g.id] = now; }
+        this.games.set(map);
+        this.received.set(rec);
+        this.layout.set(e.layout);
+        this.setState(e.state);
+        break;
+      }
+      case 'layout': this.layout.set(e.layout); break;
+      case 'game':
+        this.games.update(m => ({ ...m, [e.game.id]: e.game }));
+        this.received.update(m => ({ ...m, [e.game.id]: now }));
+        break;
+      case 'state': this.setState(e.state); break;
+      case 'ext-snapshot': {
+        const map: Record<string, LiveGame> = {};
+        for (const g of e.games) map[g.id] = g;
+        this.extState.update(m => ({ ...m, [e.round]: { tourName: e.tourName, roundName: e.roundName, url: e.url, state: e.state, games: map, error: null } }));
+        this.received.update(m => ({ ...m, ...Object.fromEntries(e.games.map(g => [g.id, now])) }));
+        break;
+      }
+      case 'ext-game':
+        this.extState.update(m => m[e.round] ? { ...m, [e.round]: { ...m[e.round], games: { ...m[e.round].games, [e.game.id]: e.game } } } : m);
+        this.received.update(m => ({ ...m, [e.game.id]: now }));
+        break;
+      case 'ext-state':
+        this.extState.update(m => m[e.round] ? { ...m, [e.round]: { ...m[e.round], state: e.state } } : m);
+        break;
+      case 'ext-error': {
+        const text = this.translate.instant(`tournaments.live.extError.${e.code === 'live_ext_limit' ? 'limit' : 'notFound'}`);
+        const empty: ExtRound = { tourName: '', roundName: '', url: '', state: 'offline', games: {}, error: null };
+        this.extState.update(m => ({ ...m, [e.round]: { ...(m[e.round] ?? empty), error: text } }));
+        break;
+      }
+    }
   }
 
   /**
@@ -575,9 +691,13 @@ export class LiveBoardsComponent implements OnInit {
     this.ticker = setInterval(() => this.now.set(Date.now()), 1000);
   }
 
-  setRound(r: number): void { void this.router.navigate([], { relativeTo: this.route, queryParams: { round: r }, queryParamsHandling: 'merge' }); }
+  setRound(r: number): void {
+    if (this.viewToken()) { this.changeView({ round: r }); return; }
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { round: r }, queryParamsHandling: 'merge' });
+  }
 
   setFilter(name: 'team' | 'player', value: string | null): void {
+    if (this.viewToken()) { this.changeView({ [name]: value }); return; }
     void this.router.navigate([], { relativeTo: this.route, queryParams: { [name]: value }, queryParamsHandling: 'merge' });
   }
 
@@ -591,6 +711,7 @@ export class LiveBoardsComponent implements OnInit {
 
   /** Auswahl in die Adresse — der geteilte Link zeigt genau diese Bretter, auch für Gäste. */
   setAdded(added: string[], ext: string[]): void {
+    if (this.viewToken()) { this.changeView({ add: parseAddParam(added.join(',')), ext: parseExtParam(ext.join(',')) }); return; }
     void this.router.navigate([], { relativeTo: this.route, queryParamsHandling: 'merge',
       queryParams: { add: joinParam(parseAddParam(added.join(','))), ext: joinParam(parseExtParam(ext.join(','))) } });
   }
@@ -617,6 +738,14 @@ export class LiveBoardsComponent implements OnInit {
 
   /** Balken an/aus: Gerätevorliebe UND Adresse (`?eval=1|0`), damit ein kopierter Link dieselbe Ansicht zeigt. */
   setEval(on: boolean): void {
+    if (this.viewToken()) {
+      if (this.canEdit()) { this.changeView({ eval: on }); return; }
+      // Zuschauer: nur für ihn (eigener Strom mit eval=…), die geteilte Ansicht bleibt.
+      this.evalOverride = on;
+      this.evalOn.set(on);
+      this.connect();
+      return;
+    }
     this.evalOn.set(on);
     writeLiveEval(on);
     this.connect();
@@ -625,16 +754,38 @@ export class LiveBoardsComponent implements OnInit {
 
   /** Link dieser Ansicht: Runde immer ausdrücklich (sonst zeigte er morgen die nächste), Mannschaft/Spieler, Balken nur wenn an. */
   shareUrl(): string {
-    const tree = this.router.createUrlTree(['/tournaments', this.id, 'live'], {
-      queryParams: { round: this.round(), team: this.team(), player: this.player(), add: joinParam(this.added()), ext: joinParam(this.ext()),
-        eval: this.evalOn() ? 1 : null },
-    });
+    const tree = this.router.createUrlTree(['/tournaments', this.id, 'live'], { queryParams: this.longParams(this.currentView()) });
     return window.location.origin + this.router.serializeUrl(tree);
   }
 
-  /** Am Handy das Teilen-Blatt, sonst Zwischenablage mit Snackbar (DESIGN 5.x „Link teilen“, wie die Partie-Links). */
+  /** Teile der langen Adresse (bleibt gültig; Rückfall, wenn das Anlegen der geteilten Ansicht scheitert). */
+  private longParams(v: LiveViewState): Record<string, string | number | null> {
+    return { round: v.round, team: v.team, player: v.player, add: joinParam(v.add), ext: joinParam(v.ext), eval: v.eval ? 1 : null };
+  }
+
+  /** Kurzer, lebender Link einer geteilten Ansicht. */
+  viewUrl(token: string): string { return `${window.location.origin}/live/${token}`; }
+
+  /**
+   * „Link teilen“ (1.029.0, Wunsch 2026-11-26 „einfach einen Hash“): beim ersten Mal wird die Ansicht als geteilte Ansicht
+   * angelegt (Schlüssel bleibt in diesem Browser) und die Seite wechselt auf `/live/<token>` — jede weitere Änderung sehen
+   * alle mit dem Link. Danach teilt der Knopf einfach den kurzen Link. Scheitert das Anlegen, geht die lange Adresse.
+   */
   share(): void {
-    const url = this.shareUrl();
+    const token = this.viewToken();
+    if (token) { this.shareLink(this.viewUrl(token)); return; }
+    this.api.createView(this.id, this.currentView()).subscribe({
+      next: r => {
+        if (r.editKey) writeViewKey(r.token, r.editKey);
+        this.shareLink(this.viewUrl(r.token));
+        void this.router.navigate(['/live', r.token], { replaceUrl: true });
+      },
+      error: () => this.shareLink(this.shareUrl()),
+    });
+  }
+
+  /** Am Handy das Teilen-Blatt, sonst Zwischenablage mit Snackbar (DESIGN 5.x „Link teilen“, wie die Partie-Links). */
+  private shareLink(url: string): void {
     const copy = () => void (navigator.clipboard?.writeText(url) ?? Promise.reject(new Error('no clipboard'))).then(
       () => this.snackbar.copy(this.translate.instant('tournaments.live.shareCopied')),
       () => this.snackbar.warn(url),

@@ -107,4 +107,26 @@ export type LiveStreamEvent =
   | { type: 'ext-snapshot'; round: string; tourName: string; roundName: string; url: string; state: LiveState; games: LiveGame[] }
   | { type: 'ext-game'; round: string; game: LiveGame }
   | { type: 'ext-state'; round: string; state: LiveState }
-  | { type: 'ext-error'; round: string; code: string };
+  | { type: 'ext-error'; round: string; code: string }
+  /** Geteilte Ansicht (1.029.0): Stand der Ansicht — zu Beginn und nach jeder Änderung des Besitzers, danach folgt ein neuer `snapshot`. */
+  | { type: 'view'; token: string; tournamentId: string; view: LiveViewState }
+  | { type: 'view-gone' };
+
+/** Eine Live-Ansicht (wie die lange Adresse): `round` null = die laufende Runde. */
+export interface LiveViewState {
+  round: number | null;
+  team: string | null;
+  player: string | null;
+  add: string[];
+  ext: string[];
+  eval: boolean;
+}
+
+/** Antwort von `/api/live-boards/views…`; `editKey` nur beim Anlegen. */
+export interface LiveViewResponse {
+  token: string;
+  tournamentId: string;
+  view: LiveViewState;
+  canEdit: boolean;
+  editKey?: string | null;
+}

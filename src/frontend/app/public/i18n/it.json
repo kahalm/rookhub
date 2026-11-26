@@ -1633,7 +1633,11 @@
       },
       "openAnalysis": "Apri sulla scacchiera di analisi (nuova scheda)",
       "moveN": "Mossa {{move}}",
-      "moveTipEnd": "Ultima mossa della partita"
+      "moveTipEnd": "Ultima mossa della partita",
+      "sharedOwner": "Vista condivisa — chiunque abbia il link vede le tue modifiche.",
+      "sharedViewer": "Vista condivisa — vedi ciò che imposta il creatore. Se cambi qualcosa, diventa la tua vista.",
+      "viewNotFound": "Questa vista condivisa non esiste più.",
+      "viewSaveFailed": "Impossibile salvare la vista condivisa."
     }
   },
   "puzzles": {

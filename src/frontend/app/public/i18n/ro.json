@@ -1633,7 +1633,11 @@
       },
       "openAnalysis": "Deschide pe tabla de analiză (filă nouă)",
       "moveN": "Mutarea {{move}}",
-      "moveTipEnd": "Ultima mutare a partidei"
+      "moveTipEnd": "Ultima mutare a partidei",
+      "sharedOwner": "Vizualizare partajată — toți cei cu linkul văd modificările.",
+      "sharedViewer": "Vizualizare partajată — vezi ce setează creatorul. Dacă schimbi ceva, devine propria ta vizualizare.",
+      "viewNotFound": "Această vizualizare partajată nu mai există.",
+      "viewSaveFailed": "Vizualizarea partajată nu a putut fi salvată."
     }
   },
   "puzzles": {

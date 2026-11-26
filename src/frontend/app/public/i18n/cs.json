@@ -1633,7 +1633,11 @@
       },
       "openAnalysis": "Otevřít na analytické šachovnici (nová karta)",
       "moveN": "Tah {{move}}",
-      "moveTipEnd": "Poslední tah partie"
+      "moveTipEnd": "Poslední tah partie",
+      "sharedOwner": "Sdílené zobrazení — změny uvidí všichni s odkazem.",
+      "sharedViewer": "Sdílené zobrazení — vidíš, co nastaví autor. Když něco změníš, stane se z něj tvé vlastní zobrazení.",
+      "viewNotFound": "Toto sdílené zobrazení už neexistuje.",
+      "viewSaveFailed": "Sdílené zobrazení se nepodařilo uložit."
     }
   },
   "puzzles": {

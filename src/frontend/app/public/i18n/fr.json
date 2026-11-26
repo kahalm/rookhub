@@ -1633,7 +1633,11 @@
       },
       "openAnalysis": "Ouvrir sur l’échiquier d’analyse (nouvel onglet)",
       "moveN": "Coup {{move}}",
-      "moveTipEnd": "Dernier coup de la partie"
+      "moveTipEnd": "Dernier coup de la partie",
+      "sharedOwner": "Vue partagée — tous ceux qui ont le lien voient vos changements.",
+      "sharedViewer": "Vue partagée — vous voyez ce que règle son créateur. Si vous changez quelque chose, elle devient votre propre vue.",
+      "viewNotFound": "Cette vue partagée n’existe plus.",
+      "viewSaveFailed": "La vue partagée n’a pas pu être enregistrée."
     }
   },
   "puzzles": {

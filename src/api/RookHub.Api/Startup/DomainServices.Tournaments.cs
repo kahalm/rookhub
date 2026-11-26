@@ -46,6 +46,9 @@ public static partial class DomainServicesSetup
             Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxExternalRounds") ?? 10, 0, 200)));
         services.AddScoped<ILiveTournamentData, CrawlerLiveTournamentData>();
         services.AddScoped<TournamentLiveService>();
+        // Geteilte, lebende Ansichten (1.029.0): Änderungen wecken die offenen Ströme im selben Prozess.
+        services.AddSingleton<LiveViewChanges>();
+        services.AddScoped<SharedLiveViews>();
     }
 
     /// <summary>Turnierverzeichnis: Sweeps je Quelle, Umkreis-Auflösung, Abfrage.</summary>

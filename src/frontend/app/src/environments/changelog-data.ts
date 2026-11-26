@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.029.0", date: "2026-11-26", changes: [
+    { en: "Live boards: „Share link“ now shares a short live link (/live/…) instead of the long address — when you add or remove boards or switch round, team or engine bar, everyone with the link sees it right away without reloading. Works without an account too; others who change something get their own view. Old long links keep working.",
+      de: "Live-Bretter: „Link teilen“ teilt jetzt einen kurzen, lebenden Link (/live/…) statt der langen Adresse — fügst du Bretter hinzu, nimmst sie heraus oder stellst Runde, Mannschaft oder Engine-Balken um, sehen das alle mit dem Link sofort, ohne neu zu laden. Geht auch ohne Konto; wer als Zuschauer etwas ändert, bekommt seine eigene Ansicht. Alte lange Links gelten weiter." },
+  ] },
   { version: "1.028.1", date: "2026-11-26", changes: [
     { en: "Live boards: when Lichess throttles us (429), the page keeps working with the last known round list instead of reporting „no linked broadcast“ for the whole round (which made every browser reconnect and ask Lichess even more often). The Lichess cloud evaluation is asked at most every 3 s (was 1 s); our own engines evaluate to depth 30 anyway.",
       de: "Live-Bretter: Drosselt uns Lichess (429), läuft die Seite mit der letzten bekannten Rundenliste weiter, statt für die ganze Runde „keine Übertragung verknüpft“ zu melden (worauf jeder Browser neu verband und Lichess noch öfter fragte). Die Lichess-Cloud-Bewertung wird höchstens alle 3 s abgefragt (vorher 1 s); die eigenen Engines rechnen ohnehin bis Tiefe 30." },

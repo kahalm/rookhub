@@ -20,6 +20,8 @@ internal static class TournamentDataEraser
         // Wen jemand verfolgt hat, ist eine Auskunft ueber ihn — und ueber die Verfolgten. Der
         // geholte Verlauf bleibt (der gehoert dem Spieler, nicht dem Konto), die Liste geht.
         db.TrackedPlayers.RemoveRange(await db.TrackedPlayers.Where(t => t.UserId == userId).ToListAsync());
+        // Geteilte Live-Ansichten (1.029.0): wer sie angelegt hat, ist eine Auskunft über ihn — die Links enden mit dem Konto.
+        db.SharedLiveViews.RemoveRange(await db.SharedLiveViews.Where(v => v.OwnerUserId == userId).ToListAsync());
     }
 
     /// <summary>Turnier-Runden-Monitor.</summary>

@@ -163,6 +163,14 @@ public static class RateLimitPartitions
 
     public const string DirectoryReadPolicy = "directory-read";
 
+    /// <summary>Geteilte Live-Ansicht anlegen/ändern (1.029.0, auch ohne Konto): ein Besitzer, der Bretter umstellt, schreibt
+    /// entprellt — 30 je Minute je Konto bzw. Adresse trägt das, hält aber ein Vollschreiben der Tabelle klein.</summary>
+    public const string LiveViewWritePolicy = "live-view-write";
+    public const int LiveViewWritePermitPerMinute = 30;
+
+    public static RateLimitPartition<string> LiveViewWrite(HttpContext ctx, int scale) =>
+        FixedWindow(UserOrIp(ctx), LiveViewWritePermitPerMinute * scale);
+
     public static RateLimitPartition<string> DirectoryRead(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), DirectoryReadPermitPerMinute * scale);
 

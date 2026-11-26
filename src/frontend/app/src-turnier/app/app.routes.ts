@@ -34,6 +34,8 @@ export const routes: Routes = [
   { path: 'tournaments/calendar/:id', loadComponent: () => import('./features/tournament-directory/tournament-directory-detail.component').then(m => m.TournamentDirectoryDetailComponent) },
   // Live-Bretter (1.014.0): die Partien einer Runde aus der verknüpften Lichess-Übertragung — ohne Anmeldung.
   { path: 'tournaments/:id/live', loadComponent: () => import('./features/tournaments/live/live-boards.component').then(m => m.LiveBoardsComponent) },
+  // Geteilte, lebende Live-Ansicht (1.029.0): kurzer Link, folgt den Änderungen des Erstellers
+  { path: 'live/:token', loadComponent: () => import('./features/tournaments/live/live-boards.component').then(m => m.LiveBoardsComponent) },
   // reloadOnParamChange: die Gruppen-Umschaltung wechselt nur die Id — die Seite muss neu laden.
   { path: 'tournaments/:id', loadComponent: () => import('./features/tournaments/tournament-detail.component').then(m => m.TournamentDetailComponent), data: { reloadOnParamChange: true } },
 

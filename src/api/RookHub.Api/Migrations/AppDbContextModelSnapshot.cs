@@ -8106,6 +8106,58 @@ namespace RookHub.Api.Migrations
                     b.ToTable("SharedLines");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.SharedLiveView", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CrawlerTournamentId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EditKeyHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime>("LastViewedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("OwnerUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ViewJson")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("varchar(8000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastViewedAt");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("SharedLiveViews");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.SharedPuzzleAttempt", b =>
                 {
                     b.Property<int>("Id")
@@ -11970,6 +12022,14 @@ namespace RookHub.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.SharedLiveView", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.TacticCandidate", b =>

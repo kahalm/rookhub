@@ -531,7 +531,7 @@ public class DeploymentConfigTests
         // Seit 2026-11-22 auch die geteilte Vereinspartie /cg/{token} (vorher GAR KEINE Vorschau, die Weiche kannte cg nicht).
         // Seit 2026-11-22 auch Trainerstunde /tl/, anonyme Zusammenfassung /ga/ und Meisterpartie /explorer/game/masters/.
         // Seit 1.024.0 auch die Live-Bretter der Turnierseite /tournaments/{id}/live (geteilte Ansicht für Gäste).
-        Assert.Contains("location ~ ^/(g|cg|t|puzzles|tournaments/calendar|l|r|w|weekly|s|partie|tl|ga|explorer/game/masters)(/|$)|^/analysis$|^/tournaments/[A-Za-z0-9]+/live$ {", nginx);
+        Assert.Contains("location ~ ^/(g|cg|t|puzzles|tournaments/calendar|l|r|w|weekly|s|partie|tl|ga|explorer/game/masters)(/|$)|^/analysis$|^/tournaments/[A-Za-z0-9]+/live$|^/live/[A-Za-z0-9]+$ {", nginx);
 
         Assert.Contains("proxy_intercept_errors on;", body);
         var errorPage = Regex.Match(body, @"error_page ([0-9 ]+)= @og_fallback;");

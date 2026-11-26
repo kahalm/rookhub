@@ -1,7 +1,8 @@
 import { Injectable, InjectionToken, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ExternalRoundView, LiveState, LiveStatus, LiveStreamEvent } from './live-boards.models';
+import { HttpHeaders } from '@angular/common/http';
+import { ExternalRoundView, LiveState, LiveStatus, LiveStreamEvent, LiveViewResponse, LiveViewState } from './live-boards.models';
 
 /** Baut die EventSource (Tests ersetzen sie). Chrome 111 (Boox) kann EventSource seit Jahren. */
 export const EVENT_SOURCE_FACTORY = new InjectionToken<(url: string) => EventSource>('EVENT_SOURCE_FACTORY', {
@@ -52,7 +53,37 @@ export class LiveBoardsService {
     // alle 29–60 s ab und die Seite zeigte „Verbindung unterbrochen“, obwohl der Server-Strom hielt (Prod-Log 26.11.).
     const q = [withEval ? 'eval=true' : '', ...filter, extra.length ? `extra=${extra.map(encodeURIComponent).join(',')}` : '', 'ngsw-bypass=1']
       .filter(Boolean).join('&');
-    const url = `/api/live-boards/${encodeURIComponent(id)}/rounds/${round}/stream?${q}`;
+    return this.events(`/api/live-boards/${encodeURIComponent(id)}/rounds/${round}/stream?${q}`);
+  }
+
+  // ── Geteilte, lebende Ansicht (1.029.0) ──────────────────────────────────────────────────────────────────────────
+
+  private keyHeaders(key: string | null | undefined): { headers?: HttpHeaders } {
+    return key ? { headers: new HttpHeaders({ 'X-Live-View-Key': key }) } : {};
+  }
+
+  createView(tournamentId: string, view: LiveViewState): Observable<LiveViewResponse> {
+    return this.http.post<LiveViewResponse>('/api/live-boards/views', { tournamentId, view });
+  }
+
+  getView(token: string, key: string | null): Observable<LiveViewResponse> {
+    return this.http.get<LiveViewResponse>(`/api/live-boards/views/${encodeURIComponent(token)}`, this.keyHeaders(key));
+  }
+
+  updateView(token: string, view: LiveViewState, key: string | null): Observable<LiveViewResponse> {
+    return this.http.put<LiveViewResponse>(`/api/live-boards/views/${encodeURIComponent(token)}`, { view }, this.keyHeaders(key));
+  }
+
+  /**
+   * Strom einer geteilten Ansicht: der Server schickt `view` und hängt bei jeder Änderung des Besitzers selbst um (neuer
+   * `view` + `snapshot`) — der Browser verbindet NICHT neu. `evalOverride` = eigener Balken-Schalter dieses Zuschauers.
+   */
+  viewStream(token: string, evalOverride: boolean | null): Observable<LiveStreamEvent> {
+    const q = [evalOverride === null ? '' : `eval=${evalOverride}`, 'ngsw-bypass=1'].filter(Boolean).join('&');
+    return this.events(`/api/live-boards/views/${encodeURIComponent(token)}/stream?${q}`);
+  }
+
+  private events(url: string): Observable<LiveStreamEvent> {
     return new Observable<LiveStreamEvent>(sub => {
       let source: EventSource | null = null;
       let timer: ReturnType<typeof setTimeout> | null = null;
@@ -80,6 +111,15 @@ export class LiveBoardsService {
         es.addEventListener('state', (e: Event) => {
           const d = parse(e as MessageEvent) as { state: LiveState } | null;
           if (d?.state) sub.next({ type: 'state', state: d.state });
+        });
+        es.addEventListener('view', (e: Event) => {
+          const d = parse(e as MessageEvent) as Omit<Extract<LiveStreamEvent, { type: 'view' }>, 'type'> | null;
+          if (d?.view) sub.next({ type: 'view', ...d });
+        });
+        es.addEventListener('view-gone', () => {
+          sub.next({ type: 'view-gone' });
+          closed = true;
+          es.close();
         });
         // Fremde Runden (1.025.0): je Ereignis mit `round` = Lichess-Runde.
         for (const type of ['ext-snapshot', 'ext-game', 'ext-state', 'ext-error'] as const) {

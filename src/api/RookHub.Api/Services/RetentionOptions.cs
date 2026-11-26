@@ -28,6 +28,12 @@ public sealed record RetentionOptions
     /// <summary><c>Retention:VisitorDays</c> — Tageszeilen der Besucher-Herkunft (<c>VisitorDays</c>) verfallen danach.</summary>
     public int VisitorDays { get; init; } = 400;
 
+    /// <summary><c>Retention:LiveViewDays</c> — geteilte Live-Ansichten (<c>SharedLiveViews</c>) ohne Aufruf verfallen danach.</summary>
+    public int LiveViewDays { get; init; } = 30;
+
+    /// <summary><c>Retention:LiveViewCap</c> — höchstens so viele geteilte Live-Ansichten; darüber gehen die am längsten nicht gesehenen.</summary>
+    public int LiveViewCap { get; init; } = 50_000;
+
     /// <summary>Werte aus der Konfiguration (Vorgabe bei fehlend/≤ 0/unlesbar).</summary>
     public static RetentionOptions From(IConfiguration? config)
     {
@@ -42,6 +48,8 @@ public sealed record RetentionOptions
             ScoresheetFailedDays = Read(nameof(ScoresheetFailedDays), d.ScoresheetFailedDays),
             ScoresheetOpenAnonymousDays = Read(nameof(ScoresheetOpenAnonymousDays), d.ScoresheetOpenAnonymousDays),
             VisitorDays = Read(nameof(VisitorDays), d.VisitorDays),
+            LiveViewDays = Read(nameof(LiveViewDays), d.LiveViewDays),
+            LiveViewCap = Read(nameof(LiveViewCap), d.LiveViewCap),
         };
     }
 }

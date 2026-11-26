@@ -1633,7 +1633,11 @@
       },
       "openAnalysis": "Öppna på analysbrädet (ny flik)",
       "moveN": "Drag {{move}}",
-      "moveTipEnd": "Partiets sista drag"
+      "moveTipEnd": "Partiets sista drag",
+      "sharedOwner": "Delad vy — alla med länken ser dina ändringar.",
+      "sharedViewer": "Delad vy — du ser det som skaparen ställer in. Ändrar du något blir det din egen vy.",
+      "viewNotFound": "Den här delade vyn finns inte längre.",
+      "viewSaveFailed": "Den delade vyn kunde inte sparas."
     }
   },
   "puzzles": {

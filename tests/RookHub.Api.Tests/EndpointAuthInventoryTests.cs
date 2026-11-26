@@ -77,6 +77,10 @@ public class EndpointAuthInventoryTests
         "GET /api/live-boards/{id}/rounds/{round:int}/stream",       // LiveBoardsController.Stream
         "GET /api/live-boards/external",                             // LiveBoardsController.External (fremde Übertragung zur Auswahl, 1.025.0)
         "GET /api/live-boards/pgn/{roundId}/{gameId}",               // LiveBoardsController.GamePgn (Analysebrett ohne Anmeldung, 1.026.0)
+        "POST /api/live-boards/views",                               // LiveBoardsController.CreateView (geteilte Ansicht auch für Gäste, 1.029.0; live-view-write)
+        "GET /api/live-boards/views/{token}",                        // LiveBoardsController.GetView
+        "PUT /api/live-boards/views/{token}",                        // LiveBoardsController.UpdateView (nur Besitzer: Konto oder X-Live-View-Key)
+        "GET /api/live-boards/views/{token}/stream",                 // LiveBoardsController.ViewStream (SSE, folgt Änderungen)
         "GET /api/kids/courses",                                     // KidsController.GetCourses
         "GET /api/kids/courses/{bookId:int}/puzzles",                // KidsController.GetCoursePuzzles
         "GET /api/kids/language-hint",                               // KidsController.GetLanguageHint (Land der IP, lokal nachgeschlagen)

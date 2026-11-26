@@ -141,3 +141,28 @@ export function liveMoveNumber(game: Pick<LiveGame, 'plies' | 'finished'>): numb
   if (!game.plies || game.plies < 1) return null;
   return game.finished ? Math.ceil(game.plies / 2) : Math.floor(game.plies / 2) + 1;
 }
+
+/** Bearbeitungsschlüssel geteilter Ansichten, die dieser Browser angelegt hat (`token → key`, Gerätevorliebe `device`:
+ *  ein Gast soll seine Ansicht weiter ändern können; höchstens {@link LIVE_VIEW_KEYS_MAX}, älteste raus). */
+export const LIVE_VIEW_KEYS = 'rookhub_live_view_keys';
+export const LIVE_VIEW_KEYS_MAX = 50;
+
+function readViewKeys(): [string, string][] {
+  try {
+    const v = JSON.parse(localStorage.getItem(LIVE_VIEW_KEYS) ?? '[]') as unknown;
+    return Array.isArray(v) ? v.filter((x): x is [string, string] => Array.isArray(x) && typeof x[0] === 'string' && typeof x[1] === 'string') : [];
+  } catch { return []; }
+}
+
+export function readViewKey(token: string): string | null {
+  return readViewKeys().find(([t]) => t === token)?.[1] ?? null;
+}
+
+/** Merkt den Schlüssel; `false` = Speicher gesperrt/voll (die Ansicht lässt sich dann nur bis zum Neuladen ändern). */
+export function writeViewKey(token: string, key: string): boolean {
+  const list = [[token, key] as [string, string], ...readViewKeys().filter(([t]) => t !== token)].slice(0, LIVE_VIEW_KEYS_MAX);
+  try { localStorage.setItem(LIVE_VIEW_KEYS, JSON.stringify(list)); return true; } catch { return false; }
+}
+
+/** Besitzer einer geteilten Ansicht: so lange nach der letzten Änderung, bis sie gespeichert wird (mehrere Klicks = ein PUT). */
+export const LIVE_VIEW_SAVE_MS = 400;

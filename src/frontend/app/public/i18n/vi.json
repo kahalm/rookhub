@@ -1633,7 +1633,11 @@
       },
       "openAnalysis": "Mở trên bàn phân tích (thẻ mới)",
       "moveN": "Nước {{move}}",
-      "moveTipEnd": "Nước đi cuối của ván"
+      "moveTipEnd": "Nước đi cuối của ván",
+      "sharedOwner": "Chế độ xem chia sẻ — mọi người có liên kết đều thấy thay đổi của bạn.",
+      "sharedViewer": "Chế độ xem chia sẻ — bạn thấy những gì người tạo thiết lập. Nếu bạn thay đổi, nó thành chế độ xem riêng của bạn.",
+      "viewNotFound": "Chế độ xem chia sẻ này không còn nữa.",
+      "viewSaveFailed": "Không thể lưu chế độ xem chia sẻ."
     }
   },
   "puzzles": {

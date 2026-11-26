@@ -1404,7 +1404,11 @@
       },
       "openAnalysis": "Megnyitás az elemzőtáblán (új lap)",
       "moveN": "{{move}}. lépés",
-      "moveTipEnd": "A játszma utolsó lépése"
+      "moveTipEnd": "A játszma utolsó lépése",
+      "sharedOwner": "Megosztott nézet — a változtatásokat mindenki látja, akinél a link van.",
+      "sharedViewer": "Megosztott nézet — azt látod, amit a létrehozója beállít. Ha módosítasz, saját nézeted lesz belőle.",
+      "viewNotFound": "Ez a megosztott nézet már nem létezik.",
+      "viewSaveFailed": "A megosztott nézetet nem sikerült menteni."
     }
   },
   "puzzles": {

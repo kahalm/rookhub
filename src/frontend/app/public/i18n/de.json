@@ -1701,7 +1701,11 @@
       },
       "openAnalysis": "Auf dem Analysebrett öffnen (neuer Tab)",
       "moveN": "Zug {{move}}",
-      "moveTipEnd": "Letzter Zug der Partie"
+      "moveTipEnd": "Letzter Zug der Partie",
+      "sharedOwner": "Geteilte Ansicht — Änderungen sehen alle mit dem Link.",
+      "sharedViewer": "Geteilte Ansicht — du siehst, was der Ersteller einstellt. Änderst du etwas, wird daraus deine eigene Ansicht.",
+      "viewNotFound": "Diese geteilte Ansicht gibt es nicht mehr.",
+      "viewSaveFailed": "Die geteilte Ansicht konnte nicht gespeichert werden."
     }
   },
   "puzzles": {

@@ -256,3 +256,18 @@ internal sealed class TournamentBroadcastLinkConfiguration : IEntityTypeConfigur
         e.HasIndex(l => l.CrawlerTournamentId).IsUnique();
     }
 }
+
+internal sealed class SharedLiveViewConfiguration : IEntityTypeConfiguration<SharedLiveView>
+{
+    public void Configure(EntityTypeBuilder<SharedLiveView> e)
+    {
+        e.Property(v => v.Token).HasMaxLength(16).IsRequired();
+        e.Property(v => v.CrawlerTournamentId).HasMaxLength(50).IsRequired();
+        e.Property(v => v.ViewJson).HasMaxLength(8000).IsRequired();
+        e.Property(v => v.EditKeyHash).HasMaxLength(64).IsRequired();
+        e.HasIndex(v => v.Token).IsUnique();
+        e.HasIndex(v => v.LastViewedAt);
+        // Kontolöschung räumt sie ausdrücklich (TournamentDataEraser); die Kaskade ist die Absicherung.
+        e.HasOne<AppUser>().WithMany().HasForeignKey(v => v.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Services.Tournaments.Live;
@@ -16,6 +17,7 @@ namespace RookHub.Api.Services.Og;
 public partial class OgMetaService
 {
     internal const string LiveKind = "live";
+    internal const string LiveViewKind = "liveview";
 
     private readonly TournamentLiveService? _live;
     private readonly ILiveTournamentData? _liveData;
@@ -78,6 +80,31 @@ public partial class OgMetaService
         if (info is not null) parts.Add(RoundState(info));
         parts.Add("Live-Bretter mit Uhren auf der Turnierseite");
         return new OgPage(title, string.Join(" · ", parts), img, canonical);
+    }
+
+    /// <summary>
+    /// Vorschau des kurzen Links <c>/live/{token}</c> (1.029.0): dieselbe Karte wie die lange Adresse, gebaut aus dem aktuellen Stand
+    /// der geteilten Ansicht (<c>SharedLiveViews</c>, ohne „zuletzt gesehen“ nachzuführen — ein Vorschau-Abrufer ist kein Zuschauer).
+    /// </summary>
+    private async Task<OgPage?> ResolveLiveViewPageAsync(string token, string baseUrl, string canonical, CancellationToken ct)
+    {
+        if (!SharedLiveViews.IsToken(token)) return null;
+        var row = await _db.SharedLiveViews.AsNoTracking().FirstOrDefaultAsync(v => v.Token == token, ct);
+        if (row is null) return null;
+        return await ResolveLivePageAsync(row.CrawlerTournamentId, LongPath(row.CrawlerTournamentId, SharedLiveViews.Parse(row.ViewJson)),
+            baseUrl, canonical, ct);
+    }
+
+    /// <summary>Die lange Adresse einer Ansicht (<c>/tournaments/{id}/live?round=&amp;team=…</c>) — Eingabe der bestehenden Vorschau.</summary>
+    internal static string LongPath(string id, DTOs.Tournaments.LiveViewState v)
+    {
+        var q = new List<string>();
+        if (v.Round is { } r) q.Add("round=" + r.ToString(CultureInfo.InvariantCulture));
+        if (v.Team is { } t) q.Add("team=" + Uri.EscapeDataString(t));
+        if (v.Player is { } p) q.Add("player=" + Uri.EscapeDataString(p));
+        if (v.Add.Count > 0) q.Add("add=" + string.Join(',', v.Add));
+        if (v.Ext.Count > 0) q.Add("ext=" + string.Join(',', v.Ext));
+        return $"/tournaments/{id}/live" + (q.Count > 0 ? "?" + string.Join('&', q) : "");
     }
 
     /// <summary>Zahl der gültigen Einträge in <c>?add=</c> (Regel in <see cref="LiveView.ParseAdd"/>, gedeckelt wie auf der Seite).</summary>

@@ -1633,7 +1633,11 @@
       },
       "openAnalysis": "在分析棋盘上打开(新标签页)",
       "moveN": "第 {{move}} 步",
-      "moveTipEnd": "对局的最后一步"
+      "moveTipEnd": "对局的最后一步",
+      "sharedOwner": "共享视图——拥有链接的人都能看到你的更改。",
+      "sharedViewer": "共享视图——你看到的是创建者的设置。若你更改任何内容，它将成为你自己的视图。",
+      "viewNotFound": "此共享视图已不存在。",
+      "viewSaveFailed": "无法保存共享视图。"
     }
   },
   "puzzles": {

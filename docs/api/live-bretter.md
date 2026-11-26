@@ -13,6 +13,10 @@ eine Mannschaft zeigt deren sechs Bretter auf einer Seite.
 | PUT | `/api/live-boards/{id}/link` `{ url }` | Konto (`user-crawl`) | Von Hand verknüpfen: Turnier-, Runden- oder Partie-Link von `lichess.org/broadcast/…`. 400 `live_invalid_url`, 404 `live_broadcast_not_found` / `live_tournament_not_found` |
 | DELETE | `/api/live-boards/{id}/link` | `tournaments.manage` | Verknüpfung lösen (falsch zugeordnet); danach sucht das nächste Lesen wieder |
 | GET | `/api/live-boards/pgn/{roundId}/{gameId}` | **AllowAnonymous** (`directory-read`) | PGN einer Live-Partie (Kopfzeilen, alle bisherigen Züge, `[%clk]`; `application/x-chess-pgn`) für „Analysieren“ (1.026.0). Aus dem Hub (offener Strom bzw. 30 min gemerkte fertige Runde), sonst nur für Runden, die Lichess kennt, aus dem 60 s gecachten Runden-PGN. 404 `live_game_not_found` |
+| POST | `/api/live-boards/views` `{ tournamentId, view }` | **AllowAnonymous** (`live-view-write`, 30/min) | Geteilte Ansicht anlegen (1.029.0) → `{ token, tournamentId, view, canEdit, editKey }`; `editKey` nur hier. 404 `live_not_linked` |
+| GET | `/api/live-boards/views/{token}` | **AllowAnonymous** (`directory-read`) | Ansicht lesen; `canEdit` für diesen Aufrufer (Konto des Erstellers oder Header `X-Live-View-Key`). 404 `live_view_not_found` |
+| PUT | `/api/live-boards/views/{token}` `{ view }` | **AllowAnonymous** (`live-view-write`), nur Besitzer | Ansicht ändern; alle offenen Ströme folgen. 403 `live_view_forbidden` |
+| GET | `/api/live-boards/views/{token}/stream?eval=` | **AllowAnonymous** (`directory-read`) + Stromgrenzen wie oben | SSE der Ansicht: `view`, dann wie der Runden-Strom; bei Änderung erneut `view` + `snapshot`, `view-gone` wenn gelöscht |
 | GET | `/api/live-boards/external?url=` | **AllowAnonymous** (`directory-read`) | „Brett hinzufügen“ aus einer FREMDEN Übertragung (1.025.0): Partie-, Runden- oder Turnier-Link → `{ roundId, roundName, tourName, url, ongoing, finished, gameId, games[] }`. 400 `live_invalid_url`, 404 `live_broadcast_not_found` / `live_ext_game_not_found`, 503 `live_lichess_busy` |
 
 `{id}` ist die chess-results-Nummer wie in `/tournaments/:id`. Gestreamt wird eine
@@ -76,6 +80,34 @@ ansehen und daneben die WM-Partie live“.
   Der Hub hält dafür je Partie das zuletzt übertragene Roh-PGN (`Feed._pgn`, `BroadcastLiveHub.PeekPgn`).
 - **Elo-Schnitt** (1.025.0): `LiveMatchSlot.homeElo/awayElo` + `…EloBoards` — Elo der Spieler an den Brettern der Begegnung, aus dem
   Strom, sonst aus der Startliste; ohne Elo zählt nicht. Im Kopf der Begegnung „Ø 2315“ unter dem Namen, Tooltip „Schnitt über n Bretter“.
+
+## Geteilte, lebende Ansicht (1.029.0, Wunsch 2026-11-26)
+
+„Wenn ich den Link share, nicht mit round=2&team=…&eval=1&ext=…, sondern einfach einen Hash — wenn ich Bretter ergänze oder
+entferne oder etwas umstelle, sollen alle mit dem Link das auch sehen.“
+
+- **Link** `/live/{token}` (Turnierseite, Route `live/:token`, dieselbe `LiveBoardsComponent`): Token 10 Zeichen base62
+  (`RandomNumberGenerator`, ~59 bit). Die langen Adressen bleiben gültig.
+- **Anlegen**: „Link teilen“ auf der langen Adresse → `POST …/views` mit der aktuellen Ansicht (Runde immer ausdrücklich, wie bisher
+  im langen Link) → Bearbeitungsschlüssel (24 Zeichen) in `localStorage rookhub_live_view_keys` (`device`, höchstens 50, älteste raus;
+  so kann auch ein Gast seine Ansicht weiter ändern) → Seite wechselt mit `replaceUrl` auf `/live/{token}` → kurzer Link wird geteilt.
+  Scheitert das Anlegen (z. B. 429), wird die lange Adresse geteilt. In der Tabelle steht nur der SHA-256 des Schlüssels; angemeldet
+  zählt zusätzlich das Konto (`OwnerUserId`). Nur für verknüpfte Turniere.
+- **Besitzer** (`canEdit`): Runde, Mannschaft/Spieler, Bretter hinzufügen/entfernen und der Balken wirken sofort lokal und gehen
+  entprellt (`LIVE_VIEW_SAVE_MS` 400 ms, mehrere Klicks = ein PUT) als `PUT …/views/{token}` mit Header `X-Live-View-Key`. Bis dahin
+  überschreibt ein `view`-Ereignis die eigene Änderung nicht. Hinweiszeile „Geteilte Ansicht — Änderungen sehen alle mit dem Link.“
+- **Zuschauer** (schlank entschieden): sie folgen der Ansicht. Ihr Balken-Schalter gilt nur für sie (Strom mit `eval=`, nicht
+  gespeichert, die Ansicht überschreibt ihn nicht). Jede ANDERE Änderung (Runde, Mannschaft, Brett) macht daraus ihre eigene Ansicht:
+  Sprung auf die lange Adresse mit der Änderung — die geteilte bleibt unberührt. Hinweiszeile sagt das.
+- **Strom** `…/views/{token}/stream`: EINE Verbindung je Zuschauer. Der Server liest die Ansicht, schickt `view` und streamt die Runde
+  wie `…/rounds/{n}/stream` (Filter, `add`, `ext` aus der Ansicht). Ändert der Besitzer sie, weckt `LiveViewChanges` (Singleton, im
+  Speicher — die API läuft als eine Instanz) alle offenen Ströme dieser Kennung: sie beenden die Abos am Hub, lesen neu und hängen sich
+  um (neuer `view` + `snapshot`, ggf. `ext-snapshot`). KEIN zusätzlicher Lichess-Strom: der `BroadcastLiveHub` hält je Runde einen,
+  ein Rundenwechsel nutzt dessen 90-s-Nachlauf. Runde ohne Übertragung: `state offline`, dann Warten auf die nächste Änderung mit
+  Lebenszeichen. Gelöscht/abgelaufen: `view-gone` → Hinweis „Diese geteilte Ansicht gibt es nicht mehr.“
+- **Speicherdauer**: 30 Tage ohne Aufruf (`Retention:LiveViewDays`), Deckel 50 000 (`Retention:LiveViewCap`), Aufräumlauf
+  `AnonymousDataRetentionService`; „zuletzt gesehen“ wird höchstens stündlich nachgeführt (`SharedLiveViews.TouchEvery`). Konto
+  gelöscht → seine Ansichten auch (`TournamentDataEraser`). Vorschau: `docs/api/link-vorschau.md`.
 
 ## Ablauf im Server (`Services/Tournaments/Live/`)
 

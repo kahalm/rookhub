@@ -1701,7 +1701,11 @@
       },
       "openAnalysis": "Otvori na ploči za analizu (nova kartica)",
       "moveN": "Potez {{move}}",
-      "moveTipEnd": "Posljednji potez partije"
+      "moveTipEnd": "Posljednji potez partije",
+      "sharedOwner": "Dijeljeni prikaz — promjene vide svi s poveznicom.",
+      "sharedViewer": "Dijeljeni prikaz — vidiš ono što postavi autor. Ako nešto promijeniš, postaje tvoj vlastiti prikaz.",
+      "viewNotFound": "Ovaj dijeljeni prikaz više ne postoji.",
+      "viewSaveFailed": "Dijeljeni prikaz nije moguće spremiti."
     }
   },
   "puzzles": {

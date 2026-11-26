@@ -111,6 +111,19 @@ public class OgLiveBoardsTests : IDisposable
     }
 
     [Fact]
+    public async Task SharedView_ShortLink_PreviewFromCurrentState()
+    {
+        Assert.Equal((OgMetaService.LiveViewKind, "Ab3dEf7hJk"), OgMetaService.ParsePath("/live/Ab3dEf7hJk", OgIndexHtmlProvider.TurnierSite));
+        Assert.Null(OgMetaService.ParsePath("/live/Ab3dEf7hJk"));
+        _db.SharedLiveViews.Add(new SharedLiveView { Token = "Ab3dEf7hJk", CrawlerTournamentId = Linked, EditKeyHash = "x",
+            ViewJson = """{"round":1,"team":"SK Schwaz","add":["2.1"],"ext":[],"eval":true}""" });
+        await _db.SaveChangesAsync();
+        var page = await Meta(null).ResolvePageAsync("/live/Ab3dEf7hJk", Base, default, OgIndexHtmlProvider.TurnierSite);
+        Assert.Equal("Live: Pinggau-Friedberg – SK Schwaz + 1 weiteres Brett · 1. Bundesliga Austria 2026/2027, Runde 1", page!.Title);
+        Assert.Null(await Meta(null).ResolvePageAsync("/live/Zz3dEf7hJk", Base, default, OgIndexHtmlProvider.TurnierSite));
+    }
+
+    [Fact]
     public async Task Player_TitleNamesPlayer()
     {
         var page = await Meta(null).ResolvePageAsync($"/tournaments/{Linked}/live?round=1&player=Mittal,%20Aditya", Base, default,

@@ -1391,7 +1391,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   **Link teilen** (1.024.0): rechts im Kopf ein Rahmenknopf `share` + „Link teilen“ (unter 480 px nur das Symbol, 48 px
   breit, Name per `aria-label`), für Gäste wie Angemeldete. Am Handy (`pointer: coarse` + Web Share API) das Teilen-Blatt,
   sonst Zwischenablage mit Snackbar „Link zu dieser Ansicht kopiert.“ — wie „Link teilen“ der Partien (8.1). Der Link trägt
-  die ganze Ansicht (`?round=` immer, `team`/`player`, `add`/`ext`, `eval=1` wenn der Balken an ist).
+  die ganze Ansicht (`?round=` immer, `team`/`player`, `add`/`ext`, `eval=1` wenn der Balken an ist). Seit 1.029.0 teilt der Knopf
+  den kurzen, lebenden Link `/live/<token>` (die Seite wechselt beim ersten Teilen dorthin); auf `/live/…` steht unter der
+  Werkzeugzeile eine leise Hinweiszeile (0,85 rem, on-surface-variant, Symbol 18 px): Besitzer `group` „Geteilte Ansicht —
+  Änderungen sehen alle mit dem Link.“, Zuschauer `visibility` „… Änderst du etwas, wird daraus deine eigene Ansicht.“ Unbekannter
+  Link: leiser Hinweis (5.11) mit `link_off`.
   **Brett hinzufügen** (1.025.0): Rahmenknopf `add` + „Brett hinzufügen“ in der Werkzeugzeile (immer, auch für Gäste) → Auswahl-
   Dialog 560 px (5.6, `autoFocus: 'dialog'`): Abschnitt „Aus dieser Runde“ (nur mit Mannschafts-/Spielerfilter) mit Suchfeld und
   Zeilen ≥ 44 px (☑/☐ in `--rh-accent`, Spieler „Weiß – Schwarz“, darunter leise „Brett n · Begegnung“), Abschnitt „Aus einer
@@ -1649,6 +1653,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-26 | 1.029.0 · Turnierseite | Live-Bretter: „Link teilen“ teilt einen kurzen, lebenden Link `/live/<token>`, Hinweiszeile für Besitzer/Zuschauer unter der Werkzeugzeile, leiser Hinweis bei unbekanntem Link (8.2) | Ein Link für alle, der Änderungen des Erstellers mitmacht | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.028.0 · Turnierseite | Live-Bretter: alle Bretter in EINEM Raster ohne Abschnitte (`minmax(min(100%, 240px), 1fr)`, Seite bis 1880 px), Herkunft als Zusatz an der Karte, Stand je Begegnung als kompakte Kopfleiste; Zugnummer „Zug n“ im Kartenkopf (8.2) | Acht Bretter auf einen Blick am PC (1920 px: 7 je Reihe, zwei Reihen ohne Scrollen), am Handy eine Spalte | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.027.3 · Turnierseite | Live-Bretter: Engine-Balken genau so hoch wie das gezeichnete Brett (gemessen, Chessground rastet auf Vielfache von acht), 0.0 liegt zwischen 4. und 5. Reihe; nach einem Zug hält er den letzten Wert, bis die neue Stellung bewertet ist (8.2) | Balken als Maßstab am Brett lesbar, kein Ausschlag | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.026.0 · Turnierseite | Live-Bretter: Symbolknopf `biotech` im Kartenkopf öffnet die Partie auf RookHubs Analysebrett (neuer Tab, alle Züge, Kopf, Uhren) (8.2) | Eine laufende Partie selbst durchrechnen, auch als Gast | Nutzerwunsch 26.11. |

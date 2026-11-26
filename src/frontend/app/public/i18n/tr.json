@@ -1633,7 +1633,11 @@
       },
       "openAnalysis": "Analiz tahtasında aç (yeni sekme)",
       "moveN": "Hamle {{move}}",
-      "moveTipEnd": "Oyunun son hamlesi"
+      "moveTipEnd": "Oyunun son hamlesi",
+      "sharedOwner": "Paylaşılan görünüm — bağlantıya sahip herkes değişikliklerini görür.",
+      "sharedViewer": "Paylaşılan görünüm — oluşturanın ayarladığını görürsün. Bir şeyi değiştirirsen kendi görünümün olur.",
+      "viewNotFound": "Bu paylaşılan görünüm artık yok.",
+      "viewSaveFailed": "Paylaşılan görünüm kaydedilemedi."
     }
   },
   "puzzles": {

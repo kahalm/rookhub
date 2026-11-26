@@ -11,7 +11,7 @@ import { LiveBoardsComponent, samePlayer } from './live-boards.component';
 import { EVENT_SOURCE_FACTORY } from './live-boards.service';
 import { FakeEventSource } from './fake-event-source';
 import { LiveGame, LiveStatus } from './live-boards.models';
-import { LIVE_EVAL_KEY, LIVE_LOST_GRACE_MS } from './live-boards.util';
+import { LIVE_EVAL_KEY, LIVE_LOST_GRACE_MS, LIVE_VIEW_KEYS, LIVE_VIEW_SAVE_MS, readViewKey, writeViewKey } from './live-boards.util';
 import { MatDialog } from '@angular/material/dialog';
 import { of } from 'rxjs';
 
@@ -50,7 +50,7 @@ describe('LiveBoardsComponent', () => {
   let query: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   let signedIn = false;
 
-  async function setup(params: Record<string, string> = {}): Promise<void> {
+  async function setup(params: Record<string, string> = {}, routeParams: Record<string, string> = { id: '1404438' }): Promise<void> {
     FakeEventSource.reset();
     query = new BehaviorSubject(convertToParamMap(params));
     await TestBed.configureTestingModule({
@@ -59,7 +59,7 @@ describe('LiveBoardsComponent', () => {
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: EVENT_SOURCE_FACTORY, useValue: FakeEventSource.factory },
-        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({ id: '1404438' })), queryParamMap: query } },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap(routeParams)), queryParamMap: query } },
       ],
     }).compileComponents();
     spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
@@ -72,7 +72,7 @@ describe('LiveBoardsComponent', () => {
 
   beforeEach(() => {
     signedIn = false;
-    try { localStorage.removeItem(LIVE_EVAL_KEY); } catch { /* egal */ }
+    try { localStorage.removeItem(LIVE_EVAL_KEY); localStorage.removeItem(LIVE_VIEW_KEYS); } catch { /* egal */ }
   });
 
   it('Gast, verknüpft: verbindet den Strom der laufenden Runde und zeigt die Bretter der Begegnung mit Stand', async () => {
@@ -152,7 +152,11 @@ describe('LiveBoardsComponent', () => {
     expect(nav).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { eval: 1 }, queryParamsHandling: 'merge', replaceUrl: true }));
   });
 
-  it('Link teilen: Runde immer ausdrücklich, Mannschaft und Balken mit; am Rechner in die Zwischenablage + Snackbar', async () => {
+  const TOKEN = 'Ab3dEf7hJk';
+  const KEY = 'K'.repeat(24);
+  const viewOf = (over: Record<string, unknown> = {}) => ({ round: 1, team: 'SK Schwaz', player: null, add: [], ext: [], eval: false, ...over });
+
+  it('lange Adresse bleibt gültig: Runde immer ausdrücklich, Mannschaft und Balken mit', async () => {
     await setup({ team: 'Schachklub Schwaz' });
     http.expectOne('/api/live-boards/1404438').flush(STATUS);
     await fixture.whenStable();
@@ -160,15 +164,122 @@ describe('LiveBoardsComponent', () => {
     expect(c.shareUrl()).toBe(`${location.origin}/tournaments/1404438/live?round=1&team=Schachklub%20Schwaz`);
     c.evalOn.set(true);
     expect(c.shareUrl()).toBe(`${location.origin}/tournaments/1404438/live?round=1&team=Schachklub%20Schwaz&eval=1`);
+  });
 
+  // Wunsch 2026-11-26: „nicht mit round=2&team=…, sondern einfach einen Hash — Änderungen sollen alle mit dem Link sehen“
+  it('Link teilen: legt die geteilte Ansicht an, merkt den Schlüssel, kopiert den kurzen Link und wechselt auf /live/<token>', async () => {
+    await setup({ team: 'SK Schwaz', round: '1', add: '2.1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
     const write = jasmine.createSpy('writeText').and.resolveTo();
     spyOnProperty(navigator, 'clipboard', 'get').and.returnValue({ writeText: write } as unknown as Clipboard);
     spyOn(window, 'matchMedia').and.returnValue({ matches: false } as MediaQueryList);
     const copied = spyOn(TestBed.inject(SnackbarService), 'copy');
+    const nav = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     (el().querySelector('.live-share') as HTMLButtonElement).click();
+    const req = http.expectOne('/api/live-boards/views');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ tournamentId: '1404438', view: viewOf({ add: ['2.1'] }) });
+    req.flush({ token: TOKEN, tournamentId: '1404438', view: viewOf({ add: ['2.1'] }), canEdit: true, editKey: KEY });
     await fixture.whenStable();
-    expect(write).toHaveBeenCalledWith(c.shareUrl());
+    expect(write).toHaveBeenCalledWith(`${location.origin}/live/${TOKEN}`);
     expect(copied).toHaveBeenCalledWith('tournaments.live.shareCopied');
+    expect(readViewKey(TOKEN)).toBe(KEY);
+    expect(nav).toHaveBeenCalledWith(['/live', TOKEN], { replaceUrl: true });
+  });
+
+  it('Link teilen: scheitert das Anlegen, geht die lange Adresse', async () => {
+    await setup({ team: 'SK Schwaz', round: '1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const write = jasmine.createSpy('writeText').and.resolveTo();
+    spyOnProperty(navigator, 'clipboard', 'get').and.returnValue({ writeText: write } as unknown as Clipboard);
+    spyOn(window, 'matchMedia').and.returnValue({ matches: false } as MediaQueryList);
+    fixture.componentInstance.share();
+    http.expectOne('/api/live-boards/views').flush({}, { status: 429, statusText: 'Too Many' });
+    await fixture.whenStable();
+    expect(write).toHaveBeenCalledWith(`${location.origin}/tournaments/1404438/live?round=1&team=SK%20Schwaz`);
+  });
+
+  async function openView(view = viewOf(), canEdit = false): Promise<void> {
+    await setup({}, { token: TOKEN });
+    const req = http.expectOne(`/api/live-boards/views/${TOKEN}`);
+    expect(req.request.headers.get('X-Live-View-Key')).toBe(canEdit ? KEY : null);
+    req.flush({ token: TOKEN, tournamentId: '1404438', view, canEdit });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+  }
+
+  it('/live/<token> als Gast: Ansicht vom Server, EIN Strom, Änderungen des Besitzers kommen ohne Neuverbinden an', async () => {
+    await openView();
+    const c = fixture.componentInstance;
+    expect(FakeEventSource.all.length).toBe(1);
+    const es = FakeEventSource.last();
+    expect(es.url).toBe(`/api/live-boards/views/${TOKEN}/stream?ngsw-bypass=1`);
+    es.emit('view', { token: TOKEN, tournamentId: '1404438', view: viewOf() });
+    es.emit('snapshot', TWO_MATCHES);
+    await fixture.whenStable();
+    expect(el().querySelectorAll('app-live-board-card').length).toBe(2);
+    expect(el().querySelector('.view-note')!.textContent).toContain('tournaments.live.sharedViewer');
+    es.emit('view', { token: TOKEN, tournamentId: '1404438', view: viewOf({ add: ['2.2'] }) });  // Besitzer fügt ein Brett hinzu
+    await fixture.whenStable();
+    expect(c.added()).toEqual(['2.2']);
+    expect(el().querySelectorAll('app-live-board-card').length).toBe(3);
+    expect(FakeEventSource.all.length).toBe(1);
+    const write = jasmine.createSpy('writeText').and.resolveTo();
+    spyOnProperty(navigator, 'clipboard', 'get').and.returnValue({ writeText: write } as unknown as Clipboard);
+    spyOn(window, 'matchMedia').and.returnValue({ matches: false } as MediaQueryList);
+    c.share();                                                                   // teilt einfach den kurzen Link
+    expect(write).toHaveBeenCalledWith(`${location.origin}/live/${TOKEN}`);
+    http.verify();
+  });
+
+  it('/live/<token> Zuschauer: eigener Balken nur für ihn (eval im Strom), andere Änderung → eigene lange Ansicht', async () => {
+    await openView();
+    const c = fixture.componentInstance;
+    c.setEval(true);
+    expect(FakeEventSource.last().url).toBe(`/api/live-boards/views/${TOKEN}/stream?eval=true&ngsw-bypass=1`);
+    FakeEventSource.last().emit('view', { token: TOKEN, tournamentId: '1404438', view: viewOf({ eval: false }) });
+    expect(c.evalOn()).toBeTrue();                                               // die Ansicht überschreibt seinen Schalter nicht
+    const nav = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+    c.setFilter('team', 'SK Absam');
+    expect(TestBed.inject(Router).serializeUrl(nav.calls.mostRecent().args[0] as never))
+      .toBe('/tournaments/1404438/live?round=1&team=SK%20Absam&eval=1');
+    http.verify();                                                               // kein PUT
+  });
+
+  it('/live/<token> Besitzer: Änderung sofort sichtbar, entprellt EIN PUT mit Schlüssel, Hinweis „alle sehen mit“', fakeAsync(() => {
+    writeViewKey(TOKEN, KEY);
+    void openView(viewOf(), true);
+    flush();
+    const c = fixture.componentInstance;
+    expect(el().querySelector('.view-note')!.textContent).toContain('tournaments.live.sharedOwner');
+    const nav = spyOn(TestBed.inject(Router), 'navigate');
+    c.setAdded(['2.1'], []);
+    c.setAdded(['2.1', '2.2'], []);
+    expect(c.added()).toEqual(['2.1', '2.2']);
+    FakeEventSource.last().emit('view', { token: TOKEN, tournamentId: '1404438', view: viewOf() });   // alter Stand: ignoriert
+    expect(c.added()).toEqual(['2.1', '2.2']);
+    tick(LIVE_VIEW_SAVE_MS);
+    const req = http.expectOne(`/api/live-boards/views/${TOKEN}`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.headers.get('X-Live-View-Key')).toBe(KEY);
+    expect(req.request.body).toEqual({ view: viewOf({ add: ['2.1', '2.2'] }) });
+    req.flush({ token: TOKEN, tournamentId: '1404438', view: viewOf({ add: ['2.1', '2.2'] }), canEdit: true });
+    expect(nav).not.toHaveBeenCalled();
+    expect(FakeEventSource.all.length).toBe(1);
+    http.verify();
+    fixture.destroy();
+    discardPeriodicTasks();
+    flush();
+  }));
+
+  it('/live/<token> unbekannt: leiser Hinweis statt Ladefehler', async () => {
+    await setup({}, { token: TOKEN });
+    http.expectOne(`/api/live-boards/views/${TOKEN}`).flush({}, { status: 404, statusText: 'Not Found' });
+    await fixture.whenStable();
+    expect(el().textContent).toContain('tournaments.live.viewNotFound');
+    expect(FakeEventSource.all.length).toBe(0);
   });
 
   it('Link teilen am Handy: Teilen-Blatt des Systems', async () => {
@@ -181,8 +292,10 @@ describe('LiveBoardsComponent', () => {
     const shareSpy = jasmine.createSpy('share').and.resolveTo();
     Object.defineProperty(nav, 'share', { value: shareSpy, configurable: true });
     try {
+      spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
       fixture.componentInstance.share();
-      expect(shareSpy).toHaveBeenCalledWith({ url: `${location.origin}/tournaments/1404438/live?round=1&player=Mittal,%20Aditya` });
+      http.expectOne('/api/live-boards/views').flush({ token: TOKEN, tournamentId: '1404438', view: viewOf(), canEdit: true, editKey: KEY });
+      expect(shareSpy).toHaveBeenCalledWith({ url: `${location.origin}/live/${TOKEN}` });
     } finally {
       if (had) Object.defineProperty(nav, 'share', had); else delete (nav as { share?: unknown }).share;
     }

@@ -125,6 +125,9 @@ public partial class OgMetaService
         // RookHub selbst kennt die Route nicht (dort leitet /tournaments/… auf die Turnierseite um).
         if (segments is ["tournaments", var liveId, "live"])
             return string.Equals(site, OgIndexHtmlProvider.TurnierSite, StringComparison.OrdinalIgnoreCase) ? (LiveKind, liveId) : null;
+        // Geteilte, lebende Ansicht /live/{token} (1.029.0) — Vorschau aus dem AKTUELLEN Stand der Ansicht.
+        if (segments is ["live", var viewToken])
+            return string.Equals(site, OgIndexHtmlProvider.TurnierSite, StringComparison.OrdinalIgnoreCase) ? (LiveViewKind, viewToken) : null;
 
         // Teilen-Links mit Vorschau seit 2026-11-22: /tl, /ga/…/summary, /s/…/club-games/{id}, /explorer/game/masters/{id}
         if (ParseShareRoute(segments) is { } share) return share;
@@ -291,6 +294,8 @@ public partial class OgMetaService
                 }
                 case LiveKind:
                     return await ResolveLivePageAsync(id, path, baseUrl, canonical, ct);
+                case LiveViewKind:
+                    return await ResolveLiveViewPageAsync(id, baseUrl, canonical, ct);
                 case "calendar":
                 {
                     // Ein geteilter Kalender-Link soll im Vorschaufenster die ECKDATEN zeigen (Termin, Ort, Bedenkzeit,
