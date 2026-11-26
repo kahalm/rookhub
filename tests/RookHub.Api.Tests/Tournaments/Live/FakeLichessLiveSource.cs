@@ -57,7 +57,12 @@ internal sealed class FakeLichessLiveSource : ILichessLiveSource
     }
 
     public Task<string?> GetTourAsync(string tourId, CancellationToken ct) => Task.FromResult(Tours.GetValueOrDefault(tourId));
-    public Task<string?> GetTourOfRoundAsync(string roundId, CancellationToken ct) => Task.FromResult(ToursOfRound.GetValueOrDefault(roundId));
+    public int TourOfRoundCalls;
+    public Task<string?> GetTourOfRoundAsync(string roundId, CancellationToken ct)
+    {
+        Interlocked.Increment(ref TourOfRoundCalls);
+        return Task.FromResult(ToursOfRound.GetValueOrDefault(roundId));
+    }
     public Task<string?> GetTopAsync(CancellationToken ct) => Task.FromResult(Top);
 
     public Task<string?> SearchAsync(string query, CancellationToken ct)

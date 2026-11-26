@@ -145,7 +145,9 @@
     "engine_not_found": "Questo motore non appartiene a quell’account o non è più registrato.",
     "live_invalid_url": "Questo non è un link di trasmissione Lichess.",
     "live_broadcast_not_found": "Lichess non conosce questa trasmissione.",
-    "live_tournament_not_found": "Questo torneo non è ancora stato scaricato."
+    "live_tournament_not_found": "Questo torneo non è ancora stato scaricato.",
+    "live_ext_game_not_found": "Questa partita non fa parte del turno.",
+    "live_lichess_busy": "Lichess è sovraccarico — riprova tra un minuto."
   },
   "common": {
     "optional": "Facoltativo",
@@ -1607,7 +1609,28 @@
         "cloud": "Valutazione cloud di Lichess",
         "engine": "Motore RookHub"
       },
-      "depth": "profondità {{depth}}"
+      "depth": "profondità {{depth}}",
+      "addBoard": "Aggiungi scacchiera",
+      "addTitle": "Aggiungi scacchiere",
+      "addSameRound": "Da questo turno",
+      "addSearch": "Cerca giocatore o squadra",
+      "addNoMatch": "Nessuna partita trovata.",
+      "addOther": "Da un’altra trasmissione Lichess",
+      "addLinkLabel": "Link a una partita o a un turno",
+      "addLinkHint": "ad es. lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "Carica",
+      "addLoadFailed": "Impossibile caricare la trasmissione.",
+      "addLimit": "Al massimo {{max}} scacchiere.",
+      "addDone": "Fatto",
+      "added": "Scacchiere aggiunte",
+      "removeBoard": "Rimuovi scacchiera",
+      "extLoading": "Caricamento della trasmissione …",
+      "extPending": "In attesa di {{count}} partita/e …",
+      "eloAvgTip": "Media su {{count}} scacchiere",
+      "extError": {
+        "limit": "Troppe altre trasmissioni sono seguite in questo momento — riprova più tardi.",
+        "notFound": "Lichess non conosce (più) questa trasmissione."
+      }
     }
   },
   "puzzles": {

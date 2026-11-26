@@ -145,7 +145,9 @@
     "engine_not_found": "Acest motor nu aparține acelui cont sau nu mai este înregistrat.",
     "live_invalid_url": "Acesta nu este un link de transmisie Lichess.",
     "live_broadcast_not_found": "Lichess nu cunoaște această transmisie.",
-    "live_tournament_not_found": "Acest turneu nu a fost încă preluat."
+    "live_tournament_not_found": "Acest turneu nu a fost încă preluat.",
+    "live_ext_game_not_found": "Această partidă nu face parte din rundă.",
+    "live_lichess_busy": "Lichess este supraîncărcat — încearcă din nou peste un minut."
   },
   "common": {
     "optional": "Opțional",
@@ -1607,7 +1609,28 @@
         "cloud": "Evaluare cloud Lichess",
         "engine": "Motor RookHub"
       },
-      "depth": "adâncime {{depth}}"
+      "depth": "adâncime {{depth}}",
+      "addBoard": "Adaugă tablă",
+      "addTitle": "Adaugă table",
+      "addSameRound": "Din această rundă",
+      "addSearch": "Caută jucător sau echipă",
+      "addNoMatch": "Nicio partidă găsită.",
+      "addOther": "Dintr-o altă transmisie Lichess",
+      "addLinkLabel": "Link către o partidă sau rundă",
+      "addLinkHint": "de ex. lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "Încarcă",
+      "addLoadFailed": "Transmisia nu a putut fi încărcată.",
+      "addLimit": "Cel mult {{max}} table.",
+      "addDone": "Gata",
+      "added": "Table adăugate",
+      "removeBoard": "Elimină tabla",
+      "extLoading": "Se încarcă transmisia …",
+      "extPending": "Se așteaptă {{count}} partidă(e) …",
+      "eloAvgTip": "Medie pe {{count}} table",
+      "extError": {
+        "limit": "Acum sunt urmărite prea multe alte transmisii — încearcă mai târziu.",
+        "notFound": "Lichess nu (mai) cunoaște această transmisie."
+      }
     }
   },
   "puzzles": {

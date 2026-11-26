@@ -139,6 +139,26 @@ public class OgLiveBoardsTests : IDisposable
         Assert.Contains("Live: &quot;", html);
     }
 
+    // 1.025.0: hinzugefügte Bretter (?add= derselben Runde, ?ext= fremde Übertragung) stehen im Titel — nur gezählt, kein Lichess-Abruf.
+    [Fact]
+    public async Task AddedBoards_TitleSaysHowManyMore_NoLichessLookup()
+    {
+        var page = await Meta(null).ResolvePageAsync(
+            $"/tournaments/{Linked}/live?round=1&team=SK%20Schwaz&add=2.3,4.1,bad&ext=fnmEB1kH.RD8sbYw1", Base, default, OgIndexHtmlProvider.TurnierSite);
+        Assert.Equal("Live: Pinggau-Friedberg – SK Schwaz + 3 weitere Bretter · 1. Bundesliga Austria 2026/2027, Runde 1", page!.Title);
+        var one = await Meta(null).ResolvePageAsync($"/tournaments/{Linked}/live?round=1&player=Mittal&ext=fnmEB1kH.RD8sbYw1", Base, default,
+            OgIndexHtmlProvider.TurnierSite);
+        Assert.Equal("Live: Mittal + 1 weiteres Brett · 1. Bundesliga Austria 2026/2027, Runde 1", one!.Title);
+        Assert.Equal(0, _src.TourOfRoundCalls);
+        Assert.Equal(0, _src.RoundPgnCalls);
+    }
+
+    [Theory]
+    [InlineData("2.3,4.1,7,AbCd1234", 4)]
+    [InlineData("2.3,2.3,../x,1234.5", 1)]
+    [InlineData(null, 0)]
+    public void AddedBoards_CountsValidDistinct(string? csv, int n) => Assert.Equal(n, OgMetaService.AddedBoards(csv));
+
     [Theory]
     [InlineData(2.5, "2,5")]
     [InlineData(3, "3")]

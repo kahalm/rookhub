@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ChessBoardComponent } from '@rh/shared/pgn-viewer/chess-board.component';
 import { PreferencesService } from '@rh/core/preferences.service';
@@ -16,13 +18,20 @@ import { evalText, lastMovePair, shownClock, whiteShare } from './live-boards.ut
   selector: 'app-live-board-card',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChessBoardComponent, TranslatePipe],
+  imports: [ChessBoardComponent, TranslatePipe, MatButtonModule, MatIconModule],
   template: `
     <article class="lb-card" [attr.aria-label]="('tournaments.live.boardN' | translate:{ board: board() }) + ': ' + game().white.name + ' – ' + game().black.name">
       <div class="lb-top">
-        <span class="lb-board">{{ 'tournaments.live.boardN' | translate:{ board: board() } }}</span>
+        <span class="lb-board">{{ 'tournaments.live.boardN' | translate:{ board: board() } }}@if (caption(); as c) { <span class="lb-caption">· {{ c }}</span> }</span>
         @if (game().finished) {
           <span class="lb-result">{{ resultText() }}</span>
+        }
+        @if (removable()) {
+          <!-- Hinzugefügtes Brett wieder herausnehmen (1.025.0) -->
+          <button mat-icon-button type="button" class="lb-remove" (click)="remove.emit()"
+                  [attr.aria-label]="'tournaments.live.removeBoard' | translate" [title]="'tournaments.live.removeBoard' | translate">
+            <mat-icon>close</mat-icon>
+          </button>
         }
       </div>
       <div class="lb-player" [class.to-move]="toMove(flipped())">
@@ -67,7 +76,11 @@ import { evalText, lastMovePair, shownClock, whiteShare } from './live-boards.ut
     }
     .lb-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.85rem;
       color: var(--mat-sys-on-surface-variant); }
-    .lb-board { font-weight: 500; }
+    .lb-board { font-weight: 500; min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lb-caption { font-weight: 400; }
+    /* Klein im Kopf der Karte, Tippziel bleibt 40 px (die Karte ist kein Formular) */
+    .lb-remove { flex: 0 0 auto; width: 40px; height: 40px; padding: 8px; margin: -8px -4px -8px 0; }
+    .lb-remove mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .lb-result { font-weight: 700; color: var(--mat-sys-on-surface); padding: 0 8px; border-radius: 999px;
       border: 1px solid var(--mat-sys-outline); font-variant-numeric: tabular-nums; }
     .lb-player { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
@@ -97,6 +110,11 @@ export class LiveBoardCardComponent {
   /** Wann die Partie zuletzt kam und „jetzt" — für die laufende Uhr der Seite am Zug. */
   readonly receivedAt = input(0);
   readonly now = input(0);
+  /** Kleine Zusatzzeile neben „Brett n“ (hinzugefügte Bretter: Begegnung bzw. Turnier). */
+  readonly caption = input<string | null>(null);
+  /** Zeigt ein ✕ zum Herausnehmen (hinzugefügte Bretter). */
+  readonly removable = input(false);
+  readonly remove = output<void>();
 
   readonly topPlayer = computed<LivePlayer>(() => this.flipped() ? this.game().white : this.game().black);
   readonly bottomPlayer = computed<LivePlayer>(() => this.flipped() ? this.game().black : this.game().white);

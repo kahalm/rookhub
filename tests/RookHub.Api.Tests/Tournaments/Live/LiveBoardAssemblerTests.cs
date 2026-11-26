@@ -41,6 +41,29 @@ public class LiveBoardAssemblerTests
         Assert.Equal(["x"], layout.Unassigned);
     }
 
+    /// <summary>Elo-Schnitt je Mannschaft (1.025.0): Elo aus dem Strom, fehlt sie, aus der Startliste; ohne Elo zählt nicht.</summary>
+    [Fact]
+    public void Team_EloAverage_StreamThenRoster_SkipsMissing()
+    {
+        var players = new List<CrPlayer>
+        {
+            new("Aditya, Mittal", "35042025", 2616, "Pinggau-Friedberg", 1),
+            new("Vaibhav, Suri", "5045185", 2569, "Pinggau-Friedberg", 2),
+            new("Hagner, Bennet", "16224477", 2462, "SK Schwaz", 1),
+            new("Schmider, Niklas", "12993778", null, "SK Schwaz", 2),
+        };
+        var round = new CrRound(true, players, [], [new CrMatch(1, "Pinggau-Friedberg", "SK Schwaz", null, null)]);
+        var b1 = G("b1", "Aditya Mittal", "Hagner, Bennet", "35042025", "16224477", round: "1.1");      // Strom: 2616 / 2462
+        var b2 = G("b2", "Schmider, Niklas", "Vaibhav, Suri", "12993778", "5045185", round: "1.2");
+        // Brett 2 ohne Elo im Strom: Vaibhav aus der Startliste (2569), Schmider hat auch dort keine → zählt nicht.
+        b2 = b2 with { White = b2.White with { Elo = null }, Black = b2.Black with { Elo = null } };
+        var m = LiveBoardAssembler.Assemble(round, [b1, b2]).Matches.Single();
+        Assert.Equal((2593, 2), (m.HomeElo, m.HomeEloBoards));                // (2616 + 2569) / 2 = 2592,5 → 2593
+        Assert.Equal((2462, 1), (m.AwayElo, m.AwayEloBoards));
+        var empty = LiveBoardAssembler.Assemble(round, []).Matches.Single();
+        Assert.Equal(((int?)null, 0), (empty.HomeElo, empty.HomeEloBoards));
+    }
+
     /// <summary>
     /// Echtes Muster der 1. BL 2026/27, Runde 1 (Lichess-Runde L3MX2oE3): „1.1"–„1.6" = Begegnung 1, „1.7"–„1.12" =
     /// Begegnung 2, je Block in Brettreihenfolge mit abwechselnden Farben. Die Meldelisten-Positionen stehen absichtlich

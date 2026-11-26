@@ -145,7 +145,9 @@
     "engine_not_found": "Engine này không thuộc tài khoản đó hoặc không còn được đăng ký.",
     "live_invalid_url": "Đây không phải liên kết buổi phát Lichess.",
     "live_broadcast_not_found": "Lichess không biết buổi phát này.",
-    "live_tournament_not_found": "Giải đấu này chưa được tải về."
+    "live_tournament_not_found": "Giải đấu này chưa được tải về.",
+    "live_ext_game_not_found": "Ván này không thuộc vòng đó.",
+    "live_lichess_busy": "Lichess đang quá tải — hãy thử lại sau một phút."
   },
   "common": {
     "optional": "Tùy chọn",
@@ -1607,7 +1609,28 @@
         "cloud": "Đánh giá đám mây của Lichess",
         "engine": "Engine RookHub"
       },
-      "depth": "độ sâu {{depth}}"
+      "depth": "độ sâu {{depth}}",
+      "addBoard": "Thêm bàn cờ",
+      "addTitle": "Thêm bàn cờ",
+      "addSameRound": "Từ vòng này",
+      "addSearch": "Tìm kỳ thủ hoặc đội",
+      "addNoMatch": "Không tìm thấy ván nào.",
+      "addOther": "Từ một buổi phát sóng Lichess khác",
+      "addLinkLabel": "Liên kết tới một ván hoặc vòng",
+      "addLinkHint": "ví dụ lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "Tải",
+      "addLoadFailed": "Không tải được buổi phát sóng.",
+      "addLimit": "Tối đa {{max}} bàn.",
+      "addDone": "Xong",
+      "added": "Bàn cờ đã thêm",
+      "removeBoard": "Gỡ bàn cờ",
+      "extLoading": "Đang tải buổi phát sóng …",
+      "extPending": "Đang chờ {{count}} ván …",
+      "eloAvgTip": "Trung bình trên {{count}} bàn",
+      "extError": {
+        "limit": "Hiện có quá nhiều buổi phát sóng khác đang được xem — hãy thử lại sau.",
+        "notFound": "Lichess không (còn) biết buổi phát sóng này."
+      }
     }
   },
   "puzzles": {

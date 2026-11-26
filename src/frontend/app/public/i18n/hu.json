@@ -41,7 +41,9 @@
     "engine_not_found": "Ez a motor nem ehhez a fiókhoz tartozik, vagy már nincs regisztrálva.",
     "live_invalid_url": "Ez nem Lichess-közvetítés linkje.",
     "live_broadcast_not_found": "Ezt a közvetítést a Lichess nem ismeri.",
-    "live_tournament_not_found": "Ez a verseny még nincs letöltve."
+    "live_tournament_not_found": "Ez a verseny még nincs letöltve.",
+    "live_ext_game_not_found": "Ez a játszma nem tartozik a fordulóhoz.",
+    "live_lichess_busy": "A Lichess most túlterhelt — próbáld újra egy perc múlva."
   },
   "common": {
     "optional": "Nem kötelező",
@@ -1378,7 +1380,28 @@
         "cloud": "Lichess felhőértékelés",
         "engine": "RookHub-motor"
       },
-      "depth": "mélység: {{depth}}"
+      "depth": "mélység: {{depth}}",
+      "addBoard": "Tábla hozzáadása",
+      "addTitle": "Táblák hozzáadása",
+      "addSameRound": "Ebből a fordulóból",
+      "addSearch": "Játékos vagy csapat keresése",
+      "addNoMatch": "Nincs találat.",
+      "addOther": "Másik Lichess-közvetítésből",
+      "addLinkLabel": "Játszma vagy forduló linkje",
+      "addLinkHint": "pl. lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "Betöltés",
+      "addLoadFailed": "A közvetítést nem sikerült betölteni.",
+      "addLimit": "Legfeljebb {{max}} tábla.",
+      "addDone": "Kész",
+      "added": "Hozzáadott táblák",
+      "removeBoard": "Tábla eltávolítása",
+      "extLoading": "A közvetítés betöltése …",
+      "extPending": "Várakozás {{count}} játszmára …",
+      "eloAvgTip": "Átlag {{count}} tábla alapján",
+      "extError": {
+        "limit": "Jelenleg túl sok más közvetítést néznek — próbáld újra később.",
+        "notFound": "A Lichess nem ismeri (már) ezt a közvetítést."
+      }
     }
   },
   "puzzles": {

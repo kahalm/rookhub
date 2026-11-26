@@ -34,7 +34,7 @@ describe('LiveBoardsService', () => {
     const got: LiveStreamEvent[] = [];
     const sub = service.stream('1404438', 3, true).subscribe(e => got.push(e));
     const es = FakeEventSource.last();
-    expect(es.url).toBe('/api/live-boards/1404438/rounds/3/stream?eval=true');
+    expect(es.url).toBe('/api/live-boards/1404438/rounds/3/stream?eval=true&ngsw-bypass=1');
     es.emit('snapshot', { state: 'live', round: 3, layout: { team: false, matches: [], boards: [], unassigned: [] }, games: [] });
     es.emit('game', { id: 'g1' });
     es.emit('state', { state: 'finished' });
@@ -42,6 +42,30 @@ describe('LiveBoardsService', () => {
     expect((got[0] as Extract<LiveStreamEvent, { type: 'snapshot' }>).state).toBe('live');
     sub.unsubscribe();
     expect(es.closed).toBeTrue();
+  });
+
+  // 1.025.0: Strom am Service Worker vorbei (Chrome beendete den untätigen Worker nach ~30 s → Abriss alle 29–60 s).
+  it('stream: immer ngsw-bypass, fremde Bretter als extra=, ext-Ereignisse mit Runde', () => {
+    const got: LiveStreamEvent[] = [];
+    service.stream('20', 2, false).subscribe().unsubscribe();
+    expect(FakeEventSource.last().url).toBe('/api/live-boards/20/rounds/2/stream?ngsw-bypass=1');
+    const sub = service.stream('20', 2, false, ['fnmEB1kH.RD8sbYw1', 'fnmEB1kH.Other001']).subscribe(e => got.push(e));
+    const es = FakeEventSource.last();
+    expect(es.url).toBe('/api/live-boards/20/rounds/2/stream?extra=fnmEB1kH.RD8sbYw1,fnmEB1kH.Other001&ngsw-bypass=1');
+    es.emit('ext-snapshot', { round: 'fnmEB1kH', tourName: 'WM', roundName: 'Game 3', url: 'u', state: 'live', games: [] });
+    es.emit('ext-game', { round: 'fnmEB1kH', game: { id: 'RD8sbYw1' } });
+    es.emit('ext-error', { round: 'Unknown1', code: 'live_ext_not_found' });
+    es.emit('ext-state', { nope: 1 });                                     // ohne Runde: verworfen
+    expect(got.map(e => e.type)).toEqual(['ext-snapshot', 'ext-game', 'ext-error']);
+    expect((got[2] as Extract<LiveStreamEvent, { type: 'ext-error' }>).code).toBe('live_ext_not_found');
+    sub.unsubscribe();
+  });
+
+  it('external: Link als Parameter', () => {
+    service.external('https://lichess.org/broadcast/x/game-3/fnmEB1kH/RD8sbYw1').subscribe();
+    const req = http.expectOne(r => r.url === '/api/live-boards/external');
+    expect(req.request.params.get('url')).toBe('https://lichess.org/broadcast/x/game-3/fnmEB1kH/RD8sbYw1');
+    req.flush({});
   });
 
   it('stream: aufgegebene Verbindung → offline, dann neuer Versuch nach der Wartezeit', fakeAsync(() => {

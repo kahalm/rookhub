@@ -145,7 +145,9 @@
     "engine_not_found": "هذا المحرك لا يخص ذلك الحساب أو لم يعد مسجلًا.",
     "live_invalid_url": "هذا ليس رابط بث من Lichess.",
     "live_broadcast_not_found": "لا يعرف Lichess هذا البث.",
-    "live_tournament_not_found": "لم يتم جلب هذه البطولة بعد."
+    "live_tournament_not_found": "لم يتم جلب هذه البطولة بعد.",
+    "live_ext_game_not_found": "هذه المباراة ليست من هذه الجولة.",
+    "live_lichess_busy": "Lichess مشغول الآن — حاول مجددًا بعد دقيقة."
   },
   "common": {
     "optional": "اختياري",
@@ -1607,7 +1609,28 @@
         "cloud": "تقييم Lichess السحابي",
         "engine": "محرك RookHub"
       },
-      "depth": "العمق {{depth}}"
+      "depth": "العمق {{depth}}",
+      "addBoard": "إضافة رقعة",
+      "addTitle": "إضافة رقع",
+      "addSameRound": "من هذه الجولة",
+      "addSearch": "ابحث عن لاعب أو فريق",
+      "addNoMatch": "لم يتم العثور على أي مباراة.",
+      "addOther": "من بث آخر على Lichess",
+      "addLinkLabel": "رابط إلى مباراة أو جولة",
+      "addLinkHint": "مثال: lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "تحميل",
+      "addLoadFailed": "تعذّر تحميل البث.",
+      "addLimit": "{{max}} رقعة على الأكثر.",
+      "addDone": "تم",
+      "added": "الرقع المضافة",
+      "removeBoard": "إزالة الرقعة",
+      "extLoading": "جارٍ تحميل البث …",
+      "extPending": "بانتظار {{count}} مباراة …",
+      "eloAvgTip": "المتوسط على {{count}} رقعة",
+      "extError": {
+        "limit": "تتم مشاهدة عدد كبير جدًا من البثوث الأخرى الآن — حاول لاحقًا.",
+        "notFound": "لا يعرف Lichess هذا البث (بعد الآن)."
+      }
     }
   },
   "puzzles": {

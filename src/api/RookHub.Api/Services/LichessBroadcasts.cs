@@ -134,6 +134,32 @@ public static partial class LichessBroadcasts
         };
     }
 
+    /// <summary>
+    /// Link einer FREMDEN Übertragung für „Brett hinzufügen“ der Live-Bretter (1.025.0): NUR <c>lichess.org/broadcast/…</c>
+    /// (keine nackte Kennung) — Turnier-Link <c>/{slug}/{tourId}</c> → (tourId, null, null), Runden-Link
+    /// <c>/{slug}/{runde}/{roundId}</c> → (null, roundId, null), Partie-Link <c>/{slug}/{runde}/{roundId}/{gameId}</c> →
+    /// (null, roundId, gameId). Jede Kennung muss acht Buchstaben/Ziffern sein; sonst <c>null</c>.
+    /// </summary>
+    public static (string? TourId, string? RoundId, string? GameId)? BoardLinkOf(string? input)
+    {
+        var s = (input ?? "").Trim();
+        if (s.Length > 400) return null;
+        var m = LinkRe().Match(s);
+        if (!m.Success) return null;
+        // Nur der Wirt lichess.org (auch www./http), nicht „evil.com/?lichess.org/broadcast/…“.
+        if (!Uri.TryCreate(s.Contains("://", StringComparison.Ordinal) ? s : "https://" + s, UriKind.Absolute, out var uri)
+            || !(uri.Host.Equals("lichess.org", StringComparison.OrdinalIgnoreCase) || uri.Host.Equals("www.lichess.org", StringComparison.OrdinalIgnoreCase)))
+            return null;
+        var parts = m.Groups[1].Value.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length switch
+        {
+            2 when IdRe().IsMatch(parts[1]) => (parts[1], null, null),
+            3 when IdRe().IsMatch(parts[2]) => (null, parts[2], null),
+            4 when IdRe().IsMatch(parts[2]) && IdRe().IsMatch(parts[3]) => (null, parts[2], parts[3]),
+            _ => null,
+        };
+    }
+
     /// <summary>Ist das eine Lichess-Kennung (acht Buchstaben/Ziffern)?</summary>
     public static bool IsId(string? s) => s is not null && IdRe().IsMatch(s);
 

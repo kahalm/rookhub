@@ -145,7 +145,9 @@
     "engine_not_found": "Αυτή η μηχανή δεν ανήκει σε αυτόν τον λογαριασμό ή δεν είναι πια καταχωρισμένη.",
     "live_invalid_url": "Αυτός δεν είναι σύνδεσμος μετάδοσης Lichess.",
     "live_broadcast_not_found": "Το Lichess δεν γνωρίζει αυτή τη μετάδοση.",
-    "live_tournament_not_found": "Αυτό το τουρνουά δεν έχει ληφθεί ακόμη."
+    "live_tournament_not_found": "Αυτό το τουρνουά δεν έχει ληφθεί ακόμη.",
+    "live_ext_game_not_found": "Αυτή η παρτίδα δεν ανήκει στον γύρο.",
+    "live_lichess_busy": "Το Lichess είναι υπερφορτωμένο — δοκιμάστε ξανά σε ένα λεπτό."
   },
   "common": {
     "optional": "Προαιρετικό",
@@ -1607,7 +1609,28 @@
         "cloud": "Αξιολόγηση cloud του Lichess",
         "engine": "Μηχανή RookHub"
       },
-      "depth": "βάθος {{depth}}"
+      "depth": "βάθος {{depth}}",
+      "addBoard": "Προσθήκη σκακιέρας",
+      "addTitle": "Προσθήκη σκακιερών",
+      "addSameRound": "Από αυτόν τον γύρο",
+      "addSearch": "Αναζήτηση παίκτη ή ομάδας",
+      "addNoMatch": "Δεν βρέθηκε παρτίδα.",
+      "addOther": "Από άλλη μετάδοση του Lichess",
+      "addLinkLabel": "Σύνδεσμος σε παρτίδα ή γύρο",
+      "addLinkHint": "π.χ. lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "Φόρτωση",
+      "addLoadFailed": "Η μετάδοση δεν φορτώθηκε.",
+      "addLimit": "Το πολύ {{max}} σκακιέρες.",
+      "addDone": "Τέλος",
+      "added": "Προστιθέμενες σκακιέρες",
+      "removeBoard": "Αφαίρεση σκακιέρας",
+      "extLoading": "Φόρτωση μετάδοσης …",
+      "extPending": "Αναμονή για {{count}} παρτίδα(ες) …",
+      "eloAvgTip": "Μέσος όρος σε {{count}} σκακιέρες",
+      "extError": {
+        "limit": "Αυτή τη στιγμή παρακολουθούνται πάρα πολλές άλλες μεταδόσεις — δοκιμάστε αργότερα.",
+        "notFound": "Το Lichess δεν γνωρίζει (πια) αυτή τη μετάδοση."
+      }
     }
   },
   "puzzles": {

@@ -145,7 +145,9 @@
     "engine_not_found": "Этот движок не принадлежит этому аккаунту или больше не зарегистрирован.",
     "live_invalid_url": "Это не ссылка на трансляцию Lichess.",
     "live_broadcast_not_found": "Lichess не знает такой трансляции.",
-    "live_tournament_not_found": "Этот турнир ещё не загружен."
+    "live_tournament_not_found": "Этот турнир ещё не загружен.",
+    "live_ext_game_not_found": "Эта партия не относится к туру.",
+    "live_lichess_busy": "Lichess сейчас перегружен — попробуйте через минуту."
   },
   "common": {
     "optional": "Необязательно",
@@ -1607,7 +1609,28 @@
         "cloud": "Облачная оценка Lichess",
         "engine": "Движок RookHub"
       },
-      "depth": "глубина {{depth}}"
+      "depth": "глубина {{depth}}",
+      "addBoard": "Добавить доску",
+      "addTitle": "Добавить доски",
+      "addSameRound": "Из этого тура",
+      "addSearch": "Найти игрока или команду",
+      "addNoMatch": "Партии не найдены.",
+      "addOther": "Из другой трансляции Lichess",
+      "addLinkLabel": "Ссылка на партию или тур",
+      "addLinkHint": "напр. lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "Загрузить",
+      "addLoadFailed": "Не удалось загрузить трансляцию.",
+      "addLimit": "Не более {{max}} досок.",
+      "addDone": "Готово",
+      "added": "Добавленные доски",
+      "removeBoard": "Убрать доску",
+      "extLoading": "Трансляция загружается …",
+      "extPending": "Ожидание партий: {{count}} …",
+      "eloAvgTip": "Среднее по {{count}} доскам",
+      "extError": {
+        "limit": "Сейчас смотрят слишком много других трансляций — попробуйте позже.",
+        "notFound": "Lichess не знает (больше) эту трансляцию."
+      }
     }
   },
   "puzzles": {

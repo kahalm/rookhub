@@ -145,7 +145,9 @@
     "engine_not_found": "Este motor não pertence a essa conta ou já não está registado.",
     "live_invalid_url": "Isto não é um link de transmissão do Lichess.",
     "live_broadcast_not_found": "O Lichess não conhece esta transmissão.",
-    "live_tournament_not_found": "Este torneio ainda não foi obtido."
+    "live_tournament_not_found": "Este torneio ainda não foi obtido.",
+    "live_ext_game_not_found": "Esta partida não pertence à ronda.",
+    "live_lichess_busy": "O Lichess está sobrecarregado — tenta de novo dentro de um minuto."
   },
   "common": {
     "optional": "Opcional",
@@ -1607,7 +1609,28 @@
         "cloud": "Avaliação na nuvem do Lichess",
         "engine": "Motor RookHub"
       },
-      "depth": "profundidade {{depth}}"
+      "depth": "profundidade {{depth}}",
+      "addBoard": "Adicionar tabuleiro",
+      "addTitle": "Adicionar tabuleiros",
+      "addSameRound": "Desta ronda",
+      "addSearch": "Pesquisar jogador ou equipa",
+      "addNoMatch": "Nenhuma partida encontrada.",
+      "addOther": "De outra transmissão do Lichess",
+      "addLinkLabel": "Link para uma partida ou ronda",
+      "addLinkHint": "p. ex. lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "Carregar",
+      "addLoadFailed": "Não foi possível carregar a transmissão.",
+      "addLimit": "No máximo {{max}} tabuleiros.",
+      "addDone": "Concluído",
+      "added": "Tabuleiros adicionados",
+      "removeBoard": "Remover tabuleiro",
+      "extLoading": "A carregar a transmissão …",
+      "extPending": "À espera de {{count}} partida(s) …",
+      "eloAvgTip": "Média de {{count}} tabuleiros",
+      "extError": {
+        "limit": "Neste momento estão a ser vistas demasiadas transmissões — tenta mais tarde.",
+        "notFound": "O Lichess não conhece (já) esta transmissão."
+      }
     }
   },
   "puzzles": {

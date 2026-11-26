@@ -153,7 +153,9 @@
     "engine_not_found": "Diese Engine gehört nicht zu diesem Konto oder ist nicht mehr registriert.",
     "live_invalid_url": "Das ist kein Link einer Lichess-Übertragung.",
     "live_broadcast_not_found": "Diese Übertragung kennt Lichess nicht.",
-    "live_tournament_not_found": "Dieses Turnier ist noch nicht geholt."
+    "live_tournament_not_found": "Dieses Turnier ist noch nicht geholt.",
+    "live_ext_game_not_found": "Diese Partie gehört nicht zu der Runde.",
+    "live_lichess_busy": "Lichess ist gerade ausgelastet — bitte in einer Minute noch einmal versuchen."
   },
   "common": {
     "optional": "Optional",
@@ -1675,7 +1677,28 @@
         "cloud": "Lichess-Cloud-Bewertung",
         "engine": "RookHub-Engine"
       },
-      "depth": "Tiefe {{depth}}"
+      "depth": "Tiefe {{depth}}",
+      "addBoard": "Brett hinzufügen",
+      "addTitle": "Bretter hinzufügen",
+      "addSameRound": "Aus dieser Runde",
+      "addSearch": "Spieler oder Mannschaft suchen",
+      "addNoMatch": "Keine Partie gefunden.",
+      "addOther": "Aus einer anderen Lichess-Übertragung",
+      "addLinkLabel": "Link zu einer Partie oder Runde",
+      "addLinkHint": "z. B. lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "Laden",
+      "addLoadFailed": "Die Übertragung konnte nicht geladen werden.",
+      "addLimit": "Höchstens {{max}} Bretter.",
+      "addDone": "Fertig",
+      "added": "Hinzugefügte Bretter",
+      "removeBoard": "Brett entfernen",
+      "extLoading": "Übertragung wird geladen …",
+      "extPending": "Warte auf {{count}} Partie(n) …",
+      "eloAvgTip": "Schnitt über {{count}} Bretter",
+      "extError": {
+        "limit": "Gerade werden zu viele andere Übertragungen angesehen — bitte später noch einmal versuchen.",
+        "notFound": "Diese Übertragung kennt Lichess nicht (mehr)."
+      }
     }
   },
   "puzzles": {

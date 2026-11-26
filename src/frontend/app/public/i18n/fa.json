@@ -145,7 +145,9 @@
     "engine_not_found": "این موتور متعلق به آن حساب نیست یا دیگر ثبت نشده است.",
     "live_invalid_url": "این پیوند پخش Lichess نیست.",
     "live_broadcast_not_found": "Lichess این پخش را نمی‌شناسد.",
-    "live_tournament_not_found": "این مسابقه هنوز دریافت نشده است."
+    "live_tournament_not_found": "این مسابقه هنوز دریافت نشده است.",
+    "live_ext_game_not_found": "این بازی جزو این دور نیست.",
+    "live_lichess_busy": "Lichess اکنون شلوغ است — یک دقیقه دیگر دوباره امتحان کنید."
   },
   "common": {
     "optional": "اختیاری",
@@ -1607,7 +1609,28 @@
         "cloud": "ارزیابی ابری Lichess",
         "engine": "موتور RookHub"
       },
-      "depth": "عمق {{depth}}"
+      "depth": "عمق {{depth}}",
+      "addBoard": "افزودن صفحه",
+      "addTitle": "افزودن صفحه‌ها",
+      "addSameRound": "از این دور",
+      "addSearch": "جستجوی بازیکن یا تیم",
+      "addNoMatch": "هیچ بازی‌ای پیدا نشد.",
+      "addOther": "از پخش دیگری در Lichess",
+      "addLinkLabel": "پیوند به یک بازی یا دور",
+      "addLinkHint": "مثلاً lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "بارگذاری",
+      "addLoadFailed": "پخش بارگذاری نشد.",
+      "addLimit": "حداکثر {{max}} صفحه.",
+      "addDone": "تمام",
+      "added": "صفحه‌های افزوده",
+      "removeBoard": "حذف صفحه",
+      "extLoading": "در حال بارگذاری پخش …",
+      "extPending": "در انتظار {{count}} بازی …",
+      "eloAvgTip": "میانگین روی {{count}} صفحه",
+      "extError": {
+        "limit": "اکنون پخش‌های دیگر زیادی دیده می‌شوند — بعداً دوباره امتحان کنید.",
+        "notFound": "Lichess این پخش را (دیگر) نمی‌شناسد."
+      }
     }
   },
   "puzzles": {

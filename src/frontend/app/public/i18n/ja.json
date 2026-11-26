@@ -145,7 +145,9 @@
     "engine_not_found": "このエンジンはそのアカウントのものではないか、登録が解除されています。",
     "live_invalid_url": "Lichess 中継のリンクではありません。",
     "live_broadcast_not_found": "Lichess はこの中継を知りません。",
-    "live_tournament_not_found": "この大会はまだ取得されていません。"
+    "live_tournament_not_found": "この大会はまだ取得されていません。",
+    "live_ext_game_not_found": "この対局はそのラウンドに含まれていません。",
+    "live_lichess_busy": "Lichess が混み合っています。1 分後にもう一度お試しください。"
   },
   "common": {
     "optional": "任意",
@@ -1607,7 +1609,28 @@
         "cloud": "Lichess クラウド評価",
         "engine": "RookHub エンジン"
       },
-      "depth": "深さ {{depth}}"
+      "depth": "深さ {{depth}}",
+      "addBoard": "盤を追加",
+      "addTitle": "盤を追加",
+      "addSameRound": "このラウンドから",
+      "addSearch": "選手またはチームを検索",
+      "addNoMatch": "対局が見つかりません。",
+      "addOther": "別の Lichess 中継から",
+      "addLinkLabel": "対局またはラウンドへのリンク",
+      "addLinkHint": "例: lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "読み込む",
+      "addLoadFailed": "中継を読み込めませんでした。",
+      "addLimit": "最大 {{max}} 盤まで。",
+      "addDone": "完了",
+      "added": "追加した盤",
+      "removeBoard": "盤を外す",
+      "extLoading": "中継を読み込み中 …",
+      "extPending": "{{count}} 局を待っています …",
+      "eloAvgTip": "{{count}} 盤の平均",
+      "extError": {
+        "limit": "現在ほかの中継が多く視聴されています。後でもう一度お試しください。",
+        "notFound": "Lichess はこの中継を(もう)認識していません。"
+      }
     }
   },
   "puzzles": {

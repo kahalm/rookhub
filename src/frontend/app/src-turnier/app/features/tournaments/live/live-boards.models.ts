@@ -66,6 +66,11 @@ export interface LiveMatchSlot {
   liveHome: number;
   liveAway: number;
   boards: LiveBoardSlot[];
+  /** Elo-Schnitt der Spieler an den Brettern (Strom, sonst Startliste; 1.025.0) und über wie viele Bretter. */
+  homeElo?: number | null;
+  homeEloBoards?: number;
+  awayElo?: number | null;
+  awayEloBoards?: number;
 }
 
 export interface LiveRoundLayout {
@@ -78,8 +83,28 @@ export interface LiveRoundLayout {
 /** Zustand der Verbindung RookHub ↔ Lichess bzw. Browser ↔ RookHub (`offline` = SSE zu, wird neu versucht). */
 export type LiveState = 'connecting' | 'live' | 'reconnecting' | 'finished' | 'offline';
 
+/** Zeile der Partieauswahl einer fremden Runde (`GET /api/live-boards/external?url=`, 1.025.0). */
+export interface ExternalGameRow {
+  id: string; white: string; black: string; whiteTitle: string | null; blackTitle: string | null;
+  whiteElo: number | null; blackElo: number | null; result: string;
+}
+
+/** Eine fremde Lichess-Runde mit ihren Partien; `gameId` = die Partie des eingefügten Partie-Links. */
+export interface ExternalRoundView {
+  roundId: string; roundName: string; tourName: string; url: string; ongoing: boolean; finished: boolean;
+  gameId: string | null; games: ExternalGameRow[];
+}
+
+/**
+ * Ereignisse des Stroms. `ext-*` (1.025.0) = zusätzliche Bretter aus fremden Übertragungen im SELBEN Strom, `round` =
+ * Lichess-Runde; der Server schickt nur die gewählten Partien.
+ */
 export type LiveStreamEvent =
   | { type: 'snapshot'; state: LiveState; round: number; layout: LiveRoundLayout; games: LiveGame[] }
   | { type: 'layout'; layout: LiveRoundLayout }
   | { type: 'game'; game: LiveGame }
-  | { type: 'state'; state: LiveState };
+  | { type: 'state'; state: LiveState }
+  | { type: 'ext-snapshot'; round: string; tourName: string; roundName: string; url: string; state: LiveState; games: LiveGame[] }
+  | { type: 'ext-game'; round: string; game: LiveGame }
+  | { type: 'ext-state'; round: string; state: LiveState }
+  | { type: 'ext-error'; round: string; code: string };

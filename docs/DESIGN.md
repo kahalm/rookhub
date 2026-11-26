@@ -1384,7 +1384,16 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   **Link teilen** (1.024.0): rechts im Kopf ein Rahmenknopf `share` + „Link teilen“ (unter 480 px nur das Symbol, 48 px
   breit, Name per `aria-label`), für Gäste wie Angemeldete. Am Handy (`pointer: coarse` + Web Share API) das Teilen-Blatt,
   sonst Zwischenablage mit Snackbar „Link zu dieser Ansicht kopiert.“ — wie „Link teilen“ der Partien (8.1). Der Link trägt
-  die ganze Ansicht (`?round=` immer, `team`/`player`, `eval=1` wenn der Balken an ist).
+  die ganze Ansicht (`?round=` immer, `team`/`player`, `add`/`ext`, `eval=1` wenn der Balken an ist).
+  **Brett hinzufügen** (1.025.0): Rahmenknopf `add` + „Brett hinzufügen“ in der Werkzeugzeile (immer, auch für Gäste) → Auswahl-
+  Dialog 560 px (5.6, `autoFocus: 'dialog'`): Abschnitt „Aus dieser Runde“ (nur mit Mannschafts-/Spielerfilter) mit Suchfeld und
+  Zeilen ≥ 44 px (☑/☐ in `--rh-accent`, Spieler „Weiß – Schwarz“, darunter leise „Brett n · Begegnung“), Abschnitt „Aus einer
+  anderen Lichess-Übertragung“ mit Link-Feld + Rahmenknopf „Laden“, Fehler als Zeile in `--rh-error`; „Abbrechen“ / „Fertig“
+  (gefüllt). Hinzugefügte Bretter: eigener Abschnitt mit `h2`-Zeile „Hinzugefügte Bretter“ bzw. „Turnier · Runde“ (Akzent-Link mit
+  `open_in_new`) unter den gefilterten Brettern, dieselbe Karte mit Zusatz „· Begegnung“ neben „Brett n“ und einem ✕ (`close`,
+  40 px, `aria-label` „Brett entfernen“) rechts im Kartenkopf. Elo-Schnitt der Begegnung: „Ø 2315“ als leise Zeile (0,8 rem,
+  `tabular-nums`) unter dem Mannschaftsnamen, Tooltip „Schnitt über n Bretter“. Verbindungsabriss: Zustand „Live“ bleibt 10 s
+  stehen, erst danach „Verbindung unterbrochen“ (kein Blinken, Bretter bleiben stehen, kein Spinner).
 - Profil: erste Karte „Darstellung“ = RookHubs `app-theme-card` (`@rh/features/profile/theme-card.component`), auch
   beim Ladefehler. Spieltermine einer Liga mit „·“-Trenner in der Lücke (`overflow-x: clip`, wie ClubHub `.kid-meta`).
 
@@ -1632,6 +1641,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-26 | 1.025.0 · Turnierseite | Live-Bretter: „Brett hinzufügen“ (Auswahl-Dialog 560 px mit Suche + Lichess-Link), Abschnitt „Hinzugefügte Bretter“ / „Turnier · Runde“ mit ✕ im Kartenkopf, Elo-Schnitt „Ø n“ unter dem Mannschaftsnamen, Abriss erst nach 10 s anzeigen (8.2) | Mannschaftskampf und daneben einzelne Bretter (auch die WM-Partie) auf einer Seite; „live“ ↔ „unterbrochen“ blinkte | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.024.0 · Turnierseite | Live-Bretter: Knopf „Link teilen“ rechts im Kopf (8.2), unter 480 px nur Symbol; Teilen-Blatt am Handy, sonst Kopieren mit Snackbar | Eine bestimmte Live-Ansicht (Runde, Mannschaft) soll an Gäste gehen und genau so aufgehen | Nutzerwunsch 26.11. |
 | 2026-11-25 | 1.021.0 · Zusammenfassung | Roter Faden als abgesetzter Kernsatz ganz oben (8.1): unter dem Titel des Texts, Akzentleiste links + leicht getönte Fläche, 1,05 rem, ≤ 75ch, ohne Überschrift; an der alten Stelle entfällt er | Der rote Faden ist die Kernaussage, stand aber am Ende von „Die Partie“ hinter allen Zügen; eine Überschrift doppelte nur seinen ersten Satz | Wunsch 2026-11-25 |
 | 2026-11-25 | 1.015.0 · Partien + Formular-Korrektur | Restzeit an den Zügen (5.3) und Karte „Zeitverbrauch“ (zwei Linien, Weiß voll/Akzent, Schwarz gestrichelt) in der Auswertungsspalte; in der Formular-Werkbank (5.12) ein Feld „Uhr nach dem Zug“ unter dem Zug und die Zeit klein in der Zugliste | Notierte Restzeiten werden jetzt mitgelesen; sie sollen sichtbar und korrigierbar sein, kompakt und ohne zweite Farbe für die Seite | Wunsch 2026-11-25 |

@@ -17,8 +17,12 @@ public sealed record CrRound(bool Team, IReadOnlyList<CrPlayer> Players, IReadOn
 public sealed record LiveBoardSlot(int Board, string White, string Black, string? Result, string? GameId, bool? HomeIsWhite = null);
 
 /// <summary>Eine Begegnung im Mannschaftsturnier mit ihren Brettern (Reihenfolge = chess-results-Aufstellung).</summary>
+/// <remarks><c>HomeElo</c>/<c>AwayElo</c> (1.025.0, Wunsch 2026-11-26): Elo-Schnitt der Spieler an den Brettern dieser
+/// Begegnung — Elo aus dem Strom, sonst aus der chess-results-Startliste; Spieler ohne Elo zählen nicht, <c>…EloBoards</c> =
+/// wie viele gezählt wurden (Tooltip „Schnitt über 6 Bretter“). <c>null</c> = kein Brett mit Elo.</remarks>
 public sealed record LiveMatchSlot(int MatchNumber, string Home, string Away, decimal? HomeScore, decimal? AwayScore,
-    decimal LiveHome, decimal LiveAway, IReadOnlyList<LiveBoardSlot> Boards);
+    decimal LiveHome, decimal LiveAway, IReadOnlyList<LiveBoardSlot> Boards,
+    int? HomeElo = null, int HomeEloBoards = 0, int? AwayElo = null, int AwayEloBoards = 0);
 
 /// <summary>Die Runde als Bretter: je Begegnung (Mannschaft) bzw. je Brett (Einzel); <see cref="Unassigned"/> = Partien
 /// der Übertragung, die keinem chess-results-Brett zuzuordnen waren.</summary>
@@ -113,12 +117,17 @@ public static class LiveBoardAssembler
             perMatch[match.MatchNumber].Add((g, homeWhite, order));
         }
 
+        // Elo aus dem Strom, sonst aus der Startliste; 0/leer zählt nicht.
+        int? EloOf(LivePlayer p) => p.Elo is > 0 ? p.Elo : find(p)?.Elo is { } e && e > 0 ? e : null;
+
         var matches = new List<LiveMatchSlot>();
         foreach (var m in round.Matches.OrderBy(x => x.MatchNumber))
         {
             var list = perMatch[m.MatchNumber].OrderBy(x => x.Order).ThenBy(x => x.G.Id, StringComparer.Ordinal).ToList();
             decimal home = 0, away = 0;
             var boards = new List<LiveBoardSlot>();
+            var homeElos = new List<int>();
+            var awayElos = new List<int>();
             for (var i = 0; i < list.Count; i++)
             {
                 var (g, homeWhite, _) = list[i];
@@ -126,12 +135,19 @@ public static class LiveBoardAssembler
                 home += homeWhite ? wPts : bPts;
                 away += homeWhite ? bPts : wPts;
                 boards.Add(new LiveBoardSlot(i + 1, g.White.Name, g.Black.Name, g.Result, g.Id, homeWhite));
+                var wElo = EloOf(g.White);
+                var bElo = EloOf(g.Black);
+                if ((homeWhite ? wElo : bElo) is { } he) homeElos.Add(he);
+                if ((homeWhite ? bElo : wElo) is { } ae) awayElos.Add(ae);
             }
-            matches.Add(new LiveMatchSlot(m.MatchNumber, m.Home, m.Away, m.HomeScore, m.AwayScore, home, away, boards));
+            matches.Add(new LiveMatchSlot(m.MatchNumber, m.Home, m.Away, m.HomeScore, m.AwayScore, home, away, boards,
+                Avg(homeElos), homeElos.Count, Avg(awayElos), awayElos.Count));
         }
         var rest = unassigned.OrderBy(g => BoardTagOrder(g.BoardTag)).Select(g => g.Id).ToList();
         return new LiveRoundLayout(true, matches, [], rest);
     }
+
+    private static int? Avg(List<int> elos) => elos.Count == 0 ? null : (int)Math.Round(elos.Average(), MidpointRounding.AwayFromZero);
 
     private static T? SingleOrDefaultSafe<T>(this IEnumerable<T> source, Func<T, bool> pred) where T : class
     {

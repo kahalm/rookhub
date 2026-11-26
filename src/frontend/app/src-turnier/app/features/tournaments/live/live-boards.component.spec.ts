@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, flush, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
@@ -11,7 +11,9 @@ import { LiveBoardsComponent, samePlayer } from './live-boards.component';
 import { EVENT_SOURCE_FACTORY } from './live-boards.service';
 import { FakeEventSource } from './fake-event-source';
 import { LiveGame, LiveStatus } from './live-boards.models';
-import { LIVE_EVAL_KEY } from './live-boards.util';
+import { LIVE_EVAL_KEY, LIVE_LOST_GRACE_MS } from './live-boards.util';
+import { MatDialog } from '@angular/material/dialog';
+import { of } from 'rxjs';
 
 const STATUS: LiveStatus = {
   linked: true, manual: false, tourId: 'IjDgZVUR', tourName: '1. Bundesliga Austria 2026/2027',
@@ -78,7 +80,7 @@ describe('LiveBoardsComponent', () => {
     http.expectOne('/api/live-boards/1404438').flush(STATUS);
     await fixture.whenStable();
     const es = FakeEventSource.last();
-    expect(es.url).toBe('/api/live-boards/1404438/rounds/1/stream');
+    expect(es.url).toBe('/api/live-boards/1404438/rounds/1/stream?ngsw-bypass=1');
     es.emit('snapshot', SNAPSHOT);
     await fixture.whenStable();
     expect(el().querySelectorAll('app-live-board-card').length).toBe(2);
@@ -104,7 +106,7 @@ describe('LiveBoardsComponent', () => {
     const first = FakeEventSource.last();
     fixture.componentInstance.setEval(true);
     expect(first.closed).toBeTrue();
-    expect(FakeEventSource.last().url).toBe('/api/live-boards/1404438/rounds/1/stream?eval=true');
+    expect(FakeEventSource.last().url).toBe('/api/live-boards/1404438/rounds/1/stream?eval=true&ngsw-bypass=1');
     expect(localStorage.getItem(LIVE_EVAL_KEY)).toBe('1');
   });
 
@@ -137,7 +139,7 @@ describe('LiveBoardsComponent', () => {
     await setup({ eval: '1', round: '1' });
     http.expectOne('/api/live-boards/1404438').flush(STATUS);
     await fixture.whenStable();
-    expect(FakeEventSource.last().url).toBe('/api/live-boards/1404438/rounds/1/stream?eval=true');
+    expect(FakeEventSource.last().url).toBe('/api/live-boards/1404438/rounds/1/stream?eval=true&ngsw-bypass=1');
     expect(localStorage.getItem(LIVE_EVAL_KEY)).toBeNull();
   });
 
@@ -185,6 +187,123 @@ describe('LiveBoardsComponent', () => {
       if (had) Object.defineProperty(nav, 'share', had); else delete (nav as { share?: unknown }).share;
     }
   });
+
+  // ── 1.025.0: weitere Bretter (Wunsch 2026-11-26) ────────────────────────────────────────────────────────────────
+  const TWO_MATCHES = {
+    ...SNAPSHOT,
+    games: [...SNAPSHOT.games, game('c1', 'Muster, Max', 'Gast, Erster'), game('c2', 'Zweiter, Gast', 'Muster, Moritz')],
+    layout: {
+      ...SNAPSHOT.layout,
+      matches: [
+        { ...SNAPSHOT.layout.matches[0], homeElo: 2539, homeEloBoards: 2, awayElo: 2462, awayEloBoards: 1 },
+        {
+          matchNumber: 2, home: 'SK Absam', away: 'SK Wörgl', homeScore: null, awayScore: null, liveHome: 0, liveAway: 0,
+          boards: [
+            { board: 1, white: 'Muster, Max', black: 'Gast, Erster', result: '*', gameId: 'c1', homeIsWhite: true },
+            { board: 2, white: 'Zweiter, Gast', black: 'Muster, Moritz', result: '*', gameId: 'c2', homeIsWhite: false },
+          ],
+        },
+      ],
+    },
+  };
+
+  it('Adresse ?add=&ext=: Gast sieht die Mannschaft, die hinzugefügten Bretter und die fremde Partie über EINEN Strom', async () => {
+    await setup({ team: 'SK Schwaz', round: '1', add: '2.2,9.9', ext: 'fnmEB1kH.RD8sbYw1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    expect(FakeEventSource.all.length).toBe(1);
+    const es = FakeEventSource.last();
+    expect(es.url).toBe('/api/live-boards/1404438/rounds/1/stream?extra=fnmEB1kH.RD8sbYw1&ngsw-bypass=1');
+    es.emit('snapshot', TWO_MATCHES);
+    es.emit('ext-snapshot', { round: 'fnmEB1kH', tourName: 'FIDE World Championship 2026', roundName: 'Game 3',
+      url: 'https://lichess.org/broadcast/-/-/fnmEB1kH', state: 'live', games: [game('RD8sbYw1', 'Gukesh D', 'Carlsen, Magnus')] });
+    await fixture.whenStable();
+    const c = fixture.componentInstance;
+    expect(c.addedBoards().map(b => b.game.id)).toEqual(['c2']);              // 9.9 gibt es nicht → still weg
+    expect(c.addedBoards()[0].caption).toBe('SK Absam – SK Wörgl');
+    expect(el().querySelectorAll('app-live-board-card').length).toBe(4);      // 2 Schwaz + 1 hinzugefügt + 1 WM
+    expect(el().textContent).toContain('FIDE World Championship 2026 · Game 3');
+    expect(el().querySelectorAll('.lb-remove').length).toBe(2);
+    expect(c.shareUrl()).toBe(`${location.origin}/tournaments/1404438/live?round=1&team=SK%20Schwaz&add=2.2,9.9&ext=fnmEB1kH.RD8sbYw1`);
+    http.verify();
+  });
+
+  it('Entfernen: ✕ nimmt das Brett aus der Adresse; Dialog-Ergebnis schreibt add/ext', async () => {
+    await setup({ team: 'SK Schwaz', add: '2.1,2.2', ext: 'fnmEB1kH.RD8sbYw1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const nav = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const c = fixture.componentInstance;
+    c.removeAdded('2.1');
+    expect(nav).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { add: '2.2', ext: 'fnmEB1kH.RD8sbYw1' } }));
+    c.removeExt('fnmEB1kH.RD8sbYw1');
+    expect(nav.calls.mostRecent().args[1]!.queryParams).toEqual({ add: '2.1,2.2', ext: null });
+    spyOn(TestBed.inject(MatDialog), 'open').and.returnValue({ afterClosed: () => of({ added: ['2.1'], ext: ['fnmEB1kH.Other001'] }) } as never);
+    c.openAdd();
+    expect(nav.calls.mostRecent().args[1]!.queryParams).toEqual({ add: '2.1', ext: 'fnmEB1kH.Other001' });
+  });
+
+  it('Dialog-Auswahl: mit Mannschaftsfilter die Bretter der anderen Begegnungen, ohne Filter keine (alle sind zu sehen)', async () => {
+    await setup({ team: 'SK Schwaz' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    FakeEventSource.last().emit('snapshot', TWO_MATCHES);
+    await fixture.whenStable();
+    const c = fixture.componentInstance;
+    expect(c.addRows().map(r => r.key)).toEqual(['2.1', '2.2']);
+    expect(el().querySelector('.live-add')).not.toBeNull();
+    query.next(convertToParamMap({}));
+    await fixture.whenStable();
+    expect(c.addRows()).toEqual([]);
+    expect(el().querySelector('.live-add')).not.toBeNull();                  // fremde Übertragungen gehen immer
+  });
+
+  it('fremde Runde unbekannt: Hinweis statt Brett, Entfernen nimmt die ganze Runde heraus', async () => {
+    await setup({ ext: 'Unknown1.Game0001' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    FakeEventSource.last().emit('snapshot', SNAPSHOT);
+    FakeEventSource.last().emit('ext-error', { round: 'Unknown1', code: 'live_ext_not_found' });
+    await fixture.whenStable();
+    expect(fixture.componentInstance.extRounds()[0].error).toBe('tournaments.live.extError.notFound');
+  });
+
+  it('Elo-Schnitt im Kopf der Begegnung, Tooltip mit Bretterzahl', async () => {
+    await setup({ team: 'SK Schwaz' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    FakeEventSource.last().emit('snapshot', TWO_MATCHES);
+    await fixture.whenStable();
+    const elos = [...el().querySelectorAll('.mh-elo')].map(e => e.textContent!.trim());
+    expect(elos).toEqual(['Ø 2539', 'Ø 2462']);
+  });
+
+  // Wunsch 2026-11-26: „Verbindung unterbrochen“ blinkte bei jedem kurzen Abriss — erst nach 10 s zeigen.
+  it('kurzer Abriss: „Live“ bleibt stehen, erst nach der Gnadenfrist „unterbrochen“; zurück vorher → nichts zu sehen', fakeAsync(() => {
+    void setup();
+    flush();
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    flush();
+    const c = fixture.componentInstance;
+    const es = FakeEventSource.last();
+    es.emit('snapshot', SNAPSHOT);
+    expect(c.state()).toBe('live');
+    es.emit('state', { state: 'reconnecting' });
+    tick(LIVE_LOST_GRACE_MS - 1000);
+    expect(c.state()).toBe('live');
+    es.emit('state', { state: 'live' });                                       // zurück vor Ablauf
+    tick(5000);
+    expect(c.state()).toBe('live');
+    es.fail(true);                                                             // aufgegeben → offline
+    tick(LIVE_LOST_GRACE_MS - 1);
+    expect(c.state()).toBe('live');
+    expect(el().querySelectorAll('app-live-board-card').length).toBe(2);       // Bretter bleiben mit letztem Stand
+    tick(1);
+    expect(c.state()).toBe('offline');
+    fixture.destroy();
+    discardPeriodicTasks();
+    flush();
+  }));
 
   it('samePlayer: Reihenfolge, Komma und Akzente egal', () => {
     expect(samePlayer('Mittal, Aditya', 'Aditya Mittal')).toBeTrue();

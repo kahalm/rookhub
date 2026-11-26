@@ -48,12 +48,16 @@ public partial class OgMetaService
         var layout = cr is null || games is null ? null : LiveBoardAssembler.Assemble(cr, games);
 
         var where = round is null ? tourName : $"{tourName}, Runde {round}";
+        // Hinzugefügte Bretter (1.025.0): ?add= aus derselben Runde, ?ext= aus fremden Übertragungen — nur gezählt, ohne
+        // Lichess-Abruf (der Vorschau-Abrufer soll keine fremde Runde prüfen lassen).
+        var more = AddedBoards(QueryParam(path, "add")) + ExternalRoundRegistry.ParseRefs(QueryParam(path, "ext")).Count;
+        var plus = more switch { 0 => "", 1 => " + 1 weiteres Brett", _ => $" + {more} weitere Bretter" };
         var parts = new List<string>();
         string title;
         var match = team is null ? null : cr?.Matches.FirstOrDefault(m => SameTeam(m.Home, team) || SameTeam(m.Away, team));
         if (match is not null)
         {
-            title = $"Live: {match.Home} – {match.Away} · {where}";
+            title = $"Live: {match.Home} – {match.Away}{plus} · {where}";
             var live = layout?.Matches.FirstOrDefault(m => m.MatchNumber == match.MatchNumber);
             var home = match.HomeScore ?? live?.LiveHome;
             var away = match.AwayScore ?? live?.LiveAway;
@@ -62,12 +66,12 @@ public partial class OgMetaService
             if (live is not null) parts.Add(Boards(live.Boards.Count(b => b.GameId is not null)));
         }
         else if (team is not null)
-            title = $"Live: {team} · {where}";
+            title = $"Live: {team}{plus} · {where}";
         else if (player is not null)
-            title = $"Live: {player} · {where}";
+            title = $"Live: {player}{plus} · {where}";
         else
         {
-            title = $"Live-Bretter · {where}";
+            title = $"Live-Bretter{plus} · {where}";
             if (cr is { Team: true, Matches.Count: > 0 }) parts.Add(cr.Matches.Count == 1 ? "1 Begegnung" : $"{cr.Matches.Count} Begegnungen");
             if (games is not null) parts.Add(Boards(games.Count));
         }
@@ -75,6 +79,17 @@ public partial class OgMetaService
         parts.Add("Live-Bretter mit Uhren auf der Turnierseite");
         return new OgPage(title, string.Join(" · ", parts), img, canonical);
     }
+
+    /// <summary>Zahl der gültigen Einträge in <c>?add=</c> (Brett <c>n</c>, Begegnung.Brett <c>m.n</c> oder Lichess-Kennung), gedeckelt wie auf der Seite.</summary>
+    internal static int AddedBoards(string? csv) =>
+        (csv ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(x => AddKeyRe().IsMatch(x)).Distinct(StringComparer.Ordinal).Take(MaxAddedBoards).Count();
+
+    /// <summary>So viele Bretter derselben Runde nimmt <c>?add=</c> höchstens (wie <c>LIVE_MAX_ADDED</c> im Frontend).</summary>
+    internal const int MaxAddedBoards = 24;
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^(\d{1,3}(\.\d{1,3})?|[A-Za-z0-9]{8})$")]
+    private static partial System.Text.RegularExpressions.Regex AddKeyRe();
 
     /// <summary>„läuft gerade“ / „beendet“ / „Beginn 27.11.2026, 14:00“ (Wiener Zeit).</summary>
     internal static string RoundState(LiveRoundInfo info)

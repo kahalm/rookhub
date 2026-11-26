@@ -145,7 +145,9 @@
     "engine_not_found": "Mesin ini bukan milik akun itu atau sudah tidak terdaftar.",
     "live_invalid_url": "Ini bukan tautan siaran Lichess.",
     "live_broadcast_not_found": "Lichess tidak mengenal siaran ini.",
-    "live_tournament_not_found": "Turnamen ini belum diambil."
+    "live_tournament_not_found": "Turnamen ini belum diambil.",
+    "live_ext_game_not_found": "Partai ini bukan bagian dari babak tersebut.",
+    "live_lichess_busy": "Lichess sedang sibuk — coba lagi dalam satu menit."
   },
   "common": {
     "optional": "Opsional",
@@ -1607,7 +1609,28 @@
         "cloud": "Evaluasi cloud Lichess",
         "engine": "Mesin RookHub"
       },
-      "depth": "kedalaman {{depth}}"
+      "depth": "kedalaman {{depth}}",
+      "addBoard": "Tambah papan",
+      "addTitle": "Tambah papan",
+      "addSameRound": "Dari babak ini",
+      "addSearch": "Cari pemain atau tim",
+      "addNoMatch": "Tidak ada partai.",
+      "addOther": "Dari siaran Lichess lain",
+      "addLinkLabel": "Tautan ke partai atau babak",
+      "addLinkHint": "mis. lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "Muat",
+      "addLoadFailed": "Siaran tidak dapat dimuat.",
+      "addLimit": "Paling banyak {{max}} papan.",
+      "addDone": "Selesai",
+      "added": "Papan yang ditambahkan",
+      "removeBoard": "Hapus papan",
+      "extLoading": "Memuat siaran …",
+      "extPending": "Menunggu {{count}} partai …",
+      "eloAvgTip": "Rata-rata dari {{count}} papan",
+      "extError": {
+        "limit": "Terlalu banyak siaran lain yang sedang ditonton — coba lagi nanti.",
+        "notFound": "Lichess tidak mengenal siaran ini (lagi)."
+      }
     }
   },
   "puzzles": {

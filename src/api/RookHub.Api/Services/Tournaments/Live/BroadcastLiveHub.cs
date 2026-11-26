@@ -89,7 +89,9 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
     /// <remarks>Finden/Anlegen des Feeds UND das Anmelden daran laufen unter dem Hub-Lock — Schließen (<see cref="TryCloseIdle"/>)
     /// nimmt denselben Lock, ein Zuschauer kann also nie an einen Feed geraten, der gerade geschlossen wird (Sperrreihenfolge
     /// immer Hub → Feed).</remarks>
-    public RoundSubscription Subscribe(string roundId, bool finished, bool wantsEval)
+    /// <param name="only">Nur diese Partien (zusätzliche Bretter aus einer fremden Übertragung, 1.025.0): der Zuschauer bekommt
+    /// nur sie, und nur für sie wird bewertet — eine Runde mit 100 Brettern rechnet für ein hinzugefügtes Brett nicht alle.</param>
+    public RoundSubscription Subscribe(string roundId, bool finished, bool wantsEval, IReadOnlySet<string>? only = null)
     {
         RoundSubscription sub;
         lock (_lock)
@@ -100,7 +102,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
                 if (_finished.TryGetValue(roundId, out var kept) && kept.Until > DateTime.UtcNow) feed.Preload(kept.Games);
                 _feeds[roundId] = feed;
             }
-            sub = feed.Add(wantsEval);
+            sub = feed.Add(wantsEval, only);
         }
         sub.AfterAdd();
         return sub;
@@ -138,12 +140,15 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         private readonly Feed _feed;
         internal readonly Channel<LiveEvent> Channel;
         internal volatile bool WantsEval;
+        /// <summary>Nur diese Partien (<c>null</c> = alle).</summary>
+        internal readonly IReadOnlySet<string>? Only;
         private int _disposed;
 
-        internal RoundSubscription(Feed feed, bool wantsEval, int queueLimit)
+        internal RoundSubscription(Feed feed, bool wantsEval, int queueLimit, IReadOnlySet<string>? only = null)
         {
             _feed = feed;
             WantsEval = wantsEval;
+            Only = only;
             Channel = System.Threading.Channels.Channel.CreateBounded<LiveEvent>(new BoundedChannelOptions(queueLimit)
             {
                 FullMode = BoundedChannelFullMode.DropOldest, SingleReader = true,
@@ -151,6 +156,19 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         }
 
         public ChannelReader<LiveEvent> Events => Channel.Reader;
+
+        internal bool Accepts(string gameId) => Only is null || Only.Contains(gameId);
+
+        /// <summary>Ereignis zustellen — gefiltert auf <see cref="Only"/>.</summary>
+        internal void Deliver(LiveEvent e)
+        {
+            switch (e)
+            {
+                case LiveGameChanged c when !Accepts(c.Game.Id): return;
+                case LiveSnapshot s when Only is not null: e = s with { Games = s.Games.Where(g => Only.Contains(g.Id)).ToList() }; break;
+            }
+            Channel.Writer.TryWrite(e);
+        }
 
         /// <summary>Nach dem Anmelden außerhalb der Locks: offene Bewertungen anstoßen.</summary>
         internal void AfterAdd()
@@ -219,16 +237,16 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
             }
         }
 
-        public RoundSubscription Add(bool wantsEval)
+        public RoundSubscription Add(bool wantsEval, IReadOnlySet<string>? only = null)
         {
-            var sub = new RoundSubscription(this, wantsEval, _hub._options.QueueLimit);
+            var sub = new RoundSubscription(this, wantsEval, _hub._options.QueueLimit, only);
             lock (_lock)
             {
                 if (_closed) throw new InvalidOperationException("Feed ist geschlossen");   // kann unter dem Hub-Lock nicht passieren
                 _subs.Add(sub);
                 _idle?.Cancel();
                 _idle = null;
-                sub.Channel.Writer.TryWrite(_loaded ? new LiveSnapshot(_games.Values.ToList(), _state) : new LiveStateChanged(_state));
+                sub.Deliver(_loaded ? new LiveSnapshot(_games.Values.ToList(), _state) : new LiveStateChanged(_state));
                 if (_run is null && _state != "finished")
                 {
                     _run = CancellationTokenSource.CreateLinkedTokenSource(_hub._shutdown.Token);
@@ -286,7 +304,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         private void Broadcast(LiveEvent e)
         {
             lock (_lock)
-                foreach (var s in _subs) s.Channel.Writer.TryWrite(e);
+                foreach (var s in _subs) s.Deliver(e);
         }
 
         private void SetState(string state)
@@ -409,22 +427,23 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
             if (g.Eval is null) QueueEval(g.Id);
         }
 
-        private bool AnyWantsEval()
+        /// <summary>Will ein Zuschauer den Balken — für diese Partie (<paramref name="gameId"/>) bzw. überhaupt?</summary>
+        private bool AnyWantsEval(string? gameId = null)
         {
-            lock (_lock) return _subs.Any(s => s.WantsEval);
+            lock (_lock) return _subs.Any(s => s.WantsEval && (gameId is null || s.Accepts(gameId)));
         }
 
         public void QueueAllEvals()
         {
             if (!CanEval || !AnyWantsEval()) return;
             List<string> ids;
-            lock (_lock) ids = _games.Values.Where(g => g.Eval is null).Select(g => g.Id).ToList();
+            lock (_lock) ids = _games.Values.Where(g => g.Eval is null && _subs.Any(s => s.WantsEval && s.Accepts(g.Id))).Select(g => g.Id).ToList();
             foreach (var id in ids) QueueEval(id);
         }
 
         private void QueueEval(string id)
         {
-            if (!CanEval || !AnyWantsEval()) return;
+            if (!CanEval || !AnyWantsEval(id)) return;
             lock (_lock)
             {
                 if (_closed || !_evalQueued.Add(id)) return;
@@ -444,7 +463,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         private bool StillWanted(string id, string fen)
         {
             lock (_lock)
-                return !_closed && _subs.Any(s => s.WantsEval)
+                return !_closed && _subs.Any(s => s.WantsEval && s.Accepts(id))
                        && _games.TryGetValue(id, out var g) && g.Fen == fen && g.Eval is null;
         }
 
@@ -468,7 +487,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
                 await foreach (var id in _evalQueue.Reader.ReadAllAsync(ct))
                 {
                     lock (_lock) _evalQueued.Remove(id);
-                    if (!AnyWantsEval() || ViewerCount == 0) continue;
+                    if (!AnyWantsEval(id) || ViewerCount == 0) continue;
                     LiveGame? g;
                     lock (_lock) _games.TryGetValue(id, out g);
                     if (g is null || g.Eval is not null) continue;

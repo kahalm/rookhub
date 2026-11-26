@@ -1,7 +1,7 @@
 import { Injectable, InjectionToken, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { LiveState, LiveStatus, LiveStreamEvent } from './live-boards.models';
+import { ExternalRoundView, LiveState, LiveStatus, LiveStreamEvent } from './live-boards.models';
 
 /** Baut die EventSource (Tests ersetzen sie). Chrome 111 (Boox) kann EventSource seit Jahren. */
 export const EVENT_SOURCE_FACTORY = new InjectionToken<(url: string) => EventSource>('EVENT_SOURCE_FACTORY', {
@@ -31,8 +31,19 @@ export class LiveBoardsService {
     return this.http.put<LiveStatus>(`/api/live-boards/${encodeURIComponent(id)}/link`, { url });
   }
 
-  stream(id: string, round: number, withEval: boolean): Observable<LiveStreamEvent> {
-    const url = `/api/live-boards/${encodeURIComponent(id)}/rounds/${round}/stream${withEval ? '?eval=true' : ''}`;
+  /** Fremde Runde + Partien zu einem Lichess-Link (Dialog „Brett hinzufügen“, 1.025.0; ohne Anmeldung). */
+  external(url: string): Observable<ExternalRoundView> {
+    return this.http.get<ExternalRoundView>('/api/live-boards/external', { params: { url } });
+  }
+
+  /** `extra` = fremde Bretter `roundId.gameId` — laufen im SELBEN Strom mit (eine EventSource je Seite). */
+  stream(id: string, round: number, withEval: boolean, extra: readonly string[] = []): Observable<LiveStreamEvent> {
+    // `ngsw-bypass` (1.025.0): sonst läuft der Strom im Prod-Build durch den Service Worker (ngsw reicht jede nicht
+    // gecachte Anfrage per respondWith durch) — Chrome beendet einen untätigen Worker nach ~30 s, die Verbindung riss
+    // alle 29–60 s ab und die Seite zeigte „Verbindung unterbrochen“, obwohl der Server-Strom hielt (Prod-Log 26.11.).
+    const q = [withEval ? 'eval=true' : '', extra.length ? `extra=${extra.map(encodeURIComponent).join(',')}` : '', 'ngsw-bypass=1']
+      .filter(Boolean).join('&');
+    const url = `/api/live-boards/${encodeURIComponent(id)}/rounds/${round}/stream?${q}`;
     return new Observable<LiveStreamEvent>(sub => {
       let source: EventSource | null = null;
       let timer: ReturnType<typeof setTimeout> | null = null;
@@ -61,6 +72,13 @@ export class LiveBoardsService {
           const d = parse(e as MessageEvent) as { state: LiveState } | null;
           if (d?.state) sub.next({ type: 'state', state: d.state });
         });
+        // Fremde Runden (1.025.0): je Ereignis mit `round` = Lichess-Runde.
+        for (const type of ['ext-snapshot', 'ext-game', 'ext-state', 'ext-error'] as const) {
+          es.addEventListener(type, (e: Event) => {
+            const d = parse(e as MessageEvent) as { round?: unknown } | null;
+            if (d && typeof d.round === 'string') sub.next({ type, ...d } as LiveStreamEvent);
+          });
+        }
         es.onerror = () => {
           if (closed) return;
           // CONNECTING = die EventSource versucht es selbst noch einmal; CLOSED = aufgegeben → eigener Versuch später.

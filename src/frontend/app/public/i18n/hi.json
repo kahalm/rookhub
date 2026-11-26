@@ -145,7 +145,9 @@
     "engine_not_found": "यह इंजन उस खाते का नहीं है या अब पंजीकृत नहीं है।",
     "live_invalid_url": "यह Lichess प्रसारण का लिंक नहीं है।",
     "live_broadcast_not_found": "Lichess इस प्रसारण को नहीं जानता।",
-    "live_tournament_not_found": "यह टूर्नामेंट अभी लाया नहीं गया है।"
+    "live_tournament_not_found": "यह टूर्नामेंट अभी लाया नहीं गया है।",
+    "live_ext_game_not_found": "यह खेल इस राउंड का नहीं है।",
+    "live_lichess_busy": "Lichess अभी व्यस्त है — एक मिनट बाद फिर कोशिश करें।"
   },
   "common": {
     "optional": "वैकल्पिक",
@@ -1607,7 +1609,28 @@
         "cloud": "Lichess क्लाउड मूल्यांकन",
         "engine": "RookHub इंजन"
       },
-      "depth": "गहराई {{depth}}"
+      "depth": "गहराई {{depth}}",
+      "addBoard": "बोर्ड जोड़ें",
+      "addTitle": "बोर्ड जोड़ें",
+      "addSameRound": "इस राउंड से",
+      "addSearch": "खिलाड़ी या टीम खोजें",
+      "addNoMatch": "कोई खेल नहीं मिला।",
+      "addOther": "किसी दूसरे Lichess प्रसारण से",
+      "addLinkLabel": "किसी खेल या राउंड का लिंक",
+      "addLinkHint": "जैसे lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "लोड करें",
+      "addLoadFailed": "प्रसारण लोड नहीं हो सका।",
+      "addLimit": "अधिकतम {{max}} बोर्ड।",
+      "addDone": "हो गया",
+      "added": "जोड़े गए बोर्ड",
+      "removeBoard": "बोर्ड हटाएँ",
+      "extLoading": "प्रसारण लोड हो रहा है …",
+      "extPending": "{{count}} खेल की प्रतीक्षा …",
+      "eloAvgTip": "{{count}} बोर्ड का औसत",
+      "extError": {
+        "limit": "अभी बहुत से दूसरे प्रसारण देखे जा रहे हैं — बाद में फिर कोशिश करें।",
+        "notFound": "Lichess इस प्रसारण को (अब) नहीं जानता।"
+      }
     }
   },
   "puzzles": {

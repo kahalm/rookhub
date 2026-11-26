@@ -153,7 +153,9 @@
     "engine_not_found": "Ovaj engine ne pripada tom računu ili više nije registriran.",
     "live_invalid_url": "Ovo nije poveznica Lichess prijenosa.",
     "live_broadcast_not_found": "Lichess ne poznaje ovaj prijenos.",
-    "live_tournament_not_found": "Ovaj turnir još nije preuzet."
+    "live_tournament_not_found": "Ovaj turnir još nije preuzet.",
+    "live_ext_game_not_found": "Ova partija ne pripada tom kolu.",
+    "live_lichess_busy": "Lichess je trenutačno preopterećen — pokušaj ponovno za minutu."
   },
   "common": {
     "optional": "Neobavezno",
@@ -1675,7 +1677,28 @@
         "cloud": "Lichess procjena iz oblaka",
         "engine": "RookHub engine"
       },
-      "depth": "dubina {{depth}}"
+      "depth": "dubina {{depth}}",
+      "addBoard": "Dodaj ploču",
+      "addTitle": "Dodaj ploče",
+      "addSameRound": "Iz ovog kola",
+      "addSearch": "Traži igrača ili ekipu",
+      "addNoMatch": "Nije pronađena nijedna partija.",
+      "addOther": "Iz drugog Lichess prijenosa",
+      "addLinkLabel": "Poveznica na partiju ili kolo",
+      "addLinkHint": "npr. lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "Učitaj",
+      "addLoadFailed": "Prijenos se nije mogao učitati.",
+      "addLimit": "Najviše {{max}} ploča.",
+      "addDone": "Gotovo",
+      "added": "Dodane ploče",
+      "removeBoard": "Ukloni ploču",
+      "extLoading": "Prijenos se učitava …",
+      "extPending": "Čeka se {{count}} partija …",
+      "eloAvgTip": "Prosjek preko {{count}} ploča",
+      "extError": {
+        "limit": "Trenutačno se gleda previše drugih prijenosa — pokušaj ponovno kasnije.",
+        "notFound": "Lichess ne poznaje ovaj prijenos (više)."
+      }
     }
   },
   "puzzles": {

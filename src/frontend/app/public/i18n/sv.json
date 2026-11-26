@@ -145,7 +145,9 @@
     "engine_not_found": "Den här motorn tillhör inte det kontot eller är inte längre registrerad.",
     "live_invalid_url": "Det här är ingen länk till en Lichess-sändning.",
     "live_broadcast_not_found": "Lichess känner inte till den här sändningen.",
-    "live_tournament_not_found": "Den här turneringen har inte hämtats än."
+    "live_tournament_not_found": "Den här turneringen har inte hämtats än.",
+    "live_ext_game_not_found": "Partiet hör inte till ronden.",
+    "live_lichess_busy": "Lichess är överbelastat — försök igen om en minut."
   },
   "common": {
     "optional": "Valfritt",
@@ -1607,7 +1609,28 @@
         "cloud": "Lichess molnvärdering",
         "engine": "RookHub-motor"
       },
-      "depth": "djup {{depth}}"
+      "depth": "djup {{depth}}",
+      "addBoard": "Lägg till bräde",
+      "addTitle": "Lägg till brädor",
+      "addSameRound": "Från den här ronden",
+      "addSearch": "Sök spelare eller lag",
+      "addNoMatch": "Inget parti hittades.",
+      "addOther": "Från en annan Lichess-sändning",
+      "addLinkLabel": "Länk till ett parti eller en rond",
+      "addLinkHint": "t.ex. lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "Läs in",
+      "addLoadFailed": "Sändningen kunde inte läsas in.",
+      "addLimit": "Högst {{max}} brädor.",
+      "addDone": "Klar",
+      "added": "Tillagda brädor",
+      "removeBoard": "Ta bort bräde",
+      "extLoading": "Sändningen läses in …",
+      "extPending": "Väntar på {{count}} parti(er) …",
+      "eloAvgTip": "Snitt över {{count}} brädor",
+      "extError": {
+        "limit": "För många andra sändningar visas just nu — försök igen senare.",
+        "notFound": "Lichess känner inte (längre) till den här sändningen."
+      }
     }
   },
   "puzzles": {

@@ -12,9 +12,10 @@ eine Mannschaft zeigt deren sechs Bretter auf einer Seite.
 | GET | `/api/live-boards/{id}/rounds/{round}/stream?eval=1` | **AllowAnonymous** (`directory-read`) + höchstens 6 gleichzeitige Ströme je IP (`SseConnectionLimiter`, `LiveBoards:MaxStreamsPerIp`, gesamt `LiveBoards:MaxStreams` 2000) | Server-Sent Events der Runde. 404 `live_not_linked` ohne Verknüpfung, 429 `live_too_many_streams` |
 | PUT | `/api/live-boards/{id}/link` `{ url }` | Konto (`user-crawl`) | Von Hand verknüpfen: Turnier-, Runden- oder Partie-Link von `lichess.org/broadcast/…`. 400 `live_invalid_url`, 404 `live_broadcast_not_found` / `live_tournament_not_found` |
 | DELETE | `/api/live-boards/{id}/link` | `tournaments.manage` | Verknüpfung lösen (falsch zugeordnet); danach sucht das nächste Lesen wieder |
+| GET | `/api/live-boards/external?url=` | **AllowAnonymous** (`directory-read`) | „Brett hinzufügen“ aus einer FREMDEN Übertragung (1.025.0): Partie-, Runden- oder Turnier-Link → `{ roundId, roundName, tourName, url, ongoing, finished, gameId, games[] }`. 400 `live_invalid_url`, 404 `live_broadcast_not_found` / `live_ext_game_not_found`, 503 `live_lichess_busy` |
 
-`{id}` ist die chess-results-Nummer wie in `/tournaments/:id`. **Keine Lichess-Kennung von außen**: gestreamt wird nur eine
-Runde der in `TournamentBroadcastLinks` verknüpften Übertragung (chess-results-Runde → Lichess-Runde: Zahl im Rundennamen,
+`{id}` ist die chess-results-Nummer wie in `/tournaments/:id`. Gestreamt wird eine
+Runde der in `TournamentBroadcastLinks` verknüpften Übertragung (fremde Runden nur als `extra=`, siehe unten) (chess-results-Runde → Lichess-Runde: Zahl im Rundennamen,
 sonst Reihenfolge, `LichessBroadcasts.RoundFor` / `TournamentLiveService.RoundsOf`).
 
 ### SSE-Format
@@ -36,6 +37,38 @@ event: state         {"state":"live|connecting|reconnecting|finished"}
 `layout` = `LiveRoundLayout`: Mannschaftsturnier `matches[]` (Begegnung aus der chess-results-Paarung, `boards[]` mit
 `gameId` + `homeIsWhite`), Einzelturnier `boards[]` (chess-results-Brett mit `gameId`), `unassigned[]` = übertragene
 Partien ohne Brett.
+
+## Weitere Bretter (1.025.0, Wunsch 2026-11-26)
+
+„bau ein, dass ich auch noch weitere Bretter hinzufügen kann“ — und „auch aus ANDEREN Übertragungen: Schwaz-Mannschaftskampf
+ansehen und daneben die WM-Partie live“.
+
+- **Adresse** (Teil des geteilten Links, auch für Gäste):
+  - `add=` — Bretter DERSELBEN Runde, Schlüssel nach der chess-results-Paarung bzw. Brettposition: Mannschaftsturnier
+    `Begegnung.Brett` (`2.3` = Begegnung 2, Brett 3), Einzelturnier `Brett` (`7`), übertragene Partie ohne Brett (`unassigned`) ihre
+    Lichess-Kennung. **Warum nicht die Lichess-Kennung?** Beim Einzelturnier gibt es das Brett schon vor Rundenbeginn (die Partie
+    erscheint, sobald sie übertragen wird), und setzt der Übertrager die Runde neu auf (neue Kennungen), stimmt der Link weiter.
+    Höchstens 24 (`LIVE_MAX_ADDED`). Nur mit `team`/`player` sichtbar — ohne Filter sieht man ohnehin alle Bretter.
+  - `ext=roundId.gameId,…` — Bretter aus fremden Übertragungen (dort ist die Kennung ab dem Einfügen bekannt, eine chess-results-
+    Paarung gibt es nicht). Höchstens 12 Bretter aus 4 Runden (`ExternalRoundRegistry.MaxBoardsPerStream`/`MaxRoundsPerStream`).
+- **Strom**: `…/stream?extra=roundId.gameId,…` — EINE EventSource je Seite. Der Server meldet sich für jede fremde Runde am selben
+  `BroadcastLiveHub` an (ein Lichess-Strom je Runde für alle Zuschauer, Leerlauf-Schließen wie gehabt) und reicht ihre Ereignisse im
+  selben SSE-Strom weiter: `ext-snapshot { round, tourName, roundName, url, state, games }`, `ext-game { round, game }`,
+  `ext-state { round, state }`, `ext-error { round, code }` (`live_ext_not_found` | `live_ext_limit`). Das Abo trägt einen
+  **Partiefilter** (`Subscribe(…, only)`): nur die gewählten Partien gehen hinaus, und NUR für sie wird bewertet (Cloud/Engine) — eine
+  Runde mit 100 Brettern rechnet für ein hinzugefügtes Brett nicht alle.
+- **Missbrauchsschutz** (`ExternalRoundRegistry`, Singleton, keine DB): Runde muss Lichess bekannt sein (`/api/broadcast/-/-/{roundId}`,
+  Treffer 5 min, Fehltreffer 10 min gecacht); serverweit höchstens `LiveBoards:MaxExternalRounds` (Vorgabe 10) verschiedene fremde
+  Runden gleichzeitig (Zählung je Runde, eine schon beobachtete kostet keinen Platz); dazu wie bisher `SseConnectionLimiter` und das
+  Rate-Limit `directory-read`. Link-Prüfung `LichessBroadcasts.BoardLinkOf` (nur Wirt lichess.org, Kennungen `[A-Za-z0-9]{8}`), im
+  Browser gespiegelt `parseBroadcastLink`.
+- **Oberfläche**: Rahmenknopf „Brett hinzufügen“ (`add`) in der Werkzeugzeile → Dialog (`LiveAddBoardDialogComponent`, 560 px): oben
+  „Aus dieser Runde“ mit Suche (nur mit Filter), darunter „Aus einer anderen Lichess-Übertragung“ mit Link-Feld + „Laden“; ein
+  Partie-Link wählt seine Partie gleich aus. Zeilen schalten um (☑), „Fertig“ schreibt `add`/`ext`. Hinzugefügte Bretter stehen unter
+  den Mannschafts-/Spielerbrettern im Abschnitt „Hinzugefügte Bretter“ (Karte mit Begegnung als Zusatzzeile und ✕), fremde je Runde
+  unter der Überschrift „Turnier · Runde“ (Link zu Lichess); fehlt eine Partie noch: „Warte auf n Partie(n) …“.
+- **Elo-Schnitt** (1.025.0): `LiveMatchSlot.homeElo/awayElo` + `…EloBoards` — Elo der Spieler an den Brettern der Begegnung, aus dem
+  Strom, sonst aus der Startliste; ohne Elo zählt nicht. Im Kopf der Begegnung „Ø 2315“ unter dem Namen, Tooltip „Schnitt über n Bretter“.
 
 ## Ablauf im Server (`Services/Tournaments/Live/`)
 
@@ -122,7 +155,10 @@ zeigt die Stellung davor — Regel in `Services/Games/SignalKingMove.cs` (siehe 
   Headless-Browser gegen Prod: keine Umleitung zur Anmeldung, keine 401, Mannschaft aus `?team=` und Runde aus `?round=`
   greifen; einziger Fehler war `eval=1` → 400 (behoben 1.023.1). Vorschau im Messenger: `docs/api/link-vorschau.md`.
 - Strom im Browser: `EventSource` (Chrome 111 kann es), `LiveBoardsService.stream` — gibt der Browser die Verbindung auf
-  (404/429), „Verbindung unterbrochen“ und neuer Versuch nach 3 s / 10 s / 30 s.
+  (404/429), neuer Versuch nach 3 s / 10 s / 30 s. Seit 1.025.0 mit `ngsw-bypass=1`: im Prod-Build lief der Strom sonst durch den
+  Service Worker (ngsw reicht jede nicht gecachte Anfrage per `respondWith` durch), Chrome beendet einen untätigen Worker nach ~30 s —
+  im Prod-Log endeten die Browser-Ströme nach 29–60 s, während der Server-Strom > 90 s hielt. Ein Abriss bei schon geladenen
+  Brettern wird erst nach 10 s angezeigt (`LIVE_LOST_GRACE_MS`): bis dahin bleiben „Live“ und die Bretter mit dem letzten Stand stehen.
 
 ## Tests
 

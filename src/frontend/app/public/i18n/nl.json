@@ -145,7 +145,9 @@
     "engine_not_found": "Deze engine hoort niet bij dat account of is niet meer geregistreerd.",
     "live_invalid_url": "Dit is geen link van een Lichess-uitzending.",
     "live_broadcast_not_found": "Lichess kent deze uitzending niet.",
-    "live_tournament_not_found": "Dit toernooi is nog niet opgehaald."
+    "live_tournament_not_found": "Dit toernooi is nog niet opgehaald.",
+    "live_ext_game_not_found": "Deze partij hoort niet bij de ronde.",
+    "live_lichess_busy": "Lichess is momenteel overbelast — probeer het over een minuut opnieuw."
   },
   "common": {
     "optional": "Optioneel",
@@ -1607,7 +1609,28 @@
         "cloud": "Lichess-cloudevaluatie",
         "engine": "RookHub-engine"
       },
-      "depth": "diepte {{depth}}"
+      "depth": "diepte {{depth}}",
+      "addBoard": "Bord toevoegen",
+      "addTitle": "Borden toevoegen",
+      "addSameRound": "Uit deze ronde",
+      "addSearch": "Speler of team zoeken",
+      "addNoMatch": "Geen partij gevonden.",
+      "addOther": "Uit een andere Lichess-uitzending",
+      "addLinkLabel": "Link naar een partij of ronde",
+      "addLinkHint": "bijv. lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "Laden",
+      "addLoadFailed": "De uitzending kon niet worden geladen.",
+      "addLimit": "Maximaal {{max}} borden.",
+      "addDone": "Klaar",
+      "added": "Toegevoegde borden",
+      "removeBoard": "Bord verwijderen",
+      "extLoading": "Uitzending wordt geladen …",
+      "extPending": "Wachten op {{count}} partij(en) …",
+      "eloAvgTip": "Gemiddelde over {{count}} borden",
+      "extError": {
+        "limit": "Er worden nu te veel andere uitzendingen bekeken — probeer het later opnieuw.",
+        "notFound": "Lichess kent deze uitzending (niet meer)."
+      }
     }
   },
   "puzzles": {

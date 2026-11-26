@@ -34,6 +34,11 @@ public static partial class DomainServicesSetup
         services.AddSingleton(_ => new SseConnectionLimiter(
             Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxStreamsPerIp") ?? 6, 1, 100),
             Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxStreams") ?? 2000, 1, 100000)));
+        // Zusätzliche Bretter aus fremden Übertragungen (1.025.0): nur Runden, die Lichess kennt, serverweit höchstens
+        // LiveBoards:MaxExternalRounds (10) gleichzeitig — Ströme laufen über denselben Hub.
+        services.AddSingleton(sp => new ExternalRoundRegistry(sp.GetRequiredService<ILichessLiveSource>(),
+            sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<ILogger<ExternalRoundRegistry>>(),
+            Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxExternalRounds") ?? 10, 0, 200)));
         services.AddScoped<ILiveTournamentData, CrawlerLiveTournamentData>();
         services.AddScoped<TournamentLiveService>();
     }

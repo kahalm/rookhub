@@ -153,7 +153,9 @@
     "engine_not_found": "This engine does not belong to that account or is no longer registered.",
     "live_invalid_url": "This is not a Lichess broadcast link.",
     "live_broadcast_not_found": "Lichess does not know this broadcast.",
-    "live_tournament_not_found": "This tournament has not been fetched yet."
+    "live_tournament_not_found": "This tournament has not been fetched yet.",
+    "live_ext_game_not_found": "This game is not part of the round.",
+    "live_lichess_busy": "Lichess is busy right now — please try again in a minute."
   },
   "common": {
     "optional": "Optional",
@@ -1675,7 +1677,28 @@
         "cloud": "Lichess cloud evaluation",
         "engine": "RookHub engine"
       },
-      "depth": "depth {{depth}}"
+      "depth": "depth {{depth}}",
+      "addBoard": "Add board",
+      "addTitle": "Add boards",
+      "addSameRound": "From this round",
+      "addSearch": "Search player or team",
+      "addNoMatch": "No game found.",
+      "addOther": "From another Lichess broadcast",
+      "addLinkLabel": "Link to a game or round",
+      "addLinkHint": "e.g. lichess.org/broadcast/…/game-3/fnmEB1kH/RD8sbYw1",
+      "addLoad": "Load",
+      "addLoadFailed": "The broadcast could not be loaded.",
+      "addLimit": "At most {{max}} boards.",
+      "addDone": "Done",
+      "added": "Added boards",
+      "removeBoard": "Remove board",
+      "extLoading": "Broadcast is loading …",
+      "extPending": "Waiting for {{count}} game(s) …",
+      "eloAvgTip": "Average over {{count}} boards",
+      "extError": {
+        "limit": "Too many other broadcasts are being watched right now — please try again later.",
+        "notFound": "Lichess does not know this broadcast (any more)."
+      }
     }
   },
   "puzzles": {
