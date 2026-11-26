@@ -327,6 +327,35 @@ export const STATES = [
     steps: [{ click: 'button.report-btn' }], expect: dlg('app-report-entry-dialog') },
   { of: 'turnier__tournaments-history', name: 'spieler-verfolgen', auth: LOGGED_IN,
     steps: [{ click: 'button.track-add' }], expect: dlg('app-track-player-dialog') },
+  // Live-Bretter (1.025.0–1.033.0, Mannschaftssicht mit Balken): Schalter „Besten Zug zeigen“ (Pfeil + SAN nur an laufenden
+  // Partien — in der fertigen Runde nur am fremden WM-Brett), „Brett drehen“ an der ersten Karte, Dialog „Brett hinzufügen“
+  // leer, mit Suche, mit geladenem Lichess-Link und mit ungültigem Link (Prüfung im Browser, keine Anfrage). Alles nur
+  // Gerätespeicher bzw. Adresse — „Fertig“ wird nie gedrückt. „Nur ein Zug“ braucht eine laufende Partie mit knapper
+  // Bewertung — kein fester Zustand möglich.
+  { of: 'turnier__live-mannschaft', name: 'bester-zug',
+    steps: [{ click: 'mat-slide-toggle.live-best button[role="switch"]' }, { wait: 1500 }],
+    expect: 'mat-slide-toggle.live-best button[aria-checked="true"]' },
+  { of: 'turnier__live-mannschaft', name: 'brett-drehen',
+    steps: [{ click: '.board-grid app-live-board-card button.lb-turn' }],
+    expect: '.board-grid app-live-board-card button.lb-turn[aria-pressed="true"]' },
+  { of: 'turnier__live-mannschaft', name: 'hinzufuegen',
+    steps: [{ click: '.live-toolbar button.live-add' }], expect: dlg('app-live-add-board-dialog') },
+  { of: 'turnier__live-mannschaft', name: 'hinzufuegen-suche',
+    steps: [{ click: '.live-toolbar button.live-add' }, { fill: `${DIALOG} app-live-add-board-dialog input[type="search"]`, text: 'Wien' }],
+    expect: `${DIALOG} app-live-add-board-dialog .ab-list .ab-row` },
+  { of: 'turnier__live-mannschaft', name: 'hinzufuegen-link',
+    steps: [{ click: '.live-toolbar button.live-add' },
+      { fill: `${DIALOG} app-live-add-board-dialog .ab-link input`, text: 'https://lichess.org/broadcast/-/-/Z7694HAY/Z2ULjsmB' },
+      { click: `${DIALOG} app-live-add-board-dialog .ab-link button[type="submit"]` }],
+    expect: `${DIALOG} app-live-add-board-dialog .ab-round` },
+  { of: 'turnier__live-mannschaft', name: 'hinzufuegen-link-fehler',
+    steps: [{ click: '.live-toolbar button.live-add' },
+      { fill: `${DIALOG} app-live-add-board-dialog .ab-link input`, text: 'https://example.org/broadcast/kein-link' },
+      { click: `${DIALOG} app-live-add-board-dialog .ab-link button[type="submit"]` }],
+    expect: `${DIALOG} app-live-add-board-dialog .ab-error` },
+  // „Link teilen“ auf der geteilten Ansicht: kopiert nur (die lange Adresse legte erst eine Ansicht an) → Hinweis unten.
+  { of: 'turnier__live-geteilt', name: 'teilen',
+    steps: [{ click: '.live-head button.live-share' }], expect: '.mat-mdc-snack-bar-container' },
 
   // ---------------------------------------------------------------- Anmeldung (dieselbe Komponente in allen Oberflächen)
   // Falsches Kennwort mit einem Namen, den es nicht gibt — kein echtes Konto wird gedrosselt.
@@ -371,6 +400,12 @@ export const STATES = [
     steps: [{ click: '.ov-round .gb-mark >> nth=0' }, { waitFor: 'lh-marked-positions-dialog .mp-board' },
       { click: 'lh-marked-positions-dialog .mat-mdc-dialog-actions button.btn-link >> nth=0' }],
     expect: '.bg-replay-box lh-game-replay' },
+  // Hochladen einer Partie, die es schon gibt (PGN einer Vereinspartie, seed.mjs `clubDupPgn`): Übersicht mit
+  // „Schon vorhanden als Partie N“ (1.033.1). Der Entwurf (POST …/drafts) bleibt gestellt; die Übersicht selbst liest nur.
+  { of: 'leaguehub__verein-neu', name: 'dublette', auth: LEAGUE,
+    steps: [{ fill: 'lh-pgn-source-panel textarea', text: '{clubDupPgn}' }, { click: 'lh-pgn-source-panel button.btn-pri' },
+      { waitFor: 'lh-club-import-review table' }],
+    expect: 'lh-club-import-review table tr td.st' },
   { of: 'leaguehub__konten', name: 'info', auth: ['admin'], steps: [{ click: 'button.chk-btn[aria-label="Wie gesucht wird"]' }], expect: '.info-panel.sugg-info' },
   { of: 'leaguehub__start', name: 'prognose-info', auth: LEAGUE,
     steps: [{ click: 'lh-fixture button.chk-btn[aria-label="Wie die Prognose zustande kommt"]' }], expect: 'lh-fixture .info-panel' },
@@ -395,7 +430,7 @@ export const STATES = [
  */
 // Lese-POSTs (Körper = Abfrage, nichts wird geschrieben) gehen zum Server — ein Echo des Körpers bräche die App:
 // same-game lieferte so ein Objekt statt einer Liste („a.filter is not a function“ im ⋮ der Partie, Volllauf 17.10.2026).
-export const READ_POSTS = [/^\/api\/puzzles\/random-batch$/, /^\/api\/kids\/endless\/batch$/, /^\/api\/game-analyses\/same-game$/];
+export const READ_POSTS = [/^\/api\/league\/club\/games\/preview$/, /^\/api\/puzzles\/random-batch$/, /^\/api\/kids\/endless\/batch$/, /^\/api\/game-analyses\/same-game$/];
 
 /**
  * Was das Werkzeug in einem Zustand mit einer Anfrage tut: 'pass' (zum Server), 'once' (einmal zum Server, dann aus dem

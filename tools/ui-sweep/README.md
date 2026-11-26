@@ -220,6 +220,20 @@ Die Prüfungen ersetzen das Hinsehen nicht — Gestaltung („wirkt das gut?") s
   eine Gruppe (drei angepinnt, drei angefangen), vier Repertoires, eigene Partien, ein Aufgabenblatt, Trainingsziel,
   Puzzle-Versuche, einen Endlos-Lauf, eine Freundschaft; LeagueHub als Mitglied Schwaz (Rolle „Verein Schwaz"),
   KidHub-Fortschritt und ein verknüpftes ClubHub-Karteiblatt. Wiederholbar, nur Dev.
+- **Live-Bretter** (`liveTournamentId`, `liveRound`, `liveTeam`, `liveAdd`, `liveExt`, `liveGameKey`, `liveViewToken`, 1.033.0):
+  die 1. Bundesliga (chess-results 1404438), auf Dev mit ihrer Lichess-Übertragung verknüpft, in der ersten FERTIGEN Runde —
+  stabile Bilder, Lichess nur einmal (der Hub merkt sich fertige Runden). Der Seed liest den ersten Schnappschuss des
+  Runden-Stroms (Mannschaft mit „Schwaz“, ein Brett einer anderen Begegnung für `add=`, die erste Partie für
+  `/analysis?live=`), nimmt als fremdes Brett die WM-Partie `fnmEB1kH.RD8sbYw1` und legt mit dem Admin-Konto EINE geteilte
+  Ansicht `/live/{token}` an (wird weiterbenutzt, solange es sie gibt — Admin = Besitzer, die übrigen Rollen Zuschauer).
+  Nicht verknüpft → „nicht auflösbar“ (verknüpfen: `PUT /api/live-boards/1404438/link`). „Nur ein Zug“ und der Pfeil von
+  „Besten Zug zeigen“ erscheinen nur an LAUFENDEN Partien — in der fertigen Runde nur am fremden Brett, wenn es gerade läuft.
+- **Offene Ströme** (Server-Sent Events, Live-Bretter): sie zählen nicht als laufende Anfrage (sonst wartete jede Seite die
+  vollen 60 s); stattdessen wartet der Sweep auf `ready` der Route (höchstens 15 s, erster gezeichneter Stand). Höchstens
+  4 Seiten mit Strom gleichzeitig (`STREAM_PAGES` in `sweep.mjs`): die API erlaubt je Adresse 6 Ströme
+  (`LiveBoards:MaxStreamsPerIp`) — mit 8 Browsern gab es am 26.11.2026 54 Pausen wegen 429 und Bilder mit Ladekreis.
+- **Platzhalter in Bedienschritten**: `{name}` im `text` eines `fill`-Schritts (states.mjs) wird wie in der Adresse ersetzt —
+  z. B. `{clubDupPgn}`, das PGN einer vorhandenen Vereinspartie für den Dubletten-Zustand der LeagueHub-Übersicht.
 - **Browser**: das von Playwright gecachte Chromium (`~/.cache/ms-playwright/chromium-*`) oder `CHROME_BIN`.
 
 ## Zustände nach einer Bedienung (`states.mjs`)

@@ -377,10 +377,16 @@ async function main() {
       if (route.roles && !route.roles.includes(auth)) continue;
       if (auth === 'anon' && [...route.url.matchAll(/\{(\w+)\}/g)].some(m => ANON_SKIP.has(m[1]))) continue;
       const { url, missing, noData } = fill(route.url, auth);
+      // Platzhalter auch im Text von `fill`-Schritten (states.mjs), z. B. das PGN einer vorhandenen Vereinspartie.
+      const steps = route.steps?.map(st => {
+        if (typeof st.text !== 'string' || !/\{\w+\}/.test(st.text)) return st;
+        const f = fill(st.text, auth); missing.push(...f.missing);
+        return { ...st, text: f.url };
+      });
       if (missing.length) { unresolved.push({ id: `${routeId(route)} (${auth})`, url: route.url, missing }); continue; }
       if (noData) { noDataSkipped++; continue; }
       for (const viewport of opts.viewport) for (const theme of opts.theme) for (const lang of opts.lang)
-        jobs.push({ route, id: routeId(route), url, auth, viewport, theme, lang });
+        jobs.push({ route, id: routeId(route), url, auth, viewport, theme, lang, ...(steps ? { steps } : {}) });
     }
   }
 
@@ -563,11 +569,14 @@ async function main() {
     const net = { inflight: 0, lastActivity: Date.now() };
     page.on('console', m => { if (m.type() === 'error') consoleErrors.push({ text: m.text().slice(0, 300), url: m.location()?.url }); });
     page.on('pageerror', e => consoleErrors.push({ text: `Ausnahme: ${String(e.message).slice(0, 300)}` }));
-    page.on('request', () => { net.inflight++; net.lastActivity = Date.now(); });
-    const finish = () => { net.inflight = Math.max(0, net.inflight - 1); net.lastActivity = Date.now(); };
+    // Server-Sent Events (Live-Bretter der Turnierseite) bleiben offen — sie zählen nicht als laufende Anfrage, sonst
+    // wartete jede Live-Seite die vollen SETTLE_MAX_MS.
+    const streaming = req => req.resourceType() === 'eventsource';
+    page.on('request', req => { if (!streaming(req)) net.inflight++; net.lastActivity = Date.now(); });
+    const finish = req => { if (!streaming(req)) net.inflight = Math.max(0, net.inflight - 1); net.lastActivity = Date.now(); };
     page.on('requestfinished', finish);
     page.on('requestfailed', req => {
-      finish();
+      finish(req);
       if (/favicon|\.woff/.test(req.url())) return;
       // Abgebrochene Anfragen gehen durch dieselbe Liste wie Fehlantworten (routes.mjs `expectedFailures`): bricht die Seite
       // nach einer erwarteten 404 die parallele Schwester-Anfrage ab (forkJoin auf /cg/ungueltig/summary), ist das kein Befund.
@@ -596,6 +605,8 @@ async function main() {
       await page.goto(origin + job.url, { waitUntil: 'load', timeout: 30000 });
       await settle(page, net, SETTLE_MAX_MS);
       shell = await shellReady();
+      // Inhalt aus einem offenen Strom (routes.mjs `ready`): auf den ersten gezeichneten Stand warten.
+      if (job.route.ready) await page.locator(job.route.ready).first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
       await page.addStyleTag({ content: '*,*::before,*::after{transition:none!important;animation:none!important;caret-color:transparent!important}' });
       await page.waitForTimeout(300);
     } catch (e) {
@@ -604,7 +615,7 @@ async function main() {
     // Zustand (states.mjs): Schritte ausführen, dann prüfen, ob er erreicht ist. Die Aufnahme gibt es in jedem Fall.
     let stepError = null; let stateMissed = false;
     if (!loadError && job.route.steps) {
-      stepError = await runSteps(page, job.route.steps, () => settle(page, net, STEP_SETTLE_MAX_MS));
+      stepError = await runSteps(page, job.steps ?? job.route.steps, () => settle(page, net, STEP_SETTLE_MAX_MS));
       if (!stepError && job.route.expect) {
         stateMissed = !(await page.locator(job.route.expect).first().isVisible().catch(() => false));
       }
@@ -736,8 +747,20 @@ async function main() {
   console.log(`${jobs.length} Aufnahmen${opts.fast ? ` aus ${units.length} Seitenladungen (--fast: Handy-Ansicht nur über die Breite, ohne Touch)` : ''}, `
     + `${opts.concurrency} gleichzeitig, höchstens ${opts.rate} API-Anfragen/min`);
   const queue = [...units];
+  // Seiten mit offenem Strom (routes.mjs `ready`, Live-Bretter): höchstens STREAM_PAGES gleichzeitig — die API lässt je
+  // Adresse nur 6 Ströme zu (`LiveBoards:MaxStreamsPerIp`, sonst 429 und eine Minute Pause für alle; Lauf 26.11.2026: 54
+  // Pausen). Ist die Grenze erreicht, nimmt der Arbeiter die nächste Seite ohne Strom oder wartet kurz.
+  const STREAM_PAGES = 4;
+  let streamPages = 0;
   await Promise.all(Array.from({ length: Math.max(1, opts.concurrency) }, async () => {
-    while (queue.length) await shoot(queue.shift());
+    while (queue.length) {
+      const i = streamPages < STREAM_PAGES ? 0 : queue.findIndex(u => !u.route.ready);
+      if (i < 0) { await new Promise(r => setTimeout(r, 200)); continue; }
+      const unit = queue.splice(i, 1)[0];
+      const stream = !!unit.route.ready;
+      if (stream) streamPages++;
+      try { await shoot(unit); } finally { if (stream) streamPages--; }
+    }
   }));
   await browser.close();
   process.stdout.write('\n');

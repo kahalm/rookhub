@@ -407,6 +407,53 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
   await step(['clubGroupId'], async () => ({ clubGroupId: list(await a.get('/api/club/groups'))[0]?.id }));
   await step(['kidsBookId'], async () => ({ kidsBookId: list(await a.get('/api/kids/courses'))[0]?.bookId }));
   await step(['tournamentId'], async () => ({ tournamentId: list(await a.get('/api/tournaments'))[0]?.id }));
+  // Live-Bretter (1.014.0–1.033.0): die 1. Bundesliga (chess-results 1404438, auf Dev mit der Lichess-Übertragung
+  // verknüpft) in einer FERTIGEN Runde — stabile Bilder, Lichess nur einmal (der Hub merkt sich fertige Runden 30 min).
+  // Aus dem ersten Schnappschuss des Runden-Stroms: Mannschaft (die mit „Schwaz“, sonst die erste), ein Brett einer
+  // ANDEREN Begegnung für `add=`, die erste Partie für RookHubs `/analysis?live=`. Dazu ein fremdes Brett (`ext=`, WM 2026)
+  // und eine geteilte Ansicht `/live/{token}` des Admin-Kontos (Besitzer = Admin, alle anderen Rollen sind Zuschauer).
+  await step(['liveTournamentId', 'liveRound', 'liveTeam', 'liveAdd', 'liveExt', 'liveGameKey', 'liveViewToken'], async () => {
+    const id = '1404438';
+    const status = await fetch(`${base}/api/live-boards/${id}`).then(r => r.ok ? r.json() : null, () => null);
+    if (!status?.linked) return { _why: `Turnier ${id} auf Dev nicht mit einer Lichess-Übertragung verknüpft (PUT /api/live-boards/${id}/link)` };
+    const round = (status.rounds ?? []).find(r => r.finished && r.lichessRoundId);
+    if (!round) return { _why: 'keine fertige Runde in der Übertragung' };
+    // Strom öffnen, ersten `snapshot` lesen, wieder schließen.
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 20000);
+    let snap = null;
+    try {
+      const res = await fetch(`${base}/api/live-boards/${id}/rounds/${round.round}/stream`, { signal: ctl.signal });
+      const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
+      while (!snap) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const m = /event: snapshot\ndata: (.*)\n/.exec(buf);
+        if (m) snap = JSON.parse(m[1]);
+      }
+    } catch { /* abgebrochen */ } finally { clearTimeout(timer); ctl.abort(); }
+    const matches = snap?.layout?.matches ?? [];
+    if (!matches.length) return { _why: 'Runden-Strom ohne Begegnungen' };
+    const own = matches.find(m => /schwaz/i.test(m.home) || /schwaz/i.test(m.away)) ?? matches[0];
+    const team = /schwaz/i.test(own.away) ? own.away : own.home;
+    const other = matches.find(m => m !== own && m.boards?.some(b => b.gameId));
+    const firstGame = own.boards?.find(b => b.gameId)?.gameId;
+    const extKey = 'fnmEB1kH.RD8sbYw1';
+    const view = { round: round.round, team, player: null, add: other ? [`${other.matchNumber}.1`] : [], ext: [extKey], eval: true };
+    let token = previous.liveViewToken;
+    if (token && !(await fetch(`${base}/api/live-boards/views/${token}`).then(r => r.ok, () => false))) token = null;
+    if (!token) token = (await a.post('/api/live-boards/views', { tournamentId: id, view }))?.token;
+    return { liveTournamentId: id, liveRound: round.round, liveTeam: encodeURIComponent(team), liveAdd: view.add.join(','), liveExt: extKey,
+      liveGameKey: firstGame ? `${round.lichessRoundId}.${firstGame}` : null, liveViewToken: token };
+  });
+  // PGN einer vorhandenen Vereinspartie — die LeagueHub-Übersicht beim Hochladen meldet sie als Dublette
+  // („Schon vorhanden als Partie N“, 1.033.1; Zustand `leaguehub__verein-neu--dublette`).
+  await step(['clubDupPgn'], async () => {
+    const id = list(await a.get('/api/league/club/games?club=1'))[0]?.id;
+    const g = id ? await a.get(`/api/league/club/games/${id}?club=1`) : null;
+    return { clubDupPgn: g?.pgn, _why: g ? 'Vereinspartie ohne PGN' : 'keine Vereinspartie' };
+  });
   await step(['directoryId'], async () => {
     const from = new Date().toISOString().slice(0, 10);
     return { directoryId: list(await a.get(`/api/tournament-directory?from=${from}&pageSize=1`))[0]?.id };

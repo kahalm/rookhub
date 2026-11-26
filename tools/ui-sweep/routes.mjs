@@ -33,9 +33,11 @@ export const APPS = {
 //                parallele Anfrage ab (forkJoin), steht das abgebrochene Gegenstück ebenfalls hier — eng gefasst.
 //   roles      — nur diese Rollen (z. B. ['admin'] für die Admin-Reiter, die ein normales Konto nie sieht); ohne Angabe
 //                alle, die `auth` zulässt. Zustände erben die Einschränkung.
+//   ready      — Selektor, auf den nach der Netzruhe noch höchstens 15 s gewartet wird (Seiten, deren Inhalt über einen
+//                offenen Strom kommt — Server-Sent Events zählen nicht als laufende Anfrage). Zustände erben ihn.
 const r = (app, url, auth = 'any', o = {}) => {
-  const { label, main = null, foldExempt = false, expectedFailures = [], roles = null } = typeof o === 'string' ? { label: o } : o;
-  return { app, url, auth, label, main, foldExempt, expectedFailures, roles };
+  const { label, main = null, foldExempt = false, expectedFailures = [], roles = null, ready = null } = typeof o === 'string' ? { label: o } : o;
+  return { app, url, auth, label, main, foldExempt, expectedFailures, roles, ready };
 };
 
 /** Ist diese Fehlantwort (Zeile wie in `failedRequests`, „GET /api/x/1 → 404“ bzw. „GET /api/x/1 — net::ERR_ABORTED“) für die Route erwartet? */
@@ -69,9 +71,14 @@ const SUMMARY_INVALID = ['.summary-page .empty-state.not-found'];
 const ADMIN_TAB = comp => [`.admin-container app-${comp} > *`, `.admin-container app-${comp}`, '.admin-container mat-tab-group'];
 const ADMIN_TABS = { books: 'admin-books-tab', daily: 'admin-daily-puzzle', puzzles: 'admin-puzzle-tags', groups: 'admin-groups-tab',
   menu: 'admin-menu-visibility', messages: 'admin-messages', courseDl: 'admin-chessable-download', ci: 'admin-github-actions',
-  roles: 'admin-roles', uploads: 'admin-league-uploads', jobs: 'admin-background-jobs', engines: 'admin-engines' };
+  roles: 'admin-roles', uploads: 'admin-league-uploads', jobs: 'admin-background-jobs', engines: 'admin-engines',
+  diagrams: 'admin-diagram-reports' };
 // Reiter der Trainingsziele (`?tab=`, TABS in training-goals.component.ts): der Inhalt des AKTIVEN Reiters.
 const TG_TAB = ['.tg-tabs .mat-mdc-tab-body-active .tab-body > *', '.tg-container app-load-error', '.tg-container app-loading-spinner'];
+// Live-Bretter der Turnierseite: das Raster, sonst Hinweis (nicht verknüpft / Ansicht weg), Fehler, „keine Partien“.
+const LIVE_BOARDS = ['.board-grid app-live-board-card', 'section.live-hint', 'app-load-error', 'p.muted'];
+// Fertig, sobald der erste Schnappschuss des Stroms gezeichnet ist (oder ein Hinweis/Fehler steht).
+const LIVE_READY = ':is(.board-grid app-live-board-card, section.live-hint, app-load-error, .live-page p.muted)';
 const COURSE_BROWSE = ['.browse-container .board-pane app-puzzle-board', '.browse-container .line-list .line-row', '.browse-container .empty-state', '.browse-container app-loading-spinner'];
 
 export const ROUTES = [
@@ -138,6 +145,10 @@ export const ROUTES = [
   r('rookhub', '/guess', 'any', { main: ['.game-row', '.lists .start-card', '.gl-container .start-card'] }),
   r('rookhub', '/guess/{guessId}', 'any', { main: ['.board-col app-chess-board', '.gb-container mat-card'] }),
   r('rookhub', '/analysis', 'any', { main: ['.board-wrap app-analysis-board', '.board-col app-position-setup.editor-full'] }),
+  // „Analysieren“ an einem Live-Brett der Turnierseite (1.026.0): PGN der Live-Partie samt Zügen, Kopf und Uhren.
+  r('rookhub', '/analysis?live={liveGameKey}', 'any', { label: 'analysis-live', main: ['.board-wrap app-analysis-board'],
+    // „Ohne Engine analysieren“: noch kein eigener Zugbaum zu dieser Partie = 404 (line-study-session.ts fängt es ab).
+    expectedFailures: [/^GET \/api\/line-studies\?key=[^ ]+ → 404$/] }),
   // „Ohne Engine analysieren“ (0.855.0/0.895.0): eigene Linien, keine Bewertung — so öffnet `?blind=1` von jeder Partieseite.
   r('rookhub', '/analysis?blind=1&moves=e2e4,e7e5,g1f3,b8c6,f1b5', 'any', { label: 'analysis-ohne-engine', main: ['.board-wrap app-analysis-board', '.board-col app-position-setup.editor-full'] }),
   r('rookhub', '/analysis/games', 'user', { main: ['mat-card.ga', '.ga-container .empty-state', '.new-card'] }),
@@ -217,6 +228,9 @@ export const ROUTES = [
   r('rookhub', '/training-videos/{trainingLessonId}', 'user', { roles: ['admin'], main: ['.segments', '.page app-load-error'] }),
   r('rookhub', '/training-videos/{trainingLessonId}/drill', 'user', { roles: ['admin'], main: ['app-chess-board', '.page .empty-state', '.page app-load-error'] }),
   // Teilen-Link eines Eintrags (/tl/{token}, ohne Anmeldung, zeitlich begrenzt): die Ungültig-Zeile prüft „Link abgelaufen“.
+  // Nachspielen über den Teilen-Link (/tl/{token}/drill): ungültig → „Link abgelaufen“ wie /tl/ungueltig.
+  r('rookhub', '/tl/ungueltig/drill', 'any', { label: 'tl-drill-invalid', main: ['.tv-share-expired', '.page app-load-error', '.page .empty-state'], expectedFailures: [
+    /^GET \/api\/training-videos\/shared\/ungueltig(\/[\w-]+)? → 404$/, /^GET \/api\/training-videos\/shared\/ungueltig(\/[\w-]+)? — net::ERR_ABORTED$/] }),
   r('rookhub', '/tl/ungueltig', 'any', { label: 'tl-invalid', main: ['.tv-share-expired'], expectedFailures: [
     /^GET \/api\/training-videos\/shared\/ungueltig → 404$/, /^GET \/api\/training-videos\/shared\/ungueltig — net::ERR_ABORTED$/] }),
   r('rookhub', '/woodpecker/{woodpeckerPlanId}/solve', 'user', { main: ['.solver app-puzzle-board', '.page mat-card.done', '.page app-load-error'], expectedFailures: [/^GET \/api\/woodpecker\/\d+\/next → 404$/] }),
@@ -267,6 +281,17 @@ export const ROUTES = [
   r('turnier', '/tournaments/{tournamentId}', 'any', { main: ['app-tournament-tables tr.mat-mdc-row', 'app-tournament-tables .player-card', 'app-tournament-tables p.empty-state', 'mat-card.load-failed'] }),
   // Live-Bretter (1.014.0): ohne verknüpfte Übertragung der Hinweis, sonst die Bretter (SSE-Strom bleibt offen).
   r('turnier', '/tournaments/{tournamentId}/live', 'any', { main: ['app-live-board-card', 'section.live-hint', 'app-load-error', 'p.muted'] }),
+  // Live-Bretter einer verknüpften Übertragung (1.025.0–1.033.0, seed.mjs `liveTournamentId`: 1. Bundesliga, FERTIGE Runde):
+  // alle Begegnungen der Runde; die Mannschaftssicht mit einem hinzugefügten Brett (`add=`), einem fremden Brett (`ext=`, WM)
+  // und Engine-Balken. Zustände (states.mjs): Besten Zug, Brett drehen, Dialog „Brett hinzufügen“ (Suche, Link, Fehler).
+  r('turnier', '/tournaments/{liveTournamentId}/live?round={liveRound}', 'any', { label: 'live-runde', main: LIVE_BOARDS, ready: LIVE_READY }),
+  r('turnier', '/tournaments/{liveTournamentId}/live?round={liveRound}&team={liveTeam}&add={liveAdd}&ext={liveExt}&eval=1', 'any',
+    { label: 'live-mannschaft', main: LIVE_BOARDS, ready: LIVE_READY }),
+  // Geteilte, lebende Ansicht (1.029.0): das Admin-Konto hat sie angelegt (Besitzer-Hinweis), alle anderen sehen den Zuschauer-Hinweis.
+  r('turnier', '/live/{liveViewToken}', 'any', { label: 'live-geteilt', main: LIVE_BOARDS, ready: LIVE_READY }),
+  // „gibt es nicht mehr“ (live-boards.component.ts loadView: 404 → viewMissing).
+  r('turnier', '/live/ungueltig', 'any', { label: 'live-geteilt-invalid', main: ['section.live-hint'],
+    expectedFailures: [/^GET \/api\/live-boards\/views\/ungueltig → 404$/] }),
   r('turnier', '/t/{tournamentId}', 'any', { main: ['app-tournament-tables tr.mat-mdc-row', 'app-tournament-tables .player-card', 'app-tournament-tables p.empty-state', '.detail-container mat-card'] }),
   r('turnier', '/tournaments', 'user', { main: ['.rows mat-card.row', 'mat-card.card.empty-state', 'mat-card.card.failed'] }),
   r('turnier', '/tournaments/history', 'user', { main: ['.rows button.row', 'mat-card.player-card', 'p.empty-state', 'p.hint.warn'] }),
