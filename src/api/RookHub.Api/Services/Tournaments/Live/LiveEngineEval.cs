@@ -37,6 +37,10 @@ public sealed class LiveEngineOptions
     /// <summary><c>LiveBoards:Engine:Depth</c> (Vorgabe 30) — Zieltiefe je Stellung. Eine Cloud-Bewertung mindestens so tief
     /// genügt, dann rechnet keine Engine.</summary>
     public int Depth { get; init; } = 30;
+    /// <summary><c>LiveBoards:Engine:MinShowDepth</c> (Vorgabe 20) — Zwischenstände erst ab dieser Tiefe an den Balken. Flache
+    /// Tiefen schlagen nach einem Zug oft kurz aus (Wunsch 2026-11-26: „warte bissl mit dem Balken bis eine gewisse Tiefe da ist“);
+    /// bis dahin bleibt der bisherige Wert stehen. Das Endergebnis geht immer hinaus.</summary>
+    public int MinShowDepth { get; init; } = 20;
     /// <summary><c>LiveBoards:Engine:MaxSeconds</c> (Vorgabe 180) — harte Grenze je Stellung, das bis dahin Erreichte gilt.</summary>
     public int MaxSeconds { get; init; } = 180;
     /// <summary><c>LiveBoards:Engine:MaxParallel</c> (Vorgabe 0 = so viele, wie Hintergrund-Engines frei sind).</summary>
@@ -57,6 +61,7 @@ public sealed class LiveEngineOptions
             OwnerUserName = s["OwnerUserName"] is { Length: > 0 } o ? o.Trim() : null,
             EngineIds = ids,
             Depth = Math.Clamp(s.GetValue<int?>("Depth") ?? 30, 10, 60),
+            MinShowDepth = Math.Clamp(s.GetValue<int?>("MinShowDepth") ?? 20, 1, 60),
             MaxSeconds = Math.Clamp(s.GetValue<int?>("MaxSeconds") ?? 180, 10, 1800),
             MaxParallel = Math.Clamp(s.GetValue<int?>("MaxParallel") ?? 0, 0, 64),
             Threads = Math.Clamp(s.GetValue<int?>("Threads") ?? 0, 0, 256),
@@ -368,6 +373,9 @@ public sealed class LiveEngineQueue : IAsyncDisposable
         }
     }
 
+    /// <summary>Darf ein Zwischenstand an den Balken? Erst ab <see cref="LiveEngineOptions.MinShowDepth"/> (höchstens die Zieltiefe).</summary>
+    internal bool ShowProgress(LiveEval ev) => (ev.Depth ?? 0) >= Math.Min(_options.MinShowDepth, _options.Depth);
+
     private async Task ExecuteAsync(Run run, Entry entry, EngineRef engine, int ownerUserId)
     {
         var lastSent = DateTime.MinValue;
@@ -377,6 +385,7 @@ public sealed class LiveEngineQueue : IAsyncDisposable
             result = await _evaluator.EvaluateAsync(engine, ownerUserId, run.Fen, ev =>
             {
                 if (!entry.Wanted(run.Fen)) { TryCancel(run.Cts); return; }          // niemand sieht das Brett mehr / weitergezogen
+                if (!ShowProgress(ev)) return;                                       // zu flach — der Balken schlüge kurz aus
                 var now = DateTime.UtcNow;
                 if (now - lastSent < ProgressSpacing) return;
                 lastSent = now;

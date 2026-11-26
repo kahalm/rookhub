@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.027.1", date: "2026-11-26", changes: [
+    { en: "Live boards: adding a board from another Lichess broadcast by game or round link works (it always said „not found“ — Lichess answers that link with a single round instead of a round list). Links with extras such as ?pov=black are accepted.",
+      de: "Live-Bretter: Ein Brett aus einer anderen Lichess-Übertragung lässt sich per Partie- oder Runden-Link hinzufügen (es hieß immer „nicht gefunden“ — Lichess beantwortet diesen Link mit einer einzelnen Runde statt einer Rundenliste). Links mit Zusätzen wie ?pov=black gehen auch." },
+    { en: "Engine bar: no more short swing after a move — engine intermediate results only reach the bar from depth 20 (LiveBoards:Engine:MinShowDepth), and until the new position is evaluated the bar keeps its last value instead of going empty.",
+      de: "Engine-Balken: kein kurzer Ausschlag mehr nach einem Zug — Zwischenstände der Engine kommen erst ab Tiefe 20 an den Balken (LiveBoards:Engine:MinShowDepth), und bis die neue Stellung bewertet ist, hält der Balken seinen letzten Wert statt leer zu werden." },
+  ] },
   { version: "1.027.0", date: "2026-11-26", changes: [
     { en: "Live boards, engine bar: positions are now computed on the background engines (the ones that analyse games), in parallel on every free engine, up to depth 30, and the bar fills in step by step („depth 12 … 30“). Previously a single „live engine“ of the first admin account was used — on the server that account has no engines, so only Lichess cloud values ever arrived. A cloud value of depth 30 or more is enough; then no engine computes.",
       de: "Live-Bretter, Engine-Balken: Die Stellungen rechnen jetzt die Hintergrund-Engines (die der Partieanalysen), parallel auf jeder freien Engine, bis Tiefe 30, und der Balken füllt sich schrittweise („Tiefe 12 … 30“). Vorher war es eine einzelne „Live-Engine“ des ersten Admin-Kontos — das hat auf dem Server keine Engines, es kamen nur Lichess-Cloud-Werte an. Ein Cloud-Wert ab Tiefe 30 genügt, dann rechnet keine Engine." },

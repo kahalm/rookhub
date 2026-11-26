@@ -43,4 +43,25 @@ describe('LiveBoardCardComponent', () => {
     expect(a.target).toBe('_blank');
     expect(a.getAttribute('aria-label')).toBe('tournaments.live.openAnalysis');
   });
+  it('hält nach einem Zug den letzten Balkenwert, bis die neue Stellung bewertet ist; neue Partie beginnt leer', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LiveBoardCardComponent);
+    fixture.componentRef.setInput('game', GAME);
+    fixture.componentRef.setInput('board', 1);
+    fixture.componentRef.setInput('showEval', true);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(c.shownEval()?.cp).toBe(42);
+    fixture.componentRef.setInput('game', { ...GAME, plies: 2, eval: null });
+    fixture.detectChanges();
+    expect(c.shownEval()?.cp).toBe(42);
+    fixture.componentRef.setInput('game', { ...GAME, plies: 2, eval: { cp: -10, mate: null, source: 'engine', depth: 22 } });
+    fixture.detectChanges();
+    expect(c.shownEval()?.cp).toBe(-10);
+    fixture.componentRef.setInput('game', { ...GAME, id: 'g2', eval: null });
+    fixture.detectChanges();
+    expect(c.shownEval()).toBeNull();
+  });
 });

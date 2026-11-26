@@ -67,7 +67,7 @@ public class LiveEngineEvalTests
 
     private static LiveEngineQueue Queue(ILiveEngineEvaluator ev, LiveEngineLane? lane = null, LiveEnginePool? pool = null,
         EngineActivityTracker? activity = null, int maxParallel = 0) =>
-        new(ev, new LiveEngineOptions { MaxParallel = maxParallel }, new MemoryCache(new MemoryCacheOptions()), NullLogger<LiveEngineQueue>.Instance,
+        new(ev, new LiveEngineOptions { MaxParallel = maxParallel, MinShowDepth = 1 }, new MemoryCache(new MemoryCacheOptions()), NullLogger<LiveEngineQueue>.Instance,
             lane, activity, _ => Task.FromResult(pool ?? Pool)) { Poll = TimeSpan.FromMilliseconds(30), ProgressSpacing = TimeSpan.Zero };
 
     // ── Warteschlange ───────────────────────────────────────────────────────────────────────────────────────────────

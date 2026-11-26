@@ -75,14 +75,22 @@ public static partial class LichessBroadcasts
         var rounds = new List<Round>();
         if (r.TryGetProperty("rounds", out var rs) && rs.ValueKind == JsonValueKind.Array)
             foreach (var x in rs.EnumerateArray())
-            {
-                var id = Str(x, "id");
-                if (id is null) continue;
-                DateTime? starts = x.TryGetProperty("startsAt", out var s) && s.ValueKind == JsonValueKind.Number
-                    ? DateTimeOffset.FromUnixTimeMilliseconds(s.GetInt64()).UtcDateTime : null;
-                rounds.Add(new Round(id, Str(x, "name") ?? id, starts, True(x, "ongoing"), True(x, "finished")));
-            }
+                if (ParseRound(x) is { } round) rounds.Add(round);
+        // /api/broadcast/-/-/{roundId} antwortet mit {round, tour, games} — ohne „rounds“-Liste (2026-11-26: fremde Runde per
+        // Partie-/Runden-Link galt deshalb immer als „nicht gefunden“). Die genannte Runde dann selbst aufnehmen.
+        if (r.TryGetProperty("round", out var one) && one.ValueKind == JsonValueKind.Object && ParseRound(one) is { } single
+            && rounds.All(x => x.Id != single.Id))
+            rounds.Add(single);
         return new TourDetail(tour, rounds);
+    }
+
+    private static Round? ParseRound(JsonElement x)
+    {
+        var id = Str(x, "id");
+        if (id is null) return null;
+        DateTime? starts = x.TryGetProperty("startsAt", out var s) && s.ValueKind == JsonValueKind.Number
+            ? DateTimeOffset.FromUnixTimeMilliseconds(s.GetInt64()).UtcDateTime : null;
+        return new Round(id, Str(x, "name") ?? id, starts, True(x, "ongoing"), True(x, "finished"));
     }
 
     private static bool True(JsonElement e, string name) => e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.True;

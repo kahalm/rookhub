@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -6,7 +6,7 @@ import { ChessBoardComponent } from '@rh/shared/pgn-viewer/chess-board.component
 import { PreferencesService } from '@rh/core/preferences.service';
 import { formatSecondsClock } from '@rh/shared/clock-format.util';
 import { chessTitle } from '../tournament-table.util';
-import { LiveGame, LivePlayer } from './live-boards.models';
+import { LiveEval, LiveGame, LivePlayer } from './live-boards.models';
 import { evalText, lastMovePair, shownClock, whiteShare } from './live-boards.util';
 
 /**
@@ -69,8 +69,8 @@ import { evalText, lastMovePair, shownClock, whiteShare } from './live-boards.ut
       </div>
       @if (showEval() && evalLabel()) {
         <!-- Quelle dezent (1.015.0): Tooltip „Übertragung / Lichess-Cloud / RookHub-Engine“, Tiefe in der Zeile. -->
-        <div class="lb-evaltext" [title]="('tournaments.live.evalSource.' + game().eval!.source) | translate">
-          {{ evalLabel() }}@if (game().eval!.depth; as d) { · {{ 'tournaments.live.depth' | translate:{ depth: d } }} }
+        <div class="lb-evaltext" [title]="('tournaments.live.evalSource.' + shownEval()!.source) | translate">
+          {{ evalLabel() }}@if (shownEval()!.depth; as d) { · {{ 'tournaments.live.depth' | translate:{ depth: d } }} }
         </div>
       }
     </article>
@@ -128,8 +128,14 @@ export class LiveBoardCardComponent {
   readonly topPlayer = computed<LivePlayer>(() => this.flipped() ? this.game().white : this.game().black);
   readonly bottomPlayer = computed<LivePlayer>(() => this.flipped() ? this.game().black : this.game().white);
   readonly lastMove = computed(() => lastMovePair(this.game().lastMove));
-  readonly share = computed(() => whiteShare(this.game().eval));
-  readonly evalLabel = computed(() => evalText(this.game().eval));
+  /** Der Balken hält nach einem Zug den letzten Wert, bis für die neue Stellung einer da ist (Wunsch 2026-11-26: kein
+   *  Leerlauf/Ausschlag direkt nach dem Zug). Eine neue Partie auf der Karte beginnt leer. */
+  readonly shownEval = linkedSignal<{ id: string; eval: LiveEval | null }, LiveEval | null>({
+    source: () => ({ id: this.game().id, eval: this.game().eval }),
+    computation: (src, prev) => src.eval ?? (prev && prev.source.id === src.id ? prev.value : null),
+  });
+  readonly share = computed(() => whiteShare(this.shownEval()));
+  readonly evalLabel = computed(() => evalText(this.shownEval()));
   readonly resultText = computed(() => this.game().result === '1/2-1/2' ? '½–½' : this.game().result.replace('-', '–'));
 
   title(p: LivePlayer): string | null { return chessTitle(p.title); }

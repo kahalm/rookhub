@@ -147,6 +147,7 @@ ansehen und daneben die WM-Partie live“.
   | `OwnerUserName` | Haus-Engine, sonst erstes Admin-Konto mit Hintergrund-Engines | wessen Engines |
   | `EngineIds` (Liste, auch `EngineId`) | leer | nur diese Engines (online, `rhe_`); leer = die Hintergrund-Liste ohne Nur-auf-Anforderung |
   | `Depth` | 30 | Zieltiefe (10–60); Cloud mindestens so tief → keine Engine |
+  | `MinShowDepth` | 20 | Zwischenstände erst ab dieser Tiefe an den Balken (vorher schlägt er nach einem Zug kurz aus); bis dahin hält die Karte den letzten Wert (1.027.1) |
   | `MaxSeconds` | 180 | harte Grenze je Stellung (10–1800) |
   | `MaxParallel` | 0 | höchstens so viele Bretter gleichzeitig (0 = alle freien Engines) |
   | `Threads` / `HashMb` | 0 / 0 | 0 = was die Engine anbietet (wie die Hintergrund-Aufträge) |
