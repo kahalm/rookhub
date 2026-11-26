@@ -34,6 +34,25 @@ public class BroadcastLiveHubTests
     }
 
     [Fact]
+    public async Task SilentStream_IsRebuilt_AfterStallTimeout_MissedMovesArrive()
+    {
+        // Prod 26.11.2026: der Lichess-Strom stand still (verbunden, aber nichts kam) — Brett 2 hing bei Zug 32, die Uhr lief ab.
+        var src = new FakeLichessLiveSource();
+        src.RoundPgn[Round] = Game1;
+        await using var hub = new BroadcastLiveHub(src, null, NullLogger<BroadcastLiveHub>.Instance, new BroadcastLiveHub.HubOptions
+        {
+            IdleClose = TimeSpan.FromSeconds(5), ReconnectMin = TimeSpan.FromMilliseconds(20), ReconnectMax = TimeSpan.FromMilliseconds(40),
+            StallTimeout = TimeSpan.FromMilliseconds(200),
+        });
+        var a = hub.Subscribe(Round, finished: false, wantsEval: false);
+        await Next<LiveSnapshot>(a);
+        await Until(() => src.StreamsOpened == 1);
+        await Until(() => src.StreamsOpened >= 2);                        // nichts kam → neu aufgebaut
+        await src.StreamOf(Round).Writer.WriteAsync(LivePgn.Game("g1", "A", "B", "1. e4 { [%clk 1:30:00] } 1... c5 { [%clk 1:29:50] }"));
+        Assert.Equal(2, (await Next<LiveGameChanged>(a)).Game.Plies);
+    }
+
+    [Fact]
     public async Task Reconnect_WithoutMoves_BackToLive_AsSoonAsConnected()
     {
         // Prod 26.11.2026: nach einem Abriss stand „Reconnecting…“ minutenlang oben, weil erst der nächste Zug „live“ setzte.

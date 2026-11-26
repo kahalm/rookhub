@@ -36,6 +36,10 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         public TimeSpan ReconnectMax { get; init; } = TimeSpan.FromSeconds(60);
         public TimeSpan RateLimitPause { get; init; } = HttpLichessLiveSource.RateLimitPause;
         public TimeSpan FinishedKeep { get; init; } = TimeSpan.FromMinutes(30);
+        /// <summary>Kommt so lange gar nichts vom Lichess-Strom (auch kein Verbindungszeichen beim Aufbau), gilt er als hängend
+        /// und wird neu aufgebaut — Lichess schickt beim Verbinden den ganzen Stand, verpasste Züge kommen so nach. Prod
+        /// 26.11.2026: der Strom stand nach einer 429-Pause still, Brett 2 blieb bei Zug 32 stehen und die Uhr lief bei uns ab.</summary>
+        public TimeSpan StallTimeout { get; init; } = TimeSpan.FromMinutes(3);
         /// <summary>Höchstzahl wartender Ereignisse je Zuschauer; ein hängender Browser verliert die ältesten (jedes
         /// Ereignis trägt den ganzen Stand seiner Partie, Späteres ersetzt Früheres).</summary>
         public int QueueLimit { get; init; } = 512;
@@ -426,15 +430,23 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
                 while (!ct.IsCancellationRequested)
                 {
                     var gotData = false;
+                    using var stall = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    stall.CancelAfter(o.StallTimeout);
                     try
                     {
                         var splitter = new BroadcastPgnSplitter();
-                        await foreach (var chunk in _hub._source.StreamRoundAsync(RoundId, ct))
+                        await foreach (var chunk in _hub._source.StreamRoundAsync(RoundId, stall.Token))
                         {
+                            stall.CancelAfter(o.StallTimeout);                 // Lebenszeichen: Wächter neu stellen
                             if (!gotData) { gotData = true; SetState("live"); }
                             foreach (var pgn in splitter.Feed(chunk)) Changed(Apply(pgn));
                         }
                         foreach (var pgn in splitter.Flush()) Changed(Apply(pgn));
+                    }
+                    catch (OperationCanceledException) when (!ct.IsCancellationRequested && stall.IsCancellationRequested)
+                    {
+                        _hub._logger.LogInformation("Live-Bretter: Strom der Runde {Round} {Minutes} min still — neu aufbauen", RoundId,
+                            (int)o.StallTimeout.TotalMinutes);
                     }
                     catch (LichessRateLimitedException)
                     {

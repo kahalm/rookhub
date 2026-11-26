@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.030.2", date: "2026-11-26", changes: [
+    { en: "Live boards: a Lichess stream that stays connected but silent (after a throttling pause) is now rebuilt after 3 minutes without any data — Lichess resends the full state, so missed moves arrive and clocks no longer run out on our side while the game goes on.",
+      de: "Live-Bretter: Ein Lichess-Strom, der verbunden bleibt, aber nichts mehr liefert (nach einer Drosselpause), wird nach 3 Minuten ohne Daten neu aufgebaut — Lichess schickt dann den ganzen Stand, verpasste Züge kommen nach, und bei uns läuft keine Uhr mehr ab, während die Partie weitergeht." },
+  ] },
   { version: "1.030.1", date: "2026-11-26", changes: [
     { en: "Live boards: after a reconnect the page no longer shows „Reconnecting…“ until the next move — it switches back to live as soon as the connection to Lichess stands (with slow time controls that could take minutes).",
       de: "Live-Bretter: Nach einem Neuverbinden steht nicht mehr bis zum nächsten Zug „Verbindung wird wiederhergestellt …“ oben — die Seite ist wieder live, sobald die Verbindung zu Lichess steht (bei langer Bedenkzeit dauerte das sonst Minuten)." },
