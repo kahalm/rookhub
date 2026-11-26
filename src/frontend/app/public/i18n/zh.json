@@ -1640,7 +1640,8 @@
       "viewSaveFailed": "无法保存共享视图。",
       "bestMove": "显示最佳着法",
       "bestMoveLabel": "最佳着法 {{move}}",
-      "turnBoard": "翻转棋盘"
+      "turnBoard": "翻转棋盘",
+      "sources": "转播"
     }
   },
   "puzzles": {

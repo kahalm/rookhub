@@ -66,11 +66,6 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
         </a>
         <div class="live-head-text">
           <h1 class="live-title">{{ 'tournaments.live.title' | translate }}</h1>
-          @if (status()?.tourName; as name) {
-            <a class="live-source" [href]="status()!.url" target="_blank" rel="noopener noreferrer">
-              {{ name }} · lichess.org<mat-icon class="inline-icon" aria-hidden="true">open_in_new</mat-icon>
-            </a>
-          }
         </div>
         <!-- Teilen (Wunsch 2026-11-26): der Link trägt die ganze Ansicht (Runde, Mannschaft/Spieler, Balken) und läuft ohne Konto -->
         <button mat-stroked-button type="button" class="live-share" (click)="share()"
@@ -161,12 +156,17 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
         @if (!layout()) {
           <app-loading-spinner />
         } @else {
-          <!-- Kopfzeilen kompakt ÜBER dem einen Raster (Wunsch 2026-11-26 „die Bretter in einer Wurscht, damit ich 8 auf
-               einmal sehe“): Stand je Begegnung, fremde Übertragungen als Link; die Herkunft steht an jeder Karte. -->
-          @if (matches().length > 0 || extRounds().length > 0) {
-            <div class="match-strip">
-              @for (m of matches(); track m.match.matchNumber) {
-                <h2 class="match-head">
+          <!-- Übertragungen gesammelt (Wunsch 2026-11-26 „sammel alle Links … und schreib die untereinander“): je Zeile eine
+               Quelle — das eigene Turnier, je Begegnung Stand + Ø-Elo (Link zur Lichess-Runde), je fremde Runde „Turnier · Runde“.
+               Kleine Schrift, Umbruch statt „…“; die Herkunft steht zusätzlich an jeder Karte. -->
+          <ul class="sources" [attr.aria-label]="'tournaments.live.sources' | translate">
+            <li class="sources-label" aria-hidden="true">{{ 'tournaments.live.sources' | translate }}</li>
+            @if (status()?.tourName; as name) {
+              <li><a class="live-source" [href]="status()!.url" target="_blank" rel="noopener noreferrer">{{ name }} · lichess.org<mat-icon class="inline-icon" aria-hidden="true">open_in_new</mat-icon></a></li>
+            }
+            @for (m of matches(); track m.match.matchNumber) {
+              <li>
+                <a class="match-head" [attr.href]="ownRoundUrl()" target="_blank" rel="noopener noreferrer">
                   <span class="mh-team">{{ m.home }}@if (m.match.homeElo; as e) {
                     <span class="mh-elo" [matTooltip]="'tournaments.live.eloAvgTip' | translate:{ count: m.match.homeEloBoards }">Ø {{ e }}</span>
                   }</span>
@@ -178,23 +178,21 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
                   <span class="mh-team away">{{ m.away }}@if (m.match.awayElo; as e) {
                     <span class="mh-elo" [matTooltip]="'tournaments.live.eloAvgTip' | translate:{ count: m.match.awayEloBoards }">Ø {{ e }}</span>
                   }</span>
-                </h2>
-              }
-              @for (x of extRounds(); track x.roundId) {
-                <p class="ext-line">
-                  @if (x.url) {
-                    <a class="ext-link" [href]="x.url" target="_blank" rel="noopener noreferrer">{{ x.title ?? ('tournaments.live.extLoading' | translate) }}<mat-icon class="inline-icon" aria-hidden="true">open_in_new</mat-icon></a>
-                  } @else { <span>{{ x.title ?? ('tournaments.live.extLoading' | translate) }}</span> }
-                  @if (x.error) {
-                    <span class="muted">{{ x.error }}</span>
-                    <button mat-button type="button" (click)="removeExtRound(x.roundId)">{{ 'tournaments.live.removeBoard' | translate }}</button>
-                  } @else if (x.pending.length > 0) {
-                    <span class="muted">{{ 'tournaments.live.extPending' | translate:{ count: x.pending.length } }}</span>
-                  }
-                </p>
-              }
-            </div>
-          }
+                </a>
+              </li>
+            }
+            @for (x of extRounds(); track x.roundId) {
+              <li class="ext-line">
+                <a class="ext-link" [href]="x.url || ('https://lichess.org/broadcast/-/-/' + x.roundId)" target="_blank" rel="noopener noreferrer">{{ x.title ?? ('tournaments.live.extLoading' | translate) }}<mat-icon class="inline-icon" aria-hidden="true">open_in_new</mat-icon></a>
+                @if (x.error) {
+                  <span class="muted">{{ x.error }}</span>
+                  <button mat-button type="button" (click)="removeExtRound(x.roundId)">{{ 'tournaments.live.removeBoard' | translate }}</button>
+                } @else if (x.pending.length > 0) {
+                  <span class="muted">{{ 'tournaments.live.extPending' | translate:{ count: x.pending.length } }}</span>
+                }
+              </li>
+            }
+          </ul>
           @if (layout()!.team && matches().length === 1 && matches()[0].boards.length === 0) {
             <p class="muted">{{ 'tournaments.live.noBoards' | translate }}</p>
           } @else if (ownCount() === 0) {
@@ -251,9 +249,14 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
     .view-note mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .filter-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0 0 8px; }
     /* Kompakte Kopfzeilen über dem Raster: je Begegnung eine Zeile „Heim Ø  2,5 : 3,5  Gast Ø“, umbrechend nebeneinander */
-    .match-strip { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 0 0 8px; }
-    .match-head { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; min-width: 0;
-      font-size: 1rem; font-weight: 500; }
+    /* Übertragungen: eine Quelle je Zeile, 0,85 rem, Umbruch statt „…“ (auch am Handy) */
+    .sources { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 0.85rem;
+      overflow-wrap: anywhere; }
+    .sources-label { font-size: 0.75rem; color: var(--mat-sys-on-surface-variant); }
+    .sources .live-source { font-size: inherit; }
+    .match-head { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; font-weight: 500;
+      color: inherit; text-decoration: none; }
+    a.match-head[href]:hover .mh-team { text-decoration: underline; }
     .mh-team { min-width: 0; overflow-wrap: anywhere; }
     .mh-score { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
     /* Karten ≥ 240 px (Brett ≈ 216 px): 1920 px → 7 Spalten, 1280 px → 4, unter ~520 px eine; min(100%, …) verhindert
@@ -367,6 +370,9 @@ export class LiveBoardsComponent implements OnInit {
     const games = this.games();
     return (l?.unassigned ?? []).filter(id => games[id]).map((id, i) => ({ key: 'u-' + id, board: i + 1, game: games[id], flipped: false }));
   });
+
+  /** Lichess-Seite der gewählten Runde (Begegnungszeilen der Übertragungsliste); ohne Runde kein Link. */
+  readonly ownRoundUrl = computed(() => this.ownRoundId() ? `https://lichess.org/broadcast/-/-/${this.ownRoundId()}` : null);
 
   /** Lichess-Runde der gewählten chess-results-Runde (für „Analysieren“). */
   readonly ownRoundId = computed(() => this.status()?.rounds.find(r => r.round === this.round())?.lichessRoundId ?? null);

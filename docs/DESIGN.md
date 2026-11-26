@@ -1377,8 +1377,10 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   `auto-fill, minmax(min(100%, 240px), 1fr)`, Abstand 12 px — 1920 px: 7 Spalten (Brett ≈ 216 px, zwei Reihen ≈ 700 px),
   1280 px: 4–5, Handy 390 px: 1 (ab ~520 px zwei). Die Herkunft steht als Zusatz „· …“ neben „Brett n“: bei mehreren
   Begegnungen „Heim – Gast“, hinzugefügte ihre Begegnung (sonst „Hinzugefügte Bretter“), fremde „Turnier · Runde“, übrige
-  „Weitere übertragene Partien“. Darüber eine kompakte, umbrechende Kopfleiste: je Begegnung eine `h2`-Zeile (1 rem)
-  „Heim Ø 2315  2,5 : 3,5  Gast Ø 2290“ und je fremde Runde der Akzent-Link mit `open_in_new` (dort auch „Warte auf …“ bzw.
+  „Weitere übertragene Partien“. Darüber seit 1.032.0 die Liste **„Übertragungen“** (`ul.sources`, 0,85 rem, eine Quelle je Zeile,
+  untereinander, Umbruch statt „…“, kleine Beschriftung 0,75 rem on-surface-variant): das eigene Turnier „Name · lichess.org“
+  (Akzent-Link mit `open_in_new`, vorher im Seitenkopf), je Begegnung „Heim Ø 2315  2,5 : 3,5  Gast Ø 2290“ (Stand fett, Link zur
+  Lichess-Runde, Unterstreichen beim Überfahren) und je fremde Runde „Turnier · Runde“ als Akzent-Link (dort auch „Warte auf …“ bzw.
   der Fehler mit „Brett entfernen“). Je Brett eine umrandete Karte (Radius 8)
   mit „Brett n“ (behält mind. 3,5 em, der Zusatz kürzt mit „…“, voller Text als Tooltip; Kopf-Abstand 4 px), rechts die **Zugnummer** „Zug 34“ (`tabular-nums`, laufend `floor(plies/2)+1`, fertig der letzte Zug;
   Tooltip „Weiß/Schwarz am Zug“ bzw. „Letzter Zug der Partie“) und Ergebnis-Chip oben, Spielerzeile oben (Gegenseite) und unten (eigene Seite): Titel in `--rh-accent`,
@@ -1656,6 +1658,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-26 | 1.032.0 · Turnierseite | Live-Bretter: alle Quellen (Turnier, Begegnungen mit Stand/Ø-Elo, fremde Runden) als Liste „Übertragungen“ untereinander über dem Raster, 0,85 rem, Umbruch statt Ellipse; Turnier-Link aus dem Seitenkopf dorthin (8.2) | Links standen seit dem einen Raster verstreut | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.031.0 · Turnierseite | Live-Bretter: Symbolknopf „Brett drehen“ (`swap_vert`) im Kartenkopf vor Analyse/✕, nur für diesen Zuschauer; Kopf-Abstand 4 px, „Brett n“ mind. 3,5 em (8.2) | Einzelne Bretter aus eigener Sicht ansehen, ohne die Vorgabe für alle zu ändern | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.030.0 · Turnierseite | Live-Bretter: Schalter „Besten Zug zeigen“ neben „Engine-Balken“ (je Gerät), blauer Pfeil + SAN fett in der Wertzeile (8.2) | Den Engine-Zug in laufenden Partien direkt sehen | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.029.0 · Turnierseite | Live-Bretter: „Link teilen“ teilt einen kurzen, lebenden Link `/live/<token>`, Hinweiszeile für Besitzer/Zuschauer unter der Werkzeugzeile, leiser Hinweis bei unbekanntem Link (8.2) | Ein Link für alle, der Änderungen des Erstellers mitmacht | Nutzerwunsch 26.11. |

@@ -1708,7 +1708,8 @@
       "viewSaveFailed": "The shared view could not be saved.",
       "bestMove": "Show best move",
       "bestMoveLabel": "Best move {{move}}",
-      "turnBoard": "Turn board"
+      "turnBoard": "Turn board",
+      "sources": "Broadcasts"
     }
   },
   "puzzles": {

@@ -452,7 +452,7 @@ describe('LiveBoardsComponent', () => {
     const captions = [...el().querySelectorAll('.lb-caption')].map(c => c.textContent!.trim());
     expect(captions).toEqual(['· Pinggau-Friedberg – SK Schwaz', '· Pinggau-Friedberg – SK Schwaz', '· SK Absam – SK Wörgl',
       '· SK Absam – SK Wörgl', '· FIDE World Championship 2026 · Game 3']);
-    expect(el().querySelectorAll('.match-strip .match-head').length).toBe(2);     // Stand je Begegnung bleibt als Kopfzeile
+    expect(el().querySelectorAll('.sources .match-head').length).toBe(2);         // Stand je Begegnung bleibt als Zeile
   });
 
   function eightBoards() {
@@ -549,6 +549,37 @@ describe('LiveBoardsComponent', () => {
     c.toggleTurn('b1');
     await fixture.whenStable();
     expect(flips()).toEqual([true, false]);
+  });
+
+  // Wunsch 2026-11-26: „Sammel alle Links … und schreib die untereinander irgendwo, wo’s passt“
+  it('Übertragungen: Turnier, Begegnungen (Link zur Lichess-Runde) und fremde Runden untereinander, Umbruch statt Abschneiden', async () => {
+    await setup({ team: 'SK Schwaz', round: '1', ext: 'fnmEB1kH.RD8sbYw1' });
+    const host = el();
+    host.style.display = 'block';
+    host.style.width = '390px';
+    document.body.appendChild(host);
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const es = FakeEventSource.last();
+    es.emit('snapshot', TWO_MATCHES);
+    es.emit('ext-snapshot', { round: 'fnmEB1kH', tourName: '35. ekipno prvenstvo Hrvatske 2026 – 1. liga, muškarci', roundName: 'Round 6',
+      url: 'https://lichess.org/broadcast/-/-/fnmEB1kH', state: 'live', games: [game('RD8sbYw1', 'Gukesh D', 'Carlsen, Magnus')] });
+    await fixture.whenStable();
+    const rows = [...host.querySelectorAll('.sources li:not(.sources-label)')] as HTMLElement[];
+    expect(rows.length).toBe(3);
+    expect(rows[0].querySelector('a')!.getAttribute('href')).toBe(STATUS.url!);
+    expect(rows[0].textContent).toContain('1. Bundesliga Austria 2026/2027 · lichess.org');
+    expect(rows[1].querySelector('a')!.getAttribute('href')).toBe('https://lichess.org/broadcast/-/-/L3MX2oE3');
+    expect(rows[1].textContent!.replace(/\s+/g, '')).toBe('Pinggau-FriedbergØ25391:0SKSchwazØ2462');   // Abstände per CSS
+    expect(rows[2].querySelector('a')!.getAttribute('href')).toBe('https://lichess.org/broadcast/-/-/fnmEB1kH');
+    expect(rows[2].textContent).toContain('35. ekipno prvenstvo Hrvatske 2026 – 1. liga, muškarci · Round 6');
+    // untereinander: jede Zeile unter der vorigen; nichts ragt über die Breite, keine Ellipse
+    for (let i = 1; i < rows.length; i++) expect(rows[i].getBoundingClientRect().top).toBeGreaterThanOrEqual(rows[i - 1].getBoundingClientRect().bottom - 0.5);
+    const list = host.querySelector('.sources') as HTMLElement;
+    expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth);
+    for (const r of rows) expect(getComputedStyle(r).textOverflow).not.toBe('ellipsis');
+    expect(host.querySelector('.live-head .live-source')).toBeNull();           // der Turnier-Link steht jetzt in der Liste
+    host.remove();
   });
 
   it('samePlayer: Reihenfolge, Komma und Akzente egal', () => {

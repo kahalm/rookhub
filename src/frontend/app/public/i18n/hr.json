@@ -1708,7 +1708,8 @@
       "viewSaveFailed": "Dijeljeni prikaz nije moguće spremiti.",
       "bestMove": "Prikaži najbolji potez",
       "bestMoveLabel": "Najbolji potez {{move}}",
-      "turnBoard": "Okreni ploču"
+      "turnBoard": "Okreni ploču",
+      "sources": "Prijenosi"
     }
   },
   "puzzles": {

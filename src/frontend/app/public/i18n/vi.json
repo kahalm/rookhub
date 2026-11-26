@@ -1640,7 +1640,8 @@
       "viewSaveFailed": "Không thể lưu chế độ xem chia sẻ.",
       "bestMove": "Hiện nước đi tốt nhất",
       "bestMoveLabel": "Nước tốt nhất {{move}}",
-      "turnBoard": "Xoay bàn cờ"
+      "turnBoard": "Xoay bàn cờ",
+      "sources": "Phát sóng"
     }
   },
   "puzzles": {

@@ -1708,7 +1708,8 @@
       "viewSaveFailed": "Die geteilte Ansicht konnte nicht gespeichert werden.",
       "bestMove": "Besten Zug zeigen",
       "bestMoveLabel": "Bester Zug {{move}}",
-      "turnBoard": "Brett drehen"
+      "turnBoard": "Brett drehen",
+      "sources": "Übertragungen"
     }
   },
   "puzzles": {

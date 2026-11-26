@@ -1640,7 +1640,8 @@
       "viewSaveFailed": "साझा दृश्य सहेजा नहीं जा सका।",
       "bestMove": "सबसे अच्छी चाल दिखाएँ",
       "bestMoveLabel": "सबसे अच्छी चाल {{move}}",
-      "turnBoard": "बोर्ड पलटें"
+      "turnBoard": "बोर्ड पलटें",
+      "sources": "प्रसारण"
     }
   },
   "puzzles": {

@@ -1411,7 +1411,8 @@
       "viewSaveFailed": "A megosztott nézetet nem sikerült menteni.",
       "bestMove": "Legjobb lépés mutatása",
       "bestMoveLabel": "Legjobb lépés: {{move}}",
-      "turnBoard": "Tábla megfordítása"
+      "turnBoard": "Tábla megfordítása",
+      "sources": "Közvetítések"
     }
   },
   "puzzles": {

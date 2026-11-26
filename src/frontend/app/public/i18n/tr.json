@@ -1640,7 +1640,8 @@
       "viewSaveFailed": "Paylaşılan görünüm kaydedilemedi.",
       "bestMove": "En iyi hamleyi göster",
       "bestMoveLabel": "En iyi hamle {{move}}",
-      "turnBoard": "Tahtayı çevir"
+      "turnBoard": "Tahtayı çevir",
+      "sources": "Yayınlar"
     }
   },
   "puzzles": {

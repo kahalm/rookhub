@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.032.0", date: "2026-11-26", changes: [
+    { en: "Live boards: all sources are now listed one below the other above the boards („Broadcasts“) — the tournament on Lichess, each match with score and average rating, and every other broadcast with its round.",
+      de: "Live-Bretter: Alle Quellen stehen jetzt untereinander über den Brettern („Übertragungen“) — das Turnier auf Lichess, jede Begegnung mit Stand und Elo-Schnitt und jede weitere Übertragung mit ihrer Runde." },
+  ] },
   { version: "1.031.0", date: "2026-11-26", changes: [
     { en: "Live boards: each board has a „Turn board“ button — it flips just that board (players, clocks, engine bar, arrow) for you; links and shared views stay as they are.",
       de: "Live-Bretter: Jedes Brett hat einen Knopf „Brett drehen“ — er dreht nur dieses Brett (Spieler, Uhren, Engine-Balken, Pfeil) für dich; Links und geteilte Ansichten bleiben, wie sie sind." },

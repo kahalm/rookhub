@@ -218,6 +218,9 @@ zeigt die Stellung davor — Regel in `Services/Games/SignalKingMove.cs` (siehe 
   in EINE Folge, gezeichnet in einem `.board-grid` (`auto-fill, minmax(min(100%, 240px), 1fr)`, Seite bis 1880 px): 1920 px → 7
   Spalten, 1280 px → 4–5, 390 px → 1. Herkunft je Karte als Zusatzzeile; Stand/Elo-Schnitt je Begegnung und Links der fremden
   Runden als kompakte Kopfleiste darüber.
+- **Übertragungen** (1.032.0, Wunsch 2026-11-26 „sammel alle Links … und schreib die untereinander“): Liste über dem Raster, je
+  Zeile eine Quelle — eigenes Turnier (`status.url`), je Begegnung Stand + Ø-Elo mit Link `lichess.org/broadcast/-/-/<eigene
+  Lichess-Runde>`, je fremde Runde „Turnier · Runde“ mit ihrem Lichess-Link (sonst `…/broadcast/-/-/<roundId>`).
 - **Brett drehen** (1.031.0, Wunsch 2026-11-26): Symbolknopf `swap_vert` im Kartenkopf (vor Analyse/✕, 40 px, `aria-pressed`)
   kehrt die Vorgabe (gewählte Mannschaft bzw. Spieler unten, sonst Heim/Weiß) für DIESE Partie um — Spieler, Uhren, Balken-Richtung
   und Pfeil drehen mit (alles hängt am `flipped` der Karte). Nur dieser Zuschauer, diese Sitzung (`sessionStorage
