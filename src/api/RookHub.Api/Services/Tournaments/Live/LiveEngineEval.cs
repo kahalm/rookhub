@@ -209,7 +209,9 @@ public sealed class BrokerLiveEngineEvaluator : ILiveEngineEvaluator
             var pv = pvs[0];
             int? depth = r.TryGetProperty("depth", out var d) && d.ValueKind == JsonValueKind.Number ? d.GetInt32()
                 : pv.TryGetProperty("depth", out var pd) && pd.ValueKind == JsonValueKind.Number ? pd.GetInt32() : null;
-            var sign = whiteToMove ? 1 : -1;
+            // Der Broker liefert schon aus WEISS-Sicht (EmitBuilder: „Bewertung aus WEISS-Sicht“). Bis 1.027.1 wurde hier bei
+            // Schwarz am Zug noch einmal gedreht — Prod 26.11.: Brett 6 zeigte −3 statt +3,5. Nicht mehr drehen.
+            const int sign = 1;
             if (pv.TryGetProperty("mate", out var m) && m.ValueKind == JsonValueKind.Number) return new LiveEval(null, sign * m.GetInt32(), "engine", depth);
             if (pv.TryGetProperty("cp", out var cp) && cp.ValueKind == JsonValueKind.Number) return new LiveEval(sign * cp.GetInt32(), null, "engine", depth);
             return null;

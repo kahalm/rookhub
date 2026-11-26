@@ -90,3 +90,22 @@ public class LichessBoardLinkQueryTests
         Assert.Equal("Z2ULjsmB", ids.Value.GameId);
     }
 }
+
+/// <summary>Der Broker liefert Weiß-Sicht (EmitBuilder) — die Live-Bretter dürfen bei Schwarz am Zug NICHT noch einmal drehen
+/// (Prod 26.11.2026: Brett 6 −3 statt +3,5, Brett 2 −1,4 statt Weiß besser).</summary>
+public class LiveEngineEvalSignTests
+{
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ParseLine_KeepsWhitePerspective_WhateverSideToMove(bool whiteToMove)
+    {
+        var ev = RookHub.Api.Services.Tournaments.Live.BrokerLiveEngineEvaluator.ParseLine(
+            """{"depth":29,"pvs":[{"moves":["e2e4"],"cp":350,"depth":29}]}""", whiteToMove)!;
+        Assert.Equal(350, ev.Cp);
+        Assert.Equal(29, ev.Depth);
+        var mate = RookHub.Api.Services.Tournaments.Live.BrokerLiveEngineEvaluator.ParseLine(
+            """{"depth":30,"pvs":[{"moves":["e2e4"],"mate":-3}]}""", whiteToMove)!;
+        Assert.Equal(-3, mate.Mate);
+    }
+}

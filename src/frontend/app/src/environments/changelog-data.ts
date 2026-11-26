@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.027.2", date: "2026-11-26", changes: [
+    { en: "Live boards: the engine bar showed the wrong side's evaluation when Black was to move (e.g. −3 instead of +3.5) — the engine broker already reports from White's point of view, and the live boards flipped it a second time.",
+      de: "Live-Bretter: Der Engine-Balken zeigte bei Schwarz am Zug die Bewertung der falschen Seite (z. B. −3 statt +3,5) — der Engine-Broker liefert schon aus Sicht von Weiß, die Live-Bretter drehten ein zweites Mal um." },
+  ] },
   { version: "1.027.1", date: "2026-11-26", changes: [
     { en: "Live boards: adding a board from another Lichess broadcast by game or round link works (it always said „not found“ — Lichess answers that link with a single round instead of a round list). Links with extras such as ?pov=black are accepted.",
       de: "Live-Bretter: Ein Brett aus einer anderen Lichess-Übertragung lässt sich per Partie- oder Runden-Link hinzufügen (es hieß immer „nicht gefunden“ — Lichess beantwortet diesen Link mit einer einzelnen Runde statt einer Rundenliste). Links mit Zusätzen wie ?pov=black gehen auch." },
