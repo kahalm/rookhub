@@ -96,14 +96,14 @@ describe('LiveBoardsComponent', () => {
     expect(flips).toEqual([true, false]);   // Brett 1: Schwaz hat Schwarz → gedreht; Brett 2: Schwaz hat Weiß
   });
 
-  it('Engine-Balken: Schalter merkt sich die Wahl und verbindet mit eval=1 neu', async () => {
+  it('Engine-Balken: Schalter merkt sich die Wahl und verbindet mit eval=true neu (der Server bindet bool, „1“ gab 400)', async () => {
     await setup();
     http.expectOne('/api/live-boards/1404438').flush(STATUS);
     await fixture.whenStable();
     const first = FakeEventSource.last();
     fixture.componentInstance.setEval(true);
     expect(first.closed).toBeTrue();
-    expect(FakeEventSource.last().url).toBe('/api/live-boards/1404438/rounds/1/stream?eval=1');
+    expect(FakeEventSource.last().url).toBe('/api/live-boards/1404438/rounds/1/stream?eval=true');
     expect(localStorage.getItem(LIVE_EVAL_KEY)).toBe('1');
   });
 

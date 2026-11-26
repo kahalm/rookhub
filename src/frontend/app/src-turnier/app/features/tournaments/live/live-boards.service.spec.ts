@@ -34,7 +34,7 @@ describe('LiveBoardsService', () => {
     const got: LiveStreamEvent[] = [];
     const sub = service.stream('1404438', 3, true).subscribe(e => got.push(e));
     const es = FakeEventSource.last();
-    expect(es.url).toBe('/api/live-boards/1404438/rounds/3/stream?eval=1');
+    expect(es.url).toBe('/api/live-boards/1404438/rounds/3/stream?eval=true');
     es.emit('snapshot', { state: 'live', round: 3, layout: { team: false, matches: [], boards: [], unassigned: [] }, games: [] });
     es.emit('game', { id: 'g1' });
     es.emit('state', { state: 'finished' });

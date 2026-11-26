@@ -32,7 +32,7 @@ export class LiveBoardsService {
   }
 
   stream(id: string, round: number, withEval: boolean): Observable<LiveStreamEvent> {
-    const url = `/api/live-boards/${encodeURIComponent(id)}/rounds/${round}/stream${withEval ? '?eval=1' : ''}`;
+    const url = `/api/live-boards/${encodeURIComponent(id)}/rounds/${round}/stream${withEval ? '?eval=true' : ''}`;
     return new Observable<LiveStreamEvent>(sub => {
       let source: EventSource | null = null;
       let timer: ReturnType<typeof setTimeout> | null = null;

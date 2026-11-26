@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.023.1", date: "2026-11-26", changes: [
+    { en: "Live boards: switching on the engine bar no longer breaks the connection („Connection lost — retrying“) — the page asked for the stream with eval=1, which the server rejected; it now sends eval=true.",
+      de: "Live-Bretter: Das Einschalten des Engine-Balkens trennt die Verbindung nicht mehr („Verbindung verloren — neuer Versuch“) — die Seite fragte den Strom mit eval=1 an, das der Server ablehnte; jetzt eval=true." },
+  ] },
   { version: "1.023.0", date: "2026-11-26", changes: [
     { en: "Player preparation / training lines: lines that contradict the opponent’s very first move are no longer suggested and no longer end up in the „Prep: …“ repertoire — if all his games in the chosen period start 1.c4, there are no 1.e4 lines any more, not even from the Lichess estimate. The list and the description of the „Prep: …“ say how many lines were left out (instead of „50 of 574 lines“). Lines he follows for at least one move and leaves later stay as before; without games in the period nothing changes.",
       de: "Spielervorbereitung / Trainingslinien: Linien, die schon dem ersten Zug des Gegners widersprechen, werden nicht mehr vorgeschlagen und landen nicht mehr im „Prep: …“-Repertoire — beginnen alle seine Partien im gewählten Zeitraum mit 1.c4, gibt es keine 1.e4-Linien mehr, auch nicht über die Lichess-Schätzung. Liste und Beschreibung des „Prep: …“ nennen, wie viele Linien ausgelassen wurden (statt „50 von 574 Linien“). Linien, denen er mindestens einen Zug folgt und die er später verlässt, bleiben wie bisher; ohne Partien im Zeitraum ändert sich nichts." },
