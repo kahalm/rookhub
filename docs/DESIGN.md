@@ -1643,6 +1643,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-26 | 1.027.3 · Turnierseite | Live-Bretter: Engine-Balken genau so hoch wie das gezeichnete Brett (gemessen, Chessground rastet auf Vielfache von acht), 0.0 liegt zwischen 4. und 5. Reihe; nach einem Zug hält er den letzten Wert, bis die neue Stellung bewertet ist (8.2) | Balken als Maßstab am Brett lesbar, kein Ausschlag | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.026.0 · Turnierseite | Live-Bretter: Symbolknopf `biotech` im Kartenkopf öffnet die Partie auf RookHubs Analysebrett (neuer Tab, alle Züge, Kopf, Uhren) (8.2) | Eine laufende Partie selbst durchrechnen, auch als Gast | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.025.0 · Turnierseite | Live-Bretter: „Brett hinzufügen“ (Auswahl-Dialog 560 px mit Suche + Lichess-Link), Abschnitt „Hinzugefügte Bretter“ / „Turnier · Runde“ mit ✕ im Kartenkopf, Elo-Schnitt „Ø n“ unter dem Mannschaftsnamen, Abriss erst nach 10 s anzeigen (8.2) | Mannschaftskampf und daneben einzelne Bretter (auch die WM-Partie) auf einer Seite; „live“ ↔ „unterbrochen“ blinkte | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.024.0 · Turnierseite | Live-Bretter: Knopf „Link teilen“ rechts im Kopf (8.2), unter 480 px nur Symbol; Teilen-Blatt am Handy, sonst Kopieren mit Snackbar | Eine bestimmte Live-Ansicht (Runde, Mannschaft) soll an Gäste gehen und genau so aufgehen | Nutzerwunsch 26.11. |

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.027.3", date: "2026-11-26", changes: [
+    { en: "Live boards: the engine bar is now exactly as tall as the board, so 0.0 sits right between the 4th and 5th rank.",
+      de: "Live-Bretter: Der Engine-Balken ist jetzt genau so hoch wie das Brett — 0.0 liegt genau zwischen der 4. und 5. Reihe." },
+  ] },
   { version: "1.027.2", date: "2026-11-26", changes: [
     { en: "Live boards: the engine bar showed the wrong side's evaluation when Black was to move (e.g. −3 instead of +3.5) — the engine broker already reports from White's point of view, and the live boards flipped it a second time.",
       de: "Live-Bretter: Der Engine-Balken zeigte bei Schwarz am Zug die Bewertung der falschen Seite (z. B. −3 statt +3,5) — der Engine-Broker liefert schon aus Sicht von Weiß, die Live-Bretter drehten ein zweites Mal um." },

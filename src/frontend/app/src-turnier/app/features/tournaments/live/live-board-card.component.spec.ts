@@ -64,4 +64,27 @@ describe('LiveBoardCardComponent', () => {
     fixture.detectChanges();
     expect(c.shownEval()).toBeNull();
   });
+  it('Balken genau so hoch wie das gezeichnete Brett, Mitte = Mitte des Bretts (0.0 zwischen 4. und 5. Reihe)', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LiveBoardCardComponent);
+    (fixture.nativeElement as HTMLElement).style.width = '303px';     // kein Vielfaches von acht: Chessground rastet ein
+    document.body.appendChild(fixture.nativeElement);
+    fixture.componentRef.setInput('game', GAME);
+    fixture.componentRef.setInput('board', 1);
+    fixture.componentRef.setInput('showEval', true);
+    fixture.autoDetectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    for (let i = 0; i < 40 && !el.querySelector('.lb-boardrow.measured'); i++) {
+      await new Promise(r => setTimeout(r, 25));
+      fixture.componentInstance.measureBoard();
+      await fixture.whenStable();
+    }
+    const bar = el.querySelector('.lb-evalbar')!.getBoundingClientRect();
+    const board = el.querySelector('cg-board')!.getBoundingClientRect();
+    expect(Math.abs(bar.height - board.height)).toBeLessThanOrEqual(1);
+    expect(Math.abs((bar.top + bar.height / 2) - (board.top + board.height / 2))).toBeLessThanOrEqual(1);
+    el.remove();
+  });
 });

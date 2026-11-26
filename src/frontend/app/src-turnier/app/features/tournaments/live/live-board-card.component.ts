@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, output } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, input, linkedSignal, output, signal,
+  viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -48,14 +49,15 @@ import { evalText, lastMovePair, shownClock, whiteShare } from './live-boards.ut
         </span>
         @if (clock(flipped()); as c) { <span class="lb-clock" role="timer">{{ c }}</span> }
       </div>
-      <div class="lb-boardrow">
+      <div class="lb-boardrow" [class.measured]="boardBox() !== null">
         @if (showEval()) {
           <div class="lb-evalbar" [class.empty]="share() === null" [class.flipped]="flipped()" role="img"
+               [style.height.px]="boardBox()?.height" [style.margin-top.px]="boardBox()?.top"
                [attr.aria-label]="share() === null ? ('tournaments.live.noEval' | translate) : ('tournaments.live.evalLabel' | translate:{ value: evalLabel() })">
             <div class="lb-evalwhite" [style.height.%]="share() ?? 0"></div>
           </div>
         }
-        <div class="lb-cg">
+        <div class="lb-cg" #cg>
           <app-chess-board [fen]="game().fen" [lastMove]="lastMove()" [flipped]="flipped()"
                            [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet" />
         </div>
@@ -97,9 +99,13 @@ import { evalText, lastMovePair, shownClock, whiteShare } from './live-boards.ut
     .lb-clock { flex: 0 0 auto; font-variant-numeric: tabular-nums; padding: 0 6px; border-radius: 4px;
       border: 1px solid transparent; }
     .to-move .lb-clock { font-weight: 700; border-color: var(--rh-accent); }
+    /* Balken genau so hoch wie das gezeichnete Brett (Wunsch 2026-11-26: „0.0 genau zwischen 4 und 5“) — Chessground
+       rastet auf ein Vielfaches von acht und steht oben links, die Zeile kann also etwas höher sein als das Brett. Höhe und
+       Versatz misst boardBox(); ohne Messung (erstes Bild) streckt sich der Balken wie bisher. */
     .lb-boardrow { display: flex; gap: 4px; align-items: stretch; }
+    .lb-boardrow.measured { align-items: flex-start; }
     .lb-cg { flex: 1 1 auto; min-width: 0; }
-    .lb-evalbar { flex: 0 0 10px; position: relative; display: flex; flex-direction: column-reverse;
+    .lb-evalbar { flex: 0 0 10px; box-sizing: border-box; position: relative; display: flex; flex-direction: column-reverse;
       background: color-mix(in srgb, black 80%, white); border: 1px solid var(--mat-sys-outline); border-radius: 2px; overflow: hidden; }
     .lb-evalbar.flipped { flex-direction: column; }
     .lb-evalbar.empty { background: transparent; border-style: dashed; }
@@ -137,6 +143,37 @@ export class LiveBoardCardComponent {
   readonly share = computed(() => whiteShare(this.shownEval()));
   readonly evalLabel = computed(() => evalText(this.shownEval()));
   readonly resultText = computed(() => this.game().result === '1/2-1/2' ? '½–½' : this.game().result.replace('-', '–'));
+
+  /** Lage des gezeichneten Bretts (cg-board) in der Brettzeile — Balkenhöhe und -versatz. */
+  readonly boardBox = signal<{ top: number; height: number } | null>(null);
+  private readonly cgHost = viewChild<ElementRef<HTMLElement>>('cg');
+
+  constructor() {
+    const destroyRef = inject(DestroyRef);
+    afterNextRender(() => {
+      if (typeof ResizeObserver === 'undefined') return;
+      const observed = new Set<Element>();
+      const ro = new ResizeObserver(() => this.measureBoard(ro, observed));
+      const host = this.cgHost()?.nativeElement;
+      if (host) { ro.observe(host); observed.add(host); }
+      this.measureBoard(ro, observed);
+      destroyRef.onDestroy(() => ro.disconnect());
+    });
+  }
+
+  /** Misst cg-board relativ zur Brettzeile; beobachtet es zusätzlich, sobald Chessground es angelegt hat. */
+  measureBoard(ro?: ResizeObserver, observed?: Set<Element>): void {
+    const host = this.cgHost()?.nativeElement;
+    const board = host?.querySelector('cg-board') as HTMLElement | null;
+    if (!host || !board) return;
+    if (ro && observed && !observed.has(board)) { ro.observe(board); observed.add(board); }
+    const h = board.getBoundingClientRect();
+    const row = host.getBoundingClientRect();
+    if (h.height <= 0) return;
+    const next = { top: Math.round(h.top - row.top), height: Math.round(h.height) };
+    const cur = this.boardBox();
+    if (!cur || cur.top !== next.top || cur.height !== next.height) this.boardBox.set(next);
+  }
 
   title(p: LivePlayer): string | null { return chessTitle(p.title); }
 
