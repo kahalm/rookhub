@@ -185,9 +185,14 @@ internal sealed class ClubPgnReader
             }
             var (game, reason) = Build(club, w, b, p.Sans, YearOf(p.H("Date"), now), p.H("Result"), p.H("Event"));
             // Uhren der Vorlage ([%clk], z. B. aus Lichess/einer Übertragung) bleiben in der gespeicherten Fassung (1.015.0).
+            // Ein weggelassener Signal-Königszug (1.022.0) zählt beim Abgleich der Uhren mit, seine Uhr fällt mit ihm weg.
+            var signal = p.DroppedSignal is null ? 0 : 1;
             if (game != null && p.MoveText.Contains("[%clk", StringComparison.Ordinal)
-                && PgnClock.Aligned(p.MoveText, p.Sans!.Count) is { } clocks)
-                game.Pgn = PgnOf(game, p.Sans, clocks);
+                && PgnClock.Aligned(p.MoveText, p.Sans!.Count + signal) is { } clocks)
+                game.Pgn = PgnOf(game, p.Sans, clocks.Take(p.Sans.Count).ToList());
+            if (game != null && p.DroppedSignal is { } dropped)
+                _log.LogInformation("Vereins-Datenbank {Club}: Partie {Index} ({White} – {Black}) ohne Signal-Königszug {Move} am Ende übernommen ({Reason})",
+                    club.Id, index, game.White, game.Black, dropped.Label, dropped.Reason);
             built.Add((index, p, game, reason));
             choices[index] = decision?.LeagueGameId;
         }

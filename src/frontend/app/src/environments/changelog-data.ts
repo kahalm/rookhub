@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.022.0", date: "2026-11-26", changes: [
+    { en: "Broadcast games (DGT boards): when the winner puts his king in the centre after the game as a signal, that „move“ is no longer recorded as the last move if it contradicts the result (the loser would then have a forced mate, e.g. club game 268: 45.Ke4). Applies to Lichess broadcasts, PGN uploads of the club database and the live boards of the tournament site. Only this one half-move is ever dropped.",
+      de: "Übertragene Partien (DGT-Bretter): Stellt der Sieger nach der Partie seinen König als Zeichen in die Mitte, steht dieser „Zug“ nicht mehr als letzter Zug in der Partie, wenn er dem Ergebnis widerspricht (der Verlierer hätte danach ein erzwungenes Matt, z. B. Vereinspartie 268: 45.Ke4). Gilt für Lichess-Übertragungen, PGN-Uploads der Vereins-Datenbank und die Live-Bretter der Turnierseite. Entfernt wird immer nur dieser eine Halbzug." },
+    { en: "Admin: repair for stored club games (POST /api/admin/club-games/signal-moves, dry run by default) — removes such a signal move through the normal correction (analysis rebuilt, copies updated) and requests the summary again.",
+      de: "Admin: Reparatur gespeicherter Vereinspartien (POST /api/admin/club-games/signal-moves, standardmäßig nur Probelauf) — entfernt einen solchen Signalzug über die normale Korrektur (Analyse umgebaut, Kopien nachgezogen) und fordert die Zusammenfassung neu an." },
+  ] },
   { version: "1.021.1", date: "2026-11-26", changes: [
     { en: "Game review: a move that defends a piece which was already hanging before is no longer „brilliant“ — the piece is not a sacrifice of that move (club game 268, 19…Qc8: the knight b8 was already attacked twice, the queen steps in front of the rook and covers it). A piece that is simply left hanging still counts as a sacrifice. Stored move classes are recalculated (rule version 6).",
       de: "Partie-Rückblick: Ein Zug, der eine schon vorher hängende Figur deckt, ist nicht mehr „brillant“ — die Figur ist kein Opfer dieses Zuges (Vereinspartie 268, 19…Dc8: der Sb8 war schon zweimal angegriffen, die Dame tritt vor den Turm und deckt ihn). Eine Figur, die einfach stehen gelassen wird, zählt weiter als Opfer. Die gespeicherten Zug-Klassen werden neu gerechnet (Regelstand 6)." },

@@ -12,6 +12,9 @@ public sealed record LeagueBroadcastGame(IReadOnlyDictionary<string, string> Hea
 {
     public string? H(string key) => Headers.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v) && v.Trim() != "?" ? v.Trim() : null;
     public int? Elo(string key) => int.TryParse(H(key), out var e) ? e : null;
+
+    /// <summary>Der Signal-Königszug, der am Ende weggelassen wurde (1.022.0); <c>null</c> = keiner.</summary>
+    public Games.SignalKingMove.Finding? DroppedSignal { get; init; }
 }
 
 /// <summary>

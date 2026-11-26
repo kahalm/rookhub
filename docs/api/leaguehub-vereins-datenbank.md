@@ -753,3 +753,22 @@ nicht jede interessante Stellung muss in der Partie vorkommen, kann auch in eine
   [startAt]`: `{ kind: 'mark' }` = erste Sprungmarke, sobald geladen; `{ kind: 'ply', ply }` = erster „!!“ aus
   `GameMarkers.brilliant` — jetzt die HALBZÜGE je Partie, `brilliantPlies` in `core/lineups.ts`). Liste und Prognose laden
   dafür beim Aufklappen auch die Sprungmarken (`club/games/{id}/marks`).
+
+### Signal-Königszug am Partieende (1.022.0)
+
+Am DGT-Brett stellt der Sieger nach der Partie oft seinen König in die Mitte — das Zeichen an Brett und Schiedsrichter. Die
+Lichess-Übertragung zeichnet das als letzten Zug auf (Prod-Partie 268: 45.Ke4 nach 44...Dc3+ = Matt in 4 für Schwarz, obwohl
+1-0). Regel (`Services/Games/SignalKingMove.cs`, rein, ohne Engine): entfernt wird höchstens der EINE letzte Halbzug, und nur wenn
+(1) das Ergebnis entschieden ist, (2) er ein Königszug des Siegers ist, (3) auf d4/e4/d5/e5 geht und (4) danach der Verlierer ein
+erzwungenes Matt in ≤ 5 nur mit Schachgeboten hat (Suche gedeckelt, Deckel = „kein Matt“) oder patt ist. Ein König in der Mitte,
+der nur Material einstellt, bleibt stehen (im Endspiel ist er oft richtig; Engine-Werte gibt es beim Einlesen noch nicht).
+
+- **Angewandt** beim Einlesen: Lichess-Übertragungen (`LeagueBroadcastImport.CleanGames` → Spielerkarten + übertragene
+  Vereinspartien), PGN-Upload der Vereins-Datenbank (`ClubPgnText.CheckAll`, Übersicht + Import, auch Teilen-Link; die Uhr des
+  Signalzugs fällt mit) und Live-Bretter der Turnierseite (`LiveGameParser.Parse`, nur fertige Partien: das Brett zeigt die
+  Stellung davor). Spur: Info-Logzeile „Signal-Königszug … nicht übernommen / ohne Signal-Königszug … übernommen“.
+- **Reparatur** gespeicherter Vereinspartien (nur Admin, alle Vereine, nicht archivierte):
+  `POST /api/admin/club-games/signal-moves?dryRun=true` (Vorgabe: nur auflisten) bzw. `?dryRun=false` (optional `&id=268`).
+  Geht über `ClubGameCorrectionService.CorrectClubAsync` (PGN, Halbzüge, `MovesHash`, Analyse umgebaut, Spielerkarten, verbundene
+  Kopien) und fordert eine vorhandene Zusammenfassung neu an. → `{ dryRun, scanned, games: [{ clubGameId, move, reason, applied,
+  summaryRequested, error, … }] }`. Stand Prod 26.11.2026 (Abschätzung per Lesezugriff): 1 von 264 Vereinspartien (268).

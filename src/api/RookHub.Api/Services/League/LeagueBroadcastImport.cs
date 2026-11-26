@@ -100,7 +100,7 @@ public sealed partial class LeagueBroadcastImport
         return (clean, games.Count);
     }
 
-    /// <summary>Wie <see cref="CleanPgn"/>, dazu jede übernommene Partie einzeln (Kopfzeilen der Übertragung samt
+    /// <summary>Wie <see cref="CleanPgn"/> (ein Signal-Königszug des Siegers am Ende fällt weg, <see cref="Games.SignalKingMove"/>), dazu jede übernommene Partie einzeln (Kopfzeilen der Übertragung samt
     /// <c>WhiteTeam</c>/<c>BlackTeam</c>, Datum schon mit Punkten; Hauptvariante als SAN) — für die Vereins-Datenbank.</summary>
     public static (string Pgn, List<LeagueBroadcastGame> Games) CleanGames(string pgn)
     {
@@ -115,13 +115,14 @@ public sealed partial class LeagueBroadcastImport
             if (h.ContainsKey("FEN") || h.GetValueOrDefault("SetUp") == "1") continue;
             if (!h.ContainsKey("WhiteFideId") && !h.ContainsKey("BlackFideId")) continue;
             var moveText = PgnParser.SplitGames(b.Raw).Select(x => x.MoveText).FirstOrDefault() ?? "";
-            var sans = PgnParser.ExtractMainlineSans(moveText);
+            // Signal-Königszug des Siegers am Ende (1.022.0, <see cref="Games.SignalKingMove"/>): nicht mit übernehmen.
+            var sans = Games.SignalKingMove.Strip(PgnParser.ExtractMainlineSans(moveText), result, out var dropped).ToList();
             if (sans.Count == 0) continue;
             h["Date"] = DateOf(h.GetValueOrDefault("Date")) ?? DateOf(h.GetValueOrDefault("UTCDate")) ?? "????.??.??";
             foreach (var k in KeepHeaders)
                 if (h.TryGetValue(k, out var val) && !string.IsNullOrWhiteSpace(val)) sb.Append(PgnWriter.Tag(k, val.Trim()));
             sb.Append('\n').Append(PgnWriter.MoveText(sans, null, null, result)).Append("\n\n");
-            list.Add(new LeagueBroadcastGame(h, sans));
+            list.Add(new LeagueBroadcastGame(h, sans) { DroppedSignal = dropped });
         }
         return (sb.ToString(), list);
     }
@@ -238,6 +239,9 @@ public sealed partial class LeagueBroadcastImport
         var pgn = await GetAsync($"{_lichess}/api/broadcast/{Uri.EscapeDataString(b.TourId)}.pgn", ct) ?? "";
         await Wait(ct);
         var (clean, cleanGames) = CleanGames(pgn);
+        foreach (var g in cleanGames.Where(g => g.DroppedSignal != null))
+            _logger.LogInformation("Lichess-Übertragung {Tour}: Signal-Königszug {Move} am Ende von {Url} nicht übernommen ({Reason})",
+                b.TourId, g.DroppedSignal!.Label, g.H("GameURL") ?? $"{g.H("White")} – {g.H("Black")}", g.DroppedSignal.Reason);
         var (games, _) = clean.Length == 0 ? (0, 0)
             : await new LeagueProfileStore(_db).ImportGamesAsync(clean, Source, ct, skipSameMoves: true);
         await ClubGamesAsync(b, cleanGames, ct);

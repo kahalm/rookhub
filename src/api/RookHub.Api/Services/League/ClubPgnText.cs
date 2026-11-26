@@ -30,7 +30,8 @@ internal static class ClubPgnText
 
     /// <summary>Eine Partie des PGN-Textes: die Kopfzeilen und die geprüfte Hauptvariante — oder warum sie sich gar nicht
     /// übernehmen lässt (<c>illegal</c>, <c>noMoves</c>, <c>tooLong</c>, <c>fromPosition</c>).</summary>
-    internal sealed record Parsed(int Index, Dictionary<string, string> Headers, List<string>? Sans, string? Error, string MoveText = "")
+    internal sealed record Parsed(int Index, Dictionary<string, string> Headers, List<string>? Sans, string? Error, string MoveText = "",
+        Games.SignalKingMove.Finding? DroppedSignal = null)
     {
         /// <summary>Die Partie als eigener PGN-Text (0.590.0): Kopfzeilen ROH (der Leser entschlüsselt nichts, also wird
         /// auch nichts verschlüsselt) und der Zugtext unverändert — zurückgeschickt ergibt er genau diese Partie. Damit
@@ -59,7 +60,7 @@ internal static class ClubPgnText
     {
         var start = new Chess.ChessBoard().ToFen();
         var result = new List<Parsed>();
-        foreach (var (index, h, _, _, moveText) in split)
+        foreach (var (index, h, _, _, moveText, _) in split)
         {
             string? Error()
             {
@@ -70,6 +71,7 @@ internal static class ClubPgnText
             }
             var err = Error();
             List<string>? sans = null;
+            Games.SignalKingMove.Finding? dropped = null;
             if (err == null)
             {
                 try
@@ -89,12 +91,18 @@ internal static class ClubPgnText
                         {
                             sans = SavedGameService.SansOf(start, uci);
                             if (sans.Count != uci.Count) { err = "illegal"; sans = null; }
+                            // Signal-Königszug des Siegers am Ende (DGT-Brett, 1.022.0): weg, wenn er dem Ergebnis widerspricht.
+                            else if (Games.SignalKingMove.Detect(sans, h.GetValueOrDefault("Result")) is { } signal)
+                            {
+                                dropped = signal;
+                                sans.RemoveAt(sans.Count - 1);
+                            }
                         }
                     }
                 }
                 catch (Exception) { err = "illegal"; sans = null; }
             }
-            result.Add(new Parsed(index, h, sans, err, moveText));
+            result.Add(new Parsed(index, h, sans, err, moveText, dropped));
         }
         return result;
     }

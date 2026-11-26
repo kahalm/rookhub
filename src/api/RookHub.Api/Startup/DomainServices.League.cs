@@ -90,6 +90,7 @@ public static partial class DomainServicesSetup
     private static void AddClubServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<RookHub.Api.Services.Club.ClubGameCorrectionService>();   // Vereinspartie + Kopien korrigieren (0.660.0)
+        services.AddScoped<RookHub.Api.Services.Club.ClubSignalMoveRepair>();   // Signal-Königszug am Ende entfernen (1.022.0)
         // Taktik-Ernte (0.657.0): fertige Analysen → Aufgaben in Kursen
         services.AddScoped<RookHub.Api.Services.Tactics.TacticHarvestService>();
         // ClubHub (Kartei der Kinder und Jugendlichen): Regeln + Sichtbarkeit, Lernstand aus dem verknüpften Konto

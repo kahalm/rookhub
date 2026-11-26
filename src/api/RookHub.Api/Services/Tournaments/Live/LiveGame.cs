@@ -40,6 +40,10 @@ public static partial class LiveGameParser
 
         var (sans, clocks, evals) = Scan(moveText ?? "");
         var start = H("FEN") ?? StartFen;
+        // Fertige Partie mit Signal-Königszug des Siegers am Ende (DGT-Brett, 1.022.0, <see cref="Games.SignalKingMove"/>): das Brett
+        // zeigt die Stellung davor — sonst stünde der König des Siegers mitten im Matt.
+        if (H("Result") is "1-0" or "0-1" && Games.SignalKingMove.Detect(sans, H("Result"), start == StartFen ? null : start) is not null)
+            sans.RemoveAt(sans.Count - 1);
         string fen = start;
         string? last = null;
         var plies = 0;

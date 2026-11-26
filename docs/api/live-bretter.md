@@ -92,6 +92,9 @@ Partien ohne Brett.
 - Lichess-Abrufe mit dem User-Agent des übrigen Lichess-Codes (`HttpClientsSetup`, Client `lichess-live`, ohne
   Gesamt-Timeout für den Strom), ohne persönliche Daten.
 
+Fertige Partie mit Signal-Königszug des Siegers am Ende (DGT-Brett, 1.022.0): `LiveGameParser.Parse` lässt ihn weg, das Brett
+zeigt die Stellung davor — Regel in `Services/Games/SignalKingMove.cs` (siehe `docs/api/leaguehub-vereins-datenbank.md`).
+
 ## Proxy-Kette
 
 - Turnier-nginx (`src/frontend/nginx.conf`): eigene `location ^~ /api/live-boards/` mit `proxy_buffering off`,
