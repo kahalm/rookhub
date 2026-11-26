@@ -1640,6 +1640,8 @@
       "viewSaveFailed": "Den delade vyn kunde inte sparas.",
       "bestMove": "Visa bästa draget",
       "bestMoveLabel": "Bästa drag {{move}}",
+      "onlyMove": "Enda draget",
+      "onlyMoveTip": "Bara ett drag håller — bästa {{best}}, näst bästa {{second}}",
       "turnBoard": "Vänd brädet",
       "sources": "Sändningar"
     }

@@ -97,7 +97,7 @@ public sealed class HttpLichessLiveSource : ILichessLiveSource
         GetAsync($"/api/broadcast/search?q={Uri.EscapeDataString(query)}&page=1", ct);
 
     public Task<string?> CloudEvalAsync(string fen, CancellationToken ct) =>
-        GetAsync($"/api/cloud-eval?fen={Uri.EscapeDataString(fen)}", ct);
+        GetAsync($"/api/cloud-eval?fen={Uri.EscapeDataString(fen)}&multiPv=2", ct);   // 2 Linien für „Nur ein Zug“ (1.033.0)
 
     public async IAsyncEnumerable<string> StreamRoundAsync(string roundId, [EnumeratorCancellation] CancellationToken ct)
     {

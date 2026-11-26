@@ -58,6 +58,10 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
           @if (title(topPlayer()); as t) { <span class="lb-title">{{ t }}</span> }{{ topPlayer().name }}
           @if (topPlayer().elo) { <span class="lb-elo">{{ topPlayer().elo }}</span> }
         </span>
+        @if (onlyMove() && toMove(flipped())) {
+          <!-- „Nur ein Zug“ (1.033.0): neben der Uhr der Seite am Zug; verrät den Zug nicht (Pfeil nur mit „Besten Zug zeigen“) -->
+          <span class="lb-only" [title]="'tournaments.live.onlyMoveTip' | translate:onlyMoveTip()">{{ 'tournaments.live.onlyMove' | translate }}</span>
+        }
         @if (clock(flipped()); as c) { <span class="lb-clock" role="timer">{{ c }}</span> }
       </div>
       <div class="lb-boardrow" [class.measured]="boardBox() !== null">
@@ -78,6 +82,10 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
           @if (title(bottomPlayer()); as t) { <span class="lb-title">{{ t }}</span> }{{ bottomPlayer().name }}
           @if (bottomPlayer().elo) { <span class="lb-elo">{{ bottomPlayer().elo }}</span> }
         </span>
+        @if (onlyMove() && toMove(!flipped())) {
+          <!-- „Nur ein Zug“ (1.033.0): neben der Uhr der Seite am Zug; verrät den Zug nicht (Pfeil nur mit „Besten Zug zeigen“) -->
+          <span class="lb-only" [title]="'tournaments.live.onlyMoveTip' | translate:onlyMoveTip()">{{ 'tournaments.live.onlyMove' | translate }}</span>
+        }
         @if (clock(!flipped()); as c) { <span class="lb-clock" role="timer">{{ c }}</span> }
       </div>
       @if (showEval() && evalLabel()) {
@@ -112,6 +120,12 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
     .lb-clock { flex: 0 0 auto; font-variant-numeric: tabular-nums; padding: 0 6px; border-radius: 4px;
       border: 1px solid transparent; }
     .to-move .lb-clock { font-weight: 700; border-color: var(--rh-accent); }
+    /* „Nur ein Zug“ (1.033.0): kleiner Akzent-Chip direkt vor der Uhr; niedriger als die Zeile → kein Sprung, der Name kürzt mit „…“ */
+    .lb-only { flex: 0 0 auto; margin-left: auto; margin-right: -2px; white-space: nowrap; font-size: 0.72rem; font-weight: 600;
+      line-height: 1.3; align-self: center; margin-block: -2px; padding: 0 6px; border-radius: 999px; color: var(--rh-accent);
+      border: 1px solid var(--rh-accent);
+      background: color-mix(in srgb, var(--rh-accent) 12%, transparent); }
+    :host-context(html.eink) .lb-only { color: black; border-color: black; background: none; }
     /* Balken genau so hoch wie das gezeichnete Brett (Wunsch 2026-11-26: „0.0 genau zwischen 4 und 5“) — Chessground
        rastet auf ein Vielfaches von acht und steht oben links, die Zeile kann also etwas höher sein als das Brett. Höhe und
        Versatz misst boardBox(); ohne Messung (erstes Bild) streckt sich der Balken wie bisher. */
@@ -176,6 +190,14 @@ export class LiveBoardCardComponent {
   readonly bestSan = computed(() => {
     const b = this.best();
     return b ? localizeSan(b.san, this.translate.getCurrentLang()) : null;
+  });
+  /** „Nur ein Zug“ (1.033.0) — nur zur Bewertung der AKTUELLEN Stellung (nicht zum gehaltenen alten Wert), nur mit Balken,
+   *  nur laufende Partie; gilt für die Seite am Zug. Die Regel rechnet der Server (`onlyMove`). */
+  readonly onlyMove = computed(() => this.showEval() && !this.game().finished && this.game().eval?.onlyMove === true);
+  /** Tooltip-Werte (Weiß-Sicht wie die Wertzeile): „bester +0.3, nächstbester −1.2“. */
+  readonly onlyMoveTip = computed(() => {
+    const ev = this.game().eval;
+    return { best: evalText(ev), second: evalText(ev ? { ...ev, cp: ev.secondCp ?? null, mate: ev.secondMate ?? null } : null) };
   });
   readonly resultText = computed(() => this.game().result === '1/2-1/2' ? '½–½' : this.game().result.replace('-', '–'));
 

@@ -285,8 +285,8 @@ public class LiveEngineEvalTests
         var progress = new List<LiveEval>();
         var ev = await eval.EvaluateAsync(E("rhe_bg0001"), 5, BlackFen, progress.Add, default);
         Assert.Equal(new LiveEval(-35, null, "engine", 30, "c7c5"), ev);     // Broker liefert schon Weiß-Sicht: nicht drehen (1.027.2); bester Zug mit (1.030.0)
-        Assert.Equal([8, 30], progress.Select(p => p.Depth));                // gleiche Tiefe zählt nicht als Fortschritt
-        Assert.Equal((30, 1, 4, 256), (broker.Last!.Depth, broker.Last.MultiPv, broker.Last.Threads, broker.Last.Hash));
+        Assert.Equal([8, 30], progress.Select(p => p.Depth));                // gleiche Tiefe zählt nicht als Fortschritt; MultiPV 2 seit 1.033.0 („Nur ein Zug“)
+        Assert.Equal((30, 2, 4, 256), (broker.Last!.Depth, broker.Last.MultiPv, broker.Last.Threads, broker.Last.Hash));
         Assert.Null(broker.Last.Movetime);
         Assert.False(tracker.IsEngineBusy("rhe_bg0001"));
         Assert.Equal(TimeSpan.MaxValue, tracker.EngineIdleFor("rhe_bg0001"));   // keine Ruhephase: der Worker darf sofort wieder

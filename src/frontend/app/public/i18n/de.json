@@ -1708,6 +1708,8 @@
       "viewSaveFailed": "Die geteilte Ansicht konnte nicht gespeichert werden.",
       "bestMove": "Besten Zug zeigen",
       "bestMoveLabel": "Bester Zug {{move}}",
+      "onlyMove": "Nur ein Zug",
+      "onlyMoveTip": "Nur ein Zug hält die Stellung — bester {{best}}, nächstbester {{second}}",
       "turnBoard": "Brett drehen",
       "sources": "Übertragungen"
     }

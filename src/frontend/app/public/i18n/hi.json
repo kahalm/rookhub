@@ -1640,6 +1640,8 @@
       "viewSaveFailed": "साझा दृश्य सहेजा नहीं जा सका।",
       "bestMove": "सबसे अच्छी चाल दिखाएँ",
       "bestMoveLabel": "सबसे अच्छी चाल {{move}}",
+      "onlyMove": "एकमात्र चाल",
+      "onlyMoveTip": "केवल एक चाल टिकती है — सर्वश्रेष्ठ {{best}}, अगली {{second}}",
       "turnBoard": "बोर्ड पलटें",
       "sources": "प्रसारण"
     }

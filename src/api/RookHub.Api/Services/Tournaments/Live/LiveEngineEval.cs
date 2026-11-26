@@ -123,13 +123,15 @@ public sealed class RegistryLiveEnginePoolSource : ILiveEnginePoolSource
 
 /// <summary>
 /// Rechnet über den vorhandenen <see cref="IEngineBroker"/> (eigener Broker bzw. Lichess-Broker, je nach Engine) — kein neuer
-/// Engine-Weg. Bis <see cref="LiveEngineOptions.Depth"/> (1 Linie), meldet jede tiefere Zeile als Zwischenstand und sich beim
+/// Engine-Weg. Bis <see cref="LiveEngineOptions.Depth"/> (2 Linien seit 1.033.0), meldet jede tiefere Zeile als Zwischenstand und sich beim
 /// <see cref="EngineActivityTracker"/> als Live-Rechnung an (die Admin-Seite „Engines“ zeigt sie; der Worker startet dort nichts
 /// Neues). Die Warteschlange gibt nur Engines, auf denen kein Auftrag rechnet — abgewürgt wird nichts.
 /// </summary>
 public sealed class BrokerLiveEngineEvaluator : ILiveEngineEvaluator
 {
     private const string SessionId = "rh-live-boards";
+    /// <summary>Linien je Stellung (1.033.0; vorher 1).</summary>
+    internal const int LiveMultiPv = 2;
 
     private readonly IServiceScopeFactory _scopes;
     private readonly EngineActivityTracker? _activity;
@@ -150,7 +152,9 @@ public sealed class BrokerLiveEngineEvaluator : ILiveEngineEvaluator
         var work = new EngineWork(SessionId,
             _options.Threads > 0 ? Math.Min(_options.Threads, Math.Max(1, engine.MaxThreads)) : Math.Max(1, engine.MaxThreads),
             _options.HashMb > 0 ? Math.Min(_options.HashMb, Math.Max(16, engine.MaxHash)) : Math.Clamp(engine.MaxHash, 16, 32768),
-            1, fen, [], Depth: _options.Depth);
+            // 2 Linien (1.033.0): beste und zweitbeste für „Nur ein Zug“ (LiveOnlyMove). Kostet je Stellung etwa das
+            // 1,5-Fache bis Tiefe 30; die Zieltiefe bleibt, Zwischenstände tragen beide Linien.
+            LiveMultiPv, fen, [], Depth: _options.Depth);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
         deadline.CancelAfter(TimeSpan.FromSeconds(_options.MaxSeconds));
         await using var scope = _scopes.CreateAsyncScope();
@@ -207,14 +211,19 @@ public sealed class BrokerLiveEngineEvaluator : ILiveEngineEvaluator
             if (r.ValueKind != JsonValueKind.Object || !r.TryGetProperty("pvs", out var pvs) || pvs.ValueKind != JsonValueKind.Array
                 || pvs.GetArrayLength() == 0) return null;
             var pv = pvs[0];
+            if (pv.ValueKind != JsonValueKind.Object) return null;
             int? depth = r.TryGetProperty("depth", out var d) && d.ValueKind == JsonValueKind.Number ? d.GetInt32()
                 : pv.TryGetProperty("depth", out var pd) && pd.ValueKind == JsonValueKind.Number ? pd.GetInt32() : null;
             // Der Broker liefert schon aus WEISS-Sicht (EmitBuilder: „Bewertung aus WEISS-Sicht“). Bis 1.027.1 wurde hier bei
             // Schwarz am Zug noch einmal gedreht — Prod 26.11.: Brett 6 zeigte −3 statt +3,5. Nicht mehr drehen.
             const int sign = 1;
             var best = LiveEval.FirstMove(pv);
-            if (pv.TryGetProperty("mate", out var m) && m.ValueKind == JsonValueKind.Number) return new LiveEval(null, sign * m.GetInt32(), "engine", depth, best);
-            if (pv.TryGetProperty("cp", out var cp) && cp.ValueKind == JsonValueKind.Number) return new LiveEval(sign * cp.GetInt32(), null, "engine", depth, best);
+            // Zweite Linie (MultiPV 2, 1.033.0) — ebenfalls schon Weiß-Sicht, nicht drehen.
+            var (secondCp, secondMate) = LiveEval.SecondOf(pvs);
+            if (pv.TryGetProperty("mate", out var m) && m.ValueKind == JsonValueKind.Number)
+                return new LiveEval(null, sign * m.GetInt32(), "engine", depth, best, secondCp, secondMate);
+            if (pv.TryGetProperty("cp", out var cp) && cp.ValueKind == JsonValueKind.Number)
+                return new LiveEval(sign * cp.GetInt32(), null, "engine", depth, best, secondCp, secondMate);
             return null;
         }
         catch (JsonException) { return null; }

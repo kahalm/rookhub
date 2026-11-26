@@ -1640,6 +1640,8 @@
       "viewSaveFailed": "De gedeelde weergave kon niet worden opgeslagen.",
       "bestMove": "Beste zet tonen",
       "bestMoveLabel": "Beste zet {{move}}",
+      "onlyMove": "Enige zet",
+      "onlyMoveTip": "Slechts één zet houdt stand — beste {{best}}, op één na beste {{second}}",
       "turnBoard": "Bord draaien",
       "sources": "Uitzendingen"
     }

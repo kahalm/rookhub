@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Chess;
 
@@ -11,9 +12,30 @@ public sealed record LivePlayer(string Name, string? Title, int? Elo, string? Fi
 
 /// <summary>Bewertung aus Weiß-Sicht: Centipawns ODER Matt in n (negativ = Schwarz setzt matt). <c>Source</c>
 /// „broadcast" (<c>[%eval]</c> im Strom), „cloud" (Lichess Cloud-Eval) oder „engine". <c>Best</c> (1.030.0) = bester Zug dieser
-/// Bewertung als UCI (erster Zug der Hauptvariante; <c>[%eval]</c> kennt keinen → <c>null</c>) — für „Besten Zug zeigen“.</summary>
-public sealed record LiveEval(int? Cp, int? Mate, string Source, int? Depth = null, string? Best = null)
+/// Bewertung als UCI (erster Zug der Hauptvariante; <c>[%eval]</c> kennt keinen → <c>null</c>) — für „Besten Zug zeigen“.
+/// <c>SecondCp</c>/<c>SecondMate</c> (1.033.0) = Bewertung der ZWEITEN Linie (MultiPV 2, ebenfalls Weiß-Sicht), <c>OnlyMove</c> =
+/// „Nur ein Zug“ (<see cref="LiveOnlyMove"/>, nur <c>true</c> oder weggelassen). Alle drei fehlen im JSON, wenn unbekannt.</summary>
+public sealed record LiveEval(int? Cp, int? Mate, string Source, int? Depth = null, string? Best = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? SecondCp = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? SecondMate = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? OnlyMove = null)
 {
+    /// <summary>Ist die zweite Linie bekannt?</summary>
+    [JsonIgnore]
+    public bool HasSecond => SecondCp is not null || SecondMate is not null;
+
+    /// <summary>Bewertung der zweiten Linie (Index 1) aus einem <c>pvs</c>-Feld: <c>(cp, mate)</c>, beide <c>null</c> = fehlt
+    /// (nur eine Linie, z. B. nur ein legaler Zug oder die Cloud kennt nur eine).</summary>
+    public static (int? Cp, int? Mate) SecondOf(System.Text.Json.JsonElement pvs)
+    {
+        if (pvs.ValueKind != System.Text.Json.JsonValueKind.Array || pvs.GetArrayLength() < 2) return (null, null);
+        var pv = pvs[1];
+        if (pv.ValueKind != System.Text.Json.JsonValueKind.Object) return (null, null);
+        if (pv.TryGetProperty("mate", out var m) && m.ValueKind == System.Text.Json.JsonValueKind.Number) return (null, m.GetInt32());
+        if (pv.TryGetProperty("cp", out var cp) && cp.ValueKind == System.Text.Json.JsonValueKind.Number) return (cp.GetInt32(), null);
+        return (null, null);
+    }
+
     private static readonly Regex Uci = new("^[a-h][1-8][a-h][1-8][qrbn]?$", RegexOptions.Compiled);
 
     /// <summary>Erster Zug einer Hauptvariante: <c>"moves"</c> als Text („e2e4 e7e5 …“, Cloud) oder Liste (Broker); nur gültiges UCI.</summary>

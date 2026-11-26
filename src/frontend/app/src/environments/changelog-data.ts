@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.033.0", date: "2026-11-26", changes: [
+    { en: "Live boards: with the engine bar on, a small „Only move“ badge appears next to the clock of the side to move when just one move holds and everything else is at least one pawn worse (not when the position is already decided). The tooltip shows best and next-best evaluation; the move itself stays hidden unless „Show best move“ is on.",
+      de: "Live-Bretter: Mit Engine-Balken erscheint neben der Uhr der Seite am Zug ein kleines „Nur ein Zug“, wenn nur ein Zug hält und alles andere mindestens einen Bauern schlechter ist (nicht, wenn die Stellung ohnehin entschieden ist). Der Tooltip zeigt beste und nächstbeste Bewertung; den Zug selbst verrät es nur mit „Besten Zug zeigen“." },
+  ] },
   { version: "1.032.0", date: "2026-11-26", changes: [
     { en: "Live boards: all sources are now listed one below the other above the boards („Broadcasts“) — the tournament on Lichess, each match with score and average rating, and every other broadcast with its round.",
       de: "Live-Bretter: Alle Quellen stehen jetzt untereinander über den Brettern („Übertragungen“) — das Turnier auf Lichess, jede Begegnung mit Stand und Elo-Schnitt und jede weitere Übertragung mit ihrer Runde." },

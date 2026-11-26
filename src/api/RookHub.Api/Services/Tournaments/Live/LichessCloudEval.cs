@@ -74,7 +74,8 @@ public sealed class LichessCloudEval
         }
     }
 
-    /// <summary><c>{"depth":30,"pvs":[{"moves":"…","cp":18}]}</c> bzw. <c>"mate":-3</c> → Bewertung (Weiß-Sicht).</summary>
+    /// <summary><c>{"depth":30,"pvs":[{"moves":"…","cp":18},{"moves":"…","cp":-40}]}</c> bzw. <c>"mate":-3</c> → Bewertung
+/// (Weiß-Sicht — auch bei Schwarz am Zug, gemessen 26.11.2026: nach 1.e4 „e7e5 cp 22“ vor „c7c6 cp 27“).</summary>
     public static LiveEval? Parse(string json)
     {
         using var doc = JsonDocument.Parse(json);
@@ -83,8 +84,12 @@ public sealed class LichessCloudEval
         if (!r.TryGetProperty("pvs", out var pvs) || pvs.ValueKind != JsonValueKind.Array || pvs.GetArrayLength() == 0) return null;
         var pv = pvs[0];
         var best = LiveEval.FirstMove(pv);
-        if (pv.TryGetProperty("mate", out var m) && m.ValueKind == JsonValueKind.Number) return new LiveEval(null, m.GetInt32(), "cloud", depth, best);
-        if (pv.TryGetProperty("cp", out var cp) && cp.ValueKind == JsonValueKind.Number) return new LiveEval(cp.GetInt32(), null, "cloud", depth, best);
+        // Zweite Linie (1.033.0, angefragt mit multiPv=2) für „Nur ein Zug“; fehlt sie, bleibt die Markierung aus.
+        var (secondCp, secondMate) = LiveEval.SecondOf(pvs);
+        if (pv.TryGetProperty("mate", out var m) && m.ValueKind == JsonValueKind.Number)
+            return new LiveEval(null, m.GetInt32(), "cloud", depth, best, secondCp, secondMate);
+        if (pv.TryGetProperty("cp", out var cp) && cp.ValueKind == JsonValueKind.Number)
+            return new LiveEval(cp.GetInt32(), null, "cloud", depth, best, secondCp, secondMate);
         return null;
     }
 }

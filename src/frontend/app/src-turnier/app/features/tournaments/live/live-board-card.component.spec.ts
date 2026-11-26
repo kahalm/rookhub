@@ -123,6 +123,58 @@ describe('LiveBoardCardComponent', () => {
     expect(c.bestArrows()).toEqual([]);                                           // ohne Balken keine Bewertung → kein Zug
   });
 
+  it('Nur ein Zug (1.033.0): Chip vor der Uhr der Seite am Zug, Tooltip bester/nächstbester, kein Pfeil, kein Sprung bei 240 px', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', { tournaments: { live: { onlyMove: 'Nur ein Zug', onlyMoveTip: 'bester {{best}}, nächstbester {{second}}' } } });
+    translate.use('de');
+    const fixture = TestBed.createComponent(LiveBoardCardComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.width = '240px';
+    document.body.appendChild(host);
+    const plain = { ...GAME, white: { ...GAME.white, name: 'Sehr langer Name, Wilhelmine-Kunigunde' },
+      black: { ...GAME.black, name: 'Noch längerer Name, Bartholomäus-Maximilian' } };
+    fixture.componentRef.setInput('game', plain);
+    fixture.componentRef.setInput('board', 1);
+    fixture.componentRef.setInput('showEval', true);
+    fixture.detectChanges();
+    const rows = () => Array.from(host.querySelectorAll('.lb-player')) as HTMLElement[];
+    const heights = rows().map(r => r.getBoundingClientRect().height);
+    expect(host.querySelector('.lb-only')).toBeNull();
+    // Schwarz am Zug (oben, nicht gedreht); Weiß-Sicht −1.5 / 0.0 (Server hat entschieden).
+    const marked = { ...plain, eval: { cp: -150, mate: null, source: 'engine' as const, depth: 24, best: 'c7c5', secondCp: 0, onlyMove: true } };
+    fixture.componentRef.setInput('game', marked);
+    fixture.detectChanges();
+    const chip = rows()[0].querySelector('.lb-only') as HTMLElement;
+    expect(chip.textContent!.trim()).toBe('Nur ein Zug');
+    expect(chip.getAttribute('title')).toBe('bester −1.5, nächstbester 0.0');
+    expect(rows()[1].querySelector('.lb-only')).toBeNull();
+    expect(rows().map(r => r.getBoundingClientRect().height)).toEqual(heights);          // kein Sprung
+    const card = host.querySelector('.lb-card')!.getBoundingClientRect();
+    expect(rows()[0].querySelector('.lb-clock')!.getBoundingClientRect().right).toBeLessThanOrEqual(card.right);
+    expect(chip.getBoundingClientRect().right).toBeLessThanOrEqual(rows()[0].querySelector('.lb-clock')!.getBoundingClientRect().left);
+    expect(fixture.componentInstance.bestArrows()).toEqual([]);                          // verrät den Zug nicht
+    fixture.componentRef.setInput('flipped', true);                                        // Schwarz unten → Chip unten
+    fixture.detectChanges();
+    expect(rows()[0].querySelector('.lb-only')).toBeNull();
+    expect(rows()[1].querySelector('.lb-only')).not.toBeNull();
+    fixture.componentRef.setInput('game', { ...marked, fen: 'rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2', plies: 2,
+      whiteToMove: true, eval: null });                                                     // nächster Zug: alter Wert gehalten, Chip weg
+    fixture.detectChanges();
+    expect(host.querySelector('.lb-only')).toBeNull();
+    fixture.componentRef.setInput('game', marked);
+    fixture.componentRef.setInput('showEval', false);
+    fixture.detectChanges();
+    expect(host.querySelector('.lb-only')).toBeNull();                                    // ohne Balken nichts
+    fixture.componentRef.setInput('showEval', true);
+    fixture.componentRef.setInput('game', { ...marked, result: '0-1', finished: true });
+    fixture.detectChanges();
+    expect(host.querySelector('.lb-only')).toBeNull();                                    // fertig → nichts
+    host.remove();
+  });
+
   it('Brett drehen: Knopf im Kopf meldet turn; bei 240 px mit Analyse und ✕ passt der Kopf, nichts abgeschnitten', async () => {
     await TestBed.configureTestingModule({
       imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],

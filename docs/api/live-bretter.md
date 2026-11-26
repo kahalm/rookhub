@@ -161,7 +161,7 @@ entferne oder etwas umstelle, sollen alle mit dem Link das auch sehen.“
      - **Je Brett nur die neueste Stellung**: ein neuer Zug ersetzt den wartenden Wunsch an seinem Platz und bricht die laufende
        Rechnung des alten ab; sieht niemand das Brett mehr mit Balken (Filter, Balken aus, Seite zu), bricht sie beim nächsten
        Zwischenstand ab.
-     - **Zwischenstände**: `BrokerLiveEngineEvaluator` rechnet bis `depth` 30 (1 Linie, Threads/Hash wie die Hintergrund-Aufträge
+     - **Zwischenstände**: `BrokerLiveEngineEvaluator` rechnet bis `depth` 30 (2 Linien seit 1.033.0, vorher 1; Threads/Hash wie die Hintergrund-Aufträge
        = was die Engine anbietet, Sitzung `rh-live-boards`, harte Grenze `MaxSeconds` 180 s — das Erreichte gilt); jede tiefere
        Zeile geht als Bewertung `source: "engine", depth: n` an den Balken (höchstens alle 0,7 s je Brett), tiefer ersetzt flacher.
        Ergebnis je Stellung 6 h gecacht (`IsSettled`), auch für andere Bretter/Runden mit derselben Stellung.
@@ -178,6 +178,27 @@ entferne oder etwas umstelle, sollen alle mit dem Link das auch sehen.“
   Bewertung kein Zug). An: blauer Pfeil auf dem Brett (`app-chess-board` `arrows`) und das SAN (Figurenbuchstaben der Sprache) fett
   hinter „+0.4 · Tiefe 22“. Nur zur Bewertung der AKTUELLEN Stellung (`game.eval`): hält die Karte nach einem Zug den alten Wert,
   gibt es keinen Pfeil; ist der Zug in der Stellung nicht legal (`liveBestMove`), auch nicht. Rochade als `e1h1` wird zu `e1g1`.
+
+  **Nur ein Zug** (1.033.0, Wunsch 2026-11-26: „markieren, wenn es nur einen Zug gibt, der gut ist, und alle anderen z. B.
+  1 Punkt schlechter“; Präzisierung „wenn der 2.-beste Zug noch +3 ist, dann ist alles wurst“):
+  - **Zwei Linien**: die Engines rechnen MultiPV 2 (`BrokerLiveEngineEvaluator.LiveMultiPv`, gleiche Zieltiefe 30, kostet je
+    Stellung etwa das 1,5-Fache; der Broker meldet nur volle Sätze, `depth` = Minimum beider Linien, Zwischenstände tragen beide).
+    Cloud-Eval mit `&multiPv=2` (gemessen 26.11.: nach 1.e4 `e7e5 cp 22`, `c7c6 cp 27` — auch die zweite Linie Weiß-Sicht).
+    Kennt die Cloud nur eine Linie → keine Markierung (die Engine rechnet ohnehin, wenn Tiefe < 30). `[%eval]` → nie.
+    Nur ein legaler Zug → keine zweite Linie → keine Markierung (erzwungen, nichts zu finden).
+  - **Regel** (`LiveOnlyMove`, rein, einmal im Server je Bewertung in `BroadcastLiveHub.ApplyEval` — auch für Cache-Treffer): beide
+    Linien in die Sicht der Seite am Zug drehen (Broker/Cloud liefern Weiß-Sicht), Matt für den Ziehenden = +∞ (früher besser),
+    gegen ihn = −∞. Zweitbester ≥ `LiveBoards:OnlyMoveIrrelevantPawns` (3,0) oder selbst Matt für den Ziehenden → egal, nichts.
+    Bester ≤ −`LiveBoards:OnlyMoveLostPawns` (5,0) oder Matt gegen ihn → verloren, nichts. Sonst Abstand ≥
+    `LiveBoards:OnlyMoveGapPawns` (1,0 Bauern) → „Nur ein Zug“. Erst ab Tiefe `MinShowDepth` (20), sonst flackert es.
+    Beispiele: +2,0 / +0,8 → ja; +4,5 / +3,1 → nein; −3,8 / −4,9 → ja (Rettungszug); Matt in 3 / +0,5 → ja; Matt / Matt später → nein.
+  - **Warum Bauern statt Gewinnprozent**: der User denkt in „1 Punkt“; die Grenzen +3/−5 nehmen genau die Stellungen heraus, in denen
+    ein Bauernabstand nichts mehr bedeutet — der Hauptvorteil einer Gewinnprozent-Kurve. Zwischen −5 und +3 ist ein Bauer fast
+    überall eine echte Entscheidung.
+  - **Daten**: `eval.secondCp`/`secondMate` (Weiß-Sicht) und `eval.onlyMove: true` — alle drei fehlen im JSON, wenn unbekannt bzw.
+    falsch (`WhenWritingNull`). Der Browser rechnet nichts nach.
+  - **Oberfläche**: Chip „Nur ein Zug“ vor der Uhr der Seite am Zug, Tooltip „bester +0.3, nächstbester −1.2“; nur mit Balken, nur
+    zur aktuellen Stellung, verrät den Zug nicht (Pfeil weiter nur mit „Besten Zug zeigen“).
 
   **Einstellungen** (`LiveBoards:Engine:*`, `LiveEngineOptions`):
 

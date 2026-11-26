@@ -1640,6 +1640,8 @@
       "viewSaveFailed": "Paylaşılan görünüm kaydedilemedi.",
       "bestMove": "En iyi hamleyi göster",
       "bestMoveLabel": "En iyi hamle {{move}}",
+      "onlyMove": "Tek hamle",
+      "onlyMoveTip": "Yalnızca bir hamle tutar — en iyi {{best}}, sonraki {{second}}",
       "turnBoard": "Tahtayı çevir",
       "sources": "Yayınlar"
     }

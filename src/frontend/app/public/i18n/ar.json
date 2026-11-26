@@ -1640,6 +1640,8 @@
       "viewSaveFailed": "تعذّر حفظ العرض المشترك.",
       "bestMove": "إظهار أفضل نقلة",
       "bestMoveLabel": "أفضل نقلة {{move}}",
+      "onlyMove": "نقلة وحيدة",
+      "onlyMoveTip": "نقلة واحدة فقط تصمد — الأفضل {{best}}، التالية {{second}}",
       "turnBoard": "اقلب الرقعة",
       "sources": "البثوث"
     }

@@ -1708,6 +1708,8 @@
       "viewSaveFailed": "Dijeljeni prikaz nije moguće spremiti.",
       "bestMove": "Prikaži najbolji potez",
       "bestMoveLabel": "Najbolji potez {{move}}",
+      "onlyMove": "Jedini potez",
+      "onlyMoveTip": "Drži samo jedan potez — najbolji {{best}}, sljedeći {{second}}",
       "turnBoard": "Okreni ploču",
       "sources": "Prijenosi"
     }

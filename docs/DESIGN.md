@@ -1388,7 +1388,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   `app-chess-board` (5.12) ohne eigene Bedienung; Engine-Balken 10 px links am Brett, Weißanteil weiß auf dunkel, ohne
   Bewertung gestrichelter leerer Rahmen, Wert als leise Zeile darunter; mit „Besten Zug zeigen“ ein blauer Pfeil (Chessground
   `blue`, wie die Live-Engine im Analysebrett) und das SAN fett (600, on-surface) am Ende der Wertzeile — nur zur Bewertung der
-  aktuellen Stellung, nie zum gehaltenen alten Wert. Mannschaft: Stand fett (`localScore`) in der Kopfleiste, Bretter aus Sicht der gewählten Mannschaft (sonst der Heimmannschaft)
+  aktuellen Stellung, nie zum gehaltenen alten Wert. **„Nur ein Zug“** (1.033.0): kleiner Akzent-Chip (0,72 rem, 600, Pille mit
+  1-px-Rahmen `--rh-accent`, Fläche 12 % Akzent; E-Ink schwarz auf weiß) in der Spielerzeile der Seite am Zug direkt vor der Uhr,
+  Text „Nur ein Zug“, Tooltip „… — bester +0.3, nächstbester −1.2“ (Weiß-Sicht wie die Wertzeile). Niedriger als die Zeile
+  (`align-self: center`), also kein Sprung; der Name kürzt mit „…“. Nur mit Balken, nur zur Bewertung der aktuellen Stellung,
+  verrät den Zug nicht (Pfeil weiter nur mit „Besten Zug zeigen“). Mannschaft: Stand fett (`localScore`) in der Kopfleiste, Bretter aus Sicht der gewählten Mannschaft (sonst der Heimmannschaft)
   unten. Ohne Übertragung kein Leerraster, sondern ein leiser Hinweis (5.11, Symbol `live_tv`) mit Feld + Knopf
   „Übertragung verknüpfen“ (Gast: „Anmelden, um …“). Die laufende Uhr tickt nicht im E-Ink-Modus (3.6). Auf der Detailseite
   ist „Live-Bretter“ ein Rahmenknopf mit `live_tv` (`.keep-label`), nur wenn verknüpft; sonst ⋮-Eintrag.
@@ -1658,6 +1662,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-26 | 1.033.0 · Turnierseite | Live-Bretter: Chip „Nur ein Zug“ vor der Uhr der Seite am Zug (Akzent-Pille 0,72 rem, Tooltip bester/nächstbester, kein Zeilensprung, ohne Zug zu verraten) (8.2) | Kritische Momente auf einen Blick, ohne die Lösung zu zeigen | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.032.0 · Turnierseite | Live-Bretter: alle Quellen (Turnier, Begegnungen mit Stand/Ø-Elo, fremde Runden) als Liste „Übertragungen“ untereinander über dem Raster, 0,85 rem, Umbruch statt Ellipse; Turnier-Link aus dem Seitenkopf dorthin (8.2) | Links standen seit dem einen Raster verstreut | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.031.0 · Turnierseite | Live-Bretter: Symbolknopf „Brett drehen“ (`swap_vert`) im Kartenkopf vor Analyse/✕, nur für diesen Zuschauer; Kopf-Abstand 4 px, „Brett n“ mind. 3,5 em (8.2) | Einzelne Bretter aus eigener Sicht ansehen, ohne die Vorgabe für alle zu ändern | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.030.0 · Turnierseite | Live-Bretter: Schalter „Besten Zug zeigen“ neben „Engine-Balken“ (je Gerät), blauer Pfeil + SAN fett in der Wertzeile (8.2) | Den Engine-Zug in laufenden Partien direkt sehen | Nutzerwunsch 26.11. |

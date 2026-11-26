@@ -35,7 +35,8 @@ public static partial class DomainServicesSetup
             sp.GetRequiredService<RookHub.Api.Services.Engines.EngineActivityTracker>()));
         services.AddSingleton(sp => new BroadcastLiveHub(sp.GetRequiredService<ILichessLiveSource>(),
             sp.GetRequiredService<LichessCloudEval>(), sp.GetRequiredService<ILogger<BroadcastLiveHub>>(),
-            engine: sp.GetRequiredService<LiveEngineQueue>()));
+            engine: sp.GetRequiredService<LiveEngineQueue>(),
+            onlyMove: LiveOnlyMoveOptions.From(configuration, sp.GetRequiredService<LiveEngineOptions>())));   // „Nur ein Zug“ (1.033.0)
         services.AddSingleton(_ => new SseConnectionLimiter(
             Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxStreamsPerIp") ?? 6, 1, 100),
             Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxStreams") ?? 2000, 1, 100000)));

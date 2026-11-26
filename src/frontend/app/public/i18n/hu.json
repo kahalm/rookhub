@@ -1411,6 +1411,8 @@
       "viewSaveFailed": "A megosztott nézetet nem sikerült menteni.",
       "bestMove": "Legjobb lépés mutatása",
       "bestMoveLabel": "Legjobb lépés: {{move}}",
+      "onlyMove": "Egyetlen lépés",
+      "onlyMoveTip": "Csak egy lépés tart — legjobb {{best}}, következő {{second}}",
       "turnBoard": "Tábla megfordítása",
       "sources": "Közvetítések"
     }

@@ -1640,6 +1640,8 @@
       "viewSaveFailed": "No se pudo guardar la vista compartida.",
       "bestMove": "Mostrar la mejor jugada",
       "bestMoveLabel": "Mejor jugada {{move}}",
+      "onlyMove": "Única jugada",
+      "onlyMoveTip": "Solo una jugada aguanta — mejor {{best}}, siguiente {{second}}",
       "turnBoard": "Girar el tablero",
       "sources": "Retransmisiones"
     }

@@ -1640,6 +1640,8 @@
       "viewSaveFailed": "Vizualizarea partajată nu a putut fi salvată.",
       "bestMove": "Arată cea mai bună mutare",
       "bestMoveLabel": "Cea mai bună mutare {{move}}",
+      "onlyMove": "Mutare unică",
+      "onlyMoveTip": "O singură mutare ține — cea mai bună {{best}}, următoarea {{second}}",
       "turnBoard": "Întoarce tabla",
       "sources": "Transmisiuni"
     }

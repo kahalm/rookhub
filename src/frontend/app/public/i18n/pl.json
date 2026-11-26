@@ -1640,6 +1640,8 @@
       "viewSaveFailed": "Nie udało się zapisać udostępnionego widoku.",
       "bestMove": "Pokaż najlepszy ruch",
       "bestMoveLabel": "Najlepszy ruch {{move}}",
+      "onlyMove": "Jedyny ruch",
+      "onlyMoveTip": "Tylko jeden ruch trzyma — najlepszy {{best}}, następny {{second}}",
       "turnBoard": "Obróć szachownicę",
       "sources": "Transmisje"
     }

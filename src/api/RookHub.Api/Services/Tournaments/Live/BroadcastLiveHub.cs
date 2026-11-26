@@ -48,6 +48,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
     private readonly ILichessLiveSource _source;
     private readonly LichessCloudEval? _cloud;
     private readonly LiveEngineQueue? _engine;
+    private readonly LiveOnlyMoveOptions _onlyMove;
     private readonly ILogger<BroadcastLiveHub> _logger;
     private readonly HubOptions _options;
     private readonly Dictionary<string, Feed> _feeds = new(StringComparer.Ordinal);
@@ -56,11 +57,12 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
     private readonly CancellationTokenSource _shutdown = new();
 
     public BroadcastLiveHub(ILichessLiveSource source, LichessCloudEval? cloud, ILogger<BroadcastLiveHub> logger, HubOptions? options = null,
-        LiveEngineQueue? engine = null)
+        LiveEngineQueue? engine = null, LiveOnlyMoveOptions? onlyMove = null)
     {
         _source = source;
         _cloud = cloud;
         _engine = engine;
+        _onlyMove = onlyMove ?? new LiveOnlyMoveOptions();
         _logger = logger;
         _options = options ?? new HubOptions();
     }
@@ -541,6 +543,8 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
 
         private void ApplyEval(string id, string fen, LiveEval ev)
         {
+            // „Nur ein Zug“ (1.033.0) EINMAL hier für Cloud und Engine (auch Treffer aus dem Cache), der Browser zeigt nur das Feld.
+            ev = LiveOnlyMove.Mark(ev, FenFields.WhiteToMove(fen), _hub._onlyMove);
             LiveGame? updated = null;
             lock (_lock)
             {

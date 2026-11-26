@@ -1708,6 +1708,8 @@
       "viewSaveFailed": "The shared view could not be saved.",
       "bestMove": "Show best move",
       "bestMoveLabel": "Best move {{move}}",
+      "onlyMove": "Only move",
+      "onlyMoveTip": "Only one move holds — best {{best}}, next best {{second}}",
       "turnBoard": "Turn board",
       "sources": "Broadcasts"
     }

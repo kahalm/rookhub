@@ -34,6 +34,11 @@ export interface LiveEval {
   cp: number | null; mate: number | null; source: 'broadcast' | 'cloud' | 'engine'; depth: number | null;
   /** Bester Zug dieser Bewertung (UCI, 1.030.0); `[%eval]` der Übertragung kennt keinen. */
   best?: string | null;
+  /** Zweite Linie (MultiPV 2, 1.033.0), Weiß-Sicht wie `cp`/`mate`; fehlt, wenn unbekannt. */
+  secondCp?: number | null;
+  secondMate?: number | null;
+  /** „Nur ein Zug“ (1.033.0): der Server hat entschieden (Regel in `LiveOnlyMove`), nur `true` oder weggelassen. */
+  onlyMove?: boolean | null;
 }
 
 export interface LiveGame {
