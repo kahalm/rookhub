@@ -1,4 +1,4 @@
-import { LIVE_MAX_ADDED, LIVE_MAX_EXT, evalText, joinParam, lastMovePair, parseAddParam, parseBroadcastLink, parseExtParam, shownClock, whiteShare } from './live-boards.util';
+import { LIVE_MAX_ADDED, LIVE_MAX_EXT, evalText, joinParam, lastMovePair, parseAddParam, parseBroadcastLink, parseExtParam, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
 import { LiveGame } from './live-boards.models';
 
 describe('live-boards.util', () => {
@@ -54,5 +54,13 @@ describe('live-boards.util', () => {
     expect(parseBroadcastLink('https://lichess.org/study/fnmEB1kH/RD8sbYw1')).toBeNull();
     expect(parseBroadcastLink('https://lichess.org/broadcast/wm/game-3/fnmEB1kH/RD8-bYw1')).toBeNull();
     expect(parseBroadcastLink('kein link')).toBeNull();
+  });
+  it('liveMoveNumber: laufend floor(plies/2)+1, fertig ceil(plies/2), vor dem ersten Zug null', () => {
+    expect(liveMoveNumber({ plies: 0, finished: false })).toBeNull();
+    expect(liveMoveNumber({ plies: 1, finished: false })).toBe(1);
+    expect(liveMoveNumber({ plies: 66, finished: false })).toBe(34);
+    expect(liveMoveNumber({ plies: 67, finished: false })).toBe(34);
+    expect(liveMoveNumber({ plies: 81, finished: true })).toBe(41);
+    expect(liveMoveNumber({ plies: 82, finished: true })).toBe(41);
   });
 });

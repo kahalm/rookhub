@@ -1699,7 +1699,9 @@
         "limit": "Too many other broadcasts are being watched right now — please try again later.",
         "notFound": "Lichess does not know this broadcast (any more)."
       },
-      "openAnalysis": "Open on the analysis board (new tab)"
+      "openAnalysis": "Open on the analysis board (new tab)",
+      "moveN": "Move {{move}}",
+      "moveTipEnd": "Last move of the game"
     }
   },
   "puzzles": {

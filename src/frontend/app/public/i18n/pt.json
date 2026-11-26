@@ -1631,7 +1631,9 @@
         "limit": "Neste momento estão a ser vistas demasiadas transmissões — tenta mais tarde.",
         "notFound": "O Lichess não conhece (já) esta transmissão."
       },
-      "openAnalysis": "Abrir no tabuleiro de análise (novo separador)"
+      "openAnalysis": "Abrir no tabuleiro de análise (novo separador)",
+      "moveN": "Lance {{move}}",
+      "moveTipEnd": "Último lance da partida"
     }
   },
   "puzzles": {

@@ -1631,7 +1631,9 @@
         "limit": "Ahora mismo se están viendo demasiadas retransmisiones — inténtalo más tarde.",
         "notFound": "Lichess no conoce (ya) esta retransmisión."
       },
-      "openAnalysis": "Abrir en el tablero de análisis (pestaña nueva)"
+      "openAnalysis": "Abrir en el tablero de análisis (pestaña nueva)",
+      "moveN": "Jugada {{move}}",
+      "moveTipEnd": "Última jugada de la partida"
     }
   },
   "puzzles": {

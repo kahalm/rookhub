@@ -1631,7 +1631,9 @@
         "limit": "Er worden nu te veel andere uitzendingen bekeken — probeer het later opnieuw.",
         "notFound": "Lichess kent deze uitzending (niet meer)."
       },
-      "openAnalysis": "Openen op het analysebord (nieuw tabblad)"
+      "openAnalysis": "Openen op het analysebord (nieuw tabblad)",
+      "moveN": "Zet {{move}}",
+      "moveTipEnd": "Laatste zet van de partij"
     }
   },
   "puzzles": {

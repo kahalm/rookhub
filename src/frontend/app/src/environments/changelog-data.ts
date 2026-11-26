@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.028.0", date: "2026-11-26", changes: [
+    { en: "Live boards: all boards (team match, added boards, boards from other broadcasts) now flow in one grid without section breaks — on a 1920 px screen seven boards per row, eight boards fit without scrolling; each card says where it comes from, the match score stays as a compact line above.",
+      de: "Live-Bretter: Alle Bretter (Begegnung, hinzugefügte, aus anderen Übertragungen) stehen jetzt in einem Raster ohne Abschnitte — auf einem 1920-px-Bildschirm sieben Bretter je Reihe, acht passen ohne Scrollen; jede Karte sagt, woher sie kommt, der Mannschaftsstand bleibt als kompakte Zeile darüber." },
+    { en: "Live boards: each card shows the current move number („Move 34“) next to the board number.",
+      de: "Live-Bretter: Jede Karte zeigt neben der Brettnummer die aktuelle Zugnummer („Zug 34“)." },
+  ] },
   { version: "1.027.3", date: "2026-11-26", changes: [
     { en: "Live boards: the engine bar is now exactly as tall as the board, so 0.0 sits right between the 4th and 5th rank.",
       de: "Live-Bretter: Der Engine-Balken ist jetzt genau so hoch wie das Brett — 0.0 liegt genau zwischen der 4. und 5. Reihe." },

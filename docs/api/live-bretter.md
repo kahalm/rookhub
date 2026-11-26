@@ -65,9 +65,10 @@ ansehen und daneben die WM-Partie live“.
   Browser gespiegelt `parseBroadcastLink`.
 - **Oberfläche**: Rahmenknopf „Brett hinzufügen“ (`add`) in der Werkzeugzeile → Dialog (`LiveAddBoardDialogComponent`, 560 px): oben
   „Aus dieser Runde“ mit Suche (nur mit Filter), darunter „Aus einer anderen Lichess-Übertragung“ mit Link-Feld + „Laden“; ein
-  Partie-Link wählt seine Partie gleich aus. Zeilen schalten um (☑), „Fertig“ schreibt `add`/`ext`. Hinzugefügte Bretter stehen unter
-  den Mannschafts-/Spielerbrettern im Abschnitt „Hinzugefügte Bretter“ (Karte mit Begegnung als Zusatzzeile und ✕), fremde je Runde
-  unter der Überschrift „Turnier · Runde“ (Link zu Lichess); fehlt eine Partie noch: „Warte auf n Partie(n) …“.
+  Partie-Link wählt seine Partie gleich aus. Zeilen schalten um (☑), „Fertig“ schreibt `add`/`ext`. Hinzugefügte Bretter stehen hinter
+  den Mannschafts-/Spielerbrettern (Karte mit Begegnung als Zusatzzeile und ✕), fremde mit „Turnier · Runde“ als Zusatzzeile; der
+  Link zu Lichess und „Warte auf n Partie(n) …“ stehen in der Kopfleiste über dem Raster. Seit 1.028.0 alles in EINEM Raster (siehe
+  Oberfläche).
 - **Analysieren** (1.026.0, Wunsch 2026-11-26): an jeder Karte (eigene, hinzugefügte, fremde) ein Symbolknopf `biotech` → neuer Tab
   `https://rookhub…/analysis?live=roundId.gameId` (Partnerseite aus `partnerSiteUrl`, Prod ↔ Prod, Dev ↔ Dev; ohne Partner kein
   Knopf). Das Analysebrett holt das PGN über `GamesService.livePgn` und lädt es wie `?pgn=` (alle Züge nachspielbar, Kopfzeilen,
@@ -173,6 +174,14 @@ zeigt die Stellung davor — Regel in `Services/Games/SignalKingMove.cs` (siehe 
   Begegnungen eines Spielers (Einzelturnier): „Live-Bretter“ mit `?player=`.
 - Mannschaft gewählt: nur ihre Begegnung, Bretter aus ihrer Sicht (sie steht unten), Stand oben (chess-results, solange
   leer: Summe der Lichess-Ergebnisse). Ohne Wahl alle Begegnungen aus Sicht der Heimmannschaft.
+- **Ein Raster** (1.028.0, Wunsch 2026-11-26 „ich hätt die Bretter gern in einer Wurscht, damit ich 8 auf einmal gut sehe“):
+  `LiveBoardsComponent.allBoards` reiht Begegnung(en)/Runde, hinzugefügte (`add`), fremde (`ext`) und weitere übertragene Partien
+  in EINE Folge, gezeichnet in einem `.board-grid` (`auto-fill, minmax(min(100%, 240px), 1fr)`, Seite bis 1880 px): 1920 px → 7
+  Spalten, 1280 px → 4–5, 390 px → 1. Herkunft je Karte als Zusatzzeile; Stand/Elo-Schnitt je Begegnung und Links der fremden
+  Runden als kompakte Kopfleiste darüber.
+- **Zugnummer** (1.028.0, Wunsch „zeig auch irgendwo die aktuelle Zuganzahl an“): im Kartenkopf „Zug n“ aus `plies`
+  (`liveMoveNumber`: laufend `floor(plies/2)+1` = der Zug, der gerade gespielt wird, fertig `ceil(plies/2)`, vor dem ersten Zug
+  nichts), Tooltip wer am Zug ist.
 - Brett = geteiltes `app-chess-board` (nur Anzeige; ein Klick tut vorerst nichts), letzter Zug markiert, Uhren (die Seite am
   Zug zählt sekündlich herunter — Näherung ab dem Eintreffen; im E-Ink-Modus steht sie), Ergebnis als Chip.
 - Engine-Balken: Schalter in der Kopfzeile, gemerkt je Gerät (`localStorage rookhub_live_eval`, `device`) und seit 1.024.0

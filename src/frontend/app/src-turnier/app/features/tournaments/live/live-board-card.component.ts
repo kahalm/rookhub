@@ -8,7 +8,7 @@ import { PreferencesService } from '@rh/core/preferences.service';
 import { formatSecondsClock } from '@rh/shared/clock-format.util';
 import { chessTitle } from '../tournament-table.util';
 import { LiveEval, LiveGame, LivePlayer } from './live-boards.models';
-import { evalText, lastMovePair, shownClock, whiteShare } from './live-boards.util';
+import { evalText, lastMovePair, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
 
 /**
  * Ein Brett der Live-Ansicht: oben die Gegenseite, unten die eigene Seite (Name, Titel, Elo, Uhr), dazwischen das
@@ -24,6 +24,10 @@ import { evalText, lastMovePair, shownClock, whiteShare } from './live-boards.ut
     <article class="lb-card" [attr.aria-label]="('tournaments.live.boardN' | translate:{ board: board() }) + ': ' + game().white.name + ' – ' + game().black.name">
       <div class="lb-top">
         <span class="lb-board">{{ 'tournaments.live.boardN' | translate:{ board: board() } }}@if (caption(); as c) { <span class="lb-caption">· {{ c }}</span> }</span>
+        @if (moveNo(); as n) {
+          <!-- Zuganzahl (Wunsch 2026-11-26): laufend der Zug, der gerade gespielt wird, fertig der letzte -->
+          <span class="lb-move" [title]="(game().finished ? 'tournaments.live.moveTipEnd' : (game().whiteToMove ? 'common.whiteToMove' : 'common.blackToMove')) | translate">{{ 'tournaments.live.moveN' | translate:{ move: n } }}</span>
+        }
         @if (game().finished) {
           <span class="lb-result">{{ resultText() }}</span>
         }
@@ -87,6 +91,7 @@ import { evalText, lastMovePair, shownClock, whiteShare } from './live-boards.ut
       color: var(--mat-sys-on-surface-variant); }
     .lb-board { font-weight: 500; min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .lb-caption { font-weight: 400; }
+    .lb-move { flex: 0 0 auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
     /* Klein im Kopf der Karte, Tippziel bleibt 40 px (die Karte ist kein Formular) */
     .lb-icon { flex: 0 0 auto; width: 40px; height: 40px; padding: 8px; margin: -8px -4px -8px 0; }
     .lb-icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
@@ -142,6 +147,8 @@ export class LiveBoardCardComponent {
   });
   readonly share = computed(() => whiteShare(this.shownEval()));
   readonly evalLabel = computed(() => evalText(this.shownEval()));
+  /** Zugnummer aus den Halbzügen: läuft die Partie, der Zug am Brett (`plies/2 + 1`), fertig der letzte gespielte; vor dem ersten Zug nichts. */
+  readonly moveNo = computed(() => liveMoveNumber(this.game()));
   readonly resultText = computed(() => this.game().result === '1/2-1/2' ? '½–½' : this.game().result.replace('-', '–'));
 
   /** Lage des gezeichneten Bretts (cg-board) in der Brettzeile — Balkenhöhe und -versatz. */

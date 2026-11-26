@@ -319,6 +319,77 @@ describe('LiveBoardsComponent', () => {
     flush();
   }));
 
+  // Wunsch 2026-11-26: „die Bretter in einer Wurscht, damit ich 8 auf einmal gut sehe“
+  it('EIN Raster: Begegnungen, hinzugefügte und fremde Bretter ohne Abschnittsgrenze, Herkunft an der Karte', async () => {
+    await setup({ ext: 'fnmEB1kH.RD8sbYw1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const es = FakeEventSource.last();
+    es.emit('snapshot', TWO_MATCHES);
+    es.emit('ext-snapshot', { round: 'fnmEB1kH', tourName: 'FIDE World Championship 2026', roundName: 'Game 3',
+      url: 'https://lichess.org/broadcast/-/-/fnmEB1kH', state: 'live', games: [game('RD8sbYw1', 'Gukesh D', 'Carlsen, Magnus')] });
+    await fixture.whenStable();
+    const grids = el().querySelectorAll('.board-grid');
+    expect(grids.length).toBe(1);
+    expect(grids[0].querySelectorAll('app-live-board-card').length).toBe(5);
+    expect(el().querySelectorAll('app-live-board-card').length).toBe(5);
+    expect(el().querySelectorAll('section').length).toBe(0);
+    const captions = [...el().querySelectorAll('.lb-caption')].map(c => c.textContent!.trim());
+    expect(captions).toEqual(['· Pinggau-Friedberg – SK Schwaz', '· Pinggau-Friedberg – SK Schwaz', '· SK Absam – SK Wörgl',
+      '· SK Absam – SK Wörgl', '· FIDE World Championship 2026 · Game 3']);
+    expect(el().querySelectorAll('.match-strip .match-head').length).toBe(2);     // Stand je Begegnung bleibt als Kopfzeile
+  });
+
+  function eightBoards() {
+    const games = Array.from({ length: 8 }, (_, i) => game('g' + i, 'Weiß ' + i, 'Schwarz ' + i));
+    return {
+      ...SNAPSHOT, games,
+      layout: { team: false, matches: [], unassigned: [],
+        boards: games.map((g, i) => ({ board: i + 1, white: g.white.name, black: g.black.name, result: null, gameId: g.id, homeIsWhite: null })) },
+    };
+  }
+
+  async function columnsAt(width: number): Promise<{ firstRow: number; overflow: boolean; cardHeight: number }> {
+    await setup();
+    const host = el();
+    host.style.display = 'block';
+    host.style.width = width + 'px';
+    document.body.appendChild(host);
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    FakeEventSource.last().emit('snapshot', eightBoards());
+    await fixture.whenStable();
+    const cards = [...host.querySelectorAll('app-live-board-card')] as HTMLElement[];
+    expect(cards.length).toBe(8);
+    const top = cards[0].getBoundingClientRect().top;
+    const firstRow = cards.filter(c => Math.abs(c.getBoundingClientRect().top - top) < 1).length;
+    const overflow = host.scrollWidth > host.clientWidth;
+    const cardHeight = cards[0].getBoundingClientRect().height;
+    host.remove();
+    return { firstRow, overflow, cardHeight };
+  }
+
+  it('Bretterwand: bei 1920 px mindestens vier (sieben) Karten je Reihe, acht Bretter in höchstens zwei Reihen', async () => {
+    const r = await columnsAt(1920);
+    expect(r.firstRow).toBeGreaterThanOrEqual(4);
+    expect(r.firstRow).toBe(7);
+    expect(r.overflow).toBeFalse();
+    // zwei Reihen (8 Bretter) passen unter Navbar, Kopf und Werkzeugzeile in ein 1080er-Fenster (~950 px Inhalt)
+    expect(2 * r.cardHeight + 12).toBeLessThan(760);
+  });
+
+  it('Bretterwand: 1280 px vier bis fünf Spalten (mit/ohne Scrollleiste), Handy 390 px eine Spalte ohne Seiten-Scroll', async () => {
+    const laptop = (await columnsAt(1280)).firstRow;
+    expect(laptop).toBeGreaterThanOrEqual(4);
+    expect(laptop).toBeLessThanOrEqual(5);
+    TestBed.resetTestingModule();
+    expect((await columnsAt(1265)).firstRow).toBe(4);                          // 1280 mit 15-px-Scrollleiste
+    TestBed.resetTestingModule();
+    const phone = await columnsAt(390);
+    expect(phone.firstRow).toBe(1);
+    expect(phone.overflow).toBeFalse();
+  });
+
   it('samePlayer: Reihenfolge, Komma und Akzente egal', () => {
     expect(samePlayer('Mittal, Aditya', 'Aditya Mittal')).toBeTrue();
     expect(samePlayer('Österreicher, Jörg', 'Jorg Osterreicher')).toBeTrue();

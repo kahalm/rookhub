@@ -1699,7 +1699,9 @@
         "limit": "Gerade werden zu viele andere Übertragungen angesehen — bitte später noch einmal versuchen.",
         "notFound": "Diese Übertragung kennt Lichess nicht (mehr)."
       },
-      "openAnalysis": "Auf dem Analysebrett öffnen (neuer Tab)"
+      "openAnalysis": "Auf dem Analysebrett öffnen (neuer Tab)",
+      "moveN": "Zug {{move}}",
+      "moveTipEnd": "Letzter Zug der Partie"
     }
   },
   "puzzles": {

@@ -1402,7 +1402,9 @@
         "limit": "Jelenleg túl sok más közvetítést néznek — próbáld újra később.",
         "notFound": "A Lichess nem ismeri (már) ezt a közvetítést."
       },
-      "openAnalysis": "Megnyitás az elemzőtáblán (új lap)"
+      "openAnalysis": "Megnyitás az elemzőtáblán (új lap)",
+      "moveN": "{{move}}. lépés",
+      "moveTipEnd": "A játszma utolsó lépése"
     }
   },
   "puzzles": {

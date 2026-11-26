@@ -1631,7 +1631,9 @@
         "limit": "지금은 다른 중계를 보는 사람이 너무 많습니다 — 나중에 다시 시도하세요.",
         "notFound": "Lichess가 이 중계를 (더 이상) 알지 못합니다."
       },
-      "openAnalysis": "분석 보드에서 열기 (새 탭)"
+      "openAnalysis": "분석 보드에서 열기 (새 탭)",
+      "moveN": "{{move}}수",
+      "moveTipEnd": "대국의 마지막 수"
     }
   },
   "puzzles": {

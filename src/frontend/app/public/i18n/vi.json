@@ -1631,7 +1631,9 @@
         "limit": "Hiện có quá nhiều buổi phát sóng khác đang được xem — hãy thử lại sau.",
         "notFound": "Lichess không (còn) biết buổi phát sóng này."
       },
-      "openAnalysis": "Mở trên bàn phân tích (thẻ mới)"
+      "openAnalysis": "Mở trên bàn phân tích (thẻ mới)",
+      "moveN": "Nước {{move}}",
+      "moveTipEnd": "Nước đi cuối của ván"
     }
   },
   "puzzles": {

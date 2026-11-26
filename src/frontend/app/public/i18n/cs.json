@@ -1631,7 +1631,9 @@
         "limit": "Právě se sleduje příliš mnoho jiných přenosů — zkuste to později.",
         "notFound": "Lichess tento přenos nezná (už)."
       },
-      "openAnalysis": "Otevřít na analytické šachovnici (nová karta)"
+      "openAnalysis": "Otevřít na analytické šachovnici (nová karta)",
+      "moveN": "Tah {{move}}",
+      "moveTipEnd": "Poslední tah partie"
     }
   },
   "puzzles": {

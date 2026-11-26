@@ -1631,7 +1631,9 @@
         "limit": "Troppe altre trasmissioni sono seguite in questo momento — riprova più tardi.",
         "notFound": "Lichess non conosce (più) questa trasmissione."
       },
-      "openAnalysis": "Apri sulla scacchiera di analisi (nuova scheda)"
+      "openAnalysis": "Apri sulla scacchiera di analisi (nuova scheda)",
+      "moveN": "Mossa {{move}}",
+      "moveTipEnd": "Ultima mossa della partita"
     }
   },
   "puzzles": {

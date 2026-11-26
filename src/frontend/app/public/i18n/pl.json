@@ -1631,7 +1631,9 @@
         "limit": "Obecnie oglądanych jest zbyt wiele innych transmisji — spróbuj później.",
         "notFound": "Lichess nie zna (już) tej transmisji."
       },
-      "openAnalysis": "Otwórz na szachownicy analizy (nowa karta)"
+      "openAnalysis": "Otwórz na szachownicy analizy (nowa karta)",
+      "moveN": "Ruch {{move}}",
+      "moveTipEnd": "Ostatni ruch partii"
     }
   },
   "puzzles": {

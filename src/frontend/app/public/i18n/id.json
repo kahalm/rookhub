@@ -1631,7 +1631,9 @@
         "limit": "Terlalu banyak siaran lain yang sedang ditonton — coba lagi nanti.",
         "notFound": "Lichess tidak mengenal siaran ini (lagi)."
       },
-      "openAnalysis": "Buka di papan analisis (tab baru)"
+      "openAnalysis": "Buka di papan analisis (tab baru)",
+      "moveN": "Langkah {{move}}",
+      "moveTipEnd": "Langkah terakhir partai"
     }
   },
   "puzzles": {

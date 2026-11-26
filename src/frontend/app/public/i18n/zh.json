@@ -1631,7 +1631,9 @@
         "limit": "目前观看其他直播的人太多 — 请稍后再试。",
         "notFound": "Lichess 不(再)识别此直播。"
       },
-      "openAnalysis": "在分析棋盘上打开(新标签页)"
+      "openAnalysis": "在分析棋盘上打开(新标签页)",
+      "moveN": "第 {{move}} 步",
+      "moveTipEnd": "对局的最后一步"
     }
   },
   "puzzles": {

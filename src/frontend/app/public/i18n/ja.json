@@ -1631,7 +1631,9 @@
         "limit": "現在ほかの中継が多く視聴されています。後でもう一度お試しください。",
         "notFound": "Lichess はこの中継を(もう)認識していません。"
       },
-      "openAnalysis": "解析盤で開く(新しいタブ)"
+      "openAnalysis": "解析盤で開く(新しいタブ)",
+      "moveN": "{{move}}手目",
+      "moveTipEnd": "対局の最後の手"
     }
   },
   "puzzles": {

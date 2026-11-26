@@ -133,3 +133,11 @@ export function samePlayer(a: string, b: string): boolean {
   const key = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').split(/[\s,]+/).filter(Boolean).sort().join(' ');
   return key(a) === key(b);
 }
+
+/** Zugnummer einer Live-Partie für die Karte (Wunsch 2026-11-26 „Zuganzahl anzeigen“): läuft sie, der Zug, der gerade
+ *  gespielt wird (`floor(plies/2) + 1`, z. B. 33 Halbzüge → Zug 17, Schwarz am Zug); fertig der letzte gespielte
+ *  (`ceil(plies/2)`); vor dem ersten Zug `null`. */
+export function liveMoveNumber(game: Pick<LiveGame, 'plies' | 'finished'>): number | null {
+  if (!game.plies || game.plies < 1) return null;
+  return game.finished ? Math.ceil(game.plies / 2) : Math.floor(game.plies / 2) + 1;
+}

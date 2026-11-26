@@ -1631,7 +1631,9 @@
         "limit": "Trop d’autres retransmissions sont suivies en ce moment — réessayez plus tard.",
         "notFound": "Lichess ne connaît pas (plus) cette retransmission."
       },
-      "openAnalysis": "Ouvrir sur l’échiquier d’analyse (nouvel onglet)"
+      "openAnalysis": "Ouvrir sur l’échiquier d’analyse (nouvel onglet)",
+      "moveN": "Coup {{move}}",
+      "moveTipEnd": "Dernier coup de la partie"
     }
   },
   "puzzles": {

@@ -28,7 +28,15 @@ import { LIVE_LOST_GRACE_MS, joinParam, parseAddParam, parseExtParam, points, re
 import { AddBoardDialogData, AddBoardDialogResult, AddBoardRow, LiveAddBoardDialogComponent } from './live-add-board-dialog.component';
 
 /** Ein Brett, wie es gezeichnet wird. `addKey` = Schlüssel in `?add=`/`?ext=` (nur hinzugefügte Bretter), `caption` = Zusatzzeile. */
-interface ShownBoard { key: string; board: number; game: LiveGame; flipped: boolean; addKey?: string; caption?: string | null; }
+interface ShownBoard {
+  key: string; board: number; game: LiveGame; flipped: boolean; addKey?: string; caption?: string | null;
+  /** Übersetzungsschlüssel der Zusatzzeile, wenn es keinen eigenen Text gibt. */
+  captionKey?: string;
+  /** Lichess-Runde (für „Analysieren“). */
+  roundId?: string | null;
+  /** ✕ an der Karte: aus `?add=` bzw. `?ext=` nehmen. */
+  removeKind?: 'add' | 'ext';
+}
 /** Eine fremde Runde im Strom (1.025.0). */
 interface ExtRound { tourName: string; roundName: string; url: string; state: LiveState; games: Record<string, LiveGame>; error: string | null; }
 /** Fremde Runde, wie sie gezeichnet wird: Bretter, die schon da sind, und gewählte, die noch fehlen. */
@@ -38,7 +46,7 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
 
 /**
  * Live-Bretter `/tournaments/:id/live` (1.014.0): die Partien einer Runde aus der verknüpften Lichess-Übertragung,
- * live über Server-Sent Events. Mannschaftsturnier: je Begegnung die Bretter (mit `?team=` nur die Begegnung dieser
+ * live über Server-Sent Events, alle Bretter in EINEM Raster (seit 1.028.0). Mannschaftsturnier: je Begegnung die Bretter (mit `?team=` nur die Begegnung dieser
  * Mannschaft, Bretter aus ihrer Sicht), oben der Mannschaftsstand. Einzelturnier: alle Bretter der Runde, mit
  * `?player=` nur das Brett dieses Spielers. Runde über `?round=`. Ohne Verknüpfung ein leiser Hinweis und — mit Konto —
  * das Feld zum Verknüpfen.
@@ -137,108 +145,69 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
 
         @if (!layout()) {
           <app-loading-spinner />
-        } @else if (layout()!.team) {
-          @for (m of matches(); track m.match.matchNumber) {
-            <section class="match">
-              <h2 class="match-head">
-                <span class="mh-team">{{ m.home }}@if (m.match.homeElo; as e) {
-                  <span class="mh-elo" [matTooltip]="'tournaments.live.eloAvgTip' | translate:{ count: m.match.homeEloBoards }">Ø {{ e }}</span>
-                }</span>
-                <span class="mh-score">
-                  @if (m.boards.length > 0 || m.match.homeScore !== null) {
-                    {{ scoreOf(m, true) | localScore }} : {{ scoreOf(m, false) | localScore }}
-                  } @else { – }
-                </span>
-                <span class="mh-team away">{{ m.away }}@if (m.match.awayElo; as e) {
-                  <span class="mh-elo" [matTooltip]="'tournaments.live.eloAvgTip' | translate:{ count: m.match.awayEloBoards }">Ø {{ e }}</span>
-                }</span>
-              </h2>
-              @if (m.boards.length > 0) {
-                <div class="board-grid">
-                  @for (b of m.boards; track b.key) {
-                    <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped" [analysisUrl]="analysisUrl(ownRoundId(), b.game.id)" [showEval]="evalOn()"
-                                         [receivedAt]="received()[b.game.id] ?? 0" [now]="now()" />
-                  }
-                </div>
-              } @else {
-                <p class="muted">{{ 'tournaments.live.noBoards' | translate }}</p>
-              }
-            </section>
-          } @empty {
-            <p class="muted">{{ 'tournaments.live.noGames' | translate }}</p>
-          }
         } @else {
-          @if (singleBoards().length > 0) {
-            <div class="board-grid">
-              @for (b of singleBoards(); track b.key) {
-                <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped" [analysisUrl]="analysisUrl(ownRoundId(), b.game.id)" [showEval]="evalOn()"
-                                     [receivedAt]="received()[b.game.id] ?? 0" [now]="now()" />
+          <!-- Kopfzeilen kompakt ÜBER dem einen Raster (Wunsch 2026-11-26 „die Bretter in einer Wurscht, damit ich 8 auf
+               einmal sehe“): Stand je Begegnung, fremde Übertragungen als Link; die Herkunft steht an jeder Karte. -->
+          @if (matches().length > 0 || extRounds().length > 0) {
+            <div class="match-strip">
+              @for (m of matches(); track m.match.matchNumber) {
+                <h2 class="match-head">
+                  <span class="mh-team">{{ m.home }}@if (m.match.homeElo; as e) {
+                    <span class="mh-elo" [matTooltip]="'tournaments.live.eloAvgTip' | translate:{ count: m.match.homeEloBoards }">Ø {{ e }}</span>
+                  }</span>
+                  <span class="mh-score">
+                    @if (m.boards.length > 0 || m.match.homeScore !== null) {
+                      {{ scoreOf(m, true) | localScore }} : {{ scoreOf(m, false) | localScore }}
+                    } @else { – }
+                  </span>
+                  <span class="mh-team away">{{ m.away }}@if (m.match.awayElo; as e) {
+                    <span class="mh-elo" [matTooltip]="'tournaments.live.eloAvgTip' | translate:{ count: m.match.awayEloBoards }">Ø {{ e }}</span>
+                  }</span>
+                </h2>
+              }
+              @for (x of extRounds(); track x.roundId) {
+                <p class="ext-line">
+                  @if (x.url) {
+                    <a class="ext-link" [href]="x.url" target="_blank" rel="noopener noreferrer">{{ x.title ?? ('tournaments.live.extLoading' | translate) }}<mat-icon class="inline-icon" aria-hidden="true">open_in_new</mat-icon></a>
+                  } @else { <span>{{ x.title ?? ('tournaments.live.extLoading' | translate) }}</span> }
+                  @if (x.error) {
+                    <span class="muted">{{ x.error }}</span>
+                    <button mat-button type="button" (click)="removeExtRound(x.roundId)">{{ 'tournaments.live.removeBoard' | translate }}</button>
+                  } @else if (x.pending.length > 0) {
+                    <span class="muted">{{ 'tournaments.live.extPending' | translate:{ count: x.pending.length } }}</span>
+                  }
+                </p>
               }
             </div>
-          } @else {
+          }
+          @if (layout()!.team && matches().length === 1 && matches()[0].boards.length === 0) {
+            <p class="muted">{{ 'tournaments.live.noBoards' | translate }}</p>
+          } @else if (ownCount() === 0) {
             <p class="muted">{{ 'tournaments.live.noGames' | translate }}</p>
           }
-          @if (missing() > 0 && !player()) {
+          @if (!layout()!.team && missing() > 0 && !player()) {
             <p class="muted">{{ 'tournaments.live.notBroadcast' | translate:{ count: missing() } }}</p>
           }
-        }
-        @if (addedBoards().length > 0) {
-          <section class="match added">
-            <h2 class="match-head"><span class="mh-team">{{ 'tournaments.live.added' | translate }}</span></h2>
+          @if (allBoards().length > 0) {
+            <!-- EIN Raster für alle Bretter: Mannschaft/Runde, hinzugefügte, fremde, weitere — keine Abschnittsgrenzen -->
             <div class="board-grid">
-              @for (b of addedBoards(); track b.key) {
-                <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped" [analysisUrl]="analysisUrl(ownRoundId(), b.game.id)" [showEval]="evalOn()" [caption]="b.caption ?? null"
-                                     [removable]="true" (remove)="removeAdded(b.addKey!)"
+              @for (b of allBoards(); track b.key) {
+                <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped" [showEval]="evalOn()"
+                                     [analysisUrl]="analysisUrl(b.roundId ?? null, b.game.id)"
+                                     [caption]="b.caption ?? (b.captionKey ? (b.captionKey | translate) : null)"
+                                     [removable]="!!b.removeKind" (remove)="removeBoard(b)"
                                      [receivedAt]="received()[b.game.id] ?? 0" [now]="now()" />
               }
             </div>
-          </section>
-        }
-        @for (x of extRounds(); track x.roundId) {
-          <section class="match added">
-            <h2 class="match-head ext-head">
-              <span class="mh-team">
-                @if (x.url) {
-                  <a class="ext-link" [href]="x.url" target="_blank" rel="noopener noreferrer">{{ x.title ?? ('tournaments.live.extLoading' | translate) }}<mat-icon class="inline-icon" aria-hidden="true">open_in_new</mat-icon></a>
-                } @else { {{ x.title ?? ('tournaments.live.extLoading' | translate) }} }
-              </span>
-            </h2>
-            @if (x.error) {
-              <p class="muted ext-line">{{ x.error }}
-                <button mat-button type="button" (click)="removeExtRound(x.roundId)">{{ 'tournaments.live.removeBoard' | translate }}</button>
-              </p>
-            }
-            @if (x.boards.length > 0) {
-              <div class="board-grid">
-                @for (b of x.boards; track b.key) {
-                  <app-live-board-card [game]="b.game" [board]="b.board" [showEval]="evalOn()" [removable]="true" (remove)="removeExt(b.addKey!)"
-                                       [analysisUrl]="analysisUrl(x.roundId, b.game.id)"
-                                       [receivedAt]="received()[b.game.id] ?? 0" [now]="now()" />
-                }
-              </div>
-            }
-            @if (!x.error && x.pending.length > 0) {
-              <p class="muted ext-line">{{ 'tournaments.live.extPending' | translate:{ count: x.pending.length } }}</p>
-            }
-          </section>
-        }
-        @if (others().length > 0 && !team() && !player()) {
-          <section class="match">
-            <h2 class="match-head"><span class="mh-team">{{ 'tournaments.live.otherGames' | translate }}</span></h2>
-            <div class="board-grid">
-              @for (b of others(); track b.key) {
-                <app-live-board-card [game]="b.game" [board]="b.board" [showEval]="evalOn()" [analysisUrl]="analysisUrl(ownRoundId(), b.game.id)"
-                                     [receivedAt]="received()[b.game.id] ?? 0" [now]="now()" />
-              }
-            </div>
-          </section>
+          }
         }
       }
     </div>
   `,
   styles: [`
-    .live-page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 8px 16px 24px; box-sizing: border-box; }
-    @media (min-width: 2400px) { .live-page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); } }
+    /* Bretterwand (Wunsch 2026-11-26): breiter als die Lese-Seiten — bei 1920 px sieben Karten nebeneinander, acht
+       Bretter samt zweiter Reihe ohne Scrollen; ab 2400 px nicht noch breiter (das Raster nimmt dann mehr Spalten). */
+    .live-page { max-width: 1880px; margin: 0 auto; padding: 8px 16px 24px; box-sizing: border-box; }
     .live-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .live-head-text { min-width: 0; flex: 1 1 auto; }
     .live-share { flex: 0 0 auto; }
@@ -263,19 +232,20 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
     .live-state mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .live-state.is-live { color: var(--rh-success); font-weight: 500; }
     .filter-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0 0 8px; }
-    .match { margin-bottom: 24px; }
-    .match-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 12px; margin: 0 0 8px;
-      font-size: 1.1rem; font-weight: 500; }
+    /* Kompakte Kopfzeilen über dem Raster: je Begegnung eine Zeile „Heim Ø  2,5 : 3,5  Gast Ø“, umbrechend nebeneinander */
+    .match-strip { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 0 0 8px; }
+    .match-head { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; min-width: 0;
+      font-size: 1rem; font-weight: 500; }
     .mh-team { min-width: 0; overflow-wrap: anywhere; }
-    .mh-team.away { text-align: right; }
     .mh-score { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .board-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-    @media (max-width: 599px) { .board-grid { grid-template-columns: minmax(0, 1fr); } }
+    /* Karten ≥ 240 px (Brett ≈ 216 px): 1920 px → 7 Spalten, 1280 px → 4, unter ~520 px eine; min(100%, …) verhindert
+       Seiten-Scroll auf ganz schmalen Geräten. */
+    .board-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 12px; }
     .muted { color: var(--mat-sys-on-surface-variant); }
-    .mh-elo { display: block; font-size: 0.8rem; font-weight: 400; color: var(--mat-sys-on-surface-variant); font-variant-numeric: tabular-nums; }
+    .mh-elo { margin-left: 0.4em; font-size: 0.8rem; font-weight: 400; color: var(--mat-sys-on-surface-variant); font-variant-numeric: tabular-nums; }
     .live-add mat-icon { margin-right: 4px; }
     .ext-link { display: inline-flex; align-items: center; gap: 2px; color: var(--rh-accent); overflow-wrap: anywhere; }
-    .ext-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0 0 8px; }
+    .ext-line { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0; }
   `],
 })
 export class LiveBoardsComponent implements OnInit {
@@ -448,6 +418,33 @@ export class LiveBoardsComponent implements OnInit {
     });
   });
 
+  /** Bretter der eigenen Auswahl (Begegnung(en) bzw. Runde) — ohne hinzugefügte und fremde. */
+  readonly ownCount = computed(() => this.layout()?.team ? this.matches().reduce((n, m) => n + m.boards.length, 0) : this.singleBoards().length);
+
+  /**
+   * ALLE gezeigten Bretter in EINER Folge für das eine Raster (Wunsch 2026-11-26): Begegnung(en) bzw. Runde, dann die
+   * hinzugefügten, die fremden und die übrigen übertragenen Partien. Woher ein Brett kommt, sagt seine Zusatzzeile —
+   * bei mehreren Begegnungen „Heim – Gast“, hinzugefügte ihre Begegnung, fremde „Turnier · Runde“.
+   */
+  readonly allBoards = computed<ShownBoard[]>(() => {
+    const own = this.ownRoundId();
+    const matches = this.matches();
+    const many = matches.length > 1;
+    const out: ShownBoard[] = [];
+    for (const m of matches) {
+      for (const b of m.boards) out.push({ ...b, roundId: own, caption: many ? `${m.home} – ${m.away}` : null });
+    }
+    for (const b of this.singleBoards()) out.push({ ...b, roundId: own });
+    for (const b of this.addedBoards()) out.push({ ...b, roundId: own, removeKind: 'add', captionKey: b.caption ? undefined : 'tournaments.live.added' });
+    for (const x of this.extRounds()) {
+      for (const b of x.boards) out.push({ ...b, roundId: x.roundId, removeKind: 'ext', caption: x.title, captionKey: 'tournaments.live.extLoading' });
+    }
+    if (!this.team() && !this.player()) {
+      for (const b of this.others()) out.push({ ...b, roundId: own, captionKey: 'tournaments.live.otherGames' });
+    }
+    return out;
+  });
+
   readonly stateIcon = computed(() => ({
     live: 'sensors', connecting: 'sync', reconnecting: 'sync_problem', finished: 'flag', offline: 'cloud_off',
   } as Record<LiveState, string>)[this.state()] ?? 'sync');
@@ -596,6 +593,12 @@ export class LiveBoardsComponent implements OnInit {
   setAdded(added: string[], ext: string[]): void {
     void this.router.navigate([], { relativeTo: this.route, queryParamsHandling: 'merge',
       queryParams: { add: joinParam(parseAddParam(added.join(','))), ext: joinParam(parseExtParam(ext.join(','))) } });
+  }
+
+  /** ✕ an einer Karte des Rasters. */
+  removeBoard(b: ShownBoard): void {
+    if (b.removeKind === 'add') this.removeAdded(b.addKey!);
+    else if (b.removeKind === 'ext') this.removeExt(b.addKey!);
   }
 
   removeAdded(key: string): void { this.setAdded(this.added().filter(k => k !== key), this.ext()); }

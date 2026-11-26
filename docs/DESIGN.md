@@ -1368,16 +1368,23 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   der Name dem Dialog, die übrige Karte schaltet weiter den Stern. Im Dialog je Runde eine Zeile Runde | Farbkästchen,
   Brett, Gegner (klickbar, wechselt auf ihn), Wertung | Ergebnis rechts; die erste offene Runde ist getönt und trägt
   den Chip „Nächste Runde“, weitere offene „geplant“.
-- **Live-Bretter** (1.014.0, `/tournaments/:id/live`, `features/tournaments/live/`): Seite in `--page-max-width`
-  (ab 2400 px die breite Stufe), Kopf mit Zurück-Pfeil, Titel und Quelle („Name · lichess.org“ mit `open_in_new`), darunter
+- **Live-Bretter** (1.014.0, `/tournaments/:id/live`, `features/tournaments/live/`): Seite als **Bretterwand** bis 1880 px
+  breit (seit 1.028.0, Ausnahme von `--page-max-width`: die Seite ist zum Zuschauen, nicht zum Lesen), Kopf mit Zurück-Pfeil, Titel und Quelle („Name · lichess.org“ mit `open_in_new`), darunter
   EINE umbrechende Werkzeugzeile: Runde (`mat-select`, laufende mit „· läuft“), Mannschaft (nur Mannschaftsturnier),
   Schalter „Engine-Balken“, Zustand als Symbol + Text (live in `--rh-success`, sonst on-surface-variant — nie nur Farbe).
-  Bretter im Raster `auto-fill, minmax(260px, 1fr)`, unter 600 px eine Spalte; je Brett eine umrandete Karte (Radius 8)
-  mit „Brett n“ und Ergebnis-Chip oben, Spielerzeile oben (Gegenseite) und unten (eigene Seite): Titel in `--rh-accent`,
+  **Alle Bretter in EINEM Raster** (1.028.0, Wunsch 2026-11-26 „in einer Wurscht, damit ich 8 auf einmal sehe“):
+  Begegnung(en) bzw. Runde, hinzugefügte, fremde und weitere übertragene Partien ohne Abschnittsgrenzen, Raster
+  `auto-fill, minmax(min(100%, 240px), 1fr)`, Abstand 12 px — 1920 px: 7 Spalten (Brett ≈ 216 px, zwei Reihen ≈ 700 px),
+  1280 px: 4–5, Handy 390 px: 1 (ab ~520 px zwei). Die Herkunft steht als Zusatz „· …“ neben „Brett n“: bei mehreren
+  Begegnungen „Heim – Gast“, hinzugefügte ihre Begegnung (sonst „Hinzugefügte Bretter“), fremde „Turnier · Runde“, übrige
+  „Weitere übertragene Partien“. Darüber eine kompakte, umbrechende Kopfleiste: je Begegnung eine `h2`-Zeile (1 rem)
+  „Heim Ø 2315  2,5 : 3,5  Gast Ø 2290“ und je fremde Runde der Akzent-Link mit `open_in_new` (dort auch „Warte auf …“ bzw.
+  der Fehler mit „Brett entfernen“). Je Brett eine umrandete Karte (Radius 8)
+  mit „Brett n“, rechts die **Zugnummer** „Zug 34“ (`tabular-nums`, laufend `floor(plies/2)+1`, fertig der letzte Zug;
+  Tooltip „Weiß/Schwarz am Zug“ bzw. „Letzter Zug der Partie“) und Ergebnis-Chip oben, Spielerzeile oben (Gegenseite) und unten (eigene Seite): Titel in `--rh-accent`,
   Name mit „…“, Elo leise, Uhr `tabular-nums` — die Seite am Zug fett mit Akzentrahmen (E-Ink: Rahmen schwarz). Das Brett ist
   `app-chess-board` (5.12) ohne eigene Bedienung; Engine-Balken 10 px links am Brett, Weißanteil weiß auf dunkel, ohne
-  Bewertung gestrichelter leerer Rahmen, Wert als leise Zeile darunter. Mannschaft: je Begegnung eine `h2`-Zeile
-  „Heim  2,5 : 3,5  Gast“ (Stand fett, `localScore`), Bretter aus Sicht der gewählten Mannschaft (sonst der Heimmannschaft)
+  Bewertung gestrichelter leerer Rahmen, Wert als leise Zeile darunter. Mannschaft: Stand fett (`localScore`) in der Kopfleiste, Bretter aus Sicht der gewählten Mannschaft (sonst der Heimmannschaft)
   unten. Ohne Übertragung kein Leerraster, sondern ein leiser Hinweis (5.11, Symbol `live_tv`) mit Feld + Knopf
   „Übertragung verknüpfen“ (Gast: „Anmelden, um …“). Die laufende Uhr tickt nicht im E-Ink-Modus (3.6). Auf der Detailseite
   ist „Live-Bretter“ ein Rahmenknopf mit `live_tv` (`.keep-label`), nur wenn verknüpft; sonst ⋮-Eintrag.
@@ -1389,10 +1396,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Dialog 560 px (5.6, `autoFocus: 'dialog'`): Abschnitt „Aus dieser Runde“ (nur mit Mannschafts-/Spielerfilter) mit Suchfeld und
   Zeilen ≥ 44 px (☑/☐ in `--rh-accent`, Spieler „Weiß – Schwarz“, darunter leise „Brett n · Begegnung“), Abschnitt „Aus einer
   anderen Lichess-Übertragung“ mit Link-Feld + Rahmenknopf „Laden“, Fehler als Zeile in `--rh-error`; „Abbrechen“ / „Fertig“
-  (gefüllt). Hinzugefügte Bretter: eigener Abschnitt mit `h2`-Zeile „Hinzugefügte Bretter“ bzw. „Turnier · Runde“ (Akzent-Link mit
-  `open_in_new`) unter den gefilterten Brettern, dieselbe Karte mit Zusatz „· Begegnung“ neben „Brett n“ und einem ✕ (`close`,
-  40 px, `aria-label` „Brett entfernen“) rechts im Kartenkopf. Elo-Schnitt der Begegnung: „Ø 2315“ als leise Zeile (0,8 rem,
-  `tabular-nums`) unter dem Mannschaftsnamen, Tooltip „Schnitt über n Bretter“.
+  (gefüllt). Hinzugefügte Bretter: seit 1.028.0 im selben Raster hinter den gefilterten Brettern (vorher eigener Abschnitt), dieselbe Karte mit Zusatz „· Begegnung“ neben „Brett n“ und einem ✕ (`close`,
+  40 px, `aria-label` „Brett entfernen“) rechts im Kartenkopf. Elo-Schnitt der Begegnung: „Ø 2315“ leise (0,8 rem,
+  `tabular-nums`) hinter dem Mannschaftsnamen (seit 1.028.0 in derselben Zeile), Tooltip „Schnitt über n Bretter“.
   **Analysieren** (1.026.0): im Kartenkopf vor dem ✕ ein Symbolknopf `biotech` (40 px, `aria-label`/`title` „Auf dem
   Analysebrett öffnen (neuer Tab)“) wie „In Analyse öffnen“ der Partienliste; öffnet RookHubs Analysebrett in einem neuen Tab. Verbindungsabriss: Zustand „Live“ bleibt 10 s
   stehen, erst danach „Verbindung unterbrochen“ (kein Blinken, Bretter bleiben stehen, kein Spinner).
@@ -1643,6 +1649,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-26 | 1.028.0 · Turnierseite | Live-Bretter: alle Bretter in EINEM Raster ohne Abschnitte (`minmax(min(100%, 240px), 1fr)`, Seite bis 1880 px), Herkunft als Zusatz an der Karte, Stand je Begegnung als kompakte Kopfleiste; Zugnummer „Zug n“ im Kartenkopf (8.2) | Acht Bretter auf einen Blick am PC (1920 px: 7 je Reihe, zwei Reihen ohne Scrollen), am Handy eine Spalte | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.027.3 · Turnierseite | Live-Bretter: Engine-Balken genau so hoch wie das gezeichnete Brett (gemessen, Chessground rastet auf Vielfache von acht), 0.0 liegt zwischen 4. und 5. Reihe; nach einem Zug hält er den letzten Wert, bis die neue Stellung bewertet ist (8.2) | Balken als Maßstab am Brett lesbar, kein Ausschlag | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.026.0 · Turnierseite | Live-Bretter: Symbolknopf `biotech` im Kartenkopf öffnet die Partie auf RookHubs Analysebrett (neuer Tab, alle Züge, Kopf, Uhren) (8.2) | Eine laufende Partie selbst durchrechnen, auch als Gast | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.025.0 · Turnierseite | Live-Bretter: „Brett hinzufügen“ (Auswahl-Dialog 560 px mit Suche + Lichess-Link), Abschnitt „Hinzugefügte Bretter“ / „Turnier · Runde“ mit ✕ im Kartenkopf, Elo-Schnitt „Ø n“ unter dem Mannschaftsnamen, Abriss erst nach 10 s anzeigen (8.2) | Mannschaftskampf und daneben einzelne Bretter (auch die WM-Partie) auf einer Seite; „live“ ↔ „unterbrochen“ blinkte | Nutzerwunsch 26.11. |

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { LiveBoardCardComponent } from './live-board-card.component';
 import { LiveGame } from './live-boards.models';
 
@@ -63,6 +63,31 @@ describe('LiveBoardCardComponent', () => {
     fixture.componentRef.setInput('game', { ...GAME, id: 'g2', eval: null });
     fixture.detectChanges();
     expect(c.shownEval()).toBeNull();
+  });
+  it('Zuganzahl im Kartenkopf: laufend der Zug am Brett, fertig der letzte, vor dem ersten Zug nichts', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', { tournaments: { live: { moveN: 'Zug {{move}}', boardN: 'Brett {{board}}' } } });
+    translate.use('de');
+    const fixture = TestBed.createComponent(LiveBoardCardComponent);
+    fixture.componentRef.setInput('game', { ...GAME, plies: 66, whiteToMove: true });
+    fixture.componentRef.setInput('board', 3);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const move = () => el.querySelector('.lb-move')?.textContent?.trim() ?? null;
+    expect(move()).toBe('Zug 34');                                             // 33 Züge gespielt, Weiß spielt den 34.
+    expect(el.querySelector('.lb-move')!.getAttribute('title')).toBe('common.whiteToMove');
+    fixture.componentRef.setInput('game', { ...GAME, plies: 67, whiteToMove: false });
+    fixture.detectChanges();
+    expect(move()).toBe('Zug 34');                                             // Schwarz am Zug im 34.
+    fixture.componentRef.setInput('game', { ...GAME, plies: 81, finished: true, result: '1-0' });
+    fixture.detectChanges();
+    expect(move()).toBe('Zug 41');                                             // fertig: letzter gespielter Zug
+    fixture.componentRef.setInput('game', { ...GAME, plies: 0 });
+    fixture.detectChanges();
+    expect(move()).toBeNull();
   });
   it('Balken genau so hoch wie das gezeichnete Brett, Mitte = Mitte des Bretts (0.0 zwischen 4. und 5. Reihe)', async () => {
     await TestBed.configureTestingModule({

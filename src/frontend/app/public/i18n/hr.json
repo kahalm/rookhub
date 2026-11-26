@@ -1699,7 +1699,9 @@
         "limit": "Trenutačno se gleda previše drugih prijenosa — pokušaj ponovno kasnije.",
         "notFound": "Lichess ne poznaje ovaj prijenos (više)."
       },
-      "openAnalysis": "Otvori na ploči za analizu (nova kartica)"
+      "openAnalysis": "Otvori na ploči za analizu (nova kartica)",
+      "moveN": "Potez {{move}}",
+      "moveTipEnd": "Posljednji potez partije"
     }
   },
   "puzzles": {
