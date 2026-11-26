@@ -22,6 +22,9 @@ public sealed record LiveStatus(bool Linked, bool Manual, string? TourId, string
 public sealed class TournamentLiveService
 {
     private static readonly TimeSpan TourTtl = TimeSpan.FromSeconds(60);
+    /// <summary>So lange hält die letzte gute Rundenliste als Rückfall, wenn Lichess drosselt oder nicht antwortet.</summary>
+    private static readonly TimeSpan StaleTtl = TimeSpan.FromHours(12);
+    private static string StaleKey(string tourId) => "live-tour-stale:" + tourId;
 
     private readonly AppDbContext _db;
     private readonly ILiveTournamentData _data;
@@ -149,9 +152,12 @@ public sealed class TournamentLiveService
         catch (Exception e) when (e is LichessRateLimitedException or HttpRequestException or JsonException or TaskCanceledException && !ct.IsCancellationRequested)
         {
             _logger.LogInformation("Live-Bretter: Übertragung {Tour} nicht gelesen ({Error})", tourId, e.Message);
-            return null;                                                   // nicht cachen — beim nächsten Mal wieder versuchen
+            // Letzte gute Fassung weiter nutzen (Prod 26.11.2026: Lichess-429 → Rundenliste leer → JEDER Strom 404 „not
+            // linked“ → Browser verbinden neu → noch mehr Abrufe). Ohne gute Fassung: nicht cachen, später wieder versuchen.
+            return _cache.TryGetValue(StaleKey(tourId), out LichessBroadcasts.TourDetail? stale) ? stale : null;
         }
         _cache.Set(key, d, TourTtl);
+        if (d is not null) _cache.Set(StaleKey(tourId), d, StaleTtl);
         return d;
     }
 

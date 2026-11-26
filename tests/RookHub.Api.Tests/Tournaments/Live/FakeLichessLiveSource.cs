@@ -56,7 +56,10 @@ internal sealed class FakeLichessLiveSource : ILichessLiveSource
         }
     }
 
-    public Task<string?> GetTourAsync(string tourId, CancellationToken ct) => Task.FromResult(Tours.GetValueOrDefault(tourId));
+    /// <summary>Lichess drosselt (429): jeder Turnier-Abruf wirft.</summary>
+    public bool RateLimited { get; set; }
+    public Task<string?> GetTourAsync(string tourId, CancellationToken ct) =>
+        RateLimited ? throw new LichessRateLimitedException() : Task.FromResult(Tours.GetValueOrDefault(tourId));
     public int TourOfRoundCalls;
     public Task<string?> GetTourOfRoundAsync(string roundId, CancellationToken ct)
     {

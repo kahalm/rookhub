@@ -71,6 +71,27 @@ public class LiveBoardsControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task ResolveRound_LichessRateLimited_UsesLastGoodRoundList()
+    {
+        // Prod 26.11.2026: nach dem Neustart drosselte Lichess (429), die Rundenliste kam leer zurück und JEDER Strom
+        // antwortete 404 „not linked“ — die Browser verbanden neu und fragten noch öfter an.
+        var svc = Service();
+        Assert.NotNull(await svc.ResolveRoundAsync(Linked, 1, default));
+        _cache.Remove("live-tour:IjDgZVUR");                               // kurze Frist abgelaufen
+        _src.RateLimited = true;
+        var info = await svc.ResolveRoundAsync(Linked, 1, default);
+        Assert.NotNull(info);
+        Assert.Equal(RoundId, info!.LichessRoundId);
+    }
+
+    [Fact]
+    public async Task ResolveRound_RateLimited_WithoutGoodCopy_Null()
+    {
+        _src.RateLimited = true;
+        Assert.Null(await Service().ResolveRoundAsync(Linked, 1, default));
+    }
+
+    [Fact]
     public async Task Status_NotLinked_OldTournament_NotLinkedWithoutSearch()
     {
         var s = Assert.IsType<LiveStatus>(Assert.IsType<OkObjectResult>(await Controller().Status(Unlinked)).Value);

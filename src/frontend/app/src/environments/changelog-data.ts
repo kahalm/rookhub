@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.028.1", date: "2026-11-26", changes: [
+    { en: "Live boards: when Lichess throttles us (429), the page keeps working with the last known round list instead of reporting „no linked broadcast“ for the whole round (which made every browser reconnect and ask Lichess even more often). The Lichess cloud evaluation is asked at most every 3 s (was 1 s); our own engines evaluate to depth 30 anyway.",
+      de: "Live-Bretter: Drosselt uns Lichess (429), läuft die Seite mit der letzten bekannten Rundenliste weiter, statt für die ganze Runde „keine Übertragung verknüpft“ zu melden (worauf jeder Browser neu verband und Lichess noch öfter fragte). Die Lichess-Cloud-Bewertung wird höchstens alle 3 s abgefragt (vorher 1 s); die eigenen Engines rechnen ohnehin bis Tiefe 30." },
+  ] },
   { version: "1.028.0", date: "2026-11-26", changes: [
     { en: "Live boards: all boards (team match, added boards, boards from other broadcasts) now flow in one grid without section breaks — on a 1920 px screen seven boards per row, eight boards fit without scrolling; each card says where it comes from, the match score stays as a compact line above.",
       de: "Live-Bretter: Alle Bretter (Begegnung, hinzugefügte, aus anderen Übertragungen) stehen jetzt in einem Raster ohne Abschnitte — auf einem 1920-px-Bildschirm sieben Bretter je Reihe, acht passen ohne Scrollen; jede Karte sagt, woher sie kommt, der Mannschaftsstand bleibt als kompakte Zeile darüber." },

@@ -13,7 +13,9 @@ namespace RookHub.Api.Services.Tournaments.Live;
 /// </summary>
 public sealed class LichessCloudEval
 {
-    public static readonly TimeSpan MinSpacing = TimeSpan.FromSeconds(1);
+    // 1 s war zu dicht: zusammen mit Strom und Rundenliste drosselte Lichess uns am 26.11.2026 dauerhaft (429). Die eigenen
+    // Hintergrund-Engines bewerten ohnehin bis Tiefe 30; die Cloud ist nur noch der schnelle erste Wert.
+    public static readonly TimeSpan MinSpacing = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan HitTtl = TimeSpan.FromHours(6);
     private static readonly TimeSpan MissTtl = TimeSpan.FromMinutes(15);
 
