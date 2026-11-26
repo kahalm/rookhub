@@ -1582,6 +1582,8 @@
       "team": "Équipe",
       "allMatches": "Tous les matchs",
       "engineBar": "Barre d’évaluation",
+      "share": "Partager le lien",
+      "shareCopied": "Lien vers cette vue copié.",
       "onlyPlayer": "Seulement l’échiquier de {{name}}",
       "showAll": "Afficher tous les échiquiers",
       "noBoards": "Aucun échiquier de ce match n’est retransmis.",

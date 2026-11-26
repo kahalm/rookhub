@@ -1582,6 +1582,8 @@
       "team": "Tim",
       "allMatches": "Semua pertandingan",
       "engineBar": "Bilah evaluasi",
+      "share": "Bagikan tautan",
+      "shareCopied": "Tautan ke tampilan ini disalin.",
       "onlyPlayer": "Hanya papan {{name}}",
       "showAll": "Tampilkan semua papan",
       "noBoards": "Tidak ada papan dari pertandingan ini yang disiarkan.",

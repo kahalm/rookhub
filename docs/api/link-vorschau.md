@@ -63,6 +63,7 @@ Basis-URL für `og:url`/`og:image`: `App:BaseUrl`; Turnierseite `App:TurnierBase
 |---|---|---|
 | `/t/{id}` | Name, Bild = Grundstellung textfrei | unverändert; feste og-Tags der Shell werden jetzt entfernt (vorher standen sie VOR den eingefügten) |
 | `/tournaments/calendar/{id}` | Eckdaten, Grundstellung | unverändert (dito) |
+| `/tournaments/{id}/live?round=&team=&player=` | keine (allgemeine Karte „Turniere“) | seit 1.024.0 (`live`): Titel „Live: Heim – Gast · Übertragung, Runde n“ (mit `team`), „Live: Spieler · …“ (mit `player`), sonst „Live-Bretter · Übertragung, Runde n“; Beschreibung deutsch: Stand, Zahl der übertragenen Bretter, Begegnungen, „Runde läuft gerade“/„beendet“/„Beginn …“ (Wiener Zeit). Ohne `round` die laufende Runde. Bild = Turnier-Motiv wie `/t/` (eine Live-Stellung wäre im Messenger gleich veraltet). Gelesen nur verknüpfte Turniere (`TournamentLiveService.GetLinkedStatusAsync`, KEINE Lichess-Suche) und Partien nur, wenn der Server sie gerade im Speicher hat (`BroadcastLiveHub.Peek`: offener Feed oder gemerkte Endstellungen) — ein Vorschau-Abrufer öffnet nie einen Strom. Nur auf der Turnierseite (`X-Og-Site: turnier`); Weiche `^/tournaments/[A-Za-z0-9]+/live$` |
 
 ### LeagueHub (vorher: `X-Og-Site: none` → keinerlei Vorschau)
 
@@ -169,6 +170,6 @@ Die angereicherte `index.html` selbst: `no-cache, must-revalidate` aus der nginx
 nach ply, Linie/Rekonstruktion inkl. abgelaufen/unbekannt, Cache-Header), `OgPuzzleCardTests` (Löser-Sicht, Themen,
 `/analysis?fen=`, Wochenpost nur veröffentlicht), `OgWorksheetCardTests` (Raster, kein Text/Lösung, Widerruf),
 `OgRedThreadTests` (roter Faden als Beschreibung), `OgClubGameTests` (`/cg/` Partie/Training, Anonymisierung: kein Klarname/FIDE/Event, Widerruf), `OgShareLinkTests` (`/tl/` + drill gültig/abgelaufen/widerrufen,
-`/s/…/club-games/{id}` anonymisiert/abgelaufen/fremde Partie, `/ga/` ohne Namen + Widerruf, Meisterpartie, Kurs nur mit Markierung + nicht öffentlich), `OgLeagueCardTests` (Pfade je Site, Begegnung offen/gespielt/leer, anonymisierte Partie, abgelaufene Links, Basis-URL,
+`/s/…/club-games/{id}` anonymisiert/abgelaufen/fremde Partie, `/ga/` ohne Namen + Widerruf, Meisterpartie, Kurs nur mit Markierung + nicht öffentlich), `OgLiveBoardsTests` (Live-Bretter: Titel je team/player/ohne, Stand nur aus dem Speicher, keine Suche/kein Strom, Escaping), `OgLeagueCardTests` (Pfade je Site, Begegnung offen/gespielt/leer, anonymisierte Partie, abgelaufene Links, Basis-URL,
 Escaping, Entfernen der Shell-Tags). nginx-Map und -Location: `DeploymentConfigTests.OgPreview_*` (Kurs-Weiche: `OgPreview_CourseSlugs_OnlyForPreviewBotsOnRookHub`).
 Bilder ansehen: `OG_DUMP_DIR=/tmp/og dotnet test --filter "FullyQualifiedName~Og"` schreibt einige PNGs.

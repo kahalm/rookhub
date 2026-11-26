@@ -1582,6 +1582,8 @@
       "team": "Drużyna",
       "allMatches": "Wszystkie mecze",
       "engineBar": "Pasek oceny",
+      "share": "Udostępnij link",
+      "shareCopied": "Skopiowano link do tego widoku.",
       "onlyPlayer": "Tylko szachownica: {{name}}",
       "showAll": "Pokaż wszystkie szachownice",
       "noBoards": "Żadna szachownica tego meczu nie jest transmitowana.",

@@ -1582,6 +1582,8 @@
       "team": "Equipo",
       "allMatches": "Todos los encuentros",
       "engineBar": "Barra de evaluación",
+      "share": "Compartir enlace",
+      "shareCopied": "Enlace a esta vista copiado.",
       "onlyPlayer": "Solo el tablero de {{name}}",
       "showAll": "Mostrar todos los tableros",
       "noBoards": "No se retransmite ningún tablero de este encuentro.",

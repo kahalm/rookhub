@@ -70,6 +70,20 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         lock (_lock) return _feeds.TryGetValue(roundId, out var f) ? f.ViewerCount : 0;
     }
 
+    /// <summary>
+    /// Was der Server von einer Runde gerade ohnehin weiß — Partien eines offenen Feeds oder die 30 min gemerkten Endstellungen
+    /// einer fertigen Runde —, OHNE einen Strom zu öffnen (Link-Vorschau, <c>docs/api/link-vorschau.md</c>). <c>null</c> = nichts
+    /// im Speicher (niemand schaut zu); ein Vorschau-Abruf baut nie eine Verbindung zu Lichess auf.
+    /// </summary>
+    public IReadOnlyList<LiveGame>? Peek(string roundId)
+    {
+        lock (_lock)
+        {
+            if (_feeds.TryGetValue(roundId, out var feed) && !feed.IsClosed && feed.IsLoaded) return feed.Games();
+            return _finished.TryGetValue(roundId, out var kept) && kept.Until > DateTime.UtcNow ? kept.Games : null;
+        }
+    }
+
     /// <summary>Zuschauen. <paramref name="finished"/> = Lichess meldet die Runde fertig (dann kein Strom).
     /// Abmelden über <see cref="RoundSubscription.DisposeAsync"/>.</summary>
     /// <remarks>Finden/Anlegen des Feeds UND das Anmelden daran laufen unter dem Hub-Lock — Schließen (<see cref="TryCloseIdle"/>)
@@ -187,6 +201,8 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         public int ViewerCount { get { lock (_lock) return _subs.Count; } }
         /// <summary>Geschlossen (Leerlauf) — nimmt keine Zuschauer mehr an; <see cref="Subscribe"/> legt dann einen neuen an.</summary>
         public bool IsClosed { get { lock (_lock) return _closed; } }
+        /// <summary>Vollstand schon geladen (vorher gäbe <see cref="Games"/> eine halbe Runde).</summary>
+        public bool IsLoaded { get { lock (_lock) return _loaded; } }
 
         public List<LiveGame> Games()
         {

@@ -1353,6 +1353,8 @@
       "team": "Csapat",
       "allMatches": "Minden mérkőzés",
       "engineBar": "Értékelősáv",
+      "share": "Link megosztása",
+      "shareCopied": "A nézet linkje vágólapra másolva.",
       "onlyPlayer": "Csak {{name}} táblája",
       "showAll": "Összes tábla",
       "noBoards": "Ennek a mérkőzésnek egyik tábláját sem közvetítik.",

@@ -1,3 +1,5 @@
+import { flexAlign } from '@rh/testing/flex-align';
+
 /**
  * UI-Sweep 2026-10-10: Gestaltungs-Funde, die nur mit den GLOBALEN Regeln (styles.scss + leaguehub.scss) und echter
  * Viewport-Breite prüfbar sind — gemessen wie in `touch-targets.spec.ts` in einem iframe mit denselben Styles.
@@ -309,7 +311,7 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
     expect(style(doc, 'p').color).toBe(style(doc, 'm').color);
     expect(style(doc, 'p').color).not.toBe(style(doc, 'r').color);
     expect(parseFloat(style(doc, 'card').maxWidth)).toBeLessThan(700);
-    expect(style(doc, 'lc').justifyContent).toBe('flex-start');
+    expect(flexAlign(style(doc, 'lc').justifyContent)).toBe('flex-start');
   });
 
   // z2-l-register-hinweis: der Hinweis der Masken nicht im Fehlerrot, sondern in --focus

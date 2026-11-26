@@ -1650,6 +1650,8 @@
       "team": "Mannschaft",
       "allMatches": "Alle Begegnungen",
       "engineBar": "Engine-Balken",
+      "share": "Link teilen",
+      "shareCopied": "Link zu dieser Ansicht kopiert.",
       "onlyPlayer": "Nur das Brett von {{name}}",
       "showAll": "Alle Bretter zeigen",
       "noBoards": "Kein Brett dieser Begegnung wird übertragen.",

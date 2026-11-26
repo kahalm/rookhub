@@ -13,6 +13,7 @@ import { TournamentDetailComponent } from './tournament-detail.component';
 import { Subscription, TournamentGroup, TournamentPlayer, TournamentTeam } from '@rh/core/models';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { OpenTournamentService } from '../../core/open-tournament.service';
+import { flexAlign } from '@rh/testing/flex-align';
 
 /** Live-Bretter (1.014.0): die Detailseite fragt nach dem Turnier, ob eine Übertragung verknüpft ist — hier: keine. */
 function flushLive(http: HttpTestingController): void {
@@ -319,7 +320,7 @@ describe('TournamentDetailComponent', () => {
       expect(row.display).toBe('flex');
       expect(row.flexWrap).toBe('wrap');
       expect(getComputedStyle(bar).flexGrow).toBe('0');
-      expect(getComputedStyle(bar).justifyContent).toBe('flex-end');
+      expect(flexAlign(getComputedStyle(bar).justifyContent)).toBe('flex-end');
     }
   });
 

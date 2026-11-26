@@ -1582,6 +1582,8 @@
       "team": "Takım",
       "allMatches": "Tüm maçlar",
       "engineBar": "Değerlendirme çubuğu",
+      "share": "Bağlantıyı paylaş",
+      "shareCopied": "Bu görünümün bağlantısı kopyalandı.",
       "onlyPlayer": "Yalnızca {{name}} tahtası",
       "showAll": "Tüm tahtaları göster",
       "noBoards": "Bu maçın hiçbir tahtası yayınlanmıyor.",

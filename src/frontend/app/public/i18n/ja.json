@@ -1582,6 +1582,8 @@
       "team": "チーム",
       "allMatches": "すべての対戦",
       "engineBar": "評価バー",
+      "share": "リンクを共有",
+      "shareCopied": "この表示へのリンクをコピーしました。",
       "onlyPlayer": "{{name}} の盤面のみ",
       "showAll": "すべての盤面を表示",
       "noBoards": "この対戦の盤面は中継されていません。",

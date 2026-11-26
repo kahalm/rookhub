@@ -1381,6 +1381,10 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   unten. Ohne Übertragung kein Leerraster, sondern ein leiser Hinweis (5.11, Symbol `live_tv`) mit Feld + Knopf
   „Übertragung verknüpfen“ (Gast: „Anmelden, um …“). Die laufende Uhr tickt nicht im E-Ink-Modus (3.6). Auf der Detailseite
   ist „Live-Bretter“ ein Rahmenknopf mit `live_tv` (`.keep-label`), nur wenn verknüpft; sonst ⋮-Eintrag.
+  **Link teilen** (1.024.0): rechts im Kopf ein Rahmenknopf `share` + „Link teilen“ (unter 480 px nur das Symbol, 48 px
+  breit, Name per `aria-label`), für Gäste wie Angemeldete. Am Handy (`pointer: coarse` + Web Share API) das Teilen-Blatt,
+  sonst Zwischenablage mit Snackbar „Link zu dieser Ansicht kopiert.“ — wie „Link teilen“ der Partien (8.1). Der Link trägt
+  die ganze Ansicht (`?round=` immer, `team`/`player`, `eval=1` wenn der Balken an ist).
 - Profil: erste Karte „Darstellung“ = RookHubs `app-theme-card` (`@rh/features/profile/theme-card.component`), auch
   beim Ladefehler. Spieltermine einer Liga mit „·“-Trenner in der Lücke (`overflow-x: clip`, wie ClubHub `.kid-meta`).
 
@@ -1628,6 +1632,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-26 | 1.024.0 · Turnierseite | Live-Bretter: Knopf „Link teilen“ rechts im Kopf (8.2), unter 480 px nur Symbol; Teilen-Blatt am Handy, sonst Kopieren mit Snackbar | Eine bestimmte Live-Ansicht (Runde, Mannschaft) soll an Gäste gehen und genau so aufgehen | Nutzerwunsch 26.11. |
 | 2026-11-25 | 1.021.0 · Zusammenfassung | Roter Faden als abgesetzter Kernsatz ganz oben (8.1): unter dem Titel des Texts, Akzentleiste links + leicht getönte Fläche, 1,05 rem, ≤ 75ch, ohne Überschrift; an der alten Stelle entfällt er | Der rote Faden ist die Kernaussage, stand aber am Ende von „Die Partie“ hinter allen Zügen; eine Überschrift doppelte nur seinen ersten Satz | Wunsch 2026-11-25 |
 | 2026-11-25 | 1.015.0 · Partien + Formular-Korrektur | Restzeit an den Zügen (5.3) und Karte „Zeitverbrauch“ (zwei Linien, Weiß voll/Akzent, Schwarz gestrichelt) in der Auswertungsspalte; in der Formular-Werkbank (5.12) ein Feld „Uhr nach dem Zug“ unter dem Zug und die Zeit klein in der Zugliste | Notierte Restzeiten werden jetzt mitgelesen; sie sollen sichtbar und korrigierbar sein, kompakt und ohne zweite Farbe für die Seite | Wunsch 2026-11-25 |
 | 2026-11-25 | 1.014.0 · Turnierseite | Live-Bretter `/tournaments/:id/live` (8.2): Bretterraster je Begegnung bzw. Runde, Karte je Brett (Spieler oben/unten, Uhr am Zug fett mit Akzentrahmen, Ergebnis-Chip), Engine-Balken links am Brett schaltbar, Mannschaftsstand als Kopfzeile, Hinweis + Verknüpfen statt Leerzustand; Knopf „Live-Bretter“ auf der Detailseite nur mit Übertragung | Wer einer Mannschaft folgt, will alle ihre Bretter auf einen Blick, auf Handy (eine Spalte) wie am PC (Raster) und am Boox (keine tickende Uhr) | Nutzerwunsch 25.11. |

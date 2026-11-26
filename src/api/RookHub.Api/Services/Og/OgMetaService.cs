@@ -13,6 +13,7 @@ using RookHub.Api.Services.Games;
 using RookHub.Api.Services.Repertoires;
 using RookHub.Api.Services.League;
 using RookHub.Api.Services.Tournaments;
+using RookHub.Api.Services.Tournaments.Live;
 using RookHub.Api.DTOs.Games;
 
 namespace RookHub.Api.Services.Og;
@@ -66,8 +67,12 @@ public partial class OgMetaService
         LeagueShareClubGames? leagueClubGames = null, AnonGameShares? anonGames = null,
         TrainingVideos.TrainingLessonShares? lessonShares = null, TrainingVideos.TrainingVideoService? lessons = null,
         Engines.LocalExplorerClient? explorer = null, Microsoft.Extensions.Caching.Memory.IMemoryCache? memory = null,
-        OwnGameSummaries? ownSummaries = null)
+        OwnGameSummaries? ownSummaries = null, TournamentLiveService? live = null, ILiveTournamentData? liveData = null,
+        BroadcastLiveHub? liveHub = null)
     {
+        _live = live;
+        _liveData = liveData;
+        _liveHub = liveHub;
         _ownSummaries = ownSummaries;
         _leagueClubGames = leagueClubGames;
         _anonGames = anonGames;
@@ -115,6 +120,11 @@ public partial class OgMetaService
                 .FirstOrDefault(p => p.Length == 2 && p[0] == "t")?[1];
             return string.IsNullOrWhiteSpace(t) ? null : ("calendar", Uri.UnescapeDataString(t));
         }
+
+        // Live-Bretter der Turnierseite (/tournaments/{id}/live?round=&team=&player=, 1.024.0) — nur auf der Turnierseite;
+        // RookHub selbst kennt die Route nicht (dort leitet /tournaments/… auf die Turnierseite um).
+        if (segments is ["tournaments", var liveId, "live"])
+            return string.Equals(site, OgIndexHtmlProvider.TurnierSite, StringComparison.OrdinalIgnoreCase) ? (LiveKind, liveId) : null;
 
         // Teilen-Links mit Vorschau seit 2026-11-22: /tl, /ga/…/summary, /s/…/club-games/{id}, /explorer/game/masters/{id}
         if (ParseShareRoute(segments) is { } share) return share;
@@ -279,6 +289,8 @@ public partial class OgMetaService
                     var title = name ?? "Schachturnier";
                     return new OgPage(title, "Turnierdaten live auf RookHub", img, canonical);
                 }
+                case LiveKind:
+                    return await ResolveLivePageAsync(id, path, baseUrl, canonical, ct);
                 case "calendar":
                 {
                     // Ein geteilter Kalender-Link soll im Vorschaufenster die ECKDATEN zeigen (Termin, Ort, Bedenkzeit,

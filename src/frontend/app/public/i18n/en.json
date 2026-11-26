@@ -1650,6 +1650,8 @@
       "team": "Team",
       "allMatches": "All matches",
       "engineBar": "Engine bar",
+      "share": "Share link",
+      "shareCopied": "Link to this view copied.",
       "onlyPlayer": "Only the board of {{name}}",
       "showAll": "Show all boards",
       "noBoards": "No board of this match is broadcast.",

@@ -1582,6 +1582,8 @@
       "team": "Družstvo",
       "allMatches": "Všechny zápasy",
       "engineBar": "Lišta hodnocení",
+      "share": "Sdílet odkaz",
+      "shareCopied": "Odkaz na toto zobrazení zkopírován.",
       "onlyPlayer": "Jen šachovnice hráče {{name}}",
       "showAll": "Zobrazit všechny šachovnice",
       "noBoards": "Žádná šachovnice tohoto zápasu se nepřenáší.",

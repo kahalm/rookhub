@@ -1,11 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { BehaviorSubject } from 'rxjs';
 import { AuthService } from '@rh/core/auth.service';
+import { SnackbarService } from '@rh/core/snackbar.service';
 import { LiveBoardsComponent, samePlayer } from './live-boards.component';
 import { EVENT_SOURCE_FACTORY } from './live-boards.service';
 import { FakeEventSource } from './fake-event-source';
@@ -129,6 +130,60 @@ describe('LiveBoardsComponent', () => {
     req.flush(STATUS);
     await fixture.whenStable();
     expect(FakeEventSource.all.length).toBe(1);
+  });
+
+  // Wunsch 2026-11-26: eine bestimmte Ansicht an Gäste teilen — der Link trägt Runde, Mannschaft, Spieler und Balken.
+  it('Adresse ?eval=1: Balken an (Strom mit eval=true), ohne die Gerätevorliebe zu überschreiben', async () => {
+    await setup({ eval: '1', round: '1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    expect(FakeEventSource.last().url).toBe('/api/live-boards/1404438/rounds/1/stream?eval=true');
+    expect(localStorage.getItem(LIVE_EVAL_KEY)).toBeNull();
+  });
+
+  it('Balken umschalten schreibt eval in die Adresse (ersetzt den Eintrag, kein neuer Verlaufsschritt)', async () => {
+    await setup();
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const nav = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    fixture.componentInstance.setEval(true);
+    expect(nav).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { eval: 1 }, queryParamsHandling: 'merge', replaceUrl: true }));
+  });
+
+  it('Link teilen: Runde immer ausdrücklich, Mannschaft und Balken mit; am Rechner in die Zwischenablage + Snackbar', async () => {
+    await setup({ team: 'Schachklub Schwaz' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const c = fixture.componentInstance;
+    expect(c.shareUrl()).toBe(`${location.origin}/tournaments/1404438/live?round=1&team=Schachklub%20Schwaz`);
+    c.evalOn.set(true);
+    expect(c.shareUrl()).toBe(`${location.origin}/tournaments/1404438/live?round=1&team=Schachklub%20Schwaz&eval=1`);
+
+    const write = jasmine.createSpy('writeText').and.resolveTo();
+    spyOnProperty(navigator, 'clipboard', 'get').and.returnValue({ writeText: write } as unknown as Clipboard);
+    spyOn(window, 'matchMedia').and.returnValue({ matches: false } as MediaQueryList);
+    const copied = spyOn(TestBed.inject(SnackbarService), 'copy');
+    (el().querySelector('.live-share') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(write).toHaveBeenCalledWith(c.shareUrl());
+    expect(copied).toHaveBeenCalledWith('tournaments.live.shareCopied');
+  });
+
+  it('Link teilen am Handy: Teilen-Blatt des Systems', async () => {
+    await setup({ player: 'Mittal, Aditya', round: '1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    spyOn(window, 'matchMedia').and.returnValue({ matches: true } as MediaQueryList);
+    const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
+    const had = Object.getOwnPropertyDescriptor(nav, 'share');
+    const shareSpy = jasmine.createSpy('share').and.resolveTo();
+    Object.defineProperty(nav, 'share', { value: shareSpy, configurable: true });
+    try {
+      fixture.componentInstance.share();
+      expect(shareSpy).toHaveBeenCalledWith({ url: `${location.origin}/tournaments/1404438/live?round=1&player=Mittal,%20Aditya` });
+    } finally {
+      if (had) Object.defineProperty(nav, 'share', had); else delete (nav as { share?: unknown }).share;
+    }
   });
 
   it('samePlayer: Reihenfolge, Komma und Akzente egal', () => {

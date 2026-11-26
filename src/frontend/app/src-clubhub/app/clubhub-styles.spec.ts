@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MatButtonModule } from '@angular/material/button';
 import { contrast, parseColor } from '@rh/testing/contrast';
+import { flexAlign } from '@rh/testing/flex-align';
 
 /** Der Löschknopf der geteilten Seite „Konto löschen" als echter Material-Knopf. */
 @Component({
@@ -500,7 +501,7 @@ describe('clubhub.scss', () => {
     const el = mount(`<ch-root><main class="wrap"><app-privacy><div class="legal-container"><div class="mat-mdc-card" style="width: 100%">
       </div></div></app-privacy></main></ch-root>`);
     const box = el.querySelector('.legal-container')!;
-    expect(getComputedStyle(box).justifyContent).toBe('flex-start');
+    expect(flexAlign(getComputedStyle(box).justifyContent)).toBe('flex-start');
     expect(el.querySelector('.mat-mdc-card')!.getBoundingClientRect().left).toBeCloseTo(box.getBoundingClientRect().left, 0);
   });
 

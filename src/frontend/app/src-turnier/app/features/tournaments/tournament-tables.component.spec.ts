@@ -8,6 +8,7 @@ import { TournamentPlayer, TournamentTeam } from '@rh/core/models';
 import { PLAYER_COLUMNS, TEAM_COLUMNS } from './tournament-table.util';
 import { TournamentTablesComponent } from './tournament-tables.component';
 import { setDarkTheme, textContrast } from '@rh/testing/contrast';
+import { flexAlign } from '@rh/testing/flex-align';
 
 describe('TournamentTablesComponent', () => {
   let fixture: ComponentFixture<TournamentTablesComponent>;
@@ -203,7 +204,7 @@ describe('TournamentTablesComponent', () => {
       if (!th) continue;
       const box = getComputedStyle(th.querySelector('.mat-sort-header-container')!);
       expect(box.flexDirection).withContext(col).toBe('row-reverse');
-      expect(box.justifyContent).withContext(`${col}: in row-reverse heißt flex-start rechts`).toBe('flex-start');
+      expect(flexAlign(box.justifyContent)).withContext(`${col}: in row-reverse heißt flex-start rechts`).toBe('flex-start');
       const label = th.querySelector('.mat-sort-header-content') as HTMLElement | null;
       const td = fixture.nativeElement.querySelector(`.table-scroll td.mat-column-${col}`) as HTMLElement | null;
       if (label && td && th.getBoundingClientRect().width > 0) {

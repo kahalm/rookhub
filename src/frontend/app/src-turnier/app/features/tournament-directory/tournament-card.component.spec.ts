@@ -11,6 +11,7 @@ import { SnackbarService } from '@rh/core/snackbar.service';
 import { Subject } from 'rxjs';
 import { directoryCalendarEvent } from './directory-calendar-event';
 import { clickCenter, clickFreeSpot, expectWholeTileClickable } from '@rh/testing/tile-hit';
+import { flexAlign } from '@rh/testing/flex-align';
 
 function entry(over: Partial<DirectoryEntry> = {}): DirectoryEntry {
   return {
@@ -349,7 +350,7 @@ describe('TournamentCardComponent', () => {
     host.style.cssText = 'display: block; width: 260px;';
     const line = host.querySelectorAll<HTMLElement>('.tc-line')[1];
     const [icon, text] = [line.querySelector('mat-icon')!, line.querySelector('span')!];
-    expect(getComputedStyle(line).alignItems).toBe('flex-start');
+    expect(flexAlign(getComputedStyle(line).alignItems)).toBe('flex-start');
     expect(getComputedStyle(icon).flexShrink).toBe('0');
     expect(icon.getBoundingClientRect().width).withContext('nicht gequetscht').toBeGreaterThanOrEqual(icon.scrollWidth - 0.5);
     expect(icon.getBoundingClientRect().top).withContext('an der ersten Zeile').toBeLessThan(text.getBoundingClientRect().top + 8);

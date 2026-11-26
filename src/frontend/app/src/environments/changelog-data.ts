@@ -10,6 +10,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.024.0", date: "2026-11-26", changes: [
+    { en: "Live boards: new „Share link“ button — on the phone the system share sheet, otherwise the link is copied. The link shows exactly the current view, also to guests without an account: round (always explicit, so it still shows this round tomorrow), team or player and the engine bar (?eval=1). Switching the engine bar now also writes it into the address.",
+      de: "Live-Bretter: neuer Knopf „Link teilen“ — am Handy das Teilen-Blatt des Systems, sonst wird der Link kopiert. Der Link zeigt genau die aktuelle Ansicht, auch Gästen ohne Konto: Runde (immer ausdrücklich, damit er morgen noch diese Runde zeigt), Mannschaft oder Spieler und den Engine-Balken (?eval=1). Das Umschalten des Balkens steht jetzt auch in der Adresse." },
+    { en: "Link preview for live boards: a shared /tournaments/{id}/live link shows „Live: Home – Away · tournament, round n“ (or „Live boards · tournament, round n“) with the live score, the number of broadcast boards and whether the round is running, instead of the generic „Tournaments“ card. The preview never opens a Lichess connection of its own.",
+      de: "Link-Vorschau der Live-Bretter: ein geteilter /tournaments/{id}/live-Link zeigt „Live: Heim – Gast · Turnier, Runde n“ (bzw. „Live-Bretter · Turnier, Runde n“) mit Live-Stand, Zahl der übertragenen Bretter und ob die Runde läuft, statt der allgemeinen Karte „Turniere“. Die Vorschau öffnet nie selbst eine Verbindung zu Lichess." },
+    { en: "Tests: layout checks compared the computed alignment with „flex-start“/„flex-end“; Chrome Headless 158 sometimes reports „flow-start“/„flow-end“ for the same layout, which made the CI fail at random. Both spellings now count the same (shared helper flexAlign).",
+      de: "Tests: Layout-Prüfungen verglichen die berechnete Ausrichtung mit „flex-start“/„flex-end“; Chrome Headless 158 meldet für dieselbe Anordnung manchmal „flow-start“/„flow-end“, die CI wurde dadurch zufällig rot. Beide Schreibweisen gelten jetzt gleich (geteilte Hilfe flexAlign)." },
+  ] },
   { version: "1.023.1", date: "2026-11-26", changes: [
     { en: "Live boards: switching on the engine bar no longer breaks the connection („Connection lost — retrying“) — the page asked for the stream with eval=1, which the server rejected; it now sends eval=true.",
       de: "Live-Bretter: Das Einschalten des Engine-Balkens trennt die Verbindung nicht mehr („Verbindung verloren — neuer Versuch“) — die Seite fragte den Strom mit eval=1 an, das der Server ablehnte; jetzt eval=true." },

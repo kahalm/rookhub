@@ -1582,6 +1582,8 @@
       "team": "Echipă",
       "allMatches": "Toate meciurile",
       "engineBar": "Bară de evaluare",
+      "share": "Distribuie linkul",
+      "shareCopied": "Linkul către această vizualizare a fost copiat.",
       "onlyPlayer": "Doar tabla lui {{name}}",
       "showAll": "Arată toate tablele",
       "noBoards": "Nicio tablă a acestui meci nu este transmisă.",

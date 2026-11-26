@@ -1582,6 +1582,8 @@
       "team": "Lag",
       "allMatches": "Alla matcher",
       "engineBar": "Värderingsstapel",
+      "share": "Dela länk",
+      "shareCopied": "Länk till den här vyn kopierad.",
       "onlyPlayer": "Bara brädet för {{name}}",
       "showAll": "Visa alla brädor",
       "noBoards": "Inget bräde i den här matchen sänds.",

@@ -1582,6 +1582,8 @@
       "team": "팀",
       "allMatches": "모든 경기",
       "engineBar": "평가 막대",
+      "share": "링크 공유",
+      "shareCopied": "이 보기의 링크를 복사했습니다.",
       "onlyPlayer": "{{name}}의 보드만",
       "showAll": "모든 보드 보기",
       "noBoards": "이 경기의 보드는 중계되지 않습니다.",

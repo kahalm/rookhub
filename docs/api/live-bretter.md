@@ -113,7 +113,14 @@ zeigt die Stellung davor — Regel in `Services/Games/SignalKingMove.cs` (siehe 
   leer: Summe der Lichess-Ergebnisse). Ohne Wahl alle Begegnungen aus Sicht der Heimmannschaft.
 - Brett = geteiltes `app-chess-board` (nur Anzeige; ein Klick tut vorerst nichts), letzter Zug markiert, Uhren (die Seite am
   Zug zählt sekündlich herunter — Näherung ab dem Eintreffen; im E-Ink-Modus steht sie), Ergebnis als Chip.
-- Engine-Balken: Schalter in der Kopfzeile, gemerkt je Gerät (`localStorage rookhub_live_eval`, `device`).
+- Engine-Balken: Schalter in der Kopfzeile, gemerkt je Gerät (`localStorage rookhub_live_eval`, `device`) und seit 1.024.0
+  zusätzlich in der Adresse (`?eval=1|0`, `replaceUrl`). Steht `eval` in der Adresse (geteilter Link), gilt das vor der
+  Gerätevorliebe, ohne sie zu überschreiben. Gäste dürfen den Balken nutzen (der Strom ist `AllowAnonymous`, auch mit `eval`).
+- **Link teilen** (1.024.0, Wunsch 2026-11-26: „einen speziellen Livestream … auch für anonyme User sharen“): Knopf im Kopf,
+  Link = `/tournaments/{id}/live?round=n[&team=…|&player=…][&eval=1]` — die Runde immer ausdrücklich (ohne sie zeigte der Link
+  am nächsten Spieltag die nächste Runde). Am Handy Teilen-Blatt, sonst Zwischenablage. Gast-Prüfung 26.11. im echten
+  Headless-Browser gegen Prod: keine Umleitung zur Anmeldung, keine 401, Mannschaft aus `?team=` und Runde aus `?round=`
+  greifen; einziger Fehler war `eval=1` → 400 (behoben 1.023.1). Vorschau im Messenger: `docs/api/link-vorschau.md`.
 - Strom im Browser: `EventSource` (Chrome 111 kann es), `LiveBoardsService.stream` — gibt der Browser die Verbindung auf
   (404/429), „Verbindung unterbrochen“ und neuer Versuch nach 3 s / 10 s / 30 s.
 

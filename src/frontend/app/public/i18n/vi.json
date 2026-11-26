@@ -1582,6 +1582,8 @@
       "team": "Đội",
       "allMatches": "Tất cả trận đấu",
       "engineBar": "Thanh đánh giá",
+      "share": "Chia sẻ liên kết",
+      "shareCopied": "Đã sao chép liên kết tới chế độ xem này.",
       "onlyPlayer": "Chỉ bàn của {{name}}",
       "showAll": "Hiện tất cả bàn",
       "noBoards": "Không bàn nào của trận này được phát.",

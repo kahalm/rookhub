@@ -1650,6 +1650,8 @@
       "team": "Ekipa",
       "allMatches": "Svi mečevi",
       "engineBar": "Traka procjene",
+      "share": "Podijeli poveznicu",
+      "shareCopied": "Poveznica na ovaj prikaz kopirana.",
       "onlyPlayer": "Samo ploča igrača {{name}}",
       "showAll": "Prikaži sve ploče",
       "noBoards": "Nijedna ploča ovog meča se ne prenosi.",

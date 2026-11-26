@@ -1582,6 +1582,8 @@
       "team": "Team",
       "allMatches": "Alle wedstrijden",
       "engineBar": "Evaluatiebalk",
+      "share": "Link delen",
+      "shareCopied": "Link naar deze weergave gekopieerd.",
       "onlyPlayer": "Alleen het bord van {{name}}",
       "showAll": "Alle borden tonen",
       "noBoards": "Geen bord van deze wedstrijd wordt uitgezonden.",

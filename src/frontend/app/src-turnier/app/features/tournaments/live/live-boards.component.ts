@@ -55,6 +55,11 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
             </a>
           }
         </div>
+        <!-- Teilen (Wunsch 2026-11-26): der Link trägt die ganze Ansicht (Runde, Mannschaft/Spieler, Balken) und läuft ohne Konto -->
+        <button mat-stroked-button type="button" class="live-share" (click)="share()"
+                [attr.aria-label]="'tournaments.live.share' | translate">
+          <mat-icon>share</mat-icon><span class="live-share-label">{{ 'tournaments.live.share' | translate }}</span>
+        </button>
       </div>
 
       @if (loading()) {
@@ -179,7 +184,10 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
     .live-page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 8px 16px 24px; box-sizing: border-box; }
     @media (min-width: 2400px) { .live-page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); } }
     .live-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .live-head-text { min-width: 0; }
+    .live-head-text { min-width: 0; flex: 1 1 auto; }
+    .live-share { flex: 0 0 auto; }
+    /* Handy: nur das Symbol, damit der Titel Platz behält (Name bleibt per aria-label) */
+    @media (max-width: 479px) { .live-share { min-width: 48px; padding: 0 12px; } .live-share .live-share-label { display: none; } .live-share mat-icon { margin: 0; } }
     .live-title { margin: 0; font-size: 1.4rem; font-weight: 500; }
     .live-source { display: inline-flex; align-items: center; gap: 2px; font-size: 0.9rem; color: var(--rh-accent);
       overflow-wrap: anywhere; }
@@ -303,6 +311,9 @@ export class LiveBoardsComponent implements OnInit {
       const r = Number(q.get('round'));
       this.team.set(q.get('team'));
       this.player.set(q.get('player'));
+      // Engine-Balken aus der Adresse (geteilter Link) geht der Gerätevorliebe vor, ohne sie zu überschreiben.
+      const ev = q.get('eval');
+      if (ev === '1' || ev === '0') this.evalOn.set(ev === '1');
       if (Number.isInteger(r) && r > 0) this.round.set(r);
       else if (this.status()) this.round.set(this.status()!.currentRound);
       this.connect();
@@ -378,10 +389,31 @@ export class LiveBoardsComponent implements OnInit {
     void this.router.navigate([], { relativeTo: this.route, queryParams: { [name]: value }, queryParamsHandling: 'merge' });
   }
 
+  /** Balken an/aus: Gerätevorliebe UND Adresse (`?eval=1|0`), damit ein kopierter Link dieselbe Ansicht zeigt. */
   setEval(on: boolean): void {
     this.evalOn.set(on);
     writeLiveEval(on);
     this.connect();
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { eval: on ? 1 : 0 }, queryParamsHandling: 'merge', replaceUrl: true });
+  }
+
+  /** Link dieser Ansicht: Runde immer ausdrücklich (sonst zeigte er morgen die nächste), Mannschaft/Spieler, Balken nur wenn an. */
+  shareUrl(): string {
+    const tree = this.router.createUrlTree(['/tournaments', this.id, 'live'], {
+      queryParams: { round: this.round(), team: this.team(), player: this.player(), eval: this.evalOn() ? 1 : null },
+    });
+    return window.location.origin + this.router.serializeUrl(tree);
+  }
+
+  /** Am Handy das Teilen-Blatt, sonst Zwischenablage mit Snackbar (DESIGN 5.x „Link teilen“, wie die Partie-Links). */
+  share(): void {
+    const url = this.shareUrl();
+    const copy = () => void (navigator.clipboard?.writeText(url) ?? Promise.reject(new Error('no clipboard'))).then(
+      () => this.snackbar.copy(this.translate.instant('tournaments.live.shareCopied')),
+      () => this.snackbar.warn(url),
+    );
+    if (typeof navigator.share !== 'function' || !window.matchMedia?.('(pointer: coarse)').matches) { copy(); return; }
+    navigator.share({ url }).catch((e: unknown) => { if ((e as { name?: string } | null)?.name !== 'AbortError') copy(); });
   }
 
   /** Mannschaftsstand: Lichess-Ergebnisse der übertragenen Bretter; ist die Runde bei chess-results eingetragen, gilt das. */

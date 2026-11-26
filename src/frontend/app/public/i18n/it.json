@@ -1582,6 +1582,8 @@
       "team": "Squadra",
       "allMatches": "Tutti gli incontri",
       "engineBar": "Barra di valutazione",
+      "share": "Condividi link",
+      "shareCopied": "Link a questa vista copiato.",
       "onlyPlayer": "Solo la scacchiera di {{name}}",
       "showAll": "Mostra tutte le scacchiere",
       "noBoards": "Nessuna scacchiera di questo incontro è trasmessa.",

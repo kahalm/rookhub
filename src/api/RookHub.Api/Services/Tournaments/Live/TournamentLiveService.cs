@@ -56,6 +56,14 @@ public sealed class TournamentLiveService
         return await StatusOfAsync(link, ct);
     }
 
+    /// <summary>Stand NUR für ein schon verknüpftes Turnier — ohne Suche bei Lichess (Link-Vorschau: ein Vorschau-Abrufer soll
+    /// keine Suche anstoßen). <c>null</c> = nicht verknüpft.</summary>
+    public async Task<LiveStatus?> GetLinkedStatusAsync(string id, CancellationToken ct)
+    {
+        var link = await _db.TournamentBroadcastLinks.AsNoTracking().FirstOrDefaultAsync(l => l.CrawlerTournamentId == id, ct);
+        return link is null ? null : await StatusOfAsync(link, ct);
+    }
+
     private async Task<LichessBroadcasts.Tour?> FindAsync(string id, CrTournament t, CancellationToken ct)
     {
         IReadOnlyList<CrPlayer> players;
