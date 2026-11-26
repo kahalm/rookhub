@@ -30,6 +30,8 @@ public static partial class DomainServicesSetup
             return tracker;
         });
         services.AddSingleton<AnalysisJobLive>();
+        // Absprache Worker ↔ Live-Bretter (1.027.0): Live rechnet auf freien Hintergrund-Engines, Vorrang vor NEUEN Aufträgen.
+        services.AddSingleton<LiveEngineLane>();
         services.AddSingleton<AnalysisJobWorker>();
         services.AddSingleton<IAnalysisJobControl>(sp => sp.GetRequiredService<AnalysisJobWorker>());
         services.AddScoped<AnalysisJobService>();

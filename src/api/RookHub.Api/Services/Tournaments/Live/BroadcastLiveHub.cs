@@ -106,7 +106,10 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
     /// immer Hub → Feed).</remarks>
     /// <param name="only">Nur diese Partien (zusätzliche Bretter aus einer fremden Übertragung, 1.025.0): der Zuschauer bekommt
     /// nur sie, und nur für sie wird bewertet — eine Runde mit 100 Brettern rechnet für ein hinzugefügtes Brett nicht alle.</param>
-    public RoundSubscription Subscribe(string roundId, bool finished, bool wantsEval, IReadOnlySet<string>? only = null)
+    /// <param name="visible">Anfangs sichtbare Bretter für den Balken (<see cref="RoundSubscription.SetVisible"/>); mit Filter der
+    /// Ansicht leer, bis die Zuordnung steht — sonst würde für einen Augenblick die ganze Runde bewertet.</param>
+    public RoundSubscription Subscribe(string roundId, bool finished, bool wantsEval, IReadOnlySet<string>? only = null,
+        IReadOnlySet<string>? visible = null)
     {
         RoundSubscription sub;
         lock (_lock)
@@ -118,6 +121,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
                 _feeds[roundId] = feed;
             }
             sub = feed.Add(wantsEval, only);
+            sub.InitVisible(visible);
         }
         sub.AfterAdd();
         return sub;
@@ -173,6 +177,21 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         public ChannelReader<LiveEvent> Events => Channel.Reader;
 
         internal bool Accepts(string gameId) => Only is null || Only.Contains(gameId);
+
+        /// <summary>Bretter, die dieser Zuschauer gerade SIEHT (Filter der Ansicht, 1.027.0); <c>null</c> = alle zugestellten.</summary>
+        private volatile IReadOnlySet<string>? _evalOnly;
+
+        /// <summary>Will dieser Zuschauer für diese Partie den Balken (an, zugestellt, sichtbar)?</summary>
+        internal bool WantsEvalFor(string gameId) => WantsEval && Accepts(gameId) && (_evalOnly is not { } v || v.Contains(gameId));
+
+        internal void InitVisible(IReadOnlySet<string>? gameIds) => _evalOnly = gameIds;
+
+        /// <summary>Sichtbare Bretter setzen (Mannschaft/Spieler/hinzugefügte); neu sichtbare werden bewertet.</summary>
+        public void SetVisible(IReadOnlySet<string>? gameIds)
+        {
+            _evalOnly = gameIds;
+            if (WantsEval) _feed.QueueAllEvals();
+        }
 
         /// <summary>Ereignis zustellen — gefiltert auf <see cref="Only"/>.</summary>
         internal void Deliver(LiveEvent e)
@@ -453,20 +472,32 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         {
             if (g is null) return;
             Broadcast(new LiveGameChanged(g));
-            if (g.Eval is null) QueueEval(g.Id);
+            if (NeedsEval(g)) QueueEval(g.Id);
+        }
+
+        /// <summary>
+        /// Braucht diese Stellung (noch) eine Bewertung? Ohne Bewertung immer; eine aus der Übertragung genügt; eine Cloud- oder
+        /// Engine-Bewertung flacher als die Zieltiefe nur, solange die Engine-Schlange die Stellung nicht schon fertig gerechnet
+        /// hat (1.027.0: Zwischenstände der Engine sind flacher, die Rechnung soll weiterlaufen bzw. neu starten).
+        /// </summary>
+        private bool NeedsEval(LiveGame g)
+        {
+            if (g.Eval is null) return true;
+            if (g.Eval.Source == "broadcast" || _hub._engine is not { } q) return false;
+            return (g.Eval.Depth ?? 0) < q.TargetDepth && !q.IsSettled(g.Fen);
         }
 
         /// <summary>Will ein Zuschauer den Balken — für diese Partie (<paramref name="gameId"/>) bzw. überhaupt?</summary>
         private bool AnyWantsEval(string? gameId = null)
         {
-            lock (_lock) return _subs.Any(s => s.WantsEval && (gameId is null || s.Accepts(gameId)));
+            lock (_lock) return _subs.Any(s => gameId is null ? s.WantsEval : s.WantsEvalFor(gameId));
         }
 
         public void QueueAllEvals()
         {
             if (!CanEval || !AnyWantsEval()) return;
             List<string> ids;
-            lock (_lock) ids = _games.Values.Where(g => g.Eval is null && _subs.Any(s => s.WantsEval && s.Accepts(g.Id))).Select(g => g.Id).ToList();
+            lock (_lock) ids = _games.Values.Where(g => NeedsEval(g) && _subs.Any(s => s.WantsEvalFor(g.Id))).Select(g => g.Id).ToList();
             foreach (var id in ids) QueueEval(id);
         }
 
@@ -492,8 +523,8 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         private bool StillWanted(string id, string fen)
         {
             lock (_lock)
-                return !_closed && _subs.Any(s => s.WantsEval && s.Accepts(id))
-                       && _games.TryGetValue(id, out var g) && g.Fen == fen && g.Eval is null;
+                return !_closed && _subs.Any(s => s.WantsEvalFor(id))
+                       && _games.TryGetValue(id, out var g) && g.Fen == fen && g.Eval?.Source != "broadcast";
         }
 
         private void ApplyEval(string id, string fen, LiveEval ev)
@@ -501,7 +532,9 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
             LiveGame? updated = null;
             lock (_lock)
             {
-                if (_games.TryGetValue(id, out var now) && now.Fen == fen && now.Eval is null)
+                // Tiefer ersetzt flacher (Zwischenstände der Engine, 1.027.0); eine Bewertung aus der Übertragung bleibt.
+                if (_games.TryGetValue(id, out var now) && now.Fen == fen
+                    && (now.Eval is null || now.Eval.Source != "broadcast" && (ev.Depth ?? 0) > (now.Eval.Depth ?? 0)))
                     _games[id] = updated = now with { Eval = ev };
             }
             if (updated is not null) Broadcast(new LiveGameChanged(updated));
@@ -519,11 +552,13 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
                     if (!AnyWantsEval(id) || ViewerCount == 0) continue;
                     LiveGame? g;
                     lock (_lock) _games.TryGetValue(id, out g);
-                    if (g is null || g.Eval is not null) continue;
-                    var ev = _hub._cloud is null ? null : await _hub._cloud.GetAsync(g.Fen, ct);
-                    if (ev is not null) { ApplyEval(id, g.Fen, ev); continue; }
-                    // Nicht im Cloud-Speicher (bei Mittelspielstellungen der Normalfall): eigene Engine — über die EINE
-                    // globale Schlange (höchstens eine Rechnung, je Brett nur die neueste Stellung, reihum).
+                    if (g is null || !NeedsEval(g)) continue;
+                    var ev = g.Eval is null && _hub._cloud is not null ? await _hub._cloud.GetAsync(g.Fen, ct) : null;
+                    if (ev is not null) ApplyEval(id, g.Fen, ev);
+                    // Cloud mindestens so tief wie die Zieltiefe genügt; sonst (bei Mittelspielstellungen der Normalfall) die
+                    // Hintergrund-Engines — über die EINE globale Schlange (je Brett nur die neueste Stellung, parallel auf den
+                    // freien Engines, Zwischenstände laufend).
+                    if (_hub._engine is null || (ev?.Depth ?? 0) >= _hub._engine.TargetDepth) continue;
                     var gameId = id;
                     _hub._engine?.Enqueue($"{RoundId}/{gameId}", g.Fen, fen => StillWanted(gameId, fen), (fen, e) => ApplyEval(gameId, fen, e));
                 }

@@ -75,6 +75,8 @@ public class EndpointAuthInventoryTests
         // Live-Bretter der Turnierseite (1.014.0): Stand + SSE-Strom einer Runde, nur verknüpfte Übertragungen, Verbindungen je IP gedeckelt.
         "GET /api/live-boards/{id}",                                 // LiveBoardsController.Status
         "GET /api/live-boards/{id}/rounds/{round:int}/stream",       // LiveBoardsController.Stream
+        "GET /api/live-boards/external",                             // LiveBoardsController.External (fremde Übertragung zur Auswahl, 1.025.0)
+        "GET /api/live-boards/pgn/{roundId}/{gameId}",               // LiveBoardsController.GamePgn (Analysebrett ohne Anmeldung, 1.026.0)
         "GET /api/kids/courses",                                     // KidsController.GetCourses
         "GET /api/kids/courses/{bookId:int}/puzzles",                // KidsController.GetCoursePuzzles
         "GET /api/kids/language-hint",                               // KidsController.GetLanguageHint (Land der IP, lokal nachgeschlagen)

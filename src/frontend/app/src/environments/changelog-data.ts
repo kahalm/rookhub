@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.027.0", date: "2026-11-26", changes: [
+    { en: "Live boards, engine bar: positions are now computed on the background engines (the ones that analyse games), in parallel on every free engine, up to depth 30, and the bar fills in step by step („depth 12 … 30“). Previously a single „live engine“ of the first admin account was used — on the server that account has no engines, so only Lichess cloud values ever arrived. A cloud value of depth 30 or more is enough; then no engine computes.",
+      de: "Live-Bretter, Engine-Balken: Die Stellungen rechnen jetzt die Hintergrund-Engines (die der Partieanalysen), parallel auf jeder freien Engine, bis Tiefe 30, und der Balken füllt sich schrittweise („Tiefe 12 … 30“). Vorher war es eine einzelne „Live-Engine“ des ersten Admin-Kontos — das hat auf dem Server keine Engines, es kamen nur Lichess-Cloud-Werte an. Ein Cloud-Wert ab Tiefe 30 genügt, dann rechnet keine Engine." },
+    { en: "Only the boards someone is looking at are computed: the page tells the server its view (team, player, added boards), and a new move cancels the old calculation of that board. Running game analyses are never interrupted — live positions take a background engine when it is free and come before the next queued analysis.",
+      de: "Gerechnet werden nur die Bretter, die jemand ansieht: Die Seite nennt dem Server ihre Ansicht (Mannschaft, Spieler, hinzugefügte Bretter), und ein neuer Zug bricht die alte Rechnung dieses Bretts ab. Laufende Partieanalysen werden nie unterbrochen — Live-Stellungen nehmen eine Hintergrund-Engine, sobald sie frei ist, und kommen vor der nächsten wartenden Analyse." },
+  ] },
   { version: "1.026.0", date: "2026-11-26", changes: [
     { en: "Live boards: every board (also added ones and boards from other broadcasts) has a small analysis button that opens the game in a new tab on RookHub’s analysis board — with all moves played so far (step through them), the header (names, Elo, event, round) and the clocks. Works for guests too; the server hands out the game’s PGN (/analysis?live=round.game).",
       de: "Live-Bretter: An jedem Brett (auch hinzugefügten und fremden) ein kleiner Analyse-Knopf, der die Partie in einem neuen Tab auf RookHubs Analysebrett öffnet — mit allen bisher gespielten Zügen (nachspielbar), den Kopfdaten (Namen, Elo, Turnier, Runde) und den Uhren. Geht auch für Gäste; das PGN der Partie liefert der Server (/analysis?live=Runde.Partie)." },

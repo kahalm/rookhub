@@ -492,14 +492,16 @@ export class LiveBoardsComponent implements OnInit {
     const s = this.status();
     const round = this.round();
     if (!s?.linked || round === null) { this.stopStream(); return; }
-    const key = `${round}|${this.evalOn()}|${this.ext().join(',')}`;
+    // Filter der Ansicht gehört zum Strom (der Server bewertet nur Sichtbares, 1.027.0) — ein Wechsel verbindet neu, still.
+    const view = { team: this.team(), player: this.player(), add: this.filtered() ? this.added() : [] };
+    const key = `${round}|${this.evalOn()}|${this.ext().join(',')}|${view.team ?? ''}|${view.player ?? ''}|${view.add.join(',')}`;
     if (key === this.streamKey && this.streamSub) return;
     const sameRound = this.streamKey.startsWith(`${round}|`);
     this.stopStream();
     this.streamKey = key;
     if (!sameRound) { this.layout.set(null); this.games.set({}); }
     this.setState('connecting');
-    this.streamSub = this.api.stream(this.id, round, this.evalOn(), this.ext()).subscribe(e => {
+    this.streamSub = this.api.stream(this.id, round, this.evalOn(), this.ext(), view).subscribe(e => {
       const now = Date.now();
       switch (e.type) {
         case 'snapshot': {

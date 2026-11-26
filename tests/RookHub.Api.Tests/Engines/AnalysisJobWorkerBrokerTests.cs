@@ -150,6 +150,73 @@ public class AnalysisJobWorkerBrokerTests : IAsyncDisposable
         return dto.Id;
     }
 
+    // ── Live-Bretter auf den Hintergrund-Engines (1.027.0) ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task LiveLane_ClaimedEngine_NoNewJob_RunningJobVisible_AndWakesLiveOnEnd()
+    {
+        var (userId, engines) = await SetupAsync();
+        _broker.Answers[engines[0]] = (200, Line(12, 9_000, best: true));
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["AnalysisJobs:TickSeconds"] = "1", ["AnalysisJobs:IdleGraceSeconds"] = "0",
+        }).Build();
+        var lane = new LiveEngineLane();
+        var ended = 0;
+        lane.JobEnded += () => Interlocked.Increment(ref ended);
+        var worker = new AnalysisJobWorker(_sp.GetRequiredService<IServiceScopeFactory>(), new EngineActivityTracker(), _broker,
+            NullLogger<AnalysisJobWorker>.Instance, config, new AnalysisJobLive(), lane: lane);
+        try
+        {
+            lane.Claim(new HashSet<string> { engines[0] });                // Live-Bretter warten auf diese Engine
+            var jobId = await JobAsync(userId, background: true);
+            await worker.StartAsync(CancellationToken.None);
+            await Task.Delay(1500);
+            Assert.Empty(_broker.Calls);                                   // kein neuer Auftrag auf der beanspruchten Engine
+            Assert.False(lane.JobRunning(engines[0]));
+
+            lane.Claim(new HashSet<string>());
+            var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Done or AnalysisJobStatus.Failed);
+            Assert.Equal(AnalysisJobStatus.Done, job.Status);
+            for (var i = 0; i < 100 && Volatile.Read(ref ended) == 0; i++) await Task.Delay(20);
+            Assert.True(ended > 0);                                        // Ende weckt die Live-Seite
+        }
+        finally
+        {
+            await worker.StopAsync(CancellationToken.None);
+            worker.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task LiveLane_JobRunning_TrueWhileAJobComputes()
+    {
+        var (userId, engines) = await SetupAsync();
+        _broker.Hanging.Add(engines[0]);
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["AnalysisJobs:TickSeconds"] = "1", ["AnalysisJobs:IdleGraceSeconds"] = "0",
+        }).Build();
+        var lane = new LiveEngineLane();
+        var worker = new AnalysisJobWorker(_sp.GetRequiredService<IServiceScopeFactory>(), new EngineActivityTracker(), _broker,
+            NullLogger<AnalysisJobWorker>.Instance, config, new AnalysisJobLive(), lane: lane);
+        try
+        {
+            await JobAsync(userId, background: true);
+            await worker.StartAsync(CancellationToken.None);
+            for (var i = 0; i < 150 && !lane.JobRunning(engines[0]); i++) await Task.Delay(20);
+            Assert.True(lane.JobRunning(engines[0]));                      // die Live-Seite nimmt diese Engine NICHT (abwürgen verboten)
+            lane.Claim(new HashSet<string> { engines[0] });
+            await Task.Delay(300);
+            Assert.True(lane.JobRunning(engines[0]));                      // ein Anspruch bricht den laufenden Auftrag nicht ab
+        }
+        finally
+        {
+            await worker.StopAsync(CancellationToken.None);
+            worker.Dispose();
+        }
+    }
+
     // ── Knotenziel (Phase 1 der Lc0-Zweitprüfung): `nodes` statt `depth`, fertig bei erreichtem Ziel ──────────────
 
     private static string Line(int depth, long nodes, bool best = false) =>

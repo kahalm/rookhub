@@ -56,11 +56,17 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
     /// <summary>Sitzungs-Epoche je Engine: dieselbe Instanz wie im <see cref="EngineBrokerRouter"/> (ohne Registrierung,
     /// z. B. in Tests, eine eigene — dann zählt sie nur hier).</summary>
     private readonly EngineSessionEpochs _epochs;
+    /// <summary>Absprache mit den Live-Brettern (1.027.0): sie rechnen auf freien Hintergrund-Engines, mit Vorrang vor NEUEN
+    /// Aufträgen (ohne Registrierung, z. B. in Tests: keine).</summary>
+    private readonly LiveEngineLane? _lane;
 
     public AnalysisJobWorker(IServiceScopeFactory scopeFactory, EngineActivityTracker tracker,
         IEngineBroker broker, ILogger<AnalysisJobWorker> logger, IConfiguration config, AnalysisJobLive live,
-        BackgroundPause? pause = null, EngineThroughputRecorder? throughput = null, EngineSessionEpochs? epochs = null)
+        BackgroundPause? pause = null, EngineThroughputRecorder? throughput = null, EngineSessionEpochs? epochs = null,
+        LiveEngineLane? lane = null)
     {
+        _lane = lane;
+        _lane?.AttachWorker(e => _running.ContainsKey(e));
         _throughput = throughput;
         _epochs = epochs ?? new EngineSessionEpochs();
         _scopeFactory = scopeFactory;
@@ -191,6 +197,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             if (_running.ContainsKey(engineId)) continue;                                   // Engine rechnet schon einen Auftrag
             if (_epochs.IsBenched(engineId, now)) continue;                                 // lieferte wiederholt fremde Ausgabe
             if (_tracker.IsEngineBusy(engineId) || _tracker.EngineIdleFor(engineId) < _settings.IdleGrace) continue;   // Live hat Vorrang
+            if (_lane?.IsClaimed(engineId) == true) continue;                               // Live-Bretter warten auf diese Engine
 
             using var scope = _scopeFactory.CreateScope();
             var svc = scope.ServiceProvider.GetRequiredService<AnalysisJobService>();
@@ -258,6 +265,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             _live.Stop(jobId);
             _running.TryRemove(new KeyValuePair<string, Running>(run.EngineId, run));
             run.Cts.Dispose();
+            _lane?.NotifyJobEnded();   // Live-Bretter zuerst fragen (sie beanspruchen die Engine, wenn etwas wartet)
             _wake.Wake();   // die Engine ist frei — nächsten Auftrag sofort holen, nicht erst beim nächsten Tick
         }
     }

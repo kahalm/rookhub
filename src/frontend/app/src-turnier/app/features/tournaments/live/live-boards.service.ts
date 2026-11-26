@@ -36,12 +36,21 @@ export class LiveBoardsService {
     return this.http.get<ExternalRoundView>('/api/live-boards/external', { params: { url } });
   }
 
-  /** `extra` = fremde Bretter `roundId.gameId` — laufen im SELBEN Strom mit (eine EventSource je Seite). */
-  stream(id: string, round: number, withEval: boolean, extra: readonly string[] = []): Observable<LiveStreamEvent> {
+  /**
+   * `extra` = fremde Bretter `roundId.gameId` — laufen im SELBEN Strom mit (eine EventSource je Seite). `view` = Filter der
+   * Ansicht (1.027.0): der Server bewertet nur die Bretter, die dieser Zuschauer sieht (Mannschaft/Spieler + hinzugefügte).
+   */
+  stream(id: string, round: number, withEval: boolean, extra: readonly string[] = [],
+         view: { team?: string | null; player?: string | null; add?: readonly string[] } = {}): Observable<LiveStreamEvent> {
+    const filter = [
+      view.team ? `team=${encodeURIComponent(view.team)}` : '',
+      view.player ? `player=${encodeURIComponent(view.player)}` : '',
+      view.add?.length ? `add=${view.add.map(encodeURIComponent).join(',')}` : '',
+    ];
     // `ngsw-bypass` (1.025.0): sonst läuft der Strom im Prod-Build durch den Service Worker (ngsw reicht jede nicht
     // gecachte Anfrage per respondWith durch) — Chrome beendet einen untätigen Worker nach ~30 s, die Verbindung riss
     // alle 29–60 s ab und die Seite zeigte „Verbindung unterbrochen“, obwohl der Server-Strom hielt (Prod-Log 26.11.).
-    const q = [withEval ? 'eval=true' : '', extra.length ? `extra=${extra.map(encodeURIComponent).join(',')}` : '', 'ngsw-bypass=1']
+    const q = [withEval ? 'eval=true' : '', ...filter, extra.length ? `extra=${extra.map(encodeURIComponent).join(',')}` : '', 'ngsw-bypass=1']
       .filter(Boolean).join('&');
     const url = `/api/live-boards/${encodeURIComponent(id)}/rounds/${round}/stream?${q}`;
     return new Observable<LiveStreamEvent>(sub => {

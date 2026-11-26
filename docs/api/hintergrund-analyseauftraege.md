@@ -169,6 +169,11 @@ Gesetzt beim Anlegen (`GameAnalysisPump.PriorityOf`, `MoveComparisonService.Crea
 Migration `AnalysisJobPriority` stuft die offenen Aufträge einmal ein. Ein höher eingestufter Auftrag verdrängt einen
 laufenden Hintergrundauftrag NICHT (nur interaktive tun das) — er kommt an die Reihe, sobald dieser fertig ist.
 
+**Live-Bretter auf den Hintergrund-Engines (1.027.0, `LiveEngineLane`)**: Warten Engine-Balken der Live-Bretter, startet der
+Worker auf den beanspruchten Engines keinen NEUEN Auftrag (Vorrang vor allen Stufen oben); ein laufender rechnet zu Ende, und
+sein Ende weckt die Live-Schlange. Die Live-Rechnung (bis Tiefe 30) belegt die Engine wie eine Analyse am Brett, aber ohne
+Ruhephase danach. Einzelheiten: `docs/api/live-bretter.md`.
+
 **Umverteilen (0.920.0, `AnalysisJobRebalancer`)**: Die Engine wird beim Anlegen fest zugeteilt. Jeder Tick des
 `AnalysisJobWorker` hängt deshalb zuerst wartende Aufträge (Queued/Paused, fällig) auf freie Engines um: Geber ist ein
 Auftrag, dessen Engine gerade rechnet, aus ist oder für diese Art Arbeit Sperrzeit hat; Nehmer eine Engine derselben

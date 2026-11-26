@@ -213,7 +213,8 @@ describe('LiveBoardsComponent', () => {
     await fixture.whenStable();
     expect(FakeEventSource.all.length).toBe(1);
     const es = FakeEventSource.last();
-    expect(es.url).toBe('/api/live-boards/1404438/rounds/1/stream?extra=fnmEB1kH.RD8sbYw1&ngsw-bypass=1');
+    // Filter der Ansicht geht mit (1.027.0: der Server bewertet nur, was dieser Zuschauer sieht)
+    expect(es.url).toBe('/api/live-boards/1404438/rounds/1/stream?team=SK%20Schwaz&add=2.2,9.9&extra=fnmEB1kH.RD8sbYw1&ngsw-bypass=1');
     es.emit('snapshot', TWO_MATCHES);
     es.emit('ext-snapshot', { round: 'fnmEB1kH', tourName: 'FIDE World Championship 2026', roundName: 'Game 3',
       url: 'https://lichess.org/broadcast/-/-/fnmEB1kH', state: 'live', games: [game('RD8sbYw1', 'Gukesh D', 'Carlsen, Magnus')] });

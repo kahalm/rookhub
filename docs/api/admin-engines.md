@@ -168,7 +168,7 @@ steckt in derselben Antwort (`GET /api/admin/engines/overview`, 10-s-Cache):
 | laufender Auftrag | `AnalysisJobs` `Status = 1` + `AnalysisJobLive` (Tiefe/Tempo/Knoten/Sekunden im Speicher) | Index (Status, EngineId) |
 | Partie zum laufenden Auftrag | `GameAnalysisPositions.AnalysisJobId` → `GameAnalyses` | Index (AnalysisJobId, GameAnalysisId), dann PK |
 | offene Partie-Analysen | `GameAnalyses.Status` Pending/Running | Index (Status) |
-| Live-Streams | `EngineActivityTracker.LiveEngines()` | Speicher |
+| Live-Streams | `EngineActivityTracker.LiveEngines()` (seit 1.027.0 auch die Engine-Balken der Live-Bretter auf Hintergrund-Engines, `docs/api/live-bretter.md`) | Speicher |
 | wartende Polls (Provider da, nichts zu tun), Schlange im Broker | `EngineHub.QueueSnapshot()` | Speicher |
 | Broker-Zähler seit Start | `EngineHub.Stats` (`BrokerStats`) | Speicher |
 | Durchsatz 1 h / 24 h / 7 T | `EngineThroughputBuckets` + ungeschriebene Zuwächse aus `EngineThroughputRecorder` | `BucketStart >= …` gruppiert nach Engine, Index (BucketStart) |

@@ -80,16 +80,8 @@ public partial class OgMetaService
         return new OgPage(title, string.Join(" · ", parts), img, canonical);
     }
 
-    /// <summary>Zahl der gültigen Einträge in <c>?add=</c> (Brett <c>n</c>, Begegnung.Brett <c>m.n</c> oder Lichess-Kennung), gedeckelt wie auf der Seite.</summary>
-    internal static int AddedBoards(string? csv) =>
-        (csv ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(x => AddKeyRe().IsMatch(x)).Distinct(StringComparer.Ordinal).Take(MaxAddedBoards).Count();
-
-    /// <summary>So viele Bretter derselben Runde nimmt <c>?add=</c> höchstens (wie <c>LIVE_MAX_ADDED</c> im Frontend).</summary>
-    internal const int MaxAddedBoards = 24;
-
-    [System.Text.RegularExpressions.GeneratedRegex(@"^(\d{1,3}(\.\d{1,3})?|[A-Za-z0-9]{8})$")]
-    private static partial System.Text.RegularExpressions.Regex AddKeyRe();
+    /// <summary>Zahl der gültigen Einträge in <c>?add=</c> (Regel in <see cref="LiveView.ParseAdd"/>, gedeckelt wie auf der Seite).</summary>
+    internal static int AddedBoards(string? csv) => LiveView.ParseAdd(csv).Count;
 
     /// <summary>„läuft gerade“ / „beendet“ / „Beginn 27.11.2026, 14:00“ (Wiener Zeit).</summary>
     internal static string RoundState(LiveRoundInfo info)

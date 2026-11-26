@@ -52,9 +52,11 @@ public class EngineActivityTracker
     /// <c>TryRemove(key)</c> löschte dort den Eintrag des NEUEN Streams: die Engine sähe frei aus,
     /// der Worker startete daneben einen Hintergrund-Auftrag, und Stockfish bekäme zwei Suchen —
     /// genau die Invariante „ein Prozess, eine Suche", auf der der Vorrang der Live-Analyse beruht.</summary>
-    public void End(int userId, string engineId)
+    /// <param name="grace">Ruhephase für den Worker danach (Analysebrett: der Nutzer zieht gleich weiter). Die Live-Bretter
+    /// (1.027.0) geben <c>false</c>: ihre Rechnung endet von selbst bei Zieltiefe, die Engine ist sofort wieder frei.</param>
+    public void End(int userId, string engineId, bool grace = true)
     {
-        _engineLastEnded[engineId] = _now();
+        if (grace) _engineLastEnded[engineId] = _now();
         if (_byUser.AddOrUpdate(userId, 0, (_, c) => c - 1) <= 0)
             _byUser.TryRemove(new KeyValuePair<int, int>(userId, 0));
         if (_byEngine.AddOrUpdate(engineId, 0, (_, c) => c - 1) <= 0)

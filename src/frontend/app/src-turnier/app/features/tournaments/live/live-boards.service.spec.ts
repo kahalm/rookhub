@@ -61,6 +61,13 @@ describe('LiveBoardsService', () => {
     sub.unsubscribe();
   });
 
+  it('stream: Filter der Ansicht (team/player/add) in der Adresse — der Server bewertet nur Sichtbares', () => {
+    service.stream('20', 2, true, [], { team: 'Schachklub Schwaz', add: ['2.3'] }).subscribe().unsubscribe();
+    expect(FakeEventSource.last().url).toBe('/api/live-boards/20/rounds/2/stream?eval=true&team=Schachklub%20Schwaz&add=2.3&ngsw-bypass=1');
+    service.stream('20', 2, false, [], { player: 'Mittal, Aditya' }).subscribe().unsubscribe();
+    expect(FakeEventSource.last().url).toBe('/api/live-boards/20/rounds/2/stream?player=Mittal%2C%20Aditya&ngsw-bypass=1');
+  });
+
   it('external: Link als Parameter', () => {
     service.external('https://lichess.org/broadcast/x/game-3/fnmEB1kH/RD8sbYw1').subscribe();
     const req = http.expectOne(r => r.url === '/api/live-boards/external');

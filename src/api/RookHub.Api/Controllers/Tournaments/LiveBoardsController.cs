@@ -131,7 +131,8 @@ public class LiveBoardsController : BaseApiController
     [EnableRateLimiting(RateLimitPartitions.DirectoryReadPolicy)]
     public async Task Stream(string id, int round, [FromQuery] bool eval, [FromServices] BroadcastLiveHub hub,
         [FromServices] SseConnectionLimiter limiter, [FromServices] ILiveTournamentData data,
-        [FromServices] ExternalRoundRegistry? ext = null, [FromQuery] string? extra = null)
+        [FromServices] ExternalRoundRegistry? ext = null, [FromQuery] string? extra = null,
+        [FromQuery] string? team = null, [FromQuery] string? player = null, [FromQuery] string? add = null)
     {
         var ct = RequestCt;
         if (!TournamentIdValidator.IsValid(id) || round is < 1 or > 999)
@@ -178,8 +179,11 @@ public class LiveBoardsController : BaseApiController
                         group.Select(r => r.GameId).ToHashSet(StringComparer.Ordinal))));
                 }
 
-            await using var sub = hub.Subscribe(info.LichessRoundId, info.Finished, eval);
-            await RunStreamAsync(Response.Body, sub, crRound, round, ct, extras: extras, errors: errors);
+            // Ansicht (1.027.0): bewertet werden nur die Bretter, die dieser Zuschauer sieht — mit Filter erst ab der Zuordnung.
+            var view = new ViewFilter(Trim(team), Trim(player), LiveView.ParseAdd(add));
+            await using var sub = hub.Subscribe(info.LichessRoundId, info.Finished, eval,
+                visible: view.Filtered ? new HashSet<string>(StringComparer.Ordinal) : null);
+            await RunStreamAsync(Response.Body, sub, crRound, round, ct, extras: extras, errors: errors, view: view);
         }
         finally
         {
@@ -188,14 +192,26 @@ public class LiveBoardsController : BaseApiController
         }
     }
 
+    /// <summary>Filter der Ansicht aus der Adresse der Seite (<c>team</c>, <c>player</c>, <c>add</c>).</summary>
+    internal sealed record ViewFilter(string? Team, string? Player, IReadOnlyList<string> Add)
+    {
+        public bool Filtered => Team is not null || Player is not null;
+    }
+
+    private static string? Trim(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim() is var t && t.Length > 200 ? t[..200] : s.Trim();
+
     /// <summary>Eine fremde Runde im Strom: was Lichess über sie sagt + das Abo am Hub (gefiltert auf die gewählten Partien).</summary>
     internal sealed record ExternalStream(ExternalRoundInfo Info, BroadcastLiveHub.RoundSubscription Sub);
 
     /// <summary>Die Ereignisschleife (eigene Methode, damit Tests sie ohne HTTP-Pipeline treiben).</summary>
     internal static async Task RunStreamAsync(Stream body, BroadcastLiveHub.RoundSubscription sub, CrRound crRound, int round,
         CancellationToken ct, TimeSpan? heartbeat = null, IReadOnlyList<ExternalStream>? extras = null,
-        IReadOnlyList<(string Round, string Code)>? errors = null)
+        IReadOnlyList<(string Round, string Code)>? errors = null, ViewFilter? view = null)
     {
+        void SetVisible(LiveRoundLayout l)
+        {
+            if (view is { Filtered: true }) sub.SetVisible(LiveView.Visible(l, view.Team, view.Player, view.Add));
+        }
         var games = new Dictionary<string, LiveGame>(StringComparer.Ordinal);
         LiveRoundLayout? layout = null;
         var known = new HashSet<string>(StringComparer.Ordinal);
@@ -240,6 +256,7 @@ public class LiveBoardsController : BaseApiController
                         case LiveSnapshot s:
                             games = s.Games.ToDictionary(g => g.Id, StringComparer.Ordinal);
                             layout = LiveBoardAssembler.Assemble(crRound, s.Games);
+                            SetVisible(layout);
                             known = games.Keys.ToHashSet(StringComparer.Ordinal);
                             await WriteAsync(body, "snapshot", new { state = s.State, round, layout, games = s.Games }, ct);
                             break;
@@ -248,6 +265,7 @@ public class LiveBoardsController : BaseApiController
                             if (known.Add(c.Game.Id))
                             {
                                 layout = LiveBoardAssembler.Assemble(crRound, games.Values.ToList());
+                                SetVisible(layout);
                                 await WriteAsync(body, "layout", layout, ct);
                             }
                             await WriteAsync(body, "game", c.Game, ct);

@@ -103,31 +103,53 @@ ansehen und daneben die WM-Partie live“.
   1. `[%eval]` aus dem Strom (die Bundesliga schickt KEINS, gemessen 25.11.2026, nur `[%clk]`);
   2. Lichess Cloud-Eval (`LichessCloudEval`: je Stellung gecacht, Treffer 6 h, Fehltreffer 15 min, ein Abruf je Sekunde,
      nach 429 Pause) — kennt Mittelspielstellungen meist nicht;
-  3. **eigene Engine** (1.015.0, Freigabe des Users) über den vorhandenen `IEngineBroker` — kein neuer Engine-Weg
-     (`LiveEngineEval.cs`). `LiveEngineQueue` (Singleton, über ALLE Runden): höchstens EINE Rechnung gleichzeitig, je Brett
-     nur die neueste Stellung (ein neuer Zug ersetzt den wartenden Wunsch an seinem Platz), reihum über die Bretter; vor dem
-     Rechnen und vor dem Übernehmen wird geprüft, ob die Stellung noch gebraucht wird (Zuschauer mit Balken, Partie steht
-     noch dort, Feed offen). `BrokerLiveEngineEvaluator`: 1 Linie, `movetime` 1,5 s, 2 Threads, 64 MB, harte Grenze 6 s,
-     Sitzung `rh-live-boards`; meldet sich beim `EngineActivityTracker` als Live-Rechnung an (ein Hintergrund-Auftrag auf
-     DERSELBEN Engine pausiert, andere laufen weiter); Ergebnis je Stellung 6 h gecacht, UCI-Wert (Seite am Zug) in
-     Weiß-Sicht gedreht. Ist keine Engine konfiguriert/online → still leer (Auswahl 60 s gecacht, 503 wählt neu).
+  3. **Hintergrund-Engines** (seit 1.027.0; vorher 1.015.0 eine einzelne „Live-Engine“ mit 1,5 s). Befund 26.11.: auf Prod
+     rechnete die Live-Engine NIE — die Auswahl nahm ohne Einstellung das erste Admin-Konto (Id 2, keine Engines), alle Engines
+     gehören Id 5; im Strom kamen nur Cloud-Werte. Wünsche des Users: „nur die Bretter rechnen, die jemand ansieht“, „kannst du
+     die nicht einfach in die Hintergrundengines werfen?“, „Stellungen nur bis Tiefe 30 rechnen“.
+     - **Nur Sichtbares**: der Strom bekommt den Filter der Ansicht (`team`, `player`, `add`; `LiveView.Visible`), das Abo
+       (`RoundSubscription.SetVisible`) bewertet nur diese Bretter, mit Filter erst ab der Zuordnung (vorher nichts). Ohne
+       Filter alle Bretter der Runde, fremde Bretter (`ext`) ohnehin nur die gewählten. Bedarf = Vereinigung über alle
+       Zuschauer mit Balken; Cloud-Eval genauso nur für Angezeigte.
+     - **Cloud genügt ab Tiefe 30**: eine Cloud-Bewertung wird sofort gezeigt; ist sie ≥ `Depth` (30), rechnet keine Engine.
+     - **Wo**: `LiveEngineQueue` (Singleton, über ALLE Runden) verteilt auf die Hintergrund-Engines des Kontos der
+       Analyseaufträge (`RegistryLiveEnginePoolSource`: `OwnerUserName`, sonst die Haus-Engine `EngineOwnerResolver.HouseOwnerAsync`,
+       sonst das erste Admin-Konto MIT Hintergrund-Engines; nur online stehende `rhe_`-Engines der Hintergrund-Liste, ohne
+       `AnalysisJobs:ExplicitOnlyEngineIds`; Liste 30 s gecacht). PARALLEL: je freie Engine eine Stellung, reihum über die
+       Bretter, gedeckelt durch `MaxParallel` (0 = alle).
+     - **Neben den Analyseaufträgen** (`Services/Engines/LiveEngineLane.cs`): eine Engine ist frei, wenn dort KEIN Auftrag
+       rechnet und niemand am Analysebrett live darauf rechnet — ein laufender Auftrag wird nie abgewürgt. Warten Live-Stellungen,
+       beansprucht die Schlange die Engines (`Claim`): der `AnalysisJobWorker` startet dort keinen NEUEN Auftrag (Vorrang vor
+       allen Stufen von `JobPriority`), und endet einer, weckt er die Schlange (`JobEnded`). Die Live-Rechnung meldet sich beim
+       `EngineActivityTracker` an (Admin-Seite „Engines“ zeigt sie als Live) und ab OHNE Ruhephase (`End(…, grace: false)`) —
+       ist die Stellung fertig, darf der Worker sofort wieder. Zum Datenbank-Auftrag (`AnalysisJobs`) wurde sie bewusst nicht:
+       je Zug eine Zeile anlegen/löschen, Takt des Workers als Verzögerung, kein Abbruch beim nächsten Zug und keine
+       Zwischenstände ohne eigenen Weg.
+     - **Je Brett nur die neueste Stellung**: ein neuer Zug ersetzt den wartenden Wunsch an seinem Platz und bricht die laufende
+       Rechnung des alten ab; sieht niemand das Brett mehr mit Balken (Filter, Balken aus, Seite zu), bricht sie beim nächsten
+       Zwischenstand ab.
+     - **Zwischenstände**: `BrokerLiveEngineEvaluator` rechnet bis `depth` 30 (1 Linie, Threads/Hash wie die Hintergrund-Aufträge
+       = was die Engine anbietet, Sitzung `rh-live-boards`, harte Grenze `MaxSeconds` 180 s — das Erreichte gilt); jede tiefere
+       Zeile geht als Bewertung `source: "engine", depth: n` an den Balken (höchstens alle 0,7 s je Brett), tiefer ersetzt flacher.
+       Ergebnis je Stellung 6 h gecacht (`IsSettled`), auch für andere Bretter/Runden mit derselben Stellung.
+     - **Wie viele parallel**: so viele, wie Hintergrund-Engines frei sind (Prod: alle online stehenden Engines der Hintergrund-
+       Liste von kahalm, ohne Lc0). Rechnen dort gerade Partieanalysen, kommen die Live-Bretter erst dran, wenn ein Auftrag endet
+       — dann aber vor jedem neuen Auftrag; bei vielen sichtbaren Brettern (z. B. ganze Runde ohne Filter) läuft die
+       Partieanalyse so lange langsamer. Liefert eine Engine nichts (Provider weg), wird sie 60 s ausgelassen.
   Quelle im Eval: `source` = `broadcast` | `cloud` | `engine`, dazu `depth`; die Karte zeigt „+0.4 · Tiefe 18“ und die
   Quelle als Tooltip.
 
-  **Welche Engine** (`LiveBoards:Engine:*`, `RegistryLiveEngineSelector`):
+  **Einstellungen** (`LiveBoards:Engine:*`, `LiveEngineOptions`):
 
   | Schlüssel | Vorgabe | Bedeutung |
   |---|---|---|
   | `Enabled` | `true` | aus = nur Strom + Cloud |
-  | `OwnerUserName` | erstes Admin-Konto (kleinste Id) | wessen Engines |
-  | `EngineId` | leer | feste Engine (`rhe_…`, auch `eei_…`); leer = erste ONLINE eigene `rhe_`-Engine des Kontos, die NICHT in seiner Hintergrund-Liste steht (= seine Live-Engine) — die Hintergrund-Engines der Analyseaufträge bleiben ungestört |
-  | `MovetimeMs` | 1500 | Rechenzeit je Stellung (200–10000) |
-  | `Depth` | 0 | statt der Zeit eine feste Tiefe (z. B. 18); `MaxSeconds` bricht trotzdem ab |
-  | `MaxSeconds` | 6 | harte Grenze je Stellung |
-  | `Threads` / `HashMb` | 2 / 64 | gedeckelt auf das, was die Engine anbietet |
-
-  Prod: ohne Einstellung rechnet die Live-Engine des ersten Admin-Kontos, sobald ihr Provider online ist. Teilt sich der
-  Admin diese Engine mit seinem eigenen Analysebrett, stellt der Broker die Suchen hintereinander (eine Suche je Prozess).
+  | `OwnerUserName` | Haus-Engine, sonst erstes Admin-Konto mit Hintergrund-Engines | wessen Engines |
+  | `EngineIds` (Liste, auch `EngineId`) | leer | nur diese Engines (online, `rhe_`); leer = die Hintergrund-Liste ohne Nur-auf-Anforderung |
+  | `Depth` | 30 | Zieltiefe (10–60); Cloud mindestens so tief → keine Engine |
+  | `MaxSeconds` | 180 | harte Grenze je Stellung (10–1800) |
+  | `MaxParallel` | 0 | höchstens so viele Bretter gleichzeitig (0 = alle freien Engines) |
+  | `Threads` / `HashMb` | 0 / 0 | 0 = was die Engine anbietet (wie die Hintergrund-Aufträge) |
 - Lichess-Abrufe mit dem User-Agent des übrigen Lichess-Codes (`HttpClientsSetup`, Client `lichess-live`, ohne
   Gesamt-Timeout für den Strom), ohne persönliche Daten.
 

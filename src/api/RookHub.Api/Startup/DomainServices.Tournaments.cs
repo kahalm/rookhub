@@ -20,14 +20,19 @@ public static partial class DomainServicesSetup
             sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<IConfiguration>()));
         services.AddSingleton<LichessCloudEval>();
         services.AddSingleton<BroadcastFinder>();
-        // Engine-Balken ohne Cloud-Bewertung: eigene Engine über den vorhandenen IEngineBroker (1.015.0), Vorgabe die
-        // Live-Engine des ersten Admin-Kontos (LiveBoards:Engine:*), höchstens eine Rechnung gleichzeitig.
+        // Engine-Balken ohne (ausreichend tiefe) Cloud-Bewertung (1.027.0): die HINTERGRUND-Engines des Kontos der Analyseaufträge,
+        // parallel auf allen freien, bis Tiefe 30, Zwischenstände laufend; Vorrang vor neuen Aufträgen über LiveEngineLane, ohne
+        // laufende abzuwürgen (LiveBoards:Engine:*).
         services.AddSingleton(_ => LiveEngineOptions.From(configuration));
-        services.AddScoped<ILiveEngineSelector, RegistryLiveEngineSelector>();
+        services.AddScoped<ILiveEnginePoolSource>(sp => new RegistryLiveEnginePoolSource(sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
+            sp.GetRequiredService<RookHub.Api.Services.EngineBroker.EngineRegistry>(), sp.GetRequiredService<LiveEngineOptions>(), configuration));
         services.AddSingleton<ILiveEngineEvaluator>(sp => new BrokerLiveEngineEvaluator(sp.GetRequiredService<IServiceScopeFactory>(),
-            sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<LiveEngineOptions>(),
-            sp.GetRequiredService<ILogger<BrokerLiveEngineEvaluator>>(), sp.GetRequiredService<RookHub.Api.Services.Engines.EngineActivityTracker>()));
-        services.AddSingleton<LiveEngineQueue>();
+            sp.GetRequiredService<LiveEngineOptions>(), sp.GetRequiredService<ILogger<BrokerLiveEngineEvaluator>>(),
+            sp.GetRequiredService<RookHub.Api.Services.Engines.EngineActivityTracker>()));
+        services.AddSingleton(sp => new LiveEngineQueue(sp.GetRequiredService<ILiveEngineEvaluator>(), sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<LiveEngineOptions>(), sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
+            sp.GetRequiredService<ILogger<LiveEngineQueue>>(), sp.GetRequiredService<RookHub.Api.Services.Engines.LiveEngineLane>(),
+            sp.GetRequiredService<RookHub.Api.Services.Engines.EngineActivityTracker>()));
         services.AddSingleton(sp => new BroadcastLiveHub(sp.GetRequiredService<ILichessLiveSource>(),
             sp.GetRequiredService<LichessCloudEval>(), sp.GetRequiredService<ILogger<BroadcastLiveHub>>(),
             engine: sp.GetRequiredService<LiveEngineQueue>()));
