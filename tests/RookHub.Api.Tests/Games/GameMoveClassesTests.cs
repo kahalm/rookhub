@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.DTOs.Games;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Games;
 
@@ -47,6 +48,20 @@ public class GameMoveClassesTests
         GameMoveClasses.Store(analysis);
         Assert.Equal(GameMoveClasses.Version, analysis.MoveClassesVersion);
         Assert.Equal(GameMoveClasses.FromPositions(positions, plies), analysis.MoveClasses);
+    }
+
+    /// <summary>Vereinspartie 268, 19…Dc8 (Regelstand 6): bester Zug bei ±0, aber kein Opfer — der Sb8 hing schon vorher und
+    /// die Dame deckt ihn. War „!!" (B), ist jetzt „best" (S). Spiegel: game-review.util.spec.ts.</summary>
+    [Fact]
+    public void Game268_19Qc8_IsBest_NotBrilliant()
+    {
+        var plies = new List<GameEvalPlyDto>
+        {
+            new() { Ply = 0, Cp = 0, Depth = 20, BestUci = "f5c8", PlayedUci = "f5c8", SecondCp = 0 },
+        };
+        Assert.Equal("S", GameMoveClasses.Compute(plies, new GameEvalScoreDto { Cp = 0 },
+            ["Qn2r1k1/5ppp/1ppB4/5q2/2P5/2b2N2/P4PPP/5RK1 b - - 3 19", "Qnq1r1k1/5ppp/1ppB4/8/2P5/2b2N2/P4PPP/5RK1 w - - 4 20"],
+            ["f5c8"], 1));
     }
 
     [Fact]

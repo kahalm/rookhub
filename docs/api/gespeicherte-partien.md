@@ -392,7 +392,10 @@ flachere), aber mit eigenem Ursprung
   Kette — auch best/excellent/good, „!!“ und „!“; ein Fehler/grober Fehler und ein „Miss“ darüber bleiben. Die Grundklasse für
   Miss/Great des nächsten Zugs bleibt die der Engine. Leser der Kette: „!!“-Marker in LeagueHub (`PliesOf(…, 'B')` — ein „!!“ in
   der Theorie erscheint dort also nicht mehr, wie auf der Partieseite), die Fehlerauswahl (I/M/P/X, unberührt) und der
-  Zusammenfassungs-Bot, der die Spalte direkt liest und nur B/G/I/M/P kennt: ein `K` ist dort „ohne Zugzeichen“). Parität beim Port an 300 Prod-Analysen Zeichen für Zeichen geprüft
+  Zusammenfassungs-Bot, der die Spalte direkt liest und nur B/G/I/M/P kennt: ein `K` ist dort „ohne Zugzeichen“); 6 = 2026-11-26
+  (Vereinspartie 268, 19…Dc8 hieß „!!“): DECKT die gezogene Figur eine Figur, die schon vorher auf ihrem Feld hing, und steht
+  diese danach nicht schlechter (nicht mehr Angreifer, nicht weniger Verteidiger), ist sie kein Opfer — auch ohne Gabel; nur
+  stehen gelassen bleibt sie eines (228: 24.O-O). Parität beim Port an 300 Prod-Analysen Zeichen für Zeichen geprüft
   (111 „!!“, 917 „!“, 76 Miss; C# ~12 ms je Partie, der Client ~90 ms); fest abgesichert durch `GameMoveClassesTests`
   (Vereinspartie 228 als Fixture, chess.com-Markierungen literal), `MoveTacticsTests` ↔ `move-tactics.util.spec.ts`,
   `TacticsBoardTests`. Erster Abnehmer: LeagueHubs „!!“-Marker (`club/games/reviews`).

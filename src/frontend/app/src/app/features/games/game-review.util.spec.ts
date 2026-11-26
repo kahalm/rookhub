@@ -565,6 +565,16 @@ describe('game-review.util', () => {
         expect(r.white.counts.best).toBe(0);
       });
 
+      // Regelstand 6 (Vereinspartie 268): 19…Dc8 deckt den Sb8, der schon vorher hing — kein Opfer, also kein „!!".
+      // Spiegel: GameMoveClassesTests.Game268_19Qc8_IsBest_NotBrilliant.
+      it('Partie 268, 19…Dc8: bester Zug bei ±0, deckt den vorher hängenden Sb8 → best, nicht brilliant', () => {
+        const r = reviewGame(game([ply(0, { cp: 0 }, 'f5c8', 'f5c8', { secondCp: 0 })], { cp: 0 }),
+          ['Qn2r1k1/5ppp/1ppB4/5q2/2P5/2b2N2/P4PPP/5RK1 b - - 3 19', 'Qnq1r1k1/5ppp/1ppB4/8/2P5/2b2N2/P4PPP/5RK1 w - - 4 20'],
+          ['f5c8']);
+        expect(r.moves[0]!.cls).toBe('best');
+        expect(r.moves[0]!.sacrifice).toBeUndefined();
+      });
+
       it('ohnehin gewonnen: Zweitbester +7,00 → best (Grenze), +6,99 → brilliant', () => {
         expect(greek({ cp: 900 }, { cp: 900 }, { secondCp: 700 }).moves[0]!.cls).toBe('best');
         expect(greek({ cp: 900 }, { cp: 900 }, { secondCp: 699 }).moves[0]!.cls).toBe('brilliant');

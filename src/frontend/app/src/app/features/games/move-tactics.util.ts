@@ -144,6 +144,9 @@ export function isPieceHanging(fenBefore: string, fenAfter: string, square: stri
  * der Zug nur zurück, was ohnehin fällt (241: 9.Ld3 rettet den Lc4, der Se4 fällt gegen d5; 7…Sxe4 ist das Opfer).
  * Die gezogene Figur (Zielfeld) ist immer Opfer-fähig; eine Figur, der der Zug den Verteidiger wegzieht, hing vorher
  * nicht und bleibt ein Opfer.
+ *
+ * Seit Regelstand 6 (Vereinspartie 268, 19…Dc8): DECKT die gezogene Figur eine vorher schon hängende Figur und steht diese
+ * danach nicht schlechter, ist sie ebenfalls kein Opfer — auch ohne Gabel (`defendedByMove`).
  */
 export function sacrificedPiece(fenBefore: string, fenAfter: string, moveUci: string): Sacrifice | null {
   const before = tryLoadFen(fenBefore);
@@ -164,6 +167,8 @@ export function sacrificedPiece(fenBefore: string, fenAfter: string, moveUci: st
       if (pieceValue(cell.type) <= captured) continue;
       if (forkResolved && cell.square !== to && hungBefore.has(cell.square)
           && before.get(cell.square)?.color === cell.color && before.get(cell.square)?.type === cell.type) continue;
+      if (cell.square !== to && before.get(cell.square)?.color === cell.color && before.get(cell.square)?.type === cell.type
+          && defendedByMove(before, after, cell.square, to)) continue;
       if (hangingOn(before, after, cell.square) && exchangeLossOn(after, cell.square) > captured) {
         hanging.push({ square: cell.square, piece: cell.type });
       }
@@ -171,6 +176,23 @@ export function sacrificedPiece(fenBefore: string, fenAfter: string, moveUci: st
   }
   if (hanging.length === 0 || !capturable(after, hanging)) return null;
   return hanging.reduce((a, b) => pieceValue(b.piece) > pieceValue(a.piece) ? b : a);
+}
+
+/**
+ * Hat der Zug eine Figur gedeckt, die schon VORHER hing (Regelstand 6, Vereinspartie 268, 19…Dc8; Spiegel
+ * `MoveTactics.DefendedByMove`)? Die Figur steht auf demselben Feld, hing in der Vorher-Stellung, die gezogene Figur deckt
+ * sie jetzt selbst, und sie steht nicht schlechter da (nicht mehr Angreifer, nicht weniger Verteidiger). Dann verteidigt
+ * der Zug sie — kein Opfer. 268: der Sb8 hing gegen Da8 + Ld6, nur vom Te8 gedeckt; Dc8 tritt davor und deckt selbst (der
+ * Turm dahinter zählt ohne Röntgen nicht mehr mit — zwei gegen einen wie vorher), nach 20.Lxb8 ist der Läufer gegen die Da8
+ * gefesselt. Bewusst NICHT ausgenommen: eine vorher hängende Figur, die der Zug nur stehen lässt — das bleibt ein Opfer wie
+ * bei chess.com (228: 24.O-O „!!", 25.Df3).
+ */
+function defendedByMove(before: Chess, after: Chess, square: Square, to: Square): boolean {
+  const piece = after.get(square);
+  if (!piece || !after.attackers(square, piece.color).includes(to) || !hangingOn(before, before, square)) return false;
+  const was = influenceOn(before, square, piece.color);
+  const now = influenceOn(after, square, piece.color);
+  return now.attackers.length <= was.attackers.length && now.defenders.length >= was.defenders.length;
 }
 
 /**

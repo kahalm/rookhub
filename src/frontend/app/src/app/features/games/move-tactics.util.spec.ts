@@ -220,6 +220,20 @@ describe('move-tactics.util', () => {
       expect(sacrificedPiece(before, after, 'c4d3')).toBeNull();
     });
 
+    // Regelstand 6 (Vereinspartie 268): deckt die gezogene Figur eine vorher schon hängende Figur, ist sie kein Opfer.
+    it('Partie 268, 19…Dc8: der Sb8 hing vorher schon, die Dame deckt ihn selbst → kein Opfer', () => {
+      const before = 'Qn2r1k1/5ppp/1ppB4/5q2/2P5/2b2N2/P4PPP/5RK1 b - - 3 19';
+      const after = 'Qnq1r1k1/5ppp/1ppB4/8/2P5/2b2N2/P4PPP/5RK1 w - - 4 20';
+      expect(isPieceHanging(before, before, 'b8')).toBeTrue();
+      expect(isPieceHanging(before, after, 'b8')).toBeTrue();
+      expect(sacrificedPiece(before, after, 'f5c8')).toBeNull();
+    });
+
+    it('Partie 268, Gegenprobe 19…Dg6: die Dame deckt den Sb8 nicht → er bleibt Opfer (stehen gelassen)', () => {
+      expect(sacrificedPiece('Qn2r1k1/5ppp/1ppB4/5q2/2P5/2b2N2/P4PPP/5RK1 b - - 3 19',
+        'Qn2r1k1/5ppp/1ppB2q1/8/2P5/2b2N2/P4PPP/5RK1 w - - 4 20', 'f5g6')).toEqual({ square: 'b8', piece: 'n' });
+    });
+
     it('Partie 228, 25.Df3: der Se6 hing schon vorher, aber allein (keine Gabel) → bleibt Opfer', () => {
       expect(sacrificedPiece('r1b4r/3k2pp/p3Nb2/3pq2B/8/2P3P1/P3Q2P/R4RK1 w - - 3 25',
         'r1b4r/3k2pp/p3Nb2/3pq2B/8/2P2QP1/P6P/R4RK1 b - - 4 25', 'e2f3')).toEqual({ square: 'e6', piece: 'n' });

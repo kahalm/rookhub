@@ -80,6 +80,29 @@ public class MoveTacticsTests
         Assert.Null(MoveTactics.SacrificedPiece(before, after, "c4d3"));
     }
 
+    /// <summary>Vereinspartie 268, 19…Dc8 (Regelstand 6): der Sb8 hing VORHER schon (Da8 + Ld6 gegen Te8), die Dame tritt davor
+    /// und deckt ihn selbst — zwei Angreifer, ein Verteidiger wie vorher, nach 20.Lxb8 ist der Läufer gegen die Da8 gefesselt.
+    /// Kein Opfer, also kein „!!".</summary>
+    [Fact]
+    public void Game268_19Qc8_DefendsTheKnightThatHungBefore_NoSacrifice()
+    {
+        const string before = "Qn2r1k1/5ppp/1ppB4/5q2/2P5/2b2N2/P4PPP/5RK1 b - - 3 19";
+        const string after = "Qnq1r1k1/5ppp/1ppB4/8/2P5/2b2N2/P4PPP/5RK1 w - - 4 20";
+        Assert.True(MoveTactics.IsPieceHanging(before, before, "b8"));
+        Assert.True(MoveTactics.IsPieceHanging(before, after, "b8"));
+        Assert.Null(MoveTactics.SacrificedPiece(before, after, "f5c8"));
+    }
+
+    /// <summary>Gegenprobe zu 268: dieselbe Stellung, aber die Dame zieht weg, ohne den Sb8 zu decken (19…Dg6) — der Springer
+    /// bleibt stehen wie vorher und zählt weiter als Opfer (Regelstand 2, „bewusst stehen gelassen").</summary>
+    [Fact]
+    public void Game268_QueenMovesWithoutDefending_KnightStaysASacrifice()
+    {
+        Assert.Equal(new MoveTactics.Sacrifice("b8", 'n'), MoveTactics.SacrificedPiece(
+            "Qn2r1k1/5ppp/1ppB4/5q2/2P5/2b2N2/P4PPP/5RK1 b - - 3 19",
+            "Qn2r1k1/5ppp/1ppB2q1/8/2P5/2b2N2/P4PPP/5RK1 w - - 4 20", "f5g6"));
+    }
+
     /// <summary>Verteidiger weggezogen: der Sd4 ist vom Td8 angegriffen und vom Le3 gedeckt (hängt nicht); nach Lc1 hängt er
     /// erst — er hing vorher nicht, bleibt also ein Opfer.</summary>
     [Fact]

@@ -30,8 +30,10 @@ public static class GameMoveClasses
     /// <see cref="GameMasterBook"/>, <see cref="GameAnalysis.MasterBookPlies"/>). 5 = 2026-11-15 („manche Züge als Buchzüge
     /// markiert und manche als beste Züge — das ist komisch"): JEDER Meister-Buchzug, der kein Fehler oder grober Fehler ist,
     /// heißt „book" (<c>K</c>) — auch best/excellent/good und die Sonderklassen „!!"/„!"; die Grundklasse für die
-    /// Folgeregeln (Miss, Great) bleibt die der Engine.</summary>
-    public const int Version = 5;
+    /// Folgeregeln (Miss, Great) bleibt die der Engine. 6 = 2026-11-26 (Vereinspartie 268, 19…Dc8 hieß „!!"): deckt die
+    /// gezogene Figur eine Figur, die schon VOR dem Zug hing, und steht diese danach nicht schlechter, ist sie kein Opfer —
+    /// auch ohne Gabel (<see cref="MoveTactics.SacrificedPiece"/>); nur stehen gelassen bleibt sie eines (228: 24.O-O).</summary>
+    public const int Version = 6;
 
     /// <summary>Zeichen je Klasse in <see cref="GameAnalysis.MoveClasses"/>; <c>-</c> = nicht bewertbar.</summary>
     public static readonly IReadOnlyDictionary<string, char> Codes = new Dictionary<string, char>

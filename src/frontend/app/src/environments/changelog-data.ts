@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.021.1", date: "2026-11-26", changes: [
+    { en: "Game review: a move that defends a piece which was already hanging before is no longer „brilliant“ — the piece is not a sacrifice of that move (club game 268, 19…Qc8: the knight b8 was already attacked twice, the queen steps in front of the rook and covers it). A piece that is simply left hanging still counts as a sacrifice. Stored move classes are recalculated (rule version 6).",
+      de: "Partie-Rückblick: Ein Zug, der eine schon vorher hängende Figur deckt, ist nicht mehr „brillant“ — die Figur ist kein Opfer dieses Zuges (Vereinspartie 268, 19…Dc8: der Sb8 war schon zweimal angegriffen, die Dame tritt vor den Turm und deckt ihn). Eine Figur, die einfach stehen gelassen wird, zählt weiter als Opfer. Die gespeicherten Zug-Klassen werden neu gerechnet (Regelstand 6)." },
+  ] },
   { version: "1.021.0", date: "2026-11-25", changes: [
     { en: "Game summaries: the common thread of the game („Der rote Faden …“) now stands right at the top, below the title, set off as the key statement — and no longer a second time at the end of „The game“. Applies to old and new summaries, signed in and via share links.",
       de: "Partie-Zusammenfassungen: Der rote Faden der Partie steht jetzt ganz oben unter dem Titel, abgesetzt als Kernaussage — und nicht mehr ein zweites Mal am Ende von „Die Partie“. Gilt für alte und neue Zusammenfassungen, angemeldet und über Teilen-Links." },

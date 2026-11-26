@@ -275,7 +275,7 @@ public class GameMasterBookTests
         Assert.Equal("SSSSIS", GameMoveClasses.FromPositions(Positions(), 6, GameMasterBook.Parse(null)));   // nicht geprüft: wie bisher
         Assert.Equal("SSSSIS", GameMoveClasses.FromPositions(Positions(), 6, GameMasterBook.Parse("")));     // geprüft, keine Theorie
         Assert.Equal('K', GameMoveClasses.Codes["book"]);
-        Assert.Equal(5, GameMoveClasses.Version);
+        Assert.True(GameMoveClasses.Version >= 5);   // Regelstand 5 eingeführt (seither nur höher, 6 = Partie 268)
 
         var flaw = Assert.Single(GameMistakes.Find(Positions(), 6));
         Assert.Equal((4, "inaccuracy", "+0.79", "-0.09"), (flaw.Ply, flaw.Class, flaw.EvalBefore, flaw.EvalAfter));

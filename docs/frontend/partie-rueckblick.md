@@ -99,6 +99,12 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
   gezogene Figur (Zielfeld) ist immer Opfer-fähig; eine Figur, der der Zug den Verteidiger wegzieht, hing vorher nicht und
   bleibt ein Opfer. Beispiel 241: 7…Sxe4 ist ein Opfer, 9.Ld3 nicht (d5 gabelte Lc4 und Se4, der Läufer geht, der
   Springer fällt). Gegenbeispiel 228: 24.O-O lässt den seit 22.Sxe6 allein hängenden Se6 stehen → bleibt „!!“ wie chess.com.
+  **Regelstand 6 (2026-11-26, Vereinspartie 268):** DECKT die gezogene Figur eine schon vorher hängende Figur und steht diese
+  danach nicht schlechter (nicht mehr Angreifer, nicht weniger Verteidiger, `defendedByMove`), ist sie kein Opfer — auch ohne
+  Gabel. 268, 19…Dc8: der Sb8 hing gegen Da8 + Ld6 (nur Te8 deckte), die Dame tritt davor und deckt selbst; „hängen“ tut
+  er nach unserer Zählung weiter (ohne Röntgen zählt der Te8 hinter der Dame nicht), aber der Zug verteidigt ihn — nach
+  20.Lxb8 ist der Läufer gegen die Da8 gefesselt. Röntgen-Verteidiger zählen bewusst weiterhin NICHT (änderte die
+  Hängt-Regel überall, auch Köder-Prüfung und Abtausch).
   **Seit 0.518.1 zwei Korrekturen**, beide an der Prod-Partie MYXN3hXqz1X2hm7Cx6V47Q gefunden
   (chess.com: kein Brilliant): (1) der Abtausch statt des vollen Figurenwerts — 22…gxf4 ließ einen von der
   Dame GEDECKTEN Turm vor einem Läufer stehen (Verlust die Qualität, 2 < geschlagener Läufer 3); (2) freechess'

@@ -60,7 +60,9 @@ public static class MoveTactics
     /// bleibt ein Opfer (bewusst stehen gelassen, wie chess.com — 228: 24.O-O „!!") — AUSSER der Zug löst eine Gabel auf:
     /// hingen vorher mindestens zwei eigene Figuren (Springer bis Dame) und hängen danach weniger, gibt der Zug nur zurück,
     /// was ohnehin fällt (241: 9.Ld3 rettet den Lc4, der Se4 fällt gegen d5). Die gezogene Figur (Zielfeld) ist immer
-    /// Opfer-fähig; eine Figur, der der Zug den Verteidiger nimmt, hing vorher nicht und bleibt ein Opfer.</para></summary>
+    /// Opfer-fähig; eine Figur, der der Zug den Verteidiger nimmt, hing vorher nicht und bleibt ein Opfer.</para>
+    /// <para>Seit Regelstand 6 (Vereinspartie 268, 19…Dc8): DECKT die gezogene Figur eine vorher schon hängende Figur und
+    /// steht diese danach nicht schlechter, ist sie ebenfalls kein Opfer — auch ohne Gabel (<see cref="DefendedByMove"/>).</para></summary>
     public static Sacrifice? SacrificedPiece(string? fenBefore, string? fenAfter, string? uci)
     {
         if (TacticsBoard.TryParse(fenBefore) is not { } before || TacticsBoard.TryParse(fenAfter) is not { } after) return null;
@@ -77,12 +79,30 @@ public static class MoveTactics
             if (type is 'p' or 'k') continue;
             if (PieceValue(p) <= captured) continue;
             if (forkResolved && sq != to && hungBefore.Contains(sq) && before.At(sq) == p) continue;
+            if (sq != to && before.At(sq) == p && DefendedByMove(before, after, sq, to)) continue;
             if (HangingOn(before, after, sq) && ExchangeLossOn(after, sq) > captured) hanging.Add((sq, type));
         }
         if (hanging.Count == 0 || !Capturable(after, hanging)) return null;
         var top = hanging[0];
         foreach (var h in hanging) if (PieceValue(h.Piece) > PieceValue(top.Piece)) top = h;
         return new Sacrifice(TacticsBoard.SquareName(top.Square), top.Piece);
+    }
+
+    /// <summary>Hat der Zug eine Figur gedeckt, die schon VORHER hing (Regelstand 6, Vereinspartie 268, 19…Dc8)? Die Figur
+    /// steht auf demselben Feld, hing in der Vorher-Stellung, die gezogene Figur deckt sie jetzt selbst, und sie steht nicht
+    /// schlechter da als vorher (nicht mehr Angreifer, nicht weniger Verteidiger). Dann ist sie kein Opfer dieses Zuges —
+    /// der Zug verteidigt sie, er lässt sie nicht stehen. 268: der Sb8 hing gegen Da8 + Ld6, nur vom Te8 gedeckt; Dc8 tritt
+    /// davor und deckt selbst (der Turm dahinter zählt ohne Röntgen nicht mehr mit — zwei gegen einen wie vorher), nach
+    /// 20.Lxb8 ist der Läufer gegen die Da8 gefesselt.
+    /// <para>Bewusst NICHT ausgenommen: eine vorher hängende Figur, die der Zug nur stehen lässt (die gezogene Figur deckt
+    /// sie nicht) — das bleibt ein Opfer wie bei chess.com (228: 24.O-O „!!", 25.Df3).</para></summary>
+    private static bool DefendedByMove(TacticsBoard before, TacticsBoard after, int sq, int to)
+    {
+        var white = TacticsBoard.IsWhite(after.At(sq)!.Value);
+        if (!after.Attackers(sq, white).Contains(to) || !HangingOn(before, before, sq)) return false;
+        var (attackersBefore, defendersBefore) = InfluenceOn(before, sq, white);
+        var (attackersAfter, defendersAfter) = InfluenceOn(after, sq, white);
+        return attackersAfter.Count <= attackersBefore.Count && defendersAfter.Count >= defendersBefore.Count;
     }
 
     /// <summary>Löst der Zug eine Gabel auf (Regelstand 2)? Hingen VOR dem Zug mindestens zwei eigene Figuren (Springer bis
