@@ -161,8 +161,8 @@ public sealed class LeaguePairingFinder(AppDbContext db)
             : ToOption(new Row(x.g, x.Season, string.IsNullOrEmpty(x.Grp) ? x.League : $"{x.League} {x.Grp}", x.Date), false, club);
     }
 
-    /// <summary>Die vorgewählte Paarung: genau EIN genauer Vorschlag, sonst die vorläufige Zuordnung zur laufenden Runde
-    /// (<see cref="Option.Provisional"/>, 0.832.0), sonst keine.</summary>
+    /// <summary>Die vorgewählte Paarung: genau EIN genauer Vorschlag (unter mehreren genau EIN besetztes Brett, 1.033.1), sonst die
+    /// vorläufige Zuordnung zur laufenden Runde (<see cref="Option.Provisional"/>, 0.832.0), sonst keine.</summary>
     public static int? AutoPick(IReadOnlyList<Option> options)
     {
         var provisional = options.FirstOrDefault(o => o.Provisional);
@@ -172,6 +172,11 @@ public sealed class LeaguePairingFinder(AppDbContext db)
         // landete auf einem Wiedersehen aus 2025/26).
         if (exact.Count == 1 && provisional is not null && !exact[0].Open && exact[0].Season != provisional.Season)
             return provisional.Id;
+        // 1.033.1 (Prod 26.11.2026, Vereinspartie 269): ein leeres Brett gilt schon als „genau“, wenn Farbe und Termin passen — neben
+        // dem besetzten Brett, an dem BEIDE Spieler saßen (Runde 1, Brett 5), waren es zwei genaue, und die vorläufige Zuordnung zur
+        // laufenden Runde 2 gewann. Genau EIN besetztes Brett mit beiden Spielern schlägt deshalb jedes leere derselben Saison.
+        var fixedExact = exact.Where(o => !o.Open).ToList();
+        if (fixedExact.Count == 1 && (provisional is null || fixedExact[0].Season == provisional.Season)) return fixedExact[0].Id;
         return exact.Count == 1 ? exact[0].Id : provisional?.Id;
     }
 

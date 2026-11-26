@@ -188,14 +188,17 @@ internal sealed class ClubGameWriter
     /// <see cref="ClubSideResolver.SameGamePrefixPlies"/> Halbzüge. Die Analyse der alten Fassung geht (die neue wird gerechnet). Liefert die
     /// Zahl der archivierten.
     /// </summary>
-    internal async Task<int> ArchiveOlderVersionsAsync(LeagueClubGame game, IReadOnlyList<string> sans, DateTime now, CancellationToken ct)
+    /// <param name="alsoId">Diese Partie gilt in jedem Fall als ältere Fassung (1.033.1: dieselben Züge bis auf das Ende laut
+    /// <see cref="ClubGameDuplicates"/>, z. B. mit „Schwaz“ auf der einen und echtem Namen auf der anderen Seite).</param>
+    internal async Task<int> ArchiveOlderVersionsAsync(LeagueClubGame game, IReadOnlyList<string> sans, DateTime now, CancellationToken ct,
+        int? alsoId = null)
     {
         // Gleiche Paarung = gleiche Id ODER gleicher Schlüssel (Tnr, Runde, Begegnung, Brett) — eine ältere Fassung kann noch eine
         // Id von vor dem letzten Aktualisieren tragen (0.716.1).
         var (kt, kr, km, kb) = (game.LeagueTnr, game.LeagueRound, game.LeagueMatchNo, game.LeagueBoard);
         var cands = await _db.LeagueClubGames
             .Where(c => c.ClubId == game.ClubId)   // nur im eigenen Verein
-            .Where(c => c.Id != game.Id && (game.LeagueGameId != null && c.LeagueGameId == game.LeagueGameId
+            .Where(c => c.Id != game.Id && (alsoId != null && c.Id == alsoId || game.LeagueGameId != null && c.LeagueGameId == game.LeagueGameId
                 || kt != null && c.LeagueTnr == kt && c.LeagueRound == kr && c.LeagueMatchNo == km && c.LeagueBoard == kb
                 || c.Year == game.Year && (c.White == game.White || game.WhiteFide != null && c.WhiteFide == game.WhiteFide)
                                        && (c.Black == game.Black || game.BlackFide != null && c.BlackFide == game.BlackFide)))
@@ -206,7 +209,7 @@ internal sealed class ClubGameWriter
         // Regel steht in SameVersion und gilt gleich für den Hinweis „möglicherweise doppelt" in der Liste.
         var live = await LeagueGameLinks.ResolveAsync(_db, cands.Append(game), ct, _log);
         var mine = live.GetValueOrDefault(game.Id)?.Id;
-        var old = cands.Where(c => SameVersion(c, live.GetValueOrDefault(c.Id)?.Id, game, mine, SansOf(c.Pgn), sans)).ToList();
+        var old = cands.Where(c => c.Id == alsoId || SameVersion(c, live.GetValueOrDefault(c.Id)?.Id, game, mine, SansOf(c.Pgn), sans)).ToList();
         if (old.Count == 0) return 0;
         foreach (var c in old)
         {

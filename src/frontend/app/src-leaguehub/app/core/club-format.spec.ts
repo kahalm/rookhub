@@ -25,7 +25,14 @@ describe('club-format', () => {
     for (const r of ['noLeaguePlayer', 'onlyOwnClub', 'notFound', 'fromPosition', 'illegal', 'noMoves', 'tooLong', 'duplicate', 'empty', 'tooLarge', 'shareLimit']) {
       expect(reasonText(r)).not.toBe('Nicht übernommen.');
     }
-    expect(reasonText('onlyOwnClub')).toContain('eigenen Vereins');   // kein fester Vereinsname mehr (0.698.0)
+    expect(reasonText('onlyOwnClub')).toContain('eigenen Vereins');
+    // 1.033.1: die schon vorhandene Partie mit Nummer
+    expect(reasonText('duplicate', 268)).toBe('Schon vorhanden als Partie 268.');
+    expect(reasonText('duplicate', null)).toBe('Diese Partie ist schon in der Vereins-Datenbank.');
+    expect(importSummary({ added: 0, duplicates: 1, anonymized: 0, truncated: false, ids: [], failed: [], duplicateOf: [{ index: 1, id: 268 }] }))
+      .toBe('0 Partien übernommen, 1 schon vorhanden (als Partie 268).');
+    expect(importSummary({ added: 0, duplicates: 2, anonymized: 0, truncated: false, ids: [], failed: [],
+      duplicateOf: [{ index: 1, id: 268 }, { index: 2, id: 270 }] })).toContain('2 schon vorhanden (als Partien 268, 270)');   // kein fester Vereinsname mehr (0.698.0)
     expect(importSummary({ added: 2, duplicates: 0, anonymized: 2, truncated: false, ids: [], failed: [], remembered: 1 }))
       .toContain('1 Namens-Zuordnung gemerkt');
   });

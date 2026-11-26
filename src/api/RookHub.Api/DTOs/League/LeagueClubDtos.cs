@@ -150,6 +150,9 @@ public class LeagueClubPreviewGameDto
     public string? Error { get; set; }
     /// <summary>Schon in der Vereins-Datenbank (oder weiter oben in derselben Datei).</summary>
     public bool Duplicate { get; set; }
+    /// <summary>Die vorhandene Vereinspartie, wenn <see cref="Duplicate"/> (1.033.1, „schon vorhanden als Partie N“); <c>null</c> =
+    /// weiter oben in derselben Datei.</summary>
+    public int? DuplicateId { get; set; }
     /// <summary>Die Partie als eigener PGN-Text (0.590.0, fehlt bei harten Fehlern) — die Seite importiert damit
     /// portionsweise (<c>games/import</c> mit diesem Text und Nummer 1…n je Portion), jede Portion sofort gespeichert.</summary>
     public string? Pgn { get; set; }
@@ -176,6 +179,14 @@ public class LeagueClubFailureDto
     public string Reason { get; set; } = string.Empty;
 }
 
+/// <summary>Eine nicht angelegte, weil schon vorhandene Partie (1.033.1): <see cref="Id"/> = die vorhandene Vereinspartie,
+/// <c>null</c> = weiter oben im selben Upload.</summary>
+public class LeagueClubDuplicateDto
+{
+    public int Index { get; set; }
+    public int? Id { get; set; }
+}
+
 public class LeagueClubImportResultDto
 {
     public int Added { get; set; }
@@ -187,6 +198,8 @@ public class LeagueClubImportResultDto
     public bool Truncated { get; set; }
     public List<int> Ids { get; set; } = new();
     public List<LeagueClubFailureDto> Failed { get; set; } = new();
+    /// <summary>Je doppelter Partie (1.033.1): ihre Nummer im PGN und die vorhandene Vereinspartie.</summary>
+    public List<LeagueClubDuplicateDto> DuplicateOf { get; set; } = new();
     /// <summary>Nur über einen Teilen-Link (0.656.0): der Zuordnungs-Schlüssel, den der Browser für ein späteres Anmelden aufhebt.</summary>
     public string? ClaimKey { get; set; }
 }

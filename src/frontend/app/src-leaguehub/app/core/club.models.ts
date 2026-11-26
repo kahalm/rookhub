@@ -80,6 +80,8 @@ export interface ClubList { total: number; page: number; pageSize: number; items
 
 export interface ClubFailure { index: number; white: string | null; black: string | null; reason: string }
 
+export interface ClubDuplicate { index: number; id: number | null }
+
 export interface ClubImportResult {
   added: number;
   duplicates: number;
@@ -89,6 +91,8 @@ export interface ClubImportResult {
   truncated: boolean;
   ids: number[];
   failed: ClubFailure[];
+  /** Je doppelter Partie (1.033.1): Nummer im PGN und die vorhandene Vereinspartie (`null` = weiter oben im selben Upload). */
+  duplicateOf?: ClubDuplicate[];
   /** Nur über einen Teilen-Link (0.656.0): Schlüssel für eine Zuordnung nach dem Anmelden. */
   claimKey?: string | null;
   /** Nur in der Oberfläche (0.970.0): was aus der Kopie in „Meine Partien" wurde — fehlt, wenn keine versucht wurde. */
@@ -153,6 +157,8 @@ export interface PreviewGame {
   /** Nicht übernehmbar, egal wie man die Namen setzt: illegal, noMoves, tooLong, fromPosition. */
   error: string | null;
   duplicate: boolean;
+  /** Die vorhandene Vereinspartie, wenn `duplicate` (1.033.1); `null` = weiter oben in derselben Datei. */
+  duplicateId?: number | null;
   white: PreviewSide;
   black: PreviewSide;
   /** Die Partie als eigener PGN-Text (0.590.0, fehlt bei harten Fehlern) — damit importiert die Seite portionsweise. */

@@ -14,7 +14,9 @@ namespace RookHub.Api.Services.League;
 /// <item><b>Begegnung</b>: die Mannschaft des Gegners laut Meldeliste (FIDE-ID, sonst Name) gegen eine eigene Mannschaft
 /// (<see cref="LeagueClub.OwnsTeam"/>) in einer Runde mit leeren Brettern; mit Tag die zeitlich nächste (±<see
 /// cref="LeaguePairingFinder.DayTolerance"/>), ohne Tag die jüngste Runde ≤ heute. Ist der Gegner unbekannt, reicht der eigene
-/// Spieler in der Meldeliste der eigenen Mannschaft. Mehrere gleich gute Begegnungen → keine Zuordnung.</item>
+/// Spieler in der Meldeliste der eigenen Mannschaft — aber nie, wenn der Gegner in der Meldeliste einer ANDEREN Mannschaft der Liga
+/// steht, und nie, wenn die Partie am Termin einer anderen Runde derselben Liga gespielt wurde (1.033.1). Mehrere gleich gute
+/// Begegnungen → keine Zuordnung.</item>
 /// <item><b>Brett</b>: die Farbe (Heim hat Weiß an den ungeraden Brettern — Tirol, in den gespielten Runden der TMM 2026/27
 /// ausnahmslos so; Bayern an den geraden, <see cref="LeaguePairingFinder.HomeWhiteByRule"/>) und die Reihenfolge der
 /// Meldeliste: die übrigen schon zugeordneten Partien derselben Begegnung grenzen das Brett ein (ein Spieler mit kleinerer
@@ -58,6 +60,8 @@ public sealed class LeagueProvisionalPairing(AppDbContext db)
         internal List<Placed> Placed { get; init; } = new();
         internal HashSet<string> OwnFides { get; init; } = new();
         internal DateOnly Today { get; init; }
+        /// <summary>Je Liga: Rundentermine ALLER Runden (auch der schon besetzten) — für die Regel „am Tag einer anderen Runde gespielt“.</summary>
+        internal Dictionary<int, List<(int Round, DateOnly Date)>> RoundDates { get; init; } = new();
     }
 
     /// <summary>Wie <see cref="Game"/> aus den Seiten einer Partie: die eigene Seite ist die anonymisierte („Schwaz"), sonst die
@@ -98,8 +102,12 @@ public sealed class LeagueProvisionalPairing(AppDbContext db)
             .ToListAsync(ct);
         var own = ownFides.ToHashSet();
         foreach (var p in roster.Where(p => p.FideId != null && club.OwnsTeam(p.Team))) own.Add(p.FideId!);
+        var roundDates = (await db.LeagueRounds.AsNoTracking().Where(r => tnrs.Contains(r.Tnr) && r.Date != null)
+                .Select(r => new { r.Tnr, r.Round, r.Date }).ToListAsync(ct))
+            .GroupBy(r => r.Tnr).ToDictionary(x => x.Key, x => x.Select(r => (r.Round, r.Date!.Value)).ToList());
         return new Context
         {
+            RoundDates = roundDates,
             Open = open,
             Roster = roster.GroupBy(p => p.Tnr).ToDictionary(x => x.Key,
                 x => x.Select(p => new RosterEntry(p.Team, p.RosterBoard, p.FideId, p.NameKey)).ToList()),
@@ -145,12 +153,19 @@ public sealed class LeagueProvisionalPairing(AppDbContext db)
             var opp = Find(roster, oppTeam, q.OppFide, q.OppKey) != null;
             var own = q.OwnFide != null && roster.Any(r => r.Team == ownTeam && r.Fide == q.OwnFide);
             if (!opp && !own) continue;
+            // 1.033.1 (Prod 26.11.2026, Vereinspartie 269: Raja von Pinggau-Friedberg landete in Schwaz – Gamlitz, Brett 4): steht der
+            // Gegner in der Meldeliste einer ANDEREN Mannschaft dieser Liga, ist es nicht diese Begegnung — der eigene Spieler allein
+            // reicht nur, wenn der Gegner in keiner Meldeliste der Liga steht (Ersatzspieler, Tippfehler im Formular).
+            if (!opp && OnOtherTeam(roster, oppTeam, q.OppFide, q.OppKey)) continue;
             if (first.Date is not { } date) continue;
             int distance;
             if (q.Date is { } d)
             {
                 distance = Math.Abs(date.DayNumber - d.DayNumber);
                 if (distance > LeaguePairingFinder.DayTolerance) continue;
+                // 1.033.1: am Termin einer ANDEREN Runde derselben Liga gespielt → jene Runde, nicht diese (Bundesliga: Runden an
+                // aufeinanderfolgenden Tagen, das Fenster von ±3 Tagen umfasst bis zu sieben Runden).
+                if ((ctx.RoundDates.GetValueOrDefault(m.Key.Tnr) ?? new()).Any(r => r.Round != m.Key.Round && r.Date == d)) continue;
             }
             else
             {
@@ -165,6 +180,11 @@ public sealed class LeagueProvisionalPairing(AppDbContext db)
         if (best.Count > 1 && (best[1].Opp, best[1].Own, best[1].Distance) == (best[0].Opp, best[0].Own, best[0].Distance)) return null;
         return best[0].M;
     }
+
+    /// <summary>Steht der Spieler (FIDE-ID, ohne sie der Namensschlüssel) in der Meldeliste einer anderen Mannschaft als <paramref name="team"/>?</summary>
+    private static bool OnOtherTeam(List<RosterEntry> roster, string team, string? fide, string? nameKey) =>
+        fide is not null ? roster.Any(r => r.Team != team && r.Fide == fide)
+            : nameKey is not null && roster.Any(r => r.Team != team && r.NameKey == nameKey);
 
     private static RosterEntry? Find(List<RosterEntry> roster, string team, string? fide, string? nameKey) =>
         (fide is null ? null : roster.FirstOrDefault(r => r.Team == team && r.Fide == fide))

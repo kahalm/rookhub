@@ -301,7 +301,9 @@ public class LeagueProvisionalPairingTests : IDisposable
         Assert.Equal(2, LeaguePairingFinder.AutoPick(new[] { prov, old }));
         // gleiche Saison: der genaue Treffer bleibt vorn (bisheriges Verhalten)
         var same = old with { Season = "2026/27" };
-        Assert.Equal(2, LeaguePairingFinder.AutoPick(new[] { prov, same }));   // zwei genaue (offen + geschlossen) → die vorläufige, wie bisher
+        // zwei genaue (offen + besetzt) derselben Saison → seit 1.033.1 das besetzte Brett, an dem beide Spieler saßen (Prod 26.11.2026,
+        // Vereinspartie 269 — vorher gewann die vorläufige Zuordnung zur laufenden Runde)
+        Assert.Equal(1, LeaguePairingFinder.AutoPick(new[] { prov, same }));
         Assert.Equal(1, LeaguePairingFinder.AutoPick(new[] { old }));
     }
 }

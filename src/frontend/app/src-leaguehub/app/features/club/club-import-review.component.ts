@@ -84,7 +84,7 @@ interface Editing { index: number; side: SideKey; text: string }
               <td class="small st">@if (isSaved(r)) { <span class="ok-text saved">gespeichert</span> }
                 @else if (isIn(r)) { <span class="ok-text">wird importiert</span> }
                 @else if (status(r).importable) { <span class="muted">{{ optional(r) ? 'nicht in Liga — anhaken zum Hinzufügen' : 'abgewählt' }}</span> }
-                @else { <span class="muted">{{ reason(status(r).reason!) }}</span> }</td>
+                @else { <span class="muted">{{ reason(status(r).reason!, r.game.duplicateId) }}</span> }</td>
             </tr>
             @if (editing(); as e) {
               @if (e.index === r.game.index) {
@@ -334,7 +334,7 @@ export class ClubImportReviewComponent {
         this.imported.emit(await this.send(this.pgn, decisions));
         return;
       }
-      const acc = this.acc ??= { added: 0, duplicates: 0, anonymized: 0, remembered: 0, truncated: false, ids: [], failed: [] };
+      const acc = this.acc ??= { added: 0, duplicates: 0, anonymized: 0, remembered: 0, truncated: false, ids: [], failed: [], duplicateOf: [] };
       const total = this.saved.size + decisions.length;
       this.progress.set({ done: this.saved.size, total });
       for (let i = 0; i < decisions.length; i += ClubImportReviewComponent.Portion) {
@@ -347,6 +347,7 @@ export class ClubImportReviewComponent {
         acc.remembered = (acc.remembered ?? 0) + (r.remembered ?? 0);
         acc.ids.push(...r.ids);
         acc.failed.push(...r.failed.map(f => ({ ...f, index: part[f.index - 1]?.index ?? f.index })));
+        (acc.duplicateOf ??= []).push(...(r.duplicateOf ?? []).map(d => ({ ...d, index: part[d.index - 1]?.index ?? d.index })));
         for (const d of part) this.saved.add(d.index);
         this.savedCount.set(this.saved.size);
         this.savedChange.emit([...this.saved]);

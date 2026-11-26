@@ -147,10 +147,16 @@ internal sealed class ClubBroadcastGames
     /// keine zweite Zusammenfassung, und es archiviert die übertragene Fassung nicht).
     /// </summary>
     internal static async Task<HashSet<LeagueClubGame>> CoveredByAsync(AppDbContext db, LeagueClub club, IEnumerable<LeagueClubGame> games,
+        bool uploadsOnly, CancellationToken ct) =>
+        new HashSet<LeagueClubGame>((await CoveringAsync(db, club, games, uploadsOnly, ct)).Keys, ReferenceEqualityComparer.Instance);
+
+    /// <summary>Wie <see cref="CoveredByAsync"/>, je gedeckter Partie die Nummer der vorhandenen Fassung (für „schon vorhanden als
+    /// Partie N“, 1.033.1). Gleiche Züge heißt seit 1.033.1 auch „bis auf das Ende gleich“ (<see cref="ClubGameDuplicates"/>).</summary>
+    internal static async Task<Dictionary<LeagueClubGame, int>> CoveringAsync(AppDbContext db, LeagueClub club, IEnumerable<LeagueClubGame> games,
         bool uploadsOnly, CancellationToken ct)
     {
         var list = games.ToList();
-        var covered = new HashSet<LeagueClubGame>(ReferenceEqualityComparer.Instance);
+        var covered = new Dictionary<LeagueClubGame, int>(ReferenceEqualityComparer.Instance);
         if (list.Count == 0) return covered;
         var years = list.Select(g => g.Year).Distinct().ToList();
         var q = ClubGameReader.GamesOf(db, club).AsNoTracking().Where(c => years.Contains(c.Year));
@@ -160,22 +166,24 @@ internal sealed class ClubBroadcastGames
             // Hochgeladene sind viele — nur die mit denselben Zügen oder einer der beteiligten FIDE-IDs.
             var hashes = list.Select(g => g.MovesHash).Distinct().ToList();
             var fides = list.SelectMany(g => new[] { g.WhiteFide, g.BlackFide }).Where(f => f != null).Distinct().ToList();
+            var plies = list.SelectMany(g => ClubGameDuplicates.LoosePlies(g.Plies)).Distinct().ToList();
             q = q.Where(c => hashes.Contains(c.MovesHash) || fides.Contains(c.WhiteFide) || fides.Contains(c.BlackFide)
-                || fides.Contains(c.WhiteRealFide) || fides.Contains(c.BlackRealFide));
+                || fides.Contains(c.WhiteRealFide) || fides.Contains(c.BlackRealFide) || plies.Contains(c.Plies));
         }
         var stored = await q.Select(c => new LeagueClubGame
         {
             Id = c.Id, Year = c.Year, White = c.White, Black = c.Black, WhiteFide = c.WhiteFide, BlackFide = c.BlackFide,
             WhiteRealFide = c.WhiteRealFide, BlackRealFide = c.BlackRealFide, MovesHash = c.MovesHash, Plies = c.Plies, Pgn = c.Pgn,
+            Result = c.Result,
         }).ToListAsync(ct);
         if (stored.Count == 0) return covered;
         var storedSans = stored.ToDictionary(c => c.Id, c => SansOf(c.Pgn));
         foreach (var g in list)
         {
             var sans = SansOf(g.Pgn);
-            if (stored.Any(c => c.Year == g.Year && (c.MovesHash == g.MovesHash && (g.Plies >= ShortGamePlies || c.White == g.White && c.Black == g.Black)
-                    || SameVersion(c, null, g, null, storedSans[c.Id], sans))))
-                covered.Add(g);
+            if (stored.FirstOrDefault(c => ClubGameDuplicates.Same(c, storedSans[c.Id], g, sans)
+                    || c.Year == g.Year && SameVersion(c, null, g, null, storedSans[c.Id], sans)) is { } hit)
+                covered[g] = hit.Id;
         }
         return covered;
     }

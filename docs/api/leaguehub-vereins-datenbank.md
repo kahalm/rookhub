@@ -145,6 +145,21 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
     derselbe Weg wie bei jeder Liste (siehe „Große Listen in Paketen").
 * **Nur das JAHR** (`Date "2024.??.??"`), nur die Hauptvariante OHNE Kommentare, nur ab der Grundstellung
   (`fromPosition`). Dubletten: gleiche Züge (`MovesHash`) im gleichen Jahr; unter 20 Halbzügen zusätzlich gleiche Namen.
+  **Bis auf das Ende gleich** (1.033.1, `Services/League/ClubGameDuplicates.cs`, Anlass Prod 26.11.2026: Vereinspartie 268 Raja –
+  Binder mit echten Namen und 45.Ke4 aus der Übertragung, dieselbe Partie kam aus „Meine Partien“ mit „Schwaz“ und 45.Kg4 als 269
+  — gleich lang, nur der letzte Halbzug anders, daher anderer Hash; Kopfzeilen und Uhren zählen nie, der Hash geht über die
+  kanonische SAN-Folge): ebenfalls doppelt, wenn das Jahr gleich ist, beide Fassungen ≥ 30 Halbzüge haben, alle Halbzüge bis auf
+  den letzten gleich sind und (a) eine Fassung genau EINEN Halbzug mehr hat (Signal-Königszug, fehlender letzter Zug) oder (b)
+  beide gleich lang sind und der letzte Halbzug auf beiden Seiten ein Königszug ist, einer davon auf d4/e4/d5/e5 (der Signalzug
+  ersetzt am DGT-Brett den echten Königszug); dazu kein Widerspruch im Ergebnis (gleich oder eines `*`) und keine Farbe mit zwei
+  verschiedenen FIDE-IDs (auch die interne hinter „Schwaz“). Namen zählen hier nicht. Ein Präfix über mehr als einen Halbzug
+  zählt bewusst NICHT (gleiche lange Theorie ≠ gleiche Partie). Gilt auf allen Wegen: Übersicht (`duplicate` + `duplicateId`),
+  PGN-/ChessBase-/Studien-Import und Teilen-Link (`duplicates` + `duplicateOf[{ index, id }]`, LeagueHub meldet „1 schon vorhanden
+  (als Partie 268)“), Formular (400 `duplicate` + `duplicateId`, Text „Schon vorhanden als Partie N.“) und Lichess-Übertragung
+  (`CoveredByAsync`). Eine doppelte Partie wird nicht angelegt — also auch keine Ligapaarung und keine automatische
+  Zusammenfassung. **Ersetzen statt melden** nur wie bisher beim Formular: ist es BESSER als eine hochgeladene Fassung mit
+  anderem Hash (mehr Halbzüge, oder ein Ergebnis, wo dort `*` steht), wird es angelegt und archiviert die alte
+  (`ArchiveOlderVersionsAsync`, jetzt auch über „Schwaz“ ↔ echter Name hinweg); eine übertragene Fassung gewinnt immer.
 * **Spielerkarten** (`Services/League/LeagueProfileStore.cs`): `LeaguePlayerProfile.Pgn` hält NUR die fremden Partien
   (Lumbra, chess-results, Megabase); Karte, Partienzahl, PGN-Download und Eröffnungsbaum nehmen die Vereinspartien dazu
   (`WithClub`, Doppelte über Jahr + Hauptvariante — die fremde Fassung gewinnt). Nach jedem Upload/Löschen werden die
@@ -186,8 +201,8 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 | GET | `/api/league/club/games/{id}/comparisons`, `…/comparisons/{comparisonId}` | view | Zugvergleiche „Partiezug gegen besten Zug“ zu den Fehlern der Hauptanalyse (0.908.0, Tiefe 30 seit 0.909.0 und erst nach der Vertiefung der Analyse auf 30, `ClubGameComparisons`): Liste `{ ply, playedUci, analysisBestUci, comparison }` bzw. ein Vergleich wie `GET /api/move-comparisons/{id}`; 404 unbekannt/anderer Verein — Details `docs/api/zuege-vergleichen.md` |
 | GET | `/api/league/club/games/pgn?fide=&q=` | view | Alle (gefilterten) als PGN |
 | POST | `/api/league/club/games/preview` | contribute | `{ pgn }` → `{ games[{ index, year, result, event, plies, opening, error, duplicate, white/black{ raw, elo, match{ league, ambiguous, name, fide, club, candidates }, owner, replace } }], truncated }`; 400 `empty`/`tooLarge` (5 Mio. Zeichen), höchstens 500 Partien |
-| POST | `/api/league/club/games/import` | contribute | `{ pgn, games?[{ index, white{ name, fide, replace }, black{…} }] }` (fehlt `games` = alle mit Vorgaben) → `{ added, duplicates, anonymized, truncated, ids, failed[{ index, white, black, reason }] }` |
-| POST | `/api/league/club/games` | contribute | EINE Partie `{ moves[] (SAN), white, black, whiteFide, blackFide, whiteElo, blackElo, whiteReplace, blackReplace, result, event, year, scanId }` → `{ id, anonymized }`; 400 `reason` wie oben + `duplicate`, `illegal` (mit Meldung); schließt die Einlesung |
+| POST | `/api/league/club/games/import` | contribute | `{ pgn, games?[{ index, white{ name, fide, replace }, black{…} }] }` (fehlt `games` = alle mit Vorgaben) → `{ added, duplicates, duplicateOf[{ index, id }] (1.033.1; `id` null = weiter oben im selben Upload), anonymized, truncated, ids, failed[{ index, white, black, reason }] }` |
+| POST | `/api/league/club/games` | contribute | EINE Partie `{ moves[] (SAN), white, black, whiteFide, blackFide, whiteElo, blackElo, whiteReplace, blackReplace, result, event, year, scanId }` → `{ id, anonymized }`; 400 `reason` wie oben + `duplicate` (mit `duplicateId`, 1.033.1), `illegal` (mit Meldung); schließt die Einlesung |
 | DELETE | `/api/league/club/games/{id}` | contribute | 204 / 403 / 404 |
 | POST | `/api/league/club/games/{id}/archive-older` | manage | „ältere archivieren“ (UI-Sweep 2026-10-11): die ANDEREN Fassungen dieser Partie (Hinweis `duplicateIds` der Liste) archivieren, diese bleibt → `{ replaced }` (Zahl der archivierten); 404 unbekannt/anderer Verein (`LeagueClubService.ArchiveOlderAsync`) |
 | POST | `/api/league/club/pairings` | contribute | Ligapaarungen für eine noch nicht gespeicherte Partie `{ white, whiteFide, black, blackFide, date, year }` → `[{ id, label, white, whiteFide, black, blackFide, result, whiteOwnClub, blackOwnClub, exact }]` (0.678.0; auch `POST /api/league/s/{token}/club/pairings`) |

@@ -7,8 +7,10 @@ import { ClubImportResult, MineCopy, ScoresheetScan, ScoresheetStatus } from './
 // Den Namen anonymisierter Spieler (früher fest ANON_NAME = 'Schwaz') liefert seit 0.698.0 der Verein:
 // ClubContextService.anonName() — LeagueHub kennt mehrere Vereine.
 
-/** Warum eine Partie nicht übernommen wurde (Gründe aus LeagueClubService). */
-export function reasonText(reason: string): string {
+/** Warum eine Partie nicht übernommen wurde (Gründe aus LeagueClubService). `duplicateId` (1.033.1): die schon vorhandene
+ *  Vereinspartie bei `duplicate`. */
+export function reasonText(reason: string, duplicateId?: number | null): string {
+  if (reason === 'duplicate' && duplicateId) return `Schon vorhanden als Partie ${duplicateId}.`;
   switch (reason) {
     case 'noLeaguePlayer': return 'Kein Spieler erkannt (weder in der Liga noch in der Megabase) — Namen korrigieren.';
     case 'onlyOwnClub': return 'Nur Spieler des eigenen Vereins — nach dem Ersetzen bleibt kein Gegner übrig.';
@@ -35,7 +37,12 @@ export function importSummary(r: ClubImportResult, anon = 'Verein'): string {
   const parts: string[] = [];
   const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
   parts.push(n(r.added, 'Partie übernommen', 'Partien übernommen') + (r.anonymized ? ` (${r.anonymized} mit „${anon}“)` : ''));
-  if (r.duplicates) parts.push(`${r.duplicates} schon da`);
+  if (r.duplicates) {
+    // „schon vorhanden als Partie 268“ (1.033.1) — die Nummern der vorhandenen Partien, soweit der Server sie kennt
+    const ids = [...new Set((r.duplicateOf ?? []).map(d => d.id).filter((id): id is number => id != null))];
+    parts.push(ids.length === 0 ? `${r.duplicates} schon da`
+      : `${r.duplicates} schon vorhanden (als ${ids.length === 1 ? 'Partie' : 'Partien'} ${ids.join(', ')})`);
+  }
   if (r.failed.length) parts.push(`${r.failed.length} nicht übernommen`);
   let s = parts.join(', ') + '.';
   if (r.remembered) s += ` ${n(r.remembered, 'Namens-Zuordnung', 'Namens-Zuordnungen')} gemerkt — das nächste Mal erkennt LeagueHub sie von selbst.`;

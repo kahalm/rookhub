@@ -33,27 +33,44 @@ internal sealed class ClubPgnReader
         _db = db; _log = log; _now = now; _shareQuota = shareQuota; _pairings = pairings; _reader = reader; _writer = writer;
     }
 
-    /// <summary>Die schon gespeicherten Partien mit den Zügen dieser Partien (Hash, Jahr, Namen) — für alle Partien eines
-    /// Aufrufs zusammen, je 500 Hashes eine Abfrage. Vorher fragte jede Partie einzeln (bis 500 Rundreisen je Übersicht
-    /// oder Import, auch anonym über den Teilen-Link; Codereview 2026-09-29, N4-004).</summary>
-    private async Task<ILookup<string, LeagueClubGame>> StoredByHashAsync(LeagueClub club, IEnumerable<LeagueClubGame> games, CancellationToken ct)
+    /// <summary>Schon gespeicherte Partien, die eine dieser Partien sein können — für alle Partien eines Aufrufs zusammen, je 500
+    /// Hashes eine Abfrage (Codereview 2026-09-29, N4-004): gleiche Züge (<see cref="LeagueClubGame.MovesHash"/>), dazu seit 1.033.1
+    /// die Kandidaten für „bis auf das Ende gleich“ (<see cref="ClubGameDuplicates"/>: gleiches Jahr, ±1 Halbzug) samt Hauptvariante.</summary>
+    private async Task<List<(LeagueClubGame Row, IReadOnlyList<string> Sans)>> StoredLikeAsync(LeagueClub club, IEnumerable<LeagueClubGame> games,
+        CancellationToken ct)
     {
-        var hashes = games.Select(g => g.MovesHash).Distinct(StringComparer.Ordinal).ToList();
-        var rows = new List<LeagueClubGame>();
+        var list = games.ToList();
+        var hashes = list.Select(g => g.MovesHash).Distinct(StringComparer.Ordinal).ToList();
+        var rows = new Dictionary<int, LeagueClubGame>();
         foreach (var chunk in hashes.Chunk(500))
-            rows.AddRange(await ClubGameReader.GamesOf(_db, club).AsNoTracking().Where(x => chunk.Contains(x.MovesHash))
-                .Select(x => new LeagueClubGame { MovesHash = x.MovesHash, Year = x.Year, White = x.White, Black = x.Black })
-                .ToListAsync(ct));
-        return rows.ToLookup(x => x.MovesHash, StringComparer.Ordinal);
+            foreach (var x in await ClubGameReader.GamesOf(_db, club).AsNoTracking().Where(x => chunk.Contains(x.MovesHash))
+                         .Select(x => new LeagueClubGame { Id = x.Id, MovesHash = x.MovesHash, Year = x.Year, White = x.White, Black = x.Black,
+                             WhiteFide = x.WhiteFide, BlackFide = x.BlackFide, WhiteRealFide = x.WhiteRealFide, BlackRealFide = x.BlackRealFide,
+                             Result = x.Result, Plies = x.Plies, Pgn = x.Pgn, Source = x.Source })
+                         .ToListAsync(ct))
+                rows[x.Id] = x;
+        var years = list.Select(g => g.Year).Distinct().ToList();
+        var plies = list.SelectMany(g => ClubGameDuplicates.LoosePlies(g.Plies)).Distinct().ToList();
+        if (plies.Count > 0)
+            foreach (var x in await ClubGameReader.GamesOf(_db, club).AsNoTracking().Where(x => years.Contains(x.Year) && plies.Contains(x.Plies))
+                         .Select(x => new LeagueClubGame { Id = x.Id, MovesHash = x.MovesHash, Year = x.Year, White = x.White, Black = x.Black,
+                             WhiteFide = x.WhiteFide, BlackFide = x.BlackFide, WhiteRealFide = x.WhiteRealFide, BlackRealFide = x.BlackRealFide,
+                             Result = x.Result, Plies = x.Plies, Pgn = x.Pgn, Source = x.Source })
+                         .ToListAsync(ct))
+                rows[x.Id] = x;
+        return rows.Values.OrderBy(x => x.Id).Select(x => (x, SansOf(x.Pgn))).ToList();
     }
 
-    /// <summary>Gleiche Partie schon da (Datenbank — <paramref name="stored"/> aus <see cref="StoredByHashAsync"/> — oder
-    /// derselbe Upload)?</summary>
-    private static bool IsDuplicate(LeagueClubGame g, List<LeagueClubGame> pending, ILookup<string, LeagueClubGame> stored)
+    /// <summary>Dieselbe Partie schon da (Datenbank — <paramref name="stored"/> aus <see cref="StoredLikeAsync"/> — oder derselbe
+    /// Upload, dann Id 0)? Regel: <see cref="ClubGameDuplicates.Same"/>. → die vorhandene Partie, sonst <c>null</c>.</summary>
+    private static LeagueClubGame? DuplicateOf(LeagueClubGame g, IReadOnlyList<string> sans,
+        List<(LeagueClubGame Game, IReadOnlyList<string> Sans)> pending, List<(LeagueClubGame Row, IReadOnlyList<string> Sans)> stored)
     {
-        bool Same(LeagueClubGame x) => x.MovesHash == g.MovesHash && x.Year == g.Year
-            && (g.Plies >= ShortGamePlies || (x.White == g.White && x.Black == g.Black));
-        return pending.Any(Same) || stored[g.MovesHash].Any(Same);
+        foreach (var (row, rs) in stored)
+            if (ClubGameDuplicates.Same(row, rs, g, sans)) return row;
+        foreach (var (row, rs) in pending)
+            if (ClubGameDuplicates.Same(row, rs, g, sans)) return row;
+        return null;
     }
 
     /// <summary>
@@ -69,10 +86,10 @@ internal sealed class ClubPgnReader
             parsed.SelectMany(p => new[] { p.H("WhiteFideId"), p.H("BlackFideId") }), ct);
         var owner = await _reader.OwnerAsync(userId, ct);
         var now = _now();
-        var pending = new List<LeagueClubGame>();
+        var pending = new List<(LeagueClubGame Game, IReadOnlyList<string> Sans)>();
         var dto = new LeagueClubPreviewDto { Truncated = truncated };
         var similar = new Dictionary<string, List<LeagueRosterPersonDto>>();
-        var candidates = new List<(LeagueClubPreviewGameDto Dto, LeagueClubGame Game)>();
+        var candidates = new List<(LeagueClubPreviewGameDto Dto, LeagueClubGame Game, IReadOnlyList<string> Sans)>();
         foreach (var p in parsed)
         {
             var (w, b, ownerSide) = Defaults(p, owner, lk);
@@ -86,15 +103,18 @@ internal sealed class ClubPgnReader
             AddSimilar(g.White.Match, g.White.Raw, lk.Roster, similar);
             AddSimilar(g.Black.Match, g.Black.Raw, lk.Roster, similar);
             if (p.Sans != null && Build(club, w, b, p.Sans, g.Year, p.H("Result"), p.H("Event")).Game is { } built)
-                candidates.Add((g, built));
+                candidates.Add((g, built, p.Sans));
             dto.Games.Add(g);
         }
-        var stored = await StoredByHashAsync(club, candidates.Select(c => c.Game), ct);
-        var broadcast = await ClubBroadcastGames.CoveredByAsync(_db, club, candidates.Select(c => c.Game), uploadsOnly: false, ct);
-        foreach (var (g, built) in candidates)
+        var stored = await StoredLikeAsync(club, candidates.Select(c => c.Game), ct);
+        var broadcast = await ClubBroadcastGames.CoveringAsync(_db, club, candidates.Select(c => c.Game), uploadsOnly: false, ct);
+        foreach (var (g, built, sans) in candidates)
         {
-            g.Duplicate = IsDuplicate(built, pending, stored) || broadcast.Contains(built);
-            pending.Add(built);
+            var dup = DuplicateOf(built, sans, pending, stored);
+            g.Duplicate = dup != null || broadcast.ContainsKey(built);
+            // „schon vorhanden als Partie N“ (1.033.1); weiter oben in derselben Datei = ohne Nummer
+            g.DuplicateId = dup is { Id: > 0 } ? dup.Id : broadcast.TryGetValue(built, out var bid) ? bid : null;
+            pending.Add((built, sans));
         }
         // Brettpaarungen (0.678.0): EINE Abfrage für die ganze Übersicht
         var dates = parsed.ToDictionary(p => p.Index, p => FullDateOf(p.H("Date")));
@@ -159,6 +179,7 @@ internal sealed class ClubPgnReader
         var remember = new List<(string Raw, LeagueNameAliases.Entry Target)>();
         var now = _now();
         var pending = new List<LeagueClubGame>();
+        var pendingSans = new List<(LeagueClubGame Game, IReadOnlyList<string> Sans)>();
         // Erst alle Partien bauen, dann die Dubletten aller zusammen nachschlagen (N4-004), dann in Reihenfolge entscheiden.
         var built = new List<(int Index, Parsed? P, LeagueClubGame? Game, string? Reason)>();
         var choices = new Dictionary<int, int?>();
@@ -196,16 +217,28 @@ internal sealed class ClubPgnReader
             built.Add((index, p, game, reason));
             choices[index] = decision?.LeagueGameId;
         }
-        var stored = await StoredByHashAsync(club, built.Where(x => x.Game != null).Select(x => x.Game!), ct);
+        var stored = await StoredLikeAsync(club, built.Where(x => x.Game != null).Select(x => x.Game!), ct);
         // Schon als übertragene Partie da (1.017.0): keine zweite Fassung, keine zweite Zusammenfassung.
-        var broadcast = await ClubBroadcastGames.CoveredByAsync(_db, club, built.Where(x => x.Game != null).Select(x => x.Game!), uploadsOnly: false, ct);
+        var broadcast = await ClubBroadcastGames.CoveringAsync(_db, club, built.Where(x => x.Game != null).Select(x => x.Game!), uploadsOnly: false, ct);
         foreach (var (index, p, game, reason) in built)
         {
             if (game == null) { result.Failed.Add(FailureOf(index, p, reason!)); continue; }
-            if (IsDuplicate(game, pending, stored) || broadcast.Contains(game)) { result.Duplicates++; continue; }
+            // Doppelt (auch mit „Schwaz“ statt Namen oder anderem letztem Zug, 1.033.1): nicht anlegen, mit Nummer melden.
+            var dup = DuplicateOf(game, p!.Sans!, pendingSans, stored);
+            int? dupId = dup is { Id: > 0 } ? dup.Id : broadcast.TryGetValue(game, out var bid) ? bid : null;
+            if (dup != null || dupId != null)
+            {
+                result.Duplicates++;
+                result.DuplicateOf.Add(new LeagueClubDuplicateDto { Index = index, Id = dupId });
+                if (dupId is { } known)
+                    _log.LogInformation("Vereins-Datenbank {Club}: Partie {Index} ({White} – {Black}) schon vorhanden als Partie {Id} — nicht doppelt angelegt",
+                        club.Id, index, game.White, game.Black, known);
+                continue;
+            }
             if (pending.Count >= budget) { result.Failed.Add(FailureOf(index, p, ShareLimitReason)); continue; }
             ClubGameWriter.Stamp(game, userId, now, shareHash, claimHash);
             pending.Add(game);
+            pendingSans.Add((game, p.Sans!));
         }
         if (lease != null) lease.Kept = pending.Count;
         var kept = pending.ToHashSet();
@@ -287,10 +320,21 @@ internal sealed class ClubPgnReader
         if (game == null) return (null, reason, null);
         // Notierte Restzeiten aus der Formular-Korrektur (1.015.0) ins PGN.
         if (ClocksOf(req.Plies, sans.Count) is { } clocks) game.Pgn = PgnOf(game, sans, clocks);
-        if (IsDuplicate(game, new(), await StoredByHashAsync(club, new[] { game }, ct))) return (null, "duplicate", null);
+        // Doppelt → Absage „duplicate“, die Nummer der vorhandenen Partie als Meldung (der Controller gibt sie als duplicateId aus).
+        // Gleiche Züge (auch „bis auf das Ende gleich“, 1.033.1 — z. B. mit Signal-Königszug oder ohne letzten Zug):
+        // Ausnahme nach der Regel „Formular ersetzt die ältere Fassung“ (ArchiveOlderVersionsAsync): ist das Formular BESSER als eine
+        // hochgeladene Fassung mit anderem Hash (mehr Halbzüge, oder ein Ergebnis, wo dort „*“ steht), wird es angelegt und die alte archiviert.
+        int? replaceId = null;
+        if (DuplicateOf(game, sans, new(), await StoredLikeAsync(club, new[] { game }, ct)) is { } dup)
+        {
+            if (dup.Source != null || dup.MovesHash == game.MovesHash || !ClubGameDuplicates.Better(dup, game))
+                return (null, "duplicate", dup.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            replaceId = dup.Id;
+        }
         // Dieselbe Partie steht schon aus der Lichess-Übertragung da (1.017.0) — auch mit abweichend abgeschriebenem Ende: das
         // Formular archiviert sie nicht und wird keine zweite Fassung (keine zweite Zusammenfassung).
-        if ((await ClubBroadcastGames.CoveredByAsync(_db, club, new[] { game }, uploadsOnly: false, ct)).Count > 0) return (null, "duplicate", null);
+        if ((await ClubBroadcastGames.CoveringAsync(_db, club, new[] { game }, uploadsOnly: false, ct)).Values.FirstOrDefault() is > 0 and var bid)
+            return (null, "duplicate", bid.ToString(System.Globalization.CultureInfo.InvariantCulture));
         using var lease = shareHash is null ? null : _shareQuota.Reserve(shareHash, 1);
         if (lease is { Granted: 0 })
         {
@@ -302,7 +346,7 @@ internal sealed class ClubPgnReader
         await _writer.ApplyPairingsAsync(club, new[] { (game, req.LeagueGameId, FullDateOf(req.Date), (IReadOnlyList<string>)sans) }, ct);
         await _writer.SaveAsync(new List<LeagueClubGame> { game }, ct, userId, _ => FullDateOf(req.Date));
         await _writer.RebalanceAsync(club, new[] { game }, ct);
-        game.Replaced = await _writer.ArchiveOlderVersionsAsync(game, sans, now, ct);
+        game.Replaced = await _writer.ArchiveOlderVersionsAsync(game, sans, now, ct, replaceId);
         _log.LogInformation("Vereins-Datenbank {Club}: eine Partie aus einem Partieformular ({Anon}{Via})",
             club.Id, game.Anonymized ? $"mit „{club.AnonName}“" : "mit Namen", userId == null ? ", Teilen-Link" : "");
         return (game, null, null);

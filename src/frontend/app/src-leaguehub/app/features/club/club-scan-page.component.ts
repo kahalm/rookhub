@@ -330,7 +330,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     } catch (err) {
       const e = err instanceof HttpErrorResponse ? err : null;
       this.saveError.set(e?.error?.reason === 'illegal' ? `Ein Zug ist nicht legal: ${e.error.message}`
-        : e?.error?.reason ? reasonText(e.error.reason) : 'Übernehmen hat nicht geklappt.');
+        : e?.error?.reason ? reasonText(e.error.reason, e.error.duplicateId) : 'Übernehmen hat nicht geklappt.');
     } finally {
       this.saving.set(false);
     }

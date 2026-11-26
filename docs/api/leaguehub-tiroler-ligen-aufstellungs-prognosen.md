@@ -257,14 +257,22 @@ Rollenverwaltung an).
   `Services/League/LeaguePairingFinder` hängt an die leeren Bretter EINE vorläufige Wahl (`Option.Provisional`, im DTO
   `provisional` + `uncertain`), gerechnet in `Services/League/LeagueProvisionalPairing.cs`:
   (1) **Begegnung**: Gegner (FIDE-ID, sonst Namensschlüssel) in der Meldeliste der gegnerischen Mannschaft einer leeren eigenen
-  Begegnung, sonst der eigene Spieler in der Meldeliste der eigenen; mit Tag ±`DayTolerance`, ohne Tag die jüngste Runde ≤ heute
-  (Saison passt zum Jahr); mehrere gleich gute → keine. (2) **Brett**: Farbe nach `HomeWhiteByRule` — die TMM-Regel „Heim Weiß an
+  Begegnung, sonst der eigene Spieler in der Meldeliste der eigenen — aber NIE, wenn der Gegner in der Meldeliste einer ANDEREN
+  Mannschaft dieser Liga steht (1.033.1, Prod 26.11.2026: Vereinspartie 269 Raja (Pinggau-Friedberg) – Binder landete in Runde 2
+  Schwaz – Gamlitz, Brett 4; der eigene Spieler allein reicht nur noch, wenn der Gegner in keiner Meldeliste der Liga steht —
+  Ersatzspieler, Tippfehler im Formular); mit Tag ±`DayTolerance`, ohne Tag die jüngste Runde ≤ heute (Saison passt zum Jahr);
+  **Tag einer anderen Runde** (1.033.1): fällt das Partiedatum genau auf den Termin einer anderen Runde derselben Liga (auch einer
+  schon besetzten), ist es nicht diese — die Bundesliga spielt an aufeinanderfolgenden Tagen, das Fenster ±3 umfasst dort bis zu
+  sieben Runden; eine am Folgetag mit dem Upload-Tag eingelesene Partie bleibt dagegen möglich (dann entscheidet die Meldeliste
+  bzw. die Vorwahl unten); mehrere gleich gute → keine. (2) **Brett**: Farbe nach `HomeWhiteByRule` — die TMM-Regel „Heim Weiß an
   ungeraden Brettern" ist an allen gespielten Brettern der Saison 2026/27 belegt (`LeagueGames.HomeColor`: ungerade `w`, gerade
   `s`, ausnahmslos; Bayern umgekehrt); dazu die Meldereihenfolge BEIDER Seiten gegenüber den schon zugeordneten Partien derselben
   Begegnung (kleinere Meldenummer sitzt weiter vorn; Untergrenze 1 + Zahl der kleineren, Obergrenze n − Zahl der größeren, feste
   Bretter grenzen direkt ein), belegte Bretter fallen weg; bleibt mehr als eines, das, das der Schätzung aus den bisherigen
   Runden am nächsten liegt (1 + Schnitt der eingesetzten Mannschaftskollegen mit kleinerer Meldenummer, `HomeRb`/`AwayRb`; ohne
-  Verlauf die Meldenummer) → `uncertain`. (3) **Vorwahl**: `AutoPick` = genau EIN genauer Treffer, sonst die vorläufige; die
+  Verlauf die Meldenummer) → `uncertain`. (3) **Vorwahl**: `AutoPick` = genau EIN genauer Treffer, sonst die vorläufige; unter mehreren genauen gewinnt seit 1.033.1
+  genau EIN besetztes Brett, an dem beide Spieler saßen, gegen jedes leere derselben Saison (ein leeres Brett gilt schon als
+  „genau“, wenn Farbe und Termin passen — vorher gewann dann die vorläufige: Fall 269, Runde 1 Brett 5 gegen Runde 2 Brett 4); die
   Prüfseite (`club-scan-page`, `ScanHeaderForm.loadPairings`) wählt dasselbe vor, Etikett „vorläufig (Aufstellung noch nicht auf
   chess-results)" (+ „Brett geschätzt"; `pairingText`). (4) **Gespeichert** über `LeagueGameLinks.Set` — ein Brett ohne Spieler
   setzt `LeagueClubGames.LeaguePairingProvisional` (auch bei Wahl von Hand). Nach jedem Speichern (`AddAsync`, PGN-Import)

@@ -234,6 +234,13 @@ public class LeagueClubController : BaseApiController
         ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad)
             : Ok(await _club.ImportPgnAsync(club, await ActingUserAsync(club, req!.DraftId, drafts, ct), req.Pgn, req.Games, ct)));
 
+    /// <summary>Absage einer einzelnen Partie: 400 <c>{ reason, message }</c>; bei <c>duplicate</c> zusätzlich <c>duplicateId</c> =
+    /// die vorhandene Vereinspartie (1.033.1, der Dienst reicht sie als Meldung durch).</summary>
+    internal static IActionResult Refused(string? reason, string? message) =>
+        reason == "duplicate" && int.TryParse(message, out var dup)
+            ? new BadRequestObjectResult(new { reason, duplicateId = dup, message = $"Already in the club database as game {dup}." })
+            : new BadRequestObjectResult(new { reason, message = message ?? "Game not accepted." });
+
     /// <summary>Eine Partie (aus einem Partieformular). 400 mit <c>reason</c> wie beim Import, dazu <c>duplicate</c>;
     /// die Einlesung (<c>scanId</c>) wird danach geschlossen — ihr Foto verschwindet.</summary>
     [HttpPost("games")]
@@ -242,7 +249,7 @@ public class LeagueClubController : BaseApiController
     {
         if (req is null) return BadRequest(new { reason = "empty", message = "Body required." });
         var (game, reason, message) = await _club.AddGameAsync(club, GetUserId(), req, ct);
-        if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
+        if (game == null) return LeagueClubController.Refused(reason, message);
         if (req.ScanId is { } scanId) await _scans.CloseLeagueScanAsync(await MeAsync(club), scanId, game.Pgn, game.Id);
         if (req.ScanId != null && req.Plies != null) await _scans.SaveClubEditStateAsync(game.Id, req.Plies, game.Pgn, ct, req.SheetEnd);
         return Ok(new { id = game.Id, anonymized = game.Anonymized, replaced = game.Replaced });
@@ -580,7 +587,7 @@ public class LeagueShareClubController : BaseApiController
         req.ScanId = null;
         var claimKey = LeagueClubService.NewClaimKey();
         var (game, reason, message) = await _club.AddGameViaShareAsync(link.Club, link.Token, req, ct, claimKey);
-        if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
+        if (game == null) return LeagueClubController.Refused(reason, message);
         if (!string.IsNullOrWhiteSpace(scanKey))
             await _scans.CloseLeagueScanAsync(Actor.Anonymous(scanKey) with { ClubId = link.Club.Id }, null, game.Pgn, game.Id);
         if (!string.IsNullOrWhiteSpace(scanKey) && req.Plies != null) await _scans.SaveClubEditStateAsync(game.Id, req.Plies, game.Pgn, ct, req.SheetEnd);

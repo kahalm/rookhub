@@ -182,7 +182,9 @@ Stelle: `Services/League/ClubGameAutoSummary.cs`, gerufen nur aus `ClubGameWrite
    Brett, aufgelöst über `LeagueGameLinks.ResolveAsync` — eine vorläufige Zuordnung zur laufenden Runde zählt, eine tote Id
    nicht), und die Liga dieser Paarung (`LeagueTournaments.Tnr`) gehört zur jüngsten Saison ihrer Region
    (`LeagueOnlineRegions.CurrentSeasonTnrsAsync`: je Region — Tirol/Österreich, Bayern — die größte `Season`).
-2. Nicht archiviert (`ArchivedAt`) und noch **keine** Zeile in `ClubGameSummaries` (egal welcher Status).
+2. Nicht archiviert (`ArchivedAt`) und noch **keine** Zeile in `ClubGameSummaries` (egal welcher Status). Eine doppelte Partie
+   (auch „bis auf das Ende gleich“, 1.033.1 — siehe `leaguehub-vereins-datenbank.md`, Dubletten) wird gar nicht angelegt und
+   bekommt deshalb auch keine Zusammenfassung (Prod 26.11.2026: Vereinspartie 269, 3,75 $ für eine zweite Fassung von 268).
 3. **Partiedatum** höchstens `MaxAgeDays` Tage zurück: der volle Tag aus dem Upload (PGN-Kopf `Date`, Datum des Formulars),
    sonst der Rundentermin der Paarung (`LeagueRounds.Date`), sonst heute. Die gespeicherte Partie trägt nur das Jahr.
 4. **Tagesdeckel**: heute (UTC) weniger als `DailyLimit` automatische Anforderungen, über alle Vereine — gezählt an
