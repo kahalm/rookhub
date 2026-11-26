@@ -1639,7 +1639,8 @@
       "viewNotFound": "Tampilan bersama ini sudah tidak ada.",
       "viewSaveFailed": "Tampilan bersama tidak dapat disimpan.",
       "bestMove": "Tampilkan langkah terbaik",
-      "bestMoveLabel": "Langkah terbaik {{move}}"
+      "bestMoveLabel": "Langkah terbaik {{move}}",
+      "turnBoard": "Putar papan"
     }
   },
   "puzzles": {

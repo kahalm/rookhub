@@ -1639,7 +1639,8 @@
       "viewNotFound": "Chế độ xem chia sẻ này không còn nữa.",
       "viewSaveFailed": "Không thể lưu chế độ xem chia sẻ.",
       "bestMove": "Hiện nước đi tốt nhất",
-      "bestMoveLabel": "Nước tốt nhất {{move}}"
+      "bestMoveLabel": "Nước tốt nhất {{move}}",
+      "turnBoard": "Xoay bàn cờ"
     }
   },
   "puzzles": {

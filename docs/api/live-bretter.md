@@ -218,6 +218,11 @@ zeigt die Stellung davor — Regel in `Services/Games/SignalKingMove.cs` (siehe 
   in EINE Folge, gezeichnet in einem `.board-grid` (`auto-fill, minmax(min(100%, 240px), 1fr)`, Seite bis 1880 px): 1920 px → 7
   Spalten, 1280 px → 4–5, 390 px → 1. Herkunft je Karte als Zusatzzeile; Stand/Elo-Schnitt je Begegnung und Links der fremden
   Runden als kompakte Kopfleiste darüber.
+- **Brett drehen** (1.031.0, Wunsch 2026-11-26): Symbolknopf `swap_vert` im Kartenkopf (vor Analyse/✕, 40 px, `aria-pressed`)
+  kehrt die Vorgabe (gewählte Mannschaft bzw. Spieler unten, sonst Heim/Weiß) für DIESE Partie um — Spieler, Uhren, Balken-Richtung
+  und Pfeil drehen mit (alles hängt am `flipped` der Karte). Nur dieser Zuschauer, diese Sitzung (`sessionStorage
+  rookhub_live_turned`, Partie-Kennungen, höchstens 100), nicht in Adresse oder geteilter Ansicht — auch nicht beim Besitzer
+  (schlank entschieden: Ausrichtung ist Sache jedes Zuschauers).
 - **Zugnummer** (1.028.0, Wunsch „zeig auch irgendwo die aktuelle Zuganzahl an“): im Kartenkopf „Zug n“ aus `plies`
   (`liveMoveNumber`: laufend `floor(plies/2)+1` = der Zug, der gerade gespielt wird, fertig `ceil(plies/2)`, vor dem ersten Zug
   nichts), Tooltip wer am Zug ist.

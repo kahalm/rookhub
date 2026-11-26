@@ -1639,7 +1639,8 @@
       "viewNotFound": "هذا العرض المشترك لم يعد موجودًا.",
       "viewSaveFailed": "تعذّر حفظ العرض المشترك.",
       "bestMove": "إظهار أفضل نقلة",
-      "bestMoveLabel": "أفضل نقلة {{move}}"
+      "bestMoveLabel": "أفضل نقلة {{move}}",
+      "turnBoard": "اقلب الرقعة"
     }
   },
   "puzzles": {

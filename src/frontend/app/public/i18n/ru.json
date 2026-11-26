@@ -1639,7 +1639,8 @@
       "viewNotFound": "Этого общего вида больше нет.",
       "viewSaveFailed": "Не удалось сохранить общий вид.",
       "bestMove": "Показывать лучший ход",
-      "bestMoveLabel": "Лучший ход {{move}}"
+      "bestMoveLabel": "Лучший ход {{move}}",
+      "turnBoard": "Перевернуть доску"
     }
   },
   "puzzles": {

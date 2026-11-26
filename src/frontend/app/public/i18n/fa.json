@@ -1639,7 +1639,8 @@
       "viewNotFound": "این نمای مشترک دیگر وجود ندارد.",
       "viewSaveFailed": "نمای مشترک ذخیره نشد.",
       "bestMove": "نمایش بهترین حرکت",
-      "bestMoveLabel": "بهترین حرکت {{move}}"
+      "bestMoveLabel": "بهترین حرکت {{move}}",
+      "turnBoard": "چرخاندن صفحه"
     }
   },
   "puzzles": {

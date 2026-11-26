@@ -1380,7 +1380,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   „Weitere übertragene Partien“. Darüber eine kompakte, umbrechende Kopfleiste: je Begegnung eine `h2`-Zeile (1 rem)
   „Heim Ø 2315  2,5 : 3,5  Gast Ø 2290“ und je fremde Runde der Akzent-Link mit `open_in_new` (dort auch „Warte auf …“ bzw.
   der Fehler mit „Brett entfernen“). Je Brett eine umrandete Karte (Radius 8)
-  mit „Brett n“, rechts die **Zugnummer** „Zug 34“ (`tabular-nums`, laufend `floor(plies/2)+1`, fertig der letzte Zug;
+  mit „Brett n“ (behält mind. 3,5 em, der Zusatz kürzt mit „…“, voller Text als Tooltip; Kopf-Abstand 4 px), rechts die **Zugnummer** „Zug 34“ (`tabular-nums`, laufend `floor(plies/2)+1`, fertig der letzte Zug;
   Tooltip „Weiß/Schwarz am Zug“ bzw. „Letzter Zug der Partie“) und Ergebnis-Chip oben, Spielerzeile oben (Gegenseite) und unten (eigene Seite): Titel in `--rh-accent`,
   Name mit „…“, Elo leise, Uhr `tabular-nums` — die Seite am Zug fett mit Akzentrahmen (E-Ink: Rahmen schwarz). Das Brett ist
   `app-chess-board` (5.12) ohne eigene Bedienung; Engine-Balken 10 px links am Brett, Weißanteil weiß auf dunkel, ohne
@@ -1403,7 +1403,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Zeilen ≥ 44 px (☑/☐ in `--rh-accent`, Spieler „Weiß – Schwarz“, darunter leise „Brett n · Begegnung“), Abschnitt „Aus einer
   anderen Lichess-Übertragung“ mit Link-Feld + Rahmenknopf „Laden“, Fehler als Zeile in `--rh-error`; „Abbrechen“ / „Fertig“
   (gefüllt). Hinzugefügte Bretter: seit 1.028.0 im selben Raster hinter den gefilterten Brettern (vorher eigener Abschnitt), dieselbe Karte mit Zusatz „· Begegnung“ neben „Brett n“ und einem ✕ (`close`,
-  40 px, `aria-label` „Brett entfernen“) rechts im Kartenkopf. Elo-Schnitt der Begegnung: „Ø 2315“ leise (0,8 rem,
+  40 px, `aria-label` „Brett entfernen“) rechts im Kartenkopf. Seit 1.031.0 an jeder Karte davor „Brett drehen“ (`swap_vert`,
+  40 px, `aria-pressed`), Reihenfolge Drehen | Analyse | ✕; bei 240 px Karte passen alle drei ohne Abschneiden. Elo-Schnitt der Begegnung: „Ø 2315“ leise (0,8 rem,
   `tabular-nums`) hinter dem Mannschaftsnamen (seit 1.028.0 in derselben Zeile), Tooltip „Schnitt über n Bretter“.
   **Analysieren** (1.026.0): im Kartenkopf vor dem ✕ ein Symbolknopf `biotech` (40 px, `aria-label`/`title` „Auf dem
   Analysebrett öffnen (neuer Tab)“) wie „In Analyse öffnen“ der Partienliste; öffnet RookHubs Analysebrett in einem neuen Tab. Verbindungsabriss: Zustand „Live“ bleibt 10 s
@@ -1655,6 +1656,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-26 | 1.031.0 · Turnierseite | Live-Bretter: Symbolknopf „Brett drehen“ (`swap_vert`) im Kartenkopf vor Analyse/✕, nur für diesen Zuschauer; Kopf-Abstand 4 px, „Brett n“ mind. 3,5 em (8.2) | Einzelne Bretter aus eigener Sicht ansehen, ohne die Vorgabe für alle zu ändern | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.030.0 · Turnierseite | Live-Bretter: Schalter „Besten Zug zeigen“ neben „Engine-Balken“ (je Gerät), blauer Pfeil + SAN fett in der Wertzeile (8.2) | Den Engine-Zug in laufenden Partien direkt sehen | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.029.0 · Turnierseite | Live-Bretter: „Link teilen“ teilt einen kurzen, lebenden Link `/live/<token>`, Hinweiszeile für Besitzer/Zuschauer unter der Werkzeugzeile, leiser Hinweis bei unbekanntem Link (8.2) | Ein Link für alle, der Änderungen des Erstellers mitmacht | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.028.0 · Turnierseite | Live-Bretter: alle Bretter in EINEM Raster ohne Abschnitte (`minmax(min(100%, 240px), 1fr)`, Seite bis 1880 px), Herkunft als Zusatz an der Karte, Stand je Begegnung als kompakte Kopfleiste; Zugnummer „Zug n“ im Kartenkopf (8.2) | Acht Bretter auf einen Blick am PC (1920 px: 7 je Reihe, zwei Reihen ohne Scrollen), am Handy eine Spalte | Nutzerwunsch 26.11. |

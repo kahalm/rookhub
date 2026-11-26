@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.031.0", date: "2026-11-26", changes: [
+    { en: "Live boards: each board has a „Turn board“ button — it flips just that board (players, clocks, engine bar, arrow) for you; links and shared views stay as they are.",
+      de: "Live-Bretter: Jedes Brett hat einen Knopf „Brett drehen“ — er dreht nur dieses Brett (Spieler, Uhren, Engine-Balken, Pfeil) für dich; Links und geteilte Ansichten bleiben, wie sie sind." },
+  ] },
   { version: "1.030.2", date: "2026-11-26", changes: [
     { en: "Live boards: a Lichess stream that stays connected but silent (after a throttling pause) is now rebuilt after 3 minutes without any data — Lichess resends the full state, so missed moves arrive and clocks no longer run out on our side while the game goes on.",
       de: "Live-Bretter: Ein Lichess-Strom, der verbunden bleibt, aber nichts mehr liefert (nach einer Drosselpause), wird nach 3 Minuten ohne Daten neu aufgebaut — Lichess schickt dann den ganzen Stand, verpasste Züge kommen nach, und bei uns läuft keine Uhr mehr ab, während die Partie weitergeht." },

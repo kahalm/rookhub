@@ -11,8 +11,10 @@ import { LiveBoardsComponent, samePlayer } from './live-boards.component';
 import { EVENT_SOURCE_FACTORY } from './live-boards.service';
 import { FakeEventSource } from './fake-event-source';
 import { LiveGame, LiveStatus } from './live-boards.models';
-import { LIVE_BEST_KEY, LIVE_EVAL_KEY, LIVE_LOST_GRACE_MS, LIVE_VIEW_KEYS, LIVE_VIEW_SAVE_MS, readViewKey, writeViewKey } from './live-boards.util';
+import { LIVE_BEST_KEY, LIVE_EVAL_KEY, LIVE_TURNED_KEY, LIVE_LOST_GRACE_MS, LIVE_VIEW_KEYS, LIVE_VIEW_SAVE_MS, readViewKey, writeViewKey } from './live-boards.util';
 import { MatDialog } from '@angular/material/dialog';
+import { By } from '@angular/platform-browser';
+import { LiveBoardCardComponent } from './live-board-card.component';
 import { of } from 'rxjs';
 
 const STATUS: LiveStatus = {
@@ -522,6 +524,31 @@ describe('LiveBoardsComponent', () => {
     expect(FakeEventSource.all.length).toBe(streams);
     expect(c.shareUrl()).not.toContain('best');
     expect(Object.keys(c.currentView())).not.toContain('best');
+  });
+
+  // Wunsch 2026-11-26: „Brett drehen“ je Karte — nur dieser Zuschauer, nicht im Link
+  it('Brett drehen: kehrt die Vorgabe nur für diese Partie um, gemerkt in der Sitzung, nicht in Adresse/geteilter Ansicht', async () => {
+    try { sessionStorage.removeItem(LIVE_TURNED_KEY); } catch { /* egal */ }
+    await setup({ team: 'SK Schwaz', round: '1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    FakeEventSource.last().emit('snapshot', SNAPSHOT);
+    await fixture.whenStable();
+    const c = fixture.componentInstance;
+    const cards = () => [...el().querySelectorAll('app-live-board-card')] as HTMLElement[];
+    const flips = () => fixture.debugElement.queryAll(By.directive(LiveBoardCardComponent)).map(d => (d.componentInstance as LiveBoardCardComponent).flipped());
+    expect(flips()).toEqual([true, false]);                                      // Vorgabe: Schwaz unten
+    const nav = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    (cards()[0].querySelector('.lb-turn') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(flips()).toEqual([false, false]);
+    expect(cards()[0].querySelector('.lb-turn')!.getAttribute('aria-pressed')).toBe('true');
+    expect(JSON.parse(sessionStorage.getItem(LIVE_TURNED_KEY)!)).toEqual(['b1']);
+    expect(nav).not.toHaveBeenCalled();
+    expect(c.shareUrl()).toBe(`${location.origin}/tournaments/1404438/live?round=1&team=SK%20Schwaz`);
+    c.toggleTurn('b1');
+    await fixture.whenStable();
+    expect(flips()).toEqual([true, false]);
   });
 
   it('samePlayer: Reihenfolge, Komma und Akzente egal', () => {

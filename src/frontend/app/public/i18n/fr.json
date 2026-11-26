@@ -1639,7 +1639,8 @@
       "viewNotFound": "Cette vue partagée n’existe plus.",
       "viewSaveFailed": "La vue partagée n’a pas pu être enregistrée.",
       "bestMove": "Afficher le meilleur coup",
-      "bestMoveLabel": "Meilleur coup {{move}}"
+      "bestMoveLabel": "Meilleur coup {{move}}",
+      "turnBoard": "Retourner l’échiquier"
     }
   },
   "puzzles": {

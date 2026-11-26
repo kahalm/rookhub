@@ -1639,7 +1639,8 @@
       "viewNotFound": "Bu paylaşılan görünüm artık yok.",
       "viewSaveFailed": "Paylaşılan görünüm kaydedilemedi.",
       "bestMove": "En iyi hamleyi göster",
-      "bestMoveLabel": "En iyi hamle {{move}}"
+      "bestMoveLabel": "En iyi hamle {{move}}",
+      "turnBoard": "Tahtayı çevir"
     }
   },
   "puzzles": {

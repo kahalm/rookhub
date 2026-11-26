@@ -1639,7 +1639,8 @@
       "viewNotFound": "Questa vista condivisa non esiste più.",
       "viewSaveFailed": "Impossibile salvare la vista condivisa.",
       "bestMove": "Mostra la mossa migliore",
-      "bestMoveLabel": "Mossa migliore {{move}}"
+      "bestMoveLabel": "Mossa migliore {{move}}",
+      "turnBoard": "Ruota la scacchiera"
     }
   },
   "puzzles": {

@@ -1639,7 +1639,8 @@
       "viewNotFound": "Această vizualizare partajată nu mai există.",
       "viewSaveFailed": "Vizualizarea partajată nu a putut fi salvată.",
       "bestMove": "Arată cea mai bună mutare",
-      "bestMoveLabel": "Cea mai bună mutare {{move}}"
+      "bestMoveLabel": "Cea mai bună mutare {{move}}",
+      "turnBoard": "Întoarce tabla"
     }
   },
   "puzzles": {

@@ -1707,7 +1707,8 @@
       "viewNotFound": "Ovaj dijeljeni prikaz više ne postoji.",
       "viewSaveFailed": "Dijeljeni prikaz nije moguće spremiti.",
       "bestMove": "Prikaži najbolji potez",
-      "bestMoveLabel": "Najbolji potez {{move}}"
+      "bestMoveLabel": "Najbolji potez {{move}}",
+      "turnBoard": "Okreni ploču"
     }
   },
   "puzzles": {

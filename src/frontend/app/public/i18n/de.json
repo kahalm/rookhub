@@ -1707,7 +1707,8 @@
       "viewNotFound": "Diese geteilte Ansicht gibt es nicht mehr.",
       "viewSaveFailed": "Die geteilte Ansicht konnte nicht gespeichert werden.",
       "bestMove": "Besten Zug zeigen",
-      "bestMoveLabel": "Bester Zug {{move}}"
+      "bestMoveLabel": "Bester Zug {{move}}",
+      "turnBoard": "Brett drehen"
     }
   },
   "puzzles": {

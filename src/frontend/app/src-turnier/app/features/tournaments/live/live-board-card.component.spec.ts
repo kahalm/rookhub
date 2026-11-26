@@ -123,6 +123,40 @@ describe('LiveBoardCardComponent', () => {
     expect(c.bestArrows()).toEqual([]);                                           // ohne Balken keine Bewertung → kein Zug
   });
 
+  it('Brett drehen: Knopf im Kopf meldet turn; bei 240 px mit Analyse und ✕ passt der Kopf, nichts abgeschnitten', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', { tournaments: { live: { moveN: 'Zug {{move}}', boardN: 'Brett {{board}}' } } });
+    translate.use('de');
+    const fixture = TestBed.createComponent(LiveBoardCardComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.width = '240px';
+    document.body.appendChild(host);
+    fixture.componentRef.setInput('game', { ...GAME, plies: 66, whiteToMove: true });
+    fixture.componentRef.setInput('board', 6);
+    fixture.componentRef.setInput('caption', 'Pinggau-Friedberg – Schachklub Schwaz');
+    fixture.componentRef.setInput('analysisUrl', 'https://rookhub.oberschmid.homes/analysis?live=fnmEB1kH.RD8sbYw1');
+    fixture.componentRef.setInput('removable', true);
+    fixture.detectChanges();
+    let turns = 0;
+    fixture.componentInstance.turn.subscribe(() => turns++);
+    const btn = host.querySelector('.lb-turn') as HTMLButtonElement;
+    expect(btn.getAttribute('aria-label')).toBe('tournaments.live.turnBoard');
+    btn.click();
+    expect(turns).toBe(1);
+    // Die Symbolknöpfe ragen bewusst 4 px ins Polster (Glyphe bündig) — entscheidend: alles innerhalb der Karte.
+    const card = host.querySelector('.lb-card')!.getBoundingClientRect();
+    for (const sel of ['.lb-turn', '.lb-analyse', '.lb-remove', '.lb-move']) {
+      const r = host.querySelector(sel)!.getBoundingClientRect();
+      expect(r.right).toBeLessThanOrEqual(card.right - 1);
+      expect(r.width).toBeGreaterThan(0);
+    }
+    expect((host.querySelector('.lb-board') as HTMLElement).getBoundingClientRect().width).toBeGreaterThanOrEqual(45);   // „Brett 6“ bleibt lesbar (mind. 3,5 em)
+    host.remove();
+  });
+
   it('Balken genau so hoch wie das gezeichnete Brett, Mitte = Mitte des Bretts (0.0 zwischen 4. und 5. Reihe)', async () => {
     await TestBed.configureTestingModule({
       imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],

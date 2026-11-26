@@ -1639,7 +1639,8 @@
       "viewNotFound": "此共享视图已不存在。",
       "viewSaveFailed": "无法保存共享视图。",
       "bestMove": "显示最佳着法",
-      "bestMoveLabel": "最佳着法 {{move}}"
+      "bestMoveLabel": "最佳着法 {{move}}",
+      "turnBoard": "翻转棋盘"
     }
   },
   "puzzles": {

@@ -199,3 +199,18 @@ export function liveBestMove(fen: string, uci: string | null | undefined): { fro
   const mv = tryMove(from, to);
   return mv ? { from, to, san: mv.san } : null;
 }
+
+/** Von Hand gedrehte Bretter (1.031.0): Partie-Kennungen, nur diese Sitzung (`session`), höchstens {@link LIVE_TURNED_MAX}. */
+export const LIVE_TURNED_KEY = 'rookhub_live_turned';
+export const LIVE_TURNED_MAX = 100;
+
+export function readTurned(): ReadonlySet<string> {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(LIVE_TURNED_KEY) ?? '[]') as unknown;
+    return new Set(Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, LIVE_TURNED_MAX) : []);
+  } catch { return new Set(); }
+}
+
+export function writeTurned(ids: ReadonlySet<string>): void {
+  try { sessionStorage.setItem(LIVE_TURNED_KEY, JSON.stringify([...ids].slice(-LIVE_TURNED_MAX))); } catch { /* gesperrt: gilt bis zum Neuladen */ }
+}

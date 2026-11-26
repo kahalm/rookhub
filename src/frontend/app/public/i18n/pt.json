@@ -1639,7 +1639,8 @@
       "viewNotFound": "Esta vista partilhada já não existe.",
       "viewSaveFailed": "Não foi possível guardar a vista partilhada.",
       "bestMove": "Mostrar o melhor lance",
-      "bestMoveLabel": "Melhor lance {{move}}"
+      "bestMoveLabel": "Melhor lance {{move}}",
+      "turnBoard": "Virar o tabuleiro"
     }
   },
   "puzzles": {

@@ -1639,7 +1639,8 @@
       "viewNotFound": "Toto sdílené zobrazení už neexistuje.",
       "viewSaveFailed": "Sdílené zobrazení se nepodařilo uložit.",
       "bestMove": "Ukázat nejlepší tah",
-      "bestMoveLabel": "Nejlepší tah {{move}}"
+      "bestMoveLabel": "Nejlepší tah {{move}}",
+      "turnBoard": "Otočit šachovnici"
     }
   },
   "puzzles": {

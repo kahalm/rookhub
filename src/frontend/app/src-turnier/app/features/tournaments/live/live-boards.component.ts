@@ -24,8 +24,8 @@ import { LocalScorePipe } from '../tournament-table.util';
 import { LiveBoardCardComponent } from './live-board-card.component';
 import { LiveBoardSlot, LiveGame, LiveMatchSlot, LiveRoundLayout, LiveState, LiveStatus, LiveStreamEvent, LiveViewState } from './live-boards.models';
 import { LiveBoardsService } from './live-boards.service';
-import { LIVE_LOST_GRACE_MS, LIVE_VIEW_SAVE_MS, joinParam, parseAddParam, parseExtParam, points, readLiveBest, readLiveEval, readViewKey, samePlayer, scoreText, writeLiveEval,
-  writeLiveBest, writeViewKey } from './live-boards.util';
+import { LIVE_LOST_GRACE_MS, LIVE_VIEW_SAVE_MS, joinParam, parseAddParam, parseExtParam, points, readLiveBest, readTurned, readLiveEval, readViewKey, samePlayer, scoreText, writeLiveEval,
+  writeLiveBest, writeTurned, writeViewKey } from './live-boards.util';
 import { AddBoardDialogData, AddBoardDialogResult, AddBoardRow, LiveAddBoardDialogComponent } from './live-add-board-dialog.component';
 
 /** Ein Brett, wie es gezeichnet wird. `addKey` = Schlüssel in `?add=`/`?ext=` (nur hinzugefügte Bretter), `caption` = Zusatzzeile. */
@@ -207,7 +207,8 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
             <!-- EIN Raster für alle Bretter: Mannschaft/Runde, hinzugefügte, fremde, weitere — keine Abschnittsgrenzen -->
             <div class="board-grid">
               @for (b of allBoards(); track b.key) {
-                <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped" [showEval]="evalOn()" [showBest]="bestOn()"
+                <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped !== turnedIds().has(b.game.id)"
+                                     [turned]="turnedIds().has(b.game.id)" (turn)="toggleTurn(b.game.id)" [showEval]="evalOn()" [showBest]="bestOn()"
                                      [analysisUrl]="analysisUrl(b.roundId ?? null, b.game.id)"
                                      [caption]="b.caption ?? (b.captionKey ? (b.captionKey | translate) : null)"
                                      [removable]="!!b.removeKind" (remove)="removeBoard(b)"
@@ -286,6 +287,8 @@ export class LiveBoardsComponent implements OnInit {
   readonly evalOn = signal(readLiveEval());
   /** „Besten Zug zeigen“ — Gerätevorliebe, jeder Zuschauer selbst (1.030.0). */
   readonly bestOn = signal(readLiveBest());
+  /** Von Hand gedrehte Bretter (Lichess-Kennung der Partie) — nur dieser Zuschauer, diese Sitzung; nicht in Adresse/geteilter Ansicht. */
+  readonly turnedIds = signal<ReadonlySet<string>>(readTurned());
   /** `?add=` — hinzugefügte Bretter dieser Runde (Schlüssel siehe `parseAddParam`). */
   readonly added = signal<string[]>([]);
   /** `?ext=` — Bretter aus fremden Übertragungen (`roundId.gameId`). */
@@ -738,6 +741,14 @@ export class LiveBoardsComponent implements OnInit {
     if (l.team && b !== undefined) return l.matches.find(m => m.matchNumber === +a)?.boards.find(x => x.board === +b) ?? null;
     if (!l.team && b === undefined && /^\d+$/.test(a)) return l.boards.find(x => x.board === +a) ?? null;
     return null;
+  }
+
+  /** „Brett drehen“: kehrt die Vorgabe (eigene Mannschaft bzw. Spieler unten) für diese eine Partie um. */
+  toggleTurn(gameId: string): void {
+    const next = new Set(this.turnedIds());
+    if (!next.delete(gameId)) next.add(gameId);
+    this.turnedIds.set(next);
+    writeTurned(next);
   }
 
   /** „Besten Zug zeigen“: nur dieses Gerät — weder Adresse noch geteilte Ansicht, kein neuer Strom (der Zug kommt mit der Bewertung). */

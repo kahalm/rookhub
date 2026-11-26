@@ -24,7 +24,7 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
   template: `
     <article class="lb-card" [attr.aria-label]="('tournaments.live.boardN' | translate:{ board: board() }) + ': ' + game().white.name + ' – ' + game().black.name">
       <div class="lb-top">
-        <span class="lb-board">{{ 'tournaments.live.boardN' | translate:{ board: board() } }}@if (caption(); as c) { <span class="lb-caption">· {{ c }}</span> }</span>
+        <span class="lb-board" [title]="caption() ?? ''">{{ 'tournaments.live.boardN' | translate:{ board: board() } }}@if (caption(); as c) { <span class="lb-caption">· {{ c }}</span> }</span>
         @if (!game().finished && moveNo(); as n) {
           <!-- Zuganzahl (Wunsch 2026-11-26): laufend der Zug, der gerade gespielt wird, fertig der letzte -->
           <span class="lb-move" [title]="(game().finished ? 'tournaments.live.moveTipEnd' : (game().whiteToMove ? 'common.whiteToMove' : 'common.blackToMove')) | translate">{{ 'tournaments.live.moveN' | translate:{ move: n } }}</span>
@@ -33,6 +33,11 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
           <!-- Fertig: nur das Ergebnis, die Zugzahl steht im Tooltip (schmale Karte, 26.11.: „½–½“ brach in zwei Zeilen um) -->
           <span class="lb-result" [title]="moveNo() ? ('tournaments.live.moveN' | translate:{ move: moveNo() }) : null">{{ resultText() }}</span>
         }
+        <!-- Nur dieses Brett drehen (Wunsch 2026-11-26): lokal für diesen Zuschauer, die Vorgabe (eigene Mannschaft unten) bleibt sonst -->
+        <button mat-icon-button type="button" class="lb-icon lb-turn" (click)="turn.emit()" [attr.aria-pressed]="turned()"
+                [attr.aria-label]="'tournaments.live.turnBoard' | translate" [title]="'tournaments.live.turnBoard' | translate">
+          <mat-icon>swap_vert</mat-icon>
+        </button>
         @if (analysisUrl(); as url) {
           <!-- Partie samt Zügen, Kopfzeilen und Uhren auf RookHubs Analysebrett, neuer Tab (1.026.0) -->
           <a mat-icon-button class="lb-icon lb-analyse" [href]="url" target="_blank" rel="noopener"
@@ -89,9 +94,10 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
       border: 1px solid color-mix(in srgb, currentColor 14%, transparent); border-radius: 8px; padding: 8px;
       display: flex; flex-direction: column; gap: 4px; background: var(--mat-sys-surface-container-low);
     }
-    .lb-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.85rem;
+    /* Kopf eng (Karte ab 240 px, bis zu drei Symbolknöpfe à 40 px): Abstand 4 px, „Brett n“ behält mind. 3,5 em, der Zusatz kürzt mit „…“ */
+    .lb-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 0.85rem;
       color: var(--mat-sys-on-surface-variant); }
-    .lb-board { font-weight: 500; min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lb-board { font-weight: 500; min-width: 3.5em; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .lb-caption { font-weight: 400; }
     .lb-move { flex: 0 0 auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
     /* Klein im Kopf der Karte, Tippziel bleibt 40 px (die Karte ist kein Formular) */
@@ -141,6 +147,10 @@ export class LiveBoardCardComponent {
   /** „Besten Zug zeigen“ (1.030.0): Pfeil + SAN des besten Zugs der Bewertung — nur mit Engine-Balken. */
   readonly showBest = input(false);
   readonly remove = output<void>();
+  /** „Brett drehen“ gedrückt — die Seite merkt es je Partie und gibt das neue `flipped` herein. */
+  readonly turn = output<void>();
+  /** Von Hand gedreht (gegen die Vorgabe) — nur für `aria-pressed`. */
+  readonly turned = input(false);
 
   readonly topPlayer = computed<LivePlayer>(() => this.flipped() ? this.game().white : this.game().black);
   readonly bottomPlayer = computed<LivePlayer>(() => this.flipped() ? this.game().black : this.game().white);

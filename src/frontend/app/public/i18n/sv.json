@@ -1639,7 +1639,8 @@
       "viewNotFound": "Den här delade vyn finns inte längre.",
       "viewSaveFailed": "Den delade vyn kunde inte sparas.",
       "bestMove": "Visa bästa draget",
-      "bestMoveLabel": "Bästa drag {{move}}"
+      "bestMoveLabel": "Bästa drag {{move}}",
+      "turnBoard": "Vänd brädet"
     }
   },
   "puzzles": {

@@ -1639,7 +1639,8 @@
       "viewNotFound": "이 공유 보기는 더 이상 없습니다.",
       "viewSaveFailed": "공유 보기를 저장하지 못했습니다.",
       "bestMove": "최선수 보기",
-      "bestMoveLabel": "최선수 {{move}}"
+      "bestMoveLabel": "최선수 {{move}}",
+      "turnBoard": "판 뒤집기"
     }
   },
   "puzzles": {
