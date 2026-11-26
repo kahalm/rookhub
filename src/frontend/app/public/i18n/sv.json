@@ -1637,7 +1637,9 @@
       "sharedOwner": "Delad vy — alla med länken ser dina ändringar.",
       "sharedViewer": "Delad vy — du ser det som skaparen ställer in. Ändrar du något blir det din egen vy.",
       "viewNotFound": "Den här delade vyn finns inte längre.",
-      "viewSaveFailed": "Den delade vyn kunde inte sparas."
+      "viewSaveFailed": "Den delade vyn kunde inte sparas.",
+      "bestMove": "Visa bästa draget",
+      "bestMoveLabel": "Bästa drag {{move}}"
     }
   },
   "puzzles": {

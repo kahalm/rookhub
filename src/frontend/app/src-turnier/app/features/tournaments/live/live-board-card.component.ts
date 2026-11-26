@@ -2,13 +2,14 @@ import { afterNextRender, ChangeDetectionStrategy, Component, computed, DestroyR
   viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslatePipe } from '@ngx-translate/core';
-import { ChessBoardComponent } from '@rh/shared/pgn-viewer/chess-board.component';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { BoardArrow, ChessBoardComponent } from '@rh/shared/pgn-viewer/chess-board.component';
+import { localizeSan } from '@rh/shared/chess/keyboard-move.util';
 import { PreferencesService } from '@rh/core/preferences.service';
 import { formatSecondsClock } from '@rh/shared/clock-format.util';
 import { chessTitle } from '../tournament-table.util';
 import { LiveEval, LiveGame, LivePlayer } from './live-boards.models';
-import { evalText, lastMovePair, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
+import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
 
 /**
  * Ein Brett der Live-Ansicht: oben die Gegenseite, unten die eigene Seite (Name, Titel, Elo, Uhr), dazwischen das
@@ -63,7 +64,7 @@ import { evalText, lastMovePair, liveMoveNumber, shownClock, whiteShare } from '
           </div>
         }
         <div class="lb-cg" #cg>
-          <app-chess-board [fen]="game().fen" [lastMove]="lastMove()" [flipped]="flipped()"
+          <app-chess-board [fen]="game().fen" [lastMove]="lastMove()" [flipped]="flipped()" [arrows]="bestArrows()"
                            [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet" />
         </div>
       </div>
@@ -77,7 +78,7 @@ import { evalText, lastMovePair, liveMoveNumber, shownClock, whiteShare } from '
       @if (showEval() && evalLabel()) {
         <!-- Quelle dezent (1.015.0): Tooltip „Übertragung / Lichess-Cloud / RookHub-Engine“, Tiefe in der Zeile. -->
         <div class="lb-evaltext" [title]="('tournaments.live.evalSource.' + shownEval()!.source) | translate">
-          {{ evalLabel() }}@if (shownEval()!.depth; as d) { · {{ 'tournaments.live.depth' | translate:{ depth: d } }} }
+          {{ evalLabel() }}@if (shownEval()!.depth; as d) { · {{ 'tournaments.live.depth' | translate:{ depth: d } }} }@if (bestSan(); as san) { · <span class="lb-best" [title]="'tournaments.live.bestMoveLabel' | translate:{ move: san }">{{ san }}</span> }
         </div>
       }
     </article>
@@ -116,11 +117,13 @@ import { evalText, lastMovePair, liveMoveNumber, shownClock, whiteShare } from '
     .lb-evalbar.flipped { flex-direction: column; }
     .lb-evalbar.empty { background: transparent; border-style: dashed; }
     .lb-evalwhite { background: white; width: 100%; }
+    .lb-best { font-weight: 600; color: var(--mat-sys-on-surface); }
     .lb-evaltext { font-size: 0.8rem; color: var(--mat-sys-on-surface-variant); font-variant-numeric: tabular-nums; }
   `],
 })
 export class LiveBoardCardComponent {
   readonly prefs = inject(PreferencesService);
+  private readonly translate = inject(TranslateService);
   readonly game = input.required<LiveGame>();
   readonly board = input.required<number>();
   /** Schwarz unten (z. B. die gewählte Mannschaft spielt an diesem Brett Schwarz). */
@@ -135,6 +138,8 @@ export class LiveBoardCardComponent {
   readonly removable = input(false);
   /** Link aufs Analysebrett (RookHub, neuer Tab); `null` = kein Knopf (z. B. ohne Partnerseite auf localhost). */
   readonly analysisUrl = input<string | null>(null);
+  /** „Besten Zug zeigen“ (1.030.0): Pfeil + SAN des besten Zugs der Bewertung — nur mit Engine-Balken. */
+  readonly showBest = input(false);
   readonly remove = output<void>();
 
   readonly topPlayer = computed<LivePlayer>(() => this.flipped() ? this.game().white : this.game().black);
@@ -150,6 +155,18 @@ export class LiveBoardCardComponent {
   readonly evalLabel = computed(() => evalText(this.shownEval()));
   /** Zugnummer aus den Halbzügen: läuft die Partie, der Zug am Brett (`plies/2 + 1`), fertig der letzte gespielte; vor dem ersten Zug nichts. */
   readonly moveNo = computed(() => liveMoveNumber(this.game()));
+  /** Bester Zug NUR aus der Bewertung der aktuellen Stellung (`game().eval`) — der nach einem Zug gehaltene alte Wert
+   *  (`shownEval`) zeigt keinen Pfeil, der gehörte zur Stellung davor. */
+  readonly best = computed(() => this.showEval() && this.showBest() && !this.game().finished
+    ? liveBestMove(this.game().fen, this.game().eval?.best) : null);
+  readonly bestArrows = computed<BoardArrow[]>(() => {
+    const b = this.best();
+    return b ? [{ from: b.from, to: b.to, brush: 'blue' }] : [];
+  });
+  readonly bestSan = computed(() => {
+    const b = this.best();
+    return b ? localizeSan(b.san, this.translate.getCurrentLang()) : null;
+  });
   readonly resultText = computed(() => this.game().result === '1/2-1/2' ? '½–½' : this.game().result.replace('-', '–'));
 
   /** Lage des gezeichneten Bretts (cg-board) in der Brettzeile — Balkenhöhe und -versatz. */

@@ -1637,7 +1637,9 @@
       "sharedOwner": "Gedeelde weergave — iedereen met de link ziet je wijzigingen.",
       "sharedViewer": "Gedeelde weergave — je ziet wat de maker instelt. Wijzig je iets, dan wordt het je eigen weergave.",
       "viewNotFound": "Deze gedeelde weergave bestaat niet meer.",
-      "viewSaveFailed": "De gedeelde weergave kon niet worden opgeslagen."
+      "viewSaveFailed": "De gedeelde weergave kon niet worden opgeslagen.",
+      "bestMove": "Beste zet tonen",
+      "bestMoveLabel": "Beste zet {{move}}"
     }
   },
   "puzzles": {

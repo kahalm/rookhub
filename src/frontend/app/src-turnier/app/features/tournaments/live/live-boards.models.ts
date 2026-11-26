@@ -30,7 +30,11 @@ export interface LivePlayer {
 }
 
 /** Bewertung aus Weiß-Sicht: `cp` ODER `mate` (negativ = Schwarz setzt matt). */
-export interface LiveEval { cp: number | null; mate: number | null; source: 'broadcast' | 'cloud' | 'engine'; depth: number | null; }
+export interface LiveEval {
+  cp: number | null; mate: number | null; source: 'broadcast' | 'cloud' | 'engine'; depth: number | null;
+  /** Bester Zug dieser Bewertung (UCI, 1.030.0); `[%eval]` der Übertragung kennt keinen. */
+  best?: string | null;
+}
 
 export interface LiveGame {
   id: string;

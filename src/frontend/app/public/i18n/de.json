@@ -1705,7 +1705,9 @@
       "sharedOwner": "Geteilte Ansicht — Änderungen sehen alle mit dem Link.",
       "sharedViewer": "Geteilte Ansicht — du siehst, was der Ersteller einstellt. Änderst du etwas, wird daraus deine eigene Ansicht.",
       "viewNotFound": "Diese geteilte Ansicht gibt es nicht mehr.",
-      "viewSaveFailed": "Die geteilte Ansicht konnte nicht gespeichert werden."
+      "viewSaveFailed": "Die geteilte Ansicht konnte nicht gespeichert werden.",
+      "bestMove": "Besten Zug zeigen",
+      "bestMoveLabel": "Bester Zug {{move}}"
     }
   },
   "puzzles": {

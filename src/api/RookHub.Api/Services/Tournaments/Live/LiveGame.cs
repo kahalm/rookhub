@@ -10,8 +10,25 @@ namespace RookHub.Api.Services.Tournaments.Live;
 public sealed record LivePlayer(string Name, string? Title, int? Elo, string? FideId, string? Team, int? ClockSeconds);
 
 /// <summary>Bewertung aus Weiß-Sicht: Centipawns ODER Matt in n (negativ = Schwarz setzt matt). <c>Source</c>
-/// „broadcast" (<c>[%eval]</c> im Strom) oder „cloud" (Lichess Cloud-Eval).</summary>
-public sealed record LiveEval(int? Cp, int? Mate, string Source, int? Depth = null);
+/// „broadcast" (<c>[%eval]</c> im Strom), „cloud" (Lichess Cloud-Eval) oder „engine". <c>Best</c> (1.030.0) = bester Zug dieser
+/// Bewertung als UCI (erster Zug der Hauptvariante; <c>[%eval]</c> kennt keinen → <c>null</c>) — für „Besten Zug zeigen“.</summary>
+public sealed record LiveEval(int? Cp, int? Mate, string Source, int? Depth = null, string? Best = null)
+{
+    private static readonly Regex Uci = new("^[a-h][1-8][a-h][1-8][qrbn]?$", RegexOptions.Compiled);
+
+    /// <summary>Erster Zug einer Hauptvariante: <c>"moves"</c> als Text („e2e4 e7e5 …“, Cloud) oder Liste (Broker); nur gültiges UCI.</summary>
+    public static string? FirstMove(System.Text.Json.JsonElement pv)
+    {
+        if (!pv.TryGetProperty("moves", out var mv)) return null;
+        var first = mv.ValueKind switch
+        {
+            System.Text.Json.JsonValueKind.String => mv.GetString()?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(),
+            System.Text.Json.JsonValueKind.Array when mv.GetArrayLength() > 0 && mv[0].ValueKind == System.Text.Json.JsonValueKind.String => mv[0].GetString(),
+            _ => null,
+        };
+        return first is not null && Uci.IsMatch(first) ? first : null;
+    }
+}
 
 /// <summary>
 /// Stand einer Partie der Lichess-Übertragung: Stellung nach dem letzten Zug, letzter Zug als UCI, Uhren aus <c>[%clk]</c>,

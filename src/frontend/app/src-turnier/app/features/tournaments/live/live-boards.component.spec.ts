@@ -11,7 +11,7 @@ import { LiveBoardsComponent, samePlayer } from './live-boards.component';
 import { EVENT_SOURCE_FACTORY } from './live-boards.service';
 import { FakeEventSource } from './fake-event-source';
 import { LiveGame, LiveStatus } from './live-boards.models';
-import { LIVE_EVAL_KEY, LIVE_LOST_GRACE_MS, LIVE_VIEW_KEYS, LIVE_VIEW_SAVE_MS, readViewKey, writeViewKey } from './live-boards.util';
+import { LIVE_BEST_KEY, LIVE_EVAL_KEY, LIVE_LOST_GRACE_MS, LIVE_VIEW_KEYS, LIVE_VIEW_SAVE_MS, readViewKey, writeViewKey } from './live-boards.util';
 import { MatDialog } from '@angular/material/dialog';
 import { of } from 'rxjs';
 
@@ -501,6 +501,27 @@ describe('LiveBoardsComponent', () => {
     const phone = await columnsAt(390);
     expect(phone.firstRow).toBe(1);
     expect(phone.overflow).toBeFalse();
+  });
+
+  it('Besten Zug zeigen: je Gerät gemerkt, nicht in Adresse/geteilter Ansicht, kein neuer Strom, ohne Balken gesperrt', async () => {
+    try { localStorage.removeItem(LIVE_BEST_KEY); } catch { /* egal */ }
+    await setup({ round: '1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const c = fixture.componentInstance;
+    const toggle = () => el().querySelector('.live-best input, .live-best button') as HTMLButtonElement;
+    expect(toggle().disabled).toBeTrue();                                         // Balken aus → nichts zu zeigen
+    c.setEval(true);
+    await fixture.whenStable();
+    expect(toggle().disabled).toBeFalse();
+    const streams = FakeEventSource.all.length;
+    const nav = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    c.setBest(true);
+    expect(localStorage.getItem(LIVE_BEST_KEY)).toBe('1');
+    expect(nav).not.toHaveBeenCalled();
+    expect(FakeEventSource.all.length).toBe(streams);
+    expect(c.shareUrl()).not.toContain('best');
+    expect(Object.keys(c.currentView())).not.toContain('best');
   });
 
   it('samePlayer: Reihenfolge, Komma und Akzente egal', () => {

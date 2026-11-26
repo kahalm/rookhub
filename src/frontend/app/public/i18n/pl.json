@@ -1637,7 +1637,9 @@
       "sharedOwner": "Udostępniony widok — zmiany widzą wszyscy z linkiem.",
       "sharedViewer": "Udostępniony widok — widzisz to, co ustawia autor. Jeśli coś zmienisz, stanie się twoim własnym widokiem.",
       "viewNotFound": "Ten udostępniony widok już nie istnieje.",
-      "viewSaveFailed": "Nie udało się zapisać udostępnionego widoku."
+      "viewSaveFailed": "Nie udało się zapisać udostępnionego widoku.",
+      "bestMove": "Pokaż najlepszy ruch",
+      "bestMoveLabel": "Najlepszy ruch {{move}}"
     }
   },
   "puzzles": {

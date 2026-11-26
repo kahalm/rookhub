@@ -1637,7 +1637,9 @@
       "sharedOwner": "Vue partagée — tous ceux qui ont le lien voient vos changements.",
       "sharedViewer": "Vue partagée — vous voyez ce que règle son créateur. Si vous changez quelque chose, elle devient votre propre vue.",
       "viewNotFound": "Cette vue partagée n’existe plus.",
-      "viewSaveFailed": "La vue partagée n’a pas pu être enregistrée."
+      "viewSaveFailed": "La vue partagée n’a pas pu être enregistrée.",
+      "bestMove": "Afficher le meilleur coup",
+      "bestMoveLabel": "Meilleur coup {{move}}"
     }
   },
   "puzzles": {

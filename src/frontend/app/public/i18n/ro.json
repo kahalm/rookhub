@@ -1637,7 +1637,9 @@
       "sharedOwner": "Vizualizare partajată — toți cei cu linkul văd modificările.",
       "sharedViewer": "Vizualizare partajată — vezi ce setează creatorul. Dacă schimbi ceva, devine propria ta vizualizare.",
       "viewNotFound": "Această vizualizare partajată nu mai există.",
-      "viewSaveFailed": "Vizualizarea partajată nu a putut fi salvată."
+      "viewSaveFailed": "Vizualizarea partajată nu a putut fi salvată.",
+      "bestMove": "Arată cea mai bună mutare",
+      "bestMoveLabel": "Cea mai bună mutare {{move}}"
     }
   },
   "puzzles": {

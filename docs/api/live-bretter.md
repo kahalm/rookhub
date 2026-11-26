@@ -171,6 +171,13 @@ entferne oder etwas umstelle, sollen alle mit dem Link das auch sehen.“
        Partieanalyse so lange langsamer. Liefert eine Engine nichts (Provider weg), wird sie 60 s ausgelassen.
   Quelle im Eval: `source` = `broadcast` | `cloud` | `engine`, dazu `depth`; die Karte zeigt „+0.4 · Tiefe 18“ und die
   Quelle als Tooltip.
+  **Bester Zug** (1.030.0, Wunsch 2026-11-26): `best` = erster Zug der Hauptvariante als UCI (`LiveEval.FirstMove`: Cloud
+  `pvs[0].moves` als Text, Broker `pvs[0].moves[0]` als Liste; `[%eval]` hat keinen → `null`). Immer mitgeschickt (ein paar Byte,
+  kein eigener Abruf). Schalter „Besten Zug zeigen“ in der Werkzeugzeile: Gerätevorliebe `localStorage rookhub_live_best`
+  (`device`), bewusst NICHT in der Adresse und nicht in der geteilten Ansicht — jeder Zuschauer selbst; gesperrt ohne Balken (ohne
+  Bewertung kein Zug). An: blauer Pfeil auf dem Brett (`app-chess-board` `arrows`) und das SAN (Figurenbuchstaben der Sprache) fett
+  hinter „+0.4 · Tiefe 22“. Nur zur Bewertung der AKTUELLEN Stellung (`game.eval`): hält die Karte nach einem Zug den alten Wert,
+  gibt es keinen Pfeil; ist der Zug in der Stellung nicht legal (`liveBestMove`), auch nicht. Rochade als `e1h1` wird zu `e1g1`.
 
   **Einstellungen** (`LiveBoards:Engine:*`, `LiveEngineOptions`):
 

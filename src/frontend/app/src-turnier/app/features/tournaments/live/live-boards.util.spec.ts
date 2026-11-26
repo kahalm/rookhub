@@ -1,4 +1,4 @@
-import { LIVE_MAX_ADDED, LIVE_MAX_EXT, evalText, joinParam, lastMovePair, parseAddParam, parseBroadcastLink, parseExtParam, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
+import { LIVE_MAX_ADDED, LIVE_MAX_EXT, evalText, joinParam, lastMovePair, parseAddParam, parseBroadcastLink, parseExtParam, liveBestMove, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
 import { LiveGame } from './live-boards.models';
 
 describe('live-boards.util', () => {
@@ -62,5 +62,16 @@ describe('live-boards.util', () => {
     expect(liveMoveNumber({ plies: 67, finished: false })).toBe(34);
     expect(liveMoveNumber({ plies: 81, finished: true })).toBe(41);
     expect(liveMoveNumber({ plies: 82, finished: true })).toBe(41);
+  });
+  it('liveBestMove: SAN zum UCI, Rochade auch als König-auf-Turm, illegal → null', () => {
+    const start = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    expect(liveBestMove(start, 'g1f3')).toEqual({ from: 'g1', to: 'f3', san: 'Nf3' });
+    expect(liveBestMove(start, 'e7e5')).toBeNull();
+    expect(liveBestMove(start, null)).toBeNull();
+    expect(liveBestMove('kaputt', 'g1f3')).toBeNull();
+    const castle = 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1';
+    expect(liveBestMove(castle, 'e1h1')).toEqual({ from: 'e1', to: 'g1', san: 'O-O' });
+    expect(liveBestMove(castle, 'e1c1')!.san).toBe('O-O-O');
+    expect(liveBestMove('8/P6k/8/8/8/8/8/K7 w - - 0 1', 'a7a8q')!.san).toBe('a8=Q');
   });
 });

@@ -197,7 +197,7 @@ public class BroadcastLiveHubTests
 
         plain.SetEval(true);
         var withEval = await Next<LiveGameChanged>(plain);
-        Assert.Equal(new LiveEval(25, null, "cloud", 30), withEval.Game.Eval);
+        Assert.Equal(new LiveEval(25, null, "cloud", 30, "c7c5"), withEval.Game.Eval);   // bester Zug mit (1.030.0)
         Assert.Equal(1, src.CloudEvalCalls);
         await plain.DisposeAsync();
     }

@@ -82,8 +82,9 @@ public sealed class LichessCloudEval
         int? depth = r.TryGetProperty("depth", out var d) && d.ValueKind == JsonValueKind.Number ? d.GetInt32() : null;
         if (!r.TryGetProperty("pvs", out var pvs) || pvs.ValueKind != JsonValueKind.Array || pvs.GetArrayLength() == 0) return null;
         var pv = pvs[0];
-        if (pv.TryGetProperty("mate", out var m) && m.ValueKind == JsonValueKind.Number) return new LiveEval(null, m.GetInt32(), "cloud", depth);
-        if (pv.TryGetProperty("cp", out var cp) && cp.ValueKind == JsonValueKind.Number) return new LiveEval(cp.GetInt32(), null, "cloud", depth);
+        var best = LiveEval.FirstMove(pv);
+        if (pv.TryGetProperty("mate", out var m) && m.ValueKind == JsonValueKind.Number) return new LiveEval(null, m.GetInt32(), "cloud", depth, best);
+        if (pv.TryGetProperty("cp", out var cp) && cp.ValueKind == JsonValueKind.Number) return new LiveEval(cp.GetInt32(), null, "cloud", depth, best);
         return null;
     }
 }

@@ -1408,7 +1408,9 @@
       "sharedOwner": "Megosztott nézet — a változtatásokat mindenki látja, akinél a link van.",
       "sharedViewer": "Megosztott nézet — azt látod, amit a létrehozója beállít. Ha módosítasz, saját nézeted lesz belőle.",
       "viewNotFound": "Ez a megosztott nézet már nem létezik.",
-      "viewSaveFailed": "A megosztott nézetet nem sikerült menteni."
+      "viewSaveFailed": "A megosztott nézetet nem sikerült menteni.",
+      "bestMove": "Legjobb lépés mutatása",
+      "bestMoveLabel": "Legjobb lépés: {{move}}"
     }
   },
   "puzzles": {

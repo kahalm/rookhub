@@ -1705,7 +1705,9 @@
       "sharedOwner": "Shared view — everyone with the link sees your changes.",
       "sharedViewer": "Shared view — you see what its creator sets up. If you change something, it becomes your own view.",
       "viewNotFound": "This shared view no longer exists.",
-      "viewSaveFailed": "The shared view could not be saved."
+      "viewSaveFailed": "The shared view could not be saved.",
+      "bestMove": "Show best move",
+      "bestMoveLabel": "Best move {{move}}"
     }
   },
   "puzzles": {

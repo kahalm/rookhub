@@ -24,8 +24,8 @@ import { LocalScorePipe } from '../tournament-table.util';
 import { LiveBoardCardComponent } from './live-board-card.component';
 import { LiveBoardSlot, LiveGame, LiveMatchSlot, LiveRoundLayout, LiveState, LiveStatus, LiveStreamEvent, LiveViewState } from './live-boards.models';
 import { LiveBoardsService } from './live-boards.service';
-import { LIVE_LOST_GRACE_MS, LIVE_VIEW_SAVE_MS, joinParam, parseAddParam, parseExtParam, points, readLiveEval, readViewKey, samePlayer, scoreText, writeLiveEval,
-  writeViewKey } from './live-boards.util';
+import { LIVE_LOST_GRACE_MS, LIVE_VIEW_SAVE_MS, joinParam, parseAddParam, parseExtParam, points, readLiveBest, readLiveEval, readViewKey, samePlayer, scoreText, writeLiveEval,
+  writeLiveBest, writeViewKey } from './live-boards.util';
 import { AddBoardDialogData, AddBoardDialogResult, AddBoardRow, LiveAddBoardDialogComponent } from './live-add-board-dialog.component';
 
 /** Ein Brett, wie es gezeichnet wird. `addKey` = Schlüssel in `?add=`/`?ext=` (nur hinzugefügte Bretter), `caption` = Zusatzzeile. */
@@ -138,6 +138,8 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
             <mat-icon>add</mat-icon>{{ 'tournaments.live.addBoard' | translate }}
           </button>
           <mat-slide-toggle [checked]="evalOn()" (change)="setEval($event.checked)">{{ 'tournaments.live.engineBar' | translate }}</mat-slide-toggle>
+          <!-- Besten Zug zeigen (1.030.0): je Gerät, nicht in Adresse/geteilter Ansicht; braucht den Balken (die Bewertung liefert den Zug) -->
+          <mat-slide-toggle class="live-best" [checked]="bestOn()" [disabled]="!evalOn()" (change)="setBest($event.checked)">{{ 'tournaments.live.bestMove' | translate }}</mat-slide-toggle>
           <span class="live-state" [class.is-live]="state() === 'live'" role="status">
             <mat-icon aria-hidden="true">{{ stateIcon() }}</mat-icon>{{ ('tournaments.live.state.' + state()) | translate }}
           </span>
@@ -205,7 +207,7 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
             <!-- EIN Raster für alle Bretter: Mannschaft/Runde, hinzugefügte, fremde, weitere — keine Abschnittsgrenzen -->
             <div class="board-grid">
               @for (b of allBoards(); track b.key) {
-                <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped" [showEval]="evalOn()"
+                <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped" [showEval]="evalOn()" [showBest]="bestOn()"
                                      [analysisUrl]="analysisUrl(b.roundId ?? null, b.game.id)"
                                      [caption]="b.caption ?? (b.captionKey ? (b.captionKey | translate) : null)"
                                      [removable]="!!b.removeKind" (remove)="removeBoard(b)"
@@ -282,6 +284,8 @@ export class LiveBoardsComponent implements OnInit {
   readonly team = signal<string | null>(null);
   readonly player = signal<string | null>(null);
   readonly evalOn = signal(readLiveEval());
+  /** „Besten Zug zeigen“ — Gerätevorliebe, jeder Zuschauer selbst (1.030.0). */
+  readonly bestOn = signal(readLiveBest());
   /** `?add=` — hinzugefügte Bretter dieser Runde (Schlüssel siehe `parseAddParam`). */
   readonly added = signal<string[]>([]);
   /** `?ext=` — Bretter aus fremden Übertragungen (`roundId.gameId`). */
@@ -734,6 +738,12 @@ export class LiveBoardsComponent implements OnInit {
     if (l.team && b !== undefined) return l.matches.find(m => m.matchNumber === +a)?.boards.find(x => x.board === +b) ?? null;
     if (!l.team && b === undefined && /^\d+$/.test(a)) return l.boards.find(x => x.board === +a) ?? null;
     return null;
+  }
+
+  /** „Besten Zug zeigen“: nur dieses Gerät — weder Adresse noch geteilte Ansicht, kein neuer Strom (der Zug kommt mit der Bewertung). */
+  setBest(on: boolean): void {
+    this.bestOn.set(on);
+    writeLiveBest(on);
   }
 
   /** Balken an/aus: Gerätevorliebe UND Adresse (`?eval=1|0`), damit ein kopierter Link dieselbe Ansicht zeigt. */

@@ -1637,7 +1637,9 @@
       "sharedOwner": "Tampilan bersama — semua yang punya tautan melihat perubahanmu.",
       "sharedViewer": "Tampilan bersama — kamu melihat apa yang diatur pembuatnya. Jika kamu mengubah sesuatu, itu menjadi tampilanmu sendiri.",
       "viewNotFound": "Tampilan bersama ini sudah tidak ada.",
-      "viewSaveFailed": "Tampilan bersama tidak dapat disimpan."
+      "viewSaveFailed": "Tampilan bersama tidak dapat disimpan.",
+      "bestMove": "Tampilkan langkah terbaik",
+      "bestMoveLabel": "Langkah terbaik {{move}}"
     }
   },
   "puzzles": {

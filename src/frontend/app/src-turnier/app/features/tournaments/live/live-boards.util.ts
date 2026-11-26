@@ -1,3 +1,4 @@
+import { Chess } from 'chess.js';
 import { LiveEval, LiveGame } from './live-boards.models';
 
 /** Engine-Balken an/aus — Gerätevorliebe (`core/local-storage-keys.ts`, Klasse `device`). */
@@ -166,3 +167,35 @@ export function writeViewKey(token: string, key: string): boolean {
 
 /** Besitzer einer geteilten Ansicht: so lange nach der letzten Änderung, bis sie gespeichert wird (mehrere Klicks = ein PUT). */
 export const LIVE_VIEW_SAVE_MS = 400;
+
+/** „Besten Zug zeigen“ an/aus (1.030.0) — Gerätevorliebe (`device`), bewusst NICHT in der Adresse/geteilten Ansicht: jeder Zuschauer schaltet selbst. */
+export const LIVE_BEST_KEY = 'rookhub_live_best';
+
+export function readLiveBest(): boolean {
+  try { return localStorage.getItem(LIVE_BEST_KEY) === '1'; } catch { return false; }
+}
+
+export function writeLiveBest(on: boolean): void {
+  try { localStorage.setItem(LIVE_BEST_KEY, on ? '1' : '0'); } catch { /* gesperrter Speicher: gilt bis zum Neuladen */ }
+}
+
+/**
+ * Bester Zug (UCI) in der Stellung `fen` → Pfeil + SAN; `null`, wenn er dort nicht legal ist (Bewertung gehört dann zu einer
+ * anderen Stellung — lieber kein Pfeil als ein falscher). Rochade auch als „König schlägt Turm“ (`e1h1`), wie manche Engines.
+ */
+export function liveBestMove(fen: string, uci: string | null | undefined): { from: string; to: string; san: string } | null {
+  if (!uci || !/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uci)) return null;
+  let c: Chess;
+  try { c = new Chess(fen); } catch { return null; }
+  const tryMove = (from: string, to: string) => {
+    try { return c.move({ from, to, promotion: uci.length > 4 ? uci[4] : undefined }); } catch { return null; }
+  };
+  let from = uci.slice(0, 2);
+  let to = uci.slice(2, 4);
+  const piece = c.get(from as Parameters<Chess['get']>[0]);
+  if (piece?.type === 'k' && (from === 'e1' || from === 'e8') && (to[0] === 'h' || to[0] === 'a') && to[1] === from[1]) {
+    to = (to[0] === 'h' ? 'g' : 'c') + from[1];
+  }
+  const mv = tryMove(from, to);
+  return mv ? { from, to, san: mv.san } : null;
+}

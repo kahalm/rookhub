@@ -1637,7 +1637,9 @@
       "sharedOwner": "共有ビュー — リンクを持つ全員に変更が表示されます。",
       "sharedViewer": "共有ビュー — 作成者の設定が表示されます。何かを変更すると、自分のビューになります。",
       "viewNotFound": "この共有ビューはもう存在しません。",
-      "viewSaveFailed": "共有ビューを保存できませんでした。"
+      "viewSaveFailed": "共有ビューを保存できませんでした。",
+      "bestMove": "最善手を表示",
+      "bestMoveLabel": "最善手 {{move}}"
     }
   },
   "puzzles": {

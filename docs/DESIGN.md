@@ -1371,7 +1371,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - **Live-Bretter** (1.014.0, `/tournaments/:id/live`, `features/tournaments/live/`): Seite als **Bretterwand** bis 1880 px
   breit (seit 1.028.0, Ausnahme von `--page-max-width`: die Seite ist zum Zuschauen, nicht zum Lesen), Kopf mit Zurück-Pfeil, Titel und Quelle („Name · lichess.org“ mit `open_in_new`), darunter
   EINE umbrechende Werkzeugzeile: Runde (`mat-select`, laufende mit „· läuft“), Mannschaft (nur Mannschaftsturnier),
-  Schalter „Engine-Balken“, Zustand als Symbol + Text (live in `--rh-success`, sonst on-surface-variant — nie nur Farbe).
+  Schalter „Engine-Balken“, daneben „Besten Zug zeigen“ (1.030.0, je Gerät, ohne Balken gesperrt), Zustand als Symbol + Text (live in `--rh-success`, sonst on-surface-variant — nie nur Farbe).
   **Alle Bretter in EINEM Raster** (1.028.0, Wunsch 2026-11-26 „in einer Wurscht, damit ich 8 auf einmal sehe“):
   Begegnung(en) bzw. Runde, hinzugefügte, fremde und weitere übertragene Partien ohne Abschnittsgrenzen, Raster
   `auto-fill, minmax(min(100%, 240px), 1fr)`, Abstand 12 px — 1920 px: 7 Spalten (Brett ≈ 216 px, zwei Reihen ≈ 700 px),
@@ -1384,7 +1384,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Tooltip „Weiß/Schwarz am Zug“ bzw. „Letzter Zug der Partie“) und Ergebnis-Chip oben, Spielerzeile oben (Gegenseite) und unten (eigene Seite): Titel in `--rh-accent`,
   Name mit „…“, Elo leise, Uhr `tabular-nums` — die Seite am Zug fett mit Akzentrahmen (E-Ink: Rahmen schwarz). Das Brett ist
   `app-chess-board` (5.12) ohne eigene Bedienung; Engine-Balken 10 px links am Brett, Weißanteil weiß auf dunkel, ohne
-  Bewertung gestrichelter leerer Rahmen, Wert als leise Zeile darunter. Mannschaft: Stand fett (`localScore`) in der Kopfleiste, Bretter aus Sicht der gewählten Mannschaft (sonst der Heimmannschaft)
+  Bewertung gestrichelter leerer Rahmen, Wert als leise Zeile darunter; mit „Besten Zug zeigen“ ein blauer Pfeil (Chessground
+  `blue`, wie die Live-Engine im Analysebrett) und das SAN fett (600, on-surface) am Ende der Wertzeile — nur zur Bewertung der
+  aktuellen Stellung, nie zum gehaltenen alten Wert. Mannschaft: Stand fett (`localScore`) in der Kopfleiste, Bretter aus Sicht der gewählten Mannschaft (sonst der Heimmannschaft)
   unten. Ohne Übertragung kein Leerraster, sondern ein leiser Hinweis (5.11, Symbol `live_tv`) mit Feld + Knopf
   „Übertragung verknüpfen“ (Gast: „Anmelden, um …“). Die laufende Uhr tickt nicht im E-Ink-Modus (3.6). Auf der Detailseite
   ist „Live-Bretter“ ein Rahmenknopf mit `live_tv` (`.keep-label`), nur wenn verknüpft; sonst ⋮-Eintrag.
@@ -1653,6 +1655,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-26 | 1.030.0 · Turnierseite | Live-Bretter: Schalter „Besten Zug zeigen“ neben „Engine-Balken“ (je Gerät), blauer Pfeil + SAN fett in der Wertzeile (8.2) | Den Engine-Zug in laufenden Partien direkt sehen | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.029.0 · Turnierseite | Live-Bretter: „Link teilen“ teilt einen kurzen, lebenden Link `/live/<token>`, Hinweiszeile für Besitzer/Zuschauer unter der Werkzeugzeile, leiser Hinweis bei unbekanntem Link (8.2) | Ein Link für alle, der Änderungen des Erstellers mitmacht | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.028.0 · Turnierseite | Live-Bretter: alle Bretter in EINEM Raster ohne Abschnitte (`minmax(min(100%, 240px), 1fr)`, Seite bis 1880 px), Herkunft als Zusatz an der Karte, Stand je Begegnung als kompakte Kopfleiste; Zugnummer „Zug n“ im Kartenkopf (8.2) | Acht Bretter auf einen Blick am PC (1920 px: 7 je Reihe, zwei Reihen ohne Scrollen), am Handy eine Spalte | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.027.3 · Turnierseite | Live-Bretter: Engine-Balken genau so hoch wie das gezeichnete Brett (gemessen, Chessground rastet auf Vielfache von acht), 0.0 liegt zwischen 4. und 5. Reihe; nach einem Zug hält er den letzten Wert, bis die neue Stellung bewertet ist (8.2) | Balken als Maßstab am Brett lesbar, kein Ausschlag | Nutzerwunsch 26.11. |

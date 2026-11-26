@@ -1705,7 +1705,9 @@
       "sharedOwner": "Dijeljeni prikaz — promjene vide svi s poveznicom.",
       "sharedViewer": "Dijeljeni prikaz — vidiš ono što postavi autor. Ako nešto promijeniš, postaje tvoj vlastiti prikaz.",
       "viewNotFound": "Ovaj dijeljeni prikaz više ne postoji.",
-      "viewSaveFailed": "Dijeljeni prikaz nije moguće spremiti."
+      "viewSaveFailed": "Dijeljeni prikaz nije moguće spremiti.",
+      "bestMove": "Prikaži najbolji potez",
+      "bestMoveLabel": "Najbolji potez {{move}}"
     }
   },
   "puzzles": {

@@ -90,6 +90,39 @@ describe('LiveBoardCardComponent', () => {
     fixture.detectChanges();
     expect(move()).toBeNull();
   });
+  // 1.030.0 „Besten Zug zeigen“: Pfeil + SAN des besten Zugs — nur zur Bewertung der AKTUELLEN Stellung
+  it('Besten Zug zeigen: Pfeil und SAN aus der Bewertung, kein Pfeil zum gehaltenen alten Wert, kein illegaler', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LiveBoardCardComponent);
+    const withBest = { ...GAME, eval: { cp: -20, mate: null, source: 'cloud' as const, depth: 40, best: 'c7c5' } };
+    fixture.componentRef.setInput('game', withBest);
+    fixture.componentRef.setInput('board', 1);
+    fixture.componentRef.setInput('showEval', true);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    const el = fixture.nativeElement as HTMLElement;
+    expect(c.bestArrows()).toEqual([]);                                           // Schalter aus
+    fixture.componentRef.setInput('showBest', true);
+    fixture.detectChanges();
+    expect(c.bestArrows()).toEqual([{ from: 'c7', to: 'c5', brush: 'blue' }]);
+    expect(el.querySelector('.lb-best')!.textContent!.trim()).toBe('c5');
+    // Nach dem nächsten Zug: Balken hält den alten Wert, der Pfeil gehörte zur Stellung davor → weg.
+    fixture.componentRef.setInput('game', { ...GAME, fen: 'rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2', plies: 2, eval: null });
+    fixture.detectChanges();
+    expect(c.shownEval()?.cp).toBe(-20);
+    expect(c.bestArrows()).toEqual([]);
+    expect(el.querySelector('.lb-best')).toBeNull();
+    fixture.componentRef.setInput('game', { ...withBest, eval: { ...withBest.eval, best: 'e2e4' } });   // Weiß-Zug, Schwarz am Zug
+    fixture.detectChanges();
+    expect(c.bestArrows()).toEqual([]);
+    fixture.componentRef.setInput('showEval', false);
+    fixture.componentRef.setInput('game', withBest);
+    fixture.detectChanges();
+    expect(c.bestArrows()).toEqual([]);                                           // ohne Balken keine Bewertung → kein Zug
+  });
+
   it('Balken genau so hoch wie das gezeichnete Brett, Mitte = Mitte des Bretts (0.0 zwischen 4. und 5. Reihe)', async () => {
     await TestBed.configureTestingModule({
       imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],

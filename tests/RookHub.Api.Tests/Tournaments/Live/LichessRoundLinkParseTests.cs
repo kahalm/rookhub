@@ -107,5 +107,26 @@ public class LiveEngineEvalSignTests
         var mate = RookHub.Api.Services.Tournaments.Live.BrokerLiveEngineEvaluator.ParseLine(
             """{"depth":30,"pvs":[{"moves":["e2e4"],"mate":-3}]}""", whiteToMove)!;
         Assert.Equal(-3, mate.Mate);
+        Assert.Equal("e2e4", ev.Best);
+    }
+
+    // 1.030.0 „Besten Zug zeigen“: erster Zug der Hauptvariante — Broker als Liste, Cloud als Text; Unsinn → kein Zug.
+    [Theory]
+    [InlineData("""{"moves":["e7e8q","d1d8"],"cp":1}""", "e7e8q")]
+    [InlineData("""{"moves":"g1f3 d7d5 c2c4","cp":1}""", "g1f3")]
+    [InlineData("""{"moves":[],"cp":1}""", null)]
+    [InlineData("""{"moves":"O-O","cp":1}""", null)]
+    [InlineData("""{"cp":1}""", null)]
+    public void FirstMove_FromBrokerOrCloud(string pv, string? best)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(pv);
+        Assert.Equal(best, RookHub.Api.Services.Tournaments.Live.LiveEval.FirstMove(doc.RootElement));
+    }
+
+    [Fact]
+    public void CloudParse_CarriesBestMove()
+    {
+        var ev = RookHub.Api.Services.Tournaments.Live.LichessCloudEval.Parse("""{"depth":40,"pvs":[{"moves":"d2d4 g8f6","cp":20}]}""")!;
+        Assert.Equal("d2d4", ev.Best);
     }
 }
