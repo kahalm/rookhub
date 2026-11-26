@@ -250,6 +250,11 @@ export interface GameKindCounts { all: number; online: number; otb: number; }
 export class GamesService {
   constructor(private http: HttpClient) {}
 
+  /** PGN einer Live-Partie der Turnierseite (alle bisherigen Züge, Kopfzeilen, Uhren; ohne Anmeldung, 1.026.0). */
+  livePgn(roundId: string, gameId: string): Observable<string> {
+    return this.http.get(`/api/live-boards/pgn/${encodeURIComponent(roundId)}/${encodeURIComponent(gameId)}`, { responseType: 'text' });
+  }
+
   /** PGN hochladen (Datei oder eingefügt) — jede Partie des Textes wird eine eigene Partie (Quelle „pgn").
    *  `ownerSide` (Sparring gegen Maia) legt die eigene Seite der neu angelegten Partien fest; ohne bleibt das Feld
    *  weg und der Server rät wie bisher. */

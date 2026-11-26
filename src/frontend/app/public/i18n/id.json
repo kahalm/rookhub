@@ -1630,7 +1630,8 @@
       "extError": {
         "limit": "Terlalu banyak siaran lain yang sedang ditonton — coba lagi nanti.",
         "notFound": "Lichess tidak mengenal siaran ini (lagi)."
-      }
+      },
+      "openAnalysis": "Buka di papan analisis (tab baru)"
     }
   },
   "puzzles": {
@@ -3866,7 +3867,8 @@
       "bestShort": "{{best}}/{{rated}} terbaik"
     },
     "withoutEngine": "Tanpa mesin",
-    "withEngine": "Dengan mesin"
+    "withEngine": "Dengan mesin",
+    "liveLoadFailed": "Partai langsung tidak dapat dimuat."
   },
   "stats": {
     "puzzleRating": "Rating {{rating}}",

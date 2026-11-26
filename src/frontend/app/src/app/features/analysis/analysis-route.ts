@@ -32,6 +32,8 @@ export interface AnalysisRouteParams {
   clubEntry: boolean;
   /** Verein, aus dem der Aufruf kam (`?club=`) — nur Vorauswahl im Dialog, der Server prüft die Mitgliedschaft. */
   clubId: number | null;
+  /** Live-Partie der Turnierseite (`?live=roundId.gameId`, 1.026.0): das PGN kommt von `/api/live-boards/pgn/…` (ohne Anmeldung). */
+  live: { roundId: string; gameId: string } | null;
 }
 
 /** Nächste Maia-Stufe zu einer Elo (600–2600 in 200er-Schritten; Gleichstand → die höhere). */
@@ -60,6 +62,7 @@ export function readAnalysisParams(params: QueryParams, isValidFen: (fen: string
   const maia = parseInt(params.get('maia') || '', 10);
   const game = params.get('game');
   const club = parseInt(params.get('club') || '', 10);
+  const live = /^([A-Za-z0-9]{8})\.([A-Za-z0-9]{8})$/.exec(params.get('live') ?? '');
   return {
     fen: fen && isValidFen(fen) ? fen : null,
     orientation: orientation === 'white' || orientation === 'black' ? orientation : null,
@@ -75,5 +78,6 @@ export function readAnalysisParams(params: QueryParams, isValidFen: (fen: string
     maia: maia > 0 && maia < 4000 ? nearestMaiaElo(maia) : null,
     clubEntry: params.get('verein') === '1',
     clubId: club > 0 ? club : null,
+    live: live ? { roundId: live[1], gameId: live[2] } : null,
   };
 }

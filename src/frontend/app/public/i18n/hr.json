@@ -1698,7 +1698,8 @@
       "extError": {
         "limit": "Trenutačno se gleda previše drugih prijenosa — pokušaj ponovno kasnije.",
         "notFound": "Lichess ne poznaje ovaj prijenos (više)."
-      }
+      },
+      "openAnalysis": "Otvori na ploči za analizu (nova kartica)"
     }
   },
   "puzzles": {
@@ -4032,7 +4033,8 @@
       "saveFailed": "Tvoje varijante nije bilo moguće spremiti — sljedeći potez pokušava ponovno."
     },
     "withoutEngine": "Bez enginea",
-    "withEngine": "S engineom"
+    "withEngine": "S engineom",
+    "liveLoadFailed": "Partija uživo nije se mogla učitati."
   },
   "stats": {
     "puzzleRating": "Rejting {{rating}}",

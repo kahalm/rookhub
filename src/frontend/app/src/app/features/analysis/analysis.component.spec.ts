@@ -166,6 +166,27 @@ describe('AnalysisComponent query-param preload', () => {
     c.ngOnDestroy();
   });
 
+  // 1.026.0: „Analysieren“ an einem Live-Brett der Turnierseite öffnet /analysis?live=roundId.gameId — auch für Gäste.
+  it('?live=roundId.gameId: holt das PGN der Live-Partie und spielt alle Züge nach', () => {
+    const c = makeComponent({ live: 'fnmEB1kH.RD8sbYw1' });
+    const pgn = '[White "Gukesh D"]\n[Black "Carlsen, Magnus"]\n\n1. e4 { [%clk 1:59:00] } 1... e5 { [%clk 1:58:30] } 2. Nf3 *\n';
+    c.__http.get = jasmine.createSpy('get').and.returnValue(of(pgn));
+    c.ngOnInit();
+    expect(c.__http.get).toHaveBeenCalledWith('/api/live-boards/pgn/fnmEB1kH/RD8sbYw1', { responseType: 'text' });
+    expect(c.line.map((n: any) => n.san)).toEqual(['e4', 'e5', 'Nf3']);
+    expect(c.pgnInput).toBe(pgn);
+    c.ngOnDestroy();
+  });
+
+  it('?live= nicht ladbar: Hinweis, leeres Brett', () => {
+    const c = makeComponent({ live: 'fnmEB1kH.RD8sbYw1' });
+    c.__http.get = jasmine.createSpy('get').and.returnValue(throwError(() => new Error('404')));
+    c.ngOnInit();
+    expect(c.__snackbar.warn).toHaveBeenCalled();
+    expect(c.line.length).toBe(0);
+    c.ngOnDestroy();
+  });
+
   // W3 F4-002: eine Stellungspartie (FEN-Kopf) aus „Partien" — früher wurde ab der Grundstellung nachgespielt, das warf
   // mitten in ngOnInit, und das Brett blieb ohne legale Züge. Seit dem Zugbaum (0.604.0) liest parsePgnTree den Kopf.
   it('?pgn= mit FEN-Kopf: die Züge laufen ab der FEN, das Brett ist spielbar', () => {

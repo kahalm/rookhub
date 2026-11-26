@@ -47,7 +47,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
     private readonly ILogger<BroadcastLiveHub> _logger;
     private readonly HubOptions _options;
     private readonly Dictionary<string, Feed> _feeds = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, (List<LiveGame> Games, DateTime Until)> _finished = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (List<LiveGame> Games, Dictionary<string, string> Pgn, DateTime Until)> _finished = new(StringComparer.Ordinal);
     private readonly Lock _lock = new();
     private readonly CancellationTokenSource _shutdown = new();
 
@@ -84,6 +84,21 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Das zuletzt übertragene PGN einer Partie (Kopfzeilen, alle Züge, <c>[%clk]</c>) — für „Analysieren“ (1.026.0). Nur aus dem
+    /// Speicher (offener Feed oder gemerkte fertige Runde), öffnet nie einen Strom; <c>null</c> = nicht da.
+    /// </summary>
+    public string? PeekPgn(string roundId, string gameId)
+    {
+        Feed? feed;
+        lock (_lock)
+        {
+            if (_finished.TryGetValue(roundId, out var kept) && kept.Until > DateTime.UtcNow && kept.Pgn.TryGetValue(gameId, out var p)) return p;
+            if (!_feeds.TryGetValue(roundId, out feed) || feed.IsClosed) return null;
+        }
+        return feed.PgnOf(gameId);
+    }
+
     /// <summary>Zuschauen. <paramref name="finished"/> = Lichess meldet die Runde fertig (dann kein Strom).
     /// Abmelden über <see cref="RoundSubscription.DisposeAsync"/>.</summary>
     /// <remarks>Finden/Anlegen des Feeds UND das Anmelden daran laufen unter dem Hub-Lock — Schließen (<see cref="TryCloseIdle"/>)
@@ -99,7 +114,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
             if (!_feeds.TryGetValue(roundId, out var feed) || feed.IsClosed)
             {
                 feed = new Feed(this, roundId, finished);
-                if (_finished.TryGetValue(roundId, out var kept) && kept.Until > DateTime.UtcNow) feed.Preload(kept.Games);
+                if (_finished.TryGetValue(roundId, out var kept) && kept.Until > DateTime.UtcNow) feed.Preload(kept.Games, kept.Pgn);
                 _feeds[roundId] = feed;
             }
             sub = feed.Add(wantsEval, only);
@@ -120,7 +135,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         {
             if (!feed.CloseIfIdle(idle)) return;
             if (_feeds.TryGetValue(feed.RoundId, out var f) && ReferenceEquals(f, feed)) _feeds.Remove(feed.RoundId);
-            if (feed.IsFinished) _finished[feed.RoundId] = (feed.Games(), DateTime.UtcNow + _options.FinishedKeep);
+            if (feed.IsFinished) _finished[feed.RoundId] = (feed.Games(), feed.Pgns(), DateTime.UtcNow + _options.FinishedKeep);
             foreach (var k in _finished.Where(x => x.Value.Until <= DateTime.UtcNow).Select(x => x.Key).ToList()) _finished.Remove(k);
         }
     }
@@ -196,6 +211,8 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         private readonly BroadcastLiveHub _hub;
         private readonly Lock _lock = new();
         private readonly Dictionary<string, LiveGame> _games = new(StringComparer.Ordinal);
+        /// <summary>Rohes PGN je Partie (zuletzt übertragen) — „Analysieren“ hebt es samt Zügen und Uhren aufs Analysebrett.</summary>
+        private readonly Dictionary<string, string> _pgn = new(StringComparer.Ordinal);
         private readonly List<RoundSubscription> _subs = [];
         private readonly Channel<string> _evalQueue = Channel.CreateUnbounded<string>(new UnboundedChannelOptions { SingleReader = true });
         private readonly HashSet<string> _evalQueued = new(StringComparer.Ordinal);
@@ -227,11 +244,22 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
             lock (_lock) return _games.Values.ToList();
         }
 
-        public void Preload(List<LiveGame> games)
+        public string? PgnOf(string gameId)
+        {
+            lock (_lock) return _pgn.GetValueOrDefault(gameId);
+        }
+
+        public Dictionary<string, string> Pgns()
+        {
+            lock (_lock) return new Dictionary<string, string>(_pgn, StringComparer.Ordinal);
+        }
+
+        public void Preload(List<LiveGame> games, Dictionary<string, string> pgn)
         {
             lock (_lock)
             {
                 foreach (var g in games) _games[g.Id] = g;
+                foreach (var (id, text) in pgn) _pgn[id] = text;
                 _loaded = true;
                 _state = "finished";
             }
@@ -329,6 +357,7 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
             if (g is null) return null;
             lock (_lock)
             {
+                _pgn[g.Id] = pgn;
                 if (_games.TryGetValue(g.Id, out var old))
                 {
                     if (old.Hash == g.Hash) return null;

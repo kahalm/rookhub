@@ -1630,7 +1630,8 @@
       "extError": {
         "limit": "अभी बहुत से दूसरे प्रसारण देखे जा रहे हैं — बाद में फिर कोशिश करें।",
         "notFound": "Lichess इस प्रसारण को (अब) नहीं जानता।"
-      }
+      },
+      "openAnalysis": "विश्लेषण बोर्ड पर खोलें (नया टैब)"
     }
   },
   "puzzles": {
@@ -3866,7 +3867,8 @@
       "bestShort": "{{best}}/{{rated}} सर्वश्रेष्ठ"
     },
     "withoutEngine": "बिना इंजन",
-    "withEngine": "इंजन के साथ"
+    "withEngine": "इंजन के साथ",
+    "liveLoadFailed": "लाइव खेल लोड नहीं हो सका।"
   },
   "stats": {
     "puzzleRating": "रेटिंग {{rating}}",

@@ -1698,7 +1698,8 @@
       "extError": {
         "limit": "Gerade werden zu viele andere Übertragungen angesehen — bitte später noch einmal versuchen.",
         "notFound": "Diese Übertragung kennt Lichess nicht (mehr)."
-      }
+      },
+      "openAnalysis": "Auf dem Analysebrett öffnen (neuer Tab)"
     }
   },
   "puzzles": {
@@ -4032,7 +4033,8 @@
       "saveFailed": "Deine Linien konnten nicht gespeichert werden — der nächste Zug versucht es erneut."
     },
     "withoutEngine": "Ohne Engine",
-    "withEngine": "Mit Engine"
+    "withEngine": "Mit Engine",
+    "liveLoadFailed": "Die Live-Partie konnte nicht geladen werden."
   },
   "stats": {
     "puzzleRating": "Wertung {{rating}}",

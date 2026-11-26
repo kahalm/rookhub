@@ -1630,7 +1630,8 @@
       "extError": {
         "limit": "Acum sunt urmărite prea multe alte transmisii — încearcă mai târziu.",
         "notFound": "Lichess nu (mai) cunoaște această transmisie."
-      }
+      },
+      "openAnalysis": "Deschide pe tabla de analiză (filă nouă)"
     }
   },
   "puzzles": {
@@ -3866,7 +3867,8 @@
       "bestShort": "{{best}}/{{rated}} cele mai bune"
     },
     "withoutEngine": "Fără motor",
-    "withEngine": "Cu motor"
+    "withEngine": "Cu motor",
+    "liveLoadFailed": "Partida live nu a putut fi încărcată."
   },
   "stats": {
     "puzzleRating": "Rating {{rating}}",

@@ -1698,7 +1698,8 @@
       "extError": {
         "limit": "Too many other broadcasts are being watched right now — please try again later.",
         "notFound": "Lichess does not know this broadcast (any more)."
-      }
+      },
+      "openAnalysis": "Open on the analysis board (new tab)"
     }
   },
   "puzzles": {
@@ -4032,7 +4033,8 @@
       "saveFailed": "Your lines could not be saved — the next move tries again."
     },
     "withoutEngine": "Without engine",
-    "withEngine": "With engine"
+    "withEngine": "With engine",
+    "liveLoadFailed": "The live game could not be loaded."
   },
   "stats": {
     "puzzleRating": "Rated {{rating}}",

@@ -239,6 +239,45 @@ public class ExternalBoardsTests : IDisposable
         Assert.Contains("live_ext_game_not_found", System.Text.Json.JsonSerializer.Serialize(nf.Value));
     }
 
+    // ── PGN für „Analysieren“ (1.026.0) ─────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GamePgn_FromOpenFeed_WithAllMovesAndClocks_NoExtraLichessCall()
+    {
+        await using var hub = new BroadcastLiveHub(_src, null, NullLogger<BroadcastLiveHub>.Instance);
+        await using var viewer = hub.Subscribe(OwnRound, false, false);
+        for (var i = 0; i < 250 && hub.Peek(OwnRound) is not { Count: > 0 }; i++) await Task.Delay(20);
+        await _src.StreamOf(OwnRound).Writer.WriteAsync(LivePgn.Game("Game0001", "Aditya Mittal", "Hagner, Bennet",
+            "1. d4 { [%clk 1:30:59] } 1... Nf6 { [%clk 1:30:40] } 2. c4 { [%clk 1:30:20] }", whiteTeam: "Pinggau-Friedberg", blackTeam: "SK Schwaz"));
+        for (var i = 0; i < 250 && hub.PeekPgn(OwnRound, "Game0001")?.Contains("2. c4") != true; i++) await Task.Delay(20);
+        var calls = _src.RoundPgnCalls;
+
+        var res = Assert.IsType<ContentResult>(await Controller().GamePgn(OwnRound, "Game0001", Registry(), hub));
+        Assert.StartsWith("application/x-chess-pgn", res.ContentType);
+        Assert.Contains("[White \"Aditya Mittal\"]", res.Content);
+        Assert.Contains("1... Nf6 { [%clk 1:30:40] } 2. c4", res.Content);
+        Assert.Equal(calls, _src.RoundPgnCalls);
+        Assert.Equal(0, _src.TourOfRoundCalls);                                   // aus dem Speicher, ohne Lichess
+        Assert.NotNull(typeof(LiveBoardsController).GetMethod(nameof(LiveBoardsController.GamePgn))!
+            .GetCustomAttributes(typeof(AllowAnonymousAttribute), false).SingleOrDefault());
+    }
+
+    [Fact]
+    public async Task GamePgn_NoFeed_KnownRoundFromCachedRoundPgn_UnknownRoundOrGame404()
+    {
+        await using var hub = new BroadcastLiveHub(_src, null, NullLogger<BroadcastLiveHub>.Instance);
+        var reg = Registry();
+        var ok = Assert.IsType<ContentResult>(await Controller().GamePgn(WmRound, WmGame, reg, hub));
+        Assert.Contains("Carlsen, Magnus", ok.Content);
+        Assert.DoesNotContain("Other001", ok.Content);
+        Assert.IsType<ContentResult>(await Controller().GamePgn(WmRound, "Other001", reg, hub));
+        Assert.Equal(1, _src.RoundPgnCalls);                                       // Runden-PGN gecacht
+        Assert.IsType<NotFoundObjectResult>(await Controller().GamePgn(WmRound, "Missing1", reg, hub));
+        Assert.IsType<NotFoundObjectResult>(await Controller().GamePgn("Unknown1", WmGame, reg, hub));
+        Assert.IsType<BadRequestObjectResult>(await Controller().GamePgn("../x", WmGame, reg, hub));
+        Assert.Equal(0, hub.OpenFeeds);
+    }
+
     private sealed class RecordingStream : MemoryStream
     {
         private readonly StringBuilder _sb = new();

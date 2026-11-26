@@ -26,9 +26,16 @@ import { evalText, lastMovePair, shownClock, whiteShare } from './live-boards.ut
         @if (game().finished) {
           <span class="lb-result">{{ resultText() }}</span>
         }
+        @if (analysisUrl(); as url) {
+          <!-- Partie samt Zügen, Kopfzeilen und Uhren auf RookHubs Analysebrett, neuer Tab (1.026.0) -->
+          <a mat-icon-button class="lb-icon lb-analyse" [href]="url" target="_blank" rel="noopener"
+             [attr.aria-label]="'tournaments.live.openAnalysis' | translate" [title]="'tournaments.live.openAnalysis' | translate">
+            <mat-icon>biotech</mat-icon>
+          </a>
+        }
         @if (removable()) {
           <!-- Hinzugefügtes Brett wieder herausnehmen (1.025.0) -->
-          <button mat-icon-button type="button" class="lb-remove" (click)="remove.emit()"
+          <button mat-icon-button type="button" class="lb-icon lb-remove" (click)="remove.emit()"
                   [attr.aria-label]="'tournaments.live.removeBoard' | translate" [title]="'tournaments.live.removeBoard' | translate">
             <mat-icon>close</mat-icon>
           </button>
@@ -79,8 +86,8 @@ import { evalText, lastMovePair, shownClock, whiteShare } from './live-boards.ut
     .lb-board { font-weight: 500; min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .lb-caption { font-weight: 400; }
     /* Klein im Kopf der Karte, Tippziel bleibt 40 px (die Karte ist kein Formular) */
-    .lb-remove { flex: 0 0 auto; width: 40px; height: 40px; padding: 8px; margin: -8px -4px -8px 0; }
-    .lb-remove mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .lb-icon { flex: 0 0 auto; width: 40px; height: 40px; padding: 8px; margin: -8px -4px -8px 0; }
+    .lb-icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .lb-result { font-weight: 700; color: var(--mat-sys-on-surface); padding: 0 8px; border-radius: 999px;
       border: 1px solid var(--mat-sys-outline); font-variant-numeric: tabular-nums; }
     .lb-player { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
@@ -114,6 +121,8 @@ export class LiveBoardCardComponent {
   readonly caption = input<string | null>(null);
   /** Zeigt ein ✕ zum Herausnehmen (hinzugefügte Bretter). */
   readonly removable = input(false);
+  /** Link aufs Analysebrett (RookHub, neuer Tab); `null` = kein Knopf (z. B. ohne Partnerseite auf localhost). */
+  readonly analysisUrl = input<string | null>(null);
   readonly remove = output<void>();
 
   readonly topPlayer = computed<LivePlayer>(() => this.flipped() ? this.game().white : this.game().black);

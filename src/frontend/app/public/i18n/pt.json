@@ -1630,7 +1630,8 @@
       "extError": {
         "limit": "Neste momento estão a ser vistas demasiadas transmissões — tenta mais tarde.",
         "notFound": "O Lichess não conhece (já) esta transmissão."
-      }
+      },
+      "openAnalysis": "Abrir no tabuleiro de análise (novo separador)"
     }
   },
   "puzzles": {
@@ -3866,7 +3867,8 @@
       "bestShort": "{{best}}/{{rated}} melhores"
     },
     "withoutEngine": "Sem motor",
-    "withEngine": "Com motor"
+    "withEngine": "Com motor",
+    "liveLoadFailed": "Não foi possível carregar a partida em direto."
   },
   "stats": {
     "puzzleRating": "Rating {{rating}}",

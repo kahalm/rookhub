@@ -1401,7 +1401,8 @@
       "extError": {
         "limit": "Jelenleg túl sok más közvetítést néznek — próbáld újra később.",
         "notFound": "A Lichess nem ismeri (már) ezt a közvetítést."
-      }
+      },
+      "openAnalysis": "Megnyitás az elemzőtáblán (új lap)"
     }
   },
   "puzzles": {
@@ -3051,7 +3052,8 @@
       "saveFailed": "A változataidat nem sikerült menteni — a következő lépés újra megpróbálja."
     },
     "withoutEngine": "Motor nélkül",
-    "withEngine": "Motorral"
+    "withEngine": "Motorral",
+    "liveLoadFailed": "Az élő játszmát nem sikerült betölteni."
   },
   "stats": {
     "puzzleRating": "Értékelés {{rating}}",

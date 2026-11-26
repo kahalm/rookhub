@@ -1630,7 +1630,8 @@
       "extError": {
         "limit": "تتم مشاهدة عدد كبير جدًا من البثوث الأخرى الآن — حاول لاحقًا.",
         "notFound": "لا يعرف Lichess هذا البث (بعد الآن)."
-      }
+      },
+      "openAnalysis": "افتح على رقعة التحليل (علامة تبويب جديدة)"
     }
   },
   "puzzles": {
@@ -3866,7 +3867,8 @@
       "bestShort": "{{best}}/{{rated}} الأفضل"
     },
     "withoutEngine": "بلا محرك",
-    "withEngine": "مع المحرك"
+    "withEngine": "مع المحرك",
+    "liveLoadFailed": "تعذّر تحميل المباراة المباشرة."
   },
   "stats": {
     "puzzleRating": "التصنيف {{rating}}",

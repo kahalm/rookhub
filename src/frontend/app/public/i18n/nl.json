@@ -1630,7 +1630,8 @@
       "extError": {
         "limit": "Er worden nu te veel andere uitzendingen bekeken — probeer het later opnieuw.",
         "notFound": "Lichess kent deze uitzending (niet meer)."
-      }
+      },
+      "openAnalysis": "Openen op het analysebord (nieuw tabblad)"
     }
   },
   "puzzles": {
@@ -3866,7 +3867,8 @@
       "bestShort": "{{best}}/{{rated}} beste"
     },
     "withoutEngine": "Zonder engine",
-    "withEngine": "Met engine"
+    "withEngine": "Met engine",
+    "liveLoadFailed": "De livepartij kon niet worden geladen."
   },
   "stats": {
     "puzzleRating": "Rating {{rating}}",

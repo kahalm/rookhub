@@ -1630,7 +1630,8 @@
       "extError": {
         "limit": "Právě se sleduje příliš mnoho jiných přenosů — zkuste to později.",
         "notFound": "Lichess tento přenos nezná (už)."
-      }
+      },
+      "openAnalysis": "Otevřít na analytické šachovnici (nová karta)"
     }
   },
   "puzzles": {
@@ -3866,7 +3867,8 @@
       "bestShort": "{{best}}/{{rated}} nejlepší"
     },
     "withoutEngine": "Bez enginu",
-    "withEngine": "S enginem"
+    "withEngine": "S enginem",
+    "liveLoadFailed": "Živou partii se nepodařilo načíst."
   },
   "stats": {
     "puzzleRating": "Rating {{rating}}",

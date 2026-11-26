@@ -141,8 +141,14 @@ public sealed partial class ExternalRoundRegistry
     private async Task<IReadOnlyList<LiveGame>> GamesAsync(string roundId, BroadcastLiveHub hub, CancellationToken ct)
     {
         if (hub.Peek(roundId) is { } open) return open;
+        return (await RoundPgnsAsync(roundId, ct)).Select(x => x.Game).ToList();
+    }
+
+    /// <summary>Partien des Runden-PGN samt Rohtext — einmal abgerufen, 60 s gecacht (Auswahl und „Analysieren“ teilen den Abruf).</summary>
+    private async Task<IReadOnlyList<(LiveGame Game, string Pgn)>> RoundPgnsAsync(string roundId, CancellationToken ct)
+    {
         var key = "live-ext-games:" + roundId;
-        if (_cache.TryGetValue(key, out IReadOnlyList<LiveGame>? cached) && cached is not null) return cached;
+        if (_cache.TryGetValue(key, out IReadOnlyList<(LiveGame, string)>? cached) && cached is not null) return cached;
         string? pgn;
         try { pgn = await _source.GetRoundPgnAsync(roundId, ct); }
         catch (Exception e) when (e is LichessRateLimitedException or HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
@@ -150,9 +156,23 @@ public sealed partial class ExternalRoundRegistry
             return [];
         }
         var splitter = new BroadcastPgnSplitter();
-        var games = splitter.Feed(pgn ?? "").Concat(splitter.Flush()).Select(LiveGameParser.Parse).OfType<LiveGame>().ToList();
-        _cache.Set(key, (IReadOnlyList<LiveGame>)games, GamesTtl);
+        var games = splitter.Feed(pgn ?? "").Concat(splitter.Flush())
+            .Select(text => (Game: LiveGameParser.Parse(text), Pgn: text)).Where(x => x.Game is not null)
+            .Select(x => (x.Game!, x.Pgn)).ToList();
+        _cache.Set(key, (IReadOnlyList<(LiveGame, string)>)games, GamesTtl);
         return games;
+    }
+
+    /// <summary>
+    /// PGN EINER Partie für „Analysieren“ (1.026.0): aus dem Hub (offener Strom), sonst — nur für Runden, die Lichess kennt — aus
+    /// dem gecachten Runden-PGN. <c>null</c> = unbekannte Runde oder Partie.
+    /// </summary>
+    public async Task<string?> GamePgnAsync(string roundId, string gameId, BroadcastLiveHub hub, CancellationToken ct)
+    {
+        if (!LichessBroadcasts.IsId(roundId) || !LichessBroadcasts.IsId(gameId)) return null;
+        if (hub.PeekPgn(roundId, gameId) is { } live) return live;
+        if (await ResolveAsync(roundId, ct) is null) return null;
+        return (await RoundPgnsAsync(roundId, ct)).FirstOrDefault(x => x.Game.Id == gameId).Pgn;
     }
 
     /// <summary>Platz für eine fremde Runde belegen (Freigabe per Dispose). Eine schon beobachtete Runde kostet keinen neuen

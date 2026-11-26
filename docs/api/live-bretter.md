@@ -12,6 +12,7 @@ eine Mannschaft zeigt deren sechs Bretter auf einer Seite.
 | GET | `/api/live-boards/{id}/rounds/{round}/stream?eval=1` | **AllowAnonymous** (`directory-read`) + höchstens 6 gleichzeitige Ströme je IP (`SseConnectionLimiter`, `LiveBoards:MaxStreamsPerIp`, gesamt `LiveBoards:MaxStreams` 2000) | Server-Sent Events der Runde. 404 `live_not_linked` ohne Verknüpfung, 429 `live_too_many_streams` |
 | PUT | `/api/live-boards/{id}/link` `{ url }` | Konto (`user-crawl`) | Von Hand verknüpfen: Turnier-, Runden- oder Partie-Link von `lichess.org/broadcast/…`. 400 `live_invalid_url`, 404 `live_broadcast_not_found` / `live_tournament_not_found` |
 | DELETE | `/api/live-boards/{id}/link` | `tournaments.manage` | Verknüpfung lösen (falsch zugeordnet); danach sucht das nächste Lesen wieder |
+| GET | `/api/live-boards/pgn/{roundId}/{gameId}` | **AllowAnonymous** (`directory-read`) | PGN einer Live-Partie (Kopfzeilen, alle bisherigen Züge, `[%clk]`; `application/x-chess-pgn`) für „Analysieren“ (1.026.0). Aus dem Hub (offener Strom bzw. 30 min gemerkte fertige Runde), sonst nur für Runden, die Lichess kennt, aus dem 60 s gecachten Runden-PGN. 404 `live_game_not_found` |
 | GET | `/api/live-boards/external?url=` | **AllowAnonymous** (`directory-read`) | „Brett hinzufügen“ aus einer FREMDEN Übertragung (1.025.0): Partie-, Runden- oder Turnier-Link → `{ roundId, roundName, tourName, url, ongoing, finished, gameId, games[] }`. 400 `live_invalid_url`, 404 `live_broadcast_not_found` / `live_ext_game_not_found`, 503 `live_lichess_busy` |
 
 `{id}` ist die chess-results-Nummer wie in `/tournaments/:id`. Gestreamt wird eine
@@ -67,6 +68,11 @@ ansehen und daneben die WM-Partie live“.
   Partie-Link wählt seine Partie gleich aus. Zeilen schalten um (☑), „Fertig“ schreibt `add`/`ext`. Hinzugefügte Bretter stehen unter
   den Mannschafts-/Spielerbrettern im Abschnitt „Hinzugefügte Bretter“ (Karte mit Begegnung als Zusatzzeile und ✕), fremde je Runde
   unter der Überschrift „Turnier · Runde“ (Link zu Lichess); fehlt eine Partie noch: „Warte auf n Partie(n) …“.
+- **Analysieren** (1.026.0, Wunsch 2026-11-26): an jeder Karte (eigene, hinzugefügte, fremde) ein Symbolknopf `biotech` → neuer Tab
+  `https://rookhub…/analysis?live=roundId.gameId` (Partnerseite aus `partnerSiteUrl`, Prod ↔ Prod, Dev ↔ Dev; ohne Partner kein
+  Knopf). Das Analysebrett holt das PGN über `GamesService.livePgn` und lädt es wie `?pgn=` (alle Züge nachspielbar, Kopfzeilen,
+  Uhren) — auch ohne Anmeldung (Menüeintrag `analysis` = `All`). Kein PGN in der Adresse: mit Uhren wären es schnell > 8 KB.
+  Der Hub hält dafür je Partie das zuletzt übertragene Roh-PGN (`Feed._pgn`, `BroadcastLiveHub.PeekPgn`).
 - **Elo-Schnitt** (1.025.0): `LiveMatchSlot.homeElo/awayElo` + `…EloBoards` — Elo der Spieler an den Brettern der Begegnung, aus dem
   Strom, sonst aus der Startliste; ohne Elo zählt nicht. Im Kopf der Begegnung „Ø 2315“ unter dem Namen, Tooltip „Schnitt über n Bretter“.
 

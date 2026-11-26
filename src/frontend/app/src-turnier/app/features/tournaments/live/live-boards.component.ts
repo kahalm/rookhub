@@ -15,6 +15,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { EinkService } from '@rh/core/eink.service';
 import { apiErrorText } from '@rh/core/api-error';
 import { SnackbarService } from '@rh/core/snackbar.service';
+import { partnerSiteUrl } from '@rh/core/partner-site';
 import { IconLabelDirective } from '@rh/shared/icon-label/icon-label.directive';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { LoadErrorComponent } from '@rh/shared/load-error/load-error.component';
@@ -155,7 +156,7 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
               @if (m.boards.length > 0) {
                 <div class="board-grid">
                   @for (b of m.boards; track b.key) {
-                    <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped" [showEval]="evalOn()"
+                    <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped" [analysisUrl]="analysisUrl(ownRoundId(), b.game.id)" [showEval]="evalOn()"
                                          [receivedAt]="received()[b.game.id] ?? 0" [now]="now()" />
                   }
                 </div>
@@ -170,7 +171,7 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
           @if (singleBoards().length > 0) {
             <div class="board-grid">
               @for (b of singleBoards(); track b.key) {
-                <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped" [showEval]="evalOn()"
+                <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped" [analysisUrl]="analysisUrl(ownRoundId(), b.game.id)" [showEval]="evalOn()"
                                      [receivedAt]="received()[b.game.id] ?? 0" [now]="now()" />
               }
             </div>
@@ -186,7 +187,7 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
             <h2 class="match-head"><span class="mh-team">{{ 'tournaments.live.added' | translate }}</span></h2>
             <div class="board-grid">
               @for (b of addedBoards(); track b.key) {
-                <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped" [showEval]="evalOn()" [caption]="b.caption ?? null"
+                <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped" [analysisUrl]="analysisUrl(ownRoundId(), b.game.id)" [showEval]="evalOn()" [caption]="b.caption ?? null"
                                      [removable]="true" (remove)="removeAdded(b.addKey!)"
                                      [receivedAt]="received()[b.game.id] ?? 0" [now]="now()" />
               }
@@ -211,6 +212,7 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
               <div class="board-grid">
                 @for (b of x.boards; track b.key) {
                   <app-live-board-card [game]="b.game" [board]="b.board" [showEval]="evalOn()" [removable]="true" (remove)="removeExt(b.addKey!)"
+                                       [analysisUrl]="analysisUrl(x.roundId, b.game.id)"
                                        [receivedAt]="received()[b.game.id] ?? 0" [now]="now()" />
                 }
               </div>
@@ -225,7 +227,7 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
             <h2 class="match-head"><span class="mh-team">{{ 'tournaments.live.otherGames' | translate }}</span></h2>
             <div class="board-grid">
               @for (b of others(); track b.key) {
-                <app-live-board-card [game]="b.game" [board]="b.board" [showEval]="evalOn()"
+                <app-live-board-card [game]="b.game" [board]="b.board" [showEval]="evalOn()" [analysisUrl]="analysisUrl(ownRoundId(), b.game.id)"
                                      [receivedAt]="received()[b.game.id] ?? 0" [now]="now()" />
               }
             </div>
@@ -364,6 +366,17 @@ export class LiveBoardsComponent implements OnInit {
     const games = this.games();
     return (l?.unassigned ?? []).filter(id => games[id]).map((id, i) => ({ key: 'u-' + id, board: i + 1, game: games[id], flipped: false }));
   });
+
+  /** Lichess-Runde der gewählten chess-results-Runde (für „Analysieren“). */
+  readonly ownRoundId = computed(() => this.status()?.rounds.find(r => r.round === this.round())?.lichessRoundId ?? null);
+  /** RookHub zu dieser Turnierseite (Prod ↔ Prod, Dev ↔ Dev); ohne Partner (localhost) kein Analyse-Knopf. */
+  private readonly rookhub = partnerSiteUrl();
+
+  /** Link aufs Analysebrett: `/analysis?live=roundId.gameId` — RookHub holt das PGN (alle Züge, Kopf, Uhren) vom Server, auch für Gäste. */
+  analysisUrl(roundId: string | null, gameId: string): string | null {
+    if (!this.rookhub || !roundId || !/^[A-Za-z0-9]{8}$/.test(roundId) || !/^[A-Za-z0-9]{8}$/.test(gameId)) return null;
+    return `${this.rookhub}/analysis?live=${roundId}.${gameId}`;
+  }
 
   /** Mit Mannschafts- oder Spielerfilter — nur dann gibt es Bretter dieser Runde, die nicht zu sehen sind. */
   readonly filtered = computed(() => !!this.team() || !!this.player());

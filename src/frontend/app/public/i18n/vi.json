@@ -1630,7 +1630,8 @@
       "extError": {
         "limit": "Hiện có quá nhiều buổi phát sóng khác đang được xem — hãy thử lại sau.",
         "notFound": "Lichess không (còn) biết buổi phát sóng này."
-      }
+      },
+      "openAnalysis": "Mở trên bàn phân tích (thẻ mới)"
     }
   },
   "puzzles": {
@@ -3866,7 +3867,8 @@
       "bestShort": "{{best}}/{{rated}} tốt nhất"
     },
     "withoutEngine": "Không có công cụ",
-    "withEngine": "Có công cụ"
+    "withEngine": "Có công cụ",
+    "liveLoadFailed": "Không tải được ván đang diễn ra."
   },
   "stats": {
     "puzzleRating": "Xếp hạng {{rating}}",

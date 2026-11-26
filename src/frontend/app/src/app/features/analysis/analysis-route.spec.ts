@@ -7,14 +7,14 @@ describe('readAnalysisParams', () => {
     const r = read({ fen: 'F', orientation: 'black', from: '/puzzles/1', engine: 'eei_a', depth: '30', lines: '5',
       moves: 'e2e4, e7e5  g1f3', pgn: '1. e4', history: '7', blind: '1', maia: '2143', game: '/club-games/236' });
     expect(r).toEqual({ fen: 'F', orientation: 'black', returnTo: '/puzzles/1', engine: 'eei_a', depth: 30, lines: 5,
-      moves: ['e2e4', 'e7e5', 'g1f3'], pgn: '1. e4', historyId: 7, blind: true, maia: 2200, gamePage: '/club-games/236', clubEntry: false, clubId: null });
+      moves: ['e2e4', 'e7e5', 'g1f3'], pgn: '1. e4', historyId: 7, blind: true, maia: 2200, gamePage: '/club-games/236', clubEntry: false, clubId: null, live: null });
   });
 
   it('verwirft ungültige Werte', () => {
     const r = read({ fen: 'F', orientation: 'red', from: 'https://x', engine: 'a b', depth: '31', lines: '6', pgn: '  ',
       history: '0', maia: 'x', game: 'https://evil' }, false);
     expect(r).toEqual({ fen: null, orientation: null, returnTo: null, engine: null, depth: null, lines: null, moves: [],
-      pgn: null, historyId: null, blind: false, maia: null, gamePage: null, clubEntry: false, clubId: null });
+      pgn: null, historyId: null, blind: false, maia: null, gamePage: null, clubEntry: false, clubId: null, live: null });
     expect(read({ from: '//evil' }).returnTo).toBeNull();
     expect(read({ game: '//evil' }).gamePage).toBeNull();
     expect(read({ game: '/\\evil' }).gamePage).toBeNull();
@@ -35,5 +35,12 @@ describe('readAnalysisParams', () => {
     expect(ok.clubEntry).toBeTrue();
     expect(ok.clubId).toBe(4);
     expect(readAnalysisParams(map({ verein: '0', club: 'x' }), () => true)).toEqual(jasmine.objectContaining({ clubEntry: false, clubId: null }));
+  });
+
+  it('?live=: nur roundId.gameId mit je acht Buchstaben/Ziffern (1.026.0)', () => {
+    expect(read({ live: 'fnmEB1kH.RD8sbYw1' }).live).toEqual({ roundId: 'fnmEB1kH', gameId: 'RD8sbYw1' });
+    expect(read({ live: 'fnmEB1kH/RD8sbYw1' }).live).toBeNull();
+    expect(read({ live: '../x.RD8sbYw1' }).live).toBeNull();
+    expect(read({}).live).toBeNull();
   });
 });

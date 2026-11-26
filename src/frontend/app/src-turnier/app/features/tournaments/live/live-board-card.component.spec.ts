@@ -25,4 +25,22 @@ describe('LiveBoardCardComponent', () => {
     expect(line.textContent).toContain('+0.4');
     expect(line.textContent).toContain('tournaments.live.depth');
   });
+
+  it('Analyse-Knopf (1.026.0): Link in neuem Tab, nur mit URL', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LiveBoardCardComponent);
+    fixture.componentRef.setInput('game', GAME);
+    fixture.componentRef.setInput('board', 1);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.lb-analyse')).toBeNull();
+    fixture.componentRef.setInput('analysisUrl', 'https://rookhub.oberschmid.homes/analysis?live=fnmEB1kH.RD8sbYw1');
+    fixture.detectChanges();
+    const a = el.querySelector('.lb-analyse') as HTMLAnchorElement;
+    expect(a.href).toBe('https://rookhub.oberschmid.homes/analysis?live=fnmEB1kH.RD8sbYw1');
+    expect(a.target).toBe('_blank');
+    expect(a.getAttribute('aria-label')).toBe('tournaments.live.openAnalysis');
+  });
 });

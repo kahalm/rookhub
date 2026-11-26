@@ -1630,7 +1630,8 @@
       "extError": {
         "limit": "För många andra sändningar visas just nu — försök igen senare.",
         "notFound": "Lichess känner inte (längre) till den här sändningen."
-      }
+      },
+      "openAnalysis": "Öppna på analysbrädet (ny flik)"
     }
   },
   "puzzles": {
@@ -3866,7 +3867,8 @@
       "bestShort": "{{best}}/{{rated}} bäst"
     },
     "withoutEngine": "Utan motor",
-    "withEngine": "Med motor"
+    "withEngine": "Med motor",
+    "liveLoadFailed": "Livepartiet kunde inte läsas in."
   },
   "stats": {
     "puzzleRating": "Rating {{rating}}",

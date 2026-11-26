@@ -1630,7 +1630,8 @@
       "extError": {
         "limit": "Obecnie oglądanych jest zbyt wiele innych transmisji — spróbuj później.",
         "notFound": "Lichess nie zna (już) tej transmisji."
-      }
+      },
+      "openAnalysis": "Otwórz na szachownicy analizy (nowa karta)"
     }
   },
   "puzzles": {
@@ -3866,7 +3867,8 @@
       "bestShort": "{{best}}/{{rated}} najlepsze"
     },
     "withoutEngine": "Bez silnika",
-    "withEngine": "Z silnikiem"
+    "withEngine": "Z silnikiem",
+    "liveLoadFailed": "Nie udało się wczytać partii na żywo."
   },
   "stats": {
     "puzzleRating": "Ranking {{rating}}",

@@ -228,6 +228,19 @@ describe('LiveBoardsComponent', () => {
     http.verify();
   });
 
+  it('Analyse-Knopf: eigene Runde und fremde Partie verlinken /analysis?live=roundId.gameId auf RookHub', async () => {
+    await setup({ team: 'SK Schwaz', ext: 'fnmEB1kH.RD8sbYw1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const c = fixture.componentInstance;
+    expect(c.analysisUrl('L3MX2oE3', 'Game0001')).toBeNull();                 // localhost: keine Partnerseite → kein Knopf
+    (c as unknown as { rookhub: string }).rookhub = 'https://rookhub.oberschmid.homes';
+    expect(c.ownRoundId()).toBe('L3MX2oE3');
+    expect(c.analysisUrl(c.ownRoundId(), 'b1abcdef')).toBe('https://rookhub.oberschmid.homes/analysis?live=L3MX2oE3.b1abcdef');
+    expect(c.analysisUrl('fnmEB1kH', 'RD8sbYw1')).toBe('https://rookhub.oberschmid.homes/analysis?live=fnmEB1kH.RD8sbYw1');
+    expect(c.analysisUrl('fnmEB1kH', 'b1')).toBeNull();
+  });
+
   it('Entfernen: ✕ nimmt das Brett aus der Adresse; Dialog-Ergebnis schreibt add/ext', async () => {
     await setup({ team: 'SK Schwaz', add: '2.1,2.2', ext: 'fnmEB1kH.RD8sbYw1' });
     http.expectOne('/api/live-boards/1404438').flush(STATUS);

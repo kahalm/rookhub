@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.026.0", date: "2026-11-26", changes: [
+    { en: "Live boards: every board (also added ones and boards from other broadcasts) has a small analysis button that opens the game in a new tab on RookHub’s analysis board — with all moves played so far (step through them), the header (names, Elo, event, round) and the clocks. Works for guests too; the server hands out the game’s PGN (/analysis?live=round.game).",
+      de: "Live-Bretter: An jedem Brett (auch hinzugefügten und fremden) ein kleiner Analyse-Knopf, der die Partie in einem neuen Tab auf RookHubs Analysebrett öffnet — mit allen bisher gespielten Zügen (nachspielbar), den Kopfdaten (Namen, Elo, Turnier, Runde) und den Uhren. Geht auch für Gäste; das PGN der Partie liefert der Server (/analysis?live=Runde.Partie)." },
+  ] },
   { version: "1.025.0", date: "2026-11-26", changes: [
     { en: "Live boards: new „Add board“ button. With a team or player selected you can add further boards of the same round (search by player or match), and from any view boards from ANOTHER Lichess broadcast — paste a game link (exactly that game) or a round/tournament link (pick from its games), e.g. your team’s match plus the World Championship game. Added boards appear in their own section below, with the same engine bar and an ✕ to remove them. The selection is part of the address (?add=, ?ext=), so „Share link“ shows exactly these boards, also to guests.",
       de: "Live-Bretter: neuer Knopf „Brett hinzufügen“. Mit gewählter Mannschaft oder Spieler kommen weitere Bretter derselben Runde dazu (Suche nach Spieler oder Begegnung), und aus jeder Ansicht Bretter aus einer ANDEREN Lichess-Übertragung — Partie-Link einfügen (genau diese Partie) oder Runden-/Turnier-Link (Auswahl aus deren Partien), z. B. der Mannschaftskampf und daneben die WM-Partie. Hinzugefügte Bretter stehen in einem eigenen Abschnitt darunter, mit demselben Engine-Balken und einem ✕ zum Entfernen. Die Auswahl steht in der Adresse (?add=, ?ext=), „Link teilen“ zeigt also genau diese Bretter, auch Gästen." },

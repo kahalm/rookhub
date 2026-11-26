@@ -1630,7 +1630,8 @@
       "extError": {
         "limit": "اکنون پخش‌های دیگر زیادی دیده می‌شوند — بعداً دوباره امتحان کنید.",
         "notFound": "Lichess این پخش را (دیگر) نمی‌شناسد."
-      }
+      },
+      "openAnalysis": "باز کردن روی صفحهٔ تحلیل (زبانهٔ جدید)"
     }
   },
   "puzzles": {
@@ -3866,7 +3867,8 @@
       "bestShort": "{{best}}/{{rated}} بهترین"
     },
     "withoutEngine": "بدون موتور",
-    "withEngine": "با موتور"
+    "withEngine": "با موتور",
+    "liveLoadFailed": "بازی زنده بارگذاری نشد."
   },
   "stats": {
     "puzzleRating": "ریتینگ {{rating}}",

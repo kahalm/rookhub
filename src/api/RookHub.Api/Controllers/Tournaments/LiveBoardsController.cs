@@ -63,6 +63,24 @@ public class LiveBoardsController : BaseApiController
         };
     }
 
+    /// <summary>
+    /// PGN einer Live-Partie (Kopfzeilen, alle bisherigen Züge, <c>[%clk]</c>) für „Analysieren“ (1.026.0): das Analysebrett von
+    /// RookHub lädt es über <c>/analysis?live=roundId.gameId</c>, auch ohne Anmeldung. 404 <c>live_game_not_found</c>.
+    /// </summary>
+    [HttpGet("pgn/{roundId}/{gameId}")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPartitions.DirectoryReadPolicy)]
+    public async Task<IActionResult> GamePgn(string roundId, string gameId, [FromServices] ExternalRoundRegistry ext, [FromServices] BroadcastLiveHub hub)
+    {
+        if (!LichessBroadcasts.IsId(roundId) || !LichessBroadcasts.IsId(gameId)) return BadRequest(new { message = "Invalid round or game." });
+        string? pgn;
+        try { pgn = await ext.GamePgnAsync(roundId, gameId, hub, RequestCt); }
+        catch (LichessRateLimitedException) { return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Lichess is busy.", code = "live_lichess_busy" }); }
+        if (pgn is null) return NotFound(new { message = "Game not found.", code = "live_game_not_found" });
+        Response.Headers.CacheControl = "no-store";
+        return Content(pgn.Trim() + "\n", "application/x-chess-pgn; charset=utf-8");
+    }
+
     /// <summary>Ist eine Übertragung verknüpft (sonst wird einmal gesucht), welche Runden, welche läuft.</summary>
     [HttpGet("{id}")]
     [AllowAnonymous]

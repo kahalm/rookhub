@@ -1630,7 +1630,8 @@
       "extError": {
         "limit": "Trop d’autres retransmissions sont suivies en ce moment — réessayez plus tard.",
         "notFound": "Lichess ne connaît pas (plus) cette retransmission."
-      }
+      },
+      "openAnalysis": "Ouvrir sur l’échiquier d’analyse (nouvel onglet)"
     }
   },
   "puzzles": {
@@ -3866,7 +3867,8 @@
       "bestShort": "{{best}}/{{rated}} meilleurs"
     },
     "withoutEngine": "Sans moteur",
-    "withEngine": "Avec moteur"
+    "withEngine": "Avec moteur",
+    "liveLoadFailed": "Impossible de charger la partie en direct."
   },
   "stats": {
     "puzzleRating": "Classement {{rating}}",

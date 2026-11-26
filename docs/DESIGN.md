@@ -1392,7 +1392,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   (gefüllt). Hinzugefügte Bretter: eigener Abschnitt mit `h2`-Zeile „Hinzugefügte Bretter“ bzw. „Turnier · Runde“ (Akzent-Link mit
   `open_in_new`) unter den gefilterten Brettern, dieselbe Karte mit Zusatz „· Begegnung“ neben „Brett n“ und einem ✕ (`close`,
   40 px, `aria-label` „Brett entfernen“) rechts im Kartenkopf. Elo-Schnitt der Begegnung: „Ø 2315“ als leise Zeile (0,8 rem,
-  `tabular-nums`) unter dem Mannschaftsnamen, Tooltip „Schnitt über n Bretter“. Verbindungsabriss: Zustand „Live“ bleibt 10 s
+  `tabular-nums`) unter dem Mannschaftsnamen, Tooltip „Schnitt über n Bretter“.
+  **Analysieren** (1.026.0): im Kartenkopf vor dem ✕ ein Symbolknopf `biotech` (40 px, `aria-label`/`title` „Auf dem
+  Analysebrett öffnen (neuer Tab)“) wie „In Analyse öffnen“ der Partienliste; öffnet RookHubs Analysebrett in einem neuen Tab. Verbindungsabriss: Zustand „Live“ bleibt 10 s
   stehen, erst danach „Verbindung unterbrochen“ (kein Blinken, Bretter bleiben stehen, kein Spinner).
 - Profil: erste Karte „Darstellung“ = RookHubs `app-theme-card` (`@rh/features/profile/theme-card.component`), auch
   beim Ladefehler. Spieltermine einer Liga mit „·“-Trenner in der Lücke (`overflow-x: clip`, wie ClubHub `.kid-meta`).
@@ -1641,6 +1643,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-26 | 1.026.0 · Turnierseite | Live-Bretter: Symbolknopf `biotech` im Kartenkopf öffnet die Partie auf RookHubs Analysebrett (neuer Tab, alle Züge, Kopf, Uhren) (8.2) | Eine laufende Partie selbst durchrechnen, auch als Gast | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.025.0 · Turnierseite | Live-Bretter: „Brett hinzufügen“ (Auswahl-Dialog 560 px mit Suche + Lichess-Link), Abschnitt „Hinzugefügte Bretter“ / „Turnier · Runde“ mit ✕ im Kartenkopf, Elo-Schnitt „Ø n“ unter dem Mannschaftsnamen, Abriss erst nach 10 s anzeigen (8.2) | Mannschaftskampf und daneben einzelne Bretter (auch die WM-Partie) auf einer Seite; „live“ ↔ „unterbrochen“ blinkte | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.024.0 · Turnierseite | Live-Bretter: Knopf „Link teilen“ rechts im Kopf (8.2), unter 480 px nur Symbol; Teilen-Blatt am Handy, sonst Kopieren mit Snackbar | Eine bestimmte Live-Ansicht (Runde, Mannschaft) soll an Gäste gehen und genau so aufgehen | Nutzerwunsch 26.11. |
 | 2026-11-25 | 1.021.0 · Zusammenfassung | Roter Faden als abgesetzter Kernsatz ganz oben (8.1): unter dem Titel des Texts, Akzentleiste links + leicht getönte Fläche, 1,05 rem, ≤ 75ch, ohne Überschrift; an der alten Stelle entfällt er | Der rote Faden ist die Kernaussage, stand aber am Ende von „Die Partie“ hinter allen Zügen; eine Überschrift doppelte nur seinen ersten Satz | Wunsch 2026-11-25 |

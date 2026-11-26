@@ -1630,7 +1630,8 @@
       "extError": {
         "limit": "Şu anda çok fazla başka yayın izleniyor — lütfen daha sonra tekrar dene.",
         "notFound": "Lichess bu yayını tanımıyor (artık)."
-      }
+      },
+      "openAnalysis": "Analiz tahtasında aç (yeni sekme)"
     }
   },
   "puzzles": {
@@ -3866,7 +3867,8 @@
       "bestShort": "{{best}}/{{rated}} en iyi"
     },
     "withoutEngine": "Motorsuz",
-    "withEngine": "Motorla"
+    "withEngine": "Motorla",
+    "liveLoadFailed": "Canlı oyun yüklenemedi."
   },
   "stats": {
     "puzzleRating": "Rating {{rating}}",

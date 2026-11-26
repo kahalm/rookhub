@@ -205,7 +205,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
               private router: Router, public auth: AuthService, private externalEngines: ExternalEngineService,
               private cdr: ChangeDetectorRef, private translate: TranslateService,
               @Inject(LOCALE_ID) private locale: string, private history: AnalysisHistoryService, private dialog: MatDialog,
-              maia: MaiaEngineService, games: GamesService, analyzeGame: AnalyzeGameService) {
+              maia: MaiaEngineService, private games: GamesService, analyzeGame: AnalyzeGameService) {
     this.lineStudies = analyzeGame?.lineStudies;
     this.historySaver = new AnalysisHistorySaver({
       save: req => this.history.save(req),
@@ -300,7 +300,20 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       });
       return;
     }
-    const blind = window.history.state?.blind === true || p.blind;
+    // Live-Partie der Turnierseite (1.026.0): PGN mit allen bisherigen Zügen, Kopfzeilen und Uhren vom Server holen
+    if (!pgn && p.live) {
+      this.resetToStart();
+      this.games.livePgn(p.live.roundId, p.live.gameId).subscribe({
+        next: text => { if (text.trim()) this.openPgn(text, p.blind); this.cdr.markForCheck(); },
+        error: () => this.snackbar.warn(this.translate.instant('analysis.liveLoadFailed')),
+      });
+      return;
+    }
+    this.openPgn(pgn, window.history.state?.blind === true || p.blind, p);
+  }
+
+  /** Partie laden (oder ohne Partie die Zugfolge/Ausgangsstellung aus `p`). */
+  private openPgn(pgn: string | null | undefined, blind: boolean, p?: AnalysisRouteParams): void {
     // `?blind=1` ohne Partie (oder ohne Konto): freies Brett ohne Engine — oben wieder einschaltbar (0.895.0)
     if (blind && !(pgn && this.lineStudies && this.auth.isLoggedIn)) this.setNoEngine(true);
     if (pgn && this.lineStudies && this.auth.isLoggedIn) {
@@ -312,10 +325,10 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       // aus einer Partie hergesprungen: das PGN bleibt im Feld stehen (kopierbar, Wunsch 2026-09-28); ohne Engine beginnt
       // die Partie in der Ausgangsstellung (Wunsch 2026-11-18), sonst am Ende
       this.loadPgn(true, blind);
-    } else if (p.moves.length) {
+    } else if (p?.moves.length) {
       this.loadFromUci(p.fen ?? START_FEN, p.moves);
     } else {
-      this.resetToStart(p.fen ?? START_FEN);
+      this.resetToStart(p?.fen ?? START_FEN);
     }
   }
 
