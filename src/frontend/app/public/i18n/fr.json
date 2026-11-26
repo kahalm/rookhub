@@ -3037,6 +3037,7 @@
         "clubBackfill": "Parties du club (anciennes)",
         "league": "Parties de ligue",
         "master": "Parties de maîtres",
+        "livePrep": "Pré-analyse de ligue",
         "other": "Autre"
       },
       "throughputTitle": "Débit",

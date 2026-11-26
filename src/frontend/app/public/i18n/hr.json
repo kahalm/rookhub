@@ -3186,6 +3186,7 @@
         "clubBackfill": "Klupske partije (starije)",
         "league": "Ligaške partije",
         "master": "Majstorske partije",
+        "livePrep": "Predanaliza lige",
         "other": "Ostalo"
       },
       "throughputTitle": "Propusnost",

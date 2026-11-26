@@ -3037,6 +3037,7 @@
         "clubBackfill": "클럽 대국(이전)",
         "league": "리그 대국",
         "master": "마스터 대국",
+        "livePrep": "리그 사전 분석",
         "other": "기타"
       },
       "throughputTitle": "처리량",

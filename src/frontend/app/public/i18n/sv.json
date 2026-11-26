@@ -3037,6 +3037,7 @@
         "clubBackfill": "Klubbpartier (äldre)",
         "league": "Ligapartier",
         "master": "Mästarpartier",
+        "livePrep": "Förhandsanalys liga",
         "other": "Övrigt"
       },
       "throughputTitle": "Genomströmning",

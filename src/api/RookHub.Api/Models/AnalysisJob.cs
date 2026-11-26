@@ -135,6 +135,16 @@ public class AnalysisJob
 
     /// <summary>Strenge Rangfolge der Engine-Warteschlange (0.918.0, siehe <see cref="JobPriority"/>): kleiner zuerst.</summary>
     public JobPriority Priority { get; set; }
+
+    /// <summary>
+    /// Vorausanalyse einer laufenden Ligapartie der eigenen Mannschaft (1.034.0, <c>ClubBroadcastPreAnalysis</c>): die Stellung
+    /// wird schon WÄHREND der Übertragung gerechnet, mit Tiefe und Linien der späteren Vertiefung. Das fertige Ergebnis bleibt
+    /// stehen und dient als Quelle des Stellungs-Caches (<c>GameAnalysisPositionCache</c>), bis die Partie in der
+    /// Vereins-Datenbank ist und ihre Analyse es übernimmt; ein noch offener Auftrag wird von dieser Analyse übernommen statt
+    /// doppelt gerechnet. In keiner Auftragsliste, zählt nicht gegen Deckel und Trimmer; aufgeräumt nach
+    /// <c>LiveBoards:PreAnalysis:RetentionHours</c>. Bleibt auch nach der Übernahme gesetzt (die Stufe steigt dann).
+    /// </summary>
+    public bool Prep { get; set; }
 }
 
 /// <summary>
@@ -158,6 +168,9 @@ public enum JobPriority : byte
     League = 4,
     /// <summary>Meisterpartien der Bibliothek (Bestand).</summary>
     Master = 5,
+    /// <summary>Vorausanalyse laufender Ligapartien der eigenen Mannschaft (1.034.0, <see cref="AnalysisJob.Prep"/>): nur, wenn
+    /// sonst gar nichts wartet. Übernimmt die Analyse der fertigen Partie den Auftrag, bekommt er deren Stufe.</summary>
+    LivePrep = 6,
 }
 
 public static class JobPriorities

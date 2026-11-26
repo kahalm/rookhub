@@ -3037,6 +3037,7 @@
         "clubBackfill": "Partidas del club (antiguas)",
         "league": "Partidas de liga",
         "master": "Partidas de maestros",
+        "livePrep": "Preanálisis de liga",
         "other": "Otro"
       },
       "throughputTitle": "Rendimiento",

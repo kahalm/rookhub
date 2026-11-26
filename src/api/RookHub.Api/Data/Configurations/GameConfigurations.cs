@@ -485,6 +485,8 @@ internal sealed class AnalysisJobConfiguration : IEntityTypeConfiguration<Analys
         e.HasIndex(j => new { j.EngineId, j.Status, j.Priority, j.Background, j.Batch, j.CreatedAt });
         e.HasIndex(j => new { j.EngineId, j.LastRunAt });
         e.HasIndex(j => new { j.Status, j.EngineId });
+        // Vorausanalyse (1.034.0): der Stellungs-Cache sucht fertige Vorausanalysen über den FEN-Anfang.
+        e.HasIndex(j => new { j.Prep, j.Fen });
         e.HasOne(j => j.User)
          .WithMany()
          .HasForeignKey(j => j.UserId)

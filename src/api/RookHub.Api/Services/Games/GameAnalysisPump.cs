@@ -215,6 +215,15 @@ internal sealed class GameAnalysisPump
                 changed = true;
                 continue;
             }
+            // Noch offene Vorausanalyse derselben Stellung (1.034.0): übernehmen statt doppelt rechnen.
+            if (await GameAnalysisPositionCache.FindOpenPrepAsync(_db, analysis, pos.Fen, analysis.RefineDepth!.Value,
+                    analysis.RefineMultiPv ?? analysis.MultiPv, ct) is { } prep)
+            {
+                Adopt(prep, analysis, background: true);
+                pos.AnalysisJobId = prep.Id;
+                changed = true;
+                continue;
+            }
             try
             {
                 var job = await _jobs.CreateAsync(analysis.UserId, new CreateAnalysisJobRequest
@@ -242,6 +251,17 @@ internal sealed class GameAnalysisPump
             }
         }
         return changed;
+    }
+
+    /// <summary>Einen offenen Vorausanalyse-Auftrag (<see cref="AnalysisJob.Prep"/>) in diese Analyse übernehmen: er bekommt
+    /// Stufe und Art, die ein frisch angelegter Auftrag dieser Analyse hätte (1.034.0). Gespeichert wird mit der Analyse.</summary>
+    private static void Adopt(AnalysisJob job, GameAnalysis analysis, bool background)
+    {
+        var batch = GameAnalysisOrigins.RunsAsBatch(analysis);
+        job.Background = background;
+        job.Batch = background && batch;
+        job.Priority = background ? PriorityOf(analysis) ?? JobPriorities.Default(background, batch) : JobPriority.Interactive;
+        job.UpdatedAt = DateTime.UtcNow;
     }
 
     /// <summary>Stufe der Aufträge einer Analyse (<see cref="JobPriority"/>): Stapel nach Herkunft, eigene Partien → Vorgabe.</summary>
@@ -282,6 +302,18 @@ internal sealed class GameAnalysisPump
             if (await GameAnalysisPositionCache.FindAsync(_db, analysis, pos.Fen, analysis.TargetDepth, analysis.MultiPv, ct) is { } cached)
             {
                 GameAnalysisPositionCache.Apply(pos, cached);
+                // Reicht der Treffer schon für die Vertiefung (Vorausanalyse mit Tiefe 30, 1.034.0), ist sie für diese Stellung
+                // erledigt — sonst sähe die Vertiefung später nach, und wäre die Quelle bis dahin aufgeräumt, rechnete sie neu.
+                if (GameAnalysisTurnRules.MeetsRefinement(analysis, cached.Depth, analysis.MultiPv)) pos.Refined = true;
+                changed = true;
+                continue;
+            }
+            // Noch offene Vorausanalyse derselben Stellung (1.034.0): die Analyse übernimmt den Auftrag samt ihrer Stufe —
+            // er ist mindestens so tief wie verlangt, sein Ergebnis kommt über das normale Einsammeln.
+            if (await GameAnalysisPositionCache.FindOpenPrepAsync(_db, analysis, pos.Fen, analysis.TargetDepth, analysis.MultiPv, ct) is { } prep)
+            {
+                Adopt(prep, analysis, background: batch);
+                pos.AnalysisJobId = prep.Id;
                 changed = true;
                 continue;
             }

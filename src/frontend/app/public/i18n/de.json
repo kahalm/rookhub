@@ -3186,6 +3186,7 @@
         "clubBackfill": "Vereinspartien (älter)",
         "league": "Liga-Partien",
         "master": "Meisterpartien",
+        "livePrep": "Vorausanalyse Liga",
         "other": "Sonstige"
       },
       "throughputTitle": "Durchsatz",

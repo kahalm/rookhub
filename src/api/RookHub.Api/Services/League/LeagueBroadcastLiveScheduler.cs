@@ -21,9 +21,17 @@ public sealed class LeagueBroadcastLiveScheduler(IServiceScopeFactory scopes, IC
     /// je Prozess einmal, beim ersten Takt (nach einem 429 beim nächsten).</summary>
     private bool _roundsBackfilled;
 
+    /// <summary>Alte Vorausanalysen aufräumen (<see cref="ClubBroadcastPreAnalysis.CleanupAsync"/>); ohne den Dienst (Tests) nichts.</summary>
+    private static Task CleanupPrepAsync(IServiceProvider services, CancellationToken ct) =>
+        services.GetService<ClubBroadcastPreAnalysis>()?.CleanupAsync(ct) ?? Task.CompletedTask;
+
     protected override async Task StepAsync(IServiceProvider services, CancellationToken ct)
     {
-        if (gate.IsPaused(LeagueRateGate.Lichess)) return;
+        if (gate.IsPaused(LeagueRateGate.Lichess))
+        {
+            await CleanupPrepAsync(services, ct);
+            return;
+        }
         var import = services.GetRequiredService<LeagueBroadcastImport>();
         if (!_roundsBackfilled)
         {
@@ -41,5 +49,7 @@ public sealed class LeagueBroadcastLiveScheduler(IServiceScopeFactory scopes, IC
         }
         var n = await import.RunLiveAsync(ct);
         if (n > 0) logger.LogInformation("LeagueHub: {Count} laufende Lichess-Übertragung(en) eingespielt", n);
+        // Alte Vorausanalysen weg (1.034.0, ClubBroadcastPreAnalysis) — im selben Takt, auch ohne laufende Runde.
+        await CleanupPrepAsync(services, ct);
     }
 }

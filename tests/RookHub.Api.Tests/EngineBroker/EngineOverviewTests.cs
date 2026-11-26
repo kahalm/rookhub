@@ -245,7 +245,7 @@ public class EngineOverviewTests : IDisposable
     [Fact]
     public void KindAndSource_Names()
     {
-        Assert.Equal(["interactive", "waiting", "clubNew", "clubBackfill", "league", "master"],
+        Assert.Equal(["interactive", "waiting", "clubNew", "clubBackfill", "league", "master", "livePrep"],
             Enum.GetValues<JobPriority>().Select(EngineOverviewService.KindOf));
         Assert.Equal("rookhub", EngineOverviewService.SourceOf("rhe_abc"));
         Assert.Equal("lichess", EngineOverviewService.SourceOf("eei_abc"));

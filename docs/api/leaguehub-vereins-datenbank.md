@@ -652,6 +652,18 @@ da; der Gewinn ist vor allem, dass die Partien schon WÄHREND des Turniers da si
   (auch in der Übersicht) — ein Formular archiviert die übertragene Fassung also nicht und bekommt keine zweite Zusammenfassung.
   Ein Fehler in diesem Schritt (Warnung im Log) lässt das Einspielen in die Karten nicht scheitern; beim nächsten Takt wieder.
   Die Liste der Verwaltung trägt dazu `nextRoundAt`/`liveUntil`. Tests: `LeagueBroadcastClubGamesTests`.
+* **Vorausanalyse laufender Partien der eigenen Mannschaft** (1.034.0, Wunsch 2026-11-26: „die Analyse mit Tiefe 30 + 5 Linien
+  schon während der Bundesliga, wenn Hintergrund-Engines frei sind, nur für Schwaz“; `Services/League/ClubBroadcastPreAnalysis.cs`).
+  Anlass: am 26.11. kamen sechs Bundesliga-Partien fast zugleich herein, rund 600 Stellungen Tiefe 30 × 5 Linien brauchten Stunden.
+  Jedes Einspielen einer Übertragung mit laufender Runde (`LiveUntil` nach dem Einspielen, also v. a. der 10-Minuten-Takt) reicht
+  die LAUFENDEN Partien desselben PGN (`OngoingGames`: Ergebnis `*`, Standard ab Grundstellung, Datum nicht vor gestern) herein —
+  kein weiterer Lichess-Abruf, unabhängig davon, ob jemand die Live-Bretter offen hat. Auswahl wie beim Einspielen
+  (`ClubBroadcastGames.Involves`: eine Seite spielt für eine Mannschaft eines Vereins in `LeagueClubs`; nur eigene Partien, keine
+  Gegner untereinander). Jede Stellung (vor jedem Halbzug und die aktuelle, wie `GamePlies` sie für die Analyse anlegt), die
+  weder eine Vorausanalyse hat noch im Stellungs-Cache tief genug steht, wird als Hintergrundauftrag Tiefe 30 / 5 Linien
+  eingereiht (höchstens 1 000 je Einspielen). Rangfolge, Unsichtbarkeit, Cache-Quelle, Übernahme durch die Analyse der
+  eingespielten Partie und Aufräumen: `hintergrund-analyseauftraege.md`. Ein Fehler darin lässt das Einspielen nicht scheitern.
+  Schalter `LiveBoards:PreAnalysis:Enabled`. Tests: `ClubBroadcastPreAnalysisTests`.
 
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|

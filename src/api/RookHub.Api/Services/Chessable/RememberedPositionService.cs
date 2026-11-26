@@ -127,7 +127,7 @@ public class RememberedPositionService
         // Bewusst OHNE ResultJson: die Roh-Zeilen sind bis zu 256 KB groß, und diese Liste braucht nur die
         // Bewertung — die steht seit v0.383.0 als EvalText in der Zeile.
         var jobs = await _db.AnalysisJobs.AsNoTracking()
-            .Where(j => j.UserId == userId)
+            .Where(j => j.UserId == userId && !j.Prep)   // Vorausanalysen (1.034.0) gehören zu keiner gemerkten Stellung
             .Select(j => new { j.Id, j.Fen, j.Status, j.ReachedDepth, j.TargetDepth, j.MultiPv, j.EvalText, j.UpdatedAt })
             .ToListAsync();
         if (jobs.Count == 0) return;

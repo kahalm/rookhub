@@ -3037,6 +3037,7 @@
         "clubBackfill": "クラブ対局（旧）",
         "league": "リーグ対局",
         "master": "マスター対局",
+        "livePrep": "リーグ事前解析",
         "other": "その他"
       },
       "throughputTitle": "スループット",

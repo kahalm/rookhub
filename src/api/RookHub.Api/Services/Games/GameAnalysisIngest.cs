@@ -134,6 +134,9 @@ internal sealed class GameAnalysisIngest
                 pos.Depth = job.ReachedDepth;
                 pos.AnalyzedAt = DateTime.UtcNow;
                 pos.NodeStepsJson = job.NodeStepsJson;   // Zwischenstände der Knotenanalyse, bevor der Auftrag gelöscht wird
+                // Ein übernommener Vorausanalyse-Auftrag (1.034.0) rechnet schon mit Tiefe und Linien der Vertiefung.
+                if (job.TargetNodes == null && GameAnalysisTurnRules.MeetsRefinement(analysis, job.ReachedDepth, job.MultiPv))
+                    pos.Refined = true;
             }
             else
             {

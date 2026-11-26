@@ -65,7 +65,12 @@ public static partial class DomainServicesSetup
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(RookHub.Api.Services.League.LeagueOnlineSync.ClientName),
             sp.GetRequiredService<ILogger<RookHub.Api.Services.League.LeagueBroadcastImport>>(), sp.GetRequiredService<IConfiguration>(),
             sp.GetRequiredService<RookHub.Api.Services.League.LeagueClubService>(),
-            sp.GetRequiredService<RookHub.Api.Services.League.LeagueBroadcastGate>()));
+            sp.GetRequiredService<RookHub.Api.Services.League.LeagueBroadcastGate>(),
+            sp.GetRequiredService<RookHub.Api.Services.League.ClubBroadcastPreAnalysis>()));
+        // Vorausanalyse laufender Ligapartien der eigenen Mannschaft (1.034.0, LiveBoards:PreAnalysis:*).
+        services.AddScoped(sp => new RookHub.Api.Services.League.ClubBroadcastPreAnalysis(
+            sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetRequiredService<RookHub.Api.Services.Engines.AnalysisJobService>(),
+            sp.GetRequiredService<ILogger<RookHub.Api.Services.League.ClubBroadcastPreAnalysis>>(), sp.GetRequiredService<IConfiguration>()));
         // Nur ein Einspielen einer Übertragung zugleich (1.017.0: schneller Takt + 6-Stunden-Takt + „per Link“).
         services.AddSingleton<RookHub.Api.Services.League.LeagueBroadcastGate>();
         services.AddScoped(sp => new RookHub.Api.Services.League.LeagueAccountChecks(

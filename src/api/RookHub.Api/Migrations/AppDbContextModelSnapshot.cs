@@ -238,6 +238,9 @@ namespace RookHub.Api.Migrations
                     b.Property<string>("NodeStepsJson")
                         .HasColumnType("longtext");
 
+                    b.Property<bool>("Prep")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<byte>("Priority")
                         .HasColumnType("tinyint unsigned");
 
@@ -272,6 +275,8 @@ namespace RookHub.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EngineId", "LastRunAt");
+
+                    b.HasIndex("Prep", "Fen");
 
                     b.HasIndex("Status", "EngineId");
 

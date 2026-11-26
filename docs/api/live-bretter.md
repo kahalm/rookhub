@@ -218,6 +218,14 @@ entferne oder etwas umstelle, sollen alle mit dem Link das auch sehen.“
 Fertige Partie mit Signal-Königszug des Siegers am Ende (DGT-Brett, 1.022.0): `LiveGameParser.Parse` lässt ihn weg, das Brett
 zeigt die Stellung davor — Regel in `Services/Games/SignalKingMove.cs` (siehe `docs/api/leaguehub-vereins-datenbank.md`).
 
+## Vorausanalyse der eigenen Mannschaft (1.034.0)
+
+Nicht Teil des Hubs: die laufenden Partien der eigenen Mannschaft (Schwaz in der Bundesliga) rechnet
+`Services/League/ClubBroadcastPreAnalysis.cs` schon während der Runde mit Tiefe 30 und fünf Linien auf den
+Hintergrund-Engines vor — gespeist vom 10-Minuten-Takt der Liga-Übertragungen, NICHT vom Strom dieser Seite (läuft also
+auch ohne Zuschauer, ohne zusätzlichen Lichess-Abruf). Die Live-Schlange (`LiveEngineLane`) geht dieser Arbeit wie jeder
+Stufe vor. Einzelheiten: `docs/api/leaguehub-vereins-datenbank.md` und `docs/api/hintergrund-analyseauftraege.md`.
+
 ## Proxy-Kette
 
 - Turnier-nginx (`src/frontend/nginx.conf`): eigene `location ^~ /api/live-boards/` mit `proxy_buffering off`,

@@ -68,6 +68,7 @@ public sealed class EngineOverviewService(
         JobPriority.ClubBackfill => "clubBackfill",
         JobPriority.League => "league",
         JobPriority.Master => "master",
+        JobPriority.LivePrep => "livePrep",
         _ => "other",
     };
 

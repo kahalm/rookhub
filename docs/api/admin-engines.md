@@ -23,7 +23,8 @@ Im UI-Sweep als Admin-Reiter `admin-engines` (`tools/ui-sweep/routes.mjs`, `ADMI
 - `pause { paused, forcedByConfig, since, by }` — aus `BackgroundPause`
 - `queue { queued, paused, running, oldestWaitingSince, byKind[{ kind, queued, paused, running, oldestWaitingSince }],
   gameAnalysesPending, gameAnalysesRunning }` — `kind` = `JobPriority` (`interactive`, `waiting`, `clubNew`,
-  `clubBackfill`, `league`, `master`)
+  `clubBackfill`, `league`, `master`, seit 1.034.0 `livePrep` = „Vorausanalyse Liga“, siehe
+  `hintergrund-analyseauftraege.md`)
 - `totals { hour, day, week }` — je Fenster `{ runs, done, failed, interrupted, retried, unavailable, timeouts, errors,
   busySeconds, avgJobSeconds, kiloNodesPerSecond }`
 - `engines[]` — `{ id, name, source (rookhub|lichess|other), registered, ownerUserId, ownerName, online, lastSeenAt,

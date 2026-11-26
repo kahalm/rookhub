@@ -80,7 +80,8 @@ public class AnalysisJobService
         // die Seite fragt alle 5–10 s — per Semijoin ueber ALLE Stapel-Stellungen, auch fuer Nutzer ohne eine einzige;
         // mit ihr traegt der Index (UserId, CreatedAt) auf GameAnalyses, den Semijoin selbst (AnalysisJobId, GameAnalysisId)
         // auf GameAnalysisPositions (A4-016).
-        var jobs = await _db.AnalysisJobs.Where(j => j.UserId == userId
+        // Vorausanalysen laufender Ligapartien (1.034.0, AnalysisJob.Prep) ebenso: Hintergrundarbeit auf dem Haus-Konto.
+        var jobs = await _db.AnalysisJobs.Where(j => j.UserId == userId && !j.Prep
                 && !_db.GameAnalyses.Any(g => g.UserId == userId
                     && (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club || g.Origin == GameAnalysisOrigin.League)
                     && g.Positions.Any(p => p.AnalysisJobId == j.Id))
@@ -114,7 +115,7 @@ public class AnalysisJobService
     /// (auf Dev erlebt: ein Auftrag rechnete eine halbe Stunde, alle anderen warteten). Die
     /// kuerzeste Schlange gewinnt deshalb, bei Gleichstand die zuerst hinterlegte.</para>
     /// </summary>
-    private async Task<string> PickBackgroundEngineAsync(int ownerId, CancellationToken ct, bool background = false)
+    private async Task<string> PickBackgroundEngineAsync(int ownerId, CancellationToken ct, bool background = false, bool prep = false)
     {
         var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == ownerId, ct);
         // Engines, die nur auf ausdrückliche Anforderung rechnen (AnalysisJobs:ExplicitOnlyEngineIds), fallen hier heraus.
@@ -134,8 +135,9 @@ public class AnalysisJobService
         // die Auftraege mehrerer Nutzer in EINER Schlange, und wer die kuerzeste sucht, muss sie
         // ganz sehen. Nach dem Auftraggeber zu zaehlen hiesse, jeden Neuling auf die Engine zu
         // schicken, vor der schon dreissig fremde Auftraege stehen.
+        // Vorausanalysen (1.034.0) stehen ganz hinten und halten keinen anderen Auftrag auf — sie zählen nur unter sich.
         var openPerEngine = await _db.AnalysisJobs
-            .Where(j => (j.EngineOwnerUserId ?? j.UserId) == ownerId
+            .Where(j => (j.EngineOwnerUserId ?? j.UserId) == ownerId && (prep || !j.Prep)
                 && j.Status != AnalysisJobStatus.Done && j.Status != AnalysisJobStatus.Failed)
             .GroupBy(j => j.EngineId)
             .Select(g => new { EngineId = g.Key, Count = g.Count() })
@@ -186,8 +188,10 @@ public class AnalysisJobService
 
     public async Task<AnalysisJobDto> CreateAsync(int userId, CreateAnalysisJobRequest req, CancellationToken ct = default,
         bool remember = true, int? engineOwnerUserId = null, bool background = false, bool batch = false,
-        JobPriority? priority = null)
+        JobPriority? priority = null, bool prep = false)
     {
+        // Vorausanalyse (1.034.0): immer Hintergrundarbeit des Stapels auf der untersten Stufe.
+        if (prep) { background = true; batch = true; priority = JobPriority.LivePrep; remember = false; }
         var fen = (req.Fen ?? string.Empty).Trim();
         if (fen.Length is 0 or > 120 || !IsLegalFen(fen))
             throw new ArgumentException("Invalid FEN");
@@ -209,14 +213,16 @@ public class AnalysisJobService
         var explicitEngine = engineId is not null;
         if (engineId is null)
         {
-            engineId = await PickBackgroundEngineAsync(engineOwner ?? userId, ct, background);
+            engineId = await PickBackgroundEngineAsync(engineOwner ?? userId, ct, background, prep);
         }
         if (engineId.Length > 64)
             throw new ArgumentException("Invalid engine id");
         // Eine gewählte Engine kommt aus der Hintergrund-Liste des Besitzers; eine genannte wird geprüft (A4-003).
         var ownersEngine = !explicitEngine || await VerifyOwnersEngineAsync(engineOwner ?? userId, engineId, ct);
 
-        var open = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId
+        // Vorausanalysen zählen nicht gegen den Deckel (sie sperrten sonst die echten Aufträge des Kontos aus) und
+        // unterliegen ihm nicht — ihre Menge begrenzt ClubBroadcastPreAnalysis selbst.
+        var open = prep ? 0 : await _db.AnalysisJobs.CountAsync(j => j.UserId == userId && !j.Prep
             && j.Status != AnalysisJobStatus.Done && j.Status != AnalysisJobStatus.Failed, ct);
         if (open >= MaxOpenJobsPerUser && !await HasNoOpenLimitAsync(userId, ct))
             throw new InvalidOperationException("Too many open analysis jobs");
@@ -231,9 +237,10 @@ public class AnalysisJobService
             Background = background,
             Batch = background && batch,
             Priority = background ? priority ?? JobPriorities.Default(background, batch) : JobPriority.Interactive,
+            Prep = prep,
         };
         _db.AnalysisJobs.Add(job);
-        await TrimAsync(userId, 1, ct);
+        if (!prep) await TrimAsync(userId, 1, ct);
         // Analysierte Stellungen gehören auch in „Gemerkte Stellungen" (dort zeigt die Übersicht den
         // Auftrag mit Status/Tiefe/Bewertung an) — aber nur EINMAL je Stellung: hat der User sie schon
         // gemerkt (Chessable-Remember oder früherer Auftrag), bleibt der vorhandene Eintrag.
@@ -324,14 +331,16 @@ public class AnalysisJobService
     /// weg, auch die, deren Ergebnis die Pumpen (Partie-Analyse, Zugvergleich) noch nicht abgeholt haben.</remarks>
     private async Task TrimAsync(int userId, int incoming, CancellationToken ct)
     {
-        var open = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId
+        // Vorausanalysen (1.034.0) bleiben außen vor: ihr fertiges Ergebnis IST der Zweck (Quelle des Stellungs-Caches), bis
+        // ClubBroadcastPreAnalysis sie nach der Haltefrist aufräumt.
+        var open = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId && !j.Prep
             && j.Status != AnalysisJobStatus.Done && j.Status != AnalysisJobStatus.Failed, ct);
-        var finished = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId
+        var finished = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId && !j.Prep
             && (j.Status == AnalysisJobStatus.Done || j.Status == AnalysisJobStatus.Failed), ct);
         var over = Math.Min(open + incoming, MaxOpenJobsPerUser) + finished - MaxJobsPerUser;
         if (over <= 0) return;
         var old = await _db.AnalysisJobs
-            .Where(j => j.UserId == userId && (j.Status == AnalysisJobStatus.Done || j.Status == AnalysisJobStatus.Failed))
+            .Where(j => j.UserId == userId && !j.Prep && (j.Status == AnalysisJobStatus.Done || j.Status == AnalysisJobStatus.Failed))
             .OrderBy(j => j.FinishedAt ?? j.UpdatedAt)
             .Take(over)
             .ToListAsync(ct);

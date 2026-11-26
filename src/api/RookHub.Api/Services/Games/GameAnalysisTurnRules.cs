@@ -10,6 +10,13 @@ namespace RookHub.Api.Services.Games;
 /// </summary>
 internal static class GameAnalysisTurnRules
 {
+    /// <summary>Genügt ein Ergebnis mit <paramref name="depth"/> und <paramref name="lines"/> Linien schon der Vertiefung der
+    /// Analyse (1.034.0: Vorausanalyse laufender Ligapartien rechnet gleich mit Tiefe 30 und fünf Linien)? Nie ohne
+    /// Vertiefung, nie für Knoten- oder Lc0-Analysen.</summary>
+    internal static bool MeetsRefinement(GameAnalysis analysis, int depth, int lines) =>
+        analysis.RefineDepth is { } rd && analysis.TargetNodes == null && analysis.EngineId == null
+        && depth >= rd && lines >= (analysis.RefineMultiPv ?? analysis.MultiPv);
+
     /// <summary>
     /// Der SCHWANZ (0.543.0): darf eine Partie schon Auftraege bekommen, obwohl vor ihr noch
     /// <paramref name="openPliesAhead"/> Stellungen offen sind? Ja, wenn davor nichts mehr offen ist — oder

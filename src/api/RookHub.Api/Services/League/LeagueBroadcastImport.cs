@@ -65,12 +65,15 @@ public sealed partial class LeagueBroadcastImport
     private readonly string[] _queries;
     private readonly LeagueClubService _clubs;
     private readonly LeagueBroadcastGate _gate;
+    private readonly ClubBroadcastPreAnalysis? _prep;
 
+    /// <param name="prep">Vorausanalyse laufender Partien der eigenen Mannschaft (1.034.0); ohne (Tests) keine.</param>
     /// <param name="clubs">Die Vereins-Datenbank (1.017.0); ohne (Tests) eine eigene ohne Analysen.</param>
     /// <param name="gate">Nur ein Einspielen zugleich — in der App ein Singleton; ohne ein eigenes.</param>
     public LeagueBroadcastImport(AppDbContext db, HttpClient http, ILogger<LeagueBroadcastImport> logger, IConfiguration? config = null,
-        LeagueClubService? clubs = null, LeagueBroadcastGate? gate = null)
+        LeagueClubService? clubs = null, LeagueBroadcastGate? gate = null, ClubBroadcastPreAnalysis? prep = null)
     {
+        _prep = prep;
         _db = db;
         _http = http;
         _logger = logger;
@@ -251,6 +254,24 @@ public sealed partial class LeagueBroadcastImport
         (b.NextRoundAt, b.LiveUntil) = parsed is null ? (null, null) : LiveOf(parsed.Rounds, b.ImportedAt.Value);
         b.Finished = allFinished || b.EndsAt is { } end && end < DateTime.UtcNow - FinishedAfter;
         await SaveAsync(b, ct);
+        if (!b.Finished && b.LiveUntil > b.ImportedAt) await PreAnalyseAsync(b, pgn, ct);
+    }
+
+    /// <summary>Laufende Partien der eigenen Mannschaft vorausrechnen lassen (<see cref="ClubBroadcastPreAnalysis"/>, 1.034.0) —
+    /// aus demselben PGN, kein weiterer Lichess-Abruf; nur solange eine Runde läuft. Beiwerk wie <see cref="ClubGamesAsync"/>:
+    /// ein Fehler hier lässt das Einspielen nicht scheitern.</summary>
+    private async Task PreAnalyseAsync(LeagueBroadcast b, string pgn, CancellationToken ct)
+    {
+        if (_prep is not { Enabled: true } || pgn.Length == 0) return;
+        try
+        {
+            await _prep.EnqueueAsync(ClubBroadcastPreAnalysis.OngoingGames(pgn), ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            _logger.LogWarning(e, "LeagueHub: Vorausanalyse der laufenden Partien von {Tour} nicht eingereiht", b.TourId);
+            _db.ChangeTracker.Clear();
+        }
     }
 
     /// <summary>Die Partien mit der eigenen Mannschaft in die Vereins-Datenbank jedes Vereins (<see cref="ClubBroadcastGames"/>). Beiwerk:

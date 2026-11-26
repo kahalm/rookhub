@@ -193,9 +193,14 @@ public class MasterAnalysisScheduler : BackgroundService, IBackgroundJobInfo
     /// <summary>Der Besitzer, auf dessen Hintergrund-Engines gerechnet wird — mit mindestens einer Engine. Fest
     /// eingestellt (<c>MasterAnalysis:OwnerUserId</c>) oder die Haus-Engine nach derselben Regel wie Punktepartie und
     /// Zugvergleich (<see cref="EngineOwnerResolver.HouseOwnerAsync"/>, A4-011).</summary>
-    private async Task<LichessEngineCredential?> OwnerAsync(AppDbContext db, CancellationToken ct)
+    private Task<LichessEngineCredential?> OwnerAsync(AppDbContext db, CancellationToken ct) => OwnerAsync(db, _configuredOwner, ct);
+
+    /// <inheritdoc cref="OwnerAsync(AppDbContext, CancellationToken)"/>
+    /// <remarks>Auch für die Vorausanalyse laufender Ligapartien (<see cref="League.ClubBroadcastPreAnalysis"/>, 1.034.0): sie
+    /// rechnet auf demselben Konto wie die spätere Analyse — nur dann übernimmt diese die Aufträge.</remarks>
+    internal static async Task<LichessEngineCredential?> OwnerAsync(AppDbContext db, int? configuredOwner, CancellationToken ct)
     {
-        if (_configuredOwner is not int id) return await EngineOwnerResolver.HouseOwnerAsync(db, ct);
+        if (configuredOwner is not int id) return await EngineOwnerResolver.HouseOwnerAsync(db, ct);
         var cred = await db.LichessEngineCredentials.AsNoTracking()
             .FirstOrDefaultAsync(c => c.UserId == id && c.BackgroundEngineIds != null, ct);
         return cred is not null && cred.BackgroundEngines.Count > 0 ? cred : null;

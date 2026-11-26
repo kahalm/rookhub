@@ -3037,6 +3037,7 @@
         "clubBackfill": "Partite del club (vecchie)",
         "league": "Partite di lega",
         "master": "Partite di maestri",
+        "livePrep": "Pre-analisi campionato",
         "other": "Altro"
       },
       "throughputTitle": "Rendimento",

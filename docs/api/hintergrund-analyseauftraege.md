@@ -164,6 +164,7 @@ auf dieser Engine nichts mehr wartet (die warme Hashtabelle zählt nur innerhalb
 | `ClubBackfill` | 3 | ältere Vereinspartien (Nachtrag der Vergleiche) |
 | `League` | 4 | Liga-Partien |
 | `Master` | 5 | Meisterpartien der Bibliothek |
+| `LivePrep` | 6 | Vorausanalyse laufender Ligapartien der eigenen Mannschaft (1.034.0, siehe unten) |
 
 Gesetzt beim Anlegen (`GameAnalysisPump.PriorityOf`, `MoveComparisonService.CreateJobAsync`), nie verschoben; die
 Migration `AnalysisJobPriority` stuft die offenen Aufträge einmal ein. Ein höher eingestufter Auftrag verdrängt einen
@@ -192,6 +193,35 @@ Migration `AnalysisJobWorkerIndexes`.
 Vertiefung) sucht die Pumpe dieselbe Stellung in fertigen Analysen anderer Partien: gleich bis auf die Zugzähler, mindestens
 so tief, mindestens so viele Linien. Treffer werden kopiert, ohne Engine. Lc0-Analysen und Knotenziele bleiben außen vor.
 Index `(Fen, Depth)`; die Spalte vergleicht ohne Groß-/Kleinschreibung, der genaue Vergleich läuft danach im Speicher.
+
+**Vorausanalyse laufender Ligapartien (1.034.0, `AnalysisJob.Prep`, Stufe `LivePrep`)** — Wunsch 2026-11-26: „die Analyse
+mit Tiefe 30 + 5 Linien schon während der Bundesliga, wenn Hintergrund-Engines frei sind, nur für Schwaz“.
+`Services/League/ClubBroadcastPreAnalysis.cs` legt für jede Stellung einer laufenden Partie der eigenen Mannschaft einen
+gewöhnlichen Auftrag an (Herkunft und Auswahl: `leaguehub-vereins-datenbank.md`), mit `Prep = true`:
+- **Tiefe/Linien** = Vertiefung der Vereinspartie (`GameAnalysisDefaults.ClubRefineDepth` 30, `GameAnalysisDefaults.MultiPv` 5) —
+  deckt den ersten Durchgang (Tiefe 20) mit. Konto wie `MasterAnalysisScheduler` (`MasterAnalysis:OwnerUserId`, sonst Haus-Engine,
+  `MasterAnalysisScheduler.OwnerAsync`), Engine wie jeder Hintergrundauftrag (kürzeste Schlange, dann `AnalysisJobRebalancer`). Nur
+  Stockfish (Hintergrund-Liste ohne Nur-auf-Anforderung-Engines).
+- **Vorrang**: `Background`, `Batch`, Stufe `LivePrep` (6) unter allen anderen; verdrängt nichts, wird von interaktiven Aufträgen
+  verdrängt, die Live-Bretter (`LiveEngineLane`) gehen ohnehin vor. Sperrzeiten wie jeder Stapel. Innerhalb der Stufe FIFO.
+- **Unsichtbar**: nicht in `GET /api/analysis-jobs`, nicht an gemerkten Stellungen, zählt nicht gegen `MaxOpenJobsPerUser`, der
+  Trimmer (`MaxJobsPerUser`) lässt sie stehen, `PickBackgroundEngineAsync` zählt sie nur für andere Vorausanalysen mit.
+- **Als Cache-Quelle**: `GameAnalysisPositionCache.FindAsync` sucht nach den Stellungen anderer Analysen auch in FERTIGEN
+  Vorausanalysen (gleicher Schlüssel ohne Zugzähler, `ReachedDepth` ≥, `MultiPv` ≥, kein Knotenziel; Ergebnis über
+  `BrokerCandidates.Parse`, fremde Engine-Ausgabe zählt nicht; Linien ≥ min(verlangt, legale Züge)). Index `(Prep, Fen)`,
+  Migration `AnalysisJobPrep`.
+- **Übernahme statt doppelt**: findet die Pumpe für eine Stellung einer Stapel-Analyse (Verein/Liga/Bestand, auch eilig) desselben
+  Kontos keinen Treffer, aber einen OFFENEN Vorausanalyse-Auftrag (`FindOpenPrepAsync`, mindestens so tief, so viele Linien,
+  noch an keiner Stellung), hängt sie ihn an die Stellung und gibt ihm Stufe und Art, die ein eigener Auftrag hätte
+  (`GameAnalysisPump.Adopt`; Vereinspartie = `ClubNew`). Gilt für ersten Durchgang und Vertiefung.
+- **Gleich vertieft**: ein Cache-Treffer oder übernommener Auftrag, der schon `RefineDepth`/`RefineMultiPv` erreicht
+  (`GameAnalysisTurnRules.MeetsRefinement`), setzt `Refined` — die Vertiefung rechnet diese Stellung nicht noch einmal und
+  hängt nicht davon ab, dass die Vorausanalyse dann noch da ist.
+- **Aufräumen**: `CleanupAsync` (im 10-Minuten-Takt `LeagueBroadcastLiveScheduler`) löscht Vorausanalysen älter als
+  `LiveBoards:PreAnalysis:RetentionHours` (Vorgabe 168, 6..1440), außer sie hängen an einer Stellung.
+- **Admin-Seite „Engines“**: eigene Art `livePrep` („Vorausanalyse Liga“) mit Zahl; übernommene zählen unter der neuen Stufe.
+- Schalter `LiveBoards:PreAnalysis:Enabled` (Vorgabe `true`; mit `MasterAnalysis:Enabled=false` ohnehin aus).
+- Tests: `ClubBroadcastPreAnalysisTests`.
 
 **Fremde Engine-Ausgabe (Provider-Versatz, 0.989.2)**: Nacht 16./17.11.2026: einzelne Provider-Prozesse (lichess
 `example-provider.py`, ein Prozess je Engine) blieben nach einem abgerissenen Upload (z. B. API-Neustart) dauerhaft eine
