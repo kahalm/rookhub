@@ -97,11 +97,12 @@ public class OpponentTrainingLinesStartFenTests
 
         var r = OpponentTrainingLines.Rank(g, ["K", "K", "K"], a, noExplorer);
 
-        Assert.Equal(new[] { "c5", "e5", "d5" }, r.Lines.Select(l => l.Sans[1]));
+        // die 1…e5-Linie widerspricht schon seinem ersten Zug (er spielt 1…c5) — sie fehlt seit 2026-11-26 ganz
+        Assert.Equal(new[] { "c5", "d5" }, r.Lines.Select(l => l.Sans[1]));
+        Assert.Equal(1, r.ExcludedFirstMove);
         Assert.Equal(("none", 1), (r.Lines[0].Source, r.Lines[0].OwnMoves));
-        Assert.Equal("deviates", r.Lines[1].Source);
-        Assert.Equal(("none", 0), (r.Lines[2].Source, r.Lines[2].OwnMoves));
-        Assert.True(r.Lines[2].NeverReached);
+        Assert.Equal(("none", 0), (r.Lines[1].Source, r.Lines[1].OwnMoves));
+        Assert.True(r.Lines[1].NeverReached);
     }
 
     [Fact]

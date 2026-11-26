@@ -65,16 +65,18 @@ public class OpponentTrainingLinesTests
 
         var r = OpponentTrainingLines.Rank(g, ["K", "K"], games);
 
-        // beide 0 % — die mit Partien kommt vor die nie erreichte, obwohl sie im Repertoire später steht
-        Assert.Equal(new[] { "d4", "e4" }, r.Lines.Select(l => l.Sans[0]));
-        Assert.True(r.Lines[1].NeverReached);
-        var line = r.Lines[0];
-        Assert.Equal(3, line.Reached);          // die Stellung nach 3.Nc3 erreichen alle drei, über die andere Zugfolge
-        // von vorne weg trifft er keinen Zug der Linie (1.d4 spielt er nie) — „nie erreicht", aber mit Partien vor den leeren
-        Assert.True(line.NeverReached);
-        Assert.Equal(0, line.Matched);
-        // Die Zwischenstellungen der Linie (nach 1.d4) erreicht der Gegner so nie — das Produkt ist 0, die Partien zählen trotzdem.
-        Assert.Equal(0, line.Probability);
+        // Seit 2026-11-26 (Zugumstellung): die 1.e4-Linie widerspricht seinem ersten Zug (immer 1.c4) und fehlt; die Nimzo-Linie
+        // beginnt an der Stellung, die er wirklich erreicht (nach 3.Sc3) — mit dem Schlüssel der Ursprungslinie.
+        Assert.Equal(1, r.ExcludedFirstMove);
+        var line = Assert.Single(r.Lines);
+        Assert.Equal(new[] { "Bb4" }, line.Sans);
+        Assert.Equal(5, line.TransposedFrom);
+        Assert.Equal(0, line.BridgeMoves);
+        Assert.NotNull(line.StartFen);
+        Assert.Equal(ChessableTrainedLineService.LineKeyFromSans(["d4", "Nf6", "c4", "e6", "Nc3", "Bb4"]), line.Key);
+        Assert.False(line.NeverReached);
+        Assert.Equal(3, line.Reached);
+        Assert.Equal(1.0, line.Probability, 6);                 // er erreicht die Stellung in allen drei Partien
     }
 
     [Fact]
@@ -95,14 +97,16 @@ public class OpponentTrainingLinesTests
     [Fact]
     public void NeverReachedPosition_StaysInTheList_AtTheEnd()
     {
-        var g = Graph('w', "1. e4 c6 2. d4 d5", "1. e4 c5 2. Nf3 d6", "1. e4 e5 2. Nf3 Nc6");
+        // nach 1.d4 war er nie (anders als 1…c6 nach 1.e4: das widerspräche ihm und fiele weg) — „nie erreicht" bleibt drin
+        var g = Graph('w', "1. d4 d5 2. c4 e6", "1. e4 c5 2. Nf3 d6", "1. e4 e5 2. Nf3 Nc6");
         var games = Times(5, "e4 c5 Nf3 d6", false).Concat(Times(1, "e4 e5 Nf3 Nc6", false));
 
         var r = OpponentTrainingLines.Rank(g, ["K", "K", "K"], games);
 
         Assert.Equal(3, r.Lines.Count);
+        Assert.Equal(0, r.ExcludedFirstMove);
         var caro = r.Lines[^1];
-        Assert.Equal("e4 c6 d4 d5", string.Join(' ', caro.Sans));
+        Assert.Equal("d4 d5 c4 e6", string.Join(' ', caro.Sans));
         Assert.True(caro.NeverReached);
         Assert.Equal(0, caro.Probability);
         Assert.Equal(0, caro.Reached);
@@ -124,7 +128,9 @@ public class OpponentTrainingLinesTests
 
         var r = OpponentTrainingLines.Rank(g, ["K", "K", "K", "K", "K", "K"], games);
 
-        Assert.Equal(new[] { 0, 5, 1, 2, 3, 4 }, r.Lines.Select(l => l.Index));
+        // 4 (1…c6) widerspricht seinem ersten Zug — er hat nach 1.e4 gespielt, nur nie 1…c6: fehlt seit 2026-11-26
+        Assert.Equal(new[] { 0, 5, 1, 2, 3 }, r.Lines.Select(l => l.Index));
+        Assert.Equal(1, r.ExcludedFirstMove);
         var najdorf = r.Lines[0];
         Assert.Equal((5, 0), (najdorf.Matched, najdorf.Missing));
         Assert.Equal(0.5, najdorf.Probability, 6);
@@ -139,8 +145,6 @@ public class OpponentTrainingLinesTests
         Assert.Equal((4, 1), (dragon.Matched, dragon.Missing));
         var twoMissing = r.Lines[4];
         Assert.Equal((1, 2), (twoMissing.Matched, twoMissing.Missing));
-        Assert.True(r.Lines[5].NeverReached);
-        Assert.Equal(0, r.Lines[5].Matched);
     }
 
     [Fact]
@@ -403,6 +407,7 @@ public class OpponentTrainingLinesTests
         var games = () => Task.FromResult(new List<OpponentTrainingLines.Game>
         {
             G("e4 c5 Nf3 d6 d4 cxd4", false, 2025), G("e4 c5 Nf3 d6 d4 cxd4", false, 2024), G("e4 e5 Nf3 Nc6 Bb5 a6", false, 2023),
+            G("e4 c6 Nc3 d5", false, 2022),   // auch 1…c6 — sonst widerspräche die Caro-Linie seinem ersten Zug und fiele weg
         });
         var svc = db.Service();
 
@@ -416,7 +421,7 @@ public class OpponentTrainingLinesTests
         Assert.False(rep.UseForExtension);              // sonst wäre es selbst eine Quelle der Vorbereitung
         Assert.Equal(RepertoireKind.Opening, rep.Kind);
         Assert.Contains("Weiß-Repertoire", rep.Description);
-        Assert.Contains("3 Partien", rep.Description);
+        Assert.Contains("4 Partien", rep.Description);
 
         // dieselben Linien-Schlüssel wie die gereihten Quelllinien, in dieser Reihenfolge; Abschnitte unverändert
         var ranked = (await svc.LinesAsync(1, Q(source), games, default))!["lines"]!.AsArray().Select(l => l!["key"]!.GetValue<string>()).ToList();
@@ -663,7 +668,9 @@ public class OpponentTrainingLinesTests
         var a = await db.RepertoireAsync(1, "A", Lines("Nf3"));           // 20 Linien
         var b = await db.RepertoireAsync(1, "B", Lines("d4") + Lines("Nc3"));  // 40 Linien
         // der Gegner spielt 1...c5 und 1...e5 — deren Linien (aus beiden Quellen) zuerst
-        var games = () => Task.FromResult(new List<OpponentTrainingLines.Game> { G("e4 c5 d4", false), G("e4 e5 Nc3", false) });
+        // je erster Zug eine Partie (sonst fielen die Linien, die seinem ersten Zug widersprechen, weg), 1…c5/1…e5 öfter
+        var games = () => Task.FromResult(firsts.Select(f => G($"e4 {f} Nf3", false))
+            .Concat([G("e4 c5 d4", false), G("e4 c5 d4", false), G("e4 e5 Nc3", false), G("e4 e5 Nc3", false)]).ToList());
         var svc = db.Service();
 
         var created = (await svc.CreateRepertoireAsync(1, "Huber, Franz", Q(null, "w"), games, default))!;
@@ -695,7 +702,8 @@ public class OpponentTrainingLinesTests
         var description = db.Ctx.Repertoires.AsNoTracking().Single(r => r.Id == created.Id).Description!;
         Assert.StartsWith("Trainingslinien gegen Hess, Max — er hat Schwarz, ich spiele Weiß — aus „A“, ", description);
         Assert.DoesNotContain("„B“", description);
-        Assert.Contains("2 Partien gezählt, 1 von 2 Linien.", description);
+        // die 1…e5-Linie aus B widerspricht seinem ersten Zug (immer 1…c5): nicht gereiht, aber in der Beschreibung genannt
+        Assert.Contains("2 Partien gezählt, 1 von 1 Linien übernommen. 1 Linie ausgelassen, weil er dort in seinen Partien nie so spielt.", description);
     }
 
     [Fact]
@@ -703,7 +711,9 @@ public class OpponentTrainingLinesTests
     {
         var d = TrainingLinesService.Description(" Hess, Max ", 'b', ["Gustafsson 1.e4", "Sizilianisch"], new DateTime(2026, 10, 10), 12, 5, 9);
         Assert.Equal("Trainingslinien gegen Hess, Max — er hat Weiß, ich spiele Schwarz — aus „Gustafsson 1.e4“, „Sizilianisch“, "
-                     + "10.10.2026, 12 Partien gezählt, 5 von 9 Linien.", d);
+                     + "10.10.2026, 12 Partien gezählt, 5 von 9 Linien übernommen.", d);
+        Assert.EndsWith("5 von 9 Linien übernommen. 3 Linien ausgelassen, weil er dort in seinen Partien nie so spielt.",
+            TrainingLinesService.Description("X", 'b', ["A"], DateTime.UtcNow, 12, 5, 9, excludedFirstMove: 3));
         Assert.Contains("er hat Schwarz, ich spiele Weiß", TrainingLinesService.Description("X", 'w', ["A"], DateTime.UtcNow, 0, 1, 1));
         Assert.True(TrainingLinesService.Description("X", 'w', [new string('a', 2000)], DateTime.UtcNow, 0, 1, 1).Length <= 1000);
     }

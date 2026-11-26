@@ -157,6 +157,18 @@ describe('TrainingLinesComponent', () => {
     expect(el().querySelector('.tl-skipped')!.textContent).toContain('3 ungelernte Chessable-Alternativen ausgelassen.');
   });
 
+  it('2026-11-26: Zugumstellung markiert, Linien gegen seinen ersten Zug als ausgelassen genannt', async () => {
+    build();
+    const data: TrainingLines = { ...DATA, excludedFirstMove: 444, lines: [
+      { ...DATA.lines[0], transposedFrom: 5, bridgeMoves: 2 }, ...DATA.lines.slice(1)] };
+    trainingLines.and.resolveTo(data);
+    await openSection();
+    const tags = el().querySelectorAll('.tl-transposed');
+    expect(tags.length).toBe(1);
+    expect(tags[0].textContent).toContain('über Zugumstellung');
+    expect(el().querySelector('.tl-excluded')!.textContent).toContain('444 Linien ausgelassen');
+  });
+
   describe('Linienzahl wählen (Wunsch 2026-11-25)', () => {
     const take = () => el().querySelector<HTMLSelectElement>('select.tl-take')!;
 

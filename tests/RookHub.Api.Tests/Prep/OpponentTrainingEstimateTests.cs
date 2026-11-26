@@ -75,12 +75,10 @@ public class OpponentTrainingEstimateTests
         Assert.Equal("mixed", najdorf.Source);
         Assert.Equal(3, najdorf.LichessFrom);                      // ab 2...d6 geschätzt
         Assert.Equal(1.0 * 0.4, najdorf.Probability, 6);
-        var open = r.Lines[1];                                     // widerspricht ihm (er spielt 1...c5): eigene Stufe dahinter
-        Assert.Equal("deviates", open.Source);
-        Assert.Equal(1, open.DeviationPly);
-        Assert.Equal("c5", open.DeviationSan);
-        Assert.Equal(1, open.DeviationGames);
-        Assert.Equal(0.45 * 0.8, open.Probability, 6);              // Schätzung ab dem Widerspruch
+        // die 1…e5-Linie widerspricht schon seinem ERSTEN Zug (er spielt 1…c5): seit 2026-11-26 gar nicht mehr dabei — auch nicht
+        // über die Schätzung des Explorers (seine Züge haben Vorrang)
+        Assert.Single(r.Lines);
+        Assert.Equal(1, r.ExcludedFirstMove);
     }
 
     [Fact]
@@ -99,8 +97,10 @@ public class OpponentTrainingEstimateTests
             [KeyAfter("e4", "c5", "Nf3")] = Stats(("d6", 50), ("Nc6", 50)),
         };
         var r = Rank(g, Times(2, "e4 c5 Nf3 d6 d4", false), explorer, minOwn: 1);
-        Assert.Equal(new[] { 4, 1, 3, 2, 0 }, r.Lines.Select(l => l.Index));
-        Assert.Equal(new[] { "own", "lichess", "deviates", "deviates", "none" }, r.Lines.Select(l => l.Source));
+        // Linie 2 widerspricht schon seinem ersten Zug: fehlt (2026-11-26); die spätere Abweichung (3) bleibt
+        Assert.Equal(new[] { 4, 1, 3, 0 }, r.Lines.Select(l => l.Index));
+        Assert.Equal(new[] { "own", "lichess", "deviates", "none" }, r.Lines.Select(l => l.Source));
+        Assert.Equal(1, r.ExcludedFirstMove);
         Assert.Equal(1, r.Lines[2].OwnMoves);                      // 1...c5 stimmte noch
         Assert.Equal("d6", r.Lines[2].DeviationSan);
         Assert.Equal(2, r.Lines[2].DeviationGames);
@@ -317,9 +317,11 @@ public class OpponentTrainingEstimateTests
         var lines = r["lines"]!.AsArray();
         Assert.All(lines, l => Assert.False(l!["pending"]!.GetValue<bool>()));
         Assert.DoesNotContain(lines, l => l!["source"]!.GetValue<string>() is "lichess" or "mixed");
-        // seine Partie geht bis 2.Sf3: die Najdorf-Linie hat danach keine Quelle (Auffüllregel), die 1...e5-Linie widerspricht ihm
+        // seine Partie geht bis 2.Sf3: die Najdorf-Linie hat danach keine Quelle (Auffüllregel); die 1...e5-Linie widerspricht
+        // seinem ersten Zug und fehlt (2026-11-26)
         Assert.Equal("none", lines.Single(l => l!["moves"]![1]!.GetValue<string>() == "c5")!["source"]!.GetValue<string>());
-        Assert.Equal("deviates", lines.Single(l => l!["moves"]![1]!.GetValue<string>() == "e5")!["source"]!.GetValue<string>());
+        Assert.DoesNotContain(lines, l => l!["moves"]![1]!.GetValue<string>() == "e5");
+        Assert.Equal(1, r["excludedFirstMove"]!.GetValue<int>());
     }
 
     [Fact]
@@ -375,8 +377,9 @@ public class OpponentTrainingEstimateTests
         // die Lücke der Linie, der er folgt, vor den Stellungen, die nur die abweichenden Linien brauchen
         var najdorf = keys.IndexOf(KeyAfter("e4", "c5", "Nf3"));
         Assert.True(najdorf >= 0);
-        Assert.True(najdorf < keys.IndexOf(KeyAfter("e4", "e5", "Nf3")), string.Join(" | ", keys));
-        Assert.True(najdorf < keys.IndexOf(KeyAfter("e4", "c6", "d4")), string.Join(" | ", keys));
+        // die beiden anderen widersprechen schon seinem ersten Zug (1…c5): ihre Stellungen fragt niemand mehr an (2026-11-26)
+        Assert.DoesNotContain(KeyAfter("e4", "e5", "Nf3"), keys);
+        Assert.DoesNotContain(KeyAfter("e4", "c6", "d4"), keys);
     }
 
     [Fact]

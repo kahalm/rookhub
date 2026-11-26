@@ -458,7 +458,8 @@ public class OpponentDeviationsTests
             "[Event \"x\"]\n[White \"?\"]\n[Black \"Offen\"]\n\n1. e4 e5 2. Nf3 *\n\n"
             + "[Event \"x\"]\n[White \"Spielmann, Rudolf vs. Reti, Richard, Berlin 1928\"]\n[Black \"Reference Games\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 *\n");
         var svc = db.Service();
-        Task<List<OpponentTrainingLines.Game>> games() => GamesOf(Times(3, "e4 c5 Nf3 d6", false, 2022));
+        // eine 1…e5-Partie dazu — sonst widerspräche die einzige Linie seinem ersten Zug und fiele weg (2026-11-26)
+        Task<List<OpponentTrainingLines.Game>> games() => GamesOf(Times(3, "e4 c5 Nf3 d6", false, 2022).Concat(Times(1, "e4 e5 Nf3", false, 2022)));
 
         var lines = (await svc.LinesAsync(1, Q(null, "w"), games, default))!;
         Assert.All(lines["lines"]!.AsArray(), l => Assert.Equal("Offen", l!["chapter"]!.GetValue<string>()));

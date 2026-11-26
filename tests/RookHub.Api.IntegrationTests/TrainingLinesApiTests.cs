@@ -148,9 +148,9 @@ public class TrainingLinesApiTests(TrainingLinesFixture fixture) : IAsyncLifetim
         Assert.Equal("e5", lines[0]!["moves"]![1]!.GetValue<string>());
         Assert.Equal(1.0, lines[0]!["probability"]!.GetValue<double>(), 4);
         Assert.Equal(2025, lines[0]!["lastYear"]!.GetValue<int>());
-        // seine Partie geht 1...e5 — die Sizilianisch-Linie widerspricht ihm (eigene Stufe, „er spielt hier 1...e5")
-        Assert.Equal("deviates", lines[1]!["source"]!.GetValue<string>());
-        Assert.Equal("e5", lines[1]!["deviationSan"]!.GetValue<string>());
+        // seine Partie geht 1...e5 — die Sizilianisch-Linie widerspricht seinem ersten Zug und fehlt (1.023.0)
+        Assert.Single(lines);
+        Assert.Equal(1, r["excludedFirstMove"]!.GetValue<int>());
     }
 
     [MySqlFact]
@@ -192,7 +192,7 @@ public class TrainingLinesApiTests(TrainingLinesFixture fixture) : IAsyncLifetim
         var first = JsonNode.Parse(await (await me.PostAsJsonAsync(prepUrl, new { repertoire = source, source = "board" })).Content.ReadAsStringAsync())!;
         var year = DateTime.UtcNow.Year;
         Assert.Equal($"Prep: Gegner, Gerd {year}", first["name"]!.GetValue<string>());
-        Assert.Equal(2, first["lines"]!.GetValue<int>());
+        Assert.Equal(1, first["lines"]!.GetValue<int>());      // die 1…e5-Linie widerspricht seinem ersten Zug (1…c5, 1.023.0)
         Assert.False(first["replaced"]!.GetValue<bool>());
         var newId = first["id"]!.GetValue<int>();
 

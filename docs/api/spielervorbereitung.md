@@ -267,6 +267,20 @@ Nutzers, jüngste zuerst, je Gegner eine, höchstens 50 (`MaxItems`; angesehen w
   — er hat Weiß, ich spiele Schwarz — aus …") und nennt nur die Repertoires, aus denen übernommene Linien stammen
   (vorher „gegen Hess, Max (Weiß)" = meine Farbe, dazu alle Quellen). Oberfläche: Haupt-`src/frontend/CLAUDE.md`
   „Spielerkarte geteilt + Spielervorbereitung".
+- Erster Zug + Zugumstellungen (1.023.0, Prod-Repertoire 331 „Brunner": „alle partien von ihm sind c4 – warum sind da e4 lines
+  dabei?"): `OpponentTranspositions` (Services/Prep), aufgerufen aus `OpponentTrainingLines.Analyze`. Je Linie der erste
+  Gegnerzug, an dem er weitergespielt hat, aber nie mit dem Zug der Linie (Widerspruch). Danach sucht es die FRÜHESTE spätere
+  Stellung der Linie, die er erreicht: zuerst eine, die er in einer Partie wirklich erreicht hat (Stellungs-Schlüssel, andere
+  Zugfolge), sonst eine Brücke — Ausstiegsstellung P (seine Partie verlässt das Repertoire mit SEINEM Zug) + mein Zug (+ sein
+  Zug) = Stellung der Linie (2 Halbzüge legal durchprobiert, nur wenn ein Ziel ≤ 6 Felder von P abweicht, höchstens 200
+  Ausstiege). Die Linie wird ab dort gereiht wie eine mit eigener Startstellung (`start` = P bzw. die gemeinsame Stellung,
+  `transposedFrom`/`bridgeMoves` in der Antwort, `key` bleibt der der Ursprungslinie), Wahrscheinlichkeit × Anteil seiner
+  Partien in der Startstellung; gleiche Startstellung + gleiche Fortsetzung = eine Linie. Kein Rückweg und Widerspruch schon
+  beim ERSTEN Zug → die Linie fehlt ganz (`excludedFirstMove` in der Antwort, Beschreibung des „Prep: …": „n von m Linien
+  übernommen. k Linien ausgelassen …"), auch die Explorer-Schätzung bringt sie nicht zurück; spätere Widersprüche ohne Rückweg
+  bleiben `deviates`. Ohne Partien im Zeitraum wie bisher. Im „Prep: …" steht eine umgestellte Linie als eigener Abschnitt mit
+  `[SetUp]`/`[FEN]` (Kopf der Quelle ohne `ChessableOid`, ohne Kommentare). Gemessen mit Prod-Repertoires 14+21 (611 Linien,
+  6 922 Stellungen): Analyze 5 ms → 35–155 ms (1 bzw. 500 gleiche Partien), 800 Zufallspartien 242 ms.
 - Abweichungen (0.891.0, Wunsch 07.11.: „in welchem zug er einen zug macht den ich nicht kenne … trainiere abweichungen"):
   `GET /api/prep/player/{id}/deviations` (prep.view) und `GET /api/league/player/{fide}/deviations` (`LeagueTrainingController`,
   league.view, kein Teilen-Link), Parameter wie `training-lines` (`take` höchstens 50). Quellen/Farbe/Kapitelfarben wie die

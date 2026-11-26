@@ -122,12 +122,18 @@ interface Want { repertoire: number | null; color: 'w' | 'b' | null }
               @if (d.skippedAlternatives) {
                 <p class="muted small tl-skipped">{{ t('skippedAlternatives', { n: d.skippedAlternatives }) }}</p>
               }
+              @if (d.excludedFirstMove) {
+                <p class="muted small tl-excluded">{{ t('excludedFirstMove', { n: d.excludedFirstMove }) }}</p>
+              }
               <ol class="tl-list">
                 @for (l of d.lines; track l.key) {
                   <li [class.never]="l.neverReached">
                     <div class="tl-line">
                       <span class="tl-moves">{{ text(l) }}</span>
                       <span class="muted small tl-chapter">{{ origin(d, l) }}</span>
+                      @if (l.transposedFrom != null) {
+                        <span class="tl-tag tl-transposed" [title]="t('transposedTip')">{{ t('transposed') }}</span>
+                      }
                       @if (l.chessableUrl) {
                         <a class="tl-tag tl-chessable" [href]="l.chessableUrl" target="_blank" rel="noopener"
                            [title]="chessableTip(l)">{{ chessableLabel(l) }}</a>
@@ -574,6 +580,9 @@ const GERMAN: Record<string, string> = {
   chessableLevelOnly: 'Auf Chessable öffnen — Stufe {{level}}, Trainingsdatum nicht mitgeschnitten',
   chessableNever: 'Auf Chessable öffnen — dort noch nicht trainiert',
   skippedAlternatives: '{{n}} ungelernte Chessable-Alternativen ausgelassen.',
+  excludedFirstMove: '{{n}} Linien ausgelassen: so eröffnet er in seinen Partien nie.',
+  transposed: 'über Zugumstellung',
+  transposedTip: 'Er kommt über eine andere Zugfolge in diese Linie — trainiert wird ab seiner Stellung.',
   headerFew: 'Von {{who}} nur {{n}} passende Partien — Lücken mit Lichess-Partien der Stufe {{band}} geschätzt.',
   headerNone: 'Von {{who}} keine passenden Partien — geschätzt mit Lichess-Partien der Stufe {{band}} (ein typischer Spieler seiner Stärke).',
   headerGaps: 'Wo {{who}} zu wenige Partien hat, sind die Linien mit Lichess-Partien der Stufe {{band}} geschätzt.',

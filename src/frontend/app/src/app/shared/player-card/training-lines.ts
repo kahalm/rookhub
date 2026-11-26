@@ -51,6 +51,11 @@ export interface TrainingLine {
   lichessFrom: number | null;
   /** Eine nötige Explorer-Stellung kam nicht rechtzeitig an. */
   pending: boolean;
+  /** Zugumstellung (2026-11-26): die Linie beginnt an der gemeinsamen Stellung mit seinen Partien (`start`/`moves` ab dort,
+   *  `key` bleibt der der Ursprungslinie) — Halbzug der Ursprungslinie, ab dem sie wieder dabei ist; `null` = wie im Repertoire. */
+  transposedFrom?: number | null;
+  /** Züge von seiner Ausstiegsstellung zurück in die Linie (mein Zug, ggf. seiner); 0 = er erreicht sie selbst. */
+  bridgeMoves?: number;
   /** Chessable-Stand (0.885.0, Mitschnitte der Extension): zuletzt trainiert (`yyyy-MM-dd`), Linienstufe, Link zur Variante
    *  (nur Linien mit `[ChessableOid]`). */
   chessableLastTrained?: string | null;
@@ -120,6 +125,8 @@ export interface TrainingLines {
   total: number;
   /** So viele Chessable-Alternativen ohne Training wurden ausgelassen (0.885.0). */
   skippedAlternatives?: number;
+  /** So viele Linien fehlen, weil sie schon seinem ersten Zug widersprechen (2026-11-26). */
+  excludedFirstMove?: number;
   lines: TrainingLine[];
   /** So viele Linien mehr gibt es (ohne `take` höchstens 50 in der Antwort). */
   more: number;

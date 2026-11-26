@@ -23,7 +23,9 @@ namespace RookHub.Api.Services.Prep;
 /// zur ersten Stellung, die der Gegner nie erreicht oder in der er nie den Zug der Linie gespielt hat. Gereiht wird in
 /// Stufen: zuerst die voll getroffenen nach Wahrscheinlichkeit, dann die mit EINEM fehlenden Gegnerzug nach der
 /// Wahrscheinlichkeit ihres getroffenen Anfangs, dann mit zwei fehlenden … ; je Stufe mehr Partien zuerst, dann die
-/// Reihenfolge im Repertoire. Linien, die er gar nicht trifft (<c>Matched = 0</c>), stehen ganz hinten („nie erreicht").</para>
+/// Reihenfolge im Repertoire. Linien, die er gar nicht trifft (<c>Matched = 0</c>), stehen ganz hinten („nie erreicht").
+/// Ausnahme (2026-11-26): Linien, die schon seinem ERSTEN Zug widersprechen, obwohl er die Stellung in seinen Partien erreicht
+/// hat, fallen ganz weg (<see cref="OpponentTranspositions"/>) — „nie erreicht" bleibt nur, wo er nie hinkam.</para>
 ///
 /// <para><b>Aufwand.</b> Die Partien laufen als Präfixbaum durch EIN Brett (Zug, Unterbaum, Zug zurück): gemeinsame
 /// Anfänge werden einmal gezogen, nicht je Partie.</para>
@@ -55,16 +57,23 @@ public static class OpponentTrainingLines
     /// <param name="Pending">Eine benötigte Explorer-Stellung kam im Zeitbudget nicht an.</param>
     /// <param name="DeviationPly">Widerspruch zu seinen Partien (<see cref="Source"/> = <c>deviates</c>): Halbzug, an dem er
     /// stattdessen <paramref name="DeviationSan"/> gespielt hat (<paramref name="DeviationGames"/> Partien, der häufigste).</param>
+    /// <param name="TransposedFrom">Zugumstellung (2026-11-26): die Linie beginnt nicht an ihrem Start, sondern an der gemeinsamen
+    /// Stellung mit seinen Partien — Halbzug der Ursprungslinie, ab dem sie wieder dabei ist; <paramref name="Sans"/> und
+    /// <paramref name="StartFen"/> gelten ab dort, <paramref name="Key"/> bleibt der der Ursprungslinie.</param>
+    /// <param name="BridgeMoves">Züge davor von seiner Ausstiegsstellung in die Linie (mein Zug, ggf. seiner); 0 = direkt erreicht.</param>
     public sealed record Line(string Key, string End, string? StartFen, string Chapter, IReadOnlyList<string> Sans, double Probability,
         int Reached, int? LastYear, bool NeverReached, int Index, int Matched = 0, int Missing = 0, double PrefixProbability = 0,
         int PrefixReached = 0, string Source = "own", int OwnMoves = 0, int LichessMoves = 0, int? LichessFrom = null, bool Pending = false,
-        int? DeviationPly = null, string? DeviationSan = null, int DeviationGames = 0)
+        int? DeviationPly = null, string? DeviationSan = null, int DeviationGames = 0, int? TransposedFrom = null, int BridgeMoves = 0)
     {
         /// <summary>Stufe der Reihung: 0 = voll getroffen, n = n Gegnerzüge fehlen, ganz hinten = gar nicht getroffen.</summary>
         internal int Tier => NeverReached ? int.MaxValue : Missing;
     }
 
-    public sealed record Result(int Games, List<Line> Lines);
+    /// <param name="ExcludedFirstMove">So viele Linien sind weggelassen, weil er an ihrem ERSTEN Gegnerzug (in einer Stellung, die er
+    /// in seinen Partien erreicht und von der aus er weitergespielt hat) nie den Zug der Linie gespielt hat — siehe
+    /// <see cref="OpponentTranspositions"/>.</param>
+    public sealed record Result(int Games, List<Line> Lines, int ExcludedFirstMove = 0);
 
     /// <summary>Schätzung für Lücken (Wunsch 2026-10-07: „wenn gaaaanz wenig games vorhanden sind … nimm lichesspartien"): je
     /// Gegner-Stellung, in der er weniger als <see cref="MinOwn"/> Partien weitergespielt hat, die Zughäufigkeiten des Explorers
@@ -78,6 +87,14 @@ public static class OpponentTrainingLines
         internal Analysis(int games, Dictionary<string, PositionStats> stats) { Games = games; Stats = stats; }
         public int Games { get; }
         internal Dictionary<string, PositionStats> Stats { get; }
+        /// <summary>Hauptvariante (Index) → neu angesetzt ab der gemeinsamen Stellung (Zugumstellung, 2026-11-26).</summary>
+        internal Dictionary<int, OpponentTranspositions.Rebase> Rebases { get; } = new();
+        /// <summary>Hauptvarianten, die schon seinem ersten Zug widersprechen und keinen Rückweg haben — fehlen in der Reihung.</summary>
+        internal HashSet<int> Excluded { get; } = new();
+
+        /// <summary>Die Stellungen, mit denen Linie <paramref name="i"/> gereiht wird (neu angesetzt oder wie im Repertoire).</summary>
+        internal List<RepertoireReach.Node> Nodes(RepertoireReach.Graph graph, int i) =>
+            Rebases.TryGetValue(i, out var r) ? r.Nodes : graph.Mainlines[i];
     }
 
     /// <summary>Zählt die Partien des Gegners mit der anderen Farbe als <paramref name="graph"/>.</summary>
@@ -85,7 +102,14 @@ public static class OpponentTrainingLines
     {
         var opponentWhite = graph.Color == 'b';
         var relevant = games.Where(g => g.OpponentWhite == opponentWhite).ToList();
-        return new Analysis(relevant.Count, Count(relevant, graph));
+        var boundaries = new Dictionary<string, OpponentTranspositions.Boundary>(StringComparer.Ordinal);
+        var a = new Analysis(relevant.Count, Count(relevant, graph, boundaries));
+        OpponentTranspositions.Resolve(graph, a.Stats, boundaries.Values, a.Rebases, a.Excluded);
+        // Ausstiegsstellungen, an denen eine neu angesetzte Linie beginnt: als erreicht zählen (Startstellung der Linie)
+        foreach (var r in a.Rebases.Values)
+            if (r.BridgeMoves > 0 && boundaries.TryGetValue(r.Nodes[0].Key, out var b) && !a.Stats.ContainsKey(b.Key))
+                a.Stats[b.Key] = new PositionStats { Reached = b.Count, LastYear = b.LastYear };
+        return a;
     }
 
     /// <summary>Die Gegner-Stellungen der Linien, für die seine Partien nicht reichen (weniger als <paramref name="minOwn"/>
@@ -93,8 +117,10 @@ public static class OpponentTrainingLines
     public static List<RepertoireReach.Node> NeedsExplorer(RepertoireReach.Graph graph, Analysis a, int minOwn)
     {
         var need = new Dictionary<string, RepertoireReach.Node>(StringComparer.Ordinal);
-        foreach (var nodes in graph.Mainlines)
+        for (var i = 0; i < graph.Mainlines.Count; i++)
         {
+            if (a.Excluded.Contains(i)) continue;              // widerspricht seinem ersten Zug: gar nicht gereiht
+            var nodes = a.Nodes(graph, i);
             if (!StartReached(nodes, a.Stats)) continue;      // eigene Startstellung, die er nie erreicht: nichts zu schätzen
             for (var k = 0; k + 1 < nodes.Count; k++)
             {
@@ -174,7 +200,9 @@ public static class OpponentTrainingLines
     /// Wahrscheinlichkeit = Produkt über die Gegnerzüge aus der jeweiligen Quelle. Linien, bei denen eine Stellung keine Quelle hat,
     /// reihen sich wie bisher (Auffüllregel) HINTER allen mit Quelle; diese nach Wahrscheinlichkeit, dann mehr eigene Gegnerzüge,
     /// dann Partien, dann Reihenfolge im Repertoire. Darunter zuerst die, denen er folgt, so weit seine Partien reichen
-    /// (<c>none</c> mit eigenen Gegnerzügen), dann die Widersprüche (<c>deviates</c>), zuletzt die ganz ohne Treffer.
+    /// (<c>none</c> mit eigenen Gegnerzügen), dann die Widersprüche (<c>deviates</c>, ab 2026-11-26 nur noch die, denen er
+    /// mindestens einen Zug folgt), zuletzt die ganz ohne Treffer. Linien, die schon seinem ersten Zug widersprechen, fehlen
+    /// (<see cref="Result.ExcludedFirstMove"/>).
     /// </summary>
     public static Result Rank(RepertoireReach.Graph graph, IReadOnlyList<string> chapters, Analysis analysis, Estimate? estimate)
     {
@@ -182,13 +210,20 @@ public static class OpponentTrainingLines
 
         var lines = new List<Line>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        var excluded = 0;
         for (var i = 0; i < graph.Mainlines.Count; i++)
         {
-            var nodes = graph.Mainlines[i];
+            if (analysis.Excluded.Contains(i)) { excluded++; continue; }       // er spielt dort nie so (2026-11-26)
+            var rebase = analysis.Rebases.GetValueOrDefault(i);
+            var nodes = analysis.Nodes(graph, i);
             var sans = SansOf(nodes);
             if (sans is null) continue;
-            var key = ChessableTrainedLineService.LineKeyFromSans(sans);
-            if (!seen.Add(key)) continue;
+            // Schlüssel der URSPRÜNGLICHEN Linie (der Trainer der Quelle findet sie so); doppelt ist eine neu angesetzte Linie erst,
+            // wenn Startstellung und Fortsetzung gleich sind (zwei Zugfolgen in dieselbe Stellung → eine Linie)
+            var key = rebase is null ? ChessableTrainedLineService.LineKeyFromSans(sans)
+                : SansOf(graph.Mainlines[i]) is { } original ? ChessableTrainedLineService.LineKeyFromSans(original) : null;
+            if (key is null) continue;
+            if (!seen.Add(rebase is null ? key : $"{nodes[0].Key}|{string.Join(' ', sans)}")) continue;
 
             var prefix = 1.0;
             var matched = 0;
@@ -213,7 +248,7 @@ public static class OpponentTrainingLines
             var end = stats.GetValueOrDefault(after.Key);
             var reached = end?.Reached ?? 0;
             var missing = opponentMoves - matched;
-            var never = opponentMoves > 0 && matched == 0;
+            var never = opponentMoves > 0 && matched == 0 && rebase is null;   // neu angesetzt: er erreicht die Startstellung
             // Ohne Gegnerzug zählt der Start: wer ihn erreicht, spielt die Linie — sonst ist auch sie „nie erreicht".
             if (opponentMoves == 0 && reached == 0) never = true;
             var prefixReached = stats.GetValueOrDefault(deepest.Key)?.Reached ?? 0;
@@ -222,6 +257,16 @@ public static class OpponentTrainingLines
                 missing == 0 && !never ? prefix : 0, reached, end?.LastYear, never, i, matched, missing, never ? 0 : prefix,
                 prefixReached, missing == 0 && !never ? "own" : "none", matched);
             if (estimate is not null && StartReached(nodes, stats)) line = Combine(line, nodes, sans, stats, estimate);
+            if (rebase is not null)
+            {
+                // Wie oft er die gemeinsame Stellung erreicht, zählt mit — sonst schlüge eine Linie ab Zug 10 jede ab Zug 1
+                var share = analysis.Games > 0 ? Math.Min(1.0, rebase.StartReached / (double)analysis.Games) : 0;
+                line = line with
+                {
+                    Probability = line.Probability * share, PrefixProbability = line.PrefixProbability * share,
+                    TransposedFrom = rebase.From, BridgeMoves = rebase.BridgeMoves,
+                };
+            }
             lines.Add(line);
         }
 
@@ -231,7 +276,7 @@ public static class OpponentTrainingLines
             .ThenByDescending(l => l.Reached)
             .ThenBy(l => l.Index);
 
-        if (estimate is null) return new Result(analysis.Games, FillRule(lines).ToList());
+        if (estimate is null) return new Result(analysis.Games, FillRule(lines).ToList(), excluded);
         // Stufe 1: widerspricht seinen Partien nicht (eigene, gemischte, reine Explorer-Linien) — nach Wahrscheinlichkeit
         var sourced = lines.Where(l => l.Source is "own" or "mixed" or "lichess").OrderByDescending(l => l.Probability)
             .ThenByDescending(l => l.OwnMoves).ThenByDescending(l => l.Reached).ThenBy(l => l.Index);
@@ -243,7 +288,7 @@ public static class OpponentTrainingLines
             .ThenByDescending(l => l.Probability).ThenBy(l => l.Index);
         // Stufe 4: weder er noch der Explorer geben etwas her — Auffüllregel wie bisher
         var rest = FillRule(lines.Where(l => l.Source == "none" && l.OwnMoves == 0));
-        return new Result(analysis.Games, sourced.Concat(followed).Concat(deviates).Concat(rest).ToList());
+        return new Result(analysis.Games, sourced.Concat(followed).Concat(deviates).Concat(rest).ToList(), excluded);
     }
 
     /// <summary>
@@ -328,7 +373,8 @@ public static class OpponentTrainingLines
 
     /// <summary>Alle Partien als Präfixbaum, dann EIN Durchlauf mit einem Brett; gezählt wird nur, was im Repertoire vorkommt
     /// (andere Stellungen fragt niemand).</summary>
-    internal static Dictionary<string, PositionStats> Count(IReadOnlyList<Game> games, RepertoireReach.Graph graph)
+    internal static Dictionary<string, PositionStats> Count(IReadOnlyList<Game> games, RepertoireReach.Graph graph,
+        Dictionary<string, OpponentTranspositions.Boundary>? boundaries = null)
     {
         var root = new Trie();
         foreach (var g in games)
@@ -351,7 +397,7 @@ public static class OpponentTrainingLines
 
         void Walk(Trie node, string key)
         {
-            var inGraph = graph.Nodes.ContainsKey(key);
+            var inGraph = graph.Nodes.TryGetValue(key, out var graphNode);
             PositionStats? st = null;
             if (inGraph)
             {
@@ -365,7 +411,15 @@ public static class OpponentTrainingLines
                 try { ok = board.Move(san); }
                 catch { ok = false; }
                 if (!ok) continue;                     // unlesbarer Zug: die Partie endet hier
-                var next = RepertoireReach.Key(board.ToFen());
+                var fen = board.ToFen();
+                var next = RepertoireReach.Key(fen);
+                // er verlässt mit SEINEM Zug das Repertoire: von hier sucht die Zugumstellung den Weg zurück
+                if (boundaries is not null && graphNode is { UserToMove: false } && !graph.Nodes.ContainsKey(next))
+                {
+                    if (!boundaries.TryGetValue(next, out var b)) boundaries[next] = b = new OpponentTranspositions.Boundary { Key = next, Fen = fen };
+                    b.Count += child.Count;
+                    if (child.LastYear is { } y && (b.LastYear is not { } have || y > have)) b.LastYear = y;
+                }
                 if (st is not null)
                 {
                     st.Continued += child.Count;

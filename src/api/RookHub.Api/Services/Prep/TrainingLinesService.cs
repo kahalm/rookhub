@@ -343,6 +343,24 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         return refs.ToDictionary(r => r.Index, r => (r.Oid, r.Oid is null ? null : status.GetValueOrDefault(r.Oid)));
     }
 
+    /// <summary>Eine über Zugumstellung erreichte Linie als eigener Abschnitt (2026-11-26): die Kopfzeilen der Quelle (ohne
+    /// <c>FEN</c>/<c>SetUp</c>/<c>ChessableOid</c> — es ist nicht mehr die Chessable-Linie), dazu die gemeinsame Stellung als
+    /// <c>[FEN]</c> und die Züge ab dort; Kommentare der Quelle fallen weg.</summary>
+    internal static string TransposedSection(Section section, OpponentTrainingLines.Line line)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var raw in section.Raw.Split('\n'))
+        {
+            var row = raw.Trim();
+            if (row.Length == 0) { if (sb.Length > 0) break; continue; }
+            if (!row.StartsWith('[')) break;                                   // Kopf zu Ende, ab hier Zugtext
+            var name = row[1..].Split(' ', 2)[0];
+            if (name is not ("FEN" or "SetUp" or "ChessableOid")) sb.Append(row).Append('\n');   // Werte schon maskiert: wie sie sind
+        }
+        if (line.StartFen is { } fen) sb.Append(PgnWriter.Tag("SetUp", "1")).Append(PgnWriter.Tag("FEN", fen));
+        return sb.Append('\n').Append(PgnWriter.MoveText(line.Sans, line.StartFen)).ToString();
+    }
+
     /// <summary>Zugnummer, mit der der Abschnitt beginnt (FEN-Feld 6, sonst 1).</summary>
     private static int StartMoveNumber(string? fen)
     {
@@ -392,7 +410,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             new OpponentTrainingLines.Estimate(_ => null, minOwn, new HashSet<string>()));
         var order = new List<RepertoireReach.Node>(need.Count);
         foreach (var line in preliminary.Lines)
-            foreach (var node in graph.Mainlines[line.Index])
+            foreach (var node in analysis.Nodes(graph, line.Index))
                 if (wanted.Remove(node.Key, out var hit)) order.Add(hit);
         order.AddRange(wanted.Values);                 // (Stellungen, die keine gezeigte Linie hat — der Vollständigkeit halber)
         return order;
@@ -433,6 +451,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         o["explorerRunning"] = c.ExplorerRunning;
         o["total"] = lines.Count;
         o["skippedAlternatives"] = c.SkippedAlternatives;
+        o["excludedFirstMove"] = c.Ranked?.ExcludedFirstMove ?? 0;     // widersprechen seinem ersten Zug — nicht in der Liste (2026-11-26)
         var shown = lines.Take(n).ToList();
         var chessable = await ChessableStatusAsync(userId, c, shown.Select(l => l.Index), ct);
         o["lines"] = new JsonArray(shown.Select(l => (JsonNode)new JsonObject
@@ -460,6 +479,8 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             ["deviationPly"] = l.DeviationPly,
             ["deviationSan"] = l.DeviationSan,
             ["deviationGames"] = l.DeviationGames,
+            ["transposedFrom"] = l.TransposedFrom,
+            ["bridgeMoves"] = l.BridgeMoves,
             ["chessableLastTrained"] = chessable[l.Index].Status?.LastTrained?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             ["chessableLevel"] = chessable[l.Index].Status?.Level,
             ["chessableUrl"] = chessable[l.Index].Oid is { } oid ? ChessableLineHistory.VariationUrl(oid) : null,
@@ -602,9 +623,10 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
 
     /// <summary>Beschreibung des angelegten „Prep: …" (Wunsch 2026-10-10): aus Sicht des Gegners UND eigener Farbe ausgeschrieben —
     /// „(Weiß)" hinter dem Gegnernamen war mehrdeutig (gemeint war die eigene Farbe). <paramref name="myColor"/> = die eigene Farbe
-    /// ('w'/'b'), <paramref name="sources"/> = nur die Repertoires, aus denen Linien stammen.</summary>
+    /// ('w'/'b'), <paramref name="sources"/> = nur die Repertoires, aus denen Linien stammen.
+    /// <paramref name="excludedFirstMove"/> = Linien, die seinem ersten Zug widersprechen und deshalb fehlen (2026-11-26).</summary>
     internal static string Description(string opponent, char myColor, IReadOnlyList<string> sources, DateTime when, int games, int picked, int total,
-        int skippedAlternatives = 0)
+        int skippedAlternatives = 0, int excludedFirstMove = 0)
     {
         var mine = myColor == 'b' ? "Schwarz" : "Weiß";
         var his = myColor == 'b' ? "Weiß" : "Schwarz";
@@ -612,7 +634,10 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         var description = $"Trainingslinien gegen {who} — er hat {his}, ich spiele {mine} — aus "
                           + string.Join(", ", sources.Select(n => $"„{n}“")) + ", "
                           + $"{when.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)}, {games} Partien gezählt, "
-                          + $"{picked} von {total} Linien."
+                          + $"{picked} von {total} Linien übernommen."
+                          + (excludedFirstMove > 0
+                              ? $" {excludedFirstMove} {(excludedFirstMove == 1 ? "Linie" : "Linien")} ausgelassen, weil er dort in seinen Partien nie so spielt."
+                              : "")
                           + (skippedAlternatives > 0 ? $" {skippedAlternatives} ungelernte Alternativen ausgelassen." : "");
         return description.Length > 1000 ? description[..997] + "…" : description;
     }
@@ -637,6 +662,8 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         var name = RepertoireName(opponent, now.Year);
         if (await ComputeAsync(userId, q, games, ct, exclude: name, elo: elo, scope: scope) is not { } c) return null;
         if (c.Sources.Count == 0) throw new DomainValidationException("Kein Repertoire ist für die Vorbereitung freigegeben.");
+        if (c.Ranked is { Lines.Count: 0, ExcludedFirstMove: > 0 })
+            throw new DomainValidationException("Keine Linie der markierten Repertoires passt zu seinen Partien — er eröffnet dort immer anders.");
         if (c.Ranked is not { Lines.Count: > 0 } ranked) throw new DomainValidationException("Die markierten Repertoires haben für diese Farbe keine Linien.");
 
         var n = RepertoireTake(q.Take);
@@ -646,6 +673,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         var pgn = string.Join("\n\n", picked.Select(l =>
         {
             var section = c.Mine[l.Index].Section;
+            if (l.TransposedFrom is not null) return TransposedSection(section, l);   // Zugumstellung: ab der gemeinsamen Stellung
             var (oid, status) = chessable[l.Index];
             if (oid is null) return section.Raw.Trim();     // keine Chessable-Linie: unverändert
             return ChessableLineHistory.Annotate(section.Raw.Trim(), status, oid, !FenFields.WhiteToMove(section.Parsed.StartFen ?? ""),
@@ -655,7 +683,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         // nur die Repertoires, die wirklich Linien beigesteuert haben — in der Reihenfolge der Quellen
         var contributed = c.Sources.Where(r => picked.Any(l => c.Mine[l.Index].Rep.Id == r.Id)).Select(r => r.Name).ToList();
         var description = Description(opponent, c.Color ?? 'w', contributed, now, ranked.Games, picked.Count, ranked.Lines.Count,
-            c.SkippedAlternatives);
+            c.SkippedAlternatives, ranked.ExcludedFirstMove);
         var sourceIds = c.Sources.Select(r => r.Id).ToList();
         var kinds = await db.Repertoires.AsNoTracking().Where(r => sourceIds.Contains(r.Id)).Select(r => r.Kind).Distinct().ToListAsync(ct);
         var kind = kinds.Count == 1 ? kinds[0] : RookHub.Api.Models.RepertoireKind.None;
