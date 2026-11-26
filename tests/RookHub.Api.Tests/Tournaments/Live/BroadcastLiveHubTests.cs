@@ -34,6 +34,22 @@ public class BroadcastLiveHubTests
     }
 
     [Fact]
+    public async Task Reconnect_WithoutMoves_BackToLive_AsSoonAsConnected()
+    {
+        // Prod 26.11.2026: nach einem Abriss stand „Reconnecting…“ minutenlang oben, weil erst der nächste Zug „live“ setzte.
+        var src = new FakeLichessLiveSource();
+        src.RoundPgn[Round] = Game1;
+        await using var hub = Hub(src);
+        var a = hub.Subscribe(Round, finished: false, wantsEval: false);
+        Assert.Equal("live", (await Next<LiveSnapshot>(a)).State);
+        await Until(() => src.StreamsOpened == 1);
+        src.StreamOf(Round).Writer.Complete();                             // Lichess schließt den Strom
+        Assert.Equal("reconnecting", (await Next<LiveStateChanged>(a)).State);
+        Assert.Equal("live", (await Next<LiveStateChanged>(a)).State);     // neu verbunden, ohne einen einzigen Zug
+        Assert.True(src.StreamsOpened >= 2);
+    }
+
+    [Fact]
     public async Task TwoViewers_OneStream_SnapshotThenDeltas_ClosesAfterLastViewer()
     {
         var src = new FakeLichessLiveSource();

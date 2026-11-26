@@ -44,6 +44,7 @@ internal sealed class FakeLichessLiveSource : ILichessLiveSource
         Interlocked.Increment(ref StreamsOpened);
         lock (StreamedRounds) StreamedRounds.Add(roundId);
         var ch = StreamOf(roundId);
+        yield return "";                                                   // verbunden (wie HttpLichessLiveSource)
         try
         {
             while (await ch.Reader.WaitToReadAsync(ct))

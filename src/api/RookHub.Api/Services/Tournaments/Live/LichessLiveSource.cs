@@ -16,6 +16,7 @@ public interface ILichessLiveSource
     Task<string?> GetRoundPgnAsync(string roundId, CancellationToken ct);
     /// <summary><c>GET /api/stream/broadcast/round/{id}.pgn</c> — offene Verbindung, Stücke wie sie kommen; endet, wenn
     /// Lichess schließt. Wirft <see cref="LichessRateLimitedException"/> bei 429.</summary>
+    /// <remarks>Das erste Stück ist leer, sobald die Verbindung steht (dann ist die Runde „live“, auch ohne Zug).</remarks>
     IAsyncEnumerable<string> StreamRoundAsync(string roundId, CancellationToken ct);
     /// <summary><c>GET /api/broadcast/{tourId}</c>; <c>null</c> = 404.</summary>
     Task<string?> GetTourAsync(string tourId, CancellationToken ct);
@@ -109,6 +110,9 @@ public sealed class HttpLichessLiveSource : ILichessLiveSource
             throw new LichessRateLimitedException();
         }
         r.EnsureSuccessStatusCode();
+        // Verbunden: ein leeres Stück als Zeichen. Lichess schickt erst bei einem Zug Daten — bei langsamer Bedenkzeit
+        // stand die Seite sonst minutenlang auf „Reconnecting…“, obwohl die Verbindung längst stand (Prod 26.11.2026).
+        yield return "";
         await using var stream = await r.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream);
         var buf = new char[8192];
