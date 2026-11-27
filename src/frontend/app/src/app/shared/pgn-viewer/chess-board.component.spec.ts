@@ -238,7 +238,7 @@ describe('ChessBoardComponent Vollbild', () => {
     fixture.detectChanges();
 
     const target: HTMLElement =
-      fixture.debugElement.query(By.directive(BoardFullscreenButtonComponent)).componentInstance.target;
+      fixture.debugElement.query(By.directive(BoardFullscreenButtonComponent)).componentInstance.target();
     // Die Größe des Vollbild-Elements erzwingt der Browser — daher Hülle ins Vollbild, Brett darin
     // als zentriertes Quadrat der kleineren Bildschirmseite.
     expect(target.classList).toContain('cb-fs-host');
@@ -482,3 +482,29 @@ describe('ChessBoardComponent Pfeile auf ungemessenem Brett (a1-rk-svg-nan-pfeil
   });
 });
 
+
+describe('ChessBoardComponent Vollbild-Knopf des Aufrufers (1.036.0)', () => {
+  it('custom meldet fullscreenRequest statt selbst ins Vollbild zu gehen; none zeigt keinen Knopf', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ChessBoardComponent], providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ChessBoardComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.width = '240px';
+    document.body.appendChild(host);
+    fixture.componentRef.setInput('fullscreenMode', 'custom');
+    fixture.detectChanges();
+    let requests = 0;
+    fixture.componentInstance.fullscreenRequest.subscribe(() => requests++);
+    const fsHost = host.querySelector('.cb-fs-host') as HTMLElement;
+    const native = spyOn(fsHost, 'requestFullscreen').and.returnValue(Promise.resolve());
+    (host.querySelector('.board-fs-btn') as HTMLButtonElement).click();
+    expect(requests).toBe(1);
+    expect(native).not.toHaveBeenCalled();
+    fixture.componentRef.setInput('fullscreenMode', 'none');
+    fixture.detectChanges();
+    expect(host.querySelector('app-board-fullscreen-button')).toBeNull();
+    fixture.destroy();
+    host.remove();
+  });
+});

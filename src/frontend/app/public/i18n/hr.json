@@ -1713,7 +1713,19 @@
       "onlyMove": "Jedini potez",
       "onlyMoveTip": "Drži samo jedan potez — najbolji {{best}}, sljedeći {{second}}",
       "turnBoard": "Okreni ploču",
-      "sources": "Prijenosi"
+      "sources": "Prijenosi",
+      "fs": {
+        "atLive": "Uživo",
+        "atLiveTip": "Ploča prati partiju — novi potezi dolaze sami.",
+        "toLive": "Natrag na uživo",
+        "engine": "Engine",
+        "lines": "Linije",
+        "ownMoves": "Vlastiti potezi",
+        "ownHint": "Povuci na ploči i isprobaj vlastite ideje — partija uživo teče dalje i ostaje nepromijenjena.",
+        "movesLoading": "Učitavanje poteza …",
+        "movesFailed": "Potezi se nisu mogli učitati.",
+        "noMoves": "Još nema poteza."
+      }
     }
   },
   "puzzles": {

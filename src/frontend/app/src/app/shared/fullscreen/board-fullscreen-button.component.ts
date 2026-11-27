@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit, ChangeDetectorRef,
+  ChangeDetectionStrategy, Component, OnDestroy, OnInit, ChangeDetectorRef, input, output,
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslateService } from '@ngx-translate/core';
@@ -29,6 +29,10 @@ import { fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen
  * gibt es keinen Tooltip, der sie unterscheidet (Codereview UX-046).</p>
  *
  * <p>Kann der Browser kein Element-Vollbild (iOS-Safari), rendert die Komponente nichts.</p>
+ *
+ * <p>Mit `custom` (1.036.0, Live-Bretter) schaltet der Knopf NICHT selbst, sondern meldet `request` — der Aufrufer
+ * baut eine eigene Vollbild-Ansicht (Brett groß + Zugliste + Engine). Dann erscheint er auch ohne Element-Vollbild
+ * (iOS): die Ansicht des Aufrufers deckt dort das Fenster ab.</p>
  */
 @Component({
   selector: 'app-board-fullscreen-button',
@@ -36,7 +40,7 @@ import { fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatIconModule],
   template: `
-    @if (supported && target) {
+    @if (custom() || (supported && target())) {
       <button type="button" class="board-fs-btn" [class.board-fs-btn--on]="active"
               (click)="toggle($event)"
               [attr.title]="label" [attr.aria-label]="label">
@@ -135,7 +139,10 @@ import { fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen
 })
 export class BoardFullscreenButtonComponent implements OnInit, OnDestroy {
   /** Element, das ins Vollbild geht — die Vollbild-Hülle um das Brett (.board-fs-host & Co.). */
-  @Input() target: HTMLElement | null = null;
+  readonly target = input<HTMLElement | null>(null);
+  /** Eigene Vollbild-Ansicht des Aufrufers: Klick meldet nur `request` (siehe Klassenkommentar). */
+  readonly custom = input(false);
+  readonly request = output<void>();
 
   readonly supported = fullscreenSupported();
   active = false;
@@ -151,7 +158,7 @@ export class BoardFullscreenButtonComponent implements OnInit, OnDestroy {
       // Das Ereignis hängt am `document` und kann noch eintreffen, während Angular die Ansicht
       // abbaut — ein markForCheck auf der zerstörten Ansicht wäre NG0205.
       if (this.destroyed) return;
-      this.active = isFullscreen(this.target);
+      this.active = isFullscreen(this.target());
       this.cdr.markForCheck();
     });
   }
@@ -169,6 +176,8 @@ export class BoardFullscreenButtonComponent implements OnInit, OnDestroy {
   toggle(event: Event): void {
     event.preventDefault();
     event.stopPropagation();
-    if (this.target) void toggleFullscreen(this.target);
+    if (this.custom()) { this.request.emit(); return; }
+    const target = this.target();
+    if (target) void toggleFullscreen(target);
   }
 }

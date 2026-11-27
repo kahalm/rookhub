@@ -39,6 +39,24 @@ describe('BoardFullscreenButtonComponent', () => {
     expect(event.defaultPrevented).toBeTrue();
   });
 
+  it('custom (1.036.0): schaltet nicht selbst, meldet request — auch ohne Ziel und ohne Element-Vollbild', () => {
+    const fixture = TestBed.createComponent(BoardFullscreenButtonComponent);
+    const target = document.createElement('div');
+    const native = spyOn(target, 'requestFullscreen').and.returnValue(Promise.resolve());
+    (fixture.componentInstance as { supported: boolean }).supported = false;   // wie iOS-Safari
+    fixture.componentRef.setInput('custom', true);
+    fixture.detectChanges();
+    let requests = 0;
+    fixture.componentInstance.request.subscribe(() => requests++);
+    const btn = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    fixture.componentRef.setInput('target', target);
+    fixture.detectChanges();
+    btn.click();
+    expect(requests).toBe(1);
+    expect(native).not.toHaveBeenCalled();
+  });
+
   it('folgt dem Vollbild-Zustand (auch wenn per Esc verlassen wird)', () => {
     const fixture = TestBed.createComponent(BoardFullscreenButtonComponent);
     const target = document.createElement('div');

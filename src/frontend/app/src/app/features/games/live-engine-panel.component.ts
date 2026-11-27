@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
-import { LIVE_LINES, LiveEngineSession } from './live-engine-session';
+import { LiveEngineSession } from './live-engine-session';
 import { TablebasePanelComponent } from '../analysis/tablebase-panel.component';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SanPipe } from '../../shared/chess/san.pipe';
@@ -42,7 +42,9 @@ import { SanPipe } from '../../shared/chess/san.pipe';
           <mat-icon>close</mat-icon>
         </button>
       </div>
-      @if (s.variation().length || s.canRedo()) {
+      @if (!showVariation()) {
+        <!-- Nebenvariante zeigt der Aufrufer selbst (Live-Bretter im Vollbild, 1.036.0) -->
+      } @else if (s.variation().length || s.canRedo()) {
         <div class="variation">
           <span class="variation-san">{{ s.variationSan() }}</span>
           @if (steps()) {
@@ -66,7 +68,7 @@ import { SanPipe } from '../../shared/chess/san.pipe';
         <!-- Immer LIVE_LINES Zeilen (leere als Platzhalter): beim Zugwechsel leert die Sitzung die Linien und füllt sie neu —
              ohne feste Höhe schrumpfte die Seite jedes Mal, und weiter unten gerollt sprang der ganze Bildschirm (gemeldet
              2026-10-06, „ruckelt bei den Pfeiltasten"). -->
-        @for (i of slots; track i) {
+        @for (i of slots(); track i) {
           @if (s.lines()[i]; as l) {
             <li>
               <span class="line-eval" [class.white]="l.positive">{{ l.evalText }}</span>
@@ -117,8 +119,10 @@ export class LiveEnginePanelComponent {
   /** Eigene Knöpfe „Zug zurück/vor". Auf der Partieseite aus (0.667.0): dort laufen die Knöpfe unter dem Brett durch die
    *  Variante. Im Fehler-Training an — dort gibt es unter dem Brett keine. */
   steps = input(true);
-  /** Feste Zeilenzahl der Linienliste (siehe Template). */
-  readonly slots = Array.from({ length: LIVE_LINES }, (_, i) => i);
+  /** Nebenvariante samt Knöpfen in der Leiste zeigen. Aus, wenn der Aufrufer sie selbst darstellt (Live-Bretter, 1.036.0). */
+  readonly showVariation = input(true);
+  /** Feste Zeilenzahl der Linienliste (siehe Template) — so viele, wie die Sitzung rechnet (Vorgabe LIVE_LINES). */
+  readonly slots = computed(() => Array.from({ length: this.session().lineSlots() }, (_, i) => i));
 
   /** Zug aus der Tablebase-Liste in die eigene Variante spielen (wie am Brett gezogen). */
   playSan(san: string): void {

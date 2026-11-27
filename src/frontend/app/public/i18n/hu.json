@@ -1416,7 +1416,19 @@
       "onlyMove": "Egyetlen lépés",
       "onlyMoveTip": "Csak egy lépés tart — legjobb {{best}}, következő {{second}}",
       "turnBoard": "Tábla megfordítása",
-      "sources": "Közvetítések"
+      "sources": "Közvetítések",
+      "fs": {
+        "atLive": "Élő",
+        "atLiveTip": "A tábla követi a játszmát — az új lépések maguktól megjelennek.",
+        "toLive": "Vissza az élő állásra",
+        "engine": "Motor",
+        "lines": "Változatok",
+        "ownMoves": "Saját lépések",
+        "ownHint": "Lépj a táblán, és próbáld ki a saját ötleteidet — az élő játszma folytatódik, és nem változik.",
+        "movesLoading": "Lépések betöltése …",
+        "movesFailed": "A lépéseket nem sikerült betölteni.",
+        "noMoves": "Még nincs lépés."
+      }
     }
   },
   "puzzles": {

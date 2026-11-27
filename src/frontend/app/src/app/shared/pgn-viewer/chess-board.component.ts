@@ -32,7 +32,9 @@ export interface BoardArrow {
   imports: [BoardFullscreenButtonComponent, PromotionPickerComponent],
   template: `
     <div #fsHost class="cb-fs-host">
-      <app-board-fullscreen-button [target]="fsHost" />
+      @if (fullscreenMode !== 'none') {
+        <app-board-fullscreen-button [target]="fsHost" [custom]="fullscreenMode === 'custom'" (request)="fullscreenRequest.emit()" />
+      }
       <!-- Bedienelemente des Aufrufers, die auch im Brett-Vollbild sichtbar sein müssen (dort ist nur dieser Teilbaum
            zu sehen), z. B. „Zurück" im Repertoire-Baum. Platzierung macht der Aufrufer. -->
       <ng-content select="[boardFsOverlay]" />
@@ -110,6 +112,11 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   private fenChangedAt = 0;
   private badgeTimer: number | null = null;
   @Output() userMove = new EventEmitter<UserBoardMove>();
+  /** Vollbild-Knopf über dem Brett: `board` = nur das Brett ins Vollbild (Vorgabe), `custom` = Knopf meldet
+   *  `fullscreenRequest` und der Aufrufer zeigt eine eigene Vollbild-Ansicht (Live-Bretter, 1.036.0), `none` = kein Knopf
+   *  (z. B. das Brett IN dieser eigenen Ansicht). */
+  @Input() fullscreenMode: 'board' | 'custom' | 'none' = 'board';
+  @Output() fullscreenRequest = new EventEmitter<void>();
   /** Brett-Vollbild an/aus (nur das eigene, nicht das App-Vollbild). */
   @Output() fullscreenChange = new EventEmitter<boolean>();
   private offFullscreen?: () => void;

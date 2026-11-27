@@ -214,7 +214,7 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
               @for (b of allBoards(); track b.key) {
                 <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped !== turnedIds().has(b.game.id)"
                                      [turned]="turnedIds().has(b.game.id)" (turn)="toggleTurn(b.game.id)" [showEval]="evalOn()" [showBest]="bestOn()"
-                                     [analysisUrl]="analysisUrl(b.roundId ?? null, b.game.id)"
+                                     [analysisUrl]="analysisUrl(b.roundId ?? null, b.game.id)" [roundId]="b.roundId ?? null"
                                      [caption]="b.caption ?? (b.captionKey ? (b.captionKey | translate) : null)"
                                      [removable]="!!b.removeKind" (remove)="removeBoard(b)"
                                      [receivedAt]="received()[b.game.id] ?? 0" [now]="now()" />

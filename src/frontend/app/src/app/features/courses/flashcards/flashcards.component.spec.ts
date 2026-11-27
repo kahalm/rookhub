@@ -254,7 +254,7 @@ describe('FlashcardsComponent digitale Lern-Ansicht', () => {
       d => d.componentInstance instanceof BoardFullscreenButtonComponent);
     expect(host).toBeTruthy();
     expect(btn).toBeTruthy();
-    expect((btn.componentInstance as BoardFullscreenButtonComponent).target).toBe(host as HTMLElement);
+    expect((btn.componentInstance as BoardFullscreenButtonComponent).target()).toBe(host as HTMLElement);
   });
 
   it('Mischen permutiert nur die Reihenfolge; ausschalten stellt die Kurs-Reihenfolge wieder her', () => {

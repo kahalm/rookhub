@@ -1,5 +1,5 @@
-import { afterNextRender, ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, input, linkedSignal, output, signal,
-  viewChild } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, linkedSignal, output,
+  signal, untracked, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -7,22 +7,32 @@ import { BoardArrow, ChessBoardComponent } from '@rh/shared/pgn-viewer/chess-boa
 import { localizeSan } from '@rh/shared/chess/keyboard-move.util';
 import { PreferencesService } from '@rh/core/preferences.service';
 import { formatSecondsClock } from '@rh/shared/clock-format.util';
+import { exitFullscreen, fullscreenSupported, isFullscreen, onFullscreenChange, requestFullscreen } from '@rh/shared/fullscreen/fullscreen.util';
+import { isBoardHotkey } from '@rh/shared/keyboard.util';
+import { LiveBoardStudyComponent } from './live-board-study.component';
+import { LiveBoardsService } from './live-boards.service';
+import { LiveStudy, readLiveFsPrefs } from './live-study';
 import { chessTitle } from '../tournament-table.util';
 import { LiveEval, LiveGame, LivePlayer } from './live-boards.models';
-import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
+import { analysisLinkTarget, evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
 
 /**
  * Ein Brett der Live-Ansicht: oben die Gegenseite, unten die eigene Seite (Name, Titel, Elo, Uhr), dazwischen das
  * geteilte Brett (`app-chess-board`, nur Anzeige — ein Klick tut vorerst nichts) mit markiertem letzten Zug und
  * optional dem Engine-Balken links. Am Zug: Uhr fett mit Akzentrahmen; fertig: Ergebnis als Chip.
+ *
+ * Vollbild (1.036.0, Wunsch 2026-11-27): der Vollbild-Knopf des Bretts schickt die GANZE Karte ins Vollbild (bzw. legt
+ * sie ohne Element-Vollbild — iOS — fest über das Fenster): Brett groß, daneben/darunter die Zugliste zum Nachspielen,
+ * die Browser-Engine mit Linien und „Selbst ziehen“ ({@link LiveStudy}, {@link LiveBoardStudyComponent}).
  */
 @Component({
   selector: 'app-live-board-card',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChessBoardComponent, TranslatePipe, MatButtonModule, MatIconModule],
+  imports: [ChessBoardComponent, TranslatePipe, MatButtonModule, MatIconModule, LiveBoardStudyComponent],
+  host: { '(document:keydown)': 'onKey($event)' },
   template: `
-    <article class="lb-card" [attr.aria-label]="('tournaments.live.boardN' | translate:{ board: board() }) + ': ' + game().white.name + ' – ' + game().black.name">
+    <article #card class="lb-card" [class.lb-fs]="fs()" [class.lb-wide]="fs() && wide()" [attr.role]="fs() ? 'dialog' : null" [attr.aria-modal]="fs() ? 'true' : null" [attr.tabindex]="fs() ? -1 : null" [attr.aria-label]="('tournaments.live.boardN' | translate:{ board: board() }) + ': ' + game().white.name + ' – ' + game().black.name">
       <div class="lb-top">
         <span class="lb-board" [title]="caption() ?? ''">{{ 'tournaments.live.boardN' | translate:{ board: board() } }}@if (caption(); as c) { <span class="lb-caption">· {{ c }}</span> }</span>
         @if (!game().finished && moveNo(); as n) {
@@ -40,7 +50,7 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
         </button>
         @if (analysisUrl(); as url) {
           <!-- Partie samt Zügen, Kopfzeilen und Uhren auf RookHubs Analysebrett, neuer Tab (1.026.0) -->
-          <a mat-icon-button class="lb-icon lb-analyse" [href]="url" target="_blank" rel="noopener"
+          <a mat-icon-button class="lb-icon lb-analyse" [href]="url" [target]="linkTarget" rel="noopener"
              [attr.aria-label]="'tournaments.live.openAnalysis' | translate" [title]="'tournaments.live.openAnalysis' | translate">
             <mat-icon>biotech</mat-icon>
           </a>
@@ -52,21 +62,28 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
             <mat-icon>close</mat-icon>
           </button>
         }
+        @if (fs()) {
+          <!-- Vollbild verlassen (auch Esc) — letzter Knopf im Kopf -->
+          <button mat-icon-button type="button" class="lb-icon lb-fs-close" (click)="closeFs()"
+                  [attr.aria-label]="'common.fullscreenExit' | translate" [title]="'common.fullscreenExit' | translate">
+            <mat-icon>close_fullscreen</mat-icon>
+          </button>
+        }
       </div>
-      <div class="lb-player" [class.to-move]="toMove(flipped())">
+      <div class="lb-player lb-ptop" [class.to-move]="toMove(flipped())">
         <!-- Elo in eigener Zeile unter dem Namen (Wunsch 2026-11-27): lange Namen kürzen mit „…“, die Elo bleibt sichtbar -->
         <span class="lb-who">
           <span class="lb-name">@if (title(topPlayer()); as t) { <span class="lb-title">{{ t }}</span> }{{ topPlayer().name }}</span>
           @if (topPlayer().elo) { <span class="lb-elo">{{ topPlayer().elo }}</span> }
         </span>
-        @if (onlyMove() && toMove(flipped())) {
+        @if (onlyMove() && atLive() && toMove(flipped())) {
           <!-- „Nur ein Zug“ (1.033.0): neben der Uhr der Seite am Zug; verrät den Zug nicht (Pfeil nur mit „Besten Zug zeigen“) -->
           <span class="lb-only" [title]="'tournaments.live.onlyMoveTip' | translate:onlyMoveTip()">{{ 'tournaments.live.onlyMove' | translate }}</span>
         }
         @if (clock(flipped()); as c) { <span class="lb-clock" role="timer">{{ c }}</span> }
       </div>
       <div class="lb-boardrow" [class.measured]="boardBox() !== null">
-        @if (showEval()) {
+        @if (barOn()) {
           <div class="lb-evalbar" [class.empty]="share() === null" [class.flipped]="flipped()" role="img"
                [style.height.px]="boardBox()?.height" [style.margin-top.px]="boardBox()?.top"
                [attr.aria-label]="share() === null ? ('tournaments.live.noEval' | translate) : ('tournaments.live.evalLabel' | translate:{ value: evalLabel() })">
@@ -74,27 +91,32 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
           </div>
         }
         <div class="lb-cg" #cg>
-          <app-chess-board [fen]="game().fen" [lastMove]="lastMove()" [flipped]="flipped()" [arrows]="bestArrows()"
-                           [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet" />
+          <app-chess-board [fen]="boardFen()" [lastMove]="boardLastMove()" [flipped]="flipped()" [arrows]="bestArrows()"
+                           [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet"
+                           [playable]="!!study()?.ownMoves()" (userMove)="study()?.play($event)"
+                           [fullscreenMode]="fs() ? 'none' : 'custom'" (fullscreenRequest)="openFs()" />
         </div>
       </div>
-      <div class="lb-player" [class.to-move]="toMove(!flipped())">
+      <div class="lb-player lb-pbot" [class.to-move]="toMove(!flipped())">
         <!-- Elo in eigener Zeile unter dem Namen (Wunsch 2026-11-27): lange Namen kürzen mit „…“, die Elo bleibt sichtbar -->
         <span class="lb-who">
           <span class="lb-name">@if (title(bottomPlayer()); as t) { <span class="lb-title">{{ t }}</span> }{{ bottomPlayer().name }}</span>
           @if (bottomPlayer().elo) { <span class="lb-elo">{{ bottomPlayer().elo }}</span> }
         </span>
-        @if (onlyMove() && toMove(!flipped())) {
+        @if (onlyMove() && atLive() && toMove(!flipped())) {
           <!-- „Nur ein Zug“ (1.033.0): neben der Uhr der Seite am Zug; verrät den Zug nicht (Pfeil nur mit „Besten Zug zeigen“) -->
           <span class="lb-only" [title]="'tournaments.live.onlyMoveTip' | translate:onlyMoveTip()">{{ 'tournaments.live.onlyMove' | translate }}</span>
         }
         @if (clock(!flipped()); as c) { <span class="lb-clock" role="timer">{{ c }}</span> }
       </div>
-      @if (showEval() && evalLabel()) {
+      @if (showEval() && evalLabel() && atLive() && !(study()?.engineOn())) {
         <!-- Quelle dezent (1.015.0): Tooltip „Übertragung / Lichess-Cloud / RookHub-Engine“, Tiefe in der Zeile. -->
         <div class="lb-evaltext" [title]="('tournaments.live.evalSource.' + shownEval()!.source) | translate">
           {{ evalLabel() }}@if (shownEval()!.depth; as d) { · {{ 'tournaments.live.depth' | translate:{ depth: d } }} }@if (bestSan(); as san) { · <span class="lb-best" [title]="'tournaments.live.bestMoveLabel' | translate:{ move: san }">{{ san }}</span> }
         </div>
+      }
+      @if (study(); as st) {
+        <app-live-board-study class="lb-side" [study]="st" [pgnState]="pgnState()" (retry)="loadPgn()" />
       }
     </article>
   `,
@@ -119,6 +141,7 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
     .lb-who { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
     .lb-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .lb-title { font-weight: 700; font-size: 0.85em; color: var(--rh-accent); margin-right: 0.25em; }
+    /* Zwei Zeilen (Name, Elo) eng gesetzt: die Bretterwand muss bei 1920 × 1080 weiter zwei Reihen zeigen (Spec „Bretterwand“) */
     .lb-elo { color: var(--mat-sys-on-surface-variant); font-size: 0.75rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
     .lb-clock { flex: 0 0 auto; font-variant-numeric: tabular-nums; padding: 0 6px; border-radius: 4px;
       border: 1px solid transparent; }
@@ -142,6 +165,22 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
     .lb-evalwhite { background: white; width: 100%; }
     .lb-best { font-weight: 600; color: var(--mat-sys-on-surface); }
     .lb-evaltext { font-size: 0.8rem; color: var(--mat-sys-on-surface-variant); font-variant-numeric: tabular-nums; }
+    /* Vollbild (1.036.0): die Karte deckt das Fenster ab (echtes Element-Vollbild, ohne — iOS — fest übers Fenster).
+       Hochformat: Brett volle Breite, darunter Zugliste + Engine, die Karte scrollt. Quer/breit: Brett so groß, wie die
+       Höhe erlaubt, rechts das Seitenteil mit eigener Scrollfläche. */
+    .lb-card.lb-fs { position: fixed; inset: 0; z-index: 1100; border: 0; border-radius: 0; padding: 8px 12px 12px;
+      background: var(--mat-sys-surface); overflow-y: auto; overscroll-behavior: contain; gap: 6px; font-size: 1rem; }
+    .lb-card.lb-fs::backdrop { background: var(--mat-sys-surface); }
+    .lb-fs .lb-top { font-size: 0.95rem; }
+    .lb-fs .lb-player { font-size: 1.05rem; }
+    .lb-fs .lb-side { margin-top: 6px; }
+    .lb-card.lb-fs.lb-wide { display: grid; overflow: hidden; column-gap: 16px; row-gap: 4px; align-content: start;
+      --lb-fs-board: min(calc(100dvh - 150px), calc(100vw - 420px));
+      grid-template-columns: calc(var(--lb-fs-board) + 14px) minmax(280px, 1fr);
+      grid-template-rows: auto auto auto auto minmax(0, 1fr); height: 100dvh; box-sizing: border-box; }
+    .lb-wide .lb-top { grid-column: 1 / -1; }
+    .lb-wide .lb-ptop, .lb-wide .lb-boardrow, .lb-wide .lb-pbot, .lb-wide .lb-evaltext { grid-column: 1; }
+    .lb-wide .lb-side { grid-column: 2; grid-row: 2 / -1; margin-top: 0; min-height: 0; overflow-y: auto; }
   `],
 })
 export class LiveBoardCardComponent {
@@ -168,6 +207,34 @@ export class LiveBoardCardComponent {
   readonly turn = output<void>();
   /** Von Hand gedreht (gegen die Vorgabe) — nur für `aria-pressed`. */
   readonly turned = input(false);
+  /** Lichess-Runde der Partie — fürs PGN (Zugliste) im Vollbild; ohne bleibt die Zugliste leer. */
+  readonly roundId = input<string | null>(null);
+  /** Analyse-Link: in der installierten App im selben Fenster, sonst neuer Tab. */
+  readonly linkTarget = analysisLinkTarget();
+
+  private readonly service = inject(LiveBoardsService);
+  /** Vollbild-Ansicht offen (1.036.0). */
+  readonly fs = signal(false);
+  /** Nachspielen/Engine/eigene Züge — nur solange das Vollbild offen ist. */
+  readonly study = signal<LiveStudy | null>(null);
+  readonly pgnState = signal<'loading' | 'ok' | 'error'>('loading');
+  /** Quer und breit genug: Seitenteil neben dem Brett statt darunter. */
+  readonly wide = signal(false);
+  private readonly cardEl = viewChild<ElementRef<HTMLElement>>('card');
+  /** Die Karte war wirklich im Element-Vollbild — verlässt der Browser es (Esc), schließt die Ansicht mit. */
+  private realFs = false;
+  private pgnTimer: ReturnType<typeof setTimeout> | null = null;
+  private pgnBusy = false;
+  private offFs?: () => void;
+  private wideQuery: MediaQueryList | null = null;
+  private readonly onWide = () => this.wide.set(!!this.wideQuery?.matches);
+
+  /** Brett zeigt genau die Live-Stellung (außerhalb des Vollbilds immer). */
+  readonly atLive = computed(() => this.study()?.atLive() ?? true);
+  readonly boardFen = computed(() => this.study()?.fen() ?? this.game().fen);
+  readonly boardLastMove = computed(() => { const st = this.study(); return st ? st.lastMove() : this.lastMove(); });
+  /** Balken: wie bisher mit dem Schalter der Seite; im Vollbild auch, solange die Browser-Engine rechnet (dann ihr Wert). */
+  readonly barOn = computed(() => this.showEval() || !!this.study()?.engineOn());
 
   readonly topPlayer = computed<LivePlayer>(() => this.flipped() ? this.game().white : this.game().black);
   readonly bottomPlayer = computed<LivePlayer>(() => this.flipped() ? this.game().black : this.game().white);
@@ -178,7 +245,13 @@ export class LiveBoardCardComponent {
     source: () => ({ id: this.game().id, eval: this.game().eval }),
     computation: (src, prev) => src.eval ?? (prev && prev.source.id === src.id ? prev.value : null),
   });
-  readonly share = computed(() => whiteShare(this.shownEval()));
+  /** Wert des Balkens: Browser-Engine (Vollbild, an) → ihre beste Linie; abseits der Live-Stellung ohne sie leer. */
+  readonly barEval = computed<LiveEval | null>(() => {
+    const st = this.study();
+    if (st?.engineOn()) { const t = st.session.topEval(); return t ? { ...t, source: 'engine', depth: st.session.depth() } : null; }
+    return this.atLive() ? this.shownEval() : null;
+  });
+  readonly share = computed(() => whiteShare(this.barEval()));
   readonly evalLabel = computed(() => evalText(this.shownEval()));
   /** Zugnummer aus den Halbzügen: läuft die Partie, der Zug am Brett (`plies/2 + 1`), fertig der letzte gespielte; vor dem ersten Zug nichts. */
   readonly moveNo = computed(() => liveMoveNumber(this.game()));
@@ -187,6 +260,9 @@ export class LiveBoardCardComponent {
   readonly best = computed(() => this.showEval() && this.showBest() && !this.game().finished
     ? liveBestMove(this.game().fen, this.game().eval?.best) : null);
   readonly bestArrows = computed<BoardArrow[]>(() => {
+    const st = this.study();
+    if (st?.engineOn()) return st.arrows();
+    if (!this.atLive()) return [];
     const b = this.best();
     return b ? [{ from: b.from, to: b.to, brush: 'blue' }] : [];
   });
@@ -219,6 +295,100 @@ export class LiveBoardCardComponent {
       this.measureBoard(ro, observed);
       destroyRef.onDestroy(() => ro.disconnect());
     });
+    // Live-Ereignisse in die Vollbild-Ansicht: passt der Zug nicht an die Zugliste, das PGN neu holen (gebündelt).
+    effect(() => {
+      const g = this.game();
+      const st = this.study();
+      if (!st) return;
+      untracked(() => { if (st.update(g) === 'stale' && st.loaded()) this.schedulePgn(); });
+    });
+    destroyRef.onDestroy(() => this.teardown());
+  }
+
+  /** Vollbild-Knopf des Bretts: Karte groß, Zugliste + Engine dazu. */
+  openFs(): void {
+    if (this.fs()) return;
+    const st = new LiveStudy(undefined, readLiveFsPrefs());
+    st.update(this.game());
+    this.study.set(st);
+    this.fs.set(true);
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      this.wideQuery = window.matchMedia('(orientation: landscape) and (min-width: 600px)');
+      this.onWide();
+      this.wideQuery.addEventListener?.('change', this.onWide);
+    }
+    this.loadPgn();
+    const el = this.cardEl()?.nativeElement;
+    if (el && fullscreenSupported()) {
+      this.offFs = onFullscreenChange(() => {
+        const now = isFullscreen(el);
+        if (now) this.realFs = true;
+        else if (this.realFs) this.closeFs();
+      });
+      requestFullscreen(el).catch(() => { /* abgelehnt: die Karte deckt das Fenster trotzdem ab */ });
+    }
+    queueMicrotask(() => el?.focus({ preventScroll: true }));
+  }
+
+  closeFs(): void {
+    if (!this.fs()) return;
+    const wasReal = this.realFs && isFullscreen(this.cardEl()?.nativeElement);
+    this.teardown();
+    this.fs.set(false);
+    this.study.set(null);
+    if (wasReal) exitFullscreen().catch(() => { /* schon draußen */ });
+  }
+
+  /** PGN der Partie holen (Zugliste); ohne Lichess-Runde bleibt nur die Live-Stellung. */
+  loadPgn(): void {
+    const st = this.study();
+    const round = this.roundId();
+    if (!st) return;
+    if (!round) { this.pgnState.set('error'); return; }
+    if (this.pgnBusy) return;
+    this.pgnBusy = true;
+    if (!st.loaded()) this.pgnState.set('loading');
+    this.service.pgn(round, this.game().id).subscribe({
+      next: pgn => {
+        this.pgnBusy = false;
+        if (this.study() !== st) return;
+        this.pgnState.set(st.loadPgn(pgn) ? 'ok' : 'error');
+      },
+      error: () => {
+        this.pgnBusy = false;
+        if (this.study() === st && !st.loaded()) this.pgnState.set('error');
+      },
+    });
+  }
+
+  /** Tasten im Vollbild: ←/→ Zug zurück/vor, Pos1/Ende, Esc schließt (auch ohne Element-Vollbild). */
+  onKey(e: KeyboardEvent): void {
+    const st = this.study();
+    if (!st || !this.fs()) return;
+    if (e.key === 'Escape') { e.preventDefault(); this.closeFs(); return; }
+    if (!isBoardHotkey(e)) return;
+    switch (e.key) {
+      case 'ArrowLeft': st.prev(); break;
+      case 'ArrowRight': st.next(); break;
+      case 'Home': st.first(); break;
+      case 'End': st.last(); break;
+      default: return;
+    }
+    e.preventDefault();
+  }
+
+  private schedulePgn(): void {
+    if (this.pgnTimer) return;
+    this.pgnTimer = setTimeout(() => { this.pgnTimer = null; this.loadPgn(); }, 1500);
+  }
+
+  private teardown(): void {
+    this.offFs?.(); this.offFs = undefined;
+    this.realFs = false;
+    if (this.pgnTimer) { clearTimeout(this.pgnTimer); this.pgnTimer = null; }
+    this.wideQuery?.removeEventListener?.('change', this.onWide);
+    this.wideQuery = null;
+    this.study()?.destroy();
   }
 
   /** Misst cg-board relativ zur Brettzeile; beobachtet es zusätzlich, sobald Chessground es angelegt hat. */

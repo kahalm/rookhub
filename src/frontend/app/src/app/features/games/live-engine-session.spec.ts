@@ -159,4 +159,39 @@ describe('LiveEngineSession', () => {
     expect(session.fallback()).toBeTrue();
     expect(session.isLc0()).toBeFalse();
   });
+
+  // Live-Bretter im Vollbild (1.036.0): Engine an/aus ohne die Nebenvariante zu verlieren, Linienzahl wählbar, Bewertung für den Balken.
+  it('angehalten rechnet nichts, die Nebenvariante bleibt; Fortsetzen rechnet die Stellung auf dem Brett', () => {
+    const { session, engine, state$ } = setup();
+    session.setPaused(true);
+    expect(engine.stopped).toBe(1);
+    session.sync(-1, start);
+    session.play({ from: 'e2', to: 'e4', san: 'e4', fen: afterE4 }, start);
+    expect(engine.analyzed).toEqual([]);
+    expect(session.variationSan()).toBe('1. e4');
+    expect(session.fen(start)).toBe(afterE4);
+    session.setPaused(false);
+    expect(engine.analyzed).toEqual([afterE4]);
+    state$.next({ fen: afterE4, depth: 12, running: true, nodes: 1, nps: 1, lines: [
+      { multipv: 1, depth: 12, scoreType: 'mate', score: -3, evalText: '#-3', pvUci: ['e7e5'] }] });
+    expect(session.topEval()).toEqual({ cp: null, mate: -3 });
+    session.setPaused(true);
+    expect(session.lines()).toEqual([]);
+    expect(session.topEval()).toBeNull();
+  });
+
+  it('Linienzahl umstellen: MultiPV neu und dieselbe Stellung noch einmal, Grenzen 1–5', () => {
+    const { session, engine } = setup();
+    session.sync(-1, start);
+    session.setLineCount(5);
+    expect(engine.multiPv).toBe(5);
+    expect(session.lineSlots()).toBe(5);
+    expect(engine.analyzed).toEqual([start, start]);
+    session.setLineCount(9);
+    expect(session.lineSlots()).toBe(5);
+    expect(engine.analyzed.length).toBe(2);   // keine Änderung → kein neuer Auftrag
+    session.setLineCount(0);
+    expect(session.lineSlots()).toBe(1);
+  });
 });
+

@@ -214,3 +214,14 @@ export function readTurned(): ReadonlySet<string> {
 export function writeTurned(ids: ReadonlySet<string>): void {
   try { sessionStorage.setItem(LIVE_TURNED_KEY, JSON.stringify([...ids].slice(-LIVE_TURNED_MAX))); } catch { /* gesperrt: gilt bis zum Neuladen */ }
 }
+
+/**
+ * Fenster für „Auf dem Analysebrett öffnen“: in der installierten App (PWA `display-mode: standalone` bzw. Android-TWA,
+ * Referrer `android-app://…`) im selben Fenster — ein neuer Tab risse dort aus der App heraus; im Browser ein neuer Tab.
+ */
+export function analysisLinkTarget(win: Pick<Window, 'matchMedia'> | null = typeof window === 'undefined' ? null : window,
+  referrer: string = typeof document === 'undefined' ? '' : document.referrer): '_self' | '_blank' {
+  let standalone = false;
+  try { standalone = !!win?.matchMedia?.('(display-mode: standalone)').matches; } catch { /* alter Browser */ }
+  return standalone || referrer.startsWith('android-app://') ? '_self' : '_blank';
+}

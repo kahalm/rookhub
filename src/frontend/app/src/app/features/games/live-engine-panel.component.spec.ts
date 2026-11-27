@@ -12,7 +12,7 @@ describe('LiveEnginePanelComponent', () => {
     const lines = signal<{ evalText: string; san: string; positive: boolean }[]>([]);
     const session = {
       fallback: () => false, engineName: () => null, depth: () => 0, isLc0: () => false, nodes: () => 0,
-      variation: () => [], canRedo: () => false, variationSan: () => '', lines, fen: (g: string) => g,
+      variation: () => [], canRedo: () => false, variationSan: () => '', lines, fen: (g: string) => g, lineSlots: () => 3,
     } as unknown as LiveEngineSession;
     TestBed.configureTestingModule({ imports: [LiveEnginePanelComponent], providers: [provideTranslateService({ fallbackLang: 'de' }), provideHttpClient(), provideHttpClientTesting()] });
     const f = TestBed.createComponent(LiveEnginePanelComponent);
@@ -33,7 +33,7 @@ describe('LiveEnginePanelComponent', () => {
     const lines = signal([{ evalText: '+0.3', san: '1. Nf3 d5 2. g3 Bb4+', positive: true }]);
     const session = {
       fallback: () => false, engineName: () => null, depth: () => 0, isLc0: () => false, nodes: () => 0,
-      variation: () => [], canRedo: () => false, variationSan: () => '', lines, fen: (g: string) => g,
+      variation: () => [], canRedo: () => false, variationSan: () => '', lines, fen: (g: string) => g, lineSlots: () => 3,
     } as unknown as LiveEngineSession;
     TestBed.configureTestingModule({ imports: [LiveEnginePanelComponent], providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()] });
     TestBed.inject(TranslateService).use('de');
@@ -42,5 +42,30 @@ describe('LiveEnginePanelComponent', () => {
     f.componentRef.setInput('gameFen', 'start');
     f.detectChanges();
     expect((f.nativeElement as HTMLElement).querySelector('.lines .line-san')!.textContent!.trim()).toBe('1. Sf3 d5 2. g3 Lb4+');
+  });
+
+  // Live-Bretter im Vollbild (1.036.0): Linienzahl wählbar, Nebenvariante zeigt dort der Aufrufer.
+  it('zeigt so viele Zeilen, wie die Sitzung rechnet, und blendet die Nebenvariante auf Wunsch aus', () => {
+    const lines = signal<{ evalText: string; san: string; positive: boolean }[]>([]);
+    const slots = signal(5);
+    const session = {
+      fallback: () => false, engineName: () => null, depth: () => 0, isLc0: () => false, nodes: () => 0,
+      variation: () => [{ san: 'e4' }], canRedo: () => false, variationSan: () => '1. e4', lines, fen: (g: string) => g,
+      lineSlots: slots,
+    } as unknown as LiveEngineSession;
+    TestBed.configureTestingModule({ imports: [LiveEnginePanelComponent], providers: [provideTranslateService({ fallbackLang: 'de' }), provideHttpClient(), provideHttpClientTesting()] });
+    const f = TestBed.createComponent(LiveEnginePanelComponent);
+    f.componentRef.setInput('session', session);
+    f.componentRef.setInput('gameFen', 'start');
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.lines li').length).toBe(5);
+    expect(el.querySelector('.variation')).not.toBeNull();
+    slots.set(1);
+    f.componentRef.setInput('showVariation', false);
+    f.detectChanges();
+    expect(el.querySelectorAll('.lines li').length).toBe(1);
+    expect(el.querySelector('.variation')).toBeNull();
+    expect(el.querySelector('.hint')).toBeNull();
   });
 });

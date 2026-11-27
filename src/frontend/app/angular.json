@@ -267,6 +267,11 @@
               {
                 "glob": "**/*",
                 "input": "public-turnier"
+              },
+              {
+                "glob": "stockfish-18-lite-single.*",
+                "input": "node_modules/stockfish/bin",
+                "output": "/assets/stockfish"
               }
             ],
             "styles": [

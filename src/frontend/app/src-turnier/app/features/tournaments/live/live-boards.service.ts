@@ -33,6 +33,11 @@ export class LiveBoardsService {
   }
 
   /** Fremde Runde + Partien zu einem Lichess-Link (Dialog „Brett hinzufügen“, 1.025.0; ohne Anmeldung). */
+  /** PGN einer Live-Partie (alle bisherigen Züge, Uhren) — Zugliste im Vollbild (1.036.0). */
+  pgn(roundId: string, gameId: string): Observable<string> {
+    return this.http.get(`/api/live-boards/pgn/${encodeURIComponent(roundId)}/${encodeURIComponent(gameId)}`, { responseType: 'text' });
+  }
+
   external(url: string): Observable<ExternalRoundView> {
     return this.http.get<ExternalRoundView>('/api/live-boards/external', { params: { url } });
   }

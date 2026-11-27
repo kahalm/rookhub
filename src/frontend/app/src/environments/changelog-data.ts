@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.036.0", date: "2026-11-27", changes: [
+    { en: "Tournament site, live boards: the fullscreen button above a board now opens a large view of that game instead of just the board. Next to the board (below it on a phone) you get the move list to replay the game, the engine in your browser with 1–5 lines, and „Make moves“ to try your own ideas on the board. New moves keep arriving live: if you are at the last move the board follows the game, otherwise it stays where you are. Your own moves never change the live game — „Back to live“ returns to the current position. Arrow keys step through the moves, Esc closes. Works for guests and on shared links; on iPhone the view covers the window.",
+      de: "Turnierseite, Live-Bretter: Der Vollbild-Knopf über einem Brett öffnet jetzt eine große Ansicht der Partie statt nur des Bretts. Daneben (am Handy darunter) stehen die Zugliste zum Nachspielen, die Engine im Browser mit 1–5 Linien und „Selbst ziehen“, um eigene Ideen auf dem Brett auszuprobieren. Neue Züge kommen weiter live an: Steht man am letzten Zug, folgt das Brett der Partie, sonst bleibt es, wo man ist. Eigene Züge ändern die Live-Partie nie — „Zur Live-Stellung“ führt zur aktuellen Stellung zurück. Pfeiltasten blättern, Esc schließt. Geht auch für Gäste und über geteilte Links; am iPhone deckt die Ansicht das Fenster ab." },
+    { en: "Tournament site, live boards: in the installed app the „Analyse“ button opens the analysis board in the same window instead of a new tab.",
+      de: "Turnierseite, Live-Bretter: In der installierten App öffnet der Knopf „Analysieren“ das Analysebrett im selben Fenster statt in einem neuen Tab." },
+  ] },
   { version: "1.035.4", date: "2026-11-27", changes: [
     { en: "Tournament site, live boards: the rating line under the name is set a little tighter, so eight boards still fit in two rows on a 1920 × 1080 screen.",
       de: "Turnierseite, Live-Bretter: Die Elo-Zeile unter dem Namen ist etwas enger gesetzt, damit acht Bretter auf einem 1920 × 1080-Bildschirm weiter in zwei Reihen passen." },

@@ -12,3 +12,7 @@
 - `isElementFullscreen()` (`fullscreen.util.ts`) unterscheidet Brett- von App-Vollbild — beide setzen `document.fullscreenElement` (App-Vollbild = `<html>`). Wer Verhalten daran knüpft, dass Teile der Oberfläche unsichtbar sind, fragt DIESE Funktion, nicht `!!document.fullscreenElement` (so sprang der Buch-Solver im App-Vollbild trotz Abschlusstext weiter).
 - `board-fs-actions.component.ts` (features/puzzles) — kleine Icon-Leiste im schwarzen Balken (Tipp/Zurücksetzen/Mausrutscher/Aufgeben) für alle drei Solver, per `<ng-content>` in die Vollbild-Hülle projiziert und über `data-fs-only` nur dort sichtbar.
 - Nicht enthalten: der Stellungs-Editor (`analysis/position-setup.component.ts`) — dort baut die Palette neben dem Brett den Nutzen zunichte.
+- **Eigene Vollbild-Ansicht des Aufrufers** (1.036.0): `app-chess-board [fullscreenMode]` — `board` (Vorgabe, nur das Brett),
+  `custom` (der Knopf meldet `fullscreenRequest`, schaltet NICHT selbst und erscheint auch ohne Element-Vollbild, z. B. iOS) und
+  `none` (kein Knopf, für das Brett IN einer solchen Ansicht). Am `BoardFullscreenButtonComponent` heißt das `custom` + `(request)`.
+  Erster Nutzer: Live-Bretter der Turnierseite (ganze Karte mit Zugliste + Engine ins Vollbild, `docs/api/live-bretter.md`).

@@ -740,6 +740,8 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
 
 - Drei Bretter: `PuzzleBoardComponent` (Löser), `AnalysisBoardComponent`, `shared/pgn-viewer/chess-board.component.ts`;
   alle mit Vollbild-Knopf **im** Brett. Neue Brett-Ansichten benutzen eines davon.
+  Braucht eine Seite eine eigene Vollbild-Ansicht (Brett + Zugliste + Engine, Live-Bretter 1.036.0), bleibt es DERSELBE
+  Knopf an derselben Stelle: `app-chess-board [fullscreenMode]="'custom'"` meldet den Klick, in der Ansicht selbst `'none'`.
 - Koordinaten global 11 px (≥ 900 px: 12 px), halbfett, Ränge links oben, Linien unten rechts, Farbe je Feld
   (UX-060, `styles.scss`); KidHub ≈ 2,2 % der Brettbreite (`KID_COORDS`). Lesbar heißt ≥ 4,5:1 zum eigenen Feld:
   im Thema brown ist auch das dunkle Feld (#c0ae91) zu hell für helle Schrift — dort dunkle Schrift mit hellem Hof
@@ -1415,6 +1417,19 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   **Analysieren** (1.026.0): im Kartenkopf vor dem ✕ ein Symbolknopf `biotech` (40 px, `aria-label`/`title` „Auf dem
   Analysebrett öffnen (neuer Tab)“) wie „In Analyse öffnen“ der Partienliste; öffnet RookHubs Analysebrett in einem neuen Tab. Verbindungsabriss: Zustand „Live“ bleibt 10 s
   stehen, erst danach „Verbindung unterbrochen“ (kein Blinken, Bretter bleiben stehen, kein Spinner).
+  **Vollbild** (1.036.0): der Vollbild-Knopf über dem Brett öffnet die GANZE Karte als Vollbild-Ansicht (Element-Vollbild,
+  ohne — iOS — fest über dem Fenster, Fläche `--mat-sys-surface`), Kopf wie die Karte plus `close_fullscreen` als letzter
+  Knopf (Esc schließt auch). Hochformat: Brett volle Breite, darunter das Seitenteil; quer ab 600 px: Brett so groß, wie die Höhe
+  erlaubt, rechts das Seitenteil (mind. 280 px, scrollt allein, Abstand 16 px). Seitenteil von oben: Zeile ⏮ ◀ ▶ ⏭
+  (Symbolknöpfe) | rechts Zustand „Live“ (`sensors` + Text in `--rh-success`, Tooltip „folgt der Partie“) bzw. abseits davon der
+  Hauptknopf „Zur Live-Stellung“ (`mat-flat-button`, `sensors`); Zeile Schalterknöpfe `mat-stroked-button` „Engine“ (`memory`) und
+  „Selbst ziehen“ (`pan_tool_alt`) — an = Akzent-Rahmen/-Schrift + 10 % Akzentfläche und `aria-pressed` (E-Ink: schwarz, fett) —,
+  bei Engine an dazwischen „Linien“ mit nativem `<select>` 1–5 (keine CDK-Overlays im Vollbild-Element); eigene Variante als
+  Zeile `alt_route` + Züge (SAN-Pipe) + Textknopf „Zug zurück“, ohne Variante bei „Selbst ziehen“ ein leiser Hinweissatz; dann die
+  Zugliste (`app-move-list`, Uhren, Kasten mit Rahmen 1 px/Radius 8, Hochformat höchstens 40 dvh, quer die restliche Höhe) und
+  bei Engine an die Linienleiste der Partieseite (`app-live-engine-panel`, ohne eigene Variantenzeile). Balken/Pfeil/„Nur ein
+  Zug“ gelten nur an der Live-Stellung bzw. kommen bei Engine an aus der Browser-Engine; die Wertzeile unter dem Brett entfällt
+  dann.
 - Profil: erste Karte „Darstellung“ = RookHubs `app-theme-card` (`@rh/features/profile/theme-card.component`), auch
   beim Ladefehler. Spieltermine einer Liga mit „·“-Trenner in der Lücke (`overflow-x: clip`, wie ClubHub `.kid-meta`).
 
@@ -1662,6 +1677,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-27 | 1.036.0 · Turnierseite | Live-Bretter: Vollbild-Knopf öffnet die ganze Karte als Vollbild-Ansicht — Brett groß, Zugliste zum Nachspielen, Browser-Engine mit wählbarer Linienzahl, „Selbst ziehen“, „Zur Live-Stellung“; hoch: Seitenteil unter dem Brett, quer daneben (8.2); `fullscreenMode` am geteilten Brett (5.12) | Partie im Vollbild verfolgen und selbst durchrechnen, ohne die Live-Partie zu verlieren | Nutzerwunsch 27.11. |
 | 2026-11-27 | 1.035.2 · Turnierseite | Live-Bretter: Elo in eigener Zeile unter dem Spielernamen (0,75 rem, leise; 1.035.4 enger gesetzt), Name kürzt allein mit „…“, Uhr senkrecht mittig (8.2) | Bei langen Namen war die Elo auf schmalen Karten abgeschnitten | Nutzerwunsch 27.11. |
 | 2026-11-27 | 1.035.0 · Turnierseite | Live-Bretter: Schalter „Vibrieren“ in der Werkzeugzeile nach „Besten Zug zeigen“, nur wo `navigator.vibrate` existiert; Muster Ergebnis lang-kurz-lang, Bewertungssprung drei kurze Stöße, Einschalten ein kurzer (8.2) | Am Handy mitbekommen, wenn sich etwas tut, ohne ständig hinzusehen | Nutzerwunsch 27.11. |
 | 2026-11-26 | 1.033.0 · Turnierseite | Live-Bretter: Chip „Nur ein Zug“ vor der Uhr der Seite am Zug (Akzent-Pille 0,72 rem, Tooltip bester/nächstbester, kein Zeilensprung, ohne Zug zu verraten) (8.2) | Kritische Momente auf einen Blick, ohne die Lösung zu zeigen | Nutzerwunsch 26.11. |

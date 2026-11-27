@@ -339,7 +339,7 @@ describe('PuzzleBoardComponent Vollbild-Knopf', () => {
     fixture.detectChanges();
 
     const button = fixture.debugElement.query(By.directive(BoardFullscreenButtonComponent));
-    const target: HTMLElement = button.componentInstance.target;
+    const target: HTMLElement = button.componentInstance.target();
     expect(target.classList).toContain('board-fs-host');
     expect(target.querySelector('.board-wrapper')).not.toBeNull();
   });

@@ -47,6 +47,12 @@ export class LiveEngineSession {
   readonly depth = signal(0);
   /** Bester Zug der gerechneten Stellung (UCI) — für den Pfeil. */
   private readonly bestUci = signal<string | null>(null);
+  /** Bewertung der besten Linie (Weiß-Sicht, cp ODER mate) — für einen Balken neben dem Brett (Live-Bretter, 1.036.0). */
+  readonly topEval = signal<{ cp: number | null; mate: number | null } | null>(null);
+  /** Zahl der Linien, die gerechnet werden — {@link setLineCount} ändert sie (Live-Bretter im Vollbild, 1.036.0). */
+  readonly lineSlots = signal(LIVE_LINES);
+  /** Angehalten (Engine aus, Nebenvariante bleibt bedienbar) — {@link setPaused}. */
+  readonly paused = signal(false);
   /** Name der externen Engine; `null` = Stockfish im Browser. */
   readonly engineName = signal<string | null>(null);
   /** Kennung der externen Engine; `null` = Stockfish im Browser — fuer das Haekchen in der Engine-Wahl. */
@@ -79,6 +85,7 @@ export class LiveEngineSession {
   constructor(engineFactory: () => AnalysisEngineService = () => new AnalysisEngineService(), depthCap = 22,
     readonly lineCount = LIVE_LINES) {
     this.engine = engineFactory();
+    this.lineSlots.set(lineCount);
     this.engine.setMultiPv(lineCount);
     this.engine.setDepth(depthCap);
     this.sub = this.engine.analysis$.subscribe(s => {
@@ -87,6 +94,8 @@ export class LiveEngineSession {
       this.nodes.set(s.nodes ?? 0);
       this.lines.set(toDisplayLines(s.fen, s.lines, LIVE_LINE_PLIES));
       this.bestUci.set(s.lines[0]?.pvUci[0] ?? null);
+      const top = s.lines[0];
+      this.topEval.set(top ? (top.scoreType === 'mate' ? { cp: null, mate: top.score } : { cp: top.score, mate: null }) : null);
     });
     this.fallbackSub = this.engine.remoteFallback$?.subscribe(f => this.fallback.set(f));
   }
@@ -179,6 +188,28 @@ export class LiveEngineSession {
     this.restart();
   }
 
+  /** Zahl der Linien ändern (1–5); die Stellung auf dem Brett rechnet neu. */
+  setLineCount(n: number): void {
+    const c = Math.max(1, Math.min(5, Math.round(n)));
+    if (c === this.lineSlots()) return;
+    this.lineSlots.set(c);
+    this.engine.setMultiPv(c);
+    this.restart();
+  }
+
+  /** Engine anhalten bzw. weiterrechnen lassen. Angehalten bleibt die Nebenvariante bedienbar (eigene Züge ohne Engine);
+   *  gerechnet wird erst wieder beim Fortsetzen — dann die Stellung, die gerade auf dem Brett steht. */
+  setPaused(on: boolean): void {
+    if (on === this.paused()) return;
+    this.paused.set(on);
+    if (on) {
+      this.engine.stop();
+      this.lines.set([]); this.depth.set(0); this.nodes.set(0); this.bestUci.set(null); this.topEval.set(null);
+    } else {
+      this.restart();
+    }
+  }
+
   /** Dieselbe Stellung mit der neuen Engine noch einmal — ohne das hiesse ein Wechsel „erst beim naechsten Zug". */
   private restart(): void {
     const fen = this.analyzedFen;
@@ -200,6 +231,8 @@ export class LiveEngineSession {
     this.depth.set(0);
     this.nodes.set(0);
     this.bestUci.set(null);
+    this.topEval.set(null);
+    if (this.paused()) return;   // gemerkt: setPaused(false) rechnet genau diese Stellung (restart)
     void this.engine.analyze(fen);
   }
 }

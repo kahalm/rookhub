@@ -32,3 +32,5 @@ Engine per Fabrik — in Tests ein Fake), Leiste in `live-engine-panel.component
   statt „einen Zug" oft „ganz an den Anfang/das Ende" (gemeldet 2026-09-24). Am PC unverändert.
 - Tippzonen fallen im Live-Modus weg (sie lägen über dem spielbaren Brett), Computer-Linien/Pfeil der gespeicherten
   Analyse ebenso (`engineHidden`), und das Fehler-Training schaltet die Live-Engine ab.
+
+- **Anhalten und Linienzahl** (1.036.0, Live-Bretter im Vollbild): `LiveEngineSession.setPaused(on)` hält die Engine an, die Nebenvariante bleibt bedienbar (eigene Züge ohne Engine); `setLineCount(1–5)` stellt MultiPV um und rechnet dieselbe Stellung neu, `lineSlots` ist die Zeilenzahl, die `app-live-engine-panel` zeigt; `topEval` liefert die beste Linie (Weiß-Sicht) für einen Balken. `app-live-engine-panel [showVariation]="false"`, wenn der Aufrufer die Nebenvariante selbst zeigt.

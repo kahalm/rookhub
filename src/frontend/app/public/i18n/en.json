@@ -1713,7 +1713,19 @@
       "onlyMove": "Only move",
       "onlyMoveTip": "Only one move holds — best {{best}}, next best {{second}}",
       "turnBoard": "Turn board",
-      "sources": "Broadcasts"
+      "sources": "Broadcasts",
+      "fs": {
+        "atLive": "Live",
+        "atLiveTip": "The board follows the game — new moves appear automatically.",
+        "toLive": "Back to live",
+        "engine": "Engine",
+        "lines": "Lines",
+        "ownMoves": "Make moves",
+        "ownHint": "Move on the board to try your own ideas — the live game carries on and is not changed.",
+        "movesLoading": "Loading the moves …",
+        "movesFailed": "The moves could not be loaded.",
+        "noMoves": "No moves yet."
+      }
     }
   },
   "puzzles": {

@@ -1713,7 +1713,19 @@
       "onlyMove": "Nur ein Zug",
       "onlyMoveTip": "Nur ein Zug hält die Stellung — bester {{best}}, nächstbester {{second}}",
       "turnBoard": "Brett drehen",
-      "sources": "Übertragungen"
+      "sources": "Übertragungen",
+      "fs": {
+        "atLive": "Live",
+        "atLiveTip": "Das Brett folgt der Partie — neue Züge kommen von selbst.",
+        "toLive": "Zur Live-Stellung",
+        "engine": "Engine",
+        "lines": "Linien",
+        "ownMoves": "Selbst ziehen",
+        "ownHint": "Zieh auf dem Brett, um eigene Ideen auszuprobieren — die Live-Partie läuft weiter und bleibt unverändert.",
+        "movesLoading": "Züge werden geladen …",
+        "movesFailed": "Die Züge konnten nicht geladen werden.",
+        "noMoves": "Noch keine Züge."
+      }
     }
   },
   "puzzles": {

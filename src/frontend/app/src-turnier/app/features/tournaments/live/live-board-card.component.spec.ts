@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { LiveBoardCardComponent } from './live-board-card.component';
@@ -13,7 +15,7 @@ const GAME: LiveGame = {
 describe('LiveBoardCardComponent', () => {
   it('kennzeichnet die Quelle der Bewertung dezent (Tooltip) und zeigt die Tiefe', async () => {
     await TestBed.configureTestingModule({
-      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     const fixture = TestBed.createComponent(LiveBoardCardComponent);
     fixture.componentRef.setInput('game', GAME);
@@ -28,7 +30,7 @@ describe('LiveBoardCardComponent', () => {
 
   it('Analyse-Knopf (1.026.0): Link in neuem Tab, nur mit URL', async () => {
     await TestBed.configureTestingModule({
-      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     const fixture = TestBed.createComponent(LiveBoardCardComponent);
     fixture.componentRef.setInput('game', GAME);
@@ -45,7 +47,7 @@ describe('LiveBoardCardComponent', () => {
   });
   it('hält nach einem Zug den letzten Balkenwert, bis die neue Stellung bewertet ist; neue Partie beginnt leer', async () => {
     await TestBed.configureTestingModule({
-      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     const fixture = TestBed.createComponent(LiveBoardCardComponent);
     fixture.componentRef.setInput('game', GAME);
@@ -66,7 +68,7 @@ describe('LiveBoardCardComponent', () => {
   });
   it('Zuganzahl im Kartenkopf: laufend der Zug am Brett, fertig der letzte, vor dem ersten Zug nichts', async () => {
     await TestBed.configureTestingModule({
-      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     const translate = TestBed.inject(TranslateService);
     translate.setTranslation('de', { tournaments: { live: { moveN: 'Zug {{move}}', boardN: 'Brett {{board}}' } } });
@@ -93,7 +95,7 @@ describe('LiveBoardCardComponent', () => {
   // 1.030.0 „Besten Zug zeigen“: Pfeil + SAN des besten Zugs — nur zur Bewertung der AKTUELLEN Stellung
   it('Besten Zug zeigen: Pfeil und SAN aus der Bewertung, kein Pfeil zum gehaltenen alten Wert, kein illegaler', async () => {
     await TestBed.configureTestingModule({
-      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     const fixture = TestBed.createComponent(LiveBoardCardComponent);
     const withBest = { ...GAME, eval: { cp: -20, mate: null, source: 'cloud' as const, depth: 40, best: 'c7c5' } };
@@ -125,7 +127,7 @@ describe('LiveBoardCardComponent', () => {
 
   it('Nur ein Zug (1.033.0): Chip vor der Uhr der Seite am Zug, Tooltip bester/nächstbester, kein Pfeil, kein Sprung bei 240 px', async () => {
     await TestBed.configureTestingModule({
-      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     const translate = TestBed.inject(TranslateService);
     translate.setTranslation('de', { tournaments: { live: { onlyMove: 'Nur ein Zug', onlyMoveTip: 'bester {{best}}, nächstbester {{second}}' } } });
@@ -177,7 +179,7 @@ describe('LiveBoardCardComponent', () => {
 
   it('Elo unter dem Namen (27.11.): bei 240 px und langem Namen kürzt nur der Name, die Elo bleibt ganz sichtbar', async () => {
     await TestBed.configureTestingModule({
-      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     const fixture = TestBed.createComponent(LiveBoardCardComponent);
     const host = fixture.nativeElement as HTMLElement;
@@ -203,7 +205,7 @@ describe('LiveBoardCardComponent', () => {
 
   it('Brett drehen: Knopf im Kopf meldet turn; bei 240 px mit Analyse und ✕ passt der Kopf, nichts abgeschnitten', async () => {
     await TestBed.configureTestingModule({
-      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     const translate = TestBed.inject(TranslateService);
     translate.setTranslation('de', { tournaments: { live: { moveN: 'Zug {{move}}', boardN: 'Brett {{board}}' } } });
@@ -237,7 +239,7 @@ describe('LiveBoardCardComponent', () => {
 
   it('Balken genau so hoch wie das gezeichnete Brett, Mitte = Mitte des Bretts (0.0 zwischen 4. und 5. Reihe)', async () => {
     await TestBed.configureTestingModule({
-      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     const fixture = TestBed.createComponent(LiveBoardCardComponent);
     (fixture.nativeElement as HTMLElement).style.width = '303px';     // kein Vielfaches von acht: Chessground rastet ein
@@ -260,7 +262,7 @@ describe('LiveBoardCardComponent', () => {
   });
   it('fertige Partie: Ergebnis einzeilig in schmaler Karte, keine Zugzahl daneben (26.11.: „½–½“ brach um)', async () => {
     await TestBed.configureTestingModule({
-      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     const fixture = TestBed.createComponent(LiveBoardCardComponent);
     const host = fixture.nativeElement as HTMLElement;
@@ -278,5 +280,116 @@ describe('LiveBoardCardComponent', () => {
     expect(res.getBoundingClientRect().height).toBeLessThan(lh * 1.6 + 2);   // eine Zeile (+ Rahmen)
     expect(host.querySelector('.lb-move')).toBeNull();
     host.remove();
+  });
+
+  describe('Vollbild (1.036.0)', () => {
+    const PGN = '[Event "BL"]\n\n1. e4 { [%clk 1:30:00] } *';
+
+    async function open(width: number, height: number) {
+      await TestBed.configureTestingModule({
+        imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
+      }).compileComponents();
+      localStorage.setItem('rookhub_live_fs', JSON.stringify({ engine: false, lines: 3 }));   // kein Stockfish-Worker im Test
+      const fixture = TestBed.createComponent(LiveBoardCardComponent);
+      const host = fixture.nativeElement as HTMLElement;
+      host.style.width = '240px';
+      document.body.appendChild(host);
+      fixture.componentRef.setInput('game', GAME);
+      fixture.componentRef.setInput('board', 1);
+      fixture.componentRef.setInput('roundId', 'fnmEB1kH');
+      fixture.detectChanges();
+      const c = fixture.componentInstance;
+      // Fenstermaße stellt der Test über die Ansicht nach (Element-Vollbild gibt es in Headless-Chrome nicht verlässlich)
+      spyOn(window, 'matchMedia').and.callFake((q: string) => ({
+        matches: q.includes('landscape') ? width > height && width >= 600 : false,
+        addEventListener: () => {}, removeEventListener: () => {},
+      }) as unknown as MediaQueryList);
+      (host.querySelector('.board-fs-btn') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const http = TestBed.inject(HttpTestingController);
+      const req = http.expectOne('/api/live-boards/pgn/fnmEB1kH/g1');
+      req.flush(PGN);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      return { fixture, host, c, http };
+    }
+
+    afterEach(() => localStorage.removeItem('rookhub_live_fs'));
+
+    it('Vollbild-Knopf des Bretts öffnet die große Ansicht mit Zugliste; ✕ und Esc schließen sie', async () => {
+      const { fixture, host, c } = await open(390, 800);
+      const card = host.querySelector('.lb-card') as HTMLElement;
+      expect(card.classList).toContain('lb-fs');
+      expect(getComputedStyle(card).position).toBe('fixed');
+      expect(host.querySelector('app-live-board-study')).not.toBeNull();
+      expect(host.querySelectorAll('app-live-board-study .move').length).toBe(1);   // Zugliste aus dem PGN
+      expect(host.querySelector('app-chess-board app-board-fullscreen-button')).toBeNull();   // im Vollbild kein zweiter Knopf
+      (host.querySelector('.lb-fs-close') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(c.fs()).toBeFalse();
+      expect(host.querySelector('app-live-board-study')).toBeNull();
+      (host.querySelector('.board-fs-btn') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      TestBed.inject(HttpTestingController).expectOne('/api/live-boards/pgn/fnmEB1kH/g1').flush(PGN);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      fixture.detectChanges();
+      expect(c.fs()).toBeFalse();
+      host.remove();
+    });
+
+    it('Handy hochformat: Brett volle Breite, Zugliste darunter; ein neuer Live-Zug kommt dazu und das Brett folgt', async () => {
+      const { fixture, host, c } = await open(390, 800);
+      const card = (host.querySelector('.lb-card') as HTMLElement).getBoundingClientRect();
+      const board = (host.querySelector('.lb-cg') as HTMLElement).getBoundingClientRect();
+      const side = (host.querySelector('app-live-board-study') as HTMLElement).getBoundingClientRect();
+      expect(board.width).toBeGreaterThan(card.width - 60);
+      expect(side.top).toBeGreaterThanOrEqual(board.bottom);
+      const afterE5 = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2';
+      fixture.componentRef.setInput('game', { ...GAME, fen: afterE5, lastMove: 'e7e5', plies: 2, whiteToMove: true });
+      fixture.detectChanges();
+      expect(host.querySelectorAll('app-live-board-study .move').length).toBe(2);
+      expect(c.boardFen()).toBe(afterE5);
+      // zurückblättern: Brett bleibt dort, auch wenn weitere Züge kommen; Live-Balkenwert gilt dann nicht
+      (host.querySelector('.ls-first') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(c.boardFen()).toContain('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR');
+      expect(c.barEval()).toBeNull();
+      expect(host.querySelector('.ls-tolive')).not.toBeNull();
+      (host.querySelector('.ls-tolive') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(c.boardFen()).toBe(afterE5);
+      expect(host.querySelector('.ls-live')).not.toBeNull();
+      c.closeFs();
+      host.remove();
+    });
+
+    it('breit (quer): Zugliste und Engine neben dem Brett, Brett so hoch wie möglich', async () => {
+      const { host, c } = await open(1280, 720);
+      expect(c.wide()).toBeTrue();
+      const card = host.querySelector('.lb-card') as HTMLElement;
+      expect(card.classList).toContain('lb-wide');
+      const board = (host.querySelector('.lb-cg') as HTMLElement).getBoundingClientRect();
+      const side = (host.querySelector('app-live-board-study') as HTMLElement).getBoundingClientRect();
+      expect(side.left).toBeGreaterThanOrEqual(board.right);
+      expect(board.width).toBeGreaterThan(200);
+      c.closeFs();
+      host.remove();
+    });
+
+    it('Selbst ziehen macht das Brett spielbar; Engine-Schalter merkt sich die Wahl', async () => {
+      const { fixture, host, c } = await open(390, 800);
+      (host.querySelector('.ls-own') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(c.study()!.ownMoves()).toBeTrue();
+      expect(host.querySelector('.ls-own')!.getAttribute('aria-pressed')).toBe('true');
+      expect(host.querySelector('.ls-hint')).not.toBeNull();
+      c.study()!.play({ from: 'e7', to: 'e5', san: 'e5', fen: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2' });
+      fixture.detectChanges();
+      expect(host.querySelector('.ls-var-san')!.textContent).toContain('e5');
+      expect(c.atLive()).toBeFalse();
+      expect(c.game().fen).toBe(GAME.fen);       // die Live-Partie bleibt unverändert
+      c.closeFs();
+      host.remove();
+    });
   });
 });

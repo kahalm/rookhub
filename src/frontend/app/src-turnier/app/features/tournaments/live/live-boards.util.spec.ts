@@ -1,4 +1,4 @@
-import { LIVE_MAX_ADDED, LIVE_MAX_EXT, evalText, joinParam, lastMovePair, parseAddParam, parseBroadcastLink, parseExtParam, liveBestMove, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
+import { LIVE_MAX_ADDED, analysisLinkTarget, LIVE_MAX_EXT, evalText, joinParam, lastMovePair, parseAddParam, parseBroadcastLink, parseExtParam, liveBestMove, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
 import { LiveGame } from './live-boards.models';
 
 describe('live-boards.util', () => {
@@ -73,5 +73,16 @@ describe('live-boards.util', () => {
     expect(liveBestMove(castle, 'e1h1')).toEqual({ from: 'e1', to: 'g1', san: 'O-O' });
     expect(liveBestMove(castle, 'e1c1')!.san).toBe('O-O-O');
     expect(liveBestMove('8/P6k/8/8/8/8/8/K7 w - - 0 1', 'a7a8q')!.san).toBe('a8=Q');
+  });
+});
+
+describe('analysisLinkTarget', () => {
+  const media = (on: boolean) => ({ matchMedia: (q: string) => ({ matches: on && q === '(display-mode: standalone)' }) as MediaQueryList });
+  it('öffnet in der installierten App (PWA/TWA) im selben Fenster, im Browser in einem neuen Tab', () => {
+    expect(analysisLinkTarget(media(false), '')).toBe('_blank');
+    expect(analysisLinkTarget(media(false), 'https://turnier.oberschmid.homes/')).toBe('_blank');
+    expect(analysisLinkTarget(media(true), '')).toBe('_self');
+    expect(analysisLinkTarget(media(false), 'android-app://homes.oberschmid.turnier/')).toBe('_self');
+    expect(analysisLinkTarget(null, '')).toBe('_blank');
   });
 });

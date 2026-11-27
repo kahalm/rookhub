@@ -76,7 +76,7 @@ ansehen und daneben die WM-Partie live“.
 - **Analysieren** (1.026.0, Wunsch 2026-11-26): an jeder Karte (eigene, hinzugefügte, fremde) ein Symbolknopf `biotech` → neuer Tab
   `https://rookhub…/analysis?live=roundId.gameId` (Partnerseite aus `partnerSiteUrl`, Prod ↔ Prod, Dev ↔ Dev; ohne Partner kein
   Knopf). Das Analysebrett holt das PGN über `GamesService.livePgn` und lädt es wie `?pgn=` (alle Züge nachspielbar, Kopfzeilen,
-  Uhren) — auch ohne Anmeldung (Menüeintrag `analysis` = `All`). Kein PGN in der Adresse: mit Uhren wären es schnell > 8 KB.
+  Uhren) — auch ohne Anmeldung (Menüeintrag `analysis` = `All`). Kein PGN in der Adresse: mit Uhren wären es schnell > 8 KB. Ziel-Fenster (1.036.0, `analysisLinkTarget`): in der installierten App (PWA `display-mode: standalone`, Android-TWA mit Referrer `android-app://`) `_self`, sonst `_blank`.
   Der Hub hält dafür je Partie das zuletzt übertragene Roh-PGN (`Feed._pgn`, `BroadcastLiveHub.PeekPgn`).
 - **Elo-Schnitt** (1.025.0): `LiveMatchSlot.homeElo/awayElo` + `…EloBoards` — Elo der Spieler an den Brettern der Begegnung, aus dem
   Strom, sonst aus der Startliste; ohne Elo zählt nicht. Im Kopf der Begegnung „Ø 2315“ unter dem Namen, Tooltip „Schnitt über n Bretter“.
@@ -271,6 +271,23 @@ Stufe vor. Einzelheiten: `docs/api/leaguehub-vereins-datenbank.md` und `docs/api
 - **Zugnummer** (1.028.0, Wunsch „zeig auch irgendwo die aktuelle Zuganzahl an“): im Kartenkopf „Zug n“ aus `plies`
   (`liveMoveNumber`: laufend `floor(plies/2)+1` = der Zug, der gerade gespielt wird, fertig `ceil(plies/2)`, vor dem ersten Zug
   nichts), Tooltip wer am Zug ist.
+- **Vollbild** (1.036.0, Wunsch 2026-11-27 „beim Vollbildbutton mach das Livebrett groß, blende nebenbei die Zugfolge ein, Engine
+  mit Lines (lokale) und mach die Option, dass man selber Züge macht“): der Vollbild-Knopf über dem Brett (`app-chess-board`
+  `fullscreenMode="custom"`, vorher: nur das Brett mit schwarzen Balken ins Vollbild) schickt die GANZE Karte ins Element-Vollbild
+  — ohne Element-Vollbild (iOS) legt sie sich `position: fixed` übers Fenster, der Knopf erscheint dort jetzt auch. Hochformat:
+  Brett volle Breite, darunter das Seitenteil; quer ab 600 px (`lb-wide`): Brett `min(100dvh − 150 px, 100vw − 420 px)`, rechts
+  das Seitenteil mit eigener Scrollfläche. Seitenteil (`live-board-study.component.ts`): ⏮ ◀ ▶ ⏭, „Live“ bzw. „Zur Live-Stellung“,
+  „Engine“ (Browser-Stockfish über `LiveEngineSession` + `app-live-engine-panel` der Partieseite, Linien 1–5 per natives `<select>`,
+  gemerkt je Gerät `localStorage rookhub_live_fs` `{engine, lines}`, Vorgabe an/3), „Selbst ziehen“, die Zugliste (`app-move-list`
+  samt `[%clk]`). Zustand in `live-study.ts` (`LiveStudy`): Züge einmal per `GET /api/live-boards/pgn/{round}/{game}`, danach hängt
+  jedes Live-Ereignis seinen `lastMove` an, wenn er genau auf die letzte Stellung passt — sonst (`stale`, mehrere Züge verpasst) holt
+  die Karte das PGN gebündelt nach 1,5 s neu; das Brett zeigt beim Folgen ohnehin die Live-FEN. `cursor` null = folgt (am letzten
+  Zug, neue Züge rücken nach), sonst bleibt die Ansicht stehen. Der erste eigene Zug heftet die Ansicht an den Zug, an dem man steht;
+  Live-Züge laufen in der Zugliste weiter, die eigene Variante bleibt, bis „Zur Live-Stellung“, ein Zug-Klick oder „Selbst ziehen“ aus
+  sie verwirft. Balken/Pfeil im Vollbild: Engine an → Wert und Pfeil der Browser-Engine; aus → wie bisher, aber nur an der
+  Live-Stellung (abseits davon leerer Balken, kein Pfeil, kein „Nur ein Zug“). Tasten ←/→/Pos1/Ende, Esc schließt. Kein CDK-Overlay
+  im Seitenteil (die Turnierseite hängt Overlays nicht ins Vollbild-Element). Gäste und `/live/<token>` genauso (PGN ist anonym).
+  Die Turnierseite liefert dafür `assets/stockfish/` aus (angular.json, ngsw-Gruppe `engine` lazy).
 - Brett = geteiltes `app-chess-board` (nur Anzeige; ein Klick tut vorerst nichts), letzter Zug markiert, Uhren (die Seite am
   Zug zählt sekündlich herunter — Näherung ab dem Eintreffen; im E-Ink-Modus steht sie), Ergebnis als Chip.
 - Engine-Balken: Schalter in der Kopfzeile, gemerkt je Gerät (`localStorage rookhub_live_eval`, `device`) und seit 1.024.0
