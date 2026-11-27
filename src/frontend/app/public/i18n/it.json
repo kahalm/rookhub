@@ -2573,7 +2573,8 @@
       "subtitle": "Solo a titolo informativo — sfoglia, niente da risolvere."
     },
     "variation": {
-      "previewing": "Linea dal commento in visualizzazione"
+      "previewing": "Linea dal commento in visualizzazione",
+      "previewingThreat": "Minaccia in visualizzazione"
     },
     "commentDialog": {
       "open": "Leggi in una finestra",

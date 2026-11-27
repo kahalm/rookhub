@@ -2573,7 +2573,8 @@
       "subtitle": "参考用です。クリックで進めるだけで、解く必要はありません。"
     },
     "variation": {
-      "previewing": "コメント内のラインを表示中"
+      "previewing": "コメント内のラインを表示中",
+      "previewingThreat": "脅威を表示中"
     },
     "commentDialog": {
       "open": "ウィンドウで読む",

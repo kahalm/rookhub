@@ -8,7 +8,11 @@ import { CommentDialogComponent, commentLength, LONG_COMMENT_CHARS } from './com
 import { displayComment as computeDisplayComment, buildCommentLines } from './book-comment.util';
 
 /** Brett-Vorschau einer angeklickten Kommentar-Variante (überlagert boardFen/lastMove). */
-export interface VariationPreview { fen: string; lastMove: [Key, Key] }
+export interface VariationPreview {
+  fen: string; lastMove: [Key, Key];
+  /** Der Zug ist eine Drohung aus der Ausgangsstellung (Nullzug) — die Leiste sagt „Zeigt die Drohung“. */
+  threat?: boolean;
+}
 
 /** Was die Kommentar-Anzeige vom Buch-Löser braucht. */
 export interface BookCommentHost {
@@ -69,11 +73,29 @@ export class BookCommentView {
   }
 
   /** {@link lines} in klickbare Segmente zerlegt (Text + spielbare Zug-Chips). Gecacht je
-   *  Kommentar-Inhalt + Puzzle, da die Auflösung nur von Puzzle-FEN/-Zügen abhängt (nicht vom Ply);
-   *  derselbe Cache wie in der Kurs-Durchsicht (`line-step.util`). */
+   *  Kommentar-Inhalt + Puzzle (+ Spoilerschutz-Länge), da die Auflösung nur von Puzzle-FEN/-Zügen abhängt (nicht vom
+   *  Ply); derselbe Cache wie in der Kurs-Durchsicht (`line-step.util`).
+   *
+   *  Spoilerschutz (Woodpecker, Aufgabe 334, gemeldet 2026-11-27): solange die Aufgabe weder gelöst noch aufgedeckt
+   *  ist, verankern Kommentar-Züge nur an den bisher GESPIELTEN Halbzügen ({@link spoilerPlayed}) — sonst spielte ein
+   *  Klick auf „1...Bxe1“ erst den weißen Lösungszug vor. Die Einleitung steht an der Start-FEN, wenn die Linie ohne
+   *  Aufbauzüge beginnt (`startPly < 0`): ihre Züge der nicht ziehenden Seite sind dann zuerst Drohungen. */
   get blocks(): CommentSegment[][] {
-    const p = this.h.puzzle;
-    return this.cache.get(p?.id ?? 0, this.lines, p?.fen ?? '', () => (p?.moves ?? '').split(' ').filter(m => m));
+    const h = this.h;
+    const p = h.puzzle;
+    return this.cache.get(p?.id ?? 0, this.lines, p?.fen ?? '', () => (p?.moves ?? '').split(' ').filter(m => m), {
+      played: this.spoilerPlayed,
+      startComment: h.startPly < 0 ? p?.comment : null,
+    });
+  }
+
+  /** Halbzüge der Linie, die der Kommentar-Parser verwenden darf: beim Lösen die bisher gespielten (`moveIndex`),
+   *  in Durchsicht, Info und nach dem Lösen/Aufgeben `undefined` (ganze Linie). */
+  get spoilerPlayed(): number | undefined {
+    const h = this.h;
+    if (h.reviewMode) return undefined;
+    if (h.state === 'SOLVED' || h.state === 'FAILED' || h.state === 'INFO' || h.state === 'COURSE_DONE') return undefined;
+    return Math.max(0, h.moveIndex);
   }
 
   /** Langer Kommentar (Vorwort, Einleitung): steht weiter VOLLSTÄNDIG im Kasten, ein Klick öffnet ihn zusätzlich im
@@ -83,7 +105,9 @@ export class BookCommentView {
   /** Spielt die angeklickte Variante bis zu diesem Zug als Brett-Vorschau (view-only). */
   previewMove(seg: CommentSegment): void {
     if (!seg.fen || !seg.from || !seg.to) return;
-    this.h.variationPreview = { fen: seg.fen, lastMove: [seg.from as Key, seg.to as Key] };
+    this.h.variationPreview = {
+      fen: seg.fen, lastMove: [seg.from as Key, seg.to as Key], ...(seg.threat ? { threat: true } : {}),
+    };
   }
 
   /** Vorschau beenden → zurück zur Puzzle-/Review-Stellung. */

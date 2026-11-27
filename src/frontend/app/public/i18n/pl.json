@@ -2573,7 +2573,8 @@
       "subtitle": "Tylko poglądowo — przeklikaj, nic do rozwiązania."
     },
     "variation": {
-      "previewing": "Pokazano wariant z komentarza"
+      "previewing": "Pokazano wariant z komentarza",
+      "previewingThreat": "Pokazano groźbę"
     },
     "commentDialog": {
       "open": "Czytaj w oknie",

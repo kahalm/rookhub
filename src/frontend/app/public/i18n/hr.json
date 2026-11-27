@@ -2646,7 +2646,8 @@
       "subtitle": "Samo za pregled — kliktaj kroz poteze, nema zadatka."
     },
     "variation": {
-      "previewing": "Prikaz linije iz komentara"
+      "previewing": "Prikaz linije iz komentara",
+      "previewingThreat": "Prikaz prijetnje"
     },
     "commentDialog": {
       "open": "Čitaj u prozoru",

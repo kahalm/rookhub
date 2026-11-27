@@ -2573,7 +2573,8 @@
       "subtitle": "仅供参考——点击浏览，无需解题。"
     },
     "variation": {
-      "previewing": "正在显示注释中的变化线"
+      "previewing": "正在显示注释中的变化线",
+      "previewingThreat": "正在显示威胁"
     },
     "commentDialog": {
       "open": "在窗口中阅读",

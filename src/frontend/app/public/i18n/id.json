@@ -2573,7 +2573,8 @@
       "subtitle": "Hanya sebagai referensi — telusuri saja, tidak ada yang perlu dipecahkan."
     },
     "variation": {
-      "previewing": "Menampilkan lini dari komentar"
+      "previewing": "Menampilkan lini dari komentar",
+      "previewingThreat": "Menampilkan ancaman"
     },
     "commentDialog": {
       "open": "Baca di jendela",

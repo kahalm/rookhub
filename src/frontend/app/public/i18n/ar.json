@@ -2573,7 +2573,8 @@
       "subtitle": "للاطلاع فقط — تنقّل بالنقر، لا شيء للحل."
     },
     "variation": {
-      "previewing": "عرض خط من التعليق"
+      "previewing": "عرض خط من التعليق",
+      "previewingThreat": "عرض التهديد"
     },
     "commentDialog": {
       "open": "القراءة في نافذة",

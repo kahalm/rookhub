@@ -2573,7 +2573,8 @@
       "subtitle": "Jen pro ilustraci — proklikejte, není co řešit."
     },
     "variation": {
-      "previewing": "Zobrazena varianta z komentáře"
+      "previewing": "Zobrazena varianta z komentáře",
+      "previewingThreat": "Zobrazena hrozba"
     },
     "commentDialog": {
       "open": "Číst v okně",

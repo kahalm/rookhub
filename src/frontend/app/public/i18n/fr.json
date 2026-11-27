@@ -2573,7 +2573,8 @@
       "subtitle": "Pour information uniquement — à parcourir, rien à résoudre."
     },
     "variation": {
-      "previewing": "Affichage d'une ligne du commentaire"
+      "previewing": "Affichage d'une ligne du commentaire",
+      "previewingThreat": "Affichage de la menace"
     },
     "commentDialog": {
       "open": "Lire dans une fenêtre",

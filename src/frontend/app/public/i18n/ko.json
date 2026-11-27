@@ -2573,7 +2573,8 @@
       "subtitle": "참고용입니다. 클릭하며 넘겨 보기만 하면 되고 풀 것은 없습니다."
     },
     "variation": {
-      "previewing": "주석의 라인을 표시하는 중"
+      "previewing": "주석의 라인을 표시하는 중",
+      "previewingThreat": "위협을 표시하는 중"
     },
     "commentDialog": {
       "open": "창에서 읽기",

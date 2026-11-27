@@ -2573,7 +2573,8 @@
       "subtitle": "Chỉ để tham khảo — bấm xem, không có gì để giải."
     },
     "variation": {
-      "previewing": "Đang hiện một biến từ bình luận"
+      "previewing": "Đang hiện một biến từ bình luận",
+      "previewingThreat": "Đang hiện đòn đe dọa"
     },
     "commentDialog": {
       "open": "Đọc trong cửa sổ",

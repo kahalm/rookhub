@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { extractSanTokens, resolveVariation, buildCommentSegments, splitBranches } from './comment-variation.util';
+import { extractSanTokens, resolveVariation, buildCommentSegments, splitBranches, nullMoveFen } from './comment-variation.util';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -734,5 +734,94 @@ describe('comment-variation.util — Verneinung trennt Zweige: „Qxe7! not 3...
         .withContext(w).toEqual([['hxg6', 'fxg6', 'Qxe7'], ['Bxg6', 'Qxg6']]);
     }
     expect(splitBranches('1.e4 e5 cannot 2.Nf3 Nc6 nothing 3.Bb5')).toEqual([['e4', 'e5', 'Nf3', 'Nc6', 'Bb5']]);
+  });
+});
+
+// Woodpecker Method Vol. 1, Aufgabe 334 (Prod BookPuzzles 35193, gemeldet 2026-11-27): „Black threatens 1...Bxe1 and
+// 1...Rd4“ bei WEISS am Zug — die Vorschau spielte erst den weißen Lösungszug 1.Re8 und verriet ihn.
+describe('comment-variation.util — Drohung als Nullzug + Spoilerschutz', () => {
+  const FEN334 = '5r1k/p2q2p1/2n5/3r3p/1bQ2B2/1P3P2/P3R1PP/4RN1K w - - 0 1';
+  const LINE334 = 'e2e8 d5d4 e8f8 b4f8 c4e6'.split(' ');
+  const TEXT334 = '334. Jose Raul Capablanca - Boris Kostic, Havana (3) 1919 White already has two pawns, but Black '
+    + 'threatens 1...Bxe1 and 1...Rd4. There is a solution to both of these threats:';
+  const board = (fen?: string) => fen?.split(' ').slice(0, 2).join(' ');
+
+  it('Aufgabe 334: beide Drohzüge aus der Ausgangsstellung, ohne den weißen Lösungszug (volle Linie)', () => {
+    const segs = buildCommentSegments(TEXT334, FEN334, LINE334);
+    const moves = segs.filter(x => x.move);
+    expect(moves.map(x => x.move)).toEqual(['1...Bxe1', '1...Rd4']);
+    expect(moves.every(x => x.threat)).toBeTrue();
+    // Weißer Turm e2 steht noch: kein 1.Re8 vorgespielt.
+    expect(board(moves[0].fen)).toBe('5r1k/p2q2p1/2n5/3r3p/2Q2B2/1P3P2/P3R1PP/4bN1K w');
+    expect([moves[0].from, moves[0].to]).toEqual(['b4', 'e1']);
+    expect(board(moves[1].fen)).toBe('5r1k/p2q2p1/2n5/7p/1bQr1B2/1P3P2/P3R1PP/4RN1K w');
+    expect(segs.map(x => x.move ?? x.text).join('')).toBe(TEXT334);
+  });
+
+  it('Aufgabe 334 im Lösemodus (Linie gekürzt) + als Einleitung (atStart): dieselben Drohungen', () => {
+    for (const opts of [{}, { atStart: true }]) {
+      const moves = buildCommentSegments(TEXT334, FEN334, LINE334, { ...opts, played: 0 }).filter(x => x.move);
+      expect(moves.map(x => x.move)).withContext(JSON.stringify(opts)).toEqual(['1...Bxe1', '1...Rd4']);
+      expect(moves.every(x => x.threat)).toBeTrue();
+    }
+  });
+
+  it('ohne Signalwort: an der Start-FEN (atStart) Drohung, sonst die Hauptlinie wie bisher', () => {
+    const text = 'Black has 1...Rd4 here.';
+    const start = buildCommentSegments(text, FEN334, LINE334, { atStart: true }).find(x => x.move)!;
+    expect(start.threat).toBeTrue();
+    expect(board(start.fen)).toBe('5r1k/p2q2p1/2n5/7p/1bQr1B2/1P3P2/P3R1PP/4RN1K w');
+    const plain = buildCommentSegments(text, FEN334, LINE334).find(x => x.move)!;
+    expect(plain.threat).toBeUndefined();
+    expect(board(plain.fen)).toBe('4Rr1k/p2q2p1/2n5/7p/1bQr1B2/1P3P2/P5PP/4RN1K w');   // nach 1.Re8 Rd4
+  });
+
+  it('Signalwort auf Deutsch („droht“); Fortsetzung der Drohung bleibt Drohung', () => {
+    const segs = buildCommentSegments('Schwarz droht 1...Lxe1 2.Txe1 Td4.', FEN334, LINE334, { played: 0 }).filter(x => x.move);
+    expect(segs.map(x => x.move)).toEqual(['1...Lxe1', '2.Txe1', 'Td4']);
+    expect(segs.every(x => x.threat)).toBeTrue();
+  });
+
+  it('Nullzug illegal → bleibt Text (Lösemodus) bzw. Hauptlinie (volle Linie)', () => {
+    // Die Dame d7 erreicht a1 weder aus der Ausgangs- noch aus der Nullzug-Stellung.
+    const text = 'Black threatens 1...Qa1.';
+    expect(buildCommentSegments(text, FEN334, LINE334, { played: 0 }).some(x => x.move)).toBeFalse();
+    expect(buildCommentSegments(text, FEN334, LINE334).some(x => x.move)).toBeFalse();
+    // „1...dxe4“ geht erst NACH 1.e4: als Nullzug nicht → im Lösemodus Text, mit voller Linie die Hauptlinie wie bisher.
+    const fen = '4k3/8/8/3p4/8/4P3/8/4K3 w - - 0 1';
+    const t2 = 'Black threatens 1...dxe4.';
+    expect(buildCommentSegments(t2, fen, ['e3e4'], { played: 0 }).some(x => x.move)).toBeFalse();
+    const full = buildCommentSegments(t2, fen, ['e3e4']).find(x => x.move)!;
+    expect(full.threat).toBeUndefined();
+    expect([full.from, full.to]).toEqual(['d5', 'e4']);
+  });
+
+  it('steht die ziehende Seite im Schach, gibt es keinen Nullzug', () => {
+    // Weiß im Schach (Dame e2 gegen Ke1): „droht 1...Qxe1“ wäre keine Drohung.
+    const check = '4k3/8/8/8/8/8/4q3/4K3 w - - 0 1';
+    expect(nullMoveFen(check)).toBeUndefined();
+    expect(buildCommentSegments('Black threatens 1...Qd1#', check, [], { atStart: true }).some(x => x.move)).toBeFalse();
+    // Ohne Schach: Seite getauscht, En-passant-Feld gelöscht, Vollzug nach Schwarz weiter.
+    expect(nullMoveFen('4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 7')).toBe('4k3/8/8/3pP3/8/8/8/4K3 b - - 0 7');
+    expect(nullMoveFen('4k3/8/8/8/8/8/8/4K3 b - - 0 7')).toBe('4k3/8/8/8/8/8/8/4K3 w - - 0 8');
+  });
+
+  it('Schwarz am Zug: „threatens 21.X“ ist die weiße Drohung aus der Ausgangsstellung', () => {
+    const fen = '6k1/5ppp/8/8/8/8/5PPP/3R2K1 b - - 0 20';
+    const m = buildCommentSegments('White threatens 21.Rd8#, so Black must act.', fen, ['g8f8']).find(x => x.move)!;
+    expect(m.threat).toBeTrue();
+    expect([m.from, m.to]).toEqual(['d1', 'd8']);
+    expect(m.fen?.split(' ')[0]).toBe('3R2k1/5ppp/8/8/8/8/5PPP/6K1');
+  });
+
+  it('Spoilerschutz: Zweig an einem noch nicht gespielten Halbzug bleibt Text — auch keine Suche in sichtbaren Stellungen', () => {
+    const text = 'Now 2.Nf3 is natural.';
+    expect(buildCommentSegments(text, START, ['e2e4', 'e7e5'], { played: 0 }).some(x => x.move)).toBeFalse();
+    expect(buildCommentSegments(text, START, ['e2e4', 'e7e5'], { played: 1 }).some(x => x.move)).toBeFalse();
+    const after = buildCommentSegments(text, START, ['e2e4', 'e7e5'], { played: 2 }).find(x => x.move)!;
+    expect(after.fen).toBe(buildCommentSegments(text, START, ['e2e4', 'e7e5']).find(x => x.move)!.fen);
+    // Aufgabe 334: „2.Rxf8+“ erst nach 1.Re8 Rd4.
+    expect(buildCommentSegments('Then 2.Rxf8+ wins.', FEN334, LINE334, { played: 1 }).some(x => x.move)).toBeFalse();
+    expect(buildCommentSegments('Then 2.Rxf8+ wins.', FEN334, LINE334, { played: 2 }).some(x => x.move)).toBeTrue();
   });
 });

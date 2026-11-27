@@ -2573,7 +2573,8 @@
       "subtitle": "Solo como referencia: recórrela, no hay nada que resolver."
     },
     "variation": {
-      "previewing": "Mostrando una línea del comentario"
+      "previewing": "Mostrando una línea del comentario",
+      "previewingThreat": "Mostrando la amenaza"
     },
     "commentDialog": {
       "open": "Leer en una ventana",

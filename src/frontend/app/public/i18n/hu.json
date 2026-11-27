@@ -2193,7 +2193,8 @@
       "subtitle": "Csak magyarázat — kattints végig, nincs mit megoldani."
     },
     "variation": {
-      "previewing": "Egy változatot mutat a kommentárból"
+      "previewing": "Egy változatot mutat a kommentárból",
+      "previewingThreat": "A fenyegetést mutatja"
     },
     "sourceGame": "Játszma megnyitása",
     "commentDialog": {

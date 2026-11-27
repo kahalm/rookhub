@@ -2646,7 +2646,8 @@
       "subtitle": "Nur zur Erklärung — durchklicken, nichts zu lösen."
     },
     "variation": {
-      "previewing": "Zeigt eine Variante aus dem Kommentar"
+      "previewing": "Zeigt eine Variante aus dem Kommentar",
+      "previewingThreat": "Zeigt die Drohung"
     },
     "commentDialog": {
       "open": "Im Fenster lesen",

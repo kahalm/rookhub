@@ -13,7 +13,7 @@
         </div>
         @if (previewing()) {
           <div class="cmt-variation-bar">
-            <span>{{ 'book.variation.previewing' | translate }}</span>
+            <span>{{ (previewThreat() ? 'book.variation.previewingThreat' : 'book.variation.previewing') | translate }}</span>
             <button mat-stroked-button type="button" (click)="previewExited.emit()">
               <mat-icon>undo</mat-icon> {{ 'common.back' | translate }}
             </button>

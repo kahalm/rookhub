@@ -43,6 +43,15 @@ import { whiteToMove } from '../../shared/chess/fen-side';
  * NOTATION: Neben englischem SAN (KQRBN) werden deutsche Figurenbuchstaben (D/T/L/S → Q/R/B/N, inkl.
  * Umwandlung =D usw.) erkannt (übersetzte Kurse). Da D/T/L/S weder englische Figuren- noch Feldbuchstaben
  * sind, ist die Zuordnung eindeutig; ein versehentlich erkanntes Wort spielt ohnehin nicht legal → Text.
+ *
+ * DROHUNG ALS NULLZUG (Woodpecker, Aufgabe 334, gemeldet 2026-11-27): „White already has two pawns, but Black threatens
+ * 1...Bxe1 and 1...Rd4" — Weiß ist am Zug, „1...X" ist aber kein Zug NACH dem weißen Lösungszug, sondern die DROHUNG in
+ * der Ausgangsstellung. An der Hauptlinie verankert spielte die Vorschau erst den weißen Lösungszug und verriet ihn.
+ * Ein Zweig, dessen erster Zug der NICHT ziehenden Seite gehört und genau den Halbzug nach der Start-FEN trägt, wird
+ * deshalb zuerst aus der Start-FEN mit getauschter Zugseite gespielt ({@link nullMoveFen}; nicht, wenn die ziehende
+ * Seite im Schach steht) — wenn ein Signalwort davor steht ({@link THREAT_BEFORE}: „threatens", „droht", „idea" …)
+ * oder der Kommentar selbst an der Start-FEN steht (`atStart`, Einleitung des Buch-Lösers). Geht der Zug so nicht,
+ * gilt die gewohnte Verankerung. Solche Segmente tragen `threat`.
  */
 
 export interface CommentSegment {
@@ -58,10 +67,30 @@ export interface CommentSegment {
   /** Nur am ersten Segment eines Blocks: der Block ist eine Zwischenüberschrift (fett, ohne Zug-Chips) —
    *  beim Import an den Satz geklebte Chessable-Überschrift (v1-rk-course-comment-ueberschrift-angeklebt). */
   heading?: boolean;
+  /** Der Zug gehört zu einer DROHUNG, gespielt aus der Start-FEN mit getauschter Zugseite (Nullzug, siehe Datei-Kopf) —
+   *  die Vorschau-Leiste sagt dann „Zeigt die Drohung". */
+  threat?: boolean;
 }
 
-/** Ein Zug-Schritt der aufgelösten Variante (Stellung nach dem Zug + Feldmarkierung). */
-export interface VariationStep { san: string; fen: string; from: string; to: string; }
+/** Ein Zug-Schritt der aufgelösten Variante (Stellung nach dem Zug + Feldmarkierung); `threat` siehe
+ *  {@link CommentSegment}. */
+export interface VariationStep { san: string; fen: string; from: string; to: string; threat?: boolean; }
+
+/** Optionen für {@link buildCommentSegments}. */
+export interface CommentSegmentOptions {
+  /** Der Kommentar steht an der Start-FEN (Einleitung vor dem ersten Lösungszug): ein Zug der nicht ziehenden Seite
+   *  mit passender Zugnummer gilt auch ohne Signalwort zuerst als Drohung (Nullzug, siehe Datei-Kopf). */
+  atStart?: boolean;
+  /** Spoilerschutz beim Lösen: nur die ersten `played` Halbzüge von `ucis` sind gespielt. Die Stellungen dahinter
+   *  bleiben als VERDECKT in der Linie ({@link HIDDEN_FEN}): ein Zweig mit ihrer Zugnummer wird Text — er wird weder
+   *  dort gespielt noch (wie eine Nummer außerhalb der Linie) in den sichtbaren Stellungen gesucht. */
+  played?: number;
+}
+
+/** Platzhalter für einen noch nicht gespielten Lösungszug bzw. die Stellung danach ({@link CommentSegmentOptions},
+ *  `played`). chess.js lehnt die „FEN" ab — aus ihr geht kein Zug auf. */
+const HIDDEN_UCI = '?';
+const HIDDEN_FEN = 'hidden';
 
 /** Ein Zweig: SAN-Folge + optionale absolute Ply des ERSTEN Zugs (aus seiner Zugnummer).
  *  `plies` = absolute Ply je Zug, soweit er eine Zugnummer trägt (parallel zu `sans`). */
@@ -76,6 +105,8 @@ export interface CommentBranch {
   /** Je Zug (parallel zu `sans`): steht zwischen ihm und dem Zug davor nur Leerraum, Satzzeichen oder ein
    *  Bewertungszeichen — keine Prosa („3.Qd1 3...Ref8", „Rf8-+ 20...f3+"). Siehe {@link resumeOuterVariation}. */
   tight?: boolean[];
+  /** Vor dem ersten Zug steht (im selben Satz) ein Drohungs-Signalwort ({@link THREAT_BEFORE}). */
+  threatSignal?: boolean;
 }
 
 // Deutsche → englische Figurenbuchstaben (für übersetzte Kurse). K bleibt K.
@@ -99,6 +130,22 @@ const ALT_WORD = /\b(?:or|oder|bzw\.?|beziehungsweise|resp\.?|respectively)\b|\/
 // den Zug davor, die Folge läuft weiter (Buch-Aufgabe 35167).
 const NEG_WORD = '(?<![\\p{L}\\d])(?:not|nicht|statt|anstatt|instead\\s+of|rather\\s+than)(?![\\p{L}\\d])';
 const NEG_BEFORE = new RegExp(`${NEG_WORD}[\\s(:,]*$`, 'iu');
+
+// Drohungs-Signalwörter (siehe Datei-Kopf, „DROHUNG ALS NULLZUG"): „threatens 1...Bxe1", „droht 1...Lxe1", „with the
+// idea 1...Rd4", „Schwarz will 1...Td4" bewusst NICHT („will" ist im Englischen Futur). Ganze Wörter, im selben Satz vor
+// dem Zug ({@link hasThreatSignal}).
+const THREAT_BEFORE = new RegExp('(?<![\\p{L}])(?:threat(?:s|en|ens|ening|ened)?|menac(?:e|es|ing)|ideas?|wants?|wanting'
+  + '|intends?|intending|intention|droh(?:t|en|te|ten|end|ende|ender|endes|enden)?|drohung(?:en)?|idee|absicht'
+  + '|beabsichtigt|m[öo]chte)(?![\\p{L}])', 'iu');
+const THREAT_WINDOW = 100;
+
+/** Steht vor `start` im selben Satz (höchstens {@link THREAT_WINDOW} Zeichen) ein Drohungs-Signalwort? */
+function hasThreatSignal(text: string, start: number): boolean {
+  let before = text.slice(Math.max(0, start - THREAT_WINDOW), start);
+  const ends = [...before.matchAll(/[.!?]\s/g)];
+  if (ends.length) { const e = ends[ends.length - 1]; before = before.slice(e.index! + e[0].length); }
+  return THREAT_BEFORE.test(before);
+}
 
 /** Zwischenraum ohne Prosa: Leerraum, Satzzeichen, Bewertungs- und Kommentarzeichen. */
 const TIGHT_GAP = /^[\s.,;:()[\]+\-=/±∓!?□∞#⩲⩱]*$/u;
@@ -325,9 +372,11 @@ export function branches(text: string): CommentBranch[] {
   let nextPly: number | undefined;   // Ply, die der nächste Zug als direkte Fortsetzung hätte
   let listSince = false;             // Feld-Aufzählung im Text dieses Zweigs seit der letzten Zugnummer, siehe (c)
   let prevEnd = 0;
+  let curThreat = false;             // Drohungs-Signalwort vor dem ersten Zug
   const push = () => out.push({
     sans: cur, startPly: curStartPly, plies: curPlies, tight: curTight,
     ...(curSoft.length ? { soft: curSoft } : {}), ...(curAltOfPrev ? { altOfPrev: true } : {}),
+    ...(curThreat ? { threatSignal: true } : {}),
   });
 
   for (const t of toks) {
@@ -365,6 +414,7 @@ export function branches(text: string): CommentBranch[] {
       if (!cur.length) curStartPly = t.ply;
     } else if (nextPly !== undefined) nextPly++;
     curTight.push(cur.length > 0 && TIGHT_GAP.test(gaps.slice(prevEnd, t.start)));
+    if (!cur.length) curThreat = hasThreatSignal(text, t.start);
     cur.push(t.san);
     curPlies.push(t.ply);
     prevEnd = t.end;
@@ -386,6 +436,7 @@ function mainlineFens(startFen: string, ucis: string[]): string[] {
   if (!c) return [];
   const fens = [c.fen()];
   for (const u of ucis) {
+    if (u === HIDDEN_UCI || fens[fens.length - 1] === HIDDEN_FEN) { fens.push(HIDDEN_FEN); continue; }
     if (!safeUci(c, u)) break;
     fens.push(c.fen());
   }
@@ -405,6 +456,33 @@ function baseStartPly(startFen: string): number {
   const fullmove = parseInt(parts[5] || '1', 10) || 1;
   const white = whiteToMove(startFen);
   return (fullmove - 1) * 2 + (white ? 0 : 1);
+}
+
+/**
+ * Die Start-FEN mit getauschter Zugseite (Nullzug): En-passant-Feld gelöscht, Vollzugzahl nach einem schwarzen
+ * „Nullzug" um eins weiter. `undefined`, wenn chess.js die FEN ablehnt oder die ziehende Seite im Schach steht (dann
+ * darf sie nicht „passen" — die Stellung danach hätte einen schlagbaren König).
+ */
+export function nullMoveFen(fen: string): string | undefined {
+  const c = tryLoadFen(fen);
+  if (!c || c.isCheck()) return undefined;
+  const parts = c.fen().split(' ');
+  const white = parts[1] === 'w';
+  parts[1] = white ? 'b' : 'w';
+  parts[3] = '-';
+  if (!white) parts[5] = String((parseInt(parts[5], 10) || 1) + 1);
+  const out = parts.join(' ');
+  return tryLoadFen(out) ? out : undefined;
+}
+
+/** Drohung (siehe Datei-Kopf): der Zweig beginnt mit dem Halbzug direkt nach der Start-FEN und geht aus der
+ *  Nullzug-Stellung auf. Leer sonst. */
+function threatSteps(startFen: string, b: CommentBranch): { steps: VariationStep[]; fen?: string } {
+  if (b.startPly === undefined || b.startPly !== baseStartPly(startFen) + 1) return { steps: [] };
+  const fen = nullMoveFen(startFen);
+  if (!fen) return { steps: [] };
+  const steps = playPrefix(fen, b.sans);
+  return steps.length ? { steps, fen } : { steps: [] };
 }
 
 /** Spielt die SAN-Folge ab `baseFen`, bis ein Zug illegal wird; liefert die Schritte des legalen Präfix.
@@ -618,6 +696,7 @@ function resolveInSubline(
 /** Löst einen Zweig auf (siehe Datei-Kopf, „VORWÄRTS-SPRUNG"): ein aufgelöster Schritt je Zug oder null. */
 function resolveBranch(
   startFen: string, ucis: string[], b: CommentBranch, ctx?: BranchContext, priorFens: PriorFen[] = [], altBase?: string,
+  threat: { atStart?: boolean; fens?: Set<string> } = {},
 ): { out: (VariationStep | null)[]; ctx?: BranchContext; guessed: number } {
   let steps: VariationStep[];
   let usedFen: string | undefined;
@@ -634,9 +713,14 @@ function resolveBranch(
       if (free.length > steps.length) { steps = free; usedFen = undefined; unframed = true; }
     }
   } else {
-    const found = resolveVariationFrom(startFen, ucis, b.sans, b.startPly);
+    // Drohung vor allem anderen (siehe Datei-Kopf): Signalwort davor oder Kommentar an der Start-FEN.
+    const t = b.threatSignal || threat.atStart ? threatSteps(startFen, b) : { steps: [] };
+    const found = t.fen ? { steps: t.steps, baseFen: t.fen } : resolveVariationFrom(startFen, ucis, b.sans, b.startPly);
     steps = found.steps;
-    if (b.startPly !== undefined) {
+    if (t.fen) {
+      usedFen = t.fen;
+      threat.fens?.add(t.fen);
+    } else if (b.startPly !== undefined) {
       const main = anchorFen(startFen, ucis, b.startPly);
       if (priorFens.length) {
         const sub = resolveInSubline(b, steps, main, priorFens, altBase);
@@ -655,6 +739,8 @@ function resolveBranch(
     const confirmed = steps.findIndex((_st, k) => k > 0 && b.plies?.[k] !== undefined && baseStartPly(steps[k - 1].fen) === b.plies[k]);
     guessed = confirmed < 0 ? steps.length : confirmed;
   }
+  // Aus einer Drohungs-Stellung gespielt (Nullzug selbst, Fortsetzung oder Alternative dazu) → Drohung.
+  if (usedFen !== undefined && threat.fens?.has(usedFen)) steps = steps.map(st => ({ ...st, threat: true }));
   const out: (VariationStep | null)[] = b.sans.map((_s, k) => (k < steps.length ? steps[k] : null));
   let k = steps.length;
   while (k < b.sans.length) {
@@ -751,16 +837,23 @@ interface ResolveState {
    *  ausdrücklichen Alternative zu ihm ({@link CommentBranch}, `altOfPrev`). Fehlt, wenn dieser Zug nicht
    *  aufging oder nur erraten ist. */
   lastBase?: string;
+  /** Kommentar steht an der Start-FEN ({@link CommentSegmentOptions}). */
+  atStart?: boolean;
+  /** Stellungen aus Drohungen (Nullzug-Stellung + Stellungen nach Drohungs-Zügen): wer dort weiterspielt, zeigt
+   *  ebenfalls die Drohung. */
+  threatFens: Set<string>;
 }
 
 /** Löst einen Zweig auf und schreibt Rahmen + Stellungen in `state` fort. */
 function resolveInto(startFen: string, ucis: string[], b: CommentBranch, state: ResolveState): (VariationStep | null)[] {
-  const r = resolveBranch(startFen, ucis, b, state.ctx, state.prior, b.altOfPrev ? state.lastBase : undefined);
+  const r = resolveBranch(startFen, ucis, b, state.ctx, state.prior, b.altOfPrev ? state.lastBase : undefined,
+    { atStart: state.atStart, fens: state.threatFens });
   // Auf per Suche gefundene Züge (`guessed`, erwähnte Pläne wie „with Rfe1 and Qd5") baut kein späterer
   // Zweig auf; was dahinter an seiner Zugnummer verankert wurde, zählt.
   // Zweig-Ende nur, wenn der Zweig bis zum letzten Zug aufging — sonst weiß niemand, wo er endet.
   r.out.forEach((step, k) => {
     if (step && k >= r.guessed) state.prior.push({ fen: step.fen, end: k === r.out.length - 1 });
+    if (step?.threat) state.threatFens.add(step.fen);
   });
   state.ctx = r.ctx;
   const n = r.out.length;
@@ -774,7 +867,7 @@ function resolveInto(startFen: string, ucis: string[], b: CommentBranch, state: 
 function sliceBranch(b: CommentBranch, from: number, to: number): CommentBranch {
   const plies = (b.plies ?? []).slice(from, to);
   return { sans: b.sans.slice(from, to), startPly: plies[0], plies, tight: b.tight?.slice(from, to).map((x, k) => k > 0 && x),
-    ...(from === 0 && b.altOfPrev ? { altOfPrev: true } : {}) };
+    ...(from === 0 && b.altOfPrev ? { altOfPrev: true } : {}), ...(from === 0 && b.threatSignal ? { threatSignal: true } : {}) };
 }
 
 /**
@@ -799,7 +892,8 @@ function resolveWithSoftSplits(startFen: string, ucis: string[], b: CommentBranc
   const soft = b.soft ?? [];
   const plies = b.plies ?? [];
   const out: (VariationStep | null)[] = [];
-  const copy = (st: ResolveState): ResolveState => ({ ctx: st.ctx, prior: [...st.prior], lastBase: st.lastBase });
+  const copy = (st: ResolveState): ResolveState =>
+    ({ ctx: st.ctx, prior: [...st.prior], lastBase: st.lastBase, atStart: st.atStart, threatFens: new Set(st.threatFens) });
   /** Aufgelöste NUMMERIERTE Züge des Abschnitts, der bei `offset` beginnt. */
   const numbered = (steps: (VariationStep | null)[], offset: number) =>
     steps.filter((x, k) => x && plies[offset + k] !== undefined).length;
@@ -823,6 +917,7 @@ function resolveWithSoftSplits(startFen: string, ucis: string[], b: CommentBranc
       state.ctx = headState.ctx;
       state.prior = headState.prior;
       state.lastBase = headState.lastBase;
+      state.threatFens = headState.threatFens;
       from = at;
     }
   });
@@ -833,12 +928,16 @@ function resolveWithSoftSplits(startFen: string, ucis: string[], b: CommentBranc
 /**
  * Zerlegt einen Kommentar in Segmente (Text + klickbare Züge). Jeder Zweig wird eigenständig gegen die
  * Puzzle-Hauptlinie (`startFen`/`ucis`) aufgelöst; ein Zug ist NUR klickbar, wenn er Teil des legalen
- * Präfix SEINES Zweigs ist (sonst reiner Text).
+ * Präfix SEINES Zweigs ist (sonst reiner Text). Spoilerschutz: {@link CommentSegmentOptions}, `played`.
  */
-export function buildCommentSegments(text: string, startFen: string, ucis: string[]): CommentSegment[] {
+export function buildCommentSegments(
+  text: string, startFen: string, ucis: string[], opts: CommentSegmentOptions = {},
+): CommentSegment[] {
   // Pro Token in Original-Reihenfolge den aufgelösten Schritt (oder null) bestimmen.
   const perToken: (VariationStep | null)[] = [];
-  const state: ResolveState = { prior: [] };
+  const played = opts.played;
+  if (played !== undefined) ucis = ucis.map((u, i) => (i < played ? u : HIDDEN_UCI));
+  const state: ResolveState = { prior: [], atStart: !!opts.atStart, threatFens: new Set() };
   for (const b of branches(text)) perToken.push(...resolveWithSoftSplits(startFen, ucis, b, state));
 
   const segments: CommentSegment[] = [];
@@ -848,7 +947,7 @@ export function buildCommentSegments(text: string, startFen: string, ucis: strin
     if (t.start > last) segments.push({ text: text.slice(last, t.start) });
     const raw = text.slice(t.start, t.end);
     const step = tokenIdx < perToken.length ? perToken[tokenIdx] : null;
-    if (step) segments.push({ move: raw.trim(), fen: step.fen, from: step.from, to: step.to });
+    if (step) segments.push({ move: raw.trim(), fen: step.fen, from: step.from, to: step.to, ...(step.threat ? { threat: true } : {}) });
     else segments.push({ text: raw });   // nicht spielbar → als Text belassen
     last = t.end;
   });

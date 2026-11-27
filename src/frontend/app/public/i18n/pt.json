@@ -2573,7 +2573,8 @@
       "subtitle": "Apenas para referência — clique para avançar, nada para resolver."
     },
     "variation": {
-      "previewing": "A mostrar uma linha do comentário"
+      "previewing": "A mostrar uma linha do comentário",
+      "previewingThreat": "A mostrar a ameaça"
     },
     "commentDialog": {
       "open": "Ler numa janela",

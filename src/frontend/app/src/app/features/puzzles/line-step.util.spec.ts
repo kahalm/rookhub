@@ -74,6 +74,21 @@ describe('CommentBlockCache', () => {
     expect(cache.get(1, ['a', 'bc'], '', () => [])).toEqual([[{ text: 'a' }], [{ text: 'bc' }]]);
   });
 
+  it('Spoilerschutz: `played` kürzt die Linie und gehört zum Schlüssel; `startComment` macht Drohungen', () => {
+    const cache = new CommentBlockCache();
+    const ucis = () => ['e2e4', 'e7e5'];
+    const text = 'Now 2.Nf3 is natural.';
+    expect(cache.get(1, [text], START, ucis, { played: 0 }).flat().some(s => s.move)).toBeFalse();
+    expect(cache.get(1, [text], START, ucis, { played: 2 }).flat().some(s => s.move)).toBeTrue();
+    expect(cache.get(1, [text], START, ucis).flat().some(s => s.move)).toBeTrue();
+    // Einleitung an der Start-FEN: „1...e5“ ist ohne Signalwort die Drohung aus der Ausgangsstellung, sonst Hauptlinie.
+    const intro = 'Black wants to play 1...d5 soon';
+    const threat = cache.get(1, [intro], START, ucis, { played: 0, startComment: intro }).flat().find(s => s.move);
+    expect(threat?.threat).toBeTrue();
+    const other = cache.get(1, ['Here 1...d5 is fine'], START, ucis, { played: 0, startComment: intro }).flat();
+    expect(other.some(s => s.move)).toBeFalse();
+  });
+
   // UI-Sweep v1 (v1-rk-course-comment-ueberschrift-angeklebt): Wortlaut aus Prod BookPuzzles 7410 (Buch 13).
   it('setzt eine angeklebte Kapitelüberschrift als eigenen Überschrift-Block ab', () => {
     const cache = new CommentBlockCache();

@@ -26,6 +26,8 @@ export class BookCommentBlockComponent {
   readonly long = input(false);
   /** Eine Kommentar-Variante steht gerade als Brett-Vorschau. */
   readonly previewing = input(false);
+  /** Die Vorschau zeigt eine Drohung aus der Ausgangsstellung (Nullzug) — eigener Leistentext. */
+  readonly previewThreat = input(false);
   /** Maschinell übersetzt → Hinweis; `machineClickable` = es gibt ein Original, auf das man wechseln kann. */
   readonly machineNote = input(false);
   readonly machineClickable = input(false);

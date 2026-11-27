@@ -2573,7 +2573,8 @@
       "subtitle": "فقط برای مطالعه — با کلیک مرور کنید، چیزی برای حل نیست."
     },
     "variation": {
-      "previewing": "نمایش یک خط از توضیح"
+      "previewing": "نمایش یک خط از توضیح",
+      "previewingThreat": "نمایش تهدید"
     },
     "commentDialog": {
       "open": "خواندن در پنجره",

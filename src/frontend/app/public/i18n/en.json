@@ -2646,7 +2646,8 @@
       "subtitle": "For reference only — click through, nothing to solve."
     },
     "variation": {
-      "previewing": "Showing a line from the comment"
+      "previewing": "Showing a line from the comment",
+      "previewingThreat": "Showing the threat"
     },
     "commentDialog": {
       "open": "Read in a window",

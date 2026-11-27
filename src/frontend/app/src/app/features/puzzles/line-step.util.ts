@@ -61,25 +61,40 @@ export function lineStepAt(fen: string, ucis: readonly string[], index: number):
   };
 }
 
+/** Wie {@link CommentBlockCache.get} die Kommentare auflöst. */
+export interface CommentBlockOptions {
+  /** Spoilerschutz beim Lösen: nur so viele Halbzüge der Linie (die bisher gespielten) dienen als Anker — ein
+   *  Kommentar-Zug, der sich nur hinter einem noch nicht gespielten Lösungszug verankern ließe, bleibt Text.
+   *  `undefined` = ganze Linie (Durchsicht, Kurs-Durchsicht, nach dem Lösen). */
+  played?: number;
+  /** Absatz, der an der Start-FEN steht (Einleitung vor dem ersten Lösungszug): seine Züge der nicht ziehenden Seite
+   *  gelten zuerst als Drohung (`buildCommentSegments`, `atStart`). */
+  startComment?: string | null;
+}
+
 /**
  * Kommentar-Absätze in klickbare Segmente zerlegt (Text + spielbare Zug-Chips), gecacht je Linie +
- * Kommentar-Inhalt — die Auflösung hängt nur von Linien-FEN/-Zügen ab, nicht vom Ply. Ohne FEN bleibt
- * jeder Absatz reiner Text.
+ * Kommentar-Inhalt + Optionen — die Auflösung hängt nur von Linien-FEN/-Zügen (bzw. deren gespielter Länge) ab,
+ * nicht vom Ply. Ohne FEN bleibt jeder Absatz reiner Text.
  */
 export class CommentBlockCache {
   private key = '';
   private blocks: CommentSegment[][] = [];
 
   /** `ucis` wird nur gelesen, wenn neu aufgelöst werden muss. */
-  get(lineId: number, lines: string[], fen: string, ucis: () => string[]): CommentSegment[][] {
+  get(lineId: number, lines: string[], fen: string, ucis: () => string[], opts: CommentBlockOptions = {}): CommentSegment[][] {
     // Trenner, der in keinem Kommentar vorkommt — sonst ergäben ["ab", "c"] und ["a", "bc"] denselben Schlüssel.
-    const key = lineId + '|' + lines.join('\u0001');
+    const start = opts.startComment?.trim() || null;
+    const key = lineId + '|' + (opts.played ?? '*') + '|' + (start ?? '') + '\u0002' + lines.join('\u0001');
     if (key !== this.key) {
       let moves: string[] | null = null;
       this.blocks = [];
-      for (const piece of lines.flatMap(splitGluedHeadings)) {
-        if (piece.heading) this.blocks.push([{ text: piece.text, heading: true }]);
-        else this.blocks.push(fen ? buildCommentSegments(piece.text, fen, moves ??= ucis()) : [{ text: piece.text }]);
+      for (const line of lines) {
+        const atStart = start !== null && line.trim() === start;
+        for (const piece of splitGluedHeadings(line)) {
+          if (piece.heading) this.blocks.push([{ text: piece.text, heading: true }]);
+          else this.blocks.push(fen ? buildCommentSegments(piece.text, fen, moves ??= ucis(), { atStart, played: opts.played }) : [{ text: piece.text }]);
+        }
       }
       this.key = key;
     }

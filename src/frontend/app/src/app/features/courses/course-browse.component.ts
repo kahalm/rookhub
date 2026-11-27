@@ -258,7 +258,7 @@ interface ChapterGroup {
                     }
                     @if (variationPreview) {
                       <div class="cmt-variation-bar">
-                        <span>{{ 'book.variation.previewing' | translate }}</span>
+                        <span>{{ (variationPreview.threat ? 'book.variation.previewingThreat' : 'book.variation.previewing') | translate }}</span>
                         <button mat-stroked-button type="button" (click)="exitVariationPreview()">
                           <mat-icon>undo</mat-icon> {{ 'common.back' | translate }}
                         </button>
@@ -488,7 +488,7 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   autoplay = false;
 
   /** Brett-Vorschau eines angeklickten Kommentar-Zugs (überlagert boardFen/lastMove); null = aus. */
-  variationPreview: { fen: string; lastMove: [Key, Key] } | null = null;
+  variationPreview: { fen: string; lastMove: [Key, Key]; threat?: boolean } | null = null;
   private readonly cmtCache = new CommentBlockCache();
 
   private uciMoves: string[] = [];
@@ -551,7 +551,7 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   /** Spielt die angeklickte Variante bis zu diesem Zug als Brett-Vorschau (view-only). */
   previewVariationMove(seg: CommentSegment): void {
     if (!seg.fen || !seg.from || !seg.to) return;
-    this.variationPreview = { fen: seg.fen, lastMove: [seg.from as Key, seg.to as Key] };
+    this.variationPreview = { fen: seg.fen, lastMove: [seg.from as Key, seg.to as Key], ...(seg.threat ? { threat: true } : {}) };
   }
 
   /** Vorschau beenden → zurück zur aktuellen Linien-Stellung. */

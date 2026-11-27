@@ -126,7 +126,7 @@
                (a1-rk-kommentar-schiebt-aktionen). -->
           @if (puzzle && (comments.lines.length || course.offlineLangStale)) {
             <app-book-comment-block [hasLines]="comments.lines.length > 0" [blocks]="comments.blocks" [long]="comments.isLong"
-              [previewing]="!!variationPreview" [machineNote]="lang.enabled && !!puzzle.commentMachine"
+              [previewing]="!!variationPreview" [previewThreat]="!!variationPreview?.threat" [machineNote]="lang.enabled && !!puzzle.commentMachine"
               [machineClickable]="!!(courseLang.source(langRef) || puzzle.commentLanguages?.[0])"
               [offlineLangStale]="course.offlineLangStale"
               (bodyClicked)="comments.onBodyClick($event)" (movePicked)="comments.previewMove($event)"
