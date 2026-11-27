@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.035.4", date: "2026-11-27", changes: [
+    { en: "Tournament site, live boards: the rating line under the name is set a little tighter, so eight boards still fit in two rows on a 1920 × 1080 screen.",
+      de: "Turnierseite, Live-Bretter: Die Elo-Zeile unter dem Namen ist etwas enger gesetzt, damit acht Bretter auf einem 1920 × 1080-Bildschirm weiter in zwei Reihen passen." },
+  ] },
   { version: "1.035.3", date: "2026-11-27", changes: [
     { en: "Analysis board: opening a game while the analysis board is already open (e.g. the analysis button of a live board on the tournament site, when the app already shows „/analysis“) now loads that game. Before, only the address changed and the board stayed on the previous position or the starting position. Pressing the button again for another board now also switches the game; a late answer for the previous board is ignored. An empty answer for a live game now shows a notice instead of a silent starting position.",
       de: "Analysebrett: Eine Partie, die bei schon offenem Analysebrett geöffnet wird (z. B. der Analyse-Knopf eines Live-Bretts der Turnierseite, wenn die App schon „/analysis“ zeigt), wird jetzt geladen. Vorher wechselte nur die Adresse, das Brett blieb auf der vorigen Stellung bzw. der Grundstellung. Ein weiterer Knopfdruck für ein anderes Brett wechselt ebenso die Partie; eine späte Antwort für das vorige Brett verfällt. Eine leere Antwort zur Live-Partie zeigt jetzt einen Hinweis statt still die Grundstellung." },

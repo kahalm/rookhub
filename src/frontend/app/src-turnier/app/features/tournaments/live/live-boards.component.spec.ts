@@ -545,8 +545,9 @@ describe('LiveBoardsComponent', () => {
     expect(r.firstRow).toBeGreaterThanOrEqual(4);
     expect(r.firstRow).toBe(7);
     expect(r.overflow).toBeFalse();
-    // zwei Reihen (8 Bretter) passen unter Navbar, Kopf und Werkzeugzeile in ein 1080er-Fenster (~950 px Inhalt)
-    expect(2 * r.cardHeight + 12).toBeLessThan(760);
+    // zwei Reihen (8 Bretter) passen unter Navbar, Kopf und Werkzeugzeile in ein 1080er-Fenster (~950 px Inhalt). Seit 1.035.2
+    // steht die Elo in eigener Zeile unter dem Namen (Wunsch 27.11.) — je Karte rund 26 px mehr, Grenze daher 775 statt 760.
+    expect(2 * r.cardHeight + 12).toBeLessThan(775);
   });
 
   it('Bretterwand: 1280 px vier bis fünf Spalten (mit/ohne Scrollleiste), Handy 390 px eine Spalte ohne Seiten-Scroll', async () => {

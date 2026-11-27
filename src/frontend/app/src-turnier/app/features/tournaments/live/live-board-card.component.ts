@@ -119,7 +119,7 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
     .lb-who { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
     .lb-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .lb-title { font-weight: 700; font-size: 0.85em; color: var(--rh-accent); margin-right: 0.25em; }
-    .lb-elo { color: var(--mat-sys-on-surface-variant); font-size: 0.8rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
+    .lb-elo { color: var(--mat-sys-on-surface-variant); font-size: 0.75rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
     .lb-clock { flex: 0 0 auto; font-variant-numeric: tabular-nums; padding: 0 6px; border-radius: 4px;
       border: 1px solid transparent; }
     .to-move .lb-clock { font-weight: 700; border-color: var(--rh-accent); }
