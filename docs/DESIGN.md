@@ -1371,7 +1371,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - **Live-Bretter** (1.014.0, `/tournaments/:id/live`, `features/tournaments/live/`): Seite als **Bretterwand** bis 1880 px
   breit (seit 1.028.0, Ausnahme von `--page-max-width`: die Seite ist zum Zuschauen, nicht zum Lesen), Kopf mit Zurück-Pfeil, Titel und Quelle („Name · lichess.org“ mit `open_in_new`), darunter
   EINE umbrechende Werkzeugzeile: Runde (`mat-select`, laufende mit „· läuft“), Mannschaft (nur Mannschaftsturnier),
-  Schalter „Engine-Balken“, daneben „Besten Zug zeigen“ (1.030.0, je Gerät, ohne Balken gesperrt), Zustand als Symbol + Text (live in `--rh-success`, sonst on-surface-variant — nie nur Farbe).
+  Schalter „Engine-Balken“, daneben „Besten Zug zeigen“ (1.030.0, je Gerät, ohne Balken gesperrt) und „Vibrieren“ (1.035.0, je Gerät, Standard aus, Erklärung als Tooltip; fehlt ganz, wo der Browser nicht vibrieren kann — iOS), Zustand als Symbol + Text (live in `--rh-success`, sonst on-surface-variant — nie nur Farbe).
   **Alle Bretter in EINEM Raster** (1.028.0, Wunsch 2026-11-26 „in einer Wurscht, damit ich 8 auf einmal sehe“):
   Begegnung(en) bzw. Runde, hinzugefügte, fremde und weitere übertragene Partien ohne Abschnittsgrenzen, Raster
   `auto-fill, minmax(min(100%, 240px), 1fr)`, Abstand 12 px — 1920 px: 7 Spalten (Brett ≈ 216 px, zwei Reihen ≈ 700 px),
@@ -1662,6 +1662,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-27 | 1.035.0 · Turnierseite | Live-Bretter: Schalter „Vibrieren“ in der Werkzeugzeile nach „Besten Zug zeigen“, nur wo `navigator.vibrate` existiert; Muster Ergebnis lang-kurz-lang, Bewertungssprung drei kurze Stöße, Einschalten ein kurzer (8.2) | Am Handy mitbekommen, wenn sich etwas tut, ohne ständig hinzusehen | Nutzerwunsch 27.11. |
 | 2026-11-26 | 1.033.0 · Turnierseite | Live-Bretter: Chip „Nur ein Zug“ vor der Uhr der Seite am Zug (Akzent-Pille 0,72 rem, Tooltip bester/nächstbester, kein Zeilensprung, ohne Zug zu verraten) (8.2) | Kritische Momente auf einen Blick, ohne die Lösung zu zeigen | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.032.0 · Turnierseite | Live-Bretter: alle Quellen (Turnier, Begegnungen mit Stand/Ø-Elo, fremde Runden) als Liste „Übertragungen“ untereinander über dem Raster, 0,85 rem, Umbruch statt Ellipse; Turnier-Link aus dem Seitenkopf dorthin (8.2) | Links standen seit dem einen Raster verstreut | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.031.0 · Turnierseite | Live-Bretter: Symbolknopf „Brett drehen“ (`swap_vert`) im Kartenkopf vor Analyse/✕, nur für diesen Zuschauer; Kopf-Abstand 4 px, „Brett n“ mind. 3,5 em (8.2) | Einzelne Bretter aus eigener Sicht ansehen, ohne die Vorgabe für alle zu ändern | Nutzerwunsch 26.11. |

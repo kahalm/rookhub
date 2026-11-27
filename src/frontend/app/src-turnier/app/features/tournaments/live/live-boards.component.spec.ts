@@ -16,6 +16,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
 import { LiveBoardCardComponent } from './live-board-card.component';
 import { of } from 'rxjs';
+import { LIVE_VIBRATE_KEY, VIBRATE_CONFIRM, VIBRATE_RESULT, VIBRATE_SWING } from './live-vibrate';
 
 const STATUS: LiveStatus = {
   linked: true, manual: false, tourId: 'IjDgZVUR', tourName: '1. Bundesliga Austria 2026/2027',
@@ -110,6 +111,35 @@ describe('LiveBoardsComponent', () => {
     expect(first.closed).toBeTrue();
     expect(FakeEventSource.last().url).toBe('/api/live-boards/1404438/rounds/1/stream?eval=true&ngsw-bypass=1');
     expect(localStorage.getItem(LIVE_EVAL_KEY)).toBe('1');
+  });
+
+  it('Vibration: Schalter bestätigt kurz, Snapshot still, Ergebnis und Bewertungssprung mit eigenem Muster', async () => {
+    try { localStorage.removeItem(LIVE_VIBRATE_KEY); } catch { /* egal */ }
+    const vib = spyOn(navigator, 'vibrate').and.returnValue(true);
+    await setup({ eval: '1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    expect(el().querySelector('.live-vibrate')).not.toBeNull();
+    expect(fixture.componentInstance.vibrateOn()).toBeFalse();
+    fixture.componentInstance.setVibrate(true);
+    expect(vib).toHaveBeenCalledWith([...VIBRATE_CONFIRM]);
+    expect(localStorage.getItem(LIVE_VIBRATE_KEY)).toBe('1');
+    vib.calls.reset();
+    const es = FakeEventSource.last();
+    const withEval = (cp: number, plies: number): LiveGame => ({ ...game('b2', 'Schmider, Niklas', 'Vaibhav, Suri'), plies,
+      eval: { cp, mate: null, source: 'engine', depth: 20 } });
+    es.emit('snapshot', { ...SNAPSHOT, games: [SNAPSHOT.games[0], withEval(20, 10)] });
+    await fixture.whenStable();
+    expect(vib).not.toHaveBeenCalled();
+    es.emit('game', withEval(160, 11));
+    expect(vib).toHaveBeenCalledWith([...VIBRATE_SWING]);
+    es.emit('game', { ...withEval(160, 11), eval: null, result: '0-1', finished: true });
+    expect(vib.calls.mostRecent().args[0]).toEqual([...VIBRATE_RESULT]);
+    // Wiederverbinden: neuer Snapshot mit fertiger Partie vibriert nicht
+    vib.calls.reset();
+    es.emit('snapshot', SNAPSHOT);
+    expect(vib).not.toHaveBeenCalled();
+    try { localStorage.removeItem(LIVE_VIBRATE_KEY); } catch { /* egal */ }
   });
 
   it('nicht verknüpft: leiser Hinweis, Gast bekommt „Anmelden" statt des Felds, kein Strom', async () => {

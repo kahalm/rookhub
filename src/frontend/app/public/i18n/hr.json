@@ -1706,6 +1706,8 @@
       "sharedViewer": "Dijeljeni prikaz — vidiš ono što postavi autor. Ako nešto promijeniš, postaje tvoj vlastiti prikaz.",
       "viewNotFound": "Ovaj dijeljeni prikaz više ne postoji.",
       "viewSaveFailed": "Dijeljeni prikaz nije moguće spremiti.",
+      "vibrate": "Vibracija",
+      "vibrateTip": "Uređaj vibrira kad je partija odlučena ili se procjena promijeni za barem jednog pješaka (i postupno kroz zadnja četiri poteza; to samo uz traku procjene).",
       "bestMove": "Prikaži najbolji potez",
       "bestMoveLabel": "Najbolji potez {{move}}",
       "onlyMove": "Jedini potez",

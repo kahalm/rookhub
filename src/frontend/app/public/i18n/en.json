@@ -1706,6 +1706,8 @@
       "sharedViewer": "Shared view — you see what its creator sets up. If you change something, it becomes your own view.",
       "viewNotFound": "This shared view no longer exists.",
       "viewSaveFailed": "The shared view could not be saved.",
+      "vibrate": "Vibrate",
+      "vibrateTip": "Vibrates on this device when a game is decided or an evaluation swings by a pawn or more (also over the last four moves; the latter only with the engine bar on).",
       "bestMove": "Show best move",
       "bestMoveLabel": "Best move {{move}}",
       "onlyMove": "Only move",

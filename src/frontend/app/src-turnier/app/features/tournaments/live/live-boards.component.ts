@@ -26,6 +26,8 @@ import { LiveBoardSlot, LiveGame, LiveMatchSlot, LiveRoundLayout, LiveState, Liv
 import { LiveBoardsService } from './live-boards.service';
 import { LIVE_LOST_GRACE_MS, LIVE_VIEW_SAVE_MS, joinParam, parseAddParam, parseExtParam, points, readLiveBest, readTurned, readLiveEval, readViewKey, samePlayer, scoreText, writeLiveEval,
   writeLiveBest, writeTurned, writeViewKey } from './live-boards.util';
+import { LiveAlert, LiveAlertTracker, VIBRATE_CONFIRM, VIBRATE_RESULT, VIBRATE_SWING, canVibrate, readLiveVibrate, vibrate,
+  writeLiveVibrate } from './live-vibrate';
 import { AddBoardDialogData, AddBoardDialogResult, AddBoardRow, LiveAddBoardDialogComponent } from './live-add-board-dialog.component';
 
 /** Ein Brett, wie es gezeichnet wird. `addKey` = Schlüssel in `?add=`/`?ext=` (nur hinzugefügte Bretter), `caption` = Zusatzzeile. */
@@ -135,6 +137,11 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
           <mat-slide-toggle [checked]="evalOn()" (change)="setEval($event.checked)">{{ 'tournaments.live.engineBar' | translate }}</mat-slide-toggle>
           <!-- Besten Zug zeigen (1.030.0): je Gerät, nicht in Adresse/geteilter Ansicht; braucht den Balken (die Bewertung liefert den Zug) -->
           <mat-slide-toggle class="live-best" [checked]="bestOn()" [disabled]="!evalOn()" (change)="setBest($event.checked)">{{ 'tournaments.live.bestMove' | translate }}</mat-slide-toggle>
+          <!-- Vibration (1.035.0): je Gerät; nur wo der Browser vibrieren kann (iOS Safari nicht) -->
+          @if (vibrateSupported) {
+            <mat-slide-toggle class="live-vibrate" [checked]="vibrateOn()" (change)="setVibrate($event.checked)"
+                              [matTooltip]="'tournaments.live.vibrateTip' | translate">{{ 'tournaments.live.vibrate' | translate }}</mat-slide-toggle>
+          }
           <span class="live-state" [class.is-live]="state() === 'live'" role="status">
             <mat-icon aria-hidden="true">{{ stateIcon() }}</mat-icon>{{ ('tournaments.live.state.' + state()) | translate }}
           </span>
@@ -290,6 +297,12 @@ export class LiveBoardsComponent implements OnInit {
   readonly evalOn = signal(readLiveEval());
   /** „Besten Zug zeigen“ — Gerätevorliebe, jeder Zuschauer selbst (1.030.0). */
   readonly bestOn = signal(readLiveBest());
+  /** Vibration bei Ergebnis und Bewertungssprung (1.035.0) — Gerätevorliebe; der Schalter fehlt, wo `navigator.vibrate` fehlt. */
+  readonly vibrateSupported = canVibrate();
+  readonly vibrateOn = signal(this.vibrateSupported && readLiveVibrate());
+  /** Erkennung je Partie; Snapshots setzen nur den Anfangsstand (kein Vibrieren beim Laden/Wiederverbinden). */
+  private readonly alerts = new LiveAlertTracker();
+  private lastVibrate = 0;
   /** Von Hand gedrehte Bretter (Lichess-Kennung der Partie) — nur dieser Zuschauer, diese Sitzung; nicht in Adresse/geteilter Ansicht. */
   readonly turnedIds = signal<ReadonlySet<string>>(readTurned());
   /** `?add=` — hinzugefügte Bretter dieser Runde (Schlüssel siehe `parseAddParam`). */
@@ -635,7 +648,7 @@ export class LiveBoardsComponent implements OnInit {
       case 'snapshot': {
         const map: Record<string, LiveGame> = {};
         const rec: Record<string, number> = {};
-        for (const g of e.games) { map[g.id] = g; rec[g.id] = now; }
+        for (const g of e.games) { map[g.id] = g; rec[g.id] = now; this.alerts.seed(g); }
         this.games.set(map);
         this.received.set(rec);
         this.layout.set(e.layout);
@@ -644,18 +657,20 @@ export class LiveBoardsComponent implements OnInit {
       }
       case 'layout': this.layout.set(e.layout); break;
       case 'game':
+        this.alert(e.game);
         this.games.update(m => ({ ...m, [e.game.id]: e.game }));
         this.received.update(m => ({ ...m, [e.game.id]: now }));
         break;
       case 'state': this.setState(e.state); break;
       case 'ext-snapshot': {
         const map: Record<string, LiveGame> = {};
-        for (const g of e.games) map[g.id] = g;
+        for (const g of e.games) { map[g.id] = g; this.alerts.seed(g); }
         this.extState.update(m => ({ ...m, [e.round]: { tourName: e.tourName, roundName: e.roundName, url: e.url, state: e.state, games: map, error: null } }));
         this.received.update(m => ({ ...m, ...Object.fromEntries(e.games.map(g => [g.id, now])) }));
         break;
       }
       case 'ext-game':
+        this.alert(e.game);
         this.extState.update(m => m[e.round] ? { ...m, [e.round]: { ...m[e.round], games: { ...m[e.round].games, [e.game.id]: e.game } } } : m);
         this.received.update(m => ({ ...m, [e.game.id]: now }));
         break;
@@ -669,6 +684,21 @@ export class LiveBoardsComponent implements OnInit {
         break;
       }
     }
+  }
+
+  /**
+   * Live-Änderung einer Partie prüfen (Zustand läuft immer mit, damit ein späteres Einschalten nicht vom alten Stand aus
+   * meldet). Vibriert nur, wenn eingeschaltet und das Brett gezeigt wird; ein Sprung braucht den Balken (sonst keine
+   * Bewertung im Strom). Mehrere Meldungen kurz hintereinander: ein Ergebnis geht immer, ein Sprung erst nach 2 s Pause.
+   */
+  private alert(game: LiveGame): void {
+    const a: LiveAlert | null = this.alerts.observe(game);
+    if (!a || !this.vibrateOn() || (a === 'swing' && !this.evalOn())) return;
+    if (!this.allBoards().some(b => b.game.id === game.id)) return;
+    const now = Date.now();
+    if (a === 'swing' && now - this.lastVibrate < 2000) return;
+    this.lastVibrate = now;
+    vibrate(a === 'result' ? VIBRATE_RESULT : VIBRATE_SWING);
   }
 
   /**
@@ -761,6 +791,13 @@ export class LiveBoardsComponent implements OnInit {
   setBest(on: boolean): void {
     this.bestOn.set(on);
     writeLiveBest(on);
+  }
+
+  /** Vibration an/aus: nur dieses Gerät. Beim Einschalten kurz zur Bestätigung — der Klick ist die Nutzerinteraktion, die Chrome verlangt. */
+  setVibrate(on: boolean): void {
+    this.vibrateOn.set(on);
+    writeLiveVibrate(on);
+    if (on) vibrate(VIBRATE_CONFIRM);
   }
 
   /** Balken an/aus: Gerätevorliebe UND Adresse (`?eval=1|0`), damit ein kopierter Link dieselbe Ansicht zeigt. */

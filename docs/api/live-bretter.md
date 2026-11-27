@@ -263,6 +263,16 @@ Stufe vor. Einzelheiten: `docs/api/leaguehub-vereins-datenbank.md` und `docs/api
 - Engine-Balken: Schalter in der Kopfzeile, gemerkt je Gerät (`localStorage rookhub_live_eval`, `device`) und seit 1.024.0
   zusätzlich in der Adresse (`?eval=1|0`, `replaceUrl`). Steht `eval` in der Adresse (geteilter Link), gilt das vor der
   Gerätevorliebe, ohne sie zu überschreiben. Gäste dürfen den Balken nutzen (der Strom ist `AllowAnonymous`, auch mit `eval`).
+- **Vibrieren** (1.035.0, Wunsch 2026-11-27): Schalter „Vibrieren“ (Standard aus, `localStorage rookhub_live_vibrate`, `device`;
+  nicht in Adresse/geteilter Ansicht). Fehlt, wo `navigator.vibrate` fehlt (iOS Safari, Desktop-Firefox). Erkennung rein in
+  `live-vibrate.ts` (`LiveAlertTracker`): **Ergebnis** — eine Partie, die live lief, bekommt 1-0/0-1/½-½ → `[400,150,400]`;
+  **Bewertungssprung** — Bewertung aus Weiß-Sicht in Bauern, Matt/große Werte auf ±10 gekappt, gegen Min/Max der Bewertungen
+  der letzten 8 Halbzüge (4 Züge): Ausschlag ≥ 1,0 → `[120,80,120,80,120]`, danach beginnt das Fenster neu bei der aktuellen
+  Bewertung. Eine tiefere Bewertung derselben Stellung ersetzt die alte. `snapshot`/`ext-snapshot` (Laden, Wiederverbinden,
+  Rundenwechsel) setzen nur den Anfangsstand, nie Vibration. Nur gezeigte Bretter; Sprung nur mit Balken (sonst kommt keine
+  Bewertung); ein Sprung frühestens 2 s nach der letzten Vibration, ein Ergebnis immer. Das Einschalten vibriert kurz (`[60]`) —
+  der Klick ist die Nutzerinteraktion, die Chrome vor `vibrate` verlangt. Läuft nur, solange die Seite offen und sichtbar ist
+  (kein Push im Hintergrund).
 - **Link teilen** (1.024.0, Wunsch 2026-11-26: „einen speziellen Livestream … auch für anonyme User sharen“): Knopf im Kopf,
   Link = `/tournaments/{id}/live?round=n[&team=…|&player=…][&eval=1]` — die Runde immer ausdrücklich (ohne sie zeigte der Link
   am nächsten Spieltag die nächste Runde). Am Handy Teilen-Blatt, sonst Zwischenablage. Gast-Prüfung 26.11. im echten
