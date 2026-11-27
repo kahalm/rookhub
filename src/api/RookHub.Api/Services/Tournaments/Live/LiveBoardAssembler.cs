@@ -45,6 +45,7 @@ public static class LiveBoardAssembler
 {
     public static LiveRoundLayout Assemble(CrRound round, IReadOnlyCollection<LiveGame> games)
     {
+        games = Current(games);
         var byFide = new Dictionary<string, CrPlayer>(StringComparer.Ordinal);
         var byName = new Dictionary<string, CrPlayer>(StringComparer.Ordinal);
         foreach (var p in round.Players)
@@ -146,6 +147,37 @@ public static class LiveBoardAssembler
         var rest = unassigned.OrderBy(g => BoardTagOrder(g.BoardTag)).Select(g => g.Id).ToList();
         return new LiveRoundLayout(true, matches, [], rest);
     }
+
+    /// <summary>
+    /// Sicherheitsnetz gegen Generationswechsel (1.035.1, Prod 27.11.2026: Runde 3 der 1. BL zweimal neu angelegt, neue Game-Ids):
+    /// stehen auf DEMSELBEN Brettplatz (<c>Round</c>-Tag „r.n“) mehrere Partien, fliegt jede ältere (kleineres
+    /// <see cref="LiveGame.Seen"/>) raus, die entweder dieselben Spieler hat (neu angelegte Fassung) oder noch gar keinen Zug
+    /// (vorbelegte Paarung, nur wenn sie wirklich älter ist). Zwei echte, verschiedene Partien mit Zügen auf demselben Tag bleiben beide stehen — ein Tag ist kein
+    /// Beweis, nur ein Hinweis. Ohne „r.n“-Tag (Einzelturniere mit „3“ für alle) greift nichts.
+    /// </summary>
+    internal static IReadOnlyCollection<LiveGame> Current(IReadOnlyCollection<LiveGame> games)
+    {
+        HashSet<string>? drop = null;
+        foreach (var group in games.Where(g => IsSlotTag(g.BoardTag)).GroupBy(g => g.BoardTag!.Trim(), StringComparer.Ordinal))
+        {
+            if (!group.Skip(1).Any()) continue;
+            var ordered = group.OrderByDescending(g => g.Seen).ThenByDescending(g => g.Plies).ThenBy(g => g.Id, StringComparer.Ordinal).ToList();
+            var newest = ordered[0];
+            foreach (var old in ordered.Skip(1))
+                if (SamePlayers(old, newest) || old.Plies == 0 && old.Seen < newest.Seen) (drop ??= new(StringComparer.Ordinal)).Add(old.Id);
+        }
+        return drop is null ? games : games.Where(g => !drop.Contains(g.Id)).ToList();
+    }
+
+    private static bool IsSlotTag(string? tag)
+    {
+        var parts = (tag ?? "").Trim().Split('.');
+        return parts.Length == 2 && int.TryParse(parts[0], out _) && int.TryParse(parts[1], out _);
+    }
+
+    private static bool SamePlayers(LiveGame a, LiveGame b) =>
+        NameKey(a.White.Name) == NameKey(b.White.Name) && NameKey(a.Black.Name) == NameKey(b.Black.Name)
+        || NameKey(a.White.Name) == NameKey(b.Black.Name) && NameKey(a.Black.Name) == NameKey(b.White.Name);
 
     private static int? Avg(List<int> elos) => elos.Count == 0 ? null : (int)Math.Round(elos.Average(), MidpointRounding.AwayFromZero);
 

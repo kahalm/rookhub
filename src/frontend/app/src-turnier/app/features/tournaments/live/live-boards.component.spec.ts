@@ -92,6 +92,32 @@ describe('LiveBoardsComponent', () => {
     http.verify();
   });
 
+  it('neuer Vollstand mitten im Strom (Runde bei Lichess neu angelegt): entfernte Partien sind vergessen, je Brett eine Karte', async () => {
+    await setup();
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const es = FakeEventSource.last();
+    // Prod 27.11.2026: der Server hielt alte und neue Ids nebeneinander — je Brett zwei Karten.
+    const doubled = { ...SNAPSHOT, games: [...SNAPSHOT.games, game('n1', 'Aditya Mittal', 'Hagner, Bennet'), game('n2', 'Schmider, Niklas', 'Vaibhav, Suri')] };
+    doubled.layout = { ...SNAPSHOT.layout, matches: [{ ...SNAPSHOT.layout.matches[0], boards: [
+      ...SNAPSHOT.layout.matches[0].boards,
+      { board: 3, white: 'Aditya Mittal', black: 'Hagner, Bennet', result: '*', gameId: 'n1', homeIsWhite: true },
+      { board: 4, white: 'Schmider, Niklas', black: 'Vaibhav, Suri', result: '*', gameId: 'n2', homeIsWhite: false },
+    ] }] };
+    es.emit('snapshot', doubled);
+    await fixture.whenStable();
+    expect(el().querySelectorAll('app-live-board-card').length).toBe(4);
+    const current = { ...SNAPSHOT, games: [game('n1', 'Aditya Mittal', 'Hagner, Bennet'), game('n2', 'Schmider, Niklas', 'Vaibhav, Suri')] };
+    current.layout = { ...SNAPSHOT.layout, matches: [{ ...SNAPSHOT.layout.matches[0], liveHome: 0, boards: [
+      { board: 1, white: 'Aditya Mittal', black: 'Hagner, Bennet', result: '*', gameId: 'n1', homeIsWhite: true },
+      { board: 2, white: 'Schmider, Niklas', black: 'Vaibhav, Suri', result: '*', gameId: 'n2', homeIsWhite: false },
+    ] }] };
+    es.emit('snapshot', current);
+    await fixture.whenStable();
+    expect(el().querySelectorAll('app-live-board-card').length).toBe(2);
+    expect(Object.keys(fixture.componentInstance.games()).sort()).toEqual(['n1', 'n2']);
+  });
+
   it('Mannschaft gewählt: nur ihre Begegnung, Bretter aus ihrer Sicht (Schwarz unten, wo sie Schwarz hat)', async () => {
     await setup({ team: 'SK Schwaz' });
     http.expectOne('/api/live-boards/1404438').flush(STATUS);

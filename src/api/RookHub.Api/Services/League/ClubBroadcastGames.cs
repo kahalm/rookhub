@@ -27,9 +27,12 @@ public sealed record LeagueBroadcastGame(IReadOnlyDictionary<string, string> Hea
 /// (<see cref="LeagueNames.Club"/>: die Bundesliga schreibt „Schachklub Schwaz“). Ohne Mannschaftsangabe (Einzelturnier) nie.</item>
 /// <item>Sie hat ein Ergebnis, einen vollen Spieltag in der laufenden Saison (ab <see cref="SeasonStart"/>, 1. Juli) und eine
 /// <c>GameURL</c>.</item>
+/// <item>Lichess führt sie JETZT: übernommen wird nur, was der gerade geholte Turnier-Export enthält (nie ein Bestand der
+/// Live-Bretter) — vorbelegte oder durch eine Neuanlage ersetzte Partien ohne Ergebnis kommen so nie herein.</item>
 /// <item>Sie steht noch nicht da: weder mit derselben <c>GameURL</c> (<see cref="LeagueClubGame.SourceUrl"/>, auch archiviert —
 /// so legt auch das zehnte Einlesen nichts doppelt an) noch als hochgeladene Fassung (gleiche Züge im gleichen Jahr wie beim
-/// Import, oder dieselben Spieler mit demselben Anfang, <see cref="ClubSideResolver.SameVersion"/>).</item>
+/// Import, oder dieselben Spieler mit demselben Anfang, <see cref="ClubSideResolver.SameVersion"/>) noch als andere übertragene
+/// Fassung (gleiche Züge und Spieler unter neuer <c>GameURL</c>, Runde neu angelegt, 1.035.1).</item>
 /// </list>
 /// <para><b>Echte Namen</b>: die Partie ist öffentlich übertragen — deshalb wird HIER niemand durch „Schwaz“ ersetzt; die
 /// eigenen Spieler stehen wie Gegner mit Namen (aus der Meldeliste, wenn sie dort stehen), FIDE-ID und Elo da, mit Veranstaltung,
@@ -106,6 +109,17 @@ internal sealed class ClubBroadcastGames
         var pending = built.Where(b => !covered.Contains(b.Game)).ToList();
         // Auch innerhalb eines Laufs nur einmal (gleiche Züge zweimal in einer Übertragung, z. B. Runde doppelt angelegt).
         pending = pending.DistinctBy(b => (b.Game.MovesHash, b.Game.White, b.Game.Black)).ToList();
+        // … und nicht neben einer schon übernommenen ÜBERTRAGENEN Fassung mit anderer GameURL (1.035.1, Prod 27.11.2026: der
+        // Veranstalter legte eine Runde neu an — neue Game-Ids, dieselben Partien; ohne das stünde eine fertige Partie zweimal da).
+        var hashes = pending.Select(b => b.Game.MovesHash).Distinct().ToList();
+        var relayed = hashes.Count == 0 ? []
+            : (await _db.LeagueClubGames.IgnoreQueryFilters().AsNoTracking()
+                .Where(c => c.ClubId == club.Id && c.Source == LeagueBroadcastImport.Source && hashes.Contains(c.MovesHash))
+                .Select(c => new { c.MovesHash, c.White, c.Black, c.SourceUrl }).ToListAsync(ct));
+        foreach (var b in pending.Where(b => relayed.Any(r => r.MovesHash == b.Game.MovesHash && r.White == b.Game.White && r.Black == b.Game.Black)))
+            _log.LogInformation("Vereins-Datenbank {Club}: übertragene Partie {Url} steht schon als andere Übertragung da — nicht doppelt",
+                club.Id, b.Game.SourceUrl);
+        pending = pending.Where(b => !relayed.Any(r => r.MovesHash == b.Game.MovesHash && r.White == b.Game.White && r.Black == b.Game.Black)).ToList();
         foreach (var b in built.Where(b => covered.Contains(b.Game)))
             _log.LogInformation("Vereins-Datenbank {Club}: übertragene Partie {Url} steht schon hochgeladen da — nicht doppelt", club.Id, b.Game.SourceUrl);
         if (pending.Count == 0) return new();

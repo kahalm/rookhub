@@ -269,6 +269,29 @@ public class LeagueBroadcastClubGamesTests : IDisposable
         Assert.NotNull(s.AutoRequestedAt);
     }
 
+    /// <summary>Prod 27.11.2026: der Veranstalter legte eine Runde neu an — dieselbe fertige Partie kommt mit neuer GameURL
+    /// (neue Game-Id). Sie darf nicht ein zweites Mal in die Vereins-Datenbank, und es gibt keine zweite Zusammenfassung.</summary>
+    [Fact]
+    public async Task Import_RundeNeuAngelegt_neueGameUrl_gleichePartie_nichtDoppelt()
+    {
+        var b = await SeedAsync(pairing: true);
+        await ImportAsync(b, Game(url: "https://lichess.org/broadcast/bl/round-3/AE2OT399/WmuQuG99"));
+        await ImportAsync(await _db.LeagueBroadcasts.SingleAsync(), Game(url: "https://lichess.org/broadcast/bl/round-3/AE2OT399/fGU4RM99"));
+
+        var g = await _db.LeagueClubGames.IgnoreQueryFilters().SingleAsync();
+        Assert.EndsWith("WmuQuG99", g.SourceUrl);
+        Assert.Single(await _db.ClubGameSummaries.ToListAsync());
+    }
+
+    /// <summary>Vorbelegte bzw. laufende Partien (kein Ergebnis) kommen nie herein — auch nicht mit Zügen.</summary>
+    [Fact]
+    public async Task Import_ohneErgebnis_nieInDieVereinsDatenbank()
+    {
+        var b = await SeedAsync();
+        await ImportAsync(b, Game(result: "*") + Game(result: "*", url: "https://lichess.org/broadcast/bl/round-3/AE2OT399/5mv2r899", moves: ""));
+        Assert.Empty(await _db.LeagueClubGames.IgnoreQueryFilters().ToListAsync());
+    }
+
     [Fact]
     public async Task Import_ohneLigapaarung_FrauenbundesligaGenauso_eineZusammenfassung()
     {

@@ -646,6 +646,11 @@ da; der Gewinn ist vor allem, dass die Partien schon WÄHREND des Turniers da si
   der `MasterAnalysisScheduler` an (Vereinspartien vor dem Bestand), Lc0 der `ClubSecondEngineScheduler`; dazu die Zusammenfassung
   für JEDE übertragene Partie (`ClubGameAutoSummary.RequestBroadcastAsync`, siehe `partie-zusammenfassung.md`).
   **Idempotent**: dieselbe `GameURL` im Verein (auch archiviert) wird nie wieder angelegt; der Index fängt zwei gleichzeitige Läufe.
+  **Runde neu angelegt** (1.035.1, Prod 27.11.2026: die 1. BL legte Runde 3 zweimal neu an, neue Game-Ids): eine Partie mit
+  denselben Zügen und Spielern wie eine schon übernommene ÜBERTRAGENE (auch archivierte) unter anderer `GameURL` kommt nicht
+  noch einmal. Quelle ist immer der gerade geholte Turnier-Export, nie der Bestand der Live-Bretter — vorbelegte oder ersetzte
+  Partien ohne Ergebnis kommen nie herein. Geprüft 27.11. lesend auf Prod: Runde 2 = 6 Vereinspartien (Ids 270–275), alle mit
+  aktueller Game-Id und richtiger Paarung; Spielerkarten R1 30 / R2 36 Partien, keine veraltete Id, keine doppelt.
   **Doppelt gegen Uploads** (`ClubBroadcastGames.CoveredByAsync`), in BEIDE Richtungen: steht die Partie schon hochgeladen da (gleiche
   Züge im gleichen Jahr wie beim Import, oder dieselben Spieler — FIDE-ID auch hinter „Schwaz“ — mit denselben ersten 16 Halbzügen,
   `SameVersion`), legt die Übertragung nichts an; kommt dieselbe Partie später als Formular, PGN oder ChessBase, ist sie `duplicate`

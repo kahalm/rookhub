@@ -143,4 +143,43 @@ public class LiveBoardAssemblerTests
     [Fact]
     public void NameKey_IgnoresOrderCommasAccentsTitles() =>
         Assert.Equal(LiveBoardAssembler.NameKey("Mag. Österreicher, Jörg"), LiveBoardAssembler.NameKey("Jorg Osterreicher"));
+
+    /// <summary>Prod 27.11.2026 (1. BL Runde 3, Schach ohne Grenzen – Schwaz): drei Generationen derselben Runde im Bestand —
+    /// vorbelegt mit falschen Paarungen ohne Zug (a), neu angelegt (b), nochmals neu angelegt (c, aktuell). Je Brettplatz bleibt
+    /// genau die jüngste.</summary>
+    [Fact]
+    public void Team_GenerationswechselDerIds_JeBrettplatzNurDieJuengste()
+    {
+        var round = new CrRound(true, [
+            new("Baldauf, Marco", "990201", 2450, "Schach ohne Grenzen", 1), new("Hagner, Bennet", "990202", 2462, "Schachklub Schwaz", 1),
+            new("Schmider, Niklas", "990203", 2398, "Schachklub Schwaz", 2), new("Mons, Leon", "990204", 2400, "Schach ohne Grenzen", 2),
+            new("Aditya Mittal", "990205", 2616, "Pinggau-Friedberg", 1),
+        ], [], [new CrMatch(1, "Schach ohne Grenzen", "Schachklub Schwaz", null, null)]);
+        LiveGame Gm(string id, string tag, string w, string b, string wf, string bf, long seen, bool moves = true) =>
+            LiveGameParser.Parse(LivePgn.Game(id, w, b, moves ? "1. e4 { [%clk 1:30:00] }" : "", "*", wf, bf, round: tag))! with { Seen = seen };
+        var games = new[]
+        {
+            Gm("5mv2r87i", "3.1", "Aditya Mittal", "Hagner, Bennet", "990205", "990202", 1, moves: false),   // a: vorbelegt
+            Gm("WmuQuGE5", "3.1", "Baldauf, Marco", "Hagner, Bennet", "990201", "990202", 10),                // b
+            Gm("wMAduO8I", "3.2", "Schmider, Niklas", "Mons, Leon", "990203", "990204", 11),                  // b
+            Gm("fGU4RMj9", "3.1", "Baldauf, Marco", "Hagner, Bennet", "990201", "990202", 20),                // c (aktuell)
+            Gm("W0ALPVpb", "3.2", "Schmider, Niklas", "Mons, Leon", "990203", "990204", 21),                  // c (aktuell)
+        };
+        var layout = LiveBoardAssembler.Assemble(round, games);
+        Assert.Equal(["fGU4RMj9", "W0ALPVpb"], layout.Matches.Single().Boards.Select(b => b.GameId));
+        Assert.Empty(layout.Unassigned);
+    }
+
+    /// <summary>Zwei verschiedene Partien MIT Zügen auf demselben Tag sind kein Generationswechsel — beide bleiben; ohne
+    /// „r.n“-Tag (Einzelturnier mit „3“ für alle) greift das Netz gar nicht.</summary>
+    [Fact]
+    public void GleicherTag_VerschiedeneSpielerMitZuegen_OderTagOhneBrett_BleibenAlle()
+    {
+        var a = G("a1", "Eins, A", "Zwei, B", "990301", "990302", round: "3.1") with { Seen = 1 };
+        var b = G("b1", "Drei, C", "Vier, D", "990303", "990304", round: "3.1") with { Seen = 2 };
+        Assert.Equal(2, LiveBoardAssembler.Current([a, b]).Count);
+        var s1 = G("s1", "Eins, A", "Zwei, B", "990301", "990302", round: "3") with { Seen = 1 };
+        var s2 = G("s2", "Eins, A", "Zwei, B", "990301", "990302", round: "3") with { Seen = 2 };
+        Assert.Equal(2, LiveBoardAssembler.Current([s1, s2]).Count);
+    }
 }

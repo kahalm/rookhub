@@ -21,6 +21,12 @@ public sealed record LiveStateChanged(string State) : LiveEvent;
 ///   <see cref="HubOptions.ReconnectMax"/>), 429 → <see cref="HubOptions.RateLimitPause"/>.</item>
 /// <item>Fertige Runde (Lichess meldet sie fertig oder alle Partien haben ein Ergebnis) → kein Strom; die Endstellungen
 ///   bleiben <see cref="HubOptions.FinishedKeep"/> im Speicher, weitere Zuschauer laden nichts nach.</item>
+/// <item>Der Bestand SPIEGELT den Runden-Export (1.035.1): jeder Vollabzug ERSETZT ihn — Partien, die Lichess nicht mehr führt,
+///   fallen raus, und alle Zuschauer bekommen einen neuen Vollstand. Während der Strom läuft, gleicht der Hub alle
+///   <see cref="HubOptions.ResyncEvery"/> und nach jeder Neuverbindung (frühestens <see cref="HubOptions.ResyncMinGap"/> nach dem
+///   letzten Abgleich) mit dem Export ab — der Strom selbst meldet nie, dass eine Partie verschwunden ist. Prod 27.11.2026: der
+///   Veranstalter der 1. BL legte Runde 3 zweimal neu an (neue Game-Ids), der Hub hielt drei Generationen (108 statt 36 Partien)
+///   und zeigte je Brett zwei Partien.</item>
 /// <item>Letzter Zuschauer weg → nach <see cref="HubOptions.IdleClose"/> wird der Strom geschlossen (ein Neuladen der
 ///   Seite reißt ihn also nicht ab).</item>
 /// </list>
@@ -43,6 +49,11 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         /// <summary>Höchstzahl wartender Ereignisse je Zuschauer; ein hängender Browser verliert die ältesten (jedes
         /// Ereignis trägt den ganzen Stand seiner Partie, Späteres ersetzt Früheres).</summary>
         public int QueueLimit { get; init; } = 512;
+        /// <summary>So oft gleicht ein laufender Feed seinen Bestand mit dem Runden-Export ab (ein Abruf je Runde, egal wie viele
+        /// zuschauen; Lichess-schonend über die gemeinsame Drossel der Quelle, nach einem 429 fällt der Abgleich aus).</summary>
+        public TimeSpan ResyncEvery { get; init; } = TimeSpan.FromMinutes(5);
+        /// <summary>Mindestabstand zweier Abgleiche (eine Neuverbindung stößt einen an, ein flatternder Strom nicht jeden).</summary>
+        public TimeSpan ResyncMinGap { get; init; } = TimeSpan.FromMinutes(1);
     }
 
     private readonly ILichessLiveSource _source;
@@ -248,6 +259,11 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         private string _state = "connecting";
         private bool _evalLoopStarted;
         private bool _closed;
+        /// <summary>Laufnummer für <see cref="LiveGame.Seen"/> (je empfangener Partie hochgezählt).</summary>
+        private long _seq;
+        /// <summary>Weckt den Abgleich vorzeitig (Neuverbindung des Stroms).</summary>
+        private readonly SemaphoreSlim _resyncNow = new(0, 1);
+        private DateTime _lastResync = DateTime.MinValue;
 
         public Feed(BroadcastLiveHub hub, string roundId, bool finished)
         {
@@ -375,22 +391,119 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
             lock (_lock) return _games.Count > 0 && _games.Values.All(g => g.Finished);
         }
 
-        /// <summary>Partie übernehmen; → geändert? Eine schon geholte Cloud-Bewertung bleibt bei gleicher Stellung stehen.</summary>
-        private LiveGame? Apply(string pgn)
+        /// <summary>Partie übernehmen; → geändert? Eine schon geholte Cloud-Bewertung bleibt bei gleicher Stellung stehen. Auch eine
+        /// unveränderte Wiederholung zählt als „gesehen“ (<see cref="LiveGame.Seen"/>).</summary>
+        private LiveGame? Apply(string pgn) => Apply(LiveGameParser.Parse(pgn), pgn);
+
+        private LiveGame? Apply(LiveGame? g, string pgn)
         {
-            var g = LiveGameParser.Parse(pgn);
             if (g is null) return null;
             lock (_lock)
             {
                 _pgn[g.Id] = pgn;
+                g = g with { Seen = ++_seq };
                 if (_games.TryGetValue(g.Id, out var old))
                 {
-                    if (old.Hash == g.Hash) return null;
+                    if (old.Hash == g.Hash)
+                    {
+                        _games[g.Id] = old with { Seen = g.Seen };
+                        return null;
+                    }
                     if (g.Eval is null && old.Eval is { Source: "cloud" or "engine" } && old.Fen == g.Fen) g = g with { Eval = old.Eval };
                 }
                 _games[g.Id] = g;
             }
             return g;
+        }
+
+        /// <summary>Laufnummer jetzt — vor einem Export-Abruf merken: was danach aus dem Strom kam, ist nie „verschwunden“.</summary>
+        internal long Mark()
+        {
+            lock (_lock) return _seq;
+        }
+
+        /// <summary>
+        /// Vollabzug übernehmen und den Bestand dabei ERSETZEN: alle Partien des Exports übernehmen, jede andere, die seit
+        /// <paramref name="mark"/> nicht mehr gesehen wurde, entfernen. Ein leerer Export (Runde noch ohne Partien, Lichess-Störung)
+        /// entfernt nichts. → (geänderte Partien, ob etwas entfernt wurde).
+        /// </summary>
+        internal (List<LiveGame> Changed, List<string> Removed) Replace(string pgn, long mark)
+        {
+            var splitter = new BroadcastPgnSplitter();
+            var changed = new List<LiveGame>();
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var block in splitter.Feed(pgn).Concat(splitter.Flush()))
+            {
+                var parsed = LiveGameParser.Parse(block);
+                if (parsed is null) continue;
+                ids.Add(parsed.Id);
+                if (Apply(parsed, block) is { } g) changed.Add(g);
+            }
+            var removed = new List<string>();
+            if (ids.Count == 0) return (changed, removed);
+            lock (_lock)
+            {
+                foreach (var (id, g) in _games)
+                    if (!ids.Contains(id) && g.Seen <= mark) removed.Add(id);
+                foreach (var id in removed)
+                {
+                    _games.Remove(id);
+                    _pgn.Remove(id);
+                }
+            }
+            return (changed, removed);
+        }
+
+        /// <summary>Abgleich mit dem Runden-Export während des Stroms: Verschwundenes raus (neuer Vollstand an alle), Geändertes als
+        /// Einzelereignis.</summary>
+        private async Task ResyncAsync(CancellationToken ct)
+        {
+            var mark = Mark();
+            var pgn = await _hub._source.GetRoundPgnAsync(RoundId, ct);
+            lock (_lock) _lastResync = DateTime.UtcNow;
+            if (pgn is null) return;
+            var (changed, removed) = Replace(pgn, mark);
+            if (removed.Count > 0)
+            {
+                _hub._logger.LogInformation("Live-Bretter: Runde {Round} — {Count} Partie(n) nicht mehr bei Lichess, entfernt ({Ids})",
+                    RoundId, removed.Count, string.Join(",", removed.Take(20)));
+                List<LiveGame> games;
+                string state;
+                lock (_lock) { games = _games.Values.ToList(); state = _state; }
+                Broadcast(new LiveSnapshot(games, state));
+                QueueAllEvals();
+                return;
+            }
+            foreach (var g in changed) Changed(g);
+        }
+
+        /// <summary>Neuverbindung: Abgleich vorziehen.</summary>
+        private void RequestResync()
+        {
+            if (_resyncNow.CurrentCount == 0) try { _resyncNow.Release(); } catch (SemaphoreFullException) { }
+        }
+
+        private async Task ResyncLoopAsync(CancellationToken ct)
+        {
+            var o = _hub._options;
+            while (!ct.IsCancellationRequested)
+            {
+                try
+                {
+                    await _resyncNow.WaitAsync(o.ResyncEvery, ct);
+                    TimeSpan wait;
+                    lock (_lock) wait = _lastResync + o.ResyncMinGap - DateTime.UtcNow;
+                    if (wait > TimeSpan.Zero) await Task.Delay(wait, ct);
+                    await ResyncAsync(ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+                catch (LichessRateLimitedException) { lock (_lock) _lastResync = DateTime.UtcNow; }
+                catch (Exception e) when (e is HttpRequestException or IOException or TaskCanceledException)
+                {
+                    lock (_lock) _lastResync = DateTime.UtcNow;
+                    _hub._logger.LogInformation("Live-Bretter: Abgleich der Runde {Round} fehlgeschlagen ({Error})", RoundId, e.Message);
+                }
+            }
         }
 
         private async Task RunAsync(CancellationToken ct)
@@ -404,11 +517,11 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
                 {
                     try
                     {
+                        var mark = Mark();
                         var pgn = await _hub._source.GetRoundPgnAsync(RoundId, ct) ?? "";
-                        var splitter = new BroadcastPgnSplitter();
-                        foreach (var game in splitter.Feed(pgn).Concat(splitter.Flush())) Apply(game);
+                        Replace(pgn, mark);
                         List<LiveGame> games;
-                        lock (_lock) { _loaded = true; games = _games.Values.ToList(); }
+                        lock (_lock) { _loaded = true; _lastResync = DateTime.UtcNow; games = _games.Values.ToList(); }
                         if (_lichessFinished || AllFinished()) { lock (_lock) _state = "finished"; }
                         else lock (_lock) _state = "live";
                         string state;
@@ -427,45 +540,17 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
                 }
                 if (IsFinished) return;
 
-                // 2) Strom
-                backoff = o.ReconnectMin;
-                while (!ct.IsCancellationRequested)
+                // 2) Strom — daneben der Abgleich mit dem Export (endet mit dem Strom)
+                using var resyncStop = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                var resync = ResyncLoopAsync(resyncStop.Token);
+                try
                 {
-                    var gotData = false;
-                    using var stall = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    stall.CancelAfter(o.StallTimeout);
-                    try
-                    {
-                        var splitter = new BroadcastPgnSplitter();
-                        await foreach (var chunk in _hub._source.StreamRoundAsync(RoundId, stall.Token))
-                        {
-                            stall.CancelAfter(o.StallTimeout);                 // Lebenszeichen: Wächter neu stellen
-                            if (!gotData) { gotData = true; SetState("live"); }
-                            foreach (var pgn in splitter.Feed(chunk)) Changed(Apply(pgn));
-                        }
-                        foreach (var pgn in splitter.Flush()) Changed(Apply(pgn));
-                    }
-                    catch (OperationCanceledException) when (!ct.IsCancellationRequested && stall.IsCancellationRequested)
-                    {
-                        _hub._logger.LogInformation("Live-Bretter: Strom der Runde {Round} {Minutes} min still — neu aufbauen", RoundId,
-                            (int)o.StallTimeout.TotalMinutes);
-                    }
-                    catch (LichessRateLimitedException)
-                    {
-                        SetState("reconnecting");
-                        await Task.Delay(o.RateLimitPause, ct);
-                        continue;
-                    }
-                    catch (Exception e) when (e is HttpRequestException or IOException or TaskCanceledException && !ct.IsCancellationRequested)
-                    {
-                        _hub._logger.LogInformation("Live-Bretter: Strom der Runde {Round} unterbrochen ({Error})", RoundId, e.Message);
-                    }
-                    if (ct.IsCancellationRequested) break;
-                    if (AllFinished()) { SetState("finished"); return; }
-                    if (gotData) backoff = o.ReconnectMin;
-                    SetState("reconnecting");
-                    await Task.Delay(backoff, ct);
-                    backoff = Next(backoff);
+                    await StreamLoopAsync(ct);
+                }
+                finally
+                {
+                    await resyncStop.CancelAsync();
+                    try { await resync; } catch (OperationCanceledException) { }
                 }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { /* letzter Zuschauer weg / Herunterfahren */ }
@@ -477,6 +562,54 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
             finally
             {
                 lock (_lock) if (_state != "finished") _run = null;
+            }
+        }
+
+        /// <summary>Der Strom mit Neuverbindung; endet bei fertiger Runde oder Abbruch. Jede Neuverbindung zieht den Abgleich vor.</summary>
+        private async Task StreamLoopAsync(CancellationToken ct)
+        {
+            var o = _hub._options;
+            var backoff = o.ReconnectMin;
+            var first = true;
+            while (!ct.IsCancellationRequested)
+            {
+                if (!first) RequestResync();
+                first = false;
+                var gotData = false;
+                using var stall = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                stall.CancelAfter(o.StallTimeout);
+                try
+                {
+                    var splitter = new BroadcastPgnSplitter();
+                    await foreach (var chunk in _hub._source.StreamRoundAsync(RoundId, stall.Token))
+                    {
+                        stall.CancelAfter(o.StallTimeout);                 // Lebenszeichen: Wächter neu stellen
+                        if (!gotData) { gotData = true; SetState("live"); }
+                        foreach (var pgn in splitter.Feed(chunk)) Changed(Apply(pgn));
+                    }
+                    foreach (var pgn in splitter.Flush()) Changed(Apply(pgn));
+                }
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested && stall.IsCancellationRequested)
+                {
+                    _hub._logger.LogInformation("Live-Bretter: Strom der Runde {Round} {Minutes} min still — neu aufbauen", RoundId,
+                        (int)o.StallTimeout.TotalMinutes);
+                }
+                catch (LichessRateLimitedException)
+                {
+                    SetState("reconnecting");
+                    await Task.Delay(o.RateLimitPause, ct);
+                    continue;
+                }
+                catch (Exception e) when (e is HttpRequestException or IOException or TaskCanceledException && !ct.IsCancellationRequested)
+                {
+                    _hub._logger.LogInformation("Live-Bretter: Strom der Runde {Round} unterbrochen ({Error})", RoundId, e.Message);
+                }
+                if (ct.IsCancellationRequested) break;
+                if (AllFinished()) { SetState("finished"); return; }
+                if (gotData) backoff = o.ReconnectMin;
+                SetState("reconnecting");
+                await Task.Delay(backoff, ct);
+                backoff = Next(backoff);
             }
         }
 

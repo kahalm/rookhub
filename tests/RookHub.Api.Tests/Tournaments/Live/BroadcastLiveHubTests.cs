@@ -236,4 +236,90 @@ public class BroadcastLiveHubTests
         Assert.Equal(1, src.CloudEvalCalls);
         await plain.DisposeAsync();
     }
+
+    // ── Generationswechsel (Prod 27.11.2026, 1. BL Runde 3: Runde zweimal neu angelegt, neue Game-Ids) ─────────────────
+
+    private static string Gen(string id, string round, string white, string black, string moves = "1. e4 { [%clk 1:30:00] }") =>
+        LivePgn.Game(id, white, black, moves, round: round);
+
+    [Fact]
+    public async Task RundeNeuAngelegt_NeueIdsImStrom_NeuverbindungGleichtAb_AlteFallenRaus()
+    {
+        var src = new FakeLichessLiveSource();
+        // Generation b: so stand die Runde beim ersten Zuschauer bei Lichess.
+        src.RoundPgn[Round] = Gen("WmuQuGE5", "3.1", "Baldauf, Marco", "Hagner, Bennet") + Gen("wMAduO8I", "3.2", "Schmider, Niklas", "Mons, Leon");
+        await using var hub = new BroadcastLiveHub(src, null, NullLogger<BroadcastLiveHub>.Instance, new BroadcastLiveHub.HubOptions
+        {
+            IdleClose = TimeSpan.FromSeconds(5), ReconnectMin = TimeSpan.FromMilliseconds(20), ReconnectMax = TimeSpan.FromMilliseconds(40),
+            ResyncEvery = TimeSpan.FromMinutes(10), ResyncMinGap = TimeSpan.FromMilliseconds(10),
+        });
+        var a = hub.Subscribe(Round, finished: false, wantsEval: false);
+        Assert.Equal(2, (await Next<LiveSnapshot>(a)).Games.Count);
+        await Until(() => src.StreamsOpened == 1);
+
+        // Veranstalter legt neu an (Generation c): der Strom bringt die neuen Ids, der Export führt nur noch sie.
+        var genC = Gen("fGU4RMj9", "3.1", "Baldauf, Marco", "Hagner, Bennet", "1. e4 { [%clk 1:30:00] } 1... c5 { [%clk 1:30:00] }")
+                   + Gen("W0ALPVpb", "3.2", "Schmider, Niklas", "Mons, Leon");
+        src.RoundPgn[Round] = genC;
+        await src.StreamOf(Round).Writer.WriteAsync(genC);
+        Assert.Equal("fGU4RMj9", (await Next<LiveGameChanged>(a)).Game.Id);
+        Assert.Equal("W0ALPVpb", (await Next<LiveGameChanged>(a)).Game.Id);
+        Assert.Equal(4, hub.Peek(Round)!.Count);                           // bisher blieb es dabei: 108 statt 36 auf Prod
+
+        src.StreamOf(Round).Writer.Complete();                             // Neuverbindung → Abgleich mit dem Export
+        var snap = await Next<LiveSnapshot>(a);
+        Assert.Equal(["W0ALPVpb", "fGU4RMj9"], snap.Games.Select(g => g.Id).Order(StringComparer.Ordinal));
+        Assert.Equal("live", snap.State);
+        Assert.Equal(2, hub.Peek(Round)!.Count);
+        Assert.Null(hub.PeekPgn(Round, "WmuQuGE5"));
+    }
+
+    [Fact]
+    public async Task LaufenderStrom_GleichtPeriodischAb_OhneNeuverbindung()
+    {
+        var src = new FakeLichessLiveSource();
+        src.RoundPgn[Round] = Gen("old1", "3.1", "A", "B") + Gen("old2", "3.2", "C", "D");
+        await using var hub = new BroadcastLiveHub(src, null, NullLogger<BroadcastLiveHub>.Instance, new BroadcastLiveHub.HubOptions
+        {
+            IdleClose = TimeSpan.FromSeconds(5), ResyncEvery = TimeSpan.FromMilliseconds(100), ResyncMinGap = TimeSpan.FromMilliseconds(50),
+        });
+        var a = hub.Subscribe(Round, finished: false, wantsEval: false);
+        await Next<LiveSnapshot>(a);
+        await Until(() => src.StreamsOpened == 1);
+        src.RoundPgn[Round] = Gen("old1", "3.1", "A", "B");                  // Brett 2 bei Lichess gelöscht
+        var snap = await Next<LiveSnapshot>(a);
+        Assert.Equal("old1", Assert.Single(snap.Games).Id);
+        Assert.Equal(1, src.StreamsOpened);                                // der Strom blieb offen
+    }
+
+    [Fact]
+    public async Task Abgleich_LeererExport_EntferntNichts_UnveraendertKeinVollstand()
+    {
+        var src = new FakeLichessLiveSource();
+        src.RoundPgn[Round] = Game1;
+        await using var hub = new BroadcastLiveHub(src, null, NullLogger<BroadcastLiveHub>.Instance, new BroadcastLiveHub.HubOptions
+        {
+            IdleClose = TimeSpan.FromSeconds(5), ResyncEvery = TimeSpan.FromMilliseconds(60), ResyncMinGap = TimeSpan.FromMilliseconds(30),
+        });
+        var a = hub.Subscribe(Round, finished: false, wantsEval: false);
+        await Next<LiveSnapshot>(a);
+        src.RoundPgn[Round] = "";                                          // Störung/leere Antwort
+        var calls = src.RoundPgnCalls;
+        await Until(() => src.RoundPgnCalls >= calls + 2);
+        Assert.Equal("g1", Assert.Single(hub.Peek(Round)!).Id);
+        Assert.False(a.Events.TryPeek(out var e) && e is LiveSnapshot);
+    }
+
+    [Fact]
+    public void Replace_PartieAusDemStromNachDemAbruf_BleibtStehen()
+    {
+        // Was der Strom NACH dem Start des Export-Abrufs brachte, fehlt im Export nur wegen der Laufzeit — nicht entfernen.
+        var hub = Hub(new FakeLichessLiveSource());
+        var feed = new BroadcastLiveHub.Feed(hub, Round, finished: false);
+        var mark = feed.Mark();
+        feed.Replace(Gen("a", "3.1", "A", "B") + Gen("b", "3.2", "C", "D"), mark);
+        Assert.Empty(feed.Replace(Gen("a", "3.1", "A", "B"), mark).Removed);          // b kam nach „mark“
+        Assert.Equal(["b"], feed.Replace(Gen("a", "3.1", "A", "B"), feed.Mark()).Removed);
+        Assert.Equal("a", Assert.Single(feed.Games()).Id);
+    }
 }

@@ -123,6 +123,16 @@ entferne oder etwas umstelle, sollen alle mit dem Link das auch sehen.“
   Neuladen reißt ihn nicht ab). Schließen und Entfernen des Feeds geschehen atomar unter dem Hub-Lock, Anmelden
   ebenso (Sperrreihenfolge Hub → Feed) — ein Zuschauer gerät nie an einen sterbenden Feed (1.014.1). Fertige Runden (Lichess `finished` oder alle Partien mit Ergebnis): kein Strom, die
   Endstellungen bleiben 30 min im Speicher.
+- **Bestand = Runden-Export** (1.035.1). Der Strom meldet nie, dass eine Partie verschwunden ist; der Hub sammelte deshalb
+  jede je gesehene Game-Id. Prod 27.11.2026 (1. BL, Runde 3, Lichess-Runde `AE2OT3gp`): der Veranstalter legte die Runde
+  zweimal neu an — vorbelegte Partien mit den Paarungen aus Runde 1 ohne Zug (z. B. `5mv2r87i`), dann eine zweite (`WmuQuGE5`,
+  `wMAduO8I` …) und eine dritte Generation (`fGU4RMj9`, `W0ALPVpb` …). Der Hub hielt 108 statt 36 Partien, die Begegnung
+  zeigte je Brett zwei. Seither: jeder Vollabzug ERSETZT den Bestand (`Feed.Replace`) — was der Export nicht führt, fliegt
+  raus (samt PGN für „Analysieren“); was der Strom NACH dem Start des Abrufs brachte (`LiveGame.Seen` > Marke), bleibt; ein
+  leerer Export entfernt nichts. Während der Strom läuft, gleicht der Hub alle `ResyncEvery` (5 min) und nach jeder
+  Neuverbindung (frühestens `ResyncMinGap` = 1 min nach dem letzten Abgleich) ab: EIN Abruf je Runde über die gedrosselte
+  Quelle, nach 429 fällt er aus. Fiel etwas weg, bekommen alle Zuschauer ein neues `snapshot` (samt `layout`); die Seite
+  ersetzt damit ihren ganzen Stand (`live-boards.component`, Spec „neuer Vollstand mitten im Strom“).
 - **Zerlegen** (`BroadcastPgnSplitter`, `LiveGameParser`): Partien aus beliebigen Stücken, fertig beim Ergebnis-Token; je
   Partie FEN (Gera.Chess), letzter Zug (UCI), Uhren aus `[%clk]` (letzter Wert je Seite), `[%eval]`, Namen/Elo/Titel/FIDE-ID/
   Mannschaft aus den Kopfzeilen.
@@ -132,6 +142,9 @@ entferne oder etwas umstelle, sollen alle mit dem Link das auch sehen.“
   der Begegnung ordnet der Lichess-Tag `Round "1.n"`: die Übertragung nummeriert blockweise je Begegnung in Brettreihenfolge
   (1. BL R1: „1.1"–„1.6" Pinggau–Schwaz, „1.7"–„1.12" nächste Begegnung …, Farben abwechselnd); nur ohne Tag die
   Meldelisten-Nummer (1.014.1). Brettnummer = Position in dieser Ordnung. Einzelturnier: Brettnummer = chess-results.
+  Sicherheitsnetz (1.035.1, `LiveBoardAssembler.Current`): mehrere Partien auf DEMSELBEN Tag „r.n“ → jede ältere (kleineres
+  `Seen`, die Laufnummer des Feeds beim letzten Empfang) fällt weg, wenn sie dieselben Spieler hat (neu angelegt) oder keinen
+  Zug (vorbelegt). Zwei verschiedene Partien mit Zügen auf einem Tag bleiben beide; Tags ohne Punkt („3“) greifen nicht.
 - **Engine-Balken** — Rückfallkette je Stellung, nur solange ein Zuschauer der Runde ihn an hat (`?eval=1`):
   1. `[%eval]` aus dem Strom (die Bundesliga schickt KEINS, gemessen 25.11.2026, nur `[%clk]`);
   2. Lichess Cloud-Eval (`LichessCloudEval`: je Stellung gecacht, Treffer 6 h, Fehltreffer 15 min, ein Abruf je Sekunde,

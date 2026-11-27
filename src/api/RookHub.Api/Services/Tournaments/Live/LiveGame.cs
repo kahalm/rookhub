@@ -55,11 +55,14 @@ public sealed record LiveEval(int? Cp, int? Mate, string Source, int? Depth = nu
 /// <summary>
 /// Stand einer Partie der Lichess-Übertragung: Stellung nach dem letzten Zug, letzter Zug als UCI, Uhren aus <c>[%clk]</c>,
 /// Ergebnis. <see cref="Hash"/> unterscheidet „wirklich geändert" von einer Wiederholung im Strom (Lichess schickt nach dem
-/// Verbinden alle Partien noch einmal).
+/// Verbinden alle Partien noch einmal). <see cref="Seen"/> (1.035.1, nur im Server) = Laufnummer des Feeds, wann Lichess die Partie
+/// zuletzt geschickt hat (Strom oder Runden-Export) — größer = jünger; der <see cref="LiveBoardAssembler"/> nimmt bei zwei Partien
+/// auf demselben Brettplatz die jüngere.
 /// </summary>
 public sealed record LiveGame(
     string Id, string? BoardTag, LivePlayer White, LivePlayer Black, string Fen, string? LastMove, int Plies,
-    string Result, LiveEval? Eval, string Hash)
+    string Result, LiveEval? Eval, string Hash,
+    [property: JsonIgnore] long Seen = 0)
 {
     public bool Finished => Result is "1-0" or "0-1" or "1/2-1/2";
     public bool WhiteToMove => FenFields.WhiteToMove(Fen);
