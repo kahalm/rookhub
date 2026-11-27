@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.035.2", date: "2026-11-27", changes: [
+    { en: "Tournament site, live boards: the rating now sits on its own line under the player’s name. Long names are shortened with „…“, but the rating always stays visible, even on narrow boards and phones.",
+      de: "Turnierseite, Live-Bretter: Die Elo steht jetzt in einer eigenen Zeile unter dem Spielernamen. Lange Namen werden mit „…“ gekürzt, die Elo bleibt aber immer sichtbar, auch auf schmalen Brettern und am Handy." },
+  ] },
   { version: "1.035.1", date: "2026-11-27", changes: [
     { en: "Tournament site, live boards: boards no longer appear twice when the organiser re-creates a round on Lichess (new game ids). The server now mirrors the round export — games Lichess no longer lists are dropped on every full load, after every reconnect and every 5 minutes while the round is live, and viewers get a fresh board list. As a safety net only the newest game per board slot is shown. Club database: a broadcast game that reappears under a new link is not imported a second time.",
       de: "Turnierseite, Live-Bretter: Bretter erscheinen nicht mehr doppelt, wenn der Veranstalter eine Runde bei Lichess neu anlegt (neue Partie-Ids). Der Server spiegelt jetzt den Runden-Export — Partien, die Lichess nicht mehr führt, fallen bei jedem Vollabzug, nach jeder Neuverbindung und alle 5 Minuten während der Runde weg, und die Zuschauer bekommen die Bretter neu. Als Sicherheitsnetz steht je Brettplatz nur die jüngste Partie. Vereins-Datenbank: eine übertragene Partie, die unter neuem Link wiederkommt, wird nicht ein zweites Mal übernommen." },

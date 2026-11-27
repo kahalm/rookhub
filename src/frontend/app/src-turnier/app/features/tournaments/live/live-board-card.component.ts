@@ -54,8 +54,9 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
         }
       </div>
       <div class="lb-player" [class.to-move]="toMove(flipped())">
-        <span class="lb-name">
-          @if (title(topPlayer()); as t) { <span class="lb-title">{{ t }}</span> }{{ topPlayer().name }}
+        <!-- Elo in eigener Zeile unter dem Namen (Wunsch 2026-11-27): lange Namen kürzen mit „…“, die Elo bleibt sichtbar -->
+        <span class="lb-who">
+          <span class="lb-name">@if (title(topPlayer()); as t) { <span class="lb-title">{{ t }}</span> }{{ topPlayer().name }}</span>
           @if (topPlayer().elo) { <span class="lb-elo">{{ topPlayer().elo }}</span> }
         </span>
         @if (onlyMove() && toMove(flipped())) {
@@ -78,8 +79,9 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
         </div>
       </div>
       <div class="lb-player" [class.to-move]="toMove(!flipped())">
-        <span class="lb-name">
-          @if (title(bottomPlayer()); as t) { <span class="lb-title">{{ t }}</span> }{{ bottomPlayer().name }}
+        <!-- Elo in eigener Zeile unter dem Namen (Wunsch 2026-11-27): lange Namen kürzen mit „…“, die Elo bleibt sichtbar -->
+        <span class="lb-who">
+          <span class="lb-name">@if (title(bottomPlayer()); as t) { <span class="lb-title">{{ t }}</span> }{{ bottomPlayer().name }}</span>
           @if (bottomPlayer().elo) { <span class="lb-elo">{{ bottomPlayer().elo }}</span> }
         </span>
         @if (onlyMove() && toMove(!flipped())) {
@@ -113,10 +115,11 @@ import { evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, white
     .lb-icon mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .lb-result { flex: 0 0 auto; white-space: nowrap; line-height: 1.5; font-weight: 700; color: var(--mat-sys-on-surface);
       padding: 0 8px; border-radius: 999px; border: 1px solid var(--mat-sys-outline); font-variant-numeric: tabular-nums; }
-    .lb-player { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+    .lb-player { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+    .lb-who { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
     .lb-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .lb-title { font-weight: 700; font-size: 0.85em; color: var(--rh-accent); margin-right: 0.25em; }
-    .lb-elo { margin-left: 0.4em; color: var(--mat-sys-on-surface-variant); font-size: 0.9em; font-variant-numeric: tabular-nums; }
+    .lb-elo { color: var(--mat-sys-on-surface-variant); font-size: 0.8rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
     .lb-clock { flex: 0 0 auto; font-variant-numeric: tabular-nums; padding: 0 6px; border-radius: 4px;
       border: 1px solid transparent; }
     .to-move .lb-clock { font-weight: 700; border-color: var(--rh-accent); }

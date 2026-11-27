@@ -1384,7 +1384,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   der Fehler mit „Brett entfernen“). Je Brett eine umrandete Karte (Radius 8)
   mit „Brett n“ (behält mind. 3,5 em, der Zusatz kürzt mit „…“, voller Text als Tooltip; Kopf-Abstand 4 px), rechts die **Zugnummer** „Zug 34“ (`tabular-nums`, laufend `floor(plies/2)+1`, fertig der letzte Zug;
   Tooltip „Weiß/Schwarz am Zug“ bzw. „Letzter Zug der Partie“) und Ergebnis-Chip oben, Spielerzeile oben (Gegenseite) und unten (eigene Seite): Titel in `--rh-accent`,
-  Name mit „…“, Elo leise, Uhr `tabular-nums` — die Seite am Zug fett mit Akzentrahmen (E-Ink: Rahmen schwarz). Das Brett ist
+  Name mit „…“, die Elo seit 1.035.2 in eigener Zeile darunter (0,8 rem, on-surface-variant, nie gekürzt), Uhr `tabular-nums` senkrecht mittig — die Seite am Zug fett mit Akzentrahmen (E-Ink: Rahmen schwarz). Das Brett ist
   `app-chess-board` (5.12) ohne eigene Bedienung; Engine-Balken 10 px links am Brett, Weißanteil weiß auf dunkel, ohne
   Bewertung gestrichelter leerer Rahmen, Wert als leise Zeile darunter; mit „Besten Zug zeigen“ ein blauer Pfeil (Chessground
   `blue`, wie die Live-Engine im Analysebrett) und das SAN fett (600, on-surface) am Ende der Wertzeile — nur zur Bewertung der
@@ -1662,6 +1662,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-27 | 1.035.2 · Turnierseite | Live-Bretter: Elo in eigener Zeile unter dem Spielernamen (0,8 rem, leise), Name kürzt allein mit „…“, Uhr senkrecht mittig (8.2) | Bei langen Namen war die Elo auf schmalen Karten abgeschnitten | Nutzerwunsch 27.11. |
 | 2026-11-27 | 1.035.0 · Turnierseite | Live-Bretter: Schalter „Vibrieren“ in der Werkzeugzeile nach „Besten Zug zeigen“, nur wo `navigator.vibrate` existiert; Muster Ergebnis lang-kurz-lang, Bewertungssprung drei kurze Stöße, Einschalten ein kurzer (8.2) | Am Handy mitbekommen, wenn sich etwas tut, ohne ständig hinzusehen | Nutzerwunsch 27.11. |
 | 2026-11-26 | 1.033.0 · Turnierseite | Live-Bretter: Chip „Nur ein Zug“ vor der Uhr der Seite am Zug (Akzent-Pille 0,72 rem, Tooltip bester/nächstbester, kein Zeilensprung, ohne Zug zu verraten) (8.2) | Kritische Momente auf einen Blick, ohne die Lösung zu zeigen | Nutzerwunsch 26.11. |
 | 2026-11-26 | 1.032.0 · Turnierseite | Live-Bretter: alle Quellen (Turnier, Begegnungen mit Stand/Ø-Elo, fremde Runden) als Liste „Übertragungen“ untereinander über dem Raster, 0,85 rem, Umbruch statt Ellipse; Turnier-Link aus dem Seitenkopf dorthin (8.2) | Links standen seit dem einen Raster verstreut | Nutzerwunsch 26.11. |

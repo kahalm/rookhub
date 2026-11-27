@@ -175,6 +175,32 @@ describe('LiveBoardCardComponent', () => {
     host.remove();
   });
 
+  it('Elo unter dem Namen (27.11.): bei 240 px und langem Namen kürzt nur der Name, die Elo bleibt ganz sichtbar', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LiveBoardCardComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.width = '240px';
+    document.body.appendChild(host);
+    fixture.componentRef.setInput('game', { ...GAME, white: { ...GAME.white, name: 'Sehr langer Name, Wilhelmine-Kunigunde Maria' },
+      black: { ...GAME.black, name: 'Noch längerer Name, Bartholomäus-Maximilian Josef' } });
+    fixture.componentRef.setInput('board', 1);
+    fixture.detectChanges();
+    const card = host.querySelector('.lb-card')!.getBoundingClientRect();
+    for (const row of Array.from(host.querySelectorAll('.lb-player')) as HTMLElement[]) {
+      const name = row.querySelector('.lb-name') as HTMLElement;
+      const elo = row.querySelector('.lb-elo') as HTMLElement;
+      expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);                       // Name kürzt mit „…“
+      expect(elo.getBoundingClientRect().top).toBeGreaterThanOrEqual(name.getBoundingClientRect().bottom - 1);   // eigene Zeile darunter
+      expect(elo.scrollWidth).toBeLessThanOrEqual(elo.clientWidth + 1);                 // Elo ungekürzt
+      expect(elo.getBoundingClientRect().right).toBeLessThanOrEqual(card.right);
+      expect(row.querySelector('.lb-clock')!.getBoundingClientRect().right).toBeLessThanOrEqual(card.right);
+    }
+    expect(host.querySelectorAll('.lb-elo')[0].textContent!.trim()).toBe('2500');      // oben Schwarz
+    host.remove();
+  });
+
   it('Brett drehen: Knopf im Kopf meldet turn; bei 240 px mit Analyse und ✕ passt der Kopf, nichts abgeschnitten', async () => {
     await TestBed.configureTestingModule({
       imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' })],
