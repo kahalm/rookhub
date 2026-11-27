@@ -34,8 +34,8 @@ Je Aufnahme entstehen bis zu drei Arten Bilder (alle in `shots/`):
 
 | Umgebung | Drossel der API je Adresse | `--rate` (Vorgabe) | `--concurrency` (Vorgabe) |
 |----------|----------------------------|--------------------|---------------------------|
-| `--env dev` | 2000/min (`RateLimiting__PermitScale=20`) | 1600/min | 8 |
-| `--env prod` | 100/min | 70/min | 2 |
+| `--env dev` | 6000/min (`RateLimiting__PermitScale=20`, bis 1.036.0 2000/min) | 1600/min | 8 |
+| `--env prod` | 300/min (bis 1.036.0 100/min; Vorgabe bewusst gelassen) | 70/min | 2 |
 
 Ausdrückliche `--rate`/`--concurrency` gehen immer vor. Die Vorgabe bleibt mit Abstand unter der Drossel, weil die
 Server-Minute auch Anfragen von vorher mitzählt (Poller, Nachzügler). Steht Dev (noch) auf `PermitScale=5` (500/min),
@@ -295,10 +295,10 @@ Benachrichtigungen) ändern sich auch ohne Umbau — das ist kein Fehler.
 - Jede Aufnahme (mit `--fast`: jede Seite) bekommt einen frischen Browser-Kontext: angemeldet = `rookhub_user` im localStorage
   (die Antwort von `POST /api/auth/login`), Sprache `de`, Design über `rookhub_app_theme` + Cookie, Service Worker aus,
   Animationen aus.
-- **Drossel**: die API begrenzt je Adresse (Prod 100 Anfragen/min global, anonyme Wege teils 60/min; Dev das Zwanzigfache), und alle Aufnahmen
+- **Drossel**: die API begrenzt je Adresse (Prod 300 Anfragen/min global, anonyme Wege teils 60/min; Dev das Zwanzigfache), und alle Aufnahmen
   kommen von einer Adresse. Ohne Bremse lief der erste Lauf in hunderte 429 und fotografierte Fehlerzustände (und
   füllt nebenbei das Log). Deshalb laufen alle API-Aufrufe durch ein gemeinsames Fenster von `--rate` je Minute
-  (Vorgabe dev 1600, prod 70 — Dev läuft mit 2000/min, siehe „Tempo"; Antworten aus dem Zwischenspeicher zählen nicht); `POST /api/client-log` wird gar nicht erst
+  (Vorgabe dev 1600, prod 70 — Dev läuft mit 6000/min, siehe „Tempo"; Antworten aus dem Zwischenspeicher zählen nicht); `POST /api/client-log` wird gar nicht erst
   geschickt. Antwortet der Server trotzdem 429, pausieren alle eine Minute und die Seite wird neu aufgenommen; die Zahl
   der Pausen steht am Ende der Ausgabe und im Kopf der Übersicht.
 - Gewartet wird, bis 0,8 s keine Anfrage mehr läuft, höchstens 60 s (Poller halten das Netz nie ganz still), danach

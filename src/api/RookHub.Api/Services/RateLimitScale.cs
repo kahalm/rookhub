@@ -4,7 +4,7 @@ namespace RookHub.Api.Services;
 /// Faktor auf alle Deckel des Rate-Limiters (<c>RateLimiting:PermitScale</c>), Vorgabe 1 = unveraendert.
 ///
 /// Gedacht fuer den E2E-Stack (<c>compose.e2e.yml</c>): dort faehrt die GANZE Suite von einer
-/// Adresse, und der globale Deckel von 100 Anfragen je Minute schlug mitten im Lauf zu — am
+/// Adresse, und der globale Deckel (damals 100 Anfragen je Minute) schlug mitten im Lauf zu — am
 /// 2026-09-13 lokal gemessen 25 Absagen in einem Lauf von zwei Minuten, verteilt auf Menue,
 /// Anmeldung und Puzzle-Endpunkte. Welcher Test dabei scheitert, ist Zufall.
 ///

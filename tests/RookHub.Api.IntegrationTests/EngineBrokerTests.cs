@@ -276,8 +276,8 @@ public class EngineBrokerTests(EngineBrokerFixture fixture) : IAsyncLifetime, IC
     [MySqlFact]
     public async Task ProviderPolls_AreNotRateLimited()
     {
-        // Der globale Limiter lässt 100 Anfragen je Minute und IP durch. 13 Provider pollen 78-mal je Minute,
-        // dazu kommen Uploads — hier 130 Abrufe in wenigen Sekunden mit einem REGISTRIERTEN Secret, keiner darf 429
+        // Der globale Limiter ließ damals 100 Anfragen je Minute und IP durch (heute 300). 13 Provider pollen 78-mal je
+        // Minute, dazu kommen Uploads — hier 130 Abrufe in wenigen Sekunden mit einem REGISTRIERTEN Secret, keiner darf 429
         // sein. (Unbekannte Secrets sind je Adresse gedeckelt, siehe den Test darunter.)
         var (_, _, engineToken) = await UserAsync();
         using var provider = Client(engineToken);

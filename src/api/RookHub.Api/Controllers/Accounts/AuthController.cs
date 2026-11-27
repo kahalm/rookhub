@@ -94,6 +94,7 @@ public class AuthController : BaseApiController
     /// Anmeldung des Zielkontos (30 Tage, ohne <c>imp</c>-Claim, samt geteiltem Cookie) — damit fielen
     /// alle Impersonations-Sperren (E-Mail aendern, API-Token anlegen) und der Admin-Bezug im Log weg.</remarks>
     [Authorize]
+    [EnableRateLimiting(RateLimitPartitions.AuthHandoffPolicy)]
     [HttpPost("handoff")]
     [DenyWhileImpersonating]
     public async Task<IActionResult> Handoff(CancellationToken ct)
@@ -124,7 +125,7 @@ public class AuthController : BaseApiController
     /// <c>/api/auth/rh-session</c>, N6-001). Der alte Pfad <c>handoff/exchange</c> ist entfernt.</para>
     /// </remarks>
     [AllowAnonymous]
-    [EnableRateLimiting("auth")]
+    [EnableRateLimiting(RateLimitPartitions.AuthHandoffPolicy)]
     [HttpPost("rh-session/handoff")]
     public async Task<ActionResult<AuthResponseDto>> HandoffExchange([FromBody] HandoffExchangeDto dto, CancellationToken ct)
     {

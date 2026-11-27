@@ -8,6 +8,10 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Controllers;
 using RookHub.Api.Controllers.Accounts;
+using RookHub.Api.Services;
+using System.Security.Claims;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Http;
 
 namespace RookHub.Api.Tests;
 
@@ -44,12 +48,15 @@ public class AuthRateLimitTests
         Assert.Equal("auth-permissions", policies[nameof(AuthController.GetPermissions)]);
         Assert.Equal("auth-session", policies[nameof(AuthController.SharedSession)]);
         Assert.Equal("auth-session", policies[nameof(AuthController.EndSharedSession)]);
+        // Hub-Wechsel (Code holen + einlösen) nicht mehr im Login-Fenster: jeder Sprung kostete dort zwei der zehn
+        // Versuche (Prod 27.11.2026). Der Code ist 256 Bit Zufall, kurzlebig und ans geteilte Cookie gebunden.
+        Assert.Equal(RateLimitPartitions.AuthHandoffPolicy, policies[nameof(AuthController.Handoff)]);
+        Assert.Equal(RateLimitPartitions.AuthHandoffPolicy, policies[nameof(AuthController.HandoffExchange)]);
 
-        // Alles, was ein Passwort oder einen Code prüft, bleibt im strengen Fenster.
+        // Alles, was ein Passwort prüft, bleibt im strengen Fenster (Brute-Force).
         foreach (var strict in new[]
                  {
-                     nameof(AuthController.Register), nameof(AuthController.Login), nameof(AuthController.Handoff),
-                     nameof(AuthController.HandoffExchange),
+                     nameof(AuthController.Register), nameof(AuthController.Login),
                      nameof(AuthController.ForgotPassword),
                      nameof(AuthController.ResetPassword), nameof(AuthController.ChangePassword),
                  })
@@ -74,6 +81,7 @@ public class AuthRateLimitTests
 
         Assert.Contains("auth-permissions", used);
         Assert.Contains("auth-session", used);
+        Assert.Contains(RateLimitPartitions.AuthHandoffPolicy, used);
         Assert.Empty(used.Except(registered));
     }
 
@@ -88,5 +96,51 @@ public class AuthRateLimitTests
         var next = src.IndexOf("AddPolicy(", start + 1, StringComparison.Ordinal);
         var block = src[start..(next < 0 ? src.Length : next)];
         Assert.Contains("ClaimTypes.NameIdentifier", block);
+    }
+
+    /// <summary>Die Deckel nach dem Prod-Fall vom 27.11.2026 (ein Nutzer, Hub-Wechsel): global 300, Rechte 90, Sitzung 180,
+    /// Übergabe 180 — Login bleibt bei 10.</summary>
+    [Fact]
+    public void Ceilings_AfterHubSwitchIncident()
+    {
+        Assert.Equal(300, RateLimitPartitions.GlobalPermitPerMinute);
+        Assert.Equal(90, RateLimitPartitions.AuthPermissionsPermitPerMinute);
+        Assert.Equal(180, RateLimitPartitions.AuthSessionPermitPerMinute);
+        Assert.Equal(180, RateLimitPartitions.AuthHandoffPermitPerMinute);
+        Assert.Contains(@"AddPolicy(""auth"", ctx => PerIpFixedWindow(ctx, 10 * permitScale))", StartupSource.All());
+    }
+
+    /// <summary>Code holen zählt je KONTO (ein Nutzer hinter einem NAT sperrt nicht die anderen), Code einlösen — ohne
+    /// Anmeldung — je Adresse; beide Fenster sind getrennt.</summary>
+    [Fact]
+    public void HandoffPolicy_IssueCountsPerAccount_RedeemPerAddress()
+    {
+        using var limiter = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.AuthHandoff(c, 1));
+        var permit = RateLimitPartitions.AuthHandoffPermitPerMinute;
+
+        Assert.Equal(permit, Acquire(limiter, Ctx(userId: 1), permit + 5));
+        Assert.Equal(permit, Acquire(limiter, Ctx(userId: 2), permit + 5));   // anderes Konto, gleiche Adresse
+        Assert.Equal(permit, Acquire(limiter, Ctx(), permit + 5));            // anonym einlösen: eigenes Adressfenster
+        Assert.Equal(0, Acquire(limiter, Ctx(), 1));
+    }
+
+    private static HttpContext Ctx(int? userId = null)
+    {
+        var ctx = new DefaultHttpContext();
+        ctx.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("203.0.113.9");
+        if (userId is { } id)
+            ctx.User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, id.ToString()) }, "test"));
+        return ctx;
+    }
+
+    private static int Acquire(PartitionedRateLimiter<HttpContext> limiter, HttpContext ctx, int count)
+    {
+        var ok = 0;
+        for (var i = 0; i < count; i++)
+        {
+            using var lease = limiter.AttemptAcquire(ctx);
+            if (lease.IsAcquired) ok++;
+        }
+        return ok;
     }
 }

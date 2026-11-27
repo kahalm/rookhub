@@ -15,7 +15,7 @@ namespace RookHub.Api.Services;
 /// Fehlerbild; ein zweiter anonymer Endless-Spieler im selben Netz verlor still seine Server-Stände.</para>
 ///
 /// <para><b>Wie:</b> <see cref="KidsRead"/> (die für alle gleichen Lese-Endpunkte der Kinderseite) je IP mit deutlich
-/// höherem Deckel und aus dem globalen 100/min-Topf genommen — die Policy ist dort selbst die Obergrenze je Adresse.
+/// höherem Deckel und aus dem globalen Topf (<see cref="GlobalPermitPerMinute"/>) genommen — die Policy ist dort selbst die Obergrenze je Adresse.
 /// <see cref="AnonymousRead"/>/<see cref="AnonymousWrite"/> zählen je Konto, sonst je Adresse + gültiger
 /// <c>X-Visitor-Id</c> (die RookHub-App schickt sie auf jedem /api-Aufruf); die Obergrenze je Adresse bleibt der globale
 /// Limiter, denn die Visitor-Id ist frei wählbar. KidHub schickt bewusst KEINE Visitor-Id und zählt deshalb je Adresse.</para>
@@ -29,12 +29,34 @@ public static class RateLimitPartitions
     /// Schriften — ein Kapitel mit 50 Diagrammbildern sind 50+ Anfragen auf einmal); der globale Limiter nimmt ihn aus.</summary>
     public const string EbookEntriesPolicy = "ebook-entries";
     /// <summary>Datei und Titelbild der E-Book-Bibliothek (0.781.1): pdf.js lädt große Bücher in vielen Bereichsanfragen
-    /// (64-KB-Stücke), die Übersicht 24 Titelbilder je Seite — im globalen 100er-Topf sperrte ein einziges Buch die Adresse
+    /// (64-KB-Stücke), die Übersicht 24 Titelbilder je Seite — im globalen Topf (damals 100) sperrte ein einziges Buch die Adresse
     /// eine Minute lang für ALLES („Could not load“).</summary>
     public const string EbookFilePolicy = "ebook-file";
     public const int EbookFilePermitPerMinute = 1500;
 
-    public const int GlobalPermitPerMinute = 100;
+    /// <summary>Globaler Deckel je Adresse (1.036.1: 100 → 300). Ein einzelner angemeldeter Nutzer, der zwischen RookHub
+    /// und LeagueHub wechselt (Vereinspartien, Zusammenfassungen, Analyse), schickte allein aus dem RookHub-Frontend 87
+    /// /api-Anfragen in einer Minute — die anderen Hubs zählen auf derselben API mit, und 100 schnitt ihn ab („Gerade kamen
+    /// zu viele Anfragen“, Prod 27.11.2026).</summary>
+    public const int GlobalPermitPerMinute = 300;
+
+    /// <summary>Rechte-Abfrage (GET /api/auth/permissions) je Konto: jede sichtbare Oberfläche fragt beim Start, bei der
+    /// Rückkehr in den Tab und alle 2 min — beim schnellen Wechseln zwischen den Hubs reichten 30 nicht.</summary>
+    public const int AuthPermissionsPermitPerMinute = 90;
+    /// <summary>Geteilte Anmeldung (POST /api/auth/rh-session, rh-session/end) je Adresse: jeder App-Start ohne Anmeldung
+    /// fragt hier — eine Schulklasse hinter einer Adresse und Hub-Wechsel desselben Nutzers.</summary>
+    public const int AuthSessionPermitPerMinute = 180;
+
+    /// <summary>Policy-Name der Anmelde-Übergabe zwischen den Oberflächen (POST /api/auth/handoff und
+    /// rh-session/handoff).</summary>
+    public const string AuthHandoffPolicy = "auth-handoff";
+    /// <summary>Übergaben je Konto (Code holen, nur angemeldet) bzw. je Adresse (Code einlösen, ohne Anmeldung) und Minute.
+    /// Vorher hingen beide am Login-Fenster „auth“ (10/min je Adresse): jeder Hub-Wechsel kostete zwei davon, und ein
+    /// Nutzer, der zwischen RookHub und LeagueHub hin- und herspringt, sperrte sich nach fünf Sprüngen Login und Übergabe.
+    /// Gegen Raten braucht es das strenge Fenster hier nicht: Code holen verlangt eine gültige Sitzung (und keine
+    /// Impersonation), der Code hat 256 Bit Zufall, lebt 60 s, ist einmal einlösbar und verlangt beim Einlösen zusätzlich
+    /// das geteilte Cookie desselben Kontos (F1-008).</summary>
+    public const int AuthHandoffPermitPerMinute = 180;
     /// <summary>Eine Klasse von 30 Kindern braucht beim Start rund 90 (levels, courses, ggf. language-hint), danach je
     /// Stufenstart eine bis zwei — 240 lässt auch zwei Gruppen hinter derselben Adresse Luft.</summary>
     public const int KidsReadPermitPerMinute = 240;
@@ -116,8 +138,9 @@ public static class RateLimitPartitions
     public static string ClientIp(HttpContext ctx) => ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     /// <summary>Globaler Deckel je Adresse — außer für Endpunkte, deren eigene Policy schon die Obergrenze je Adresse
-    /// ist und höher liegt (<see cref="KidsReadPolicy"/>, <see cref="EbookEntriesPolicy"/>); sonst schnitte der globale
-    /// Topf sie doch wieder bei 100 ab.</summary>
+    /// ist (<see cref="KidsReadPolicy"/>, <see cref="EbookEntriesPolicy"/>, <see cref="EbookFilePolicy"/>); sonst schnitte
+    /// der globale Topf sie doch wieder bei <see cref="GlobalPermitPerMinute"/> ab bzw. zehrte eine Schulklasse ihn für die
+    /// übrige App auf.</summary>
     public static RateLimitPartition<string> Global(HttpContext ctx, int scale) =>
         HasOwnIpCeiling(ctx)
             ? RateLimitPartition.GetNoLimiter(KidsReadPolicy)
@@ -197,6 +220,10 @@ public static class RateLimitPartitions
 
     public static RateLimitPartition<string> ExplorerPaths(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), ExplorerPathsPermitPerMinute * scale);
+
+    /// <summary>Anmelde-Übergabe: Code holen je Konto, Code einlösen (ohne Anmeldung) je Adresse.</summary>
+    public static RateLimitPartition<string> AuthHandoff(HttpContext ctx, int scale) =>
+        FixedWindow(UserOrIp(ctx), AuthHandoffPermitPerMinute * scale);
 
     public static RateLimitPartition<string> UserSocial(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), UserSocialPermitPerMinute * scale);

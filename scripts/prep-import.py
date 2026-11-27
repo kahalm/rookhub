@@ -16,7 +16,7 @@ abgebrochener Lauf setzt so einfach neu an. Ein doppelt geschicktes Paket verbuc
     # ohne Server: Pakete nur zählen bzw. als .pgn.gz ablegen
     python3 scripts/prep-import.py --source Lumbra --dry-run LumbrasGigaBase_OTB_Complete.7z
 
-Drosseln: --rate (Anfragen je Minute, Vorgabe 60; die Prod-API erlaubt 100/min je IP, der Login zählt mit).
+Drosseln: --rate (Anfragen je Minute, Vorgabe 60; die Prod-API erlaubt 300/min je IP, der Login zählt mit).
 Bei 429 wartet das Skript (Retry-After), bei 5xx/Verbindungsfehlern versucht es es mit wachsender Pause erneut.
 """
 import argparse

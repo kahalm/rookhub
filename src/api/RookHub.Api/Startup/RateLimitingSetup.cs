@@ -18,8 +18,8 @@ public static class RateLimitingSetup
         services.AddSingleton<RateLimitRejectionHandler>();
         services.AddRateLimiter(options =>
         {
-            // 100/min je IP — außer für die Kinderseiten-Lesezugriffe („kids-read"), deren eigene Policy die Obergrenze je
-            // Adresse ist (siehe RateLimitPartitions).
+            // RateLimitPartitions.GlobalPermitPerMinute (300/min) je IP — außer für Kinderseite und E-Book-Leser
+            // („kids-read", „ebook-entries", „ebook-file"), deren eigene Policy die Obergrenze je Adresse ist.
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                 RookHub.Api.Services.RateLimitPartitions.Global(context, permitScale));
             AddLoginAndAnonymousPolicies(options, permitScale);
@@ -50,7 +50,13 @@ public static class RateLimitingSetup
     /// <summary>Anmeldung (je IP) und die offenen Endpunkte nach Zweck.</summary>
     private static void AddLoginAndAnonymousPolicies(RateLimiterOptions options, int permitScale)
     {
+        // Nur was ein Passwort oder einen Rate-Code prüft (Login, Registrierung, Passwort vergessen/zurücksetzen/ändern,
+        // Vereins-Code): 10/min je IP gegen Brute-Force.
         options.AddPolicy("auth", ctx => PerIpFixedWindow(ctx, 10 * permitScale));
+        // Anmelde-Übergabe zwischen den Oberflächen (handoff, rh-session/handoff): eigener Topf statt „auth" — jeder
+        // Hub-Wechsel kostete dort zwei der zehn Login-Versuche (Prod 27.11.2026). Begründung in RateLimitPartitions.
+        options.AddPolicy("auth-handoff", ctx =>
+            RookHub.Api.Services.RateLimitPartitions.AuthHandoff(ctx, permitScale));
         // Offene Endpunkte nach ZWECK getrennt (vorher teilten sich 21 davon „anonymous-puzzle", 30/min je IP — eine
         // Schulklasse hinter einer NAT-Adresse sah in KidHub ab dem 16. Kind 429). Schlüssel und Deckel in
         // RateLimitPartitions: Kinderseite je IP mit hohem Deckel und ohne den globalen Topf; anonyme Stände und
@@ -69,7 +75,7 @@ public static class RateLimitingSetup
     {
         // Community-Review-Flags (flag-hints): jeder eingeloggte User darf setzen/aufheben — aber
         // gedrosselt PRO USER, damit niemand per Id-Iteration den Admin-Review-Bestand des ganzen
-        // Katalogs umflaggt (der globale 100/min-IP-Limiter erlaubte ~6000 Flags/h).
+        // Katalogs umflaggt (der globale IP-Limiter, damals 100/min, erlaubte ~6000 Flags/h).
         options.AddPolicy("user-flag", ctx =>
             RateLimitPartition.GetFixedWindowLimiter(
                 partitionKey: ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
@@ -81,7 +87,7 @@ public static class RateLimitingSetup
                     QueueLimit = 0
                 }));
         // Nachricht an das Admin-Team (POST /api/messages/reply): offen für jedes Konto, und jede Nachricht legte bei
-        // ALLEN Admins Glocke + Web-Push an — nur der globale 100/min-IP-Deckel bremste (~6000 Nachrichten/h). Je KONTO;
+        // ALLEN Admins Glocke + Web-Push an — nur der globale IP-Deckel (damals 100/min) bremste (~6000 Nachrichten/h). Je KONTO;
         // die Glocke entprellt zusätzlich AdminMessageService (Serie ungelesener Nachrichten = eine Glocke je Admin).
         // Derselbe Topf gilt für Meldung und Quellen-Hinweis im Turnierverzeichnis — beide schreiben in diesen Kanal.
         options.AddPolicy("user-message", ctx => RookHub.Api.Services.RateLimitPartitions.UserMessage(ctx, permitScale));
@@ -105,22 +111,25 @@ public static class RateLimitingSetup
         // Rechte-Abfrage (GET /api/auth/permissions): eigene Partition PRO USER. Sie lief über das Klassen-Attribut
         // auf „auth" — jede sichtbare Oberfläche (RookHub, Turnierseite, LeagueHub) fragt beim Start, bei der Rückkehr
         // in den Tab und alle 2 min, und hinter einem NAT erschöpfte das das 10/min-Login-Fenster der ganzen IP.
+        // 90/min (vorher 30): beim schnellen Wechseln zwischen den Hubs lief ein einzelner Nutzer hinein (Prod 27.11.2026).
         options.AddPolicy("auth-permissions", ctx =>
             RateLimitPartition.GetFixedWindowLimiter(
                 partitionKey: ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                     ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 factory: _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 30 * permitScale,
+                    PermitLimit = RookHub.Api.Services.RateLimitPartitions.AuthPermissionsPermitPerMinute * permitScale,
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0
                 }));
         // Geteilte Anmeldung (POST /api/auth/rh-session, rh-session/end): JEDER App-Start ohne Anmeldung fragt hier (auf allen
         // vier Oberflächen) — eigene IP-Partition mit höherem Deckel statt „auth": eine Schulklasse, die KidHub öffnet,
-        // sind 25 Starts in einer Minute und sperrte sonst Anmeldung, Registrierung und „Passwort vergessen".
-        options.AddPolicy("auth-session", ctx => PerIpFixedWindow(ctx, 60 * permitScale));
+        // sind 25 Starts in einer Minute und sperrte sonst Anmeldung, Registrierung und „Passwort vergessen". 180/min
+        // (vorher 60): Hub-Wechsel desselben Nutzers zählen mit (Prod 27.11.2026).
+        options.AddPolicy("auth-session", ctx =>
+            PerIpFixedWindow(ctx, RookHub.Api.Services.RateLimitPartitions.AuthSessionPermitPerMinute * permitScale));
         // Chessable-Roh-Senken der Extension (problem-moves, session-moves, review-lines): eigene Partition PRO
-        // USER, zusätzlich zum globalen Deckel je IP. Vorher durfte ein Konto die vollen 100 Batches/min je IP
+        // USER, zusätzlich zum globalen Deckel je IP. Vorher durfte ein Konto die vollen 100 Batches/min je IP (damaliger Deckel)
         // schreiben (~1,3 GB/min). RepCheck flusht je Senke und Kurs höchstens alle 15 s — 60/min für alle drei
         // zusammen lässt auch mehreren offenen Kursen reichlich Luft. Die Menge je Konto deckelt ChessableSinkBytes.
         options.AddPolicy("extension-sink", ctx =>

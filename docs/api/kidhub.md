@@ -18,7 +18,7 @@ Eigene Oberfläche (`kidhub(-dev).oberschmid.homes`, drittes Angular-Projekt, si
 | POST | `/api/admin/kids/rebuild` | `puzzles.manage` | Leiter sofort neu rechnen → `{ levels, puzzles }` (nach einem Neuimport der Standard-Puzzles, der sie per Cascade leert) |
 
 **Rate-Limit nach Zweck** (Codereview 2026-09-29, A10-003): die Lese-Endpunkte (`language-hint`, `levels`, `levels/{level}`,
-`courses`, `courses/{id}/puzzles`) hängen an `kids-read` — 240/min je IP und AUS dem globalen 100/min-Topf genommen
+`courses`, `courses/{id}/puzzles`) hängen an `kids-read` — 240/min je IP und AUS dem globalen Topf (300/min) genommen
 (`RateLimitPartitions.Global`: die Policy ist dort selbst die Obergrenze je Adresse). Vorher teilten sie sich mit 15 anderen
 offenen Endpunkten `anonymous-puzzle` (30/min je IP), und eine Schulklasse hinter einer NAT-Adresse sah ab dem 16. Kind das
 Fehlerbild. KidHub schickt bewusst keine `X-Visitor-Id`, deshalb zählt hier die Adresse. Die übrigen offenen Endpunkte:

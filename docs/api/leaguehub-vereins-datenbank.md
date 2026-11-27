@@ -95,7 +95,7 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   **Importiert wird PORTIONSWEISE** (0.590.0, Wunsch „damit Progress nicht verloren geht“): die Übersicht liefert je
   Partie ihren eigenen PGN-Text (`games[].pgn`, Kopfzeilen roh wie gelesen, Zugtext unverändert; fehlt bei harten
   Fehlern), die Seite (`club-import-review.component.ts`) schickt je 10 Partien genau deren Text mit Nummern 1…n —
-  jede Portion wird sofort gespeichert. 10 statt 1, weil der globale Deckel 100 Anfragen/min je IP ist (Teilen-Link 60):
+  jede Portion wird sofort gespeichert. 10 statt 1, weil der globale Deckel damals 100 Anfragen/min je IP war (heute 300; Teilen-Link 60):
   500 Partien sind so 50 Anfragen. Eine abgerissene Portion wird zweimal wiederholt (429 wartet 20 s), eine Absage (400)
   nicht; war sie schon gespeichert und nur die Antwort verloren, zählt der Server sie als doppelt. Scheitert es endgültig,
   bleibt das Gespeicherte, und „Weiter importieren (n übrig)“ schickt nur den Rest. Ohne `pgn` (älterer Server) geht

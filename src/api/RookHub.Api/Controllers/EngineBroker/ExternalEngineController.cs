@@ -25,7 +25,7 @@ namespace RookHub.Api.Controllers.EngineBroker;
 /// <para><b>Arbeit</b> (<c>POST work</c> = Long-Poll, <c>POST work/{id}</c> = Upload): anonym — der Provider
 /// weist sich über sein <c>providerSecret</c> bzw. die Kennung des abgeholten Auftrags aus — und
 /// VOM RATE-LIMITER AUSGENOMMEN: 13 Provider pollen 78-mal je Minute, dazu die Uploads; unter dem globalen
-/// Deckel (100/min je IP) bauten wir genau die Drosselung nach, deretwegen es diesen Broker gibt. Ein
+/// Deckel (je IP, heute 300/min) bauten wir genau die Drosselung nach, deretwegen es diesen Broker gibt. Ein
 /// unbekanntes Secret bekommt nach der Wartezeit dasselbe 204 wie ein bekanntes ohne Arbeit — kein 401/404
 /// im Takt (log-watcher) und keine Auskunft nach außen. Solche Polls sind je Adresse gedeckelt
 /// (<see cref="UnknownSelectorThrottle"/>), der Rumpf des Polls auf <see cref="MaxAcquireBodyBytes"/>.</para>

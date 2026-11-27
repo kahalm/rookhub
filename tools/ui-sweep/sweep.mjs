@@ -46,8 +46,8 @@ const QUIET_MS = 800;
 // router-outlet steht (waitShellReady in checks.mjs). Läuft das ab und fehlt die Seite noch: Werkzeug-Befund „noch
 // geladen“ (not-ready) statt „Schlüssel statt Text“. Steht die Seite und nur die Hülle zeigt Schlüssel, bleibt „i18n-key“.
 const SHELL_READY_MAX_MS = 10000;
-// Die API drosselt je Adresse (Prod global 100 Anfragen/min, anonyme Wege teils 60/min; Dev läuft mit
-// RateLimiting__PermitScale=20, also 2000/min). Alle Aufnahmen kommen von EINER Adresse — ohne eigene Bremse lief der
+// Die API drosselt je Adresse (Prod global 300 Anfragen/min, anonyme Wege teils 60/min; Dev läuft mit
+// RateLimiting__PermitScale=20, also 6000/min). Alle Aufnahmen kommen von EINER Adresse — ohne eigene Bremse lief der
 // erste Lauf in hunderte 429 und fotografierte Fehlerzustände. Vorgaben je Umgebung, --rate/--concurrency gehen vor.
 // Steht Dev noch auf PermitScale 5 (500/min), ausdrücklich `--rate 400 --concurrency 4` geben.
 const ENV_DEFAULTS = { dev: { rate: 1600, concurrency: 8 }, prod: { rate: 70, concurrency: 2 } };
@@ -101,7 +101,7 @@ const HELP = `UI-Sweep — Screenshots aller Seiten + automatische Prüfung + Ve
                          empty (Konto ganz ohne Daten → Leerzustände), trainer (ClubHub-Trainer einer Gruppe)
                                                                                      Vorgabe: anon,user
   --concurrency n        gleichzeitige Seiten (Vorgabe dev 8, prod 2 — mehr läuft in die Drossel der API)
-  --rate n               höchstens n API-Anfragen je Minute (Vorgabe dev 1600 — Dev drosselt bei 2000 je Adresse,
+  --rate n               höchstens n API-Anfragen je Minute (Vorgabe dev 1600 — Dev drosselt bei 6000 je Adresse,
                          PermitScale 20; prod 70 — Prod drosselt bei 100). Antworten aus dem Zwischenspeicher zählen nicht
   --fast                 jede Seite (Route × Konto × Design × Sprache) nur EINMAL laden und alle Breiten durch Umstellen
                          der Fenstergröße fotografieren (schmalste zuerst). Grenze: Handy-Ansicht nur über die Breite,

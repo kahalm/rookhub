@@ -25,7 +25,7 @@ async function login(user, password) {
 }
 function api(token) {
   const call = async (method, p, body, raw) => {
-    await new Promise(r => setTimeout(r, 700));   // Drossel der API: 100 Anfragen/min je Adresse
+    await new Promise(r => setTimeout(r, 700));   // Drossel der API: 300 Anfragen/min je Adresse (bis 1.036.0 100)
     const headers = { Authorization: `Bearer ${token}` };
     if (body !== undefined && !(body instanceof FormData)) headers['content-type'] = 'application/json';
     const r = await fetch(`${BASE}${p}`, { method, headers, body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body) });

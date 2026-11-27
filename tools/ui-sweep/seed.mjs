@@ -61,7 +61,7 @@ export async function login(base, user, password) {
 
 export function api(base, token) {
   const call = async (method, path, body, retried = false) => {
-    // Drossel der API (100/min je Adresse): 0,65 s Abstand; ein 429 trotzdem (das Fenster des Servers zählt auch die
+    // Drossel der API (300/min je Adresse, bis 1.036.0 100/min): 0,65 s Abstand; ein 429 trotzdem (das Fenster des Servers zählt auch die
     // Anfragen davor) → eine Minute warten und einmal neu — sonst fehlten ganze Parameter.
     await new Promise(r => setTimeout(r, 650));
     const form = body instanceof FormData;

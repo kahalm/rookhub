@@ -79,7 +79,7 @@ Lichess-Konto ging gar nichts. Direkt gibt es keine fremde Drossel, keinen Liche
    alle 15 s); Kestrel bricht Rümpfe unter 240 B/s ab („Reading the request body timed out due to data arriving too
    slowly“). `Submit` setzt `IHttpMinRequestBodyDataRateFeature.MinDataRate = null` und `[DisableRequestSizeLimit]` —
    `EngineBrokerTests` (Integration, echter Kestrel) fällt ohne beides um.
-2. **Rate-Limiter**: 13 Provider sind 78 Polls je Minute plus Uploads, der globale Deckel 100/min je IP →
+2. **Rate-Limiter**: 13 Provider sind 78 Polls je Minute plus Uploads, der globale Deckel (damals 100/min, heute 300/min) je IP →
    `[DisableRateLimiting]` an Poll UND Upload (schaltet auch den globalen Limiter ab — per Test belegt: ohne es 429).
    Registrierung und `token/test` bleiben limitiert.
 3. **Puffernde Proxys**: der Frontend-nginx hat `location ^~ /api/external-engine/` mit `proxy_request_buffering off`

@@ -354,7 +354,7 @@ public class PrepReadApiTests(PrepReadFixture fixture) : IAsyncLifetime, IClassF
 
 public sealed class PrepReadFixture() : MariaDbClassFixture("prpr", withApp: true)
 {
-    // Die Klasse schickt gut 60 Anfragen von EINER Adresse; der globale Deckel (100/min) soll nicht mitentscheiden.
+    // Die Klasse schickt gut 60 Anfragen von EINER Adresse; der globale Deckel (300/min) soll nicht mitentscheiden.
     protected override ApiFactory CreateFactory(string connectionString) =>
         new(connectionString, new Dictionary<string, string?> { [RateLimitScale.ConfigKey] = "10" });
 }

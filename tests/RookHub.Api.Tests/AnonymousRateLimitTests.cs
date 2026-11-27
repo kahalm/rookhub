@@ -136,7 +136,7 @@ public class AnonymousRateLimitTests
     }
 
     /// <summary>Das Fehlerszenario: 30 Kinder hinter EINER Adresse öffnen KidHub (levels + courses + ggf. language-hint
-    /// je Kind = 90 Anfragen in einer Minute). Weder die Policy noch der globale 100/min-Topf dürfen sie abweisen.</summary>
+    /// je Kind = 90 Anfragen in einer Minute). Weder die Policy noch der globale Topf dürfen sie abweisen.</summary>
     [Fact]
     public void KidsRead_LetsAWholeClassBehindOneAddressThrough_AndLeavesTheGlobalBucketAlone()
     {
@@ -148,7 +148,7 @@ public class AnonymousRateLimitTests
         Assert.Equal(90, Acquired(kids, ctx, 90));
 
         // Der globale Topf derselben Adresse ist danach unberührt — die übrige App (Anmeldung, Sitzung) läuft weiter.
-        Assert.Equal(RateLimitPartitions.GlobalPermitPerMinute, Acquired(global, Context(policy: "auth-session"), 150));
+        Assert.Equal(RateLimitPartitions.GlobalPermitPerMinute, Acquired(global, Context(policy: "auth-session"), RateLimitPartitions.GlobalPermitPerMinute + 50));
     }
 
     /// <summary>Die Obergrenze je Adresse bleibt: kids-read ist aus dem globalen Topf genommen, also MUSS die Policy
@@ -158,7 +158,11 @@ public class AnonymousRateLimitTests
     {
         using var kids = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.KidsRead(c, 1));
         Assert.Equal(RateLimitPartitions.KidsReadPermitPerMinute, Acquired(kids, Context(), RateLimitPartitions.KidsReadPermitPerMinute + 20));
-        Assert.True(RateLimitPartitions.KidsReadPermitPerMinute > RateLimitPartitions.GlobalPermitPerMinute);
+        // Seit der globale Deckel 300 ist, liegt kids-read darunter — die Ausnahme bleibt trotzdem nötig: eine volle
+        // Klasse zehrt sonst den globalen Topf der Adresse auf, und die übrige App (Anmeldung, Sitzung) bekäme 429.
+        using var global = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.Global(c, 1));
+        Acquired(global, Context(policy: "kids-read"), RateLimitPartitions.KidsReadPermitPerMinute);
+        Assert.Equal(RateLimitPartitions.GlobalPermitPerMinute, Acquired(global, Context(), RateLimitPartitions.GlobalPermitPerMinute));
     }
 
     [Fact]

@@ -11,6 +11,13 @@
 | POST | `/api/auth/rh-session` | Geteilte Anmeldung der Schwesterseite übernehmen — Nachweis ist das Cookie auf der gemeinsamen Elterndomäne (`SharedSessionService`, `Path=/api/auth/rh-session`). **204 = keine**, ohne Unterscheidung — bewusst kein 401: jeder anonyme App-Start fragt hier, und ein 401 zählte für die Überwachung als abgelehnter Anmeldeversuch (log-watcher `auth_bruteforce`, Fehlalarm 2026-09-15). Ein untaugliches Cookie wird dabei gelöscht |
 | POST | `/api/auth/rh-session/end` | Geteilte Anmeldung beenden (Abmelden) — löscht das Cookie, immer 204 |
 
+**Rate-Limits** (`Startup/RateLimitingSetup.cs`, `Services/RateLimitPartitions.cs`; Stand 28.11.2026): `auth` 10/min je IP
+nur für Login, Registrierung, Passwort vergessen/zurücksetzen/ändern (Brute-Force); `auth-handoff` 180/min für die
+Übergabe zwischen den Oberflächen (`handoff` je Konto, `rh-session/handoff` je IP — vorher im `auth`-Fenster, jeder
+Hub-Wechsel kostete zwei der zehn Login-Versuche; der Code ist 256 Bit Zufall, 60 s gültig, einmalig und ans geteilte
+Cookie desselben Kontos gebunden); `auth-session` 180/min je IP (`rh-session`, `rh-session/end`); `auth-permissions`
+90/min je Konto; darüber der globale Deckel 300/min je IP.
+
 **Absolute Obergrenze der Sitzung** (Codereview A1-007/P-14, entschieden 25.10.2026): jede Anmeldung trägt ihren
 Zeitpunkt als `auth_time`-Claim (Unix-Sekunden) im JWT UND im Cookie `rh_session`. Login, Registrierung und Passwortwechsel
 setzen ihn auf jetzt; das Einlösen des Cookies (`rh-session`), die Übergabe (`handoff` → `rh-session/handoff`) und das
