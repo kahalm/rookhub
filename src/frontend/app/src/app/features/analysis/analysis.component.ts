@@ -1,7 +1,7 @@
 import { Component, HostListener, OnDestroy, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, Inject, LOCALE_ID } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -29,7 +29,7 @@ import { PositionRepertoiresComponent } from '../repertoire/position-repertoires
 import { OpeningExplorerComponent } from './opening-explorer.component';
 import { AuthService } from '../../core/auth.service';
 import { AnalysisSettings, DEPTH_OPTIONS, EVAL_SETTLE_DEPTH } from './analysis-settings';
-import { AnalysisRouteParams, readAnalysisParams } from './analysis-route';
+import { AnalysisRouteParams, analysisLoadKey, readAnalysisParams } from './analysis-route';
 import { PositionMenuComponent } from './position-menu.component';
 import { MarkPositionButtonComponent } from '../../shared/mark-position/mark-position-button.component';
 import { MarkOrigin } from '../../shared/mark-position/marked-positions.service';
@@ -196,6 +196,12 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   readonly compare: AnalysisCompare;
 
   private sub?: Subscription;
+  /** Query-Wechsel bei offener Seite (1.035.3), siehe {@link reloadOnQueryChange}. */
+  private querySub?: Subscription;
+  /** Stellungs-Vorgaben der zuletzt geladenen Adresse ({@link analysisLoadKey}). */
+  private loadKey = '';
+  /** Zählt jeden Ladevorgang hoch — eine späte Antwort (Live-PGN, Verlauf) eines überholten Aufrufs verfällt. */
+  private loadSeq = 0;
   private errorSub?: Subscription;
   private fallbackSub?: Subscription;
   /** Gemerkte Einstellungen (localStorage, je Gerät). */
@@ -250,7 +256,34 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // External Engines des Lichess-Kontos (nur eingeloggt; stiller Hintergrund-Feed — ohne Liste bleibt es beim
     // Browser-WASM).
     if (this.auth.isLoggedIn) this.picker.load();
+    this.loadKey = analysisLoadKey(this.route.snapshot.queryParamMap);
     this.loadInitialPosition(p);
+    this.querySub = this.route.queryParamMap.subscribe(m => this.reloadOnQueryChange(m));
+  }
+
+  /**
+   * Neue Stellungs-Vorgaben bei offener Seite (Bug 2026-11-27, „am Handy immer Anfangsstellung“): steht schon `/analysis`
+   * offen und kommt eine neue Adresse nur mit anderer Query (`?live=…`, `?pgn=…`, `?fen=…`), verwendet Angular die
+   * Komponente weiter — `ngOnInit` lief nicht erneut, das Brett blieb auf der alten Stellung bzw. der Grundstellung.
+   * Jetzt wird dann neu geladen: offene Linien-Sitzung und Verlauf speichern und schließen, Vorgaben übernehmen, laden.
+   */
+  private reloadOnQueryChange(map: ParamMap): void {
+    const key = analysisLoadKey(map);
+    if (key === this.loadKey) return;
+    this.loadKey = key;
+    const p = readAnalysisParams(map, fen => this.isValidFen(fen));
+    this.historySaver.flush();
+    this.historySaver.newSession();
+    this.study?.destroy();
+    this.study = null;
+    if (this.studyEngineHidden) { this.studyEngineHidden = false; this.engineOn = this.engineOnBeforeBlind; }
+    this.setNoEngine(false);
+    this.pgnInput = '';
+    this.applyRouteParams(p);
+    this.engine.setDepth(this.depthSetting);
+    this.engine.setMultiPv(this.linesCount);
+    this.loadInitialPosition(p);
+    this.cdr.markForCheck();
   }
 
   /** Vorgaben der Adresse übernehmen. Von der Auftragsseite: Engine + Suchparameter des Auftrags, damit hier
@@ -292,10 +325,11 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // lang für einen Query-Param; über Seitengrenzen kommt der State nicht an, dann gilt `?pgn=` (LeagueHub, 0.592.0).
     const statePgn = (window.history.state && window.history.state.pgn) as string | undefined;
     const pgn = typeof statePgn === 'string' && statePgn.trim() ? statePgn : p.pgn;
+    const seq = ++this.loadSeq;
     if (p.historyId != null && this.auth.isLoggedIn) {
       this.resetToStart();
       this.history.get(p.historyId).subscribe({
-        next: e => this.openHistoryEntry(e),
+        next: e => { if (seq === this.loadSeq) this.openHistoryEntry(e); },
         error: () => this.snackbar.warn(this.translate.instant('analysis.history.loadFailed')),   // F2-009 wie openHistoryEntry
       });
       return;
@@ -304,7 +338,12 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (!pgn && p.live) {
       this.resetToStart();
       this.games.livePgn(p.live.roundId, p.live.gameId).subscribe({
-        next: text => { if (text.trim()) this.openPgn(text, p.blind); this.cdr.markForCheck(); },
+        next: text => {
+          if (seq !== this.loadSeq) return;
+          // leere Antwort (Partie unbekannt) nicht stumm als Grundstellung zeigen
+          if (text.trim()) this.openPgn(text, p.blind); else this.snackbar.warn(this.translate.instant('analysis.liveLoadFailed'));
+          this.cdr.markForCheck();
+        },
         error: () => this.snackbar.warn(this.translate.instant('analysis.liveLoadFailed')),
       });
       return;
@@ -448,6 +487,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.historySaver.flush();
     this.study?.destroy();
     this.sub?.unsubscribe();
+    this.querySub?.unsubscribe();
     this.errorSub?.unsubscribe();
     this.fallbackSub?.unsubscribe();
     this.cutSub?.unsubscribe();

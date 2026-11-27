@@ -1,4 +1,4 @@
-import { nearestMaiaElo, readAnalysisParams } from './analysis-route';
+import { analysisLoadKey, nearestMaiaElo, readAnalysisParams } from './analysis-route';
 
 describe('readAnalysisParams', () => {
   const read = (p: Record<string, string>, valid = true) => readAnalysisParams({ get: k => p[k] ?? null }, () => valid);
@@ -42,5 +42,17 @@ describe('readAnalysisParams', () => {
     expect(read({ live: 'fnmEB1kH/RD8sbYw1' }).live).toBeNull();
     expect(read({ live: '../x.RD8sbYw1' }).live).toBeNull();
     expect(read({}).live).toBeNull();
+  });
+});
+
+describe('analysisLoadKey (1.035.3)', () => {
+  const key = (p: Record<string, string>) => analysisLoadKey({ get: k => p[k] ?? null });
+  it('ändert sich mit Stellung, Zügen, Partie, Verlauf und Live-Partie', () => {
+    expect(key({})).not.toBe(key({ live: 'fnmEB1kH.RD8sbYw1' }));
+    expect(key({ live: 'fnmEB1kH.RD8sbYw1' })).not.toBe(key({ live: 'fnmEB1kH.AAAAAAAA' }));
+    for (const k of ['fen', 'moves', 'pgn', 'history']) expect(key({})).not.toBe(key({ [k]: 'x' }));
+  });
+  it('bleibt bei „Ohne Engine“, Engine-Vorgaben und Rücksprung gleich', () => {
+    expect(key({ live: 'fnmEB1kH.RD8sbYw1' })).toBe(key({ live: 'fnmEB1kH.RD8sbYw1', blind: '1', depth: '30', from: '/x', game: '/g' }));
   });
 });

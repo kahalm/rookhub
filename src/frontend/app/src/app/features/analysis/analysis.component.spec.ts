@@ -7,7 +7,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
-import { Subject, of, throwError } from 'rxjs';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { AnalysisComponent } from './analysis.component';
 import { DEPTH_OPTIONS } from './analysis-settings';
 import { AnalysisEngineService } from './analysis-engine.service';
@@ -49,7 +49,10 @@ function makeComponent(params: Record<string, string | null>, opts: {
     stop: () => {},
     destroy: () => {},                  // in ngOnDestroy aufgerufen
   };
-  const route: any = { snapshot: { queryParamMap: { get: (k: string) => params[k] ?? null } } };
+  const paramMap = (ps: Record<string, string | null>) => ({ get: (k: string) => ps[k] ?? null });
+  // queryParamMap als Strom (1.035.3): neue Query bei offener Seite lädt neu — Specs schieben sie über c.__query.next
+  const query = new BehaviorSubject<any>(paramMap(params));
+  const route: any = { snapshot: { queryParamMap: paramMap(params) }, queryParamMap: query };
   const snackBar: any = { open: () => {}, show: jasmine.createSpy('show'), warn: jasmine.createSpy('warn') };
   const router: any = {
     navigateByUrl: jasmine.createSpy('navigateByUrl'),
@@ -101,6 +104,7 @@ function makeComponent(params: Record<string, string | null>, opts: {
     games, analyzeGame);
   c.spar.maiaDelayMs = 0;
   c.__http = http;
+  c.__query = { next: (ps: Record<string, string | null>) => { route.snapshot.queryParamMap = paramMap(ps); query.next(paramMap(ps)); } };
   c.__analyzeGame = analyzeGame;
   c.__router = router;
   c.__maia = maia;
@@ -184,6 +188,62 @@ describe('AnalysisComponent query-param preload', () => {
     c.ngOnInit();
     expect(c.__snackbar.warn).toHaveBeenCalled();
     expect(c.line.length).toBe(0);
+    c.ngOnDestroy();
+  });
+
+  // Bug 2026-11-27 („am Handy immer Anfangsstellung“): schon offenes /analysis, neue Adresse nur mit anderer Query —
+  // Angular verwendet die Komponente weiter, ngOnInit läuft nicht erneut. Vorher blieb die Grundstellung stehen.
+  it('neue ?live= bei schon offener Analyse (gleiche Route): lädt die Live-Partie nach', () => {
+    const c = makeComponent({});
+    const pgn = '[White "Gukesh D"]\n[Black "Carlsen, Magnus"]\n\n1. e4 { [%clk 1:59:00] } 1... e5 { [%clk 1:58:30] } 2. Nf3 *\n';
+    c.__http.get = jasmine.createSpy('get').and.returnValue(of(pgn));
+    c.ngOnInit();
+    expect(c.line.length).toBe(0);
+    expect(c.__http.get).not.toHaveBeenCalled();
+    c.__query.next({ live: 'fnmEB1kH.RD8sbYw1' });
+    expect(c.__http.get).toHaveBeenCalledWith('/api/live-boards/pgn/fnmEB1kH/RD8sbYw1', { responseType: 'text' });
+    expect(c.line.map((n: any) => n.san)).toEqual(['e4', 'e5', 'Nf3']);
+    expect(c.ply).toBe(3);                       // am Partieende, nicht in der Grundstellung
+    c.ngOnDestroy();
+  });
+
+  it('neue ?live= angemeldet bei offener Analyse: eigener Linien-Baum der Live-Partie, alte Sitzung geschlossen', () => {
+    const c = makeComponent({ fen: START, moves: 'd2d4' }, { loggedIn: true });
+    const pgn = '[White "A"]\n[Black "B"]\n[Result "1/2-1/2"]\n\n1. e4 { [%eval 0.3] [%clk 1:59:00] } 1... e5 2. Nf3 1/2-1/2\n';
+    c.__http.get = jasmine.createSpy('get').and.returnValue(of(pgn));
+    c.ngOnInit();
+    expect(c.line.map((n: any) => n.san)).toEqual(['d4']);
+    c.__query.next({ live: 'fnmEB1kH.RD8sbYw1' });
+    expect(c.line.map((n: any) => n.san)).toEqual(['e4', 'e5', 'Nf3']);
+    expect(c.startFen).toBe(START);
+    c.ngOnDestroy();
+  });
+
+  it('nur ?blind= wechselt (Knopf „Ohne Engine“): kein Neuladen', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4,e7e5' });
+    c.ngOnInit();
+    c.goTo(1);
+    c.__query.next({ fen: START, moves: 'e2e4,e7e5', blind: '1' });
+    expect(c.ply).toBe(1);                       // Stellung bleibt, wo sie war
+    c.ngOnDestroy();
+  });
+
+  it('späte Antwort einer überholten ?live= verfällt', () => {
+    const c = makeComponent({ live: 'fnmEB1kH.RD8sbYw1' });
+    const late = new Subject<string>();
+    c.__http.get = jasmine.createSpy('get').and.returnValues(late.asObservable(), of('1. d4 d5 *'));
+    c.ngOnInit();
+    c.__query.next({ live: 'AAAAAAAA.BBBBBBBB' });
+    late.next('1. e4 e5 2. Nf3 *');
+    expect(c.line.map((n: any) => n.san)).toEqual(['d4', 'd5']);
+    c.ngOnDestroy();
+  });
+
+  it('?live= mit leerer Antwort: Hinweis statt stiller Grundstellung', () => {
+    const c = makeComponent({ live: 'fnmEB1kH.RD8sbYw1' });
+    c.__http.get = jasmine.createSpy('get').and.returnValue(of('  '));
+    c.ngOnInit();
+    expect(c.__snackbar.warn).toHaveBeenCalledWith('analysis.liveLoadFailed');
     c.ngOnDestroy();
   });
 
@@ -1532,7 +1592,7 @@ describe('AnalysisComponent Brett-Steuerknöpfe (zugänglicher Name)', () => {
         provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: AnalysisEngineService, useValue: engine },
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } }, queryParamMap: of({ get: () => null }) } },
         { provide: Router, useValue: { navigateByUrl: () => {} } },
         { provide: SnackbarService, useValue: { show: () => {}, warn: () => {} } },
         { provide: AuthService, useValue: { isLoggedIn: false, has: () => false } },
@@ -2296,7 +2356,8 @@ async function renderAnalysis(params: Record<string, string> = {}, lang?: string
       provideNoopAnimations(),
       provideTranslateService({ fallbackLang: 'en' }),
       { provide: AnalysisEngineService, useValue: engine },
-      { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: (k: string) => params[k] ?? null } } } },
+      { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: (k: string) => params[k] ?? null } },
+        queryParamMap: of({ get: (k: string) => params[k] ?? null }) } },
       { provide: Router, useValue: { navigateByUrl: () => {} } },
       { provide: SnackbarService, useValue: { show: () => {}, warn: () => {} } },
       { provide: AuthService, useValue: { isLoggedIn: false, has: () => false } },

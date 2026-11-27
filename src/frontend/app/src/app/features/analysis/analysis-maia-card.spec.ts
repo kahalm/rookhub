@@ -52,7 +52,7 @@ describe('AnalysisComponent Karte „Sparring gegen Maia" (0.760.0)', () => {
         provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: AnalysisEngineService, useValue: engine },
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } }, queryParamMap: of({ get: () => null }) } },
         { provide: Router, useValue: { navigateByUrl: () => {} } },
         { provide: SnackbarService, useValue: { show: () => {}, warn: () => {} } },
         { provide: AuthService, useValue: { isLoggedIn: false, has: () => false } },

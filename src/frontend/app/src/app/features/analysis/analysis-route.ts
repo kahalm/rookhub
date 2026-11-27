@@ -81,3 +81,16 @@ export function readAnalysisParams(params: QueryParams, isValidFen: (fen: string
     live: live ? { roundId: live[1], gameId: live[2] } : null,
   };
 }
+
+/** Die Parameter, die bestimmen, WAS auf dem Brett steht (Stellung, Zugfolge, Partie, Verlauf-Eintrag, Live-Partie). */
+const POSITION_PARAMS = ['fen', 'moves', 'pgn', 'history', 'live'] as const;
+
+/**
+ * Schlüssel der Stellungs-Vorgaben einer Adresse (1.035.3): ändert er sich bei offenem Analysebrett (gleiche Route, nur
+ * neue Query — z. B. der Analyse-Knopf eines Live-Bretts, während in der App schon `/analysis` offen ist), muss die Seite
+ * neu laden; Angular verwendet die Komponente weiter und ruft `ngOnInit` nicht erneut. `blind`, Engine-Vorgaben und
+ * Rücksprünge zählen bewusst NICHT — „Ohne Engine“ schreibt `?blind=` selbst in die Adresse.
+ */
+export function analysisLoadKey(params: QueryParams): string {
+  return JSON.stringify(POSITION_PARAMS.map(k => params.get(k)));
+}
