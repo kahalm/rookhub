@@ -1694,6 +1694,7 @@
       "addDone": "Fertig",
       "added": "Hinzugefügte Bretter",
       "removeBoard": "Brett entfernen",
+      "resultOverlay": "Partie beendet: {{result}}",
       "extLoading": "Übertragung wird geladen …",
       "extPending": "Warte auf {{count}} Partie(n) …",
       "eloAvgTip": "Schnitt über {{count}} Bretter",

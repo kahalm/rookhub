@@ -1397,6 +1397,7 @@
       "addDone": "Kész",
       "added": "Hozzáadott táblák",
       "removeBoard": "Tábla eltávolítása",
+      "resultOverlay": "A játszma véget ért: {{result}}",
       "extLoading": "A közvetítés betöltése …",
       "extPending": "Várakozás {{count}} játszmára …",
       "eloAvgTip": "Átlag {{count}} tábla alapján",

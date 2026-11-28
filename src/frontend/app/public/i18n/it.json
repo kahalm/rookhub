@@ -1625,6 +1625,7 @@
       "addDone": "Fatto",
       "added": "Scacchiere aggiunte",
       "removeBoard": "Rimuovi scacchiera",
+      "resultOverlay": "Partita terminata: {{result}}",
       "extLoading": "Caricamento della trasmissione …",
       "extPending": "In attesa di {{count}} partita/e …",
       "eloAvgTip": "Media su {{count}} scacchiere",

@@ -1625,6 +1625,7 @@
       "addDone": "Selesai",
       "added": "Papan yang ditambahkan",
       "removeBoard": "Hapus papan",
+      "resultOverlay": "Permainan selesai: {{result}}",
       "extLoading": "Memuat siaran …",
       "extPending": "Menunggu {{count}} partai …",
       "eloAvgTip": "Rata-rata dari {{count}} papan",

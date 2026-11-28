@@ -1625,6 +1625,7 @@
       "addDone": "Hotovo",
       "added": "Přidané šachovnice",
       "removeBoard": "Odebrat šachovnici",
+      "resultOverlay": "Partie skončila: {{result}}",
       "extLoading": "Načítá se přenos …",
       "extPending": "Čeká se na {{count}} partii/í …",
       "eloAvgTip": "Průměr z {{count}} šachovnic",

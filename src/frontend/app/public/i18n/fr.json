@@ -1625,6 +1625,7 @@
       "addDone": "Terminé",
       "added": "Échiquiers ajoutés",
       "removeBoard": "Retirer l’échiquier",
+      "resultOverlay": "Partie terminée : {{result}}",
       "extLoading": "Chargement de la retransmission …",
       "extPending": "En attente de {{count}} partie(s) …",
       "eloAvgTip": "Moyenne sur {{count}} échiquiers",

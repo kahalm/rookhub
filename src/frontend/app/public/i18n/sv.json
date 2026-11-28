@@ -1625,6 +1625,7 @@
       "addDone": "Klar",
       "added": "Tillagda brädor",
       "removeBoard": "Ta bort bräde",
+      "resultOverlay": "Partiet är slut: {{result}}",
       "extLoading": "Sändningen läses in …",
       "extPending": "Väntar på {{count}} parti(er) …",
       "eloAvgTip": "Snitt över {{count}} brädor",

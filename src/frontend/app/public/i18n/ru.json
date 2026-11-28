@@ -1625,6 +1625,7 @@
       "addDone": "Готово",
       "added": "Добавленные доски",
       "removeBoard": "Убрать доску",
+      "resultOverlay": "Партия окончена: {{result}}",
       "extLoading": "Трансляция загружается …",
       "extPending": "Ожидание партий: {{count}} …",
       "eloAvgTip": "Среднее по {{count}} доскам",

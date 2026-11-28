@@ -1625,6 +1625,7 @@
       "addDone": "完成",
       "added": "已添加的棋盘",
       "removeBoard": "移除棋盘",
+      "resultOverlay": "对局结束：{{result}}",
       "extLoading": "正在加载直播 …",
       "extPending": "正在等待 {{count}} 局 …",
       "eloAvgTip": "{{count}} 个棋盘的平均值",

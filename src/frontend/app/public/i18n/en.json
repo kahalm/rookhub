@@ -1694,6 +1694,7 @@
       "addDone": "Done",
       "added": "Added boards",
       "removeBoard": "Remove board",
+      "resultOverlay": "Game over: {{result}}",
       "extLoading": "Broadcast is loading …",
       "extPending": "Waiting for {{count}} game(s) …",
       "eloAvgTip": "Average over {{count}} boards",

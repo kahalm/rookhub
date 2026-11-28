@@ -1625,6 +1625,7 @@
       "addDone": "Gata",
       "added": "Table adăugate",
       "removeBoard": "Elimină tabla",
+      "resultOverlay": "Partidă încheiată: {{result}}",
       "extLoading": "Se încarcă transmisia …",
       "extPending": "Se așteaptă {{count}} partidă(e) …",
       "eloAvgTip": "Medie pe {{count}} table",

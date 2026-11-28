@@ -1625,6 +1625,7 @@
       "addDone": "Xong",
       "added": "Bàn cờ đã thêm",
       "removeBoard": "Gỡ bàn cờ",
+      "resultOverlay": "Ván đấu kết thúc: {{result}}",
       "extLoading": "Đang tải buổi phát sóng …",
       "extPending": "Đang chờ {{count}} ván …",
       "eloAvgTip": "Trung bình trên {{count}} bàn",

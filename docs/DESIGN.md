@@ -1410,7 +1410,12 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   1-px-Rahmen `--rh-accent`, Fläche 12 % Akzent; E-Ink schwarz auf weiß) in der Spielerzeile der Seite am Zug direkt vor der Uhr,
   Text „Nur ein Zug“, Tooltip „… — bester +0.3, nächstbester −1.2“ (Weiß-Sicht wie die Wertzeile). Niedriger als die Zeile
   (`align-self: center`), also kein Sprung; der Name kürzt mit „…“. Nur mit Balken, nur zur Bewertung der aktuellen Stellung,
-  verrät den Zug nicht (Pfeil weiter nur mit „Besten Zug zeigen“). Mannschaft: Stand fett (`localScore`) in der Kopfleiste, Bretter aus Sicht der gewählten Mannschaft (sonst der Heimmannschaft)
+  verrät den Zug nicht (Pfeil weiter nur mit „Besten Zug zeigen“). **Fertige Partie** (1.043.0, Wunsch 2026-11-28): die
+  Karte rückt im Raster ans Ende (in der Übersicht mehrerer Begegnungen innerhalb ihrer Begegnung), das Brett liegt unter
+  einem Schleier aus `--mat-sys-scrim` (hell 45 %, dunkel 60 %) mit dem Ergebnis groß in Weiß (800, `tabular-nums`,
+  `clamp(1.5rem, 26cqmin, 8rem)` — wächst mit dem Brett), Namen/Elo/Kopf bleiben außerhalb und lesbar, Klicks gehen durch
+  (`pointer-events: none`), nicht im Vollbild; E-Ink ohne Schleier: weißes Schild, 3 px schwarzer Rahmen, schwarze Schrift.
+  Der Umzug gleitet 450 ms (FLIP), nicht beim Laden, nicht mit „Bewegung reduzieren“ oder E-Ink. Mannschaft: Stand fett (`localScore`) in der Kopfleiste, Bretter aus Sicht der gewählten Mannschaft (sonst der Heimmannschaft)
   unten. Ohne Übertragung kein Leerraster, sondern ein leiser Hinweis (5.11, Symbol `live_tv`) mit Feld + Knopf
   „Übertragung verknüpfen“ (Gast: „Anmelden, um …“). Die laufende Uhr tickt nicht im E-Ink-Modus (3.6). Auf der Detailseite
   ist „Live-Bretter“ ein Rahmenknopf mit `live_tv` (`.keep-label`), nur wenn verknüpft; sonst ⋮-Eintrag.
@@ -1693,6 +1698,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-28 | 1.043.0 · Turnierseite | Live-Bretter: fertige Partie rückt ans Ende (je Begegnung in der Übersicht), Brett unter Scrim-Schleier mit großem Ergebnis (mit der Kartengröße skaliert, E-Ink: Schild mit Rahmen statt Transparenz), Umzug gleitet kurz (FLIP, nicht beim Laden, nicht bei reduzierter Bewegung) (8.2) | Laufende Partien vorne, Ergebnis auf einen Blick | Nutzerwunsch 28.11. |
 | 2026-11-28 | 1.038.0 · Meisterpartien | Suchseite `/master-games` (8.1): Filterraster, Trefferzeilen als ganze Kachel mit Ergebnis-Pille und Meta-Zeile, Anmelde-Hinweis statt gesperrter Zeilen, Hinweis auf nicht berücksichtigte Wörter | Suche über alle Meister- und Buchpartien, nicht nur die eigenen | Nutzerwunsch 28.11. |
 | 2026-11-28 | 1.037.0 · Turnierseite | Turnierverlauf: „FIDE-Profil“ am Namen, je Zeile Symbolknopf zur chess-results-Spielerkarte (Nebenziel neben dem Zeilenknopf, 44 px), „Elo-Rechner“ im Seitenkopf als Dialog (8.2) | FIDE-Seite und Elo-Vorausschau ohne Suchen erreichen; theoretischen Elo-Gewinn national + international rechnen | Nutzerwunsch 28.11. |
 | 2026-11-28 | 1.042.0 · Turnierseite | Live-Bretter: Schalter „Aufblitzen“ und „Benachrichtigung“ nach „Vibrieren“; Karte blitzt 3× (0,6 s) mit 3-px-Rahmen + 16 % getönter Fläche — Ergebnis `--rh-accent`, Bewertungssprung `--rh-warn` —, ohne Bewegung/E-Ink ruhiger Rahmen 3 s; Tab im Hintergrund: Titel „● …“ im Wechsel, Favicon mit rotem Punkt (8.2) | Am PC mitbekommen, wenn sich etwas tut, auch mit der Seite im Hintergrund | Nutzerwunsch 28.11. |

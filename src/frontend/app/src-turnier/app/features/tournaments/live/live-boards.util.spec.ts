@@ -1,4 +1,4 @@
-import { BroadcastLink, LIVE_MAX_ADDED, analysisLinkTarget, broadcastHost, broadcastRoundUrl, extRoundOf, isLiveGameIdFor, isLiveRoundId, LIVE_MAX_EXT, evalText, joinParam, lastMovePair, parseAddParam, parseBroadcastLink, parseExtParam, liveBestMove, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
+import { BroadcastLink, LIVE_MAX_ADDED, analysisLinkTarget, broadcastHost, broadcastRoundUrl, extRoundOf, finishedLast, flipDeltas, isLiveGameIdFor, isLiveRoundId, LIVE_MAX_EXT, evalText, joinParam, lastMovePair, parseAddParam, parseBroadcastLink, parseExtParam, liveBestMove, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
 import { LiveGame } from './live-boards.models';
 
 describe('live-boards.util', () => {
@@ -126,5 +126,41 @@ describe('analysisLinkTarget', () => {
     expect(analysisLinkTarget(media(true), '')).toBe('_self');
     expect(analysisLinkTarget(media(false), 'android-app://homes.oberschmid.turnier/')).toBe('_self');
     expect(analysisLinkTarget(null, '')).toBe('_blank');
+  });
+});
+
+describe('finishedLast / flipDeltas (beendete Partien ans Ende, 1.043.0)', () => {
+  const b = (k: string, done: boolean, g = '') => ({ k, done, g });
+  const keys = (list: { k: string }[]) => list.map(x => x.k);
+
+  it('laufende vorne in alter Reihenfolge, beendete stabil dahinter', () => {
+    const list = [b('a', true), b('b', false), b('c', true), b('d', false), b('e', false)];
+    expect(keys(finishedLast(list, x => x.done))).toEqual(['b', 'd', 'e', 'a', 'c']);
+    expect(keys(finishedLast([b('a', true), b('b', true)], x => x.done))).toEqual(['a', 'b']);
+    expect(finishedLast([], () => true)).toEqual([]);
+  });
+
+  it('Gruppen bleiben ganz und an ihrer Stelle; sortiert wird nur innerhalb', () => {
+    const list = [b('a1', true, 'A'), b('a2', false, 'A'), b('b1', false, 'B'), b('b2', true, 'B'), b('b3', false, 'B')];
+    expect(keys(finishedLast(list, x => x.done, x => x.g))).toEqual(['a2', 'a1', 'b1', 'b3', 'b2']);
+  });
+
+  it('flipDeltas: ohne frisch beendete Partie (Erstladen, Rundenwechsel) keine Bewegung', () => {
+    const prev = new Map([['a', { x: 0, y: 0 }]]);
+    const next = new Map([['a', { x: 0, y: 0 }], ['b', { x: 250, y: 0 }]]);
+    expect(flipDeltas(new Map(), next, new Map(), new Map([['a', true], ['b', false]])).size).toBe(0);
+    // schon fertig gewesen → kein Wechsel
+    expect(flipDeltas(prev, new Map([['a', { x: 250, y: 0 }]]), new Map([['a', true]]), new Map([['a', true]])).size).toBe(0);
+    // neue Bretter ohne Vorgänger → kein Wechsel
+    expect(flipDeltas(new Map(), next, new Map(), new Map([['a', true]])).size).toBe(0);
+  });
+
+  it('flipDeltas: frisch beendet → Versatz alte minus neue Lage für jede bewegte Karte', () => {
+    const prev = new Map([['a', { x: 0, y: 0 }], ['b', { x: 250, y: 0 }], ['c', { x: 500, y: 0 }]]);
+    const next = new Map([['b', { x: 0, y: 0 }], ['c', { x: 250, y: 0 }], ['a', { x: 500, y: 0 }]]);
+    const d = flipDeltas(prev, next, new Map([['a', false], ['b', false], ['c', false]]), new Map([['a', true], ['b', false], ['c', false]]));
+    expect(d.get('a')).toEqual({ dx: -500, dy: 0 });
+    expect(d.get('b')).toEqual({ dx: 250, dy: 0 });
+    expect(d.get('c')).toEqual({ dx: 250, dy: 0 });
   });
 });

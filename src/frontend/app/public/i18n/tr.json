@@ -1625,6 +1625,7 @@
       "addDone": "Tamam",
       "added": "Eklenen tahtalar",
       "removeBoard": "Tahtayı kaldır",
+      "resultOverlay": "Oyun bitti: {{result}}",
       "extLoading": "Yayın yükleniyor …",
       "extPending": "{{count}} oyun bekleniyor …",
       "eloAvgTip": "{{count}} tahta üzerinden ortalama",

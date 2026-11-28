@@ -1625,6 +1625,7 @@
       "addDone": "Concluído",
       "added": "Tabuleiros adicionados",
       "removeBoard": "Remover tabuleiro",
+      "resultOverlay": "Partida terminada: {{result}}",
       "extLoading": "A carregar a transmissão …",
       "extPending": "À espera de {{count}} partida(s) …",
       "eloAvgTip": "Média de {{count}} tabuleiros",

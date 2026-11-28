@@ -1625,6 +1625,7 @@
       "addDone": "Готово",
       "added": "Додані дошки",
       "removeBoard": "Прибрати дошку",
+      "resultOverlay": "Партію завершено: {{result}}",
       "extLoading": "Трансляція завантажується …",
       "extPending": "Очікування партій: {{count}} …",
       "eloAvgTip": "Середнє за {{count}} дошками",

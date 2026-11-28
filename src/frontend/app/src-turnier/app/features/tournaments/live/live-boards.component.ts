@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, afterRenderEffect, computed, inject, signal, untracked, viewChild } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,7 +24,7 @@ import { LocalScorePipe } from '../tournament-table.util';
 import { LiveBoardCardComponent } from './live-board-card.component';
 import { LiveBoardSlot, LiveGame, LiveMatchSlot, LiveRoundLayout, LiveState, LiveStatus, LiveStreamEvent, LiveViewState } from './live-boards.models';
 import { LiveBoardsService } from './live-boards.service';
-import { broadcastHost, broadcastRoundUrl, isLiveGameIdFor, isLiveRoundId, LIVE_LOST_GRACE_MS, LIVE_VIEW_SAVE_MS, joinParam, parseAddParam, parseExtParam, points, readLiveBest, readTurned, readLiveEval, readViewKey, samePlayer, scoreText, writeLiveEval,
+import { CardPositions, broadcastHost, broadcastRoundUrl, finishedLast, flipDeltas, isLiveGameIdFor, isLiveRoundId, LIVE_LOST_GRACE_MS, LIVE_VIEW_SAVE_MS, joinParam, parseAddParam, parseExtParam, points, readLiveBest, readTurned, readLiveEval, readViewKey, samePlayer, scoreText, writeLiveEval,
   writeLiveBest, writeTurned, writeViewKey } from './live-boards.util';
 import { LiveAlertEvent, LiveAlertTracker, VIBRATE_CONFIRM, VIBRATE_RESULT, VIBRATE_SWING, canVibrate, readLiveVibrate, vibrate,
   writeLiveVibrate } from './live-vibrate';
@@ -41,6 +41,8 @@ interface ShownBoard {
   roundId?: string | null;
   /** ✕ an der Karte: aus `?add=` bzw. `?ext=` nehmen. */
   removeKind?: 'add' | 'ext';
+  /** Block, der beim Nach-hinten-Sortieren zusammenbleibt (je Begegnung der Übersicht); sonst ein gemeinsamer. */
+  group?: string;
 }
 /** Eine fremde Runde im Strom (1.025.0). */
 interface ExtRound { tourName: string; roundName: string; url: string; state: LiveState; games: Record<string, LiveGame>; error: string | null; }
@@ -219,9 +221,9 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
           }
           @if (allBoards().length > 0) {
             <!-- EIN Raster für alle Bretter: Mannschaft/Runde, hinzugefügte, fremde, weitere — keine Abschnittsgrenzen -->
-            <div class="board-grid">
+            <div class="board-grid" #grid>
               @for (b of allBoards(); track b.key) {
-                <app-live-board-card [game]="b.game" [board]="b.board" [flipped]="b.flipped !== turnedIds().has(b.game.id)"
+                <app-live-board-card [attr.data-key]="b.key" [game]="b.game" [board]="b.board" [flipped]="b.flipped !== turnedIds().has(b.game.id)"
                                      [turned]="turnedIds().has(b.game.id)" (turn)="toggleTurn(b.game.id)" [showEval]="evalOn()" [showBest]="bestOn()"
                                      [analysisUrl]="analysisUrl(b.roundId ?? null, b.game.id)" [roundId]="b.roundId ?? null"
                                      [caption]="b.caption ?? (b.captionKey ? (b.captionKey | translate) : null)"
@@ -278,7 +280,7 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
     .mh-score { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
     /* Karten ≥ 240 px (Brett ≈ 216 px): 1920 px → 7 Spalten, 1280 px → 4, unter ~520 px eine; min(100%, …) verhindert
        Seiten-Scroll auf ganz schmalen Geräten. */
-    .board-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 12px; }
+    .board-grid { position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 12px; }
     .muted { color: var(--mat-sys-on-surface-variant); }
     .mh-elo { margin-left: 0.4em; font-size: 0.8rem; font-weight: 400; color: var(--mat-sys-on-surface-variant); font-variant-numeric: tabular-nums; }
     .live-add mat-icon { margin-right: 4px; }
@@ -502,15 +504,17 @@ export class LiveBoardsComponent implements OnInit {
    * ALLE gezeigten Bretter in EINER Folge für das eine Raster (Wunsch 2026-11-26): Begegnung(en) bzw. Runde, dann die
    * hinzugefügten, die fremden und die übrigen übertragenen Partien. Woher ein Brett kommt, sagt seine Zusatzzeile —
    * bei mehreren Begegnungen „Heim – Gast“, hinzugefügte ihre Begegnung, fremde „Turnier · Runde“.
+   * Beendete Partien stehen hinten (Wunsch 2026-11-28, {@link finishedLast}): zeigt die Übersicht mehrere Begegnungen,
+   * innerhalb jeder Begegnung (die Blöcke bleiben ganz), alle übrigen Bretter gemeinsam dahinter.
    */
   readonly allBoards = computed<ShownBoard[]>(() => {
     const own = this.ownRoundId();
     const matches = this.matches();
     const many = matches.length > 1;
     const out: ShownBoard[] = [];
-    for (const m of matches) {
-      for (const b of m.boards) out.push({ ...b, roundId: own, caption: many ? `${m.home} – ${m.away}` : null });
-    }
+    matches.forEach((m, i) => {
+      for (const b of m.boards) out.push({ ...b, roundId: own, caption: many ? `${m.home} – ${m.away}` : null, group: many ? 'm' + i : undefined });
+    });
     for (const b of this.singleBoards()) out.push({ ...b, roundId: own });
     for (const b of this.addedBoards()) out.push({ ...b, roundId: own, removeKind: 'add', captionKey: b.caption ? undefined : 'tournaments.live.added' });
     for (const x of this.extRounds()) {
@@ -519,8 +523,44 @@ export class LiveBoardsComponent implements OnInit {
     if (!this.team() && !this.player()) {
       for (const b of this.others()) out.push({ ...b, roundId: own, captionKey: 'tournaments.live.otherGames' });
     }
-    return out;
+    return finishedLast(out, b => b.game.finished, b => b.group ?? '');
   });
+
+  private readonly grid = viewChild<ElementRef<HTMLElement>>('grid');
+  /** Lage und Fertig-Stand der Karten im letzten Bild — Grundlage der FLIP-Animation beim Wechsel ans Ende. */
+  private cardPos: CardPositions = new Map();
+  private cardDone: ReadonlyMap<string, boolean> = new Map();
+  /** Nach jedem Bild mit geänderten Brettern: Karten, die durch ein neues Ergebnis umgezogen sind, gleiten von der alten
+   *  Lage an die neue (FLIP, 1.043.0). Erstladen/Rundenwechsel haben keine Vorgänger → kein Sprung. */
+  protected readonly flipEffect = afterRenderEffect(() => {
+    const boards = this.allBoards();
+    untracked(() => this.flipCards(boards));
+  });
+
+  private flipCards(boards: ShownBoard[]): void {
+    const grid = this.grid()?.nativeElement;
+    const cards = grid ? Array.from(grid.querySelectorAll<HTMLElement>(':scope > [data-key]')) : [];
+    const pos = new Map(cards.map(c => [c.dataset['key'] ?? '', { x: c.offsetLeft, y: c.offsetTop }]));
+    const done = new Map(boards.map(b => [b.key, b.game.finished]));
+    if (this.motionAllowed()) {
+      const deltas = flipDeltas(this.cardPos, pos, this.cardDone, done);
+      for (const c of cards) {
+        const d = deltas.get(c.dataset['key'] ?? '');
+        // Karte im Vollbild nicht anfassen: ein transform am Host machte ihn zum Bezugsrahmen des position:fixed.
+        if (!d || typeof c.animate !== 'function' || c.querySelector('.lb-fs')) continue;
+        c.animate([{ transform: `translate(${d.dx}px, ${d.dy}px)` }, { transform: 'none' }],
+          { duration: 450, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)' });
+      }
+    }
+    this.cardPos = pos;
+    this.cardDone = done;
+  }
+
+  /** Bewegung nur ohne E-Ink (Schlieren) und ohne „Bewegung reduzieren“. */
+  private motionAllowed(): boolean {
+    if (this.eink.enabled()) return false;
+    try { return !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches; } catch { return true; }
+  }
 
   readonly stateIcon = computed(() => ({
     live: 'sensors', connecting: 'sync', reconnecting: 'sync_problem', finished: 'flag', offline: 'cloud_off',

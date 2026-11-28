@@ -1694,6 +1694,7 @@
       "addDone": "Gotovo",
       "added": "Dodane ploče",
       "removeBoard": "Ukloni ploču",
+      "resultOverlay": "Partija završena: {{result}}",
       "extLoading": "Prijenos se učitava …",
       "extPending": "Čeka se {{count}} partija …",
       "eloAvgTip": "Prosjek preko {{count}} ploča",

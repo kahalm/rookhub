@@ -1625,6 +1625,7 @@
       "addDone": "완료",
       "added": "추가한 보드",
       "removeBoard": "보드 제거",
+      "resultOverlay": "대국 종료: {{result}}",
       "extLoading": "중계를 불러오는 중 …",
       "extPending": "대국 {{count}}개 대기 중 …",
       "eloAvgTip": "보드 {{count}}개 평균",

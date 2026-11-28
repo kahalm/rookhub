@@ -96,6 +96,14 @@ import { analysisLinkTarget, evalText, lastMovePair, liveBestMove, liveMoveNumbe
                            [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet"
                            [playable]="!!study()?.ownMoves()" (userMove)="study()?.play($event)"
                            [fullscreenMode]="fs() ? 'none' : 'custom'" (fullscreenRequest)="openFs()" />
+          @if (game().finished && !fs()) {
+            <!-- Fertig (Wunsch 2026-11-28): Brett abgedunkelt, Ergebnis groß darüber; Klicks gehen durch (pointer-events: none),
+                 im Vollbild nicht — dort wird nachgespielt. -->
+            <div class="lb-final" role="img" [attr.aria-label]="'tournaments.live.resultOverlay' | translate:{ result: resultText() }"
+                 [style.top.px]="boardBox()?.top" [style.height.px]="boardBox()?.height" [style.width.px]="boardBox()?.height">
+              <span class="lb-final-text" aria-hidden="true">{{ resultText() }}</span>
+            </div>
+          }
         </div>
       </div>
       <div class="lb-player lb-pbot" [class.to-move]="toMove(!flipped())">
@@ -173,7 +181,20 @@ import { analysisLinkTarget, evalText, lastMovePair, liveBestMove, liveMoveNumbe
        Versatz misst boardBox(); ohne Messung (erstes Bild) streckt sich der Balken wie bisher. */
     .lb-boardrow { display: flex; gap: 4px; align-items: stretch; }
     .lb-boardrow.measured { align-items: flex-start; }
-    .lb-cg { flex: 1 1 auto; min-width: 0; }
+    .lb-cg { flex: 1 1 auto; min-width: 0; position: relative; }
+    /* Ergebnis-Schleier (1.043.0): deckt genau das gezeichnete Brett (boardBox; ungemessen unten, quadratisch über die
+       Breite), Schrift wächst mit der Brettgröße (cqmin). Schleier aus dem Scrim-Token, im Dunkeln kräftiger; E-Ink ohne
+       Transparenz: weißes Schild mit schwarzem Rahmen, das Brett bleibt sichtbar. Namen/Elo liegen außerhalb. */
+    :host { --lb-final-scrim: color-mix(in srgb, var(--mat-sys-scrim, #000) 45%, transparent); --lb-final-ink: #fff; }
+    :host-context(html.dark-theme) { --lb-final-scrim: color-mix(in srgb, var(--mat-sys-scrim, #000) 60%, transparent); }
+    .lb-final { position: absolute; left: 0; bottom: 0; width: 100%; aspect-ratio: 1 / 1; z-index: 5; pointer-events: none;
+      display: grid; place-items: center; container-type: size; border-radius: 2px;
+      background: var(--lb-final-scrim); color: var(--lb-final-ink); }
+    .lb-final-text { font-size: clamp(1.5rem, 26cqmin, 8rem); font-weight: 800; line-height: 1; white-space: nowrap;
+      font-variant-numeric: tabular-nums; letter-spacing: 0.02em; text-shadow: 0 1px 3px rgb(0 0 0 / 0.6); }
+    :host-context(html.eink) .lb-final { background: none; }
+    :host-context(html.eink) .lb-final-text { color: #000; background: #fff; border: 3px solid #000; border-radius: 8px;
+      padding: 0.08em 0.25em; text-shadow: none; }
     .lb-evalbar { flex: 0 0 10px; box-sizing: border-box; position: relative; display: flex; flex-direction: column-reverse;
       background: color-mix(in srgb, black 80%, white); border: 1px solid var(--mat-sys-outline); border-radius: 2px; overflow: hidden; }
     .lb-evalbar.flipped { flex-direction: column; }

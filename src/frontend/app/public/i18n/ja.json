@@ -1625,6 +1625,7 @@
       "addDone": "完了",
       "added": "追加した盤",
       "removeBoard": "盤を外す",
+      "resultOverlay": "対局終了：{{result}}",
       "extLoading": "中継を読み込み中 …",
       "extPending": "{{count}} 局を待っています …",
       "eloAvgTip": "{{count}} 盤の平均",

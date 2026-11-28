@@ -826,18 +826,19 @@ describe('LiveBoardsComponent', () => {
     const c = fixture.componentInstance;
     const cards = () => [...el().querySelectorAll('app-live-board-card')] as HTMLElement[];
     const flips = () => fixture.debugElement.queryAll(By.directive(LiveBoardCardComponent)).map(d => (d.componentInstance as LiveBoardCardComponent).flipped());
-    expect(flips()).toEqual([true, false]);                                      // Vorgabe: Schwaz unten
+    // Reihenfolge b2, b1: das fertige Brett 1 steht seit 1.043.0 hinten
+    expect(flips()).toEqual([false, true]);                                      // Vorgabe: Schwaz unten
     const nav = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
-    (cards()[0].querySelector('.lb-turn') as HTMLButtonElement).click();
+    (cards()[1].querySelector('.lb-turn') as HTMLButtonElement).click();
     await fixture.whenStable();
     expect(flips()).toEqual([false, false]);
-    expect(cards()[0].querySelector('.lb-turn')!.getAttribute('aria-pressed')).toBe('true');
+    expect(cards()[1].querySelector('.lb-turn')!.getAttribute('aria-pressed')).toBe('true');
     expect(JSON.parse(sessionStorage.getItem(LIVE_TURNED_KEY)!)).toEqual(['b1']);
     expect(nav).not.toHaveBeenCalled();
     expect(c.shareUrl()).toBe(`${location.origin}/tournaments/1404438/live?round=1&team=SK%20Schwaz`);
     c.toggleTurn('b1');
     await fixture.whenStable();
-    expect(flips()).toEqual([true, false]);
+    expect(flips()).toEqual([false, true]);
   });
 
   // Wunsch 2026-11-26: „Sammel alle Links … und schreib die untereinander irgendwo, wo’s passt“
@@ -868,6 +869,99 @@ describe('LiveBoardsComponent', () => {
     expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth);
     for (const r of rows) expect(getComputedStyle(r).textOverflow).not.toBe('ellipsis');
     expect(host.querySelector('.live-head .live-source')).toBeNull();           // der Turnier-Link steht jetzt in der Liste
+    host.remove();
+  });
+
+  // Wunsch 2026-11-28: „wenn ein Spiel fertig ist, dann wandert es ans Ende mit dem Ergebnis als großes Overlay“.
+  it('beendete Partien ans Ende: Begegnung allein → alle Bretter gemeinsam, Übersicht → je Begegnung, Blöcke bleiben ganz', async () => {
+    await setup({ ext: 'fnmEB1kH.RD8sbYw1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const es = FakeEventSource.last();
+    const c = fixture.componentInstance;
+    const order = () => c.allBoards().map(b => b.game.id);
+    // Eine Begegnung + fremdes Brett: das fertige b1 rückt hinter alle laufenden (auch hinter das fremde)
+    es.emit('snapshot', SNAPSHOT);
+    es.emit('ext-snapshot', { round: 'fnmEB1kH', tourName: 'WM', roundName: 'Game 3', url: 'https://lichess.org/broadcast/-/-/fnmEB1kH',
+      state: 'live', games: [game('RD8sbYw1', 'Gukesh D', 'Carlsen, Magnus')] });
+    await fixture.whenStable();
+    expect(order()).toEqual(['b2', 'RD8sbYw1', 'b1']);
+    // Zwei Begegnungen: b1 nur innerhalb seiner Begegnung nach hinten, die zweite Begegnung bleibt ein Block danach
+    es.emit('snapshot', { ...TWO_MATCHES, games: [...TWO_MATCHES.games.slice(0, 2), game('c1', 'Muster, Max', 'Gast, Erster', '0-1'),
+      TWO_MATCHES.games[3]] });
+    await fixture.whenStable();
+    expect(order()).toEqual(['b2', 'b1', 'c2', 'c1', 'RD8sbYw1']);
+    // Die gespeicherte Auswahl bleibt unberührt (nur Darstellung)
+    expect(c.matches()[0].boards.map(b => b.game.id)).toEqual(['b1', 'b2']);
+  });
+
+  it('Ergebnis-Schleier: fertiges Brett abgedunkelt mit großem Ergebnis, laufendes ohne; Klicks gehen durch', async () => {
+    await setup();
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    FakeEventSource.last().emit('snapshot', SNAPSHOT);
+    await fixture.whenStable();
+    const cards = [...el().querySelectorAll('app-live-board-card')] as HTMLElement[];
+    expect(cards[0].querySelector('.lb-final')).toBeNull();                  // b2 läuft (steht vorne)
+    const veil = cards[1].querySelector('.lb-final') as HTMLElement;
+    expect(veil).not.toBeNull();
+    expect(veil.querySelector('.lb-final-text')!.textContent!.trim()).toBe('1–0');
+    expect(veil.getAttribute('aria-label')).toBe('tournaments.live.resultOverlay');
+    expect(getComputedStyle(veil).pointerEvents).toBe('none');
+    expect(cards[1].querySelector('.lb-name')).not.toBeNull();               // Namen stehen außerhalb des Schleiers
+    expect(veil.contains(cards[1].querySelector('.lb-name'))).toBeFalse();
+  });
+
+  it('Wechsel ans Ende gleitet (FLIP) — nicht beim Erstladen, nicht mit „Bewegung reduzieren“', async () => {
+    const anim = spyOn(HTMLElement.prototype, 'animate').and.callThrough();
+    await setup();
+    const host = el();
+    host.style.display = 'block';
+    host.style.width = '1280px';
+    document.body.appendChild(host);
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const es = FakeEventSource.last();
+    const three = { ...SNAPSHOT, games: [game('b1', 'Aditya Mittal', 'Hagner, Bennet', '1-0'), game('b2', 'Schmider, Niklas', 'Vaibhav, Suri'),
+      game('b3', 'Dritter, Weiß', 'Dritter, Schwarz')] };
+    three.layout = { ...SNAPSHOT.layout, matches: [{ ...SNAPSHOT.layout.matches[0], boards: [...SNAPSHOT.layout.matches[0].boards,
+      { board: 3, white: 'Dritter, Weiß', black: 'Dritter, Schwarz', result: '*', gameId: 'b3', homeIsWhite: true }] }] };
+    es.emit('snapshot', three);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(c.allBoards().map(b => b.game.id)).toEqual(['b2', 'b3', 'b1']);   // schon fertig → einfach hinten
+    expect(anim).not.toHaveBeenCalled();
+    es.emit('game', { ...three.games[1], result: '1/2-1/2', finished: true });   // b2 wird fertig
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(c.allBoards().map(b => b.game.id)).toEqual(['b3', 'b1', 'b2']);
+    expect(anim).toHaveBeenCalled();
+    const moved = anim.calls.all().map(x => (x.object as HTMLElement).dataset['key']);
+    expect(moved.length).toBeGreaterThan(0);
+    host.remove();
+  });
+
+  it('Wechsel ans Ende ohne Animation, wenn das Gerät „Bewegung reduzieren“ will', async () => {
+    const anim = spyOn(HTMLElement.prototype, 'animate').and.callThrough();
+    const realMatch = window.matchMedia.bind(window);
+    spyOn(window, 'matchMedia').and.callFake((q: string) => q.includes('reduced-motion') ? { matches: true } as MediaQueryList : realMatch(q));
+    await setup();
+    const host = el();
+    host.style.display = 'block';
+    host.style.width = '1280px';
+    document.body.appendChild(host);
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const es = FakeEventSource.last();
+    es.emit('snapshot', { ...SNAPSHOT, games: [game('b1', 'Aditya Mittal', 'Hagner, Bennet'), SNAPSHOT.games[1]] });
+    await fixture.whenStable();
+    expect(fixture.componentInstance.allBoards().map(b => b.game.id)).toEqual(['b1', 'b2']);
+    es.emit('game', { ...SNAPSHOT.games[0] });                                // b1 wird fertig → rückt ans Ende, springt aber
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.allBoards().map(b => b.game.id)).toEqual(['b2', 'b1']);
+    expect(anim).not.toHaveBeenCalled();
     host.remove();
   });
 

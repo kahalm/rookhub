@@ -1625,6 +1625,7 @@
       "addDone": "تمام",
       "added": "صفحه‌های افزوده",
       "removeBoard": "حذف صفحه",
+      "resultOverlay": "بازی تمام شد: {{result}}",
       "extLoading": "در حال بارگذاری پخش …",
       "extPending": "در انتظار {{count}} بازی …",
       "eloAvgTip": "میانگین روی {{count}} صفحه",

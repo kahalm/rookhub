@@ -1625,6 +1625,7 @@
       "addDone": "Gotowe",
       "added": "Dodane szachownice",
       "removeBoard": "Usuń szachownicę",
+      "resultOverlay": "Partia zakończona: {{result}}",
       "extLoading": "Wczytywanie transmisji …",
       "extPending": "Oczekiwanie na {{count}} partii …",
       "eloAvgTip": "Średnia z {{count}} szachownic",

@@ -328,6 +328,23 @@ Stufe vor. Einzelheiten: `docs/api/leaguehub-vereins-datenbank.md` und `docs/api
   in EINE Folge, gezeichnet in einem `.board-grid` (`auto-fill, minmax(min(100%, 240px), 1fr)`, Seite bis 1880 px): 1920 px → 7
   Spalten, 1280 px → 4–5, 390 px → 1. Herkunft je Karte als Zusatzzeile; Stand/Elo-Schnitt je Begegnung und Links der fremden
   Runden als kompakte Kopfleiste darüber.
+- **Fertige Partien hinten** (1.043.0, Wunsch 2026-11-28: „wenn ein Spiel fertig ist, dann wandert es ans Ende mit dem
+  Ergebnis als großes Overlay über dem Spielbrett und das Spielbrett abgedunkelt“): `allBoards` sortiert zuletzt mit
+  `finishedLast` (`live-boards.util.ts`) — laufende vorne in der bisherigen Reihenfolge, beendete (`finished` = 1-0/0-1/½-½)
+  stabil dahinter. **Gruppen**: zeigt die Übersicht (ohne `team`) mehrere Begegnungen, bleibt jede Begegnung ein Block an
+  ihrer Stelle und sortiert nur in sich (die Karten tragen „Heim – Gast“ als Zusatz, ein Zerreißen machte die Zuordnung
+  unlesbar); alle übrigen Bretter (einzige Begegnung, Einzelrunde, `add`, `ext`, weitere) bilden EINE Gruppe — bei der
+  gewählten Mannschaft rückt ein fertiges Brett also auch hinter hinzugefügte/fremde laufende Partien. Reine Darstellung:
+  Adresse, geteilte Ansicht (`LiveViewState`) und `matches()` behalten die Brettreihenfolge; gilt für lange Adresse und
+  `/live/{token}`. Beim Laden stehen schon fertige Partien einfach hinten. **Wechsel**: wird eine Partie fertig, gleiten die
+  verschobenen Karten 450 ms von der alten an die neue Lage (FLIP per `Element.animate`, `afterRenderEffect` +
+  `flipDeltas`: Lage relativ zum Raster, nur wenn eine im vorigen Bild laufende Partie jetzt fertig ist — Erstladen,
+  Rundenwechsel, neue Bretter animieren nie); nicht bei `prefers-reduced-motion: reduce`, nicht im E-Ink-Modus, nie die
+  Karte im Vollbild (ein `transform` am Host bräche ihr `position: fixed`). **Schleier** (`live-board-card`): über dem
+  gezeichneten Brett (`boardBox`) `.lb-final` mit `--mat-sys-scrim` (hell 45 %, dunkel 60 %) und dem Ergebnis groß
+  (`clamp(1.5rem, 26cqmin, 8rem)`, Container = Schleier), `pointer-events: none` (Vollbild-Knopf und Analyse bleiben
+  bedienbar), `aria-label` „Partie beendet: 1–0“ (`tournaments.live.resultOverlay`), nicht im Vollbild (dort wird
+  nachgespielt). E-Ink: kein Schleier, weißes Schild mit 3 px schwarzem Rahmen. Spieler/Elo/Kopf liegen außerhalb.
 - **Übertragungen** (1.032.0, Wunsch 2026-11-26 „sammel alle Links … und schreib die untereinander“): Liste über dem Raster, je
   Zeile eine Quelle — eigenes Turnier (`status.url`), je Begegnung Stand + Ø-Elo mit Link `lichess.org/broadcast/-/-/<eigene
   Lichess-Runde>`, je fremde Runde „Turnier · Runde“ mit ihrem Lichess-Link (sonst `…/broadcast/-/-/<roundId>`).

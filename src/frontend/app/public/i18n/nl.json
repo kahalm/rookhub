@@ -1625,6 +1625,7 @@
       "addDone": "Klaar",
       "added": "Toegevoegde borden",
       "removeBoard": "Bord verwijderen",
+      "resultOverlay": "Partij afgelopen: {{result}}",
       "extLoading": "Uitzending wordt geladen …",
       "extPending": "Wachten op {{count}} partij(en) …",
       "eloAvgTip": "Gemiddelde over {{count}} borden",

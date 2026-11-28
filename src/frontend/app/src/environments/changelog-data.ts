@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.043.0", date: "2026-11-28", changes: [
+    { en: "Tournament site, live boards: when a game ends, its board moves to the end of the grid — running games stay in front. In the overview with several matches it moves to the end of its own match, so matches stay together. Games that were already over when the page loaded are simply at the back.",
+      de: "Turnierseite, Live-Bretter: Ist eine Partie fertig, rückt ihr Brett ans Ende des Rasters — laufende Partien bleiben vorne. In der Übersicht mit mehreren Begegnungen rückt es ans Ende seiner Begegnung, die Begegnungen bleiben beisammen. Schon beim Laden fertige Partien stehen einfach hinten." },
+    { en: "Finished boards are darkened with the result in large type on top („1–0“, „0–1“, „½–½“), growing with the card; names and ratings stay readable, full screen and „Analyse“ still work. The move to the end slides briefly (not with „reduce motion“ or in e-ink mode, where the result sits on a white plate with a black frame instead).",
+      de: "Fertige Bretter sind abgedunkelt, darüber groß das Ergebnis („1–0“, „0–1“, „½–½“), passend zur Kartengröße; Namen und Elo bleiben lesbar, Vollbild und „Analysieren“ gehen weiter. Der Umzug ans Ende gleitet kurz (nicht bei „Bewegung reduzieren“ und nicht im E-Ink-Modus — dort steht das Ergebnis auf einem weißen Schild mit schwarzem Rahmen)." },
+  ] },
   { version: "1.042.0", date: "2026-11-28", changes: [
     { en: "Tournament site, live boards: new switch „Flash“ next to „Vibrate“ — when a live game is decided or the evaluation swings, that board briefly flashes (result and swing in different colours; a calm frame without motion). With the tab in the background, the tab title alternates with „● 1-0 Board 3“ and the icon gets a dot until you come back.",
       de: "Turnierseite, Live-Bretter: neuer Schalter „Aufblitzen“ neben „Vibrieren“ — wird eine laufende Partie entschieden oder kippt die Bewertung, blitzt dieses Brett kurz auf (Ergebnis und Sprung in eigener Farbe; ohne Bewegung ein ruhiger Rahmen). Liegt der Tab im Hintergrund, wechselt der Tab-Titel mit „● 1-0 Brett 3“ und das Symbol bekommt einen Punkt, bis man zurückkommt." },

@@ -1625,6 +1625,7 @@
       "addDone": "हो गया",
       "added": "जोड़े गए बोर्ड",
       "removeBoard": "बोर्ड हटाएँ",
+      "resultOverlay": "बाज़ी समाप्त: {{result}}",
       "extLoading": "प्रसारण लोड हो रहा है …",
       "extPending": "{{count}} खेल की प्रतीक्षा …",
       "eloAvgTip": "{{count}} बोर्ड का औसत",

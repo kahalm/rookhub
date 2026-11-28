@@ -1625,6 +1625,7 @@
       "addDone": "تم",
       "added": "الرقع المضافة",
       "removeBoard": "إزالة الرقعة",
+      "resultOverlay": "انتهت المباراة: {{result}}",
       "extLoading": "جارٍ تحميل البث …",
       "extPending": "بانتظار {{count}} مباراة …",
       "eloAvgTip": "المتوسط على {{count}} رقعة",

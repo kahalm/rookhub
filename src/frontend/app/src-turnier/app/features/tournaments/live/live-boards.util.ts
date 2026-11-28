@@ -301,3 +301,44 @@ export function analysisLinkTarget(win: Pick<Window, 'matchMedia'> | null = type
   try { standalone = !!win?.matchMedia?.('(display-mode: standalone)').matches; } catch { /* alter Browser */ }
   return standalone || referrer.startsWith('android-app://') ? '_self' : '_blank';
 }
+
+/**
+ * Beendete Partien ans Ende (Wunsch 2026-11-28: „wenn ein Spiel fertig ist, dann wandert es ans Ende“): laufende behalten
+ * ihre Reihenfolge vorne, beendete folgen in ihrer bisherigen Reihenfolge (stabil). `groupOf` hält Gruppen zusammen
+ * (Begegnungen der Übersicht): jede Gruppe bleibt ein Block an der Stelle ihres ersten Bretts, sortiert wird nur darin.
+ * Reine Darstellung — die gespeicherte Auswahl (Adresse, geteilte Ansicht) bleibt unberührt.
+ */
+export function finishedLast<T>(boards: readonly T[], isFinished: (b: T) => boolean, groupOf: (b: T) => string = () => ''): T[] {
+  const groups = new Map<string, { running: T[]; done: T[] }>();
+  for (const b of boards) {
+    const key = groupOf(b);
+    let g = groups.get(key);
+    if (!g) { g = { running: [], done: [] }; groups.set(key, g); }
+    (isFinished(b) ? g.done : g.running).push(b);
+  }
+  const out: T[] = [];
+  for (const g of groups.values()) out.push(...g.running, ...g.done);
+  return out;
+}
+
+/** Positionen der Karten im Raster (relativ zum Raster, also unabhängig vom Scrollen) für die FLIP-Animation. */
+export type CardPositions = ReadonlyMap<string, { x: number; y: number }>;
+
+/**
+ * Welche Karten beim Wechsel ans Ende gleiten (FLIP, 1.043.0): nur wenn in DIESEM Bild eine Partie fertig wurde, die
+ * vorher schon lief (`wasFinished` false) — beim Erstladen, Rundenwechsel oder neuen Bretter-Set gibt es keine Vorgänger,
+ * also keinen Sprung. Ergebnis: Schlüssel → Versatz (alte minus neue Lage) der Karten, die sich bewegt haben.
+ */
+export function flipDeltas(prev: CardPositions, next: CardPositions, wasFinished: ReadonlyMap<string, boolean>,
+  finishedNow: ReadonlyMap<string, boolean>): Map<string, { dx: number; dy: number }> {
+  const out = new Map<string, { dx: number; dy: number }>();
+  const justFinished = [...finishedNow].some(([k, f]) => f && wasFinished.get(k) === false);
+  if (!justFinished) return out;
+  for (const [k, p] of next) {
+    const old = prev.get(k);
+    if (!old) continue;
+    const dx = old.x - p.x, dy = old.y - p.y;
+    if (Math.abs(dx) >= 1 || Math.abs(dy) >= 1) out.set(k, { dx, dy });
+  }
+  return out;
+}
