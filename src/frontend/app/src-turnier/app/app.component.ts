@@ -72,9 +72,13 @@ export class TurnierAppComponent implements OnInit {
    * fehlen Suchprofile, Merkliste und Favoriten, bis der Nutzer selbst neu laedt. Auf der Maske selbst nicht —
    * dort navigiert `leaveLoginMask` schon. Keine Schleife: danach ist er angemeldet, und `consumeIncoming` meldet
    * `false`.
+   *
+   * <p>„Auf der Maske“ heißt auch: eine Navigation dorthin ist noch unterwegs (2026-11-28). Die Adresszeile zeigt
+   * /login erst am Navigationsende; bisher sah dieser Test währenddessen die vorige Adresse und lud neu, statt
+   * `leaveLoginMask` den Rücksprung zu überlassen. Gleiche Prüfung wie dort ({@link HandoffService.loginMaskReturnUrl}).</p>
    */
   private afterAdoption(adopted: boolean): void {
-    if (adopted && !location.pathname.endsWith('/login')) this.reloadPage();
+    if (adopted && this.handoff.loginMaskReturnUrl() === undefined) this.reloadPage();
   }
 
   /** Eigene Methode, damit die Specs das Neuladen abfangen koennen. */

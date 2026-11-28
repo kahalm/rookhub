@@ -222,7 +222,11 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
    Registrierung und Guard). `?switch=1` ist die bewusste Tuer zur Maske fuer einen Konto-Wechsel ohne
    vorheriges Abmelden. Gilt ebenso in der Turnierseite (`src-turnier`, Import ueber `@rh/*`). Der Wechsel auf
    ein ANDERES Konto raeumt lokal auf wie `logout()` (ohne `session/end`); ebenso der Ablauf des Tokens
-   (`SessionStore.validUser` → `endExpiredSession`, Codereview F1-006)
+   (`SessionStore.validUser` → `endExpiredSession`, Codereview F1-006).
+   Laeuft beim Start noch die Uebernahme (`HandoffService.consumeIncoming`, Einmal-Code/geteilte Anmeldung), warten
+   `authGuard`/`adminGuard` darauf (`core/handoff-ready.ts`, hoechstens 5 s), statt den Gast auf die Maske zu schicken;
+   `leaveLoginMask` prueft auch eine noch laufende Navigation zu /login (Fund 2026-11-28, LeagueHub). Der Abgleich
+   beim Zurueckkehren in den Tab laeuft hoechstens alle 5 Minuten (`RecheckGapMs`)
 4a. Speichern der Sitzung (`SessionStore.persist`, hinter der Fassade `AuthService`): ist der localStorage voll, werden die Offline-Caches
    geraeumt und erneut geschrieben; scheitert auch das, sagt eine Snackbar, dass die Anmeldung nur bis zum
    Neuladen haelt (`storageFull`, Kibana-Event `ClientLog storage_full`). Vorher blieb das stumm

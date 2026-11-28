@@ -1,7 +1,8 @@
+import { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
@@ -126,5 +127,25 @@ describe('TurnierAppComponent', () => {
 
     app.afterAdoption(true);
     expect(reload).withContext(location.pathname).toHaveBeenCalledTimes(location.pathname.endsWith('/login') ? 0 : 1);
+  });
+
+  // Fund 2026-11-28: die Navigation zur Maske läuft noch (Login-Chunk lädt), die Adresszeile zeigt sie also noch nicht.
+  // afterAdoption darf dann NICHT neu laden — den Rücksprung übernimmt leaveLoginMask.
+  it('laedt nicht neu, solange die Navigation zur Maske noch unterwegs ist', async () => {
+    const fixture = TestBed.createComponent(TurnierAppComponent);
+    const app = fixture.componentInstance as unknown as { afterAdoption(a: boolean): void; reloadPage(): void };
+    const reload = spyOn(app, 'reloadPage');
+    const router = TestBed.inject(Router);
+    let release!: (c: Type<unknown>) => void;
+    router.resetConfig([{ path: 'login', loadComponent: () => new Promise<Type<unknown>>(r => release = r) }]);
+    const nav = router.navigateByUrl('/login?returnUrl=%2Fprofile');
+    await new Promise<void>(r => setTimeout(r));
+    expect(router.currentNavigation()).withContext('Login-Chunk lädt noch').not.toBeNull();
+
+    app.afterAdoption(true);
+    expect(reload).not.toHaveBeenCalled();
+
+    release(class {});
+    await nav.catch(() => false);
   });
 });

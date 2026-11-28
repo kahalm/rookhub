@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, UrlTree } from '@angular/router';
 import { AuthService } from './auth.service';
+import { HandoffReady } from './handoff-ready';
 
 /**
  * Gast → Anmeldemaske mit Rücksprungziel und dem Hinweis „bitte einloggen“ (`authRequired`). EINE Form für jeden
@@ -18,7 +19,12 @@ export const authGuard: CanActivateFn = (route, state) => {
   if (authService.isLoggedIn) {
     return true;
   }
+  // Läuft gerade die Start-Übernahme (Einmal-Code oder geteilte Anmeldung, HandoffService.consumeIncoming), erst
+  // deren Ende abwarten — höchstens HandoffReady.GuardWaitMs. Sonst landete ein Gast mit geteilter Anmeldung auf der
+  // Maske, obwohl die Sitzung einen Moment später stand (Fund 2026-11-28, LeagueHub). Ohne Übernahme bleibt der
+  // Guard synchron.
   // Nicht eingeloggt → zur Login-Seite mit Rücksprungziel + Flag, damit dort der Hinweis
   // „bitte einloggen/registrieren" erscheint (z. B. beim Klick auf einen Wochenpost-Link).
-  return loginRedirect(router, state.url);
+  return inject(HandoffReady).afterPending(() =>
+    authService.isLoggedIn ? true : loginRedirect(router, state.url));
 };

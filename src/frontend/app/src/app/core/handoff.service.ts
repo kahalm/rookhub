@@ -1,8 +1,9 @@
 import { DestroyRef, Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, UrlTree } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService, AuthResponse } from './auth.service';
+import { HandoffReady } from './handoff-ready';
 import { accountHomeUrl, leagueHubUrl, partnerSiteUrl, rookHubUrlForLeagueHub } from './partner-site';
 import { sanitizeReturnUrl } from './return-url.util';
 
@@ -52,6 +53,7 @@ export class HandoffService {
   private auth = inject(AuthService);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
+  private readyState = inject(HandoffReady);
 
   /** Parametername in der Ziel-URL. */
   static readonly Param = 'h';
@@ -64,8 +66,14 @@ export class HandoffService {
   static readonly ExchangeUrl = '/api/auth/rh-session/handoff';
 
   /** Mindestabstand zwischen zwei Abgleichen beim Zurueckkehren in den Tab — hin- und herschalten
-   *  fragt nicht jedes Mal (der Endpunkt teilt sich sein IP-Fenster mit dem Abmelden). */
-  static readonly RecheckGapMs = 15_000;
+   *  fragt nicht jedes Mal (der Endpunkt teilt sich sein IP-Fenster mit dem Abmelden).
+   *
+   *  <p>5 Minuten statt vorher 15 s (2026-11-28): jeder Abgleich ist ein voller rh-session-Tausch, der Server stellt
+   *  dabei jedes Mal ein neues Cookie samt JWT aus — gemessen ~1000 Aufrufe in 48 h von EINEM LeagueHub-Nutzer, der
+   *  zwischen Fenstern wechselt. Ein Abmelden in RookHub kommt hier spaetestens 5 Minuten spaeter an (beim naechsten
+   *  Zurueckkehren in den Tab danach); fuer den Vereins-PC-Fall (A1-005: der Naechste setzt sich hin) reicht das, und
+   *  ein frischer Start der Seite gleicht ohnehin sofort ab.</p> */
+  static readonly RecheckGapMs = 5 * 60_000;
 
   private watching = false;
   private lastCheck = 0;
@@ -149,11 +157,27 @@ export class HandoffService {
   private goInTab(tab: Window, url: string): void { tab.location.href = url; }
 
   /**
+   * Erfuellt, sobald die Start-Uebernahme ({@link consumeIncoming}) fertig ist — sofort, wenn keine laeuft. Wird nie
+   * verworfen. Die Guards warten darauf ueber {@link HandoffReady} (ohne diesen Dienst und seine Abhaengigkeiten).
+   */
+  get ready(): Promise<void> { return this.readyState.settled(Number.POSITIVE_INFINITY); }
+
+  /**
    * Loest einen mitgebrachten Code ein (beim App-Start aufzurufen) und raeumt ihn aus der URL —
    * er ist verbraucht, und im Verlauf hat er nichts verloren. `true`, wenn dadurch eine Anmeldung
    * entstanden ist.
+   *
+   * <p>Solange das laeuft, ist es in {@link HandoffReady} vermerkt — SYNCHRON, noch bevor die erste Navigation
+   * startet (die Wurzelkomponente ruft das aus `ngOnInit`, der Router navigiert erst danach): der authGuard wartet
+   * darauf, statt einen Gast mit geteilter Anmeldung auf die Maske zu schicken (Fund 2026-11-28, LeagueHub).</p>
    */
-  async consumeIncoming(): Promise<boolean> {
+  consumeIncoming(): Promise<boolean> {
+    const run = this.runConsumeIncoming();
+    this.readyState.track(run);
+    return run;
+  }
+
+  private async runConsumeIncoming(): Promise<boolean> {
     this.watchAdoptedSession();
     const url = new URL(location.href);
     const code = url.searchParams.get(HandoffService.Param);
@@ -292,7 +316,27 @@ export class HandoffService {
   }
 
   /**
-   * Holt den Nutzer aus der Anmeldemaske heraus, falls er dort inzwischen gelandet ist.
+   * Steht die Anmeldemaske gerade an — oder ist eine Navigation dorthin noch unterwegs? Dann das Ruecksprungziel
+   * (`returnUrl`, ungeprueft, ggf. `null`), sonst `undefined`.
+   *
+   * <p>Die laufende Navigation zaehlt ZUERST (Fund 2026-11-28, LeagueHub): der Router setzt die Adresszeile erst am
+   * Navigationsende, waehrend der Login-Chunk noch laedt steht dort die vorige Adresse. Nur `location` zu pruefen
+   * liess den Nutzer angemeldet vor der Maske sitzen.</p>
+   */
+  loginMaskReturnUrl(): string | null | undefined {
+    const nav = this.router.currentNavigation();
+    const pending: UrlTree | undefined = nav ? (nav.finalUrl ?? nav.extractedUrl) : undefined;
+    if (pending) {
+      const path = this.router.serializeUrl(pending).split(/[?#]/)[0];
+      return path.endsWith('/login') ? (pending.queryParams['returnUrl'] ?? null) : undefined;
+    }
+    const url = new URL(location.href);
+    return url.pathname.endsWith('/login') ? url.searchParams.get('returnUrl') : undefined;
+  }
+
+  /**
+   * Holt den Nutzer aus der Anmeldemaske heraus, falls er dort inzwischen gelandet ist — oder gerade dorthin
+   * unterwegs ist (siehe {@link loginMaskReturnUrl}).
    *
    * <p>Der Aufruf hier laeuft aus dem `ngOnInit` der Wurzelkomponente und ist ASYNCHRON — die
    * erste Router-Navigation startet direkt danach, also BEVOR die Anmeldung steht. Der authGuard
@@ -305,9 +349,9 @@ export class HandoffService {
    * die Turnierseite, KidHub und LeagueHub haben kein Dashboard.</p>
    */
   private leaveLoginMask(): void {
-    const url = new URL(location.href);
-    if (!url.pathname.endsWith('/login')) return;
-    void this.router.navigateByUrl(sanitizeReturnUrl(url.searchParams.get('returnUrl'), '/'));
+    const returnUrl = this.loginMaskReturnUrl();
+    if (returnUrl === undefined) return;
+    void this.router.navigateByUrl(sanitizeReturnUrl(returnUrl, '/'));
   }
 
   /**

@@ -1,9 +1,11 @@
+import { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { routes } from '../app.routes';
 import { AuthService } from './auth.service';
+import { authGuard } from './auth.guard';
 import { GUEST_START_URL, HandoffService } from './handoff.service';
 
 /**
@@ -143,6 +145,71 @@ describe('HandoffService', () => {
 
     it('lässt auch ein eingebettetes scheme:// nicht durch', async () => {
       expect(await adoptOnLoginMask('/x?next=https://evil.example')).toHaveBeenCalledWith('/');
+    });
+  });
+
+  describe('Übernahme, während die erste Navigation noch läuft (Fund 2026-11-28, LeagueHub)', () => {
+    // Prod v1.036.0, ES-Logs: rh-session → 200 → adoptSession, danach trotzdem die Anmeldemaske. Die erste
+    // Navigation lief parallel; der authGuard schickte auf /login, und während dessen Chunk lud, stand in der
+    // Adresszeile noch die vorige Adresse — leaveLoginMask prüfte nur location und tat nichts.
+    let router: Router;
+    let releaseLogin!: (c: Type<unknown>) => void;
+
+    beforeEach(() => {
+      router = TestBed.inject(Router);
+      router.resetConfig([
+        { path: 'verein', canActivate: [authGuard], children: [] },
+        { path: 'login', loadComponent: () => new Promise<Type<unknown>>(r => releaseLogin = r) },   // lazy, hängt bis release
+      ]);
+    });
+
+    it('verlässt die Maske auch, wenn die Navigation dorthin noch läuft (Login-Chunk lädt)', async () => {
+      history.replaceState({}, '', '/verein');
+      const done = svc.consumeIncoming();
+      const toLogin = router.navigateByUrl('/login?returnUrl=%2Fverein');
+      await settle();
+      expect(location.pathname).withContext('Adresszeile noch nicht auf der Maske').toBe('/verein');
+      expect(router.currentNavigation()?.finalUrl?.toString()).toBe('/login?returnUrl=%2Fverein');
+      const nav = spyOn(router, 'navigateByUrl').and.callThrough();
+
+      http.expectOne('/api/auth/rh-session').flush(session);
+      expect(await done).toBeTrue();
+      expect(nav).toHaveBeenCalledOnceWith('/verein');
+      releaseLogin(class {});
+
+      expect(await nav.calls.mostRecent().returnValue).toBeTrue();
+      expect(await toLogin).withContext('die Navigation zur Maske ist abgelöst').toBeFalse();
+      expect(router.url).toBe('/verein');
+      drainPreferences();
+      http.verify();
+    });
+
+    it('der authGuard wartet auf die laufende Übernahme, statt auf /login zu schicken', async () => {
+      history.replaceState({}, '', '/verein');
+      const done = svc.consumeIncoming();
+      const first = router.navigateByUrl('/verein');
+      await settle();
+      expect(router.currentNavigation()).withContext('Guard wartet').not.toBeNull();
+
+      http.expectOne('/api/auth/rh-session').flush(session);
+      expect(await done).toBeTrue();
+      expect(await first).toBeTrue();
+      expect(router.url).toBe('/verein');
+      drainPreferences();
+      http.verify();
+    });
+
+    it('ready ist erfüllt, sobald consumeIncoming fertig ist', async () => {
+      let ready = false;
+      const done = svc.consumeIncoming();
+      void svc.ready.then(() => ready = true);
+      await settle();
+      expect(ready).withContext('rh-session noch offen').toBeFalse();
+      http.expectOne('/api/auth/rh-session').flush(null, noContent);
+      expect(await done).toBeFalse();
+      await settle();
+      expect(ready).toBeTrue();
+      http.verify();
     });
   });
 
@@ -460,6 +527,25 @@ describe('HandoffService', () => {
       visible();
       document.dispatchEvent(new Event('visibilitychange'));
       http.expectNone('/api/auth/rh-session');
+      await finish();
+    });
+
+    it('gleicht höchstens alle 5 Minuten ab — jeder Abgleich stellt ein neues Cookie samt JWT aus (2026-11-28)', async () => {
+      expect(HandoffService.RecheckGapMs).toBe(5 * 60_000);
+      adopted();
+      await svc.consumeIncoming();
+      http.expectOne('/api/auth/rh-session').flush(session);
+      await settle();
+      visible();
+      const self = svc as unknown as { lastCheck: number };
+
+      self.lastCheck = Date.now() - 60_000;                          // vor 1 Minute: früher (15 s) schon wieder
+      window.dispatchEvent(new Event('focus'));
+      http.expectNone('/api/auth/rh-session');
+
+      self.lastCheck = Date.now() - HandoffService.RecheckGapMs - 1;
+      window.dispatchEvent(new Event('focus'));
+      http.expectOne('/api/auth/rh-session').flush(session);
       await finish();
     });
 
