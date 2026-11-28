@@ -2748,6 +2748,10 @@ namespace RookHub.Api.Migrations
                     b.Property<int>("Page")
                         .HasColumnType("int");
 
+                    b.Property<string>("Reason")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 

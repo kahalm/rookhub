@@ -535,6 +535,9 @@ public class EbookDiagramCorrection
     [MaxLength(60)]
     public string? FontFamily { get; set; }
     public float? Confidence { get; set; }
+    /// <summary>Herkunft einer Massenkorrektur (1.041.0, z. B. <c>bulk-rotation-180</c>); <c>null</c> = Hand-Korrektur im Editor.</summary>
+    [MaxLength(40)]
+    public string? Reason { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

@@ -65,6 +65,13 @@ public class EbooksAdminController : BaseApiController
     public async Task<IActionResult> RescanDiagrams(CancellationToken ct)
         => Ok(new { queued = await _service.RescanDiagramsAsync(ct) });
 
+    /// <summary>Massenkorrektur von Diagrammstellungen (1.041.0): <c>{ items: [{ diagramId, fen, sideKnown }], reason?, dryRun? }</c>
+    /// (höchstens 2000) → Ergebnis je Eintrag (<c>ok</c>/<c>invalid</c>/<c>notfound</c>/<c>unchanged</c>) + neu eingereihte Bücher.
+    /// Wie „Stellung korrigieren“, aber Zugrecht aus dem Auftrag und Buch NICHT kuratiert.</summary>
+    [HttpPost("diagrams/positions")]
+    public async Task<ActionResult<EbookBulkPositionsResultDto>> BulkCorrectPositions([FromBody] EbookBulkPositionsDto dto, CancellationToken ct)
+        => Ok(await _service.BulkCorrectDiagramPositionsAsync(GetUserId(), dto, ct));
+
     /// <summary>
     /// Diagramme EINES Buchs ergänzen statt ersetzen (0.811.0): die Erkennung läuft erneut (auch bei kuratierten Büchern),
     /// vorhandene Diagramme bleiben unverändert, neue kommen nur an freien Stellen dazu; unplausible Lesungen werden als

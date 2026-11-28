@@ -472,6 +472,49 @@ public class EbookDiagramPositionDto
     [System.ComponentModel.DataAnnotations.Required, MaxLength(100)] public string Fen { get; set; } = string.Empty;
 }
 
+/// <summary>Massenkorrektur von Diagrammstellungen (<c>POST /api/admin/ebooks/diagrams/positions</c>, 1.041.0).</summary>
+public class EbookBulkPositionsDto
+{
+    public const int MaxItems = 2000;
+    [System.ComponentModel.DataAnnotations.Required, MaxLength(MaxItems)] public List<EbookBulkPositionItemDto> Items { get; set; } = new();
+    /// <summary>Kennung im Korrektur-Protokoll (<c>EbookDiagramCorrections.Reason</c>); leer → <c>bulk</c>.</summary>
+    [MaxLength(40)] public string? Reason { get; set; }
+    /// <summary>Nur berechnen, nichts speichern.</summary>
+    public bool DryRun { get; set; }
+}
+
+public class EbookBulkPositionItemDto
+{
+    public int DiagramId { get; set; }
+    public string? Fen { get; set; }
+    /// <summary>Zugrecht gesichert (z. B. aus dem Buchtext) — wird so übernommen, nicht erzwungen.</summary>
+    public bool SideKnown { get; set; }
+}
+
+public class EbookBulkPositionsResultDto
+{
+    public bool DryRun { get; set; }
+    public string Reason { get; set; } = string.Empty;
+    public int Ok { get; set; }
+    public int Invalid { get; set; }
+    public int NotFound { get; set; }
+    public int Unchanged { get; set; }
+    /// <summary>Bücher, deren Lösungsprüfung neu eingereiht wurde (bzw. bei <c>dryRun</c> würde).</summary>
+    public List<int> RequeuedBooks { get; set; } = new();
+    public List<EbookBulkPositionItemResultDto> Items { get; set; } = new();
+}
+
+public class EbookBulkPositionItemResultDto
+{
+    public int DiagramId { get; set; }
+    public int? EbookId { get; set; }
+    /// <summary><c>ok</c> | <c>invalid</c> | <c>notfound</c> | <c>unchanged</c>.</summary>
+    public string Status { get; set; } = string.Empty;
+    public string? OldFen { get; set; }
+    public string? NewFen { get; set; }
+    public string? Error { get; set; }
+}
+
 
 /// <summary>Wo eine Kurslinie im E-Book steht (<c>GET /api/courses/{bookId}/ebook-refs</c>).</summary>
 public class CourseLineEbookRefDto

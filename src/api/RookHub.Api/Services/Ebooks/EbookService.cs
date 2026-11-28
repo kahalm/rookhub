@@ -839,27 +839,84 @@ public class EbookService
         var d = await _db.EbookDiagrams.FirstOrDefaultAsync(x => x.Id == diagramId && x.EbookId == id, ct)
             ?? throw new NotFoundException("Diagram not found.");
         var newFen = NormalizeCorrectedFen(fen);
-        _db.EbookDiagramCorrections.Add(new EbookDiagramCorrection
-        {
-            EbookId = id, DiagramId = d.Id, UserId = userId, Page = d.Page, OldFen = d.Fen, NewFen = newFen,
-            FontFamily = d.FontFamily, Confidence = d.Confidence,
-        });
-        if (d.Fen != newFen)
-        {
-            d.Fen = newFen;
-            ResetSolutionForNewPosition(d);
-        }
         // Zugrecht wurde im Editor ausdrücklich gesetzt (der Editor schickt es immer mit) — jetzt bekannt.
-        d.SideKnown = true;
+        ApplyPositionCorrection(d, userId, newFen, sideKnown: true, reason: null);
         // Ein ungelesenes Diagramm (0.811.0) ist nach der Korrektur gelesen — ab jetzt für Nutzer sichtbar.
         if (d.FontFamily == EbookDiagramVisibility.Unread) d.FontFamily = "hand";
         ebook.DiagramsCurated = true;
-        ebook.SolutionCheckState = EbookDiagramState.Pending;
-        ebook.SolutionCheckQueuedAt = DateTime.UtcNow;
-        ebook.UpdatedAt = DateTime.UtcNow;
+        QueueSolutionCheck(ebook);
         await _db.SaveChangesAsync(ct);
         var all = await GetDiagramsAsync(caller, manageAll, id, ct);
         return all.Items.FirstOrDefault(x => x.Id == d.Id) ?? throw new NotFoundException("Diagram not found.");
+    }
+
+    /// <summary>Kern jeder Stellungskorrektur (Editor und Massenkorrektur): Protokollzeile in <see cref="EbookDiagramCorrection"/>,
+    /// neue FEN + Zugrecht, bei neuer FEN die Lösung ab der neuen Stellung neu bestimmen. Das Einreihen des Buchs macht der Aufrufer.</summary>
+    private void ApplyPositionCorrection(EbookDiagram d, int userId, string newFen, bool sideKnown, string? reason)
+    {
+        _db.EbookDiagramCorrections.Add(new EbookDiagramCorrection
+        {
+            EbookId = d.EbookId, DiagramId = d.Id, UserId = userId, Page = d.Page, OldFen = d.Fen, NewFen = newFen,
+            FontFamily = d.FontFamily, Confidence = d.Confidence, Reason = reason,
+        });
+        d.SideKnown = sideKnown;
+        if (d.Fen != newFen)
+        {
+            d.Fen = newFen;
+            ResetSolutionForNewPosition(d, sideKnown);
+        }
+    }
+
+    private static void QueueSolutionCheck(Ebook ebook)
+    {
+        ebook.SolutionCheckState = EbookDiagramState.Pending;
+        ebook.SolutionCheckQueuedAt = DateTime.UtcNow;
+        ebook.UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Massenkorrektur von Diagrammstellungen (1.041.0, <c>ebooks.manage</c>; z. B. 180° gedreht gespeicherte Bretter): je
+    /// Eintrag dieselbe Korrektur wie im Editor (<see cref="ApplyPositionCorrection"/>, protokolliert mit <c>Reason</c>), aber
+    /// das Zugrecht kommt aus dem Auftrag, das Buch wird NICHT kuratiert, und jedes Buch wird nur einmal neu eingereiht.
+    /// Je Eintrag <c>ok</c> / <c>invalid</c> (FEN ungültig, doppelte Id) / <c>notfound</c> / <c>unchanged</c> (gleiche FEN und
+    /// gleiches Zugrecht — dann auch keine Protokollzeile). <c>dryRun</c> rechnet nur.
+    /// </summary>
+    public async Task<EbookBulkPositionsResultDto> BulkCorrectDiagramPositionsAsync(int userId, EbookBulkPositionsDto dto, CancellationToken ct = default)
+    {
+        var items = dto.Items ?? new();
+        if (items.Count > EbookBulkPositionsDto.MaxItems)
+            throw new DomainValidationException($"At most {EbookBulkPositionsDto.MaxItems} items per call.");
+        var reason = string.IsNullOrWhiteSpace(dto.Reason) ? "bulk" : Clip(dto.Reason.Trim(), 40);
+        var result = new EbookBulkPositionsResultDto { DryRun = dto.DryRun, Reason = reason };
+        var ids = items.Select(i => i.DiagramId).Distinct().ToList();
+        var diagrams = await _db.EbookDiagrams.Where(d => ids.Contains(d.Id)).ToDictionaryAsync(d => d.Id, ct);
+        var seen = new HashSet<int>();
+        var books = new SortedSet<int>();
+        foreach (var item in items)
+        {
+            var r = new EbookBulkPositionItemResultDto { DiagramId = item.DiagramId };
+            result.Items.Add(r);
+            if (!diagrams.TryGetValue(item.DiagramId, out var d)) { r.Status = "notfound"; result.NotFound++; continue; }
+            r.EbookId = d.EbookId;
+            r.OldFen = d.Fen;
+            if (!seen.Add(d.Id)) { r.Status = "invalid"; r.Error = "Duplicate diagram id."; result.Invalid++; continue; }
+            string newFen;
+            try { newFen = NormalizeCorrectedFen(item.Fen); }
+            catch (DomainValidationException e) { r.Status = "invalid"; r.Error = e.Message; result.Invalid++; continue; }
+            r.NewFen = newFen;
+            if (d.Fen == newFen && d.SideKnown == item.SideKnown) { r.Status = "unchanged"; result.Unchanged++; continue; }
+            r.Status = "ok";
+            result.Ok++;
+            if (d.Fen != newFen) books.Add(d.EbookId);
+            if (!dto.DryRun) ApplyPositionCorrection(d, userId, newFen, item.SideKnown, reason);
+        }
+        result.RequeuedBooks = books.ToList();
+        if (dto.DryRun) return result;
+        if (books.Count > 0)
+            foreach (var ebook in await _db.Ebooks.Where(b => books.Contains(b.Id)).ToListAsync(ct))
+                QueueSolutionCheck(ebook);
+        await _db.SaveChangesAsync(ct);
+        return result;
     }
 
     /// <summary>FEN prüfen und vervollständigen: 8 Reihen à 8 Felder, genau ein weißer und ein schwarzer König, Zugrecht w/b;
@@ -901,7 +958,7 @@ public class EbookService
 
     /// <summary>Neue Stellung: Buchlösung ab ihr neu nachspielen (nicht spielbar → keine Linie, Text bleibt), Engine-Lösung
     /// verwerfen; Prüfung und Bewertung zurück auf „ungeprüft“.</summary>
-    internal static void ResetSolutionForNewPosition(EbookDiagram d)
+    internal static void ResetSolutionForNewPosition(EbookDiagram d, bool sideKnown = true)
     {
         if (d.SolutionSource == "engine" || string.IsNullOrEmpty(d.SolutionText))
         {
@@ -911,7 +968,7 @@ public class EbookService
         }
         else
         {
-            var found = EbookSolutionFinder.TryParse(d.Fen, true, d.SolutionText, d.SolutionPage ?? d.Page);
+            var found = EbookSolutionFinder.TryParse(d.Fen, sideKnown, d.SolutionText, d.SolutionPage ?? d.Page);
             d.SolutionUci = found == null ? null : Clip(string.Join(' ', found.Uci), 1200);
             d.SolutionSan = found == null ? null : Clip(string.Join(' ', found.San), 1500);
             d.SolutionSource = "book";

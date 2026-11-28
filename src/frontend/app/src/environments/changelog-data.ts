@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.041.0", date: "2026-11-28", changes: [
+    { en: "E-books (admin): new bulk endpoint to correct many diagram positions at once (up to 2000 per call, with dry run). It works like „Correct position“, but takes the side to move from the request, does not mark the book as curated and logs each correction with a reason (e.g. „bulk-rotation-180“) — for the boards that were stored rotated by 180°.",
+      de: "E-Books (Admin): neuer Sammel-Endpunkt, der viele Diagrammstellungen auf einmal korrigiert (bis 2000 je Aufruf, mit Probelauf). Er arbeitet wie „Stellung korrigieren“, übernimmt aber das Zugrecht aus dem Auftrag, macht das Buch nicht kuratiert und protokolliert jede Korrektur mit Grund (z. B. „bulk-rotation-180“) — für die um 180° gedreht gespeicherten Bretter." },
+  ] },
   { version: "1.040.0", date: "2026-11-28", changes: [
     { en: "Tournament site, live boards: chess.com broadcasts work too. Paste a chess.com event link (event, round or game, e.g. chess.com/events/…/03/…) in „Add board“ next to Lichess links, or link your own tournament to a chess.com event. The boards look like Lichess boards — moves, clocks, result, engine bar, full screen with move list and „Analyse“.",
       de: "Turnierseite, Live-Bretter: Übertragungen von chess.com gehen jetzt auch. Einen chess.com-Event-Link (Event, Runde oder Partie, z. B. chess.com/events/…/03/…) wie einen Lichess-Link bei „Brett hinzufügen“ einfügen oder das eigene Turnier mit einem chess.com-Event verknüpfen. Die Bretter sehen aus wie Lichess-Bretter — Züge, Uhren, Ergebnis, Engine-Balken, Vollbild mit Zugliste und „Analysieren“." },
