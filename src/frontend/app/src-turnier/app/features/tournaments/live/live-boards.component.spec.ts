@@ -75,7 +75,20 @@ describe('LiveBoardsComponent', () => {
 
   beforeEach(() => {
     signedIn = false;
-    try { localStorage.removeItem(LIVE_EVAL_KEY); localStorage.removeItem(LIVE_VIEW_KEYS); } catch { /* egal */ }
+    // Standard ist Balken AN (1.039.0); die meisten Fälle prüfen den schlanken Strom → gemerkte Wahl „aus“.
+    try { localStorage.setItem(LIVE_EVAL_KEY, '0'); localStorage.removeItem(LIVE_VIEW_KEYS); } catch { /* egal */ }
+  });
+
+  // Wunsch 2026-11-28: „standard mit engine + pfeil“ — auch für Gäste ohne gemerkte Wahl und ohne eval in der Adresse.
+  it('ohne gemerkte Wahl: Engine-Balken und bester Zug AN, Strom mit eval=true', async () => {
+    try { localStorage.removeItem(LIVE_EVAL_KEY); localStorage.removeItem(LIVE_BEST_KEY); } catch { /* egal */ }
+    await setup({ round: '1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const c = fixture.componentInstance;
+    expect(c.evalOn()).toBeTrue();
+    expect(c.bestOn()).toBeTrue();
+    expect(FakeEventSource.last().url).toBe('/api/live-boards/1404438/rounds/1/stream?eval=true&ngsw-bypass=1');
   });
 
   it('Gast, verknüpft: verbindet den Strom der laufenden Runde und zeigt die Bretter der Begegnung mit Stand', async () => {
@@ -198,30 +211,42 @@ describe('LiveBoardsComponent', () => {
     http.expectOne('/api/live-boards/1404438').flush(STATUS);
     await fixture.whenStable();
     expect(FakeEventSource.last().url).toBe('/api/live-boards/1404438/rounds/1/stream?eval=true&ngsw-bypass=1');
-    expect(localStorage.getItem(LIVE_EVAL_KEY)).toBeNull();
+    expect(localStorage.getItem(LIVE_EVAL_KEY)).toBe('0');                    // gemerkte Wahl bleibt
   });
 
-  it('Balken umschalten schreibt eval in die Adresse (ersetzt den Eintrag, kein neuer Verlaufsschritt)', async () => {
+  it('Balken umschalten: gemerkt im Browser, nicht in die Adresse; ein ausdrückliches ?eval= fällt weg (ersetzt den Eintrag)', async () => {
     await setup();
     http.expectOne('/api/live-boards/1404438').flush(STATUS);
     await fixture.whenStable();
     const nav = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     fixture.componentInstance.setEval(true);
-    expect(nav).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { eval: 1 }, queryParamsHandling: 'merge', replaceUrl: true }));
+    expect(nav).not.toHaveBeenCalled();
+    expect(localStorage.getItem(LIVE_EVAL_KEY)).toBe('1');
+  });
+
+  it('Balken umschalten bei ausdrücklichem ?eval=0: Adresse ging vor, der Schalter nimmt eval heraus (ersetzt den Eintrag)', async () => {
+    try { localStorage.removeItem(LIVE_EVAL_KEY); } catch { /* egal */ }
+    await setup({ eval: '0', round: '1' });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    expect(fixture.componentInstance.evalOn()).toBeFalse();                       // Adresse vor Vorliebe
+    const nav2 = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    fixture.componentInstance.setEval(true);
+    expect(nav2).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { eval: null }, queryParamsHandling: 'merge', replaceUrl: true }));
   });
 
   const TOKEN = 'Ab3dEf7hJk';
   const KEY = 'K'.repeat(24);
-  const viewOf = (over: Record<string, unknown> = {}) => ({ round: 1, team: 'SK Schwaz', player: null, add: [], ext: [], eval: false, ...over });
+  const viewOf = (over: Record<string, unknown> = {}) => ({ round: 1, team: 'SK Schwaz', player: null, add: [], ext: [], ...over });
 
-  it('lange Adresse bleibt gültig: Runde immer ausdrücklich, Mannschaft und Balken mit', async () => {
+  it('lange Adresse bleibt gültig: Runde immer ausdrücklich, Mannschaft mit, Balken nicht (jeder selbst)', async () => {
     await setup({ team: 'Schachklub Schwaz' });
     http.expectOne('/api/live-boards/1404438').flush(STATUS);
     await fixture.whenStable();
     const c = fixture.componentInstance;
     expect(c.shareUrl()).toBe(`${location.origin}/tournaments/1404438/live?round=1&team=Schachklub%20Schwaz`);
     c.evalOn.set(true);
-    expect(c.shareUrl()).toBe(`${location.origin}/tournaments/1404438/live?round=1&team=Schachklub%20Schwaz&eval=1`);
+    expect(c.shareUrl()).toBe(`${location.origin}/tournaments/1404438/live?round=1&team=Schachklub%20Schwaz`);
   });
 
   // Wunsch 2026-11-26: „nicht mit round=2&team=…, sondern einfach einen Hash — Änderungen sollen alle mit dem Link sehen“
@@ -273,7 +298,7 @@ describe('LiveBoardsComponent', () => {
     const c = fixture.componentInstance;
     expect(FakeEventSource.all.length).toBe(1);
     const es = FakeEventSource.last();
-    expect(es.url).toBe(`/api/live-boards/views/${TOKEN}/stream?ngsw-bypass=1`);
+    expect(es.url).toBe(`/api/live-boards/views/${TOKEN}/stream?eval=false&ngsw-bypass=1`);
     es.emit('view', { token: TOKEN, tournamentId: '1404438', view: viewOf() });
     es.emit('snapshot', TWO_MATCHES);
     await fixture.whenStable();
@@ -292,19 +317,41 @@ describe('LiveBoardsComponent', () => {
     http.verify();
   });
 
-  it('/live/<token> Zuschauer: eigener Balken nur für ihn (eval im Strom), andere Änderung → eigene lange Ansicht', async () => {
+  it('/live/<token> Zuschauer: eigener Balken nur für ihn (eval im Strom, gemerkt), andere Änderung → eigene lange Ansicht', async () => {
     await openView();
     const c = fixture.componentInstance;
     c.setEval(true);
     expect(FakeEventSource.last().url).toBe(`/api/live-boards/views/${TOKEN}/stream?eval=true&ngsw-bypass=1`);
-    FakeEventSource.last().emit('view', { token: TOKEN, tournamentId: '1404438', view: viewOf({ eval: false }) });
-    expect(c.evalOn()).toBeTrue();                                               // die Ansicht überschreibt seinen Schalter nicht
+    expect(localStorage.getItem(LIVE_EVAL_KEY)).toBe('1');
+    // Alte gespeicherte Ansicht mit eval: false (vor 1.039.0) — wird ignoriert.
+    FakeEventSource.last().emit('view', { token: TOKEN, tournamentId: '1404438', view: { ...viewOf(), eval: false } as never });
+    expect(c.evalOn()).toBeTrue();
     const nav = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
     c.setFilter('team', 'SK Absam');
     expect(TestBed.inject(Router).serializeUrl(nav.calls.mostRecent().args[0] as never))
-      .toBe('/tournaments/1404438/live?round=1&team=SK%20Absam&eval=1');
+      .toBe('/tournaments/1404438/live?round=1&team=SK%20Absam');
     http.verify();                                                               // kein PUT
   });
+
+  // Wunsch 2026-11-28: „nur die bretter bei allen gleich … engine + bester zug soll jeder selbst ein/ausschalten können“
+  it('/live/<token> Besitzer: Balken und bester Zug nur für ihn — kein PUT, die Ansicht bleibt', fakeAsync(() => {
+    writeViewKey(TOKEN, KEY);
+    void openView(viewOf(), true);
+    flush();
+    const c = fixture.componentInstance;
+    c.setEval(true);
+    c.setBest(false);
+    tick(LIVE_VIEW_SAVE_MS * 2);
+    http.verify();                                                               // nichts gespeichert
+    expect(FakeEventSource.last().url).toBe(`/api/live-boards/views/${TOKEN}/stream?eval=true&ngsw-bypass=1`);
+    expect(Object.keys(c.currentView()).sort()).toEqual(['add', 'ext', 'player', 'round', 'team']);
+    c.setAdded(['2.1'], []);                                                     // Bretter dagegen gehen an alle
+    tick(LIVE_VIEW_SAVE_MS);
+    const req = http.expectOne(`/api/live-boards/views/${TOKEN}`);
+    expect(req.request.body).toEqual({ view: viewOf({ add: ['2.1'] }) });
+    req.flush({ token: TOKEN, tournamentId: '1404438', view: viewOf({ add: ['2.1'] }), canEdit: true });
+    fixture.destroy();
+  }));
 
   it('/live/<token> Besitzer: Änderung sofort sichtbar, entprellt EIN PUT mit Schlüssel, Hinweis „alle sehen mit“', fakeAsync(() => {
     writeViewKey(TOKEN, KEY);

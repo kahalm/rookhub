@@ -16,7 +16,7 @@ eine Mannschaft zeigt deren sechs Bretter auf einer Seite.
 | POST | `/api/live-boards/views` `{ tournamentId, view }` | **AllowAnonymous** (`live-view-write`, 30/min) | Geteilte Ansicht anlegen (1.029.0) → `{ token, tournamentId, view, canEdit, editKey }`; `editKey` nur hier. 404 `live_not_linked` |
 | GET | `/api/live-boards/views/{token}` | **AllowAnonymous** (`directory-read`) | Ansicht lesen; `canEdit` für diesen Aufrufer (Konto des Erstellers oder Header `X-Live-View-Key`). 404 `live_view_not_found` |
 | PUT | `/api/live-boards/views/{token}` `{ view }` | **AllowAnonymous** (`live-view-write`), nur Besitzer | Ansicht ändern; alle offenen Ströme folgen. 403 `live_view_forbidden` |
-| GET | `/api/live-boards/views/{token}/stream?eval=` | **AllowAnonymous** (`directory-read`) + Stromgrenzen wie oben | SSE der Ansicht: `view`, dann wie der Runden-Strom; bei Änderung erneut `view` + `snapshot`, `view-gone` wenn gelöscht |
+| GET | `/api/live-boards/views/{token}/stream?eval=` | **AllowAnonymous** (`directory-read`) + Stromgrenzen wie oben | SSE der Ansicht: `view`, dann wie der Runden-Strom; bei Änderung erneut `view` + `snapshot`, `view-gone` wenn gelöscht. `eval` = Balken DIESES Zuschauers (ohne Angabe aus; seit 1.039.0 nicht mehr Teil der Ansicht) |
 | GET | `/api/live-boards/external?url=` | **AllowAnonymous** (`directory-read`) | „Brett hinzufügen“ aus einer FREMDEN Übertragung (1.025.0): Partie-, Runden- oder Turnier-Link → `{ roundId, roundName, tourName, url, ongoing, finished, gameId, games[] }`. 400 `live_invalid_url`, 404 `live_broadcast_not_found` / `live_ext_game_not_found`, 503 `live_lichess_busy` |
 
 `{id}` ist die chess-results-Nummer wie in `/tournaments/:id`. Gestreamt wird eine
@@ -93,12 +93,20 @@ entferne oder etwas umstelle, sollen alle mit dem Link das auch sehen.“
   so kann auch ein Gast seine Ansicht weiter ändern) → Seite wechselt mit `replaceUrl` auf `/live/{token}` → kurzer Link wird geteilt.
   Scheitert das Anlegen (z. B. 429), wird die lange Adresse geteilt. In der Tabelle steht nur der SHA-256 des Schlüssels; angemeldet
   zählt zusätzlich das Konto (`OwnerUserId`). Nur für verknüpfte Turniere.
-- **Besitzer** (`canEdit`): Runde, Mannschaft/Spieler, Bretter hinzufügen/entfernen und der Balken wirken sofort lokal und gehen
+- **Was geteilt ist** (1.039.0, Wunsch 2026-11-28: „beim shared link sollen nur die bretter bei allen gleich sein (sprich wenn ich
+  eins ergänze sollen es alle haben). engine + bester zug soll jeder selbst ein/ausschalten können, standard mit engine + pfeil“):
+  NUR die Brettauswahl — `LiveViewState` = `round`, `team`, `player`, `add`, `ext` (Reihenfolge der Bretter folgt daraus).
+  Engine-Balken und Pfeil „Bester Zug“ schaltet jeder selbst (Besitzer wie Zuschauer), gemerkt im Browser (`rookhub_live_eval`,
+  `rookhub_live_best`), Standard beide AN. Vor 1.039.0 trug die Ansicht `eval`: alte Zeilen behalten es im JSON, `SharedLiveViews.Parse`
+  übergeht es (keine Migration), beim nächsten Speichern fällt es weg; ein `eval` im `PUT`/`POST` alter Browser wird ebenso übergangen.
+- **Besitzer** (`canEdit`): Runde, Mannschaft/Spieler, Bretter hinzufügen/entfernen wirken sofort lokal und gehen
   entprellt (`LIVE_VIEW_SAVE_MS` 400 ms, mehrere Klicks = ein PUT) als `PUT …/views/{token}` mit Header `X-Live-View-Key`. Bis dahin
-  überschreibt ein `view`-Ereignis die eigene Änderung nicht. Hinweiszeile „Geteilte Ansicht — Änderungen sehen alle mit dem Link.“
-- **Zuschauer** (schlank entschieden): sie folgen der Ansicht. Ihr Balken-Schalter gilt nur für sie (Strom mit `eval=`, nicht
-  gespeichert, die Ansicht überschreibt ihn nicht). Jede ANDERE Änderung (Runde, Mannschaft, Brett) macht daraus ihre eigene Ansicht:
-  Sprung auf die lange Adresse mit der Änderung — die geteilte bleibt unberührt. Hinweiszeile sagt das.
+  überschreibt ein `view`-Ereignis die eigene Änderung nicht. Balken/Pfeil des Besitzers: kein `PUT`, nur sein Strom. Hinweiszeile
+  „Geteilte Ansicht — die Bretter sind für alle mit dem Link gleich, deine Änderungen daran sehen alle. Engine und besten Zug schaltet
+  jeder selbst.“
+- **Zuschauer** (schlank entschieden): sie folgen der Brettauswahl. Balken und Pfeil sind ihre eigenen (Strom mit `eval=`, das
+  `view`-Ereignis fasst sie nicht an). Jede Änderung an den Brettern (Runde, Mannschaft, Brett) macht daraus ihre eigene Ansicht:
+  Sprung auf die lange Adresse mit der Änderung (ohne `eval`) — die geteilte bleibt unberührt. Hinweiszeile sagt das.
 - **Strom** `…/views/{token}/stream`: EINE Verbindung je Zuschauer. Der Server liest die Ansicht, schickt `view` und streamt die Runde
   wie `…/rounds/{n}/stream` (Filter, `add`, `ext` aus der Ansicht). Ändert der Besitzer sie, weckt `LiveViewChanges` (Singleton, im
   Speicher — die API läuft als eine Instanz) alle offenen Ströme dieser Kennung: sie beenden die Abos am Hub, lesen neu und hängen sich
@@ -290,9 +298,12 @@ Stufe vor. Einzelheiten: `docs/api/leaguehub-vereins-datenbank.md` und `docs/api
   Die Turnierseite liefert dafür `assets/stockfish/` aus (angular.json, ngsw-Gruppe `engine` lazy).
 - Brett = geteiltes `app-chess-board` (nur Anzeige; ein Klick tut vorerst nichts), letzter Zug markiert, Uhren (die Seite am
   Zug zählt sekündlich herunter — Näherung ab dem Eintreffen; im E-Ink-Modus steht sie), Ergebnis als Chip.
-- Engine-Balken: Schalter in der Kopfzeile, gemerkt je Gerät (`localStorage rookhub_live_eval`, `device`) und seit 1.024.0
-  zusätzlich in der Adresse (`?eval=1|0`, `replaceUrl`). Steht `eval` in der Adresse (geteilter Link), gilt das vor der
-  Gerätevorliebe, ohne sie zu überschreiben. Gäste dürfen den Balken nutzen (der Strom ist `AllowAnonymous`, auch mit `eval`).
+- Engine-Balken: Schalter in der Kopfzeile, gemerkt je Gerät (`localStorage rookhub_live_eval`, `device`), **Standard an**
+  (1.039.0; nur `0`/`false` heißt aus, gesperrter Speicher → an). „Besten Zug zeigen“ ebenso Standard an. Die lange Adresse
+  nimmt `?eval=1|0` weiter an (alte geteilte Links): ausdrücklich gesetzt gilt es vor der Gerätevorliebe, ohne sie zu überschreiben;
+  der Schalter schreibt seit 1.039.0 NICHT mehr in die Adresse, sondern merkt die Wahl und nimmt ein vorhandenes `eval` heraus
+  (`replaceUrl`), sonst überstimmte es die Wahl beim Neuladen. Der kurze Link `/live/{token}` kennt kein `eval`. Gäste dürfen den
+  Balken nutzen (der Strom ist `AllowAnonymous`, auch mit `eval`).
 - **Vibrieren** (1.035.0, Wunsch 2026-11-27): Schalter „Vibrieren“ (Standard aus, `localStorage rookhub_live_vibrate`, `device`;
   nicht in Adresse/geteilter Ansicht). Fehlt, wo `navigator.vibrate` fehlt (iOS Safari, Desktop-Firefox). Erkennung rein in
   `live-vibrate.ts` (`LiveAlertTracker`): **Ergebnis** — eine Partie, die live lief, bekommt 1-0/0-1/½-½ → `[400,150,400]`;
@@ -304,7 +315,8 @@ Stufe vor. Einzelheiten: `docs/api/leaguehub-vereins-datenbank.md` und `docs/api
   der Klick ist die Nutzerinteraktion, die Chrome vor `vibrate` verlangt. Läuft nur, solange die Seite offen und sichtbar ist
   (kein Push im Hintergrund).
 - **Link teilen** (1.024.0, Wunsch 2026-11-26: „einen speziellen Livestream … auch für anonyme User sharen“): Knopf im Kopf,
-  Link = `/tournaments/{id}/live?round=n[&team=…|&player=…][&eval=1]` — die Runde immer ausdrücklich (ohne sie zeigte der Link
+  Link = `/tournaments/{id}/live?round=n[&team=…|&player=…]` (Rückfall, wenn das Anlegen der geteilten Ansicht scheitert; bis
+  1.038 mit `&eval=1`, seit 1.039.0 ohne — jeder Zuschauer schaltet selbst) — die Runde immer ausdrücklich (ohne sie zeigte der Link
   am nächsten Spieltag die nächste Runde). Am Handy Teilen-Blatt, sonst Zwischenablage. Gast-Prüfung 26.11. im echten
   Headless-Browser gegen Prod: keine Umleitung zur Anmeldung, keine 401, Mannschaft aus `?team=` und Runde aus `?round=`
   greifen; einziger Fehler war `eval=1` → 400 (behoben 1.023.1). Vorschau im Messenger: `docs/api/link-vorschau.md`.

@@ -130,9 +130,9 @@ public class SharedLiveViewsTests : IDisposable
         denied = Assert.IsType<ObjectResult>(await Controller(WithKey("falsch")).UpdateView(created.Token, new UpdateLiveViewRequest { View = View("X") }, Views()));
         Assert.Equal(403, denied.StatusCode);
         var ok = Assert.IsType<OkObjectResult>(await Controller(WithKey(created.EditKey))
-            .UpdateView(created.Token, new UpdateLiveViewRequest { View = new LiveViewState { Round = 0, Team = "  Pinggau-Friedberg ", Eval = true } }, Views()));
+            .UpdateView(created.Token, new UpdateLiveViewRequest { View = new LiveViewState { Round = 0, Team = "  Pinggau-Friedberg " } }, Views()));
         var v = Assert.IsType<LiveViewResponse>(ok.Value).View;
-        Assert.Equal((null, "Pinggau-Friedberg", true), (v.Round, v.Team, v.Eval));         // Runde 0 → laufende Runde
+        Assert.Equal((null, "Pinggau-Friedberg"), (v.Round, v.Team));                       // Runde 0 → laufende Runde
 
         // Angemeldet angelegt: das Konto darf ohne Schlüssel, ein anderes Konto nicht.
         var mine = Assert.IsType<LiveViewResponse>(Assert.IsType<OkObjectResult>(await Controller(WithKey(null, 7))
@@ -248,5 +248,17 @@ public class SharedLiveViewsTests : IDisposable
             return ValueTask.CompletedTask;
         }
         public override Task FlushAsync(CancellationToken ct) => Task.CompletedTask;
+    }
+
+    /// <summary>Wunsch 2026-11-28: geteilt ist nur die Brettauswahl — ein <c>eval</c> aus Zeilen vor 1.039.0 wird übergangen,
+    /// beim Speichern fällt es weg (jeder Zuschauer schaltet den Balken selbst).</summary>
+    [Fact]
+    public async Task Parse_OldRowWithEval_IgnoredAndNotStored()
+    {
+        var v = SharedLiveViews.Parse("{\"round\":2,\"team\":\"SK Schwaz\",\"add\":[\"1.2\"],\"ext\":[],\"eval\":true}");
+        Assert.Equal((2, "SK Schwaz", "1.2"), (v.Round, v.Team, Assert.Single(v.Add)));
+        var created = await CreateAsGuest(View("SK Schwaz"));
+        var row = await _db.SharedLiveViews.SingleAsync(x => x.Token == created.Token);
+        Assert.DoesNotContain("eval", row.ViewJson, StringComparison.OrdinalIgnoreCase);
     }
 }

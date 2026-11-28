@@ -10,8 +10,10 @@ public sealed class LiveBoardLinkRequest
 }
 
 /// <summary>
-/// Eine Live-Ansicht (1.029.0): dieselben Teile wie die lange Adresse <c>/tournaments/{id}/live?round=&amp;team=&amp;player=&amp;add=&amp;ext=&amp;eval=</c>.
-/// Der Server prüft und deckelt sie (<c>SharedLiveViews.Normalize</c>), bevor sie gespeichert oder gesendet wird.
+/// Eine Live-Ansicht (1.029.0): dieselben Teile wie die lange Adresse <c>/tournaments/{id}/live?round=&amp;team=&amp;player=&amp;add=&amp;ext=</c>.
+/// Der Server prüft und deckelt sie (<c>SharedLiveViews.Normalize</c>), bevor sie gespeichert oder gesendet wird. Geteilt ist nur die
+/// Brettauswahl: Engine-Balken und bester Zug schaltet jeder Zuschauer selbst (1.039.0) — ein <c>eval</c> in alten Zeilen oder
+/// Anfragen wird beim Lesen übergangen und nicht mehr gespeichert.
 /// </summary>
 public sealed class LiveViewState
 {
@@ -25,8 +27,6 @@ public sealed class LiveViewState
     public List<string> Add { get; set; } = [];
     /// <summary>Bretter fremder Übertragungen (<c>roundId.gameId</c>), höchstens 12 aus 4 Runden.</summary>
     public List<string> Ext { get; set; } = [];
-    /// <summary>Engine-Balken.</summary>
-    public bool Eval { get; set; }
 }
 
 /// <summary><c>POST /api/live-boards/views</c>: Ansicht eines Turniers als kurzen, lebenden Link anlegen.</summary>

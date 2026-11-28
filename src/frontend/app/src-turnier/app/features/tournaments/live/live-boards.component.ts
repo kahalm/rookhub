@@ -294,6 +294,7 @@ export class LiveBoardsComponent implements OnInit {
   readonly round = signal<number | null>(null);
   readonly team = signal<string | null>(null);
   readonly player = signal<string | null>(null);
+  /** Engine-Balken — Gerätevorliebe (Standard an), jeder Zuschauer selbst; auch in der geteilten Ansicht NICHT geteilt (1.039.0). */
   readonly evalOn = signal(readLiveEval());
   /** „Besten Zug zeigen“ — Gerätevorliebe, jeder Zuschauer selbst (1.030.0). */
   readonly bestOn = signal(readLiveBest());
@@ -322,8 +323,8 @@ export class LiveBoardsComponent implements OnInit {
   readonly viewToken = signal<string | null>(null);
   readonly canEdit = signal(false);
   readonly viewMissing = signal(false);
-  /** Eigener Balken-Schalter eines Zuschauers der geteilten Ansicht (`null` = wie die Ansicht). */
-  private evalOverride: boolean | null = null;
+  /** Steht `?eval=1|0` ausdrücklich in der langen Adresse? */
+  private urlEval = false;
   /** Besitzer: Änderung wartet aufs Speichern — `view`-Ereignisse überschreiben sie bis dahin nicht. */
   private savePending = false;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -515,9 +516,11 @@ export class LiveBoardsComponent implements OnInit {
       this.player.set(q.get('player'));
       this.added.set(parseAddParam(q.get('add')));
       this.ext.set(parseExtParam(q.get('ext')));
-      // Engine-Balken aus der Adresse (geteilter Link) geht der Gerätevorliebe vor, ohne sie zu überschreiben.
+      // Engine-Balken: ausdrücklich in der langen Adresse (`?eval=1|0`) geht der Gerätevorliebe vor, ohne sie zu überschreiben;
+      // ohne `eval` gilt die Vorliebe (Standard an).
       const ev = q.get('eval');
-      if (ev === '1' || ev === '0') this.evalOn.set(ev === '1');
+      this.urlEval = ev === '1' || ev === '0';
+      if (this.urlEval) this.evalOn.set(ev === '1');
       if (Number.isInteger(r) && r > 0) this.round.set(r);
       else if (this.status()) this.round.set(this.status()!.currentRound);
       this.connect();
@@ -560,7 +563,7 @@ export class LiveBoardsComponent implements OnInit {
 
   /** Die Ansicht, wie sie gerade eingestellt ist (für Anlegen/Ändern der geteilten Ansicht). */
   currentView(): LiveViewState {
-    return { round: this.round(), team: this.team(), player: this.player(), add: this.added(), ext: this.ext(), eval: this.evalOn() };
+    return { round: this.round(), team: this.team(), player: this.player(), add: this.added(), ext: this.ext() };
   }
 
   /** Stand einer geteilten Ansicht übernehmen (vom Server oder als eigene Änderung des Besitzers). Neue Runde → Bretter leeren. */
@@ -572,8 +575,7 @@ export class LiveBoardsComponent implements OnInit {
     this.player.set(v.player);
     this.added.set(parseAddParam(v.add.join(',')));
     this.ext.set(parseExtParam(v.ext.join(',')));
-    // Der eigene Balken-Schalter eines Zuschauers bleibt bei ihm (gilt nur für seinen Strom).
-    if (this.evalOverride === null) this.evalOn.set(v.eval);
+    // Balken/bester Zug gehören nicht zur Ansicht (1.039.0): jeder Zuschauer behält seine eigene Wahl.
   }
 
   /**
@@ -622,15 +624,15 @@ export class LiveBoardsComponent implements OnInit {
     this.startTicker();
   }
 
-  /** Strom einer geteilten Ansicht: EINE Verbindung, der Server hängt bei Änderungen selbst um. Neu nur bei eigenem Balken. */
+  /** Strom einer geteilten Ansicht: EINE Verbindung, der Server hängt bei Änderungen selbst um. Neu nur beim eigenen Balken-Schalter. */
   private connectView(): void {
     if (!this.status()?.linked) { this.stopStream(); return; }
-    const key = `view|${this.viewToken()}|${this.evalOverride}`;
+    const key = `view|${this.viewToken()}|${this.evalOn()}`;
     if (key === this.streamKey && this.streamSub) return;
     this.stopStream();
     this.streamKey = key;
     this.setState('connecting');
-    this.streamSub = this.api.viewStream(this.viewToken()!, this.evalOverride).subscribe(e => this.onEvent(e));
+    this.streamSub = this.api.viewStream(this.viewToken()!, this.evalOn()).subscribe(e => this.onEvent(e));
     this.startTicker();
   }
 
@@ -800,23 +802,20 @@ export class LiveBoardsComponent implements OnInit {
     if (on) vibrate(VIBRATE_CONFIRM);
   }
 
-  /** Balken an/aus: Gerätevorliebe UND Adresse (`?eval=1|0`), damit ein kopierter Link dieselbe Ansicht zeigt. */
+  /**
+   * Balken an/aus (1.039.0): nur für diesen Zuschauer, gemerkt im Browser — auch Besitzer und Zuschauer der geteilten Ansicht
+   * (sie wird dabei NICHT geändert). Auf der langen Adresse fällt ein ausdrückliches `?eval=` weg, sonst überstimmte es die
+   * neue Wahl beim Neuladen.
+   */
   setEval(on: boolean): void {
-    if (this.viewToken()) {
-      if (this.canEdit()) { this.changeView({ eval: on }); return; }
-      // Zuschauer: nur für ihn (eigener Strom mit eval=…), die geteilte Ansicht bleibt.
-      this.evalOverride = on;
-      this.evalOn.set(on);
-      this.connect();
-      return;
-    }
     this.evalOn.set(on);
     writeLiveEval(on);
     this.connect();
-    void this.router.navigate([], { relativeTo: this.route, queryParams: { eval: on ? 1 : 0 }, queryParamsHandling: 'merge', replaceUrl: true });
+    if (!this.viewToken() && this.urlEval)
+      void this.router.navigate([], { relativeTo: this.route, queryParams: { eval: null }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
-  /** Link dieser Ansicht: Runde immer ausdrücklich (sonst zeigte er morgen die nächste), Mannschaft/Spieler, Balken nur wenn an. */
+  /** Link dieser Ansicht: Runde immer ausdrücklich (sonst zeigte er morgen die nächste), Mannschaft/Spieler; Balken nicht (jeder selbst). */
   shareUrl(): string {
     const tree = this.router.createUrlTree(['/tournaments', this.id, 'live'], { queryParams: this.longParams(this.currentView()) });
     return window.location.origin + this.router.serializeUrl(tree);
@@ -824,7 +823,7 @@ export class LiveBoardsComponent implements OnInit {
 
   /** Teile der langen Adresse (bleibt gültig; Rückfall, wenn das Anlegen der geteilten Ansicht scheitert). */
   private longParams(v: LiveViewState): Record<string, string | number | null> {
-    return { round: v.round, team: v.team, player: v.player, add: joinParam(v.add), ext: joinParam(v.ext), eval: v.eval ? 1 : null };
+    return { round: v.round, team: v.team, player: v.player, add: joinParam(v.add), ext: joinParam(v.ext) };
   }
 
   /** Kurzer, lebender Link einer geteilten Ansicht. */

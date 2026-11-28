@@ -121,14 +121,16 @@ export type LiveStreamEvent =
   | { type: 'view'; token: string; tournamentId: string; view: LiveViewState }
   | { type: 'view-gone' };
 
-/** Eine Live-Ansicht (wie die lange Adresse): `round` null = die laufende Runde. */
+/**
+ * Eine Live-Ansicht (wie die lange Adresse): `round` null = die laufende Runde. Nur die Brettauswahl ist geteilt — Engine-Balken
+ * und bester Zug schaltet jeder Zuschauer selbst (1.039.0, nicht mehr Teil der Ansicht).
+ */
 export interface LiveViewState {
   round: number | null;
   team: string | null;
   player: string | null;
   add: string[];
   ext: string[];
-  eval: boolean;
 }
 
 /** Antwort von `/api/live-boards/views…`; `editKey` nur beim Anlegen. */

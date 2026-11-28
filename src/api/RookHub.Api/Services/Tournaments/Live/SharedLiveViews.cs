@@ -56,7 +56,6 @@ public sealed class SharedLiveViews
             Player = Text(v.Player),
             Add = LiveView.ParseAdd(string.Join(',', v.Add ?? [])),
             Ext = ExternalRoundRegistry.ParseRefs(string.Join(',', v.Ext ?? [])).Select(r => $"{r.RoundId}.{r.GameId}").ToList(),
-            Eval = v.Eval,
         };
     }
 

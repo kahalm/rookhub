@@ -81,10 +81,10 @@ export class LiveBoardsService {
 
   /**
    * Strom einer geteilten Ansicht: der Server schickt `view` und hängt bei jeder Änderung des Besitzers selbst um (neuer
-   * `view` + `snapshot`) — der Browser verbindet NICHT neu. `evalOverride` = eigener Balken-Schalter dieses Zuschauers.
+   * `view` + `snapshot`) — der Browser verbindet NICHT neu. `withEval` = Balken-Schalter dieses Zuschauers (gehört nicht zur Ansicht, 1.039.0).
    */
-  viewStream(token: string, evalOverride: boolean | null): Observable<LiveStreamEvent> {
-    const q = [evalOverride === null ? '' : `eval=${evalOverride}`, 'ngsw-bypass=1'].filter(Boolean).join('&');
+  viewStream(token: string, withEval: boolean): Observable<LiveStreamEvent> {
+    const q = [`eval=${withEval}`, 'ngsw-bypass=1'].join('&');
     return this.events(`/api/live-boards/views/${encodeURIComponent(token)}/stream?${q}`);
   }
 

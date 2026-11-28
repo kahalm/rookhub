@@ -264,8 +264,8 @@ public class LiveBoardsController : BaseApiController
     /// Strom einer geteilten Ansicht: zuerst <c>view</c> <c>{ token, tournamentId, view }</c>, dann derselbe Strom wie
     /// <see cref="Stream"/> für deren Runde, Mannschaft/Spieler, hinzugefügte und fremde Bretter. Ändert der Besitzer die Ansicht,
     /// hängt der Server die Hub-Abos um (KEIN zusätzlicher Lichess-Strom: der Hub hält je Runde einen) und schickt erneut
-    /// <c>view</c> + <c>snapshot</c> — der Zuschauer muss nichts neu laden. <c>eval</c> überschreibt den Balken der Ansicht nur für
-    /// diesen Zuschauer. Gelöscht/abgelaufen: <c>view-gone</c>, dann Ende.
+    /// <c>view</c> + <c>snapshot</c> — der Zuschauer muss nichts neu laden. <c>eval</c> = Balken dieses Zuschauers (gehört seit 1.039.0
+    /// nicht mehr zur Ansicht; ohne Angabe aus). Gelöscht/abgelaufen: <c>view-gone</c>, dann Ende.
     /// </summary>
     [HttpGet("views/{token}/stream")]
     [AllowAnonymous]
@@ -315,7 +315,7 @@ public class LiveBoardsController : BaseApiController
                 CrRound crRound;
                 try { crRound = await data.GetRoundAsync(row.CrawlerTournamentId, round!.Value, ct); }
                 catch (RookHub.Api.Exceptions.CrawlerRequestException) { crRound = new CrRound(false, [], [], []); }
-                await StreamRoundAsync(info, crRound, round!.Value, eval ?? state.Eval, hub, ext, string.Join(',', state.Ext),
+                await StreamRoundAsync(info, crRound, round!.Value, eval ?? false, hub, ext, string.Join(',', state.Ext),
                     state.Team, state.Player, string.Join(',', state.Add), ct, stop: changed);
                 if (!changed.IsCancellationRequested) return;   // eigene Runde zu Ende / Zuschauer weg — der Browser verbindet neu
             }

@@ -1,11 +1,22 @@
 import { Chess } from 'chess.js';
 import { LiveEval, LiveGame } from './live-boards.models';
 
-/** Engine-Balken an/aus — Gerätevorliebe (`core/local-storage-keys.ts`, Klasse `device`). */
+/**
+ * Engine-Balken an/aus — Gerätevorliebe (`core/local-storage-keys.ts`, Klasse `device`), jeder Zuschauer selbst (auch in der
+ * geteilten Ansicht, 1.039.0). Standard AN: ohne gemerkte Wahl (oder bei gesperrtem Speicher) zeigt die Seite den Balken.
+ */
 export const LIVE_EVAL_KEY = 'rookhub_live_eval';
 
 export function readLiveEval(): boolean {
-  try { return localStorage.getItem(LIVE_EVAL_KEY) === '1'; } catch { return false; }
+  return readOnByDefault(LIVE_EVAL_KEY);
+}
+
+/** Gemerkter Schalter, Standard an: nur `'0'`/`'false'` heißt aus (ui-prefs-sync kann den Wert vom Konto übernehmen). */
+function readOnByDefault(key: string): boolean {
+  try {
+    const v = localStorage.getItem(key);
+    return v !== '0' && v !== 'false';
+  } catch { return true; }
 }
 
 export function writeLiveEval(on: boolean): void {
@@ -168,11 +179,11 @@ export function writeViewKey(token: string, key: string): boolean {
 /** Besitzer einer geteilten Ansicht: so lange nach der letzten Änderung, bis sie gespeichert wird (mehrere Klicks = ein PUT). */
 export const LIVE_VIEW_SAVE_MS = 400;
 
-/** „Besten Zug zeigen“ an/aus (1.030.0) — Gerätevorliebe (`device`), bewusst NICHT in der Adresse/geteilten Ansicht: jeder Zuschauer schaltet selbst. */
+/** „Besten Zug zeigen“ an/aus (1.030.0) — Gerätevorliebe (`device`), bewusst NICHT in der Adresse/geteilten Ansicht: jeder Zuschauer schaltet selbst. Standard AN (1.039.0). */
 export const LIVE_BEST_KEY = 'rookhub_live_best';
 
 export function readLiveBest(): boolean {
-  try { return localStorage.getItem(LIVE_BEST_KEY) === '1'; } catch { return false; }
+  return readOnByDefault(LIVE_BEST_KEY);
 }
 
 export function writeLiveBest(on: boolean): void {

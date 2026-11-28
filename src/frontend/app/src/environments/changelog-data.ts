@@ -10,6 +10,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.039.0", date: "2026-11-28", changes: [
+    { en: "Tournament site, live boards, shared link (/live/…): only the boards are the same for everyone — if the creator adds or removes a board or changes round or team, everyone with the link sees it. Engine bar and best-move arrow are now up to each viewer (owner too), remembered in the browser, and no longer part of the shared view.",
+      de: "Turnierseite, Live-Bretter, geteilter Link (/live/…): Für alle gleich sind nur noch die Bretter — ergänzt oder entfernt der Ersteller ein Brett oder wechselt Runde oder Mannschaft, sehen das alle mit dem Link. Engine-Balken und Pfeil „Bester Zug“ schaltet jetzt jeder selbst (auch der Ersteller), gemerkt im Browser; sie gehören nicht mehr zur geteilten Ansicht." },
+    { en: "Live boards: engine bar and best move are on by default — also for guests and for old links without the setting. Switching them no longer writes into the address; the shared long link no longer carries „eval“.",
+      de: "Live-Bretter: Engine-Balken und bester Zug sind standardmäßig an — auch für Gäste und bei alten Links ohne diese Angabe. Das Umschalten schreibt nicht mehr in die Adresse; der lange Teilen-Link trägt kein „eval“ mehr." },
+    { en: "The note on a shared view now says so: the boards are shared, engine and best move everyone chooses.",
+      de: "Die Hinweiszeile der geteilten Ansicht sagt das jetzt: die Bretter sind geteilt, Engine und besten Zug wählt jeder selbst." },
+  ] },
   { version: "1.038.1", date: "2026-11-28", changes: [
     { en: "LeagueHub, ClubHub and the tournament site: opening the site while signed in to RookHub (shared sign-in) could still show the login form, although the sign-in had just been taken over. The page now waits for the takeover (at most 5 seconds) before it sends you to the login form, and if the login form is already loading it leaves it again right away and opens the page you wanted.",
       de: "LeagueHub, ClubHub und Turnierseite: Wer die Seite öffnete, während er in RookHub angemeldet war (geteilte Anmeldung), sah trotzdem manchmal die Anmeldemaske, obwohl die Anmeldung eben übernommen war. Die Seite wartet jetzt auf die Übernahme (höchstens 5 Sekunden), bevor sie zur Anmeldemaske schickt, und lädt die Maske gerade schon, geht es sofort weiter zur gewünschten Seite." },

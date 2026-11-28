@@ -14,7 +14,7 @@ public class SharedLiveView
     public string Token { get; set; } = string.Empty;
     /// <summary>chess-results-Turniernummer (wie <c>TournamentBroadcastLink.CrawlerTournamentId</c>).</summary>
     public string CrawlerTournamentId { get; set; } = string.Empty;
-    /// <summary>Die Ansicht als JSON (<c>LiveViewState</c>: round, team, player, add, ext, eval) — schon geprüft und gedeckelt.</summary>
+    /// <summary>Die Ansicht als JSON (<c>LiveViewState</c>: round, team, player, add, ext; ein <c>eval</c> aus Zeilen vor 1.039.0 wird übergangen) — schon geprüft und gedeckelt.</summary>
     public string ViewJson { get; set; } = "{}";
     /// <summary>Angemeldeter Ersteller (darf ohne Schlüssel ändern); Gäste: <c>null</c>.</summary>
     public int? OwnerUserId { get; set; }
