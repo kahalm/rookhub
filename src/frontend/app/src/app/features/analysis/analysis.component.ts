@@ -43,7 +43,7 @@ import {
   removeNode,
 } from './analysis-tree';
 import { AnalysisLineModel, boardMove, playLine } from './analysis-line-model';
-import { pgnTitle } from './analysis-title.util';
+import { AnalysisHeading, analysisHeading, analysisHeadingMeta, analysisHeadingText, pgnTitle } from './analysis-title.util';
 import { LineStudyService, lineStudyKey } from './line-study.service';
 import { blindResumeNode } from './line-study.util';
 import { LineStudySession } from './line-study-session';
@@ -124,6 +124,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   pgnInput = '';
   /** Kopfdaten des zuletzt geladenen PGN — Vorbelegung für Download/Speichern; ein neuer Baum setzt sie zurück. */
   pgnHeaders: Record<string, string> | null = null;
+  /** Kopf statt „Analyse" (Wunsch 2026-11-28): Partie aus den PGN-Kopfzeilen bzw. dem Titel des Verlauf-Eintrags; null =
+   *  keine Partie bekannt (freies Brett, Stellung, Zugfolge). Bleibt beim Linien-Baum stehen (der ersetzt den Baum). */
+  heading: AnalysisHeading | null = null;
   /** Aus LeagueHub gekommen (`?verein=1`, Wunsch 2026-11-09): das Übernehmen steht vorn. */
   clubEntry = false;
   clubEntryId: number | null = null;
@@ -279,6 +282,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (this.studyEngineHidden) { this.studyEngineHidden = false; this.engineOn = this.engineOnBeforeBlind; }
     this.setNoEngine(false);
     this.pgnInput = '';
+    this.heading = null;
     this.applyRouteParams(p);
     this.engine.setDepth(this.depthSetting);
     this.engine.setMultiPv(this.linesCount);
@@ -375,6 +379,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    *  geht, ist Schluss. */
   private loadFromUci(fromFen: string, uciMoves: string[]): void {
     if (!this.isValidFen(fromFen)) { this.resetToStart(START_FEN); return; }
+    this.heading = null;
     const root = createRoot(fromFen);
     this.setTree(root, playLine(root, uciMoves, playUci));
   }
@@ -778,7 +783,17 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   flip(): void { this.orientation = this.orientation === 'white' ? 'black' : 'white'; }
 
   reset(): void { this.historySaver.newSession(); this.resetToStart(START_FEN); }
-  private resetToStart(fen = this.startFen): void { this.setTree(createRoot(fen)); }
+  private resetToStart(fen = this.startFen): void { this.heading = null; this.setTree(createRoot(fen)); }
+
+  /** Überschrift der geladenen Partie (oder null → „Analyse"). */
+  get headingText(): string | null {
+    return this.heading ? analysisHeadingText(this.heading, this.translate.instant('gameAnalysis.noName')) : null;
+  }
+  /** „1–0 · Turnier, Runde 3 · 2024" unter der Überschrift. */
+  get headingMeta(): string {
+    return this.heading
+      ? analysisHeadingMeta(this.heading, round => this.translate.instant('tournaments.pairings.roundLabel', { round })) : '';
+  }
 
   // ---- Karte „Sparring gegen Maia" ein-/ausblenden (0.760.0) ----
   openMaiaCard(): void {
@@ -824,6 +839,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     const main = mainline(parsed.root);
     this.setTree(parsed.root, atStart ? parsed.root : main[main.length - 1] ?? parsed.root);
     this.pgnHeaders = parsed.headers;
+    this.heading = analysisHeading(parsed.headers);
   }
 
   // ---- Sterne + Zugbaum ----
@@ -897,6 +913,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.historySaver.openEntry(e);
     const { root, nodes } = fromDto(e.startFen, e.tree);
     this.setTree(root, (e.current >= 0 ? nodes[e.current] : null) ?? root);
+    this.heading = analysisHeading(null, e.title);
     this.historySaver.markSaved();   // eben geladen = schon gespeichert
     this.cdr.markForCheck();
   }

@@ -2380,6 +2380,76 @@ async function renderAnalysis(params: Record<string, string> = {}, lang?: string
   return fixture;
 }
 
+// Wunsch 2026-11-28: „wenn der Titel der Partie bekannt ist, oben statt nur ‚Analyse'".
+describe('AnalysisComponent Partie-Titel im Kopf', () => {
+  const PGN = '[Event "Tata Steel"]\n[Round "3"]\n[Date "2024.01.20"]\n[White "Gukesh D"]\n[Black "Carlsen, Magnus"]\n'
+    + '[Result "1-0"]\n\n1. e4 e5 2. Nf3 1-0\n';
+
+  it('?pgn= bzw. Router-State: Titel „Weiß – Schwarz" mit Ergebnis · Turnier, Runde · Jahr', () => {
+    const c = makeComponent({ pgn: PGN });
+    c.ngOnInit();
+    expect(c.headingText).toBe('Gukesh D – Carlsen, Magnus');
+    expect(c.headingMeta).toBe('1–0 · Tata Steel, tournaments.pairings.roundLabel:{"round":"3"} · 2024');
+    c.ngOnDestroy();
+  });
+
+  it('?live=: der Titel kommt aus dem nachgeladenen PGN', () => {
+    const c = makeComponent({ live: 'cc~abc-12~xyz.g1' });
+    c.__http.get = jasmine.createSpy('get').and.returnValue(of('[White "Firouzja"]\n[Black "Caruana"]\n\n1. d4 *\n'));
+    c.ngOnInit();
+    expect(c.headingText).toBe('Firouzja – Caruana');
+    c.ngOnDestroy();
+  });
+
+  it('ohne Partie, mit „?"-Namen und nach „Neue Analyse" bzw. FEN: „Analyse"; ein eingefügtes PGN ersetzt den Titel', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4' });
+    c.ngOnInit();
+    expect(c.headingText).toBeNull();
+    c.pgnInput = '[White "?"]\n[Black "?"]\n\n1. e4 *';
+    c.loadPgn();
+    expect(c.headingText).toBeNull();
+    c.pgnInput = PGN;
+    c.loadPgn();
+    expect(c.headingText).toBe('Gukesh D – Carlsen, Magnus');
+    c.pgnInput = '[White "Anderssen"]\n[Black "Kieseritzky"]\n\n1. e4 e5 *';
+    c.loadPgn();
+    expect(c.headingText).toBe('Anderssen – Kieseritzky');
+    expect(c.headingMeta).toBe('');
+    c.reset();
+    expect(c.headingText).toBeNull();
+    c.pgnInput = PGN; c.loadPgn();
+    c.fenInput = START; c.loadFen();
+    expect(c.headingText).toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('Verlauf-Eintrag: sein Titel steht oben', () => {
+    const c = makeComponent({}, { loggedIn: true });
+    c.ngOnInit();
+    c.openHistoryEntry({ id: 7, startFen: START, moves: ['d2d4'], ply: 1, title: 'Carlsen – Nakamura', preview: '', moveCount: 1,
+      nodeCount: 1, starCount: 0, current: 0, createdAt: '', updatedAt: '', tree: { n: [{ p: -1, u: 'd2d4' }] } });
+    expect(c.headingText).toBe('Carlsen – Nakamura');
+    c.ngOnDestroy();
+  });
+
+  it('Vorlage: h1 zeigt den Partie-Titel (mit Tooltip) samt Zeile darunter, sonst „Analyse"', async () => {
+    const fixture = await renderAnalysis({ pgn: PGN });
+    const h1 = fixture.nativeElement.querySelector('.header h1') as HTMLElement;
+    expect(h1.textContent!.trim()).toBe('Gukesh D – Carlsen, Magnus');
+    expect(h1.getAttribute('title')).toBe('Gukesh D – Carlsen, Magnus');
+    expect(h1.classList).toContain('game-title');
+    expect((fixture.nativeElement.querySelector('.game-meta') as HTMLElement).textContent).toContain('Tata Steel');
+    fixture.destroy();
+  });
+
+  it('Vorlage ohne Partie: „analysis.title", keine Zeile darunter', async () => {
+    const fixture = await renderAnalysis({});
+    expect((fixture.nativeElement.querySelector('.header h1') as HTMLElement).textContent!.trim()).toBe('analysis.title');
+    expect(fixture.nativeElement.querySelector('.game-meta')).toBeNull();
+    fixture.destroy();
+  });
+});
+
 // Codereview F4-012: ?from= setzen auch Partienliste, Partie, Favoriten und Kalkulation — der Knopf hieß trotzdem immer
 // „Zurück zum Puzzle"; falsche FEN/PGN meldeten sich fest auf Englisch („Invalid FEN" + „OK").
 describe('AnalysisComponent Zurück-Knopf + Meldungen (übersetzt)', () => {

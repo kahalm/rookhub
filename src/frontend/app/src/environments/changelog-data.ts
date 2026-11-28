@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.044.0", date: "2026-11-28", changes: [
+    { en: "Analysis board: when a game is open (from your games, master games, a shared game, a live board, a pasted PGN or the history), the heading shows its title instead of just “Analysis” — usually “White – Black”, below it result · event, round · year. Long names are shortened with “…” (full text on hover). Without known names, on a free board or after “Reset” it stays “Analysis”.",
+      de: "Analysebrett: Ist eine Partie offen (aus den eigenen Partien, den Meisterpartien, einer geteilten Partie, einem Live-Brett, einem eingefügten PGN oder dem Verlauf), steht oben ihr Titel statt nur „Analyse“ — meist „Weiß – Schwarz“, darunter Ergebnis · Turnier, Runde · Jahr. Lange Namen werden mit „…“ gekürzt (ganzer Text beim Draufzeigen). Ohne bekannte Namen, auf freiem Brett oder nach „Zurücksetzen“ bleibt „Analyse“." },
+  ] },
   { version: "1.043.1", date: "2026-11-28", changes: [
     { en: "Tournament site, live boards: the result overlay uses named colours instead of hex values, so the colour check of the build passes again.",
       de: "Turnierseite, Live-Bretter: Das Ergebnis-Overlay nimmt Farbnamen statt Hex-Werten, damit die Farbprüfung des Builds wieder grün ist." },

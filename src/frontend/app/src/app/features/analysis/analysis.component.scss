@@ -1,5 +1,10 @@
 /* App-Vollbild (Host-Klasse auf app-root): Seitentitel weg — das Brett bekommt den Platz. */
 :host-context(.app-fullscreen) h1 { display: none; }
+/* Partie-Titel im Kopf (Wunsch 2026-11-28): einzeilig mit „…", voller Text im Tooltip; die Knöpfe brechen am Handy darunter. */
+.title-block { flex: 1 1 16rem; min-width: 0; }
+.game-title, .game-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-meta { margin: 2px 0 0; font-size: .875rem; color: var(--mat-sys-on-surface-variant); }
+:host-context(.app-fullscreen) .game-meta { display: none; }
 .analysis-page { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
 .analysis-layout { display: flex; gap: 1.25rem; align-items: flex-start; flex-wrap: wrap; }
 /* Brettgröße an die Fensterhöhe gebunden (d2-rk-analysis-brettspalte): groß wächst das Brett bis 820 px, am Laptop

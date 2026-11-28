@@ -34,3 +34,60 @@ export function pgnTitle(h: Record<string, string>): string | null {
   if (white && black) return `${white} – ${black}`;
   return white ?? black ?? (h['Event'] && h['Event'] !== '?' ? h['Event'] : null);
 }
+
+/**
+ * Kopf des Analysebretts (Wunsch 2026-11-28: „wenn der Titel der Partie bekannt ist, oben statt nur ‚Analyse'"): aus den
+ * PGN-Kopfzeilen der geladenen Partie bzw. dem Titel eines Verlauf-Eintrags. `title` = ausdrücklicher Titel (Kapitel,
+ * `Title`), sonst stehen die Namen einzeln da (null = Platzhalter/fehlt). Ohne Titel und ohne beide Namen: null —
+ * dann bleibt oben „Analyse".
+ */
+export interface AnalysisHeading {
+  title: string | null;
+  white: string | null;
+  black: string | null;
+  /** „1–0", „0–1", „½–½" (offene Partie „*": null) */
+  result: string | null;
+  event: string | null;
+  round: string | null;
+  year: string | null;
+}
+
+const RESULTS: Record<string, string> = { '1-0': '1–0', '0-1': '0–1', '1/2-1/2': '½–½' };
+
+function clean(v: string | null | undefined): string | null {
+  const t = (v ?? '').trim();
+  return t && !PLACEHOLDER.test(t) ? t : null;
+}
+
+/** @param explicitTitle Titel eines Verlauf-Eintrags („Weiß – Schwarz" oder frei) — wird bei „A – B" in Namen zerlegt. */
+export function analysisHeading(headers: Record<string, string> | null | undefined, explicitTitle?: string | null): AnalysisHeading | null {
+  const h = headers ?? {};
+  let title = clean(h['ChapterName']) ?? clean(h['Title']);
+  let white = clean(h['White']), black = clean(h['Black']);
+  const ex = clean(explicitTitle);
+  if (!title && !white && !black && ex) {
+    const m = NAMES.exec(ex);
+    if (m) { white = clean(m[1]); black = clean(m[2]); } else title = ex;
+  }
+  if (!title && !white && !black) return null;
+  const date = /^(\d{4})/.exec((h['Date'] ?? h['UTCDate'] ?? '').trim());
+  const event = clean(h['Event']);
+  return {
+    title, white, black,
+    result: RESULTS[(h['Result'] ?? '').trim()] ?? null,
+    event: event && event !== title ? event : null,
+    round: clean(h['Round']),
+    year: date ? date[1] : null,
+  };
+}
+
+/** Überschrift: der ausdrückliche Titel, sonst „Weiß – Schwarz" (ein fehlender Name als `noName`). */
+export function analysisHeadingText(h: AnalysisHeading, noName: string): string {
+  return h.title ?? `${h.white ?? noName} – ${h.black ?? noName}`;
+}
+
+/** Zeile darunter: „1–0 · Event, Runde 3 · 2024" — nur, was da ist; leer = keine Zeile. */
+export function analysisHeadingMeta(h: AnalysisHeading, roundLabel: (round: string) => string): string {
+  const where = [h.event, h.round ? roundLabel(h.round) : null].filter(Boolean).join(', ');
+  return [h.result, where, h.year].filter(Boolean).join(' · ');
+}

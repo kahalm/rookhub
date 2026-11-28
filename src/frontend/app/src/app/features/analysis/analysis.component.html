@@ -1,6 +1,14 @@
 <div class="analysis-page">
   <div class="header">
-    <h1>{{ 'analysis.title' | translate }}</h1>
+    <!-- Partie bekannt (Wunsch 2026-11-28): „Weiß – Schwarz" bzw. Kapitel statt „Analyse", darunter Ergebnis · Turnier · Jahr -->
+    <div class="title-block">
+      @if (headingText; as t) {
+        <h1 class="game-title" [attr.title]="t">{{ t }}</h1>
+        @if (headingMeta; as meta) { <p class="game-meta" [attr.title]="meta">{{ meta }}</p> }
+      } @else {
+        <h1>{{ 'analysis.title' | translate }}</h1>
+      }
+    </div>
     <span class="header-actions">
     <!-- Mit/ohne Engine umschalten (0.895.0, auch mit Linien-Baum seit 0.898.0) — die Adresse zieht mit (`?blind=1`). -->
     <button mat-stroked-button type="button" class="blind-btn" (click)="toggleNoEngine()" [attr.aria-pressed]="blind">
