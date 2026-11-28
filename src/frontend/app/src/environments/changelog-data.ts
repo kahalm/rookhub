@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.043.1", date: "2026-11-28", changes: [
+    { en: "Tournament site, live boards: the result overlay uses named colours instead of hex values, so the colour check of the build passes again.",
+      de: "Turnierseite, Live-Bretter: Das Ergebnis-Overlay nimmt Farbnamen statt Hex-Werten, damit die Farbprüfung des Builds wieder grün ist." },
+  ] },
   { version: "1.043.0", date: "2026-11-28", changes: [
     { en: "Tournament site, live boards: when a game ends, its board moves to the end of the grid — running games stay in front. In the overview with several matches it moves to the end of its own match, so matches stay together. Games that were already over when the page loaded are simply at the back.",
       de: "Turnierseite, Live-Bretter: Ist eine Partie fertig, rückt ihr Brett ans Ende des Rasters — laufende Partien bleiben vorne. In der Übersicht mit mehreren Begegnungen rückt es ans Ende seiner Begegnung, die Begegnungen bleiben beisammen. Schon beim Laden fertige Partien stehen einfach hinten." },
