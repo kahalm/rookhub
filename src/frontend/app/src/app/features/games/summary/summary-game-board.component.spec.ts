@@ -460,7 +460,8 @@ describe('ClubGameSummaryComponent mit Seitenbrett', () => {
 
     it('Zug-Klick öffnet das Brett als Blatt statt zu scrollen; Seitenbrett und Leseposition bleiben', () => {
       spyOn(history, 'pushState');
-      const fixture = setup(PGN, '**2.Sf3** war gut.\n\n' + MD, true);
+      // Im Listenpunkt: hinter einem Absatz steht am Handy seit 1.045.0 ein Brett im Text, das den Klick selbst zeigt.
+      const fixture = setup(PGN, '- **2.Sf3** war gut.\n\n' + MD, true);
       const host = fixture.nativeElement as HTMLElement;
       const board = fixture.componentInstance.sideBoard()!;
       const scroll = spyOn(board['host'].nativeElement, 'scrollIntoView');

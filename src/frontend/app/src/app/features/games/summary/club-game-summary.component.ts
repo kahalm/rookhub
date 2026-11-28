@@ -10,7 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Observable, Subscription, forkJoin } from 'rxjs';
+import { Observable, Subscription, forkJoin, map } from 'rxjs';
 import { ChessBoardComponent, BoardArrow } from '../../../shared/pgn-viewer/chess-board.component';
 import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
 import { PreferencesService } from '../../../core/preferences.service';
@@ -25,10 +25,16 @@ import { ClubGameSummary, ClubGameSummaryService, EbookSuggestionInfo, SummarySo
 import { ClubSummaryLinkComponent } from './club-summary-link.component';
 import { SummaryGameBoardComponent, SummaryJump } from './summary-game-board.component';
 import { SummaryBoardSheetComponent } from './summary-board-sheet.component';
+import { InlineBoardJump, SummaryInlineBoardComponent } from './summary-inline-board.component';
+import { followsGame, inlineBoardPlan } from './summary-inline-board.util';
 import { SanPipe } from '../../../shared/chess/san.pipe';
+import type { LiveMove } from '../live-engine-session';
 import { MarkOrigin } from '../../../shared/mark-position/marked-positions.service';
 import { GameTextPart, mergeGameSection } from './summary-game-text.util';
-import { DiagramSpec, InlinePart, MASTER_GAME_PATH, SummaryBlock, gameMovePairs, moveLabel, linkSummaryMoves, parseInline, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock, withoutRedThread } from './summary-markdown.util';
+import { DiagramSpec, InlinePart, MASTER_GAME_PATH, SummaryBlock, gameMovePairs, gamePositions, moveLabel, linkSummaryMoves, parseInline, parseSummary, positionsOf, visibleSummaryBlocks, withGameBlock, withoutRedThread } from './summary-markdown.util';
+
+/** Unter dieser Breite steht das Seitenbrett unter dem Text (Spalten erst ab 900 px). */
+const NARROW = '(max-width: 899.98px)';
 
 /** Ein fertig aufgelöstes Diagramm: Stellung, letzter Zug, Pfeile, Blickrichtung. */
 interface ResolvedDiagram {
@@ -51,7 +57,7 @@ interface ResolvedDiagram {
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [GameActionsService],
   imports: [DatePipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatMenuModule, MatProgressSpinnerModule, TranslatePipe, IconLabelDirective,
-    ChessBoardComponent, LoadErrorComponent, ClubSummaryLinkComponent, SummaryGameBoardComponent, MaximNoteComponent, SanPipe],
+    ChessBoardComponent, LoadErrorComponent, ClubSummaryLinkComponent, SummaryGameBoardComponent, SummaryInlineBoardComponent, MaximNoteComponent, SanPipe],
   template: `
     <div class="summary-page" [class.with-board]="hasBoard()">
       @if (loading()) {
@@ -149,7 +155,10 @@ interface ResolvedDiagram {
                     @else if (b.level === 2) { <h2><ng-container *ngTemplateOutlet="inline; context: { $implicit: b.parts }" /></h2> }
                     @else { <h3><ng-container *ngTemplateOutlet="inline; context: { $implicit: b.parts }" /></h3> }
                   }
-                  @case ('paragraph') { <p><ng-container *ngTemplateOutlet="inline; context: { $implicit: b.parts }" /></p> }
+                  @case ('paragraph') {
+                    <p><ng-container *ngTemplateOutlet="inline; context: { $implicit: b.parts, block: $index }" /></p>
+                    <ng-container *ngTemplateOutlet="inlineBoard; context: { $implicit: $index }" />
+                  }
                   @case ('quote') { <blockquote><ng-container *ngTemplateOutlet="inline; context: { $implicit: b.parts }" /></blockquote> }
                   @case ('rule') { <hr /> }
                   @case ('game') {
@@ -161,7 +170,9 @@ interface ResolvedDiagram {
                   }
                   @case ('gameText') {
                     <!-- Verschmolzener Abschnitt „Die Partie“ (Wunsch 2026-11-14): Partiezüge fett im Text, Varianten in Klammern kleiner und gedämpft. -->
-                    <p class="game-text">@for (seg of b.segments; track $index) {@if (seg.variation) {<span class="gt-var"><ng-container *ngTemplateOutlet="gameParts; context: { $implicit: seg.parts }" /></span>} @else {<ng-container *ngTemplateOutlet="gameParts; context: { $implicit: seg.parts }" />}}</p>
+                    @let block = $index;
+                    <p class="game-text">@for (seg of b.segments; track $index) {@if (seg.variation) {<span class="gt-var"><ng-container *ngTemplateOutlet="gameParts; context: { $implicit: seg.parts, block }" /></span>} @else {<ng-container *ngTemplateOutlet="gameParts; context: { $implicit: seg.parts, block }" />}}</p>
+                    <ng-container *ngTemplateOutlet="inlineBoard; context: { $implicit: block }" />
                   }
                   @case ('maxim') { <app-maxim-note class="maxim" [text]="b.value" /> }
                   @case ('book') {
@@ -252,10 +263,18 @@ interface ResolvedDiagram {
     </ng-template>
 
     <!-- Text ohne Leerraum drumherum: Leerzeichen um die Interpolation im Template machten „( 45.Ta1“ und „61.Kxg5 .“ (Partie 243). -->
-    <ng-template #inline let-parts>
+    <!-- Brett im Fließtext (Wunsch 2026-11-28): nur unter 900 px, wo das Seitenbrett erst hinter dem Text steht. -->
+    <ng-template #inlineBoard let-i>
+      @if (inlineJump(i); as j) {
+        <app-summary-inline-board class="inline-board" [rootFen]="rootFen()" [jump]="j" [game]="gameLine()" [flipped]="game()?.ownerSide === 'black'"
+                                  (open)="openInline($event)" />
+      }
+    </ng-template>
+
+    <ng-template #inline let-parts let-block="block">
       @for (p of parts; track $index) {
         @if (p.link) { <ng-container *ngTemplateOutlet="textLink; context: { $implicit: p }" /> }
-        @else if (p.line) { <button type="button" class="mv" [class.mv-b]="p.bold" [class.mv-i]="p.italic" (click)="showMove(p)">{{ p.text }}</button> }
+        @else if (p.line) { <button type="button" class="mv" [class.mv-b]="p.bold" [class.mv-i]="p.italic" (click)="showMove(p, block)">{{ p.text }}</button> }
         @else if (p.bold) { <strong>{{ p.text }}</strong> }
         @else if (p.italic) { <em>{{ p.text }}</em> }
         @else if (p.code) { <code>{{ p.text }}</code> }
@@ -263,11 +282,11 @@ interface ResolvedDiagram {
       }
     </ng-template>
 
-    <ng-template #gameParts let-parts>
+    <ng-template #gameParts let-parts let-block="block">
       @for (p of parts; track $index) {
         @if (p.move) { <button type="button" class="gt-mv" [class.gt-game]="p.move.ply !== undefined" [class.gt-good]="p.mark === 'good'" [class.gt-bad]="p.mark === 'bad'"
                                [class.gt-on]="p.move.ply !== undefined && p.move.ply === boardPly()" [attr.aria-current]="p.move.ply !== undefined && p.move.ply === boardPly() ? 'step' : null"
-                               (click)="showGameTextMove(p)">{{ p.text }}{{ p.glyph }}</button> }
+                               (click)="showGameTextMove(p, block)">{{ p.text }}{{ p.glyph }}</button> }
         @else if (p.link) { <ng-container *ngTemplateOutlet="textLink; context: { $implicit: p }" /> }
         @else if (p.result) { @if (resultText(); as r) { <span class="gt-result">{{ r }}</span> } }
         @else if (p.bold) { <strong>{{ p.text }}</strong> }
@@ -479,6 +498,37 @@ export class ClubGameSummaryComponent implements OnInit {
   readonly boardPly = computed(() => { const b = this.sideBoard(); return b && !b.variation() ? b.ply() : -1; });
   private readonly dialog = inject(MatDialog);
   private readonly breakpoints = inject(BreakpointObserver);
+  /** Unter 900 px steht das Seitenbrett hinter dem ganzen Text — dann kommen Bretter in den Fließtext. */
+  private readonly narrow = toSignal(this.breakpoints.observe(NARROW).pipe(map(r => r.matches)), { initialValue: this.breakpoints.isMatched(NARROW) });
+  /** Die ganze Partie als Zugfolge (für die Bretter im Text). */
+  readonly gameLine = computed(() => { const g = gamePositions(this.positions()); return g[g.length - 1].path; });
+  readonly rootFen = computed(() => this.positions().fens[0]);
+  /** Bretter im Text je Block: wo eins steht und mit welcher Stellung es anfängt ({@link inlineBoardPlan}). */
+  private readonly inlinePlan = computed(() => this.narrow() && this.hasBoard() ? inlineBoardPlan(this.visibleBlocks(), this.gameLine()) : new Map<number, InlineBoardJump>());
+  /** Klick auf einen Zug im Absatz stellt dessen Brett um (statt das Blatt zu öffnen). */
+  private readonly inlineClicked = signal<ReadonlyMap<number, InlineBoardJump>>(new Map());
+
+  /** Stand des Bretts hinter Block `i` — `null`, wenn dort keins steht. */
+  inlineJump(i: number): InlineBoardJump | null {
+    const planned = this.inlinePlan().get(i);
+    return planned ? this.inlineClicked().get(i) ?? planned : null;
+  }
+
+  /** Großes Brett (Blatt) an der Stellung eines Bretts im Text — als Partiezug, wenn die Folge bis dorthin die Partie ist. */
+  openInline(j: InlineBoardJump): void {
+    this.showOnBoard(followsGame(j.line, j.at, this.gameLine()) ? { ply: j.at } : { line: [...j.line], at: j.at });
+  }
+
+  /** Zug im Text: steht hinter dem Absatz ein Brett, zeigt das ihn; sonst wie bisher Seitenbrett bzw. Blatt. */
+  private jump(block: number | undefined, line: readonly LiveMove[], at: number, fallback: SummaryJump): void {
+    if (block !== undefined && this.inlinePlan().has(block)) {
+      const game = this.gameLine();
+      const j: InlineBoardJump = followsGame(line, at, game) ? { line: game, at } : { line, at };
+      this.inlineClicked.update(m => new Map(m).set(block, j));
+      return;
+    }
+    this.showOnBoard(fallback);
+  }
 
   ngOnInit(): void {
     this.gameId = Number(this.route.snapshot.paramMap.get('id'));
@@ -644,14 +694,15 @@ export class ClubGameSummaryComponent implements OnInit {
   }
 
   /** Klick auf einen Zug im Text: Partiezug oder Variante aufs Seitenbrett. */
-  showMove(p: InlinePart): void {
-    if (p.line && p.at) this.showOnBoard({ line: p.line, at: p.at });
+  showMove(p: InlinePart, block?: number): void {
+    if (p.line && p.at) this.jump(block, p.line, p.at, { line: p.line, at: p.at });
   }
 
   /** Klick auf einen Zug im verschmolzenen Text: Partiezug als Halbzug (hebt ihn hervor), Variante als Zugfolge. */
-  showGameTextMove(p: GameTextPart): void {
+  showGameTextMove(p: GameTextPart, block?: number): void {
     if (!p.move) return;
-    if (p.move.ply !== undefined) this.showOnBoard({ ply: p.move.ply }); else this.showOnBoard({ line: p.move.line, at: p.move.at });
+    const { line, at, ply } = p.move;
+    this.jump(block, line, ply ?? at, ply !== undefined ? { ply } : { line, at });
   }
 
   /** Klick auf einen Zug in „Die Partie“. */
@@ -665,7 +716,7 @@ export class ClubGameSummaryComponent implements OnInit {
    */
   showOnBoard(jump: SummaryJump): void {
     const g = this.game();
-    if (g && this.breakpoints.isMatched('(max-width: 899.98px)')) {
+    if (g && this.breakpoints.isMatched(NARROW)) {
       SummaryBoardSheetComponent.open(this.dialog, { pgn: g.pgn, flipped: g.ownerSide === 'black', jump, markSource: this.markSource });
       return;
     }
