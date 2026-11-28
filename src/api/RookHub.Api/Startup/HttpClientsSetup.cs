@@ -54,6 +54,17 @@ public static class HttpClientsSetup
             client.Timeout = Timeout.InfiniteTimeSpan;
             client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub/1.0 (+https://rookhub.oberschmid.homes)");
         });
+        // chess.com-Übertragungen der Live-Bretter (1.040.0): die JSON-Endpunkte der Events-Seite; gzip, Zeitgrenze je Abruf
+        // in HttpChessComEventsApi (15 s), derselbe User-Agent ohne persönliche Daten.
+        services.AddHttpClient(RookHub.Api.Services.Tournaments.Live.HttpChessComEventsApi.ClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub/1.0 (+https://rookhub.oberschmid.homes)");
+            client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate | System.Net.DecompressionMethods.Brotli,
+        });
         // Zweite Liga-Quelle: SBV-Ligamanager (Bayern, 2026-10-07) — direkt, höflich, ohne Crawler/VPN.
         services.AddHttpClient(RookHub.Api.Services.League.LigamanagerSource.ClientName, client =>
         {

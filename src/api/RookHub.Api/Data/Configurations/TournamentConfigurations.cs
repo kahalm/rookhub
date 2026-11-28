@@ -251,7 +251,7 @@ internal sealed class TournamentBroadcastLinkConfiguration : IEntityTypeConfigur
     public void Configure(EntityTypeBuilder<TournamentBroadcastLink> e)
     {
         e.Property(l => l.CrawlerTournamentId).HasMaxLength(50).IsRequired();
-        e.Property(l => l.TourId).HasMaxLength(12).IsRequired();
+        e.Property(l => l.TourId).HasMaxLength(120).IsRequired();   // Lichess 8 Zeichen, chess.com „cc~{event-slug}“ (1.040.0)
         e.Property(l => l.TourName).HasMaxLength(200).IsRequired();
         e.HasIndex(l => l.CrawlerTournamentId).IsUnique();
     }

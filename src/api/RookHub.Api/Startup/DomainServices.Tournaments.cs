@@ -16,8 +16,15 @@ public static partial class DomainServicesSetup
         services.AddScoped<AutoSubscriptionService>();
         // Live-Bretter (1.014.0): EIN Lichess-Strom je Runde mit Zuschauern (Hub), Cloud-Eval, Suche der Übertragung —
         // Singletons mit Zustand im Speicher; je Anfrage nur die Verknüpfung (DB) und die Crawler-Daten.
-        services.AddSingleton<ILichessLiveSource>(sp => new HttpLichessLiveSource(
+        // chess.com-Übertragungen (1.040.0): Kennungen „cc~…“ leitet die Quelle an ChessComLiveSource (Abfrage im Takt statt
+        // Strom, ein Raum-Abruf je Event und Takt für alle Zuschauer), alles andere an Lichess.
+        services.AddSingleton<IChessComEventsApi>(sp => new HttpChessComEventsApi(
             sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<IConfiguration>()));
+        services.AddSingleton(sp => new ChessComLiveSource(sp.GetRequiredService<IChessComEventsApi>(),
+            sp.GetRequiredService<ILogger<ChessComLiveSource>>(), ChessComLiveSource.Options.From(configuration)));
+        services.AddSingleton<ILichessLiveSource>(sp => new LiveSourceRouter(
+            new HttpLichessLiveSource(sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<IConfiguration>()),
+            sp.GetRequiredService<ChessComLiveSource>()));
         services.AddSingleton<LichessCloudEval>();
         services.AddSingleton<BroadcastFinder>();
         // Engine-Balken ohne (ausreichend tiefe) Cloud-Bewertung (1.027.0): die HINTERGRUND-Engines des Kontos der Analyseaufträge,
@@ -33,10 +40,16 @@ public static partial class DomainServicesSetup
             sp.GetRequiredService<LiveEngineOptions>(), sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
             sp.GetRequiredService<ILogger<LiveEngineQueue>>(), sp.GetRequiredService<RookHub.Api.Services.Engines.LiveEngineLane>(),
             sp.GetRequiredService<RookHub.Api.Services.Engines.EngineActivityTracker>()));
-        services.AddSingleton(sp => new BroadcastLiveHub(sp.GetRequiredService<ILichessLiveSource>(),
-            sp.GetRequiredService<LichessCloudEval>(), sp.GetRequiredService<ILogger<BroadcastLiveHub>>(),
-            engine: sp.GetRequiredService<LiveEngineQueue>(),
-            onlyMove: LiveOnlyMoveOptions.From(configuration, sp.GetRequiredService<LiveEngineOptions>())));   // „Nur ein Zug“ (1.033.0)
+        services.AddSingleton(sp =>
+        {
+            var hub = new BroadcastLiveHub(sp.GetRequiredService<ILichessLiveSource>(),
+                sp.GetRequiredService<LichessCloudEval>(), sp.GetRequiredService<ILogger<BroadcastLiveHub>>(),
+                engine: sp.GetRequiredService<LiveEngineQueue>(),
+                onlyMove: LiveOnlyMoveOptions.From(configuration, sp.GetRequiredService<LiveEngineOptions>()));   // „Nur ein Zug“ (1.033.0)
+            // chess.com holt die Züge der ausdrücklich gewählten Bretter zuerst.
+            sp.GetRequiredService<ChessComLiveSource>().WantedGames = hub.WantedGames;
+            return hub;
+        });
         services.AddSingleton(_ => new SseConnectionLimiter(
             Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxStreamsPerIp") ?? 6, 1, 100),
             Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxStreams") ?? 2000, 1, 100000)));
@@ -44,7 +57,8 @@ public static partial class DomainServicesSetup
         // LiveBoards:MaxExternalRounds (10) gleichzeitig — Ströme laufen über denselben Hub.
         services.AddSingleton(sp => new ExternalRoundRegistry(sp.GetRequiredService<ILichessLiveSource>(),
             sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<ILogger<ExternalRoundRegistry>>(),
-            Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxExternalRounds") ?? 10, 0, 200)));
+            Math.Clamp(configuration.GetValue<int?>("LiveBoards:MaxExternalRounds") ?? 10, 0, 200),
+            sp.GetRequiredService<ChessComLiveSource>()));
         services.AddScoped<ILiveTournamentData, CrawlerLiveTournamentData>();
         services.AddScoped<TournamentLiveService>();
         // Geteilte, lebende Ansichten (1.029.0): Änderungen wecken die offenen Ströme im selben Prozess.

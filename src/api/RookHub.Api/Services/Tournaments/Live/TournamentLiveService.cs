@@ -32,10 +32,12 @@ public sealed class TournamentLiveService
     private readonly ILichessLiveSource _source;
     private readonly IMemoryCache _cache;
     private readonly ILogger<TournamentLiveService> _logger;
+    private readonly ChessComLiveSource? _chessCom;
 
     public TournamentLiveService(AppDbContext db, ILiveTournamentData data, BroadcastFinder finder, ILichessLiveSource source,
-        IMemoryCache cache, ILogger<TournamentLiveService> logger)
+        IMemoryCache cache, ILogger<TournamentLiveService> logger, ChessComLiveSource? chessCom = null)
     {
+        _chessCom = chessCom;
         _db = db;
         _data = data;
         _finder = finder;
@@ -97,12 +99,22 @@ public sealed class TournamentLiveService
         return link;
     }
 
-    /// <summary>Von Hand verknüpfen (Turnier-, Runden- oder Partie-Link). Reason: <c>invalidUrl</c>, <c>notFound</c>, <c>tournamentNotFound</c>.</summary>
+    /// <summary>Von Hand verknüpfen (Turnier-, Runden- oder Partie-Link von Lichess, seit 1.040.0 auch ein chess.com-Event-Link).
+    /// Reason: <c>invalidUrl</c>, <c>notFound</c>, <c>tournamentNotFound</c>. chess.com nicht erreichbar →
+    /// <see cref="ChessComUnavailableException"/>.</summary>
     public async Task<(LiveStatus? Status, string? Reason)> LinkAsync(string id, string? url, CancellationToken ct)
     {
-        if (LichessBroadcasts.IdsOf(url) is not { } ids) return (null, "invalidUrl");
+        var cc = _chessCom is null ? null : ChessComEvents.LinkOf(url);
+        var ids = cc is null ? LichessBroadcasts.IdsOf(url) : null;
+        if (cc is null && ids is null) return (null, "invalidUrl");
         if (await _data.GetTournamentAsync(id, ct) is null) return (null, "tournamentNotFound");
-        var json = ids.TourId is { } tid ? await _source.GetTourAsync(tid, ct) : await _source.GetTourOfRoundAsync(ids.RoundId!, ct);
+        string? json;
+        if (cc is not null)
+        {
+            var slug = cc.Room ?? (cc.Index is { } index ? await _chessCom!.ResolveIndexAsync(index, ct) : null);
+            json = slug is null ? null : await _source.GetTourAsync(ChessComEvents.TourId(slug), ct);
+        }
+        else json = ids!.Value.TourId is { } tid ? await _source.GetTourAsync(tid, ct) : await _source.GetTourOfRoundAsync(ids.Value.RoundId!, ct);
         if (json is null || LichessBroadcasts.ParseTourDetail(json) is not { } detail) return (null, "notFound");
         _cache.Set("live-tour:" + detail.Tour.Id, detail, TourTtl);
         var link = await SaveAsync(id, detail.Tour, manual: true, ct);
@@ -137,8 +149,12 @@ public sealed class TournamentLiveService
                       ?? rounds.LastOrDefault(r => r.Finished || r.StartsAt is { } s && s <= DateTime.UtcNow)?.Round
                       ?? rounds.FirstOrDefault()?.Round;
         return new LiveStatus(true, link.Manual, link.TourId, detail?.Tour.Name ?? link.TourName,
-            $"https://lichess.org/broadcast/-/{link.TourId}", rounds, current);
+            TourUrl(link.TourId), rounds, current);
     }
+
+    /// <summary>Link der Übertragung bei ihrer Quelle (Lichess-Turnier bzw. chess.com-Event).</summary>
+    public static string TourUrl(string tourId) =>
+        ChessComEvents.RoomOfTour(tourId) is { } room ? ChessComEvents.RoomUrl(room) : $"https://lichess.org/broadcast/-/{tourId}";
 
     private async Task<LichessBroadcasts.TourDetail?> DetailAsync(string tourId, CancellationToken ct)
     {

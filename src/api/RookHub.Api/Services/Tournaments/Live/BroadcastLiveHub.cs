@@ -102,6 +102,18 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
     }
 
     /// <summary>
+    /// Partien einer Runde, die Zuschauer ausdrücklich gewählt haben (Partiefilter der zusätzlichen Bretter) — für Quellen, die
+    /// abfragen statt streamen (chess.com, <see cref="ChessComLiveSource"/>): die holen diese Partien zuerst. <c>null</c> = keine
+    /// Vorliebe (niemand schaut zu oder einer sieht die ganze Runde).
+    /// </summary>
+    public IReadOnlySet<string>? WantedGames(string roundId)
+    {
+        Feed? feed;
+        lock (_lock) if (!_feeds.TryGetValue(roundId, out feed) || feed.IsClosed) return null;
+        return feed.WantedGames();
+    }
+
+    /// <summary>
     /// Das zuletzt übertragene PGN einer Partie (Kopfzeilen, alle Züge, <c>[%clk]</c>) — für „Analysieren“ (1.026.0). Nur aus dem
     /// Speicher (offener Feed oder gemerkte fertige Runde), öffnet nie einen Strom; <c>null</c> = nicht da.
     /// </summary>
@@ -275,6 +287,21 @@ public sealed class BroadcastLiveHub : IAsyncDisposable
         public string RoundId { get; }
         public bool IsFinished { get { lock (_lock) return _state == "finished"; } }
         public int ViewerCount { get { lock (_lock) return _subs.Count; } }
+
+        /// <summary>Vereinigung der Partiefilter aller Zuschauer; <c>null</c>, sobald einer die ganze Runde sieht.</summary>
+        public IReadOnlySet<string>? WantedGames()
+        {
+            lock (_lock)
+            {
+                var set = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var s in _subs)
+                {
+                    if (s.Only is null) return null;
+                    set.UnionWith(s.Only);
+                }
+                return set;
+            }
+        }
         /// <summary>Geschlossen (Leerlauf) — nimmt keine Zuschauer mehr an; <see cref="Subscribe"/> legt dann einen neuen an.</summary>
         public bool IsClosed { get { lock (_lock) return _closed; } }
         /// <summary>Vollstand schon geladen (vorher gäbe <see cref="Games"/> eine halbe Runde).</summary>

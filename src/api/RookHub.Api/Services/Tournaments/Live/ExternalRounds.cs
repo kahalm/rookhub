@@ -42,14 +42,17 @@ public sealed partial class ExternalRoundRegistry
     private static readonly TimeSpan GamesTtl = TimeSpan.FromSeconds(60);
 
     private readonly ILichessLiveSource _source;
+    private readonly ChessComLiveSource? _chessCom;
     private readonly IMemoryCache _cache;
     private readonly ILogger<ExternalRoundRegistry> _logger;
     private readonly Dictionary<string, int> _watched = new(StringComparer.Ordinal);
     private readonly Lock _lock = new();
 
-    public ExternalRoundRegistry(ILichessLiveSource source, IMemoryCache cache, ILogger<ExternalRoundRegistry> logger, int maxRounds = 10)
+    public ExternalRoundRegistry(ILichessLiveSource source, IMemoryCache cache, ILogger<ExternalRoundRegistry> logger, int maxRounds = 10,
+        ChessComLiveSource? chessCom = null)
     {
         _source = source;
+        _chessCom = chessCom;
         _cache = cache;
         _logger = logger;
         MaxRounds = maxRounds;
@@ -72,6 +75,7 @@ public sealed partial class ExternalRoundRegistry
         {
             var m = RefRe().Match(raw);
             if (!m.Success) continue;
+            if (!IsGameIdFor(m.Groups[1].Value, m.Groups[2].Value)) continue;
             var r = new ExternalBoardRef(m.Groups[1].Value, m.Groups[2].Value);
             if (list.Contains(r)) continue;
             if (!rounds.Contains(r.RoundId) && rounds.Count >= MaxRoundsPerStream) continue;
@@ -82,13 +86,21 @@ public sealed partial class ExternalRoundRegistry
         return list;
     }
 
-    [GeneratedRegex("^([A-Za-z0-9]{8})\\.([A-Za-z0-9]{8})$")]
+    /// <summary>Lichess <c>roundId.gameId</c> (je acht Zeichen) oder chess.com <c>cc~event~runde.partie-slug</c> (1.040.0).</summary>
+    [GeneratedRegex("^([A-Za-z0-9]{8}|cc~[A-Za-z0-9][A-Za-z0-9-]{0,99}~[A-Za-z0-9_-]{1,40})\\.([A-Za-z0-9_-]{1,80})$")]
     private static partial Regex RefRe();
+
+    /// <summary>Lichess-Runde (acht Zeichen) oder chess.com-Runde (<c>cc~event~runde</c>)?</summary>
+    public static bool IsRoundId(string? s) => LichessBroadcasts.IsId(s) || ChessComEvents.IsRoundId(s);
+
+    /// <summary>Passt die Partie-Kennung zur Quelle der Runde?</summary>
+    public static bool IsGameIdFor(string roundId, string? gameId) =>
+        ChessComEvents.IsChessCom(roundId) ? ChessComEvents.IsGameId(gameId) : LichessBroadcasts.IsId(gameId);
 
     /// <summary>Kennt Lichess diese Runde? <c>null</c> = nein (oder Lichess gerade nicht erreichbar — dann ungecacht).</summary>
     public async Task<ExternalRoundInfo?> ResolveAsync(string roundId, CancellationToken ct)
     {
-        if (!LichessBroadcasts.IsId(roundId)) return null;
+        if (!IsRoundId(roundId)) return null;
         var key = "live-ext-round:" + roundId;
         if (_cache.TryGetValue(key, out ExternalRoundInfo? hit)) return hit;
         ExternalRoundInfo? info = null;
@@ -108,7 +120,17 @@ public sealed partial class ExternalRoundRegistry
     }
 
     private static ExternalRoundInfo Info(LichessBroadcasts.TourDetail d, LichessBroadcasts.Round r) =>
-        new(r.Id, r.Name, d.Tour.Id, d.Tour.Name, $"https://lichess.org/broadcast/-/-/{r.Id}", r.Ongoing, r.Finished);
+        new(r.Id, r.Name, d.Tour.Id, d.Tour.Name, RoundUrl(r.Id), r.Ongoing, r.Finished);
+
+    /// <summary>Link der Runde bei ihrer Quelle: Lichess-Runde bzw. die Event-Seite bei chess.com (eine Runden-Seite gibt es dort nicht).</summary>
+    public static string RoundUrl(string roundId) =>
+        ChessComEvents.SplitRound(roundId) is { } cc ? ChessComEvents.RoomUrl(cc.Room) + "/games" : $"https://lichess.org/broadcast/-/-/{roundId}";
+
+    /// <summary>Laufende Runde, sonst die zuletzt begonnene/fertige, sonst die erste.</summary>
+    private static LichessBroadcasts.Round PickRound(LichessBroadcasts.TourDetail d) =>
+        d.Rounds.LastOrDefault(x => x.Ongoing)
+        ?? d.Rounds.LastOrDefault(x => x.Finished || x.StartsAt is { } s && s <= DateTime.UtcNow)
+        ?? d.Rounds[0];
 
     /// <summary>
     /// Link aus dem Dialog → Runde + ihre Partien. Turnier-Link → die laufende Runde (sonst die zuletzt begonnene/fertige).
@@ -116,15 +138,14 @@ public sealed partial class ExternalRoundRegistry
     /// </summary>
     public async Task<(ExternalRoundView? View, string? Reason)> LookupAsync(string? url, BroadcastLiveHub hub, CancellationToken ct)
     {
+        if (ChessComEvents.LinkOf(url) is { } cc) return await LookupChessComAsync(cc, ct);
         if (LichessBroadcasts.BoardLinkOf(url) is not { } ids) return (null, "invalidUrl");
         ExternalRoundInfo? info;
         if (ids.TourId is { } tourId)
         {
             var json = await _source.GetTourAsync(tourId, ct);
             if (json is null || LichessBroadcasts.ParseTourDetail(json) is not { Rounds.Count: > 0 } d) return (null, "notFound");
-            var r = d.Rounds.LastOrDefault(x => x.Ongoing)
-                    ?? d.Rounds.LastOrDefault(x => x.Finished || x.StartsAt is { } s && s <= DateTime.UtcNow)
-                    ?? d.Rounds[0];
+            var r = PickRound(d);
             info = Info(d, r);
             _cache.Set("live-ext-round:" + r.Id, info, HitTtl);
         }
@@ -134,6 +155,36 @@ public sealed partial class ExternalRoundRegistry
         if (ids.GameId is { } g && games.Count > 0 && games.All(x => x.Id != g)) return (null, "gameNotFound");
         return (new ExternalRoundView(info.RoundId, info.RoundName, info.TourName, info.Url, info.Ongoing, info.Finished, ids.GameId,
             games.Select(x => new ExternalGameRow(x.Id, x.White.Name, x.Black.Name, x.White.Title, x.Black.Title, x.White.Elo, x.Black.Elo, x.Result))
+                .ToList()), null);
+    }
+
+    /// <summary>
+    /// chess.com-Link (1.040.0): Event (→ laufende Runde wie bei Lichess), Event-Gruppe (→ ihr zuletzt geänderter Raum), Partie
+    /// (→ ihre Runde, Partie vorgewählt). Die Auswahl kommt direkt aus der Raum-Antwort — ohne die Züge jeder Partie zu holen.
+    /// Wirft <see cref="ChessComUnavailableException"/>, wenn chess.com nicht antwortet.
+    /// </summary>
+    private async Task<(ExternalRoundView? View, string? Reason)> LookupChessComAsync(ChessComEvents.Link link, CancellationToken ct)
+    {
+        if (_chessCom is null) return (null, "invalidUrl");
+        var slug = link.Room ?? (link.Index is { } index ? await _chessCom.ResolveIndexAsync(index, ct) : null);
+        if (slug is null) return (null, "notFound");
+        var room = await _chessCom.RoomAsync(slug, TimeSpan.FromSeconds(8), ct);
+        if (room is null || room.Rounds.Count == 0) return (null, "notFound");
+        if (LichessBroadcasts.ParseTourDetail(ChessComEvents.ToTourJson(room, DateTime.UtcNow)) is not { Rounds.Count: > 0 } d) return (null, "notFound");
+        LichessBroadcasts.Round r;
+        if (link.Round is { } rs)
+        {
+            if (d.Rounds.FirstOrDefault(x => x.Id == ChessComEvents.RoundId(room.Slug, rs)) is not { } given) return (null, "notFound");
+            r = given;
+        }
+        else r = PickRound(d);
+        var info = Info(d, r);
+        _cache.Set("live-ext-round:" + r.Id, info, HitTtl);
+        var round = room.RoundBySlug(ChessComEvents.SplitRound(r.Id)!.Value.Round)!;
+        var games = room.GamesOf(round).OrderBy(g => g.Board ?? int.MaxValue).ToList();
+        if (link.Game is { } g && games.All(x => x.Slug != g)) return (null, "gameNotFound");
+        return (new ExternalRoundView(info.RoundId, info.RoundName, info.TourName, info.Url, info.Ongoing, info.Finished, link.Game,
+            games.Select(x => new ExternalGameRow(x.Slug, x.White.Name, x.Black.Name, x.White.Title, x.Black.Title, x.White.Elo, x.Black.Elo, x.Result))
                 .ToList()), null);
     }
 
@@ -169,7 +220,9 @@ public sealed partial class ExternalRoundRegistry
     /// </summary>
     public async Task<string?> GamePgnAsync(string roundId, string gameId, BroadcastLiveHub hub, CancellationToken ct)
     {
-        if (!LichessBroadcasts.IsId(roundId) || !LichessBroadcasts.IsId(gameId)) return null;
+        if (!IsRoundId(roundId) || !IsGameIdFor(roundId, gameId)) return null;
+        // chess.com: das PGN im Hub kann noch ohne Züge sein (nur die Stellung aus der Raum-Antwort) — die Quelle holt sie nach.
+        if (ChessComEvents.IsChessCom(roundId)) return _chessCom is null ? null : await _chessCom.GetGamePgnAsync(roundId, gameId, ct);
         if (hub.PeekPgn(roundId, gameId) is { } live) return live;
         if (await ResolveAsync(roundId, ct) is null) return null;
         return (await RoundPgnsAsync(roundId, ct)).FirstOrDefault(x => x.Game.Id == gameId).Pgn;

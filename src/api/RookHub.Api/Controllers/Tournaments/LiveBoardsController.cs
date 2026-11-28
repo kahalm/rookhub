@@ -53,15 +53,20 @@ public class LiveBoardsController : BaseApiController
         ExternalRoundView? view;
         string? reason;
         try { (view, reason) = await ext.LookupAsync(url, hub, RequestCt); }
+        catch (ChessComUnavailableException) { return ChessComUnavailable(); }
         catch (LichessRateLimitedException) { return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Lichess is busy.", code = "live_lichess_busy" }); }
         return reason switch
         {
             null => Ok(view),
-            "invalidUrl" => BadRequest(new { message = "Not a Lichess broadcast link.", code = "live_invalid_url" }),
+            "invalidUrl" => BadRequest(new { message = "Not a Lichess or chess.com broadcast link.", code = "live_invalid_url" }),
             "gameNotFound" => NotFound(new { message = "Game not found in this round.", code = "live_ext_game_not_found" }),
             _ => NotFound(new { message = "Broadcast not found.", code = "live_broadcast_not_found" }),
         };
     }
+
+    /// <summary>503 <c>live_chesscom_unavailable</c>: chess.com drosselt, sperrt oder antwortet nicht (1.040.0).</summary>
+    private ObjectResult ChessComUnavailable() =>
+        StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "chess.com is not reachable right now.", code = "live_chesscom_unavailable" });
 
     /// <summary>
     /// PGN einer Live-Partie (Kopfzeilen, alle bisherigen Züge, <c>[%clk]</c>) für „Analysieren“ (1.026.0): das Analysebrett von
@@ -72,9 +77,10 @@ public class LiveBoardsController : BaseApiController
     [EnableRateLimiting(RateLimitPartitions.DirectoryReadPolicy)]
     public async Task<IActionResult> GamePgn(string roundId, string gameId, [FromServices] ExternalRoundRegistry ext, [FromServices] BroadcastLiveHub hub)
     {
-        if (!LichessBroadcasts.IsId(roundId) || !LichessBroadcasts.IsId(gameId)) return BadRequest(new { message = "Invalid round or game." });
+        if (!ExternalRoundRegistry.IsRoundId(roundId) || !ExternalRoundRegistry.IsGameIdFor(roundId, gameId)) return BadRequest(new { message = "Invalid round or game." });
         string? pgn;
         try { pgn = await ext.GamePgnAsync(roundId, gameId, hub, RequestCt); }
+        catch (ChessComUnavailableException) { return ChessComUnavailable(); }
         catch (LichessRateLimitedException) { return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Lichess is busy.", code = "live_lichess_busy" }); }
         if (pgn is null) return NotFound(new { message = "Game not found.", code = "live_game_not_found" });
         Response.Headers.CacheControl = "no-store";
@@ -98,11 +104,14 @@ public class LiveBoardsController : BaseApiController
     public async Task<IActionResult> Link(string id, [FromBody] LiveBoardLinkRequest? req)
     {
         if (!TournamentIdValidator.IsValid(id)) return BadRequest(new { message = "Invalid tournament ID." });
-        var (status, reason) = await _live.LinkAsync(id, req?.Url, RequestCt);
+        LiveStatus? status;
+        string? reason;
+        try { (status, reason) = await _live.LinkAsync(id, req?.Url, RequestCt); }
+        catch (ChessComUnavailableException) { return ChessComUnavailable(); }
         return reason switch
         {
             null => Ok(status),
-            "invalidUrl" => BadRequest(new { message = "Not a Lichess broadcast link.", code = "live_invalid_url" }),
+            "invalidUrl" => BadRequest(new { message = "Not a Lichess or chess.com broadcast link.", code = "live_invalid_url" }),
             "tournamentNotFound" => NotFound(new { message = "Tournament not found.", code = "live_tournament_not_found" }),
             _ => NotFound(new { message = "Broadcast not found.", code = "live_broadcast_not_found" }),
         };

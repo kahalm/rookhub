@@ -10,7 +10,7 @@ public class TournamentBroadcastLink
     public int Id { get; set; }
     /// <summary>chess-results-Turniernummer (wie <c>TournamentSubscription.CrawlerTournamentId</c>).</summary>
     public string CrawlerTournamentId { get; set; } = string.Empty;
-    /// <summary>Lichess-Kennung des Übertragungs-Turniers (8 Zeichen).</summary>
+    /// <summary>Kennung des Übertragungs-Turniers: Lichess (8 Zeichen) oder chess.com <c>cc~{event-slug}</c> (1.040.0).</summary>
     public string TourId { get; set; } = string.Empty;
     public string TourName { get; set; } = string.Empty;
     public bool Manual { get; set; }

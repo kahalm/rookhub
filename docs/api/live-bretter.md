@@ -10,14 +10,14 @@ eine Mannschaft zeigt deren sechs Bretter auf einer Seite.
 |---|---|---|---|
 | GET | `/api/live-boards/{id}` | **AllowAnonymous** (`directory-read`) | Verknüpfung + Runden (`LiveStatus`); ohne Verknüpfung sucht der Server einmal automatisch. 404 = Turnier nicht geholt |
 | GET | `/api/live-boards/{id}/rounds/{round}/stream?eval=1` | **AllowAnonymous** (`directory-read`) + höchstens 6 gleichzeitige Ströme je IP (`SseConnectionLimiter`, `LiveBoards:MaxStreamsPerIp`, gesamt `LiveBoards:MaxStreams` 2000) | Server-Sent Events der Runde. 404 `live_not_linked` ohne Verknüpfung, 429 `live_too_many_streams` |
-| PUT | `/api/live-boards/{id}/link` `{ url }` | Konto (`user-crawl`) | Von Hand verknüpfen: Turnier-, Runden- oder Partie-Link von `lichess.org/broadcast/…`. 400 `live_invalid_url`, 404 `live_broadcast_not_found` / `live_tournament_not_found` |
+| PUT | `/api/live-boards/{id}/link` `{ url }` | Konto (`user-crawl`) | Von Hand verknüpfen: Turnier-, Runden- oder Partie-Link von `lichess.org/broadcast/…` oder (1.040.0) ein chess.com-Event-Link (siehe unten). 400 `live_invalid_url`, 404 `live_broadcast_not_found` / `live_tournament_not_found`, 503 `live_chesscom_unavailable` |
 | DELETE | `/api/live-boards/{id}/link` | `tournaments.manage` | Verknüpfung lösen (falsch zugeordnet); danach sucht das nächste Lesen wieder |
 | GET | `/api/live-boards/pgn/{roundId}/{gameId}` | **AllowAnonymous** (`directory-read`) | PGN einer Live-Partie (Kopfzeilen, alle bisherigen Züge, `[%clk]`; `application/x-chess-pgn`) für „Analysieren“ (1.026.0). Aus dem Hub (offener Strom bzw. 30 min gemerkte fertige Runde), sonst nur für Runden, die Lichess kennt, aus dem 60 s gecachten Runden-PGN. 404 `live_game_not_found` |
 | POST | `/api/live-boards/views` `{ tournamentId, view }` | **AllowAnonymous** (`live-view-write`, 30/min) | Geteilte Ansicht anlegen (1.029.0) → `{ token, tournamentId, view, canEdit, editKey }`; `editKey` nur hier. 404 `live_not_linked` |
 | GET | `/api/live-boards/views/{token}` | **AllowAnonymous** (`directory-read`) | Ansicht lesen; `canEdit` für diesen Aufrufer (Konto des Erstellers oder Header `X-Live-View-Key`). 404 `live_view_not_found` |
 | PUT | `/api/live-boards/views/{token}` `{ view }` | **AllowAnonymous** (`live-view-write`), nur Besitzer | Ansicht ändern; alle offenen Ströme folgen. 403 `live_view_forbidden` |
 | GET | `/api/live-boards/views/{token}/stream?eval=` | **AllowAnonymous** (`directory-read`) + Stromgrenzen wie oben | SSE der Ansicht: `view`, dann wie der Runden-Strom; bei Änderung erneut `view` + `snapshot`, `view-gone` wenn gelöscht. `eval` = Balken DIESES Zuschauers (ohne Angabe aus; seit 1.039.0 nicht mehr Teil der Ansicht) |
-| GET | `/api/live-boards/external?url=` | **AllowAnonymous** (`directory-read`) | „Brett hinzufügen“ aus einer FREMDEN Übertragung (1.025.0): Partie-, Runden- oder Turnier-Link → `{ roundId, roundName, tourName, url, ongoing, finished, gameId, games[] }`. 400 `live_invalid_url`, 404 `live_broadcast_not_found` / `live_ext_game_not_found`, 503 `live_lichess_busy` |
+| GET | `/api/live-boards/external?url=` | **AllowAnonymous** (`directory-read`) | „Brett hinzufügen“ aus einer FREMDEN Übertragung (1.025.0; chess.com seit 1.040.0): Partie-, Runden- oder Turnier-Link → `{ roundId, roundName, tourName, url, ongoing, finished, gameId, games[] }`. 400 `live_invalid_url`, 404 `live_broadcast_not_found` / `live_ext_game_not_found`, 503 `live_lichess_busy` / `live_chesscom_unavailable` |
 
 `{id}` ist die chess-results-Nummer wie in `/tournaments/:id`. Gestreamt wird eine
 Runde der in `TournamentBroadcastLinks` verknüpften Übertragung (fremde Runden nur als `extra=`, siehe unten) (chess-results-Runde → Lichess-Runde: Zahl im Rundennamen,
@@ -80,6 +80,66 @@ ansehen und daneben die WM-Partie live“.
   Der Hub hält dafür je Partie das zuletzt übertragene Roh-PGN (`Feed._pgn`, `BroadcastLiveHub.PeekPgn`).
 - **Elo-Schnitt** (1.025.0): `LiveMatchSlot.homeElo/awayElo` + `…EloBoards` — Elo der Spieler an den Brettern der Begegnung, aus dem
   Strom, sonst aus der Startliste; ohne Elo zählt nicht. Im Kopf der Begegnung „Ø 2315“ unter dem Namen, Tooltip „Schnitt über n Bretter“.
+
+## chess.com-Übertragungen (1.040.0, Wunsch 2026-11-28)
+
+„Kann ich bei den Livebrettern auch chess.com-Broadcast-Links einfügen?“ → „ja, bau chess.com ein“. Überall, wo ein fremder
+Lichess-Link geht, geht jetzt auch ein chess.com-Event-Link: „Brett hinzufügen“ (Dialog, `?ext=`), Verknüpfen des eigenen
+Turniers (`PUT …/link`), „Analysieren“ (`/analysis?live=`), geteilte Ansicht.
+
+- **Linkformen** (`ChessComEvents.LinkOf`, im Browser `parseBroadcastLink`; nur `chess.com` / `*.chess.com`, Sprachpräfix `/de/…`
+  erlaubt): `/events/{event}` (auch `/games`, `/results`, `/schedule` … dahinter) → laufende Runde (sonst die zuletzt
+  begonnene/fertige); `/events/{event}/{runde}/{partie}` (auch `/events/{event}/dashboard/{runde}/{partie}`) → diese Partie vorgewählt;
+  `/events/{event}/{runde}`; `/events/info/{gruppe}` (Event-Gruppe, z. B. London Chess Classic mit mehreren Räumen) → der zuletzt
+  geänderte begonnene Raum. `/events`, `/events/current`, Partien außerhalb von Events (`/game/live/…`) → 400 `live_invalid_url`.
+- **Kennungen** (ohne Punkt/Komma/Schrägstrich, damit `?ext=roundId.gameId,…` und `/pgn/{round}/{game}` gleich bleiben): Turnier
+  `cc~{event-slug}`, Runde `cc~{event-slug}~{runden-slug}` (z. B. `cc~2026-fide-chess-world-championship~03`), Partie = chess.com-Slug
+  (`Sindarov_Javokhir-Gukesh_D`). Lichess-Kennungen haben nie ein `~`; `ExternalRoundRegistry.IsRoundId`/`IsGameIdFor` und im Browser
+  `isLiveRoundId`/`isLiveGameIdFor` prüfen je Quelle. `TournamentBroadcastLinks.TourId` dafür 12 → 120 Zeichen (Migration
+  `WidenBroadcastTourId`).
+- **Endpunkte bei chess.com** (keine offizielle Broadcast-API; gemessen 28.11.2026 im Bündel der Events-Seite `events-view.js`,
+  ohne Anmeldung, mit unserem User-Agent nicht von Cloudflare gesperrt — ein `curl`-User-Agent bekam 403):
+  - `POST https://www.chess.com/events/v1/api/room/{event}` (leerer Rumpf) → Event, `rounds[]` (`slug`, `name`, `startAt`), ALLE
+    `games[]` mit `result`, `whiteClock`/`blackClock` (ms), `currentFEN`, `lastMoveAt`, `board`, `revision`, Spieler mit `fideId`,
+    `elo`, `title`, `fed`. Live aktuell (vier Abrufe im 13-s-Abstand: neue `revision` je Zug). WM 22 KB, Swiss mit 135 Partien 220 KB
+    (gzip ~37 KB).
+  - `POST …/game/{event}/{runde}/{partie}` → `moves[]` mit `cbn` = `"e2e4_e4"` (UCI_SAN) und `clock` (ms nach dem Zug); dazu
+    `analysis[]` (darum ~360 KB, gzip ~66 KB bei 120 Halbzügen — wird nicht gelesen).
+  - `POST …/index/{gruppe}` → Räume einer Event-Gruppe.
+  - Nicht nutzbar: `/events/pgn/{eventId}/{roundId}` (verlangt Anmeldung), die Züge im Browser kommen sonst über Socket.IO
+    (`nxt.chessbomb.com`). **Robustheit**: es sind interne Endpunkte der Seite — ändert chess.com sie, liefert der Abruf 404 oder
+    unlesbares JSON (dann „nicht gefunden“ bzw. `live_chesscom_unavailable`); die gespeicherten echten Antworten in
+    `tests/…/Fixtures/ChessCom/` und `ChessComLiveSmokeTests` (`ROOKHUB_LIVE_CHESSCOM=1`, optional `ROOKHUB_LIVE_CHESSCOM_URL`) zeigen
+    schnell, was sich geändert hat.
+- **Einbau** (`ChessComLiveSource`, `LiveSourceRouter`): die Quelle sieht nach außen aus wie Lichess — Runden-PGN, „Strom“ aus
+  PGN-Stücken, Turnier-JSON in Lichess-Form (`ChessComEvents.ToTourJson` → `LichessBroadcasts.ParseTourDetail`). Der Router
+  (registriert als `ILichessLiveSource`) gibt `cc~…` an chess.com, alles andere an Lichess. Hub, Zuordnung, Engine-Balken, „Nur ein
+  Zug“, Vollbild-Zugliste, „Analysieren“ und geteilte Ansicht laufen dadurch unverändert. PGN je Partie (`ChessComEvents.ToPgn`):
+  Kopfzeilen inkl. FIDE-ID (Zuordnung zur Startliste beim eigenen Turnier), `Round "r.Brett"`, `GameURL` = Partie bei chess.com
+  (letzter Teil = Kennung), Züge mit `[%clk]`; als „Team“ zählt nur, was nicht die Föderation ist.
+- **Takt und Drosselung**: EIN Raum-Abruf je Event und Takt für alle Runden und Zuschauer (`LiveBoards:ChessCom:PollSeconds`, Vorgabe
+  8 s, 5–120; Raum im Speicher geteilt) — nur solange der Hub die Runde offen hält (letzter Zuschauer weg → 90 s später Schluss); eine
+  Runde ohne begonnene Partie fragt alle 30 s. Züge nur für Partien mit neuer `revision`, höchstens
+  `LiveBoards:ChessCom:GameFetchesPerTick` (6) je Runde und Takt, beim Vollstand 12; zuerst die ausdrücklich gewählten Bretter
+  (`BroadcastLiveHub.WantedGames` = Partiefilter der `ext`-Abos), dann die am längsten nicht geholten. Bis dahin zeigt eine Partie die
+  Stellung aus der Raum-Antwort (`[FEN]`, ohne Zugliste/Uhren) bzw. die zuletzt geholten Züge. Eine 404-Partie wird bis zur nächsten
+  Revision nicht erneut gefragt. Ende des Stroms: alle Partien mit Ergebnis und ihre Züge geholt → `finished`.
+  `HttpChessComEventsApi`: höchstens 2 Abrufe gleichzeitig, mindestens 250 ms Abstand, 15 s Zeitgrenze, gzip; nach 429/403 ruht die
+  ganze Quelle 2 min (jeder Abruf wirft sofort `ChessComUnavailableException`); sonst verdoppelt der Strom seinen Takt bis 2 min und
+  gibt nach drei Fehlern in Folge an den Hub zurück (der pausiert wie nach einem Lichess-429 90 s, Zustand `reconnecting`).
+  `ChessComUnavailableException` erbt von `LichessRateLimitedException` (seit 1.040.0 nicht mehr `sealed`).
+- **Auswahl im Dialog**: kommt direkt aus der Raum-Antwort (Namen, Titel, Elo, Ergebnis, nach Brett) — ohne die Züge jeder Partie zu
+  holen. „Analysieren“ holt bei chess.com immer über die Quelle (Züge aus dem Speicher, sonst ein Abruf der Partie), weil das PGN im
+  Hub zeitweise nur die Stellung trägt.
+- **Oberfläche**: Platzhalter `lichess.org/broadcast/… · chess.com/events/…`, Texte „Übertragung (Lichess oder chess.com)“. Liste
+  „Übertragungen“: eigene Zeile `{Turnier} · chess.com` bzw. `· lichess.org` (`broadcastHost`), fremde Runden „Turnier · Runde ·
+  chess.com“ mit Link auf `chess.com/events/{event}/games` (`broadcastRoundUrl`; eine Runden-Seite gibt es dort nicht); Begegnungen
+  eines chess.com-verknüpften Turniers verlinken ebenfalls die Event-Seite.
+- **Engine-Balken**: Lichess-Cloud-Eval und Hintergrund-Engines arbeiten auf der Stellung (FEN) — für chess.com-Bretter genauso
+  wie für Lichess-Bretter; `[%eval]` schickt chess.com nicht.
+- **Nicht gemacht**: automatische Suche nach chess.com-Übertragungen (der `BroadcastFinder` sucht nur bei Lichess — verknüpfen geht
+  von Hand); `?add=` für nicht zugeordnete Partien eines chess.com-verknüpften Turniers (Schlüssel bleibt die 8-stellige Lichess-Kennung,
+  ohne Filter sieht man ohnehin alle).
 
 ## Geteilte, lebende Ansicht (1.029.0, Wunsch 2026-11-26)
 
@@ -328,6 +388,7 @@ Stufe vor. Einzelheiten: `docs/api/leaguehub-vereins-datenbank.md` und `docs/api
 
 ## Tests
 
-`tests/RookHub.Api.Tests/Tournaments/Live/` (Zerleger in Stücken, Parser %clk/%eval, Zuordnung, Hub-Lebenszyklus, Finder,
+`tests/RookHub.Api.Tests/Tournaments/Live/` (`ChessComLiveTests`: Linkformen, echte Antworten aus `Fixtures/ChessCom`, PGN, Takt/Deckel/
+Vorrang, Backoff, Router, Auswahl, Verknüpfen; Zerleger in Stücken, Parser %clk/%eval, Zuordnung, Hub-Lebenszyklus, Finder,
 Controller-Zugriff), `LichessLiveSmokeTests` liest mit `ROOKHUB_LIVE_LICHESS=1` den echten Bundesliga-Strom ein paar
 Sekunden; Frontend `live-boards.*.spec.ts` (EventSource gemockt).

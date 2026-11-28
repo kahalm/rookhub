@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 namespace RookHub.Api.Services.Tournaments.Live;
 
 /// <summary>Lichess hat 429 geantwortet — der Aufrufer pausiert (Lichess verlangt dann mindestens eine Minute Ruhe).</summary>
-public sealed class LichessRateLimitedException() : Exception("Lichess: 429 Too Many Requests");
+public class LichessRateLimitedException(string message = "Lichess: 429 Too Many Requests") : Exception(message);
 
 /// <summary>
 /// Was die Live-Bretter von Lichess lesen. Eigene Schnittstelle, damit Hub und Finder ohne Netz testbar sind

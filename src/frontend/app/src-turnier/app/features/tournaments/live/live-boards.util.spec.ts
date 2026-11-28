@@ -1,4 +1,4 @@
-import { LIVE_MAX_ADDED, analysisLinkTarget, LIVE_MAX_EXT, evalText, joinParam, lastMovePair, parseAddParam, parseBroadcastLink, parseExtParam, liveBestMove, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
+import { BroadcastLink, LIVE_MAX_ADDED, analysisLinkTarget, broadcastHost, broadcastRoundUrl, extRoundOf, isLiveGameIdFor, isLiveRoundId, LIVE_MAX_EXT, evalText, joinParam, lastMovePair, parseAddParam, parseBroadcastLink, parseExtParam, liveBestMove, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
 import { LiveGame } from './live-boards.models';
 
 describe('live-boards.util', () => {
@@ -47,13 +47,55 @@ describe('live-boards.util', () => {
 
   it('parseBroadcastLink: Partie, Runde, Turnier; andere Wirte und schiefe Kennungen nicht', () => {
     expect(parseBroadcastLink('https://lichess.org/broadcast/fide-world-chess-championship-2026/game-3/fnmEB1kH/RD8sbYw1'))
-      .toEqual({ tourId: null, roundId: 'fnmEB1kH', gameId: 'RD8sbYw1' });
-    expect(parseBroadcastLink('lichess.org/broadcast/wm/game-3/fnmEB1kH')).toEqual({ tourId: null, roundId: 'fnmEB1kH', gameId: null });
-    expect(parseBroadcastLink('https://lichess.org/broadcast/wm/WmTour01')).toEqual({ tourId: 'WmTour01', roundId: null, gameId: null });
+      .toEqual({ source: 'lichess', tourId: null, roundId: 'fnmEB1kH', gameId: 'RD8sbYw1' });
+    expect(parseBroadcastLink('lichess.org/broadcast/wm/game-3/fnmEB1kH')).toEqual({ source: 'lichess', tourId: null, roundId: 'fnmEB1kH', gameId: null });
+    expect(parseBroadcastLink('https://lichess.org/broadcast/wm/WmTour01')).toEqual({ source: 'lichess', tourId: 'WmTour01', roundId: null, gameId: null });
     expect(parseBroadcastLink('https://evil.example/broadcast/wm/game-3/fnmEB1kH')).toBeNull();
     expect(parseBroadcastLink('https://lichess.org/study/fnmEB1kH/RD8sbYw1')).toBeNull();
     expect(parseBroadcastLink('https://lichess.org/broadcast/wm/game-3/fnmEB1kH/RD8-bYw1')).toBeNull();
     expect(parseBroadcastLink('kein link')).toBeNull();
+  });
+
+  // 1.040.0: chess.com-Übertragungen (wie ChessComEvents.LinkOf im Server, gleiche Fälle wie ChessComLiveTests)
+  it('parseBroadcastLink: chess.com-Event, Tab, Runde, Partie, Dashboard, Sprache, Gruppe', () => {
+    const wc = '2026-fide-chess-world-championship';
+    const cc = (round: string | null, game: string | null): BroadcastLink =>
+      ({ source: 'chesscom', tourId: 'cc~' + wc, roundId: round ? `cc~${wc}~${round}` : null, gameId: game });
+    expect(parseBroadcastLink(`https://www.chess.com/events/${wc}`)).toEqual(cc(null, null));
+    expect(parseBroadcastLink(`chess.com/events/${wc}/games`)).toEqual(cc(null, null));
+    expect(parseBroadcastLink(`https://www.chess.com/events/${wc}/results?x=1#y`)).toEqual(cc(null, null));
+    expect(parseBroadcastLink(`https://www.chess.com/events/${wc}/03/Sindarov_Javokhir-Gukesh_D`)).toEqual(cc('03', 'Sindarov_Javokhir-Gukesh_D'));
+    expect(parseBroadcastLink(`https://www.chess.com/de/events/${wc}/03/Sindarov_Javokhir-Gukesh_D`)).toEqual(cc('03', 'Sindarov_Javokhir-Gukesh_D'));
+    expect(parseBroadcastLink(`https://www.chess.com/events/${wc}/dashboard/03/Sindarov_Javokhir-Gukesh_D`)).toEqual(cc('03', 'Sindarov_Javokhir-Gukesh_D'));
+    expect(parseBroadcastLink(`https://www.chess.com/events/${wc}/04`)).toEqual(cc('04', null));
+    expect(parseBroadcastLink(`http://schach.chess.com/events/${wc}`)).toEqual(cc(null, null));
+    expect(parseBroadcastLink('https://www.chess.com/events/info/2026-xtx-markets-london-chess-classic'))
+      .toEqual({ source: 'chesscom', tourId: null, roundId: null, gameId: null });
+  });
+
+  it('parseBroadcastLink: keine fremden Wirte, keine chess.com-Seiten außer Events', () => {
+    for (const bad of ['https://evil.com/events/x', 'https://chess.com.evil.com/events/x', 'https://www.chess.com/game/live/123456',
+      'https://www.chess.com/events', 'https://www.chess.com/events/current', 'https://www.chess.com/events/x/03/Name.With.Dots',
+      'ftp://www.chess.com/events/x']) {
+      expect(parseBroadcastLink(bad)).withContext(bad).toBeNull();
+    }
+  });
+
+  it('chess.com-Kennungen: ext-Schlüssel, Runde, Partie, Links, Herkunft', () => {
+    const r = 'cc~2026-fide-chess-world-championship~03';
+    expect(parseExtParam(`${r}.Sindarov_Javokhir-Gukesh_D,fnmEB1kH.RD8sbYw1,cc~x y~1.a`))
+      .toEqual([`${r}.Sindarov_Javokhir-Gukesh_D`, 'fnmEB1kH.RD8sbYw1']);
+    expect(extRoundOf(`${r}.Sindarov_Javokhir-Gukesh_D`)).toBe(r);
+    expect(isLiveRoundId(r)).toBeTrue();
+    expect(isLiveRoundId('fnmEB1kH')).toBeTrue();
+    expect(isLiveRoundId('cc~bad slug~03')).toBeFalse();
+    expect(isLiveGameIdFor(r, 'Sindarov_Javokhir-Gukesh_D')).toBeTrue();
+    expect(isLiveGameIdFor('fnmEB1kH', 'Sindarov_Javokhir-Gukesh_D')).toBeFalse();
+    expect(broadcastRoundUrl(r)).toBe('https://www.chess.com/events/2026-fide-chess-world-championship/games');
+    expect(broadcastRoundUrl('fnmEB1kH')).toBe('https://lichess.org/broadcast/-/-/fnmEB1kH');
+    expect(broadcastHost('https://www.chess.com/events/x')).toBe('chess.com');
+    expect(broadcastHost('https://lichess.org/broadcast/-/IjDgZVUR')).toBe('lichess.org');
+    expect(broadcastHost(null)).toBe('lichess.org');
   });
   it('liveMoveNumber: laufend floor(plies/2)+1, fertig ceil(plies/2), vor dem ersten Zug null', () => {
     expect(liveMoveNumber({ plies: 0, finished: false })).toBeNull();

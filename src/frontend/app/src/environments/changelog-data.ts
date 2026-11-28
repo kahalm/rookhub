@@ -10,6 +10,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.040.0", date: "2026-11-28", changes: [
+    { en: "Tournament site, live boards: chess.com broadcasts work too. Paste a chess.com event link (event, round or game, e.g. chess.com/events/…/03/…) in „Add board“ next to Lichess links, or link your own tournament to a chess.com event. The boards look like Lichess boards — moves, clocks, result, engine bar, full screen with move list and „Analyse“.",
+      de: "Turnierseite, Live-Bretter: Übertragungen von chess.com gehen jetzt auch. Einen chess.com-Event-Link (Event, Runde oder Partie, z. B. chess.com/events/…/03/…) wie einen Lichess-Link bei „Brett hinzufügen“ einfügen oder das eigene Turnier mit einem chess.com-Event verknüpfen. Die Bretter sehen aus wie Lichess-Bretter — Züge, Uhren, Ergebnis, Engine-Balken, Vollbild mit Zugliste und „Analysieren“." },
+    { en: "chess.com has no public broadcast API, so the server asks the events page’s own data politely: once every 8 seconds per event for all viewers together, moves only for games that changed, and only while someone is watching. If chess.com throttles or cannot be reached, it pauses and the page says so („chess.com cannot be reached right now“).",
+      de: "chess.com hat keine öffentliche Übertragungs-Schnittstelle; der Server fragt deshalb höflich die Daten der Events-Seite ab: alle 8 Sekunden einmal je Event für alle Zuschauer gemeinsam, Züge nur für Partien mit Änderung und nur, solange jemand zuschaut. Drosselt chess.com oder ist es nicht erreichbar, pausiert er, und die Seite sagt das („chess.com ist gerade nicht erreichbar“)." },
+    { en: "The list „Broadcasts“ shows where each source comes from (lichess.org or chess.com) and links to it.",
+      de: "Die Liste „Übertragungen“ zeigt bei jeder Quelle, woher sie kommt (lichess.org oder chess.com), und verlinkt dorthin." },
+  ] },
   { version: "1.039.0", date: "2026-11-28", changes: [
     { en: "Tournament site, live boards, shared link (/live/…): only the boards are the same for everyone — if the creator adds or removes a board or changes round or team, everyone with the link sees it. Engine bar and best-move arrow are now up to each viewer (owner too), remembered in the browser, and no longer part of the shared view.",
       de: "Turnierseite, Live-Bretter, geteilter Link (/live/…): Für alle gleich sind nur noch die Bretter — ergänzt oder entfernt der Ersteller ein Brett oder wechselt Runde oder Mannschaft, sehen das alle mit dem Link. Engine-Balken und Pfeil „Bester Zug“ schaltet jetzt jeder selbst (auch der Ersteller), gemerkt im Browser; sie gehören nicht mehr zur geteilten Ansicht." },

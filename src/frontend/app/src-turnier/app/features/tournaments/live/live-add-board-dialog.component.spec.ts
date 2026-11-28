@@ -89,6 +89,41 @@ describe('LiveAddBoardDialogComponent', () => {
     expect(c.round()).toBeNull();
   });
 
+  // 1.040.0: chess.com-Übertragung — gleicher Dialog, Kennungen „cc~event~runde.partie-slug“, Herkunft in der Liste.
+  it('chess.com-Partie-Link: lädt die Runde und wählt die Partie aus; chess.com nicht erreichbar → eigener Code', async () => {
+    await setup({ rows: [], added: [], ext: ['fnmEB1kH.RD8sbYw1'] });
+    const c = fixture.componentInstance;
+    const round = 'cc~2026-xtx-markets-london-chess-classic-lcc-swiss~02';
+    c.link.set('https://www.chess.com/events/2026-xtx-markets-london-chess-classic-lcc-swiss/02/Verma_Aditya-Zwirs_Nico');
+    c.lookup();
+    const req = http.expectOne(r => r.url === '/api/live-boards/external');
+    expect(req.request.params.get('url')).toContain('chess.com/events/');
+    req.flush({
+      roundId: round, roundName: 'Round 2', tourName: 'LCC Swiss', url: 'https://www.chess.com/events/2026-xtx-markets-london-chess-classic-lcc-swiss/games',
+      ongoing: true, finished: false, gameId: 'Verma_Aditya-Zwirs_Nico',
+      games: [{ id: 'Verma_Aditya-Zwirs_Nico', white: 'Verma, Aditya', black: 'Zwirs, Nico', whiteTitle: null, blackTitle: 'IM', whiteElo: 2162, blackElo: 2442, result: '*' }],
+    } satisfies ExternalRoundView);
+    await fixture.whenStable();
+    expect(c.ext()).toEqual(['fnmEB1kH.RD8sbYw1', `${round}.Verma_Aditya-Zwirs_Nico`]);
+    expect(c.canAddExt(round)).toBeTrue();                 // dieselbe Runde kostet keinen neuen Platz
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('LCC Swiss · Round 2');
+
+    c.link.set('https://www.chess.com/events/2026-fide-chess-world-championship');
+    c.lookup();
+    http.expectOne(r => r.url === '/api/live-boards/external')
+      .flush({ message: 'down', code: 'live_chesscom_unavailable' }, { status: 503, statusText: 'Service Unavailable' });
+    expect(c.linkError()).toBe('down');
+  });
+
+  it('chess.com-Seite ohne Event: Fehler im Browser, keine Anfrage', async () => {
+    await setup({ rows: [], added: [], ext: [] });
+    const c = fixture.componentInstance;
+    c.link.set('https://www.chess.com/play/online');
+    c.lookup();
+    expect(c.linkError()).toBe('apiErrors.live_invalid_url');
+    http.expectNone(() => true);
+  });
+
   it('Grenze: höchstens 4 fremde Runden', async () => {
     await setup({ rows: [], added: [], ext: ['Round001.Game0001', 'Round002.Game0001', 'Round003.Game0001', 'Round004.Game0001'] });
     const c = fixture.componentInstance;

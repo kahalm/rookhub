@@ -8411,8 +8411,8 @@ namespace RookHub.Api.Migrations
 
                     b.Property<string>("TourId")
                         .IsRequired()
-                        .HasMaxLength(12)
-                        .HasColumnType("varchar(12)");
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
 
                     b.Property<string>("TourName")
                         .IsRequired()

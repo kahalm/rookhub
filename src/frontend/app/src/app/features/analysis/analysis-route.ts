@@ -62,7 +62,8 @@ export function readAnalysisParams(params: QueryParams, isValidFen: (fen: string
   const maia = parseInt(params.get('maia') || '', 10);
   const game = params.get('game');
   const club = parseInt(params.get('club') || '', 10);
-  const live = /^([A-Za-z0-9]{8})\.([A-Za-z0-9]{8})$/.exec(params.get('live') ?? '');
+  // Lichess `roundId.gameId` (je acht Zeichen) oder chess.com `cc~event~runde.partie-slug` (1.040.0); der Server prüft genauer.
+  const live = /^([A-Za-z0-9]{8}|cc~[A-Za-z0-9][A-Za-z0-9-]{0,99}~[A-Za-z0-9_-]{1,40})\.([A-Za-z0-9_-]{1,80})$/.exec(params.get('live') ?? '');
   return {
     fen: fen && isValidFen(fen) ? fen : null,
     orientation: orientation === 'white' || orientation === 'black' ? orientation : null,

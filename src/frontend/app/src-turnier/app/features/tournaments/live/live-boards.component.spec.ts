@@ -460,6 +460,45 @@ describe('LiveBoardsComponent', () => {
     expect(c.analysisUrl('fnmEB1kH', 'b1')).toBeNull();
   });
 
+  // 1.040.0: chess.com-Übertragung als fremde Runde — derselbe Strom, Herkunft „chess.com“ und Link zur Event-Seite.
+  it('fremdes chess.com-Brett: EIN Strom mit cc-Kennung, Zeile „Turnier · Runde · chess.com“, Analyse-Link', async () => {
+    const round = 'cc~2026-xtx-markets-london-chess-classic-lcc-swiss~02';
+    const key = `${round}.Verma_Aditya-Zwirs_Nico`;
+    await setup({ team: 'SK Schwaz', round: '1', ext: `fnmEB1kH.RD8sbYw1,${key}` });
+    http.expectOne('/api/live-boards/1404438').flush(STATUS);
+    await fixture.whenStable();
+    const es = FakeEventSource.last();
+    expect(es.url).toContain(`&extra=fnmEB1kH.RD8sbYw1,${key}&`);
+    es.emit('snapshot', TWO_MATCHES);
+    es.emit('ext-snapshot', { round, tourName: 'LCC Swiss', roundName: 'Round 2',
+      url: 'https://www.chess.com/events/2026-xtx-markets-london-chess-classic-lcc-swiss/games', state: 'live',
+      games: [game('Verma_Aditya-Zwirs_Nico', 'Verma, Aditya', 'Zwirs, Nico')] });
+    await fixture.whenStable();
+    const links = [...el().querySelectorAll<HTMLAnchorElement>('.sources .ext-link')];
+    const cc = links.find(a => a.href.includes('chess.com'))!;
+    expect(cc.textContent).toContain('LCC Swiss · Round 2 · chess.com');
+    expect(cc.href).toBe('https://www.chess.com/events/2026-xtx-markets-london-chess-classic-lcc-swiss/games');
+    expect(links.find(a => a.href.includes('lichess.org'))!.textContent).toContain('lichess.org');   // Lichess-Runde: Herkunft ebenso
+    expect(el().textContent).toContain('Verma, Aditya');
+    const c = fixture.componentInstance;
+    (c as unknown as { rookhub: string }).rookhub = 'https://rookhub.oberschmid.homes';
+    expect(c.analysisUrl(round, 'Verma_Aditya-Zwirs_Nico')).toBe(`https://rookhub.oberschmid.homes/analysis?live=${key}`);
+    expect(c.analysisUrl(round, 'a.b')).toBeNull();
+    expect(c.shareUrl()).toContain(`ext=fnmEB1kH.RD8sbYw1,${key}`);
+  });
+
+  it('eigene Übertragung bei chess.com: Quelle „chess.com“ in der Liste, Begegnungen verlinken die Event-Seite', async () => {
+    await setup({ round: '1' });
+    http.expectOne('/api/live-boards/1404438').flush({ ...STATUS, tourId: 'cc~2026-fide-chess-world-championship',
+      url: 'https://www.chess.com/events/2026-fide-chess-world-championship',
+      rounds: STATUS.rounds.map(r => ({ ...r, lichessRoundId: `cc~2026-fide-chess-world-championship~0${r.round}` })) });
+    await fixture.whenStable();
+    FakeEventSource.last().emit('snapshot', TWO_MATCHES);
+    await fixture.whenStable();
+    expect(el().querySelector('.sources .live-source')!.textContent).toContain('· chess.com');
+    expect(fixture.componentInstance.ownRoundUrl()).toBe('https://www.chess.com/events/2026-fide-chess-world-championship/games');
+  });
+
   it('Entfernen: ✕ nimmt das Brett aus der Adresse; Dialog-Ergebnis schreibt add/ext', async () => {
     await setup({ team: 'SK Schwaz', add: '2.1,2.2', ext: 'fnmEB1kH.RD8sbYw1' });
     http.expectOne('/api/live-boards/1404438').flush(STATUS);

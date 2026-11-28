@@ -9,7 +9,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { apiErrorText } from '@rh/core/api-error';
 import { ExternalRoundView } from './live-boards.models';
 import { LiveBoardsService } from './live-boards.service';
-import { LIVE_MAX_ADDED, LIVE_MAX_EXT, LIVE_MAX_EXT_ROUNDS, parseBroadcastLink, samePlayer } from './live-boards.util';
+import { extRoundOf, LIVE_MAX_ADDED, LIVE_MAX_EXT, LIVE_MAX_EXT_ROUNDS, parseBroadcastLink, samePlayer } from './live-boards.util';
 
 /** Ein Brett der eigenen Runde zur Auswahl: `key` wie in `?add=`. */
 export interface AddBoardRow { key: string; board: number; white: string; black: string; match: string | null; }
@@ -67,7 +67,7 @@ export interface AddBoardDialogResult { added: string[]; ext: string[]; }
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="ab-field">
           <mat-label>{{ 'tournaments.live.addLinkLabel' | translate }}</mat-label>
           <input matInput type="url" [value]="link()" (input)="link.set($any($event.target).value); linkError.set(null)"
-                 placeholder="https://lichess.org/broadcast/…" autocomplete="off" />
+                 placeholder="lichess.org/broadcast/… · chess.com/events/…" autocomplete="off" />
           <mat-hint>{{ 'tournaments.live.addLinkHint' | translate }}</mat-hint>
         </mat-form-field>
         <button mat-stroked-button type="submit" [disabled]="loading() || !link().trim()">{{ 'tournaments.live.addLoad' | translate }}</button>
@@ -150,14 +150,14 @@ export class LiveAddBoardDialogComponent {
   }
 
   toggleExt(key: string): void {
-    this.ext.update(l => l.includes(key) ? l.filter(k => k !== key) : this.canAddExt(key.slice(0, 8)) ? [...l, key] : l);
+    this.ext.update(l => l.includes(key) ? l.filter(k => k !== key) : this.canAddExt(extRoundOf(key)) ? [...l, key] : l);
   }
 
   /** Noch Platz: höchstens 12 fremde Bretter aus höchstens 4 Runden (wie der Server). */
   canAddExt(roundId: string): boolean {
     const l = this.ext();
     if (l.length >= LIVE_MAX_EXT) return false;
-    const rounds = new Set(l.map(k => k.slice(0, 8)));
+    const rounds = new Set(l.map(k => extRoundOf(k)));
     return rounds.has(roundId) || rounds.size < LIVE_MAX_EXT_ROUNDS;
   }
 

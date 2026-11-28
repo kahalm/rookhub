@@ -24,7 +24,7 @@ import { LocalScorePipe } from '../tournament-table.util';
 import { LiveBoardCardComponent } from './live-board-card.component';
 import { LiveBoardSlot, LiveGame, LiveMatchSlot, LiveRoundLayout, LiveState, LiveStatus, LiveStreamEvent, LiveViewState } from './live-boards.models';
 import { LiveBoardsService } from './live-boards.service';
-import { LIVE_LOST_GRACE_MS, LIVE_VIEW_SAVE_MS, joinParam, parseAddParam, parseExtParam, points, readLiveBest, readTurned, readLiveEval, readViewKey, samePlayer, scoreText, writeLiveEval,
+import { broadcastHost, broadcastRoundUrl, isLiveGameIdFor, isLiveRoundId, LIVE_LOST_GRACE_MS, LIVE_VIEW_SAVE_MS, joinParam, parseAddParam, parseExtParam, points, readLiveBest, readTurned, readLiveEval, readViewKey, samePlayer, scoreText, writeLiveEval,
   writeLiveBest, writeTurned, writeViewKey } from './live-boards.util';
 import { LiveAlert, LiveAlertTracker, VIBRATE_CONFIRM, VIBRATE_RESULT, VIBRATE_SWING, canVibrate, readLiveVibrate, vibrate,
   writeLiveVibrate } from './live-vibrate';
@@ -95,7 +95,7 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
                 <mat-form-field appearance="outline" subscriptSizing="dynamic" class="link-field">
                   <mat-label>{{ 'tournaments.live.linkLabel' | translate }}</mat-label>
                   <input matInput type="url" [value]="linkUrl()" (input)="linkUrl.set($any($event.target).value)"
-                         placeholder="https://lichess.org/broadcast/…" autocomplete="off" />
+                         placeholder="lichess.org/broadcast/… · chess.com/events/…" autocomplete="off" />
                   <mat-hint>{{ 'tournaments.live.linkHint' | translate }}</mat-hint>
                 </mat-form-field>
                 <button mat-flat-button type="submit" [disabled]="linking() || !linkUrl().trim()">
@@ -169,7 +169,7 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
           <ul class="sources" [attr.aria-label]="'tournaments.live.sources' | translate">
             <li class="sources-label" aria-hidden="true">{{ 'tournaments.live.sources' | translate }}</li>
             @if (status()?.tourName; as name) {
-              <li><a class="live-source" [href]="status()!.url" target="_blank" rel="noopener noreferrer">{{ name }} · lichess.org<mat-icon class="inline-icon" aria-hidden="true">open_in_new</mat-icon></a></li>
+              <li><a class="live-source" [href]="status()!.url" target="_blank" rel="noopener noreferrer">{{ name }} · {{ sourceHost() }}<mat-icon class="inline-icon" aria-hidden="true">open_in_new</mat-icon></a></li>
             }
             @for (m of matches(); track m.match.matchNumber) {
               <li>
@@ -190,7 +190,7 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
             }
             @for (x of extRounds(); track x.roundId) {
               <li class="ext-line">
-                <a class="ext-link" [href]="x.url || ('https://lichess.org/broadcast/-/-/' + x.roundId)" target="_blank" rel="noopener noreferrer">{{ x.title ?? ('tournaments.live.extLoading' | translate) }}<mat-icon class="inline-icon" aria-hidden="true">open_in_new</mat-icon></a>
+                <a class="ext-link" [href]="x.url || roundUrl(x.roundId)" target="_blank" rel="noopener noreferrer">{{ x.title ?? ('tournaments.live.extLoading' | translate) }} · {{ roundHost(x.roundId) }}<mat-icon class="inline-icon" aria-hidden="true">open_in_new</mat-icon></a>
                 @if (x.error) {
                   <span class="muted">{{ x.error }}</span>
                   <button mat-button type="button" (click)="removeExtRound(x.roundId)">{{ 'tournaments.live.removeBoard' | translate }}</button>
@@ -386,7 +386,13 @@ export class LiveBoardsComponent implements OnInit {
   });
 
   /** Lichess-Seite der gewählten Runde (Begegnungszeilen der Übertragungsliste); ohne Runde kein Link. */
-  readonly ownRoundUrl = computed(() => this.ownRoundId() ? `https://lichess.org/broadcast/-/-/${this.ownRoundId()}` : null);
+  readonly ownRoundUrl = computed(() => this.ownRoundId() ? broadcastRoundUrl(this.ownRoundId()!) : null);
+  /** Quelle der eigenen Übertragung für die Liste „Übertragungen“ (lichess.org / chess.com, 1.040.0). */
+  readonly sourceHost = computed(() => broadcastHost(this.status()?.url));
+  /** Link einer fremden Runde, solange der Strom noch keinen gemeldet hat. */
+  roundUrl(roundId: string): string { return broadcastRoundUrl(roundId); }
+  /** Herkunft einer fremden Runde (lichess.org / chess.com). */
+  roundHost(roundId: string): string { return broadcastHost(broadcastRoundUrl(roundId)); }
 
   /** Lichess-Runde der gewählten chess-results-Runde (für „Analysieren“). */
   readonly ownRoundId = computed(() => this.status()?.rounds.find(r => r.round === this.round())?.lichessRoundId ?? null);
@@ -395,7 +401,7 @@ export class LiveBoardsComponent implements OnInit {
 
   /** Link aufs Analysebrett: `/analysis?live=roundId.gameId` — RookHub holt das PGN (alle Züge, Kopf, Uhren) vom Server, auch für Gäste. */
   analysisUrl(roundId: string | null, gameId: string): string | null {
-    if (!this.rookhub || !roundId || !/^[A-Za-z0-9]{8}$/.test(roundId) || !/^[A-Za-z0-9]{8}$/.test(gameId)) return null;
+    if (!this.rookhub || !roundId || !isLiveRoundId(roundId) || !isLiveGameIdFor(roundId, gameId)) return null;
     return `${this.rookhub}/analysis?live=${roundId}.${gameId}`;
   }
 

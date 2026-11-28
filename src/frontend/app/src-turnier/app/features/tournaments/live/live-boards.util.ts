@@ -88,8 +88,38 @@ export const LIVE_MAX_EXT = 12;
 export const LIVE_MAX_EXT_ROUNDS = 4;
 
 const ADD_KEY = /^(\d{1,3}(\.\d{1,3})?|[A-Za-z0-9]{8})$/;
-const EXT_KEY = /^[A-Za-z0-9]{8}\.[A-Za-z0-9]{8}$/;
+const EXT_KEY = /^([A-Za-z0-9]{8}\.[A-Za-z0-9]{8}|cc~[A-Za-z0-9][A-Za-z0-9-]{0,99}~[A-Za-z0-9_-]{1,40}\.[A-Za-z0-9_-]{1,80})$/;
 const LICHESS_ID = /^[A-Za-z0-9]{8}$/;
+/** chess.com (1.040.0, wie `ChessComEvents` im Server): Runde `cc~{event}~{runde}`, Partie = chess.com-Slug. */
+const CC_ROUND = /^cc~([A-Za-z0-9][A-Za-z0-9-]{0,99})~([A-Za-z0-9_-]{1,40})$/;
+const CC_TOUR = /^cc~([A-Za-z0-9][A-Za-z0-9-]{0,99})$/;
+const CC_SLUG = /^[A-Za-z0-9][A-Za-z0-9-]{0,99}$/;
+const CC_ROUND_SLUG = /^[A-Za-z0-9_-]{1,40}$/;
+const CC_GAME = /^[A-Za-z0-9_-]{1,80}$/;
+const CC_TABS = new Set(['games', 'results', 'schedule', 'info', 'news', 'players', 'pairings', 'standings', 'dashboard', 'bracket', 'teams']);
+const CC_RESERVED = new Set(['current', 'finished', 'favorites', 'results', 'pgn', 'v1', 'tab', 'embed', 'graphics', 'upcoming', 'past']);
+
+/** Runde eines `?ext=`-Schlüssels (`roundId.gameId`; keine der Kennungen enthält einen Punkt). */
+export function extRoundOf(key: string): string { return key.slice(0, key.indexOf('.')); }
+
+/** Lichess-Runde (acht Zeichen) oder chess.com-Runde (`cc~event~runde`)? */
+export function isLiveRoundId(id: string | null | undefined): boolean { return !!id && (LICHESS_ID.test(id) || CC_ROUND.test(id)); }
+
+/** Passt die Partie-Kennung zur Quelle der Runde (Lichess acht Zeichen, chess.com Slug)? */
+export function isLiveGameIdFor(roundId: string, gameId: string): boolean {
+  return CC_ROUND.test(roundId) ? CC_GAME.test(gameId) : LICHESS_ID.test(gameId);
+}
+
+/** Link einer Runde bei ihrer Quelle: Lichess-Runde, bei chess.com die Partien-Seite des Events (wie `ExternalRoundRegistry.RoundUrl`). */
+export function broadcastRoundUrl(roundId: string): string {
+  const cc = CC_ROUND.exec(roundId);
+  return cc ? `https://www.chess.com/events/${cc[1]}/games` : `https://lichess.org/broadcast/-/-/${roundId}`;
+}
+
+/** Kurzname der Quelle eines Übertragungs-Links für die Liste „Übertragungen“ (`chess.com` bzw. `lichess.org`). */
+export function broadcastHost(url: string | null | undefined): string {
+  return /^https?:\/\/([a-z0-9-]+\.)*chess\.com(\/|$)/i.test(url ?? '') ? 'chess.com' : 'lichess.org';
+}
 
 /**
  * `?add=` — hinzugefügte Bretter DERSELBEN Runde (1.025.0). Schlüssel nach der chess-results-Paarung, damit der Link auch
@@ -105,7 +135,7 @@ export function parseExtParam(v: string | null): string[] {
   const out: string[] = [];
   const rounds = new Set<string>();
   for (const x of distinct((v ?? '').split(',').map(s => s.trim()).filter(s => EXT_KEY.test(s)))) {
-    const r = x.slice(0, 8);
+    const r = extRoundOf(x);
     if (!rounds.has(r) && rounds.size >= LIVE_MAX_EXT_ROUNDS) continue;
     rounds.add(r);
     out.push(x);
@@ -119,24 +149,59 @@ export function joinParam(list: readonly string[]): string | null {
   return list.length ? list.join(',') : null;
 }
 
+/** Was ein Übertragungs-Link nennt. chess.com: `tourId` = `cc~event` (bei einem Gruppen-Link `/events/info/…` `null`, der
+ *  Server wählt den Raum), `roundId` = `cc~event~runde`, `gameId` = Partie-Slug. */
+export interface BroadcastLink { source: 'lichess' | 'chesscom'; tourId: string | null; roundId: string | null; gameId: string | null }
+
 /**
- * Link einer Lichess-Übertragung für „Brett hinzufügen“ prüfen (wie `LichessBroadcasts.BoardLinkOf` im Server):
- * nur lichess.org/broadcast, Turnier- (`/slug/tourId`), Runden- (`/slug/runde/roundId`) oder Partie-Link
- * (`/slug/runde/roundId/gameId`), jede Kennung acht Buchstaben/Ziffern. `null` = ungültig.
+ * Link einer Übertragung für „Brett hinzufügen“ / „Verknüpfen“ prüfen (wie `LichessBroadcasts.BoardLinkOf` und
+ * `ChessComEvents.LinkOf` im Server):
+ * - Lichess: nur lichess.org/broadcast, Turnier- (`/slug/tourId`), Runden- (`/slug/runde/roundId`) oder Partie-Link
+ *   (`/slug/runde/roundId/gameId`), jede Kennung acht Buchstaben/Ziffern;
+ * - chess.com (1.040.0): `chess.com/events/{event}` (auch `/games`, `/results` …), `/events/{event}/{runde}[/{partie}]`,
+ *   `/events/{event}/dashboard/{runde}/{partie}`, `/events/info/{gruppe}`; Sprachpräfix (`/de/events/…`) und `*.chess.com` erlaubt.
+ * `null` = ungültig.
  */
-export function parseBroadcastLink(input: string): { tourId: string | null; roundId: string | null; gameId: string | null } | null {
+export function parseBroadcastLink(input: string): BroadcastLink | null {
   let url: URL;
   const s = input.trim();
+  if (!s || s.length > 400) return null;
   try { url = new URL(s.includes('://') ? s : 'https://' + s); } catch { return null; }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+  if (/^([a-z0-9-]+\.)*chess\.com$/i.test(url.hostname)) return parseChessComLink(url);
   if (!/^(www\.)?lichess\.org$/i.test(url.hostname)) return null;
   const parts = url.pathname.split('/').filter(Boolean);
   if (parts[0] !== 'broadcast') return null;
   const p = parts.slice(1);
-  if (p.length === 2 && LICHESS_ID.test(p[1])) return { tourId: p[1], roundId: null, gameId: null };
-  if (p.length === 3 && LICHESS_ID.test(p[2])) return { tourId: null, roundId: p[2], gameId: null };
-  if (p.length === 4 && LICHESS_ID.test(p[2]) && LICHESS_ID.test(p[3])) return { tourId: null, roundId: p[2], gameId: p[3] };
+  if (p.length === 2 && LICHESS_ID.test(p[1])) return { source: 'lichess', tourId: p[1], roundId: null, gameId: null };
+  if (p.length === 3 && LICHESS_ID.test(p[2])) return { source: 'lichess', tourId: null, roundId: p[2], gameId: null };
+  if (p.length === 4 && LICHESS_ID.test(p[2]) && LICHESS_ID.test(p[3])) return { source: 'lichess', tourId: null, roundId: p[2], gameId: p[3] };
   return null;
 }
+
+function parseChessComLink(url: URL): BroadcastLink | null {
+  let parts: string[];
+  try { parts = url.pathname.split('/').filter(Boolean).map(decodeURIComponent); } catch { return null; }
+  if (parts.length && /^[a-z]{2,3}(-[A-Za-z]{2})?$/.test(parts[0]) && parts[0] !== 'events') parts.shift();
+  if (parts.length < 2 || parts[0].toLowerCase() !== 'events') return null;
+  parts.shift();
+  const cc = (room: string, round: string | null, game: string | null): BroadcastLink =>
+    ({ source: 'chesscom', tourId: 'cc~' + room, roundId: round ? `cc~${room}~${round}` : null, gameId: game });
+  if (parts[0].toLowerCase() === 'info') {
+    return parts.length >= 2 && CC_SLUG.test(parts[1]) ? { source: 'chesscom', tourId: null, roundId: null, gameId: null } : null;
+  }
+  const room = parts[0];
+  if (CC_RESERVED.has(room.toLowerCase()) || !CC_SLUG.test(room)) return null;
+  const rest = parts.slice(1);
+  if (rest.length >= 3 && rest[0].toLowerCase() === 'dashboard') rest.shift();
+  if (rest.length === 0 || (rest.length === 1 && CC_TABS.has(rest[0].toLowerCase()))) return cc(room, null, null);
+  if (rest.length === 1) return CC_ROUND_SLUG.test(rest[0]) ? cc(room, rest[0], null) : null;
+  if (CC_TABS.has(rest[0].toLowerCase())) return cc(room, null, null);
+  return CC_ROUND_SLUG.test(rest[0]) && CC_GAME.test(rest[1]) ? cc(room, rest[0], rest[1]) : null;
+}
+
+/** chess.com-Turnierkennung (`cc~event`)? */
+export function isChessComTour(id: string | null | undefined): boolean { return !!id && CC_TOUR.test(id); }
 
 function distinct(list: string[]): string[] { return [...new Set(list)]; }
 

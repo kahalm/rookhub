@@ -42,6 +42,10 @@ describe('readAnalysisParams', () => {
     expect(read({ live: 'fnmEB1kH/RD8sbYw1' }).live).toBeNull();
     expect(read({ live: '../x.RD8sbYw1' }).live).toBeNull();
     expect(read({}).live).toBeNull();
+    // 1.040.0: chess.com-Runde „cc~event~runde“ mit Partie-Slug
+    expect(read({ live: 'cc~2026-fide-chess-world-championship~03.Sindarov_Javokhir-Gukesh_D' }).live)
+      .toEqual({ roundId: 'cc~2026-fide-chess-world-championship~03', gameId: 'Sindarov_Javokhir-Gukesh_D' });
+    expect(read({ live: 'cc~x/y~03.Game' }).live).toBeNull();
   });
 });
 
