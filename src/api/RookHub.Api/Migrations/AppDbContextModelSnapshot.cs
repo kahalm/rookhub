@@ -5948,6 +5948,9 @@ namespace RookHub.Api.Migrations
                     b.Property<DateOnly?>("PlayedOn")
                         .HasColumnType("date");
 
+                    b.Property<short?>("PlayedYear")
+                        .HasColumnType("smallint");
+
                     b.Property<int?>("PlyCount")
                         .HasColumnType("int");
 
@@ -6008,9 +6011,13 @@ namespace RookHub.Api.Migrations
 
                     b.HasIndex("DuplicateOfId");
 
+                    b.HasIndex("Eco");
+
                     b.HasIndex("MovesHash");
 
                     b.HasIndex("OpeningLine");
+
+                    b.HasIndex("PlayedYear");
 
                     b.HasIndex("Score");
 

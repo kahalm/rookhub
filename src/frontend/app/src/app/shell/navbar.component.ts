@@ -167,6 +167,7 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
           @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
           @if (auth.has('prep.view')) { <button mat-menu-item routerLink="/prep">{{ 'nav.prep' | translate }}</button> }
           @if (can('games')) { <button mat-menu-item routerLink="/games">{{ 'nav.games' | translate }}</button> }
+          @if (can('master-games')) { <button mat-menu-item routerLink="/master-games">{{ 'nav.masterGames' | translate }}</button> }
           @if (can('scoresheet')) { <button mat-menu-item routerLink="/games/scoresheet">{{ 'nav.scoresheet' | translate }}</button> }
           @if (can('reconstruct')) { <button mat-menu-item routerLink="/reconstruct">{{ 'nav.reconstruct' | translate }}</button> }
           @if (can('remembered')) { <button mat-menu-item routerLink="/remembered">{{ 'nav.remembered' | translate }}</button> }
@@ -488,7 +489,7 @@ export class NavbarComponent implements OnInit {
   }
   get anyLibrary(): boolean {
     return this.can('analysis') || this.can('games') || this.can('scoresheet') || this.can('reconstruct') || this.can('remembered')
-      || this.can('ebooks') || this.can('maxims') || (this.showCatalog && this.can('catalog')) || this.auth.has('prep.view');
+      || this.can('ebooks') || this.can('maxims') || this.can('master-games') || (this.showCatalog && this.can('catalog')) || this.auth.has('prep.view');
   }
 
   /** Glocken-Badge: Anzahl ungelesener In-App-Benachrichtigungen. */

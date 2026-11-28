@@ -62,6 +62,7 @@ export const routes: Routes = [
   // Ohne authGuard: die Punktepartie laeuft auch ohne Anmeldung (kuratierter Bestand, Fortschritt
   // an einer anonymen Sitzung am Server) — wie die Puzzles. Das Gate ist allein die
   // Menue-Sichtbarkeit, die dafuer auf „All" steht (MenuRegistry).
+  { path: 'master-games', loadComponent: () => import('./features/master-games/master-games.component').then(m => m.MasterGamesComponent), canActivate: [menuGuard('master-games')] },
   { path: 'guess/:id', loadComponent: () => import('./features/guess/guess-board.component').then(m => m.GuessBoardComponent), canActivate: [menuGuard('guess')] },
   { path: 'guess', loadComponent: () => import('./features/guess/guess-list.component').then(m => m.GuessListComponent), canActivate: [menuGuard('guess')] },
   // Literal vor Parameter: /analysis/games/:id darf nicht als Auftrags-Id verstanden werden.

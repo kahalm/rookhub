@@ -89,6 +89,13 @@ public class LibraryGame
     /// Unvollstaendige PGN-Daten („1904.??.??") landen als <c>null</c>.</summary>
     public DateOnly? PlayedOn { get; set; }
 
+    /// <summary>
+    /// Das JAHR der Partie, auch wenn das PGN nur das Jahr kennt („1904.??.??“) — dort bleibt <see cref="PlayedOn"/>
+    /// <c>null</c>. Eigene Spalte mit Index fuer die Meisterpartien-Suche (1.038.0): am echten Bestand tragen 25 612 von
+    /// 130 572 Partien nur ein Jahr, ueber <see cref="PlayedOn"/> allein fielen sie aus jeder Jahressuche heraus.
+    /// </summary>
+    public short? PlayedYear { get; set; }
+
     [MaxLength(8)] public string? Eco { get; set; }
 
     /// <summary>Startstellung, falls das PGN einen <c>[FEN]</c>-Tag traegt; <c>null</c> = Grundstellung.</summary>

@@ -320,6 +320,11 @@ internal sealed class LibraryGameConfiguration : IEntityTypeConfiguration<Librar
         // den vollen Tabellenscan, und der laeuft ueber die LONGTEXT-Spalte mit den PGNs:
         // gemessen 22,4 s gegen 0,25 s. Status gehoert deshalb VOR die Zeile.
         e.HasIndex(g => new { g.Status, g.OpeningLine });
+        // Meisterpartien-Suche (1.038.0): Jahresbereich und ECO-Praefix/-Bereich sind Bereichssuchen auf diesen beiden
+        // Spalten; „neueste/aelteste zuerst“ liest PlayedYear sortiert (InnoDB haengt die Id an). Gemessen am echten
+        // Bestand (130 572 Zeilen): jede Kombination unter 0,4 s, die meisten unter 20 ms.
+        e.HasIndex(g => g.PlayedYear);
+        e.HasIndex(g => g.Eco);
         // Der erste grobe Filter (Partien einer brauchbaren Laenge mit genug Kommentaren).
         e.HasIndex(g => new { g.CommentedPlies, g.PlyCount });
         // Selbstbezug: die Dublette zeigt auf die zuerst eingelesene Fassung. Kein Cascade —

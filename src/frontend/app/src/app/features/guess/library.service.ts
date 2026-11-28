@@ -16,6 +16,8 @@ export interface LibraryGame {
   result: string | null;
   event: string | null;
   playedOn: string | null;
+  /** Das Jahr, auch wenn das PGN nur das Jahr kennt (nur die Meisterpartien-Suche liefert es). */
+  playedYear?: number | null;
   eco: string | null;
   plyCount: number | null;
   annotator: string | null;
@@ -47,6 +49,33 @@ export interface LibraryQuery {
   minCommentedPlies?: number;
   page?: number;
   pageSize?: number;
+}
+
+/** Filter der Meisterpartien-Suche (`GET /api/library-games/search`, 1.038.0) — alle optional. */
+export interface MasterGameQuery {
+  q?: string;
+  /** Spielername, egal welche Farbe. */
+  player?: string;
+  event?: string;
+  yearFrom?: number | null;
+  yearTo?: number | null;
+  result?: '' | 'white' | 'black' | 'draw';
+  /** ECO-Code, -Präfix oder -Bereich („B90“, „B9“, „B20-B99“). */
+  eco?: string;
+  sort?: 'best' | 'newest' | 'oldest';
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MasterGamePage {
+  items: LibraryGame[];
+  total: number;
+  page: number;
+  pageSize: number;
+  /** Eingaben, die nicht gefiltert haben (zu kurz, Stoppwort, unlesbarer ECO-Code). */
+  ignored: string[];
+  /** Weiter blättert die Suche nicht. */
+  maxPage: number;
 }
 
 /** „Frag die Kommentare" (0.536.0): eine passende Stelle — erster kommentierter Halbzug, Auszug, Ähnlichkeit 0..1. */
@@ -99,6 +128,22 @@ export class LibraryService {
     if (query.page) params = params.set('page', query.page);
     if (query.pageSize) params = params.set('pageSize', query.pageSize);
     return this.http.get<LibraryGamePage>('/api/library-games', { params });
+  }
+
+  /** Meisterpartien-Suche (1.038.0): nur gesetzte Filter gehen mit. */
+  searchMasters(query: MasterGameQuery): Observable<MasterGamePage> {
+    let params = new HttpParams();
+    for (const key of ['q', 'player', 'event', 'eco'] as const) {
+      const v = query[key]?.trim();
+      if (v) params = params.set(key, v);
+    }
+    if (query.yearFrom != null) params = params.set('yearFrom', query.yearFrom);
+    if (query.yearTo != null) params = params.set('yearTo', query.yearTo);
+    if (query.result) params = params.set('result', query.result);
+    if (query.sort && query.sort !== 'best') params = params.set('sort', query.sort);
+    if (query.page && query.page > 1) params = params.set('page', query.page);
+    if (query.pageSize) params = params.set('pageSize', query.pageSize);
+    return this.http.get<MasterGamePage>('/api/library-games/search', { params });
   }
 
   /** „Frag die Kommentare" (0.536.0): semantische Suche über die Anmerkungen. Ohne `q` nur, ob es sie gibt. */

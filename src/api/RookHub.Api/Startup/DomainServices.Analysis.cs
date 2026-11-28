@@ -123,6 +123,7 @@ public static partial class DomainServicesSetup
     private static void AddLibraryServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<LibraryGameService>();
+        services.AddScoped<LibraryGameSearchService>();   // Meisterpartien-Suche (1.038.0)
         services.AddScoped<GuessStartPly>();
         services.AddScoped<CommentSetService>();
         services.AddScoped<GuessOpeningTree>();

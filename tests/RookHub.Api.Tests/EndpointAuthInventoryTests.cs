@@ -154,6 +154,8 @@ public class EndpointAuthInventoryTests
         "GET /api/library-games",                                    // LibraryGameController.Search
         // „Frag die Kommentare" (0.536.0): wie die Namenssuche ohne Anmeldung — Kopfdaten + Kommentar-Auszüge, keine Züge.
         "GET /api/library-games/semantic",                          // LibraryGameController.Semantic
+        // Meisterpartien-Suche (1.038.0): dieselben Kopfdaten wie die Namenssuche, mit Spieler-/Jahr-/ECO-Filtern.
+        "GET /api/library-games/search",                            // LibraryGameController.Find
         "GET /api/guess-sessions/anonymous",                         // GuessSessionAnonymousController.List
         "GET /api/guess-sessions/anonymous/{id:int}",                // GuessSessionAnonymousController.Get
         "GET /api/guess-sessions/anonymous/{id:int}/review",         // GuessSessionAnonymousController.Review

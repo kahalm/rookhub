@@ -52,6 +52,7 @@ public static class LibraryGameReader
             Site = Cut(Tag(headers, "Site"), 120),
             Round = Cut(Tag(headers, "Round"), 20),
             PlayedOn = Date(Tag(headers, "Date")) ?? Date(Tag(headers, "EventDate")),
+            PlayedYear = YearOf(Tag(headers, "Date")) ?? YearOf(Tag(headers, "EventDate")),
             Eco = Cut(Tag(headers, "ECO"), 8),
             StartFen = Cut(Tag(headers, "FEN"), 120),
             PlyCount = stats.PlyCount,
@@ -362,6 +363,22 @@ public static class LibraryGameReader
         => DateOnly.TryParseExact(value, "yyyy.MM.dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
             ? d
             : null;
+
+    /// <summary>Das Jahr eines PGN-Datums, auch wenn Monat und Tag fehlen („1904.??.??“ → 1904); <c>null</c> ohne vier
+    /// fuehrende Ziffern oder ausserhalb von <see cref="MinYear"/>–<see cref="MaxYear"/>. Dieselbe Regel steht als SQL in
+    /// der Migration <c>LibraryPlayedYear</c> (Nachtrag des Bestands).</summary>
+    internal static short? YearOf(string? value)
+    {
+        if (value is null || value.Length < 4) return null;
+        var head = value.AsSpan(0, 4);
+        foreach (var c in head) if (c is < '0' or > '9') return null;
+        var year = int.Parse(head, NumberStyles.None, CultureInfo.InvariantCulture);
+        return year is >= MinYear and <= MaxYear ? (short)year : null;
+    }
+
+    /// <summary>Kleinstes und groesstes Jahr, das als Partiejahr gilt — darunter/darueber steht im PGN ein Tippfehler
+    /// oder ein Platzhalter („0000“).</summary>
+    public const int MinYear = 1000, MaxYear = 2100;
 
     private static string? Cut(string? value, int max)
         => string.IsNullOrWhiteSpace(value) ? null : (value.Length <= max ? value.Trim() : value[..max].Trim());

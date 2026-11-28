@@ -1312,6 +1312,14 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   ohne Einzug), dann die Begründung als normaler Text und ein Textknopf „Ganzen Vergleich öffnen“ (`compare_arrows`) auf
   die Vergleichsseite (`?clubGame=` → Rücklink „Zur Partie“, keine „Früheren Vergleiche“, keine „geht nicht“-Zeilen).
   Läuft der Vergleich noch: EINE leise Zeile, kein Ladebalken; keiner da oder gescheitert: nichts (kein Leerzustand).
+- Meisterpartien-Suche `/master-games` (1.038.0): Seitenkopf nach 5.1 („Filter zurücksetzen“ als Textknopf nur bei
+  gesetztem Filter), ein Satz + ?. Filter als Raster `repeat(auto-fit, minmax(180px, 1fr))`, Freitext über die ganze
+  Breite, „Jahr von/bis“ als Paar in EINER Zelle; die Eröffnungsliste schreibt den ECO-Bereich ins ECO-Feld (ein
+  eigener Code steht dann als „ECO-Code …“ in der Liste). Treffer als Zeilen (`li.rh-tile`, Hauptziel = Knopf über
+  Namen + Meta-Zeile, ≥ 44 px): „Weiß – Schwarz“ einzeilig mit „…“, Ergebnis als Pille, darunter „Turnier Jahr · ECO ·
+  kommentiert von … · Quelle: …“ (nur gesetzte Angaben). Ohne Anmeldung eine leise Zeile mit Schloss + „Anmelden“ über
+  der Liste (der Klick auf eine Zeile führt zur Anmeldung). Nicht berücksichtigte Wörter und der Blätter-Deckel als
+  leise Hinweiszeile, Blättern über `mat-paginator` ohne Seitengröße.
 
 ### 8.2 Turnierseite (`src-turnier/`)
 
@@ -1685,6 +1693,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-28 | 1.038.0 · Meisterpartien | Suchseite `/master-games` (8.1): Filterraster, Trefferzeilen als ganze Kachel mit Ergebnis-Pille und Meta-Zeile, Anmelde-Hinweis statt gesperrter Zeilen, Hinweis auf nicht berücksichtigte Wörter | Suche über alle Meister- und Buchpartien, nicht nur die eigenen | Nutzerwunsch 28.11. |
 | 2026-11-28 | 1.037.0 · Turnierseite | Turnierverlauf: „FIDE-Profil“ am Namen, je Zeile Symbolknopf zur chess-results-Spielerkarte (Nebenziel neben dem Zeilenknopf, 44 px), „Elo-Rechner“ im Seitenkopf als Dialog (8.2) | FIDE-Seite und Elo-Vorausschau ohne Suchen erreichen; theoretischen Elo-Gewinn national + international rechnen | Nutzerwunsch 28.11. |
 | 2026-11-27 | 1.036.0 · Turnierseite | Live-Bretter: Vollbild-Knopf öffnet die ganze Karte als Vollbild-Ansicht — Brett groß, Zugliste zum Nachspielen, Browser-Engine mit wählbarer Linienzahl, „Selbst ziehen“, „Zur Live-Stellung“; hoch: Seitenteil unter dem Brett, quer daneben (8.2); `fullscreenMode` am geteilten Brett (5.12) | Partie im Vollbild verfolgen und selbst durchrechnen, ohne die Live-Partie zu verlieren | Nutzerwunsch 27.11. |
 | 2026-11-27 | 1.035.2 · Turnierseite | Live-Bretter: Elo in eigener Zeile unter dem Spielernamen (0,75 rem, leise; 1.035.4 enger gesetzt), Name kürzt allein mit „…“, Uhr senkrecht mittig (8.2) | Bei langen Namen war die Elo auf schmalen Karten abgeschnitten | Nutzerwunsch 27.11. |

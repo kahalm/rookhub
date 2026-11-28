@@ -343,6 +343,7 @@
     "account": "Account",
     "analysis": "Analysis",
     "games": "Games",
+    "masterGames": "Master games",
     "stats": "Statistics",
     "trainingGoals": "Training goals",
     "installApp": "Install app",
@@ -4446,6 +4447,14 @@
           "“Read a scoresheet”: take a photo of your scoresheet; an AI model (Claude by Anthropic, USA) reads the moves, RookHub checks every move on the board and stores the game in your games. You fix uncertain moves via “Review and correct”. The number of scans per day is limited."
         ]
       },
+      "masterGames": {
+        "t": "Master games",
+        "p": [
+          "Search more than 130,000 annotated master games from books and collections — by player (with White or Black), tournament, year or range of years, result, opening/ECO code and free text.",
+          "Names and tournaments are matched by the start of a word: “Capa” finds Capablanca. Several words in the player field must all appear with White or Black — “Carlsen Anand” finds their games against each other. Words shorter than three letters are ignored.",
+          "Click a game to replay it with its annotations. Searching is open to everyone; viewing the moves requires an account."
+        ]
+      },
       "reconstruct": {
         "t": "Reconstruct game",
         "p": [
@@ -4988,6 +4997,66 @@
       "moveFailed": "That move does not work in this position.",
       "games": "Games ({{count}})",
       "anonHint": "You can browse without an account. Requesting a game to be computed needs a sign-in, because it uses someone's engine time."
+    }
+  },
+  "masterGames": {
+    "title": "Master games",
+    "intro": "Search annotated master games from books and collections.",
+    "help": "Names and tournaments match from the start of a word (“Capa” finds Capablanca); every word must match.\n\nPlayer: White or Black. Several words: each with White or Black — “Carlsen Anand” finds their games against each other.\n\nECO: a code (B90), a group (B9, B) or a range (C60-C99). The opening list fills in the range.",
+    "q": "Free text",
+    "qHint": "Player, tournament or annotator",
+    "player": "Player",
+    "playerHint": "White or Black",
+    "event": "Tournament",
+    "yearFrom": "Year from",
+    "yearTo": "to",
+    "result": "Result",
+    "resultAny": "Any result",
+    "resultWhite": "White wins",
+    "resultBlack": "Black wins",
+    "resultDraw": "Draw",
+    "opening": "Opening",
+    "openingAny": "Any opening",
+    "openingCustom": "ECO code {{eco}}",
+    "eco": "ECO",
+    "ecoHint": "e.g. B90, B9 or C60-C99",
+    "sort": "Sort by",
+    "sortBest": "Best annotated",
+    "sortNewest": "Newest first",
+    "sortOldest": "Oldest first",
+    "reset": "Reset filters",
+    "loginToView": "Sign in to replay the games with their moves.",
+    "found": "Games found: {{count}}",
+    "ignored": "Not used for filtering (too short or not understood): {{words}}",
+    "capped": "Only the first {{count}} can be browsed — narrow the search to see more.",
+    "empty": "No game matches these filters.",
+    "unknownPlayer": "Unknown",
+    "source": "Source: {{source}}",
+    "openLabel": "Replay {{game}}",
+    "viewFailed": "The game could not be opened.",
+    "openings": {
+      "sicilian": "Sicilian Defence",
+      "french": "French Defence",
+      "caroKann": "Caro-Kann Defence",
+      "pircModern": "Pirc and Modern Defence",
+      "alekhine": "Alekhine Defence",
+      "scandinavian": "Scandinavian Defence",
+      "kingsGambit": "King's Gambit",
+      "petrov": "Petrov Defence",
+      "italian": "Italian Game",
+      "twoKnights": "Two Knights Defence",
+      "ruyLopez": "Ruy Lopez",
+      "slav": "Slav Defence",
+      "qga": "Queen's Gambit Accepted",
+      "qgd": "Queen's Gambit Declined",
+      "gruenfeld": "Grünfeld Defence",
+      "catalan": "Catalan Opening",
+      "queensIndian": "Queen's Indian Defence",
+      "nimzoIndian": "Nimzo-Indian Defence",
+      "kingsIndian": "King's Indian Defence",
+      "english": "English Opening",
+      "benoni": "Benoni and Benko",
+      "dutch": "Dutch Defence"
     }
   },
   "tournamentDirectory": {

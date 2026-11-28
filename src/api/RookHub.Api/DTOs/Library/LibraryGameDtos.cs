@@ -20,6 +20,8 @@ public class LibraryGameDto
     public string? Result { get; set; }
     public string? Event { get; set; }
     public DateOnly? PlayedOn { get; set; }
+    /// <summary>Das Jahr, auch wenn das PGN nur das Jahr kennt (dann ist <see cref="PlayedOn"/> leer).</summary>
+    public int? PlayedYear { get; set; }
     public string? Eco { get; set; }
     public int? PlyCount { get; set; }
 
@@ -60,6 +62,45 @@ public class LibraryGamePageDto
     public int Total { get; set; }
     public int Page { get; set; }
     public int PageSize { get; set; }
+}
+
+/// <summary>
+/// Die Filter der Meisterpartien-Suche (<c>GET /api/library-games/search</c>, 1.038.0). Alle optional; leer = der ganze
+/// Bestand, nach der Eignungsnote sortiert.
+/// </summary>
+public class LibraryGameSearchQuery
+{
+    /// <summary>Freitext über Spieler, Turnier und Kommentator (Wortanfänge, jedes Wort Pflicht).</summary>
+    public string? Q { get; set; }
+    /// <summary>Spielername — egal ob mit Weiß oder Schwarz. Mehrere Wörter: jedes in Weiß ODER Schwarz („Carlsen Anand“
+    /// findet die Partien der beiden gegeneinander).</summary>
+    public string? Player { get; set; }
+    /// <summary>Turnier bzw. Veranstaltung (<c>[Event]</c>).</summary>
+    public string? Event { get; set; }
+    public int? YearFrom { get; set; }
+    public int? YearTo { get; set; }
+    /// <summary><c>white</c> | <c>black</c> | <c>draw</c> (oder die PGN-Form <c>1-0</c>/<c>0-1</c>/<c>1/2-1/2</c>).</summary>
+    public string? Result { get; set; }
+    /// <summary>ECO-Code oder -Präfix (<c>B90</c>, <c>B9</c>, <c>B</c>) oder -Bereich (<c>B20-B99</c>).</summary>
+    public string? Eco { get; set; }
+    /// <summary><c>best</c> (Vorgabe: Eignungsnote), <c>newest</c>, <c>oldest</c>.</summary>
+    public string? Sort { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 25;
+}
+
+/// <summary>Eine Seite der Meisterpartien-Suche.</summary>
+public class LibraryGameSearchPageDto
+{
+    public List<LibraryGameDto> Items { get; set; } = new();
+    public int Total { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    /// <summary>Eingaben, die NICHT gefiltert haben (Wörter unter drei Zeichen, über dem Deckel, unlesbarer ECO-Code) — die
+    /// Seite sagt es, statt still mehr zu zeigen, als gefragt war.</summary>
+    public List<string> Ignored { get; set; } = new();
+    /// <summary>Weiter als bis hier blättert die Suche nicht (<see cref="Total"/> zählt trotzdem alles) — dann eingrenzen.</summary>
+    public int MaxPage { get; set; }
 }
 
 /// <summary>Warum eine Anforderung abgelehnt wurde — dieselben Gruende wie beim Einwurf, plus

@@ -28,11 +28,25 @@ public class LibraryGameController : BaseApiController
 
     private readonly CommentSearchService _comments;
 
-    public LibraryGameController(LibraryGameService service, CommentSearchService comments)
+    private readonly LibraryGameSearchService _search;
+
+    public LibraryGameController(LibraryGameService service, CommentSearchService comments, LibraryGameSearchService search)
     {
         _service = service;
         _comments = comments;
+        _search = search;
     }
+
+    /// <summary>
+    /// Meisterpartien-Suche (1.038.0, Seite <c>/master-games</c>): Spieler (egal welche Farbe), Turnier, Jahr(esbereich),
+    /// Ergebnis, ECO und Freitext — geblättert, ohne Züge. Offen wie die Namenssuche daneben und mit derselben Drossel;
+    /// die Züge liefert erst <see cref="View"/> (angemeldet).
+    /// </summary>
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-puzzle")]
+    [HttpGet("search")]
+    public async Task<ActionResult<LibraryGameSearchPageDto>> Find([FromQuery] LibraryGameSearchQuery query, CancellationToken ct)
+        => Ok(await _search.SearchAsync(query, ct));
 
     /// <summary>„Frag die Kommentare" (0.536.0): semantische Suche über die Anmerkungen — je Partie die passendsten
     /// Stellen. Wie die Namenssuche ohne Anmeldung (nur Kopfdaten und Kommentar-Auszüge, keine Züge).</summary>

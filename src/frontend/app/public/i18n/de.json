@@ -343,6 +343,7 @@
     "account": "Konto",
     "analysis": "Analyse",
     "games": "Partien",
+    "masterGames": "Meisterpartien",
     "stats": "Statistik",
     "trainingGoals": "Trainingsziele",
     "installApp": "App installieren",
@@ -4446,6 +4447,14 @@
           "„Partieformular einlesen“: Fotografiere dein Partieformular; ein KI-Modell (Claude von Anthropic, USA) liest die Züge, RookHub prüft jeden Zug am Brett und legt die Partie in deinen Partien ab. Unsichere Züge korrigierst du über „Prüfen und korrigieren“. Die Zahl der Einlesungen pro Tag ist begrenzt."
         ]
       },
+      "masterGames": {
+        "t": "Meisterpartien",
+        "p": [
+          "Durchsuche über 130 000 kommentierte Meisterpartien aus Büchern und Sammlungen – nach Spieler (mit Weiß oder Schwarz), Turnier, Jahr oder Jahresbereich, Ergebnis, Eröffnung/ECO-Code und Freitext.",
+          "Namen und Turniere werden über den Wortanfang gefunden: „Capa“ findet Capablanca. Mehrere Wörter im Spielerfeld müssen alle bei Weiß oder Schwarz stehen – „Carlsen Anand“ findet ihre Partien gegeneinander. Wörter unter drei Buchstaben bleiben unberücksichtigt.",
+          "Ein Klick auf eine Partie spielt sie mit ihren Anmerkungen nach. Suchen kann jeder, die Züge ansehen nur mit Konto."
+        ]
+      },
       "reconstruct": {
         "t": "Partie rekonstruieren",
         "p": [
@@ -4988,6 +4997,66 @@
       "moveFailed": "Dieser Zug geht in dieser Stellung nicht.",
       "games": "Partien ({{count}})",
       "anonHint": "Suchen geht ohne Konto. Eine Partie rechnen zu lassen braucht eine Anmeldung — es verbraucht Rechenzeit, die jemandem gehört."
+    }
+  },
+  "masterGames": {
+    "title": "Meisterpartien",
+    "intro": "Kommentierte Meisterpartien aus Büchern und Sammlungen durchsuchen.",
+    "help": "Namen und Turniere werden über den Wortanfang gefunden („Capa“ findet Capablanca); jedes Wort muss passen.\n\nSpieler: Weiß oder Schwarz. Mehrere Wörter: jedes bei Weiß oder Schwarz – „Carlsen Anand“ findet ihre Partien gegeneinander.\n\nECO: ein Code (B90), eine Gruppe (B9, B) oder ein Bereich (C60-C99). Die Eröffnungsliste trägt den Bereich ein.",
+    "q": "Freitext",
+    "qHint": "Spieler, Turnier oder Kommentator",
+    "player": "Spieler",
+    "playerHint": "Weiß oder Schwarz",
+    "event": "Turnier",
+    "yearFrom": "Jahr von",
+    "yearTo": "bis",
+    "result": "Ergebnis",
+    "resultAny": "Jedes Ergebnis",
+    "resultWhite": "Weiß gewinnt",
+    "resultBlack": "Schwarz gewinnt",
+    "resultDraw": "Remis",
+    "opening": "Eröffnung",
+    "openingAny": "Jede Eröffnung",
+    "openingCustom": "ECO-Code {{eco}}",
+    "eco": "ECO",
+    "ecoHint": "z. B. B90, B9 oder C60-C99",
+    "sort": "Sortierung",
+    "sortBest": "Am besten kommentiert",
+    "sortNewest": "Neueste zuerst",
+    "sortOldest": "Älteste zuerst",
+    "reset": "Filter zurücksetzen",
+    "loginToView": "Melde dich an, um die Partien mit ihren Zügen nachzuspielen.",
+    "found": "Gefundene Partien: {{count}}",
+    "ignored": "Nicht zum Filtern verwendet (zu kurz oder nicht verstanden): {{words}}",
+    "capped": "Blättern lassen sich nur die ersten {{count}} – grenze die Suche ein, um mehr zu sehen.",
+    "empty": "Keine Partie passt zu diesen Filtern.",
+    "unknownPlayer": "Unbekannt",
+    "source": "Quelle: {{source}}",
+    "openLabel": "{{game}} nachspielen",
+    "viewFailed": "Die Partie ließ sich nicht öffnen.",
+    "openings": {
+      "sicilian": "Sizilianisch",
+      "french": "Französisch",
+      "caroKann": "Caro-Kann",
+      "pircModern": "Pirc und Modern",
+      "alekhine": "Aljechin-Verteidigung",
+      "scandinavian": "Skandinavisch",
+      "kingsGambit": "Königsgambit",
+      "petrov": "Russisch (Petrow)",
+      "italian": "Italienisch",
+      "twoKnights": "Zweispringerspiel im Nachzug",
+      "ruyLopez": "Spanisch",
+      "slav": "Slawisch",
+      "qga": "Angenommenes Damengambit",
+      "qgd": "Abgelehntes Damengambit",
+      "gruenfeld": "Grünfeld-Indisch",
+      "catalan": "Katalanisch",
+      "queensIndian": "Damenindisch",
+      "nimzoIndian": "Nimzowitsch-Indisch",
+      "kingsIndian": "Königsindisch",
+      "english": "Englisch",
+      "benoni": "Benoni und Wolgagambit",
+      "dutch": "Holländisch"
     }
   },
   "tournamentDirectory": {

@@ -145,6 +145,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
 - Rohbestand (`LibraryGames`) — der Vorrat, aus dem die Punktepartie ausgewaehlt wird → `docs/api/rohbestand.md`
 - Partie anfordern (`/api/library-games`) — der Rohbestand als Nachschlagewerk → `docs/api/partie-anfordern.md`
 - „Frag die Kommentare" — semantische Suche im Rohbestand (0.536.0) → `docs/api/frag-die-kommentare.md`
+- Meisterpartien-Suche (`/master-games`, offen, Züge mit Konto, 1.038.0) — Spieler/Turnier/Jahr/Ergebnis/ECO über den Rohbestand → `docs/api/meisterpartien-suche.md`
 - Stellungsfilter (`/api/guess-tree`) — der Eroeffnungsbaum der Punktepartie → `docs/api/stellungsfilter.md`
 - Anmerkungen in mehreren Sprachen (`CommentSets`) → `docs/api/anmerkungen-in-mehreren-sprachen.md`
 - Partieformular einlesen (auth, 0.529.0) → `docs/api/partieformular-einlesen.md`

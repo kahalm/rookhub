@@ -23,6 +23,7 @@ lesen. Sie werden nach und nach befuellt, und ein noch nicht befuelltes Feld ist
 | `CommentCount` / `CommentedPlies` / `CommentChars` | Wie viele Kommentare, wie viele HALBZUEGE einen tragen, wie viel Text. Die mittlere Zahl entscheidet: die Punktepartie haelt an kommentierten Zuegen an, drei lange Absaetze am Schluss machen sie stumm |
 | `NagCount` / `VariationCount` | Symbol-Bewertungen und Nebenvarianten — Zeichen ernsthafter Arbeit, aber der Spielende sieht sie nie |
 | `Languages` | CSV von ISO-Kuerzeln (`de`, `en,de`), `und` = nicht bestimmbar. NIE `null` lassen, sobald geprueft — sonst holt der naechste Durchgang dieselben Zeilen wieder |
+| `PlayedYear` | Das Jahr, auch wenn nur das Jahr bekannt ist („1904.??.??“ — `PlayedOn` bleibt dann leer); indiziert für die Meisterpartien-Suche (1.038.0, `meisterpartien-suche.md`) |
 | `OpeningLine` | Die ersten 30 Halbzuege normalisiert („e4 e5 Nf3 …"), indiziert. Damit ist der Bestand eine EROEFFNUNGSSTATISTIK: „wie viele Partien spielen dieselben ersten k Zuege" ist eine Praefix-Suche statt einer Volltextsuche ueber 338 MB |
 | `FirstCommentedPly` | Der erste kommentierte Halbzug — zusammen mit `OpeningLine` die Grundlage von `GuessStartPly` |
 | `SearchText` | Spieler, Turnier und Kommentator kleingeschrieben in einer Spalte, mit VOLLTEXT-Index — das Feld, ueber das die Bestandssuche laeuft |

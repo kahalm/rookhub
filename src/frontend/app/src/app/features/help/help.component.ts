@@ -36,6 +36,7 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
   'analysis': 'analysis',
   'guess': 'guess',
   'games': 'games',
+  'master-games': 'masterGames',
   'reconstruct': 'reconstruct',
   'scoresheet': 'games',
   'remembered': 'chessable',
@@ -316,6 +317,7 @@ export class HelpComponent implements AfterViewInit, OnDestroy {
     // Analyse & Sammlung
     { id: 'analysis', icon: '\u{1F52C}' },
     { id: 'games', icon: '\u{1F4DD}' },
+    { id: 'masterGames', icon: '\u{1F50E}' },
     { id: 'reconstruct', icon: '\u{1F9E0}' },
     { id: 'ebooks', icon: '\u{1F4D5}' },
     { id: 'maxims', icon: '\u{1F4DC}' },

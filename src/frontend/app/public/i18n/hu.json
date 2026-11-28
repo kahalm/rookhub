@@ -133,6 +133,7 @@
     "fullscreen": "Teljes képernyő",
     "fullscreenExit": "Teljes képernyő elhagyása (Esc)",
     "games": "Játszmák",
+    "masterGames": "Mesterjátszmák",
     "help": "Súgó",
     "leaderboards": "Ranglisták",
     "remembered": "Megjelöltek",
@@ -4593,6 +4594,66 @@
       "anonHint": "Kereséshez nem kell fiók. Egy játszma kiszámításához be kell jelentkezni, mert valakinek a gépidejét használja."
     }
   },
+  "masterGames": {
+    "title": "Mesterjátszmák",
+    "intro": "Elemzett mesterjátszmák keresése könyvekből és gyűjteményekből.",
+    "help": "A neveket és versenyeket a szó eleje alapján találja meg („Capa” megtalálja Capablancát); minden szónak egyeznie kell.\n\nJátékos: világos vagy sötét. Több szó: mindegyik a világosnál vagy a sötétnél – „Carlsen Anand” az egymás elleni játszmáikat adja.\n\nECO: kód (B90), csoport (B9, B) vagy tartomány (C60-C99). A megnyitáslista beírja a tartományt.",
+    "q": "Szabad szöveg",
+    "qHint": "Játékos, verseny vagy elemző",
+    "player": "Játékos",
+    "playerHint": "Világos vagy sötét",
+    "event": "Verseny",
+    "yearFrom": "Évtől",
+    "yearTo": "évig",
+    "result": "Eredmény",
+    "resultAny": "Bármely eredmény",
+    "resultWhite": "Világos nyer",
+    "resultBlack": "Sötét nyer",
+    "resultDraw": "Döntetlen",
+    "opening": "Megnyitás",
+    "openingAny": "Bármely megnyitás",
+    "openingCustom": "ECO-kód: {{eco}}",
+    "eco": "ECO",
+    "ecoHint": "pl. B90, B9 vagy C60-C99",
+    "sort": "Rendezés",
+    "sortBest": "Legjobban elemzett",
+    "sortNewest": "Legújabb elöl",
+    "sortOldest": "Legrégebbi elöl",
+    "reset": "Szűrők törlése",
+    "loginToView": "Jelentkezz be, hogy a játszmákat lépésekkel együtt lejátszhasd.",
+    "found": "Talált játszmák: {{count}}",
+    "ignored": "Nem használt a szűréshez (túl rövid vagy nem értelmezhető): {{words}}",
+    "capped": "Csak az első {{count}} lapozható – szűkítsd a keresést, hogy többet láss.",
+    "empty": "Egy játszma sem felel meg ezeknek a szűrőknek.",
+    "unknownPlayer": "Ismeretlen",
+    "source": "Forrás: {{source}}",
+    "openLabel": "{{game}} lejátszása",
+    "viewFailed": "A játszmát nem sikerült megnyitni.",
+    "openings": {
+      "sicilian": "Szicíliai védelem",
+      "french": "Francia védelem",
+      "caroKann": "Caro–Kann-védelem",
+      "pircModern": "Pirc- és modern védelem",
+      "alekhine": "Aljechin-védelem",
+      "scandinavian": "Skandináv védelem",
+      "kingsGambit": "Királycsel",
+      "petrov": "Orosz védelem (Petrov)",
+      "italian": "Olasz játék",
+      "twoKnights": "Kettős huszárjáték",
+      "ruyLopez": "Spanyol megnyitás",
+      "slav": "Szláv védelem",
+      "qga": "Elfogadott vezércsel",
+      "qgd": "Elhárított vezércsel",
+      "gruenfeld": "Grünfeld-védelem",
+      "catalan": "Katalán megnyitás",
+      "queensIndian": "Vezérindiai védelem",
+      "nimzoIndian": "Nimzoindiai védelem",
+      "kingsIndian": "Királyindiai védelem",
+      "english": "Angol megnyitás",
+      "benoni": "Benoni és Benkő-csel",
+      "dutch": "Holland védelem"
+    }
+  },
   "tournamentDirectory": {
     "title": "Versenynaptár",
     "help": "A versenyeket minden éjjel beolvassuk azokról az oldalakról, amelyek közzéteszik a naptárukat — ma a chess-results és a FIDE-naptár, később több is. Hozz létre egy keresési profilt hellyel és körzettel — ugyanez a profil vezérli a listát, a térképet, a naptárat és a közeli új versenyekről szóló értesítést.",
@@ -5321,6 +5382,14 @@
         "p": [
           "A ☰ → Elemzés és gyűjtemény → Játszmák alatt vannak a játszmáid: a RepCheck-bővítménnyel a chess.comon vagy a lichessen mentve, a „PGN feltöltése” gombbal átvéve vagy egy játszmalap fotójáról beolvasva. A „Játszma elemzése” a háttérben számolja ki – utána a tábla alatt megjelenik az értékelési görbe pontossággal és lépésosztályokkal. A játszmát linkkel meg is oszthatod, vagy PGN-ként letöltheted.",
           "„Játszmalap beolvasása”: fényképezd le a játszmalapodat; egy MI-modell (Claude, az amerikai Anthropic cégtől) kiolvassa a lépéseket, a RookHub minden lépést ellenőriz a táblán, és a játszmát a játszmáid közé menti. A bizonytalan lépéseket az „Ellenőrzés és javítás” alatt javíthatod. A napi beolvasások száma korlátozott."
+        ]
+      },
+      "masterGames": {
+        "t": "Mesterjátszmák",
+        "p": [
+          "Keress több mint 130 000 elemzett mesterjátszmában könyvekből és gyűjteményekből – játékos (világossal vagy sötéttel), verseny, év vagy évtartomány, eredmény, megnyitás/ECO-kód és szabad szöveg szerint.",
+          "A neveket és versenyeket a szó eleje alapján találja meg: „Capa” megtalálja Capablancát. A játékos mezőben minden szónak a világosnál vagy a sötétnél kell szerepelnie – „Carlsen Anand” az egymás elleni játszmáikat adja. A háromnál rövidebb szavakat figyelmen kívül hagyja.",
+          "Egy játszmára kattintva elemzésekkel együtt lejátszhatod. Keresni bárki tud, a lépések megtekintéséhez fiók kell."
         ]
       },
       "reconstruct": {

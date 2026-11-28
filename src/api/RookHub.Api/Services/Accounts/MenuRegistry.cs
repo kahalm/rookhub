@@ -27,6 +27,8 @@ public static class MenuRegistry
         // Fortschritt an einer anonymen Sitzung) — genau wie die Puzzles.
         new MenuItemDef("guess", MenuVisibilityLevel.All),
         new MenuItemDef("games", MenuVisibilityLevel.Registered),
+        // Meisterpartien-Suche (1.038.0): Kopfdaten des Rohbestands sind ohnehin offen; die Züge erst nach Anmeldung.
+        new MenuItemDef("master-games", MenuVisibilityLevel.All),
         new MenuItemDef("reconstruct", MenuVisibilityLevel.Registered),
         // Partieformular einlesen (0.529.0) — jede Einlesung kostet beim Modell; Tagesdeckel je Nutzer.
         new MenuItemDef("scoresheet", MenuVisibilityLevel.Registered),

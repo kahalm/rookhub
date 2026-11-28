@@ -10,6 +10,7 @@ Punktepartie-Seite oeffnet den Bestand: suchen, und einzelne Partien in die Wart
 | Methode | Endpoint | Auth | Zweck |
 |---|---|---|---|
 | GET | `/api/library-games?q=&language=&minCommentedPlies=&page=&pageSize=&line=` | **AllowAnonymous** + RL | Eine Seite der Bestandssuche, nach Eignungsnote sortiert; je Zeile `inPool`/`requested`/`gameAnalysisId`. **Ohne die Zuege** |
+| GET | `/api/library-games/search?…` | **AllowAnonymous** + RL | Meisterpartien-Suche mit Spieler-/Jahr-/ECO-Filtern (1.038.0) → `meisterpartien-suche.md` |
 | POST | `/api/library-games/{id}/request` | Auth | Diese Partie rechnen lassen — derselbe Weg wie ein eingeworfenes PGN (feste Tiefe 20, Haus-Engine, Deckel 5). Liegt sie schon spielbar da, kommt die vorhandene Analyse zurueck (`alreadyPlayable`), es wird NICHTS doppelt gerechnet. 400 mit `reason` ∈ `not-found`/`too-many-open`/`no-engine`/`invalid-pgn` |
 
 **Suchen darf jeder, anfordern nur angemeldet** (0.475.5). Die Suche liefert Kopfdaten — Spieler,

@@ -343,6 +343,7 @@
     "account": "Račun",
     "analysis": "Analiza",
     "games": "Partije",
+    "masterGames": "Majstorske partije",
     "stats": "Statistika",
     "trainingGoals": "Trening ciljevi",
     "installApp": "Instaliraj aplikaciju",
@@ -4446,6 +4447,14 @@
           "»Učitaj zapisnik partije«: fotografiraj svoj zapisnik; model umjetne inteligencije (Claude tvrtke Anthropic, SAD) čita poteze, RookHub provjerava svaki potez na ploči i sprema partiju među tvoje partije. Nesigurne poteze ispravljaš putem »Provjeri i ispravi«. Broj učitavanja po danu je ograničen."
         ]
       },
+      "masterGames": {
+        "t": "Majstorske partije",
+        "p": [
+          "Pretraži više od 130 000 komentiranih majstorskih partija iz knjiga i zbirki – po igraču (bijelim ili crnim), turniru, godini ili rasponu godina, rezultatu, otvaranju/ECO kodu i slobodnom tekstu.",
+          "Imena i turniri pronalaze se po početku riječi: „Capa“ pronalazi Capablancu. Sve riječi u polju igrača moraju stajati kod bijelih ili crnih – „Carlsen Anand“ pronalazi njihove međusobne partije. Riječi kraće od tri slova se zanemaruju.",
+          "Klikom na partiju odigravaš je s komentarima. Pretraživati može svatko, a za poteze je potreban račun."
+        ]
+      },
       "reconstruct": {
         "t": "Rekonstrukcija partije",
         "p": [
@@ -4988,6 +4997,66 @@
       "moveFailed": "Taj potez nije moguć u ovoj poziciji.",
       "games": "Partije ({{count}})",
       "anonHint": "Pretraživanje ide i bez računa. Za izračun partije potrebna je prijava jer troši nečije strojno vrijeme."
+    }
+  },
+  "masterGames": {
+    "title": "Majstorske partije",
+    "intro": "Pretraži komentirane majstorske partije iz knjiga i zbirki.",
+    "help": "Imena i turniri pronalaze se po početku riječi („Capa“ pronalazi Capablancu); svaka riječ mora odgovarati.\n\nIgrač: bijeli ili crni. Više riječi: svaka kod bijelih ili crnih – „Carlsen Anand“ pronalazi njihove međusobne partije.\n\nECO: kod (B90), skupina (B9, B) ili raspon (C60-C99). Popis otvaranja upisuje raspon.",
+    "q": "Slobodni tekst",
+    "qHint": "Igrač, turnir ili komentator",
+    "player": "Igrač",
+    "playerHint": "Bijeli ili crni",
+    "event": "Turnir",
+    "yearFrom": "Godina od",
+    "yearTo": "do",
+    "result": "Rezultat",
+    "resultAny": "Svaki rezultat",
+    "resultWhite": "Bijeli pobjeđuje",
+    "resultBlack": "Crni pobjeđuje",
+    "resultDraw": "Remi",
+    "opening": "Otvaranje",
+    "openingAny": "Svako otvaranje",
+    "openingCustom": "ECO kod {{eco}}",
+    "eco": "ECO",
+    "ecoHint": "npr. B90, B9 ili C60-C99",
+    "sort": "Poredak",
+    "sortBest": "Najbolje komentirane",
+    "sortNewest": "Najnovije prvo",
+    "sortOldest": "Najstarije prvo",
+    "reset": "Poništi filtre",
+    "loginToView": "Prijavi se kako bi odigrao partije s potezima.",
+    "found": "Pronađene partije: {{count}}",
+    "ignored": "Nije korišteno za filtriranje (prekratko ili nerazumljivo): {{words}}",
+    "capped": "Prelistati se može samo prvih {{count}} – suzi pretragu da vidiš više.",
+    "empty": "Nijedna partija ne odgovara ovim filtrima.",
+    "unknownPlayer": "Nepoznato",
+    "source": "Izvor: {{source}}",
+    "openLabel": "Odigraj {{game}}",
+    "viewFailed": "Partiju nije moguće otvoriti.",
+    "openings": {
+      "sicilian": "Sicilijanska obrana",
+      "french": "Francuska obrana",
+      "caroKann": "Caro-Kann obrana",
+      "pircModern": "Pirc i moderna obrana",
+      "alekhine": "Aljehinova obrana",
+      "scandinavian": "Skandinavska obrana",
+      "kingsGambit": "Kraljev gambit",
+      "petrov": "Ruska obrana (Petrov)",
+      "italian": "Talijanska partija",
+      "twoKnights": "Obrana dvaju skakača",
+      "ruyLopez": "Španjolska partija",
+      "slav": "Slavenska obrana",
+      "qga": "Prihvaćeni damin gambit",
+      "qgd": "Odbijeni damin gambit",
+      "gruenfeld": "Grünfeldova obrana",
+      "catalan": "Katalonsko otvaranje",
+      "queensIndian": "Damina indijska obrana",
+      "nimzoIndian": "Nimzoindijska obrana",
+      "kingsIndian": "Kraljeva indijska obrana",
+      "english": "Englesko otvaranje",
+      "benoni": "Benoni i Benko",
+      "dutch": "Nizozemska obrana"
     }
   },
   "tournamentDirectory": {
