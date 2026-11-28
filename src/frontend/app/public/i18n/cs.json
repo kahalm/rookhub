@@ -5356,6 +5356,8 @@
     "gaps": "Mezery: {{count}}",
     "gapsOne": "{{count}} mezera",
     "notFound": "Tato rekonstrukce (už) neexistuje.",
+    "notFoundPrivate": "Tato rekonstrukce neexistuje nebo patří někomu jinému – rekonstrukce jsou soukromé, požádejte o odkaz ke sdílení ({{link}}).",
+    "backToList": "Na moje rekonstrukce",
     "editHead": "Upravit údaje",
     "white": "Bílý",
     "black": "Černý",

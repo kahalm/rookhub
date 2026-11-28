@@ -5356,6 +5356,8 @@
     "gaps": "{{count}} goluri",
     "gapsOne": "{{count}} gol",
     "notFound": "Această reconstituire nu (mai) există.",
+    "notFoundPrivate": "Această reconstituire nu există sau aparține altcuiva – reconstituirile sunt private, cere linkul de partajare ({{link}}).",
+    "backToList": "La reconstituirile mele",
     "editHead": "Editează detaliile",
     "white": "Alb",
     "black": "Negru",

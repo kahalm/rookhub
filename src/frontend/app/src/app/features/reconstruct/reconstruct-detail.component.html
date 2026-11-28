@@ -1,6 +1,12 @@
 <div class="page">
   @if (loading()) {
     <p class="muted">{{ 'common.loading' | translate }}</p>
+  } @else if (notFound()) {
+    <div class="empty-state not-found" role="status">
+      <mat-icon>lock</mat-icon>
+      <p>{{ 'reconstruct.notFoundPrivate' | translate:{ link: shareLinkShape } }}</p>
+      <a mat-stroked-button routerLink="/reconstruct"><mat-icon>arrow_back</mat-icon> {{ 'reconstruct.backToList' | translate }}</a>
+    </div>
   } @else if (!data()) {
     <p class="muted">{{ 'reconstruct.notFound' | translate }}</p>
     <a mat-button routerLink="/reconstruct"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}</a>

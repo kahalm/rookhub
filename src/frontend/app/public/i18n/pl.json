@@ -5356,6 +5356,8 @@
     "gaps": "Luki: {{count}}",
     "gapsOne": "{{count}} luka",
     "notFound": "Ta rekonstrukcja nie istnieje (już).",
+    "notFoundPrivate": "Ta rekonstrukcja nie istnieje lub należy do kogoś innego – rekonstrukcje są prywatne, poproś o link do udostępnienia ({{link}}).",
+    "backToList": "Do moich rekonstrukcji",
     "editHead": "Edytuj szczegóły",
     "white": "Białe",
     "black": "Czarne",

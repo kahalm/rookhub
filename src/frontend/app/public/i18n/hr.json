@@ -5541,6 +5541,8 @@
     "gaps": "Praznina: {{count}}",
     "gapsOne": "Praznina: {{count}}",
     "notFound": "Ova rekonstrukcija (više) ne postoji.",
+    "notFoundPrivate": "Ova rekonstrukcija ne postoji ili pripada nekom drugom – rekonstrukcije su privatne, zatraži poveznicu za dijeljenje ({{link}}).",
+    "backToList": "Na moje rekonstrukcije",
     "editHead": "Uredi podatke",
     "white": "Bijeli",
     "black": "Crni",

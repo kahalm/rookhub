@@ -5356,6 +5356,8 @@
     "gaps": "{{count}} luckor",
     "gapsOne": "{{count}} lucka",
     "notFound": "Den här rekonstruktionen finns inte (längre).",
+    "notFoundPrivate": "Den här rekonstruktionen finns inte eller tillhör någon annan – rekonstruktioner är privata, be om delningslänken ({{link}}).",
+    "backToList": "Till mina rekonstruktioner",
     "editHead": "Redigera uppgifter",
     "white": "Vit",
     "black": "Svart",

@@ -77,6 +77,32 @@ describe('ReconstructDetailComponent', () => {
 
   afterEach(() => { delete (navigator as unknown as Record<string, unknown>)['clipboard']; });
 
+  it('zeigt bei 404 (fremd oder nicht vorhanden) einen Hinweis im Inhalt statt einer Snackbar', () => {
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+    const fixture = TestBed.createComponent(ReconstructDetailComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/reconstructions/5').flush({ message: 'nf' }, { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(fixture.componentInstance.notFound()).toBeTrue();
+    expect(el.querySelector('.not-found p')?.textContent).toContain('reconstruct.notFoundPrivate');
+    expect(el.querySelector('.not-found a')?.getAttribute('href')).toBe('/reconstruct');
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('meldet andere Ladefehler (500) weiter per Snackbar, ohne den 404-Hinweis', () => {
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+    const fixture = TestBed.createComponent(ReconstructDetailComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/reconstructions/5').flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.notFound()).toBeFalse();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.not-found')).toBeNull();
+    expect(warn).toHaveBeenCalledWith('reconstruct.loadFailed');
+  });
+
   it('spielt die eingetippten Züge lokal mit und zeigt die Stellung danach', () => {
     const c = open([]);
     c.startNew(PartKind.Moves);

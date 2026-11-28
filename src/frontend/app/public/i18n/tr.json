@@ -5356,6 +5356,8 @@
     "gaps": "Boşluklar: {{count}}",
     "gapsOne": "{{count}} boşluk",
     "notFound": "Bu yeniden oluşturma (artık) mevcut değil.",
+    "notFoundPrivate": "Bu yeniden oluşturma yok ya da başkasına ait – yeniden oluşturmalar özeldir, paylaşım bağlantısını iste ({{link}}).",
+    "backToList": "Yeniden oluşturmalarıma",
     "editHead": "Ayrıntıları düzenle",
     "white": "Beyaz",
     "black": "Siyah",

@@ -5356,6 +5356,8 @@
     "gaps": "{{count}} lacune",
     "gapsOne": "{{count}} lacuna",
     "notFound": "Questa ricostruzione non esiste (più).",
+    "notFoundPrivate": "Questa ricostruzione non esiste o appartiene a qualcun altro – le ricostruzioni sono private, chiedi il link di condivisione ({{link}}).",
+    "backToList": "Alle mie ricostruzioni",
     "editHead": "Modifica dettagli",
     "white": "Bianco",
     "black": "Nero",

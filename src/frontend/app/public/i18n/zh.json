@@ -5356,6 +5356,8 @@
     "gaps": "{{count}} 处空缺",
     "gapsOne": "{{count}} 处空缺",
     "notFound": "此复原不存在（或已不存在）。",
+    "notFoundPrivate": "此复原不存在或属于他人——复原是私密的，请向对方索取分享链接（{{link}}）。",
+    "backToList": "前往我的复原",
     "editHead": "编辑详情",
     "white": "白方",
     "black": "黑方",

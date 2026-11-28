@@ -5356,6 +5356,8 @@
     "gaps": "{{count}} khoảng trống",
     "gapsOne": "{{count}} khoảng trống",
     "notFound": "Bản dựng này không (còn) tồn tại.",
+    "notFoundPrivate": "Bản dựng này không tồn tại hoặc thuộc về người khác – các bản dựng là riêng tư, hãy xin liên kết chia sẻ ({{link}}).",
+    "backToList": "Đến các bản dựng của tôi",
     "editHead": "Sửa thông tin",
     "white": "Trắng",
     "black": "Đen",

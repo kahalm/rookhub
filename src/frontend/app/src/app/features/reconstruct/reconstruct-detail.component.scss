@@ -188,3 +188,6 @@
   .editor app-chess-board,
   .editor app-position-setup { max-width: min(100%, calc(100vh - 360px)); }
 }
+
+// 404: fremde oder nicht vorhandene Rekonstruktion — ein Satz, ein Weg zurück (DESIGN 5.10 Leerzustand).
+.not-found > p { max-width: 36rem; margin-inline: auto; }

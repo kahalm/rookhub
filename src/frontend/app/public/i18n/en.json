@@ -5541,6 +5541,8 @@
     "gaps": "{{count}} gaps",
     "gapsOne": "{{count}} gap",
     "notFound": "This reconstruction does not exist (any more).",
+    "notFoundPrivate": "This reconstruction does not exist or belongs to someone else – reconstructions are private, so ask for the share link ({{link}}).",
+    "backToList": "To my reconstructions",
     "editHead": "Edit details",
     "white": "White",
     "black": "Black",

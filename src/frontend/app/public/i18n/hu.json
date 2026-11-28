@@ -5541,6 +5541,8 @@
     "gaps": "{{count}} hézag",
     "gapsOne": "{{count}} hézag",
     "notFound": "Ez a rekonstrukció (már) nem létezik.",
+    "notFoundPrivate": "Ez a rekonstrukció nem létezik, vagy valaki másé – a rekonstrukciók privátak, kérd el a megosztási linket ({{link}}).",
+    "backToList": "Saját rekonstrukcióimhoz",
     "editHead": "Adatok szerkesztése",
     "white": "Világos",
     "black": "Sötét",

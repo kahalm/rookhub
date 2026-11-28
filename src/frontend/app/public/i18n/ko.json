@@ -5356,6 +5356,8 @@
     "gaps": "빈칸 {{count}}개",
     "gapsOne": "빈칸 {{count}}개",
     "notFound": "이 복원은 존재하지 않습니다(더 이상).",
+    "notFoundPrivate": "이 복원은 존재하지 않거나 다른 사람의 것입니다 – 복원은 비공개이므로 공유 링크({{link}})를 요청하세요.",
+    "backToList": "내 복원으로",
     "editHead": "세부 정보 편집",
     "white": "백",
     "black": "흑",

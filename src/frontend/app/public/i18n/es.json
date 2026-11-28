@@ -5356,6 +5356,8 @@
     "gaps": "{{count}} huecos",
     "gapsOne": "{{count}} hueco",
     "notFound": "Esta reconstrucción no existe (o ya no existe).",
+    "notFoundPrivate": "Esta reconstrucción no existe o pertenece a otra persona – las reconstrucciones son privadas, pide el enlace para compartir ({{link}}).",
+    "backToList": "A mis reconstrucciones",
     "editHead": "Editar datos",
     "white": "Blancas",
     "black": "Negras",

@@ -5356,6 +5356,8 @@
     "gaps": "空白 {{count}} 件",
     "gapsOne": "空白 {{count}} 件",
     "notFound": "この復元は存在しません（もう存在しません）。",
+    "notFoundPrivate": "この復元は存在しないか、他の人のものです – 復元は非公開なので、共有リンク（{{link}}）を頼んでください。",
+    "backToList": "自分の復元へ",
     "editHead": "詳細を編集",
     "white": "白",
     "black": "黒",

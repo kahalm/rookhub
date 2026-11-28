@@ -5541,6 +5541,8 @@
     "gaps": "{{count}} Lücken",
     "gapsOne": "{{count}} Lücke",
     "notFound": "Diese Rekonstruktion gibt es (nicht mehr).",
+    "notFoundPrivate": "Diese Rekonstruktion gibt es nicht oder sie gehört jemand anderem – Rekonstruktionen sind privat, bitte um den Teilen-Link ({{link}}).",
+    "backToList": "Zu meinen Rekonstruktionen",
     "editHead": "Angaben bearbeiten",
     "white": "Weiß",
     "black": "Schwarz",

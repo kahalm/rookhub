@@ -5356,6 +5356,8 @@
     "gaps": "{{count}} gaten",
     "gapsOne": "{{count}} gat",
     "notFound": "Deze reconstructie bestaat niet (meer).",
+    "notFoundPrivate": "Deze reconstructie bestaat niet of is van iemand anders – reconstructies zijn privé, vraag om de deellink ({{link}}).",
+    "backToList": "Naar mijn reconstructies",
     "editHead": "Gegevens bewerken",
     "white": "Wit",
     "black": "Zwart",

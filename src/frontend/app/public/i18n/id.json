@@ -5356,6 +5356,8 @@
     "gaps": "{{count}} celah",
     "gapsOne": "{{count}} celah",
     "notFound": "Rekonstruksi ini tidak ada (lagi).",
+    "notFoundPrivate": "Rekonstruksi ini tidak ada atau milik orang lain – rekonstruksi bersifat pribadi, mintalah tautan berbagi ({{link}}).",
+    "backToList": "Ke rekonstruksi saya",
     "editHead": "Edit detail",
     "white": "Putih",
     "black": "Hitam",

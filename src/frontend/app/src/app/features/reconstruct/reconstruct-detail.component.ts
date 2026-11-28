@@ -69,6 +69,10 @@ export class ReconstructDetailComponent implements OnInit {
   readonly Kind = PartKind;
   readonly data = signal<Reconstruction | null>(null);
   readonly loading = signal(true);
+  /** Laden mit 404 beendet: nicht vorhanden oder nicht die eigene (Rekonstruktionen sind privat). */
+  readonly notFound = signal(false);
+  /** Wie ein Teilen-Link aussieht, für den 404-Hinweis — „rookhub…/r/…“ statt eines erfundenen Tokens. */
+  readonly shareLinkShape = `${window.location.host}/r/…`;
   readonly busy = signal(false);
   /** Id des Teils, das gerade bearbeitet wird; 0 = ein neues, noch nicht gespeichertes. */
   readonly editingId = signal<number | null>(null);
@@ -184,7 +188,14 @@ export class ReconstructDetailComponent implements OnInit {
         // Dafür erst einen Knopf suchen zu müssen ist ein Umweg ohne Entscheidung.
         if (data.parts.length === 0) this.startNew(PartKind.Moves);
       },
-      error: () => { this.loading.set(false); this.snackbar.warn(this.translate.instant('reconstruct.loadFailed')); },
+      error: (err: unknown) => {
+        this.loading.set(false);
+        // 404 heißt: gibt es nicht ODER gehört jemand anderem (der Server unterscheidet das absichtlich nicht,
+        // sonst verriete er über fortlaufende Ids, welche Rekonstruktionen es gibt). Meist hat jemand die Adresse
+        // aus seiner Browserzeile weitergegeben — dann hilft nur der Teilen-Link, und das steht im Seiteninhalt.
+        if ((err as { status?: number } | null)?.status === 404) { this.notFound.set(true); return; }
+        this.snackbar.warn(this.translate.instant('reconstruct.loadFailed'));
+      },
     });
   }
 

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.036.2", date: "2026-11-28", changes: [
+    { en: "Reconstructions: opening someone else’s reconstruction address (for example one copied from their browser bar) used to show only a brief “Could not be loaded”. The page now explains it in place: the reconstruction does not exist or belongs to someone else, reconstructions are private, so ask for the share link (…/r/…). A button leads back to your own reconstructions. Other loading errors behave as before.",
+      de: "Rekonstruktionen: Wer die Adresse einer fremden Rekonstruktion öffnete (etwa aus der Browserzeile kopiert), sah nur kurz „Konnte nicht geladen werden“. Jetzt erklärt die Seite es im Inhalt: Die Rekonstruktion gibt es nicht oder sie gehört jemand anderem, Rekonstruktionen sind privat – bitte um den Teilen-Link (…/r/…). Ein Knopf führt zurück zu den eigenen Rekonstruktionen. Andere Ladefehler bleiben wie bisher." },
+  ] },
   { version: "1.036.1", date: "2026-11-28", changes: [
     { en: "Fewer “Too many requests” errors: switching quickly between RookHub and LeagueHub (club games, summaries, analysis) could hit the server limits within a minute. The overall limit per address rises from 100 to 300 requests per minute, the permission check from 30 to 90 and the shared sign-in from 60 to 180. Moving between the sites no longer counts against the strict login limit (10 per minute), which stays in place for sign-in, registration and password reset.",
       de: "Weniger „Zu viele Anfragen“: Wer schnell zwischen RookHub und LeagueHub wechselte (Vereinspartien, Zusammenfassungen, Analyse), lief binnen einer Minute in die Grenzen des Servers. Der Gesamtdeckel je Adresse steigt von 100 auf 300 Anfragen je Minute, die Rechte-Abfrage von 30 auf 90 und die geteilte Anmeldung von 60 auf 180. Der Wechsel zwischen den Seiten zählt nicht mehr gegen die strenge Login-Grenze (10 je Minute), die für Anmeldung, Registrierung und Passwort-Zurücksetzen bleibt." },
