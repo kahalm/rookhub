@@ -8,12 +8,23 @@
   .page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
 }
 
+/* Titel links, „Elo-Rechner" rechts; am Handy bricht der Knopf unter den Titel. */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+.header h1 { margin: 0; }
+.elo-calc-open { flex: 0 0 auto; }
+
 .header h1 {
   display: flex;
   align-items: center;
   gap: 0.4rem;
   font-size: 1.4rem;
-  margin: 0 0 0.75rem;
 }
 
 .filter-bar {
@@ -77,6 +88,17 @@ h3 {
 .rows-scroll { overflow-x: auto; }
 
 .rows { display: flex; flex-direction: column; }
+
+/* Zeile mit zweitem Ziel (DESIGN 5.3): die Zeile oeffnet das Turnier, daneben als Geschwister der
+   Link auf die chess-results-Spielerkarte (Elo-Berechnung) — nie ein Link im Knopf. Die Trennlinie
+   gehoert jetzt der ganzen Zeile, sonst endete sie vor dem Symbol. */
+.row-line {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+.row-line > .row { flex: 1 1 auto; border-bottom: 0; }
+.row-link { flex: none; color: var(--mat-sys-on-surface-variant); }
 
 .row {
   display: grid;
@@ -180,6 +202,15 @@ h3 {
   .row:not(.upcoming) .row-num.change { grid-area: change; }
   /* Die Textzelle („Ergebnis wird geholt …") nimmt die ganze zweite Zeile. */
   .row:not(.upcoming) .row-num.span-rest { grid-area: auto; grid-column: 1 / -1; grid-row: 2; }
+
+  /* Das Symbol zur Spielerkarte: 44 px Tippziel (DESIGN 7), ohne ueberstehende Trefferflaeche —
+     ein ::after ueber den Rand verbreiterte den Scrollkasten. */
+  .row-link {
+    --mat-icon-button-state-layer-size: 44px;
+    width: 44px; height: 44px; padding: 10px;
+  }
+  /* Materials unsichtbares 48-px-Tippziel stand 2 px ueber den Rand und verbreiterte den Kasten. */
+  .row-link ::ng-deep .mat-mdc-button-touch-target { width: 44px; height: 44px; }
 
   /* Jede Zeile ist ein Knopf; mit ~32px Hoehe trifft der Daumen leicht die Nachbarzeile — und
      der Klick startet u. U. einen minutenlangen Hol-Auftrag. */

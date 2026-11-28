@@ -4945,7 +4945,35 @@
         "title": "Játékos követése"
       },
       "friendNoName": "{{name}} profiljából hiányzik a név — a chess-resultson név alapján keresünk, ezért itt nincs mit megjeleníteni.",
-      "pendingStopped": "Még {{count}} eredmény hiányzik — már nem kérdezünk rá újra."
+      "pendingStopped": "Még {{count}} eredmény hiányzik — már nem kérdezünk rá újra.",
+      "fideProfile": "FIDE-profil",
+      "cardLink": "Játékoslap értékszám-számítással a chess-results oldalon: {{name}}",
+      "tournamentLink": "Verseny a chess-results oldalon: {{name}}",
+      "elo": {
+        "open": "Élő-kalkulátor",
+        "title": "Élő-kalkulátor",
+        "lead": "Mennyit hozna elméletben egyetlen játszma — FIDE és nemzeti (osztrák szabályok szerint). Válassz játékosokat, vagy add meg magad az értékszámot és a K-tényezőt; minden mező módosítható marad.",
+        "playerA": "A játékos",
+        "playerB": "B játékos",
+        "modePlayer": "Játékos választása",
+        "modeManual": "Kézi megadás",
+        "choosePlayer": "Játékos",
+        "searchFide": "Keresés a FIDE-listában",
+        "searchPlaceholder": "Vezetéknév, keresztnév",
+        "fromCard": "a(z) {{name}} játékoslapja szerint",
+        "international": "FIDE-értékszám",
+        "kFide": "FIDE K-tényező",
+        "national": "Nemzeti értékszám",
+        "kNational": "Nemzeti K-tényező",
+        "nationalShort": "nemzeti",
+        "resultFor": "Eredmény: {{name}}",
+        "result": {
+          "win": "Győzelem",
+          "draw": "Döntetlen",
+          "loss": "Vereség"
+        },
+        "note": "Változás játszmánként, kerekítés nélkül. FIDE: a különbség legfeljebb 400, K 40/20/10 (FIDE értékszám-szabályzat 2024). Nemzeti: Osztrák Sakkszövetség (TUWO 1. melléklet), K = (3400 − értékszám)² / 100000, legfeljebb 50, 2400-tól mindig 10, a különbség legfeljebb 450. Az előzményekből vett értékszámok a legutóbbi játékoslapról származnak."
+      }
     }
   },
   "kids": {

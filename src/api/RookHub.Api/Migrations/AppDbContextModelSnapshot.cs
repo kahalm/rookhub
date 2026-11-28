@@ -6806,6 +6806,9 @@ namespace RookHub.Api.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BirthYear")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("CardFetchedAt")
                         .HasColumnType("datetime(6)");
 
@@ -6846,6 +6849,9 @@ namespace RookHub.Api.Migrations
                         .HasColumnType("decimal(6,2)");
 
                     b.Property<int?>("RatingInternational")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RatingNational")
                         .HasColumnType("int");
 
                     b.Property<int?>("Rounds")

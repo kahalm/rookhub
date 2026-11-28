@@ -1,0 +1,138 @@
+<h2 mat-dialog-title>{{ 'turnier.history.elo.title' | translate }}</h2>
+
+<!-- Scrollt am Handy — Weiterscroll-Schatten (DESIGN 5.6). -->
+<mat-dialog-content class="rh-scroll-hint">
+  <p class="lead">{{ 'turnier.history.elo.lead' | translate }}</p>
+
+  <div class="sides">
+    @for (side of sides; track $index; let i = $index) {
+      <section class="side" [attr.data-side]="i">
+        <h3>{{ (i === 0 ? 'turnier.history.elo.playerA' : 'turnier.history.elo.playerB') | translate }}</h3>
+
+        <mat-button-toggle-group class="mode" [value]="side.mode()" (change)="setMode(side, $event.value)"
+                                 hideSingleSelectionIndicator>
+          <mat-button-toggle value="player">{{ 'turnier.history.elo.modePlayer' | translate }}</mat-button-toggle>
+          <mat-button-toggle value="manual">{{ 'turnier.history.elo.modeManual' | translate }}</mat-button-toggle>
+        </mat-button-toggle-group>
+
+        @if (side.mode() === 'player') {
+          @if (playersFor(i).length > 0) {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="pick">
+              <mat-label>{{ 'turnier.history.elo.choosePlayer' | translate }}</mat-label>
+              <mat-select [value]="side.playerKey()" (selectionChange)="choosePlayer(side, $event.value)">
+                @for (p of playersFor(i); track p.key) {
+                  <mat-option [value]="p.key">{{ p.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          }
+
+          @if (i === 1) {
+            <!-- Spieler ausserhalb der eigenen Reiter: ueber die FIDE-Liste. Die nationale Wertung fuehrt sie nicht. -->
+            <form class="search" (ngSubmit)="search()">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ 'turnier.history.elo.searchFide' | translate }}</mat-label>
+                <input matInput name="searchName" autocomplete="off" [(ngModel)]="searchName"
+                       [placeholder]="'turnier.history.elo.searchPlaceholder' | translate">
+              </mat-form-field>
+              <button mat-stroked-button type="submit" [disabled]="searchName.trim().length < 2 || searching()">
+                @if (searching()) {
+                  <mat-spinner matButtonIcon diameter="18" />
+                } @else {
+                  <mat-icon>search</mat-icon>
+                }
+                {{ 'profile.searchPlayer' | translate }}
+              </button>
+            </form>
+            @if (searchFailed()) { <p class="error">{{ 'turnier.history.track.searchError' | translate }}</p> }
+            @if (searchHits(); as hits) {
+              @if (hits.length === 0) {
+                <p class="muted">{{ 'profile.noResults' | translate }}</p>
+              } @else {
+                <div class="hits">
+                  @for (h of hits; track h.name + h.fideId) {
+                    <button type="button" class="hit" (click)="chooseHit(side, h)">
+                      @if (h.title) { <strong>{{ h.title }}</strong> }
+                      <span class="name">{{ h.name }}</span>
+                      @if (h.elo) { <span class="muted">{{ h.elo }}</span> }
+                      @if (h.country) { <span class="muted">{{ h.country }}</span> }
+                    </button>
+                  }
+                </div>
+              }
+            }
+          }
+
+          @if (side.loading()) {
+            <p class="muted source"><mat-spinner diameter="14" class="inline-spinner" /> {{ 'common.loading' | translate }}</p>
+          } @else if (side.label()) {
+            <p class="muted source">
+              <strong>{{ side.label() }}</strong>
+              @if (side.source(); as src) {
+                · {{ 'turnier.history.elo.fromCard' | translate: { name: src.name } }}
+              }
+            </p>
+          }
+        }
+
+        <div class="fields">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'turnier.history.elo.international' | translate }}</mat-label>
+            <input matInput type="number" inputmode="numeric" min="1" max="3500" class="intl"
+                   [ngModel]="side.international()" (ngModelChange)="setInternational(side, $event)">
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'turnier.history.elo.kFide' | translate }}</mat-label>
+            <mat-select class="k-fide" [value]="side.fideK()" (selectionChange)="setFideK(side, $event.value)">
+              @for (k of fideKFactors; track k) {
+                <mat-option [value]="k">{{ k }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'turnier.history.elo.national' | translate }}</mat-label>
+            <input matInput type="number" inputmode="numeric" min="1" max="3500" class="natl"
+                   [ngModel]="side.national()" (ngModelChange)="setNational(side, $event)">
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'turnier.history.elo.kNational' | translate }}</mat-label>
+            <input matInput type="number" inputmode="decimal" min="0.1" max="100" step="0.1" class="k-natl"
+                   [ngModel]="side.nationalK()" (ngModelChange)="setNationalK(side, $event)">
+          </mat-form-field>
+        </div>
+      </section>
+    }
+  </div>
+
+  <div class="table-scroll">
+    <table class="result">
+      <thead>
+        <tr>
+          <th scope="col">{{ 'turnier.history.elo.resultFor' | translate: { name: sideLabel(0) } }}</th>
+          <th scope="col">{{ sideLabel(0) }}<br><span class="muted">FIDE</span></th>
+          <th scope="col">{{ sideLabel(0) }}<br><span class="muted">{{ 'turnier.history.elo.nationalShort' | translate }}</span></th>
+          <th scope="col">{{ sideLabel(1) }}<br><span class="muted">FIDE</span></th>
+          <th scope="col">{{ sideLabel(1) }}<br><span class="muted">{{ 'turnier.history.elo.nationalShort' | translate }}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of results; track r) {
+          <tr [attr.data-result]="r">
+            <th scope="row">{{ ('turnier.history.elo.result.' + r) | translate }}</th>
+            @for (cell of cells; track $index) {
+              @let value = change(cell.side, cell.system, r);
+              <td class="num" [class.up]="value?.startsWith('+')" [class.down]="value?.startsWith('−')">
+                {{ value ?? '–' }}
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <p class="muted note">{{ 'turnier.history.elo.note' | translate }}</p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>{{ 'common.close' | translate }}</button>
+</mat-dialog-actions>

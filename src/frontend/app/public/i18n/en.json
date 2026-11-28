@@ -5342,7 +5342,35 @@
         "title": "Track a player"
       },
       "friendNoName": "{{name}} has no name in their profile — chess-results is searched by name, so there is nothing to show here.",
-      "pendingStopped": "{{count}} results are still missing — no longer checking."
+      "pendingStopped": "{{count}} results are still missing — no longer checking.",
+      "fideProfile": "FIDE profile",
+      "cardLink": "Player card with rating calculation on chess-results: {{name}}",
+      "tournamentLink": "Tournament on chess-results: {{name}}",
+      "elo": {
+        "open": "Rating calculator",
+        "title": "Rating calculator",
+        "lead": "What a single game would bring in theory — FIDE and national (Austrian rules). Pick players or enter rating and K-factor yourself; every field stays editable.",
+        "playerA": "Player A",
+        "playerB": "Player B",
+        "modePlayer": "Choose player",
+        "modeManual": "Enter manually",
+        "choosePlayer": "Player",
+        "searchFide": "Search FIDE list",
+        "searchPlaceholder": "Last name, first name",
+        "fromCard": "from the player card of {{name}}",
+        "international": "Rating FIDE",
+        "kFide": "K-factor FIDE",
+        "national": "Rating national",
+        "kNational": "K-factor national",
+        "nationalShort": "national",
+        "resultFor": "Result for {{name}}",
+        "result": {
+          "win": "Win",
+          "draw": "Draw",
+          "loss": "Loss"
+        },
+        "note": "Change per game, not rounded. FIDE: difference capped at 400, K 40/20/10 (FIDE Rating Regulations 2024). National: Austrian Chess Federation (TUWO appendix 1), K = (3400 − rating)² / 100000, at most 50, from 2400 always 10, difference capped at 450. Ratings from the history are those of the latest player card."
+      }
     }
   },
   "kids": {

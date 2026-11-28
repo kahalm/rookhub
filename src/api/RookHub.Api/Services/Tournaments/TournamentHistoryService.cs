@@ -62,9 +62,10 @@ public class TournamentHistoryService
     /// Turniere fuer immer leer (die Karte wird sonst nie wieder geholt).
     ///
     /// <para>1 = Punkte/Platz/Performance/Elo-Aenderung. 2 = zusaetzlich die gespielten Partien
-    /// (2026-09-07).</para>
+    /// (2026-09-07). 3 = zusaetzlich nationale Wertung und Geburtsjahr (2026-11-28, fuer den
+    /// Elo-Rechner im Turnierverlauf).</para>
     /// </summary>
-    public const int CurrentCardVersion = 2;
+    public const int CurrentCardVersion = 3;
 
     /// <summary>
     /// Fassung des Bedenkzeit-Abrufs. Erhoehen, wenn sich am Weg oder am Parser etwas aendert —
@@ -121,7 +122,12 @@ public class TournamentHistoryService
         /// Bedenkzeit-Klasse je Turnier. Sie gehoert dem TURNIER und wird deshalb nicht an der
         /// Teilnahme gefuehrt — zwei Freunde im selben Open teilen sie sich.
         /// </summary>
-        IReadOnlyDictionary<string, TournamentSpeed> Speeds);
+        IReadOnlyDictionary<string, TournamentSpeed> Speeds,
+        /// <summary>
+        /// Die FIDE-Kennung des Spielers, sofern bekannt — die Ansicht verlinkt damit das
+        /// FIDE-Profil. Dieselbe Kennung steckt ohnehin im Spielerschluessel.
+        /// </summary>
+        string? FideId = null);
 
     /// <summary>
     /// Der Verlauf mehrerer Konten. Mehrere, weil die Ansicht auf Freunde umschaltbar ist und
@@ -177,7 +183,8 @@ public class TournamentHistoryService
 
         var pending = QueueMissingCards(identity, results);
         return new PlayerHistory(
-            userId, displayName, status, results, pending, await SpeedsForAsync(results, ct));
+            userId, displayName, status, results, pending, await SpeedsForAsync(results, ct),
+            identity.FideId);
     }
 
     /// <summary>
@@ -816,6 +823,8 @@ public class TournamentHistoryService
                 : null;
             result.RatingChange = card.RatingChange;
             result.RatingInternational = card.RatingInternational;
+            result.RatingNational = card.RatingNational;
+            result.BirthYear = card.YearOfBirth is >= 1900 and <= 2100 ? card.YearOfBirth : null;
             // Der Platz der KARTE ist der genauere: die Trefferliste rundet bei Gleichstand.
             result.Rank = card.Rank ?? result.Rank;
         }
@@ -862,7 +871,8 @@ public class TournamentHistoryService
 
     internal sealed record CrawlerPlayerCard(
         decimal? Points, int? Rank, int? PerformanceRating, decimal? RatingChange,
-        int? RatingInternational, int? GamesPlayed, bool HasResult);
+        int? RatingInternational, int? GamesPlayed, bool HasResult,
+        int? RatingNational = null, int? YearOfBirth = null);
 
     private static DateOnly? ParseDate(string? text)
     {

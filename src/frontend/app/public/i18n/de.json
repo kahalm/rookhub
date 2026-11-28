@@ -5342,7 +5342,35 @@
         "title": "Spieler verfolgen"
       },
       "friendNoName": "Im Profil von {{name}} fehlt der Name — chess-results wird über den Namen durchsucht, daher gibt es hier nichts anzuzeigen.",
-      "pendingStopped": "{{count}} Ergebnisse fehlen noch — es wird nicht mehr nachgefragt."
+      "pendingStopped": "{{count}} Ergebnisse fehlen noch — es wird nicht mehr nachgefragt.",
+      "fideProfile": "FIDE-Profil",
+      "cardLink": "Spielerkarte mit Elo-Berechnung auf chess-results: {{name}}",
+      "tournamentLink": "Turnier auf chess-results: {{name}}",
+      "elo": {
+        "open": "Elo-Rechner",
+        "title": "Elo-Rechner",
+        "lead": "Was eine einzelne Partie theoretisch bringt — FIDE und national (österreichische Regeln). Spieler wählen oder Elo und K-Faktor selbst eintragen; jedes Feld bleibt änderbar.",
+        "playerA": "Spieler A",
+        "playerB": "Spieler B",
+        "modePlayer": "Spieler wählen",
+        "modeManual": "Selbst eintragen",
+        "choosePlayer": "Spieler",
+        "searchFide": "In der FIDE-Liste suchen",
+        "searchPlaceholder": "Nachname, Vorname",
+        "fromCard": "laut Spielerkarte von {{name}}",
+        "international": "Elo FIDE",
+        "kFide": "K-Faktor FIDE",
+        "national": "Elo national",
+        "kNational": "K-Faktor national",
+        "nationalShort": "national",
+        "resultFor": "Ergebnis für {{name}}",
+        "result": {
+          "win": "Sieg",
+          "draw": "Remis",
+          "loss": "Niederlage"
+        },
+        "note": "Änderung je Partie, ungerundet. FIDE: Differenz auf 400 gedeckelt, K 40/20/10 (FIDE-Wertungsordnung 2024). National: ÖSB (TUWO Anhang 1), K = (3400 − Elo)² / 100000, höchstens 50, ab 2400 immer 10, Differenz auf 450 gedeckelt. Zahlen aus dem Verlauf stammen von der jüngsten Spielerkarte."
+      }
     }
   },
   "kids": {

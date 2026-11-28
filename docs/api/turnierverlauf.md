@@ -128,7 +128,7 @@ Eintrag genau EINMAL nach.
 
 | Datenart | Fassung | Erhoehen, wenn sich aendert |
 |---|---|---|
-| Spielerkarte | `TournamentHistoryService.CurrentCardVersion` | die Karten-Felder oder ihr Parser |
+| Spielerkarte | `TournamentHistoryService.CurrentCardVersion` (3 seit 2026-11-28: nationale Wertung + Geburtsjahr) | die Karten-Felder oder ihr Parser |
 | Bedenkzeit | `TournamentHistoryService.CurrentTimeControlVersion` | der Weg zu den Turnierdetails oder ihr Parser |
 | Rundenplan | `TournamentRoundPlanService.CurrentVersion` | `FindTableByHeaders` / `ParseRoundPlanAsync` |
 | Spielort ueber Vereinsnamen | `VenueDisambiguationService.CurrentVersion` | die Aufloesungs-Regel |
@@ -152,3 +152,26 @@ Parser-Reparatur (tnr1438343: null gespeicherte von neun abrufbaren Terminen).
 **Die PARTIENZAHL kommt von der Spielerkarte** (`GamesPlayed`), nicht aus der Rundenzahl: in einer
 Liga wird ein Spieler an einem TEIL der Termine aufgestellt, die Trefferliste meldet trotzdem alle
 elf Runden. Gezaehlt werden die Kartenzeilen MIT Gegner — ein Freilos ist keine Partie.
+
+**Links nach draussen und Elo-Rechner** (2026-11-28). Der Verlauf traegt dafuer vier Felder mehr:
+
+| Feld | Wo | Herkunft | Wofuer |
+|---|---|---|---|
+| `fideId` | `PlayerHistoryDto` | FIDE-Kennung der Identitaet (Profil bzw. Verfolgt-Eintrag) | Link `https://ratings.fide.com/profile/<fideId>` neben dem Namen; fehlt sie, kein Link |
+| `birthYear` | `PlayerHistoryDto` | juengste Spielerkarte mit Geburtsjahr (`PlayerTournamentResults.BirthYear`, plausibel 1900–2100) | nur FIDE-K-Faktor 40 („unter 18, unter 2300") im Rechner, nicht angezeigt |
+| `startNumber` | Eintrag | `PlayerTournamentResults.Snr` aus der Trefferliste (0 → `null`) | Link je Zeile auf die Spielerkarte `https://chess-results.com/tnr<id>.aspx?lan=0&art=9&snr=<n>` — dort rechnet chess-results die Elo-Aenderung Partie fuer Partie vor (auch laufend = „Elo-Vorausschau"); ohne Startnummer die Turnierseite |
+| `ratingNational` | Eintrag | Spielerkarte „Rating national" (`PlayerTournamentResults.RatingNational`) | nationale Seite des Rechners vorfuellen |
+
+Sichtbar sind die Felder nur denen, die den Verlauf ohnehin sehen (eigenes Konto, angenommene Freunde, eigene
+Verfolgt-Eintraege); Geburtsjahr und Kennung stehen oeffentlich auf chess-results. Die Kartenfassung steigt auf 3 —
+der Nachtlauf holt jede aeltere Karte einmal neu (gedeckelt wie immer auf `MaxCardsPerRun`), bis dahin bleiben
+nationale Wertung und Geburtsjahr leer und der Rechner laesst die Felder zum Eintragen offen.
+
+Der **Elo-Rechner** (Knopf im Seitenkopf, Dialog `elo-calculator-dialog.component.ts`) rechnet rein im Browser
+(`elo-calc.ts`, Formeln und Quellen dort): je Seite einen Spieler waehlen (A = ich vorausgewaehlt, B aus Freunden,
+Verfolgten oder der FIDE-Suche ueber `GET /api/profile/player-search`) oder Elo + K-Faktor selbst eintragen. Vorgefuellt
+wird aus der juengsten Spielerkarte: international = Wertung zu Beginn + Aenderung dieses Turniers, national = Wertung zu
+Beginn. FIDE: Differenz auf 400 gedeckelt, K 40/20/10 (waehlbar — „bis 30 Partien" und „war schon einmal 2400" kennt
+der Verlauf nicht). National nach OeSB-TUWO Anhang 1: K = (3400 − Elo)² / 100000, hoechstens 50, ab 2400 konstant 10,
+Differenz auf 450 gedeckelt, dieselbe Erwartungstabelle wie die FIDE. Andere Landesverbaende (DSB-DWZ u. a.) rechnet er
+nicht.

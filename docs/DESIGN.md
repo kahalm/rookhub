@@ -1370,6 +1370,14 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   der Name dem Dialog, die übrige Karte schaltet weiter den Stern. Im Dialog je Runde eine Zeile Runde | Farbkästchen,
   Brett, Gegner (klickbar, wechselt auf ihn), Wertung | Ergebnis rechts; die erste offene Runde ist getönt und trägt
   den Chip „Nächste Runde“, weitere offene „geplant“.
+- **Turnierverlauf** (`/tournaments/history`, 2026-11-28): neben dem Spielernamen ein Textknopf „FIDE-Profil“
+  (`mat-button`, `open_in_new` hinten, neuer Tab) nur mit bekannter FIDE-Kennung; je Zeile als Nebenziel (5.3) ein
+  `mat-icon-button` `open_in_new` RECHTS neben dem Zeilenknopf (Geschwister in `.row-line`, Trennlinie an der ganzen
+  Zeile, 44 × 44 px auch am Handy) auf die chess-results-Spielerkarte mit Elo-Berechnung, ohne Startnummer auf die
+  Turnierseite. Im Seitenkopf rechts `mat-stroked-button` „Elo-Rechner“ (`calculate`) → Dialog 760 px: je Spieler
+  Umschalter „Spieler wählen / Selbst eintragen“, vier Outline-Felder (Elo FIDE, K FIDE, Elo national, K national) im
+  2er-Raster, Ergebnis als Tabelle Sieg/Remis/Niederlage × (A FIDE, A national, B FIDE, B national) im eigenen
+  Scrollkasten, Plus in Primär-, Minus in Fehlerfarbe, fehlende Wertung „–“.
 - **Live-Bretter** (1.014.0, `/tournaments/:id/live`, `features/tournaments/live/`): Seite als **Bretterwand** bis 1880 px
   breit (seit 1.028.0, Ausnahme von `--page-max-width`: die Seite ist zum Zuschauen, nicht zum Lesen), Kopf mit Zurück-Pfeil, Titel und Quelle („Name · lichess.org“ mit `open_in_new`), darunter
   EINE umbrechende Werkzeugzeile: Runde (`mat-select`, laufende mit „· läuft“), Mannschaft (nur Mannschaftsturnier),
@@ -1677,6 +1685,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-28 | 1.037.0 · Turnierseite | Turnierverlauf: „FIDE-Profil“ am Namen, je Zeile Symbolknopf zur chess-results-Spielerkarte (Nebenziel neben dem Zeilenknopf, 44 px), „Elo-Rechner“ im Seitenkopf als Dialog (8.2) | FIDE-Seite und Elo-Vorausschau ohne Suchen erreichen; theoretischen Elo-Gewinn national + international rechnen | Nutzerwunsch 28.11. |
 | 2026-11-27 | 1.036.0 · Turnierseite | Live-Bretter: Vollbild-Knopf öffnet die ganze Karte als Vollbild-Ansicht — Brett groß, Zugliste zum Nachspielen, Browser-Engine mit wählbarer Linienzahl, „Selbst ziehen“, „Zur Live-Stellung“; hoch: Seitenteil unter dem Brett, quer daneben (8.2); `fullscreenMode` am geteilten Brett (5.12) | Partie im Vollbild verfolgen und selbst durchrechnen, ohne die Live-Partie zu verlieren | Nutzerwunsch 27.11. |
 | 2026-11-27 | 1.035.2 · Turnierseite | Live-Bretter: Elo in eigener Zeile unter dem Spielernamen (0,75 rem, leise; 1.035.4 enger gesetzt), Name kürzt allein mit „…“, Uhr senkrecht mittig (8.2) | Bei langen Namen war die Elo auf schmalen Karten abgeschnitten | Nutzerwunsch 27.11. |
 | 2026-11-27 | 1.035.0 · Turnierseite | Live-Bretter: Schalter „Vibrieren“ in der Werkzeugzeile nach „Besten Zug zeigen“, nur wo `navigator.vibrate` existiert; Muster Ergebnis lang-kurz-lang, Bewertungssprung drei kurze Stöße, Einschalten ein kurzer (8.2) | Am Handy mitbekommen, wenn sich etwas tut, ohne ständig hinzusehen | Nutzerwunsch 27.11. |

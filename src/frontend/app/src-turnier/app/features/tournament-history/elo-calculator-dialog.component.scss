@@ -1,0 +1,56 @@
+mat-dialog-content { display: flex; flex-direction: column; gap: 0.75rem; }
+.lead { margin: 0; color: var(--mat-sys-on-surface-variant); }
+
+/* Zwei Spalten ab Dialogbreite, am Handy untereinander. */
+.sides {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1rem;
+}
+.side { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+h3 { margin: 0; font-size: 0.95rem; font-weight: 500; }
+.mode { align-self: flex-start; }
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.fields mat-form-field, .pick { width: 100%; min-width: 0; }
+
+.search { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.search mat-form-field { flex: 1 1 10rem; min-width: 0; }
+
+.hits { display: flex; flex-direction: column; gap: 0.25rem; max-height: 12rem; overflow-y: auto; }
+.hit {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem;
+  width: 100%; padding: 0.5rem 0.75rem; min-height: 44px;
+  border: 1px solid var(--mat-sys-outline-variant); border-radius: 8px;
+  background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.hit:hover { background: var(--mat-sys-surface-container-high); }
+.name { overflow-wrap: anywhere; }
+
+.source { margin: 0; font-size: 0.85rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; }
+.inline-spinner { display: inline-block; }
+.muted { color: var(--mat-sys-on-surface-variant); }
+.error { color: var(--mat-sys-error); margin: 0; }
+.note { margin: 0; font-size: 0.8rem; }
+
+/* Eigener Scrollkasten: fuenf Spalten sind am Handy breiter als der Dialog (DESIGN 4.4). */
+.table-scroll { overflow-x: auto; }
+.result { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.result th, .result td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  text-align: left;
+  white-space: nowrap;
+}
+.result thead th { font-weight: 500; font-size: 0.8rem; vertical-align: bottom; }
+.result thead th:not(:first-child) { text-align: right; }
+.result td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.result td.up { color: var(--mat-sys-primary); }
+.result td.down { color: var(--mat-sys-error); }
+
+/* Safari zoomt bei Schrift unter 16px ins Feld. */
+@media (pointer: coarse) { input { font-size: 16px; } }

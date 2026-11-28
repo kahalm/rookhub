@@ -24,6 +24,8 @@ import { RookHubLinkComponent } from '../../shell/rookhub-link.component';
 import { HISTORY_SPEEDS, HistoryFriend, HistorySpeed, PlayerHistory, PlayerHistoryEntry, SpeedSummary, TrackedPlayer } from './tournament-history.model';
 import { TournamentHistoryService } from './tournament-history.service';
 import { TrackPlayerDialogComponent } from './track-player-dialog.component';
+import { chessResultsCardUrl, fideProfileUrl } from './history-links';
+import { EloCalcDialogData, EloCalculatorDialogComponent } from './elo-calculator-dialog.component';
 
 /**
  * Ab welcher Zahl eine Performance eine Aussage ist. chess-results traegt eine 0 ein, wenn es sie
@@ -274,6 +276,33 @@ export class TournamentHistoryComponent implements OnInit {
     }
     this.store(key);
     this.load(key);
+  }
+
+  // ----- Links nach draussen + Elo-Rechner ---------------------------------
+
+  /** FIDE-Profil des offenen Verlaufs — nur mit bekannter Kennung. */
+  fideUrl(history: PlayerHistory): string | null {
+    return fideProfileUrl(history.fideId);
+  }
+
+  /** Spielerkarte auf chess-results (Elo-Berechnung); ohne Startnummer die Turnierseite. */
+  cardUrl(entry: PlayerHistoryEntry): string | null {
+    return chessResultsCardUrl(entry.chessResultsId, entry.startNumber);
+  }
+
+  /**
+   * Elo-Rechner oeffnen. Er kennt dieselben Spieler wie die Reiter (gesperrte ohne Namen nicht —
+   * dort gibt es keinen Verlauf) und bekommt die schon geladenen Verlaeufe mit.
+   */
+  openEloCalculator(): void {
+    const me = this.auth.currentUser?.userId ?? null;
+    const data: EloCalcDialogData = {
+      players: this.tabs().filter(t => t.enabled)
+        .map(t => ({ key: t.key, kind: t.kind, id: t.id, label: t.label })),
+      meKey: me === null ? null : accountKey(me),
+      loaded: this.loaded(),
+    };
+    this.dialog.open(EloCalculatorDialogComponent, { data, width: '760px', maxWidth: '96vw', autoFocus: 'dialog' });
   }
 
   // ----- Verfolgte Spieler ------------------------------------------------

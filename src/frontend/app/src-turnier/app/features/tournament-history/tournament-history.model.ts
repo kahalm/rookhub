@@ -60,6 +60,13 @@ export interface PlayerHistoryEntry {
    * Zeile und trennt die Auswertung. `unknown`, solange die Turnierseite dafuer fehlt.
    */
   speed: HistorySpeed;
+  /**
+   * Startnummer in diesem Turnier — damit verlinkt die Zeile die Spielerkarte auf chess-results
+   * (dort steht die Elo-Berechnung). `null`/fehlend: nur die Turnierseite.
+   */
+  startNumber?: number | null;
+  /** Nationale Wertung zu Turnierbeginn laut Spielerkarte (Oesterreich: OeSB-Elo). */
+  ratingNational?: number | null;
 }
 
 export interface PlayerHistory {
@@ -72,6 +79,10 @@ export interface PlayerHistory {
    * Hintergrund — solange die Zahl groesser als null ist, lohnt ein zweiter Blick.
    */
   pending: number;
+  /** FIDE-Kennung des Spielers, sofern bekannt — fuer den Link aufs FIDE-Profil. */
+  fideId?: string | null;
+  /** Geburtsjahr laut juengster Spielerkarte — nur fuer den FIDE-K-Faktor im Elo-Rechner. */
+  birthYear?: number | null;
 }
 
 /** Ein Freund, dessen Verlauf sich ansehen laesst. */

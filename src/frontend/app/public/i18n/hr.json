@@ -5342,7 +5342,35 @@
         "title": "Prati igrača"
       },
       "friendNoName": "U profilu korisnika {{name}} nedostaje ime — chess-results se pretražuje po imenu, pa ovdje nema što prikazati.",
-      "pendingStopped": "Još nedostaje rezultata: {{count}} — više se ne provjerava."
+      "pendingStopped": "Još nedostaje rezultata: {{count}} — više se ne provjerava.",
+      "fideProfile": "FIDE profil",
+      "cardLink": "Kartica igrača s izračunom rejtinga na chess-results: {{name}}",
+      "tournamentLink": "Turnir na chess-results: {{name}}",
+      "elo": {
+        "open": "Kalkulator rejtinga",
+        "title": "Kalkulator rejtinga",
+        "lead": "Što bi jedna partija teoretski donijela — FIDE i nacionalni rejting (austrijska pravila). Odaberi igrače ili sam upiši rejting i K-faktor; svako polje ostaje promjenjivo.",
+        "playerA": "Igrač A",
+        "playerB": "Igrač B",
+        "modePlayer": "Odaberi igrača",
+        "modeManual": "Upiši ručno",
+        "choosePlayer": "Igrač",
+        "searchFide": "Traži na FIDE listi",
+        "searchPlaceholder": "Prezime, ime",
+        "fromCard": "prema kartici igrača s turnira {{name}}",
+        "international": "Rejting FIDE",
+        "kFide": "K-faktor FIDE",
+        "national": "Nacionalni rejting",
+        "kNational": "Nacionalni K-faktor",
+        "nationalShort": "nacionalni",
+        "resultFor": "Rezultat za {{name}}",
+        "result": {
+          "win": "Pobjeda",
+          "draw": "Remi",
+          "loss": "Poraz"
+        },
+        "note": "Promjena po partiji, nezaokružena. FIDE: razlika ograničena na 400, K 40/20/10 (FIDE pravilnik o rejtingu 2024). Nacionalni: Austrijski šahovski savez (TUWO prilog 1), K = (3400 − rejting)² / 100000, najviše 50, od 2400 uvijek 10, razlika ograničena na 450. Rejtinzi iz povijesti potječu s najnovije kartice igrača."
+      }
     }
   },
   "kids": {

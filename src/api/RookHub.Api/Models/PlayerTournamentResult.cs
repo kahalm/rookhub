@@ -64,6 +64,18 @@ public class PlayerTournamentResult
     public int? RatingInternational { get; set; }
 
     /// <summary>
+    /// Nationale Wertung zu Turnierbeginn (in Oesterreich die OeSB-Elo), wie sie auf der
+    /// Spielerkarte steht. Der Elo-Rechner im Turnierverlauf fuellt damit die nationale Seite vor.
+    /// </summary>
+    public int? RatingNational { get; set; }
+
+    /// <summary>
+    /// Geburtsjahr laut Spielerkarte — nur fuer den FIDE-K-Faktor (40 bis zum 18. Geburtstag,
+    /// solange unter 2300). Oeffentlich auf chess-results; die Ansicht zeigt es nicht an.
+    /// </summary>
+    public int? BirthYear { get; set; }
+
+    /// <summary>
     /// Tatsaechlich GESPIELTE Partien — nicht die Rundenzahl des Turniers. In einer Liga steht ein
     /// Spieler an Brett 17 und wird an einem Teil der Termine aufgestellt; <see cref="Rounds"/>
     /// meldet trotzdem alle elf. <c>null</c> bei Karten, die vor dieser Zaehlung geholt wurden

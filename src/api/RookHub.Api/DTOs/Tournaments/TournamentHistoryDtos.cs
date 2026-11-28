@@ -27,10 +27,30 @@ public class PlayerHistoryDto
     /// </summary>
     public int Pending { get; set; }
 
+    /// <summary>
+    /// FIDE-Kennung des Spielers (aus Profil bzw. Verfolgt-Eintrag), sonst <c>null</c>. Die
+    /// Ansicht verlinkt damit das FIDE-Profil. Sichtbar nur fuer das eigene Konto, angenommene
+    /// Freunde und eigene Verfolgt-Eintraege — dieselben, die den Verlauf ueberhaupt sehen.
+    /// </summary>
+    public string? FideId { get; set; }
+
+    /// <summary>
+    /// Geburtsjahr laut der juengsten Spielerkarte, die eines nennt — nur fuer den FIDE-K-Faktor
+    /// im Elo-Rechner (40 bis zum 18. Geburtstag unter 2300). <c>null</c>, wenn keine Karte es
+    /// fuehrt.
+    /// </summary>
+    public int? BirthYear { get; set; }
+
     public static PlayerHistoryDto From(TournamentHistoryService.PlayerHistory history) => new()
     {
         UserId = history.UserId,
         DisplayName = history.DisplayName,
+        FideId = history.FideId,
+        BirthYear = history.Results
+            .Where(r => r.BirthYear is not null)
+            .OrderByDescending(r => r.EndDate)
+            .Select(r => r.BirthYear)
+            .FirstOrDefault(),
         Status = history.Status switch
         {
             TournamentHistoryService.HistoryStatus.NoName => "noName",
@@ -91,6 +111,16 @@ public class PlayerHistoryEntryDto
     /// </summary>
     public bool CardFetched { get; set; }
 
+    /// <summary>
+    /// Startnummer des Spielers in diesem Turnier — damit verlinkt die Ansicht die Spielerkarte
+    /// auf chess-results (<c>tnr…aspx?art=9&amp;snr=…</c>, dort steht die Elo-Berechnung).
+    /// <c>null</c>, wenn die Trefferliste keine nannte.
+    /// </summary>
+    public int? StartNumber { get; set; }
+
+    /// <summary>Nationale Wertung zu Turnierbeginn laut Spielerkarte (Oesterreich: OeSB-Elo).</summary>
+    public int? RatingNational { get; set; }
+
     public static PlayerHistoryEntryDto From(PlayerTournamentResult r, TournamentSpeed speed) => new()
     {
         Speed = speed switch
@@ -113,6 +143,8 @@ public class PlayerHistoryEntryDto
         RatingBefore = r.RatingInternational,
         HasResult = r.Points is not null || r.PerformanceRating is not null,
         CardFetched = r.CardFetchedAt is not null,
+        StartNumber = r.Snr > 0 ? r.Snr : null,
+        RatingNational = r.RatingNational,
     };
 }
 

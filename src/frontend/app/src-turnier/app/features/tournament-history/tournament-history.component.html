@@ -4,6 +4,11 @@
       {{ 'turnier.history.title' | translate }}
       <app-help-hint [text]="'turnier.history.help' | translate" />
     </h1>
+    <!-- Elo-Rechner: theoretischer Gewinn einer Partie, FIDE + national. -->
+    <button mat-stroked-button type="button" class="elo-calc-open" (click)="openEloCalculator()">
+      <mat-icon>calculate</mat-icon>
+      {{ 'turnier.history.elo.open' | translate }}
+    </button>
   </div>
 
   <!-- Ein Reiter je Konto und je verfolgtem Spieler: ich zuerst, danach die Freunde mit
@@ -100,6 +105,14 @@
         <div class="player-head">
           <h2>{{ history.displayName }}</h2>
 
+          <!-- FIDE-Profil des Spielers, nur mit bekannter Kennung (neuer Tab, DESIGN 8.2 „Turnierverlauf"). -->
+          @if (fideUrl(history); as url) {
+            <a mat-button class="fide-link" [href]="url" target="_blank" rel="noopener">
+              {{ 'turnier.history.fideProfile' | translate }}
+              <mat-icon iconPositionEnd>open_in_new</mat-icon>
+            </a>
+          }
+
           <!-- Nur beim verfolgten Spieler: er steht hier, weil jemand ihn hinzugefuegt hat, und
                der Weg zurueck gehoert an dieselbe Stelle. -->
           @if (activeTab(); as tab) {
@@ -150,6 +163,7 @@
           <div class="rows-scroll">
             <div class="rows">
               @for (entry of currentRunning(); track trackById($index, entry)) {
+                <div class="row-line">
                 <button type="button" class="row running" (click)="open(entry)"
                         [disabled]="opening() !== null"
                         [class.busy]="opening() === entry.chessResultsId">
@@ -162,6 +176,11 @@
                   </span>
                   <ng-container *ngTemplateOutlet="resultCells; context: { $implicit: entry }" />
                 </button>
+                <a mat-icon-button class="row-link" [href]="cardUrl(entry)" target="_blank" rel="noopener"
+                   [appIconLabel]="(entry.startNumber ? 'turnier.history.cardLink' : 'turnier.history.tournamentLink') | translate: { name: entry.name }">
+                  <mat-icon>open_in_new</mat-icon>
+                </a>
+                </div>
               }
             </div>
           </div>
@@ -171,6 +190,7 @@
           <h3>{{ 'turnier.history.upcoming' | translate }}</h3>
           <div class="rows">
             @for (entry of currentUpcoming(); track trackById($index, entry)) {
+              <div class="row-line">
               <button type="button" class="row upcoming" (click)="open(entry)"
                       [disabled]="opening() !== null"
                       [class.busy]="opening() === entry.chessResultsId">
@@ -182,6 +202,11 @@
                   }
                 </span>
               </button>
+              <a mat-icon-button class="row-link" [href]="cardUrl(entry)" target="_blank" rel="noopener"
+                 [appIconLabel]="(entry.startNumber ? 'turnier.history.cardLink' : 'turnier.history.tournamentLink') | translate: { name: entry.name }">
+                <mat-icon>open_in_new</mat-icon>
+              </a>
+              </div>
             }
           </div>
         }
@@ -215,6 +240,7 @@
           <div class="rows-scroll">
             <div class="rows">
               @for (entry of group.entries; track trackById($index, entry)) {
+                <div class="row-line">
                 <button type="button" class="row" (click)="open(entry)"
                         [disabled]="opening() !== null"
                         [class.busy]="opening() === entry.chessResultsId">
@@ -239,6 +265,11 @@
                     <span class="row-num muted span-rest">{{ 'turnier.history.fetchingResult' | translate }}</span>
                   }
                 </button>
+                <a mat-icon-button class="row-link" [href]="cardUrl(entry)" target="_blank" rel="noopener"
+                   [appIconLabel]="(entry.startNumber ? 'turnier.history.cardLink' : 'turnier.history.tournamentLink') | translate: { name: entry.name }">
+                  <mat-icon>open_in_new</mat-icon>
+                </a>
+                </div>
               }
             </div>
           </div>
