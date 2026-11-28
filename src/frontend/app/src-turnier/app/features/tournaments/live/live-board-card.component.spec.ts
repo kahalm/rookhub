@@ -392,4 +392,26 @@ describe('LiveBoardCardComponent', () => {
       host.remove();
     });
   });
+
+  it('Aufblitzen (1.042.0): Klasse je Art an der Karte, ohne Wert keine', async () => {
+    await TestBed.configureTestingModule({
+      imports: [LiveBoardCardComponent], providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LiveBoardCardComponent);
+    fixture.componentRef.setInput('game', GAME);
+    fixture.componentRef.setInput('board', 1);
+    fixture.detectChanges();
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.lb-card')!;
+    expect(card.classList.contains('lb-flash-result') || card.classList.contains('lb-flash-swing')).toBeFalse();
+    fixture.componentRef.setInput('flash', 'result');
+    fixture.detectChanges();
+    expect(card.classList).toContain('lb-flash-result');
+    fixture.componentRef.setInput('flash', 'swing');
+    fixture.detectChanges();
+    expect(card.classList).toContain('lb-flash-swing');
+    expect(card.classList).not.toContain('lb-flash-result');
+    fixture.componentRef.setInput('flash', null);
+    fixture.detectChanges();
+    expect(card.classList).not.toContain('lb-flash-swing');
+  });
 });

@@ -32,6 +32,12 @@ export const VIBRATE_CONFIRM: readonly number[] = [60];
 
 export type LiveAlert = 'result' | 'swing';
 
+/**
+ * Eine Meldung mit Einzelheiten (für Aufblitzen/Benachrichtigung, 1.042.0): beim Sprung `from` = der Wert im Fenster, gegen
+ * den der Ausschlag gemessen wurde (Minimum beim Anstieg, Maximum beim Fall), `to` = die neue Bewertung (Bauern, gekappt).
+ */
+export interface LiveAlertEvent { kind: LiveAlert; from: number | null; to: number | null }
+
 /** Bewertung in Bauern aus Weiß-Sicht, gekappt auf ±{@link LIVE_EVAL_CAP}; `null` ohne Wert. Matt = ±Kappe. */
 export function evalPawns(ev: LiveEval | null | undefined): number | null {
   if (!ev) return null;
@@ -66,27 +72,34 @@ export class LiveAlertTracker {
 
   /** Live-Änderung einer Partie; unbekannte Partie = erster Stand (ohne Meldung). */
   observe(game: LiveGame): LiveAlert | null {
+    return this.observeDetail(game)?.kind ?? null;
+  }
+
+  /** Wie {@link observe}, mit den Werten des Sprungs — EINE Erkennung für Vibrieren, Aufblitzen und Benachrichtigung. */
+  observeDetail(game: LiveGame): LiveAlertEvent | null {
     const t = this.games.get(game.id);
     if (!t) { this.seed(game); return null; }
     if (t.decided) return null;
     if (decided(game.result) || game.finished) {
       t.decided = true;
       t.evals = [];
-      return decided(game.result) ? 'result' : null;
+      return decided(game.result) ? { kind: 'result', from: null, to: null } : null;
     }
     const v = evalPawns(game.eval);
     if (v === null) return null;
     const ply = game.plies;
     // Frühere Halbzüge im Fenster; dieselbe Stellung (oder eine zurückgenommene spätere) fällt heraus.
     const prior = t.evals.filter(e => e.ply < ply && e.ply >= ply - LIVE_SWING_WINDOW_PLIES);
-    let swing = false;
+    let from: number | null = null;
     if (prior.length > 0) {
       const min = Math.min(...prior.map(e => e.v));
       const max = Math.max(...prior.map(e => e.v));
-      swing = v - min >= LIVE_SWING_PAWNS - 1e-9 || max - v >= LIVE_SWING_PAWNS - 1e-9;
+      if (v - min >= LIVE_SWING_PAWNS - 1e-9) from = min;
+      else if (max - v >= LIVE_SWING_PAWNS - 1e-9) from = max;
     }
+    const swing = from !== null;
     t.evals = swing ? [{ ply, v }] : [...prior, { ply, v }];
-    return swing ? 'swing' : null;
+    return swing ? { kind: 'swing', from, to: v } : null;
   }
 
   /** Alles vergessen (Rundenwechsel). */

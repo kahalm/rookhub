@@ -17,6 +17,7 @@ import { By } from '@angular/platform-browser';
 import { LiveBoardCardComponent } from './live-board-card.component';
 import { of } from 'rxjs';
 import { LIVE_VIBRATE_KEY, VIBRATE_CONFIRM, VIBRATE_RESULT, VIBRATE_SWING } from './live-vibrate';
+import { DOT_FAVICON, LIVE_FLASH_KEY, LIVE_NOTIFY_KEY, TAB_MARK } from './live-attention';
 
 const STATUS: LiveStatus = {
   linked: true, manual: false, tourId: 'IjDgZVUR', tourName: '1. Bundesliga Austria 2026/2027',
@@ -179,6 +180,151 @@ describe('LiveBoardsComponent', () => {
     es.emit('snapshot', SNAPSHOT);
     expect(vib).not.toHaveBeenCalled();
     try { localStorage.removeItem(LIVE_VIBRATE_KEY); } catch { /* egal */ }
+  });
+
+  describe('Aufblitzen und Benachrichtigung (1.042.0)', () => {
+    let hidden = false;
+    let focused = true;
+    let savedNotification: unknown;
+    const withEval = (cp: number, plies: number): LiveGame => ({ ...game('b2', 'Schmider, Niklas', 'Vaibhav, Suri'), plies,
+      eval: { cp, mate: null, source: 'engine', depth: 20 } });
+
+    /** Fake der Notification API: Erlaubnis einstellbar, merkt sich jede Meldung. */
+    class FakeNote {
+      static permission: NotificationPermission = 'default';
+      static answer: NotificationPermission = 'granted';
+      static shown: FakeNote[] = [];
+      static requestPermission = async () => { FakeNote.permission = FakeNote.answer; return FakeNote.answer; };
+      onclick: (() => void) | null = null;
+      constructor(public title: string, public options: NotificationOptions) { FakeNote.shown.push(this); }
+      close(): void { /* nichts */ }
+    }
+
+    async function connected(): Promise<FakeEventSource> {
+      await setup({ eval: '1' });
+      http.expectOne('/api/live-boards/1404438').flush(STATUS);
+      await fixture.whenStable();
+      const es = FakeEventSource.last();
+      es.emit('snapshot', { ...SNAPSHOT, games: [SNAPSHOT.games[0], withEval(20, 10)] });
+      await fixture.whenStable();
+      return es;
+    }
+
+    beforeEach(() => {
+      hidden = false;
+      focused = true;
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+      spyOn(document, 'hasFocus').and.callFake(() => focused);
+      savedNotification = (window as unknown as { Notification?: unknown }).Notification;
+      FakeNote.permission = 'default';
+      FakeNote.answer = 'granted';
+      FakeNote.shown = [];
+      (window as unknown as { Notification: unknown }).Notification = FakeNote;
+      try { localStorage.removeItem(LIVE_FLASH_KEY); localStorage.removeItem(LIVE_NOTIFY_KEY); localStorage.removeItem(LIVE_VIBRATE_KEY); } catch { /* egal */ }
+    });
+
+    afterEach(() => {
+      delete (document as unknown as { hidden?: boolean }).hidden;
+      (window as unknown as { Notification: unknown }).Notification = savedNotification;
+      try { localStorage.removeItem(LIVE_FLASH_KEY); localStorage.removeItem(LIVE_NOTIFY_KEY); } catch { /* egal */ }
+    });
+
+    const card = (id: string) => el().querySelector(`app-live-board-card[data-game="${id}"] .lb-card`)!;
+
+    it('sichtbar: die betroffene Karte blitzt auf — Ergebnis und Sprung mit eigener Klasse; Schalter aus = nichts', async () => {
+      const es = await connected();
+      expect(el().querySelector('.live-flash')).not.toBeNull();
+      es.emit('game', withEval(160, 11));
+      await fixture.whenStable();
+      expect(card('b2').className).not.toContain('lb-flash');
+      fixture.componentInstance.setFlash(true);
+      expect(localStorage.getItem(LIVE_FLASH_KEY)).toBe('1');
+      es.emit('game', withEval(20, 12));
+      await fixture.whenStable();
+      expect(card('b2').classList).toContain('lb-flash-swing');
+      expect(card('b1').className).not.toContain('lb-flash');
+      es.emit('game', { ...withEval(20, 12), eval: null, result: '1-0', finished: true });
+      await fixture.whenStable();
+      expect(card('b2').classList).toContain('lb-flash-result');
+      expect(document.title).not.toContain(TAB_MARK);
+    });
+
+    it('Hintergrund: Tab-Titel mit „●“ und Favicon mit Punkt, zurück beim Sichtbarwerden und beim Verlassen der Seite', async () => {
+      const title = document.title;
+      const link = document.createElement('link');
+      link.rel = 'icon';
+      link.href = 'favicon.ico';
+      document.head.appendChild(link);
+      try {
+        try { localStorage.setItem(LIVE_FLASH_KEY, '1'); } catch { /* egal */ }
+        const es = await connected();
+        hidden = true;
+        es.emit('game', { ...withEval(20, 11), eval: null, result: '0-1', finished: true });
+        expect(document.title).toBe(TAB_MARK + '0-1 tournaments.live.boardN');
+        expect(link.getAttribute('href')).toBe(DOT_FAVICON);
+        expect(card('b2').className).not.toContain('lb-flash');
+        hidden = false;
+        document.dispatchEvent(new Event('visibilitychange'));
+        expect(document.title).toBe(title);
+        expect(link.getAttribute('href')).toBe('favicon.ico');
+        // nochmal im Hintergrund, dann Seite verlassen
+        hidden = true;
+        es.emit('snapshot', { ...SNAPSHOT, games: [{ ...SNAPSHOT.games[0], result: '*', finished: false }, withEval(20, 10)] });
+        es.emit('game', { ...SNAPSHOT.games[0] });
+        expect(document.title).toContain(TAB_MARK);
+        fixture.destroy();
+        expect(document.title).toBe(title);
+        expect(link.getAttribute('href')).toBe('favicon.ico');
+      } finally {
+        link.remove();
+        document.title = title;
+      }
+    });
+
+    it('Benachrichtigung erlaubt: nur wenn die Seite nicht im Blick ist, tag je Brett, Klick zeigt das Brett', async () => {
+      const es = await connected();
+      expect(el().querySelector('.live-notify')).not.toBeNull();
+      await fixture.componentInstance.setNotify(true);
+      expect(fixture.componentInstance.notifyOn()).toBeTrue();
+      expect(localStorage.getItem(LIVE_NOTIFY_KEY)).toBe('1');
+      es.emit('game', withEval(160, 11));   // sichtbar + Fokus: keine Meldung
+      expect(FakeNote.shown.length).toBe(0);
+      focused = false;                      // anderes Fenster vorn
+      es.emit('game', withEval(20, 12));
+      expect(FakeNote.shown.length).toBe(1);
+      expect(FakeNote.shown[0].title).toBe('tournaments.live.boardN: +1.6 → +0.2');
+      expect(FakeNote.shown[0].options.tag).toBe('rh-live-b2');
+      hidden = true;
+      es.emit('game', { ...withEval(20, 12), eval: null, result: '1/2-1/2', finished: true });
+      expect(FakeNote.shown.length).toBe(2);
+      expect(FakeNote.shown[1].options.body).toBe('Schmider, Niklas – Vaibhav, Suri ½-½');
+      expect(FakeNote.shown[1].options.tag).toBe('rh-live-b2');
+      const focus = spyOn(window, 'focus');
+      const scroll = spyOn(Element.prototype, 'scrollIntoView');
+      FakeNote.shown[1].onclick!();
+      await fixture.whenStable();
+      expect(focus).toHaveBeenCalled();
+      expect(scroll).toHaveBeenCalled();
+      expect(card('b2').classList).toContain('lb-flash-result');
+    });
+
+    it('Benachrichtigung abgelehnt: Schalter zurück und Hinweis; ohne Notification API kein Schalter', async () => {
+      FakeNote.answer = 'denied';
+      await connected();
+      const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+      const toggle = { checked: true };
+      await fixture.componentInstance.setNotify(true, toggle as never);
+      expect(fixture.componentInstance.notifyOn()).toBeFalse();
+      expect(toggle.checked).toBeFalse();
+      expect(warn).toHaveBeenCalledWith('tournaments.live.notifyDenied');
+      expect(localStorage.getItem(LIVE_NOTIFY_KEY)).toBe('0');
+      fixture.destroy();
+      TestBed.resetTestingModule();
+      delete (window as unknown as { Notification?: unknown }).Notification;
+      await connected();
+      expect(el().querySelector('.live-notify')).toBeNull();
+      expect(el().querySelector('.live-flash')).not.toBeNull();
+    });
   });
 
   it('nicht verknüpft: leiser Hinweis, Gast bekommt „Anmelden" statt des Felds, kein Strom', async () => {

@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "1.042.0", date: "2026-11-28", changes: [
+    { en: "Tournament site, live boards: new switch „Flash“ next to „Vibrate“ — when a live game is decided or the evaluation swings, that board briefly flashes (result and swing in different colours; a calm frame without motion). With the tab in the background, the tab title alternates with „● 1-0 Board 3“ and the icon gets a dot until you come back.",
+      de: "Turnierseite, Live-Bretter: neuer Schalter „Aufblitzen“ neben „Vibrieren“ — wird eine laufende Partie entschieden oder kippt die Bewertung, blitzt dieses Brett kurz auf (Ergebnis und Sprung in eigener Farbe; ohne Bewegung ein ruhiger Rahmen). Liegt der Tab im Hintergrund, wechselt der Tab-Titel mit „● 1-0 Brett 3“ und das Symbol bekommt einen Punkt, bis man zurückkommt." },
+    { en: "Live boards: new switch „Notification“ — a system notification for the same events while the page is open but not in view (e.g. „Board 3: +1.4 → −0.3“); one per board, a newer one replaces the older. Clicking it brings the window forward and shows the board. Turning it on asks the browser for permission; if refused, the switch goes back off with a hint.",
+      de: "Live-Bretter: neuer Schalter „Benachrichtigung“ — eine Systembenachrichtigung für dieselben Ereignisse, solange die Seite offen, aber nicht im Blick ist (z. B. „Brett 3: +1.4 → −0.3“); je Brett eine, die neuere ersetzt die ältere. Ein Klick holt das Fenster nach vorn und zeigt das Brett. Beim Einschalten fragt der Browser um Erlaubnis; abgelehnt springt der Schalter mit einem Hinweis zurück." },
+  ] },
   { version: "1.041.0", date: "2026-11-28", changes: [
     { en: "E-books (admin): new bulk endpoint to correct many diagram positions at once (up to 2000 per call, with dry run). It works like „Correct position“, but takes the side to move from the request, does not mark the book as curated and logs each correction with a reason (e.g. „bulk-rotation-180“) — for the boards that were stored rotated by 180°.",
       de: "E-Books (Admin): neuer Sammel-Endpunkt, der viele Diagrammstellungen auf einmal korrigiert (bis 2000 je Aufruf, mit Probelauf). Er arbeitet wie „Stellung korrigieren“, übernimmt aber das Zugrecht aus dem Auftrag, macht das Buch nicht kuratiert und protokolliert jede Korrektur mit Grund (z. B. „bulk-rotation-180“) — für die um 180° gedreht gespeicherten Bretter." },

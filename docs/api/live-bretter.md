@@ -374,6 +374,28 @@ Stufe vor. Einzelheiten: `docs/api/leaguehub-vereins-datenbank.md` und `docs/api
   Bewertung); ein Sprung frühestens 2 s nach der letzten Vibration, ein Ergebnis immer. Das Einschalten vibriert kurz (`[60]`) —
   der Klick ist die Nutzerinteraktion, die Chrome vor `vibrate` verlangt. Läuft nur, solange die Seite offen und sichtbar ist
   (kein Push im Hintergrund).
+- **Aufblitzen** und **Benachrichtigung** (1.042.0, Wunsch 2026-11-28: „am PC flashen statt vibrieren“, dazu eine
+  Benachrichtigung): zwei weitere Schalter neben „Vibrieren“ (Standard aus, `localStorage rookhub_live_flash` /
+  `rookhub_live_notify`, `device`; nicht in Adresse/geteilter Ansicht). Dieselben Ereignisse aus EINER Erkennung
+  (`LiveAlertTracker.observeDetail` liefert zusätzlich `from`/`to` des Sprungs), dieselben Regeln (nur gezeigte Bretter,
+  Sprung nur mit Balken, ein Sprung frühestens 2 s nach der letzten Meldung — gezählt wird nur eine Meldung, die wirklich
+  hinausging); die Ausgabe steht getrennt in `live-attention.ts`.
+  - **Aufblitzen**, Tab sichtbar: die Karte trägt 3 s (`LIVE_FLASH_MS`) die Klasse `lb-flash-result` (Akzentfarbe) bzw.
+    `lb-flash-swing` (Warnfarbe) — dreimal Rahmen + getönte Fläche; mit `prefers-reduced-motion` und im E-Ink-Modus ein
+    ruhiger Rahmen. Tab im Hintergrund (`document.hidden`): `TabAttention` wechselt den Titel sekündlich zwischen
+    „● 1-0 Brett 3“ bzw. „● Brett 3: −0.3“ und dem Originaltitel und setzt jedes `link[rel~=icon]` auf das Symbol mit
+    rotem Punkt (Canvas; sonst ein reiner Punkt als SVG). Endet bei `visibilitychange` → sichtbar, beim Ausschalten und
+    beim Verlassen der Seite (`DestroyRef`); Titel und Favicons stehen dann wieder wie vorher (ändert die Seite den Titel
+    zwischendurch, gilt der neue als Original).
+  - **Benachrichtigung**: Notification API, nur solange die Seite offen ist (kein Service-Worker-Push). Einschalten ruft
+    `Notification.requestPermission()` im Klick; abgelehnt/gesperrt → Schalter zurück + Snackbar
+    (`tournaments.live.notifyDenied`). Beim Laden gilt die Vorliebe nur mit `permission === 'granted'`. Gemeldet wird nur,
+    wenn der Tab nicht sichtbar ist ODER das Fenster keinen Fokus hat: Titel „Brett 3“ / Text „Weiß – Schwarz 1-0“, Sprung
+    Titel „Brett 3: +1.4 → −0.3“ / Text „Bewertung +1.4 → −0.3 · Weiß – Schwarz“; `tag` `rh-live-<gameId>` (eine neue
+    Meldung desselben Bretts ersetzt die alte). Klick → `window.focus()`, Karte (`[data-game]`) mittig ins Bild und
+    hervorgehoben (Blitz-Klasse, auch ohne „Aufblitzen“). Der Schalter fehlt, wo es `Notification` nicht gibt (iOS Safari
+    ohne installierte Web-App); Android-Chrome wirft bei `new Notification` (verlangt den Service Worker) — dort bleibt es
+    still.
 - **Link teilen** (1.024.0, Wunsch 2026-11-26: „einen speziellen Livestream … auch für anonyme User sharen“): Knopf im Kopf,
   Link = `/tournaments/{id}/live?round=n[&team=…|&player=…]` (Rückfall, wenn das Anlegen der geteilten Ansicht scheitert; bis
   1.038 mit `&eval=1`, seit 1.039.0 ohne — jeder Zuschauer schaltet selbst) — die Runde immer ausdrücklich (ohne sie zeigte der Link

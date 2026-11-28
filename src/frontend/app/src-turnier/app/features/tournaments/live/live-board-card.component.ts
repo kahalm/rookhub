@@ -14,6 +14,7 @@ import { LiveBoardsService } from './live-boards.service';
 import { LiveStudy, readLiveFsPrefs } from './live-study';
 import { chessTitle } from '../tournament-table.util';
 import { LiveEval, LiveGame, LivePlayer } from './live-boards.models';
+import { LiveAlert } from './live-vibrate';
 import { analysisLinkTarget, evalText, lastMovePair, liveBestMove, liveMoveNumber, shownClock, whiteShare } from './live-boards.util';
 
 /**
@@ -32,7 +33,7 @@ import { analysisLinkTarget, evalText, lastMovePair, liveBestMove, liveMoveNumbe
   imports: [ChessBoardComponent, TranslatePipe, MatButtonModule, MatIconModule, LiveBoardStudyComponent],
   host: { '(document:keydown)': 'onKey($event)' },
   template: `
-    <article #card class="lb-card" [class.lb-fs]="fs()" [class.lb-wide]="fs() && wide()" [attr.role]="fs() ? 'dialog' : null" [attr.aria-modal]="fs() ? 'true' : null" [attr.tabindex]="fs() ? -1 : null" [attr.aria-label]="('tournaments.live.boardN' | translate:{ board: board() }) + ': ' + game().white.name + ' – ' + game().black.name">
+    <article #card class="lb-card" [class.lb-fs]="fs()" [class.lb-flash-result]="flash() === 'result'" [class.lb-flash-swing]="flash() === 'swing'" [class.lb-wide]="fs() && wide()" [attr.role]="fs() ? 'dialog' : null" [attr.aria-modal]="fs() ? 'true' : null" [attr.tabindex]="fs() ? -1 : null" [attr.aria-label]="('tournaments.live.boardN' | translate:{ board: board() }) + ': ' + game().white.name + ' – ' + game().black.name">
       <div class="lb-top">
         <span class="lb-board" [title]="caption() ?? ''">{{ 'tournaments.live.boardN' | translate:{ board: board() } }}@if (caption(); as c) { <span class="lb-caption">· {{ c }}</span> }</span>
         @if (!game().finished && moveNo(); as n) {
@@ -152,6 +153,21 @@ import { analysisLinkTarget, evalText, lastMovePair, liveBestMove, liveMoveNumbe
       border: 1px solid var(--rh-accent);
       background: color-mix(in srgb, var(--rh-accent) 12%, transparent); }
     :host-context(html.eink) .lb-only { color: black; border-color: black; background: none; }
+    /* Aufblitzen (1.042.0): Ergebnis in Akzentfarbe, Bewertungssprung in Warnfarbe — dreimal kurz Rahmen + getönte Fläche.
+       Ohne Bewegung (prefers-reduced-motion, E-Ink) ein ruhiger Rahmen, solange die Klasse steht (3 s). Die Bedeutung trägt
+       nicht die Farbe allein: Ergebnis-Chip bzw. Wertzeile ändern sich zugleich. */
+    .lb-card.lb-flash-result { --lb-flash: var(--rh-accent); }
+    .lb-card.lb-flash-swing { --lb-flash: var(--rh-warn); }
+    .lb-card.lb-flash-result, .lb-card.lb-flash-swing { animation: lb-flash 0.6s ease-in-out 3; }
+    @keyframes lb-flash {
+      0%, 100% { box-shadow: 0 0 0 0 transparent; }
+      50% { box-shadow: 0 0 0 3px var(--lb-flash); background: color-mix(in srgb, var(--lb-flash) 16%, var(--mat-sys-surface-container-low)); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .lb-card.lb-flash-result, .lb-card.lb-flash-swing { animation: none; box-shadow: 0 0 0 3px var(--lb-flash); }
+    }
+    :host-context(html.eink) .lb-card.lb-flash-result, :host-context(html.eink) .lb-card.lb-flash-swing {
+      animation: none; box-shadow: 0 0 0 3px black; }
     /* Balken genau so hoch wie das gezeichnete Brett (Wunsch 2026-11-26: „0.0 genau zwischen 4 und 5“) — Chessground
        rastet auf ein Vielfaches von acht und steht oben links, die Zeile kann also etwas höher sein als das Brett. Höhe und
        Versatz misst boardBox(); ohne Messung (erstes Bild) streckt sich der Balken wie bisher. */
@@ -202,6 +218,8 @@ export class LiveBoardCardComponent {
   readonly analysisUrl = input<string | null>(null);
   /** „Besten Zug zeigen“ (1.030.0): Pfeil + SAN des besten Zugs der Bewertung — nur mit Engine-Balken. */
   readonly showBest = input(false);
+  /** Aufblitzen (1.042.0): die Seite setzt es für 3 s (`LIVE_FLASH_MS`) nach einem Ergebnis bzw. Bewertungssprung. */
+  readonly flash = input<LiveAlert | null>(null);
   readonly remove = output<void>();
   /** „Brett drehen“ gedrückt — die Seite merkt es je Partie und gibt das neue `flipped` herein. */
   readonly turn = output<void>();

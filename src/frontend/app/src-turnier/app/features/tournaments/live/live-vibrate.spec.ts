@@ -93,4 +93,13 @@ describe('live-vibrate', () => {
     expect(t.observe(g(21, null))).toBeNull();
     expect(t.observe(g(22, 300))).toBeNull();   // erster Wert: nichts zum Vergleichen
   });
+
+  it('observeDetail: Sprung mit Ausgangswert im Fenster und neuem Wert, Ergebnis ohne Werte', () => {
+    const t = new LiveAlertTracker();
+    t.seed(g(20, 140));
+    expect(t.observeDetail(g(21, 100))).toBeNull();
+    expect(t.observeDetail(g(22, -30))).toEqual({ kind: 'swing', from: 1.4, to: -0.3 });   // Fall: gegen das Maximum
+    expect(t.observeDetail(g(23, 90))).toEqual({ kind: 'swing', from: -0.3, to: 0.9 });    // Anstieg: gegen das Minimum
+    expect(t.observeDetail(g(23, null, { result: '1-0' }))).toEqual({ kind: 'result', from: null, to: null });
+  });
 });

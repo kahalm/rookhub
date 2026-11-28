@@ -109,6 +109,8 @@ export const STORAGE_KEYS: readonly StorageKeyEntry[] = [
   d('rookhub_explorer_settings', 'Eröffnungs-Explorer'),
   d('rookhub_live_eval', 'Live-Bretter der Turnierseite: Engine-Balken an/aus (Standard an, je Gerät, nicht in der geteilten Ansicht)'),
   d('rookhub_live_vibrate', 'Live-Bretter: Vibration bei Ergebnis/Bewertungssprung an/aus (je Gerät)'),
+  d('rookhub_live_flash', 'Live-Bretter: Aufblitzen (Karte bzw. Tab-Titel/Favicon) bei Ergebnis/Bewertungssprung an/aus (je Gerät)'),
+  d('rookhub_live_notify', 'Live-Bretter: Systembenachrichtigung bei Ergebnis/Bewertungssprung an/aus (je Gerät, nur mit Erlaubnis)'),
   d('rookhub_live_best', 'Live-Bretter: „Besten Zug zeigen“ an/aus (Standard an, je Gerät, nicht in der geteilten Ansicht)'),
   d('rookhub_live_fs', 'Live-Bretter im Vollbild: Browser-Engine an/aus und Zahl der Linien (je Gerät)'),
   d('rookhub_live_view_keys', 'Live-Bretter: Bearbeitungsschlüssel selbst geteilter Ansichten (Gäste ändern ihre Ansicht weiter)'),

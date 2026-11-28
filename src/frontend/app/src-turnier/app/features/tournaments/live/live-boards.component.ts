@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSlideToggle, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -26,8 +26,10 @@ import { LiveBoardSlot, LiveGame, LiveMatchSlot, LiveRoundLayout, LiveState, Liv
 import { LiveBoardsService } from './live-boards.service';
 import { broadcastHost, broadcastRoundUrl, isLiveGameIdFor, isLiveRoundId, LIVE_LOST_GRACE_MS, LIVE_VIEW_SAVE_MS, joinParam, parseAddParam, parseExtParam, points, readLiveBest, readTurned, readLiveEval, readViewKey, samePlayer, scoreText, writeLiveEval,
   writeLiveBest, writeTurned, writeViewKey } from './live-boards.util';
-import { LiveAlert, LiveAlertTracker, VIBRATE_CONFIRM, VIBRATE_RESULT, VIBRATE_SWING, canVibrate, readLiveVibrate, vibrate,
+import { LiveAlertEvent, LiveAlertTracker, VIBRATE_CONFIRM, VIBRATE_RESULT, VIBRATE_SWING, canVibrate, readLiveVibrate, vibrate,
   writeLiveVibrate } from './live-vibrate';
+import { LIVE_FLASH_MS, TabAttention, notifySupported, pageAttended, pawnsText, readLiveFlash, readLiveNotify, requestNotifyPermission,
+  resultShort, showLiveNotification, writeLiveFlash, writeLiveNotify } from './live-attention';
 import { AddBoardDialogData, AddBoardDialogResult, AddBoardRow, LiveAddBoardDialogComponent } from './live-add-board-dialog.component';
 
 /** Ein Brett, wie es gezeichnet wird. `addKey` = Schlüssel in `?add=`/`?ext=` (nur hinzugefügte Bretter), `caption` = Zusatzzeile. */
@@ -142,6 +144,13 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
             <mat-slide-toggle class="live-vibrate" [checked]="vibrateOn()" (change)="setVibrate($event.checked)"
                               [matTooltip]="'tournaments.live.vibrateTip' | translate">{{ 'tournaments.live.vibrate' | translate }}</mat-slide-toggle>
           }
+          <!-- Aufblitzen + Benachrichtigung (1.042.0): je Gerät, dieselben Ereignisse wie das Vibrieren; Benachrichtigung nur mit Notification API -->
+          <mat-slide-toggle class="live-flash" [checked]="flashOn()" (change)="setFlash($event.checked)"
+                            [matTooltip]="'tournaments.live.flashTip' | translate">{{ 'tournaments.live.flash' | translate }}</mat-slide-toggle>
+          @if (notifyAvailable) {
+            <mat-slide-toggle class="live-notify" [checked]="notifyOn()" (change)="setNotify($event.checked, $event.source)"
+                              [matTooltip]="'tournaments.live.notifyTip' | translate">{{ 'tournaments.live.notify' | translate }}</mat-slide-toggle>
+          }
           <span class="live-state" [class.is-live]="state() === 'live'" role="status">
             <mat-icon aria-hidden="true">{{ stateIcon() }}</mat-icon>{{ ('tournaments.live.state.' + state()) | translate }}
           </span>
@@ -217,7 +226,8 @@ interface ShownMatch { match: LiveMatchSlot; home: string; away: string; boards:
                                      [analysisUrl]="analysisUrl(b.roundId ?? null, b.game.id)" [roundId]="b.roundId ?? null"
                                      [caption]="b.caption ?? (b.captionKey ? (b.captionKey | translate) : null)"
                                      [removable]="!!b.removeKind" (remove)="removeBoard(b)"
-                                     [receivedAt]="received()[b.game.id] ?? 0" [now]="now()" />
+                                     [receivedAt]="received()[b.game.id] ?? 0" [now]="now()"
+                                     [flash]="flashes()[b.game.id] ?? null" [attr.data-game]="b.game.id" />
               }
             </div>
           }
@@ -286,6 +296,7 @@ export class LiveBoardsComponent implements OnInit {
   private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   id = '';
   readonly loading = signal(true);
@@ -303,7 +314,16 @@ export class LiveBoardsComponent implements OnInit {
   readonly vibrateOn = signal(this.vibrateSupported && readLiveVibrate());
   /** Erkennung je Partie; Snapshots setzen nur den Anfangsstand (kein Vibrieren beim Laden/Wiederverbinden). */
   private readonly alerts = new LiveAlertTracker();
-  private lastVibrate = 0;
+  private lastAlert = 0;
+  /** Aufblitzen (1.042.0): Karte blinkt bzw. — Tab im Hintergrund — Titel und Favicon wechseln. Gerätevorliebe, Standard aus. */
+  readonly flashOn = signal(readLiveFlash());
+  /** Benachrichtigung (1.042.0): nur mit Notification API und Erlaubnis; die Vorliebe allein schaltet sie nicht ein. */
+  readonly notifyAvailable = notifySupported();
+  readonly notifyOn = signal(this.notifyAvailable && readLiveNotify() && Notification.permission === 'granted');
+  /** Bretter, die gerade aufblitzen (Lichess-Kennung → Art). */
+  readonly flashes = signal<Partial<Record<string, 'result' | 'swing'>>>({});
+  private readonly flashTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly tab = new TabAttention(document);
   /** Von Hand gedrehte Bretter (Lichess-Kennung der Partie) — nur dieser Zuschauer, diese Sitzung; nicht in Adresse/geteilter Ansicht. */
   readonly turnedIds = signal<ReadonlySet<string>>(readTurned());
   /** `?add=` — hinzugefügte Bretter dieser Runde (Schlüssel siehe `parseAddParam`). */
@@ -507,7 +527,13 @@ export class LiveBoardsComponent implements OnInit {
   } as Record<LiveState, string>)[this.state()] ?? 'sync');
 
   ngOnInit(): void {
-    this.destroyRef.onDestroy(() => { this.stopStream(); this.clearLostTimer(); if (this.saveTimer) clearTimeout(this.saveTimer); });
+    this.destroyRef.onDestroy(() => {
+      this.stopStream(); this.clearLostTimer(); if (this.saveTimer) clearTimeout(this.saveTimer);
+      // Titel und Favicon zurück, offene Blitze weg (Verlassen der Seite, 1.042.0)
+      this.tab.stop();
+      for (const t of this.flashTimers.values()) clearTimeout(t);
+      this.flashTimers.clear();
+    });
     this.route.paramMap.subscribe(p => {
       // Kurzer, lebender Link /live/:token (1.029.0): die Ansicht kommt vom Server, nicht aus der Adresse.
       const token = p.get('token');
@@ -696,17 +722,65 @@ export class LiveBoardsComponent implements OnInit {
 
   /**
    * Live-Änderung einer Partie prüfen (Zustand läuft immer mit, damit ein späteres Einschalten nicht vom alten Stand aus
-   * meldet). Vibriert nur, wenn eingeschaltet und das Brett gezeigt wird; ein Sprung braucht den Balken (sonst keine
+   * meldet). Meldet nur, wenn eine Meldeart an ist und das Brett gezeigt wird; ein Sprung braucht den Balken (sonst keine
    * Bewertung im Strom). Mehrere Meldungen kurz hintereinander: ein Ergebnis geht immer, ein Sprung erst nach 2 s Pause.
+   * EINE Erkennung, drei Ausgaben (1.042.0): Vibrieren, Aufblitzen (Karte bzw. Tab-Titel im Hintergrund), Benachrichtigung
+   * (nur wenn die Seite nicht im Blick ist).
    */
   private alert(game: LiveGame): void {
-    const a: LiveAlert | null = this.alerts.observe(game);
-    if (!a || !this.vibrateOn() || (a === 'swing' && !this.evalOn())) return;
-    if (!this.allBoards().some(b => b.game.id === game.id)) return;
+    const ev = this.alerts.observeDetail(game);
+    if (!ev || (ev.kind === 'swing' && !this.evalOn())) return;
+    // Benachrichtigung nur, wenn die Seite nicht im Blick ist; geht gar nichts hinaus, zählt es auch nicht für die Drosselung.
+    const toNotify = this.notifyOn() && !pageAttended(document);
+    if (!this.vibrateOn() && !this.flashOn() && !toNotify) return;
+    const shown = this.allBoards().find(b => b.game.id === game.id);
+    if (!shown) return;
     const now = Date.now();
-    if (a === 'swing' && now - this.lastVibrate < 2000) return;
-    this.lastVibrate = now;
-    vibrate(a === 'result' ? VIBRATE_RESULT : VIBRATE_SWING);
+    if (ev.kind === 'swing' && now - this.lastAlert < 2000) return;
+    this.lastAlert = now;
+    if (this.vibrateOn()) vibrate(ev.kind === 'result' ? VIBRATE_RESULT : VIBRATE_SWING);
+    const board = this.translate.instant('tournaments.live.boardN', { board: shown.board });
+    if (this.flashOn()) {
+      if (document.hidden) this.tab.start(ev.kind === 'result' ? `${resultShort(game.result)} ${board}` : `${board}: ${pawnsText(ev.to ?? 0)}`);
+      else this.flashBoard(game.id, ev.kind);
+    }
+    if (toNotify) this.notify(game, board, ev);
+  }
+
+  /**
+   * Benachrichtigung je Brett (`tag` ersetzt die vorige desselben Bretts): „Brett 3“ / „Weiß – Schwarz 1-0“ bzw.
+   * „Brett 3: +1.4 → −0.3“ / „Bewertung +1.4 → −0.3 · Weiß – Schwarz“. Klick holt das Fenster nach vorn und zeigt das Brett.
+   */
+  private notify(game: LiveGame, board: string, ev: LiveAlertEvent): void {
+    const names = `${game.white.name} – ${game.black.name}`;
+    let title = board;
+    let body = `${names} ${resultShort(game.result)}`;
+    if (ev.kind === 'swing') {
+      const from = pawnsText(ev.from ?? 0);
+      const to = pawnsText(ev.to ?? 0);
+      title = `${board}: ${from} → ${to}`;
+      body = `${this.translate.instant('tournaments.live.evalSwing', { from, to })} · ${names}`;
+    }
+    showLiveNotification(title, body, `rh-live-${game.id}`, () => this.showBoard(game.id, ev.kind));
+  }
+
+  /** Karte kurz aufblitzen lassen (Klasse an der Karte für {@link LIVE_FLASH_MS}); eine neue Meldung verlängert. */
+  private flashBoard(gameId: string, kind: 'result' | 'swing'): void {
+    const old = this.flashTimers.get(gameId);
+    if (old) clearTimeout(old);
+    this.flashes.update(m => ({ ...m, [gameId]: kind }));
+    this.flashTimers.set(gameId, setTimeout(() => {
+      this.flashTimers.delete(gameId);
+      this.flashes.update(m => { const n = { ...m }; delete n[gameId]; return n; });
+    }, LIVE_FLASH_MS));
+  }
+
+  /** Klick auf die Benachrichtigung: zum Brett scrollen und es hervorheben (auch ohne „Aufblitzen“). */
+  showBoard(gameId: string, kind: 'result' | 'swing'): void {
+    const el = this.host.nativeElement.querySelector(`[data-game="${CSS.escape(gameId)}"]`);
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || this.eink.enabled();
+    el?.scrollIntoView({ block: 'center', behavior: still ? 'auto' : 'smooth' });
+    this.flashBoard(gameId, kind);
   }
 
   /**
@@ -806,6 +880,28 @@ export class LiveBoardsComponent implements OnInit {
     this.vibrateOn.set(on);
     writeLiveVibrate(on);
     if (on) vibrate(VIBRATE_CONFIRM);
+  }
+
+  /** Aufblitzen an/aus: nur dieses Gerät. Aus → ein laufender Tab-Hinweis endet. */
+  setFlash(on: boolean): void {
+    this.flashOn.set(on);
+    writeLiveFlash(on);
+    if (!on) this.tab.stop();
+  }
+
+  /**
+   * Benachrichtigung an/aus. Beim Einschalten fragt der Browser nach der Erlaubnis (der Klick ist die Nutzergeste); abgelehnt
+   * oder blockiert → Schalter zurück und ein Hinweis, wo man sie erlaubt.
+   */
+  async setNotify(on: boolean, toggle?: MatSlideToggle): Promise<void> {
+    if (!on) { this.notifyOn.set(false); writeLiveNotify(false); return; }
+    const granted = await requestNotifyPermission();
+    this.notifyOn.set(granted);
+    writeLiveNotify(granted);
+    if (!granted) {
+      if (toggle) toggle.checked = false;
+      this.snackbar.warn(this.translate.instant('tournaments.live.notifyDenied'));
+    }
   }
 
   /**
